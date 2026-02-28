@@ -60,6 +60,12 @@ pub struct ModelCompatibilityMatrix {
     pub zephyr_32k: TokenizerDownloadInfo,
     /// Vicuna with 32K vocabulary - SentencePiece tokenizer (LLaMA-based)
     pub vicuna_32k: TokenizerDownloadInfo,
+    /// Orca with 32K vocabulary - SentencePiece tokenizer
+    pub orca_32k: TokenizerDownloadInfo,
+    /// SOLAR with 32K vocabulary - SentencePiece tokenizer
+    pub solar_32k: TokenizerDownloadInfo,
+    /// Alpaca with 32K vocabulary - SentencePiece tokenizer
+    pub alpaca_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -195,6 +201,24 @@ impl Default for ModelCompatibilityMatrix {
                 repo: "lmsys/vicuna-7b-v1.5".to_string(),
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "vicuna-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            orca_32k: TokenizerDownloadInfo {
+                repo: "Open-Orca/OpenOrca-Platypus2-13B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "orca-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            solar_32k: TokenizerDownloadInfo {
+                repo: "upstage/SOLAR-10.7B-Instruct-v1.0".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "solar-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            alpaca_32k: TokenizerDownloadInfo {
+                repo: "tatsu-lab/alpaca-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "alpaca-32k".to_string(),
                 expected_vocab: Some(32000),
             },
         }

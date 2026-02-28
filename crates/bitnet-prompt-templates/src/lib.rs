@@ -86,6 +86,12 @@ pub enum TemplateType {
     ZephyrChat,
     /// Vicuna/ShareGPT chat format (USER:/ASSISTANT: roles)
     VicunaChat,
+    /// Orca ChatML format with Orca default system prompt
+    OrcaChat,
+    /// SOLAR instruct format (### User:/### Assistant:)
+    SolarInstruct,
+    /// Stanford Alpaca instruct format (### Instruction:/### Response:)
+    AlpacaInstruct,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -117,6 +123,9 @@ impl std::str::FromStr for TemplateType {
             "fill-in-middle" | "fim" => Ok(Self::FillInMiddle),
             "zephyr-chat" | "zephyr" => Ok(Self::ZephyrChat),
             "vicuna-chat" | "vicuna" => Ok(Self::VicunaChat),
+            "orca-chat" | "orca" => Ok(Self::OrcaChat),
+            "solar-instruct" | "solar" => Ok(Self::SolarInstruct),
+            "alpaca-instruct" | "alpaca" => Ok(Self::AlpacaInstruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -124,7 +133,8 @@ impl std::str::FromStr for TemplateType {
                  codellama-instruct, cohere-command, internlm-chat, \
                  yi-chat, baichuan-chat, chatglm-chat, mpt-instruct, \
                  rwkv-world, olmo-instruct, fill-in-middle, \
-                 zephyr-chat, vicuna-chat",
+                 zephyr-chat, vicuna-chat, orca-chat, solar-instruct, \
+                 alpaca-instruct",
                 s
             ),
         }
@@ -156,6 +166,9 @@ impl std::fmt::Display for TemplateType {
             Self::FillInMiddle => write!(f, "fill-in-middle"),
             Self::ZephyrChat => write!(f, "zephyr-chat"),
             Self::VicunaChat => write!(f, "vicuna-chat"),
+            Self::OrcaChat => write!(f, "orca-chat"),
+            Self::SolarInstruct => write!(f, "solar-instruct"),
+            Self::AlpacaInstruct => write!(f, "alpaca-instruct"),
         }
     }
 }
@@ -255,6 +268,27 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::OlmoInstruct;
+            }
+            // Alpaca ### Instruction/### Response markers (but NOT ### User: which is Solar)
+            if jinja.contains("### Instruction:")
+                && jinja.contains("### Response:")
+                && !jinja.contains("### User:")
+            {
+                tracing::debug!(
+                    template = "AlpacaInstruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::AlpacaInstruct;
+            }
+            // Solar ### User:/### Assistant: markers
+            if jinja.contains("### User:") && jinja.contains("### Assistant:") {
+                tracing::debug!(
+                    template = "SolarInstruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::SolarInstruct;
             }
             // MPT ### instruction markers
             if jinja.contains("### Instruction") && jinja.contains("### Response") {
@@ -468,6 +502,33 @@ impl TemplateType {
                 );
                 return Self::VicunaChat;
             }
+            if lower.contains("orca") {
+                tracing::debug!(
+                    template = "OrcaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::OrcaChat;
+            }
+            if lower.contains("solar") {
+                tracing::debug!(
+                    template = "SolarInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::SolarInstruct;
+            }
+            if lower.contains("alpaca") {
+                tracing::debug!(
+                    template = "AlpacaInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::AlpacaInstruct;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -509,6 +570,9 @@ impl TemplateType {
             Self::FillInMiddle => Self::apply_fill_in_middle(user_text, system_prompt),
             Self::ZephyrChat => Self::apply_zephyr_chat(user_text, system_prompt),
             Self::VicunaChat => Self::apply_vicuna_chat(user_text, system_prompt),
+            Self::OrcaChat => Self::apply_orca_chat(user_text, system_prompt),
+            Self::SolarInstruct => Self::apply_solar_instruct(user_text, system_prompt),
+            Self::AlpacaInstruct => Self::apply_alpaca_instruct(user_text, system_prompt),
         }
     }
 
@@ -964,6 +1028,55 @@ impl TemplateType {
         result
     }
 
+    /// Apply Orca ChatML template (ChatML variant with Orca default system prompt)
+    fn apply_orca_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or(
+            "You are Orca, an AI language model created by Microsoft. You are \
+             a cautious assistant. You carefully follow instructions.",
+        );
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
+    /// Apply SOLAR instruct template
+    ///
+    /// Format: `### User:\n{text}\n\n### Assistant:\n`
+    fn apply_solar_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str("### System:\n");
+            result.push_str(sys);
+            result.push_str("\n\n");
+        }
+        result.push_str("### User:\n");
+        result.push_str(user_text);
+        result.push_str("\n\n### Assistant:\n");
+        result
+    }
+
+    /// Apply Stanford Alpaca instruct template
+    ///
+    /// Format: `Below is an instruction ...\n\n### Instruction:\n{text}\n\n### Response:\n`
+    fn apply_alpaca_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or(
+            "Below is an instruction that describes a task. Write a response \
+             that appropriately completes the request.",
+        );
+        result.push_str(system);
+        result.push_str("\n\n### Instruction:\n");
+        result.push_str(user_text);
+        result.push_str("\n\n### Response:\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1023,6 +1136,15 @@ impl TemplateType {
             }
             Self::VicunaChat => {
                 vec!["USER:".to_string(), "</s>".to_string()]
+            }
+            Self::OrcaChat => {
+                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+            }
+            Self::SolarInstruct => {
+                vec!["### User:".to_string(), "</s>".to_string()]
+            }
+            Self::AlpacaInstruct => {
+                vec!["### Instruction:".to_string(), "</s>".to_string()]
             }
         }
     }
@@ -1086,6 +1208,9 @@ impl TemplateType {
             Self::FillInMiddle => false, // Uses <fim_prefix>/<fim_middle> tokens
             Self::ZephyrChat => false,   // Uses <|system|>/<|user|> tokens
             Self::VicunaChat => true,    // Simple USER:/ASSISTANT: format
+            Self::OrcaChat => false,     // ChatML uses im_start/im_end tokens
+            Self::SolarInstruct => true, // Simple ### markers, BOS helpful
+            Self::AlpacaInstruct => true, // Simple ### markers, BOS helpful
         }
     }
 
@@ -1110,6 +1235,7 @@ impl TemplateType {
                 | Self::OlmoInstruct
                 | Self::FillInMiddle
                 | Self::ZephyrChat
+                | Self::OrcaChat
         )
     }
 
@@ -1519,6 +1645,57 @@ impl TemplateType {
                     }
                 }
                 write!(out, "ASSISTANT:")?;
+            }
+            TemplateType::OrcaChat => {
+                // Orca ChatML format (same structure as Phi4Chat)
+                let sys = system.unwrap_or(
+                    "You are Orca, an AI language model created by Microsoft. You are \
+                     a cautious assistant. You carefully follow instructions.",
+                );
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::SolarInstruct => {
+                // Solar ### User:/### Assistant: format
+                if let Some(sys) = system {
+                    write!(out, "### System:\n{}\n\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "### User:\n{}\n\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "### Assistant:\n{}\n\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "### Assistant:")?;
+            }
+            TemplateType::AlpacaInstruct => {
+                // Alpaca ### Instruction:/### Response: format
+                let sys = system.unwrap_or(
+                    "Below is an instruction that describes a task. Write a response \
+                     that appropriately completes the request.",
+                );
+                writeln!(out, "{}\n", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "### Instruction:\n{}\n\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "### Response:\n{}\n\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "### Response:")?;
             }
         }
 
@@ -1991,6 +2168,15 @@ mod tests {
         assert_eq!("zephyr".parse::<TemplateType>().unwrap(), TemplateType::ZephyrChat);
         assert_eq!("vicuna-chat".parse::<TemplateType>().unwrap(), TemplateType::VicunaChat);
         assert_eq!("vicuna".parse::<TemplateType>().unwrap(), TemplateType::VicunaChat);
+        assert_eq!("orca-chat".parse::<TemplateType>().unwrap(), TemplateType::OrcaChat);
+        assert_eq!("orca".parse::<TemplateType>().unwrap(), TemplateType::OrcaChat);
+        assert_eq!("solar-instruct".parse::<TemplateType>().unwrap(), TemplateType::SolarInstruct);
+        assert_eq!("solar".parse::<TemplateType>().unwrap(), TemplateType::SolarInstruct);
+        assert_eq!(
+            "alpaca-instruct".parse::<TemplateType>().unwrap(),
+            TemplateType::AlpacaInstruct
+        );
+        assert_eq!("alpaca".parse::<TemplateType>().unwrap(), TemplateType::AlpacaInstruct);
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -2019,6 +2205,9 @@ mod tests {
         assert!(!TemplateType::FillInMiddle.default_stop_sequences().is_empty());
         assert!(!TemplateType::ZephyrChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::VicunaChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::OrcaChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::SolarInstruct.default_stop_sequences().is_empty());
+        assert!(!TemplateType::AlpacaInstruct.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -2118,6 +2307,9 @@ mod tests {
         assert!(!TemplateType::FillInMiddle.should_add_bos()); // Uses FIM tokens
         assert!(!TemplateType::ZephyrChat.should_add_bos()); // Uses special tokens
         assert!(TemplateType::VicunaChat.should_add_bos()); // Simple USER:/ASSISTANT: format
+        assert!(!TemplateType::OrcaChat.should_add_bos()); // ChatML uses im_start/im_end tokens
+        assert!(TemplateType::SolarInstruct.should_add_bos()); // Simple ### markers
+        assert!(TemplateType::AlpacaInstruct.should_add_bos()); // Simple ### markers
     }
 
     #[test]
@@ -2144,6 +2336,9 @@ mod tests {
         assert!(TemplateType::FillInMiddle.parse_special()); // Has FIM tokens
         assert!(TemplateType::ZephyrChat.parse_special()); // Has special tokens
         assert!(!TemplateType::VicunaChat.parse_special()); // Simple text format
+        assert!(TemplateType::OrcaChat.parse_special()); // Has im_start/im_end
+        assert!(!TemplateType::SolarInstruct.parse_special()); // Simple text markers
+        assert!(!TemplateType::AlpacaInstruct.parse_special()); // Simple text markers
     }
 
     #[test]
@@ -3128,5 +3323,133 @@ mod detect_logging_tests {
         assert!(s.contains("ASSISTANT: Hi!"));
         assert!(s.contains("USER: Bye"));
         assert!(s.ends_with("ASSISTANT:"));
+    }
+
+    // ── Orca Chat ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_orca_chat_template() {
+        let template = TemplateType::OrcaChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are Orca"));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = template.apply("Hello!", Some("Custom system."));
+        assert!(result.contains("Custom system."));
+        assert!(!result.contains("You are Orca"));
+    }
+
+    #[test]
+    fn test_detect_orca_from_name() {
+        let t = TemplateType::detect(Some("orca-mini-3b"), None);
+        assert_eq!(t, TemplateType::OrcaChat);
+    }
+
+    #[test]
+    fn test_render_chat_orca() {
+        let t = TemplateType::OrcaChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
+        assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
+        assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    // ── Solar Instruct ─────────────────────────────────────────────
+
+    #[test]
+    fn test_solar_instruct_template() {
+        let template = TemplateType::SolarInstruct;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("### User:\nHello!"));
+        assert!(result.contains("### Assistant:\n"));
+        assert!(!result.contains("### System:"));
+
+        let result = template.apply("Hello!", Some("Be brief."));
+        assert!(result.contains("### System:\nBe brief."));
+        assert!(result.contains("### User:\nHello!"));
+    }
+
+    #[test]
+    fn test_detect_solar_from_jinja() {
+        let t = TemplateType::detect(None, Some("### User: {content}\n### Assistant:"));
+        assert_eq!(t, TemplateType::SolarInstruct);
+    }
+
+    #[test]
+    fn test_detect_solar_from_name() {
+        let t = TemplateType::detect(Some("solar-10.7b"), None);
+        assert_eq!(t, TemplateType::SolarInstruct);
+    }
+
+    #[test]
+    fn test_render_chat_solar() {
+        let t = TemplateType::SolarInstruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("### System:\nBe helpful."));
+        assert!(s.contains("### User:\nHello"));
+        assert!(s.contains("### Assistant:\nHi!"));
+        assert!(s.contains("### User:\nBye"));
+        assert!(s.ends_with("### Assistant:\n"));
+    }
+
+    // ── Alpaca Instruct ────────────────────────────────────────────
+
+    #[test]
+    fn test_alpaca_instruct_template() {
+        let template = TemplateType::AlpacaInstruct;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("Below is an instruction"));
+        assert!(result.contains("### Instruction:\nHello!"));
+        assert!(result.contains("### Response:\n"));
+
+        let result = template.apply("Hello!", Some("Custom system."));
+        assert!(result.starts_with("Custom system."));
+        assert!(!result.contains("Below is an instruction"));
+    }
+
+    #[test]
+    fn test_detect_alpaca_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("### Instruction: {content}\n### Response:"),
+        );
+        assert_eq!(t, TemplateType::AlpacaInstruct);
+    }
+
+    #[test]
+    fn test_detect_alpaca_from_name() {
+        let t = TemplateType::detect(Some("alpaca-7b"), None);
+        assert_eq!(t, TemplateType::AlpacaInstruct);
+    }
+
+    #[test]
+    fn test_render_chat_alpaca() {
+        let t = TemplateType::AlpacaInstruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("Be helpful."));
+        assert!(s.contains("### Instruction:\nHello"));
+        assert!(s.contains("### Response:\nHi!"));
+        assert!(s.contains("### Instruction:\nBye"));
+        assert!(s.ends_with("### Response:\n"));
     }
 }

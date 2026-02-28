@@ -565,3 +565,81 @@ fn snapshot_vicuna_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("vicuna_multi_turn", out);
 }
+
+// ── Orca Chat ───────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_orca_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::OrcaChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("orca_single_turn", out);
+}
+
+#[test]
+fn snapshot_orca_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::OrcaChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("orca_with_system", out);
+}
+
+#[test]
+fn snapshot_orca_multi_turn() {
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::OrcaChat).with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("orca_multi_turn", out);
+}
+
+// ── Solar Instruct ──────────────────────────────────────────────────
+
+#[test]
+fn snapshot_solar_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::SolarInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("solar_single_turn", out);
+}
+
+#[test]
+fn snapshot_solar_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::SolarInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("solar_with_system", out);
+}
+
+#[test]
+fn snapshot_solar_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::SolarInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("solar_multi_turn", out);
+}
+
+// ── Alpaca Instruct ─────────────────────────────────────────────────
+
+#[test]
+fn snapshot_alpaca_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::AlpacaInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("alpaca_single_turn", out);
+}
+
+#[test]
+fn snapshot_alpaca_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::AlpacaInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("alpaca_with_system", out);
+}
+
+#[test]
+fn snapshot_alpaca_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::AlpacaInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("alpaca_multi_turn", out);
+}

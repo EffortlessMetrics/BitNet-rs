@@ -120,6 +120,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(4096),
             }),
+            "orca" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "solar" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "alpaca" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(2048),
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -175,6 +190,9 @@ impl ArchitectureRegistry {
             "bert",
             "zephyr",
             "vicuna",
+            "orca",
+            "solar",
+            "alpaca",
         ]
     }
 
