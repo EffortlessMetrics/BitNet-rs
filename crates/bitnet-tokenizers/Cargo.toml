@@ -28,8 +28,8 @@ tokenizers = { version = "0.22.1", default-features = false, features = ["onig",
 tempfile = "3.23.0"
 base64 = "0.22.1"
 ahash = "0.8.12"
-reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream"], optional = true }
-futures-util = { version = "0.3.31", optional = true }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream"] }
+futures-util = { version = "0.3.31" }
 dirs = "6.0.0"
 memmap2 = "0.9.9"
 thiserror.workspace = true
@@ -39,7 +39,6 @@ integration-tests = []
 default = []
 spm = ["sentencepiece", "sentencepiece-model"]
 inference = []
-downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
 cuda = ["gpu"]  # Backward compatibility alias for gpu
