@@ -28,6 +28,8 @@ default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
+description = "GPU hardware abstraction layer with telemetry and metrics collection"
+rust-version.workspace = true
 
 [lints]
 workspace = true
