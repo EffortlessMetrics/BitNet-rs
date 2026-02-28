@@ -137,7 +137,7 @@ struct TimingMetrics {
     pub generate: f64,
     pub total: f64,
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_batch_prefill_timing() {
     let model = Arc::new(MockModelWithTiming::new());
     let tokenizer = Arc::new(MockTokenizerWithTiming::new());
@@ -205,7 +205,7 @@ async fn test_batch_prefill_timing() {
 /// - Tokenize time: 1.0-1.5ms (1ms sleep + overhead)
 /// - Prefill time: 10-15ms (10ms sleep + overhead)
 /// - If timings exceed these by 50%+ on stable hardware, investigate system load
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_batch_prefill_performance_consistency() {
     if std::env::var("RUN_PERF_TESTS").is_err() {
         eprintln!("⏭️  Skipping performance test; set RUN_PERF_TESTS=1 to enable");
@@ -243,7 +243,7 @@ async fn test_batch_prefill_performance_consistency() {
         );
     }
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_prefill_error_recovery() {
     let model = Arc::new(MockModelWithTiming::new());
     let tokenizer = Arc::new(MockTokenizerWithTiming::new());
@@ -256,7 +256,7 @@ async fn test_prefill_error_recovery() {
     let result = engine.prefill(&valid_tokens).await;
     assert!(result.is_ok(), "Should recover with valid tokens");
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_empty_batch_handling() {
     let model = Arc::new(MockModelWithTiming::new());
     let tokenizer = Arc::new(MockTokenizerWithTiming::new());
@@ -266,7 +266,7 @@ async fn test_empty_batch_handling() {
     let results = processor.process_batch(&empty_prompts).await.unwrap();
     assert_eq!(results.len(), 0, "Empty batch should return empty results");
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_single_prompt_batch() {
     let model = Arc::new(MockModelWithTiming::new());
     let tokenizer = Arc::new(MockTokenizerWithTiming::new());
