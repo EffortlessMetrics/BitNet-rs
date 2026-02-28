@@ -9,6 +9,7 @@
 //! - [`rmsnorm`]: RMSNorm layer normalization
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
+//! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -20,6 +21,7 @@ pub mod kv_cache;
 pub mod qk256_gemv;
 pub mod rmsnorm;
 pub mod rope;
+pub mod softmax;
 
 pub use attention::{AttentionKernelConfig, launch_attention};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
@@ -32,3 +34,4 @@ pub use crate::reduction::{
     ReductionConfig, ReductionOp, launch_reduce_cols_f32, launch_reduce_f32,
     launch_reduce_rows_f32, reduce_cols_f32, reduce_f32, reduce_rows_f32,
 };
+pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
