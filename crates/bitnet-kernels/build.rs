@@ -32,11 +32,14 @@ fn main() {
     // See Issue #439 for unified predicate approach.
     let gpu =
         env::var_os("CARGO_FEATURE_GPU").is_some() || env::var_os("CARGO_FEATURE_CUDA").is_some();
+    let rocm = env::var_os("CARGO_FEATURE_ROCM").is_some();
 
-    if gpu {
+    if gpu || rocm {
         // Emit build-time cfg flag for unified GPU detection
         println!("cargo:rustc-cfg=bitnet_build_gpu");
+    }
 
+    if gpu {
         // Add CUDA library paths
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");
@@ -58,6 +61,20 @@ fn main() {
         println!("cargo:rustc-link-lib=curand");
         println!("cargo:rustc-link-lib=cublas");
         println!("cargo:rustc-link-lib=cublasLt");
+    }
+
+    if rocm {
+        let rocm_root = env_var("ROCM_PATH")
+            .or_else(|| env_var("ROCM_HOME"))
+            .or_else(|| env_var("HIP_PATH"))
+            .unwrap_or_else(|| "/opt/rocm".to_string());
+
+        println!("cargo:rustc-link-search={}/lib", rocm_root);
+        println!("cargo:rustc-link-search={}/lib64", rocm_root);
+
+        // Link core ROCm runtime libraries required for HIP kernel launch.
+        println!("cargo:rustc-link-lib=amdhip64");
+        println!("cargo:rustc-link-lib=hsa-runtime64");
     }
 
     // Only do FFI detection work if the crate feature "ffi" is enabled

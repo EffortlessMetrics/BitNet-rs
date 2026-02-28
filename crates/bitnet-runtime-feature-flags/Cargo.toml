@@ -22,8 +22,9 @@ bitnet-runtime-feature-flags-core = { path = "../bitnet-runtime-feature-flags-co
 [features]
 default = []
 cpu = []
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 cuda = []
+rocm = []
 inference = []
 kernels = []
 tokenizers = []

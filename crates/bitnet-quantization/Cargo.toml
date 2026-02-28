@@ -41,7 +41,8 @@ cpu = ["bitnet-kernels/cpu"]
 simd = []
 integration-tests = []
 cuda = ["bitnet-kernels/cuda"]
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+rocm = ["bitnet-kernels/rocm"]
+gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
 inference = []
 
