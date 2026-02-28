@@ -806,28 +806,28 @@ impl TemplateType {
             TemplateType::Phi4Chat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                write!(out, "<|im_start|>system\n{}<|im_end|>\n", sys)?;
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
 
                 // Render conversation history
                 for turn in history {
                     let role = turn.role.as_str();
-                    write!(out, "<|im_start|>{}\n{}<|im_end|>\n", role, turn.text)?;
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
                 }
 
                 // Start assistant response
-                write!(out, "<|im_start|>assistant\n")?;
+                writeln!(out, "<|im_start|>assistant")?;
             }
             TemplateType::QwenChat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                write!(out, "<|im_start|>system\n{}<|im_end|>\n", sys)?;
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
 
                 for turn in history {
                     let role = turn.role.as_str();
-                    write!(out, "<|im_start|>{}\n{}<|im_end|>\n", role, turn.text)?;
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
                 }
 
-                write!(out, "<|im_start|>assistant\n")?;
+                writeln!(out, "<|im_start|>assistant")?;
             }
             TemplateType::GemmaChat => {
                 // Gemma format with start_of_turn/end_of_turn tokens
@@ -840,25 +840,25 @@ impl TemplateType {
                         ChatRole::Assistant => "model",
                         ChatRole::System => continue,
                     };
-                    write!(out, "<start_of_turn>{}\n", role)?;
+                    writeln!(out, "<start_of_turn>{}", role)?;
                     if role == "user" && !system_prepended {
                         if let Some(sys) = system {
-                            write!(out, "{}\n\n", sys)?;
+                            writeln!(out, "{}\n", sys)?;
                         }
                         system_prepended = true;
                     }
-                    write!(out, "{}<end_of_turn>\n", turn.text)?;
+                    writeln!(out, "{}<end_of_turn>", turn.text)?;
                 }
 
                 // If no user turn was seen, still emit system prompt
-                if !system_prepended {
-                    if let Some(sys) = system {
-                        write!(out, "<start_of_turn>user\n{}<end_of_turn>\n", sys)?;
-                    }
+                if !system_prepended
+                    && let Some(sys) = system
+                {
+                    writeln!(out, "<start_of_turn>user\n{}<end_of_turn>", sys)?;
                 }
 
                 // Start model response
-                write!(out, "<start_of_turn>model\n")?;
+                writeln!(out, "<start_of_turn>model")?;
             }
             TemplateType::MistralChat => {
                 // Mistral [INST]...[/INST] format
@@ -888,18 +888,18 @@ impl TemplateType {
                 // ChatML format with im_start/im_end tokens
                 let sys =
                     system.unwrap_or("You are a helpful assistant.");
-                write!(out, "<|im_start|>system\n{}<|im_end|>\n", sys)?;
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
 
                 for turn in history {
                     let role = turn.role.as_str();
-                    write!(
+                    writeln!(
                         out,
-                        "<|im_start|>{}\n{}<|im_end|>\n",
+                        "<|im_start|>{}\n{}<|im_end|>",
                         role, turn.text
                     )?;
                 }
 
-                write!(out, "<|im_start|>assistant\n")?;
+                writeln!(out, "<|im_start|>assistant")?;
             }
             TemplateType::Instruct => {
                 // Simple Q&A format
@@ -1034,22 +1034,22 @@ impl TemplateType {
                 // ChatML format with im_start/im_end tokens
                 let sys = system
                     .unwrap_or("You are a helpful assistant.");
-                write!(
+                writeln!(
                     out,
-                    "<|im_start|>system\n{}<|im_end|>\n",
+                    "<|im_start|>system\n{}<|im_end|>",
                     sys
                 )?;
 
                 for turn in history {
                     let role = turn.role.as_str();
-                    write!(
+                    writeln!(
                         out,
-                        "<|im_start|>{}\n{}<|im_end|>\n",
+                        "<|im_start|>{}\n{}<|im_end|>",
                         role, turn.text
                     )?;
                 }
 
-                write!(out, "<|im_start|>assistant\n")?;
+                writeln!(out, "<|im_start|>assistant")?;
             }
         }
 

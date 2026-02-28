@@ -55,10 +55,10 @@ impl ModelConfig {
         if let Some(defaults) = crate::ArchitectureRegistry::lookup(architecture) {
             self.norm_type = defaults.norm_type;
             self.activation_type = defaults.activation_type;
-            if let Some(ctx) = defaults.default_context_length {
-                if self.max_position_embeddings == 2048 {
-                    self.max_position_embeddings = ctx;
-                }
+            if let Some(ctx) = defaults.default_context_length
+                && self.max_position_embeddings == 2048
+            {
+                self.max_position_embeddings = ctx;
             }
         }
     }
