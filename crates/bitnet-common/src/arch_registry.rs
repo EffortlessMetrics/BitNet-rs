@@ -36,12 +36,8 @@ impl ArchitectureRegistry {
             "phi-2" | "phi2" => (LayerNorm, Gelu, Some(2048)),
 
             "llama" | "mistral" => (RmsNorm, Silu, None),
-            "llama-3.2" | "llama3.2" | "llama32" => {
-                (RmsNorm, Silu, Some(131072))
-            }
-            "llama-3.1" | "llama3.1" | "llama31" => {
-                (RmsNorm, Silu, Some(131072))
-            }
+            "llama-3.2" | "llama3.2" | "llama32" => (RmsNorm, Silu, Some(131072)),
+            "llama-3.1" | "llama3.1" | "llama31" => (RmsNorm, Silu, Some(131072)),
             "mistral-nemo" | "nemo" => (RmsNorm, Silu, Some(128000)),
             "llama2" | "llama-2" => (RmsNorm, Silu, Some(4096)),
 
@@ -55,9 +51,7 @@ impl ArchitectureRegistry {
             "bitnet" | "bitnet-b1.58" => (LayerNorm, Silu, None),
 
             "deepseek" | "deepseek2" => (RmsNorm, Silu, None),
-            "deepseek-v3" | "deepseekv3" | "deepseek3" => {
-                (RmsNorm, Silu, Some(65536))
-            }
+            "deepseek-v3" | "deepseekv3" | "deepseek3" => (RmsNorm, Silu, Some(65536)),
 
             "starcoder" | "starcoder2" => (LayerNorm, Gelu, None),
             "falcon" => (LayerNorm, Gelu, None),
@@ -75,9 +69,7 @@ impl ArchitectureRegistry {
             "internlm" | "internlm2" => (RmsNorm, Silu, None),
             "yi" | "yi-1.5" => (RmsNorm, Silu, None),
             "baichuan" | "baichuan2" => (RmsNorm, Silu, None),
-            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => {
-                (RmsNorm, Silu, None)
-            }
+            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => (RmsNorm, Silu, None),
 
             "mpt" => (LayerNorm, Gelu, None),
 
@@ -100,14 +92,10 @@ impl ArchitectureRegistry {
             "gpt" | "bert" => (LayerNorm, Gelu, None),
             "tinyllama" => (RmsNorm, Silu, Some(2048)),
             "dolphin" => (RmsNorm, Silu, Some(4096)),
-            "chatgpt" | "gpt4" | "gpt-4" => {
-                (LayerNorm, Gelu, Some(8192))
-            }
+            "chatgpt" | "gpt4" | "gpt-4" => (LayerNorm, Gelu, Some(8192)),
 
             "mixtral" => (RmsNorm, Silu, Some(32768)),
-            "stablelm" | "stable-lm" | "stablecode" => {
-                (RmsNorm, Silu, Some(4096))
-            }
+            "stablelm" | "stable-lm" | "stablecode" => (RmsNorm, Silu, Some(4096)),
             "bloom" | "bloomz" => (LayerNorm, Gelu, Some(2048)),
             "jamba" => (RmsNorm, Silu, Some(256000)),
             "persimmon" | "adept" => (LayerNorm, Gelu, Some(16384)),
@@ -120,11 +108,7 @@ impl ArchitectureRegistry {
             _ => return None,
         };
 
-        Some(ArchDefaults {
-            norm_type: norm,
-            activation_type: act,
-            default_context_length: ctx,
-        })
+        Some(ArchDefaults { norm_type: norm, activation_type: act, default_context_length: ctx })
     }
 
     /// All recognised architecture name strings (lower-case canonical forms).
@@ -484,8 +468,8 @@ mod tests {
     #[test]
     fn test_core_families_always_present() {
         let core = [
-            "llama", "mistral", "phi", "gemma", "qwen", "gpt", "bert",
-            "falcon", "bitnet", "deepseek",
+            "llama", "mistral", "phi", "gemma", "qwen", "gpt", "bert", "falcon", "bitnet",
+            "deepseek",
         ];
         for family in &core {
             assert!(
@@ -554,15 +538,9 @@ mod property_tests {
 
     #[test]
     fn lookup_and_is_known_agree() {
-        let mut samples: Vec<String> = ArchitectureRegistry::known_architectures()
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        samples.extend(
-            ["unknown", "", "mamba", "\u{1F999}"]
-                .iter()
-                .map(|s| s.to_string()),
-        );
+        let mut samples: Vec<String> =
+            ArchitectureRegistry::known_architectures().iter().map(|s| s.to_string()).collect();
+        samples.extend(["unknown", "", "mamba", "\u{1F999}"].iter().map(|s| s.to_string()));
 
         for s in &samples {
             assert_eq!(

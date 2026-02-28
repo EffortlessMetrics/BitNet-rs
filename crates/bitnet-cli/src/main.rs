@@ -639,10 +639,7 @@ async fn main() -> Result<()> {
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&templates).unwrap());
             } else {
-                println!(
-                    "{:<30} {:<6} {:<8} {}",
-                    "Template", "BOS", "Special", "Stop Sequences"
-                );
+                println!("{:<30} {:<6} {:<8} {}", "Template", "BOS", "Special", "Stop Sequences");
                 println!("{}", "-".repeat(80));
                 for t in TemplateType::all_variants() {
                     let info = t.info();

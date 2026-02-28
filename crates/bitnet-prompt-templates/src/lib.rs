@@ -447,10 +447,7 @@ impl TemplateType {
                 return Self::GemmaChat;
             }
             // [INST] with <<SYS>>/<</SYS>> ΓåÆ Llama2Chat (CodeLlama handled by tokenizer name)
-            if jinja.contains("[INST]")
-                && jinja.contains("<<SYS>>")
-                && jinja.contains("<</SYS>>")
-            {
+            if jinja.contains("[INST]") && jinja.contains("<<SYS>>") && jinja.contains("<</SYS>>") {
                 tracing::debug!(
                     template = "Llama2Chat",
                     source = "gguf_chat_template",
@@ -592,7 +589,10 @@ impl TemplateType {
                 );
                 return Self::TinyLlamaChat;
             }
-            if lower.contains("llama-3.2") || lower.contains("llama3.2") || lower.contains("llama-32") {
+            if lower.contains("llama-3.2")
+                || lower.contains("llama3.2")
+                || lower.contains("llama-32")
+            {
                 tracing::debug!(
                     template = "Llama32Chat",
                     source = "tokenizer_name",
@@ -601,7 +601,10 @@ impl TemplateType {
                 );
                 return Self::Llama32Chat;
             }
-            if lower.contains("llama-3.1") || lower.contains("llama3.1") || lower.contains("llama-31") {
+            if lower.contains("llama-3.1")
+                || lower.contains("llama3.1")
+                || lower.contains("llama-31")
+            {
                 tracing::debug!(
                     template = "Llama31Chat",
                     source = "tokenizer_name",
@@ -737,7 +740,10 @@ impl TemplateType {
                 );
                 return Self::MistralChat;
             }
-            if lower.contains("deepseek-v3") || lower.contains("deepseekv3") || lower.contains("deepseek3") {
+            if lower.contains("deepseek-v3")
+                || lower.contains("deepseekv3")
+                || lower.contains("deepseek3")
+            {
                 tracing::debug!(
                     template = "DeepSeekV3Chat",
                     source = "tokenizer_name",
@@ -1172,9 +1178,8 @@ impl TemplateType {
             Self::OLMo2Chat => Self::apply_olmo2_chat(user_text, system_prompt),
             Self::Llama32Chat => Self::apply_llama32_chat(user_text, system_prompt),
             Self::CohereAya => {
-                let sys = system_prompt.unwrap_or(
-                    "You are Aya, a multilingual AI assistant created by Cohere.",
-                );
+                let sys = system_prompt
+                    .unwrap_or("You are Aya, a multilingual AI assistant created by Cohere.");
                 apply_chatml(sys, user_text)
             }
             Self::SmolLMChat => {
@@ -1687,8 +1692,8 @@ impl TemplateType {
     /// Apply IBM Granite chat format with start_of_role/end_of_role tokens
     fn apply_granite_chat(user_text: &str, system_prompt: Option<&str>) -> String {
         let mut result = String::new();
-        let system = system_prompt
-            .unwrap_or("You are Granite, an AI language model developed by IBM.");
+        let system =
+            system_prompt.unwrap_or("You are Granite, an AI language model developed by IBM.");
         result.push_str("<|start_of_role|>system<|end_of_role|>");
         result.push_str(system);
         result.push('\n');
@@ -1702,8 +1707,7 @@ impl TemplateType {
     /// Apply NVIDIA Nemotron chat format with extra_id tokens
     fn apply_nemotron_chat(user_text: &str, system_prompt: Option<&str>) -> String {
         let mut result = String::new();
-        let system = system_prompt
-            .unwrap_or("You are a helpful, respectful and honest assistant.");
+        let system = system_prompt.unwrap_or("You are a helpful, respectful and honest assistant.");
         result.push_str("<extra_id_0>System\n");
         result.push_str(system);
         result.push('\n');
@@ -1726,8 +1730,7 @@ impl TemplateType {
     /// Apply Meta Llama-2 chat format with [INST]<<SYS>>/<</SYS>> markers
     fn apply_llama2_chat(user_text: &str, system_prompt: Option<&str>) -> String {
         let mut result = String::from("[INST] ");
-        let system = system_prompt
-            .unwrap_or("You are a helpful, respectful and honest assistant.");
+        let system = system_prompt.unwrap_or("You are a helpful, respectful and honest assistant.");
         result.push_str("<<SYS>>\n");
         result.push_str(system);
         result.push_str("\n<</SYS>>\n\n");
@@ -1782,8 +1785,7 @@ impl TemplateType {
 
     /// Apply StableLM ChatML format
     fn apply_stablelm_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let system =
-            system_prompt.unwrap_or("You are a helpful, respectful and honest assistant.");
+        let system = system_prompt.unwrap_or("You are a helpful, respectful and honest assistant.");
         apply_chatml(system, user_text)
     }
 
@@ -1802,8 +1804,8 @@ impl TemplateType {
 
     /// Apply AI21 Labs Jamba ChatML format
     fn apply_jamba_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let system = system_prompt
-            .unwrap_or("You are Jamba, a helpful AI assistant made by AI21 Labs.");
+        let system =
+            system_prompt.unwrap_or("You are Jamba, a helpful AI assistant made by AI21 Labs.");
         apply_chatml(system, user_text)
     }
 
@@ -1896,8 +1898,8 @@ impl TemplateType {
 
     /// Apply Meta Llama 3.1 chat format (same header format as Llama 3, always includes system)
     fn apply_llama31_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let system = system_prompt
-            .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+        let system =
+            system_prompt.unwrap_or("You are a helpful, harmless, and honest AI assistant.");
         let mut result = String::from("<|begin_of_text|>");
         result.push_str("<|start_header_id|>system<|end_header_id|>\n\n");
         result.push_str(system);
@@ -1911,8 +1913,8 @@ impl TemplateType {
 
     /// Apply DeepSeek V3 ChatML format
     fn apply_deepseekv3_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let system = system_prompt
-            .unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
+        let system =
+            system_prompt.unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
         apply_chatml(system, user_text)
     }
 
@@ -1930,8 +1932,8 @@ impl TemplateType {
 
     /// Apply Meta Llama 3.2 chat format (same header format as Llama 3.1)
     fn apply_llama32_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let system = system_prompt
-            .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+        let system =
+            system_prompt.unwrap_or("You are a helpful, harmless, and honest AI assistant.");
         let mut result = String::from("<|begin_of_text|>");
         result.push_str("<|start_header_id|>system<|end_header_id|>\n\n");
         result.push_str(system);
@@ -2003,9 +2005,7 @@ impl TemplateType {
             Self::VicunaChat => {
                 vec!["USER:".to_string(), "</s>".to_string()]
             }
-            Self::OrcaChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::OrcaChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::SolarInstruct => {
                 vec!["### User:".to_string(), "</s>".to_string()]
             }
@@ -2015,9 +2015,7 @@ impl TemplateType {
             Self::CommandRPlus => {
                 vec!["<|END_OF_TURN_TOKEN|>".to_string()]
             }
-            Self::NousHermes => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::NousHermes => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::WizardLM => {
                 vec!["USER:".to_string(), "</s>".to_string()]
             }
@@ -2030,9 +2028,7 @@ impl TemplateType {
             Self::NemotronChat => {
                 vec!["<extra_id_1>".to_string(), "</s>".to_string()]
             }
-            Self::SaigaChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::SaigaChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::Llama2Chat => {
                 vec!["</s>".to_string()]
             }
@@ -2042,75 +2038,47 @@ impl TemplateType {
             Self::Phi3Instruct => {
                 vec!["<|end|>".to_string(), "<|endoftext|>".to_string()]
             }
-            Self::TinyLlamaChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::DolphinChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::ChatGptChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::TinyLlamaChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::DolphinChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::ChatGptChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::MixtralInstruct => {
                 vec!["</s>".to_string()]
             }
-            Self::StableLMChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::StableLMChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::BloomChat => {
                 vec!["User:".to_string(), "</s>".to_string()]
             }
-            Self::JambaChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::JambaChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::PersimmonChat => {
                 vec!["human:".to_string(), "</s>".to_string()]
             }
             Self::XverseChat => {
                 vec!["Human:".to_string(), "</s>".to_string()]
             }
-            Self::Qwen25Chat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::Qwen25Chat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::MistralNemoChat => {
                 vec!["</s>".to_string()]
             }
-            Self::ArcticInstruct => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::DbrxInstruct => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::ArcticInstruct => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::DbrxInstruct => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::ExaoneChat => {
                 vec!["[|endofturn|]".to_string()]
             }
-            Self::MiniCPMChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::MiniCPMChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::CodeGemma => {
                 vec!["<end_of_turn>".to_string(), "<start_of_turn>".to_string()]
             }
             Self::Llama31Chat => {
                 vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()]
             }
-            Self::DeepSeekV3Chat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::Falcon2Chat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::OLMo2Chat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::DeepSeekV3Chat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::Falcon2Chat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::OLMo2Chat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::Llama32Chat => {
                 vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()]
             }
-            Self::CohereAya => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
-            Self::SmolLMChat => {
-                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
-            }
+            Self::CohereAya => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
+            Self::SmolLMChat => CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect(),
             Self::Phi2Instruct => {
                 vec!["Instruct:".to_string(), "</s>".to_string()]
             }
@@ -2174,45 +2142,45 @@ impl TemplateType {
             Self::RwkvWorld => true,   // Simple User:/Assistant: format
             Self::OlmoInstruct => false, // Uses <|user|>/<|assistant|> tokens
             Self::FillInMiddle => false, // Uses <fim_prefix>/<fim_middle> tokens
-            Self::ZephyrChat => false,   // Uses <|system|>/<|user|> tokens
-            Self::VicunaChat => true,    // Simple USER:/ASSISTANT: format
-            Self::OrcaChat => false,     // ChatML uses im_start/im_end tokens
+            Self::ZephyrChat => false, // Uses <|system|>/<|user|> tokens
+            Self::VicunaChat => true,  // Simple USER:/ASSISTANT: format
+            Self::OrcaChat => false,   // ChatML uses im_start/im_end tokens
             Self::SolarInstruct => true, // Simple ### markers, BOS helpful
             Self::AlpacaInstruct => true, // Simple ### markers, BOS helpful
-            Self::CommandRPlus => true,   // Has <BOS_TOKEN> but we handle separately
-            Self::NousHermes => false,    // ChatML uses im_start/im_end tokens
-            Self::WizardLM => true,       // Simple USER:/ASSISTANT: format
-            Self::OpenChat => true,       // Simple GPT4 Correct format
-            Self::GraniteChat => false,   // Uses start_of_role tokens
-            Self::NemotronChat => false,  // Uses extra_id tokens
-            Self::SaigaChat => false,     // ChatML uses im_start/im_end tokens
-            Self::Llama2Chat => true,     // Llama-2 benefits from BOS
-            Self::Gemma2Chat => true,     // Like Gemma, benefits from BOS
-            Self::Phi3Instruct => false,  // Uses <|system|>/<|user|> tokens
-            Self::TinyLlamaChat => true,  // TinyLlama typically needs BOS
-            Self::DolphinChat => false,   // ChatML uses im_start/im_end tokens
-            Self::ChatGptChat => false,   // ChatML uses im_start/im_end tokens
+            Self::CommandRPlus => true, // Has <BOS_TOKEN> but we handle separately
+            Self::NousHermes => false, // ChatML uses im_start/im_end tokens
+            Self::WizardLM => true,    // Simple USER:/ASSISTANT: format
+            Self::OpenChat => true,    // Simple GPT4 Correct format
+            Self::GraniteChat => false, // Uses start_of_role tokens
+            Self::NemotronChat => false, // Uses extra_id tokens
+            Self::SaigaChat => false,  // ChatML uses im_start/im_end tokens
+            Self::Llama2Chat => true,  // Llama-2 benefits from BOS
+            Self::Gemma2Chat => true,  // Like Gemma, benefits from BOS
+            Self::Phi3Instruct => false, // Uses <|system|>/<|user|> tokens
+            Self::TinyLlamaChat => true, // TinyLlama typically needs BOS
+            Self::DolphinChat => false, // ChatML uses im_start/im_end tokens
+            Self::ChatGptChat => false, // ChatML uses im_start/im_end tokens
             Self::MixtralInstruct => true, // Same as Mistral, uses <s>
-            Self::StableLMChat => false,   // ChatML uses im_start/im_end tokens
-            Self::BloomChat => false,      // Simple User:/Assistant: format
-            Self::JambaChat => false,      // ChatML uses im_start/im_end tokens
-            Self::PersimmonChat => false,  // Simple human:/adept: format
-            Self::XverseChat => false,     // Simple Human:/Assistant: format
-            Self::Qwen25Chat => false,     // ChatML uses im_start/im_end tokens
-            Self::MistralNemoChat => true,  // Nemo benefits from BOS
-            Self::ArcticInstruct => false,  // ChatML uses im_start/im_end tokens
-            Self::DbrxInstruct => false,   // ChatML uses im_start/im_end tokens
-            Self::ExaoneChat => false,     // Uses [|system|]/[|endofturn|] tokens
-            Self::MiniCPMChat => false,    // ChatML uses im_start/im_end tokens
-            Self::CodeGemma => true,       // Like Gemma, benefits from BOS
-            Self::Llama31Chat => false,    // Template includes <|begin_of_text|>
+            Self::StableLMChat => false, // ChatML uses im_start/im_end tokens
+            Self::BloomChat => false,  // Simple User:/Assistant: format
+            Self::JambaChat => false,  // ChatML uses im_start/im_end tokens
+            Self::PersimmonChat => false, // Simple human:/adept: format
+            Self::XverseChat => false, // Simple Human:/Assistant: format
+            Self::Qwen25Chat => false, // ChatML uses im_start/im_end tokens
+            Self::MistralNemoChat => true, // Nemo benefits from BOS
+            Self::ArcticInstruct => false, // ChatML uses im_start/im_end tokens
+            Self::DbrxInstruct => false, // ChatML uses im_start/im_end tokens
+            Self::ExaoneChat => false, // Uses [|system|]/[|endofturn|] tokens
+            Self::MiniCPMChat => false, // ChatML uses im_start/im_end tokens
+            Self::CodeGemma => true,   // Like Gemma, benefits from BOS
+            Self::Llama31Chat => false, // Template includes <|begin_of_text|>
             Self::DeepSeekV3Chat => false, // ChatML uses im_start/im_end tokens
-            Self::Falcon2Chat => false,    // ChatML uses im_start/im_end tokens
-            Self::OLMo2Chat => false,      // ChatML uses im_start/im_end tokens
-            Self::Llama32Chat => false,    // Template includes <|begin_of_text|>
-            Self::CohereAya => false,      // ChatML uses im_start/im_end tokens
-            Self::SmolLMChat => false,     // ChatML uses im_start/im_end tokens
-            Self::Phi2Instruct => false,   // Simple Instruct/Output format
+            Self::Falcon2Chat => false, // ChatML uses im_start/im_end tokens
+            Self::OLMo2Chat => false,  // ChatML uses im_start/im_end tokens
+            Self::Llama32Chat => false, // Template includes <|begin_of_text|>
+            Self::CohereAya => false,  // ChatML uses im_start/im_end tokens
+            Self::SmolLMChat => false, // ChatML uses im_start/im_end tokens
+            Self::Phi2Instruct => false, // Simple Instruct/Output format
         }
     }
 
@@ -2722,8 +2690,7 @@ impl TemplateType {
             }
             TemplateType::NousHermes => {
                 // NousHermes ChatML variant
-                let sys = system
-                    .unwrap_or("You are a helpful, honest and harmless AI assistant.");
+                let sys = system.unwrap_or("You are a helpful, honest and harmless AI assistant.");
                 out = render_chatml(sys, history);
             }
             TemplateType::WizardLM => {
@@ -2747,23 +2714,15 @@ impl TemplateType {
                 }
                 write!(out, "ASSISTANT: ")?;
             }
-            TemplateType::OpenChat=> {
+            TemplateType::OpenChat => {
                 // OpenChat GPT4 Correct format
                 for turn in history {
                     match turn.role {
                         ChatRole::User => {
-                            write!(
-                                out,
-                                "GPT4 Correct User: {}<|end_of_turn|>",
-                                turn.text
-                            )?;
+                            write!(out, "GPT4 Correct User: {}<|end_of_turn|>", turn.text)?;
                         }
                         ChatRole::Assistant => {
-                            write!(
-                                out,
-                                "GPT4 Correct Assistant: {}<|end_of_turn|>",
-                                turn.text
-                            )?;
+                            write!(out, "GPT4 Correct Assistant: {}<|end_of_turn|>", turn.text)?;
                         }
                         ChatRole::System => {}
                     }
@@ -2772,8 +2731,8 @@ impl TemplateType {
             }
             TemplateType::GraniteChat => {
                 // Granite role-token format
-                let sys = system
-                    .unwrap_or("You are Granite, an AI language model developed by IBM.");
+                let sys =
+                    system.unwrap_or("You are Granite, an AI language model developed by IBM.");
                 writeln!(out, "<|start_of_role|>system<|end_of_role|>{}", sys)?;
                 for turn in history {
                     let role = turn.role.as_str();
@@ -2783,8 +2742,7 @@ impl TemplateType {
             }
             TemplateType::NemotronChat => {
                 // Nemotron extra_id format
-                let sys = system
-                    .unwrap_or("You are a helpful, respectful and honest assistant.");
+                let sys = system.unwrap_or("You are a helpful, respectful and honest assistant.");
                 write!(out, "<extra_id_0>System\n{}\n", sys)?;
                 for turn in history {
                     match turn.role {
@@ -2809,8 +2767,7 @@ impl TemplateType {
             }
             TemplateType::Llama2Chat => {
                 // Llama-2 [INST]<<SYS>>/<</SYS>> format
-                let sys = system
-                    .unwrap_or("You are a helpful, respectful and honest assistant.");
+                let sys = system.unwrap_or("You are a helpful, respectful and honest assistant.");
                 let mut first_user = true;
                 for turn in history {
                     match turn.role {
@@ -2833,11 +2790,7 @@ impl TemplateType {
                     }
                 }
                 if first_user {
-                    write!(
-                        out,
-                        "[INST] <<SYS>>\n{}\n<</SYS>>\n\n [/INST] ",
-                        sys
-                    )?;
+                    write!(out, "[INST] <<SYS>>\n{}\n<</SYS>>\n\n [/INST] ", sys)?;
                 }
             }
             TemplateType::Gemma2Chat => {
@@ -2918,9 +2871,7 @@ impl TemplateType {
                 }
             }
             TemplateType::StableLMChat => {
-                let sys = system.unwrap_or(
-                    "You are a helpful, respectful and honest assistant.",
-                );
+                let sys = system.unwrap_or("You are a helpful, respectful and honest assistant.");
                 out = render_chatml(sys, history);
             }
             TemplateType::BloomChat => {
@@ -2941,9 +2892,8 @@ impl TemplateType {
                 write!(out, "Assistant: ")?;
             }
             TemplateType::JambaChat => {
-                let sys = system.unwrap_or(
-                    "You are Jamba, a helpful AI assistant made by AI21 Labs.",
-                );
+                let sys =
+                    system.unwrap_or("You are Jamba, a helpful AI assistant made by AI21 Labs.");
                 out = render_chatml(sys, history);
             }
             TemplateType::PersimmonChat => {
@@ -3011,15 +2961,13 @@ impl TemplateType {
                 out = render_chatml(sys, history);
             }
             TemplateType::DbrxInstruct => {
-                let sys = system.unwrap_or(
-                    "You are DBRX, created by Databricks. You are a helpful assistant.",
-                );
+                let sys = system
+                    .unwrap_or("You are DBRX, created by Databricks. You are a helpful assistant.");
                 out = render_chatml(sys, history);
             }
             TemplateType::ExaoneChat => {
-                let sys = system.unwrap_or(
-                    "You are EXAONE model from LG AI Research, a helpful assistant.",
-                );
+                let sys = system
+                    .unwrap_or("You are EXAONE model from LG AI Research, a helpful assistant.");
                 writeln!(out, "[|system|]{}[|endofturn|]", sys)?;
                 for turn in history {
                     match turn.role {
@@ -3068,13 +3016,8 @@ impl TemplateType {
                 // Llama 3.1 format with <|begin_of_text|> prefix
                 out.push_str("<|begin_of_text|>");
 
-                let sys = system
-                    .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
-                write!(
-                    out,
-                    "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>",
-                    sys
-                )?;
+                let sys = system.unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+                write!(out, "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>", sys)?;
 
                 for turn in history {
                     let role = turn.role.as_str();
@@ -3088,8 +3031,8 @@ impl TemplateType {
                 write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
             }
             TemplateType::DeepSeekV3Chat => {
-                let sys = system
-                    .unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
+                let sys =
+                    system.unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
                 out = render_chatml(sys, history);
             }
             TemplateType::Falcon2Chat => {
@@ -3103,13 +3046,8 @@ impl TemplateType {
             TemplateType::Llama32Chat => {
                 out.push_str("<|begin_of_text|>");
 
-                let sys = system
-                    .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
-                write!(
-                    out,
-                    "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>",
-                    sys
-                )?;
+                let sys = system.unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+                write!(out, "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>", sys)?;
 
                 for turn in history {
                     let role = turn.role.as_str();
@@ -3123,9 +3061,8 @@ impl TemplateType {
                 write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
             }
             TemplateType::CohereAya => {
-                let sys = system.unwrap_or(
-                    "You are Aya, a multilingual AI assistant created by Cohere.",
-                );
+                let sys =
+                    system.unwrap_or("You are Aya, a multilingual AI assistant created by Cohere.");
                 out = render_chatml(sys, history);
             }
             TemplateType::SmolLMChat => {
@@ -3185,15 +3122,13 @@ impl TemplateType {
             if output_count > structural_count {
                 warnings.push(format!(
                     "Stop sequence {:?} found {} extra time(s) beyond template structure",
-                    stop, output_count - structural_count
+                    stop,
+                    output_count - structural_count
                 ));
             }
         }
 
-        TemplateValidation {
-            is_valid: warnings.is_empty(),
-            warnings,
-        }
+        TemplateValidation { is_valid: warnings.is_empty(), warnings }
     }
 
     /// Returns a human-readable summary of this template type's configuration.
@@ -4018,24 +3953,32 @@ mod tests {
     #[test]
     fn test_all_templates_validate_own_output() {
         for template in &[
-            TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat,
-            TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat,
-            TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder,
-            TemplateType::FalconChat, TemplateType::CodeLlamaInstruct,
-            TemplateType::CohereCommand, TemplateType::InternLMChat,
-            TemplateType::YiChat, TemplateType::BaichuanChat,
-            TemplateType::ChatGLMChat, TemplateType::MptInstruct,
-            TemplateType::RwkvWorld, TemplateType::OlmoInstruct,
-            TemplateType::FillInMiddle, TemplateType::ZephyrChat,
+            TemplateType::Raw,
+            TemplateType::Instruct,
+            TemplateType::Llama3Chat,
+            TemplateType::Phi4Chat,
+            TemplateType::QwenChat,
+            TemplateType::GemmaChat,
+            TemplateType::MistralChat,
+            TemplateType::DeepSeekChat,
+            TemplateType::StarCoder,
+            TemplateType::FalconChat,
+            TemplateType::CodeLlamaInstruct,
+            TemplateType::CohereCommand,
+            TemplateType::InternLMChat,
+            TemplateType::YiChat,
+            TemplateType::BaichuanChat,
+            TemplateType::ChatGLMChat,
+            TemplateType::MptInstruct,
+            TemplateType::RwkvWorld,
+            TemplateType::OlmoInstruct,
+            TemplateType::FillInMiddle,
+            TemplateType::ZephyrChat,
             TemplateType::VicunaChat,
         ] {
             let output = template.apply("Test input", None);
             let v = template.validate_output(&output, "Test input");
-            assert!(
-                v.is_valid,
-                "Template {:?} failed self-validation: {:?}",
-                template, v.warnings
-            );
+            assert!(v.is_valid, "Template {:?} failed self-validation: {:?}", template, v.warnings);
         }
     }
 }
@@ -4967,10 +4910,7 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_alpaca_from_jinja() {
-        let t = TemplateType::detect(
-            None,
-            Some("### Instruction: {content}\n### Response:"),
-        );
+        let t = TemplateType::detect(None, Some("### Instruction: {content}\n### Response:"));
         assert_eq!(t, TemplateType::AlpacaInstruct);
     }
 
@@ -5098,10 +5038,7 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_wizard_lm_from_jinja() {
-        let t = TemplateType::detect(
-            None,
-            Some("A chat between USER: text ASSISTANT: response"),
-        );
+        let t = TemplateType::detect(None, Some("A chat between USER: text ASSISTANT: response"));
         assert_eq!(t, TemplateType::WizardLM);
     }
 
@@ -5177,9 +5114,9 @@ mod detect_logging_tests {
         let t = TemplateType::TinyLlamaChat;
         let result = t.apply("Hello!", None);
         assert!(result.contains("<|im_start|>system\n"));
-        assert!(result.contains(
-            "You are a friendly chatbot who always responds in a helpful manner."
-        ));
+        assert!(
+            result.contains("You are a friendly chatbot who always responds in a helpful manner.")
+        );
         assert!(result.contains("<|im_end|>"));
         assert!(result.contains("<|im_start|>user\nHello!"));
         assert!(result.ends_with("<|im_start|>assistant\n"));
@@ -5203,10 +5140,7 @@ mod detect_logging_tests {
 
     #[test]
     fn test_tinyllama_does_not_match_llama3() {
-        assert_eq!(
-            TemplateType::detect(Some("tinyllama"), None),
-            TemplateType::TinyLlamaChat
-        );
+        assert_eq!(TemplateType::detect(Some("tinyllama"), None), TemplateType::TinyLlamaChat);
     }
 
     #[test]
@@ -5293,26 +5227,14 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_chatgpt_from_name() {
-        assert_eq!(
-            TemplateType::detect(Some("chatgpt-4o"), None),
-            TemplateType::ChatGptChat
-        );
-        assert_eq!(
-            TemplateType::detect(Some("gpt-4-turbo"), None),
-            TemplateType::ChatGptChat
-        );
-        assert_eq!(
-            TemplateType::detect(Some("gpt4-gguf"), None),
-            TemplateType::ChatGptChat
-        );
+        assert_eq!(TemplateType::detect(Some("chatgpt-4o"), None), TemplateType::ChatGptChat);
+        assert_eq!(TemplateType::detect(Some("gpt-4-turbo"), None), TemplateType::ChatGptChat);
+        assert_eq!(TemplateType::detect(Some("gpt4-gguf"), None), TemplateType::ChatGptChat);
     }
 
     #[test]
     fn test_chatgpt_does_not_match_gpt2() {
-        assert_ne!(
-            TemplateType::detect(Some("gpt2-medium"), None),
-            TemplateType::ChatGptChat
-        );
+        assert_ne!(TemplateType::detect(Some("gpt2-medium"), None), TemplateType::ChatGptChat);
     }
 
     #[test]
@@ -5529,7 +5451,10 @@ mod detect_logging_tests {
     #[test]
     fn test_detect_falcon2_from_name() {
         assert_eq!(TemplateType::detect(Some("falcon-2-11b"), None), TemplateType::Falcon2Chat);
-        assert_eq!(TemplateType::detect(Some("tiiuae/falcon2-chat"), None), TemplateType::Falcon2Chat);
+        assert_eq!(
+            TemplateType::detect(Some("tiiuae/falcon2-chat"), None),
+            TemplateType::Falcon2Chat
+        );
     }
 
     #[test]
@@ -5575,7 +5500,10 @@ mod detect_logging_tests {
     #[test]
     fn test_detect_olmo2_from_name() {
         assert_eq!(TemplateType::detect(Some("olmo-2-1124-7b"), None), TemplateType::OLMo2Chat);
-        assert_eq!(TemplateType::detect(Some("allenai/olmo2-instruct"), None), TemplateType::OLMo2Chat);
+        assert_eq!(
+            TemplateType::detect(Some("allenai/olmo2-instruct"), None),
+            TemplateType::OLMo2Chat
+        );
     }
 
     #[test]
@@ -5621,8 +5549,14 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_llama32_from_name() {
-        assert_eq!(TemplateType::detect(Some("llama-3.2-3b-instruct"), None), TemplateType::Llama32Chat);
-        assert_eq!(TemplateType::detect(Some("meta-llama/llama3.2-1b"), None), TemplateType::Llama32Chat);
+        assert_eq!(
+            TemplateType::detect(Some("llama-3.2-3b-instruct"), None),
+            TemplateType::Llama32Chat
+        );
+        assert_eq!(
+            TemplateType::detect(Some("meta-llama/llama3.2-1b"), None),
+            TemplateType::Llama32Chat
+        );
         assert_eq!(TemplateType::detect(Some("llama-32-chat"), None), TemplateType::Llama32Chat);
     }
 

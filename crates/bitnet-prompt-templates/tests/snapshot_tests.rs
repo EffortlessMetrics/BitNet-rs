@@ -89,8 +89,8 @@ fn snapshot_phi4_single_turn() {
 
 #[test]
 fn snapshot_phi4_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::Phi4Chat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::Phi4Chat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("phi4_with_system", out);
 }
@@ -113,8 +113,8 @@ fn snapshot_qwen_single_turn() {
 
 #[test]
 fn snapshot_qwen_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::QwenChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::QwenChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("qwen_with_system", out);
 }
@@ -137,8 +137,8 @@ fn snapshot_gemma_single_turn() {
 
 #[test]
 fn snapshot_gemma_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::GemmaChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::GemmaChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("gemma_with_system", out);
 }
@@ -169,8 +169,8 @@ fn snapshot_mistral_with_system() {
 
 #[test]
 fn snapshot_mistral_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::MistralChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::MistralChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("mistral_multi_turn", out);
@@ -213,8 +213,8 @@ fn snapshot_starcoder_single_turn() {
 
 #[test]
 fn snapshot_starcoder_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::StarCoder)
-        .with_system_prompt("You are a Python expert.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::StarCoder).with_system_prompt("You are a Python expert.");
     let out = tmpl.format("Write a sort function.");
     insta::assert_snapshot!("starcoder_with_system", out);
 }
@@ -247,8 +247,8 @@ fn snapshot_falcon_with_system() {
 
 #[test]
 fn snapshot_falcon_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::FalconChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::FalconChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("falcon_multi_turn", out);
@@ -343,16 +343,16 @@ fn snapshot_yi_single_turn() {
 
 #[test]
 fn snapshot_yi_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::YiChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::YiChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("yi_with_system", out);
 }
 
 #[test]
 fn snapshot_yi_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::YiChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::YiChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("yi_multi_turn", out);
@@ -403,8 +403,8 @@ fn snapshot_chatglm_with_system() {
 
 #[test]
 fn snapshot_chatglm_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::ChatGLMChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::ChatGLMChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("chatglm_multi_turn", out);
@@ -429,8 +429,8 @@ fn snapshot_mpt_with_system() {
 
 #[test]
 fn snapshot_mpt_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::MptInstruct)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::MptInstruct).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("mpt_multi_turn", out);
@@ -447,8 +447,8 @@ fn test_rwkv_world_single_turn() {
 
 #[test]
 fn test_rwkv_world_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::RwkvWorld)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::RwkvWorld).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("rwkv_world_with_system", out);
 }
@@ -499,16 +499,15 @@ fn snapshot_fim_single_turn() {
 
 #[test]
 fn snapshot_fim_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::FillInMiddle)
-        .with_system_prompt("return result");
+    let tmpl = PromptTemplate::new(TemplateType::FillInMiddle).with_system_prompt("return result");
     let out = tmpl.format("def fibonacci(n):");
     insta::assert_snapshot!("fim_with_system", out);
 }
 
 #[test]
 fn snapshot_fim_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::FillInMiddle)
-        .with_system_prompt("return result");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::FillInMiddle).with_system_prompt("return result");
     tmpl.add_turn("Write hello world", "print('Hello, world!')");
     let out = tmpl.format("def sort(arr):");
     insta::assert_snapshot!("fim_multi_turn", out);
@@ -533,8 +532,8 @@ fn snapshot_zephyr_with_system() {
 
 #[test]
 fn snapshot_zephyr_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::ZephyrChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::ZephyrChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("zephyr_multi_turn", out);
@@ -559,8 +558,8 @@ fn snapshot_vicuna_with_system() {
 
 #[test]
 fn snapshot_vicuna_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::VicunaChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::VicunaChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("vicuna_multi_turn", out);
@@ -577,8 +576,8 @@ fn snapshot_orca_single_turn() {
 
 #[test]
 fn snapshot_orca_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::OrcaChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::OrcaChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("orca_with_system", out);
 }
@@ -689,8 +688,8 @@ fn snapshot_noushermes_with_system() {
 
 #[test]
 fn snapshot_noushermes_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::NousHermes)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::NousHermes).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("noushermes_multi_turn", out);
@@ -707,16 +706,16 @@ fn snapshot_wizardlm_single_turn() {
 
 #[test]
 fn snapshot_wizardlm_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::WizardLM)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::WizardLM).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("wizardlm_with_system", out);
 }
 
 #[test]
 fn snapshot_wizardlm_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::WizardLM)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::WizardLM).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("wizardlm_multi_turn", out);
@@ -733,16 +732,16 @@ fn snapshot_openchat_single_turn() {
 
 #[test]
 fn snapshot_openchat_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::OpenChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::OpenChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("openchat_with_system", out);
 }
 
 #[test]
 fn snapshot_openchat_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::OpenChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::OpenChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("openchat_multi_turn", out);
@@ -767,8 +766,8 @@ fn snapshot_granite_with_system() {
 
 #[test]
 fn snapshot_granite_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::GraniteChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::GraniteChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("granite_multi_turn", out);
@@ -811,16 +810,16 @@ fn snapshot_saiga_single_turn() {
 
 #[test]
 fn snapshot_saiga_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::SaigaChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::SaigaChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("saiga_with_system", out);
 }
 
 #[test]
 fn snapshot_saiga_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::SaigaChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::SaigaChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("saiga_multi_turn", out);
@@ -845,8 +844,8 @@ fn snapshot_llama2_with_system() {
 
 #[test]
 fn snapshot_llama2_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Llama2Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Llama2Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("llama2_multi_turn", out);
@@ -871,8 +870,8 @@ fn snapshot_gemma2_with_system() {
 
 #[test]
 fn snapshot_gemma2_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Gemma2Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Gemma2Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("gemma2_multi_turn", out);
@@ -949,8 +948,8 @@ fn snapshot_dolphin_with_system() {
 
 #[test]
 fn snapshot_dolphin_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::DolphinChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::DolphinChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("dolphin_multi_turn", out);
@@ -975,8 +974,8 @@ fn snapshot_chatgpt_with_system() {
 
 #[test]
 fn snapshot_chatgpt_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::ChatGptChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::ChatGptChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("chatgpt_multi_turn", out);
@@ -1079,8 +1078,8 @@ fn snapshot_exaone_with_system() {
 
 #[test]
 fn snapshot_exaone_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::ExaoneChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::ExaoneChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("exaone_multi_turn", out);
@@ -1105,8 +1104,8 @@ fn snapshot_minicpm_with_system() {
 
 #[test]
 fn snapshot_minicpm_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::MiniCPMChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::MiniCPMChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("minicpm_multi_turn", out);
@@ -1123,16 +1122,16 @@ fn snapshot_bloom_single_turn() {
 
 #[test]
 fn snapshot_bloom_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::BloomChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::BloomChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("bloom_with_system", out);
 }
 
 #[test]
 fn snapshot_bloom_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::BloomChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::BloomChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("bloom_multi_turn", out);
@@ -1149,16 +1148,16 @@ fn snapshot_jamba_single_turn() {
 
 #[test]
 fn snapshot_jamba_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::JambaChat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::JambaChat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("jamba_with_system", out);
 }
 
 #[test]
 fn snapshot_jamba_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::JambaChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::JambaChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("jamba_multi_turn", out);
@@ -1209,8 +1208,8 @@ fn snapshot_xverse_with_system() {
 
 #[test]
 fn snapshot_xverse_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::XverseChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::XverseChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("xverse_multi_turn", out);
@@ -1235,8 +1234,8 @@ fn snapshot_qwen25_with_system() {
 
 #[test]
 fn snapshot_qwen25_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Qwen25Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Qwen25Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("qwen25_multi_turn", out);
@@ -1305,8 +1304,8 @@ fn snapshot_codegemma_single_turn() {
 
 #[test]
 fn snapshot_codegemma_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::CodeGemma)
-        .with_system_prompt("You are a Python expert.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::CodeGemma).with_system_prompt("You are a Python expert.");
     let out = tmpl.format("Write a sort function.");
     insta::assert_snapshot!("codegemma_with_system", out);
 }
@@ -1339,8 +1338,8 @@ fn snapshot_llama31_with_system() {
 
 #[test]
 fn snapshot_llama31_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Llama31Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Llama31Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("llama31_multi_turn", out);
@@ -1383,16 +1382,16 @@ fn snapshot_cohere_aya_single_turn() {
 
 #[test]
 fn snapshot_cohere_aya_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::CohereAya)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::CohereAya).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("cohere_aya_with_system", out);
 }
 
 #[test]
 fn snapshot_cohere_aya_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::CohereAya)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::CohereAya).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("cohere_aya_multi_turn", out);
@@ -1417,8 +1416,8 @@ fn snapshot_smollm_with_system() {
 
 #[test]
 fn snapshot_smollm_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::SmolLMChat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::SmolLMChat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("smollm_multi_turn", out);
@@ -1469,8 +1468,8 @@ fn snapshot_falcon2_with_system() {
 
 #[test]
 fn snapshot_falcon2_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Falcon2Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Falcon2Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("falcon2_multi_turn", out);
@@ -1487,16 +1486,16 @@ fn snapshot_olmo2_single_turn() {
 
 #[test]
 fn snapshot_olmo2_with_system() {
-    let tmpl = PromptTemplate::new(TemplateType::OLMo2Chat)
-        .with_system_prompt("You are a science tutor.");
+    let tmpl =
+        PromptTemplate::new(TemplateType::OLMo2Chat).with_system_prompt("You are a science tutor.");
     let out = tmpl.format("What is ATP?");
     insta::assert_snapshot!("olmo2_with_system", out);
 }
 
 #[test]
 fn snapshot_olmo2_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::OLMo2Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::OLMo2Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("olmo2_multi_turn", out);
@@ -1521,8 +1520,8 @@ fn snapshot_llama32_with_system() {
 
 #[test]
 fn snapshot_llama32_multi_turn() {
-    let mut tmpl = PromptTemplate::new(TemplateType::Llama32Chat)
-        .with_system_prompt("You are a Rust expert.");
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Llama32Chat).with_system_prompt("You are a Rust expert.");
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("llama32_multi_turn", out);

@@ -1929,12 +1929,7 @@ mod tests {
         let matrix = ModelCompatibilityMatrix::default();
         for (name, entry) in all_matrix_entries(&matrix) {
             if let Some(vocab) = entry.expected_vocab {
-                assert!(
-                    vocab > 0,
-                    "Entry '{}' has non-positive vocab_size: {}",
-                    name,
-                    vocab
-                );
+                assert!(vocab > 0, "Entry '{}' has non-positive vocab_size: {}", name, vocab);
             }
         }
     }
@@ -1945,8 +1940,21 @@ mod tests {
         let matrix = ModelCompatibilityMatrix::default();
         let entries = all_matrix_entries(&matrix);
         let expected_families = [
-            "llama3", "llama2", "phi4", "qwen2", "gemma", "mistral", "deepseek", "starcoder",
-            "falcon", "gpt2", "bitnet", "yi", "baichuan", "chatglm", "mpt",
+            "llama3",
+            "llama2",
+            "phi4",
+            "qwen2",
+            "gemma",
+            "mistral",
+            "deepseek",
+            "starcoder",
+            "falcon",
+            "gpt2",
+            "bitnet",
+            "yi",
+            "baichuan",
+            "chatglm",
+            "mpt",
         ];
         for family in &expected_families {
             assert!(

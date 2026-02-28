@@ -96,7 +96,6 @@ pub enum NormType {
     RmsNorm,
 }
 
-
 /// Activation function type used in feed-forward layers
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ActivationType {
