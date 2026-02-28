@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -119,6 +119,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
     ) {
         let s = template.to_string();
@@ -134,6 +135,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -184,7 +186,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat),
             "detect() returned an unexpected variant"
         );
     }
@@ -215,6 +217,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
     ) {
         let out = template.apply("", None);
@@ -230,6 +233,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -248,6 +252,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -313,6 +318,7 @@ proptest! {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -347,6 +353,34 @@ proptest! {
         let t = TemplateType::Phi4Chat;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("phi4-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// QwenChat template always includes <|im_start|> and <|im_end|> in its output.
+    #[test]
+    fn prop_qwen_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::QwenChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "QwenChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "QwenChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// QwenChat display/parse round-trips correctly.
+    #[test]
+    fn prop_qwen_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::QwenChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("qwen-chat must parse");
         prop_assert_eq!(t, parsed);
     }
 }
