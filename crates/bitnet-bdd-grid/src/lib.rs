@@ -251,6 +251,40 @@ fn build_curated_rows() -> Box<[BddCell]> {
             forbidden_features: FeatureSet::new(),
             intent: "Engine-core session contracts match C++ reference for all decode-step invariants",
         },
+        // Feature: metal — Scenario: "Metal backend compiles and exposes GPU capability"
+        // Reason: An EndToEnd/Local cell verifies the `metal` feature gate compiles without errors
+        // on all platforms. Metal is macOS/iOS only but compile-time checks run everywhere
+        // to catch feature-flag regressions before macOS runners are needed.
+        BddCell {
+            scenario: TestingScenario::EndToEnd,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["cpu", "metal"]),
+            optional_features: feature_set_from_names(&["reporting"]),
+            forbidden_features: feature_set_from_names(&["cuda"]),
+            intent: "Metal backend feature gate compiles without errors (compile-only check)",
+        },
+        // Feature: vulkan — Scenario: "Vulkan backend compiles and probes availability"
+        // Reason: A Minimal/PreProduction cell verifies that `--features vulkan` compiles.
+        // Runtime probe returns `false` without a Vulkan GPU — only compile-time coverage needed.
+        BddCell {
+            scenario: TestingScenario::Minimal,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["cpu", "vulkan"]),
+            optional_features: feature_set_from_names(&["reporting"]),
+            forbidden_features: feature_set_from_names(&["cuda"]),
+            intent: "Vulkan backend feature gate compiles and probe reports compiled=true",
+        },
+        // Feature: oneapi — Scenario: "Intel oneAPI backend compiles without errors"
+        // Reason: A Development/PreProduction cell verifies the `oneapi` feature gate compiles.
+        // oneAPI runtime requires Intel hardware; only compile coverage is checked in CI.
+        BddCell {
+            scenario: TestingScenario::Development,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["cpu", "oneapi"]),
+            optional_features: feature_set_from_names(&["reporting"]),
+            forbidden_features: feature_set_from_names(&["cuda"]),
+            intent: "Intel oneAPI backend feature gate compiles without errors (compile-only check)",
+        },
     ]
     .into_boxed_slice()
 }

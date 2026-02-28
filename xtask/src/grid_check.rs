@@ -16,6 +16,9 @@ fn bdd_feature_to_cargo(name: &str) -> Option<&'static str> {
         "tokenizers" => Some("cpu"),
         "gpu" => Some("gpu"),
         "cuda" => Some("cuda"),
+        "metal" => Some("metal"),
+        "vulkan" => Some("vulkan"),
+        "oneapi" => Some("oneapi"),
         // crossval requires external C++ deps (BITNET_CPP_DIR) – skip in CI
         "crossval" => None,
         "server" => Some("full-cli"),
