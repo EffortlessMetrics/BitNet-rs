@@ -13,3 +13,5 @@ pub use wasm_shim::{
 pub mod usm;
 pub mod p2p;
 pub mod async_exec;
+pub mod graph;
+pub use graph::*;

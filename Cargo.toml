@@ -2,13 +2,11 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
-  "crates/bitnet-opencl",       # OpenCL GPU backend
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",
   "crates/bitnet-bdd-grid-core",
   "crates/bitnet-compat",
-  "crates/bitnet-opencl",       # WASM-compatible OpenCL kernel validation shim
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
   "crates/bitnet-runtime-feature-flags",
   "crates/bitnet-runtime-feature-flags-core",
@@ -24,7 +22,6 @@ members = [
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
-  "crates/bitnet-opencl",        # OpenCL 3.0 backend with USM support
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
@@ -35,7 +32,6 @@ members = [
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
-  "crates/bitnet-opencl",       # OpenCL backend utilities (P2P transfer, etc.)
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-runtime-bootstrap",
@@ -63,18 +59,13 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-"crates/bitnet-vulkan",        # Vulkan compute backend
-"crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
-"crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
   "crossval",
   "tests",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-"crates/bitnet-metal",        # Metal compute backend (Apple Silicon)
-"crates/bitnet-webgpu",       # WebGPU compute backend (wgpu)
-"crates/bitnet-rocm",         # AMD ROCm/HIP backend
+  "crates/bitnet-opencl",       # OpenCL graph-based execution engine
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -105,7 +96,6 @@ default-members = [
   "crates/bitnet-runtime-profile-core",
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
-  "crates/bitnet-opencl",
   "crates/bitnet-logits",
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
@@ -163,7 +153,6 @@ bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi"
 bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", optional = true }
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
-bitnet-vulkan = { path = "crates/bitnet-vulkan", version = "0.2.1-dev", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -220,12 +209,8 @@ spm = []                                                                        
 cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
-vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu", "dep:bitnet-vulkan"]
-webgpu = [] # Handled by bitnet-webgpu crate
-level-zero = ["kernels", "inference", "tokenizers"]  # Intel Level-Zero backend
-rocm = [] # Handled by bitnet-rocm crate
+vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
-metal-compute = [] # Handled by bitnet-metal crate
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
@@ -297,11 +282,6 @@ required-features = ["cpu", "ffi"]
 name = "srp_ops"
 harness = false
 required-features = ["cpu"]
-
-[[bench]]
-name = "opencl_ops"
-harness = false
-required-features = ["bench"]
 
 [workspace.dependencies]
 # Core dependencies
