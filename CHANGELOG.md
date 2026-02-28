@@ -26,9 +26,16 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Cohere Command template**: Add `CohereCommand` template with `<|START_OF_TURN_TOKEN|>`/`<|CHATBOT_TOKEN|>` format, `command_256k` tokenizer entry (255K vocab), and auto-detection from GGUF and model name.
 - **InternLM chat template**: Add `InternLMChat` template (ChatML format), `internlm_103k` tokenizer entry (103K vocab), and auto-detection from model name.
 - **Architecture registry expansion**: Add CodeLlama, Cohere Command/Command-R, InternLM/InternLM2, Yi/Yi-1.5, Baichuan/Baichuan2, ChatGLM/GLM-4, and MPT to the architecture registry (36 total architecture strings).
+- **Yi chat template**: Add `YiChat` template (ChatML format), `yi_64k` tokenizer entry (64K vocab), and auto-detection from model name.
+- **Baichuan chat template**: Add `BaichuanChat` template with `<reserved_106>`/`<reserved_107>` token format, `baichuan_64k` tokenizer entry (126K vocab), and auto-detection from model name.
+- **ChatGLM/GLM-4 chat template**: Add `ChatGLMChat` template with `[gMASK]<sop>`, `<|user|>`/`<|assistant|>` format, `chatglm_65k` tokenizer entry (65K vocab), and auto-detection from GGUF metadata and model name.
+- **MPT instruct template**: Add `MptInstruct` template with `### Instruction`/`### Response` format, `mpt_50k` tokenizer entry (50K vocab), and auto-detection from GGUF metadata and model name.
+- **Supported architectures README table**: Add comprehensive table listing all 17 model families with norm type, activation, template, and tokenizer info.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
+- **Root directory cleanup**: Remove 34 temporary files (Python scripts, patches, summary text files, temp .rs files) accumulated during development.
+- **Clippy lint fixes**: Collapse nested if-let per `collapsible_if` lint in config.rs and prompt-templates lib.rs.
 - `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
 - `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
 
