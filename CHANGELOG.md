@@ -31,16 +31,26 @@ All notable changes to bitnet-rs will be documented in this file.
 - **ChatGLM/GLM-4 chat template**: Add `ChatGLMChat` template with `[gMASK]<sop>`, `<|user|>`/`<|assistant|>` format, `chatglm_65k` tokenizer entry (65K vocab), and auto-detection from GGUF metadata and model name.
 - **MPT instruct template**: Add `MptInstruct` template with `### Instruction`/`### Response` format, `mpt_50k` tokenizer entry (50K vocab), and auto-detection from GGUF metadata and model name.
 - **Supported architectures README table**: Add comprehensive table listing all 17 model families with norm type, activation, template, and tokenizer info.
+- **`list-architectures` CLI command**: Add new `ListArchitectures` subcommand to bitnet-cli with `--json` flag. Displays all supported architectures with norm type, activation, and context length defaults.
+- **Architecture integration tests**: Add 8 integration tests verifying end-to-end architecture defaults flow (Phi-4, LLaMA, GPT, BitNet, idempotency, family coverage).
+- **Snapshot test completeness**: Add 5 missing snapshot tests (Raw with_system/multi_turn, StarCoder single_turn/with_system/multi_turn) — now 51 total covering all 17 variants × 3 scenarios.
+- **Tokenizer discovery validation tests**: Add 7 tests verifying all 18 tokenizer entries have valid repos, vocab sizes, cache keys, and family coverage.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
 - **Root directory cleanup**: Remove 34 temporary files (Python scripts, patches, summary text files, temp .rs files) accumulated during development.
 - **Clippy lint fixes**: Collapse nested if-let per `collapsible_if` lint in config.rs and prompt-templates lib.rs.
+- **CLAUDE.md count fixes**: Update template count (13→17) and tokenizer entry count (14→18) in project documentation.
 - `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
 - `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
 
 ### Fixed
 - `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
+
+### Testing
+- **Architecture registry edge cases**: Add 7 tests for unicode, whitespace, special characters, very long strings, validity invariants, and unique lowercase forms.
+- **Config defaults edge cases**: Add 6 tests for non-2048 max_position preservation, unicode architecture names, all case variants, empty/whitespace strings, and all-families validation.
+- **Template detect edge cases**: Add 12 tests for jinja-over-name priority, ChatML override, empty inputs, mixed-case names, name substrings, jinja variants, and full family coverage.
 
 ### Documentation
 - `docs: add canonical CUDA GPU setup guide` — Comprehensive CUDA GPU setup guide with corrected build command examples and environment configuration (#998)
