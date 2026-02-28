@@ -26,12 +26,12 @@ pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_k
 #[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub mod ffi_session; // FFI session wrapper for validation-only parity checking
 pub mod parity;
+pub mod prefix_cache;
 pub mod profiler;
 pub mod rt;
 pub mod runtime_utils;
 pub mod sampling;
 pub mod simple_forward;
-pub mod speculative;
 pub mod streaming;
 pub mod tensor_parallel;
 // Only compile the shim when tests or a GPU feature need it
@@ -63,6 +63,10 @@ pub use parity::{
     eval_logits_all_positions, eval_logits_incremental, eval_logits_once,
     eval_logits_once_for_parity, get_model_config, get_model_vocab_size,
 };
+pub use prefix_cache::{
+    CacheEntry as PrefixCacheEntry, EvictionPolicy as PrefixEvictionPolicy, PrefixCache,
+    PrefixCacheConfig, PrefixCacheStats,
+};
 pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
     ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
@@ -75,7 +79,6 @@ pub use receipts::{
 // Re-export CorrectionRecord from bitnet-common for convenience
 pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
-pub use speculative::{SpeculativeConfig, SpeculativeDecoder, SpeculativeResult, SpeculativeStats};
 pub use streaming::{GenerationStream, StreamingConfig};
 pub use thread_pool::{InferenceThreadPool, ThreadPoolConfig, ThreadPoolMetrics};
 
