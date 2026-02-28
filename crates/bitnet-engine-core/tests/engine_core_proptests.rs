@@ -110,7 +110,7 @@ proptest! {
         tokens_generated in 0usize..1_000_000,
         tokens_per_second in 0.0f64..1_000_000.0f64,
     ) {
-        let stats = GenerationStats { tokens_generated, tokens_per_second };
+        let stats = GenerationStats { tokens_generated, tokens_per_second, ..Default::default() };
         let json = serde_json::to_string(&stats).expect("serialize GenerationStats");
         let restored: GenerationStats = serde_json::from_str(&json).expect("deserialize");
         prop_assert_eq!(stats.tokens_generated, restored.tokens_generated);
@@ -123,7 +123,7 @@ proptest! {
         tokens_generated in 0usize..100_000,
         tokens_per_second in 0.0f64..100_000.0f64,
     ) {
-        let stats = GenerationStats { tokens_generated, tokens_per_second };
+        let stats = GenerationStats { tokens_generated, tokens_per_second, ..Default::default() };
         let cloned = stats.clone();
         let orig_json  = serde_json::to_string(&stats).unwrap();
         let clone_json = serde_json::to_string(&cloned).unwrap();
@@ -142,7 +142,7 @@ proptest! {
         id in any::<u32>(),
         text in "[ -~]{0,64}",  // printable ASCII
     ) {
-        let event = TokenEvent { id, text };
+        let event = TokenEvent { id, text, latency_ms: 0.0, position: 0 };
         let json = serde_json::to_string(&event).expect("serialize TokenEvent");
         let restored: TokenEvent = serde_json::from_str(&json).expect("deserialize TokenEvent");
         prop_assert_eq!(event.id, restored.id);

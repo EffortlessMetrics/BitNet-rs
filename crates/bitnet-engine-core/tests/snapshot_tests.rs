@@ -61,7 +61,8 @@ fn generation_stats_default_json_snapshot() {
 #[test]
 fn generation_stats_with_values_json_snapshot() {
     use bitnet_engine_core::GenerationStats;
-    let stats = GenerationStats { tokens_generated: 64, tokens_per_second: 12.3 };
+    let stats =
+        GenerationStats { tokens_generated: 64, tokens_per_second: 12.3, ..Default::default() };
     let json = serde_json::to_string_pretty(&stats).unwrap();
     insta::assert_snapshot!("generation_stats_with_values_json", json);
 }

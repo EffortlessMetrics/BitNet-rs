@@ -33,7 +33,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 ///     fn generate(&self, prompt: &str, config: &GenerationConfig) -> Result<Vec<StreamEvent>> {
 ///         use bitnet_engine_core::{TokenEvent, GenerationStats};
 ///         Ok(vec![
-///             StreamEvent::Token(TokenEvent { id: 0, text: prompt.to_string() }),
+///             StreamEvent::Token(TokenEvent { id: 0, text: prompt.to_string(), latency_ms: 0.0, position: 0 }),
 ///             StreamEvent::Done {
 ///                 reason: StopReason::MaxTokens,
 ///                 stats: GenerationStats::default(),
