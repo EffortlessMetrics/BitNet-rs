@@ -1,11 +1,19 @@
 //! # Sampling Strategies
 //!
 //! Comprehensive sampling strategies for text generation including greedy,
-//! top-k, top-p (nucleus), temperature, and repetition penalty sampling.
+//! top-k, top-p (nucleus), temperature, repetition penalty, min-p,
+//! typical, and mirostat adaptive sampling.
 
 // Re-export pure logits transforms from the dedicated micro-crate.
 pub use bitnet_logits::{
-    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, argmax, softmax_in_place,
+    apply_min_p, apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p,
+    apply_typical, argmax, softmax_in_place,
+};
+
+pub mod strategies;
+pub use strategies::{
+    MinPSampler, MirostatSampler, RepetitionPenaltyConfig, SamplerChain, SamplerChainBuilder,
+    SamplerStage, TypicalSampler,
 };
 
 use anyhow::{Context, Result};
