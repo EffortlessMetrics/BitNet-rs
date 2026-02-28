@@ -145,6 +145,13 @@ impl HuggingFaceLoader {
         {
             config.model.num_heads = v as usize;
         }
+        if let Some(v) = cfg
+            .get("num_key_value_heads")
+            .or_else(|| cfg.get("num_kv_heads"))
+            .and_then(|v| v.as_u64())
+        {
+            config.model.num_key_value_heads = v as usize;
+        }
         if let Some(v) =
             cfg.get("intermediate_size").or_else(|| cfg.get("n_inner")).and_then(|v| v.as_u64())
         {
@@ -157,6 +164,13 @@ impl HuggingFaceLoader {
         {
             config.model.max_position_embeddings = v as usize;
         }
+
+        // Apply architecture-specific defaults (norm type, activation)
+        let architecture = cfg
+            .get("model_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        config.model.apply_architecture_defaults(architecture);
 
         Ok(config)
     }
