@@ -133,6 +133,10 @@ path = "tests/gpu_quantization.rs"
 required-features = ["gpu"]
 
 [[test]]
+name = "backend_selection_bdd"
+path = "tests/backend_selection_bdd.rs"
+
+[[test]]
 name = "opencl_stub_tests"
 path = "tests/opencl_stub_tests.rs"
 required-features = ["oneapi"]
