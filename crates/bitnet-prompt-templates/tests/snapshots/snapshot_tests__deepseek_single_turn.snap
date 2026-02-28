@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+assertion_line: 168
+expression: out
+---
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Explain photosynthesis briefly.<|im_end|>
+<|im_start|>assistant

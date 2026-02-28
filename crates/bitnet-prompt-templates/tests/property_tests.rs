@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -122,6 +122,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
     ) {
         let s = template.to_string();
@@ -140,6 +141,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -190,7 +192,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat),
             "detect() returned an unexpected variant"
         );
     }
@@ -224,6 +226,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
     ) {
         let out = template.apply("", None);
@@ -242,6 +245,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -263,6 +267,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -331,6 +336,7 @@ proptest! {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -449,6 +455,34 @@ proptest! {
         let t = TemplateType::MistralChat;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("mistral-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// DeepSeekChat template always includes ChatML tokens.
+    #[test]
+    fn prop_deepseek_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::DeepSeekChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "DeepSeekChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "DeepSeekChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// DeepSeekChat display/parse round-trips correctly.
+    #[test]
+    fn prop_deepseek_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::DeepSeekChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("deepseek-chat must parse");
         prop_assert_eq!(t, parsed);
     }
 }

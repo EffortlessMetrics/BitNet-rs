@@ -158,3 +158,29 @@ fn snapshot_mistral_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("mistral_multi_turn", out);
 }
+
+// ── DeepSeek Chat ──────────────────────────────────────────────────
+
+#[test]
+fn snapshot_deepseek_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::DeepSeekChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("deepseek_single_turn", out);
+}
+
+#[test]
+fn snapshot_deepseek_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::DeepSeekChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("deepseek_with_system", out);
+}
+
+#[test]
+fn snapshot_deepseek_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::DeepSeekChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("deepseek_multi_turn", out);
+}
