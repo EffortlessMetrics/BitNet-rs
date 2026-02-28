@@ -47,12 +47,8 @@ struct ConfigInput {
 }
 
 fuzz_target!(|input: ConfigInput| {
-    let metadata: HashMap<String, GgufValue> = input
-        .entries
-        .into_iter()
-        .take(256)
-        .map(|e| (e.key, e.value.into_gguf()))
-        .collect();
+    let metadata: HashMap<String, GgufValue> =
+        input.entries.into_iter().take(256).map(|e| (e.key, e.value.into_gguf())).collect();
 
     if let Ok(config) = GgufModelConfig::from_gguf_metadata(&metadata) {
         let _ = config.validate();
