@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "OpenCL backend for BitNet GPU inference on Intel Arc GPUs"
+description = "OpenCL/GPU text generation loop for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
@@ -28,11 +29,12 @@ temp-env.workspace = true
 [features]
 default = []
 oneapi = ["dep:opencl3"]
-cpu = []
-gpu = ["cuda"]
-cuda = []
-opencl = []
-vulkan = []
+bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
+bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

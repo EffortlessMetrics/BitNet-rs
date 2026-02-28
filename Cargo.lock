@@ -883,6 +883,12 @@ dependencies = [
  "serial_test",
  "temp-env",
  "tempfile",
+ "bitnet-generation",
+ "bitnet-sampling",
+ "log",
+ "proptest",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 

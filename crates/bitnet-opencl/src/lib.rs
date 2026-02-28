@@ -31,13 +31,40 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `OpenCL`/GPU text generation for `BitNet` inference.
+//!
+//! This crate provides [`GenerationEngine`], which orchestrates the
+//! full text generation loop: tokenisation → transformer forward pass →
+//! sampling → KV-cache append → stopping-criteria check → decode.
+//!
+//! The current implementation is **CPU-only** (MVP).  A GPU dispatch
+//! interface ([`ModelBackend`] trait) is ready so that an `OpenCL` or CUDA
+//! backend can be plugged in without changing the loop logic.
+//!
+//! ## Quick start
+//!
+//! ```rust
+//! use bitnet_opencl::{
+//!     GenerationConfig, GenerationEngine, MockModelBackend,
+//!     MockTokenizer, StoppingCriteria,
+//! };
+//!
+//! let mut engine = GenerationEngine::new(
+//!     MockModelBackend::new(256),
+//!     MockTokenizer,
+//!     GenerationConfig { max_tokens: 8, temperature: 0.0, ..Default::default() },
+//!     StoppingCriteria { max_length: 8, ..Default::default() },
+//! );
+//! let result = engine.generate("hello").unwrap();
+//! assert!(!result.tokens.is_empty());
+//! ```
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
+pub mod generation;
+pub mod generation_stats;
+
+// Re-exports for ergonomic access.
+pub use generation::{
+    GenerationConfig, GenerationEngine, GenerationError, GenerationResult, GenerationStream,
+    MockModelBackend, MockTokenizer, ModelBackend, StoppingCriteria, StreamToken, Tokenizer,
 };
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub use generation_stats::{GenerationStats, StatsCollector};
