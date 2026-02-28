@@ -6,13 +6,13 @@
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 use log::{debug, info, warn};
-use opencl3::command_queue::{CommandQueue, CL_QUEUE_PROFILING_ENABLE};
+use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
 use opencl3::context::Context;
-use opencl3::device::{Device, CL_DEVICE_TYPE_GPU};
-use opencl3::memory::{Buffer, ClMem, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY};
+use opencl3::device::{CL_DEVICE_TYPE_GPU, Device};
+use opencl3::memory::{Buffer, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY, ClMem};
 use opencl3::platform::get_platforms;
 use opencl3::program::Program;
-use opencl3::types::{cl_device_id, CL_BLOCKING};
+use opencl3::types::{CL_BLOCKING, cl_device_id};
 
 /// OpenCL kernel provider for Intel Arc GPUs.
 ///
@@ -36,6 +36,7 @@ struct OpenClContext {
     context: Context,
     queue: CommandQueue,
     matmul_program: Option<Program>,
+    matmul_tiled_program: Option<Program>,
     _quantize_program: Option<Program>,
     _elementwise_program: Option<Program>,
 }
@@ -77,17 +78,12 @@ impl OpenClKernel {
     }
 
     fn try_init() -> Result<Self> {
-        let platforms = get_platforms().map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Failed to get OpenCL platforms: {}", e),
-            }
+        let platforms = get_platforms().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to get OpenCL platforms: {}", e),
         })?;
 
         if platforms.is_empty() {
-            return Err(KernelError::GpuError {
-                reason: "No OpenCL platforms found".into(),
-            }
-            .into());
+            return Err(KernelError::GpuError { reason: "No OpenCL platforms found".into() }.into());
         }
 
         // Search for Intel GPU device
@@ -95,9 +91,7 @@ impl OpenClKernel {
             let platform_name = platform.name().unwrap_or_default();
             debug!("Checking OpenCL platform: {}", platform_name);
 
-            let device_ids = platform
-                .get_devices(CL_DEVICE_TYPE_GPU)
-                .unwrap_or_default();
+            let device_ids = platform.get_devices(CL_DEVICE_TYPE_GPU).unwrap_or_default();
 
             for device_id in device_ids {
                 let device = Device::new(device_id);
@@ -110,27 +104,30 @@ impl OpenClKernel {
                 if vendor.to_lowercase().contains("intel") {
                     info!("Selected Intel GPU: {}", device_name);
 
-                    let context = Context::from_device(&device).map_err(|e| {
-                        KernelError::GpuError {
+                    let context =
+                        Context::from_device(&device).map_err(|e| KernelError::GpuError {
                             reason: format!("Failed to create OpenCL context: {}", e),
-                        }
-                    })?;
-
-                    let queue =
-                        CommandQueue::create_default_with_properties(
-                            &context,
-                            CL_QUEUE_PROFILING_ENABLE,
-                            0,
-                        )
-                        .map_err(|e| KernelError::GpuError {
-                            reason: format!("Failed to create command queue: {}", e),
                         })?;
+
+                    let queue = CommandQueue::create_default_with_properties(
+                        &context,
+                        CL_QUEUE_PROFILING_ENABLE,
+                        0,
+                    )
+                    .map_err(|e| KernelError::GpuError {
+                        reason: format!("Failed to create command queue: {}", e),
+                    })?;
 
                     // Compile kernel programs (non-fatal if compilation fails)
                     let matmul_program = Self::compile_program(
                         &context,
                         crate::kernels::MATMUL_I2S_SRC,
                         "matmul_i2s",
+                    );
+                    let matmul_tiled_program = Self::compile_program(
+                        &context,
+                        crate::kernels::MATMUL_I2S_TILED_SRC,
+                        "matmul_i2s_tiled",
                     );
                     let quantize_program = Self::compile_program(
                         &context,
@@ -149,6 +146,7 @@ impl OpenClKernel {
                         context,
                         queue,
                         matmul_program,
+                        matmul_tiled_program,
                         _quantize_program: quantize_program,
                         _elementwise_program: elementwise_program,
                     };
@@ -163,17 +161,10 @@ impl OpenClKernel {
             }
         }
 
-        Err(KernelError::GpuError {
-            reason: "No Intel GPU device found via OpenCL".into(),
-        }
-        .into())
+        Err(KernelError::GpuError { reason: "No Intel GPU device found via OpenCL".into() }.into())
     }
 
-    fn compile_program(
-        context: &Context,
-        source: &str,
-        name: &str,
-    ) -> Option<Program> {
+    fn compile_program(context: &Context, source: &str, name: &str) -> Option<Program> {
         match Program::create_and_build_from_source(context, source, "") {
             Ok(program) => {
                 info!("Compiled OpenCL program: {}", name);
@@ -219,98 +210,88 @@ impl KernelProvider for OpenClKernel {
             reason: "OpenCL context not initialized".into(),
         })?;
 
-        let program = ctx.matmul_program.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "matmul_i2s program not compiled".into(),
-        })?;
+        // Prefer tiled kernel when available; fall back to naive
+        let (program, kernel_name) = if let Some(ref tiled) = ctx.matmul_tiled_program {
+            (tiled, "matmul_i2s_tiled")
+        } else if let Some(ref naive) = ctx.matmul_program {
+            (naive, "matmul_i2s")
+        } else {
+            return Err(
+                KernelError::GpuError { reason: "No matmul program compiled".into() }.into()
+            );
+        };
 
         use opencl3::kernel::{ExecuteKernel, Kernel};
 
         // Create buffers
         let mut buf_a = unsafe {
-            Buffer::<i8>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                a.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer A create: {}", e),
-            })?
+            Buffer::<i8>::create(&ctx.context, CL_MEM_READ_ONLY, a.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer A create: {}", e) })?
         };
         let mut buf_b = unsafe {
-            Buffer::<u8>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                b.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer B create: {}", e),
-            })?
+            Buffer::<u8>::create(&ctx.context, CL_MEM_READ_ONLY, b.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer B create: {}", e) })?
         };
         let buf_c = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_WRITE_ONLY,
-                c.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer C create: {}", e),
-            })?
+            Buffer::<f32>::create(&ctx.context, CL_MEM_WRITE_ONLY, c.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer C create: {}", e) })?
         };
 
         // Upload data (blocking writes)
         unsafe {
             ctx.queue
                 .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, a, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write A: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Write A: {}", e) })?;
             ctx.queue
                 .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, b, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write B: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Write B: {}", e) })?;
         }
 
         // Create and run kernel
-        let kernel = Kernel::create(program, "matmul_i2s").map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Kernel create: {}", e),
-            }
-        })?;
+        let kernel = Kernel::create(program, kernel_name)
+            .map_err(|e| KernelError::GpuError { reason: format!("Kernel create: {}", e) })?;
 
         let m_u32 = m as u32;
         let n_u32 = n as u32;
         let k_u32 = k as u32;
 
+        // Tiled kernel uses work-group-aligned global sizes
+        let tile_size = 16usize;
+        let (global_m, global_n) = if kernel_name == "matmul_i2s_tiled" {
+            let gm = ((m + tile_size - 1) / tile_size) * tile_size;
+            let gn = ((n + tile_size - 1) / tile_size) * tile_size;
+            (gm, gn)
+        } else {
+            (m, n)
+        };
+
         let event = unsafe {
-            ExecuteKernel::new(&kernel)
-                .set_arg(&buf_a.get())
+            let mut exec = ExecuteKernel::new(&kernel);
+            exec.set_arg(&buf_a.get())
                 .set_arg(&buf_b.get())
                 .set_arg(&buf_c.get())
                 .set_arg(&m_u32)
                 .set_arg(&n_u32)
                 .set_arg(&k_u32)
-                .set_global_work_sizes(&[m, n])
-                .enqueue_nd_range(&ctx.queue)
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Enqueue: {}", e),
-                })?
+                .set_global_work_sizes(&[global_m, global_n]);
+
+            if kernel_name == "matmul_i2s_tiled" {
+                exec.set_local_work_sizes(&[tile_size, tile_size]);
+            }
+
+            exec.enqueue_nd_range(&ctx.queue)
+                .map_err(|e| KernelError::GpuError { reason: format!("Enqueue: {}", e) })?
         };
 
-        event.wait().map_err(|e| KernelError::GpuError {
-            reason: format!("Kernel wait: {}", e),
-        })?;
+        event
+            .wait()
+            .map_err(|e| KernelError::GpuError { reason: format!("Kernel wait: {}", e) })?;
 
         // Read results (blocking)
         unsafe {
             ctx.queue
                 .enqueue_read_buffer(&buf_c, CL_BLOCKING, 0, c, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Read C: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Read C: {}", e) })?;
         }
 
         Ok(())
