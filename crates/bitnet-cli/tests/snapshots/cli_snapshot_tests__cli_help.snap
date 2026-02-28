@@ -43,26 +43,42 @@ PERFORMANCE:
 Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
-  run           Run simple text generation
-  tokenize      Tokenize text and output token IDs as JSON
-  score         Calculate perplexity score for a model
-  inference     Run inference on a model
-  chat          Interactive chat mode (streaming)
-  convert       Convert between model formats
-  benchmark     Benchmark model performance
-  serve         Start inference server
-  config        Manage configuration
-  info          Show system information
-  inspect       Inspect model metadata and diagnostics
-  compat-check  Check GGUF file compatibility using header validation
-  help          Print this message or the help of the given subcommand(s)
+  run            Run simple text generation
+  tokenize       Tokenize text and output token IDs as JSON
+  score          Calculate perplexity score for a model
+  inference      Run inference on a model
+  chat           Interactive chat mode (streaming)
+  convert        Convert between model formats
+  benchmark      Benchmark model performance
+  serve          Start inference server
+  config         Manage configuration
+  info           Show system information
+  inspect        Inspect model metadata and diagnostics
+  compat-check   Check GGUF file compatibility using header validation
+  list-backends  List available GPU backends and their detection status
+  help           Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>
           Configuration file path
 
   -d, --device <DEVICE>
-          Device to use (cpu, cuda, auto)
+          Device to use (cpu, cuda, oneapi, gpu, npu, auto)
+
+      --backend <BACKEND>
+          GPU backend to use
+
+          Possible values:
+          - auto:   Automatically detect best available backend
+          - cpu:    CPU only (no GPU)
+          - cuda:   NVIDIA CUDA
+          - opencl: Intel OpenCL (Arc, Xe)
+          - vulkan: Vulkan compute
+          - metal:  Apple Metal
+          - rocm:   AMD ROCm/HIP
+          - webgpu: WebGPU (experimental)
+          
+          [default: auto]
 
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
@@ -83,6 +99,20 @@ Options:
 
       --interface-version
           Print CLI interface version and exit
+
+      --output-format <FORMAT>
+          Output format (text, json)
+          
+          [default: text]
+
+      --quiet
+          Suppress all non-essential output
+
+      --verbose
+          Enable verbose/debug-level output
+
+      --no-color
+          Disable colored output
 
   -h, --help
           Print help (see a summary with '-h')

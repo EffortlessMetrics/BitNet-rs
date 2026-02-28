@@ -19,6 +19,8 @@ use console::style;
 use std::io;
 use tracing::{debug, error, info, warn};
 
+use output::{OutputConfig, OutputFormat};
+
 mod backend;
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -26,6 +28,7 @@ mod config;
 mod exit;
 #[cfg(feature = "full-cli")]
 mod ln_rules;
+pub mod output;
 mod sampling;
 mod score;
 pub mod tokenizer_discovery;
@@ -150,6 +153,22 @@ struct Cli {
     /// Print CLI interface version and exit
     #[arg(long)]
     interface_version: bool,
+
+    /// Output format (text, json)
+    #[arg(long = "output-format", value_name = "FORMAT", default_value = "text", global = true)]
+    output_format: String,
+
+    /// Suppress all non-essential output
+    #[arg(long, global = true)]
+    quiet: bool,
+
+    /// Enable verbose/debug-level output
+    #[arg(long, global = true, conflicts_with = "quiet")]
+    verbose: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -443,6 +462,24 @@ async fn main() -> Result<()> {
     // Parse CLI arguments
     let cli = Cli::parse();
 
+    // Build global output configuration from CLI flags
+    if cli.no_color {
+        console::set_colors_enabled(false);
+        console::set_colors_enabled_stderr(false);
+    }
+
+    let output_format: OutputFormat = cli.output_format.parse().unwrap_or_else(|e| {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    });
+
+    let out = OutputConfig {
+        format: output_format,
+        quiet: cli.quiet,
+        verbose: cli.verbose,
+        color: !cli.no_color,
+    };
+
     // Handle shell completions
     if let Some(shell) = cli.completions {
         generate_completions(shell);
@@ -465,8 +502,9 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Setup logging
-    setup_logging(&config, cli.log_level.as_deref())?;
+    // Setup logging (--quiet/--verbose override --log-level)
+    let effective_log_level = out.log_level_override().map(String::from).or(cli.log_level.clone());
+    setup_logging(&config, effective_log_level.as_deref())?;
 
     let startup_contract_report =
         evaluate_and_emit(RuntimeComponent::Cli, ContractPolicy::Observe)?;
@@ -558,6 +596,7 @@ async fn main() -> Result<()> {
                 logits_topk,
                 assert_greedy,
                 no_warnings,
+                &out,
             )
             .await
         }
@@ -576,7 +615,7 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
-        Some(Commands::Info) => show_system_info().await,
+        Some(Commands::Info) => show_system_info(&out).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
@@ -596,6 +635,49 @@ async fn main() -> Result<()> {
 
     // Handle errors gracefully
     if let Err(e) = result {
+        let msg = format!("{}", e);
+
+        // Provide flag suggestions for common misspellings
+        if msg.contains("unexpected argument") || msg.contains("unrecognized") {
+            let known_flags = &[
+                "--max-tokens",
+                "--max-new-tokens",
+                "--n-predict",
+                "--temperature",
+                "--top-k",
+                "--top-p",
+                "--repetition-penalty",
+                "--model",
+                "--tokenizer",
+                "--prompt",
+                "--prompt-template",
+                "--greedy",
+                "--seed",
+                "--format",
+                "--quiet",
+                "--verbose",
+                "--no-color",
+                "--json-out",
+            ];
+            if let Some(start) = msg.find("'--")
+                && let Some(end) = msg[start + 1..].find('\'')
+            {
+                let unknown = &msg[start + 1..start + 1 + end];
+                let suggestions = output::suggest_flag(unknown, known_flags);
+                if !suggestions.is_empty() {
+                    eprintln!(
+                        "\n  {} Did you mean {}?",
+                        style("hint:").cyan().bold(),
+                        suggestions
+                            .iter()
+                            .map(|s| format!("'{}'", style(s).green()))
+                            .collect::<Vec<_>>()
+                            .join(" or ")
+                    );
+                }
+            }
+        }
+
         error!("Command failed: {}", e);
 
         // Show error chain
@@ -893,6 +975,7 @@ async fn run_simple_generation(
     logits_topk: usize,
     assert_greedy: bool,
     no_warnings: bool,
+    out: &OutputConfig,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -945,15 +1028,35 @@ async fn run_simple_generation(
         })?
     };
 
-    println!("Loading model from: {}", model_path.display());
+    // Show model summary at startup (before loading)
+    if let Some(summary) = output::summarize_model(&model_path, "cpu") {
+        out.status(&format!("\n{}", style("Model Info").bold().cyan()));
+        out.status(&format!("{summary}"));
+    }
+
+    out.status(&format!("Loading model from: {}", model_path.display()));
 
     // Check for QK256 scalar kernel usage and emit performance warnings
     if !no_warnings {
         check_and_warn_qk256_performance(&model_path, max_new_tokens)?;
     }
 
-    // Try real loader first
+    // Try real loader first, with a progress spinner
     use bitnet_models::loader::{LoadConfig, ModelLoader};
+
+    let spinner = if !out.quiet && out.format != OutputFormat::Json {
+        let pb = indicatif::ProgressBar::new_spinner();
+        pb.set_style(
+            indicatif::ProgressStyle::default_spinner()
+                .template("{spinner:.cyan} {msg}")
+                .expect("valid template"),
+        );
+        pb.set_message("Loading model...");
+        pb.enable_steady_tick(std::time::Duration::from_millis(80));
+        Some(pb)
+    } else {
+        None
+    };
 
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
@@ -1017,6 +1120,11 @@ async fn run_simple_generation(
         }
     };
 
+    // Finish spinner after model loading
+    if let Some(pb) = spinner {
+        pb.finish_with_message("Model loaded \u{2713}");
+    }
+
     // Load tokenizer with auto-discovery
     // Priority: explicit path → sibling tokenizer.json → parent tokenizer.json → GGUF embedded → mock
 
@@ -1038,7 +1146,7 @@ async fn run_simple_generation(
             Ok(path) => {
                 // Found tokenizer via discovery
                 external_tokenizer = true;
-                println!("Loading tokenizer from: {}", path.display());
+                out.status(&format!("Loading tokenizer from: {}", path.display()));
 
                 match bitnet_tokenizers::load_tokenizer(&path) {
                     Ok(tok) => tok,
@@ -1053,14 +1161,14 @@ async fn run_simple_generation(
                                 path.display()
                             );
                         }
-                        println!("Warning: Using mock tokenizer due to: {e}");
+                        out.warn(&format!("Warning: Using mock tokenizer due to: {e}"));
                         std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 }
             }
             Err(_discovery_err) => {
                 // Discovery failed, try GGUF embedded as fallback
-                println!("No external tokenizer found, attempting to load from GGUF model...");
+                out.status("No external tokenizer found, attempting to load from GGUF model...");
 
                 // Read the GGUF file to get tokenizer metadata
                 let gguf_data = std::fs::read(&model_path)
@@ -1075,7 +1183,7 @@ async fn run_simple_generation(
 
                 match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
                     Ok(tok) => {
-                        println!("Successfully loaded SentencePiece tokenizer from GGUF");
+                        out.status("Successfully loaded SentencePiece tokenizer from GGUF");
                         tok
                     }
                     Err(e) => {
@@ -1102,7 +1210,7 @@ async fn run_simple_generation(
                                 model_dir.display()
                             );
                         }
-                        println!("Warning: Using mock tokenizer due to: {e}");
+                        out.warn(&format!("Warning: Using mock tokenizer due to: {e}"));
                         std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 }
@@ -1160,7 +1268,7 @@ async fn run_simple_generation(
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
-    println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
+    out.debug(&format!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]));
 
     // Create KV cache
     let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
@@ -1169,8 +1277,10 @@ async fn run_simple_generation(
     // Create sampler
     let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
 
-    print!("Generating: {}", formatted_prompt);
-    std::io::Write::flush(&mut std::io::stdout())?;
+    if !out.quiet && out.format != OutputFormat::Json {
+        print!("Generating: {}", formatted_prompt);
+        std::io::Write::flush(&mut std::io::stdout())?;
+    }
 
     // Track timing
     let start_time = std::time::Instant::now();
@@ -1357,10 +1467,12 @@ async fn run_simple_generation(
             first_token_ms = Some(start_time.elapsed().as_millis() as u64);
         }
 
-        // Decode and print the new token
+        // Decode and print the new token (streaming text output)
         let token_text = tokenizer.decode(&[next_token])?;
-        print!("{}", token_text);
-        std::io::Write::flush(&mut std::io::stdout())?;
+        if !out.quiet && out.format != OutputFormat::Json {
+            print!("{}", token_text);
+            std::io::Write::flush(&mut std::io::stdout())?;
+        }
 
         // Maintain rolling tail (if present)
         if let Some(t) = &mut tail {
@@ -1411,16 +1523,18 @@ async fn run_simple_generation(
         0.0
     };
 
-    println!("\n\nGeneration complete!");
-    println!(
-        "Generated {} tokens in {}ms ({:.1} tok/s)",
-        generated_tokens.len(),
-        total_ms,
-        tok_per_sec
-    );
+    if !out.quiet && out.format != OutputFormat::Json {
+        println!("\n\nGeneration complete!");
+        println!(
+            "Generated {} tokens in {}ms ({:.1} tok/s)",
+            generated_tokens.len(),
+            total_ms,
+            tok_per_sec
+        );
+    }
 
     // Output JSON if requested
-    if let Some(json_path) = json_out {
+    if let Some(ref json_path) = json_out {
         let generated_text = tokenizer.decode(&generated_tokens)?;
 
         // Get tokenizer info
@@ -1481,8 +1595,31 @@ async fn run_simple_generation(
                 None
             },
         });
-        std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
+        std::fs::write(json_path, serde_json::to_string_pretty(&output)?)?;
         println!("JSON output written to: {}", json_path.display());
+    }
+
+    // Emit JSON to stdout if --format json was used (distinct from --json-out file)
+    if out.format == OutputFormat::Json && json_out.is_none() {
+        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let prompt_tokens_len = tokens.len() - generated_tokens.len();
+        let result = serde_json::json!({
+            "prompt": prompt,
+            "text": generated_text,
+            "tokens": {
+                "prompt": prompt_tokens_len,
+                "generated": generated_tokens.len(),
+                "total": prompt_tokens_len + generated_tokens.len(),
+            },
+            "latency": {
+                "total_ms": total_ms,
+                "first_token_ms": first_token_ms,
+            },
+            "throughput": {
+                "tokens_per_second": tok_per_sec,
+            },
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
     }
 
     // Dump IDs if requested
@@ -1608,7 +1745,20 @@ fn compute_rms(xs: &[f32]) -> f32 {
 }
 
 /// Show system information
-async fn show_system_info() -> Result<()> {
+async fn show_system_info(out: &OutputConfig) -> Result<()> {
+    // JSON mode: collect all info and emit as JSON
+    if out.format == OutputFormat::Json {
+        let info = serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "os": std::env::consts::OS,
+            "arch": std::env::consts::ARCH,
+            "cpu_cores": num_cpus::get(),
+            "gpu_compiled": cfg!(any(feature = "gpu", feature = "cuda")),
+        });
+        println!("{}", serde_json::to_string_pretty(&info)?);
+        return Ok(());
+    }
+
     println!("{}", style("BitNet System Information").bold().cyan());
     println!();
 
