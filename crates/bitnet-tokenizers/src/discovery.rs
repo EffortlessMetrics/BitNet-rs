@@ -24,6 +24,8 @@ pub struct ModelCompatibilityMatrix {
     pub gpt2_50k: TokenizerDownloadInfo,
     /// BitNet-specific tokenizers for neural network optimization
     pub bitnet_custom: TokenizerDownloadInfo,
+    /// Phi-4 with 100K vocabulary - TikToken BPE tokenizer
+    pub phi4_100k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -52,6 +54,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string(), "tokenizer.model".to_string()],
                 cache_key: "bitnet-custom".to_string(),
                 expected_vocab: None,
+            },
+            phi4_100k: TokenizerDownloadInfo {
+                repo: "microsoft/phi-4".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "phi4-100k".to_string(),
+                expected_vocab: Some(100352),
             },
         }
     }

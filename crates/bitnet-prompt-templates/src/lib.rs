@@ -48,6 +48,8 @@ pub enum TemplateType {
     Instruct,
     /// LLaMA-3 chat format with special tokens
     Llama3Chat,
+    /// Phi-4 ChatML format with im_start/im_end tokens
+    Phi4Chat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -58,7 +60,8 @@ impl std::str::FromStr for TemplateType {
             "raw" => Ok(Self::Raw),
             "instruct" => Ok(Self::Instruct),
             "llama3-chat" | "llama3_chat" => Ok(Self::Llama3Chat),
-            _ => bail!("Unknown template type: {}. Supported: raw, instruct, llama3-chat", s),
+            "phi4-chat" | "phi4_chat" | "phi4" | "chatml" => Ok(Self::Phi4Chat),
+            _ => bail!("Unknown template type: {}. Supported: raw, instruct, llama3-chat, phi4-chat", s),
         }
     }
 }
@@ -69,6 +72,7 @@ impl std::fmt::Display for TemplateType {
             Self::Raw => write!(f, "raw"),
             Self::Instruct => write!(f, "instruct"),
             Self::Llama3Chat => write!(f, "llama3-chat"),
+            Self::Phi4Chat => write!(f, "phi4-chat"),
         }
     }
 }
@@ -91,6 +95,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Llama3Chat;
+            }
+            // ChatML / Phi-4 signature
+            if jinja.contains("<|im_start|>") && jinja.contains("<|im_end|>") {
+                tracing::debug!(
+                    template = "Phi4Chat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::Phi4Chat;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
@@ -115,6 +128,15 @@ impl TemplateType {
                 );
                 return Self::Llama3Chat;
             }
+            if lower.contains("phi") {
+                tracing::debug!(
+                    template = "Phi4Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Phi4Chat;
+            }
             if lower.contains("instruct") || lower.contains("mistral") {
                 tracing::debug!(
                     template = "Instruct",
@@ -137,6 +159,7 @@ impl TemplateType {
             Self::Raw => user_text.to_string(),
             Self::Instruct => Self::apply_instruct(user_text, system_prompt),
             Self::Llama3Chat => Self::apply_llama3_chat(user_text, system_prompt),
+            Self::Phi4Chat => Self::apply_phi4_chat(user_text, system_prompt),
         }
     }
 
@@ -189,12 +212,43 @@ impl TemplateType {
         result
     }
 
+    /// Apply Phi-4 ChatML template with im_start/im_end tokens
+    ///
+    /// Format:
+    /// ```text
+    /// <|im_start|>system
+    /// You are a helpful assistant.<|im_end|>
+    /// <|im_start|>user
+    /// {user_text}<|im_end|>
+    /// <|im_start|>assistant
+    /// ```
+    fn apply_phi4_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+
+        // Add system prompt (default if not provided)
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+
+        // Add user message
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+
+        // Start assistant response
+        result.push_str("<|im_start|>assistant\n");
+
+        result
+    }
+
     /// Get the default stop sequences for this template
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
             Self::Instruct => vec!["\n\nQ:".to_string(), "\n\nHuman:".to_string()],
             Self::Llama3Chat => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+            Self::Phi4Chat => vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()],
         }
     }
 
@@ -238,13 +292,14 @@ impl TemplateType {
         match self {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
+            Self::Phi4Chat => false,   // ChatML uses im_start/im_end tokens
         }
     }
 
     /// Check if special tokens should be parsed during encoding
     /// LLaMA-3 chat templates contain special tokens that need to be parsed
     pub fn parse_special(&self) -> bool {
-        matches!(self, Self::Llama3Chat)
+        matches!(self, Self::Llama3Chat | Self::Phi4Chat)
     }
 
     /// Render a chat history (system + turns) into a single prompt string.
@@ -275,6 +330,20 @@ impl TemplateType {
 
                 // Start assistant response
                 write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
+            }
+            TemplateType::Phi4Chat => {
+                // ChatML format with im_start/im_end tokens
+                let sys = system.unwrap_or("You are a helpful assistant.");
+                write!(out, "<|im_start|>system\n{}<|im_end|>\n", sys)?;
+
+                // Render conversation history
+                for turn in history {
+                    let role = turn.role.as_str();
+                    write!(out, "<|im_start|>{}\n{}<|im_end|>\n", role, turn.text)?;
+                }
+
+                // Start assistant response
+                write!(out, "<|im_start|>assistant\n")?;
             }
             TemplateType::Instruct => {
                 // Simple Q&A format
@@ -377,6 +446,61 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_phi4_chat_template() {
+        let template = TemplateType::Phi4Chat;
+
+        // Without system prompt (default system prompt added)
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        // With custom system prompt
+        let result = template.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(!result.contains("You are a helpful assistant."));
+    }
+
+    #[test]
+    fn test_render_chat_phi4() {
+        let t = TemplateType::Phi4Chat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("You are helpful.")).unwrap();
+
+        assert!(s.contains("<|im_start|>system\n"));
+        assert!(s.contains("You are helpful."));
+        assert!(s.contains("<|im_start|>user\n"));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<|im_start|>assistant\n"));
+        assert!(s.contains("Hi there!"));
+        assert!(s.contains("How are you?"));
+        assert!(s.contains("<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_detect_phi4_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("<|im_start|>system\n{system}<|im_end|>\n<|im_start|>user\n{user}<|im_end|>"),
+        );
+        assert_eq!(t, TemplateType::Phi4Chat);
+    }
+
+    #[test]
+    fn test_detect_phi4_from_name() {
+        let t = TemplateType::detect(Some("phi-4-mini"), None);
+        assert_eq!(t, TemplateType::Phi4Chat);
+    }
+
+    #[test]
     fn test_raw_template() {
         let template = TemplateType::Raw;
         let result = template.apply("Hello, world!", None);
@@ -425,6 +549,10 @@ mod tests {
         assert_eq!("instruct".parse::<TemplateType>().unwrap(), TemplateType::Instruct);
         assert_eq!("llama3-chat".parse::<TemplateType>().unwrap(), TemplateType::Llama3Chat);
         assert_eq!("llama3_chat".parse::<TemplateType>().unwrap(), TemplateType::Llama3Chat);
+        assert_eq!("phi4-chat".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
+        assert_eq!("phi4_chat".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
+        assert_eq!("phi4".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
+        assert_eq!("chatml".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -434,10 +562,15 @@ mod tests {
         assert_eq!(TemplateType::Raw.default_stop_sequences(), Vec::<String>::new());
         assert!(!TemplateType::Instruct.default_stop_sequences().is_empty());
         assert!(!TemplateType::Llama3Chat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::Phi4Chat.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
         assert!(llama3_stops.contains(&"<|eot_id|>".to_string()));
+
+        // Check phi4-chat has the expected stop tokens
+        let phi4_stops = TemplateType::Phi4Chat.default_stop_sequences();
+        assert!(phi4_stops.contains(&"<|im_end|>".to_string()));
     }
 
     #[test]
@@ -502,6 +635,7 @@ mod tests {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
+        assert!(!TemplateType::Phi4Chat.should_add_bos()); // Uses im_start/im_end
     }
 
     #[test]
@@ -509,6 +643,7 @@ mod tests {
         assert!(!TemplateType::Raw.parse_special());
         assert!(!TemplateType::Instruct.parse_special());
         assert!(TemplateType::Llama3Chat.parse_special()); // LLaMA-3 has special tokens
+        assert!(TemplateType::Phi4Chat.parse_special()); // Phi-4 has special tokens
     }
 
     #[test]
@@ -643,6 +778,7 @@ mod property_tests {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ]
     }
 
@@ -697,7 +833,7 @@ mod property_tests {
     proptest! {
         #[test]
         fn non_raw_templates_have_stop_sequences(
-            template in prop_oneof![Just(TemplateType::Instruct), Just(TemplateType::Llama3Chat)],
+            template in prop_oneof![Just(TemplateType::Instruct), Just(TemplateType::Llama3Chat), Just(TemplateType::Phi4Chat)],
         ) {
             let stops = template.default_stop_sequences();
             prop_assert!(

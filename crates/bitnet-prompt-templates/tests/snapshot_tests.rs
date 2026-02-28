@@ -62,3 +62,27 @@ fn snapshot_llama3_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("llama3_multi_turn", out);
 }
+
+#[test]
+fn snapshot_phi4_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Phi4Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("phi4_single_turn", out);
+}
+
+#[test]
+fn snapshot_phi4_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Phi4Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("phi4_with_system", out);
+}
+
+#[test]
+fn snapshot_phi4_multi_turn() {
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Phi4Chat).with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("phi4_multi_turn", out);
+}

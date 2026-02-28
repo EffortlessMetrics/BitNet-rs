@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -118,6 +118,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
     ) {
         let s = template.to_string();
@@ -132,6 +133,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -182,7 +184,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat),
             "detect() returned an unexpected variant"
         );
     }
@@ -212,6 +214,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
     ) {
         let out = template.apply("", None);
@@ -226,6 +229,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -243,6 +247,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -307,6 +312,7 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -314,5 +320,33 @@ proptest! {
         let out1 = template.render_chat(&turns, None).unwrap();
         let out2 = template.render_chat(&turns, None).unwrap();
         prop_assert_eq!(out1, out2, "render_chat must be deterministic for {:?}", template);
+    }
+
+    /// Phi4Chat template always includes <|im_start|> and <|im_end|> in its output.
+    #[test]
+    fn prop_phi4_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::Phi4Chat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "Phi4Chat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "Phi4Chat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// Phi4Chat display/parse round-trips correctly.
+    #[test]
+    fn prop_phi4_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::Phi4Chat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("phi4-chat must parse");
+        prop_assert_eq!(t, parsed);
     }
 }
