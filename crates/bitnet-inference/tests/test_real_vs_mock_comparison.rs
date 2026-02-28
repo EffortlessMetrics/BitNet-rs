@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// Test showing that models initialized with real weights produce meaningful logits
 ///
 /// This validates Issue #248 resolution: transformer forward pass is real computation.
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_real_vs_mock_inference_comparison() -> Result<()> {
     println!("=== Issue #248 Validation: Real Inference with Weighted Model ===");
     println!("\nTesting model with weights (real computation):");

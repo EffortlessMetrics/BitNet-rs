@@ -88,7 +88,7 @@ fn create_minimal_model() -> Result<(Arc<BitNetModel>, BitNetConfig)> {
 }
 
 /// Test that we can create an inference engine with a properly initialized model
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_real_inference_engine_creation() -> Result<()> {
     let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -97,7 +97,7 @@ async fn test_real_inference_engine_creation() -> Result<()> {
     Ok(())
 }
 /// Test forward pass with actual token IDs
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_forward_pass_with_tokens() -> Result<()> {
     let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -117,7 +117,7 @@ async fn test_forward_pass_with_tokens() -> Result<()> {
     Ok(())
 }
 /// Test text generation (basic autoregressive functionality)
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_basic_text_generation() -> Result<()> {
     let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -138,7 +138,7 @@ async fn test_basic_text_generation() -> Result<()> {
     Ok(())
 }
 /// Test that the model configuration is properly loaded
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_model_configuration() -> Result<()> {
     let (model, config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -153,7 +153,7 @@ async fn test_model_configuration() -> Result<()> {
     Ok(())
 }
 /// Integration test: measure basic performance
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_basic_performance() -> Result<()> {
     let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
