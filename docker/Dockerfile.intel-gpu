@@ -55,8 +55,9 @@ ENV VERGEN_GIT_SHA=${VCS_REF:-unknown} \
     VERGEN_IDEMPOTENT=1
 
 # Build CPU features (oneapi feature is not yet wired; build cpu to validate)
-RUN cargo build --locked --release --no-default-features --features cpu && \
-    cp target/release/bitnet target/release/bitnet-server /usr/local/bin/ || true
+RUN cargo build --locked --release --no-default-features --features cpu -p bitnet-cli -p bitnet-server && \
+    cp target/release/bitnet /usr/local/bin/bitnet && \
+    cp target/release/server /usr/local/bin/bitnet-server
 
 # ── Stage 4: Runtime (slim + Intel GPU libs) ─────────────────────
 FROM debian:bookworm-slim AS runtime
