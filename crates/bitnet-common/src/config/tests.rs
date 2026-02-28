@@ -440,3 +440,18 @@ fn test_apply_architecture_defaults_unknown_preserves_defaults() {
     assert_eq!(config.norm_type, orig_norm);
     assert_eq!(config.activation_type, orig_act);
 }
+
+#[test]
+fn test_apply_architecture_defaults_qwen() {
+    for arch in &["qwen", "qwen2", "qwen2.5"] {
+        let mut config = ModelConfig::default();
+        config.apply_architecture_defaults(arch);
+        assert_eq!(config.norm_type, NormType::RmsNorm, "norm for {}", arch);
+        assert_eq!(
+            config.activation_type,
+            ActivationType::Silu,
+            "activation for {}",
+            arch
+        );
+    }
+}

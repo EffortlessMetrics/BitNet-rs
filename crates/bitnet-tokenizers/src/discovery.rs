@@ -26,6 +26,8 @@ pub struct ModelCompatibilityMatrix {
     pub bitnet_custom: TokenizerDownloadInfo,
     /// Phi-4 with 100K vocabulary - TikToken BPE tokenizer
     pub phi4_100k: TokenizerDownloadInfo,
+    /// Qwen2 with 151K vocabulary - BPE tokenizer
+    pub qwen2_150k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -60,6 +62,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "phi4-100k".to_string(),
                 expected_vocab: Some(100352),
+            },
+            qwen2_150k: TokenizerDownloadInfo {
+                repo: "Qwen/Qwen2-7B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "qwen2-150k".to_string(),
+                expected_vocab: Some(151936),
             },
         }
     }
@@ -606,6 +614,9 @@ impl TokenizerDiscovery {
             ("llama", 128256) => Ok(Some(self.compatibility_matrix.llama3_128k.clone())),
             ("llama", 32000) => Ok(Some(self.compatibility_matrix.llama2_32k.clone())),
             ("gpt2", 50257) => Ok(Some(self.compatibility_matrix.gpt2_50k.clone())),
+            ("qwen" | "qwen2" | "qwen2.5", 151936) => {
+                Ok(Some(self.compatibility_matrix.qwen2_150k.clone()))
+            }
             _ => Ok(None), // Unknown combination
         }
     }
