@@ -5,6 +5,46 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
+- **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
+- **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
+- **Tokenizer error handling** (#1131): Improved error handling and edge case coverage in `bitnet-tokenizers` for more robust tokenization
+- **GPU telemetry and monitoring** (#1124): GPU telemetry system tracks utilization, memory, temperature, and kernel timing for observability
+- **Tensor parallelism** (#1125): Multi-device tensor parallelism splits layers across GPU devices for large-model inference
+- **GPU-to-GPU peer transfer** (#1126): OpenCL peer-to-peer memory transfer between GPU devices eliminates host-side round-trips
+- **ONNX export with GPU metadata** (#1122): ONNX export path now embeds GPU acceleration metadata for interop with external inference runtimes
+- **GPU power management** (#1121): GPU power management integration in `bitnet-device-probe` for thermal throttling awareness and power-state queries
+- **GpuBatchScheduler** (#1119): Multi-request GPU batching scheduler coalesces inference requests for higher throughput
+- **OpenCL USM support** (#1117): OpenCL 3.0 Unified Shared Memory (USM) support eliminates explicit buffer copies on supported devices
+- **GPU health endpoint** (#1116): GPU health check REST endpoint in `bitnet-server` reports device status, memory, and thermal state
+- **gpu-info subcommand** (#1115): New `gpu-info` CLI subcommand for device discovery and capability reporting
+- **kernel-bench subcommand** (#1118): New `kernel-bench` CLI subcommand for micro-benchmarking individual kernel implementations
+- **FP16/INT8 mixed-precision kernels** (#1114): OpenCL FP16/INT8 mixed-precision kernel variants for reduced memory bandwidth on supported hardware
+- **Persistent kernel cache** (#1113): OpenCL persistent kernel compilation cache avoids recompilation across runs
+- **bitnet-metal microcrate** (#1112): Metal compute backend microcrate with MSL shaders for macOS/Apple Silicon GPU inference
+- **bitnet-rocm microcrate** (#1111): AMD ROCm GPU backend microcrate with HIP runtime integration
+- **bitnet-webgpu microcrate** (#1108): Cross-platform GPU backend via `wgpu` for WebGPU and native Vulkan/Metal/DX12 targets
+- **bitnet-level-zero microcrate** (#1085): Intel Level-Zero backend microcrate for low-level Intel GPU access
+- **bitnet-vulkan microcrate** (#1071): Vulkan compute backend microcrate with SPIR-V shader pipeline
+- **GPU server integration** (#1128): GPU backends wired into the axum HTTP server for accelerated inference serving
+- **Intel subgroup kernels** (#1087): Intel subgroup-optimized OpenCL kernels tuned for Arc GPU EU architecture
+- **WASM kernel validation shim** (#1084): OpenCL WASM-compatible kernel validation shim enables browser-side correctness checks
+- **Multi-device work scheduler** (#1083): Inference work scheduler distributes computation across heterogeneous GPU devices
+- **Vulkan tiled matmul** (#1082): Tiled matrix multiplication compute shader for Vulkan backend with shared-memory optimization
+- **GPU transformer orchestration** (#1081): Complete GPU transformer layer orchestration in OpenCL — attention, FFN, and LayerNorm fused pipeline
+- **GPU activation kernels** (#1080): OpenCL SiLU and GELU activation function kernels for GPU-resident forward passes
+- **GPU linear projection** (#1079): OpenCL GPU linear projection kernels for attention Q/K/V and FFN layers
+- **GPU embedding lookup** (#1078): OpenCL GPU embedding lookup kernels for token-to-vector conversion on device
+- **Work-group auto-tuning** (#1077): OpenCL work-group size auto-tuning profiles device limits for optimal occupancy
+- **GPU memory enforcement** (#1076): OpenCL GPU memory limit enforcement and telemetry prevents OOM and tracks allocation watermarks
+- **GPU KV cache kernels** (#1075): OpenCL GPU KV cache management kernels for on-device cache append and retrieval
+- **OpenCL kernel profiling** (#1058): Event-based kernel profiling in OpenCL captures per-kernel timing for performance analysis
+- **Receipt schema extension** (#1090): Receipt schema extended with OpenCL device info, kernel timing, and backend metadata
+- **CUDA kernel scaffolding** (#1092): CUDA kernel scaffolding for QK256 GEMV, attention, and RMSNorm operations
+- **HIP kernel stubs** (#1102): ROCm HIP kernel stubs for QK256 GEMV, attention, and RMSNorm mirroring CUDA scaffolding
+- **CPU kernel gap fill** (#1095): CPU kernel gaps filled and dead orphan source files removed for cleaner kernel registry
+- **GGUF-to-GPU tensor loader** (#1096): GGUF-to-GPU tensor loader for Intel Arc enables direct model loading to GPU memory
+- **Production-ready general LLMs** (#1049): Extended bitnet-rs infrastructure for production-ready general LLM support beyond BitNet models
 - `feat(gpu): add initial ROCm feature wiring and build/link support` — ROCm (AMD GPU) backend skeleton with feature gate, build-system integration, and link support for HIP runtime (#1014)
 - `feat(gpu): add initial support for Metal backend and detection` — Metal GPU backend with runtime detection for macOS/Apple Silicon; capability wired into DeviceProbe (#1021)
 - `feat(kernels): wire QK256 dispatch to canonical AVX2/scalar path` — QK256 GEMV dispatch now routes through the canonical AVX2/scalar runtime path; AVX2 CI coverage added (#1018)
@@ -13,25 +53,57 @@ All notable changes to bitnet-rs will be documented in this file.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
+- **Nix flake OpenCL deps** (#1066): OpenCL development dependencies added to Nix flake for reproducible GPU development environments
 - `chore: prepare the workspace for crates.io release` — Workspace metadata, manifests, and dependency versions updated for crates.io publishing readiness (#1028)
 - `chore: prepare v0.2.0 release` — Version bumped to 0.2.0; release notes consolidated (#1006)
 - `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
 - `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
 
 ### Fixed
+- **Snapshot kernel provider count** (#1089): Updated kernel provider count 2→3 in snapshots after Metal backend addition
 - `fix: handle .contiguous() panics on block-quantized tensors during transpose` — Prevents panics when calling `.contiguous()` on block-quantized tensors that require transpose (#1048)
 - `fix: input validation falsely rejecting CRLF sequences` — Input validation no longer rejects valid payloads containing CRLF (`\r\n`) line endings (#1030)
 - `fix: improve Model Download System` — Model download reliability improvements including better error handling, retry logic, and progress reporting (#1027)
 - `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
 
 ### Performance
+- **AVX2 QK256 GEMV optimization** (#1105): SIMD unpack and 4-wide FMA tiling on QK256 GEMV hot paths for improved throughput on x86-64
+- **NEON kernel enhancements** (#1103): Enhanced ARM64 NEON kernel implementations for improved performance on Apple Silicon and ARM servers
+- **OpenCL tiled matmul** (#1060): Tiled matrix multiplication kernel with local memory optimization for OpenCL GPU backends
 - `perf: optimize softmax_in_place for sparse distributions` — Faster softmax computation for sparse logit distributions by skipping negligible values (#1031)
 
 ### Testing
+- **GPU vs CPU cross-validation** (#1120): GPU vs CPU cross-validation test suite verifies numerical equivalence across backends
+- **Numerical stability tests** (#1123): 40-test numerical stability suite covering edge cases in kernels (NaN, Inf, denormals, large tensors)
+- **GPU stress tests** (#1107): GPU stress tests for reliability validation under sustained load and memory pressure
+- **GPU snapshot regression** (#1106): Comprehensive GPU kernel output regression snapshots via insta for deterministic output tracking
+- **GPU feature flag matrix** (#1104): GPU feature flag compatibility matrix tests verify correct compilation across feature combinations
+- **TDD scaffold enablement** (#1097): TDD scaffolds enabled and ignored test count further reduced
+- **Snapshot tests expansion** (#1094): Insta snapshot tests added for `bitnet-feature-matrix` and `bitnet-test-support` crates
+- **Property tests expansion** (#1091): Property tests added for additional crates strengthening invariant coverage
+- **BDD multi-backend scenarios** (#1086): Comprehensive BDD scenarios for multi-backend device selection and fallback behavior
+- **Fuzz targets: kernel/KV/config/sampling/tensors** (#1088): Five new fuzz targets covering kernel dispatch, KV cache ops, config parsing, sampling strategies, and tensor operations
+- **Fuzz targets: attention/softmax/rmsnorm** (#1070): Three new fuzz targets for attention, softmax, and RMSNorm numerical stability
+- **OpenCL property tests** (#1069): Extended property tests for OpenCL kernel CPU reference implementations
+- **OpenCL e2e pipeline tests** (#1055): End-to-end OpenCL inference pipeline tests validate full forward pass on GPU
+- **Criterion benchmarks: OpenCL** (#1073): Criterion benchmarks for OpenCL kernel CPU reference implementations
+- **Criterion benchmarks: quantization/kernels** (#1101): Expanded Criterion benchmarks covering quantization algorithms and kernel operations
 - `test: reduce ignored test count (wave 7) — enable unblocked tests` — Wave 7 reduction of `#[ignore]` tests; newly unblocked tests converted to active (#1025)
 - `test(bitnet-device-probe): add property tests for new backend capabilities` — Property tests covering ROCm, Metal, Vulkan, NPU, and oneAPI backend capability invariants (#1003)
 
+### CI
+- **ROCm/HIP smoke workflow** (#1130): CI smoke workflow for ROCm/HIP compilation validates AMD GPU backend builds
+- **Fuzz target matrix completion** (#1099): Fuzz-nightly and fuzz-ci workflow matrices updated to include all fuzz targets
+- **Mutation testing: OpenCL** (#1056): Mutation testing configuration added for OpenCL modules via `cargo-mutants`
+- **Intel GPU Docker image** (#1065): Docker image with Intel compute runtime for GPU CI jobs
+
 ### Documentation
+- **GPU ADRs** (#1109): Architecture Decision Records documenting GPU backend selection rationale and trade-offs
+- **GPU contributor guide** (#1110): GPU development contributor guide covering kernel authoring, testing, and review workflow
+- **Intel GPU tuning guide** (#1068): Intel GPU performance tuning guide with Arc-specific optimization recommendations
+- **Multi-GPU architecture docs** (#1053): Multi-GPU backend architecture documentation covering device management and scheduling
+- **Dual-backend roadmap update** (#1054): Dual-backend roadmap updated with Intel GPU work and OpenCL integration milestones
+- **CHANGELOG update wave** (#1098): CHANGELOG entries added for PRs #1003–#1048
 - `docs: clarify BitNet.cpp vs llama.cpp cross-validation relationship` — Clarified the distinct roles of BitNet.cpp and llama.cpp in the dual-backend cross-validation architecture (#1026)
 - `docs: add general LLM production readiness plan for BitNet-rs` — Production readiness roadmap covering reliability, scalability, and deployment considerations (#1012)
 - `docs: add macOS 26 Apple Silicon integration roadmap` — Roadmap for macOS 26 integration with Apple Silicon GPU/NPU acceleration (#1007)
