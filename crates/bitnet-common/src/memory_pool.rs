@@ -375,7 +375,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "not a multiple of 4")]
     fn as_f32_slice_bad_alignment() {
-        let pool = TensorPool::new(4096);
         // Bucket 64, but we fabricate a bad-length buffer via the public API:
         // Actually bucket 64 is fine (64 % 4 == 0), so we test indirectly.
         // This test verifies the assertion message by using an impossible
