@@ -237,3 +237,15 @@ name = "feature_activation_no_panic"
 path = "fuzz_targets/feature_activation_no_panic.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "opencl_ternary_pack"
+path = "fuzz_targets/opencl_ternary_pack.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "device_opencl_construct"
+path = "fuzz_targets/device_opencl_construct.rs"
+test = false
+doc = false
