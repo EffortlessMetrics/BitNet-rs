@@ -16,7 +16,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.2.1-dev" }
+bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.2.0-alpha.1" }
 
 [features]
 default = []
