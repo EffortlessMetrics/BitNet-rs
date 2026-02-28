@@ -8,17 +8,18 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "OpenCL abstraction layer for BitNet GPU inference on Intel Arc"
+description = "OpenCL 3.0 backend with Unified Shared Memory (USM) support for BitNet inference"
+rust-version.workspace = true
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-opencl3 = "0.9"
-thiserror.workspace = true
-tracing.workspace = true
+log.workspace = true
 
 [dev-dependencies]
-proptest.workspace = true
-insta.workspace = true
+serial_test.workspace = true
 
 [features]
 default = []
+
+[lints]
+workspace = true

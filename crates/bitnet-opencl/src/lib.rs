@@ -1,38 +1,7 @@
-//! OpenCL abstraction layer for BitNet GPU inference.
+//! OpenCL 3.0 backend for BitNet inference.
 //!
-//! This crate provides a high-level Rust interface over the `opencl3` crate,
-//! targeting Intel Arc GPUs via Intel's Compute Runtime.
-//!
-//! # Architecture
-//!
-//! ```text
-//! OpenClDevice -> OpenClContext -> OpenClQueue
-//!                     |              |
-//!               OpenClProgram   OpenClBuffer<T>
-//! ```
-//!
-//! # Example (requires hardware)
-//!
-//! ```rust,no_run
-//! use bitnet_opencl::{OpenClContext, OpenClQueue, OpenClBuffer, AccessMode};
-//!
-//! let ctx = OpenClContext::new_intel().expect("Intel GPU required");
-//! let queue = ctx.create_queue().expect("queue creation");
-//! let mut buf = OpenClBuffer::<f32>::new(&ctx, 1024, AccessMode::ReadWrite)
-//!     .expect("buffer allocation");
-//! ```
+//! Provides Unified Shared Memory (USM) support for zero-copy host-device
+//! data access, with automatic fallback to explicit buffer copies when USM
+//! is unavailable.
 
-pub mod buffer;
-pub mod context;
-pub mod device;
-pub mod error;
-pub mod program;
-pub mod queue;
-
-// Re-export primary API types at crate root.
-pub use buffer::{AccessMode, OpenClBuffer};
-pub use context::OpenClContext;
-pub use device::OpenClDevice;
-pub use error::OpenClError;
-pub use program::{OpenClProgram, ProgramCache};
-pub use queue::OpenClQueue;
+pub mod usm;
