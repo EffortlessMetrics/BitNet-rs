@@ -688,7 +688,10 @@ dependencies = [
  "insta",
  "memmap2",
  "proptest",
+ "serde",
  "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
@@ -717,6 +720,7 @@ dependencies = [
  "bitnet-device-probe",
  "bitnet-engine-core",
  "bitnet-generation",
+ "bitnet-gguf",
  "bitnet-kernels",
  "bitnet-logits",
  "bitnet-models",

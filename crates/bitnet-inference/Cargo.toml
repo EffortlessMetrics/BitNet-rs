@@ -27,6 +27,7 @@ bitnet-logits = { path = "../bitnet-logits", version = "0.2.1-dev" }
 bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
 bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
 bitnet-sys = { path = "../bitnet-sys", version = "0.2.1-dev", optional = true }
 anyhow.workspace = true
 futures.workspace = true
@@ -75,7 +76,7 @@ oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 # Runtime selection
-rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros"]
+rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros", "bitnet-gguf/rt-tokio"]
 rt-wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 # Only run GPU-dependent tests when requested:
 gpu-tests = []

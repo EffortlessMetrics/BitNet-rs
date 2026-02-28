@@ -14,6 +14,9 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 memmap2.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -25,6 +28,7 @@ default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
+rt-tokio = ["dep:tokio", "tokio/fs", "tokio/io-util"]
 
 [lints]
 workspace = true
