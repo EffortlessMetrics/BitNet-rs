@@ -294,6 +294,9 @@ enum Cmd {
         /// Request timeout in seconds
         #[arg(long, default_value_t = 1800)]
         timeout: u64,
+        /// Skip network and only use local cache (or fail if missing)
+        #[arg(long)]
+        offline: bool,
     },
 
     /// Download LLaMA-3 tokenizer.json from HuggingFace
@@ -1120,6 +1123,7 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
+            offline,
         } => download_model_cmd(DownloadConfig {
             id: &id,
             file: &file,
@@ -1133,6 +1137,7 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
+            offline: offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
         }),
         Cmd::Tokenizer { into, source, force, verbose } => {
             // AC:ID llama3-tokenizer-api-contracts.md#xtask-tokenizer-v1
@@ -1386,6 +1391,7 @@ struct DownloadConfig<'a> {
     json: bool,
     retries: u32,
     timeout: u64,
+    offline: bool,
 }
 
 // Macro for emitting JSON events
@@ -1442,6 +1448,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         json,
         retries,
         timeout,
+        offline,
     } = config;
     fs::create_dir_all(out_dir)?;
 
@@ -1452,6 +1459,17 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     let dest_dir = out_dir.join(id.replace('/', "-"));
     fs::create_dir_all(&dest_dir)?;
     let dest = dest_dir.join(safe_file);
+
+    if offline {
+        if dest.exists() {
+            if !json {
+                println!("✓ File is up to date (offline mode): {}", dest.display());
+            }
+            return Ok(());
+        } else {
+            bail!("Offline mode enabled but model file not found in cache");
+        }
+    }
 
     let revision = rev.unwrap_or("main");
     let url = format!("{base_url}/{id}/resolve/{revision}/{file}");
@@ -4010,6 +4028,7 @@ fn full_crossval_cmd(
         json: false,
         retries: 3,
         timeout: 1800,
+        offline: std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
     })?;
 
     println!();
