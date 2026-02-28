@@ -27,6 +27,20 @@ All notable changes to bitnet-rs will be documented in this file.
 - **GPU error recovery** (#1287): RecoveryEngine with retry, fallback, and blacklisting strategies for resilient GPU execution, 60 tests
 - **GPU config system** (#1286): GpuConfig with from_env(), validate(), 8 environment variable constants for runtime GPU configuration, 69 tests
 - **CHANGELOG waves 33-35** (#1285): 14 entries covering quantization, embeddings, RoPE, server, CLI, and E2E improvements
+- **E2E mock inference** (#1284): MockModel with forward pass, full generation loop, deterministic seeding, 56 tests
+- **CLI --backend flag** (#1283): BackendArg with 8 options, list-backends subcommand, 32 tests
+- **GPU HAL fuzz targets** (#1282): 4 fuzz targets for sampling, quantization, attention shapes, RoPE values
+- **GPU HAL benchmarks** (#1281): Criterion benchmarks for softmax, rms_norm, matmul, rope, sampling
+- **OpenCL runtime binding** (#1280): platform/device enumeration with dynamic loading, mock devices, 46 tests
+- **GPU compile check CI** (#1279): 7-crate compile matrix workflow, doc check workflow
+- **GPU HAL property tests** (#1278): 35 proptest-based tests for sampling, quantization, attention, RoPE, memory
+- **GPU architecture documentation** (#1277): architecture guide, testing guide, compatibility matrix
+- **Full inference engine** (#1276): EngineConfig with 8 backend types, lifecycle state machine, capabilities, 64 tests
+- **GPU server integration** (#1275): OpenAI-compatible chat completion API types, health checks, 57 tests
+- **Rotary position embeddings** (#1274): RoPE with NTK/YaRN/Linear scaling, pre-computed tables, 50 tests
+- **Embedding layer** (#1273): token embedding with batch lookup and tied output projection, 45 tests
+- **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios, 78 tests
+- **CHANGELOG waves 29-32** (#1271): 17 entries covering GPU HAL infrastructure PRs
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
