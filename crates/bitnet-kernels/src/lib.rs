@@ -10,11 +10,11 @@ pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 // OpenCL kernel sources (always compiled — just embedded string constants)
-#[path = "gpu/kernels/mod.rs"]
-pub mod kernels;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
+#[path = "gpu/kernels/mod.rs"]
+pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 mod stubs;

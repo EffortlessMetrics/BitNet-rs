@@ -234,6 +234,9 @@ fn _create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_comm
             use candle_core::backend::BackendDevice;
             candle_core::Device::Metal(candle_core::MetalDevice::new(0)?)
         }
+        Device::OpenCL(_) => {
+            return Err(anyhow::anyhow!("OpenCL device not supported in test tensor creation"));
+        }
     };
     let tensor = CandleTensor::from_vec(data, shape.as_slice(), &candle_device)?;
     Ok(bitnet_common::BitNetTensor::new(tensor))

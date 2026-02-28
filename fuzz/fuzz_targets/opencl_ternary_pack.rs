@@ -57,21 +57,13 @@ fuzz_target!(|data: &[u8]| {
     let packed = pack_ternary(&ternary_values);
     let unpacked = unpack_ternary(&packed, ternary_values.len());
 
-    assert_eq!(
-        ternary_values.len(),
-        unpacked.len(),
-        "Length mismatch after round-trip"
-    );
+    assert_eq!(ternary_values.len(), unpacked.len(), "Length mismatch after round-trip");
     assert_eq!(ternary_values, unpacked, "Values changed after round-trip");
 
     // Strategy 2: Treat input as packed bytes, unpack them
     let unpacked_raw = unpack_ternary(data, data.len() * 4);
     // All unpacked values should be in {-1, 0, 1}
     for &v in &unpacked_raw {
-        assert!(
-            v == -1 || v == 0 || v == 1,
-            "Unpacked value {} is not ternary",
-            v
-        );
+        assert!(v == -1 || v == 0 || v == 1, "Unpacked value {} is not ternary", v);
     }
 });

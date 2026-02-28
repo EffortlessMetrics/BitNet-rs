@@ -6,13 +6,13 @@
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 use log::{debug, info, warn};
-use opencl3::command_queue::{CommandQueue, CL_QUEUE_PROFILING_ENABLE};
+use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
 use opencl3::context::Context;
-use opencl3::device::{Device, CL_DEVICE_TYPE_GPU};
-use opencl3::memory::{Buffer, ClMem, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY};
+use opencl3::device::{CL_DEVICE_TYPE_GPU, Device};
+use opencl3::memory::{Buffer, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY, ClMem};
 use opencl3::platform::get_platforms;
 use opencl3::program::Program;
-use opencl3::types::{cl_device_id, CL_BLOCKING};
+use opencl3::types::{CL_BLOCKING, cl_device_id};
 
 /// OpenCL kernel provider for Intel Arc GPUs.
 ///
@@ -77,17 +77,12 @@ impl OpenClKernel {
     }
 
     fn try_init() -> Result<Self> {
-        let platforms = get_platforms().map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Failed to get OpenCL platforms: {}", e),
-            }
+        let platforms = get_platforms().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to get OpenCL platforms: {}", e),
         })?;
 
         if platforms.is_empty() {
-            return Err(KernelError::GpuError {
-                reason: "No OpenCL platforms found".into(),
-            }
-            .into());
+            return Err(KernelError::GpuError { reason: "No OpenCL platforms found".into() }.into());
         }
 
         // Search for Intel GPU device
@@ -95,9 +90,7 @@ impl OpenClKernel {
             let platform_name = platform.name().unwrap_or_default();
             debug!("Checking OpenCL platform: {}", platform_name);
 
-            let device_ids = platform
-                .get_devices(CL_DEVICE_TYPE_GPU)
-                .unwrap_or_default();
+            let device_ids = platform.get_devices(CL_DEVICE_TYPE_GPU).unwrap_or_default();
 
             for device_id in device_ids {
                 let device = Device::new(device_id);
@@ -110,21 +103,19 @@ impl OpenClKernel {
                 if vendor.to_lowercase().contains("intel") {
                     info!("Selected Intel GPU: {}", device_name);
 
-                    let context = Context::from_device(&device).map_err(|e| {
-                        KernelError::GpuError {
+                    let context =
+                        Context::from_device(&device).map_err(|e| KernelError::GpuError {
                             reason: format!("Failed to create OpenCL context: {}", e),
-                        }
-                    })?;
-
-                    let queue =
-                        CommandQueue::create_default_with_properties(
-                            &context,
-                            CL_QUEUE_PROFILING_ENABLE,
-                            0,
-                        )
-                        .map_err(|e| KernelError::GpuError {
-                            reason: format!("Failed to create command queue: {}", e),
                         })?;
+
+                    let queue = CommandQueue::create_default_with_properties(
+                        &context,
+                        CL_QUEUE_PROFILING_ENABLE,
+                        0,
+                    )
+                    .map_err(|e| KernelError::GpuError {
+                        reason: format!("Failed to create command queue: {}", e),
+                    })?;
 
                     // Compile kernel programs (non-fatal if compilation fails)
                     let matmul_program = Self::compile_program(
@@ -163,17 +154,10 @@ impl OpenClKernel {
             }
         }
 
-        Err(KernelError::GpuError {
-            reason: "No Intel GPU device found via OpenCL".into(),
-        }
-        .into())
+        Err(KernelError::GpuError { reason: "No Intel GPU device found via OpenCL".into() }.into())
     }
 
-    fn compile_program(
-        context: &Context,
-        source: &str,
-        name: &str,
-    ) -> Option<Program> {
+    fn compile_program(context: &Context, source: &str, name: &str) -> Option<Program> {
         match Program::create_and_build_from_source(context, source, "") {
             Ok(program) => {
                 info!("Compiled OpenCL program: {}", name);
@@ -227,59 +211,31 @@ impl KernelProvider for OpenClKernel {
 
         // Create buffers
         let mut buf_a = unsafe {
-            Buffer::<i8>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                a.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer A create: {}", e),
-            })?
+            Buffer::<i8>::create(&ctx.context, CL_MEM_READ_ONLY, a.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer A create: {}", e) })?
         };
         let mut buf_b = unsafe {
-            Buffer::<u8>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                b.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer B create: {}", e),
-            })?
+            Buffer::<u8>::create(&ctx.context, CL_MEM_READ_ONLY, b.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer B create: {}", e) })?
         };
         let buf_c = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_WRITE_ONLY,
-                c.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer C create: {}", e),
-            })?
+            Buffer::<f32>::create(&ctx.context, CL_MEM_WRITE_ONLY, c.len(), std::ptr::null_mut())
+                .map_err(|e| KernelError::GpuError { reason: format!("Buffer C create: {}", e) })?
         };
 
         // Upload data (blocking writes)
         unsafe {
             ctx.queue
                 .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, a, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write A: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Write A: {}", e) })?;
             ctx.queue
                 .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, b, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write B: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Write B: {}", e) })?;
         }
 
         // Create and run kernel
-        let kernel = Kernel::create(program, "matmul_i2s").map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Kernel create: {}", e),
-            }
-        })?;
+        let kernel = Kernel::create(program, "matmul_i2s")
+            .map_err(|e| KernelError::GpuError { reason: format!("Kernel create: {}", e) })?;
 
         let m_u32 = m as u32;
         let n_u32 = n as u32;
@@ -295,22 +251,18 @@ impl KernelProvider for OpenClKernel {
                 .set_arg(&k_u32)
                 .set_global_work_sizes(&[m, n])
                 .enqueue_nd_range(&ctx.queue)
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Enqueue: {}", e),
-                })?
+                .map_err(|e| KernelError::GpuError { reason: format!("Enqueue: {}", e) })?
         };
 
-        event.wait().map_err(|e| KernelError::GpuError {
-            reason: format!("Kernel wait: {}", e),
-        })?;
+        event
+            .wait()
+            .map_err(|e| KernelError::GpuError { reason: format!("Kernel wait: {}", e) })?;
 
         // Read results (blocking)
         unsafe {
             ctx.queue
                 .enqueue_read_buffer(&buf_c, CL_BLOCKING, 0, c, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Read C: {}", e),
-                })?;
+                .map_err(|e| KernelError::GpuError { reason: format!("Read C: {}", e) })?;
         }
 
         Ok(())

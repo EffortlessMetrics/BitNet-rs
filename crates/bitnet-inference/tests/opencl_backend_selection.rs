@@ -16,10 +16,7 @@ mod oneapi_tests {
     #[test]
     fn device_capabilities_include_oneapi() {
         let caps = device_features::current_kernel_capabilities();
-        assert!(
-            caps.oneapi_compiled,
-            "KernelCapabilities should report oneapi_compiled=true"
-        );
+        assert!(caps.oneapi_compiled, "KernelCapabilities should report oneapi_compiled=true");
     }
 
     #[test]
