@@ -15,6 +15,7 @@ pub mod kernels;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
+pub mod kv_cache_gpu;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 mod stubs;

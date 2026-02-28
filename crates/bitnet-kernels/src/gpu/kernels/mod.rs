@@ -12,6 +12,9 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 
+/// KV cache management kernels source.
+pub const KV_CACHE_SRC: &str = include_str!("kv_cache.cl");
+
 #[cfg(test)]
 mod tests {
     use super::*;
