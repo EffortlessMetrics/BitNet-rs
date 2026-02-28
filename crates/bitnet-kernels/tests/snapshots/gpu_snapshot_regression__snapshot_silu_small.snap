@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{ kernel: \"silu\", size_class: \"small\", shape: vec![8], output: out, }"
+---
+KernelSnapshot {
+    kernel: "silu",
+    size_class: "small",
+    shape: [
+        8,
+    ],
+    output: [
+        -0.188703,
+        -0.248112,
+        -0.237269,
+        -0.154536,
+        -0.131732,
+        -0.267819,
+        -0.177632,
+        -0.227984,
+    ],
+}

@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{\n    kernel: \"ternary_dequantize\", size_class: \"small\", shape: vec![8], output:\n    deq,\n}"
+---
+KernelSnapshot {
+    kernel: "ternary_dequantize",
+    size_class: "small",
+    shape: [
+        8,
+    ],
+    output: [
+        -0.42,
+        -0.42,
+        -0.42,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ],
+}

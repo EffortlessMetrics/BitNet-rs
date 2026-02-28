@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{ kernel: \"dot\", size_class: \"small\", shape: vec![1], output: out.to_vec(), }"
+---
+KernelSnapshot {
+    kernel: "dot",
+    size_class: "small",
+    shape: [
+        1,
+    ],
+    output: [
+        1.688788,
+    ],
+}

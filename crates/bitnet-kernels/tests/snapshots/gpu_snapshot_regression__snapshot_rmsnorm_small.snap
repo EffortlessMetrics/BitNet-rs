@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{ kernel: \"rmsnorm\", size_class: \"small\", shape: vec![4], output: out, }"
+---
+KernelSnapshot {
+    kernel: "rmsnorm",
+    size_class: "small",
+    shape: [
+        4,
+    ],
+    output: [
+        1.007303,
+        0.394437,
+        0.022287,
+        0.780607,
+    ],
+}

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelConfig\n{\n    kernel: \"ternary_quantize\", work_group_size: 128, precision: \"i8\",\n    vectorisation_width: 16,\n}"
+---
+KernelConfig {
+    kernel: "ternary_quantize",
+    work_group_size: 128,
+    precision: "i8",
+    vectorisation_width: 16,
+}
