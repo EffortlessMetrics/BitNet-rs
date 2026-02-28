@@ -13,3 +13,11 @@ log.workspace = true
 
 [dev-dependencies]
 temp-env = "0.3.6"
+keywords.workspace = true
+categories.workspace = true
+description = "OpenCL GPU backend and memory management for BitNet inference"
+rust-version.workspace = true
+[features]
+default = []
+[lints]
+workspace = true

@@ -9,3 +9,5 @@ pub mod wasm_shim;
 pub use wasm_shim::{
     ArgQualifier, KernelArg, KernelSignature, MockOpenClContext, parse_kernel_signatures,
 };
+//! OpenCL GPU backend and memory management for BitNet inference.
+pub mod memory_defrag;
