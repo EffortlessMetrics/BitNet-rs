@@ -6,4 +6,5 @@ GpuCapabilities {
     available: false,
     cuda_available: false,
     rocm_available: false,
+    oneapi_available: false,
 }

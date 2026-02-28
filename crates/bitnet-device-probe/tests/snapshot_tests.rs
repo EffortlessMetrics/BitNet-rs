@@ -8,7 +8,10 @@ use bitnet_device_probe::{DeviceCapabilities, SimdLevel, detect_simd_level, gpu_
 #[test]
 fn gpu_compiled_is_bool() {
     // gpu_compiled reflects whether any GPU backend feature is compiled.
-    assert_eq!(gpu_compiled(), cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm")));
+    assert_eq!(
+        gpu_compiled(),
+        cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")),
+    );
 }
 
 #[test]

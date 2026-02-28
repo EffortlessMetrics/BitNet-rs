@@ -257,14 +257,14 @@ fn probe_gpu_never_panics() {
     let _ = probe_gpu();
 }
 
-/// `GpuCapabilities::available` must be the OR of CUDA and ROCm availability.
+/// `GpuCapabilities::available` must be the OR of CUDA, ROCm, and oneAPI availability.
 #[test]
 fn probe_gpu_available_consistent_with_backend_flags() {
     let caps = probe_gpu();
     assert_eq!(
         caps.available,
-        caps.cuda_available || caps.rocm_available,
-        "available must equal cuda_available || rocm_available"
+        caps.cuda_available || caps.rocm_available || caps.oneapi_available,
+        "available must equal cuda_available || rocm_available || oneapi_available"
     );
 }
 
@@ -276,17 +276,18 @@ fn gpu_capabilities_clone_equals_original() {
 }
 
 /// Without GPU feature, `probe_gpu()` must return all-`false` fields.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[test]
 fn probe_gpu_returns_false_without_gpu_feature() {
     let caps = probe_gpu();
     assert!(!caps.available, "available must be false without GPU feature");
     assert!(!caps.cuda_available, "cuda_available must be false without GPU feature");
     assert!(!caps.rocm_available, "rocm_available must be false without GPU feature");
+    assert!(!caps.oneapi_available, "oneapi_available must be false without GPU feature");
 }
 
 /// Without GPU feature, `gpu_compiled()` must return `false`.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[test]
 fn gpu_compiled_is_false_with_cpu_feature_only() {
     assert!(!gpu_compiled(), "gpu_compiled() must be false when built with --features cpu only");
@@ -310,7 +311,7 @@ fn device_capabilities_cpu_rust_always_true() {
 #[test]
 fn device_capabilities_compiled_flags_match_gpu_compiled() {
     let caps = DeviceCapabilities::detect();
-    assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
+    assert_eq!(caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled, gpu_compiled(),);
 }
 
 /// `DeviceCapabilities` is `Clone + PartialEq`; a clone must compare equal.
@@ -416,13 +417,13 @@ proptest! {
         prop_assert!(caps.core_count >= 1, "core_count must always be >= 1, got {}", caps.core_count);
     }
 
-    /// `probe_gpu().available` must equal CUDA/ROCm ORed availability.
+    /// `probe_gpu().available` must equal CUDA/ROCm/oneAPI ORed availability.
     #[test]
     fn probe_gpu_fields_always_consistent(_n in 0u8..=10) {
         let caps = probe_gpu();
         prop_assert_eq!(
-            caps.available, caps.cuda_available || caps.rocm_available,
-            "available must equal cuda_available || rocm_available"
+            caps.available, caps.cuda_available || caps.rocm_available || caps.oneapi_available,
+            "available must equal cuda_available || rocm_available || oneapi_available"
         );
     }
 }

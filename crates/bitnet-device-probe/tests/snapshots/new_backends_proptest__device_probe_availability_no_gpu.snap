@@ -2,4 +2,4 @@
 source: crates/bitnet-device-probe/tests/new_backends_proptest.rs
 expression: fields
 ---
-cuda_available=false rocm_available=false
+cuda_available=false rocm_available=false oneapi_available=false
