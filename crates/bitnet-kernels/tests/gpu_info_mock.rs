@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 use bitnet_kernels::gpu_utils::get_gpu_info;
 use bitnet_tests::support::env_guard::EnvScope;
 use serial_test::serial;
