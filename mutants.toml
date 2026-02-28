@@ -35,6 +35,46 @@ exclude_globs = [
 
     # Benchmark code (separate from production logic)
     "**/benches/**",
+
+    # Embedded OpenCL kernel source strings (not Rust logic; mutations
+    # would produce invalid GPU programs that only fail at runtime on real
+    # hardware, not in unit tests)
+    "**/gpu/kernels/*.cl",
+]
+
+# ── OpenCL / oneAPI mutation scope ──────────────────────────────────────────
+#
+# Focus mutation testing on the Rust orchestration logic around OpenCL,
+# not the embedded kernel source strings.  Use `examine_re` to include
+# only functions in the opencl module and `exclude_re` to skip
+# auto-generated trait boilerplate that mutants can't meaningfully test.
+
+# Functions to mutate (regex matches on the fully-qualified function name).
+# cargo-mutants examines every function by default; these patterns *restrict*
+# the set when passed via --examine-re on the CLI (see scripts/mutant_opencl.sh).
+examine_re = [
+    # OpenCL provider module — core orchestration
+    "opencl::OpenClKernel::.*",
+    # Device feature detection helpers
+    "device_features::.*",
+    # Kernel registry backend selection
+    "kernel_registry::KernelCapabilities::.*",
+    "kernel_registry::KernelBackend::.*",
+    # Device probe oneAPI functions
+    "bitnet_device_probe::oneapi_.*",
+    "bitnet_device_probe::probe_gpu",
+    "bitnet_device_probe::fake_gpu_backends",
+]
+
+# Functions/items to skip even if they match examine_re.
+exclude_re = [
+    # Debug / Display trait impls — cosmetic, not logic
+    "fmt$",
+    # Auto-derived Clone/PartialEq
+    "clone$",
+    "eq$",
+    # Unsafe Send/Sync marker impls (no body to mutate)
+    "Send|Sync",
 ]
 
 # Mutation testing thresholds and timeouts
