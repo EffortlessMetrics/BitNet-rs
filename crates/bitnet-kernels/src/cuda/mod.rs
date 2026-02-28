@@ -8,6 +8,7 @@
 //! - [`attention`]: Scaled dot-product attention with causal masking
 //! - [`rmsnorm`]: RMSNorm layer normalization
 //! - [`rope`]: Rotary Position Embedding (RoPE)
+//! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -23,3 +24,9 @@ pub use attention::{AttentionKernelConfig, launch_attention};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
 pub use rope::{RopeConfig, launch_rope, rope_forward, rope_forward_cpu};
+
+// Re-export reduction types from the crate-level module (always compiled).
+pub use crate::reduction::{
+    ReductionConfig, ReductionOp, launch_reduce_cols_f32, launch_reduce_f32,
+    launch_reduce_rows_f32, reduce_cols_f32, reduce_f32, reduce_rows_f32,
+};
