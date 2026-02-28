@@ -435,3 +435,55 @@ fn snapshot_mpt_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("mpt_multi_turn", out);
 }
+
+// ── RWKV World ──────────────────────────────────────────────────
+
+#[test]
+fn test_rwkv_world_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::RwkvWorld);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("rwkv_world_single_turn", out);
+}
+
+#[test]
+fn test_rwkv_world_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::RwkvWorld)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("rwkv_world_with_system", out);
+}
+
+#[test]
+fn test_rwkv_world_multi_turn() {
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::RwkvWorld).with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("rwkv_world_multi_turn", out);
+}
+
+// ── OLMo Instruct ───────────────────────────────────────────────
+
+#[test]
+fn test_olmo_instruct_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::OlmoInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("olmo_instruct_single_turn", out);
+}
+
+#[test]
+fn test_olmo_instruct_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::OlmoInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("olmo_instruct_with_system", out);
+}
+
+#[test]
+fn test_olmo_instruct_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::OlmoInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("olmo_instruct_multi_turn", out);
+}

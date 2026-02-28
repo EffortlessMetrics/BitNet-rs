@@ -52,6 +52,10 @@ pub struct ModelCompatibilityMatrix {
     pub chatglm_65k: TokenizerDownloadInfo,
     /// MPT with 50K vocabulary - BPE tokenizer (GPT-NeoX based)
     pub mpt_50k: TokenizerDownloadInfo,
+    /// RWKV World with 65K vocabulary - custom tokenizer
+    pub rwkv_65k: TokenizerDownloadInfo,
+    /// OLMo with 50K vocabulary - BPE tokenizer
+    pub olmo_50k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -164,6 +168,18 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "mpt-50k".to_string(),
                 expected_vocab: Some(50432),
+            },
+            rwkv_65k: TokenizerDownloadInfo {
+                repo: "RWKV/rwkv-5-world-3b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "rwkv-65k".to_string(),
+                expected_vocab: Some(65536),
+            },
+            olmo_50k: TokenizerDownloadInfo {
+                repo: "allenai/OLMo-7B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "olmo-50k".to_string(),
+                expected_vocab: Some(50280),
             },
         }
     }

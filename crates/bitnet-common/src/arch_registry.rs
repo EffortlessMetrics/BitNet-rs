@@ -95,6 +95,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Gelu,
                 default_context_length: None,
             }),
+            "rwkv" | "rwkv5" | "rwkv6" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "olmo" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(2048),
+            }),
+            "olmo2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -139,6 +154,11 @@ impl ArchitectureRegistry {
             "chatglm3",
             "glm-4",
             "mpt",
+            "rwkv",
+            "rwkv5",
+            "rwkv6",
+            "olmo",
+            "olmo2",
             "bitnet",
             "bitnet-b1.58",
             "gpt",
