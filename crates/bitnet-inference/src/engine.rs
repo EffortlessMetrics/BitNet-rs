@@ -756,6 +756,10 @@ impl InferenceEngine {
                     Box::new(GpuBackend::new(model.clone(), device)?)
                 }
             }
+            Device::OpenCL(_) => {
+                debug!("OpenCL not yet supported, falling back to CPU backend");
+                Box::new(CpuBackend::new(model.clone())?)
+            }
         };
 
         let engine = Self {
