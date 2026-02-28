@@ -7,6 +7,7 @@ members = [
   "crates/bitnet-bdd-grid",
   "crates/bitnet-bdd-grid-core",
   "crates/bitnet-compat",
+  "crates/bitnet-opencl",       # WASM-compatible OpenCL kernel validation shim
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
   "crates/bitnet-runtime-feature-flags",
   "crates/bitnet-runtime-feature-flags-core",

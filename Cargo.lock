@@ -829,6 +829,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-opencl"
+version = "0.2.1-dev"
+dependencies = [
+ "log",
+ "temp-env",
+]
+
+[[package]]
 name = "bitnet-prompt-templates"
 version = "0.2.1-dev"
 dependencies = [

@@ -1,0 +1,15 @@
+[package]
+name = "bitnet-opencl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "WASM-compatible OpenCL kernel validation shim for BitNet"
+
+[dependencies]
+log.workspace = true
+
+[dev-dependencies]
+temp-env = "0.3.6"
