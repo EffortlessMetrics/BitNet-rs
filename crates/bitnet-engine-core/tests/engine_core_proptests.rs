@@ -142,7 +142,7 @@ proptest! {
         id in any::<u32>(),
         text in "[ -~]{0,64}",  // printable ASCII
     ) {
-        let event = TokenEvent { id, text: text.clone() };
+        let event = TokenEvent { id, text };
         let json = serde_json::to_string(&event).expect("serialize TokenEvent");
         let restored: TokenEvent = serde_json::from_str(&json).expect("deserialize TokenEvent");
         prop_assert_eq!(event.id, restored.id);

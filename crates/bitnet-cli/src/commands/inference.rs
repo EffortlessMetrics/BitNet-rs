@@ -1815,7 +1815,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_prefill_invoked() {
         let tokenizer = Arc::new(BasicTokenizer::new());
         let flag = Arc::new(AtomicBool::new(false));
@@ -1836,7 +1836,7 @@ mod tests {
         assert!(flag.load(Ordering::SeqCst));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_prefill_is_executed_with_timing() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());

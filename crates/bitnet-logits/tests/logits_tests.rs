@@ -28,12 +28,12 @@ fn softmax_output_sums_to_one() {
 fn temperature_scaling_preserves_argmax() {
     let logits = vec![0.5f32, 3.0, 1.0];
     let best_before = argmax(&logits);
-    let mut scaled = logits.clone();
+    let mut scaled = logits;
     apply_temperature(&mut scaled, 0.5);
     assert_eq!(argmax(&scaled), best_before);
 }
 
-/// Exactly `n - k` entries become `NEG_INFINITY` after apply_top_k.
+/// Exactly `n - k` entries become `NEG_INFINITY` after `apply_top_k`.
 #[test]
 fn apply_top_k_zeros_correct_count() {
     let mut logits = vec![1.0f32, 4.0, 3.0, 2.0, 5.0];
@@ -98,8 +98,8 @@ proptest! {
     ) {
         let idx = argmax(&logits);
         prop_assert!(idx < logits.len());
-        let max_val = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        prop_assert_eq!(logits[idx], max_val);
+        let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        prop_assert!((logits[idx] - max_val).abs() < f32::EPSILON);
     }
 
 /// After `apply_top_k(k)`, at most `k` entries must be non-`NEG_INFINITY`.
@@ -117,7 +117,7 @@ proptest! {
 
 // ── apply_top_p tests ────────────────────────────────────────────────────────
 
-/// top_p >= 1.0 is a no-op (keep all tokens).
+/// `top_p` >= 1.0 is a no-op (keep all tokens).
 #[test]
 fn apply_top_p_one_is_noop() {
     let original = vec![0.5f32, 0.3, 0.2];
@@ -126,7 +126,7 @@ fn apply_top_p_one_is_noop() {
     assert_eq!(probs, original);
 }
 
-/// top_p cuts off tokens below the nucleus threshold.
+/// `top_p` cuts off tokens below the nucleus threshold.
 #[test]
 fn apply_top_p_removes_low_probability_tokens() {
     // Sorted desc: 0.5, 0.3, 0.2. Cumsum: 0.5 → 0.8 >= 0.8, so token at 0.2 is zeroed.
@@ -134,10 +134,10 @@ fn apply_top_p_removes_low_probability_tokens() {
     apply_top_p(&mut probs, 0.8);
     assert!(probs[0] > 0.0, "first token must survive");
     assert!(probs[1] > 0.0, "second token must survive");
-    assert_eq!(probs[2], 0.0, "third token must be zeroed");
+    assert!((probs[2] - 0.0).abs() < f32::EPSILON, "third token must be zeroed");
 }
 
-/// top_p on a single-token distribution keeps that token.
+/// `top_p` on a single-token distribution keeps that token.
 #[test]
 fn apply_top_p_single_element_keeps_token() {
     let mut probs = vec![1.0f32];
@@ -145,7 +145,7 @@ fn apply_top_p_single_element_keeps_token() {
     assert!(probs[0] > 0.0, "sole token must survive");
 }
 
-/// top_p with very small threshold keeps at least the highest-probability token.
+/// `top_p` with very small threshold keeps at least the highest-probability token.
 #[test]
 fn apply_top_p_very_small_threshold_keeps_at_least_one() {
     let mut probs = vec![0.6f32, 0.3, 0.1];
@@ -154,7 +154,7 @@ fn apply_top_p_very_small_threshold_keeps_at_least_one() {
     assert!(surviving >= 1, "at least one token must survive even with tiny top_p");
 }
 
-/// Zeroed entries from prior top_k are correctly handled (excluded from sorting).
+/// Zeroed entries from prior `top_k` are correctly handled (excluded from sorting).
 #[test]
 fn apply_top_p_handles_zeros_from_top_k() {
     // Simulate a post-top_k probability vector where two tokens are non-zero.
@@ -162,7 +162,7 @@ fn apply_top_p_handles_zeros_from_top_k() {
     let mut probs = vec![0.0f32, 0.8, 0.0, 0.2];
     apply_top_p(&mut probs, 0.75);
     assert!(probs[1] > 0.0, "dominant token must survive");
-    assert_eq!(probs[3], 0.0, "smaller token must be zeroed");
+    assert!((probs[3] - 0.0).abs() < f32::EPSILON, "smaller token must be zeroed");
 }
 
 // ── apply_repetition_penalty tests ───────────────────────────────────────────
@@ -265,7 +265,7 @@ fn apply_temperature_above_one_flattens() {
     assert!(after_spread < before_spread, "temperature>1 must decrease relative spread");
 }
 
-/// Empty slice is a safe no-op for apply_temperature.
+/// Empty slice is a safe no-op for `apply_temperature`.
 #[test]
 fn apply_temperature_empty_slice_is_safe() {
     let mut logits: Vec<f32> = vec![];
@@ -288,23 +288,23 @@ fn softmax_output_values_in_unit_interval() {
     let mut logits = vec![-10.0f32, 0.0, 5.0, 1000.0, -1000.0];
     softmax_in_place(&mut logits);
     for &p in &logits {
-        assert!(p >= 0.0 && p <= 1.0, "softmax output must be in [0,1], got {p}");
+        assert!((0.0..=1.0).contains(&p), "softmax output must be in [0,1], got {p}");
     }
 }
 
-/// Softmax with NEG_INFINITY entries produces 0.0 for those positions.
+/// Softmax with `NEG_INFINITY` entries produces 0.0 for those positions.
 #[test]
 fn softmax_neg_infinity_becomes_zero() {
     let mut logits = vec![f32::NEG_INFINITY, 1.0f32, 2.0];
     softmax_in_place(&mut logits);
-    assert_eq!(logits[0], 0.0, "NEG_INFINITY must become 0.0 after softmax");
+    assert!((logits[0] - 0.0).abs() < f32::EPSILON, "NEG_INFINITY must become 0.0 after softmax");
     let sum: f32 = logits.iter().sum();
     assert!((sum - 1.0).abs() < 1e-5, "sum must still be 1.0");
 }
 
 // ── apply_top_k edge cases ────────────────────────────────────────────────────
 
-/// apply_top_k with k=1 retains only the maximum.
+/// `apply_top_k` with k=1 retains only the maximum.
 #[test]
 fn apply_top_k_k_one_retains_max_only() {
     let mut logits = vec![1.0f32, 5.0, 3.0, 2.0];
@@ -316,7 +316,7 @@ fn apply_top_k_k_one_retains_max_only() {
     assert!((finite_val - 5.0).abs() < 1e-6, "the surviving entry must be the maximum");
 }
 
-/// apply_top_k with k >= len is a no-op (all entries survive).
+/// `apply_top_k` with k >= len is a no-op (all entries survive).
 #[test]
 fn apply_top_k_k_ge_len_is_noop() {
     let original = vec![1.0f32, 2.0, 3.0];
@@ -361,7 +361,7 @@ proptest! {
         let mut v = logits;
         softmax_in_place(&mut v);
         for &p in &v {
-            prop_assert!(p >= 0.0 && p <= 1.0 + 1e-5, "softmax output out of range: {p}");
+            prop_assert!((0.0..=(1.0 + 1e-5)).contains(&p), "softmax output out of range: {p}");
         }
     }
 

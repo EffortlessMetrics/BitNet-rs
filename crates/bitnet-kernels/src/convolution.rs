@@ -231,7 +231,7 @@ pub fn conv2d_quantized(
     let elements_per_weight = kic * kh * kw;
     let expected_weight_size = match qtype {
         QuantizationType::I2S => (oc * elements_per_weight).div_ceil(4), // 2 bits per element, packed
-        QuantizationType::TL1 | QuantizationType::TL2 => oc * elements_per_weight, // 1 byte per element
+        QuantizationType::TL1 | QuantizationType::TL2 => oc * elements_per_weight,
     };
 
     if weight_quantized.len() != expected_weight_size {

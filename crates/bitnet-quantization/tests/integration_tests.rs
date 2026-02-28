@@ -26,7 +26,7 @@ fn make_tensor(data: Vec<f32>, shape: &[usize]) -> BitNetTensor {
 fn test_i2s_dequantize_known_values() {
     // Codes [-2, -1, 0, 1] map to unsigned [0, 1, 2, 3].
     // Packed: 0 | (1<<2) | (2<<4) | (3<<6) = 0b11100100 = 0xE4
-    let packed_byte: u8 = 0u8 | (1u8 << 2) | (2u8 << 4) | (3u8 << 6);
+    let packed_byte: u8 = (1u8 << 2) | (2u8 << 4) | (3u8 << 6);
     assert_eq!(packed_byte, 0xE4);
 
     let tensor = QuantizedTensor::new_with_params(
@@ -100,7 +100,7 @@ fn test_tl1_lut_entry_count() {
 fn test_tl2_dequantize_symmetry() {
     // Codes [0, 1, 2, 3] → packed unsigned 2-bit byte:
     // 0 | (1<<2) | (2<<4) | (3<<6) = 0xE4
-    let packed_byte: u8 = 0u8 | (1u8 << 2) | (2u8 << 4) | (3u8 << 6);
+    let packed_byte: u8 = (1u8 << 2) | (2u8 << 4) | (3u8 << 6);
 
     let tensor = QuantizedTensor::new_with_params(
         vec![packed_byte],

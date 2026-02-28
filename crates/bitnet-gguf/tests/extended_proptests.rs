@@ -4,15 +4,15 @@
 //!   - Little-endian encoding correctness for header fields
 //!   - Exact 24-byte boundary (valid) vs 23-byte (too small)
 //!   - Empty and single-byte inputs never panic
-//!   - u64::MAX tensor/metadata counts preserved
-//!   - TensorInfo with empty and very long names
-//!   - GgufValue::Array with String elements
+//!   - `u64::MAX` tensor/metadata counts preserved
+//!   - `TensorInfo` with empty and very long names
+//!   - `GgufValue::Array` with String elements
 //!   - v3 alignment = 0 (not power-of-two → falls back to 32)
 //!   - v3 alignment = 1 (power-of-two, 2^0 → preserved)
-//!   - Systematically corrupt each of the 4 magic bytes → parse_header error
-//!   - Byte-level truncation sweep: sizes 0..24 all fail parse_header
-//!   - GgufValue::String empty string preserved
-//!   - GgufValue clone depth: Array of cloned elements is independent
+//!   - Systematically corrupt each of the 4 magic bytes → `parse_header` error
+//!   - Byte-level truncation sweep: sizes 0..24 all fail `parse_header`
+//!   - `GgufValue::String` empty string preserved
+//!   - `GgufValue` clone depth: Array of cloned elements is independent
 
 use bitnet_gguf::{GgufValue, GgufValueType, TensorInfo, parse_header};
 use proptest::prelude::*;
@@ -91,11 +91,11 @@ fn parse_header_exactly_23_bytes_always_fails() {
     // A valid header up to byte 23 (one byte short).
     let mut d = valid_v2_header(0, 0);
     d.truncate(23);
-    assert!(parse_header(&d).is_err(), "23 bytes must always fail parse_header");
+    assert!(parse_header(&d).is_err(), "23 bytes must always fail `parse_header`");
 }
 
 proptest! {
-    /// Any input strictly shorter than 24 bytes must fail parse_header regardless
+    /// Any input strictly shorter than 24 bytes must fail `parse_header` regardless
     /// of whether the magic bytes are present.
     #[test]
     fn prop_truncation_sweep_below_24_bytes_always_fails(
@@ -237,11 +237,11 @@ proptest! {
 }
 
 // ---------------------------------------------------------------------------
-// 8. GgufValue::Array with String elements
+// 8. `GgufValue::Array` with String elements
 // ---------------------------------------------------------------------------
 
 proptest! {
-    /// GgufValue::Array with String elements preserves all element values and count.
+    /// `GgufValue::Array` with String elements preserves all element values and count.
     #[test]
     fn prop_gguf_value_array_string_elements_preserved(
         strings in prop::collection::vec("[a-z]{0,32}", 0..=16_usize),

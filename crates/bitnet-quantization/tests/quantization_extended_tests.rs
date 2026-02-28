@@ -481,6 +481,7 @@ proptest! {
         let n = data.len();
         let tensor = make_tensor(data, &[n]);
         let q = TL1Quantizer::new();
+        #[allow(clippy::collapsible_if)]
         if let Ok(qd) = q.quantize_tensor(&tensor) {
             if let Ok(deq) = q.dequantize_tensor(&qd) {
                 let vals = deq.to_vec().unwrap();
@@ -499,6 +500,7 @@ proptest! {
         let n = data.len();
         let tensor = make_tensor(data, &[n]);
         let q = TL2Quantizer::new();
+        #[allow(clippy::collapsible_if)]
         if let Ok(qd) = q.quantize_tensor(&tensor) {
             if let Ok(deq) = q.dequantize_tensor(&qd) {
                 let vals = deq.to_vec().unwrap();

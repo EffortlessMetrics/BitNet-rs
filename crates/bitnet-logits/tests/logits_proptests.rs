@@ -28,7 +28,7 @@ fn finite_vec(
     prop::collection::vec(min..=max, len)
 }
 
-/// Generate a vec that may contain some NEG_INFINITY entries alongside finite values.
+/// Generate a vec that may contain some `NEG_INFINITY` entries alongside finite values.
 fn mixed_neginf_vec(
     len: impl Into<prop::collection::SizeRange>,
 ) -> impl Strategy<Value = Vec<f32>> {
@@ -84,7 +84,8 @@ proptest! {
     ) {
         let mut logits = vec![val; n];
         softmax_in_place(&mut logits);
-        let expected = 1.0 / n as f32;
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        let expected = 1.0 / (n as f64) as f32;
         for &p in &logits {
             prop_assert!(
                 (p - expected).abs() < 1e-4,
@@ -105,10 +106,10 @@ proptest! {
     ) {
         // Require a unique maximum so argmax is unambiguous.
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        let max_count = logits.iter().filter(|&&x| (x - max_val).abs() < f32::EPSILON).count();
         prop_assume!(max_count == 1);
 
-        let mut probs = logits.clone();
+        let mut probs = logits;
         softmax_in_place(&mut probs);
 
         // log-probs: apply ln to every non-zero probability.
@@ -209,7 +210,7 @@ proptest! {
         softmax_in_place(&mut base);
         let max_base = base.iter().copied().fold(0.0f32, f32::max);
 
-        let mut scaled = logits.clone();
+        let mut scaled = logits;
         apply_temperature(&mut scaled, temp);
         softmax_in_place(&mut scaled);
         let max_scaled = scaled.iter().copied().fold(0.0f32, f32::max);
@@ -234,7 +235,7 @@ proptest! {
         softmax_in_place(&mut base);
         let max_base = base.iter().copied().fold(0.0f32, f32::max);
 
-        let mut scaled = logits.clone();
+        let mut scaled = logits;
         apply_temperature(&mut scaled, temp);
         softmax_in_place(&mut scaled);
         let max_scaled = scaled.iter().copied().fold(0.0f32, f32::max);
@@ -274,7 +275,7 @@ proptest! {
         k in 1usize..30,
     ) {
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        let max_count = logits.iter().filter(|&&x| (x - max_val).abs() < f32::EPSILON).count();
         prop_assume!(max_count == 1);
 
         let k_eff = k.min(logits.len());
@@ -460,8 +461,7 @@ proptest! {
         let mut l = logits;
         apply_repetition_penalty(&mut l, &[0u32], penalty);
         for i in 1..l.len() {
-            prop_assert_eq!(
-                l[i], original[i],
+            prop_assert!((l[i] - original[i]).abs() < f32::EPSILON,
                 "token {} was not in penalty list but logit changed",
                 i
             );

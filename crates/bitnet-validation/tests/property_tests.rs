@@ -74,7 +74,7 @@ proptest! {
         // Append anything that isn't ".weight"
         let name = format!("{stem}.bias");
         prop_assert!(!is_ln_gamma(&name));
-        let name2 = format!("{stem}");
+        let name2 = stem.to_string();
         prop_assert!(!is_ln_gamma(&name2));
     }
 

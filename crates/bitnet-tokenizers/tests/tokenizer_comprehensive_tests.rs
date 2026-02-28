@@ -250,7 +250,7 @@ proptest! {
         let tokens = tok.encode(&text, false, false)
             .expect("encode must succeed for valid UTF-8");
         let char_count = text.chars().count();
-        prop_assert!(tokens.len() >= 1, "non-empty text must produce ≥1 token");
+        prop_assert!(!tokens.is_empty(), "non-empty text must produce ≥1 token");
         prop_assert!(tokens.len() <= char_count * 4,
             "token count {} must be ≤ 4× char count {}", tokens.len(), char_count);
     }
