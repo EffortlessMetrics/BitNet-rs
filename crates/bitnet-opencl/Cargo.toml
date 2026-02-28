@@ -1,0 +1,26 @@
+[package]
+name = "bitnet-opencl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "OpenCL runtime binding layer for BitNet GPU inference"
+rust-version.workspace = true
+
+[dependencies]
+log.workspace = true
+opencl3 = { version = "0.9", optional = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+
+[features]
+default = []
+opencl-runtime = ["dep:opencl3"]
+
+[lints]
+workspace = true

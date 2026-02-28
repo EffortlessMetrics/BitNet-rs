@@ -12,13 +12,19 @@ description = "GPU hardware abstraction layer with computation graph and kernel 
 rust-version.workspace = true
 
 [dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror.workspace = true
 log.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 
 [features]
 default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
 
 [lints]
 workspace = true

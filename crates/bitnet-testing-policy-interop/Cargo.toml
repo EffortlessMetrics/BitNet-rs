@@ -13,9 +13,9 @@ description = "Interoperability façade for BitNet testing policy, BDD grid, and
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-testing-policy-contract = { path = "../bitnet-testing-policy-contract", version = "0.2.1-dev" }
-bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.1-dev" }
-bitnet-testing-policy-kit = { path = "../bitnet-testing-policy-kit", version = "0.2.1-dev" }
+bitnet-testing-policy-contract = { path = "../bitnet-testing-policy-contract", version = "0.2.0-alpha.1" }
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.0-alpha.1" }
+bitnet-testing-policy-kit = { path = "../bitnet-testing-policy-kit", version = "0.2.0-alpha.1" }
 
 [features]
 default = []

@@ -2,6 +2,7 @@
 //!
 //! This library exposes internal modules for testing purposes.
 
+pub mod backend;
 #[cfg(feature = "full-cli")]
 pub mod commands;
 pub mod config;

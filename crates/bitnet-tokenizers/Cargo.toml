@@ -17,9 +17,9 @@ include = [
 ]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0-alpha.1" }
 anyhow.workspace = true
 tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -61,7 +61,7 @@ tokio = { workspace = true, features = ["full"] }
 tempfile = "3.23.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
-bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
+bitnet-tests = { path = "../../tests", version = "0.2.0-alpha.1" }
 bitnet-test-support.workspace = true
 proptest = { workspace = true }
 insta = { workspace = true }
