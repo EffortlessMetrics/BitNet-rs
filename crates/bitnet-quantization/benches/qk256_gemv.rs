@@ -170,49 +170,35 @@ fn bench_qk256_avx2_gemv(c: &mut Criterion) {
         let blocks_per_row = cols.div_ceil(QK256_BLOCK);
         let row_stride = blocks_per_row * QK256_PACKED_BYTES;
         let qs: Vec<u8> = (0..rows * row_stride).map(|i| (i * 0x55) as u8).collect();
-        let x: Vec<f32> = (0..cols)
-            .map(|i| ((i as f32) - (cols as f32) / 2.0) * 0.001)
-            .collect();
+        let x: Vec<f32> = (0..cols).map(|i| ((i as f32) - (cols as f32) / 2.0) * 0.001).collect();
         let mut y = vec![0.0f32; rows];
 
         group.throughput(Throughput::Elements((rows * cols) as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("scalar", name),
-            &name,
-            |b, _| {
-                b.iter(|| {
-                    for (row, out) in y.iter_mut().enumerate() {
-                        let s = row * row_stride;
-                        *out = gemv_qk256_row(
-                            black_box(&qs[s..s + row_stride]),
-                            black_box(&x),
-                            cols,
-                        );
-                    }
-                    black_box(&y);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("scalar", name), &name, |b, _| {
+            b.iter(|| {
+                for (row, out) in y.iter_mut().enumerate() {
+                    let s = row * row_stride;
+                    *out = gemv_qk256_row(black_box(&qs[s..s + row_stride]), black_box(&x), cols);
+                }
+                black_box(&y);
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("avx2", name),
-            &name,
-            |b, _| {
-                b.iter(|| {
-                    gemv_qk256_avx2(
-                        black_box(&qs),
-                        black_box(&x),
-                        black_box(&mut y),
-                        rows,
-                        cols,
-                        row_stride,
-                    )
-                    .unwrap();
-                    black_box(&y);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("avx2", name), &name, |b, _| {
+            b.iter(|| {
+                gemv_qk256_avx2(
+                    black_box(&qs),
+                    black_box(&x),
+                    black_box(&mut y),
+                    rows,
+                    cols,
+                    row_stride,
+                )
+                .unwrap();
+                black_box(&y);
+            });
+        });
     }
 
     group.finish();

@@ -116,19 +116,10 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
 
             // Prefetch next block's packed bytes and input vector into L1.
             if blk_idx + 1 < blocks_needed {
-                _mm_prefetch(
-                    blk.add(QK256_PACKED_BYTES) as *const i8,
-                    _MM_HINT_T0,
-                );
-                _mm_prefetch(
-                    x_ptr.add(col + QK256_BLOCK) as *const i8,
-                    _MM_HINT_T0,
-                );
+                _mm_prefetch(blk.add(QK256_PACKED_BYTES) as *const i8, _MM_HINT_T0);
+                _mm_prefetch(x_ptr.add(col + QK256_BLOCK) as *const i8, _MM_HINT_T0);
                 // Second cache-line of next input chunk (256 f32 = 1024 bytes ≈ 16 lines).
-                _mm_prefetch(
-                    x_ptr.add(col + QK256_BLOCK + 16) as *const i8,
-                    _MM_HINT_T0,
-                );
+                _mm_prefetch(x_ptr.add(col + QK256_BLOCK + 16) as *const i8, _MM_HINT_T0);
             }
 
             let mut j = 0usize;
