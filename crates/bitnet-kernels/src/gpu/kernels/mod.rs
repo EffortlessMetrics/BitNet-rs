@@ -11,6 +11,7 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
+pub const SILU_GATE_SRC: &str = include_str!("silu_gate.cl");
 
 #[cfg(test)]
 mod tests {

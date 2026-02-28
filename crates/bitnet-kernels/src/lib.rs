@@ -19,6 +19,7 @@ pub mod gpu_utils;
 pub mod npu;
 mod stubs;
 pub mod tl_lut;
+pub mod activation_gpu;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
