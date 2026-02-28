@@ -29,6 +29,7 @@ pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
+pub mod embedding;
 pub mod fusion;
 pub mod kv_cache;
 pub mod pooling;
@@ -85,12 +86,13 @@ pub use elementwise::{
     ElementwiseConfig, ElementwiseOp, elementwise_cpu_fallback, elementwise_unary_cpu,
     fused_elementwise_cpu, launch_elementwise_binary, launch_elementwise_unary,
     launch_fused_add_mul,
+};
+
 pub use embedding::{
     EmbeddingKernelConfig, PositionEmbeddingConfig, embedding_forward, embedding_lookup_cpu,
     embedding_with_position_cpu, launch_embedding_lookup, launch_position_embedding,
     position_embedding_forward,
 };
-pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
