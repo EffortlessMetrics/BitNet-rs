@@ -1,5 +1,14 @@
 // RMSNorm: output[i] = (input[i] / rms) * weight[i]
 // where rms = sqrt(mean(input²) + eps)
+// RMS normalization compute shader for WebGPU inference.
+// Computes: output[i] = (input[i] / sqrt(mean(input^2) + eps)) * weight[i]
+// Each workgroup processes one row of length `n`.
+
+struct Params {
+    rows: u32,
+    n: u32,
+    eps: f32,
+}
 
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read> weight: array<f32>;
@@ -49,5 +58,52 @@ fn main(
         if (idx >= n) { break; }
         output[idx] = (input[idx] / rms) * weight[idx];
         idx = idx + 256u;
+@group(0) @binding(3) var<uniform> params: Params;
+
+const WG_SIZE: u32 = 256u;
+
+var<workgroup> shared_data: array<f32, 256>;
+
+@compute @workgroup_size(256)
+fn main(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+    @builtin(workgroup_id) wid: vec3<u32>,
+) {
+    let row = wid.x;
+    let local_id = lid.x;
+
+    if (row >= params.rows) {
+        return;
+    }
+
+    let row_offset = row * params.n;
+
+    // Compute sum of squares (parallel reduction)
+    var local_sum_sq: f32 = 0.0;
+    for (var i: u32 = local_id; i < params.n; i = i + WG_SIZE) {
+        let val = input[row_offset + i];
+        local_sum_sq = local_sum_sq + val * val;
+    }
+    shared_data[local_id] = local_sum_sq;
+    workgroupBarrier();
+
+    // Tree reduction for sum of squares
+    for (var stride: u32 = WG_SIZE / 2u; stride > 0u; stride = stride / 2u) {
+        if (local_id < stride) {
+            shared_data[local_id] = shared_data[local_id]
+                                  + shared_data[local_id + stride];
+        }
+        workgroupBarrier();
+    }
+
+    let rms = sqrt(shared_data[0] / f32(params.n) + params.eps);
+    let inv_rms = 1.0 / rms;
+    workgroupBarrier();
+
+    // Normalize and apply weight
+    for (var i: u32 = local_id; i < params.n; i = i + WG_SIZE) {
+        output[row_offset + i] = input[row_offset + i] * inv_rms
+                                * weight[i];
     }
 }

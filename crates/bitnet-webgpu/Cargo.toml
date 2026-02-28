@@ -1,0 +1,27 @@
+[package]
+name = "bitnet-webgpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "WGSL compute shader sources for WebGPU browser inference in BitNet"
+rust-version.workspace = true
+
+[dependencies]
+# No wgpu dependency yet — this crate embeds WGSL kernel sources only.
+
+[dev-dependencies]
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+webgpu = []
+
+[lints]
+workspace = true
