@@ -13,3 +13,13 @@ log.workspace = true
 
 [dev-dependencies]
 temp-env = "0.3.6"
+keywords.workspace = true
+categories.workspace = true
+description = "OpenCL 3.0 backend with Unified Shared Memory (USM) support for BitNet inference"
+rust-version.workspace = true
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+serial_test.workspace = true
+[features]
+default = []
+[lints]
+workspace = true
