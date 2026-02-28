@@ -6,7 +6,7 @@
 
 use bitnet_common::Device;
 use bitnet_kernels::capability_matrix::{
-    DeviceClass, OperationCategory, PrecisionSupport, SupportLevel, apple_m1,
+    DeviceClass, DeviceProfile, OperationCategory, PrecisionSupport, SupportLevel,
 };
 use bitnet_kernels::gpu_utils::{GpuInfo, get_gpu_info};
 
@@ -285,7 +285,7 @@ mod metal_workgroup_limits {
         }
     }
 
-    /// 2-D threadgroup dimensions (width x height) must stay within limits.
+    /// 2-D threadgroup dimensions (width × height) must stay within limits.
     #[test]
     fn two_d_threadgroup_within_limit() {
         let grids: &[(u32, u32)] = &[
@@ -300,7 +300,7 @@ mod metal_workgroup_limits {
             let total = w * h;
             assert!(
                 total <= METAL_MAX_THREADS_PER_THREADGROUP,
-                "Threadgroup {w}x{h} = {total} exceeds limit"
+                "Threadgroup {w}×{h} = {total} exceeds limit"
             );
         }
     }
@@ -309,17 +309,17 @@ mod metal_workgroup_limits {
     #[test]
     fn three_d_threadgroup_within_limit() {
         let grids: &[(u32, u32, u32)] = &[
-            (8, 8, 16),   // 1024
-            (4, 4, 64),   // 1024
-            (16, 8, 8),   // 1024
-            (1, 1, 1024), // 1024
-            (32, 32, 1),  // 1024
+            (8, 8, 16), // 1024
+            (4, 4, 64), // 1024
+            (16, 8, 8), // 1024
+            (1, 1, 1024),
+            (32, 32, 1), // 1024
         ];
         for &(x, y, z) in grids {
             let total = x * y * z;
             assert!(
                 total <= METAL_MAX_THREADS_PER_THREADGROUP,
-                "Threadgroup {x}x{y}x{z} = {total} exceeds limit"
+                "Threadgroup {x}×{y}×{z} = {total} exceeds limit"
             );
         }
     }
@@ -330,7 +330,7 @@ mod metal_workgroup_limits {
         let total = 33_u32 * 33;
         assert!(
             total > METAL_MAX_THREADS_PER_THREADGROUP,
-            "33x33 = {total} should exceed the limit"
+            "33×33 = {total} should exceed the limit"
         );
     }
 }
@@ -364,7 +364,7 @@ mod metal_memory_estimation {
     /// Estimate whether a model fits in Metal unified memory.
     #[test]
     fn model_memory_estimation_2b_params() {
-        // 2 billion params x 2 bits / 8 = 500 MB (rough I2_S estimate)
+        // 2 billion params × 2 bits / 8 = 500 MB (rough I2_S estimate)
         let param_count: u64 = 2_000_000_000;
         let bytes = param_count * 2 / 8; // 2-bit quantisation
         let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
@@ -376,7 +376,7 @@ mod metal_memory_estimation {
 
     #[test]
     fn apple_m1_profile_memory_is_sane() {
-        let profile = apple_m1();
+        let profile = DeviceProfile::apple_m1();
         assert_eq!(profile.device_class, DeviceClass::AppleMetal);
         assert!(
             profile.memory_gb as u64 >= METAL_MIN_UNIFIED_MEMORY_GB,
@@ -396,7 +396,7 @@ mod metal_shader_availability {
     /// Verify the Apple M1 capability profile includes matrix ops.
     #[test]
     fn apple_m1_supports_matmul_fp32() {
-        let profile = apple_m1();
+        let profile = DeviceProfile::apple_m1();
         let entry = profile.capabilities.iter().find(|e| {
             e.operation == OperationCategory::MatrixOps && e.precision == PrecisionSupport::FP32
         });
@@ -411,7 +411,7 @@ mod metal_shader_availability {
 
     #[test]
     fn apple_m1_supports_matmul_fp16() {
-        let profile = apple_m1();
+        let profile = DeviceProfile::apple_m1();
         let entry = profile.capabilities.iter().find(|e| {
             e.operation == OperationCategory::MatrixOps && e.precision == PrecisionSupport::FP16
         });
@@ -420,7 +420,7 @@ mod metal_shader_availability {
 
     #[test]
     fn apple_m1_binary_quantized_is_partial() {
-        let profile = apple_m1();
+        let profile = DeviceProfile::apple_m1();
         let entry = profile.capabilities.iter().find(|e| {
             e.operation == OperationCategory::QuantizedOps
                 && e.precision == PrecisionSupport::Binary
@@ -457,14 +457,13 @@ mod metal_shader_availability {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_cpu_parity {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]
     #[ignore = "TDD scaffold: Metal matmul kernel not yet implemented"]
     fn metal_matmul_matches_cpu_small() {
         // Stub: when Metal matmul is implemented, this should verify that
-        // a small 4x4 matmul on Metal produces the same output as the CPU
+        // a small 4×4 matmul on Metal produces the same output as the CPU
         // FallbackKernel within f32 epsilon tolerance.
         unimplemented!("Metal matmul kernel parity test");
     }
@@ -497,7 +496,7 @@ mod metal_cpu_parity {
         use bitnet_kernels::{FallbackKernel, KernelProvider};
         let cpu = FallbackKernel;
         assert!(cpu.is_available(), "CPU fallback must always be available");
-        assert_eq!(cpu.name(), "fallback");
+        assert_eq!(cpu.name(), "cpu-fallback");
     }
 
     /// Cosine similarity helper used for future parity checks.
