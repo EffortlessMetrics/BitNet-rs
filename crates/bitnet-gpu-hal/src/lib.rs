@@ -4,11 +4,11 @@
 //! attention, embedding, `RoPE`, transformer blocks, generation control,
 //! and memory management.
 
-pub mod workgroup;
 pub mod profiling;
+pub mod speculative;
 pub mod streaming;
 pub mod test_harness;
-pub mod speculative;
+pub mod workgroup;
 use std::fmt;
 
 // ── Errors ────────────────────────────────────────────────────────────────
