@@ -103,6 +103,7 @@ default-members = [
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
 ]
 
 [package]
