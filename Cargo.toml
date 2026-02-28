@@ -60,7 +60,7 @@ members = [
   "crates/bitnet-test-support",
   "crates/bitnet-opencl",        # OpenCL runtime binding layer
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer with profiling
   "crossval",
   "tests",
   "xtask",
