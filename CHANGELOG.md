@@ -5,6 +5,42 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **GPU health monitor** (#1306): 9 check types, DiagnosticReport, trend detection, and recommendations for proactive GPU health management, 71 tests
+- **Speculative decoding** (#1305): 4 acceptance methods (greedy, sample, typical, top-k), adaptive draft length, and speedup tracking, 65 tests
+- **GPU power management** (#1304): PowerManager with 4 modes (Performance, Balanced, PowerSaver, Adaptive), ThermalPolicy, and energy efficiency tracking, 53 tests
+- **Batch inference engine** (#1303): BatchEngine with 4 padding strategies, priority scheduling, and dynamic batching for throughput optimization, 73 tests
+- **Cross-backend test harness** (#1302): 4 tolerance modes (Exact, UlpBased, Relative, Statistical), TestSuite/TestRunner, and built-in validation suites, 68 tests
+- **GPU streaming generation** (#1301): StreamingGenerator with SSE/JSON formatters and full stream lifecycle management for real-time token output, 75 tests
+- **GPU profiling framework** (#1300): GpuProfiler with ChromeTraceExporter, CsvExporter, and ProfileReport for kernel-level performance analysis, 67 tests
+- **Async GPU execution** (#1299): AsyncEngine with priority queue, dependency tracking, and Pipeline stages for non-blocking GPU dispatch, 60 tests
+- **SPIR-V compilation pipeline** (#1298): SpirVCompiler, SpirVCache with LRU eviction, and SpirVValidator for Vulkan shader management, 65 tests
+- **Computation graph executor** (#1297): GraphOptimizer with operator fusion, dead-code elimination, constant folding, and ExecutionPlan scheduling, 89 tests
+- **Kernel autotuner** (#1296): 4 search strategies (Exhaustive, Random, Grid, Bayesian) with persistent cache for optimal kernel configuration, 60 tests
+- **GPU memory pool** (#1295): FirstFit, BestFit, BuddySystem, and SlabAllocator strategies with defragmentation support, 76 tests
+- **GPU tensor operations** (#1294): TensorOps trait with CpuTensorOps reference impl covering matmul, softmax, rms_norm, rope, silu, and gelu, 81 tests
+- **Multi-device scheduler** (#1293): 5 scheduling policies with device blacklisting and utilization reporting for heterogeneous GPU fleets, 69 tests
+- **Backend capability matrix** (#1292): 8 backends with FeatureFlags and feature negotiation scoring for optimal backend selection, 71 tests
+- **Vulkan runtime layer** (#1291): VulkanInstance, VulkanPhysicalDevice, VulkanBuffer, and VulkanComputePipeline abstractions, 36 tests
+- **Model sharding** (#1290): 4 sharding strategies (LayerWise, TensorParallel, Replicated, Custom) for multi-device model distribution, 64 tests
+- **wgpu runtime integration** (#1289): WgpuDevice, WgpuBuffer, WgpuComputePipeline, and WgpuKernelLauncher for cross-platform GPU compute, 32 tests
+- **Linear algebra primitives** (#1288): dot, norm, matmul, matvec, transpose, outer, and batched operations for GPU backend foundations, 83 tests
+- **GPU error recovery** (#1287): RecoveryEngine with retry, fallback, and blacklisting strategies for resilient GPU execution, 60 tests
+- **GPU config system** (#1286): GpuConfig with from_env(), validate(), 8 environment variable constants for runtime GPU configuration, 69 tests
+- **CHANGELOG waves 33-35** (#1285): 14 entries covering quantization, embeddings, RoPE, server, CLI, and E2E improvements
+- **E2E mock inference** (#1284): MockModel with forward pass, full generation loop, deterministic seeding, 56 tests
+- **CLI --backend flag** (#1283): BackendArg with 8 options, list-backends subcommand, 32 tests
+- **GPU HAL fuzz targets** (#1282): 4 fuzz targets for sampling, quantization, attention shapes, RoPE values
+- **GPU HAL benchmarks** (#1281): Criterion benchmarks for softmax, rms_norm, matmul, rope, sampling
+- **OpenCL runtime binding** (#1280): platform/device enumeration with dynamic loading, mock devices, 46 tests
+- **GPU compile check CI** (#1279): 7-crate compile matrix workflow, doc check workflow
+- **GPU HAL property tests** (#1278): 35 proptest-based tests for sampling, quantization, attention, RoPE, memory
+- **GPU architecture documentation** (#1277): architecture guide, testing guide, compatibility matrix
+- **Full inference engine** (#1276): EngineConfig with 8 backend types, lifecycle state machine, capabilities, 64 tests
+- **GPU server integration** (#1275): OpenAI-compatible chat completion API types, health checks, 57 tests
+- **Rotary position embeddings** (#1274): RoPE with NTK/YaRN/Linear scaling, pre-computed tables, 50 tests
+- **Embedding layer** (#1273): token embedding with batch lookup and tied output projection, 45 tests
+- **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios, 78 tests
+- **CHANGELOG waves 29-32** (#1271): 17 entries covering GPU HAL infrastructure PRs
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
