@@ -8,7 +8,7 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "OpenCL 3.0 backend with Unified Shared Memory (USM) support for BitNet inference"
+description = "OpenCL compute kernels for BitNet neural network inference"
 rust-version.workspace = true
 
 [dependencies]

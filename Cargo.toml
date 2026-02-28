@@ -62,8 +62,8 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
-  "crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
+"crates/bitnet-vulkan",        # Vulkan compute backend
+"crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
   "crossval",
   "tests",
   "xtask",

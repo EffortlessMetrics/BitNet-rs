@@ -5,11 +5,15 @@
 //! reports itself as unavailable — compilation succeeds everywhere.
 
 pub mod capabilities;
+pub mod command;
 pub mod error;
+pub mod pipeline;
 pub mod shader;
 
 pub use capabilities::{query_device, MetalDeviceInfo};
+pub use command::{CommandBuffer, CommandBufferState};
 pub use error::MetalError;
+pub use pipeline::{PipelineCache, PipelineDescriptor};
 
 use crate::error::Result;
 
@@ -99,6 +103,75 @@ mod tests {
     #[test]
     fn rmsnorm_shader_has_eps() {
         assert!(shader::RMSNORM_MSL.contains("eps"));
+    }
+
+    #[test]
+    fn rope_shader_non_empty() {
+        assert!(!shader::ROPE_MSL.is_empty());
+    }
+
+    #[test]
+    fn rope_shader_has_kernel_function() {
+        assert!(shader::ROPE_MSL.contains("kernel void rope"));
+    }
+
+    #[test]
+    fn rope_shader_uses_freq_cos_sin() {
+        assert!(shader::ROPE_MSL.contains("freq_cos"));
+        assert!(shader::ROPE_MSL.contains("freq_sin"));
+    }
+
+    #[test]
+    fn attention_shader_non_empty() {
+        assert!(!shader::ATTENTION_MSL.is_empty());
+    }
+
+    #[test]
+    fn attention_shader_has_kernel_function() {
+        assert!(shader::ATTENTION_MSL.contains("kernel void attention"));
+    }
+
+    #[test]
+    fn attention_shader_has_softmax_reduction() {
+        assert!(shader::ATTENTION_MSL.contains("threadgroup_barrier"));
+        assert!(shader::ATTENTION_MSL.contains("shared_max"));
+    }
+
+    #[test]
+    fn all_kernels_registry_has_five_entries() {
+        assert_eq!(shader::ALL_KERNELS.len(), 5);
+    }
+
+    #[test]
+    fn get_kernel_source_found() {
+        assert!(shader::get_kernel_source("matmul").is_some());
+        assert!(shader::get_kernel_source("rope").is_some());
+        assert!(shader::get_kernel_source("attention").is_some());
+    }
+
+    #[test]
+    fn get_kernel_source_not_found() {
+        assert!(shader::get_kernel_source("nonexistent").is_none());
+    }
+
+    #[test]
+    fn pipeline_cache_validates_all_builtin_kernels() {
+        let cache = PipelineCache::new();
+        for (name, _) in shader::ALL_KERNELS {
+            assert!(cache.validate(name).is_ok(), "pipeline missing: {name}");
+        }
+    }
+
+    #[test]
+    fn command_buffer_encode_commit_wait_lifecycle() {
+        use crate::command::CommandBufferState;
+        let mut buf = CommandBuffer::new();
+        let cache = PipelineCache::new();
+        let pipe = cache.get("softmax").unwrap();
+        buf.encode_dispatch(pipe, (32, 1, 1)).unwrap();
+        buf.commit().unwrap();
+        buf.wait_until_completed().unwrap();
+        assert_eq!(buf.state(), CommandBufferState::Completed);
     }
 
     #[test]
