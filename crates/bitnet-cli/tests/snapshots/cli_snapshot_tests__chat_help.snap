@@ -26,14 +26,29 @@ Options:
           
           [default: auto]
 
-      --log-level <LEVEL>
-          Log level (trace, debug, info, warn, error)
+      --backend <BACKEND>
+          GPU backend to use
+
+          Possible values:
+          - auto:   Automatically detect best available backend
+          - cpu:    CPU only (no GPU)
+          - cuda:   NVIDIA CUDA
+          - opencl: Intel OpenCL (Arc, Xe)
+          - vulkan: Vulkan compute
+          - metal:  Apple Metal
+          - rocm:   AMD ROCm/HIP
+          - webgpu: WebGPU (experimental)
+          
+          [default: auto]
 
   -p, --prompt <TEXT>
           Input prompt (if not provided, interactive mode is used)
 
       --input-file <PATH>
           Input file containing prompts (one per line)
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
 
   -o, --output <PATH>
           Output file for results
@@ -55,8 +70,16 @@ Options:
           
           [default: 0.7]
 
+      --output-format <FORMAT>
+          Output format (text, json)
+          
+          [default: text]
+
       --top-k <K>
           Top-k sampling parameter
+
+      --quiet
+          Suppress all non-essential output
 
       --top-p <P>
           Top-p (nucleus) sampling parameter
@@ -65,6 +88,9 @@ Options:
           Repetition penalty
           
           [default: 1.1]
+
+      --no-color
+          Disable colored output
 
       --seed <SEED>
           Random seed for reproducible generation

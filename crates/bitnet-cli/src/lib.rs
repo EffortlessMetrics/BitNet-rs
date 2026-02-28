@@ -8,6 +8,7 @@ pub mod commands;
 pub mod config;
 pub mod exit;
 pub mod ln_rules;
+pub mod output;
 pub mod tokenizer_discovery;
 
 /// Build the CLI command for external use (e.g., in tests)
