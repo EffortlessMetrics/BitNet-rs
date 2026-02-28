@@ -1,6 +1,14 @@
 # Architectural Decision Records
 
-- ADR-0001: [Configuration layering and clamp location](./0001-configuration-layering.md)
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](./0001-configuration-layering.md) | Configuration layering and clamp location | Accepted |
+| [001](./ADR-001-opencl-initial-backend.md) | Use OpenCL as initial Intel GPU backend | Accepted |
+| [002](./ADR-002-microcrate-per-backend.md) | One microcrate per GPU backend | Accepted |
+| [003](./ADR-003-gpu-hal-abstraction.md) | GPU Hardware Abstraction Layer (HAL) traits | Accepted |
+| [004](./ADR-004-kernel-compilation-strategy.md) | Runtime kernel compilation with caching | Accepted |
+| [005](./ADR-005-cpu-fallback-strategy.md) | Automatic CPU fallback when GPU unavailable | Accepted |
+| [006](./ADR-006-feature-flag-design.md) | Feature flag structure for multi-backend | Accepted |
 
 ## Template for new ADRs
 
