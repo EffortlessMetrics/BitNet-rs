@@ -1337,6 +1337,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-tests-new"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bitnet-common",
+ "bitnet-inference",
+ "bitnet-kernels",
+ "bitnet-models",
+ "tokio",
+]
+
+[[package]]
 name = "bitnet-tokenizers"
 version = "0.2.1-dev"
 dependencies = [

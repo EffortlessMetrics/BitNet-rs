@@ -61,6 +61,7 @@ members = [
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crossval",
   "tests",
+  "tests-new",
   "xtask",
   "xtask-build-helper",
   "fuzz",
