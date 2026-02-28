@@ -164,6 +164,10 @@ impl GpuBackend {
     /// Create GPU backend with custom configuration
     pub fn with_config(config: GpuPerformanceConfig) -> Result<Self> {
         let device_id = config.device_id;
+        #[cfg(all(feature = "metal", target_os = "macos"))]
+        let device = Device::new_metal(device_id).map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        #[cfg(not(all(feature = "metal", target_os = "macos")))]
         let device = Device::new_cuda(device_id)
             .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
@@ -208,8 +212,13 @@ impl Backend for GpuBackend {
     }
 
     fn is_available(&self) -> bool {
-        // Check if CUDA is available and device exists
-        Device::new_cuda(self.device_id).is_ok() && self.kernel_provider.is_available()
+        // Check if CUDA or Metal is available and device exists
+        #[cfg(all(feature = "metal", target_os = "macos"))]
+        let device_ok = Device::new_metal(self.device_id).is_ok();
+        #[cfg(not(all(feature = "metal", target_os = "macos")))]
+        let device_ok = Device::new_cuda(self.device_id).is_ok();
+
+        device_ok && self.kernel_provider.is_available()
     }
 
     fn tokenize(&self, text: &str) -> Result<Vec<u32>> {
