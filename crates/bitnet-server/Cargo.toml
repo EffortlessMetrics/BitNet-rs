@@ -106,6 +106,8 @@ gpu = [
   "runtime-profile-core",
 ]
 server = ["runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-server"]
+oneapi = ["bitnet-inference/oneapi", "bitnet-kernels/oneapi", "runtime-profile-core"]        # Intel GPU via OpenCL/oneAPI
+vulkan = ["bitnet-kernels/vulkan", "runtime-profile-core"]                                   # Vulkan GPU backend
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)

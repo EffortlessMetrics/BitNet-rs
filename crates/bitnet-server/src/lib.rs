@@ -10,6 +10,7 @@ mod caching;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
+pub mod gpu_backend;
 pub mod health;
 pub mod model_manager;
 pub mod monitoring;
@@ -142,6 +143,7 @@ pub struct BitNetServer {
     #[cfg(feature = "prometheus")]
     prometheus_exporter: Option<Arc<PrometheusExporter>>,
     start_time: Instant,
+    gpu_device_config: Option<gpu_backend::GpuDeviceConfig>,
 }
 
 impl BitNetServer {
@@ -182,6 +184,16 @@ impl BitNetServer {
         // Initialize security validator
         let security_validator = Arc::new(SecurityValidator::new(config.security.clone())?);
 
+        // Parse GPU device configuration from environment
+        let gpu_device_config = std::env::var("BITNET_GPU_DEVICE")
+            .ok()
+            .and_then(|val| {
+                gpu_backend::GpuDeviceConfig::from_env_value(&val)
+                    .map_err(|e| warn!("Invalid BITNET_GPU_DEVICE value: {e}"))
+                    .ok()
+            })
+            .or_else(|| Some(gpu_backend::GpuDeviceConfig::default()));
+
         // Load default model if specified
         if let Some(model_path) = &config.server.default_model_path {
             let device = config.server.default_device.resolve();
@@ -217,6 +229,7 @@ impl BitNetServer {
             #[cfg(feature = "prometheus")]
             prometheus_exporter,
             start_time,
+            gpu_device_config,
         })
     }
 
@@ -255,6 +268,7 @@ impl BitNetServer {
             security_validator: Arc::clone(&self.security_validator),
             metrics: self.monitoring.metrics(),
             start_time: self.start_time,
+            gpu_device_config: self.gpu_device_config.clone(),
         };
 
         let mut app = Router::new()
@@ -270,6 +284,8 @@ impl BitNetServer {
             // Server statistics and management
             .route("/v1/stats", get(server_stats_handler))
             .route("/v1/devices", get(device_status_handler))
+            // GPU backend status
+            .route("/api/v1/gpu/status", get(gpu_backend::gpu_status_handler))
             // Root endpoint
             .route("/", get(root_handler))
             .with_state(app_state);
@@ -372,6 +388,8 @@ pub struct ProductionAppState {
     pub security_validator: Arc<SecurityValidator>,
     pub metrics: Arc<MetricsCollector>,
     pub start_time: Instant,
+    /// GPU device configuration (populated from `BITNET_GPU_DEVICE` env var).
+    pub gpu_device_config: Option<gpu_backend::GpuDeviceConfig>,
 }
 
 /// Root handler

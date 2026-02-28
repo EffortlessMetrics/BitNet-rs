@@ -113,6 +113,10 @@ pub struct ServerSettings {
     pub default_model_path: Option<String>,
     pub default_tokenizer_path: Option<String>,
     pub default_device: DeviceConfig,
+    /// GPU device selection (e.g. `"cuda:0"`, `"opencl:1"`, `"vulkan"`).
+    /// Parsed from `BITNET_GPU_DEVICE` environment variable.
+    #[serde(default)]
+    pub gpu_device: Option<String>,
 }
 
 impl Default for ServerSettings {
@@ -127,6 +131,7 @@ impl Default for ServerSettings {
             default_model_path: None,
             default_tokenizer_path: None,
             default_device: DeviceConfig::Auto,
+            gpu_device: None,
         }
     }
 }
@@ -178,6 +183,10 @@ impl ConfigBuilder {
                     tracing::warn!("Invalid BITNET_DEFAULT_DEVICE value '{}': {}", device, e);
                 }
             }
+        }
+
+        if let Ok(gpu_device) = env::var("BITNET_GPU_DEVICE") {
+            self.config.server.gpu_device = Some(gpu_device);
         }
 
         // Model manager settings
