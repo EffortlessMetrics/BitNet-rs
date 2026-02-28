@@ -196,15 +196,6 @@ impl MetricsCollector {
         self.inference.cache_hit_rate.set(hit_rate);
     }
 
-    /// Record an HTTP request (count, duration, error flag).
-    pub fn record_request(&self, _method: &str, _path: &str, status: u16, duration: Duration) {
-        self.inference.requests_total.increment(1);
-        self.inference.request_duration.record(duration.as_secs_f64());
-        if status >= 500 {
-            self.inference.errors_total.increment(1);
-        }
-    }
-
     /// Collect system-level metrics
     pub async fn collect_system_metrics(&self) -> Result<()> {
         // Update uptime

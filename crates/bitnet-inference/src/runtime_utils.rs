@@ -19,19 +19,15 @@ where
             // We're already in a runtime context, so we need to spawn a blocking task
             // to avoid blocking the runtime
             let result = std::thread::spawn(move || {
-                let rt = tokio::runtime::Runtime::new().map_err(|e| {
-                    BitNetError::Inference(InferenceError::GenerationFailed {
-                        reason: format!("Failed to create runtime: {e}"),
-                    })
-                })?;
-                Ok::<T, BitNetError>(rt.block_on(future))
+                let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+                rt.block_on(future)
             })
             .join()
             .map_err(|_| {
                 BitNetError::Inference(InferenceError::GenerationFailed {
                     reason: "Thread panicked during block_on".to_string(),
                 })
-            })??;
+            })?;
             Ok(result)
         }
         Err(_) => {

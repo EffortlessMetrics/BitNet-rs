@@ -138,7 +138,7 @@ mod latency_tests {
         let device = Device::Cpu;
         InferenceEngine::new(model, tokenizer, device).unwrap()
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_single_inference_latency() {
         let engine = create_test_engine().await;
         let start_time = Instant::now();
@@ -148,7 +148,7 @@ mod latency_tests {
         assert!(latency < Duration::from_millis(100));
         println!("Single inference latency: {:?}", latency);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_inference_latency_with_different_prompt_lengths() {
         let engine = create_test_engine().await;
         let prompt_lengths = [10, 50, 100, 500, 1000];
@@ -162,7 +162,7 @@ mod latency_tests {
             assert!(latency < Duration::from_millis(200));
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_inference_latency_with_different_generation_lengths() {
         let engine = create_test_engine().await;
         let generation_lengths = [1, 10, 50, 100];
@@ -177,7 +177,7 @@ mod latency_tests {
             assert!(latency < expected_max_latency);
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_first_token_latency() {
         let engine = create_test_engine().await;
         let start_time = Instant::now();
@@ -195,7 +195,7 @@ mod latency_tests {
             panic!("First token generation timed out");
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_latency_consistency() {
         let engine = create_test_engine().await;
         let num_runs = 10;
@@ -228,7 +228,7 @@ mod throughput_tests {
         let device = Device::Cpu;
         InferenceEngine::new(model, tokenizer, device).unwrap()
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_sequential_throughput() {
         let engine = create_test_engine().await;
         let num_requests = 20;
@@ -244,7 +244,7 @@ mod throughput_tests {
         assert!(throughput > 0.0);
         assert!(throughput < 1000.0);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_concurrent_throughput() {
         let engine = Arc::new(create_test_engine().await);
         let num_requests = 20;
@@ -276,7 +276,7 @@ mod throughput_tests {
         assert_eq!(successful_requests, num_requests);
         assert!(throughput > 0.0);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_streaming_throughput() {
         let engine = create_test_engine().await;
         let config = GenerationConfig::default().with_max_tokens(20);
@@ -301,7 +301,7 @@ mod throughput_tests {
         assert!(token_count > 0);
         assert!(tokens_per_second > 0.0);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_throughput_scaling() {
         let engine = Arc::new(create_test_engine().await);
         let base_requests = 10;
@@ -342,7 +342,7 @@ mod memory_tests {
         let device = Device::Cpu;
         InferenceEngine::new(model, tokenizer, device).unwrap()
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_usage_single_inference() {
         let engine = create_test_engine().await;
         let stats_before = engine.get_stats().await;
@@ -356,7 +356,7 @@ mod memory_tests {
             stats_before.cache_usage, stats_after.cache_usage
         );
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_usage_multiple_inferences() {
         let engine = create_test_engine().await;
         let num_inferences = 5;
@@ -374,7 +374,7 @@ mod memory_tests {
             assert!(*usage <= 100.0);
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_cleanup_after_cache_clear() {
         let engine = create_test_engine().await;
         for i in 0..5 {
@@ -390,7 +390,7 @@ mod memory_tests {
             stats_before_clear.cache_usage, stats_after_clear.cache_usage
         );
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_usage_with_different_context_lengths() {
         let context_lengths = [512, 1024, 2048];
         for context_length in context_lengths {
@@ -408,7 +408,7 @@ mod memory_tests {
             assert!(stats.cache_usage <= 100.0);
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_efficiency_with_batching() {
         let engine = Arc::new(create_test_engine().await);
         let num_concurrent = 4;
@@ -451,7 +451,7 @@ mod cache_performance_tests {
         let device = Device::Cpu;
         InferenceEngine::new(model, tokenizer, device).unwrap()
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cache_hit_performance() {
         let engine = create_test_engine().await;
         let prompt = "Cache performance test prompt";
@@ -470,7 +470,7 @@ mod cache_performance_tests {
         assert!(first_inference_time > Duration::from_millis(0));
         assert!(second_inference_time > Duration::from_millis(0));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cache_efficiency_with_similar_prompts() {
         let engine = create_test_engine().await;
         let base_prompt = "This is a test prompt for cache efficiency";
@@ -488,7 +488,7 @@ mod cache_performance_tests {
             assert!(*time < Duration::from_millis(100));
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cache_size_impact_on_performance() {
         let cache_sizes = [1024, 4096, 16384];
         for cache_size in cache_sizes {
@@ -509,7 +509,7 @@ mod cache_performance_tests {
             assert!(throughput > 0.0);
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cache_clear_performance_impact() {
         let engine = create_test_engine().await;
         for i in 0..5 {
@@ -536,7 +536,7 @@ mod cache_performance_tests {
 }
 mod backend_performance_tests {
     use super::*;
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_performance() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -556,7 +556,7 @@ mod backend_performance_tests {
         let stats = engine.get_stats().await;
         assert_eq!(stats.backend_type, "cpu");
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_backend_selection_performance() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -575,7 +575,7 @@ mod backend_performance_tests {
         assert!(cpu_time > Duration::from_millis(0));
         assert!(gpu_time > Duration::from_millis(0));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_backend_warmup_performance() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -602,7 +602,7 @@ mod stress_tests {
         let device = Device::Cpu;
         InferenceEngine::new(model, tokenizer, device).unwrap()
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_high_concurrency_stress() {
         let engine = Arc::new(create_test_engine().await);
         let num_requests = 50;
@@ -643,7 +643,7 @@ mod stress_tests {
         assert!(successful_requests > num_requests * 8 / 10);
         assert!(throughput > 0.0);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_long_running_performance() {
         let engine = create_test_engine().await;
         let duration = Duration::from_secs(10);
@@ -682,7 +682,7 @@ mod stress_tests {
         assert!(throughput > 0.0);
         assert!(avg_latency < Duration::from_millis(100));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_memory_stress() {
         let engine = create_test_engine().await;
         let num_requests = 100;

@@ -6,7 +6,7 @@
 //! comprehensive coverage of the inference engine.
 use bitnet_inference::prelude::*;
 use std::time::Duration;
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_inference_config_defaults() {
     let config = InferenceConfig::default();
     assert!(config.max_context_length > 0);
@@ -14,7 +14,7 @@ async fn test_inference_config_defaults() {
     assert!(config.batch_size > 0);
     assert!(config.memory_pool_size > 0);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_inference_config_validation() {
     let mut config = InferenceConfig::default();
     assert!(config.validate().is_ok());
@@ -30,7 +30,7 @@ async fn test_inference_config_validation() {
     config.memory_pool_size = 0;
     assert!(config.validate().is_err());
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_inference_config_builder() {
     let config = InferenceConfig::default()
         .with_threads(8)
@@ -42,7 +42,7 @@ async fn test_inference_config_builder() {
     assert!(config.mixed_precision);
     assert_eq!(config.memory_pool_size, 1024 * 1024 * 1024);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_inference_config_presets() {
     let cpu_config = InferenceConfig::cpu_optimized();
     assert!(!cpu_config.mixed_precision);
@@ -54,7 +54,7 @@ async fn test_inference_config_presets() {
     assert_eq!(memory_config.max_context_length, 1024);
     assert_eq!(memory_config.memory_pool_size, 1024 * 1024 * 256);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_generation_config_defaults() {
     let config = GenerationConfig::default();
     assert_eq!(config.max_new_tokens, 100);
@@ -66,7 +66,7 @@ async fn test_generation_config_defaults() {
     assert!(config.seed.is_none());
     assert!(config.skip_special_tokens);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_generation_config_validation() {
     let mut config = GenerationConfig::default();
     assert!(config.validate().is_ok());
@@ -84,7 +84,7 @@ async fn test_generation_config_validation() {
     config.repetition_penalty = 0.0;
     assert!(config.validate().is_err());
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_generation_config_presets() {
     let greedy = GenerationConfig::greedy();
     assert_eq!(greedy.temperature, 0.0);
@@ -96,7 +96,7 @@ async fn test_generation_config_presets() {
     assert_eq!(balanced.temperature, 0.7);
     assert_eq!(balanced.repetition_penalty, 1.05);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_generation_config_builder() {
     let config = GenerationConfig::default()
         .with_seed(42)
@@ -112,7 +112,7 @@ async fn test_generation_config_builder() {
     assert_eq!(config.top_k, 40);
     assert_eq!(config.top_p, 0.95);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_config_serialization() {
     let gen_config = GenerationConfig::default();
     let serialized = serde_json::to_string(&gen_config).unwrap();
@@ -125,13 +125,13 @@ async fn test_config_serialization() {
     assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
     assert_eq!(inf_config.num_threads, deserialized.num_threads);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_cache_config_creation() {
     let config = CacheConfig::default();
     assert!(config.max_size_bytes > 0);
     assert!(config.max_sequence_length > 0);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_cache_creation() {
     let config = CacheConfig::default();
     let cache = KVCache::new(config);
@@ -140,7 +140,7 @@ async fn test_cache_creation() {
     assert_eq!(cache.size(), 0);
     assert_eq!(cache.usage_percent(), 0.0);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_cache_operations() {
     let config = CacheConfig::default();
     let mut cache = KVCache::new(config).unwrap();
@@ -149,7 +149,7 @@ async fn test_cache_operations() {
     cache.clear();
     assert_eq!(cache.size(), 0);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_streaming_config() {
     let config = StreamingConfig::default();
     assert!(config.buffer_size > 0);
@@ -164,7 +164,7 @@ async fn test_streaming_config() {
     assert_eq!(custom_config.buffer_size, 5);
     assert_eq!(custom_config.flush_interval_ms, 100);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_sampling_config() {
     let config = SamplingConfig {
         temperature: 0.7,
@@ -179,7 +179,7 @@ async fn test_sampling_config() {
     assert_eq!(config.repetition_penalty, 1.0);
     assert_eq!(config.seed, Some(42));
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_sampling_strategy_creation() {
     let config = SamplingConfig {
         temperature: 0.7,
@@ -190,7 +190,7 @@ async fn test_sampling_strategy_creation() {
     };
     let _strategy = SamplingStrategy::new(config);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_sampling_with_different_parameters() {
     let logits = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let context = vec![1, 2, 3];
@@ -215,7 +215,7 @@ async fn test_sampling_with_different_parameters() {
     let high_temp_token = high_temp_strategy.sample(&logits, &context);
     assert!(high_temp_token.is_ok());
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_sampling_reproducibility() {
     let logits = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let context = vec![1, 2, 3];
@@ -232,7 +232,7 @@ async fn test_sampling_reproducibility() {
     let token2 = strategy2.sample(&logits, &context).unwrap();
     assert_eq!(token1, token2);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_sampling_edge_cases() {
     let context = vec![1, 2, 3];
     let empty_logits = vec![];
@@ -272,7 +272,7 @@ async fn test_sampling_edge_cases() {
     let token = result.unwrap();
     assert!(token < logits.len() as u32);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_error_handling() {
     let mut config = InferenceConfig { max_context_length: 0, ..Default::default() };
     let error = config.validate().unwrap_err();
@@ -290,7 +290,7 @@ async fn test_error_handling() {
     let error = config.validate().unwrap_err();
     assert!(error.contains("memory_pool_size"));
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_generation_config_error_handling() {
     let mut config = GenerationConfig::default().with_max_tokens(0);
     let error = config.validate().unwrap_err();
@@ -311,7 +311,7 @@ async fn test_generation_config_error_handling() {
     let error = config.validate().unwrap_err();
     assert!(error.contains("repetition_penalty"));
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_performance_characteristics() {
     let start = std::time::Instant::now();
     for _ in 0..1000 {
@@ -327,14 +327,14 @@ async fn test_performance_characteristics() {
     let duration = start.elapsed();
     assert!(duration < Duration::from_millis(10));
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_memory_efficiency() {
     let configs: Vec<_> = (0..1000).map(|_| InferenceConfig::default()).collect();
     assert_eq!(configs.len(), 1000);
     let gen_configs: Vec<_> = (0..1000).map(|_| GenerationConfig::default()).collect();
     assert_eq!(gen_configs.len(), 1000);
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_concurrent_config_access() {
     use std::sync::Arc;
     use tokio::task;
@@ -354,7 +354,7 @@ async fn test_concurrent_config_access() {
         handle.await.unwrap();
     }
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_config_edge_cases() {
     let config =
         InferenceConfig::default().with_threads(1).with_batch_size(1).with_memory_pool_size(1024);
@@ -377,7 +377,7 @@ async fn test_config_edge_cases() {
         .with_max_tokens(100000);
     assert!(gen_config.validate().is_ok());
 }
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_comprehensive_coverage() {
     let _cpu = InferenceConfig::cpu_optimized();
     let _gpu = InferenceConfig::gpu_optimized();

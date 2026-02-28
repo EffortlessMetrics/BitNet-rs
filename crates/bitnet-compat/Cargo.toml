@@ -8,9 +8,9 @@ description = "Compatibility layer for drop-in llama.cpp replacement"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0-alpha.1", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev", optional = true }
 anyhow = "1.0.100"
 tracing = "0.1.41"
 serde_json.workspace = true

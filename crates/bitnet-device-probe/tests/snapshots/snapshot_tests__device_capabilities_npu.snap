@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_tests.rs
-expression: "format!(\"npu_compiled={} npu_feature={}\", caps.npu_compiled, npu_feat)"
----
-npu_compiled=false npu_feature=false

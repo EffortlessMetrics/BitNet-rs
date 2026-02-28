@@ -9,17 +9,14 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 
 ## Features
 
-- **SIMD/CUDA/Metal/Vulkan kernels** — AVX2/AVX-512/NEON on CPU; CUDA (`gpu`), Metal (`metal`, macOS), Vulkan (`vulkan`), Intel oneAPI (`oneapi`), ROCm (`rocm`), WebGPU (`wgpu`) GPU backends
+- **SIMD/CUDA/Metal/Vulkan kernels** — AVX2/AVX-512/NEON on CPU; CUDA (`gpu`), Metal (`metal`, macOS), Vulkan (`vulkan`), Intel oneAPI (`oneapi`) GPU backends
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
-- **Speculative decoding** — 4 acceptance methods (greedy, sample, typical, top-k) with adaptive draft length
-- **Batch inference engine** — priority scheduling, dynamic batching, 4 padding strategies
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
 - **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **GPU profiling & telemetry** — ChromeTrace/CSV export, kernel timing, health monitoring
 
-> **v0.2.0:** GPU HAL with CUDA, Metal, Vulkan, OpenCL, ROCm, and WebGPU backends. Speculative decoding and batch inference engines. AVX2 QK256 GEMV optimization merged; QK256 scalar kernels produce ~0.1 tok/s on 2B models — use `--max-tokens 4–16` for validation.
+> **v0.2.0:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
 
 ## Quick Start
 
@@ -47,20 +44,17 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 |-------------------------------|-------|-------|
 | CPU inference — I2_S BitNet32 | ✅    | Production path; 10–20× faster than QK256 scalar |
 | CPU inference — I2_S QK256    | ✅    | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
-| GPU inference — CUDA          | ⚠️   | Kernel scaffolding + multi-head attention dispatch (#1092, #1318) |
+| GPU inference — CUDA          | ⚠️   | Implemented; receipt validation pending |
 | GPU inference — Metal         | ✅    | macOS/iOS via `--features metal` (#992) |
 | GPU inference — Vulkan        | ✅    | Runtime probing via `--features vulkan` (#993) |
 | GPU inference — Intel oneAPI  | ✅    | Intel CPU/GPU via `--features oneapi` (#986) |
-| GPU inference — ROCm          | ✅    | AMD GPU via HIP runtime (#1014, #1111) |
-| GPU inference — WebGPU        | ✅    | Cross-platform via `wgpu` (#1108) |
-| Speculative decoding          | ✅    | 4 acceptance methods, adaptive draft length (#1305) |
-| Batch inference engine        | ✅    | Priority scheduling, dynamic batching (#1303) |
+| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe` (#995) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
 | Honest-compute receipts       | ✅    | Schema v1.0.0, 8 validation gates |
 | Strict mode                   | ✅    | Runtime guards prevent mock fallback |
 | SafeTensors → GGUF export     | ✅    | `bitnet-st2gguf` with F16 LayerNorm preservation |
-| Server / HTTP API             | 🚧    | GPU backends wired; OpenAI-compatible types; inference TODOs |
+| Server / HTTP API             | 🚧    | Health endpoints wired; inference endpoints have TODOs |
 
 ## Architecture
 
@@ -152,7 +146,7 @@ cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 ```
 
-The suite has **7,000+ tests** spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (44 targets), BDD grid, and E2E golden-path categories. ~157 tests are intentionally `#[ignore]`-d with justification strings (TDD scaffolding, model-gated, or GPU-hardware-gated — not failures to fix).
+The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (13 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for issues #254, #260, #469 — not failures to fix).
 
 See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
 
@@ -166,7 +160,7 @@ cargo fmt --all && cargo clippy --all-targets --no-default-features --features c
 cargo nextest run --workspace --no-default-features --features cpu
 ```
 
-Note: ~157 tests are intentionally `#[ignore]`-d with justification strings (TDD scaffolding, model-gated, GPU-hardware-gated). This is expected behaviour, not failures to fix.
+Note: ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for tracked issues #254, #260, #469). This is expected MVP behaviour, not failures to fix.
 
 ## License
 

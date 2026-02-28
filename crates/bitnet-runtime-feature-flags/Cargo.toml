@@ -16,8 +16,8 @@ include = [
 ]
 
 [dependencies]
-bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.2.0-alpha.1" }
-bitnet-runtime-feature-flags-core = { path = "../bitnet-runtime-feature-flags-core", version = "0.2.0-alpha.1" }
+bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.2.1-dev" }
+bitnet-runtime-feature-flags-core = { path = "../bitnet-runtime-feature-flags-core", version = "0.2.1-dev" }
 
 [features]
 default = []

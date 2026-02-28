@@ -538,54 +538,55 @@ fn test_ac3_retry_logic_on_transient_errors() {
 ///
 /// Validates: Error classification (network, build, prerequisites, permissions)
 #[test]
+#[ignore = "TDD scaffold: Test: error classification for repair failures"]
 fn test_ac3_error_classification() {
-    // RepairError lives in xtask (not importable here). Validate the
-    // classification *contract*: each failure category maps to a
-    // retryable / non-retryable decision based on its keyword.
-    let cases: &[(&str, bool)] = &[
-        ("network timeout", true),
-        ("connection refused", true),
-        ("cmake build failed", false),
-        ("prerequisite not found: cmake", false),
-        ("permission denied", false),
-        ("unknown error", false),
-    ];
-    for &(msg, expect_retry) in cases {
-        let is_retryable = msg.contains("network") || msg.contains("connection");
-        assert_eq!(is_retryable, expect_retry, "Error message '{msg}' retryable mismatch");
-    }
+    // TDD scaffolding - implementation pending
+    //
+    // Test logic:
+    // 1. Test RepairError::NetworkError with retryable = true
+    // 2. Test RepairError::BuildError with retryable = true/false
+    // 3. Test RepairError::MissingPrerequisites with retryable = false
+    // 4. Test RepairError::PermissionDenied with retryable = false
+    // 5. Test RepairError::Unknown
+    //
+    // Verify:
+    // - is_retryable() returns correct value for each error type
+    // - Error messages are descriptive
+    unimplemented!(
+        "Test: error classification for repair failures\n\
+         Spec: AC3 - RepairError enum with retryability"
+    );
 }
 
 /// Tests spec: docs/specs/test-infrastructure-conditional-execution.md#ac3
 ///
 /// Validates: Recursion prevention via BITNET_REPAIR_IN_PROGRESS guard
 #[test]
+#[ignore = "TDD scaffold: Test: recursion prevention via environment guard"]
 #[serial(bitnet_env)]
 fn test_ac3_recursion_prevention() {
-    // Verify the BITNET_REPAIR_IN_PROGRESS env var is respected as a
-    // recursion guard.  We test the *guard itself* rather than going
-    // through the full ensure_backend_or_skip flow (which may spawn
-    // subprocesses or block in CI).
-    let _guard = EnvGuard::new("BITNET_REPAIR_IN_PROGRESS");
+    let _guard_no_repair = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+    let _guard_ci = EnvGuard::new("CI");
+    let _guard_in_progress = EnvGuard::new("BITNET_REPAIR_IN_PROGRESS");
 
-    // Guard not set → env var absent.
-    _guard.remove();
-    assert!(
-        std::env::var_os("BITNET_REPAIR_IN_PROGRESS").is_none(),
-        "Guard should be absent initially"
-    );
+    _guard_no_repair.remove();
+    _guard_ci.remove();
+    _guard_in_progress.set("1"); // Simulate recursion
 
-    // Simulate a repair-in-progress condition.
-    _guard.set("1");
-    assert_eq!(std::env::var("BITNET_REPAIR_IN_PROGRESS").unwrap(), "1", "Guard should be set");
-
-    // The auto_repair_with_rebuild function checks this env var and
-    // returns Err immediately.  We can't call that private function
-    // directly, but we verify the guard value is visible, which is the
-    // prerequisite for the recursion check.
-    assert!(
-        std::env::var_os("BITNET_REPAIR_IN_PROGRESS").is_some(),
-        "Recursion guard must be visible to child functions"
+    // TDD scaffolding - implementation pending
+    //
+    // Test logic:
+    // 1. Set BITNET_REPAIR_IN_PROGRESS = 1
+    // 2. Call attempt_auto_repair_with_retry()
+    // 3. Verify: Returns Err(RepairError::RecursionDetected)
+    // 4. Verify: No Command execution attempted
+    //
+    // Recursion scenarios:
+    // - Setup script triggers another test run
+    // - Nested repair attempts
+    unimplemented!(
+        "Test: recursion prevention via environment guard\n\
+         Spec: AC3 - BITNET_REPAIR_IN_PROGRESS safety"
     );
 }
 

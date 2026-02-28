@@ -43,6 +43,7 @@ Understanding-oriented. These explain *why* things work the way they do.
 
 | Topic | Description |
 |-------|-------------|
+| [adr/README.md](adr/README.md) | Architectural Decision Records |
 | [architecture-overview.md](architecture-overview.md) | System components and design principles |
 | [explanation/FEATURES.md](explanation/FEATURES.md) | Feature flag system |
 | [explanation/dual-backend-crossval.md](explanation/dual-backend-crossval.md) | Dual-backend cross-validation design |

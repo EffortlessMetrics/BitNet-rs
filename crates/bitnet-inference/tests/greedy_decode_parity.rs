@@ -183,7 +183,7 @@ mod deterministic_inference_tests {
     /// Verify deterministic multi-step greedy decoding
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_deterministic_multi_step_greedy() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: deterministic multi-step greedy");
@@ -231,7 +231,7 @@ mod deterministic_inference_tests {
     /// Verify temperature=0 is equivalent to greedy mode
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_temperature_zero_equivalence() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: temperature=0 equivalence");
@@ -280,7 +280,7 @@ mod deterministic_inference_tests {
     /// Verify reproducibility with fixed seed across multiple runs
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_reproducibility_with_seed() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: reproducibility with seed");
@@ -337,7 +337,7 @@ mod logits_validation_tests {
     /// Verify logits output shape matches vocab size
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_logits_shape_validation() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: logits shape validation");
@@ -380,7 +380,7 @@ mod logits_validation_tests {
     /// Verify first generated token matches argmax from eval_ids
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_logits_argmax_consistency() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: logits argmax consistency");
