@@ -284,6 +284,11 @@ name = "srp_ops"
 harness = false
 required-features = ["cpu"]
 
+[[bench]]
+name = "opencl_ops"
+harness = false
+required-features = ["bench"]
+
 [workspace.dependencies]
 # Core dependencies
 anyhow = "1.0.100"
