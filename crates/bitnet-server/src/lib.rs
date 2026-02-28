@@ -12,6 +12,7 @@ pub mod config;
 pub mod execution_router;
 pub mod gpu_backend;
 pub mod health;
+pub mod metrics;
 pub mod model_manager;
 pub mod monitoring;
 pub mod security;
