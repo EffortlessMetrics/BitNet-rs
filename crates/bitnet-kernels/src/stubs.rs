@@ -84,3 +84,45 @@ impl KernelProvider for NeonKernel {
         }))
     }
 }
+
+#[cfg(not(target_arch = "aarch64"))]
+impl NeonKernel {
+    /// Stub: QK256 dequantization is not available on non-ARM64 architectures.
+    pub fn dequantize_qk256(
+        &self,
+        _quantized: &[i8],
+        _scales: &[f32],
+        _block_size: usize,
+    ) -> Result<Vec<f32>> {
+        Err(BitNetError::Kernel(KernelError::UnsupportedArchitecture {
+            arch: "NEON kernel not available on non-ARM64 architectures".to_string(),
+        }))
+    }
+
+    /// Stub: scalar fallback also unavailable on non-ARM64.
+    pub fn dequantize_qk256_scalar(
+        &self,
+        _quantized: &[i8],
+        _scales: &[f32],
+        _block_size: usize,
+    ) -> Result<Vec<f32>> {
+        Err(BitNetError::Kernel(KernelError::UnsupportedArchitecture {
+            arch: "NEON kernel not available on non-ARM64 architectures".to_string(),
+        }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(not(target_arch = "aarch64"))]
+    #[test]
+    fn test_neon_stub_dequantize_qk256_returns_error() {
+        let kernel = NeonKernel;
+        let quantized = vec![0i8; 64];
+        let scales = vec![1.0f32; 1];
+        assert!(kernel.dequantize_qk256(&quantized, &scales, 256).is_err());
+        assert!(kernel.dequantize_qk256_scalar(&quantized, &scales, 256).is_err());
+    }
+}
