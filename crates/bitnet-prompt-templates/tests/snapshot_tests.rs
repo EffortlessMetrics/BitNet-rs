@@ -487,3 +487,81 @@ fn test_olmo_instruct_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("olmo_instruct_multi_turn", out);
 }
+
+// ── Fill-in-the-Middle ──────────────────────────────────────────────
+
+#[test]
+fn snapshot_fim_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::FillInMiddle);
+    let out = tmpl.format("def fibonacci(n):");
+    insta::assert_snapshot!("fim_single_turn", out);
+}
+
+#[test]
+fn snapshot_fim_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::FillInMiddle)
+        .with_system_prompt("return result");
+    let out = tmpl.format("def fibonacci(n):");
+    insta::assert_snapshot!("fim_with_system", out);
+}
+
+#[test]
+fn snapshot_fim_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::FillInMiddle)
+        .with_system_prompt("return result");
+    tmpl.add_turn("Write hello world", "print('Hello, world!')");
+    let out = tmpl.format("def sort(arr):");
+    insta::assert_snapshot!("fim_multi_turn", out);
+}
+
+// ── Zephyr Chat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_zephyr_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::ZephyrChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("zephyr_single_turn", out);
+}
+
+#[test]
+fn snapshot_zephyr_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::ZephyrChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("zephyr_with_system", out);
+}
+
+#[test]
+fn snapshot_zephyr_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::ZephyrChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("zephyr_multi_turn", out);
+}
+
+// ── Vicuna Chat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_vicuna_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::VicunaChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("vicuna_single_turn", out);
+}
+
+#[test]
+fn snapshot_vicuna_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::VicunaChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("vicuna_with_system", out);
+}
+
+#[test]
+fn snapshot_vicuna_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::VicunaChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("vicuna_multi_turn", out);
+}

@@ -56,6 +56,10 @@ pub struct ModelCompatibilityMatrix {
     pub rwkv_65k: TokenizerDownloadInfo,
     /// OLMo with 50K vocabulary - BPE tokenizer
     pub olmo_50k: TokenizerDownloadInfo,
+    /// Zephyr with 32K vocabulary - BPE tokenizer (Mistral-based)
+    pub zephyr_32k: TokenizerDownloadInfo,
+    /// Vicuna with 32K vocabulary - SentencePiece tokenizer (LLaMA-based)
+    pub vicuna_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -180,6 +184,18 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "olmo-50k".to_string(),
                 expected_vocab: Some(50280),
+            },
+            zephyr_32k: TokenizerDownloadInfo {
+                repo: "HuggingFaceH4/zephyr-7b-beta".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "zephyr-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            vicuna_32k: TokenizerDownloadInfo {
+                repo: "lmsys/vicuna-7b-v1.5".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "vicuna-32k".to_string(),
+                expected_vocab: Some(32000),
             },
         }
     }

@@ -80,6 +80,12 @@ pub enum TemplateType {
     RwkvWorld,
     /// OLMo instruct format (<|user|>/<|assistant|> tokens)
     OlmoInstruct,
+    /// Fill-in-the-middle format for code infilling (<fim_prefix>/<fim_suffix>/<fim_middle>)
+    FillInMiddle,
+    /// HuggingFace Zephyr chat format (<|user|>/<|assistant|> with </s> delimiters)
+    ZephyrChat,
+    /// Vicuna/ShareGPT chat format (USER:/ASSISTANT: roles)
+    VicunaChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -108,13 +114,17 @@ impl std::str::FromStr for TemplateType {
             "mpt-instruct" | "mpt_instruct" | "mpt" => Ok(Self::MptInstruct),
             "rwkv-world" | "rwkv_world" | "rwkv" => Ok(Self::RwkvWorld),
             "olmo-instruct" | "olmo_instruct" | "olmo" => Ok(Self::OlmoInstruct),
+            "fill-in-middle" | "fim" => Ok(Self::FillInMiddle),
+            "zephyr-chat" | "zephyr" => Ok(Self::ZephyrChat),
+            "vicuna-chat" | "vicuna" => Ok(Self::VicunaChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
                  mistral-chat, deepseek-chat, starcoder, falcon-chat, \
                  codellama-instruct, cohere-command, internlm-chat, \
                  yi-chat, baichuan-chat, chatglm-chat, mpt-instruct, \
-                 rwkv-world, olmo-instruct",
+                 rwkv-world, olmo-instruct, fill-in-middle, \
+                 zephyr-chat, vicuna-chat",
                 s
             ),
         }
@@ -143,6 +153,9 @@ impl std::fmt::Display for TemplateType {
             Self::MptInstruct => write!(f, "mpt-instruct"),
             Self::RwkvWorld => write!(f, "rwkv-world"),
             Self::OlmoInstruct => write!(f, "olmo-instruct"),
+            Self::FillInMiddle => write!(f, "fill-in-middle"),
+            Self::ZephyrChat => write!(f, "zephyr-chat"),
+            Self::VicunaChat => write!(f, "vicuna-chat"),
         }
     }
 }
@@ -165,6 +178,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Llama3Chat;
+            }
+            // Fill-in-the-middle signature
+            if jinja.contains("<fim_prefix>") {
+                tracing::debug!(
+                    template = "FillInMiddle",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::FillInMiddle;
             }
             // ChatML / Phi-4 signature
             if jinja.contains("<|im_start|>") && jinja.contains("<|im_end|>") {
@@ -212,6 +234,19 @@ impl TemplateType {
                 );
                 return Self::ChatGLMChat;
             }
+            // Zephyr signature (</s> delimiters with <|user|>, no [gMASK] or <|im_start|>)
+            if jinja.contains("</s>")
+                && jinja.contains("<|user|>")
+                && !jinja.contains("[gMASK]")
+                && !jinja.contains("<|im_start|>")
+            {
+                tracing::debug!(
+                    template = "ZephyrChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::ZephyrChat;
+            }
             // OLMo instruct signature (<|user|>/<|assistant|> without [gMASK])
             if jinja.contains("<|user|>") && jinja.contains("<|assistant|>") {
                 tracing::debug!(
@@ -229,6 +264,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::MptInstruct;
+            }
+            // Vicuna/ShareGPT signature (USER:/ASSISTANT:, not Falcon's "User:")
+            if jinja.contains("USER:") && jinja.contains("ASSISTANT:") {
+                tracing::debug!(
+                    template = "VicunaChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::VicunaChat;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
@@ -297,6 +341,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::DeepSeekChat;
+            }
+            if lower.contains("fim") || lower.contains("fill-in-middle") {
+                tracing::debug!(
+                    template = "FillInMiddle",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::FillInMiddle;
             }
             if lower.contains("starcoder") || lower.contains("star-coder") {
                 tracing::debug!(
@@ -397,6 +450,24 @@ impl TemplateType {
                 );
                 return Self::OlmoInstruct;
             }
+            if lower.contains("zephyr") {
+                tracing::debug!(
+                    template = "ZephyrChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::ZephyrChat;
+            }
+            if lower.contains("vicuna") || lower.contains("sharegpt") {
+                tracing::debug!(
+                    template = "VicunaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::VicunaChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -435,6 +506,9 @@ impl TemplateType {
             Self::MptInstruct => Self::apply_mpt_instruct(user_text, system_prompt),
             Self::RwkvWorld => Self::apply_rwkv_world(user_text, system_prompt),
             Self::OlmoInstruct => Self::apply_olmo_instruct(user_text, system_prompt),
+            Self::FillInMiddle => Self::apply_fill_in_middle(user_text, system_prompt),
+            Self::ZephyrChat => Self::apply_zephyr_chat(user_text, system_prompt),
+            Self::VicunaChat => Self::apply_vicuna_chat(user_text, system_prompt),
         }
     }
 
@@ -830,6 +904,66 @@ impl TemplateType {
         result
     }
 
+    /// Apply fill-in-the-middle template for code infilling
+    ///
+    /// Format: `<fim_prefix>{user_text}<fim_suffix>{suffix_context}<fim_middle>`
+    fn apply_fill_in_middle(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::from("<fim_prefix>");
+        result.push_str(user_text);
+        result.push_str("<fim_suffix>");
+        if let Some(suffix) = system_prompt {
+            result.push_str(suffix);
+        }
+        result.push_str("<fim_middle>");
+        result
+    }
+
+    /// Apply Zephyr chat template with </s> delimiters
+    ///
+    /// Format:
+    /// ```text
+    /// <|system|>
+    /// You are a helpful assistant.</s>
+    /// <|user|>
+    /// {user_text}</s>
+    /// <|assistant|>
+    /// ```
+    fn apply_zephyr_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|system|>\n");
+        result.push_str(system);
+        result.push_str("</s>\n");
+        result.push_str("<|user|>\n");
+        result.push_str(user_text);
+        result.push_str("</s>\n");
+        result.push_str("<|assistant|>\n");
+        result
+    }
+
+    /// Apply Vicuna/ShareGPT chat template
+    ///
+    /// Format:
+    /// ```text
+    /// A chat between a curious user and an artificial intelligence assistant. ...
+    ///
+    /// USER: {user_text}
+    /// ASSISTANT:
+    /// ```
+    fn apply_vicuna_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or(
+            "A chat between a curious user and an artificial intelligence \
+             assistant. The assistant gives helpful, detailed, and polite \
+             answers to the user's questions.",
+        );
+        result.push_str(system);
+        result.push_str("\n\nUSER: ");
+        result.push_str(user_text);
+        result.push_str("\nASSISTANT:");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -876,6 +1010,19 @@ impl TemplateType {
             }
             Self::OlmoInstruct => {
                 vec!["<|endoftext|>".to_string(), "<|user|>".to_string()]
+            }
+            Self::FillInMiddle => {
+                vec![
+                    "<fim_suffix>".to_string(),
+                    "<|endoftext|>".to_string(),
+                    "<fim_pad>".to_string(),
+                ]
+            }
+            Self::ZephyrChat => {
+                vec!["</s>".to_string(), "<|user|>".to_string()]
+            }
+            Self::VicunaChat => {
+                vec!["USER:".to_string(), "</s>".to_string()]
             }
         }
     }
@@ -936,6 +1083,9 @@ impl TemplateType {
             Self::MptInstruct => true, // Simple ### markers, BOS helpful
             Self::RwkvWorld => true,   // Simple User:/Assistant: format
             Self::OlmoInstruct => false, // Uses <|user|>/<|assistant|> tokens
+            Self::FillInMiddle => false, // Uses <fim_prefix>/<fim_middle> tokens
+            Self::ZephyrChat => false,   // Uses <|system|>/<|user|> tokens
+            Self::VicunaChat => true,    // Simple USER:/ASSISTANT: format
         }
     }
 
@@ -958,6 +1108,8 @@ impl TemplateType {
                 | Self::BaichuanChat
                 | Self::ChatGLMChat
                 | Self::OlmoInstruct
+                | Self::FillInMiddle
+                | Self::ZephyrChat
         )
     }
 
@@ -1315,6 +1467,58 @@ impl TemplateType {
                     }
                 }
                 writeln!(out, "<|assistant|>")?;
+            }
+            TemplateType::FillInMiddle => {
+                // FIM: just format the last user message as FIM, ignore assistant turns
+                let last_user = history
+                    .iter()
+                    .rev()
+                    .find(|t| t.role == ChatRole::User)
+                    .map(|t| t.text.as_str())
+                    .unwrap_or("");
+                write!(out, "<fim_prefix>{}<fim_suffix>", last_user)?;
+                if let Some(sys) = system {
+                    write!(out, "{}", sys)?;
+                }
+                write!(out, "<fim_middle>")?;
+            }
+            TemplateType::ZephyrChat => {
+                // Zephyr format with </s> delimiters
+                let sys = system.unwrap_or("You are a helpful assistant.");
+                write!(out, "<|system|>\n{}</s>\n", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<|user|>\n{}</s>\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<|assistant|>\n{}</s>\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "<|assistant|>")?;
+            }
+            TemplateType::VicunaChat => {
+                // Vicuna/ShareGPT USER:/ASSISTANT: format
+                let sys = system.unwrap_or(
+                    "A chat between a curious user and an artificial intelligence \
+                     assistant. The assistant gives helpful, detailed, and polite \
+                     answers to the user's questions.",
+                );
+                writeln!(out, "{}\n", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "USER: {}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "ASSISTANT: {}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "ASSISTANT:")?;
             }
         }
 
@@ -1781,6 +1985,12 @@ mod tests {
         assert_eq!("rwkv".parse::<TemplateType>().unwrap(), TemplateType::RwkvWorld);
         assert_eq!("olmo-instruct".parse::<TemplateType>().unwrap(), TemplateType::OlmoInstruct);
         assert_eq!("olmo".parse::<TemplateType>().unwrap(), TemplateType::OlmoInstruct);
+        assert_eq!("fill-in-middle".parse::<TemplateType>().unwrap(), TemplateType::FillInMiddle);
+        assert_eq!("fim".parse::<TemplateType>().unwrap(), TemplateType::FillInMiddle);
+        assert_eq!("zephyr-chat".parse::<TemplateType>().unwrap(), TemplateType::ZephyrChat);
+        assert_eq!("zephyr".parse::<TemplateType>().unwrap(), TemplateType::ZephyrChat);
+        assert_eq!("vicuna-chat".parse::<TemplateType>().unwrap(), TemplateType::VicunaChat);
+        assert_eq!("vicuna".parse::<TemplateType>().unwrap(), TemplateType::VicunaChat);
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -1806,6 +2016,9 @@ mod tests {
         assert!(!TemplateType::MptInstruct.default_stop_sequences().is_empty());
         assert!(!TemplateType::RwkvWorld.default_stop_sequences().is_empty());
         assert!(!TemplateType::OlmoInstruct.default_stop_sequences().is_empty());
+        assert!(!TemplateType::FillInMiddle.default_stop_sequences().is_empty());
+        assert!(!TemplateType::ZephyrChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::VicunaChat.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -1902,6 +2115,9 @@ mod tests {
         assert!(TemplateType::MptInstruct.should_add_bos()); // Simple markers
         assert!(TemplateType::RwkvWorld.should_add_bos()); // Simple User:/Assistant: format
         assert!(!TemplateType::OlmoInstruct.should_add_bos()); // Uses special tokens
+        assert!(!TemplateType::FillInMiddle.should_add_bos()); // Uses FIM tokens
+        assert!(!TemplateType::ZephyrChat.should_add_bos()); // Uses special tokens
+        assert!(TemplateType::VicunaChat.should_add_bos()); // Simple USER:/ASSISTANT: format
     }
 
     #[test]
@@ -1925,6 +2141,9 @@ mod tests {
         assert!(!TemplateType::MptInstruct.parse_special()); // Simple text markers
         assert!(!TemplateType::RwkvWorld.parse_special()); // Simple text format
         assert!(TemplateType::OlmoInstruct.parse_special()); // Has special tokens
+        assert!(TemplateType::FillInMiddle.parse_special()); // Has FIM tokens
+        assert!(TemplateType::ZephyrChat.parse_special()); // Has special tokens
+        assert!(!TemplateType::VicunaChat.parse_special()); // Simple text format
     }
 
     #[test]
@@ -2091,6 +2310,9 @@ mod tests {
             TemplateType::CohereCommand, TemplateType::InternLMChat,
             TemplateType::YiChat, TemplateType::BaichuanChat,
             TemplateType::ChatGLMChat, TemplateType::MptInstruct,
+            TemplateType::RwkvWorld, TemplateType::OlmoInstruct,
+            TemplateType::FillInMiddle, TemplateType::ZephyrChat,
+            TemplateType::VicunaChat,
         ] {
             let output = template.apply("Test input", None);
             let v = template.validate_output(&output, "Test input");
@@ -2129,6 +2351,9 @@ mod property_tests {
             Just(TemplateType::MptInstruct),
             Just(TemplateType::RwkvWorld),
             Just(TemplateType::OlmoInstruct),
+            Just(TemplateType::FillInMiddle),
+            Just(TemplateType::ZephyrChat),
+            Just(TemplateType::VicunaChat),
         ]
     }
 
@@ -2202,6 +2427,9 @@ mod property_tests {
                 Just(TemplateType::MptInstruct),
                 Just(TemplateType::RwkvWorld),
                 Just(TemplateType::OlmoInstruct),
+                Just(TemplateType::FillInMiddle),
+                Just(TemplateType::ZephyrChat),
+                Just(TemplateType::VicunaChat),
             ],
         ) {
             let stops = template.default_stop_sequences();
@@ -2737,6 +2965,9 @@ mod detect_logging_tests {
             ("mpt-7b-instruct", TemplateType::MptInstruct),
             ("rwkv-5-world-3b", TemplateType::RwkvWorld),
             ("olmo-7b-instruct", TemplateType::OlmoInstruct),
+            ("fim-coder", TemplateType::FillInMiddle),
+            ("zephyr-7b-beta", TemplateType::ZephyrChat),
+            ("vicuna-13b-v1.5", TemplateType::VicunaChat),
         ];
         for (name, expected) in cases {
             let detected = TemplateType::detect(Some(name), None);
@@ -2746,5 +2977,156 @@ mod detect_logging_tests {
                 name, expected, detected
             );
         }
+    }
+
+    // ── Fill-in-the-Middle ──────────────────────────────────────────────
+
+    #[test]
+    fn test_fill_in_middle_template() {
+        let template = TemplateType::FillInMiddle;
+        let result = template.apply("def hello():", None);
+        assert!(result.starts_with("<fim_prefix>"));
+        assert!(result.contains("def hello():"));
+        assert!(result.contains("<fim_suffix>"));
+        assert!(result.ends_with("<fim_middle>"));
+    }
+
+    #[test]
+    fn test_fill_in_middle_with_suffix_context() {
+        let template = TemplateType::FillInMiddle;
+        let result = template.apply("def hello():", Some("return 'world'"));
+        assert!(result.contains("<fim_prefix>def hello():"));
+        assert!(result.contains("<fim_suffix>return 'world'<fim_middle>"));
+    }
+
+    #[test]
+    fn test_detect_fim_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("<fim_prefix>{prefix}<fim_suffix>{suffix}<fim_middle>"),
+        );
+        assert_eq!(t, TemplateType::FillInMiddle);
+    }
+
+    #[test]
+    fn test_detect_fim_from_name() {
+        let t = TemplateType::detect(Some("starcoder-fim-model"), None);
+        assert_eq!(t, TemplateType::FillInMiddle);
+    }
+
+    #[test]
+    fn test_render_chat_fim() {
+        let t = TemplateType::FillInMiddle;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "def sort():"),
+            ChatTurn::new(ChatRole::Assistant, "pass"),
+            ChatTurn::new(ChatRole::User, "def hello():"),
+        ];
+        let s = t.render_chat(&hist, Some("return 'world'")).unwrap();
+        assert!(s.contains("<fim_prefix>def hello():"));
+        assert!(s.contains("<fim_suffix>return 'world'<fim_middle>"));
+    }
+
+    // ── Zephyr Chat ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_zephyr_chat_template() {
+        let template = TemplateType::ZephyrChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|system|>\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("</s>\n"));
+        assert!(result.contains("<|user|>\nHello!</s>\n"));
+        assert!(result.ends_with("<|assistant|>\n"));
+    }
+
+    #[test]
+    fn test_zephyr_chat_with_system() {
+        let template = TemplateType::ZephyrChat;
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("<|system|>\nBe concise.</s>"));
+        assert!(!result.contains("You are a helpful assistant."));
+    }
+
+    #[test]
+    fn test_detect_zephyr_from_jinja() {
+        let t = TemplateType::detect(None, Some("<|user|>\n{content}</s>\n<|assistant|>\n"));
+        assert_eq!(t, TemplateType::ZephyrChat);
+    }
+
+    #[test]
+    fn test_detect_zephyr_from_name() {
+        let t = TemplateType::detect(Some("zephyr-7b-beta"), None);
+        assert_eq!(t, TemplateType::ZephyrChat);
+    }
+
+    #[test]
+    fn test_render_chat_zephyr() {
+        let t = TemplateType::ZephyrChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|system|>\nBe helpful.</s>"));
+        assert!(s.contains("<|user|>\nHello</s>"));
+        assert!(s.contains("<|assistant|>\nHi!</s>"));
+        assert!(s.contains("<|user|>\nBye</s>"));
+        assert!(s.ends_with("<|assistant|>\n"));
+    }
+
+    // ── Vicuna Chat ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_vicuna_chat_template() {
+        let template = TemplateType::VicunaChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("A chat between a curious user"));
+        assert!(result.contains("USER: Hello!"));
+        assert!(result.ends_with("\nASSISTANT:"));
+    }
+
+    #[test]
+    fn test_vicuna_chat_with_system() {
+        let template = TemplateType::VicunaChat;
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.starts_with("Be concise."));
+        assert!(!result.contains("A chat between a curious user"));
+        assert!(result.contains("USER: Hello!"));
+    }
+
+    #[test]
+    fn test_detect_vicuna_from_jinja() {
+        let t = TemplateType::detect(None, Some("USER: {content}\nASSISTANT:"));
+        assert_eq!(t, TemplateType::VicunaChat);
+    }
+
+    #[test]
+    fn test_detect_vicuna_from_name() {
+        let t = TemplateType::detect(Some("vicuna-13b-v1.5"), None);
+        assert_eq!(t, TemplateType::VicunaChat);
+    }
+
+    #[test]
+    fn test_detect_sharegpt_from_name() {
+        let t = TemplateType::detect(Some("sharegpt-model"), None);
+        assert_eq!(t, TemplateType::VicunaChat);
+    }
+
+    #[test]
+    fn test_render_chat_vicuna() {
+        let t = TemplateType::VicunaChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.starts_with("Be helpful.\n\n"));
+        assert!(s.contains("USER: Hello"));
+        assert!(s.contains("ASSISTANT: Hi!"));
+        assert!(s.contains("USER: Bye"));
+        assert!(s.ends_with("ASSISTANT:"));
     }
 }

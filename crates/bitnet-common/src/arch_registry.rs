@@ -110,6 +110,16 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(4096),
             }),
+            "zephyr" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "vicuna" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -163,6 +173,8 @@ impl ArchitectureRegistry {
             "bitnet-b1.58",
             "gpt",
             "bert",
+            "zephyr",
+            "vicuna",
         ]
     }
 
