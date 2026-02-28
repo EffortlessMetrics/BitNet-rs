@@ -9,15 +9,21 @@ repository.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "GPU hardware abstraction layer for BitNet inference"
+description = "GPU hardware abstraction layer with profiling for BitNet inference"
+
 [dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror.workspace = true
+
 [dev-dependencies]
 proptest.workspace = true
+
 [features]
 default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
+
 [lints]
 workspace = true
