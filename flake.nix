@@ -34,6 +34,13 @@
           cargo-nextest  # Faster test runner with timeout protection
         ];
 
+        # OpenCL development dependencies for Intel GPU support
+        openclDeps = with pkgs; [
+          opencl-headers
+          ocl-icd
+          clinfo
+        ];
+
         # Common env for rust builds: no sccache, no incremental
         commonEnv = {
           RUSTUP_TOOLCHAIN = "stable";
@@ -89,6 +96,35 @@
 
               echo "=== BitNet MSRV shell (1.89.0) ==="
               rustc --version
+            '';
+          };
+
+          # OpenCL development shell for Intel GPU work
+          # Note: intel-compute-runtime is not currently in nixpkgs.
+          # Install it manually from https://github.com/intel/compute-runtime
+          # or use the Docker image (Dockerfile.intel-gpu) for full support.
+          opencl-dev = pkgs.mkShell {
+            name = "bitnet-opencl-dev";
+            buildInputs = nativeDeps ++ openclDeps ++ [
+              rustStable
+            ];
+            shellHook = ''
+              export RUSTUP_TOOLCHAIN=${commonEnv.RUSTUP_TOOLCHAIN}
+              export RUSTC_WRAPPER=${commonEnv.RUSTC_WRAPPER}
+              export CARGO_NET_GIT_FETCH_WITH_CLI=${commonEnv.CARGO_NET_GIT_FETCH_WITH_CLI}
+              export CARGO_INCREMENTAL=${commonEnv.CARGO_INCREMENTAL}
+              export LIBCLANG_PATH="${pkgs.libclang.lib}/lib"
+              export OCL_ICD_VENDORS="${pkgs.ocl-icd}/etc/OpenCL/vendors"
+
+              echo "╭─────────────────────────────────────────────╮"
+              echo "│ BitNet-rs OpenCL development environment   │"
+              echo "├─────────────────────────────────────────────┤"
+              echo "│ rustc:  $(rustc --version | cut -d' ' -f2) │"
+              echo "│ clinfo: $(clinfo --version 2>/dev/null || echo 'available') │"
+              echo "├─────────────────────────────────────────────┤"
+              echo "│ Run 'clinfo' to verify OpenCL devices      │"
+              echo "│ OCL_ICD_VENDORS=${pkgs.ocl-icd}/etc/OpenCL/vendors │"
+              echo "╰─────────────────────────────────────────────╯"
             '';
           };
         };
