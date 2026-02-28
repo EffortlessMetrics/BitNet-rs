@@ -719,12 +719,29 @@ impl MultiHeadAttention {
     }
 }
 
+/// Apply the configured activation function
+fn apply_activation(
+    x: &Tensor,
+    activation: bitnet_common::ActivationType,
+) -> candle_core::Result<Tensor> {
+    match activation {
+        bitnet_common::ActivationType::Silu => candle_nn::ops::silu(x),
+        bitnet_common::ActivationType::Gelu => x.gelu_erf(),
+        bitnet_common::ActivationType::Relu2 => {
+            // Squared ReLU: max(0, x)²
+            let relu = x.relu()?;
+            relu.sqr()
+        }
+    }
+}
+
 /// Feed-Forward Network
 pub struct FeedForward {
     gate_proj: Linear,
     up_proj: Linear,
     down_proj: Linear,
     layer_idx: usize, // Layer index for QK256 weight name generation
+    activation: bitnet_common::ActivationType,
 }
 
 impl FeedForward {
@@ -745,6 +762,7 @@ impl FeedForward {
                 vb.pp("down_proj"),
             )?,
             layer_idx,
+            activation: config.model.activation_type,
         })
     }
 
@@ -762,12 +780,12 @@ impl FeedForward {
             tracing::debug!("MLP ||u|| (gate_proj): {:.6e}", u_norm);
         }
 
-        let gate = candle_nn::ops::silu(&gate)?;
+        let gate = apply_activation(&gate, self.activation)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
-            && let Ok(silu_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+            && let Ok(act_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
-            tracing::debug!("MLP ||silu(u)||: {:.6e}", silu_norm);
+            tracing::debug!("MLP ||{:?}(u)||: {:.6e}", self.activation, act_norm);
         }
 
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
@@ -783,7 +801,7 @@ impl FeedForward {
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
-            tracing::debug!("MLP ||silu(u) * v||: {:.6e}", prod_norm);
+            tracing::debug!("MLP ||act(u) * v||: {:.6e}", prod_norm);
         }
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
@@ -2008,5 +2026,62 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_apply_activation_silu() {
+        let device = Device::Cpu;
+        let input = Tensor::new(&[1.0f32, -1.0, 0.0, 2.0], &device).unwrap();
+        let output = apply_activation(&input, bitnet_common::ActivationType::Silu).unwrap();
+        let vals: Vec<f32> = output.to_vec1().unwrap();
+        // SiLU(1) ≈ 0.7311, SiLU(-1) ≈ -0.2689, SiLU(0) = 0, SiLU(2) ≈ 1.7616
+        assert!((vals[0] - 0.7311).abs() < 0.01);
+        assert!((vals[1] + 0.2689).abs() < 0.01);
+        assert!((vals[2]).abs() < 0.001);
+        assert!((vals[3] - 1.7616).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_apply_activation_relu2() {
+        let device = Device::Cpu;
+        let input = Tensor::new(&[1.0f32, -1.0, 0.0, 2.0], &device).unwrap();
+        let output = apply_activation(&input, bitnet_common::ActivationType::Relu2).unwrap();
+        let vals: Vec<f32> = output.to_vec1().unwrap();
+        // ReLU²(1) = 1, ReLU²(-1) = 0, ReLU²(0) = 0, ReLU²(2) = 4
+        assert!((vals[0] - 1.0).abs() < 0.001);
+        assert!((vals[1]).abs() < 0.001);
+        assert!((vals[2]).abs() < 0.001);
+        assert!((vals[3] - 4.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_apply_activation_gelu() {
+        let device = Device::Cpu;
+        let input = Tensor::new(&[1.0f32, -1.0, 0.0, 2.0], &device).unwrap();
+        let output = apply_activation(&input, bitnet_common::ActivationType::Gelu).unwrap();
+        let vals: Vec<f32> = output.to_vec1().unwrap();
+        // GELU(1) ≈ 0.8413, GELU(-1) ≈ -0.1587, GELU(0) = 0, GELU(2) ≈ 1.9545
+        assert!((vals[0] - 0.8413).abs() < 0.01);
+        assert!((vals[1] + 0.1587).abs() < 0.01);
+        assert!((vals[2]).abs() < 0.001);
+        assert!((vals[3] - 1.9545).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_activations_produce_different_outputs() {
+        let device = Device::Cpu;
+        let input = Tensor::new(&[1.0f32, -1.0, 0.5, 2.0], &device).unwrap();
+        let silu = apply_activation(&input, bitnet_common::ActivationType::Silu).unwrap();
+        let relu2 = apply_activation(&input, bitnet_common::ActivationType::Relu2).unwrap();
+        let gelu = apply_activation(&input, bitnet_common::ActivationType::Gelu).unwrap();
+
+        let silu_vals: Vec<f32> = silu.to_vec1().unwrap();
+        let relu2_vals: Vec<f32> = relu2.to_vec1().unwrap();
+        let gelu_vals: Vec<f32> = gelu.to_vec1().unwrap();
+
+        // All three should produce different outputs for x=1.0
+        assert!((silu_vals[0] - relu2_vals[0]).abs() > 0.01);
+        assert!((silu_vals[0] - gelu_vals[0]).abs() > 0.01);
+        assert!((relu2_vals[0] - gelu_vals[0]).abs() > 0.01);
     }
 }

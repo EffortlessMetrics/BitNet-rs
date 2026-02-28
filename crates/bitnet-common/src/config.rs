@@ -39,6 +39,8 @@ pub struct ModelConfig {
     pub rms_norm_eps: Option<f32>,
     /// Tokenizer configuration
     pub tokenizer: TokenizerConfig,
+    /// Activation function for feed-forward layers
+    pub activation_type: ActivationType,
 }
 
 impl Default for ModelConfig {
@@ -57,8 +59,21 @@ impl Default for ModelConfig {
             rope_scaling: None,
             rms_norm_eps: None,
             tokenizer: TokenizerConfig::default(),
+            activation_type: ActivationType::default(),
         }
     }
+}
+
+/// Activation function type used in feed-forward layers
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ActivationType {
+    /// SiLU/Swish activation (default for LLaMA/Phi/Mistral)
+    #[default]
+    Silu,
+    /// Squared ReLU (BitNet-specific)
+    Relu2,
+    /// GELU activation (GPT-2/BERT)
+    Gelu,
 }
 
 /// Supported model formats
