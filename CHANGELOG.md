@@ -121,6 +121,41 @@ All notable changes to bitnet-rs will be documented in this file.
 - **GPU memory profiler** (#1554): 87 tests for allocation tracking and leak detection
 - **Kernel fusion** (#1555): 86 tests for pattern matching and optimization passes
 - **CHANGELOG waves 75-80** (#1549): Documentation update for waves 75-80
+### Waves 87-92: GPU HAL Modules, Infrastructure & Tooling
+
+#### GPU HAL Modules
+
+- **Serving runtime** (#1589): GPU-HAL serving runtime module with request routing, load balancing, and lifecycle management (113 tests)
+- **Config management** (#1591): GPU-HAL configuration management module with layered config, validation, and hot-reload support (88 tests)
+- **Distributed inference** (#1590): GPU-HAL distributed inference module with shard coordination, collective ops, and fault tolerance (108 tests)
+- **Optimization passes** (#1592): GPU-HAL optimization passes module with graph rewrites, fusion rules, and cost modeling (102 tests)
+- **Cache system** (#1596): GPU-HAL cache system module with multi-tier caching, eviction policies, and hit-rate tracking (94 tests)
+- **Logging framework** (#1595): GPU-HAL logging framework module with structured logging, log levels, and sink configuration (82 tests)
+- **Instruction tuning** (#1597): GPU-HAL instruction tuning module with prompt formatting, LoRA integration, and evaluation harness (99 tests)
+- **Model export** (#1599): GPU-HAL model export module with multi-format serialization, metadata embedding, and validation (100 tests)
+- **Weight compression** (#1602): GPU-HAL weight compression module with quantization-aware packing, bitstream encoding, and decompression kernels (86 tests)
+- **Attention patterns** (#1330): GPU-HAL attention patterns module with sparse, sliding-window, and cross-attention implementations (95 tests)
+- **Tensor ops v2** (#1600): GPU-HAL tensor operations v2 module with fused elementwise ops, broadcasting, and autograd support (107 tests)
+- **SIMD dispatch** (#1603): GPU-HAL SIMD dispatch module with runtime feature detection, ISA selection, and fallback routing (94 tests)
+- **Model hub client** (#1604): GPU-HAL model hub client module with registry queries, download management, and integrity checks (121 tests)
+- **Convolution kernels** (#1608): GPU-HAL convolution kernels module with im2col, Winograd, and FFT-based implementations (117 tests)
+- **Normalization variants** (#1612): GPU-HAL normalization variants module with RMSNorm, GroupNorm, and InstanceNorm implementations (120 tests)
+- **Sparse operations** (#1370): GPU-HAL sparse operations module with CSR/CSC storage, SpMV, and sparse attention kernels (128 tests)
+- **Model pruning** (#1366): GPU-HAL model pruning module with magnitude, structured, and movement pruning strategies (92 tests)
+- **Dynamic shapes** (#1614): GPU-HAL dynamic shapes module with symbolic dimensions, shape inference, and runtime validation (122 tests)
+- **Operator registry** (#1609): GPU-HAL operator registry module with op registration, dispatch tables, and schema validation (91 tests)
+- **Tensor memory pool** (#1611): GPU-HAL tensor memory pool module with arena allocation, defragmentation, and usage tracking (107 tests)
+- **Model debugger** (#1607): GPU-HAL model debugger module with tensor inspection, breakpoints, and execution tracing (105 tests)
+- **Compatibility checker** (#1610): GPU-HAL compatibility checker module with hardware capability matching and fallback recommendations (110 tests)
+- **Migration tool** (#1606): GPU-HAL migration tool module with version diffing, automatic transforms, and rollback support (98 tests)
+
+#### Infrastructure
+
+- **Workspace integration v16** (#1598): Consolidated 140 module declarations across organized workspace sections
+
+#### Documentation
+
+- **CHANGELOG w81-86** (#1587): CHANGELOG update documenting waves 81-86 PRs
 
 ### Wave 66-69: Advanced Inference Pipeline & Production Features
 
