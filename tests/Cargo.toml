@@ -277,6 +277,11 @@ path = "integration/e2e_golden_path.rs"
 required-features = ["inference"]
 
 [[test]]
+name = "inference_pipeline_tests"
+path = "integration/inference_pipeline_tests.rs"
+required-features = ["inference"]
+
+[[test]]
 name = "gpu_cross_backend_validation"
 path = "gpu_cross_backend_validation.rs"
 
