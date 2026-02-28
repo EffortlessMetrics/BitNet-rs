@@ -25,19 +25,19 @@ toml = "0.9.8"
 httpdate = "1.0.3"
 tempfile = "3.23.0"
 chrono = "0.4.42"
-bitnet-models = { path = "../crates/bitnet-models", default-features = false, features = ["cpu"] }
-bitnet-kernels = { path = "../crates/bitnet-kernels", default-features = false, features = ["cpu"] }
-bitnet-common = { path = "../crates/bitnet-common", default-features = false }
-bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", default-features = false, features = ["spm"] }
-bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, optional = true }
-bitnet = { path = "..", default-features = false, features = ["cpu"], optional = true }
+bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev", default-features = false, features = ["cpu"] }
+bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev", default-features = false, features = ["cpu"] }
+bitnet-common = { path = "../crates/bitnet-common", version = "0.2.1-dev", default-features = false }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", version = "0.2.1-dev", default-features = false, features = ["spm"] }
+bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev", default-features = false, optional = true }
+bitnet = { path = "..", version = "0.2.1-dev", default-features = false, features = ["cpu"], optional = true }
 tokio = { version = "1.48.0", features = ["rt"], optional = true }
 futures = { version = "0.3.31", optional = true }
 regex = "1.12.2"
-xtask-build-helper = { path = "../xtask-build-helper" }
-bitnet-crossval = { path = "../crossval", default-features = false, optional = true }
-bitnet-sys = { path = "../crates/bitnet-sys", default-features = false, optional = true }
-bitnet-bdd-grid = { path = "../crates/bitnet-bdd-grid" }
+xtask-build-helper = { path = "../xtask-build-helper", version = "0.2.1-dev" }
+bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", default-features = false, optional = true }
+bitnet-sys = { path = "../crates/bitnet-sys", version = "0.2.1-dev", default-features = false, optional = true }
+bitnet-bdd-grid = { path = "../crates/bitnet-bdd-grid", version = "0.2.1-dev" }
 scopeguard = "1.2.0"
 thiserror = "2.0.17"
 
@@ -55,4 +55,4 @@ assert_cmd = "2.1.1"
 predicates = "3.1.3"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
-bitnet-test-support = { path = "../crates/bitnet-test-support" }
+bitnet-test-support.workspace = true
