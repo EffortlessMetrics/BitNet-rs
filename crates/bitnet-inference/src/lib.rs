@@ -12,6 +12,7 @@ pub mod generation;
 pub mod gguf;
 pub mod kernel_recorder;
 pub mod layers;
+pub mod metrics;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
@@ -43,6 +44,10 @@ pub use generation::{
 };
 pub use kernel_recorder::KernelRecorder;
 pub use layers::{BitNetAttention, LookupTable, QuantizedLinear};
+pub use metrics::{
+    InferenceMetrics, LatencyHistogram, MemoryProfiler, MetricsCollector, MetricsReport,
+    ThroughputTracker,
+};
 pub use npu::{BITNET_ENABLE_NPU, map_device_token, npu_requested};
 pub use parity::{
     eval_logits_all_positions, eval_logits_incremental, eval_logits_once,
