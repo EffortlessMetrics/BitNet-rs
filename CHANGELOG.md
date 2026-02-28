@@ -151,6 +151,16 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Activation recomputation** (#1432): `CheckpointPlanner` with DP knapsack, selective storage, dependency-aware recomputation — 70 tests
 - **CHANGELOG wave 60** (#1433): Documents PRs #1416–#1425
 - **Expert parallelism** (#1434): All-to-all dispatch/combine, token permutation, capacity management, load balance loss — 73 tests
+- **ROCm HIP compute kernels** (#1252): 6 HIP kernels for AMD GPU inference (matmul, softmax, rmsnorm, rope, attention, elementwise), 24 tests
+- **v0.2.0 release preparation** (#1251): release checklist, migration guide, release notes documentation
+- **GPU runtime diagnostics** (#1250): driver detection, system info, troubleshooting, 28 tests
+- **Model validation system** (#1249): weight statistics, architecture, GPU compatibility validation, 56 tests
+- **Metal MSL compute kernels** (#1248): 6 Metal shaders (matmul, softmax, rmsnorm, rope, attention, elementwise), 20 tests
+- **Makefile GPU targets** (#1247): GPU build, test, benchmark, lint targets in Makefile
+- **KV cache optimized** (#1246): paged attention, cache defragmentation, block allocation, 32 tests
+- **Embedding layer and vocabulary** (#1245): sinusoidal and learned positional encoding, vocabulary manager, 47 tests
+- **Multi-backend dispatcher** (#1244): priority, round-robin, and load-based scheduling across GPU backends with 27 tests
+- **CHANGELOG waves 18-25** (#1243): 34 CHANGELOG entries covering waves 18-25 PRs
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
