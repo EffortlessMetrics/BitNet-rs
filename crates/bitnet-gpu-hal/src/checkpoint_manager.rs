@@ -240,9 +240,7 @@ impl CheckpointDiff {
         let mut changed_idx = Vec::new();
 
         for (i, entry) in current.kv_cache_entries.iter().enumerate() {
-            let differs = base
-                .kv_cache_entries
-                .get(i) != Some(entry);
+            let differs = base.kv_cache_entries.get(i) != Some(entry);
             if differs {
                 changed_kv.push(entry.clone());
                 changed_idx.push(i);
@@ -265,11 +263,7 @@ impl CheckpointDiff {
 /// Abstract storage backend for checkpoint data.
 pub trait CheckpointStorage {
     /// Persist a full checkpoint.
-    fn save(
-        &mut self,
-        metadata: &CheckpointMetadata,
-        data: &[u8],
-    ) -> Result<(), CheckpointError>;
+    fn save(&mut self, metadata: &CheckpointMetadata, data: &[u8]) -> Result<(), CheckpointError>;
 
     /// Load checkpoint data by ID.
     fn load(&self, id: &str) -> Result<Vec<u8>, CheckpointError>;
@@ -316,11 +310,7 @@ impl FileCheckpointStorage {
 }
 
 impl CheckpointStorage for FileCheckpointStorage {
-    fn save(
-        &mut self,
-        metadata: &CheckpointMetadata,
-        data: &[u8],
-    ) -> Result<(), CheckpointError> {
+    fn save(&mut self, metadata: &CheckpointMetadata, data: &[u8]) -> Result<(), CheckpointError> {
         let meta_json = serde_json::to_vec_pretty(metadata)?;
         std::fs::write(self.meta_path(&metadata.id), meta_json)?;
         std::fs::write(self.data_path(&metadata.id), data)?;
@@ -387,22 +377,14 @@ pub struct MemoryCheckpointStorage {
 }
 
 impl CheckpointStorage for MemoryCheckpointStorage {
-    fn save(
-        &mut self,
-        metadata: &CheckpointMetadata,
-        data: &[u8],
-    ) -> Result<(), CheckpointError> {
-        self.metas
-            .insert(metadata.id.clone(), metadata.clone());
+    fn save(&mut self, metadata: &CheckpointMetadata, data: &[u8]) -> Result<(), CheckpointError> {
+        self.metas.insert(metadata.id.clone(), metadata.clone());
         self.blobs.insert(metadata.id.clone(), data.to_vec());
         Ok(())
     }
 
     fn load(&self, id: &str) -> Result<Vec<u8>, CheckpointError> {
-        self.blobs
-            .get(id)
-            .cloned()
-            .ok_or_else(|| CheckpointError::NotFound(id.to_string()))
+        self.blobs.get(id).cloned().ok_or_else(|| CheckpointError::NotFound(id.to_string()))
     }
 
     fn list(&self) -> Result<Vec<CheckpointMetadata>, CheckpointError> {
@@ -420,10 +402,7 @@ impl CheckpointStorage for MemoryCheckpointStorage {
     }
 
     fn get_metadata(&self, id: &str) -> Result<CheckpointMetadata, CheckpointError> {
-        self.metas
-            .get(id)
-            .cloned()
-            .ok_or_else(|| CheckpointError::NotFound(id.to_string()))
+        self.metas.get(id).cloned().ok_or_else(|| CheckpointError::NotFound(id.to_string()))
     }
 }
 
@@ -526,9 +505,7 @@ fn compress(data: &[u8], mode: CompressionMode) -> Vec<u8> {
 /// Unwrap a tagged-envelope produced by [`compress`].
 fn decompress(data: &[u8]) -> Result<Vec<u8>, CheckpointError> {
     if data.is_empty() {
-        return Err(CheckpointError::CorruptCheckpoint(
-            "empty compressed payload".into(),
-        ));
+        return Err(CheckpointError::CorruptCheckpoint("empty compressed payload".into()));
     }
     // Tag byte is stripped; remainder is the original data.
     Ok(data[1..].to_vec())
@@ -557,10 +534,7 @@ impl<S: CheckpointStorage> CheckpointManager<S> {
     /// Create a new manager with the given config and storage backend.
     pub fn new(config: CheckpointConfig, storage: S) -> Result<Self, CheckpointError> {
         Self::validate_config(&config)?;
-        let scheduler = CheckpointScheduler::new(
-            config.auto_save_interval_tokens,
-            None,
-        );
+        let scheduler = CheckpointScheduler::new(config.auto_save_interval_tokens, None);
         Ok(Self {
             config,
             storage,
@@ -574,9 +548,7 @@ impl<S: CheckpointStorage> CheckpointManager<S> {
 
     fn validate_config(config: &CheckpointConfig) -> Result<(), CheckpointError> {
         if config.max_checkpoints == 0 {
-            return Err(CheckpointError::InvalidConfig(
-                "max_checkpoints must be > 0".into(),
-            ));
+            return Err(CheckpointError::InvalidConfig("max_checkpoints must be > 0".into()));
         }
         if config.enable_incremental && config.full_checkpoint_interval == 0 {
             return Err(CheckpointError::InvalidConfig(
@@ -592,10 +564,7 @@ impl<S: CheckpointStorage> CheckpointManager<S> {
     }
 
     fn now_epoch() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
     }
 
     /// Create a checkpoint of `state` with the given `model_hash`.
@@ -690,10 +659,7 @@ impl<S: CheckpointStorage> CheckpointManager<S> {
     }
 
     /// Restore inference state from checkpoint `id`.
-    pub fn restore_checkpoint(
-        &self,
-        id: &str,
-    ) -> Result<InferenceState, CheckpointError> {
+    pub fn restore_checkpoint(&self, id: &str) -> Result<InferenceState, CheckpointError> {
         let meta = self.storage.get_metadata(id)?;
         let raw = self.storage.load(id)?;
         let json = decompress(&raw)?;
@@ -813,9 +779,7 @@ mod tests {
         }
     }
 
-    fn memory_manager(
-        config: CheckpointConfig,
-    ) -> CheckpointManager<MemoryCheckpointStorage> {
+    fn memory_manager(config: CheckpointConfig) -> CheckpointManager<MemoryCheckpointStorage> {
         CheckpointManager::new(config, MemoryCheckpointStorage::default()).unwrap()
     }
 
@@ -889,10 +853,7 @@ mod tests {
 
     #[test]
     fn test_config_validation_max_checkpoints_zero() {
-        let cfg = CheckpointConfig {
-            max_checkpoints: 0,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { max_checkpoints: 0, ..Default::default() };
         let result = CheckpointManager::new(cfg, MemoryCheckpointStorage::default());
         assert!(result.is_err());
     }
@@ -974,12 +935,7 @@ mod tests {
 
     #[test]
     fn test_kv_cache_entry_empty_data() {
-        let entry = KVCacheEntry {
-            layer_idx: 0,
-            key_data: vec![],
-            value_data: vec![],
-            seq_len: 0,
-        };
+        let entry = KVCacheEntry { layer_idx: 0, key_data: vec![], value_data: vec![], seq_len: 0 };
         let json = serde_json::to_string(&entry).unwrap();
         let back: KVCacheEntry = serde_json::from_str(&json).unwrap();
         assert_eq!(entry, back);
@@ -1108,16 +1064,11 @@ mod tests {
     fn test_diff_apply_updates_sampling_state() {
         let base = sample_state(5, 2);
         let mut current = base.clone();
-        current
-            .sampling_state
-            .insert("top_k".into(), "50".into());
+        current.sampling_state.insert("top_k".into(), "50".into());
 
         let diff = CheckpointDiff::compute(&base, &current);
         let restored = diff.apply(&base).unwrap();
-        assert_eq!(
-            restored.sampling_state.get("top_k").map(String::as_str),
-            Some("50")
-        );
+        assert_eq!(restored.sampling_state.get("top_k").map(String::as_str), Some("50"));
     }
 
     // ── CRC-32 tests ────────────────────────────────────────────────────
@@ -1408,14 +1359,8 @@ mod tests {
     fn test_scheduler_token_trigger() {
         let sched = CheckpointScheduler::new(100, None);
         assert!(sched.should_checkpoint(50).is_none());
-        assert_eq!(
-            sched.should_checkpoint(100),
-            Some(TriggerReason::TokenCount)
-        );
-        assert_eq!(
-            sched.should_checkpoint(200),
-            Some(TriggerReason::TokenCount)
-        );
+        assert_eq!(sched.should_checkpoint(100), Some(TriggerReason::TokenCount));
+        assert_eq!(sched.should_checkpoint(200), Some(TriggerReason::TokenCount));
     }
 
     #[test]
@@ -1423,10 +1368,7 @@ mod tests {
         let mut sched = CheckpointScheduler::new(100, None);
         sched.record_checkpoint(100);
         assert!(sched.should_checkpoint(150).is_none());
-        assert_eq!(
-            sched.should_checkpoint(200),
-            Some(TriggerReason::TokenCount)
-        );
+        assert_eq!(sched.should_checkpoint(200), Some(TriggerReason::TokenCount));
     }
 
     #[test]
@@ -1434,10 +1376,7 @@ mod tests {
         let mut sched = CheckpointScheduler::new(0, Some(Duration::from_millis(1)));
         // Force the last-checkpoint time far enough in the past.
         sched.last_checkpoint_time = Instant::now().checked_sub(Duration::from_secs(1)).unwrap();
-        assert_eq!(
-            sched.should_checkpoint(0),
-            Some(TriggerReason::TimeElapsed)
-        );
+        assert_eq!(sched.should_checkpoint(0), Some(TriggerReason::TimeElapsed));
     }
 
     #[test]
@@ -1445,10 +1384,7 @@ mod tests {
         let mut sched = CheckpointScheduler::new(10, Some(Duration::from_millis(1)));
         sched.last_checkpoint_time = Instant::now().checked_sub(Duration::from_secs(1)).unwrap();
         // Token trigger fires first in evaluation order.
-        assert_eq!(
-            sched.should_checkpoint(10),
-            Some(TriggerReason::TokenCount)
-        );
+        assert_eq!(sched.should_checkpoint(10), Some(TriggerReason::TokenCount));
     }
 
     // ── CheckpointManager basic tests ───────────────────────────────────
@@ -1531,8 +1467,7 @@ mod tests {
         let payload = compress(&json, CompressionMode::None);
         store.save(&meta, &payload).unwrap();
 
-        let mgr =
-            CheckpointManager::new(CheckpointConfig::default(), store).unwrap();
+        let mgr = CheckpointManager::new(CheckpointConfig::default(), store).unwrap();
         assert!(!mgr.verify_checkpoint("corrupt").unwrap());
     }
 
@@ -1540,10 +1475,7 @@ mod tests {
 
     #[test]
     fn test_manager_prune_respects_max() {
-        let cfg = CheckpointConfig {
-            max_checkpoints: 3,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { max_checkpoints: 3, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(5, 1);
         for _ in 0..6 {
@@ -1555,10 +1487,7 @@ mod tests {
 
     #[test]
     fn test_manager_prune_keeps_newest() {
-        let cfg = CheckpointConfig {
-            max_checkpoints: 2,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { max_checkpoints: 2, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(5, 1);
         let _m1 = mgr.create_checkpoint(&state, "m").unwrap();
@@ -1573,10 +1502,7 @@ mod tests {
 
     #[test]
     fn test_manager_prune_returns_count() {
-        let cfg = CheckpointConfig {
-            max_checkpoints: 2,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { max_checkpoints: 2, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(5, 1);
         for _ in 0..5 {
@@ -1656,10 +1582,7 @@ mod tests {
 
     #[test]
     fn test_manager_compression_zstd_roundtrip() {
-        let cfg = CheckpointConfig {
-            compression: CompressionMode::Zstd,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { compression: CompressionMode::Zstd, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(15, 3);
         let meta = mgr.create_checkpoint(&state, "m").unwrap();
@@ -1670,10 +1593,7 @@ mod tests {
 
     #[test]
     fn test_manager_compression_lz4_roundtrip() {
-        let cfg = CheckpointConfig {
-            compression: CompressionMode::Lz4,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { compression: CompressionMode::Lz4, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(15, 3);
         let meta = mgr.create_checkpoint(&state, "m").unwrap();
@@ -1683,10 +1603,7 @@ mod tests {
 
     #[test]
     fn test_manager_compression_snappy_roundtrip() {
-        let cfg = CheckpointConfig {
-            compression: CompressionMode::Snappy,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { compression: CompressionMode::Snappy, ..Default::default() };
         let mut mgr = memory_manager(cfg);
         let state = sample_state(15, 3);
         let meta = mgr.create_checkpoint(&state, "m").unwrap();
@@ -1838,24 +1755,15 @@ mod tests {
 
     #[test]
     fn test_manager_config_accessor() {
-        let cfg = CheckpointConfig {
-            max_checkpoints: 42,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { max_checkpoints: 42, ..Default::default() };
         let mgr = memory_manager(cfg);
         assert_eq!(mgr.config().max_checkpoints, 42);
     }
 
     #[test]
     fn test_manager_scheduler_accessor() {
-        let cfg = CheckpointConfig {
-            auto_save_interval_tokens: 200,
-            ..Default::default()
-        };
+        let cfg = CheckpointConfig { auto_save_interval_tokens: 200, ..Default::default() };
         let mgr = memory_manager(cfg);
-        assert_eq!(
-            mgr.scheduler().should_checkpoint(200),
-            Some(TriggerReason::TokenCount)
-        );
+        assert_eq!(mgr.scheduler().should_checkpoint(200), Some(TriggerReason::TokenCount));
     }
 }
