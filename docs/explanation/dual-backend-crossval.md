@@ -28,6 +28,26 @@ BitNet-rs must support multiple model types with different C++ reference impleme
    - Generally compatible with llama.cpp
    - Default to llama.cpp unless explicitly overridden
 
+## bitnet.cpp vs llama.cpp: Relationship in BitNet-rs
+
+BitNet-rs treats `bitnet.cpp` and `llama.cpp` as **two distinct C++ cross-validation lanes**, but they are not symmetric dependencies:
+
+- `llama.cpp` is a standalone upstream inference engine.
+- `bitnet.cpp` is BitNet-focused and, in practice, vendors/depends on `llama.cpp` + `ggml` internals for shared runtime plumbing.
+
+In local builds this shows up as:
+
+- **Full lane available**: BitNet.cpp artifacts are found **and** embedded llama/ggml artifacts are found.
+- **Fallback lane available**: standalone llama.cpp artifacts are found, while BitNet.cpp artifacts are missing.
+
+This is why BitNet-rs labels availability as “full BitNet lane” vs “llama fallback lane” during detection and preflight diagnostics.
+
+### Practical interpretation
+
+- BitNet.cpp carries llama.cpp as part of its build graph.
+- llama.cpp does **not** require BitNet.cpp.
+- For cross-validation, BitNet-rs can still run useful checks with llama.cpp even when the BitNet lane is unavailable.
+
 ## Architecture
 
 ### Component Structure
