@@ -126,8 +126,11 @@ pub mod spirv_compiler;
 pub mod docker_ci;
 
 // === Existing Modules (prior waves) ===
-
+pub mod generation;
+pub mod model_architecture;
 pub mod model_warmup;
+use std::fmt;
+
 //
 // Provides checkpoint management for saving and resuming inference state,
 // with incremental diffs, compression, and automatic scheduling.
@@ -144,7 +147,6 @@ pub mod streaming_aggregator;
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
 pub mod error_recovery;
-pub mod generation;
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
