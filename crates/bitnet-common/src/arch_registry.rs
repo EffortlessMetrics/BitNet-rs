@@ -45,6 +45,11 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
+            "deepseek" | "deepseek2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -67,6 +72,8 @@ impl ArchitectureRegistry {
             "qwen2.5",
             "gemma",
             "gemma2",
+            "deepseek",
+            "deepseek2",
             "bitnet",
             "bitnet-b1.58",
             "gpt",

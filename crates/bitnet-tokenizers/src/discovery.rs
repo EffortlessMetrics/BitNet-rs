@@ -32,6 +32,8 @@ pub struct ModelCompatibilityMatrix {
     pub gemma_256k: TokenizerDownloadInfo,
     /// Mistral with 32K vocabulary - SentencePiece tokenizer
     pub mistral_32k: TokenizerDownloadInfo,
+    /// DeepSeek with 100K vocabulary - BPE tokenizer
+    pub deepseek_100k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -84,6 +86,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "mistral-32k".to_string(),
                 expected_vocab: Some(32000),
+            },
+            deepseek_100k: TokenizerDownloadInfo {
+                repo: "deepseek-ai/DeepSeek-V2-Lite".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "deepseek-100k".to_string(),
+                expected_vocab: Some(100015),
             },
         }
     }

@@ -135,7 +135,7 @@ fn test_architecture_support() {
     let loader = ModelLoader::new(Device::Cpu);
 
     // All architectures shared with production loader
-    for arch in ["bitnet", "bitnet-b1.58", "llama", "mistral", "qwen", "gpt", "bert", "phi"] {
+    for arch in ["bitnet", "bitnet-b1.58", "llama", "mistral", "qwen", "gpt", "bert", "phi", "deepseek"] {
         assert!(
             loader.is_supported_architecture(arch),
             "{arch} should be supported"

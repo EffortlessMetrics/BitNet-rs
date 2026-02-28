@@ -56,6 +56,8 @@ pub enum TemplateType {
     GemmaChat,
     /// Mistral chat format with [INST]...[/INST] tokens
     MistralChat,
+    /// DeepSeek ChatML format with im_start/im_end tokens
+    DeepSeekChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -70,9 +72,13 @@ impl std::str::FromStr for TemplateType {
             "qwen-chat" | "qwen_chat" | "qwen" => Ok(Self::QwenChat),
             "gemma-chat" | "gemma_chat" | "gemma" => Ok(Self::GemmaChat),
             "mistral-chat" | "mistral_chat" | "mistral" => Ok(Self::MistralChat),
+            "deepseek-chat" | "deepseek_chat" | "deepseek" => {
+                Ok(Self::DeepSeekChat)
+            }
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
-                 llama3-chat, phi4-chat, qwen-chat, gemma-chat, mistral-chat",
+                 llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
+                 mistral-chat, deepseek-chat",
                 s
             ),
         }
@@ -89,6 +95,7 @@ impl std::fmt::Display for TemplateType {
             Self::QwenChat => write!(f, "qwen-chat"),
             Self::GemmaChat => write!(f, "gemma-chat"),
             Self::MistralChat => write!(f, "mistral-chat"),
+            Self::DeepSeekChat => write!(f, "deepseek-chat"),
         }
     }
 }
@@ -198,6 +205,15 @@ impl TemplateType {
                 );
                 return Self::MistralChat;
             }
+            if lower.contains("deepseek") {
+                tracing::debug!(
+                    template = "DeepSeekChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::DeepSeekChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -224,6 +240,7 @@ impl TemplateType {
             Self::QwenChat => Self::apply_qwen_chat(user_text, system_prompt),
             Self::GemmaChat => Self::apply_gemma_chat(user_text, system_prompt),
             Self::MistralChat => Self::apply_mistral_chat(user_text, system_prompt),
+            Self::DeepSeekChat => Self::apply_deepseek_chat(user_text, system_prompt),
         }
     }
 
@@ -390,6 +407,35 @@ impl TemplateType {
         result
     }
 
+    /// Apply DeepSeek ChatML format (same structure as Qwen/Phi-4 ChatML)
+    ///
+    /// ```text
+    /// <|im_start|>system
+    /// You are a helpful assistant.<|im_end|>
+    /// <|im_start|>user
+    /// {user_text}<|im_end|>
+    /// <|im_start|>assistant
+    /// ```
+    fn apply_deepseek_chat(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+
+        result.push_str("<|im_start|>assistant\n");
+
+        result
+    }
+
     /// Get the default stop sequences for this template
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
@@ -402,6 +448,12 @@ impl TemplateType {
             }
             Self::GemmaChat => vec!["<end_of_turn>".to_string()],
             Self::MistralChat => vec!["</s>".to_string()],
+            Self::DeepSeekChat => {
+                vec![
+                    "<|im_end|>".to_string(),
+                    "<|end▁of▁sentence|>".to_string(),
+                ]
+            }
         }
     }
 
@@ -449,6 +501,7 @@ impl TemplateType {
             Self::QwenChat => false,   // ChatML uses im_start/im_end tokens
             Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
             Self::MistralChat => false, // Template includes <s>
+            Self::DeepSeekChat => false, // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -462,6 +515,7 @@ impl TemplateType {
                 | Self::QwenChat
                 | Self::GemmaChat
                 | Self::MistralChat
+                | Self::DeepSeekChat
         )
     }
 
@@ -574,6 +628,23 @@ impl TemplateType {
                 } else {
                     write!(out, "[INST] ")?;
                 }
+            }
+            TemplateType::DeepSeekChat => {
+                // ChatML format with im_start/im_end tokens
+                let sys =
+                    system.unwrap_or("You are a helpful assistant.");
+                write!(out, "<|im_start|>system\n{}<|im_end|>\n", sys)?;
+
+                for turn in history {
+                    let role = turn.role.as_str();
+                    write!(
+                        out,
+                        "<|im_start|>{}\n{}<|im_end|>\n",
+                        role, turn.text
+                    )?;
+                }
+
+                write!(out, "<|im_start|>assistant\n")?;
             }
             TemplateType::Instruct => {
                 // Simple Q&A format
@@ -829,6 +900,77 @@ mod tests {
     }
 
     #[test]
+    fn test_deepseek_chat_template() {
+        let template = TemplateType::DeepSeekChat;
+
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = template.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(!result.contains("You are a helpful assistant."));
+    }
+
+    #[test]
+    fn test_detect_deepseek_from_name() {
+        let t = TemplateType::detect(Some("deepseek-v2-lite"), None);
+        assert_eq!(t, TemplateType::DeepSeekChat);
+    }
+
+    #[test]
+    fn test_render_chat_deepseek() {
+        let t = TemplateType::DeepSeekChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("You are helpful.")).unwrap();
+
+        assert!(s.contains("<|im_start|>system\n"));
+        assert!(s.contains("You are helpful."));
+        assert!(s.contains("<|im_start|>user\n"));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<|im_start|>assistant\n"));
+        assert!(s.contains("Hi there!"));
+        assert!(s.contains("How are you?"));
+        assert!(s.contains("<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn snapshot_deepseek_single_turn() {
+        let result =
+            TemplateType::DeepSeekChat.apply("What is 2+2?", None);
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn snapshot_deepseek_with_system() {
+        let result = TemplateType::DeepSeekChat
+            .apply("Explain monads", Some("You are a Haskell tutor."));
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn snapshot_deepseek_multi_turn() {
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let result = TemplateType::DeepSeekChat
+            .render_chat(&hist, Some("You are friendly."))
+            .unwrap();
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
     fn test_raw_template() {
         let template = TemplateType::Raw;
         let result = template.apply("Hello, world!", None);
@@ -890,6 +1032,18 @@ mod tests {
         assert_eq!("mistral-chat".parse::<TemplateType>().unwrap(), TemplateType::MistralChat);
         assert_eq!("mistral_chat".parse::<TemplateType>().unwrap(), TemplateType::MistralChat);
         assert_eq!("mistral".parse::<TemplateType>().unwrap(), TemplateType::MistralChat);
+        assert_eq!(
+            "deepseek-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::DeepSeekChat
+        );
+        assert_eq!(
+            "deepseek_chat".parse::<TemplateType>().unwrap(),
+            TemplateType::DeepSeekChat
+        );
+        assert_eq!(
+            "deepseek".parse::<TemplateType>().unwrap(),
+            TemplateType::DeepSeekChat
+        );
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -903,6 +1057,7 @@ mod tests {
         assert!(!TemplateType::QwenChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::GemmaChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::MistralChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::DeepSeekChat.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -987,6 +1142,7 @@ mod tests {
         assert!(!TemplateType::QwenChat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
         assert!(!TemplateType::MistralChat.should_add_bos()); // Template includes <s>
+        assert!(!TemplateType::DeepSeekChat.should_add_bos()); // ChatML tokens
     }
 
     #[test]
@@ -998,6 +1154,7 @@ mod tests {
         assert!(TemplateType::QwenChat.parse_special()); // Qwen has special tokens
         assert!(TemplateType::GemmaChat.parse_special()); // Gemma has special tokens
         assert!(TemplateType::MistralChat.parse_special()); // Mistral has special tokens
+        assert!(TemplateType::DeepSeekChat.parse_special()); // DeepSeek has special tokens
     }
 
     #[test]
@@ -1136,6 +1293,7 @@ mod property_tests {
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
         ]
     }
 
@@ -1197,6 +1355,7 @@ mod property_tests {
                 Just(TemplateType::QwenChat),
                 Just(TemplateType::GemmaChat),
                 Just(TemplateType::MistralChat),
+                Just(TemplateType::DeepSeekChat),
             ],
         ) {
             let stops = template.default_stop_sequences();

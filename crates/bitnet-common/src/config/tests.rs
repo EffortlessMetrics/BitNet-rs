@@ -471,3 +471,18 @@ fn test_apply_architecture_defaults_qwen() {
         );
     }
 }
+
+#[test]
+fn test_apply_architecture_defaults_deepseek() {
+    for arch in &["deepseek", "deepseek2"] {
+        let mut config = ModelConfig::default();
+        config.apply_architecture_defaults(arch);
+        assert_eq!(config.norm_type, NormType::RmsNorm, "norm for {}", arch);
+        assert_eq!(
+            config.activation_type,
+            ActivationType::Silu,
+            "activation for {}",
+            arch
+        );
+    }
+}
