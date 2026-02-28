@@ -4,6 +4,7 @@
 //! for high-performance GPU inference. Each submodule targets a specific operation
 //! in the BitNet transformer pipeline:
 //!
+//! - [`activations`]: SiLU, GELU, ReLU, and fused SiLU-gate activations
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
 //! - [`rmsnorm`]: RMSNorm layer normalization
@@ -17,6 +18,7 @@
 //! compilation and kernel dispatch are handled by the parent [`super::gpu::cuda`]
 //! module via `cudarc`.
 
+pub mod activations;
 pub mod attention;
 pub mod kv_cache;
 pub mod qk256_gemv;
@@ -24,6 +26,10 @@ pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
 
+pub use activations::{
+    ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
+    launch_silu_gate, silu_gate_cpu,
+};
 pub use attention::{AttentionKernelConfig, launch_attention};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
@@ -42,3 +48,6 @@ pub use crate::reduction::{
     launch_reduce_rows_f32, reduce_cols_f32, reduce_f32, reduce_rows_f32,
 };
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
