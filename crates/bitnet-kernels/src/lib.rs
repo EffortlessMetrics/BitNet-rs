@@ -12,6 +12,9 @@ pub mod ffi;
 // OpenCL kernel sources (always compiled — just embedded string constants)
 #[path = "gpu/kernels/mod.rs"]
 pub mod kernels;
+// Persistent OpenCL kernel cache (filesystem only — no GPU deps)
+#[path = "gpu/kernel_cache.rs"]
+pub mod kernel_cache;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
