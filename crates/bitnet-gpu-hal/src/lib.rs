@@ -135,6 +135,7 @@ pub mod token_streaming;
 // === Infrastructure ===
 pub mod arch_registry;
 pub mod logging;
+pub mod logging_observability;
 pub mod migration_tool;
 pub mod observability;
 pub mod thread_pool;
