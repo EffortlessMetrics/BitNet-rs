@@ -92,7 +92,9 @@ pub mod model_debugger;
 // === Testing & Validation ===
 pub mod compatibility_checker;
 pub mod e2e_integration;
+pub mod generation;
 pub mod model_validator;
+pub mod quant_calibration;
 pub mod test_harness;
 
 // === Infrastructure ===
@@ -144,7 +146,6 @@ pub mod streaming_aggregator;
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
 pub mod error_recovery;
-pub mod generation;
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
