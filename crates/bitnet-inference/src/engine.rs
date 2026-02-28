@@ -756,7 +756,7 @@ impl InferenceEngine {
                     Box::new(GpuBackend::new(model.clone(), device)?)
                 }
             }
-            Device::OpenCL(_) => {
+            Device::OpenCL(_) | Device::Vulkan(_) => {
                 if bitnet_kernels::device_features::oneapi_available_runtime() {
                     debug!("Using OpenCL backend (CPU fallback for compute)");
                 }

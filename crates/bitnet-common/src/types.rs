@@ -33,6 +33,7 @@ pub enum Device {
     Cuda(usize),
     Metal,
     OpenCL(usize),
+    Vulkan(usize),
 }
 
 // Conservative conversion from Candle device - avoids assuming CUDA ordinal
@@ -76,6 +77,16 @@ impl Device {
         matches!(self, Device::OpenCL(_))
     }
 
+    /// Create a new Vulkan device with the specified index
+    pub fn new_vulkan(index: usize) -> anyhow::Result<Self> {
+        Ok(Device::Vulkan(index))
+    }
+
+    /// Check if this device is Vulkan
+    pub fn is_vulkan(&self) -> bool {
+        matches!(self, Device::Vulkan(_))
+    }
+
     /// Convert our device preference to Candle's device.
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
@@ -91,6 +102,7 @@ impl Device {
             #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
             Device::Metal => candle_core::Device::Cpu,
             Device::OpenCL(_) => candle_core::Device::Cpu, // OpenCL uses its own buffer management
+            Device::Vulkan(_) => candle_core::Device::Cpu, // Vulkan uses its own buffer management
         })
     }
 
@@ -220,6 +232,44 @@ mod tests {
     #[test]
     fn device_opencl_serialization_roundtrip() {
         let dev = Device::OpenCL(1);
+        let json = serde_json::to_string(&dev).unwrap();
+        let deserialized: Device = serde_json::from_str(&json).unwrap();
+        assert_eq!(dev, deserialized);
+    }
+
+    #[test]
+    fn device_vulkan_variant_basic() {
+        let dev = Device::Vulkan(0);
+        assert!(dev.is_vulkan());
+        assert!(!dev.is_cpu());
+        assert!(!dev.is_cuda());
+        assert!(!dev.is_opencl());
+    }
+
+    #[test]
+    fn device_vulkan_new() {
+        let dev = Device::new_vulkan(0).unwrap();
+        assert_eq!(dev, Device::Vulkan(0));
+    }
+
+    #[test]
+    fn device_vulkan_to_candle_falls_back_to_cpu() {
+        let dev = Device::Vulkan(0);
+        let candle_dev = dev.to_candle().unwrap();
+        assert!(matches!(candle_dev, candle_core::Device::Cpu));
+    }
+
+    #[test]
+    fn device_vulkan_debug_format() {
+        let dev = Device::Vulkan(2);
+        let debug = format!("{:?}", dev);
+        assert!(debug.contains("Vulkan"));
+        assert!(debug.contains("2"));
+    }
+
+    #[test]
+    fn device_vulkan_serialization_roundtrip() {
+        let dev = Device::Vulkan(1);
         let json = serde_json::to_string(&dev).unwrap();
         let deserialized: Device = serde_json::from_str(&json).unwrap();
         assert_eq!(dev, deserialized);

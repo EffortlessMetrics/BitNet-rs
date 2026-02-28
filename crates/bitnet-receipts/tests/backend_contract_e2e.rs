@@ -19,6 +19,8 @@ fn cpu_only_caps() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Scalar,
     }
 }
@@ -31,6 +33,8 @@ fn cpu_avx2_caps() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }

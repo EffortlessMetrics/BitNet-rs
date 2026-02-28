@@ -45,6 +45,8 @@ pub enum KernelBackend {
     OneApi,
     /// C++ FFI bridge to bitnet.cpp / llama.cpp.
     CppFfi,
+    /// Vulkan GPU kernels via compute shaders.
+    Vulkan,
 }
 
 impl fmt::Display for KernelBackend {
@@ -54,6 +56,7 @@ impl fmt::Display for KernelBackend {
             KernelBackend::Cuda => write!(f, "cuda"),
             KernelBackend::OneApi => write!(f, "oneapi"),
             KernelBackend::CppFfi => write!(f, "cpp-ffi"),
+            KernelBackend::Vulkan => write!(f, "vulkan"),
         }
     }
 }
@@ -61,7 +64,7 @@ impl fmt::Display for KernelBackend {
 impl KernelBackend {
     /// Returns true if this backend requires a GPU at runtime.
     pub fn requires_gpu(self) -> bool {
-        matches!(self, KernelBackend::Cuda | KernelBackend::OneApi)
+        matches!(self, KernelBackend::Cuda | KernelBackend::OneApi | KernelBackend::Vulkan)
     }
 
     /// Returns true if this backend is compiled in the current build.
@@ -72,6 +75,7 @@ impl KernelBackend {
             KernelBackend::OneApi => cfg!(feature = "oneapi"),
             // FFI availability is determined by the consumer crate's feature flags
             KernelBackend::CppFfi => false,
+            KernelBackend::Vulkan => cfg!(feature = "vulkan"),
         }
     }
 }
@@ -94,6 +98,10 @@ pub struct KernelCapabilities {
     pub oneapi_runtime: bool,
     /// C++ FFI bridge is compiled.
     pub cpp_ffi: bool,
+    /// Vulkan compute backend is compiled.
+    pub vulkan_compiled: bool,
+    /// Vulkan runtime detected (GPU present and accessible).
+    pub vulkan_runtime: bool,
     /// Best SIMD level available at compile time.
     pub simd_level: SimdLevel,
 }
@@ -110,6 +118,8 @@ impl KernelCapabilities {
             oneapi_compiled: cfg!(feature = "oneapi"),
             oneapi_runtime: false,
             cpp_ffi: false, // bitnet-common has no ffi feature; FFI detection is crate-local
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: compile_time_simd_level(),
         }
     }
@@ -139,6 +149,13 @@ impl KernelCapabilities {
         self
     }
 
+    /// Fill in the `vulkan_runtime` field from a live probe result.
+    #[must_use]
+    pub fn with_vulkan_runtime(mut self, available: bool) -> Self {
+        self.vulkan_runtime = available;
+        self
+    }
+
     /// Returns backends that are compiled in, in priority order (best first).
     pub fn compiled_backends(&self) -> Vec<KernelBackend> {
         let mut backends = Vec::new();
@@ -147,6 +164,9 @@ impl KernelCapabilities {
         }
         if self.oneapi_compiled {
             backends.push(KernelBackend::OneApi);
+        }
+        if self.vulkan_compiled {
+            backends.push(KernelBackend::Vulkan);
         }
         if self.cpp_ffi {
             backends.push(KernelBackend::CppFfi);
@@ -164,6 +184,9 @@ impl KernelCapabilities {
         }
         if self.oneapi_compiled && self.oneapi_runtime {
             return Some(KernelBackend::OneApi);
+        }
+        if self.vulkan_compiled && self.vulkan_runtime {
+            return Some(KernelBackend::Vulkan);
         }
         if self.cpp_ffi {
             return Some(KernelBackend::CppFfi);
@@ -225,6 +248,7 @@ mod tests {
         assert_eq!(KernelBackend::Cuda.to_string(), "cuda");
         assert_eq!(KernelBackend::OneApi.to_string(), "oneapi");
         assert_eq!(KernelBackend::CppFfi.to_string(), "cpp-ffi");
+        assert_eq!(KernelBackend::Vulkan.to_string(), "vulkan");
     }
 
     #[test]
@@ -233,6 +257,7 @@ mod tests {
         assert!(KernelBackend::Cuda.requires_gpu());
         assert!(KernelBackend::OneApi.requires_gpu());
         assert!(!KernelBackend::CppFfi.requires_gpu());
+        assert!(KernelBackend::Vulkan.requires_gpu());
     }
 
     #[test]
@@ -255,6 +280,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         };
         assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
@@ -269,6 +296,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         };
         assert_eq!(caps.best_available(), Some(KernelBackend::CpuRust));
@@ -283,6 +312,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: true,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         };
         let backends = caps.compiled_backends();
@@ -300,6 +331,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         };
         let s = caps.summary();
@@ -316,6 +349,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let caps = caps.with_cuda_runtime(true);
@@ -339,6 +374,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         assert_eq!(caps.best_available(), Some(KernelBackend::CpuRust));
@@ -359,6 +396,8 @@ mod property_tests {
                 oneapi_compiled: false,
                 oneapi_runtime: false,
                 cpp_ffi,
+                vulkan_compiled: false,
+                vulkan_runtime: false,
                 simd_level: SimdLevel::Scalar,
             },
         )
@@ -381,6 +420,7 @@ mod property_tests {
             let reachable = caps.cpu_rust
                 || (caps.cuda_compiled && caps.cuda_runtime)
                 || (caps.oneapi_compiled && caps.oneapi_runtime)
+                || (caps.vulkan_compiled && caps.vulkan_runtime)
                 || caps.cpp_ffi;
             let best = caps.best_available();
             prop_assert_eq!(
@@ -403,6 +443,8 @@ mod property_tests {
                 cpp_ffi: any_ffi,
                 oneapi_compiled: false,
                 oneapi_runtime: false,
+                vulkan_compiled: false,
+                vulkan_runtime: false,
                 simd_level: SimdLevel::Scalar,
             };
             prop_assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
@@ -418,12 +460,13 @@ mod property_tests {
                 Just(KernelBackend::Cuda),
                 Just(KernelBackend::OneApi),
                 Just(KernelBackend::CppFfi),
+                Just(KernelBackend::Vulkan),
             ],
         ) {
             let requires = backend.requires_gpu();
             prop_assert_eq!(
                 requires,
-                backend == KernelBackend::Cuda || backend == KernelBackend::OneApi
+                backend == KernelBackend::Cuda || backend == KernelBackend::OneApi || backend == KernelBackend::Vulkan
             );
         }
     }
