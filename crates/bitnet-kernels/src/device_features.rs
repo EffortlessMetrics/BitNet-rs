@@ -110,7 +110,7 @@ pub fn gpu_available_runtime() -> bool {
     crate::gpu_utils::get_gpu_info().cuda
 }
 
-/// Check if an Intel GPU is available at runtime via OpenCL.
+/// Check if an Intel GPU is available at runtime via `OpenCL`.
 ///
 /// Delegates to [`bitnet_device_probe::oneapi_available_runtime`] which
 /// checks `clinfo` and `sycl-ls`. Returns `false` when the `oneapi`

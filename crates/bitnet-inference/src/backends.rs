@@ -406,7 +406,9 @@ pub fn select_backend(
         }
         Device::OpenCL(_) => {
             if bitnet_kernels::device_features::oneapi_available_runtime() {
-                info!("OpenCL selected; compute kernels dispatched via KernelManager, tensor ops on CPU");
+                info!(
+                    "OpenCL selected; compute kernels dispatched via KernelManager, tensor ops on CPU"
+                );
             } else {
                 warn!("OpenCL requested but oneapi runtime not available, falling back to CPU");
             }

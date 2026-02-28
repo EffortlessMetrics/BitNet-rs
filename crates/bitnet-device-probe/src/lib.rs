@@ -73,6 +73,7 @@ pub fn probe_cpu() -> CpuCapabilities {
 /// `BITNET_GPU_FAKE=none` makes all GPU flags `false`.
 /// Strict mode (`BITNET_STRICT_MODE=1`) ignores `BITNET_GPU_FAKE` and probes real hardware.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GpuCapabilities {
     /// Any GPU backend is available (CUDA, `ROCm`, and/or oneAPI).
     pub available: bool,
@@ -222,7 +223,7 @@ pub const fn oneapi_compiled() -> bool {
     cfg!(feature = "oneapi")
 }
 
-/// Check if an Intel GPU is available at runtime via OpenCL.
+/// Check if an Intel GPU is available at runtime via `OpenCL`.
 ///
 /// Detection strategy:
 /// 1. Check `BITNET_GPU_FAKE` env var (respects strict mode)
@@ -420,7 +421,7 @@ pub struct DeviceProbe {
     /// Whether a CUDA-capable GPU was found at runtime.
     pub cuda_available: bool,
     pub rocm_available: bool,
-    /// Whether an Intel GPU was found at runtime via OpenCL.
+    /// Whether an Intel GPU was found at runtime via `OpenCL`.
     pub oneapi_available: bool,
 }
 
