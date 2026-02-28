@@ -1,7 +1,7 @@
 //! Property and unit tests for recently-added backend capabilities.
 //!
 //! Covers:
-//! - ROCm availability field in [`GpuCapabilities`] and [`DeviceProbe`]
+//! - `ROCm` availability field in [`GpuCapabilities`] and [`DeviceProbe`]
 //! - Vulkan compile-time and runtime probes (`vulkan_compiled`, `vulkan_available_runtime`)
 //! - oneAPI feature flag (compile-time gate; no runtime function yet)
 //! - GPU feature flag interactions (`gpu` implies `cuda` OR `rocm`)
@@ -338,14 +338,17 @@ fn vulkan_compiled_is_false_with_cpu_only_features() {
 fn oneapi_feature_flag_is_accessible() {
     // oneAPI feature exists as a Cargo gate but has no runtime function yet.
     // Verify the feature flag can be evaluated and produces a bool.
-    let _oneapi_enabled: bool = cfg!(feature = "oneapi");
+    let oneapi_enabled: bool = cfg!(feature = "oneapi");
+    // Ensure the variable is used so clippy doesn't complain.
+    let _ = oneapi_enabled;
 }
 
 /// Without the `oneapi` feature, it must evaluate to `false`.
 #[cfg(not(feature = "oneapi"))]
 #[test]
 fn oneapi_feature_disabled_in_cpu_build() {
-    assert!(!cfg!(feature = "oneapi"), "oneapi feature must be false in cpu-only builds");
+    let oneapi = cfg!(feature = "oneapi");
+    assert!(!oneapi, "oneapi feature must be false in cpu-only builds");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
