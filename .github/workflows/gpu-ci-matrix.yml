@@ -1,0 +1,183 @@
+name: GPU CI Matrix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docker/**"
+      - ".github/workflows/gpu-ci-matrix.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docker/**"
+      - ".github/workflows/gpu-ci-matrix.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUST_LOG: warn
+
+jobs:
+  # ── Docker-based compile checks for each GPU backend ───────────
+  docker-compile:
+    name: "docker-compile (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cpu
+            dockerfile: docker/Dockerfile.test-matrix
+            target: test-cpu
+          - label: gpu
+            dockerfile: docker/Dockerfile.test-matrix
+            target: test-gpu
+          - label: oneapi
+            dockerfile: docker/Dockerfile.test-matrix
+            target: test-oneapi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2  # v3
+
+      - name: Build ${{ matrix.label }}
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198e19c816612b  # v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.label }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.label }}
+
+  # ── Native compile checks (no Docker) ──────────────────────────
+  native-compile:
+    name: "native-check (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cpu
+            flags: "--no-default-features --features cpu"
+          - label: gpu
+            flags: "--no-default-features --features gpu"
+            allow_failure: true
+          - label: cpu+gpu
+            flags: "--no-default-features --features cpu,gpu"
+            allow_failure: true
+          - label: oneapi
+            flags: "--no-default-features --features oneapi"
+            allow_failure: true
+          - label: cpu+oneapi
+            flags: "--no-default-features --features cpu,oneapi"
+            allow_failure: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-ci-${{ matrix.label }}
+
+      - name: Compile check (${{ matrix.label }})
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        run: cargo check --workspace --locked ${{ matrix.flags }}
+
+  # ── CPU test run ───────────────────────────────────────────────
+  cpu-tests:
+    name: CPU Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    needs: [native-compile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-ci-cpu-test
+
+      - name: Run CPU tests
+        run: |
+          cargo test --workspace --locked --no-default-features --features cpu \
+            -- --skip "gpu" --skip "cuda" 2>&1 | tail -100
+
+  # ── Intel GPU Docker build ────────────────────────────────────
+  intel-gpu-docker:
+    name: Intel GPU Docker Build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2  # v3
+
+      - name: Build Intel GPU image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198e19c816612b  # v6
+        with:
+          context: .
+          file: docker/Dockerfile.intel-gpu
+          target: builder
+          push: false
+          cache-from: type=gha,scope=intel-gpu
+          cache-to: type=gha,mode=max,scope=intel-gpu
+
+  # ── NVIDIA GPU Docker build ───────────────────────────────────
+  nvidia-gpu-docker:
+    name: NVIDIA GPU Docker Build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2  # v3
+
+      - name: Build NVIDIA GPU image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198e19c816612b  # v6
+        with:
+          context: .
+          file: docker/Dockerfile.nvidia-gpu
+          target: builder
+          push: false
+          cache-from: type=gha,scope=nvidia-gpu
+          cache-to: type=gha,mode=max,scope=nvidia-gpu

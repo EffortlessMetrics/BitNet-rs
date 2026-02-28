@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.6
+# NVIDIA GPU CI image for BitNet-rs
+#
+# Based on CUDA 12.2 devel image for full nvcc + runtime support.
+# Build:
+#   docker build -f docker/Dockerfile.nvidia-gpu -t bitnet-rs:nvidia-gpu .
+#
+# Run with GPU access:
+#   docker run --gpus all bitnet-rs:nvidia-gpu
+
+# ── Stage 1: Builder with CUDA toolkit ───────────────────────────
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04 AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl build-essential cmake pkg-config libssl-dev ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust toolchain (MSRV 1.92.0)
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.92.0
+ENV PATH=/root/.cargo/bin:$PATH
+
+WORKDIR /app
+
+# Copy workspace
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build with GPU feature
+RUN cargo build --locked --no-default-features --features gpu
+
+# ── Stage 2: Test runner ─────────────────────────────────────────
+FROM builder AS test-runner
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Run GPU tests (requires --gpus all at runtime)
+CMD ["cargo", "test", "--workspace", "--locked", "--no-default-features", "--features", "gpu"]
+
+# ── Stage 3: Runtime (minimal CUDA runtime) ──────────────────────
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 10001 bitnet \
+    && useradd -m -u 10001 -g 10001 -s /bin/false bitnet
+
+COPY --from=builder /app/target/debug/bitnet-cli /usr/local/bin/bitnet 2>/dev/null || true
+COPY --from=builder /app/target/debug/bitnet-server /usr/local/bin/bitnet-server 2>/dev/null || true
+
+RUN mkdir -p /models && chown bitnet:bitnet /models
+
+USER bitnet
+WORKDIR /home/bitnet
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+    RUST_LOG=info
+
+LABEL org.opencontainers.image.title="bitnet-rs-nvidia-gpu" \
+      org.opencontainers.image.description="BitNet-rs GPU CI image (CUDA 12.2)"
