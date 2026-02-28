@@ -393,3 +393,15 @@ fn test_invalid_env_values() {
         }
     }
 }
+
+#[test]
+fn test_norm_type_and_activation_type_defaults() {
+    let config = ModelConfig::default();
+    assert_eq!(config.norm_type, NormType::LayerNorm);
+    assert_eq!(config.activation_type, ActivationType::Silu);
+
+    // Verify enum variants exist
+    let _rmsnorm = NormType::RmsNorm;
+    let _relu2 = ActivationType::Relu2;
+    let _gelu = ActivationType::Gelu;
+}

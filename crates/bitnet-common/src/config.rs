@@ -37,6 +37,10 @@ pub struct ModelConfig {
     pub rope_scaling: Option<RopeScaling>,
     /// RMSNorm epsilon for numerical stability
     pub rms_norm_eps: Option<f32>,
+    /// Normalization layer type
+    pub norm_type: NormType,
+    /// Activation function type for FFN
+    pub activation_type: ActivationType,
     /// Tokenizer configuration
     pub tokenizer: TokenizerConfig,
 }
@@ -56,9 +60,33 @@ impl Default for ModelConfig {
             rope_theta: None,
             rope_scaling: None,
             rms_norm_eps: None,
+            norm_type: NormType::LayerNorm,
+            activation_type: ActivationType::Silu,
             tokenizer: TokenizerConfig::default(),
         }
     }
+}
+
+/// Normalization type used by the model architecture
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum NormType {
+    /// Standard LayerNorm with mean subtraction (BitNet default)
+    #[default]
+    LayerNorm,
+    /// RMSNorm without mean subtraction (LLaMA/Phi/Mistral)
+    RmsNorm,
+}
+
+/// Activation function type used in feed-forward layers
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ActivationType {
+    /// SiLU/Swish activation (default for LLaMA/Phi/Mistral)
+    #[default]
+    Silu,
+    /// Squared ReLU (BitNet-specific)
+    Relu2,
+    /// GELU activation (GPT-2/BERT)
+    Gelu,
 }
 
 /// Supported model formats

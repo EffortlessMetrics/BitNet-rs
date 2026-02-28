@@ -78,6 +78,9 @@ pub fn is_projection_weight(name: &str) -> bool {
         || name.ends_with(".ffn_gate.weight")
         || name.ends_with(".ffn_up.weight")
         || name.ends_with(".ffn_down.weight")
+        // Phi-style fused projections
+        || name.ends_with(".qkv_proj.weight")
+        || name.ends_with(".gate_up_proj.weight")
 }
 
 #[cfg(test)]
@@ -123,6 +126,14 @@ mod tests {
         assert!(is_projection_weight("blk.0.gate_proj.weight"));
         assert!(is_projection_weight("blk.0.up_proj.weight"));
         assert!(is_projection_weight("blk.0.down_proj.weight"));
+
+        // Phi-style fused projections
+        assert!(is_projection_weight(
+            "model.layers.0.self_attn.qkv_proj.weight"
+        ));
+        assert!(is_projection_weight(
+            "model.layers.0.mlp.gate_up_proj.weight"
+        ));
 
         // Negatives
         assert!(!is_projection_weight("blk.0.attn_norm.weight"));
