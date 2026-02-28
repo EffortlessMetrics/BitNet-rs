@@ -32,6 +32,7 @@ members = [
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
+  "crates/bitnet-opencl",       # OpenCL backend utilities (P2P transfer, etc.)
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-runtime-bootstrap",
