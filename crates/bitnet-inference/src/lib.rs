@@ -10,11 +10,9 @@ pub mod cpu_opt;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
-/// GPU telemetry and monitoring (no GPU deps).
-pub mod gpu_telemetry;
 pub mod kernel_recorder;
 pub mod layers;
-pub mod batch_gpu;
+pub mod multi_device;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
