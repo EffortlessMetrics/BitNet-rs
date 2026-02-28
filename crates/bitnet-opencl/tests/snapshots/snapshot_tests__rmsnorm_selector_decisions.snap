@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: cases
+---
+- - 0
+  - small
+- - 32
+  - small
+- - 128
+  - small
+- - 256
+  - small
+- - 512
+  - tiled
+- - 2048
+  - tiled
+- - 4096
+  - tiled

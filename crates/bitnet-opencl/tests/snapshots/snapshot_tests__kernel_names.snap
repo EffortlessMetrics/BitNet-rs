@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: names
+---
+- qk256_gemv
+- rmsnorm
+- attention

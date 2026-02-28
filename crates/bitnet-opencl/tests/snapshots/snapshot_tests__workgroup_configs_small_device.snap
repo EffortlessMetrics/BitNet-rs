@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: cases
+---
+- - 1
+  - local=1 global=1 groups=1
+- - 16
+  - local=16 global=16 groups=1
+- - 64
+  - local=64 global=64 groups=1
+- - 100
+  - local=64 global=128 groups=2
+- - 1024
+  - local=64 global=1024 groups=16

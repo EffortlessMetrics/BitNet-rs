@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+Kernel error: Invalid arguments: QK256 inner dimension k=100 must be a positive multiple of 256

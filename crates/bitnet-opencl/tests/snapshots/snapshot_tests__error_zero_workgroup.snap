@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+Kernel error: Invalid arguments: workgroup problem_size must be non-zero

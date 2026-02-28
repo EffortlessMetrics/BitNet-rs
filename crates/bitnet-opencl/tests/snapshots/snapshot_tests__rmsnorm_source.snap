@@ -1,0 +1,37 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: "kernels::RMSNORM_SOURCE"
+---
+__kernel void rmsnorm(
+    __global const float* input,
+    __global const float* gamma,
+    __global float*       output,
+    const uint hidden_dim,
+    const float eps)
+{
+    const uint row = get_group_id(0);
+    const uint lid = get_local_id(0);
+    const uint wg  = get_local_size(0);
+
+    __local float partial_sum;
+    if (lid == 0) partial_sum = 0.0f;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float local_sum = 0.0f;
+    for (uint i = lid; i < hidden_dim; i += wg) {
+        float x = input[row * hidden_dim + i];
+        local_sum += x * x;
+    }
+
+    /* Simple serial reduction (placeholder for tree reduce) */
+    atomic_add_local(&partial_sum, local_sum);
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float rms = sqrt(partial_sum / (float)hidden_dim + eps);
+    float inv_rms = 1.0f / rms;
+
+    for (uint i = lid; i < hidden_dim; i += wg) {
+        output[row * hidden_dim + i] =
+            input[row * hidden_dim + i] * inv_rms * gamma[i];
+    }
+}

@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: cases
+---
+- - 1
+  - 256
+  - 64
+  - 2
+- - 1
+  - 512
+  - 128
+  - 4
+- - 2048
+  - 2048
+  - 1048576
+  - 32768
+- - 4096
+  - 4096
+  - 4194304
+  - 131072
