@@ -404,6 +404,10 @@ pub fn select_backend(
                 Ok(Box::new(CpuBackend::new(model)?))
             }
         }
+        Device::OpenCL(_) => {
+            warn!("OpenCL requested but not yet supported for inference, falling back to CPU");
+            Ok(Box::new(CpuBackend::new(model)?))
+        }
     }
 }
 
