@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+assertion_line: 228
+expression: out
+---
+# You are a code assistant.
+Now write a loop.

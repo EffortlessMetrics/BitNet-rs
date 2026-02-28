@@ -16,6 +16,23 @@ fn snapshot_raw_simple() {
 }
 
 #[test]
+fn snapshot_raw_with_system() {
+    let tmpl =
+        PromptTemplate::new(TemplateType::Raw).with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("raw_with_system", out);
+}
+
+#[test]
+fn snapshot_raw_multi_turn() {
+    let mut tmpl =
+        PromptTemplate::new(TemplateType::Raw).with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("raw_multi_turn", out);
+}
+
+#[test]
 fn snapshot_instruct_no_system() {
     let tmpl = PromptTemplate::new(TemplateType::Instruct);
     let out = tmpl.format("What is 2+2?");
@@ -183,6 +200,32 @@ fn snapshot_deepseek_multi_turn() {
     tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("deepseek_multi_turn", out);
+}
+
+// ── StarCoder ───────────────────────────────────────────────────
+
+#[test]
+fn snapshot_starcoder_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::StarCoder);
+    let out = tmpl.format("Write a fibonacci function in Python.");
+    insta::assert_snapshot!("starcoder_single_turn", out);
+}
+
+#[test]
+fn snapshot_starcoder_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::StarCoder)
+        .with_system_prompt("You are a Python expert.");
+    let out = tmpl.format("Write a sort function.");
+    insta::assert_snapshot!("starcoder_with_system", out);
+}
+
+#[test]
+fn snapshot_starcoder_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::StarCoder)
+        .with_system_prompt("You are a code assistant.");
+    tmpl.add_turn("Write hello world", "print('Hello, world!')");
+    let out = tmpl.format("Now write a loop.");
+    insta::assert_snapshot!("starcoder_multi_turn", out);
 }
 
 // ── Falcon Chat ──────────────────────────────────────────────────

@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+assertion_line: 219
+expression: out
+---
+# You are a Python expert.
+Write a sort function.
