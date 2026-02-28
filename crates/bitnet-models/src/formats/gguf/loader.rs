@@ -284,10 +284,11 @@ impl GgufLoader {
                 "Metal support not enabled; rebuild with --features metal (or gpu) on macOS"
                     .to_string(),
             )),
+            Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
         }
     }
 
-    /// Validate LayerNorm gamma statistics to catch quantization artifacts.
+    /// Validate LayerNorm gamma statisticsto catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
     /// If stats are suspicious, fail in strict mode or warn otherwise.

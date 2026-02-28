@@ -294,6 +294,7 @@ fn test_device_selection_mutations() {
                 assert!(!is_cuda, "Metal device should not report as CUDA");
                 assert!(is_metal, "Metal device should report as Metal");
             }
+            _ => {} // Other device variants (e.g., OpenCL)
         }
 
         // Test device enumeration
@@ -301,6 +302,7 @@ fn test_device_selection_mutations() {
             Device::Cpu => None,
             Device::Cuda(id) => Some(id),
             Device::Metal => None,
+            _ => None, // Other device variants
         };
 
         if let Some(_id) = device_id {
