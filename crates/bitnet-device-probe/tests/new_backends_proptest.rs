@@ -16,7 +16,6 @@ use bitnet_device_probe::{
     vulkan_available_runtime, vulkan_compiled,
 };
 use proptest::prelude::*;
-use serial_test::serial;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROCm: GpuCapabilities.rocm_available
@@ -38,7 +37,7 @@ fn probe_gpu_rocm_available_false_without_gpu_feature() {
 
 /// `GpuCapabilities.available` must equal `cuda_available || rocm_available`.
 ///
-/// This invariant must hold regardless of the GPU feature set.
+// This invariant must hold regardless of the GPU feature set.
 proptest! {
     #[test]
     fn probe_gpu_available_equals_cuda_or_rocm(_n in 0u8..=8) {
@@ -52,7 +51,7 @@ proptest! {
     }
 }
 
-/// `GpuCapabilities` clone must equal the original (derived `Clone + PartialEq`).
+// `GpuCapabilities` clone must equal the original (derived `Clone + PartialEq`).
 proptest! {
     #[test]
     fn probe_gpu_capabilities_clone_roundtrip(_n in 0u8..=8) {
@@ -61,7 +60,7 @@ proptest! {
     }
 }
 
-/// `rocm_available` is deterministic across consecutive calls.
+// `rocm_available` is deterministic across consecutive calls.
 proptest! {
     #[test]
     fn probe_gpu_rocm_available_is_deterministic(_n in 0u8..=8) {
@@ -199,7 +198,7 @@ fn device_probe_rocm_available_false_without_gpu_feature() {
     assert!(!probe_device().rocm_available, "rocm_available must be false without GPU feature");
 }
 
-/// `DeviceProbe.rocm_available` must be deterministic across consecutive calls.
+// `DeviceProbe.rocm_available` must be deterministic across consecutive calls.
 proptest! {
     #[test]
     fn device_probe_rocm_available_is_deterministic(_n in 0u8..=8) {
@@ -250,7 +249,7 @@ fn device_probe_debug_contains_rocm_and_cuda_fields() {
     assert!(debug_str.contains("cuda_available"), "Debug must contain 'cuda_available'");
 }
 
-/// `DeviceProbe` fields are all consistent: the probe never panics.
+// `DeviceProbe` fields are all consistent: the probe never panics.
 proptest! {
     #[test]
     fn device_probe_roundtrip_never_panics(_n in 0u8..=8) {
@@ -277,7 +276,7 @@ fn vulkan_compiled_false_without_vulkan_feature() {
     assert!(!vulkan_compiled(), "vulkan_compiled() must be false without 'vulkan' feature");
 }
 
-/// `vulkan_compiled()` is a compile-time constant; repeated calls must agree.
+// `vulkan_compiled()` is a compile-time constant; repeated calls must agree.
 proptest! {
     #[test]
     fn vulkan_compiled_is_stable_across_calls(_n in 0u8..=8) {
@@ -295,7 +294,7 @@ fn vulkan_available_runtime_false_without_vulkan_feature() {
     );
 }
 
-/// `vulkan_available_runtime()` is deterministic across consecutive calls.
+// `vulkan_available_runtime()` is deterministic across consecutive calls.
 proptest! {
     #[test]
     fn vulkan_available_runtime_is_deterministic(_n in 0u8..=8) {
@@ -430,7 +429,7 @@ fn probe_gpu_available_false_without_gpu_feature() {
     assert!(!probe_gpu().available, "available must be false without GPU feature");
 }
 
-/// `DeviceCapabilities` clone roundtrip must be identity.
+// `DeviceCapabilities` clone roundtrip must be identity.
 proptest! {
     #[test]
     fn device_capabilities_clone_roundtrip(_n in 0u8..=8) {
@@ -439,7 +438,7 @@ proptest! {
     }
 }
 
-/// `DeviceCapabilities.rocm_compiled` is a compile-time constant; stable across calls.
+// `DeviceCapabilities.rocm_compiled` is a compile-time constant; stable across calls.
 proptest! {
     #[test]
     fn device_caps_rocm_compiled_is_stable(_n in 0u8..=8) {
@@ -449,7 +448,7 @@ proptest! {
     }
 }
 
-/// `DeviceCapabilities.cuda_compiled` is a compile-time constant; stable across calls.
+// `DeviceCapabilities.cuda_compiled` is a compile-time constant; stable across calls.
 proptest! {
     #[test]
     fn device_caps_cuda_compiled_is_stable(_n in 0u8..=8) {
