@@ -907,6 +907,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-rocm"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "bytemuck",
+ "libloading 0.8.9",
+ "proptest",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
 name = "bitnet-rope"
 version = "0.2.1-dev"
 dependencies = [
