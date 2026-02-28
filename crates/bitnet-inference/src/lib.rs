@@ -34,6 +34,7 @@ pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
 pub mod tensor_parallel;
+pub mod token_stream;
 // Only compile the shim when tests or a GPU feature need it
 #[cfg(any(test, feature = "gpu"))]
 mod tensor_ext;
@@ -81,6 +82,7 @@ pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 pub use thread_pool::{InferenceThreadPool, ThreadPoolConfig, ThreadPoolMetrics};
+pub use token_stream::{StreamConfig, StreamEvent, StreamStats, TokenBuffer, TokenStream};
 
 // Re-export SRP-extracted orchestration contracts from bitnet-engine-core.
 pub use bitnet_engine_core::{BackendInfo, InferenceSession, SessionConfig, SessionMetrics};
