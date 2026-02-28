@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! Graceful shutdown management for the inference server.
 //!
 //! Coordinates an orderly shutdown through five phases:
@@ -1230,3 +1231,6 @@ mod tests {
         assert_eq!(report.hooks_failed.len(), 1);
     }
 }
+=======
+//! Graceful shutdown coordination for GPU HAL operations.
+>>>>>>> 029288df (feat(gpu-hal): workspace integration v9 — waves 56-58 modules)
