@@ -157,6 +157,12 @@ pub enum TemplateType {
     StableLMChat,
     /// BigScience BLOOM chat format (User:/Assistant: roles)
     BloomChat,
+    /// AI21 Labs Jamba hybrid SSM-Transformer ChatML format
+    JambaChat,
+    /// Adept AI Persimmon chat format (human:/adept: roles)
+    PersimmonChat,
+    /// XVERSE Chinese LLM chat format (Human:/Assistant: roles)
+    XverseChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -207,6 +213,9 @@ impl std::str::FromStr for TemplateType {
             "mixtral-instruct" | "mixtral" => Ok(Self::MixtralInstruct),
             "stablelm-chat" | "stablelm" | "stable-lm" => Ok(Self::StableLMChat),
             "bloom-chat" | "bloom" | "bloomz" => Ok(Self::BloomChat),
+            "jamba-chat" | "jamba" => Ok(Self::JambaChat),
+            "persimmon-chat" | "persimmon" => Ok(Self::PersimmonChat),
+            "xverse-chat" | "xverse" => Ok(Self::XverseChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -219,7 +228,8 @@ impl std::str::FromStr for TemplateType {
                  wizard-lm, openchat, granite-chat, nemotron-chat, \
                  saiga-chat, llama2-chat, gemma2-chat, phi3-instruct, \
                  tinyllama-chat, dolphin-chat, chatgpt-chat, \
-                 mixtral-instruct, stablelm-chat, bloom-chat",
+                 mixtral-instruct, stablelm-chat, bloom-chat, \
+                 jamba-chat, persimmon-chat, xverse-chat",
                 s
             ),
         }
@@ -270,6 +280,9 @@ impl std::fmt::Display for TemplateType {
             Self::MixtralInstruct => write!(f, "mixtral-instruct"),
             Self::StableLMChat => write!(f, "stablelm-chat"),
             Self::BloomChat => write!(f, "bloom-chat"),
+            Self::JambaChat => write!(f, "jamba-chat"),
+            Self::PersimmonChat => write!(f, "persimmon-chat"),
+            Self::XverseChat => write!(f, "xverse-chat"),
         }
     }
 }
@@ -847,6 +860,33 @@ impl TemplateType {
                 );
                 return Self::BloomChat;
             }
+            if lower.contains("jamba") {
+                tracing::debug!(
+                    template = "JambaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::JambaChat;
+            }
+            if lower.contains("persimmon") || lower.contains("adept") {
+                tracing::debug!(
+                    template = "PersimmonChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::PersimmonChat;
+            }
+            if lower.contains("xverse") {
+                tracing::debug!(
+                    template = "XverseChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::XverseChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -907,6 +947,9 @@ impl TemplateType {
             Self::MixtralInstruct => Self::apply_mixtral_instruct(user_text, system_prompt),
             Self::StableLMChat => Self::apply_stablelm_chat(user_text, system_prompt),
             Self::BloomChat => Self::apply_bloom_chat(user_text, system_prompt),
+            Self::JambaChat => Self::apply_jamba_chat(user_text, system_prompt),
+            Self::PersimmonChat => Self::apply_persimmon_chat(user_text, system_prompt),
+            Self::XverseChat => Self::apply_xverse_chat(user_text, system_prompt),
         }
     }
 
@@ -1512,6 +1555,39 @@ impl TemplateType {
         result
     }
 
+    /// Apply AI21 Labs Jamba ChatML format
+    fn apply_jamba_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are Jamba, a helpful AI assistant made by AI21 Labs.");
+        apply_chatml(system, user_text)
+    }
+
+    /// Apply Adept AI Persimmon chat format (human:/adept: roles)
+    fn apply_persimmon_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str(sys);
+            result.push_str("\n\n");
+        }
+        result.push_str("human: ");
+        result.push_str(user_text);
+        result.push_str("\nadept: ");
+        result
+    }
+
+    /// Apply XVERSE Chinese LLM chat format (Human:/Assistant: roles)
+    fn apply_xverse_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str(sys);
+            result.push_str("\n\n");
+        }
+        result.push_str("Human: ");
+        result.push_str(user_text);
+        result.push_str("\n\nAssistant: ");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1629,6 +1705,15 @@ impl TemplateType {
             Self::BloomChat => {
                 vec!["User:".to_string(), "</s>".to_string()]
             }
+            Self::JambaChat => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
+            Self::PersimmonChat => {
+                vec!["human:".to_string(), "</s>".to_string()]
+            }
+            Self::XverseChat => {
+                vec!["Human:".to_string(), "</s>".to_string()]
+            }
         }
     }
 
@@ -1710,6 +1795,9 @@ impl TemplateType {
             Self::MixtralInstruct => true, // Same as Mistral, uses <s>
             Self::StableLMChat => false,   // ChatML uses im_start/im_end tokens
             Self::BloomChat => false,      // Simple User:/Assistant: format
+            Self::JambaChat => false,      // ChatML uses im_start/im_end tokens
+            Self::PersimmonChat => false,  // Simple human:/adept: format
+            Self::XverseChat => false,     // Simple Human:/Assistant: format
         }
     }
 
@@ -1747,6 +1835,7 @@ impl TemplateType {
                 | Self::DolphinChat
                 | Self::ChatGptChat
                 | Self::StableLMChat
+                | Self::JambaChat
         )
     }
 
@@ -2417,6 +2506,46 @@ impl TemplateType {
                         }
                         ChatRole::Assistant => {
                             writeln!(out, "Assistant: {}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "Assistant: ")?;
+            }
+            TemplateType::JambaChat => {
+                let sys = system.unwrap_or(
+                    "You are Jamba, a helpful AI assistant made by AI21 Labs.",
+                );
+                out = render_chatml(sys, history);
+            }
+            TemplateType::PersimmonChat => {
+                if let Some(sys) = system {
+                    write!(out, "{}\n\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "human: {}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "adept: {}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "adept: ")?;
+            }
+            TemplateType::XverseChat => {
+                if let Some(sys) = system {
+                    write!(out, "{}\n\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "Human: {}\n\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "Assistant: {}\n\n", turn.text)?;
                         }
                         ChatRole::System => {}
                     }
@@ -3278,6 +3407,9 @@ mod property_tests {
             Just(TemplateType::MixtralInstruct),
             Just(TemplateType::StableLMChat),
             Just(TemplateType::BloomChat),
+            Just(TemplateType::JambaChat),
+            Just(TemplateType::PersimmonChat),
+            Just(TemplateType::XverseChat),
         ]
     }
 
@@ -3357,6 +3489,9 @@ mod property_tests {
                 Just(TemplateType::MixtralInstruct),
                 Just(TemplateType::StableLMChat),
                 Just(TemplateType::BloomChat),
+                Just(TemplateType::JambaChat),
+                Just(TemplateType::PersimmonChat),
+                Just(TemplateType::XverseChat),
             ],
         ) {
             let stops = template.default_stop_sequences();

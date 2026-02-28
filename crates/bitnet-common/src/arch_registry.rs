@@ -215,6 +215,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Gelu,
                 default_context_length: Some(2048),
             }),
+            "jamba" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(256000),
+            }),
+            "persimmon" | "adept" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: Some(16384),
+            }),
+            "xverse" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(8192),
+            }),
             _ => None,
         }
     }
@@ -291,6 +306,10 @@ impl ArchitectureRegistry {
             "stablecode",
             "bloom",
             "bloomz",
+            "jamba",
+            "persimmon",
+            "adept",
+            "xverse",
         ]
     }
 

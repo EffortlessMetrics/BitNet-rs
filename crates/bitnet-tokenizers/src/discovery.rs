@@ -98,6 +98,12 @@ pub struct ModelCompatibilityMatrix {
     pub stablelm_32k: TokenizerDownloadInfo,
     /// BLOOM with 250K vocabulary - BPE tokenizer
     pub bloom_250k: TokenizerDownloadInfo,
+    /// Jamba with 256K vocabulary - BPE tokenizer
+    pub jamba_256k: TokenizerDownloadInfo,
+    /// Persimmon with 262K vocabulary - BPE tokenizer
+    pub persimmon_262k: TokenizerDownloadInfo,
+    /// XVERSE with 32K vocabulary - SentencePiece tokenizer
+    pub xverse_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -348,6 +354,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "bloom-250k".to_string(),
                 expected_vocab: Some(250680),
+            },
+            jamba_256k: TokenizerDownloadInfo {
+                repo: "ai21labs/Jamba-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "jamba-256k".to_string(),
+                expected_vocab: Some(65536),
+            },
+            persimmon_262k: TokenizerDownloadInfo {
+                repo: "adept/persimmon-8b-chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "persimmon-262k".to_string(),
+                expected_vocab: Some(262144),
+            },
+            xverse_32k: TokenizerDownloadInfo {
+                repo: "xverse/XVERSE-13B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "xverse-32k".to_string(),
+                expected_vocab: Some(32000),
             },
         }
     }

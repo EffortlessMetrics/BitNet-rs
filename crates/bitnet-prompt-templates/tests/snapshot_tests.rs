@@ -1059,3 +1059,81 @@ fn snapshot_bloom_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("bloom_multi_turn", out);
 }
+
+// ── JambaChat ────────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_jamba_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::JambaChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("jamba_single_turn", out);
+}
+
+#[test]
+fn snapshot_jamba_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::JambaChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("jamba_with_system", out);
+}
+
+#[test]
+fn snapshot_jamba_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::JambaChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("jamba_multi_turn", out);
+}
+
+// ── PersimmonChat ────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_persimmon_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::PersimmonChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("persimmon_single_turn", out);
+}
+
+#[test]
+fn snapshot_persimmon_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::PersimmonChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("persimmon_with_system", out);
+}
+
+#[test]
+fn snapshot_persimmon_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::PersimmonChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("persimmon_multi_turn", out);
+}
+
+// ── XverseChat ───────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_xverse_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::XverseChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("xverse_single_turn", out);
+}
+
+#[test]
+fn snapshot_xverse_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::XverseChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("xverse_with_system", out);
+}
+
+#[test]
+fn snapshot_xverse_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::XverseChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("xverse_multi_turn", out);
+}
