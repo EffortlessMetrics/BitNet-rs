@@ -31,13 +31,36 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! Async GPU execution engine with pipeline parallelism for `BitNet` inference.
+//!
+//! This crate provides:
+//!
+//! - [`AsyncGpuExecutor`] — multi-queue GPU command management with
+//!   double-buffering support for overlapped host↔device transfers.
+//! - [`PipelineScheduler`] — DAG-based scheduler that overlaps transfer,
+//!   compute, and readback stages across successive tokens.
+//! - [`GpuFuture`] / [`GpuEvent`] — lightweight async completion primitives.
+//!
+//! All `OpenCL` interactions are gated behind the `oneapi` feature flag.
+//! Without it, a **mock backend** is compiled that completes every operation
+//! synchronously, enabling the full test suite to run without GPU hardware.
+//!
+//! # Feature flags
+//!
+//! | Feature  | Effect |
+//! |----------|--------|
+//! | `cpu`    | CPU-only mock backend (default path) |
+//! | `gpu`    | Enables `cuda` + `oneapi` |
+//! | `cuda`   | CUDA backend (placeholder) |
+//! | `oneapi` | Intel oneAPI / OpenCL backend |
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
+pub mod async_executor;
+pub mod error;
+pub mod pipeline_scheduler;
+
+// Re-export primary types at crate root for convenience.
+pub use async_executor::{
+    AsyncGpuExecutor, ExecutionPlan, GpuEvent, GpuFuture, OpId, PipelineStage,
 };
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub use error::{GpuError, GpuResult};
+pub use pipeline_scheduler::PipelineScheduler;
