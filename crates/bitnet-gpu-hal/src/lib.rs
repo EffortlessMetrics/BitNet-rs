@@ -129,6 +129,7 @@ pub mod cross_compile;
 pub mod e2e_integration;
 pub mod kernel_jit;
 pub mod model_validator;
+pub mod onnx_support;
 pub mod test_harness;
 pub mod token_streaming;
 
