@@ -9,6 +9,7 @@ pub mod memory_optimization;
 pub mod mixed_precision;
 #[cfg(feature = "oneapi")]
 pub mod opencl;
+pub mod sparse;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod validation;
 
@@ -22,5 +23,6 @@ pub use cuda::*;
 pub use memory_optimization::*;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use mixed_precision::*;
+pub use sparse::*;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use validation::*;
