@@ -73,6 +73,7 @@ members = [
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
 "crates/bitnet-metal",        # Metal compute backend (Apple Silicon)
 "crates/bitnet-webgpu",       # WebGPU compute backend (wgpu)
+"crates/bitnet-rocm",         # AMD ROCm/HIP backend
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -222,6 +223,7 @@ vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 webgpu = [] # Handled by bitnet-webgpu crate
 level-zero = ["kernels", "inference", "tokenizers"]  # Intel Level-Zero backend
+rocm = [] # Handled by bitnet-rocm crate
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 metal-compute = [] # Handled by bitnet-metal crate
 
