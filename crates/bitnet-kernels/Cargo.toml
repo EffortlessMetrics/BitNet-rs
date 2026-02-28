@@ -142,6 +142,10 @@ name = "opencl_property_tests"
 path = "tests/opencl_property_tests.rs"
 
 [[test]]
+name = "opencl_property_tests_extended"
+path = "tests/opencl_property_tests_extended.rs"
+
+[[test]]
 name = "opencl_bdd_tests"
 path = "tests/opencl_bdd_tests.rs"
 
