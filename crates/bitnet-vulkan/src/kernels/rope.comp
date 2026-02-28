@@ -1,0 +1,46 @@
+#version 450
+
+// Rotary Position Embedding (RoPE) compute shader.
+// Applies rotary embeddings to query/key vectors in-place.
+// Each invocation handles one (position, dimension_pair).
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) buffer Data { float data[]; };
+layout(set = 0, binding = 1) readonly buffer FreqCos { float freq_cos[]; };
+layout(set = 0, binding = 2) readonly buffer FreqSin { float freq_sin[]; };
+
+layout(push_constant) uniform Params {
+    uint seq_len;
+    uint head_dim;
+    uint num_heads;
+};
+
+shared float shared_scratch[256];
+
+void main() {
+    uint gid = gl_GlobalInvocationID.x;
+    uint half_dim = head_dim / 2u;
+    uint total_pairs = seq_len * num_heads * half_dim;
+
+    if (gid >= total_pairs) return;
+
+    uint pair_in_head = gid % half_dim;
+    uint head_and_pos = gid / half_dim;
+    uint head = head_and_pos % num_heads;
+    uint pos = head_and_pos / num_heads;
+
+    uint base = (pos * num_heads + head) * head_dim;
+    uint idx0 = base + pair_in_head;
+    uint idx1 = base + pair_in_head + half_dim;
+
+    uint freq_idx = pos * half_dim + pair_in_head;
+    float cos_val = freq_cos[freq_idx];
+    float sin_val = freq_sin[freq_idx];
+
+    float x0 = data[idx0];
+    float x1 = data[idx1];
+
+    data[idx0] = x0 * cos_val - x1 * sin_val;
+    data[idx1] = x0 * sin_val + x1 * cos_val;
+}

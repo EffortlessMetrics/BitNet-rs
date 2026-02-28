@@ -1,0 +1,93 @@
+#version 450
+
+// Scaled dot-product attention compute shader.
+// attn = softmax(Q @ K^T / sqrt(d_k)) @ V
+// Each workgroup processes one (batch, head, query_position) triple.
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) readonly buffer Query { float q[]; };
+layout(set = 0, binding = 1) readonly buffer Key { float k[]; };
+layout(set = 0, binding = 2) readonly buffer Value { float v[]; };
+layout(set = 0, binding = 3) writeonly buffer Output { float out_data[]; };
+
+layout(push_constant) uniform Params {
+    uint seq_len;
+    uint head_dim;
+    uint kv_len;
+};
+
+shared float shared_scores[256];
+shared float shared_max[256];
+shared float shared_sum[256];
+
+void main() {
+    uint tid = gl_LocalInvocationID.x;
+    uint wg = gl_WorkGroupID.x;
+
+    // wg encodes (batch_head, query_pos) — one workgroup per query position
+    uint query_pos = wg;
+    float scale = 1.0 / sqrt(float(head_dim));
+
+    // Phase 1: compute Q·K^T scores
+    // Each thread handles a subset of kv positions
+    float local_max = -3.402823e+38;
+    for (uint kv = tid; kv < kv_len; kv += 256u) {
+        float dot = 0.0;
+        for (uint d = 0u; d < head_dim; d++) {
+            dot += q[query_pos * head_dim + d] * k[kv * head_dim + d];
+        }
+        float score = dot * scale;
+        shared_scores[tid] = score;
+        local_max = max(local_max, score);
+    }
+    shared_max[tid] = local_max;
+    barrier();
+
+    // Reduce max
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_max[tid] = max(shared_max[tid], shared_max[tid + s]);
+        }
+        barrier();
+    }
+    float row_max = shared_max[0];
+
+    // Phase 2: softmax numerator + denominator
+    float local_sum = 0.0;
+    for (uint kv = tid; kv < kv_len; kv += 256u) {
+        float dot = 0.0;
+        for (uint d = 0u; d < head_dim; d++) {
+            dot += q[query_pos * head_dim + d] * k[kv * head_dim + d];
+        }
+        float score = dot * scale;
+        float e = exp(score - row_max);
+        // Store attention weight temporarily
+        shared_scores[tid] = e;
+        local_sum += e;
+    }
+    shared_sum[tid] = local_sum;
+    barrier();
+
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_sum[tid] += shared_sum[tid + s];
+        }
+        barrier();
+    }
+    float total = shared_sum[0];
+
+    // Phase 3: weighted sum of values
+    for (uint d = tid; d < head_dim; d += 256u) {
+        float acc = 0.0;
+        for (uint kv = 0u; kv < kv_len; kv++) {
+            float dot = 0.0;
+            for (uint dd = 0u; dd < head_dim; dd++) {
+                dot += q[query_pos * head_dim + dd] * k[kv * head_dim + dd];
+            }
+            float w = exp(dot * scale - row_max) / total;
+            acc += w * v[kv * head_dim + d];
+        }
+        out_data[query_pos * head_dim + d] = acc;
+    }
+}
