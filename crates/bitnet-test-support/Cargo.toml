@@ -13,6 +13,7 @@ publish = true
 # No runtime deps — this crate is intentionally minimal
 
 [dev-dependencies]
+insta.workspace = true
 proptest.workspace = true
 serial_test.workspace = true
 

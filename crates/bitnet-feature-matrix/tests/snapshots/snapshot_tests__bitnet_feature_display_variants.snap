@@ -1,0 +1,26 @@
+---
+source: crates/bitnet-feature-matrix/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "cpu",
+    "gpu",
+    "cuda",
+    "inference",
+    "kernels",
+    "tokenizers",
+    "quantization",
+    "cli",
+    "server",
+    "ffi",
+    "python",
+    "wasm",
+    "crossval",
+    "trace",
+    "iq2s-ffi",
+    "cpp-ffi",
+    "fixtures",
+    "reporting",
+    "trend",
+    "integration-tests",
+]

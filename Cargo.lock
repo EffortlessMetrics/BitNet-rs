@@ -601,6 +601,7 @@ name = "bitnet-feature-matrix"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-runtime-profile-core",
+ "insta",
  "proptest",
 ]
 
@@ -1160,6 +1161,7 @@ dependencies = [
 name = "bitnet-test-support"
 version = "0.2.1-dev"
 dependencies = [
+ "insta",
  "proptest",
  "serial_test",
 ]

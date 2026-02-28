@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-test-support/tests/snapshot_tests.rs
+expression: "format!(\"constructible={}\", std::mem::size_of_val(&scope) > 0)"
+---
+constructible=true
