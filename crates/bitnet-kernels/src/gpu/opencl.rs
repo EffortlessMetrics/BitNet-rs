@@ -36,7 +36,7 @@ struct OpenClContext {
     context: Context,
     queue: CommandQueue,
     matmul_program: Option<Program>,
-    rope_program: Option<Program>,
+    matmul_tiled_program: Option<Program>,
     _quantize_program: Option<Program>,
     _elementwise_program: Option<Program>,
 }
@@ -133,10 +133,10 @@ impl OpenClKernel {
                         crate::kernels::MATMUL_I2S_SRC,
                         "matmul_i2s",
                     );
-                    let rope_program = Self::compile_program(
+                    let matmul_tiled_program = Self::compile_program(
                         &context,
-                        crate::kernels::ROPE_SRC,
-                        "rope",
+                        crate::kernels::MATMUL_I2S_TILED_SRC,
+                        "matmul_i2s_tiled",
                     );
                     let quantize_program = Self::compile_program(
                         &context,
@@ -155,7 +155,7 @@ impl OpenClKernel {
                         context,
                         queue,
                         matmul_program,
-                        rope_program,
+                        matmul_tiled_program,
                         _quantize_program: quantize_program,
                         _elementwise_program: elementwise_program,
                     };
@@ -226,9 +226,17 @@ impl KernelProvider for OpenClKernel {
             reason: "OpenCL context not initialized".into(),
         })?;
 
-        let program = ctx.matmul_program.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "matmul_i2s program not compiled".into(),
-        })?;
+        // Prefer tiled kernel when available; fall back to naive
+        let (program, kernel_name) = if let Some(ref tiled) = ctx.matmul_tiled_program {
+            (tiled, "matmul_i2s_tiled")
+        } else if let Some(ref naive) = ctx.matmul_program {
+            (naive, "matmul_i2s")
+        } else {
+            return Err(KernelError::GpuError {
+                reason: "No matmul program compiled".into(),
+            }
+            .into());
+        };
 
         use opencl3::kernel::{ExecuteKernel, Kernel};
 
@@ -282,7 +290,7 @@ impl KernelProvider for OpenClKernel {
         }
 
         // Create and run kernel
-        let kernel = Kernel::create(program, "matmul_i2s").map_err(|e| {
+        let kernel = Kernel::create(program, kernel_name).map_err(|e| {
             KernelError::GpuError {
                 reason: format!("Kernel create: {}", e),
             }
@@ -292,16 +300,31 @@ impl KernelProvider for OpenClKernel {
         let n_u32 = n as u32;
         let k_u32 = k as u32;
 
+        // Tiled kernel uses work-group-aligned global sizes
+        let tile_size = 16usize;
+        let (global_m, global_n) = if kernel_name == "matmul_i2s_tiled" {
+            let gm = ((m + tile_size - 1) / tile_size) * tile_size;
+            let gn = ((n + tile_size - 1) / tile_size) * tile_size;
+            (gm, gn)
+        } else {
+            (m, n)
+        };
+
         let event = unsafe {
-            ExecuteKernel::new(&kernel)
-                .set_arg(&buf_a.get())
+            let mut exec = ExecuteKernel::new(&kernel);
+            exec.set_arg(&buf_a.get())
                 .set_arg(&buf_b.get())
                 .set_arg(&buf_c.get())
                 .set_arg(&m_u32)
                 .set_arg(&n_u32)
                 .set_arg(&k_u32)
-                .set_global_work_sizes(&[m, n])
-                .enqueue_nd_range(&ctx.queue)
+                .set_global_work_sizes(&[global_m, global_n]);
+
+            if kernel_name == "matmul_i2s_tiled" {
+                exec.set_local_work_sizes(&[tile_size, tile_size]);
+            }
+
+            exec.enqueue_nd_range(&ctx.queue)
                 .map_err(|e| KernelError::GpuError {
                     reason: format!("Enqueue: {}", e),
                 })?
@@ -334,129 +357,5 @@ impl KernelProvider for OpenClKernel {
         // GPU quantization will be optimized in a follow-up PR.
         warn!("OpenCL quantize: falling back to CPU for correctness validation");
         crate::cpu::FallbackKernel.quantize(input, output, scales, qtype)
-    }
-}
-
-impl OpenClKernel {
-    /// Apply Rotary Position Embedding (RoPE) to a tensor on the GPU.
-    ///
-    /// `x`         — `[seq_len × num_heads × head_dim]` row-major (modified in-place)
-    /// `freq_cos`  — `[max_seq_len × half_head_dim]` pre-computed cosine table
-    /// `freq_sin`  — `[max_seq_len × half_head_dim]` pre-computed sine table
-    /// `pos_offset`— starting position index (for KV-cache continuation)
-    #[allow(dead_code)]
-    pub fn rope_apply(
-        &self,
-        x: &mut [f32],
-        freq_cos: &[f32],
-        freq_sin: &[f32],
-        seq_len: usize,
-        num_heads: usize,
-        head_dim: usize,
-        pos_offset: u32,
-    ) -> Result<()> {
-        let ctx = self.context.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "OpenCL context not initialized".into(),
-        })?;
-
-        let program = ctx.rope_program.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "rope program not compiled".into(),
-        })?;
-
-        use opencl3::kernel::{ExecuteKernel, Kernel};
-
-        let half_dim = head_dim / 2;
-
-        let mut buf_x = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY | CL_MEM_WRITE_ONLY,
-                x.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer x create: {}", e),
-            })?
-        };
-        let mut buf_cos = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                freq_cos.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer freq_cos create: {}", e),
-            })?
-        };
-        let mut buf_sin = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_READ_ONLY,
-                freq_sin.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer freq_sin create: {}", e),
-            })?
-        };
-
-        unsafe {
-            ctx.queue
-                .enqueue_write_buffer(&mut buf_x, CL_BLOCKING, 0, x, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write x: {}", e),
-                })?;
-            ctx.queue
-                .enqueue_write_buffer(&mut buf_cos, CL_BLOCKING, 0, freq_cos, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write freq_cos: {}", e),
-                })?;
-            ctx.queue
-                .enqueue_write_buffer(&mut buf_sin, CL_BLOCKING, 0, freq_sin, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write freq_sin: {}", e),
-                })?;
-        }
-
-        let kernel = Kernel::create(program, "rope_apply").map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Kernel create: {}", e),
-            }
-        })?;
-
-        let seq_u32 = seq_len as u32;
-        let heads_u32 = num_heads as u32;
-        let dim_u32 = head_dim as u32;
-
-        let event = unsafe {
-            ExecuteKernel::new(&kernel)
-                .set_arg(&buf_x.get())
-                .set_arg(&buf_cos.get())
-                .set_arg(&buf_sin.get())
-                .set_arg(&seq_u32)
-                .set_arg(&heads_u32)
-                .set_arg(&dim_u32)
-                .set_arg(&pos_offset)
-                .set_global_work_sizes(&[half_dim, seq_len * num_heads])
-                .enqueue_nd_range(&ctx.queue)
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Enqueue: {}", e),
-                })?
-        };
-
-        event.wait().map_err(|e| KernelError::GpuError {
-            reason: format!("Kernel wait: {}", e),
-        })?;
-
-        unsafe {
-            ctx.queue
-                .enqueue_read_buffer(&buf_x, CL_BLOCKING, 0, x, &[])
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Read x: {}", e),
-                })?;
-        }
-
-        Ok(())
     }
 }

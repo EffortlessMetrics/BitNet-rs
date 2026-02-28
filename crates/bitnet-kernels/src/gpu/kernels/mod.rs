@@ -3,18 +3,17 @@
 //! Kernel sources are embedded at compile time via `include_str!` and
 //! compiled to OpenCL programs at runtime via `clCreateProgramWithSource`.
 
-/// I2S matrix multiplication kernel source.
+/// I2S matrix multiplication kernel source (naive, used as fallback).
 pub const MATMUL_I2S_SRC: &str = include_str!("matmul_i2s.cl");
+
+/// Tiled I2S matrix multiplication kernel source (Intel Arc optimized).
+pub const MATMUL_I2S_TILED_SRC: &str = include_str!("matmul_i2s_tiled.cl");
 
 /// I2S quantization kernel source.
 pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
-pub const SILU_GATE_SRC: &str = include_str!("silu_gate.cl");
-
-/// Rotary Position Embedding (RoPE) kernel source.
-pub const ROPE_SRC: &str = include_str!("rope.cl");
 
 #[cfg(test)]
 mod tests {
@@ -23,17 +22,20 @@ mod tests {
     #[test]
     fn kernel_sources_are_not_empty() {
         assert!(!MATMUL_I2S_SRC.is_empty(), "matmul_i2s.cl should not be empty");
+        assert!(!MATMUL_I2S_TILED_SRC.is_empty(), "matmul_i2s_tiled.cl should not be empty");
         assert!(!QUANTIZE_I2S_SRC.is_empty(), "quantize_i2s.cl should not be empty");
         assert!(!ELEMENTWISE_SRC.is_empty(), "elementwise.cl should not be empty");
-        assert!(!ROPE_SRC.is_empty(), "rope.cl should not be empty");
     }
 
     #[test]
     fn kernel_sources_contain_kernel_keyword() {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("__kernel"),
+            "matmul_i2s_tiled.cl missing __kernel"
+        );
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
-        assert!(ROPE_SRC.contains("__kernel"), "rope.cl missing __kernel");
     }
 
     #[test]
@@ -55,23 +57,41 @@ mod tests {
     }
 
     #[test]
-    fn rope_kernel_has_apply_function() {
-        assert!(ROPE_SRC.contains("rope_apply"), "missing rope_apply kernel");
-    }
-
-    #[test]
-    fn rope_kernel_has_fused_qk_function() {
+    fn tiled_matmul_kernel_has_expected_functions() {
         assert!(
-            ROPE_SRC.contains("rope_apply_qk"),
-            "missing rope_apply_qk kernel"
+            MATMUL_I2S_TILED_SRC.contains("matmul_i2s_tiled"),
+            "missing matmul_i2s_tiled kernel"
+        );
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("matmul_i2s_tiled_vec4"),
+            "missing matmul_i2s_tiled_vec4 kernel"
         );
     }
 
     #[test]
-    fn rope_kernel_uses_trig_functions() {
-        // The kernel uses pre-computed cos/sin tables, not native trig,
-        // but references freq_cos/freq_sin parameters
-        assert!(ROPE_SRC.contains("freq_cos"), "missing freq_cos parameter");
-        assert!(ROPE_SRC.contains("freq_sin"), "missing freq_sin parameter");
+    fn tiled_matmul_kernel_has_configurable_tile_size() {
+        assert!(MATMUL_I2S_TILED_SRC.contains("TILE_SIZE"), "missing TILE_SIZE define");
+        assert!(MATMUL_I2S_TILED_SRC.contains("LOCAL_SIZE_X"), "missing LOCAL_SIZE_X define");
+        assert!(MATMUL_I2S_TILED_SRC.contains("LOCAL_SIZE_Y"), "missing LOCAL_SIZE_Y define");
+    }
+
+    #[test]
+    fn tiled_matmul_kernel_uses_local_memory() {
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("__local"),
+            "tiled kernel should use __local memory"
+        );
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("barrier(CLK_LOCAL_MEM_FENCE)"),
+            "tiled kernel should have local memory barriers"
+        );
+    }
+
+    #[test]
+    fn tiled_matmul_kernel_uses_branchless_decode() {
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("decode_ternary"),
+            "tiled kernel should use branchless decode_ternary helper"
+        );
     }
 }
