@@ -126,6 +126,8 @@ pub mod docker_ci;
 
 // === Existing Modules (prior waves) ===
 
+pub mod model_warmup;
+//
 // Provides checkpoint management for saving and resuming inference state,
 // with incremental diffs, compression, and automatic scheduling.
 pub mod checkpoint_manager;
@@ -140,5 +142,4 @@ pub mod streaming_aggregator;
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
 pub mod generation;
-pub mod model_warmup;
 // GPU hardware abstraction layer for `BitNet` inference.
