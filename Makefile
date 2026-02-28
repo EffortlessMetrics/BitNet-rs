@@ -17,6 +17,7 @@ NC := $(shell tput sgr0 2>/dev/null || echo "")
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
         guards preflight \
+        gpu-test-build gpu-test-run gpu-test-monitor gpu-test-down gpu-test-check \
         b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
@@ -374,6 +375,35 @@ docker-run: docker
 ## docker-gpu: Run with GPU support in Docker
 docker-gpu: docker
 	@docker run -it --rm --gpus all bitnet-rs:latest
+
+#############################################################################
+# GPU DOCKER TEST TARGETS
+#############################################################################
+
+## gpu-test-build: Build the Intel GPU test Docker image
+gpu-test-build:
+	@echo "$(GREEN)Building GPU test image...$(NC)"
+	@docker compose -f docker-compose.gpu-test.yml build gpu-tests
+
+## gpu-test-run: Run GPU integration tests via Docker Compose
+gpu-test-run:
+	@echo "$(GREEN)Running GPU integration tests...$(NC)"
+	@docker compose -f docker-compose.gpu-test.yml run --rm gpu-tests
+
+## gpu-test-monitor: Start the GPU monitor sidecar
+gpu-test-monitor:
+	@echo "$(GREEN)Starting GPU monitor...$(NC)"
+	@docker compose -f docker-compose.gpu-test.yml up gpu-monitor
+
+## gpu-test-down: Tear down all GPU test services
+gpu-test-down:
+	@echo "$(GREEN)Tearing down GPU test environment...$(NC)"
+	@docker compose -f docker-compose.gpu-test.yml down -v
+
+## gpu-test-check: Verify GPU is visible inside the container
+gpu-test-check:
+	@echo "$(GREEN)Checking GPU availability...$(NC)"
+	@docker compose -f docker-compose.gpu-test.yml run --rm gpu-tests clinfo --list
 
 #############################################################################
 # ADVANCED TARGETS

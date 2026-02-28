@@ -1,0 +1,36 @@
+# Intel GPU Compute Runtime + Rust toolchain for BitNet-rs GPU tests.
+FROM ubuntu:24.04
+
+ARG RUST_VERSION=1.92.0
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install Intel Compute Runtime and OpenCL ICD loader
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    clinfo \
+    curl \
+    gcc \
+    git \
+    intel-opencl-icd \
+    libc6-dev \
+    ocl-icd-libopencl1 \
+    opencl-headers \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain ${RUST_VERSION} && \
+    . "$HOME/.cargo/env" && \
+    cargo install cargo-nextest --locked
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /workspace
+COPY . .
+
+# Pre-build dependencies so test iterations are fast
+RUN cargo build --workspace --no-default-features --features gpu 2>/dev/null || true
+
+ENTRYPOINT ["cargo"]
+CMD ["nextest", "run", "--workspace", "--no-default-features", "--features", "gpu", "-E", "test(/opencl/)", "--profile", "ci"]

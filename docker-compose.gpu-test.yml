@@ -1,0 +1,70 @@
+# Docker Compose GPU Test Environment for Intel GPUs
+#
+# Runs BitNet-rs integration tests on Intel Arc GPUs using the Intel
+# Compute Runtime.  Requires Linux host with /dev/dri available.
+#
+# Usage:
+#   docker compose -f docker-compose.gpu-test.yml up --build
+#   docker compose -f docker-compose.gpu-test.yml run gpu-tests
+#   docker compose -f docker-compose.gpu-test.yml down
+
+services:
+  # -----------------------------------------------------------------------
+  # GPU test runner
+  # -----------------------------------------------------------------------
+  gpu-tests:
+    build:
+      context: .
+      dockerfile: ci/gpu-docker/Dockerfile.gpu-test
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "video"
+      - "render"
+    environment:
+      - RUST_LOG=info
+      - BITNET_GPU_BACKEND=opencl
+      - OCL_ICD_VENDORS=/etc/OpenCL/vendors
+    volumes:
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    working_dir: /workspace
+    command: >
+      cargo nextest run --workspace --no-default-features --features gpu
+      -E 'test(/opencl/)'
+      --profile ci
+    healthcheck:
+      test: ["CMD", "clinfo", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      gpu-monitor:
+        condition: service_started
+
+  # -----------------------------------------------------------------------
+  # Intel GPU monitor (intel_gpu_top)
+  # -----------------------------------------------------------------------
+  gpu-monitor:
+    image: ubuntu:24.04
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "video"
+      - "render"
+    entrypoint: /bin/bash
+    command: >
+      -c "apt-get update -qq && apt-get install -y -qq intel-gpu-tools > /dev/null 2>&1 &&
+          echo 'GPU monitor started' &&
+          intel_gpu_top -J -s 2000 || echo 'intel_gpu_top unavailable (non-Intel host?)'"
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /dev/dri"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+
+volumes:
+  cargo-cache:
+  target-cache:
