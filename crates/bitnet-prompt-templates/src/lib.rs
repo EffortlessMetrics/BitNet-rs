@@ -76,6 +76,10 @@ pub enum TemplateType {
     ChatGLMChat,
     /// MPT instruct format (simple ### markers)
     MptInstruct,
+    /// RWKV World format (User:/Assistant: roles for RWKV-5/6 models)
+    RwkvWorld,
+    /// OLMo instruct format (<|user|>/<|assistant|> tokens)
+    OlmoInstruct,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -102,12 +106,15 @@ impl std::str::FromStr for TemplateType {
             "baichuan-chat" | "baichuan_chat" | "baichuan" => Ok(Self::BaichuanChat),
             "chatglm-chat" | "chatglm_chat" | "chatglm" | "glm-4" | "glm4" => Ok(Self::ChatGLMChat),
             "mpt-instruct" | "mpt_instruct" | "mpt" => Ok(Self::MptInstruct),
+            "rwkv-world" | "rwkv_world" | "rwkv" => Ok(Self::RwkvWorld),
+            "olmo-instruct" | "olmo_instruct" | "olmo" => Ok(Self::OlmoInstruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
                  mistral-chat, deepseek-chat, starcoder, falcon-chat, \
                  codellama-instruct, cohere-command, internlm-chat, \
-                 yi-chat, baichuan-chat, chatglm-chat, mpt-instruct",
+                 yi-chat, baichuan-chat, chatglm-chat, mpt-instruct, \
+                 rwkv-world, olmo-instruct",
                 s
             ),
         }
@@ -134,6 +141,8 @@ impl std::fmt::Display for TemplateType {
             Self::BaichuanChat => write!(f, "baichuan-chat"),
             Self::ChatGLMChat => write!(f, "chatglm-chat"),
             Self::MptInstruct => write!(f, "mpt-instruct"),
+            Self::RwkvWorld => write!(f, "rwkv-world"),
+            Self::OlmoInstruct => write!(f, "olmo-instruct"),
         }
     }
 }
@@ -194,16 +203,23 @@ impl TemplateType {
                 );
                 return Self::CohereCommand;
             }
-            // ChatGLM/GLM-4 signature
-            if jinja.contains("[gMASK]")
-                || (jinja.contains("<|user|>") && jinja.contains("<|assistant|>"))
-            {
+            // ChatGLM/GLM-4 signature (requires [gMASK])
+            if jinja.contains("[gMASK]") {
                 tracing::debug!(
                     template = "ChatGLMChat",
                     source = "gguf_chat_template",
                     "auto-detected prompt template"
                 );
                 return Self::ChatGLMChat;
+            }
+            // OLMo instruct signature (<|user|>/<|assistant|> without [gMASK])
+            if jinja.contains("<|user|>") && jinja.contains("<|assistant|>") {
+                tracing::debug!(
+                    template = "OlmoInstruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::OlmoInstruct;
             }
             // MPT ### instruction markers
             if jinja.contains("### Instruction") && jinja.contains("### Response") {
@@ -363,6 +379,24 @@ impl TemplateType {
                 );
                 return Self::MptInstruct;
             }
+            if lower.contains("rwkv") {
+                tracing::debug!(
+                    template = "RwkvWorld",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::RwkvWorld;
+            }
+            if lower.contains("olmo") {
+                tracing::debug!(
+                    template = "OlmoInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::OlmoInstruct;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -399,6 +433,8 @@ impl TemplateType {
             Self::BaichuanChat => Self::apply_baichuan_chat(user_text, system_prompt),
             Self::ChatGLMChat => Self::apply_chatglm_chat(user_text, system_prompt),
             Self::MptInstruct => Self::apply_mpt_instruct(user_text, system_prompt),
+            Self::RwkvWorld => Self::apply_rwkv_world(user_text, system_prompt),
+            Self::OlmoInstruct => Self::apply_olmo_instruct(user_text, system_prompt),
         }
     }
 
@@ -762,6 +798,38 @@ impl TemplateType {
         result
     }
 
+    /// Apply RWKV World template
+    ///
+    /// Format: `User: {text}\n\nAssistant:`
+    fn apply_rwkv_world(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str("User: ");
+            result.push_str(sys);
+            result.push_str("\n\nAssistant: OK\n\n");
+        }
+        result.push_str("User: ");
+        result.push_str(user_text);
+        result.push_str("\n\nAssistant:");
+        result
+    }
+
+    /// Apply OLMo instruct template
+    ///
+    /// Format: `<|user|>\n{text}\n<|assistant|>\n`
+    fn apply_olmo_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str("<|system|>\n");
+            result.push_str(sys);
+            result.push('\n');
+        }
+        result.push_str("<|user|>\n");
+        result.push_str(user_text);
+        result.push_str("\n<|assistant|>\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -802,6 +870,12 @@ impl TemplateType {
             }
             Self::MptInstruct => {
                 vec!["### Instruction".to_string(), "<|endoftext|>".to_string()]
+            }
+            Self::RwkvWorld => {
+                vec!["\nUser:".to_string(), "\n\n".to_string()]
+            }
+            Self::OlmoInstruct => {
+                vec!["<|endoftext|>".to_string(), "<|user|>".to_string()]
             }
         }
     }
@@ -860,6 +934,8 @@ impl TemplateType {
             Self::BaichuanChat => false, // Uses reserved tokens
             Self::ChatGLMChat => false, // Uses [gMASK]<sop> tokens
             Self::MptInstruct => true, // Simple ### markers, BOS helpful
+            Self::RwkvWorld => true,   // Simple User:/Assistant: format
+            Self::OlmoInstruct => false, // Uses <|user|>/<|assistant|> tokens
         }
     }
 
@@ -881,6 +957,7 @@ impl TemplateType {
                 | Self::YiChat
                 | Self::BaichuanChat
                 | Self::ChatGLMChat
+                | Self::OlmoInstruct
         )
     }
 
@@ -1203,6 +1280,42 @@ impl TemplateType {
                 }
                 writeln!(out, "### Response")?;
             }
+            TemplateType::RwkvWorld => {
+                // RWKV World User:/Assistant: format
+                if let Some(sys) = system {
+                    write!(out, "User: {}\n\nAssistant: OK\n\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "User: {}\n\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "Assistant: {}\n\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "Assistant:")?;
+            }
+            TemplateType::OlmoInstruct => {
+                // OLMo <|user|>/<|assistant|> format
+                if let Some(sys) = system {
+                    write!(out, "<|system|>\n{}\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<|user|>\n{}\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<|assistant|>\n{}\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "<|assistant|>\n")?;
+            }
         }
 
         Ok(out)
@@ -1228,15 +1341,16 @@ impl TemplateType {
             ));
         }
 
-        // Check if any stop sequence appears in the middle (not at the end)
+        // Check if any stop sequence appears beyond the template's structural usage
+        let structural = self.apply("", None);
         for stop in self.default_stop_sequences() {
-            if let Some(pos) = output.find(&stop) {
-                if pos + stop.len() < output.len() {
-                    warnings.push(format!(
-                        "Stop sequence {:?} found at position {} (not at end)",
-                        stop, pos
-                    ));
-                }
+            let structural_count = structural.matches(&stop).count();
+            let output_count = output.matches(&stop).count();
+            if output_count > structural_count {
+                warnings.push(format!(
+                    "Stop sequence {:?} found {} extra time(s) beyond template structure",
+                    stop, output_count - structural_count
+                ));
             }
         }
 
@@ -1663,6 +1777,10 @@ mod tests {
         assert_eq!("glm-4".parse::<TemplateType>().unwrap(), TemplateType::ChatGLMChat);
         assert_eq!("mpt-instruct".parse::<TemplateType>().unwrap(), TemplateType::MptInstruct);
         assert_eq!("mpt".parse::<TemplateType>().unwrap(), TemplateType::MptInstruct);
+        assert_eq!("rwkv-world".parse::<TemplateType>().unwrap(), TemplateType::RwkvWorld);
+        assert_eq!("rwkv".parse::<TemplateType>().unwrap(), TemplateType::RwkvWorld);
+        assert_eq!("olmo-instruct".parse::<TemplateType>().unwrap(), TemplateType::OlmoInstruct);
+        assert_eq!("olmo".parse::<TemplateType>().unwrap(), TemplateType::OlmoInstruct);
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -1686,6 +1804,8 @@ mod tests {
         assert!(!TemplateType::BaichuanChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::ChatGLMChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::MptInstruct.default_stop_sequences().is_empty());
+        assert!(!TemplateType::RwkvWorld.default_stop_sequences().is_empty());
+        assert!(!TemplateType::OlmoInstruct.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -1780,6 +1900,8 @@ mod tests {
         assert!(!TemplateType::BaichuanChat.should_add_bos()); // Reserved tokens
         assert!(!TemplateType::ChatGLMChat.should_add_bos()); // gMASK tokens
         assert!(TemplateType::MptInstruct.should_add_bos()); // Simple markers
+        assert!(TemplateType::RwkvWorld.should_add_bos()); // Simple User:/Assistant: format
+        assert!(!TemplateType::OlmoInstruct.should_add_bos()); // Uses special tokens
     }
 
     #[test]
@@ -1801,6 +1923,8 @@ mod tests {
         assert!(TemplateType::BaichuanChat.parse_special()); // Has reserved tokens
         assert!(TemplateType::ChatGLMChat.parse_special()); // Has gMASK/sop tokens
         assert!(!TemplateType::MptInstruct.parse_special()); // Simple text markers
+        assert!(!TemplateType::RwkvWorld.parse_special()); // Simple text format
+        assert!(TemplateType::OlmoInstruct.parse_special()); // Has special tokens
     }
 
     #[test]
@@ -1923,6 +2047,60 @@ mod tests {
         assert_eq!(turn.role, ChatRole::User);
         assert_eq!(turn.text, "test message");
     }
+
+    #[test]
+    fn test_validate_output_valid() {
+        let t = TemplateType::Instruct;
+        let output = t.apply("Hello world", None);
+        let v = t.validate_output(&output, "Hello world");
+        assert!(v.is_valid, "warnings: {:?}", v.warnings);
+    }
+
+    #[test]
+    fn test_validate_output_empty() {
+        let t = TemplateType::Raw;
+        let v = t.validate_output("", "Hello");
+        assert!(!v.is_valid);
+        assert!(v.warnings.iter().any(|w| w.contains("empty")));
+    }
+
+    #[test]
+    fn test_validate_output_missing_user_text() {
+        let t = TemplateType::Instruct;
+        let v = t.validate_output("Some random output", "Hello world");
+        assert!(!v.is_valid);
+        assert!(v.warnings.iter().any(|w| w.contains("user text")));
+    }
+
+    #[test]
+    fn test_template_info() {
+        let info = TemplateType::Phi4Chat.info();
+        assert_eq!(info.name, "phi4-chat");
+        assert!(!info.stop_sequences.is_empty());
+        assert!(!info.adds_bos);
+        assert!(info.parses_special);
+    }
+
+    #[test]
+    fn test_all_templates_validate_own_output() {
+        for template in &[
+            TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat,
+            TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat,
+            TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder,
+            TemplateType::FalconChat, TemplateType::CodeLlamaInstruct,
+            TemplateType::CohereCommand, TemplateType::InternLMChat,
+            TemplateType::YiChat, TemplateType::BaichuanChat,
+            TemplateType::ChatGLMChat, TemplateType::MptInstruct,
+        ] {
+            let output = template.apply("Test input", None);
+            let v = template.validate_output(&output, "Test input");
+            assert!(
+                v.is_valid,
+                "Template {:?} failed self-validation: {:?}",
+                template, v.warnings
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1949,6 +2127,8 @@ mod property_tests {
             Just(TemplateType::BaichuanChat),
             Just(TemplateType::ChatGLMChat),
             Just(TemplateType::MptInstruct),
+            Just(TemplateType::RwkvWorld),
+            Just(TemplateType::OlmoInstruct),
         ]
     }
 
@@ -2020,6 +2200,8 @@ mod property_tests {
                 Just(TemplateType::BaichuanChat),
                 Just(TemplateType::ChatGLMChat),
                 Just(TemplateType::MptInstruct),
+                Just(TemplateType::RwkvWorld),
+                Just(TemplateType::OlmoInstruct),
             ],
         ) {
             let stops = template.default_stop_sequences();
@@ -2372,6 +2554,94 @@ mod detect_logging_tests {
         assert!(s.ends_with("### Response\n"));
     }
 
+    // ── RWKV World ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_rwkv_world_template() {
+        let template = TemplateType::RwkvWorld;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("User: Hello!"));
+        assert!(result.ends_with("Assistant:"));
+    }
+
+    #[test]
+    fn test_rwkv_world_with_system() {
+        let template = TemplateType::RwkvWorld;
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("User: Be concise."));
+        assert!(result.contains("Assistant: OK"));
+        assert!(result.contains("User: Hello!"));
+    }
+
+    #[test]
+    fn test_detect_rwkv_from_name() {
+        let t = TemplateType::detect(Some("rwkv-5-world-3b"), None);
+        assert_eq!(t, TemplateType::RwkvWorld);
+    }
+
+    #[test]
+    fn test_render_chat_rwkv() {
+        let t = TemplateType::RwkvWorld;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("System.")).unwrap();
+        assert!(s.contains("User: System."));
+        assert!(s.contains("Assistant: OK"));
+        assert!(s.contains("User: Hello"));
+        assert!(s.contains("Assistant: Hi!"));
+        assert!(s.contains("User: Bye"));
+        assert!(s.ends_with("Assistant:"));
+    }
+
+    // ── OLMo Instruct ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_olmo_instruct_template() {
+        let template = TemplateType::OlmoInstruct;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|user|>\nHello!"));
+        assert!(result.ends_with("<|assistant|>\n"));
+    }
+
+    #[test]
+    fn test_olmo_instruct_with_system() {
+        let template = TemplateType::OlmoInstruct;
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("<|system|>\nBe concise."));
+        assert!(result.contains("<|user|>\nHello!"));
+    }
+
+    #[test]
+    fn test_detect_olmo_from_name() {
+        let t = TemplateType::detect(Some("olmo-7b-instruct"), None);
+        assert_eq!(t, TemplateType::OlmoInstruct);
+    }
+
+    #[test]
+    fn test_detect_olmo_from_jinja() {
+        let t = TemplateType::detect(None, Some("<|user|>\n{content}\n<|assistant|>\n"));
+        assert_eq!(t, TemplateType::OlmoInstruct);
+    }
+
+    #[test]
+    fn test_render_chat_olmo() {
+        let t = TemplateType::OlmoInstruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("System.")).unwrap();
+        assert!(s.contains("<|system|>\nSystem."));
+        assert!(s.contains("<|user|>\nHello"));
+        assert!(s.contains("<|assistant|>\nHi!"));
+        assert!(s.contains("<|user|>\nBye"));
+        assert!(s.ends_with("<|assistant|>\n"));
+    }
+
     // ── Detection Edge Cases ───────────────────────────────────────────
 
     #[test]
@@ -2434,8 +2704,8 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_chatglm_jinja_variants() {
-        // GLM-4 uses <|user|>/<|assistant|> in jinja
-        let t = TemplateType::detect(None, Some("<|user|>\n{content}<|assistant|>\n"));
+        // GLM-4 uses [gMASK] in jinja
+        let t = TemplateType::detect(None, Some("[gMASK]<sop><|user|>\n{content}<|assistant|>\n"));
         assert_eq!(t, TemplateType::ChatGLMChat);
     }
 
@@ -2465,6 +2735,8 @@ mod detect_logging_tests {
             ("baichuan2-13b", TemplateType::BaichuanChat),
             ("chatglm3-6b", TemplateType::ChatGLMChat),
             ("mpt-7b-instruct", TemplateType::MptInstruct),
+            ("rwkv-5-world-3b", TemplateType::RwkvWorld),
+            ("olmo-7b-instruct", TemplateType::OlmoInstruct),
         ];
         for (name, expected) in cases {
             let detected = TemplateType::detect(Some(name), None);
