@@ -22,5 +22,9 @@ insta = { workspace = true }
 default = []
 opencl-runtime = ["dep:opencl3"]
 
+[[test]]
+name = "nix_integration_tests"
+path = "tests/nix_integration_tests.rs"
+
 [lints]
 workspace = true
