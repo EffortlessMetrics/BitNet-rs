@@ -18,10 +18,9 @@ use proptest::prelude::*;
 // ── Arbitrary error message strategy ─────────────────────────────────────────
 
 fn arb_nonempty_string() -> impl Strategy<Value = String> {
-    "[a-zA-Z0-9_ ]{1,80}".prop_map(|s| s.trim().to_string()).prop_filter(
-        "must be non-empty after trim",
-        |s| !s.is_empty(),
-    )
+    "[a-zA-Z0-9_ ]{1,80}"
+        .prop_map(|s| s.trim().to_string())
+        .prop_filter("must be non-empty after trim", |s| !s.is_empty())
 }
 
 // ── From<ModelError> preserves message ───────────────────────────────────────

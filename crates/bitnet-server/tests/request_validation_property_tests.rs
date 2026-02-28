@@ -11,8 +11,8 @@
 //! - repetition_penalty in [0.1, 10.0] is accepted; outside is rejected
 //! - Prompts with null bytes or control characters are rejected
 
-use bitnet_server::security::{SecurityConfig, SecurityValidator, ValidationError};
 use bitnet_server::InferenceRequest;
+use bitnet_server::security::{SecurityConfig, SecurityValidator, ValidationError};
 use proptest::prelude::*;
 
 // ── helpers ──────────────────────────────────────────────────────────────────

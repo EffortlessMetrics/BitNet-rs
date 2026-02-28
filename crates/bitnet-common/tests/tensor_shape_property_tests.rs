@@ -23,10 +23,10 @@ fn shape_dim() -> impl Strategy<Value = usize> {
 
 /// Strategy for a 1-4 dimensional shape with bounded element count.
 fn arb_shape() -> impl Strategy<Value = Vec<usize>> {
-    prop::collection::vec(shape_dim(), 1..=4).prop_filter(
-        "element count must be <= 65536 to avoid OOM",
-        |dims| dims.iter().product::<usize>() <= 65536,
-    )
+    prop::collection::vec(shape_dim(), 1..=4)
+        .prop_filter("element count must be <= 65536 to avoid OOM", |dims| {
+            dims.iter().product::<usize>() <= 65536
+        })
 }
 
 // ── Element count ────────────────────────────────────────────────────────────
