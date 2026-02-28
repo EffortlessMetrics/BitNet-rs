@@ -1,0 +1,16 @@
+services:
+  intel-gpu-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.intel-gpu
+      target: builder
+    devices:
+      - /dev/dri:/dev/dri
+
+  intel-gpu-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.intel-gpu
+      target: tester
+    devices:
+      - /dev/dri:/dev/dri
