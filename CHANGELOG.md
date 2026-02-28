@@ -40,6 +40,10 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Template validation utilities**: Add `TemplateType::validate_output()` for checking output quality (non-empty, contains user text, stop sequence placement) and `TemplateType::info()` for retrieving template metadata.
 - **Architecture registry property tests**: Add 5 proptest-based property tests (lookup never panics, known archs always found, case-insensitive lookup, punctuation never matches, lookup/is_known agreement).
 - **Dense model inference guide**: Add `docs/guides/dense-model-inference.md` documenting how FP16/BF16 dense models flow through the pipeline.
+- **FillInMiddle prompt template**: Add `FillInMiddle` template with `<fim_prefix>`/`<fim_suffix>`/`<fim_middle>` format for code infilling tasks (StarCoder, CodeLlama).
+- **Zephyr chat template**: Add `ZephyrChat` template with `<|user|>`/`<|assistant|>` and `</s>` delimiters, `zephyr_32k` tokenizer entry, and `zephyr` arch registry entry.
+- **Vicuna chat template**: Add `VicunaChat` template with `USER:`/`ASSISTANT:` ShareGPT format, `vicuna_32k` tokenizer entry, and `vicuna` arch registry entry.
+- **Architecture count regression test**: Guard against accidental deletion with minimum count assertion (40+ entries) and core family presence check.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed

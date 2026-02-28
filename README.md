@@ -13,9 +13,9 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — 19 prompt templates covering 20+ model families: LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo; auto-detected from GGUF metadata or tokenizer path
+- **Chat templates** — 22 prompt templates covering 20+ model families: LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo, Zephyr, Vicuna; plus FillInMiddle for code infilling; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **Multi-SLM architecture registry** — 41 architecture strings across 21 model families with auto-detected normalization, activation, and context defaults
+- **Multi-SLM architecture registry** — 43 architecture strings across 23 model families with auto-detected normalization, activation, and context defaults
 
 <details>
 <summary><strong>Supported Model Architectures</strong> (click to expand)</summary>
@@ -40,6 +40,8 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 | MPT | mpt | LayerNorm | GeLU | MptInstruct | mpt_50k |
 | RWKV | rwkv, rwkv5, rwkv6 | LayerNorm | SiLU | RwkvWorld | rwkv_65k |
 | OLMo | olmo, olmo2 | LayerNorm/RmsNorm | SiLU | OlmoInstruct | olmo_50k |
+| Zephyr | zephyr | RmsNorm | SiLU | ZephyrChat | zephyr_32k |
+| Vicuna | vicuna | RmsNorm | SiLU | VicunaChat | vicuna_32k |
 | GPT | gpt | LayerNorm | GeLU | — | gpt2_50k |
 | BERT | bert | LayerNorm | GeLU | — | — |
 
