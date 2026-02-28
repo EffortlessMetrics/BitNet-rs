@@ -385,12 +385,14 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-logits",
+ "bitnet-math",
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-rope",
  "bitnet-tests",
  "bitnet-tokenizers",
  "bitnet-transformer",
+ "bitnet-warn-once",
  "byteorder",
  "candle-core",
  "candle-nn",
@@ -494,7 +496,9 @@ name = "bitnet-common"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-math",
  "bitnet-test-support",
+ "bitnet-warn-once",
  "bytemuck",
  "candle-core",
  "criterion 0.7.0",
@@ -798,6 +802,13 @@ name = "bitnet-logits"
 version = "0.2.1-dev"
 dependencies = [
  "insta",
+ "proptest",
+]
+
+[[package]]
+name = "bitnet-math"
+version = "0.2.1-dev"
+dependencies = [
  "proptest",
 ]
 
@@ -1437,6 +1448,16 @@ dependencies = [
  "serde",
  "serde_yaml_ng",
  "tempfile",
+]
+
+[[package]]
+name = "bitnet-warn-once"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+ "serial_test",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

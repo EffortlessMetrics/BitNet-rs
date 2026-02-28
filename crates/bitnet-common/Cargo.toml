@@ -16,6 +16,8 @@ include = [
 ]
 
 [dependencies]
+bitnet-math.workspace = true
+bitnet-warn-once.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true

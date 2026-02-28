@@ -3,7 +3,7 @@
 //! This example shows how to use the warn_once macro to avoid log spam
 //! when the same warning condition occurs repeatedly.
 
-use bitnet_common::warn_once;
+use bitnet_warn_once::warn_once;
 
 fn deprecated_function_v1() {
     warn_once!("deprecated_api_v1", "Using deprecated API v1, please migrate to v2");

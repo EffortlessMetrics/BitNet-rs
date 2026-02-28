@@ -8,7 +8,7 @@
 //! # Examples
 //!
 //! ```
-//! use bitnet_common::warn_once;
+//! use bitnet_warn_once::warn_once;
 //!
 //! fn some_function() {
 //!     warn_once!("deprecated_api_v1", "Using deprecated API v1, please migrate to v2");
@@ -55,7 +55,7 @@ fn get_registry() -> &'static Mutex<HashSet<String>> {
 /// # Examples
 ///
 /// ```
-/// use bitnet_common::warn_once_fn;
+/// use bitnet_warn_once::warn_once_fn;
 ///
 /// warn_once_fn("model_fallback", "Falling back to CPU for unsupported operation");
 /// warn_once_fn("model_fallback", "Falling back to CPU for unsupported operation"); // DEBUG level
@@ -85,7 +85,7 @@ pub fn warn_once_fn(key: &str, message: &str) {
 /// # Examples
 ///
 /// ```
-/// use bitnet_common::warn_once;
+/// use bitnet_warn_once::warn_once;
 ///
 /// // Simple string message
 /// warn_once!("deprecated_api", "This API is deprecated");

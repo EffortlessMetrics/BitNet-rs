@@ -2,6 +2,8 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-math",
+  "crates/bitnet-warn-once",
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",
@@ -73,6 +75,8 @@ resolver = "2"
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
 default-members = [
   "crates/bitnet-common",
+  "crates/bitnet-math",
+  "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
   "crates/bitnet-rope",
   "crates/bitnet-transformer",
@@ -146,6 +150,8 @@ version = "0.2.1-dev"
 [dependencies]
 # Core crates - always included
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
+bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
+bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
@@ -299,6 +305,8 @@ harness = false
 required-features = ["cpu", "bench"]
 
 [workspace.dependencies]
+bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
+bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"
