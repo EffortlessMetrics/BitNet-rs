@@ -57,7 +57,8 @@ pub use production_engine::{
 pub use prompt_template::{ChatRole, ChatTurn, PromptTemplate, TemplateType};
 pub use receipts::{
     AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,
-    KVCacheTestResults, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
+    KVCacheTestResults, ModelInfo, OpenClDeviceInfo, OpenClTiming, PerformanceBaseline,
+    RECEIPT_SCHEMA_VERSION, TestResults,
 };
 // Re-export CorrectionRecord from bitnet-common for convenience
 pub use bitnet_common::CorrectionRecord;
