@@ -445,6 +445,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "bitnet-common",
+ "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-kernels",

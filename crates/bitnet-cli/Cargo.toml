@@ -26,6 +26,7 @@ path = "src/main.rs"
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
