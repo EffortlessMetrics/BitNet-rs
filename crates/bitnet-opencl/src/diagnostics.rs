@@ -1,427 +1,374 @@
-//! GPU runtime diagnostics for troubleshooting.
+//! Rich GPU error diagnostics for debugging OpenCL kernel failures.
 //!
-//! Provides comprehensive system checks for driver availability,
-//! `OpenCL`/Vulkan/CUDA status, GPU memory, and feature flags.
-
-use std::fmt::Write as _;
+//! Provides [`GpuDiagnosticReport`] which collects full context when a GPU
+//! operation fails: device info, driver version, kernel source, arguments,
+//! buffer sizes, and a recent event log of the last GPU operations.
 
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
+use std::fmt;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 
-use crate::system_info::{self, SystemInfo};
+/// Maximum number of recent events retained in the event log.
+const DEFAULT_EVENT_LOG_CAPACITY: usize = 10;
 
-// ── Status types ─────────────────────────────────────────────────────────────
-
-/// Driver detection status.
+/// A single GPU operation recorded in the event log.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DriverStatus {
-    /// Whether any GPU driver was detected.
-    pub found: bool,
-    /// Human-readable driver description (or "not found").
+pub struct GpuEvent {
+    /// Sequential event index.
+    pub index: u64,
+    /// Timestamp when the event occurred.
+    pub timestamp: SystemTime,
+    /// Operation type (e.g. `"kernel_dispatch"`, `"buffer_write"`, `"buffer_read"`).
+    pub operation: String,
+    /// Human-readable description.
     pub description: String,
+    /// Whether this operation succeeded.
+    pub success: bool,
+    /// Wall-clock duration of the operation, if measured.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<Duration>,
 }
 
-/// `OpenCL` platform/device enumeration status.
+/// Information about a kernel argument at the time of failure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OpenClStatus {
-    /// Whether `OpenCL` support was compiled in.
-    pub compiled: bool,
-    /// Whether an `OpenCL` runtime was detected.
-    pub available: bool,
-    /// Discovered platform names.
-    pub platforms: Vec<String>,
-    /// Number of devices found across all platforms.
-    pub device_count: usize,
+pub struct KernelArgInfo {
+    /// Argument index (0-based).
+    pub index: usize,
+    /// Argument name if known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Argument type description (e.g. `"buffer<f32>"`, `"u32"`).
+    pub type_desc: String,
+    /// Buffer size in bytes (for buffer arguments).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buffer_size: Option<usize>,
 }
 
-/// Vulkan availability status.
+/// GPU device information captured at error time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VulkanStatus {
-    /// Whether Vulkan support was compiled in.
-    pub compiled: bool,
-    /// Whether a Vulkan-capable device was found at runtime.
-    pub available: bool,
-    /// Discovered device names.
-    pub devices: Vec<String>,
+pub struct GpuDeviceInfo {
+    /// Device name (e.g. `"Intel Arc A770"`).
+    pub name: String,
+    /// Device vendor.
+    pub vendor: String,
+    /// Driver version string.
+    pub driver_version: String,
+    /// OpenCL version string.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencl_version: Option<String>,
+    /// Global memory size in bytes.
+    pub global_memory_bytes: u64,
+    /// Maximum work group size.
+    pub max_work_group_size: usize,
+    /// Number of compute units.
+    pub compute_units: usize,
 }
 
-/// CUDA availability status.
+/// Full diagnostic report collected when a GPU error occurs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CudaStatus {
-    /// Whether CUDA support was compiled in.
-    pub compiled: bool,
-    /// Whether a CUDA-capable GPU was found at runtime.
-    pub available: bool,
-    /// CUDA driver version string (if available).
-    pub driver_version: Option<String>,
+pub struct GpuDiagnosticReport {
+    /// The error message that triggered this report.
+    pub error_message: String,
+    /// Device information.
+    pub device_info: GpuDeviceInfo,
+    /// Kernel that failed (if applicable).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_name: Option<String>,
+    /// Kernel source snippet (first 2048 chars).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_source: Option<String>,
+    /// Kernel arguments at the time of failure.
+    pub kernel_args: Vec<KernelArgInfo>,
+    /// Global work size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub global_work_size: Option<Vec<usize>>,
+    /// Local work size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_work_size: Option<Vec<usize>>,
+    /// Recent GPU event log (up to last 10 operations before the error).
+    pub recent_events: Vec<GpuEvent>,
+    /// Timestamp when this report was generated.
+    pub generated_at: SystemTime,
 }
 
-/// GPU memory status.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MemoryStatus {
-    /// Whether memory information was successfully queried.
-    pub available: bool,
-    /// Total GPU memory in megabytes (0 if unknown).
-    pub total_mb: u64,
-    /// Free GPU memory in megabytes (0 if unknown).
-    pub free_mb: u64,
+impl GpuDiagnosticReport {
+    /// Export this report as a pretty-printed JSON string.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
+
+    /// Export this report as a compact JSON string.
+    pub fn to_json_compact(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    /// Deserialize a report from a JSON string.
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
 }
 
-/// Feature flag compilation status.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct FeatureStatus {
-    /// `cpu` feature is enabled.
-    pub cpu: bool,
-    /// `gpu` feature is enabled.
-    pub gpu: bool,
-    /// `cuda` feature is enabled.
-    pub cuda: bool,
-    /// `opencl` feature is enabled.
-    pub opencl: bool,
-    /// `vulkan` feature is enabled.
-    pub vulkan: bool,
+impl fmt::Display for GpuDiagnosticReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "=== GPU Diagnostic Report ===")?;
+        writeln!(f, "Error: {}", self.error_message)?;
+        writeln!(f)?;
+        writeln!(f, "--- Device ---")?;
+        writeln!(f, "  Name:            {}", self.device_info.name)?;
+        writeln!(f, "  Vendor:          {}", self.device_info.vendor)?;
+        writeln!(f, "  Driver:          {}", self.device_info.driver_version)?;
+        if let Some(ref ocl) = self.device_info.opencl_version {
+            writeln!(f, "  OpenCL:          {ocl}")?;
+        }
+        writeln!(
+            f,
+            "  Global Memory:   {} MB",
+            self.device_info.global_memory_bytes / (1024 * 1024)
+        )?;
+        writeln!(
+            f,
+            "  Compute Units:   {}",
+            self.device_info.compute_units
+        )?;
+        writeln!(
+            f,
+            "  Max WG Size:     {}",
+            self.device_info.max_work_group_size
+        )?;
+
+        if let Some(ref name) = self.kernel_name {
+            writeln!(f)?;
+            writeln!(f, "--- Kernel ---")?;
+            writeln!(f, "  Name: {name}")?;
+            if let Some(ref gws) = self.global_work_size {
+                writeln!(f, "  Global WS: {gws:?}")?;
+            }
+            if let Some(ref lws) = self.local_work_size {
+                writeln!(f, "  Local WS:  {lws:?}")?;
+            }
+        }
+
+        if !self.kernel_args.is_empty() {
+            writeln!(f)?;
+            writeln!(f, "--- Kernel Arguments ---")?;
+            for arg in &self.kernel_args {
+                let name = arg.name.as_deref().unwrap_or("(unnamed)");
+                if let Some(sz) = arg.buffer_size {
+                    writeln!(
+                        f,
+                        "  [{:>2}] {name}: {} ({} bytes)",
+                        arg.index, arg.type_desc, sz
+                    )?;
+                } else {
+                    writeln!(
+                        f,
+                        "  [{:>2}] {name}: {}",
+                        arg.index, arg.type_desc
+                    )?;
+                }
+            }
+        }
+
+        if let Some(ref src) = self.kernel_source {
+            writeln!(f)?;
+            writeln!(f, "--- Kernel Source (truncated) ---")?;
+            for line in src.lines().take(20) {
+                writeln!(f, "  {line}")?;
+            }
+            let total_lines = src.lines().count();
+            if total_lines > 20 {
+                writeln!(f, "  ... ({} more lines)", total_lines - 20)?;
+            }
+        }
+
+        if !self.recent_events.is_empty() {
+            writeln!(f)?;
+            writeln!(f, "--- Recent Events ---")?;
+            for evt in &self.recent_events {
+                let status = if evt.success { "OK" } else { "FAIL" };
+                let dur = evt
+                    .duration
+                    .map(|d| format!(" ({:.2?})", d))
+                    .unwrap_or_default();
+                writeln!(
+                    f,
+                    "  [{}] [{status}] {}: {}{}",
+                    evt.index, evt.operation, evt.description, dur
+                )?;
+            }
+        }
+
+        writeln!(f, "=== End Report ===")?;
+        Ok(())
+    }
 }
 
-/// Result of a quick GPU smoke test.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SmokeTestResult {
-    /// Whether the smoke test passed.
-    pub passed: bool,
-    /// Human-readable result message.
-    pub message: String,
-    /// Elapsed time in milliseconds.
-    pub elapsed_ms: u64,
+/// Builder for constructing a [`GpuDiagnosticReport`].
+#[derive(Debug)]
+pub struct DiagnosticReportBuilder {
+    error_message: String,
+    device_info: GpuDeviceInfo,
+    kernel_name: Option<String>,
+    kernel_source: Option<String>,
+    kernel_args: Vec<KernelArgInfo>,
+    global_work_size: Option<Vec<usize>>,
+    local_work_size: Option<Vec<usize>>,
+    recent_events: Vec<GpuEvent>,
 }
 
-// ── Diagnostic report ────────────────────────────────────────────────────────
-
-/// Issue found during diagnostics, with a suggested fix.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticIssue {
-    /// Short issue summary.
-    pub summary: String,
-    /// Suggested remediation.
-    pub suggestion: String,
-}
-
-/// Complete diagnostic report.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReport {
-    /// System information snapshot.
-    pub system: SystemInfo,
-    /// Driver detection results.
-    pub driver: DriverStatus,
-    /// `OpenCL` status.
-    pub opencl: OpenClStatus,
-    /// Vulkan status.
-    pub vulkan: VulkanStatus,
-    /// CUDA status.
-    pub cuda: CudaStatus,
-    /// GPU memory status.
-    pub memory: MemoryStatus,
-    /// Feature flag status.
-    pub features: FeatureStatus,
-    /// Smoke test result (if run).
-    pub smoke_test: Option<SmokeTestResult>,
-    /// Issues found with suggested fixes.
-    pub issues: Vec<DiagnosticIssue>,
-    /// Recommended configuration notes.
-    pub recommendations: Vec<String>,
-}
-
-// ── GpuDiagnostics ───────────────────────────────────────────────────────────
-
-/// Runs comprehensive GPU diagnostic checks.
-pub struct GpuDiagnostics;
-
-impl GpuDiagnostics {
-    /// Create a new diagnostics runner.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self
-    }
-
-    /// Detect installed GPU drivers.
-    #[must_use]
-    pub fn check_drivers(&self) -> DriverStatus {
-        if command_succeeds("nvidia-smi", &[]) {
-            return DriverStatus {
-                found: true,
-                description: "NVIDIA GPU driver detected (nvidia-smi)".to_owned(),
-            };
-        }
-
-        if command_succeeds("rocm-smi", &["--showid"]) {
-            return DriverStatus {
-                found: true,
-                description: "AMD ROCm driver detected (rocm-smi)".to_owned(),
-            };
-        }
-
-        DriverStatus { found: false, description: "not found".to_owned() }
-    }
-
-    /// Check `OpenCL` platform/device availability.
-    #[must_use]
-    pub const fn check_opencl(&self) -> OpenClStatus {
-        let compiled = cfg!(feature = "opencl");
-        if !compiled {
-            return OpenClStatus {
-                compiled: false,
-                available: false,
-                platforms: Vec::new(),
-                device_count: 0,
-            };
-        }
-        OpenClStatus { compiled: true, available: false, platforms: Vec::new(), device_count: 0 }
-    }
-
-    /// Check Vulkan availability.
-    #[must_use]
-    pub const fn check_vulkan(&self) -> VulkanStatus {
-        let compiled = cfg!(feature = "vulkan");
-        VulkanStatus { compiled, available: false, devices: Vec::new() }
-    }
-
-    /// Check CUDA availability.
-    #[must_use]
-    pub fn check_cuda(&self) -> CudaStatus {
-        let compiled = cfg!(any(feature = "gpu", feature = "cuda"));
-        let available = compiled && command_succeeds("nvidia-smi", &[]);
-        let driver_version = if available { read_nvidia_driver_version() } else { None };
-        CudaStatus { compiled, available, driver_version }
-    }
-
-    /// Check available GPU memory.
-    #[must_use]
-    pub const fn check_memory(&self) -> MemoryStatus {
-        MemoryStatus { available: false, total_mb: 0, free_mb: 0 }
-    }
-
-    /// Report which feature flags were compiled in.
-    #[must_use]
-    pub const fn check_features(&self) -> FeatureStatus {
-        FeatureStatus {
-            cpu: cfg!(feature = "cpu"),
-            gpu: cfg!(feature = "gpu"),
-            cuda: cfg!(feature = "cuda"),
-            opencl: cfg!(feature = "opencl"),
-            vulkan: cfg!(feature = "vulkan"),
+impl DiagnosticReportBuilder {
+    /// Start building a report for the given error and device.
+    pub fn new(error_message: impl Into<String>, device_info: GpuDeviceInfo) -> Self {
+        Self {
+            error_message: error_message.into(),
+            device_info,
+            kernel_name: None,
+            kernel_source: None,
+            kernel_args: Vec::new(),
+            global_work_size: None,
+            local_work_size: None,
+            recent_events: Vec::new(),
         }
     }
 
-    /// Run a quick smoke test to verify basic compute works.
-    #[must_use]
-    #[allow(clippy::cast_precision_loss)]
-    pub fn run_smoke_test(&self) -> SmokeTestResult {
-        let start = std::time::Instant::now();
-
-        let a: Vec<f32> = (0..1024).map(|i| i as f32).collect();
-        let b: Vec<f32> = (0..1024).map(|i| (1024 - i) as f32).collect();
-        let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-
-        let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
-        // Floating-point accumulation may differ slightly from the exact value.
-        let passed = dot > 178_900_000.0 && dot < 179_000_000.0;
-
-        SmokeTestResult {
-            passed,
-            message: if passed {
-                format!("Smoke test passed (dot product = {dot}, elapsed = {elapsed_ms}ms)")
-            } else {
-                format!("Smoke test FAILED (expected ~178_956_288, got {dot})")
-            },
-            elapsed_ms,
-        }
+    /// Set the kernel name.
+    pub fn kernel_name(mut self, name: impl Into<String>) -> Self {
+        self.kernel_name = Some(name.into());
+        self
     }
 
-    /// Run all diagnostics and produce a full report.
-    #[must_use]
-    pub fn run_full(&self) -> DiagnosticReport {
-        let system = system_info::collect_system_info();
-        let driver = self.check_drivers();
-        let opencl = self.check_opencl();
-        let vulkan = self.check_vulkan();
-        let cuda = self.check_cuda();
-        let memory = self.check_memory();
-        let features = self.check_features();
-        let smoke_test = Some(self.run_smoke_test());
+    /// Set the kernel source (truncated to 2048 chars).
+    pub fn kernel_source(mut self, source: impl Into<String>) -> Self {
+        let src: String = source.into();
+        self.kernel_source = Some(if src.len() > 2048 {
+            src[..2048].to_string()
+        } else {
+            src
+        });
+        self
+    }
 
-        let mut issues = Vec::new();
-        let mut recommendations = Vec::new();
+    /// Add a kernel argument.
+    pub fn add_arg(mut self, arg: KernelArgInfo) -> Self {
+        self.kernel_args.push(arg);
+        self
+    }
 
-        if !driver.found {
-            issues.push(DiagnosticIssue {
-                summary: "No GPU driver detected".to_owned(),
-                suggestion: "Install NVIDIA or AMD GPU drivers for hardware acceleration"
-                    .to_owned(),
-            });
-        }
+    /// Set global work size.
+    pub fn global_work_size(mut self, gws: Vec<usize>) -> Self {
+        self.global_work_size = Some(gws);
+        self
+    }
 
-        if !features.gpu && !features.cuda {
-            issues.push(DiagnosticIssue {
-                summary: "GPU feature not compiled".to_owned(),
-                suggestion: "Rebuild with --features gpu to enable GPU support".to_owned(),
-            });
-            recommendations
-                .push("Build with: cargo build --no-default-features --features gpu".to_owned());
-        }
+    /// Set local work size.
+    pub fn local_work_size(mut self, lws: Vec<usize>) -> Self {
+        self.local_work_size = Some(lws);
+        self
+    }
 
-        if features.cpu {
-            recommendations.push("CPU backend is available as fallback".to_owned());
-        }
+    /// Set recent events from an [`EventLog`].
+    pub fn events_from_log(mut self, log: &EventLog) -> Self {
+        self.recent_events = log.snapshot();
+        self
+    }
 
-        if !features.opencl {
-            recommendations
-                .push("OpenCL support not compiled; add --features opencl if needed".to_owned());
-        }
-
-        DiagnosticReport {
-            system,
-            driver,
-            opencl,
-            vulkan,
-            cuda,
-            memory,
-            features,
-            smoke_test,
-            issues,
-            recommendations,
+    /// Consume the builder and produce the report.
+    pub fn build(self) -> GpuDiagnosticReport {
+        GpuDiagnosticReport {
+            error_message: self.error_message,
+            device_info: self.device_info,
+            kernel_name: self.kernel_name,
+            kernel_source: self.kernel_source,
+            kernel_args: self.kernel_args,
+            global_work_size: self.global_work_size,
+            local_work_size: self.local_work_size,
+            recent_events: self.recent_events,
+            generated_at: SystemTime::now(),
         }
     }
 }
 
-impl Default for GpuDiagnostics {
+/// Thread-safe circular event log that retains the last N GPU operations.
+#[derive(Debug, Clone)]
+pub struct EventLog {
+    inner: Arc<Mutex<EventLogInner>>,
+}
+
+#[derive(Debug)]
+struct EventLogInner {
+    events: VecDeque<GpuEvent>,
+    capacity: usize,
+    next_index: u64,
+}
+
+impl EventLog {
+    /// Create an event log with the default capacity (10).
+    pub fn new() -> Self {
+        Self::with_capacity(DEFAULT_EVENT_LOG_CAPACITY)
+    }
+
+    /// Create an event log with a custom capacity.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(EventLogInner {
+                events: VecDeque::with_capacity(capacity),
+                capacity,
+                next_index: 0,
+            })),
+        }
+    }
+
+    /// Record a GPU event.
+    pub fn record(
+        &self,
+        operation: impl Into<String>,
+        description: impl Into<String>,
+        success: bool,
+        duration: Option<Duration>,
+    ) {
+        let mut inner = self.inner.lock().unwrap();
+        let event = GpuEvent {
+            index: inner.next_index,
+            timestamp: SystemTime::now(),
+            operation: operation.into(),
+            description: description.into(),
+            success,
+            duration,
+        };
+        inner.next_index += 1;
+        if inner.events.len() >= inner.capacity {
+            inner.events.pop_front();
+        }
+        inner.events.push_back(event);
+    }
+
+    /// Number of events currently in the log.
+    pub fn len(&self) -> usize {
+        self.inner.lock().unwrap().events.len()
+    }
+
+    /// Whether the log is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Return a snapshot of all events in order.
+    pub fn snapshot(&self) -> Vec<GpuEvent> {
+        self.inner.lock().unwrap().events.iter().cloned().collect()
+    }
+
+    /// Clear all events.
+    pub fn clear(&self) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.events.clear();
+    }
+}
+
+impl Default for EventLog {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-// ── Report formatting ────────────────────────────────────────────────────────
-
-/// Format a diagnostic report as human-readable text.
-#[must_use]
-pub fn format_report(report: &DiagnosticReport) -> String {
-    let mut out = String::with_capacity(2048);
-
-    out.push_str("=== BitNet GPU Diagnostics Report ===\n\n");
-
-    out.push_str("── System ──\n");
-    let _ = writeln!(out, "  OS:         {} {}", report.system.os_name, report.system.os_version);
-    let _ = writeln!(out, "  Kernel:     {}", report.system.kernel_version);
-    let _ = writeln!(out, "  CPU:        {}", report.system.cpu_name);
-    let _ = writeln!(out, "  CPU cores:  {}", report.system.cpu_cores);
-    if report.system.total_memory_mb > 0 {
-        let _ = writeln!(out, "  Memory:     {} MB", report.system.total_memory_mb);
-    }
-    let _ = writeln!(out, "  Rust:       {}", report.system.rust_version);
-    let _ = writeln!(out, "  BitNet:     {}", report.system.bitnet_version);
-    out.push('\n');
-
-    out.push_str("── GPU Driver ──\n");
-    let _ = writeln!(out, "  Status:     {}", report.driver.description);
-    out.push('\n');
-
-    out.push_str("── CUDA ──\n");
-    let _ = writeln!(out, "  Compiled:   {}", yes_no(report.cuda.compiled));
-    let _ = writeln!(out, "  Available:  {}", yes_no(report.cuda.available));
-    if let Some(ref ver) = report.cuda.driver_version {
-        let _ = writeln!(out, "  Driver:     {ver}");
-    }
-    out.push('\n');
-
-    out.push_str("── OpenCL ──\n");
-    let _ = writeln!(out, "  Compiled:   {}", yes_no(report.opencl.compiled));
-    let _ = writeln!(out, "  Available:  {}", yes_no(report.opencl.available));
-    if !report.opencl.platforms.is_empty() {
-        let _ = writeln!(out, "  Platforms:  {}", report.opencl.platforms.join(", "));
-        let _ = writeln!(out, "  Devices:    {}", report.opencl.device_count);
-    }
-    out.push('\n');
-
-    out.push_str("── Vulkan ──\n");
-    let _ = writeln!(out, "  Compiled:   {}", yes_no(report.vulkan.compiled));
-    let _ = writeln!(out, "  Available:  {}", yes_no(report.vulkan.available));
-    out.push('\n');
-
-    out.push_str("── GPU Memory ──\n");
-    if report.memory.available {
-        let _ = writeln!(out, "  Total:      {} MB", report.memory.total_mb);
-        let _ = writeln!(out, "  Free:       {} MB", report.memory.free_mb);
-    } else {
-        out.push_str("  Status:     not available\n");
-    }
-    out.push('\n');
-
-    out.push_str("── Feature Flags ──\n");
-    let _ = writeln!(out, "  cpu:        {}", yes_no(report.features.cpu));
-    let _ = writeln!(out, "  gpu:        {}", yes_no(report.features.gpu));
-    let _ = writeln!(out, "  cuda:       {}", yes_no(report.features.cuda));
-    let _ = writeln!(out, "  opencl:     {}", yes_no(report.features.opencl));
-    let _ = writeln!(out, "  vulkan:     {}", yes_no(report.features.vulkan));
-    out.push('\n');
-
-    if let Some(ref st) = report.smoke_test {
-        out.push_str("── Smoke Test ──\n");
-        let _ = writeln!(out, "  {}\n", st.message);
-    }
-
-    out.push_str("── Issues ──\n");
-    if report.issues.is_empty() {
-        out.push_str("  No issues found.\n\n");
-    } else {
-        for (i, issue) in report.issues.iter().enumerate() {
-            let _ = writeln!(out, "  {}. {}\n     Fix: {}", i + 1, issue.summary, issue.suggestion);
-        }
-        out.push('\n');
-    }
-
-    if !report.recommendations.is_empty() {
-        out.push_str("── Recommendations ──\n");
-        for rec in &report.recommendations {
-            let _ = writeln!(out, "  • {rec}");
-        }
-        out.push('\n');
-    }
-
-    out
-}
-
-/// Format a diagnostic report as JSON.
-///
-/// # Panics
-///
-/// Panics if serialization fails (should not happen with valid data).
-#[must_use]
-pub fn format_json(report: &DiagnosticReport) -> String {
-    serde_json::to_string_pretty(report).expect("DiagnosticReport should always serialize to JSON")
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-const fn yes_no(b: bool) -> &'static str {
-    if b { "yes" } else { "no" }
-}
-
-fn command_succeeds(cmd: &str, args: &[&str]) -> bool {
-    std::process::Command::new(cmd)
-        .args(args)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
-}
-
-fn read_nvidia_driver_version() -> Option<String> {
-    let output = std::process::Command::new("nvidia-smi")
-        .args(["--query-gpu=driver_version", "--format=csv,noheader"])
-        .output()
-        .ok()?;
-    if output.status.success() {
-        Some(String::from_utf8_lossy(&output.stdout).trim().to_owned())
-    } else {
-        None
     }
 }
 
@@ -429,70 +376,186 @@ fn read_nvidia_driver_version() -> Option<String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn gpu_diagnostics_default_creates_instance() {
-        let _diag = GpuDiagnostics::default();
-    }
-
-    #[test]
-    fn check_drivers_returns_not_found_without_gpu() {
-        let diag = GpuDiagnostics::new();
-        let status = diag.check_drivers();
-        assert!(!status.description.is_empty());
-    }
-
-    #[test]
-    fn check_opencl_without_feature() {
-        let diag = GpuDiagnostics::new();
-        let status = diag.check_opencl();
-        if !cfg!(feature = "opencl") {
-            assert!(!status.compiled);
-            assert!(!status.available);
+    fn test_device() -> GpuDeviceInfo {
+        GpuDeviceInfo {
+            name: "Intel Arc A770".to_string(),
+            vendor: "Intel".to_string(),
+            driver_version: "23.43.27642.40".to_string(),
+            opencl_version: Some("OpenCL 3.0".to_string()),
+            global_memory_bytes: 16 * 1024 * 1024 * 1024,
+            max_work_group_size: 1024,
+            compute_units: 512,
         }
     }
 
     #[test]
-    fn check_vulkan_without_feature() {
-        let diag = GpuDiagnostics::new();
-        let status = diag.check_vulkan();
-        if !cfg!(feature = "vulkan") {
-            assert!(!status.compiled);
+    fn test_diagnostic_report_builder() {
+        let report =
+            DiagnosticReportBuilder::new("CL_OUT_OF_RESOURCES", test_device())
+                .kernel_name("bitnet_matmul_i2s")
+                .global_work_size(vec![1024, 1024])
+                .local_work_size(vec![16, 16])
+                .build();
+
+        assert_eq!(report.error_message, "CL_OUT_OF_RESOURCES");
+        assert_eq!(
+            report.kernel_name.as_deref(),
+            Some("bitnet_matmul_i2s")
+        );
+        assert_eq!(report.global_work_size, Some(vec![1024, 1024]));
+        assert_eq!(report.local_work_size, Some(vec![16, 16]));
+        assert_eq!(report.device_info.name, "Intel Arc A770");
+    }
+
+    #[test]
+    fn test_diagnostic_report_json_roundtrip() {
+        let report = DiagnosticReportBuilder::new(
+            "CL_MEM_OBJECT_ALLOCATION_FAILURE",
+            test_device(),
+        )
+        .kernel_name("layernorm_fp32")
+        .add_arg(KernelArgInfo {
+            index: 0,
+            name: Some("input".to_string()),
+            type_desc: "buffer<f32>".to_string(),
+            buffer_size: Some(4096),
+        })
+        .build();
+
+        let json = report.to_json().unwrap();
+        let restored = GpuDiagnosticReport::from_json(&json).unwrap();
+
+        assert_eq!(restored.error_message, report.error_message);
+        assert_eq!(restored.kernel_name, report.kernel_name);
+        assert_eq!(restored.kernel_args.len(), 1);
+        assert_eq!(restored.kernel_args[0].buffer_size, Some(4096));
+    }
+
+    #[test]
+    fn test_diagnostic_report_display_formatting() {
+        let report =
+            DiagnosticReportBuilder::new("CL_OUT_OF_RESOURCES", test_device())
+                .kernel_name("matmul")
+                .add_arg(KernelArgInfo {
+                    index: 0,
+                    name: Some("A".to_string()),
+                    type_desc: "buffer<f32>".to_string(),
+                    buffer_size: Some(8192),
+                })
+                .build();
+
+        let display = format!("{report}");
+        assert!(display.contains("GPU Diagnostic Report"));
+        assert!(display.contains("CL_OUT_OF_RESOURCES"));
+        assert!(display.contains("Intel Arc A770"));
+        assert!(display.contains("matmul"));
+        assert!(display.contains("8192 bytes"));
+    }
+
+    #[test]
+    fn test_event_log_capacity() {
+        let log = EventLog::with_capacity(3);
+        for i in 0..5 {
+            log.record("op", format!("event {i}"), true, None);
         }
+
+        assert_eq!(log.len(), 3);
+        let events = log.snapshot();
+        assert_eq!(events[0].description, "event 2");
+        assert_eq!(events[2].description, "event 4");
     }
 
     #[test]
-    fn check_cuda_without_feature() {
-        let diag = GpuDiagnostics::new();
-        let status = diag.check_cuda();
-        if !cfg!(any(feature = "gpu", feature = "cuda")) {
-            assert!(!status.compiled);
-            assert!(!status.available);
-        }
+    fn test_event_log_indices_monotonic() {
+        let log = EventLog::new();
+        log.record("a", "first", true, None);
+        log.record("b", "second", false, None);
+        log.record(
+            "c",
+            "third",
+            true,
+            Some(Duration::from_millis(5)),
+        );
+
+        let events = log.snapshot();
+        assert_eq!(events[0].index, 0);
+        assert_eq!(events[1].index, 1);
+        assert_eq!(events[2].index, 2);
+        assert!(!events[1].success);
+        assert_eq!(
+            events[2].duration,
+            Some(Duration::from_millis(5))
+        );
     }
 
     #[test]
-    fn check_features_reflects_compile_flags() {
-        let diag = GpuDiagnostics::new();
-        let f = diag.check_features();
-        assert_eq!(f.cpu, cfg!(feature = "cpu"));
-        assert_eq!(f.gpu, cfg!(feature = "gpu"));
-        assert_eq!(f.cuda, cfg!(feature = "cuda"));
-        assert_eq!(f.opencl, cfg!(feature = "opencl"));
-        assert_eq!(f.vulkan, cfg!(feature = "vulkan"));
+    fn test_report_with_events() {
+        let log = EventLog::new();
+        log.record(
+            "kernel_dispatch",
+            "matmul enqueued",
+            true,
+            Some(Duration::from_millis(10)),
+        );
+        log.record("buffer_read", "read output", false, None);
+
+        let report = DiagnosticReportBuilder::new(
+            "CL_INVALID_KERNEL_ARGS",
+            test_device(),
+        )
+        .events_from_log(&log)
+        .build();
+
+        assert_eq!(report.recent_events.len(), 2);
+        assert!(report.recent_events[0].success);
+        assert!(!report.recent_events[1].success);
     }
 
     #[test]
-    fn smoke_test_passes() {
-        let diag = GpuDiagnostics::new();
-        let result = diag.run_smoke_test();
-        assert!(result.passed, "smoke test should pass: {}", result.message);
+    fn test_kernel_source_truncation() {
+        let long_source = "x".repeat(5000);
+        let report = DiagnosticReportBuilder::new("err", test_device())
+            .kernel_source(long_source)
+            .build();
+
+        assert_eq!(
+            report.kernel_source.as_ref().unwrap().len(),
+            2048
+        );
     }
 
     #[test]
-    fn run_full_produces_report() {
-        let diag = GpuDiagnostics::new();
-        let report = diag.run_full();
-        assert!(!report.system.os_name.is_empty());
-        assert!(report.smoke_test.is_some());
+    fn test_event_log_thread_safe() {
+        let log = EventLog::new();
+        let log2 = log.clone();
+
+        log.record("op1", "from log1", true, None);
+        log2.record("op2", "from log2", true, None);
+
+        assert_eq!(log.len(), 2);
+        assert_eq!(log2.len(), 2);
+    }
+
+    #[test]
+    fn test_event_log_clear() {
+        let log = EventLog::new();
+        log.record("op", "test", true, None);
+        assert_eq!(log.len(), 1);
+
+        log.clear();
+        assert!(log.is_empty());
+    }
+
+    #[test]
+    fn test_report_compact_json() {
+        let report =
+            DiagnosticReportBuilder::new("err", test_device()).build();
+        let compact = report.to_json_compact().unwrap();
+        let pretty = report.to_json().unwrap();
+
+        assert!(compact.len() < pretty.len());
+        let r1 = GpuDiagnosticReport::from_json(&compact).unwrap();
+        let r2 = GpuDiagnosticReport::from_json(&pretty).unwrap();
+        assert_eq!(r1.error_message, r2.error_message);
     }
 }
