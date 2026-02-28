@@ -39,6 +39,7 @@ cargo xtask download-model \
 ```
 
 **Features:**
+
 - Resumable downloads (partial downloads are cached)
 - HF_TOKEN support for private repos
 - SHA256 verification
@@ -77,6 +78,7 @@ cargo xtask crossval \
 ```
 
 **Environment:**
+
 - Single-threaded execution for determinism
 - Controlled via `OMP_NUM_THREADS=1` and `GGML_NUM_THREADS=1`
 
@@ -123,6 +125,7 @@ cargo xtask clean-cache
 ```
 
 Cleans:
+
 - `target/`
 - `~/.cache/bitnet_cpp/`
 - `crossval/fixtures/`
@@ -146,9 +149,11 @@ cargo xtask benchmark --platform current
 ## Environment Variables
 
 ### For Downloads
+
 - `HF_TOKEN`: Hugging Face authentication token for private repos
 
 ### For Cross-Validation
+
 - `BITNET_CPP_DIR`: Path to C++ implementation (default: `~/.cache/bitnet_cpp`)
 - `CROSSVAL_GGUF`: Path to GGUF model file
 - `OMP_NUM_THREADS`: OpenMP threads (set to 1 for determinism)
@@ -176,16 +181,19 @@ On Windows, the `fetch-cpp` command requires WSL or Git Bash for the shell scrip
 ## Troubleshooting
 
 ### Download Issues
+
 - Check network connectivity
 - Verify HF_TOKEN for private repos
 - Use `--force` to override existing files
 
 ### Cross-Validation Failures
+
 - Ensure C++ build dependencies are installed
 - Check BITNET_CPP_DIR path
 - Verify model file exists and is valid
 
 ### Memory Issues
+
 - Use release builds for better performance
 - Reduce batch size in tests
 - Monitor with `cargo xtask benchmark`

@@ -5,6 +5,7 @@ This document contains the licenses of all third-party dependencies used in the 
 ## License Summary
 
 The BitNet Rust implementation uses dependencies under the following licenses:
+
 - MIT License
 - Apache License 2.0
 - BSD 2-Clause License
@@ -22,6 +23,7 @@ All dependencies have been verified to be compatible with our dual MIT/Apache-2.
 ## Dependency Audit
 
 This project uses automated dependency auditing through:
+
 - `cargo-audit` for security vulnerability scanning
 - `cargo-deny` for license compatibility verification
 - GitHub Dependabot for automated security updates
@@ -29,14 +31,17 @@ This project uses automated dependency auditing through:
 ## Security Policy
 
 ### Vulnerability Reporting
+
 Security vulnerabilities should be reported through GitHub Security Advisories or by emailing the maintainers directly.
 
 ### Dependency Updates
+
 - Dependencies are automatically scanned for security vulnerabilities
 - Critical security updates are applied immediately
 - Non-critical updates are reviewed and applied during regular maintenance cycles
 
 ### Supply Chain Security
+
 - All dependencies are verified through cargo-deny configuration
 - License compatibility is automatically checked
 - Dependency sources are restricted to trusted registries (crates.io)
@@ -45,13 +50,17 @@ Security vulnerabilities should be reported through GitHub Security Advisories o
 ## Model Download Security
 
 ### Hash Verification
+
 All model downloads include integrity verification:
+
 - SHA256 checksums are verified for all downloaded models
 - Models are downloaded from trusted sources only
 - Corrupted or tampered models are rejected
 
 ### Trusted Sources
+
 Approved model sources:
+
 - HuggingFace Hub (huggingface.co)
 - Official BitNet model repositories
 - Verified community repositories with proper checksums
@@ -59,11 +68,13 @@ Approved model sources:
 ## Build Security
 
 ### Reproducible Builds
+
 - Cargo.lock is committed to ensure reproducible builds
 - Build scripts are audited for security implications
 - External build dependencies (cc, bindgen) are pinned to specific versions
 
 ### Static Analysis
+
 - All unsafe code is documented with safety proofs
 - Miri testing is used to detect undefined behavior
 - Clippy lints are enforced at the pedantic level
@@ -71,11 +82,13 @@ Approved model sources:
 ## Runtime Security
 
 ### Memory Safety
+
 - Unsafe code is isolated to kernel modules with comprehensive documentation
 - All FFI boundaries are carefully validated
 - Memory allocations are bounded to prevent DoS attacks
 
 ### Input Validation
+
 - All user inputs are validated and sanitized
 - Model files are parsed with strict bounds checking
 - Network inputs are rate-limited and validated
@@ -83,6 +96,7 @@ Approved model sources:
 ## Compliance
 
 This project complies with:
+
 - SPDX license identification standards
 - OpenSSF security best practices
 - Rust security guidelines
@@ -98,7 +112,7 @@ The following sections contain the full license text for each category of depend
 
 ### MIT License
 
-```
+```text
 MIT License
 
 Copyright (c) [year] [fullname]
@@ -120,11 +134,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
-
+```text
 ### Apache License 2.0
 
-```
+```text
 Apache License
 Version 2.0, January 2004
 http://www.apache.org/licenses/
@@ -301,8 +314,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
    such Contributor by reason of your accepting any such warranty or support.
 
 END OF TERMS AND CONDITIONS
-```
-
+```text
 ---
 
 *Note: This document will be automatically updated with specific dependency information during the build process using cargo-license or similar tooling.*
