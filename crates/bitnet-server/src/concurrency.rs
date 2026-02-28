@@ -451,6 +451,7 @@ impl ConcurrencyManager {
             // Check if bucket is idle
             // We use try_lock to avoid blocking if the bucket is currently in use
             if let Ok(last_refill) = bucket.last_refill.try_lock() {
+                #[allow(clippy::collapsible_if)]
                 if now.duration_since(*last_refill) > max_idle {
                     keys_to_remove.push(*ip);
                 }
@@ -544,8 +545,10 @@ mod tests {
     #[tokio::test]
     async fn test_rate_limiter_cleanup() {
         // Create configuration with per-IP rate limiting enabled
-        let mut config = ConcurrencyConfig::default();
-        config.per_ip_rate_limit = Some(10);
+        let config = ConcurrencyConfig {
+            per_ip_rate_limit: Some(10),
+            ..Default::default()
+        };
 
         let manager = ConcurrencyManager::new(config);
 

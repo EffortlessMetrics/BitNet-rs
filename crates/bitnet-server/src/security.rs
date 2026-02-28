@@ -559,8 +559,10 @@ mod tests {
         assert!(validator.validate_model_request("relative/model.gguf").is_ok());
 
         // Case 2: Restricted directories
-        let mut config = SecurityConfig::default();
-        config.allowed_model_directories = vec!["/models".to_string(), "local_models".to_string()];
+        let config = SecurityConfig {
+            allowed_model_directories: vec!["/models".to_string(), "local_models".to_string()],
+            ..Default::default()
+        };
         let validator = SecurityValidator::new(config).unwrap();
 
         // Allowed paths

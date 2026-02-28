@@ -53,7 +53,7 @@ fn kernel_manager_list_available_providers_contains_fallback_name() {
     let providers = mgr.list_available_providers();
     // "fallback" is always present as the last-resort provider
     assert!(
-        providers.iter().any(|&name| name == "fallback"),
+        providers.contains(&"fallback"),
         "fallback provider must always be listed, got: {providers:?}"
     );
 }

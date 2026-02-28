@@ -21,8 +21,8 @@ fn probe_device_never_panics() {
 // ── simd_level_ordering_is_consistent ────────────────────────────────────────
 
 /// A platform that supports a higher SIMD level must also rank higher via
-/// `simd_level_rank`. On x86_64 AVX512 ≥ AVX2 ≥ SSE4.2 ≥ Scalar.
-/// On AArch64 NEON is the only level.
+/// `simd_level_rank`. On `x86_64` AVX512 ≥ AVX2 ≥ SSE4.2 ≥ Scalar.
+/// On `AArch64` NEON is the only level.
 #[test]
 fn simd_level_ordering_is_consistent() {
     // Static ordering: Scalar < Sse42 < Avx2 < Avx512
@@ -68,7 +68,7 @@ fn simd_level_display_roundtrip() {
     let all_levels =
         [SimdLevel::Scalar, SimdLevel::Neon, SimdLevel::Sse42, SimdLevel::Avx2, SimdLevel::Avx512];
 
-    let strings: Vec<String> = all_levels.iter().map(|l| l.to_string()).collect();
+    let strings: Vec<String> = all_levels.iter().map(std::string::ToString::to_string).collect();
 
     // Every string must be non-empty.
     for s in &strings {
@@ -257,7 +257,7 @@ fn probe_gpu_never_panics() {
     let _ = probe_gpu();
 }
 
-/// `GpuCapabilities::available` must be the OR of CUDA and ROCm availability.
+/// `GpuCapabilities::available` must be the OR of CUDA and `ROCm` availability.
 #[test]
 fn probe_gpu_available_consistent_with_backend_flags() {
     let caps = probe_gpu();
@@ -459,7 +459,7 @@ fn probe_cpu_has_avx512_consistent_with_simd_level() {
 }
 
 /// `probe_device().cpu.cores` must equal `probe_device().cpu.threads`
-/// (the implementation uses available_parallelism for both).
+/// (the implementation uses `available_parallelism` for both).
 #[test]
 fn probe_device_cores_equal_threads() {
     let probe = probe_device();
@@ -556,7 +556,7 @@ fn simd_level_rank_sse42_greater_than_scalar() {
 fn simd_level_ranks_are_pairwise_distinct() {
     let all =
         [SimdLevel::Scalar, SimdLevel::Sse42, SimdLevel::Avx2, SimdLevel::Avx512, SimdLevel::Neon];
-    let ranks: Vec<u32> = all.iter().map(|l| simd_level_rank(l)).collect();
+    let ranks: Vec<u32> = all.iter().map(simd_level_rank).collect();
     let unique: std::collections::HashSet<u32> = ranks.iter().copied().collect();
     assert_eq!(
         unique.len(),

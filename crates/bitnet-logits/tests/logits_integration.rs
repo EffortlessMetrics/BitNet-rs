@@ -17,14 +17,14 @@ fn temperature_variety_of_inputs() {
     let input = vec![1.0f32, 2.0, 4.0];
 
     // temp = 0.5 → multiply each logit by 2.0
-    let mut logits = input.clone();
+    let mut logits = input.to_vec();
     apply_temperature(&mut logits, 0.5);
     assert!((logits[0] - 2.0).abs() < 1e-5, "temp 0.5: 1.0 → 2.0, got {}", logits[0]);
     assert!((logits[1] - 4.0).abs() < 1e-5, "temp 0.5: 2.0 → 4.0, got {}", logits[1]);
     assert!((logits[2] - 8.0).abs() < 1e-5, "temp 0.5: 4.0 → 8.0, got {}", logits[2]);
 
     // temp = 2.0 → multiply each logit by 0.5
-    let mut logits = input.clone();
+    let mut logits = input.to_vec();
     apply_temperature(&mut logits, 2.0);
     assert!((logits[0] - 0.5).abs() < 1e-5, "temp 2.0: 1.0 → 0.5, got {}", logits[0]);
     assert!((logits[1] - 1.0).abs() < 1e-5, "temp 2.0: 2.0 → 1.0, got {}", logits[1]);
@@ -168,7 +168,7 @@ fn repetition_penalty_ignores_out_of_bounds_ids() {
 // ── full pipeline ─────────────────────────────────────────────────────────────
 
 /// Exercise the full sampling pipeline in sequence:
-/// repetition_penalty → temperature → top_k → softmax → top_p.
+/// `repetition_penalty` → `temperature` → `top_k` → `softmax` → `top_p`.
 ///
 /// The output must be a valid probability distribution (all values ≥ 0, sum ≈ 1.0).
 #[test]
