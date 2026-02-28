@@ -186,8 +186,8 @@ impl SecurityValidator {
 
     /// Sanitize input text
     fn sanitize_input(&self, input: &str) -> Result<(), ValidationError> {
-        // Check for null bytes and control characters (except newline and tab)
-        if input.chars().any(|c| c.is_control() && c != '\n' && c != '\t') {
+        // Check for null bytes and control characters (except newline, carriage return, and tab)
+        if input.chars().any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t') {
             return Err(ValidationError::InvalidCharacters);
         }
 
