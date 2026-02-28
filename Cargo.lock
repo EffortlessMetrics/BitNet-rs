@@ -694,6 +694,7 @@ dependencies = [
 name = "bitnet-gpu-hal"
 version = "0.2.0-alpha.1"
 dependencies = [
+ "criterion",
  "proptest",
  "serde",
  "serde_json",
