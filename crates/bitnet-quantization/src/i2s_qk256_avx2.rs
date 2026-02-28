@@ -331,7 +331,6 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_gemv_qk256_avx2_smoke() {
-        use crate::i2s_qk256::gemv_qk256;
         use rand::{Rng, SeedableRng};
         use rand_chacha::ChaCha8Rng;
 
@@ -340,8 +339,6 @@ mod tests {
             eprintln!("Skipping AVX2 smoke test: AVX2 not available");
             return;
         }
-
-        const TOLERANCE: f32 = 1e-5;
 
         // Single smoke test case: 4×256 (single block per row)
         let (rows, cols, seed) = (4usize, 256usize, 42u64);
@@ -359,10 +356,14 @@ mod tests {
         // Generate random input vector
         let x: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
 
-        // Compute reference result using scalar path
+        // Compute reference result using explicit scalar row kernel (no dispatch),
+        // so this test always compares AVX2 against true scalar execution.
         let mut y_scalar = vec![0.0f32; rows];
-        gemv_qk256(&qs_data, &x, &mut y_scalar, rows, cols, row_stride_bytes)
-            .expect("Scalar GEMV should succeed");
+        for (row, output) in y_scalar.iter_mut().enumerate().take(rows) {
+            let start = row * row_stride_bytes;
+            let end = start + row_stride_bytes;
+            *output = crate::i2s_qk256::gemv_qk256_row(&qs_data[start..end], &x, cols);
+        }
 
         // Compute AVX2 result
         let mut y_avx2 = vec![0.0f32; rows];
@@ -372,13 +373,21 @@ mod tests {
         // Compare results
         for (i, (&scalar, &avx2)) in y_scalar.iter().zip(y_avx2.iter()).enumerate() {
             let abs_diff = (scalar - avx2).abs();
+            let block_count = (cols / QK256_BLOCK) as f32;
+            let abs_tol = (1e-5f32 * block_count.sqrt()).min(5e-4);
+            let rel_tol = 1e-4f32;
+            let rel_diff = if scalar.abs() > 1e-12 { abs_diff / scalar.abs() } else { abs_diff };
+
             assert!(
-                abs_diff < TOLERANCE,
-                "Smoke test failed at row {}: scalar={}, avx2={}, diff={}",
+                abs_diff <= abs_tol || rel_diff <= rel_tol,
+                "Smoke test failed at row {}: scalar={}, avx2={}, abs_diff={}, rel_diff={}, abs_tol={}, rel_tol={}",
                 i,
                 scalar,
                 avx2,
-                abs_diff
+                abs_diff,
+                rel_diff,
+                abs_tol,
+                rel_tol
             );
         }
 

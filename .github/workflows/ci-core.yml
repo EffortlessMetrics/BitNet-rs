@@ -161,6 +161,22 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
+      - name: Run AVX2-targeted unit tests (x86_64 static +avx2)
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        env:
+          RUSTFLAGS: "-D warnings -C target-feature=+avx2"
+        run: |
+          cargo test --locked \
+            -p bitnet-quantization \
+            --lib \
+            --no-default-features --features cpu \
+            -- --nocapture
+          cargo test --locked \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu,avx2 \
+            -- --nocapture
+
   # Job 2: BDD Grid Check (separate job for parallel execution and clear gate signal)
   grid-check:
     name: BDD Grid Check
