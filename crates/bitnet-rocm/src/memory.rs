@@ -5,6 +5,7 @@ use crate::ffi::{HipDevicePtr, HipMemcpyKind};
 use tracing::debug;
 
 /// A device-side memory allocation.
+#[derive(Debug)]
 pub struct DeviceBuffer {
     ptr: HipDevicePtr,
     size: usize,
