@@ -51,8 +51,8 @@ mod gpu_memory_pool {
 
 mod cpu_kernel_safety {
     use super::*;
-    use bitnet_kernels::cpu::FallbackKernel;
     use bitnet_kernels::KernelProvider;
+    use bitnet_kernels::cpu::FallbackKernel;
 
     #[test]
     fn test_matmul_zero_dimensions_returns_error() {
@@ -84,8 +84,7 @@ mod cpu_kernel_safety {
         let input: &[f32] = &[];
         let mut output: Vec<u8> = vec![];
         let mut scales: Vec<f32> = vec![];
-        let result =
-            kernel.quantize(input, &mut output, &mut scales, QuantizationType::I2S);
+        let result = kernel.quantize(input, &mut output, &mut scales, QuantizationType::I2S);
         // Empty input: should error or no-op, never panic.
         let _ = result;
     }
@@ -96,8 +95,7 @@ mod cpu_kernel_safety {
         let input = [1.0f32];
         let mut output = vec![0u8; 1];
         let mut scales = vec![0.0f32; 1];
-        let result =
-            kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
+        let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         let _ = result;
     }
 
@@ -107,8 +105,7 @@ mod cpu_kernel_safety {
         let input = vec![0.0f32; 64];
         let mut output = vec![0u8; 64];
         let mut scales = vec![0.0f32; 1];
-        let result =
-            kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
+        let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         // All-zero input is a valid edge case; must not divide by zero.
         let _ = result;
     }
@@ -119,8 +116,7 @@ mod cpu_kernel_safety {
         let input = vec![f32::NAN; 64];
         let mut output = vec![0u8; 64];
         let mut scales = vec![0.0f32; 1];
-        let result =
-            kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
+        let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         // NaN input: should not cause infinite loop or panic.
         let _ = result;
     }
@@ -131,8 +127,7 @@ mod cpu_kernel_safety {
         let input = vec![f32::INFINITY; 64];
         let mut output = vec![0u8; 64];
         let mut scales = vec![0.0f32; 1];
-        let result =
-            kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
+        let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         // Infinity: should not cause undefined behavior.
         let _ = result;
     }
@@ -179,8 +174,8 @@ mod device_feature_safety {
 // ---------------------------------------------------------------------------
 
 mod concurrency_safety {
-    use bitnet_kernels::cpu::FallbackKernel;
     use bitnet_kernels::KernelProvider;
+    use bitnet_kernels::cpu::FallbackKernel;
     use std::sync::Arc;
     use std::thread;
 
