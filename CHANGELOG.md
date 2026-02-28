@@ -12,6 +12,10 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Phi-4 ChatML prompt template** (#1031): Add `Phi4Chat` template type with `<|im_start|>`/`<|im_end|>` token formatting. Auto-detects from GGUF metadata or model name.
 - **Architecture-aware config defaults**: Add `ModelConfig::apply_architecture_defaults()` for automatic norm/activation/context selection based on model family.
 - **Phi-specific tensor name patterns**: Add `.qkv_proj.weight` and `.gate_up_proj.weight` fused projection patterns to tensor name predicates.
+- **Qwen architecture support**: Add Qwen/Qwen2/Qwen2.5 config defaults (RmsNorm, SiLU), `qwen2_150k` tokenizer entry (151K vocab), and `QwenChat` ChatML prompt template with auto-detection.
+- **Gemma architecture support**: Add `gemma`/`gemma2` to loader recognition, config defaults (RmsNorm, GeLU), `gemma_256k` tokenizer entry (256K vocab), and `GemmaChat` prompt template (`<start_of_turn>`/`<end_of_turn>` format).
+- **Mistral prompt template**: Add `MistralChat` template with `[INST]...[/INST]` format, auto-detection from GGUF metadata and model name, and `mistral_32k` tokenizer entry (32K vocab).
+- **Loader architecture sync**: Add `"gpt"` and `"bert"` to basic loader's `is_supported_architecture()`, matching production loader.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
