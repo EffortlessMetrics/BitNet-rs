@@ -23,18 +23,18 @@ name = "bitnet"
 path = "src/main.rs"
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
-bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
-bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
-bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
-bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
-bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
-bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }
-bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
-bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.2.0-alpha.1" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.0-alpha.1" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0-alpha.1" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0-alpha.1" }
+bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.0-alpha.1" }
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.0-alpha.1" }
+bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.0-alpha.1" }
+bitnet-validation = { path = "../bitnet-validation", version = "0.2.0-alpha.1" }
+bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.0-alpha.1", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive", "env", "color"] }

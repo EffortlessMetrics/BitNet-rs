@@ -383,7 +383,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bitnet-common",
- "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-kernels",
@@ -697,15 +696,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitnet-gpu-hal"
-version = "0.2.0-alpha.1"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "bitnet-honest-compute"
 version = "0.2.0-alpha.1"
 dependencies = [
@@ -797,7 +787,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-level-zero"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "bitnet-test-support",
@@ -817,7 +807,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-metal"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "bytemuck",
@@ -872,7 +862,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-opencl"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "log",
@@ -965,7 +955,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-rocm"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "bytemuck",
@@ -1483,7 +1473,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-vulkan"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "ash",
  "bitnet-common",
@@ -1523,7 +1513,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-webgpu"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "bytemuck",

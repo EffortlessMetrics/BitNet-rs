@@ -146,7 +146,7 @@ fn default_memory_for_device(device: &Device) -> usize {
     match device {
         Device::Cpu => 16 * 1024 * 1024 * 1024,
         Device::Cuda(_) => 8 * 1024 * 1024 * 1024,
-        Device::OpenCL(_) => 8 * 1024 * 1024 * 1024,
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => 8 * 1024 * 1024 * 1024,
         Device::Metal => 8 * 1024 * 1024 * 1024,
     }
 }
@@ -156,7 +156,7 @@ fn default_capability_for_device(device: &Device) -> f64 {
     match device {
         Device::Cpu => 1.0,
         Device::Cuda(_) => 10.0,
-        Device::OpenCL(_) => 6.0,
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => 6.0,
         Device::Metal => 7.0,
     }
 }

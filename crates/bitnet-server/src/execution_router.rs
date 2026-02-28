@@ -201,7 +201,7 @@ impl DeviceMonitor {
                 let gpu_info = get_gpu_info();
                 gpu_info.metal
             }
-            Device::OpenCL(_) => false, // OpenCL runtime detection not yet implemented
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => false, // OpenCL runtime detection not yet implemented
         }
     }
 
@@ -234,7 +234,7 @@ impl DeviceMonitor {
                 }
             }
             Device::Metal => Self::get_metal_memory_budget_mb(system),
-            Device::OpenCL(_) => system.total_memory() / 1024, // Treat like CPU for now
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => system.total_memory() / 1024, // Treat like CPU for now
         }
     }
 
@@ -288,7 +288,7 @@ impl DeviceMonitor {
                 let available_mb = system.available_memory() / 1024;
                 available_mb.min(Self::get_metal_memory_budget_mb(system))
             }
-            Device::OpenCL(_) => system.free_memory() / (1024 * 1024), // Treat like CPU for now
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => system.free_memory() / (1024 * 1024), // Treat like CPU for now
         }
     }
 
@@ -333,7 +333,7 @@ impl DeviceMonitor {
                     None
                 }
             }
-            Device::OpenCL(_) => None,
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => None,
         }
     }
 
@@ -348,7 +348,7 @@ impl DeviceMonitor {
     fn get_simd_support(device: &Device) -> Vec<String> {
         match device {
             Device::Cpu => Self::detect_cpu_simd_features(),
-            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) => Vec::new(), // GPU devices don't use CPU SIMD
+            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) | Device::Hip(_) | Device::Npu => Vec::new(), // GPU devices don't use CPU SIMD
         }
     }
 
@@ -447,7 +447,7 @@ impl DeviceMonitor {
                 #[cfg(not(target_os = "macos"))]
                 0.0
             }
-            Device::OpenCL(_) => 60.0, // Estimated OpenCL performance
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => 60.0, // Estimated OpenCL performance
         };
 
         // Update capabilities

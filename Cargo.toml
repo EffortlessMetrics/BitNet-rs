@@ -160,10 +160,10 @@ bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.0-al
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.0-alpha.1", optional = true }
 
 # Optional crates based on features
-bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", optional = true }
-bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
-bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
-bitnet-vulkan = { path = "crates/bitnet-vulkan", version = "0.2.1-dev", optional = true }
+bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.0-alpha.1", optional = true }
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.0-alpha.1", optional = true }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.0-alpha.1", optional = true }
+bitnet-vulkan = { path = "crates/bitnet-vulkan", version = "0.2.0-alpha.1", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
