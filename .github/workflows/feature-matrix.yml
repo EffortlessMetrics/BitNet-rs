@@ -56,6 +56,13 @@ jobs:
           - label: "cpu+crossval"
             flags: "--no-default-features --features cpu,crossval"
             allow_failure: true
+          # OneAPI/OpenCL checks require OpenCL headers — informational only on standard runners
+          - label: "oneapi"
+            flags: "--no-default-features --features oneapi"
+            allow_failure: true
+          - label: "cpu+oneapi"
+            flags: "--no-default-features --features cpu,oneapi"
+            allow_failure: true
 
     steps:
       - name: Checkout
@@ -107,6 +114,12 @@ jobs:
           - crate: bitnet-inference
             label: gpu
             flags: "--no-default-features --features gpu"
+          - crate: bitnet-kernels
+            label: oneapi
+            flags: "--no-default-features --features oneapi"
+          - crate: bitnet-device-probe
+            label: oneapi
+            flags: "--no-default-features --features oneapi"
 
     steps:
       - name: Checkout
