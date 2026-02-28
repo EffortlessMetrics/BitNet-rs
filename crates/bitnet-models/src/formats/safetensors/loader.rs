@@ -301,6 +301,14 @@ impl SafeTensorsLoader {
             }
         }
 
+        // Apply architecture-aware defaults (norm type, activation, context length)
+        let architecture = metadata
+            .get("architecture")
+            .or_else(|| metadata.get("model_type"))
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        config.model.apply_architecture_defaults(architecture);
+
         Ok(config)
     }
 

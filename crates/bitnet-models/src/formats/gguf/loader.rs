@@ -1225,6 +1225,12 @@ impl GgufLoader {
             config.quantization.precision = precision;
         }
 
+        // Apply architecture-aware defaults (norm type, activation, context length)
+        let architecture = reader
+            .get_string_metadata("general.architecture")
+            .unwrap_or_default();
+        config.model.apply_architecture_defaults(&architecture);
+
         Ok(config)
     }
 

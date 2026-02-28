@@ -28,6 +28,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
 - **Criterion Benchmarks** — `benches/srp_ops.rs` with 6 functions: logits pipeline, top-k (k=5/k=50), repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
+- **Phi-4 Architecture Support** - Configurable normalization (RMSNorm/LayerNorm), activation dispatch (SiLU/ReLU²/GeLU), ChatML prompt template, 100K tokenizer compatibility, architecture auto-detection
 
 ### Current Limitations (MVP Phase)
 

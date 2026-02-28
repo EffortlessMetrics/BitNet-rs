@@ -45,6 +45,39 @@ pub struct ModelConfig {
     pub tokenizer: TokenizerConfig,
 }
 
+impl ModelConfig {
+    /// Set model config defaults based on detected architecture.
+    ///
+    /// Call this after extracting the architecture string from model metadata
+    /// (e.g. GGUF `general.architecture`) so that norm/activation/context defaults
+    /// match what the architecture actually expects.
+    pub fn apply_architecture_defaults(&mut self, architecture: &str) {
+        match architecture.to_lowercase().as_str() {
+            "phi" | "phi-4" | "phi-3" => {
+                self.norm_type = NormType::RmsNorm;
+                self.activation_type = ActivationType::Silu;
+                // Phi-4 defaults to 16K context when not explicitly set
+                if self.max_position_embeddings == 2048 {
+                    self.max_position_embeddings = 16384;
+                }
+            }
+            "llama" | "mistral" => {
+                self.norm_type = NormType::RmsNorm;
+                self.activation_type = ActivationType::Silu;
+            }
+            "bitnet" | "bitnet-b1.58" => {
+                self.norm_type = NormType::LayerNorm;
+                self.activation_type = ActivationType::Silu;
+            }
+            "gpt" | "bert" => {
+                self.norm_type = NormType::LayerNorm;
+                self.activation_type = ActivationType::Gelu;
+            }
+            _ => {} // keep defaults
+        }
+    }
+}
+
 impl Default for ModelConfig {
     fn default() -> Self {
         Self {

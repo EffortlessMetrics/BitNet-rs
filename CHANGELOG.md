@@ -5,6 +5,13 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phi architecture recognition** (#1028): Add `"phi"` to supported architectures in model loader and production loader. Phi-4 models are now recognized during format detection.
+- **Configurable normalization dispatch** (#1029): Add `NormLayer` enum wrapping `LayerNorm` and `RmsNorm`. Models can now select normalization type via `NormType` config. Phi-4/LLaMA/Mistral use `RmsNorm`; BitNet uses `LayerNorm`.
+- **Configurable activation dispatch** (#1030): Add `ActivationType` enum (`Silu`/`Relu2`/`Gelu`) to `ModelConfig`. `FeedForward` now dispatches activation based on config instead of hardcoded SiLU.
+- **Phi-4 tokenizer compatibility** (#1031): Add `phi4_100k` entry to `ModelCompatibilityMatrix` with `microsoft/phi-4` repo and 100,352 vocab size.
+- **Phi-4 ChatML prompt template** (#1031): Add `Phi4Chat` template type with `<|im_start|>`/`<|im_end|>` token formatting. Auto-detects from GGUF metadata or model name.
+- **Architecture-aware config defaults**: Add `ModelConfig::apply_architecture_defaults()` for automatic norm/activation/context selection based on model family.
+- **Phi-specific tensor name patterns**: Add `.qkv_proj.weight` and `.gate_up_proj.weight` fused projection patterns to tensor name predicates.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed

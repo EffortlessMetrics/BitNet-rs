@@ -405,3 +405,38 @@ fn test_norm_type_and_activation_type_defaults() {
     let _relu2 = ActivationType::Relu2;
     let _gelu = ActivationType::Gelu;
 }
+
+#[test]
+fn test_apply_architecture_defaults_phi() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("phi");
+    assert_eq!(config.norm_type, NormType::RmsNorm);
+    assert_eq!(config.activation_type, ActivationType::Silu);
+    assert_eq!(config.max_position_embeddings, 16384);
+}
+
+#[test]
+fn test_apply_architecture_defaults_bitnet() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("bitnet");
+    assert_eq!(config.norm_type, NormType::LayerNorm);
+    assert_eq!(config.activation_type, ActivationType::Silu);
+}
+
+#[test]
+fn test_apply_architecture_defaults_gpt() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("gpt");
+    assert_eq!(config.norm_type, NormType::LayerNorm);
+    assert_eq!(config.activation_type, ActivationType::Gelu);
+}
+
+#[test]
+fn test_apply_architecture_defaults_unknown_preserves_defaults() {
+    let mut config = ModelConfig::default();
+    let orig_norm = config.norm_type;
+    let orig_act = config.activation_type;
+    config.apply_architecture_defaults("unknown_model");
+    assert_eq!(config.norm_type, orig_norm);
+    assert_eq!(config.activation_type, orig_act);
+}

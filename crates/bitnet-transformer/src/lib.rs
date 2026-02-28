@@ -793,7 +793,7 @@ impl MultiHeadAttention {
 }
 
 /// Apply the configured activation function
-fn apply_activation(
+pub fn apply_activation(
     x: &Tensor,
     activation: bitnet_common::ActivationType,
 ) -> candle_core::Result<Tensor> {
