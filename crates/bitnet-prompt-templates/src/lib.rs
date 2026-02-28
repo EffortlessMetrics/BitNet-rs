@@ -112,6 +112,12 @@ pub enum TemplateType {
     Gemma2Chat,
     /// Microsoft Phi-3 instruct format with <|system|>/<|user|>/<|assistant|>/<|end|> markers
     Phi3Instruct,
+    /// TinyLlama ChatML format with BOS token
+    TinyLlamaChat,
+    /// Cognitive Computations Dolphin ChatML variant
+    DolphinChat,
+    /// OpenAI ChatGPT/GPT-4 ChatML format for GGUF exports
+    ChatGptChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -156,6 +162,9 @@ impl std::str::FromStr for TemplateType {
             "llama2-chat" | "llama-2-chat" | "llama2" => Ok(Self::Llama2Chat),
             "gemma2-chat" | "gemma-2-chat" | "gemma2" => Ok(Self::Gemma2Chat),
             "phi3-instruct" | "phi-3-instruct" | "phi3" => Ok(Self::Phi3Instruct),
+            "tinyllama-chat" | "tinyllama" | "tiny-llama" => Ok(Self::TinyLlamaChat),
+            "dolphin-chat" | "dolphin" => Ok(Self::DolphinChat),
+            "chatgpt-chat" | "chatgpt" | "gpt4-chat" => Ok(Self::ChatGptChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -166,7 +175,8 @@ impl std::str::FromStr for TemplateType {
                  zephyr-chat, vicuna-chat, orca-chat, solar-instruct, \
                  alpaca-instruct, command-r-plus, nous-hermes, \
                  wizard-lm, openchat, granite-chat, nemotron-chat, \
-                 saiga-chat, llama2-chat, gemma2-chat, phi3-instruct",
+                 saiga-chat, llama2-chat, gemma2-chat, phi3-instruct, \
+                 tinyllama-chat, dolphin-chat, chatgpt-chat",
                 s
             ),
         }
@@ -211,6 +221,9 @@ impl std::fmt::Display for TemplateType {
             Self::Llama2Chat => write!(f, "llama2-chat"),
             Self::Gemma2Chat => write!(f, "gemma2-chat"),
             Self::Phi3Instruct => write!(f, "phi3-instruct"),
+            Self::TinyLlamaChat => write!(f, "tinyllama-chat"),
+            Self::DolphinChat => write!(f, "dolphin-chat"),
+            Self::ChatGptChat => write!(f, "chatgpt-chat"),
         }
     }
 }
@@ -436,6 +449,16 @@ impl TemplateType {
         // Priority 2: Tokenizer family name heuristics
         if let Some(name) = tokenizer_name {
             let lower = name.to_ascii_lowercase();
+            // TinyLlama must be checked before "llama" to avoid false match
+            if lower.contains("tinyllama") || lower.contains("tiny-llama") {
+                tracing::debug!(
+                    template = "TinyLlamaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::TinyLlamaChat;
+            }
             if lower.contains("llama3") || lower.contains("llama-3") {
                 tracing::debug!(
                     template = "Llama3Chat",
@@ -471,6 +494,16 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Phi3Instruct;
+            }
+            // Dolphin must be checked before "phi" because "dolphin" contains "phi"
+            if lower.contains("dolphin") {
+                tracing::debug!(
+                    template = "DolphinChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::DolphinChat;
             }
             if lower.contains("phi") {
                 tracing::debug!(
@@ -724,6 +757,20 @@ impl TemplateType {
                 );
                 return Self::SaigaChat;
             }
+            // ChatGPT/GPT-4 must be checked before generic "instruct" fallback
+            // and must NOT match "gpt2" (that's the base GPT template)
+            if lower.contains("chatgpt")
+                || lower.contains("gpt-4")
+                || (lower.contains("gpt4") && !lower.contains("gpt2"))
+            {
+                tracing::debug!(
+                    template = "ChatGptChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::ChatGptChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -778,6 +825,9 @@ impl TemplateType {
             Self::Llama2Chat => Self::apply_llama2_chat(user_text, system_prompt),
             Self::Gemma2Chat => Self::apply_gemma2_chat(user_text, system_prompt),
             Self::Phi3Instruct => Self::apply_phi3_instruct(user_text, system_prompt),
+            Self::TinyLlamaChat => Self::apply_tinyllama_chat(user_text, system_prompt),
+            Self::DolphinChat => Self::apply_dolphin_chat(user_text, system_prompt),
+            Self::ChatGptChat => Self::apply_chatgpt_chat(user_text, system_prompt),
         }
     }
 
@@ -1422,6 +1472,49 @@ impl TemplateType {
         result
     }
 
+    /// Apply TinyLlama ChatML format
+    fn apply_tinyllama_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt
+            .unwrap_or("You are a friendly chatbot who always responds in a helpful manner.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
+    /// Apply Dolphin ChatML format
+    fn apply_dolphin_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or("You are Dolphin, a helpful AI assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
+    /// Apply ChatGPT/GPT-4 ChatML format
+    fn apply_chatgpt_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1521,6 +1614,15 @@ impl TemplateType {
             Self::Phi3Instruct => {
                 vec!["<|end|>".to_string(), "<|endoftext|>".to_string()]
             }
+            Self::TinyLlamaChat => {
+                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+            }
+            Self::DolphinChat => {
+                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+            }
+            Self::ChatGptChat => {
+                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+            }
         }
     }
 
@@ -1596,6 +1698,9 @@ impl TemplateType {
             Self::Llama2Chat => true,     // Llama-2 benefits from BOS
             Self::Gemma2Chat => true,     // Like Gemma, benefits from BOS
             Self::Phi3Instruct => false,  // Uses <|system|>/<|user|> tokens
+            Self::TinyLlamaChat => true,  // TinyLlama typically needs BOS
+            Self::DolphinChat => false,   // ChatML uses im_start/im_end tokens
+            Self::ChatGptChat => false,   // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -1629,6 +1734,9 @@ impl TemplateType {
                 | Self::SaigaChat
                 | Self::Gemma2Chat
                 | Self::Phi3Instruct
+                | Self::TinyLlamaChat
+                | Self::DolphinChat
+                | Self::ChatGptChat
         )
     }
 
@@ -2297,6 +2405,35 @@ impl TemplateType {
                     }
                 }
                 writeln!(out, "<|assistant|>")?;
+            }
+            TemplateType::TinyLlamaChat => {
+                let sys = system.unwrap_or(
+                    "You are a friendly chatbot who always responds in a helpful manner.",
+                );
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::DolphinChat => {
+                let sys = system.unwrap_or("You are Dolphin, a helpful AI assistant.");
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::ChatGptChat => {
+                let sys = system.unwrap_or("You are a helpful assistant.");
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
             }
         }
 
@@ -4231,5 +4368,189 @@ mod detect_logging_tests {
         assert!(s.contains("GPT4 Correct User: Hello"));
         assert!(s.contains("GPT4 Correct Assistant: Hi!"));
         assert!(s.ends_with("GPT4 Correct Assistant:"));
+    }
+
+    // ── TinyLlamaChat tests ────────────────────────────────────────
+
+    #[test]
+    fn test_tinyllama_chat_template() {
+        let t = TemplateType::TinyLlamaChat;
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains(
+            "You are a friendly chatbot who always responds in a helpful manner."
+        ));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\nHello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = t.apply("Hello!", Some("Custom system."));
+        assert!(result.contains("Custom system."));
+        assert!(!result.contains("friendly chatbot"));
+    }
+
+    #[test]
+    fn test_detect_tinyllama_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("TinyLlama-1.1B-Chat"), None),
+            TemplateType::TinyLlamaChat
+        );
+        assert_eq!(
+            TemplateType::detect(Some("tiny-llama-chat"), None),
+            TemplateType::TinyLlamaChat
+        );
+    }
+
+    #[test]
+    fn test_tinyllama_does_not_match_llama3() {
+        assert_eq!(
+            TemplateType::detect(Some("tinyllama"), None),
+            TemplateType::TinyLlamaChat
+        );
+    }
+
+    #[test]
+    fn test_render_chat_tinyllama() {
+        let t = TemplateType::TinyLlamaChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("Be helpful."));
+        assert!(s.contains("<|im_start|>user\nHello"));
+        assert!(s.contains("<|im_start|>assistant\nHi!"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_tinyllama_bos_and_parse() {
+        assert!(TemplateType::TinyLlamaChat.should_add_bos());
+        assert!(TemplateType::TinyLlamaChat.parse_special());
+    }
+
+    // ── DolphinChat tests ──────────────────────────────────────────
+
+    #[test]
+    fn test_dolphin_chat_template() {
+        let t = TemplateType::DolphinChat;
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are Dolphin, a helpful AI assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\nHello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = t.apply("Hello!", Some("Custom."));
+        assert!(result.contains("Custom."));
+        assert!(!result.contains("Dolphin"));
+    }
+
+    #[test]
+    fn test_detect_dolphin_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("dolphin-2.6-mistral"), None),
+            TemplateType::DolphinChat
+        );
+    }
+
+    #[test]
+    fn test_render_chat_dolphin() {
+        let t = TemplateType::DolphinChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be nice.")).unwrap();
+        assert!(s.contains("Be nice."));
+        assert!(s.contains("<|im_start|>user\nHello"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_dolphin_bos_and_parse() {
+        assert!(!TemplateType::DolphinChat.should_add_bos());
+        assert!(TemplateType::DolphinChat.parse_special());
+    }
+
+    // ── ChatGptChat tests ──────────────────────────────────────────
+
+    #[test]
+    fn test_chatgpt_chat_template() {
+        let t = TemplateType::ChatGptChat;
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\nHello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = t.apply("Hello!", Some("Custom."));
+        assert!(result.contains("Custom."));
+    }
+
+    #[test]
+    fn test_detect_chatgpt_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("chatgpt-4o"), None),
+            TemplateType::ChatGptChat
+        );
+        assert_eq!(
+            TemplateType::detect(Some("gpt-4-turbo"), None),
+            TemplateType::ChatGptChat
+        );
+        assert_eq!(
+            TemplateType::detect(Some("gpt4-gguf"), None),
+            TemplateType::ChatGptChat
+        );
+    }
+
+    #[test]
+    fn test_chatgpt_does_not_match_gpt2() {
+        assert_ne!(
+            TemplateType::detect(Some("gpt2-medium"), None),
+            TemplateType::ChatGptChat
+        );
+    }
+
+    #[test]
+    fn test_render_chat_chatgpt() {
+        let t = TemplateType::ChatGptChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("Be helpful."));
+        assert!(s.contains("<|im_start|>user\nHello"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_chatgpt_bos_and_parse() {
+        assert!(!TemplateType::ChatGptChat.should_add_bos());
+        assert!(TemplateType::ChatGptChat.parse_special());
+    }
+
+    #[test]
+    fn test_fromstr_new_templates() {
+        assert_eq!("tinyllama-chat".parse::<TemplateType>().unwrap(), TemplateType::TinyLlamaChat);
+        assert_eq!("tinyllama".parse::<TemplateType>().unwrap(), TemplateType::TinyLlamaChat);
+        assert_eq!("tiny-llama".parse::<TemplateType>().unwrap(), TemplateType::TinyLlamaChat);
+        assert_eq!("dolphin-chat".parse::<TemplateType>().unwrap(), TemplateType::DolphinChat);
+        assert_eq!("dolphin".parse::<TemplateType>().unwrap(), TemplateType::DolphinChat);
+        assert_eq!("chatgpt-chat".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
+        assert_eq!("chatgpt".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
+        assert_eq!("gpt4-chat".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
+    }
+
+    #[test]
+    fn test_display_new_templates() {
+        assert_eq!(TemplateType::TinyLlamaChat.to_string(), "tinyllama-chat");
+        assert_eq!(TemplateType::DolphinChat.to_string(), "dolphin-chat");
+        assert_eq!(TemplateType::ChatGptChat.to_string(), "chatgpt-chat");
     }
 }

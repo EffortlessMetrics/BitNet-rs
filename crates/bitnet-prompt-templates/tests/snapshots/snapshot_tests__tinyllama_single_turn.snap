@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|im_start|>system
+You are a friendly chatbot who always responds in a helpful manner.<|im_end|>
+<|im_start|>user
+Explain photosynthesis briefly.<|im_end|>
+<|im_start|>assistant

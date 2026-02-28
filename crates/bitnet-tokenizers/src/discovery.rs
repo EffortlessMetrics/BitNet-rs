@@ -86,6 +86,12 @@ pub struct ModelCompatibilityMatrix {
     pub gemma2_256k: TokenizerDownloadInfo,
     /// Phi-3 with 32K vocabulary - BPE tokenizer
     pub phi3_32k: TokenizerDownloadInfo,
+    /// TinyLlama with 32K vocabulary - SentencePiece tokenizer
+    pub tinyllama_32k: TokenizerDownloadInfo,
+    /// Dolphin (Mistral finetune) with 32K vocabulary - BPE tokenizer
+    pub dolphin_32k: TokenizerDownloadInfo,
+    /// ChatGPT/GPT-4 with ~100K vocabulary - BPE tokenizer
+    pub chatgpt_100k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -300,6 +306,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "phi3-32k".to_string(),
                 expected_vocab: Some(32064),
+            },
+            tinyllama_32k: TokenizerDownloadInfo {
+                repo: "TinyLlama/TinyLlama-1.1B-Chat-v1.0".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "tinyllama-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            dolphin_32k: TokenizerDownloadInfo {
+                repo: "cognitivecomputations/dolphin-2.6-mistral-7b-dpo".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "dolphin-32k".to_string(),
+                expected_vocab: Some(32768),
+            },
+            chatgpt_100k: TokenizerDownloadInfo {
+                repo: "openai/gpt-4".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "chatgpt-100k".to_string(),
+                expected_vocab: Some(100000),
             },
         }
     }

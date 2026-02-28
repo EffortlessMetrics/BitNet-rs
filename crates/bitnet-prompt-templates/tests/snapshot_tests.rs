@@ -903,3 +903,81 @@ fn snapshot_phi3_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("phi3_multi_turn", out);
 }
+
+// ── TinyLlamaChat ───────────────────────────────────────────────────
+
+#[test]
+fn snapshot_tinyllama_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::TinyLlamaChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("tinyllama_single_turn", out);
+}
+
+#[test]
+fn snapshot_tinyllama_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::TinyLlamaChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("tinyllama_with_system", out);
+}
+
+#[test]
+fn snapshot_tinyllama_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::TinyLlamaChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("tinyllama_multi_turn", out);
+}
+
+// ── DolphinChat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_dolphin_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::DolphinChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("dolphin_single_turn", out);
+}
+
+#[test]
+fn snapshot_dolphin_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::DolphinChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("dolphin_with_system", out);
+}
+
+#[test]
+fn snapshot_dolphin_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::DolphinChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("dolphin_multi_turn", out);
+}
+
+// ── ChatGptChat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_chatgpt_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::ChatGptChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("chatgpt_single_turn", out);
+}
+
+#[test]
+fn snapshot_chatgpt_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::ChatGptChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("chatgpt_with_system", out);
+}
+
+#[test]
+fn snapshot_chatgpt_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::ChatGptChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("chatgpt_multi_turn", out);
+}

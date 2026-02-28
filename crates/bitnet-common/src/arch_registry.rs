@@ -185,6 +185,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Gelu,
                 default_context_length: None,
             }),
+            "tinyllama" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(2048),
+            }),
+            "dolphin" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "chatgpt" | "gpt4" | "gpt-4" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: Some(8192),
+            }),
             _ => None,
         }
     }
@@ -237,6 +252,11 @@ impl ArchitectureRegistry {
             "bitnet-b1.58",
             "gpt",
             "bert",
+            "tinyllama",
+            "dolphin",
+            "chatgpt",
+            "gpt4",
+            "gpt-4",
             "zephyr",
             "vicuna",
             "orca",
