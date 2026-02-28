@@ -13,9 +13,9 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — 35 prompt templates covering 30+ model families: LLaMA-2/3, Phi-3/4, Qwen, Gemma/Gemma2, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command/Command-R+, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo, Zephyr, Vicuna, Orca, Solar, Alpaca, Nous Hermes, WizardLM, OpenChat, Granite, Nemotron, Saiga; plus FillInMiddle for code infilling; auto-detected from GGUF metadata or tokenizer path
+- **Chat templates** — 47 prompt templates covering 40+ model families: LLaMA-2/3, Phi-3/4, Qwen/Qwen2.5, Gemma/Gemma2, Mistral/Mixtral/Nemo, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command/Command-R+, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo, Zephyr, Vicuna, Orca, Solar, Alpaca, Nous Hermes, WizardLM, OpenChat, Granite, Nemotron, Saiga, TinyLlama, Dolphin, ChatGPT, StableLM, Bloom, Jamba, Persimmon, XVERSE, Arctic; plus FillInMiddle for code infilling; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **Multi-SLM architecture registry** — 55+ architecture strings across 30+ model families with auto-detected normalization, activation, and context defaults
+- **Multi-SLM architecture registry** — 70+ architecture strings across 40+ model families with auto-detected normalization, activation, and context defaults
 
 <details>
 <summary><strong>Supported Model Architectures</strong> (click to expand)</summary>
@@ -55,6 +55,20 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 | Llama-2 | llama2, llama-2 | RmsNorm | SiLU | Llama2Chat | llama2_32k |
 | Gemma 2 | gemma2, gemma-2 | RmsNorm | GeLU | Gemma2Chat | gemma2_256k |
 | Phi-3 | phi3, phi-3 | RmsNorm | SiLU | Phi3Instruct | phi3_32k |
+| Llama-2 | llama2, llama-2 | RmsNorm | SiLU | Llama2Chat | llama2_32k |
+| Gemma 2 | gemma2, gemma-2 | RmsNorm | GeLU | Gemma2Chat | gemma2_256k |
+| Mixtral | mixtral | RmsNorm | SiLU | MixtralInstruct | mixtral_32k |
+| Mistral Nemo | mistral-nemo, nemo | RmsNorm | SiLU | MistralNemoChat | mistral_nemo_128k |
+| Qwen 2.5 | qwen2.5, qwen-2.5 | RmsNorm | SiLU | Qwen25Chat | qwen25_152k |
+| TinyLlama | tinyllama | RmsNorm | SiLU | TinyLlamaChat | tinyllama_32k |
+| Dolphin | dolphin | RmsNorm | SiLU | DolphinChat | dolphin_32k |
+| ChatGPT | chatgpt, gpt4, gpt-4 | LayerNorm | GeLU | ChatGptChat | chatgpt_100k |
+| StableLM | stablelm, stable-lm | RmsNorm | SiLU | StableLMChat | stablelm_32k |
+| Bloom | bloom, bloomz | LayerNorm | GeLU | BloomChat | bloom_250k |
+| Jamba | jamba | RmsNorm | SiLU | JambaChat | jamba_256k |
+| Persimmon | persimmon, adept | LayerNorm | GeLU | PersimmonChat | persimmon_262k |
+| XVERSE | xverse | RmsNorm | SiLU | XverseChat | xverse_32k |
+| Arctic | arctic | RmsNorm | SiLU | ArcticInstruct | arctic_32k |
 | GPT | gpt | LayerNorm | GeLU | — | gpt2_50k |
 | BERT | bert | LayerNorm | GeLU | — | — |
 

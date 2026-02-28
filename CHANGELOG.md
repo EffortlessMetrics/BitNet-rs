@@ -57,9 +57,22 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Llama-2 chat template**: Add `Llama2Chat` template with `[INST]<<SYS>>`/`<</SYS>>` format (distinct from Llama-3), `llama2_32k` tokenizer entry, and `llama2`/`llama-2` arch entries.
 - **Gemma 2 chat template**: Add `Gemma2Chat` template (same format as GemmaChat, separate version detection), `gemma2_256k` tokenizer entry, and `gemma2`/`gemma-2` arch entries.
 - **Phi-3 instruct template**: Add `Phi3Instruct` template with `<|system|>`/`<|user|>`/`<|assistant|>`/`<|end|>` markers (distinct from Phi-4 ChatML), `phi3_32k` tokenizer entry, and `phi3`/`phi-3` arch entries.
+- **TinyLlama chat template**: Add `TinyLlamaChat` ChatML variant for TinyLlama-1.1B models, `tinyllama_32k` tokenizer entry, and `tinyllama` arch entry.
+- **Dolphin chat template**: Add `DolphinChat` ChatML variant for Cognitive Computations Dolphin models, `dolphin_32k` tokenizer entry, and `dolphin` arch entry.
+- **ChatGPT chat template**: Add `ChatGptChat` ChatML format for OpenAI GPT-4 style models, `chatgpt_100k` tokenizer entry, and `chatgpt`/`gpt4`/`gpt-4` arch entries.
+- **Mixtral instruct template**: Add `MixtralInstruct` [INST] format for Mixture-of-Experts models, `mixtral_32k` tokenizer entry, and `mixtral` arch entry.
+- **StableLM chat template**: Add `StableLMChat` ChatML variant for Stability AI models, `stablelm_32k` tokenizer entry, and `stablelm`/`stable-lm`/`stablecode` arch entries.
+- **Bloom chat template**: Add `BloomChat` template with simple User/Assistant format for BigScience BLOOM, `bloom_250k` tokenizer entry, and `bloom`/`bloomz` arch entries.
+- **Jamba chat template**: Add `JambaChat` ChatML variant for AI21 Labs hybrid SSM-Transformer, `jamba_256k` tokenizer entry, and `jamba` arch entry.
+- **Persimmon chat template**: Add `PersimmonChat` template with human/adept turn format, `persimmon_262k` tokenizer entry, and `persimmon`/`adept` arch entries.
+- **XVERSE chat template**: Add `XverseChat` template with Human/Assistant format for XVERSE Chinese LLM, `xverse_32k` tokenizer entry, and `xverse` arch entry.
+- **Qwen 2.5 chat template**: Add `Qwen25Chat` ChatML variant with version-specific detection, `qwen25_152k` tokenizer entry, and `qwen2.5`/`qwen-2.5` arch entries.
+- **Mistral Nemo chat template**: Add `MistralNemoChat` [INST] format for Mistral Nemo 12B (128K context), `mistral_nemo_128k` tokenizer entry, and `mistral-nemo`/`nemo` arch entries.
+- **Arctic instruct template**: Add `ArcticInstruct` ChatML variant for Snowflake Arctic, `arctic_32k` tokenizer entry, and `arctic` arch entry.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
+- **ChatML code deduplication**: Extract shared `apply_chatml()`, `render_chatml()` helpers and `CHATML_STOP_SEQUENCES` constant; 11 ChatML-variant templates now delegate to shared code (139 lines removed).
 - **Root directory cleanup**: Remove 34 temporary files (Python scripts, patches, summary text files, temp .rs files) accumulated during development.
 - **Clippy lint fixes**: Collapse nested if-let per `collapsible_if` lint in config.rs and prompt-templates lib.rs.
 - **CLAUDE.md count fixes**: Update template count (13→17) and tokenizer entry count (14→18) in project documentation.
