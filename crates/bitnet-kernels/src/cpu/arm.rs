@@ -363,10 +363,7 @@ impl NeonKernel {
                 let lt_neg = vcltq_f32(normalized, threshold_neg); // mask: val < -0.5
 
                 // Select codes: positive → 1, negative → 3, else → 0
-                let codes = vorrq_u32(
-                    vandq_u32(gt_pos, code_pos),
-                    vandq_u32(lt_neg, code_neg),
-                );
+                let codes = vorrq_u32(vandq_u32(gt_pos, code_pos), vandq_u32(lt_neg, code_neg));
 
                 // Pack 4 codes into one byte (2 bits each)
                 let byte_idx = (start + i) / 4;
@@ -482,10 +479,7 @@ impl NeonKernel {
 
                 // Each mask is all-1s (0xFFFFFFFF) or 0; AND with 1 gives 0 or 1
                 let codes = vaddq_u32(
-                    vaddq_u32(
-                        vandq_u32(ge_neg, one),
-                        vandq_u32(ge_zero, one),
-                    ),
+                    vaddq_u32(vandq_u32(ge_neg, one), vandq_u32(ge_zero, one)),
                     vandq_u32(ge_pos, one),
                 );
 
@@ -630,10 +624,7 @@ impl NeonKernel {
 
         if block_size != QK256 {
             return Err(BitNetError::Kernel(KernelError::InvalidArguments {
-                reason: format!(
-                    "QK256 dequantize requires block_size=256, got {}",
-                    block_size
-                ),
+                reason: format!("QK256 dequantize requires block_size=256, got {}", block_size),
             }));
         }
 
@@ -695,8 +686,7 @@ impl NeonKernel {
 
             // Scalar tail
             while elem_idx < QK256 && block_start + elem_idx < total_elements {
-                output[block_start + elem_idx] =
-                    LUT[codes[elem_idx] as usize] * scale;
+                output[block_start + elem_idx] = LUT[codes[elem_idx] as usize] * scale;
                 elem_idx += 1;
             }
         }
@@ -783,17 +773,12 @@ mod tests {
         let quantized = vec![0xAAu8 as i8; 64]; // 0b10101010 → all code 2
         let scales = vec![2.0f32; 1];
 
-        let result = kernel
-            .dequantize_qk256(&quantized, &scales, 256)
-            .expect("dequantize should succeed");
+        let result =
+            kernel.dequantize_qk256(&quantized, &scales, 256).expect("dequantize should succeed");
 
         assert_eq!(result.len(), 256);
         for &val in &result {
-            assert!(
-                (val - 2.0).abs() < 1e-6,
-                "Expected 2.0 (LUT[2]=1.0 * scale=2.0), got {}",
-                val
-            );
+            assert!((val - 2.0).abs() < 1e-6, "Expected 2.0 (LUT[2]=1.0 * scale=2.0), got {}", val);
         }
     }
 
@@ -823,13 +808,7 @@ mod tests {
 
         assert_eq!(result_neon.len(), result_scalar.len());
         for (i, (n, s)) in result_neon.iter().zip(result_scalar.iter()).enumerate() {
-            assert!(
-                (n - s).abs() < 1e-6,
-                "Mismatch at index {}: neon={}, scalar={}",
-                i,
-                n,
-                s
-            );
+            assert!((n - s).abs() < 1e-6, "Mismatch at index {}: neon={}, scalar={}", i, n, s);
         }
     }
 
@@ -855,9 +834,7 @@ mod tests {
         let mut output = vec![0u8; 32]; // 128 values / 4 per byte
         let mut scales = vec![0.0f32; 1]; // 128 / 128 = 1 block
 
-        kernel
-            .quantize(&input, &mut output, &mut scales, QuantizationType::TL2)
-            .unwrap();
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL2).unwrap();
 
         assert!(scales[0] > 0.0);
         assert!(output.iter().any(|&x| x != 0));
