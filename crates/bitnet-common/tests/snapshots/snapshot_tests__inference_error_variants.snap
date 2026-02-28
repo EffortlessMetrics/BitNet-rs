@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "Generation failed: NaN logits",
+    "Invalid input: empty prompt",
+    "Context length exceeded: 4096",
+    "Tokenization failed: unknown token",
+]

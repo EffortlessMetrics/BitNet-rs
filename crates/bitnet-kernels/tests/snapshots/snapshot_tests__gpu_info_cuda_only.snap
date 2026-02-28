@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_tests.rs
+expression: info
+---
+GpuInfo {
+    cuda: true,
+    cuda_version: Some(
+        "12.4",
+    ),
+    metal: false,
+    rocm: false,
+    rocm_version: None,
+    opengl: false,
+    wgpu: false,
+}

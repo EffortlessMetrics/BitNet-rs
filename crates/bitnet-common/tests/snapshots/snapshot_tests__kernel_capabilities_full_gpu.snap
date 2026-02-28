@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: caps
+---
+KernelCapabilities {
+    cpu_rust: true,
+    cuda_compiled: true,
+    cuda_runtime: true,
+    hip_compiled: false,
+    hip_runtime: false,
+    oneapi_compiled: false,
+    oneapi_runtime: false,
+    cpp_ffi: false,
+    simd_level: Avx512,
+}

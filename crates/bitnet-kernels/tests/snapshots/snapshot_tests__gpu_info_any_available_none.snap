@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_tests.rs
+expression: "format!(\"{}\", info.any_available())"
+---
+false

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "Unsupported quantization type: IQ4_XS",
+    "Invalid block size: 128",
+    "Quantization failed: overflow",
+]
