@@ -695,7 +695,8 @@ name = "bitnet-gpu-hal"
 version = "0.2.0-alpha.1"
 dependencies = [
  "proptest",
- "thiserror 2.0.18",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

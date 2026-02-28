@@ -22,4 +22,7 @@ pub use attention::{
     launch_mha_decode, launch_mha_prefill,
 };
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
-pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
+pub use rmsnorm::{RmsNormConfig, launch_rmsnorm, rmsnorm_cpu_reference};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use rmsnorm::{RMSNORM_KERNEL_SRC, launch_rmsnorm_cuda};
