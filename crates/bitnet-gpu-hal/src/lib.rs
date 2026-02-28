@@ -123,7 +123,11 @@ pub mod gpu_topology;
 pub mod model_debugger;
 
 // === Testing & Validation ===
+<<<<<<< HEAD
 pub mod activation_kernels;
+=======
+pub mod api_versioning;
+>>>>>>> 34b79475 (feat(gpu-hal): API versioning with deprecation tracking)
 pub mod compatibility_checker;
 pub mod cross_compile;
 pub mod e2e_integration;
