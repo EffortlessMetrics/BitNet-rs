@@ -3,6 +3,8 @@
 //! Provides unified compile-time and runtime device capability queries,
 //! extracted from `bitnet-kernels` for use by the broader workspace.
 
+pub mod npu;
+
 pub use bitnet_common::kernel_registry::SimdLevel;
 
 // ── CPU capabilities ─────────────────────────────────────────────────────────
