@@ -68,6 +68,14 @@ pub enum TemplateType {
     CohereCommand,
     /// InternLM ChatML format with im_start/im_end tokens
     InternLMChat,
+    /// Yi chat format (ChatML-style with im_start/im_end)
+    YiChat,
+    /// Baichuan chat format with custom role tokens
+    BaichuanChat,
+    /// ChatGLM/GLM-4 chat format with custom role markers
+    ChatGLMChat,
+    /// MPT instruct format (simple ### markers)
+    MptInstruct,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -100,11 +108,22 @@ impl std::str::FromStr for TemplateType {
             "internlm-chat" | "internlm_chat" | "internlm" => {
                 Ok(Self::InternLMChat)
             }
+            "yi-chat" | "yi_chat" | "yi" => Ok(Self::YiChat),
+            "baichuan-chat" | "baichuan_chat" | "baichuan" => {
+                Ok(Self::BaichuanChat)
+            }
+            "chatglm-chat" | "chatglm_chat" | "chatglm" | "glm-4" | "glm4" => {
+                Ok(Self::ChatGLMChat)
+            }
+            "mpt-instruct" | "mpt_instruct" | "mpt" => {
+                Ok(Self::MptInstruct)
+            }
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
                  mistral-chat, deepseek-chat, starcoder, falcon-chat, \
-                 codellama-instruct, cohere-command, internlm-chat",
+                 codellama-instruct, cohere-command, internlm-chat, \
+                 yi-chat, baichuan-chat, chatglm-chat, mpt-instruct",
                 s
             ),
         }
@@ -127,6 +146,10 @@ impl std::fmt::Display for TemplateType {
             Self::CodeLlamaInstruct => write!(f, "codellama-instruct"),
             Self::CohereCommand => write!(f, "cohere-command"),
             Self::InternLMChat => write!(f, "internlm-chat"),
+            Self::YiChat => write!(f, "yi-chat"),
+            Self::BaichuanChat => write!(f, "baichuan-chat"),
+            Self::ChatGLMChat => write!(f, "chatglm-chat"),
+            Self::MptInstruct => write!(f, "mpt-instruct"),
         }
     }
 }
@@ -187,6 +210,24 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::CohereCommand;
+            }
+            // ChatGLM/GLM-4 signature
+            if jinja.contains("[gMASK]") || (jinja.contains("<|user|>") && jinja.contains("<|assistant|>")) {
+                tracing::debug!(
+                    template = "ChatGLMChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::ChatGLMChat;
+            }
+            // MPT ### instruction markers
+            if jinja.contains("### Instruction") && jinja.contains("### Response") {
+                tracing::debug!(
+                    template = "MptInstruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::MptInstruct;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
@@ -301,6 +342,42 @@ impl TemplateType {
                 );
                 return Self::InternLMChat;
             }
+            if lower.contains("yi-") || lower.contains("yi_") || lower == "yi" {
+                tracing::debug!(
+                    template = "YiChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::YiChat;
+            }
+            if lower.contains("baichuan") {
+                tracing::debug!(
+                    template = "BaichuanChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::BaichuanChat;
+            }
+            if lower.contains("chatglm") || lower.contains("glm-4") || lower.contains("glm4") {
+                tracing::debug!(
+                    template = "ChatGLMChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::ChatGLMChat;
+            }
+            if lower.contains("mpt") {
+                tracing::debug!(
+                    template = "MptInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::MptInstruct;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -338,6 +415,16 @@ impl TemplateType {
             }
             Self::InternLMChat => {
                 Self::apply_internlm_chat(user_text, system_prompt)
+            }
+            Self::YiChat => Self::apply_yi_chat(user_text, system_prompt),
+            Self::BaichuanChat => {
+                Self::apply_baichuan_chat(user_text, system_prompt)
+            }
+            Self::ChatGLMChat => {
+                Self::apply_chatglm_chat(user_text, system_prompt)
+            }
+            Self::MptInstruct => {
+                Self::apply_mpt_instruct(user_text, system_prompt)
             }
         }
     }
@@ -665,6 +752,77 @@ impl TemplateType {
 
         result
     }
+
+    /// Apply Yi chat template (ChatML format)
+    fn apply_yi_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
+    /// Apply Baichuan chat template
+    ///
+    /// Format: `<reserved_106>{user}<reserved_107>`
+    fn apply_baichuan_chat(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str("<reserved_106>");
+            result.push_str(sys);
+            result.push_str("<reserved_107>");
+        }
+        result.push_str("<reserved_106>");
+        result.push_str(user_text);
+        result.push_str("<reserved_107>");
+        result
+    }
+
+    /// Apply ChatGLM/GLM-4 chat template
+    ///
+    /// Format: `[gMASK]<sop><|system|>\n{sys}<|user|>\n{user}<|assistant|>\n`
+    fn apply_chatglm_chat(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::from("[gMASK]<sop>");
+        if let Some(sys) = system_prompt {
+            result.push_str("<|system|>\n");
+            result.push_str(sys);
+        }
+        result.push_str("<|user|>\n");
+        result.push_str(user_text);
+        result.push_str("<|assistant|>\n");
+        result
+    }
+
+    /// Apply MPT instruct template
+    ///
+    /// Format: `### Instruction\n{text}\n\n### Response\n`
+    fn apply_mpt_instruct(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str("### System\n");
+            result.push_str(sys);
+            result.push_str("\n\n");
+        }
+        result.push_str("### Instruction\n");
+        result.push_str(user_text);
+        result.push_str("\n\n### Response\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -699,6 +857,18 @@ impl TemplateType {
                     "<|im_end|>".to_string(),
                     "<eoa>".to_string(),
                 ]
+            }
+            Self::YiChat => {
+                vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()]
+            }
+            Self::BaichuanChat => {
+                vec!["</s>".to_string()]
+            }
+            Self::ChatGLMChat => {
+                vec!["<|user|>".to_string(), "<|observation|>".to_string()]
+            }
+            Self::MptInstruct => {
+                vec!["### Instruction".to_string(), "<|endoftext|>".to_string()]
             }
         }
     }
@@ -753,6 +923,10 @@ impl TemplateType {
             Self::CodeLlamaInstruct => false, // [INST] format with own markers
             Self::CohereCommand => false, // Uses START_OF_TURN tokens
             Self::InternLMChat => false, // ChatML uses im_start/im_end tokens
+            Self::YiChat => false,      // ChatML uses im_start/im_end tokens
+            Self::BaichuanChat => false, // Uses reserved tokens
+            Self::ChatGLMChat => false,  // Uses [gMASK]<sop> tokens
+            Self::MptInstruct => true,   // Simple ### markers, BOS helpful
         }
     }
 
@@ -771,6 +945,9 @@ impl TemplateType {
                 | Self::CodeLlamaInstruct
                 | Self::CohereCommand
                 | Self::InternLMChat
+                | Self::YiChat
+                | Self::BaichuanChat
+                | Self::ChatGLMChat
         )
     }
 
@@ -1050,6 +1227,71 @@ impl TemplateType {
                 }
 
                 writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::YiChat => {
+                // Yi ChatML format (same as Phi4/Qwen)
+                let sys = system.unwrap_or("You are a helpful assistant.");
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::BaichuanChat => {
+                // Baichuan reserved token format
+                if let Some(sys) = system {
+                    write!(out, "<reserved_106>{}<reserved_107>", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<reserved_106>{}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<reserved_107>{}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "<reserved_107>")?;
+            }
+            TemplateType::ChatGLMChat => {
+                // ChatGLM/GLM-4 format
+                write!(out, "[gMASK]<sop>")?;
+                if let Some(sys) = system {
+                    write!(out, "<|system|>\n{}", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<|user|>\n{}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<|assistant|>\n{}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "<|assistant|>\n")?;
+            }
+            TemplateType::MptInstruct => {
+                // MPT ### marker format
+                if let Some(sys) = system {
+                    writeln!(out, "### System\n{}\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "### Instruction\n{}\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "### Response\n{}\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "### Response")?;
             }
         }
 
@@ -1474,6 +1716,38 @@ mod tests {
             "internlm".parse::<TemplateType>().unwrap(),
             TemplateType::InternLMChat
         );
+        assert_eq!(
+            "yi-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::YiChat
+        );
+        assert_eq!(
+            "yi".parse::<TemplateType>().unwrap(),
+            TemplateType::YiChat
+        );
+        assert_eq!(
+            "baichuan-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::BaichuanChat
+        );
+        assert_eq!(
+            "baichuan".parse::<TemplateType>().unwrap(),
+            TemplateType::BaichuanChat
+        );
+        assert_eq!(
+            "chatglm-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::ChatGLMChat
+        );
+        assert_eq!(
+            "glm-4".parse::<TemplateType>().unwrap(),
+            TemplateType::ChatGLMChat
+        );
+        assert_eq!(
+            "mpt-instruct".parse::<TemplateType>().unwrap(),
+            TemplateType::MptInstruct
+        );
+        assert_eq!(
+            "mpt".parse::<TemplateType>().unwrap(),
+            TemplateType::MptInstruct
+        );
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -1493,6 +1767,10 @@ mod tests {
         assert!(!TemplateType::CodeLlamaInstruct.default_stop_sequences().is_empty());
         assert!(!TemplateType::CohereCommand.default_stop_sequences().is_empty());
         assert!(!TemplateType::InternLMChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::YiChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::BaichuanChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::ChatGLMChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::MptInstruct.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -1583,6 +1861,10 @@ mod tests {
         assert!(!TemplateType::CodeLlamaInstruct.should_add_bos()); // [INST] markers
         assert!(!TemplateType::CohereCommand.should_add_bos()); // Turn tokens
         assert!(!TemplateType::InternLMChat.should_add_bos()); // ChatML tokens
+        assert!(!TemplateType::YiChat.should_add_bos()); // ChatML tokens
+        assert!(!TemplateType::BaichuanChat.should_add_bos()); // Reserved tokens
+        assert!(!TemplateType::ChatGLMChat.should_add_bos()); // gMASK tokens
+        assert!(TemplateType::MptInstruct.should_add_bos()); // Simple markers
     }
 
     #[test]
@@ -1600,6 +1882,10 @@ mod tests {
         assert!(TemplateType::CodeLlamaInstruct.parse_special()); // Has special tokens
         assert!(TemplateType::CohereCommand.parse_special()); // Has turn tokens
         assert!(TemplateType::InternLMChat.parse_special()); // Has im_start/im_end
+        assert!(TemplateType::YiChat.parse_special()); // Has im_start/im_end
+        assert!(TemplateType::BaichuanChat.parse_special()); // Has reserved tokens
+        assert!(TemplateType::ChatGLMChat.parse_special()); // Has gMASK/sop tokens
+        assert!(!TemplateType::MptInstruct.parse_special()); // Simple text markers
     }
 
     #[test]
@@ -1740,6 +2026,14 @@ mod property_tests {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ]
     }
 
@@ -1803,6 +2097,14 @@ mod property_tests {
                 Just(TemplateType::MistralChat),
                 Just(TemplateType::DeepSeekChat),
                 Just(TemplateType::StarCoder),
+                Just(TemplateType::FalconChat),
+                Just(TemplateType::CodeLlamaInstruct),
+                Just(TemplateType::CohereCommand),
+                Just(TemplateType::InternLMChat),
+                Just(TemplateType::YiChat),
+                Just(TemplateType::BaichuanChat),
+                Just(TemplateType::ChatGLMChat),
+                Just(TemplateType::MptInstruct),
             ],
         ) {
             let stops = template.default_stop_sequences();
@@ -2001,5 +2303,169 @@ mod detect_logging_tests {
         assert!(s.contains("How are you?"));
         assert!(s.contains("<|im_end|>"));
         assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    // ── Yi Chat ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_yi_chat_template() {
+        let template = TemplateType::YiChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_start|>user\nHello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_detect_yi_from_name() {
+        let t = TemplateType::detect(Some("yi-34b-chat"), None);
+        assert_eq!(t, TemplateType::YiChat);
+    }
+
+    #[test]
+    fn test_render_chat_yi() {
+        let t = TemplateType::YiChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+        ];
+        let s = t.render_chat(&hist, Some("Be concise.")).unwrap();
+        assert!(s.contains("<|im_start|>system\nBe concise.<|im_end|>"));
+        assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
+        assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    // ── Baichuan Chat ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_baichuan_chat_template() {
+        let template = TemplateType::BaichuanChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<reserved_106>Hello!"));
+        assert!(result.contains("<reserved_107>"));
+    }
+
+    #[test]
+    fn test_detect_baichuan_from_name() {
+        let t = TemplateType::detect(Some("baichuan2-13b-chat"), None);
+        assert_eq!(t, TemplateType::BaichuanChat);
+    }
+
+    #[test]
+    fn test_render_chat_baichuan() {
+        let t = TemplateType::BaichuanChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, None).unwrap();
+        assert!(s.contains("<reserved_106>Hello"));
+        assert!(s.contains("<reserved_107>Hi!"));
+        assert!(s.contains("<reserved_106>Bye"));
+        assert!(s.ends_with("<reserved_107>"));
+    }
+
+    // ── ChatGLM Chat ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_chatglm_chat_template() {
+        let template = TemplateType::ChatGLMChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.starts_with("[gMASK]<sop>"));
+        assert!(result.contains("<|user|>\nHello!"));
+        assert!(result.ends_with("<|assistant|>\n"));
+    }
+
+    #[test]
+    fn test_chatglm_chat_with_system() {
+        let template = TemplateType::ChatGLMChat;
+        let result = template.apply("Hello!", Some("Be helpful."));
+        assert!(result.contains("<|system|>\nBe helpful."));
+        assert!(result.contains("<|user|>\nHello!"));
+    }
+
+    #[test]
+    fn test_detect_chatglm_from_name() {
+        let t = TemplateType::detect(Some("chatglm3-6b"), None);
+        assert_eq!(t, TemplateType::ChatGLMChat);
+
+        let t2 = TemplateType::detect(Some("glm-4-9b"), None);
+        assert_eq!(t2, TemplateType::ChatGLMChat);
+    }
+
+    #[test]
+    fn test_detect_chatglm_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("[gMASK]<sop><|user|>\n{content}<|assistant|>"),
+        );
+        assert_eq!(t, TemplateType::ChatGLMChat);
+    }
+
+    #[test]
+    fn test_render_chat_chatglm() {
+        let t = TemplateType::ChatGLMChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+        ];
+        let s = t.render_chat(&hist, Some("System.")).unwrap();
+        assert!(s.starts_with("[gMASK]<sop>"));
+        assert!(s.contains("<|system|>\nSystem."));
+        assert!(s.contains("<|user|>\nHello"));
+        assert!(s.contains("<|assistant|>\nHi!"));
+        assert!(s.ends_with("<|assistant|>\n"));
+    }
+
+    // ── MPT Instruct ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_mpt_instruct_template() {
+        let template = TemplateType::MptInstruct;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("### Instruction\nHello!"));
+        assert!(result.ends_with("### Response\n"));
+    }
+
+    #[test]
+    fn test_mpt_instruct_with_system() {
+        let template = TemplateType::MptInstruct;
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("### System\nBe concise."));
+        assert!(result.contains("### Instruction\nHello!"));
+    }
+
+    #[test]
+    fn test_detect_mpt_from_name() {
+        let t = TemplateType::detect(Some("mpt-7b-instruct"), None);
+        assert_eq!(t, TemplateType::MptInstruct);
+    }
+
+    #[test]
+    fn test_detect_mpt_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("### Instruction\n{content}\n\n### Response\n"),
+        );
+        assert_eq!(t, TemplateType::MptInstruct);
+    }
+
+    #[test]
+    fn test_render_chat_mpt() {
+        let t = TemplateType::MptInstruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("System.")).unwrap();
+        assert!(s.contains("### System\nSystem."));
+        assert!(s.contains("### Instruction\nHello"));
+        assert!(s.contains("### Response\nHi!"));
+        assert!(s.contains("### Instruction\nBye"));
+        assert!(s.ends_with("### Response\n"));
     }
 }

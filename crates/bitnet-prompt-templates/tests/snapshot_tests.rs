@@ -288,3 +288,107 @@ fn snapshot_internlm_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("internlm_multi_turn", out);
 }
+
+// ── Yi Chat ────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_yi_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::YiChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("yi_single_turn", out);
+}
+
+#[test]
+fn snapshot_yi_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::YiChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("yi_with_system", out);
+}
+
+#[test]
+fn snapshot_yi_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::YiChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("yi_multi_turn", out);
+}
+
+// ── Baichuan Chat ──────────────────────────────────────────────
+
+#[test]
+fn snapshot_baichuan_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::BaichuanChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("baichuan_single_turn", out);
+}
+
+#[test]
+fn snapshot_baichuan_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::BaichuanChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("baichuan_with_system", out);
+}
+
+#[test]
+fn snapshot_baichuan_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::BaichuanChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("baichuan_multi_turn", out);
+}
+
+// ── ChatGLM Chat ───────────────────────────────────────────────
+
+#[test]
+fn snapshot_chatglm_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::ChatGLMChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("chatglm_single_turn", out);
+}
+
+#[test]
+fn snapshot_chatglm_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::ChatGLMChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("chatglm_with_system", out);
+}
+
+#[test]
+fn snapshot_chatglm_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::ChatGLMChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("chatglm_multi_turn", out);
+}
+
+// ── MPT Instruct ───────────────────────────────────────────────
+
+#[test]
+fn snapshot_mpt_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::MptInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("mpt_single_turn", out);
+}
+
+#[test]
+fn snapshot_mpt_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::MptInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("mpt_with_system", out);
+}
+
+#[test]
+fn snapshot_mpt_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::MptInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("mpt_multi_turn", out);
+}

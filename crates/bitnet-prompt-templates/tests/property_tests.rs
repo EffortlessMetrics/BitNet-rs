@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -128,6 +128,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
     ) {
         let s = template.to_string();
@@ -152,6 +156,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -202,7 +210,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat | TemplateType::YiChat | TemplateType::BaichuanChat | TemplateType::ChatGLMChat | TemplateType::MptInstruct),
             "detect() returned an unexpected variant"
         );
     }
@@ -242,6 +250,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
     ) {
         let out = template.apply("", None);
@@ -266,6 +278,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -293,6 +309,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -367,6 +387,10 @@ proptest! {
             Just(TemplateType::CodeLlamaInstruct),
             Just(TemplateType::CohereCommand),
             Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -659,6 +683,92 @@ proptest! {
         let t = TemplateType::InternLMChat;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("internlm-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ── Yi Chat ────────────────────────────────────────────────────────
+
+    /// YiChat template always includes ChatML tokens.
+    #[test]
+    fn prop_yi_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::YiChat.apply(&user, system.as_deref());
+        prop_assert!(out.contains("<|im_start|>"), "YiChat missing <|im_start|>: {out:?}");
+        prop_assert!(out.contains("<|im_end|>"), "YiChat missing <|im_end|>: {out:?}");
+    }
+
+    /// YiChat display/parse round-trips correctly.
+    #[test]
+    fn prop_yi_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::YiChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("yi-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ── Baichuan Chat ──────────────────────────────────────────────────
+
+    /// BaichuanChat template always includes reserved tokens.
+    #[test]
+    fn prop_baichuan_contains_reserved_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::BaichuanChat.apply(&user, None);
+        prop_assert!(out.contains("<reserved_106>"), "BaichuanChat missing <reserved_106>: {out:?}");
+        prop_assert!(out.contains("<reserved_107>"), "BaichuanChat missing <reserved_107>: {out:?}");
+    }
+
+    /// BaichuanChat display/parse round-trips correctly.
+    #[test]
+    fn prop_baichuan_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::BaichuanChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("baichuan-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ── ChatGLM Chat ───────────────────────────────────────────────────
+
+    /// ChatGLMChat template always starts with [gMASK]<sop>.
+    #[test]
+    fn prop_chatglm_starts_with_gmask(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::ChatGLMChat.apply(&user, None);
+        prop_assert!(out.starts_with("[gMASK]<sop>"), "ChatGLMChat missing [gMASK]<sop>: {out:?}");
+        prop_assert!(out.contains("<|user|>"), "ChatGLMChat missing <|user|>: {out:?}");
+        prop_assert!(out.contains("<|assistant|>"), "ChatGLMChat missing <|assistant|>: {out:?}");
+    }
+
+    /// ChatGLMChat display/parse round-trips correctly.
+    #[test]
+    fn prop_chatglm_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::ChatGLMChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("chatglm-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ── MPT Instruct ───────────────────────────────────────────────────
+
+    /// MptInstruct template always includes ### markers.
+    #[test]
+    fn prop_mpt_contains_hash_markers(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::MptInstruct.apply(&user, None);
+        prop_assert!(out.contains("### Instruction"), "MptInstruct missing ### Instruction: {out:?}");
+        prop_assert!(out.contains("### Response"), "MptInstruct missing ### Response: {out:?}");
+    }
+
+    /// MptInstruct display/parse round-trips correctly.
+    #[test]
+    fn prop_mpt_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::MptInstruct;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("mpt-instruct must parse");
         prop_assert_eq!(t, parsed);
     }
 }

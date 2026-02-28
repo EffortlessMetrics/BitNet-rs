@@ -44,6 +44,14 @@ pub struct ModelCompatibilityMatrix {
     pub command_256k: TokenizerDownloadInfo,
     /// InternLM with 103K vocabulary - BPE tokenizer
     pub internlm_103k: TokenizerDownloadInfo,
+    /// Yi with 64K vocabulary - BPE tokenizer
+    pub yi_64k: TokenizerDownloadInfo,
+    /// Baichuan with 64K vocabulary - BPE tokenizer
+    pub baichuan_64k: TokenizerDownloadInfo,
+    /// ChatGLM/GLM-4 with 65K vocabulary - BPE tokenizer
+    pub chatglm_65k: TokenizerDownloadInfo,
+    /// MPT with 50K vocabulary - BPE tokenizer (GPT-NeoX based)
+    pub mpt_50k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -132,6 +140,30 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "internlm-103k".to_string(),
                 expected_vocab: Some(103168),
+            },
+            yi_64k: TokenizerDownloadInfo {
+                repo: "01-ai/Yi-34B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "yi-64k".to_string(),
+                expected_vocab: Some(64000),
+            },
+            baichuan_64k: TokenizerDownloadInfo {
+                repo: "baichuan-inc/Baichuan2-13B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "baichuan-64k".to_string(),
+                expected_vocab: Some(125696),
+            },
+            chatglm_65k: TokenizerDownloadInfo {
+                repo: "THUDM/chatglm3-6b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "chatglm-65k".to_string(),
+                expected_vocab: Some(64798),
+            },
+            mpt_50k: TokenizerDownloadInfo {
+                repo: "mosaicml/mpt-7b-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mpt-50k".to_string(),
+                expected_vocab: Some(50432),
             },
         }
     }
