@@ -178,6 +178,8 @@ impl OpenClKernel {
     /// Get the platform name.
     pub fn platform_name(&self) -> &str {
         &self.platform_name
+        // TODO: Initialize OpenCL context, find Intel GPU device
+        Err(KernelError::GpuError { reason: "OpenCL backend not yet implemented".into() }.into())
     }
 }
 
@@ -266,6 +268,7 @@ impl KernelProvider for OpenClKernel {
         }
 
         Ok(())
+        Err(KernelError::GpuError { reason: "OpenCL matmul_i2s not yet implemented".into() }.into())
     }
 
     fn quantize(
@@ -279,5 +282,6 @@ impl KernelProvider for OpenClKernel {
         // GPU quantization will be optimized in a follow-up PR.
         warn!("OpenCL quantize: falling back to CPU for correctness validation");
         crate::cpu::FallbackKernel.quantize(input, output, scales, qtype)
+        Err(KernelError::GpuError { reason: "OpenCL quantize not yet implemented".into() }.into())
     }
 }
