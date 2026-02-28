@@ -31,6 +31,7 @@ pub mod runtime_utils;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
+pub mod tensor_parallel;
 // Only compile the shim when tests or a GPU feature need it
 #[cfg(any(test, feature = "gpu"))]
 mod tensor_ext;
