@@ -1,0 +1,8 @@
+[gpu]
+backend = "auto"
+max_batch_size = 1
+max_sequence_length = 2048
+enable_profiling = false
+kernel_cache_enabled = true
+pipeline_depth = 2
+log_level = "warn"
