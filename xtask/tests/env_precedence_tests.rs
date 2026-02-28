@@ -129,7 +129,7 @@ fn test_default_path_no_env_vars() {
 
     // Run setup-cpp-auto to see what default path it uses
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -170,7 +170,7 @@ fn test_bitnet_cpp_dir_overrides_default() {
     }
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .env("BITNET_CPP_DIR", custom_path)
         .output()
@@ -208,7 +208,7 @@ fn test_bitnet_cpp_path_fallback() {
     }
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .env("BITNET_CPP_PATH", legacy_path)
         .output()
@@ -251,7 +251,7 @@ fn test_bitnet_cpp_dir_precedence_over_path() {
     }
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .env("BITNET_CPP_DIR", new_path)
         .env("BITNET_CPP_PATH", old_path)
@@ -419,7 +419,7 @@ fn test_sh_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -467,7 +467,7 @@ fn test_fish_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=fish"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=fish"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -514,7 +514,7 @@ fn test_pwsh_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=pwsh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=pwsh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -551,7 +551,7 @@ fn test_cmd_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=cmd"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=cmd"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -591,7 +591,7 @@ fn test_linux_ld_library_path() {
     let _g2 = EnvGuard::clear("BITNET_CPP_PATH");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -626,7 +626,7 @@ fn test_macos_dyld_library_path() {
     let _g2 = EnvGuard::clear("BITNET_CPP_PATH");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=sh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -661,7 +661,7 @@ fn test_windows_pwsh_path() {
     let _g2 = EnvGuard::clear("BITNET_CPP_PATH");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=pwsh"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=pwsh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -696,7 +696,7 @@ fn test_windows_cmd_path() {
     let _g2 = EnvGuard::clear("BITNET_CPP_PATH");
 
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=cmd"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=cmd"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
