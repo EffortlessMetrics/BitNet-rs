@@ -1386,6 +1386,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-quantization",
  "bitnet-rope",
+ "bitnet-test-support",
  "candle-core",
  "candle-nn",
  "insta",
