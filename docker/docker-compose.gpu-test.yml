@@ -1,0 +1,98 @@
+# GPU Docker Compose for local testing
+#
+# Usage:
+#   docker compose -f docker/docker-compose.gpu-test.yml up cpu-test        # CPU tests
+#   docker compose -f docker/docker-compose.gpu-test.yml up intel-gpu-build # Intel GPU build
+#   docker compose -f docker/docker-compose.gpu-test.yml up cuda-gpu-build  # CUDA GPU build
+#
+# Environment variables:
+#   GIT_SHA      - Git commit hash for OCI labels
+#   GIT_BRANCH   - Git branch name
+#   GIT_DESCRIBE - Git describe output
+
+services:
+  # Intel GPU build + test
+  intel-gpu-build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.intel-gpu
+      target: builder
+      args:
+        VCS_REF: ${GIT_SHA:-unknown}
+        VCS_BRANCH: ${GIT_BRANCH:-unknown}
+        VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
+    command: cargo test --locked --no-default-features --features cpu
+    environment:
+      - RUST_LOG=warn
+      - RUST_TEST_THREADS=2
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+    devices:
+      - /dev/dri:/dev/dri
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 8G
+
+  # CUDA GPU build + test (via multi-gpu Dockerfile)
+  cuda-gpu-build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.multi-gpu
+      target: builder-cuda
+      args:
+        GPU_BACKEND: cuda
+        VCS_REF: ${GIT_SHA:-unknown}
+        VCS_BRANCH: ${GIT_BRANCH:-unknown}
+        VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
+    command: cargo test --locked --no-default-features --features gpu
+    environment:
+      - RUST_LOG=warn
+      - RUST_TEST_THREADS=2
+      - CUDA_VISIBLE_DEVICES=0
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # CPU-only build + test (baseline)
+  cpu-test:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: builder-cpu
+      args:
+        VCS_REF: ${GIT_SHA:-unknown}
+        VCS_BRANCH: ${GIT_BRANCH:-unknown}
+        VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
+    command: cargo test --locked --no-default-features --features cpu
+    environment:
+      - RUST_LOG=warn
+      - RUST_TEST_THREADS=2
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 8G
+
+networks:
+  default:
+    name: bitnet-gpu-test
+    driver: bridge

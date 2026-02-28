@@ -1,0 +1,104 @@
+# syntax=docker/dockerfile:1.6
+# Intel GPU compute runtime for OpenCL/Level Zero testing
+#
+# Build:
+#   docker build -f docker/Dockerfile.intel-gpu -t bitnet-rs:intel-gpu .
+#
+# Run (with GPU passthrough):
+#   docker run --device /dev/dri bitnet-rs:intel-gpu cargo test --no-default-features --features oneapi
+#
+# Uses cargo-chef for dependency caching.
+
+# ── Stage 1: Install cargo-chef ──────────────────────────────────
+FROM rust:1.92-bookworm AS chef
+RUN cargo install cargo-chef --locked
+WORKDIR /app
+
+# ── Stage 2: Capture dependency recipe ───────────────────────────
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ── Stage 3: Builder with Intel GPU compute runtime ──────────────
+FROM rust:1.92-bookworm AS builder
+
+# Install Intel GPU compute runtime (OpenCL + Level Zero)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wget gnupg2 software-properties-common \
+        build-essential cmake pkg-config libssl-dev \
+    && wget -qO - https://repositories.intel.com/gpu/intel-graphics.key \
+       | gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] \
+       https://repositories.intel.com/gpu/ubuntu jammy unified" \
+       > /etc/apt/sources.list.d/intel-gpu.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+       intel-opencl-icd libze-intel-gpu1 libze1 clinfo \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cargo install cargo-chef --locked
+WORKDIR /app
+
+# Cook dependencies first (cached until Cargo.toml/Cargo.lock change)
+COPY --from=planner /app/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo chef cook --release --no-default-features --features cpu --recipe-path recipe.json
+
+# Copy full source and build
+COPY . .
+
+ARG VCS_REF
+ARG VCS_BRANCH
+ARG VCS_DESCRIBE
+ENV VERGEN_GIT_SHA=${VCS_REF:-unknown} \
+    VERGEN_GIT_BRANCH=${VCS_BRANCH:-unknown} \
+    VERGEN_GIT_DESCRIBE=${VCS_DESCRIBE:-unknown} \
+    VERGEN_IDEMPOTENT=1
+
+# Build CPU features (oneapi feature is not yet wired; build cpu to validate)
+RUN cargo build --locked --release --no-default-features --features cpu && \
+    cp target/release/bitnet target/release/bitnet-server /usr/local/bin/ || true
+
+# ── Stage 4: Runtime (slim + Intel GPU libs) ─────────────────────
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wget gnupg2 ca-certificates libssl3 curl \
+    && wget -qO - https://repositories.intel.com/gpu/intel-graphics.key \
+       | gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] \
+       https://repositories.intel.com/gpu/ubuntu jammy unified" \
+       > /etc/apt/sources.list.d/intel-gpu.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+       intel-opencl-icd libze-intel-gpu1 libze1 clinfo \
+    && apt-get purge -y wget gnupg2 \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 10001 bitnet && \
+    useradd -m -u 10001 -g 10001 -s /bin/false bitnet
+
+COPY --from=builder /usr/local/bin/bitnet /usr/local/bin/bitnet
+COPY --from=builder /usr/local/bin/bitnet-server /usr/local/bin/bitnet-server
+
+RUN mkdir -p /data /models && \
+    chown -R bitnet:bitnet /data /models
+
+USER bitnet
+WORKDIR /home/bitnet
+
+ENV RUST_LOG=info \
+    BITNET_MODEL_PATH=/models \
+    BITNET_DATA_PATH=/data
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+LABEL org.opencontainers.image.title="bitnet-rs-intel-gpu" \
+      org.opencontainers.image.description="BitNet-rs with Intel GPU compute runtime" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${VCS_DESCRIBE}" \
+      org.opencontainers.image.ref.name="${VCS_BRANCH}"
+
+CMD ["bitnet-server"]

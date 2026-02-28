@@ -1,0 +1,116 @@
+name: Docker GPU Image Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  push:
+    branches: [main]
+    paths:
+      - 'docker/Dockerfile.*'
+      - 'docker/docker-compose.gpu-test.yml'
+      - '.github/workflows/docker-gpu-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docker/Dockerfile.*'
+      - 'docker/docker-compose.gpu-test.yml'
+      - '.github/workflows/docker-gpu-build.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  build-gpu-images:
+    name: Build ${{ matrix.image }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: intel-gpu
+            dockerfile: docker/Dockerfile.intel-gpu
+            target: runtime
+            platforms: linux/amd64
+          - image: multi-gpu-cuda
+            dockerfile: docker/Dockerfile.multi-gpu
+            target: runtime
+            build-args: GPU_BACKEND=cuda
+            platforms: linux/amd64
+          - image: multi-gpu-intel
+            dockerfile: docker/Dockerfile.multi-gpu
+            target: runtime
+            build-args: GPU_BACKEND=intel
+            platforms: linux/amd64
+          - image: multi-gpu-cpu
+            dockerfile: docker/Dockerfile.multi-gpu
+            target: runtime
+            build-args: GPU_BACKEND=cpu
+            platforms: linux/amd64
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2  # v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804  # v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+          tags: |
+            type=schedule,pattern=weekly
+            type=sha,prefix=
+            type=ref,event=branch
+            type=ref,event=pr
+
+      - name: Build and push
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1  # v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          build-args: |
+            VCS_REF=${{ github.sha }}
+            VCS_BRANCH=${{ github.ref_name }}
+            VCS_DESCRIBE=${{ github.ref_name }}-${{ github.run_number }}
+            ${{ matrix.build-args }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platforms }}
+
+  # Validate docker-compose.gpu-test.yml syntax
+  validate-compose:
+    name: Validate Compose
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Validate docker-compose.gpu-test.yml
+        run: docker compose -f docker/docker-compose.gpu-test.yml config --quiet
