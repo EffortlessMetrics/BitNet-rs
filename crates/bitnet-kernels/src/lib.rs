@@ -12,6 +12,9 @@ pub mod ffi;
 // OpenCL kernel sources (always compiled — just embedded string constants)
 #[path = "gpu/kernels/mod.rs"]
 pub mod kernels;
+// OpenCL mixed-precision selection (no GPU deps)
+#[path = "gpu/opencl_mixed_precision.rs"]
+pub mod opencl_mixed_precision;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
