@@ -76,7 +76,12 @@ pub fn load_tokenizer(path: &Path) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
         }
         "model" => try_load_spm_from_file(path),
         _ => {
-            anyhow::bail!("Unknown tokenizer file format: {}", ext)
+            anyhow::bail!(
+                "Unknown tokenizer file format '{}' for path: {}. \
+                 Supported formats: .json (HuggingFace), .gguf (GGUF embedded), .model (SentencePiece)",
+                ext,
+                path.display()
+            )
         }
     }
 }

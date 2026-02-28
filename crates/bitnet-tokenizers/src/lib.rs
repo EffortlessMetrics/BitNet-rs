@@ -144,6 +144,16 @@ pub trait Tokenizer: Send + Sync {
         None
     }
 
+    /// Returns true if the given token ID is a known special token (BOS, EOS, or PAD).
+    ///
+    /// This is useful for filtering special tokens during post-processing or
+    /// for skipping them in stop-sequence evaluation.
+    fn is_special_token(&self, id: u32) -> bool {
+        self.bos_token_id() == Some(id)
+            || self.eos_token_id() == Some(id)
+            || self.pad_token_id() == Some(id)
+    }
+
     /// Returns the tokenizer family name based on known special tokens.
     ///
     /// Inspects special token IDs to determine the tokenizer family:
@@ -586,5 +596,161 @@ mod property_tests {
             let result = tok.decode(&[]).unwrap();
             prop_assert_eq!(result, "");
         }
+    }
+}
+
+#[cfg(test)]
+mod edge_case_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_encode_empty_string() {
+        let tok = BasicTokenizer::new();
+        let result = tok.encode("", false, false).unwrap();
+        assert!(result.is_empty(), "encoding empty string should produce empty vec");
+
+        let result_with_bos = tok.encode("", true, true).unwrap();
+        assert!(result_with_bos.is_empty(), "empty string returns early before BOS/EOS");
+    }
+
+    #[test]
+    fn test_encode_empty_string_with_bos_configured() {
+        let tok = BasicTokenizer::with_config(50257, Some(1), Some(2), None);
+        // BasicTokenizer returns early on empty text, so even with BOS configured
+        // no tokens are produced.
+        let result = tok.encode("", true, true).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_decode_empty_tokens() {
+        let tok = BasicTokenizer::new();
+        let result = tok.decode(&[]).unwrap();
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_decode_invalid_utf8_bytes() {
+        let tok = BasicTokenizer::new();
+        // Feed byte-level token IDs that form invalid UTF-8 (0xFF 0xFE)
+        let result = tok.decode(&[0xFF, 0xFE]).unwrap();
+        // from_utf8_lossy replaces invalid bytes with U+FFFD
+        assert!(result.contains('\u{FFFD}'), "invalid UTF-8 should produce replacement chars");
+    }
+
+    #[test]
+    fn test_decode_skips_special_tokens() {
+        let tok = BasicTokenizer::with_config(50257, Some(1), Some(2), Some(3));
+        // Mix of special token IDs and real byte-level IDs (ASCII 'A' = 65)
+        let result = tok.decode(&[1, 65, 2, 3]).unwrap();
+        assert_eq!(result, "A", "special tokens (BOS=1, EOS=2, PAD=3) should be skipped");
+    }
+
+    #[test]
+    fn test_is_special_token() {
+        let tok = BasicTokenizer::with_config(50257, Some(1), Some(2), Some(3));
+        assert!(tok.is_special_token(1), "BOS should be special");
+        assert!(tok.is_special_token(2), "EOS should be special");
+        assert!(tok.is_special_token(3), "PAD should be special");
+        assert!(!tok.is_special_token(65), "regular token should not be special");
+    }
+
+    #[test]
+    fn test_is_special_token_none_configured() {
+        let tok = BasicTokenizer::new();
+        // Default BasicTokenizer has bos=None, eos=Some(50256), pad=None
+        assert!(!tok.is_special_token(0), "no BOS configured");
+        assert!(tok.is_special_token(50256), "EOS should be special");
+        assert!(!tok.is_special_token(42), "arbitrary ID not special");
+    }
+
+    #[test]
+    fn test_get_family_name_default() {
+        let tok = BasicTokenizer::new();
+        assert_eq!(tok.get_family_name(), "unknown");
+    }
+
+    #[test]
+    fn test_mock_special_token_family_detection() {
+        let tok = MockTokenizer::with_special_tokens(&[
+            ("<|eot_id|>", 128009),
+            ("<|start_header_id|>", 128006),
+        ]);
+        assert_eq!(tok.get_family_name(), "llama3");
+    }
+
+    #[test]
+    fn test_mock_mistral_family_detection() {
+        let tok = MockTokenizer::with_special_tokens(&[("[INST]", 3)]);
+        assert_eq!(tok.get_family_name(), "mistral-instruct");
+    }
+
+    #[test]
+    fn test_from_path_unsupported_extension() {
+        let path = PathBuf::from("/tmp/model.bin");
+        let result = from_path(&path);
+        assert!(result.is_err());
+        let err_msg = result.err().map(|e| format!("{}", e)).unwrap_or_default();
+        assert!(
+            err_msg.contains("model.bin"),
+            "error should mention the file path, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_from_path_no_extension() {
+        let path = PathBuf::from("/tmp/tokenizer");
+        let result = from_path(&path);
+        assert!(result.is_err());
+        let err_msg = result.err().map(|e| format!("{}", e)).unwrap_or_default();
+        assert!(
+            err_msg.contains("tokenizer"),
+            "error should mention the file path, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_token_to_piece_byte_range() {
+        let tok = BasicTokenizer::new();
+        // ASCII 'A' = 65
+        assert_eq!(tok.token_to_piece(65), Some("A".to_string()));
+        // High byte-level token
+        assert_eq!(tok.token_to_piece(0), Some("\0".to_string()));
+        // Beyond byte range gives formatted placeholder
+        assert_eq!(tok.token_to_piece(1000), Some("<token_1000>".to_string()));
+    }
+
+    #[test]
+    fn test_encode_single_byte() {
+        let tok = BasicTokenizer::new();
+        let tokens = tok.encode("A", false, false).unwrap();
+        assert_eq!(tokens, vec![65]);
+    }
+
+    #[test]
+    fn test_encode_multibyte_utf8() {
+        let tok = BasicTokenizer::new();
+        // '€' is 3 bytes in UTF-8: 0xE2, 0x82, 0xAC
+        let tokens = tok.encode("€", false, false).unwrap();
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens, vec![0xE2, 0x82, 0xAC]);
+    }
+
+    #[test]
+    fn test_mock_tokenizer_encode_empty() {
+        let tok = MockTokenizer::new();
+        let tokens = tok.encode("", false, false).unwrap();
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn test_mock_tokenizer_decode_high_ids_skipped() {
+        let tok = MockTokenizer::new();
+        // IDs >= 256 are skipped (treated as special/OOV tokens)
+        let result = tok.decode(&[65, 500, 66]).unwrap();
+        assert_eq!(result, "AB", "high IDs should be skipped in mock decode");
     }
 }
