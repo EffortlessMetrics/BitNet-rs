@@ -23,6 +23,7 @@ pub mod property_based_tests;
 #[cfg(feature = "cpu")]
 pub mod qk256_dispatch;
 // pub mod robustness_tests; // Keep disabled until needed
+pub mod pipeline;
 pub mod simd_ops;
 pub mod tl1;
 pub mod tl2;
