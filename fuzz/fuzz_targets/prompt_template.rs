@@ -53,10 +53,7 @@ fuzz_target!(|input: PromptInput| {
         .flat_map(|(u, a)| {
             let u_str = std::str::from_utf8(u).unwrap_or("hi");
             let a_str = std::str::from_utf8(a).unwrap_or("ok");
-            [
-                ChatTurn::new(ChatRole::User, u_str),
-                ChatTurn::new(ChatRole::Assistant, a_str),
-            ]
+            [ChatTurn::new(ChatRole::User, u_str), ChatTurn::new(ChatRole::Assistant, a_str)]
         })
         .collect();
     let _ = template.render_chat(&turns, system);

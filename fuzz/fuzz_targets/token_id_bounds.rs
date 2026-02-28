@@ -44,10 +44,7 @@ fuzz_target!(|input: TokenBoundsInput| {
 
     // --- greedy_sample: returned ID must be < vocab ---
     if let Ok(id) = greedy_sample(&logits) {
-        assert!(
-            (id as usize) < vocab,
-            "greedy_sample returned {id} for vocab size {vocab}",
-        );
+        assert!((id as usize) < vocab, "greedy_sample returned {id} for vocab size {vocab}",);
     }
 
     // --- SamplingStrategy: returned ID must be < vocab ---
@@ -60,10 +57,7 @@ fuzz_target!(|input: TokenBoundsInput| {
     };
     let mut strategy = SamplingStrategy::new(config);
     if let Ok(id) = strategy.sample(&logits, &context) {
-        assert!(
-            (id as usize) < vocab,
-            "SamplingStrategy returned {id} for vocab size {vocab}",
-        );
+        assert!((id as usize) < vocab, "SamplingStrategy returned {id} for vocab size {vocab}",);
     }
 
     // --- argmax: must be < vocab ---

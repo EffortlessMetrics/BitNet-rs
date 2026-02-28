@@ -61,16 +61,10 @@ fuzz_target!(|input: StopSeqInput| {
         if let Some(ref reason) = result {
             match reason {
                 StopReason::StopTokenId(id) => {
-                    assert!(
-                        stop_ids.contains(id),
-                        "StopTokenId {id} not in stop_ids list",
-                    );
+                    assert!(stop_ids.contains(id), "StopTokenId {id} not in stop_ids list",);
                 }
                 StopReason::StopString(s) => {
-                    assert!(
-                        tail.contains(s.as_str()),
-                        "StopString '{s}' not found in tail",
-                    );
+                    assert!(tail.contains(s.as_str()), "StopString '{s}' not found in tail",);
                 }
                 StopReason::EosToken => {
                     assert_eq!(

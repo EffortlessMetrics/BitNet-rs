@@ -47,12 +47,7 @@ fuzz_target!(|input: ConfigInput| {
     }
 
     // Edge cases: zero-value fields.
-    let _ = BitNetConfig::builder()
-        .vocab_size(0)
-        .hidden_size(0)
-        .num_layers(0)
-        .num_heads(0)
-        .build();
+    let _ = BitNetConfig::builder().vocab_size(0).hidden_size(0).num_layers(0).num_heads(0).build();
 
     // Edge: huge values must not cause overflow or panic.
     let _ = BitNetConfig::builder()
