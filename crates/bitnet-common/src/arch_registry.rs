@@ -65,13 +65,11 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
-            "command" | "command-r" | "command-r-plus" | "cohere" => {
-                Some(ArchDefaults {
-                    norm_type: NormType::LayerNorm,
-                    activation_type: ActivationType::Silu,
-                    default_context_length: None,
-                })
-            }
+            "command" | "command-r" | "command-r-plus" | "cohere" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
             "internlm" | "internlm2" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
@@ -87,13 +85,11 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
-            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => {
-                Some(ArchDefaults {
-                    norm_type: NormType::RmsNorm,
-                    activation_type: ActivationType::Silu,
-                    default_context_length: None,
-                })
-            }
+            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
             "mpt" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -190,11 +186,7 @@ mod tests {
     #[test]
     fn test_known_architectures_consistent_with_lookup() {
         for arch in ArchitectureRegistry::known_architectures() {
-            assert!(
-                ArchitectureRegistry::is_known(arch),
-                "is_known('{}') should be true",
-                arch,
-            );
+            assert!(ArchitectureRegistry::is_known(arch), "is_known('{}') should be true", arch,);
         }
     }
 
@@ -285,5 +277,94 @@ mod tests {
         let defaults = ArchitectureRegistry::lookup("mpt").unwrap();
         assert_eq!(defaults.norm_type, NormType::LayerNorm);
         assert_eq!(defaults.activation_type, ActivationType::Gelu);
+    }
+
+    #[test]
+    fn test_very_long_string_returns_none() {
+        let long = "a".repeat(10_000);
+        assert!(ArchitectureRegistry::lookup(&long).is_none());
+        assert!(!ArchitectureRegistry::is_known(&long));
+    }
+
+    #[test]
+    fn test_unicode_strings_return_none() {
+        let unicode_strs = ["φι", "模型", "llama-😊", "مدل", "φ-4", "ллама"];
+        for s in &unicode_strs {
+            assert!(
+                ArchitectureRegistry::lookup(s).is_none(),
+                "Unicode '{}' should not match any architecture",
+                s
+            );
+        }
+    }
+
+    #[test]
+    fn test_whitespace_variants_return_none() {
+        let ws_strs = [" phi", "phi ", "\tphi", "phi\n", " phi ", "ph i"];
+        for s in &ws_strs {
+            assert!(
+                ArchitectureRegistry::lookup(s).is_none(),
+                "Whitespace variant {:?} should not match",
+                s
+            );
+        }
+    }
+
+    #[test]
+    fn test_special_character_variants_return_none() {
+        let special = [
+            "phi!", "phi@", "phi#", "phi$", "phi%", "phi&", "phi+", "phi=", "phi;", "phi:", "phi/",
+            "phi\\",
+        ];
+        for s in &special {
+            assert!(
+                ArchitectureRegistry::lookup(s).is_none(),
+                "Special char variant {:?} should not match",
+                s
+            );
+        }
+    }
+
+    #[test]
+    fn test_all_known_architectures_have_valid_defaults() {
+        for arch in ArchitectureRegistry::known_architectures() {
+            let defaults = ArchitectureRegistry::lookup(arch)
+                .unwrap_or_else(|| panic!("'{}' is known but lookup returned None", arch));
+            assert!(
+                matches!(defaults.norm_type, NormType::LayerNorm | NormType::RmsNorm),
+                "Invalid norm_type for '{}'",
+                arch
+            );
+            assert!(
+                matches!(
+                    defaults.activation_type,
+                    ActivationType::Silu | ActivationType::Relu2 | ActivationType::Gelu
+                ),
+                "Invalid activation_type for '{}'",
+                arch
+            );
+        }
+    }
+
+    #[test]
+    fn test_known_architectures_have_unique_lowercase_forms() {
+        let mut seen = std::collections::HashSet::new();
+        for arch in ArchitectureRegistry::known_architectures() {
+            let lower = arch.to_lowercase();
+            assert!(
+                seen.insert(lower.clone()),
+                "Duplicate lowercase form '{}' from arch '{}'",
+                lower,
+                arch
+            );
+        }
+    }
+
+    #[test]
+    fn test_numeric_and_empty_variations() {
+        assert!(ArchitectureRegistry::lookup("123").is_none());
+        assert!(ArchitectureRegistry::lookup("0").is_none());
+        assert!(ArchitectureRegistry::lookup("3.5").is_none());
+        assert!(ArchitectureRegistry::lookup("phi4").is_none()); // no dash
     }
 }

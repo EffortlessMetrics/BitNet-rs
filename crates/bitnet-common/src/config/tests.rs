@@ -463,12 +463,7 @@ fn test_apply_architecture_defaults_qwen() {
         let mut config = ModelConfig::default();
         config.apply_architecture_defaults(arch);
         assert_eq!(config.norm_type, NormType::RmsNorm, "norm for {}", arch);
-        assert_eq!(
-            config.activation_type,
-            ActivationType::Silu,
-            "activation for {}",
-            arch
-        );
+        assert_eq!(config.activation_type, ActivationType::Silu, "activation for {}", arch);
     }
 }
 
@@ -478,10 +473,86 @@ fn test_apply_architecture_defaults_deepseek() {
         let mut config = ModelConfig::default();
         config.apply_architecture_defaults(arch);
         assert_eq!(config.norm_type, NormType::RmsNorm, "norm for {}", arch);
+        assert_eq!(config.activation_type, ActivationType::Silu, "activation for {}", arch);
+    }
+}
+
+#[test]
+fn test_apply_defaults_preserves_non_2048_max_position() {
+    let mut config = ModelConfig::default();
+    config.max_position_embeddings = 4096;
+    config.apply_architecture_defaults("phi");
+    // Phi wants 16384, but we only override when the value is still 2048
+    assert_eq!(config.max_position_embeddings, 4096);
+    // Norm and activation should still be applied
+    assert_eq!(config.norm_type, NormType::RmsNorm);
+    assert_eq!(config.activation_type, ActivationType::Silu);
+}
+
+#[test]
+fn test_apply_defaults_unicode_architecture_preserves_defaults() {
+    let mut config = ModelConfig::default();
+    let orig_norm = config.norm_type;
+    let orig_activation = config.activation_type;
+    let orig_max_pos = config.max_position_embeddings;
+    config.apply_architecture_defaults("φι-λλάμα");
+    assert_eq!(config.norm_type, orig_norm);
+    assert_eq!(config.activation_type, orig_activation);
+    assert_eq!(config.max_position_embeddings, orig_max_pos);
+}
+
+#[test]
+fn test_apply_defaults_all_case_variants_work() {
+    for variant in &["PHI", "Phi", "pHi", "phi", "PHI-4", "Phi-4"] {
+        let mut config = ModelConfig::default();
+        config.apply_architecture_defaults(variant);
+        assert_eq!(
+            config.norm_type,
+            NormType::RmsNorm,
+            "Case variant '{}' should set RmsNorm",
+            variant
+        );
         assert_eq!(
             config.activation_type,
             ActivationType::Silu,
-            "activation for {}",
+            "Case variant '{}' should set Silu",
+            variant
+        );
+    }
+}
+
+#[test]
+fn test_apply_defaults_empty_string_preserves_defaults() {
+    let mut config = ModelConfig::default();
+    let orig_norm = config.norm_type;
+    config.apply_architecture_defaults("");
+    assert_eq!(config.norm_type, orig_norm);
+}
+
+#[test]
+fn test_apply_defaults_whitespace_string_preserves_defaults() {
+    let mut config = ModelConfig::default();
+    let orig_norm = config.norm_type;
+    config.apply_architecture_defaults("  ");
+    assert_eq!(config.norm_type, orig_norm);
+}
+
+#[test]
+fn test_apply_defaults_all_families_set_valid_norm_and_activation() {
+    for arch in crate::ArchitectureRegistry::known_architectures() {
+        let mut config = ModelConfig::default();
+        config.apply_architecture_defaults(arch);
+        assert!(
+            matches!(config.norm_type, NormType::LayerNorm | NormType::RmsNorm),
+            "Arch '{}' set invalid norm_type",
+            arch
+        );
+        assert!(
+            matches!(
+                config.activation_type,
+                ActivationType::Silu | ActivationType::Relu2 | ActivationType::Gelu
+            ),
+            "Arch '{}' set invalid activation_type",
             arch
         );
     }
