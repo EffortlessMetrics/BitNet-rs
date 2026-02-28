@@ -4,8 +4,12 @@ pub mod async_runtime;
 pub mod backend_selector;
 pub mod bench_harness;
 pub mod deployment_manager;
+pub mod generation;
 pub mod hal_traits;
 pub mod model_warmup;
+pub mod test_harness;
+pub mod weight_compression;
+use std::fmt;
 
 // Provides checkpoint management for saving and resuming inference state,
 // with incremental diffs, compression, and automatic scheduling.
