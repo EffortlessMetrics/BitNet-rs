@@ -5,12 +5,12 @@ use std::sync::OnceLock;
 
 pub mod convolution;
 pub mod cpu;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub mod cuda;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod gpu;
 pub mod gpu_utils;
