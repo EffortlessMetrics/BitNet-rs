@@ -1,0 +1,23 @@
+[package]
+name = "bitnet-opencl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "OpenCL backend for BitNet GPU inference"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true
+
+[features]
+default = []
