@@ -13,8 +13,8 @@ description = "Compact feature and BDD profile contracts for BitNet tooling"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.2.1-dev" }
-bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.2.1-dev" }
+bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.2.0-alpha.1" }
+bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.2.0-alpha.1" }
 
 [dev-dependencies]
 proptest.workspace = true
