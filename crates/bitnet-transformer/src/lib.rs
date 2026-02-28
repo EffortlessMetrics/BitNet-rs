@@ -62,7 +62,8 @@ fn linear_with_optional_bias(
 }
 
 /// Helper to create layer norm with optional bias.
-/// If `bias` is missing we fall back to RMSNorm (no bias).
+/// If `bias` is missing we use no-bias LayerNorm by default, or error when
+/// `BITNET_REQUIRE_LAYER_NORM_BIAS=1`.
 fn layer_norm_with_optional_bias(
     normalized_shape: usize,
     eps: f64,
@@ -75,7 +76,16 @@ fn layer_norm_with_optional_bias(
             tracing::debug!("Using LayerNorm with bias [{}]", normalized_shape);
             Ok(LayerNorm::new(weight, bias, eps))
         }
-        Err(_) => {
+        Err(err) => {
+            if std::env::var("BITNET_REQUIRE_LAYER_NORM_BIAS")
+                .ok()
+                .is_some_and(|value| value == "1")
+            {
+                return Err(candle_core::Error::Msg(format!(
+                    "LayerNorm bias tensor is required but missing (set BITNET_REQUIRE_LAYER_NORM_BIAS=0 or unset to allow no-bias LayerNorm): {err}"
+                )));
+            }
+
             // No bias → LayerNorm without bias (but WITH mean subtraction)
             // IMPORTANT: Use LayerNorm::new_no_bias (remove_mean=true) NOT rms_norm (remove_mean=false)
             // because the gamma weights in GGUF are calibrated for LayerNorm semantics (mean subtraction).
@@ -1851,7 +1861,7 @@ mod tests {
 
     #[test]
     fn test_layer_norm_with_optional_bias() -> candle_core::Result<()> {
-        // Test layer_norm_with_optional_bias helper with RMSNorm (no bias)
+        // Test layer_norm_with_optional_bias helper with no-bias LayerNorm path
         let device = Device::Cpu;
         let hidden_size = 128;
         let eps = 1e-5;
@@ -1865,7 +1875,7 @@ mod tests {
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
 
-        // Create LayerNorm (should use RMSNorm path due to missing bias)
+        // Create LayerNorm (should use no-bias LayerNorm path due to missing bias)
         let layer_norm = layer_norm_with_optional_bias(hidden_size, eps, vb)?;
 
         // Test forward pass
@@ -1884,6 +1894,33 @@ mod tests {
         let has_inf = vec_data.iter().any(|x| x.is_infinite());
         assert!(!has_nan, "Output should not contain NaN");
         assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
+        let device = Device::Cpu;
+        let hidden_size = 64;
+        let eps = 1e-5;
+
+        use std::collections::HashMap;
+
+        let mut tensors = HashMap::new();
+        let weight = Tensor::ones(hidden_size, DType::F32, &device)?;
+        tensors.insert("weight".to_string(), weight);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        let mut scope = bitnet_test_support::EnvScope::new();
+        scope.set("BITNET_REQUIRE_LAYER_NORM_BIAS", "1");
+
+        let err = layer_norm_with_optional_bias(hidden_size, eps, vb)
+            .expect_err("missing bias should error when BITNET_REQUIRE_LAYER_NORM_BIAS=1");
+        assert!(
+            err.to_string().contains("LayerNorm bias tensor is required"),
+            "unexpected error: {err}"
+        );
 
         Ok(())
     }
