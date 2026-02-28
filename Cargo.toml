@@ -66,6 +66,7 @@ members = [
   "xtask",
   "xtask-build-helper",
   "fuzz",
+  "crates/bitnet-opencl",       # OpenCL backend & cross-backend benchmark utilities
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
   "crates/bitnet-gpu-hal",
 ]
@@ -297,6 +298,11 @@ required-features = ["cpu", "bench"]
 
 [[bench]]
 name = "kernel_ops"
+harness = false
+required-features = ["cpu", "bench"]
+
+[[bench]]
+name = "gpu_kernels"
 harness = false
 required-features = ["cpu", "bench"]
 

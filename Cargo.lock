@@ -843,9 +843,12 @@ dependencies = [
 name = "bitnet-opencl"
 version = "0.2.0-alpha.1"
 dependencies = [
+ "criterion",
  "insta",
  "log",
  "opencl3",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

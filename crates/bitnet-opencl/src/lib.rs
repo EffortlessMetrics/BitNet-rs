@@ -3,6 +3,7 @@
 //! Provides safe wrappers around opencl3 types with dynamic library
 //! loading and graceful fallback when no `OpenCL` runtime is installed.
 
+pub mod benchmark_utils;
 pub mod runtime;
 
 pub use runtime::{
