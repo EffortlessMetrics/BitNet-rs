@@ -5,6 +5,10 @@
 //! and memory management.
 
 pub mod activations;
+pub mod profiling;
+pub mod streaming;
+pub mod test_harness;
+pub mod speculative;
 use std::fmt;
 
 // ── Errors ────────────────────────────────────────────────────────────────

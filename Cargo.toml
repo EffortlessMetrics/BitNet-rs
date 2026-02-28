@@ -60,13 +60,14 @@ members = [
   "crates/bitnet-test-support",
   "crates/bitnet-opencl",        # OpenCL runtime binding layer
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer with profiling
   "crossval",
   "tests",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
+  "crates/bitnet-gpu-hal",
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,

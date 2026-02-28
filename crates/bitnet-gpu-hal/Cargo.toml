@@ -10,18 +10,14 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "GPU hardware abstraction layer for BitNet inference"
-
 [dependencies]
 thiserror.workspace = true
-
 [dev-dependencies]
 proptest.workspace = true
-
 [features]
 default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
-
 [lints]
 workspace = true
