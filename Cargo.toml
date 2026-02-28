@@ -22,7 +22,6 @@ members = [
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
-  "crates/bitnet-opencl",        # OpenCL 3.0 backend with USM support
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
@@ -60,14 +59,13 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-opencl",        # SRP: OpenCL abstraction layer for Intel GPU inference
+  "crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
   "crossval",
   "tests",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-  "crates/bitnet-rocm",         # AMD ROCm/HIP backend
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -98,7 +96,6 @@ default-members = [
   "crates/bitnet-runtime-profile-core",
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
-  "crates/bitnet-opencl",
   "crates/bitnet-logits",
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
@@ -213,9 +210,7 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
-rocm = [] # Handled by bitnet-rocm crate
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
-oneapi = ["kernels", "bitnet-kernels/oneapi", "bitnet-common/oneapi"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
@@ -282,10 +277,6 @@ name = "simple_demo"
 [[example]]
 name = "ffi_threading_demo"
 required-features = ["cpu", "ffi"]
-
-[[example]]
-name = "opencl_smoke"
-required-features = ["oneapi"]
 
 [[bench]]
 name = "srp_ops"

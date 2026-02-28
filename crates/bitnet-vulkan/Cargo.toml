@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-vulkan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Vulkan compute kernels for BitNet-rs inference"
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+
+[dev-dependencies]
+
+[features]
+default = []
+precompiled-spirv = []
