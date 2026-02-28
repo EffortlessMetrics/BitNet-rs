@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -123,6 +123,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
     ) {
         let s = template.to_string();
@@ -142,6 +143,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -192,7 +194,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder),
             "detect() returned an unexpected variant"
         );
     }
@@ -227,6 +229,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
     ) {
         let out = template.apply("", None);
@@ -246,6 +249,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -268,6 +272,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -337,6 +342,7 @@ proptest! {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -483,6 +489,26 @@ proptest! {
         let t = TemplateType::DeepSeekChat;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("deepseek-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// StarCoder output preserves user text verbatim.
+    #[test]
+    fn prop_starcoder_preserves_code(
+        code in "[a-zA-Z0-9_ (){}:;]{1,100}",
+    ) {
+        let out = TemplateType::StarCoder.apply(&code, None);
+        prop_assert_eq!(out, code);
+    }
+
+    /// StarCoder display/parse round-trips correctly.
+    #[test]
+    fn prop_starcoder_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::StarCoder;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("starcoder must parse");
         prop_assert_eq!(t, parsed);
     }
 }

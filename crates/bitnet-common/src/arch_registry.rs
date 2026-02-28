@@ -50,6 +50,16 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
+            "starcoder" | "starcoder2" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: None,
+            }),
+            "falcon" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: None,
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -74,6 +84,9 @@ impl ArchitectureRegistry {
             "gemma2",
             "deepseek",
             "deepseek2",
+            "starcoder",
+            "starcoder2",
+            "falcon",
             "bitnet",
             "bitnet-b1.58",
             "gpt",
@@ -163,6 +176,9 @@ mod tests {
     fn test_is_known() {
         assert!(ArchitectureRegistry::is_known("llama"));
         assert!(ArchitectureRegistry::is_known("BERT"));
+        assert!(ArchitectureRegistry::is_known("starcoder"));
+        assert!(ArchitectureRegistry::is_known("falcon"));
+        assert!(ArchitectureRegistry::is_known("deepseek"));
         assert!(!ArchitectureRegistry::is_known("unknown"));
     }
 }

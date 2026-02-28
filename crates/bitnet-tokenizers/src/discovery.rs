@@ -34,6 +34,8 @@ pub struct ModelCompatibilityMatrix {
     pub mistral_32k: TokenizerDownloadInfo,
     /// DeepSeek with 100K vocabulary - BPE tokenizer
     pub deepseek_100k: TokenizerDownloadInfo,
+    /// StarCoder with 49K vocabulary - BPE tokenizer
+    pub starcoder_49k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -92,6 +94,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "deepseek-100k".to_string(),
                 expected_vocab: Some(100015),
+            },
+            starcoder_49k: TokenizerDownloadInfo {
+                repo: "bigcode/starcoder".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "starcoder-49k".to_string(),
+                expected_vocab: Some(49152),
             },
         }
     }

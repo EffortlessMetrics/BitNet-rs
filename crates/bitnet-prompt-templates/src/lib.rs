@@ -58,6 +58,8 @@ pub enum TemplateType {
     MistralChat,
     /// DeepSeek ChatML format with im_start/im_end tokens
     DeepSeekChat,
+    /// StarCoder code completion format (prefix/suffix/middle FIM tokens)
+    StarCoder,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -75,10 +77,13 @@ impl std::str::FromStr for TemplateType {
             "deepseek-chat" | "deepseek_chat" | "deepseek" => {
                 Ok(Self::DeepSeekChat)
             }
+            "starcoder" | "star_coder" | "code-completion" => {
+                Ok(Self::StarCoder)
+            }
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
-                 mistral-chat, deepseek-chat",
+                 mistral-chat, deepseek-chat, starcoder",
                 s
             ),
         }
@@ -96,6 +101,7 @@ impl std::fmt::Display for TemplateType {
             Self::GemmaChat => write!(f, "gemma-chat"),
             Self::MistralChat => write!(f, "mistral-chat"),
             Self::DeepSeekChat => write!(f, "deepseek-chat"),
+            Self::StarCoder => write!(f, "starcoder"),
         }
     }
 }
@@ -214,6 +220,15 @@ impl TemplateType {
                 );
                 return Self::DeepSeekChat;
             }
+            if lower.contains("starcoder") || lower.contains("star-coder") {
+                tracing::debug!(
+                    template = "StarCoder",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::StarCoder;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -241,6 +256,7 @@ impl TemplateType {
             Self::GemmaChat => Self::apply_gemma_chat(user_text, system_prompt),
             Self::MistralChat => Self::apply_mistral_chat(user_text, system_prompt),
             Self::DeepSeekChat => Self::apply_deepseek_chat(user_text, system_prompt),
+            Self::StarCoder => Self::apply_starcoder(user_text, system_prompt),
         }
     }
 
@@ -436,6 +452,26 @@ impl TemplateType {
         result
     }
 
+    /// Apply StarCoder code completion format
+    ///
+    /// StarCoder uses a simple completion format. If a system prompt is
+    /// provided it is prepended as a comment.
+    fn apply_starcoder(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+
+        if let Some(system) = system_prompt {
+            result.push_str("# ");
+            result.push_str(system);
+            result.push('\n');
+        }
+
+        result.push_str(user_text);
+        result
+    }
+
     /// Get the default stop sequences for this template
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
@@ -453,6 +489,9 @@ impl TemplateType {
                     "<|im_end|>".to_string(),
                     "<|end▁of▁sentence|>".to_string(),
                 ]
+            }
+            Self::StarCoder => {
+                vec!["<|endoftext|>".to_string()]
             }
         }
     }
@@ -502,6 +541,7 @@ impl TemplateType {
             Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
             Self::MistralChat => false, // Template includes <s>
             Self::DeepSeekChat => false, // ChatML uses im_start/im_end tokens
+            Self::StarCoder => true,    // Simple completion, BOS helpful
         }
     }
 
@@ -516,6 +556,7 @@ impl TemplateType {
                 | Self::GemmaChat
                 | Self::MistralChat
                 | Self::DeepSeekChat
+                | Self::StarCoder
         )
     }
 
@@ -680,6 +721,16 @@ impl TemplateType {
                     if i > 0 {
                         write!(out, "\n\n")?;
                     }
+                    write!(out, "{}", turn.text)?;
+                }
+            }
+            TemplateType::StarCoder => {
+                // Code completion: system as comment, code only
+                if let Some(sys) = system {
+                    writeln!(out, "# {}", sys)?;
+                }
+
+                for turn in history {
                     write!(out, "{}", turn.text)?;
                 }
             }
@@ -971,6 +1022,24 @@ mod tests {
     }
 
     #[test]
+    fn test_starcoder_template() {
+        let template = TemplateType::StarCoder;
+
+        let result = template.apply("def hello():", None);
+        assert_eq!(result, "def hello():");
+
+        let result = template.apply("def hello():", Some("Complete this function"));
+        assert!(result.starts_with("# Complete this function\n"));
+        assert!(result.contains("def hello():"));
+    }
+
+    #[test]
+    fn test_detect_starcoder_from_name() {
+        let t = TemplateType::detect(Some("bigcode-starcoder"), None);
+        assert_eq!(t, TemplateType::StarCoder);
+    }
+
+    #[test]
     fn test_raw_template() {
         let template = TemplateType::Raw;
         let result = template.apply("Hello, world!", None);
@@ -1044,6 +1113,14 @@ mod tests {
             "deepseek".parse::<TemplateType>().unwrap(),
             TemplateType::DeepSeekChat
         );
+        assert_eq!(
+            "starcoder".parse::<TemplateType>().unwrap(),
+            TemplateType::StarCoder
+        );
+        assert_eq!(
+            "code-completion".parse::<TemplateType>().unwrap(),
+            TemplateType::StarCoder
+        );
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -1058,6 +1135,7 @@ mod tests {
         assert!(!TemplateType::GemmaChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::MistralChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::DeepSeekChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::StarCoder.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -1143,6 +1221,7 @@ mod tests {
         assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
         assert!(!TemplateType::MistralChat.should_add_bos()); // Template includes <s>
         assert!(!TemplateType::DeepSeekChat.should_add_bos()); // ChatML tokens
+        assert!(TemplateType::StarCoder.should_add_bos()); // Simple completion
     }
 
     #[test]
@@ -1155,6 +1234,7 @@ mod tests {
         assert!(TemplateType::GemmaChat.parse_special()); // Gemma has special tokens
         assert!(TemplateType::MistralChat.parse_special()); // Mistral has special tokens
         assert!(TemplateType::DeepSeekChat.parse_special()); // DeepSeek has special tokens
+        assert!(TemplateType::StarCoder.parse_special()); // StarCoder has endoftext
     }
 
     #[test]
@@ -1294,6 +1374,7 @@ mod property_tests {
             Just(TemplateType::GemmaChat),
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
         ]
     }
 
@@ -1356,6 +1437,7 @@ mod property_tests {
                 Just(TemplateType::GemmaChat),
                 Just(TemplateType::MistralChat),
                 Just(TemplateType::DeepSeekChat),
+                Just(TemplateType::StarCoder),
             ],
         ) {
             let stops = template.default_stop_sequences();
