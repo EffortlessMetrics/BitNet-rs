@@ -29,6 +29,7 @@ pub mod tl_lut;
 pub mod embedding_gpu;
 pub mod linear_gpu;
 pub mod activation_gpu;
+pub mod transformer_layer_gpu;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
