@@ -11,6 +11,7 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
+pub const LINEAR_SRC: &str = include_str!("linear.cl");
 
 #[cfg(test)]
 mod tests {
