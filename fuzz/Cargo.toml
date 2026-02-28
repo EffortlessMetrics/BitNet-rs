@@ -13,24 +13,24 @@ libfuzzer-sys = "0.4.10"
 serde_json = "1.0.145"
 safetensors = "0.6.2"
 tempfile = "3"
-bitnet-quantization = { path = "../crates/bitnet-quantization" }
-bitnet-models = { path = "../crates/bitnet-models" }
-bitnet-kernels = { path = "../crates/bitnet-kernels" }
-bitnet-common = { path = "../crates/bitnet-common" }
-bitnet-gguf = { path = "../crates/bitnet-gguf" }
-bitnet-st2gguf = { path = "../crates/bitnet-st2gguf" }
-bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
-bitnet-logits = { path = "../crates/bitnet-logits" }
-bitnet-generation = { path = "../crates/bitnet-generation" }
-bitnet-rope = { path = "../crates/bitnet-rope" }
-bitnet-sampling = { path = "../crates/bitnet-sampling" }
-bitnet-receipts = { path = "../crates/bitnet-receipts" }
-bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates" }
-bitnet-validation = { path = "../crates/bitnet-validation" }
-bitnet-engine-core = { path = "../crates/bitnet-engine-core" }
-bitnet-honest-compute = { path = "../crates/bitnet-honest-compute" }
-bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core" }
-bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core" }
+bitnet-quantization = { path = "../crates/bitnet-quantization", version = "0.2.1-dev" }
+bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev" }
+bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev" }
+bitnet-common = { path = "../crates/bitnet-common", version = "0.2.1-dev" }
+bitnet-gguf = { path = "../crates/bitnet-gguf", version = "0.2.1-dev" }
+bitnet-st2gguf = { path = "../crates/bitnet-st2gguf", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", version = "0.2.1-dev" }
+bitnet-logits = { path = "../crates/bitnet-logits", version = "0.2.1-dev" }
+bitnet-generation = { path = "../crates/bitnet-generation", version = "0.2.1-dev" }
+bitnet-rope = { path = "../crates/bitnet-rope", version = "0.2.1-dev" }
+bitnet-sampling = { path = "../crates/bitnet-sampling", version = "0.2.1-dev" }
+bitnet-receipts = { path = "../crates/bitnet-receipts", version = "0.2.1-dev" }
+bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates", version = "0.2.1-dev" }
+bitnet-validation = { path = "../crates/bitnet-validation", version = "0.2.1-dev" }
+bitnet-engine-core = { path = "../crates/bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-honest-compute = { path = "../crates/bitnet-honest-compute", version = "0.2.1-dev" }
+bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core", version = "0.2.1-dev" }
+bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core", version = "0.2.1-dev" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 

@@ -357,24 +357,24 @@ cargo_metadata = "0.23.1"
 filetime = "0.2.26"
 
 # bitnet-rs crates for cross-validation
-bitnet-common = { path = "../crates/bitnet-common" }
-bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, features = ["cpu", "rt-tokio"] }
-bitnet-models = { path = "../crates/bitnet-models" }
-bitnet-quantization = { path = "../crates/bitnet-quantization" }
-bitnet-kernels = { path = "../crates/bitnet-kernels" }
-bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
-bitnet-compat = { path = "../crates/bitnet-compat" }
-bitnet-honest-compute = { path = "../crates/bitnet-honest-compute" }
-bitnet-sampling = { path = "../crates/bitnet-sampling" }
-bitnet-device-probe = { path = "../crates/bitnet-device-probe" }
-bitnet-logits = { path = "../crates/bitnet-logits" }
-bitnet-generation = { path = "../crates/bitnet-generation" }
-bitnet-engine-core = { path = "../crates/bitnet-engine-core" }
-bitnet-gguf = { path = "../crates/bitnet-gguf" }
-bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates" }
-bitnet-receipts = { path = "../crates/bitnet-receipts" }
-bitnet = { path = "../", default-features = false, features = ["cpu"] }
-bitnet-crossval = { path = "../crossval", package = "bitnet-crossval" }
+bitnet-common = { path = "../crates/bitnet-common", version = "0.2.1-dev" }
+bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev", default-features = false, features = ["cpu", "rt-tokio"] }
+bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev" }
+bitnet-quantization = { path = "../crates/bitnet-quantization", version = "0.2.1-dev" }
+bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", version = "0.2.1-dev" }
+bitnet-compat = { path = "../crates/bitnet-compat", version = "0.2.1-dev" }
+bitnet-honest-compute = { path = "../crates/bitnet-honest-compute", version = "0.2.1-dev" }
+bitnet-sampling = { path = "../crates/bitnet-sampling", version = "0.2.1-dev" }
+bitnet-device-probe = { path = "../crates/bitnet-device-probe", version = "0.2.1-dev" }
+bitnet-logits = { path = "../crates/bitnet-logits", version = "0.2.1-dev" }
+bitnet-generation = { path = "../crates/bitnet-generation", version = "0.2.1-dev" }
+bitnet-engine-core = { path = "../crates/bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-gguf = { path = "../crates/bitnet-gguf", version = "0.2.1-dev" }
+bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates", version = "0.2.1-dev" }
+bitnet-receipts = { path = "../crates/bitnet-receipts", version = "0.2.1-dev" }
+bitnet = { path = "../", version = "0.2.1-dev", default-features = false, features = ["cpu"] }
+bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", package = "bitnet-crossval" }
 
 # Additional dependencies for fixtures
 bincode = "2.0.1"
