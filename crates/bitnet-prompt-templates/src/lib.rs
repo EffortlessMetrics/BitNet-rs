@@ -100,6 +100,12 @@ pub enum TemplateType {
     WizardLM,
     /// OpenChat GPT4 Correct User/Assistant format with end_of_turn
     OpenChat,
+    /// IBM Granite chat format with start_of_role/end_of_role tokens
+    GraniteChat,
+    /// NVIDIA Nemotron chat format with extra_id tokens
+    NemotronChat,
+    /// Russian Saiga/YandexGPT ChatML variant with Cyrillic system prompt
+    SaigaChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -138,6 +144,9 @@ impl std::str::FromStr for TemplateType {
             "nous-hermes" | "nous" | "hermes" => Ok(Self::NousHermes),
             "wizard-lm" | "wizard" | "wizardlm" => Ok(Self::WizardLM),
             "openchat" | "open-chat" => Ok(Self::OpenChat),
+            "granite-chat" | "granite" => Ok(Self::GraniteChat),
+            "nemotron-chat" | "nemotron" => Ok(Self::NemotronChat),
+            "saiga-chat" | "saiga" => Ok(Self::SaigaChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -147,7 +156,8 @@ impl std::str::FromStr for TemplateType {
                  rwkv-world, olmo-instruct, fill-in-middle, \
                  zephyr-chat, vicuna-chat, orca-chat, solar-instruct, \
                  alpaca-instruct, command-r-plus, nous-hermes, \
-                 wizard-lm, openchat",
+                 wizard-lm, openchat, granite-chat, nemotron-chat, \
+                 saiga-chat",
                 s
             ),
         }
@@ -186,6 +196,9 @@ impl std::fmt::Display for TemplateType {
             Self::NousHermes => write!(f, "nous-hermes"),
             Self::WizardLM => write!(f, "wizard-lm"),
             Self::OpenChat => write!(f, "openchat"),
+            Self::GraniteChat => write!(f, "granite-chat"),
+            Self::NemotronChat => write!(f, "nemotron-chat"),
+            Self::SaigaChat => write!(f, "saiga-chat"),
         }
     }
 }
@@ -226,6 +239,24 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::CommandRPlus;
+            }
+            // Granite signature (must be before ChatML check)
+            if jinja.contains("<|start_of_role|>") {
+                tracing::debug!(
+                    template = "GraniteChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::GraniteChat;
+            }
+            // Nemotron signature (must be before ChatML check)
+            if jinja.contains("<extra_id_0>") || jinja.contains("<extra_id_1>") {
+                tracing::debug!(
+                    template = "NemotronChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::NemotronChat;
             }
             // ChatML / Phi-4 signature
             if jinja.contains("<|im_start|>") && jinja.contains("<|im_end|>") {
@@ -603,6 +634,33 @@ impl TemplateType {
                 );
                 return Self::OpenChat;
             }
+            if lower.contains("granite") {
+                tracing::debug!(
+                    template = "GraniteChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::GraniteChat;
+            }
+            if lower.contains("nemotron") {
+                tracing::debug!(
+                    template = "NemotronChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::NemotronChat;
+            }
+            if lower.contains("saiga") {
+                tracing::debug!(
+                    template = "SaigaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::SaigaChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -651,6 +709,9 @@ impl TemplateType {
             Self::NousHermes => Self::apply_nous_hermes(user_text, system_prompt),
             Self::WizardLM => Self::apply_wizard_lm(user_text, system_prompt),
             Self::OpenChat => Self::apply_openchat(user_text, system_prompt),
+            Self::GraniteChat => Self::apply_granite_chat(user_text, system_prompt),
+            Self::NemotronChat => Self::apply_nemotron_chat(user_text, system_prompt),
+            Self::SaigaChat => Self::apply_saiga_chat(user_text, system_prompt),
         }
     }
 
@@ -1215,6 +1276,53 @@ impl TemplateType {
         result
     }
 
+    /// Apply IBM Granite chat format with start_of_role/end_of_role tokens
+    fn apply_granite_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt
+            .unwrap_or("You are Granite, an AI language model developed by IBM.");
+        result.push_str("<|start_of_role|>system<|end_of_role|>");
+        result.push_str(system);
+        result.push('\n');
+        result.push_str("<|start_of_role|>user<|end_of_role|>");
+        result.push_str(user_text);
+        result.push('\n');
+        result.push_str("<|start_of_role|>assistant<|end_of_role|>");
+        result
+    }
+
+    /// Apply NVIDIA Nemotron chat format with extra_id tokens
+    fn apply_nemotron_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt
+            .unwrap_or("You are a helpful, respectful and honest assistant.");
+        result.push_str("<extra_id_0>System\n");
+        result.push_str(system);
+        result.push('\n');
+        result.push_str("<extra_id_1>User\n");
+        result.push_str(user_text);
+        result.push('\n');
+        result.push_str("<extra_id_1>Assistant\n");
+        result
+    }
+
+    /// Apply Saiga/YandexGPT ChatML variant with Russian default system prompt
+    fn apply_saiga_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or(
+            "Ты — Сайга, русскоязычный автоматический ассистент. \
+             Ты разговариваешь с людьми и помогаешь им.",
+        );
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+        result.push_str("<|im_start|>assistant\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1296,6 +1404,15 @@ impl TemplateType {
             Self::OpenChat => {
                 vec!["<|end_of_turn|>".to_string()]
             }
+            Self::GraniteChat => {
+                vec!["<|end_of_role|>".to_string(), "<|end_of_text|>".to_string()]
+            }
+            Self::NemotronChat => {
+                vec!["<extra_id_1>".to_string(), "</s>".to_string()]
+            }
+            Self::SaigaChat => {
+                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+            }
         }
     }
 
@@ -1365,6 +1482,9 @@ impl TemplateType {
             Self::NousHermes => false,    // ChatML uses im_start/im_end tokens
             Self::WizardLM => true,       // Simple USER:/ASSISTANT: format
             Self::OpenChat => true,       // Simple GPT4 Correct format
+            Self::GraniteChat => false,   // Uses start_of_role tokens
+            Self::NemotronChat => false,  // Uses extra_id tokens
+            Self::SaigaChat => false,     // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -1393,6 +1513,9 @@ impl TemplateType {
                 | Self::CommandRPlus
                 | Self::NousHermes
                 | Self::OpenChat
+                | Self::GraniteChat
+                | Self::NemotronChat
+                | Self::SaigaChat
         )
     }
 
@@ -1943,6 +2066,48 @@ impl TemplateType {
                     }
                 }
                 write!(out, "GPT4 Correct Assistant:")?;
+            }
+            TemplateType::GraniteChat => {
+                // Granite role-token format
+                let sys = system
+                    .unwrap_or("You are Granite, an AI language model developed by IBM.");
+                writeln!(out, "<|start_of_role|>system<|end_of_role|>{}", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|start_of_role|>{}<|end_of_role|>{}", role, turn.text)?;
+                }
+                write!(out, "<|start_of_role|>assistant<|end_of_role|>")?;
+            }
+            TemplateType::NemotronChat => {
+                // Nemotron extra_id format
+                let sys = system
+                    .unwrap_or("You are a helpful, respectful and honest assistant.");
+                write!(out, "<extra_id_0>System\n{}\n", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<extra_id_1>User\n{}\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<extra_id_1>Assistant\n{}\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "<extra_id_1>Assistant")?;
+            }
+            TemplateType::SaigaChat => {
+                // Saiga ChatML variant
+                let sys = system.unwrap_or(
+                    "Ты — Сайга, русскоязычный автоматический ассистент. \
+                     Ты разговариваешь с людьми и помогаешь им.",
+                );
+                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
+                for turn in history {
+                    let role = turn.role.as_str();
+                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
+                }
+                writeln!(out, "<|im_start|>assistant")?;
             }
         }
 

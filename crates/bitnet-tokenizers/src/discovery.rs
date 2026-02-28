@@ -74,6 +74,12 @@ pub struct ModelCompatibilityMatrix {
     pub wizard_32k: TokenizerDownloadInfo,
     /// OpenChat with 32K vocabulary - BPE tokenizer
     pub openchat_32k: TokenizerDownloadInfo,
+    /// Granite with 128K vocabulary - BPE tokenizer
+    pub granite_128k: TokenizerDownloadInfo,
+    /// Nemotron with 32K vocabulary - BPE tokenizer
+    pub nemotron_32k: TokenizerDownloadInfo,
+    /// Saiga with 32K vocabulary - SentencePiece tokenizer
+    pub saiga_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -251,6 +257,24 @@ impl Default for ModelCompatibilityMatrix {
                 repo: "openchat/openchat_3.5".to_string(),
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "openchat-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            granite_128k: TokenizerDownloadInfo {
+                repo: "ibm-granite/granite-3.0-8b-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "granite-128k".to_string(),
+                expected_vocab: Some(128000),
+            },
+            nemotron_32k: TokenizerDownloadInfo {
+                repo: "nvidia/Nemotron-4-340B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "nemotron-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            saiga_32k: TokenizerDownloadInfo {
+                repo: "IlyaGusev/saiga_mistral_7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "saiga-32k".to_string(),
                 expected_vocab: Some(32000),
             },
         }

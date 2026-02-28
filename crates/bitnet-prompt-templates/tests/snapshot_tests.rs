@@ -747,3 +747,81 @@ fn snapshot_openchat_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("openchat_multi_turn", out);
 }
+
+// ── Granite Chat ────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_granite_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::GraniteChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("granite_single_turn", out);
+}
+
+#[test]
+fn snapshot_granite_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::GraniteChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("granite_with_system", out);
+}
+
+#[test]
+fn snapshot_granite_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::GraniteChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("granite_multi_turn", out);
+}
+
+// ── Nemotron Chat ───────────────────────────────────────────────────
+
+#[test]
+fn snapshot_nemotron_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::NemotronChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("nemotron_single_turn", out);
+}
+
+#[test]
+fn snapshot_nemotron_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::NemotronChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("nemotron_with_system", out);
+}
+
+#[test]
+fn snapshot_nemotron_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::NemotronChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("nemotron_multi_turn", out);
+}
+
+// ── Saiga Chat ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_saiga_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::SaigaChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("saiga_single_turn", out);
+}
+
+#[test]
+fn snapshot_saiga_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::SaigaChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("saiga_with_system", out);
+}
+
+#[test]
+fn snapshot_saiga_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::SaigaChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("saiga_multi_turn", out);
+}

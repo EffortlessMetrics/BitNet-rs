@@ -150,6 +150,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(8192),
             }),
+            "granite" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(8192),
+            }),
+            "nemotron" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "saiga" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(2048),
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -213,6 +228,9 @@ impl ArchitectureRegistry {
             "wizardlm",
             "wizard",
             "openchat",
+            "granite",
+            "nemotron",
+            "saiga",
         ]
     }
 
