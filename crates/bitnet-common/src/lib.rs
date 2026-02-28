@@ -9,6 +9,7 @@ pub mod config;
 pub mod error;
 pub mod kernel_registry;
 pub mod math;
+pub mod memory_pool;
 pub mod strict_mode;
 pub mod tensor;
 pub mod types;
