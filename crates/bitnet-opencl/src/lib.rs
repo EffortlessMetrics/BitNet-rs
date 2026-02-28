@@ -31,13 +31,22 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! Provides optimized OpenCL kernel sources and a hardware-aware
+//! [`KernelSelector`] that picks the best variant for each operation.
+//!
+//! # Kernel Sources
+//!
+//! The `.cl` files under [`kernels`] are embedded at compile time via
+//! `include_str!` so the binary is self-contained.
+//!
+//! # Example
+//!
+//! ```rust
+//! use bitnet_opencl::kernel_selector::{KernelSelector, KernelVariant};
+//!
+//! let sel = KernelSelector::new(256, true, 4);
+//! assert_eq!(sel.select_matmul(512, 512, 512), KernelVariant::Vectorized);
+//! ```
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod kernel_selector;
+pub mod kernels;
