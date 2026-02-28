@@ -59,6 +59,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-gpu-hal",       # GPU HAL: activation functions & kernel sources
   "crossval",
   "tests",
   "xtask",

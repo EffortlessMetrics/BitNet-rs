@@ -1,0 +1,23 @@
+[package]
+name = "bitnet-gpu-hal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "GPU hardware abstraction layer with activation functions for BitNet inference"
+rust-version.workspace = true
+
+[dependencies]
+# Pure-Rust math – no external deps required.
+
+[dev-dependencies]
+
+[features]
+default = []
+
+[lints]
+workspace = true
