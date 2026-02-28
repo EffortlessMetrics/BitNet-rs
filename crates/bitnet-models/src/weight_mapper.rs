@@ -66,7 +66,18 @@ fn ensure_matrix_or_transpose(
                 expected_out,
                 expected_in
             );
-            Ok(t.t()?.contiguous()?)
+            let transposed = t.t()?;
+            let res = match transposed.contiguous() {
+                Ok(t2) => t2,
+                Err(_) => {
+                    tracing::warn!(
+                        "{}: Tensor transpose contiguous failed, falling back to F32 cast",
+                        name
+                    );
+                    t.to_dtype(candle_core::DType::F32)?.t()?.contiguous()?
+                }
+            };
+            Ok(res)
         }
         // allow fused hidden x hidden in cases where both dims equal hidden
         [o, i] if *o == expected_out && *i == expected_out && expected_out == expected_in => {
@@ -80,7 +91,18 @@ fn ensure_matrix_or_transpose(
                 i,
                 o
             );
-            Ok(t.t()?.contiguous()?)
+            let transposed = t.t()?;
+            let res = match transposed.contiguous() {
+                Ok(t2) => t2,
+                Err(_) => {
+                    tracing::warn!(
+                        "{}: Tensor transpose contiguous failed, falling back to F32 cast",
+                        name
+                    );
+                    t.to_dtype(candle_core::DType::F32)?.t()?.contiguous()?
+                }
+            };
+            Ok(res)
         }
         _ => Err(bitnet_common::BitNetError::Validation(format!(
             "{}: unexpected matrix shape {:?}, expected [{}, {}] or its transpose",
