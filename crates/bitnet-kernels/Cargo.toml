@@ -142,5 +142,9 @@ name = "opencl_property_tests"
 path = "tests/opencl_property_tests.rs"
 
 [[test]]
+name = "golden_outputs"
+path = "tests/golden_outputs.rs"
+
+[[test]]
 name = "opencl_bdd_tests"
 path = "tests/opencl_bdd_tests.rs"
