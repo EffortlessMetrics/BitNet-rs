@@ -13,12 +13,18 @@ rust-version.workspace = true
 autobenches = false
 
 [dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+proptest.workspace = true
 
 [features]
 default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
 bench = []
 
 [[bench]]
