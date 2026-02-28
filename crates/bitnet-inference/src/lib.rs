@@ -28,6 +28,7 @@ pub mod rt;
 pub mod runtime_utils;
 pub mod sampling;
 pub mod simple_forward;
+pub mod speculative;
 pub mod streaming;
 // Only compile the shim when tests or a GPU feature need it
 #[cfg(any(test, feature = "gpu"))]
@@ -66,6 +67,7 @@ pub use receipts::{
 // Re-export CorrectionRecord from bitnet-common for convenience
 pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
+pub use speculative::{SpeculativeConfig, SpeculativeDecoder, SpeculativeResult, SpeculativeStats};
 pub use streaming::{GenerationStream, StreamingConfig};
 
 // Re-export SRP-extracted orchestration contracts from bitnet-engine-core.
