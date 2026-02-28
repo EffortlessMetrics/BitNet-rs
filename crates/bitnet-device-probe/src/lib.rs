@@ -266,6 +266,7 @@ fn accel_device_exists() -> bool {
 
 /// Check if Intel oneAPI/`OpenCL` support was compiled.
 #[inline]
+/// Check if Intel oneAPI/OpenCL support was compiled.
 pub const fn oneapi_compiled() -> bool {
     cfg!(feature = "oneapi")
 }
