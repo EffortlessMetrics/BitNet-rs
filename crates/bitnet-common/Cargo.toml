@@ -43,6 +43,8 @@ cpu = []
 cuda = ["candle-core/cuda"]
 rocm = []
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
+hip = []
+npu = []
 metal = []
 oneapi = []
 # Do NOT enable Candle's Metal feature on non-Apple hosts.

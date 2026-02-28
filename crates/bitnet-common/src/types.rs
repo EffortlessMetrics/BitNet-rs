@@ -31,6 +31,8 @@ pub enum Device {
     #[default]
     Cpu,
     Cuda(usize),
+    Hip(usize),
+    Npu,
     Metal,
 }
 
@@ -39,7 +41,7 @@ impl From<&candle_core::Device> for Device {
     fn from(d: &candle_core::Device) -> Self {
         match d {
             candle_core::Device::Cpu => Device::Cpu,
-            #[cfg(any(feature = "gpu", feature = "cuda"))]
+            #[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
             candle_core::Device::Cuda(_) => Device::Cuda(usize::MAX), // unknown ordinal
             #[cfg(all(feature = "metal", target_os = "macos"))]
             candle_core::Device::Metal(_) => Device::Metal,
@@ -65,13 +67,25 @@ impl Device {
         matches!(self, Device::Cuda(_))
     }
 
+    /// Check if this device is HIP (ROCm)
+    pub fn is_hip(&self) -> bool {
+        matches!(self, Device::Hip(_))
+    }
+
+    /// Check if this device is NPU
+    pub fn is_npu(&self) -> bool {
+        matches!(self, Device::Npu)
+    }
+
     /// Convert our device preference to Candle's device.
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
         Ok(match *self {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(i) if i != usize::MAX => candle_core::Device::new_cuda(i)?,
             Device::Cuda(_) => candle_core::Device::Cpu, // fallback for unknown
+            // HIP/NPU candle backends are not wired yet; fallback keeps API non-breaking.
+            Device::Hip(_) | Device::Npu => candle_core::Device::Cpu,
             #[cfg(all(feature = "metal", target_os = "macos"))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;
@@ -82,10 +96,11 @@ impl Device {
         })
     }
 
-    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "hip")))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
         Ok(match *self {
             Device::Cpu => candle_core::Device::Cpu,
+            Device::Hip(_) | Device::Npu => candle_core::Device::Cpu,
             #[cfg(all(feature = "metal", target_os = "macos"))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;

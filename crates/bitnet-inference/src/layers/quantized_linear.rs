@@ -1290,6 +1290,14 @@ impl QuantizedLinear {
                     QuantizationType::TL2 => total_ops * 0.6,
                 }
             }
+            Device::Hip(_) | Device::Npu => {
+                // HIP/NPU throughput (fallback, not yet optimized)
+                match self.qtype {
+                    QuantizationType::I2S => total_ops * 0.5,
+                    QuantizationType::TL1 => total_ops * 0.4,
+                    QuantizationType::TL2 => total_ops * 0.4,
+                }
+            }
         }
     }
 

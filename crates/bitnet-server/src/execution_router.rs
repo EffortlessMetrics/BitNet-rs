@@ -201,6 +201,7 @@ impl DeviceMonitor {
                 let gpu_info = get_gpu_info();
                 gpu_info.metal
             }
+            Device::Hip(_) | Device::Npu => false,
         }
     }
 
@@ -233,6 +234,7 @@ impl DeviceMonitor {
                 }
             }
             Device::Metal => Self::get_metal_memory_budget_mb(system),
+            Device::Hip(_) | Device::Npu => 0,
         }
     }
 
@@ -286,6 +288,7 @@ impl DeviceMonitor {
                 let available_mb = system.available_memory() / 1024;
                 available_mb.min(Self::get_metal_memory_budget_mb(system))
             }
+            Device::Hip(_) | Device::Npu => 0,
         }
     }
 
@@ -330,6 +333,8 @@ impl DeviceMonitor {
                     None
                 }
             }
+            Device::Hip(id) => Some(format!("HIP:{}", id)),
+            Device::Npu => Some("NPU".to_string()),
         }
     }
 
@@ -344,7 +349,7 @@ impl DeviceMonitor {
     fn get_simd_support(device: &Device) -> Vec<String> {
         match device {
             Device::Cpu => Self::detect_cpu_simd_features(),
-            Device::Cuda(_) | Device::Metal => Vec::new(), // GPU devices don't use CPU SIMD
+            Device::Cuda(_) | Device::Metal | Device::Hip(_) | Device::Npu => Vec::new(), // GPU devices don't use CPU SIMD
         }
     }
 
@@ -443,6 +448,7 @@ impl DeviceMonitor {
                 #[cfg(not(target_os = "macos"))]
                 0.0
             }
+            Device::Hip(_) | Device::Npu => 50.0, // Estimated HIP/NPU performance
         };
 
         // Update capabilities
