@@ -169,6 +169,12 @@ pub enum TemplateType {
     MistralNemoChat,
     /// Snowflake Arctic ChatML variant
     ArcticInstruct,
+    /// Databricks DBRX ChatML format
+    DbrxInstruct,
+    /// LG AI Research EXAONE chat format with [|system|]/[|endofturn|] markers
+    ExaoneChat,
+    /// OpenBMB MiniCPM ChatML format
+    MiniCPMChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -225,6 +231,9 @@ impl std::str::FromStr for TemplateType {
             "qwen25-chat" | "qwen2.5-chat" | "qwen2.5" => Ok(Self::Qwen25Chat),
             "mistral-nemo-chat" | "mistral-nemo" | "nemo" => Ok(Self::MistralNemoChat),
             "arctic-instruct" | "arctic" => Ok(Self::ArcticInstruct),
+            "dbrx-instruct" | "dbrx" => Ok(Self::DbrxInstruct),
+            "exaone-chat" | "exaone" => Ok(Self::ExaoneChat),
+            "minicpm-chat" | "minicpm" => Ok(Self::MiniCPMChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -239,7 +248,8 @@ impl std::str::FromStr for TemplateType {
                  tinyllama-chat, dolphin-chat, chatgpt-chat, \
                  mixtral-instruct, stablelm-chat, bloom-chat, \
                  jamba-chat, persimmon-chat, xverse-chat, \
-                 qwen25-chat, mistral-nemo-chat, arctic-instruct",
+                 qwen25-chat, mistral-nemo-chat, arctic-instruct, \
+                 dbrx-instruct, exaone-chat, minicpm-chat",
                 s
             ),
         }
@@ -296,6 +306,9 @@ impl std::fmt::Display for TemplateType {
             Self::Qwen25Chat => write!(f, "qwen25-chat"),
             Self::MistralNemoChat => write!(f, "mistral-nemo-chat"),
             Self::ArcticInstruct => write!(f, "arctic-instruct"),
+            Self::DbrxInstruct => write!(f, "dbrx-instruct"),
+            Self::ExaoneChat => write!(f, "exaone-chat"),
+            Self::MiniCPMChat => write!(f, "minicpm-chat"),
         }
     }
 }
@@ -366,6 +379,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Phi3Instruct;
+            }
+            // EXAONE signature (must be before ChatML check)
+            if jinja.contains("[|system|]") || jinja.contains("[|endofturn|]") {
+                tracing::debug!(
+                    template = "ExaoneChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::ExaoneChat;
             }
             // ChatML / Phi-4 signature
             if jinja.contains("<|im_start|>") && jinja.contains("<|im_end|>") {
@@ -927,6 +949,33 @@ impl TemplateType {
                 );
                 return Self::ArcticInstruct;
             }
+            if lower.contains("dbrx") {
+                tracing::debug!(
+                    template = "DbrxInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::DbrxInstruct;
+            }
+            if lower.contains("exaone") {
+                tracing::debug!(
+                    template = "ExaoneChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::ExaoneChat;
+            }
+            if lower.contains("minicpm") {
+                tracing::debug!(
+                    template = "MiniCPMChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::MiniCPMChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -993,6 +1042,9 @@ impl TemplateType {
             Self::Qwen25Chat => Self::apply_qwen25_chat(user_text, system_prompt),
             Self::MistralNemoChat => Self::apply_mistral_nemo_chat(user_text, system_prompt),
             Self::ArcticInstruct => Self::apply_arctic_instruct(user_text, system_prompt),
+            Self::DbrxInstruct => Self::apply_dbrx_instruct(user_text, system_prompt),
+            Self::ExaoneChat => Self::apply_exaone_chat(user_text, system_prompt),
+            Self::MiniCPMChat => Self::apply_minicpm_chat(user_text, system_prompt),
         }
     }
 
@@ -1659,6 +1711,34 @@ impl TemplateType {
         apply_chatml(system, user_text)
     }
 
+    /// Apply Databricks DBRX ChatML format
+    fn apply_dbrx_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are DBRX, created by Databricks. You are a helpful assistant.");
+        apply_chatml(system, user_text)
+    }
+
+    /// Apply LG AI Research EXAONE chat format
+    fn apply_exaone_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are EXAONE model from LG AI Research, a helpful assistant.");
+        let mut result = String::new();
+        result.push_str("[|system|]");
+        result.push_str(system);
+        result.push_str("[|endofturn|]\n");
+        result.push_str("[|user|]");
+        result.push_str(user_text);
+        result.push_str("\n[|endofturn|]\n");
+        result.push_str("[|assistant|]");
+        result
+    }
+
+    /// Apply OpenBMB MiniCPM ChatML format
+    fn apply_minicpm_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt.unwrap_or("You are a helpful assistant.");
+        apply_chatml(system, user_text)
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1794,6 +1874,15 @@ impl TemplateType {
             Self::ArcticInstruct => {
                 CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
+            Self::DbrxInstruct => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
+            Self::ExaoneChat => {
+                vec!["[|endofturn|]".to_string()]
+            }
+            Self::MiniCPMChat => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
         }
     }
 
@@ -1881,6 +1970,9 @@ impl TemplateType {
             Self::Qwen25Chat => false,     // ChatML uses im_start/im_end tokens
             Self::MistralNemoChat => true,  // Nemo benefits from BOS
             Self::ArcticInstruct => false,  // ChatML uses im_start/im_end tokens
+            Self::DbrxInstruct => false,   // ChatML uses im_start/im_end tokens
+            Self::ExaoneChat => false,     // Uses [|system|]/[|endofturn|] tokens
+            Self::MiniCPMChat => false,    // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -1921,6 +2013,9 @@ impl TemplateType {
                 | Self::JambaChat
                 | Self::Qwen25Chat
                 | Self::ArcticInstruct
+                | Self::DbrxInstruct
+                | Self::ExaoneChat
+                | Self::MiniCPMChat
         )
     }
 
@@ -2667,6 +2762,34 @@ impl TemplateType {
                 let sys = system.unwrap_or("You are a helpful AI assistant.");
                 out = render_chatml(sys, history);
             }
+            TemplateType::DbrxInstruct => {
+                let sys = system.unwrap_or(
+                    "You are DBRX, created by Databricks. You are a helpful assistant.",
+                );
+                out = render_chatml(sys, history);
+            }
+            TemplateType::ExaoneChat => {
+                let sys = system.unwrap_or(
+                    "You are EXAONE model from LG AI Research, a helpful assistant.",
+                );
+                writeln!(out, "[|system|]{}[|endofturn|]", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "[|user|]{}\n[|endofturn|]\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "[|assistant|]{}\n[|endofturn|]\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "[|assistant|]")?;
+            }
+            TemplateType::MiniCPMChat => {
+                let sys = system.unwrap_or("You are a helpful assistant.");
+                out = render_chatml(sys, history);
+            }
         }
 
         Ok(out)
@@ -2719,6 +2842,62 @@ impl TemplateType {
             adds_bos: self.should_add_bos(),
             parses_special: self.parse_special(),
         }
+    }
+
+    /// Returns a slice of all available prompt template variants.
+    pub fn all_variants() -> &'static [TemplateType] {
+        &[
+            Self::Raw,
+            Self::Instruct,
+            Self::Llama3Chat,
+            Self::Phi4Chat,
+            Self::QwenChat,
+            Self::GemmaChat,
+            Self::MistralChat,
+            Self::DeepSeekChat,
+            Self::StarCoder,
+            Self::FalconChat,
+            Self::CodeLlamaInstruct,
+            Self::CohereCommand,
+            Self::InternLMChat,
+            Self::YiChat,
+            Self::BaichuanChat,
+            Self::ChatGLMChat,
+            Self::MptInstruct,
+            Self::RwkvWorld,
+            Self::OlmoInstruct,
+            Self::FillInMiddle,
+            Self::ZephyrChat,
+            Self::VicunaChat,
+            Self::OrcaChat,
+            Self::SolarInstruct,
+            Self::AlpacaInstruct,
+            Self::CommandRPlus,
+            Self::NousHermes,
+            Self::WizardLM,
+            Self::OpenChat,
+            Self::GraniteChat,
+            Self::NemotronChat,
+            Self::SaigaChat,
+            Self::Llama2Chat,
+            Self::Gemma2Chat,
+            Self::Phi3Instruct,
+            Self::TinyLlamaChat,
+            Self::DolphinChat,
+            Self::ChatGptChat,
+            Self::MixtralInstruct,
+            Self::StableLMChat,
+            Self::BloomChat,
+            Self::JambaChat,
+            Self::PersimmonChat,
+            Self::XverseChat,
+            Self::Qwen25Chat,
+            Self::MistralNemoChat,
+            Self::ArcticInstruct,
+            Self::DbrxInstruct,
+            Self::ExaoneChat,
+            Self::MiniCPMChat,
+        ]
     }
 }
 
@@ -4802,5 +4981,160 @@ mod detect_logging_tests {
         assert_eq!(TemplateType::TinyLlamaChat.to_string(), "tinyllama-chat");
         assert_eq!(TemplateType::DolphinChat.to_string(), "dolphin-chat");
         assert_eq!(TemplateType::ChatGptChat.to_string(), "chatgpt-chat");
+    }
+
+    // ── all_variants() ─────────────────────────────────────────────
+
+    #[test]
+    fn test_all_variants_complete() {
+        let variants = TemplateType::all_variants();
+        assert_eq!(variants.len(), 50);
+        // Verify no duplicates
+        let mut seen = std::collections::HashSet::new();
+        for v in variants {
+            assert!(seen.insert(v.to_string()), "Duplicate variant: {}", v);
+        }
+    }
+
+    // ── DBRX Instruct ──────────────────────────────────────────────
+
+    #[test]
+    fn test_dbrx_instruct_template() {
+        let template = TemplateType::DbrxInstruct;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are DBRX, created by Databricks."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = template.apply("Hello!", Some("Custom."));
+        assert!(result.contains("Custom."));
+        assert!(!result.contains("DBRX"));
+    }
+
+    #[test]
+    fn test_detect_dbrx_from_name() {
+        let t = TemplateType::detect(Some("dbrx-instruct"), None);
+        assert_eq!(t, TemplateType::DbrxInstruct);
+    }
+
+    #[test]
+    fn test_dbrx_fromstr_roundtrip() {
+        assert_eq!("dbrx-instruct".parse::<TemplateType>().unwrap(), TemplateType::DbrxInstruct);
+        assert_eq!("dbrx".parse::<TemplateType>().unwrap(), TemplateType::DbrxInstruct);
+        assert_eq!(TemplateType::DbrxInstruct.to_string(), "dbrx-instruct");
+    }
+
+    #[test]
+    fn test_render_chat_dbrx() {
+        let t = TemplateType::DbrxInstruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
+        assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
+        assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    // ── EXAONE Chat ────────────────────────────────────────────────
+
+    #[test]
+    fn test_exaone_chat_template() {
+        let template = TemplateType::ExaoneChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("[|system|]"));
+        assert!(result.contains("EXAONE model from LG AI Research"));
+        assert!(result.contains("[|endofturn|]"));
+        assert!(result.contains("[|user|]Hello!"));
+        assert!(result.ends_with("[|assistant|]"));
+
+        let result = template.apply("Hello!", Some("Custom."));
+        assert!(result.contains("[|system|]Custom.[|endofturn|]"));
+        assert!(!result.contains("EXAONE"));
+    }
+
+    #[test]
+    fn test_detect_exaone_from_jinja() {
+        let t = TemplateType::detect(None, Some("[|system|]{system}[|endofturn|]"));
+        assert_eq!(t, TemplateType::ExaoneChat);
+    }
+
+    #[test]
+    fn test_detect_exaone_from_name() {
+        let t = TemplateType::detect(Some("exaone-3.0-7.8b"), None);
+        assert_eq!(t, TemplateType::ExaoneChat);
+    }
+
+    #[test]
+    fn test_exaone_fromstr_roundtrip() {
+        assert_eq!("exaone-chat".parse::<TemplateType>().unwrap(), TemplateType::ExaoneChat);
+        assert_eq!("exaone".parse::<TemplateType>().unwrap(), TemplateType::ExaoneChat);
+        assert_eq!(TemplateType::ExaoneChat.to_string(), "exaone-chat");
+    }
+
+    #[test]
+    fn test_render_chat_exaone() {
+        let t = TemplateType::ExaoneChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("[|system|]Be helpful.[|endofturn|]"));
+        assert!(s.contains("[|user|]Hello\n[|endofturn|]"));
+        assert!(s.contains("[|assistant|]Hi!\n[|endofturn|]"));
+        assert!(s.ends_with("[|assistant|]"));
+    }
+
+    // ── MiniCPM Chat ───────────────────────────────────────────────
+
+    #[test]
+    fn test_minicpm_chat_template() {
+        let template = TemplateType::MiniCPMChat;
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result = template.apply("Hello!", Some("Custom."));
+        assert!(result.contains("Custom."));
+    }
+
+    #[test]
+    fn test_detect_minicpm_from_name() {
+        let t = TemplateType::detect(Some("minicpm-2b-sft"), None);
+        assert_eq!(t, TemplateType::MiniCPMChat);
+    }
+
+    #[test]
+    fn test_minicpm_fromstr_roundtrip() {
+        assert_eq!("minicpm-chat".parse::<TemplateType>().unwrap(), TemplateType::MiniCPMChat);
+        assert_eq!("minicpm".parse::<TemplateType>().unwrap(), TemplateType::MiniCPMChat);
+        assert_eq!(TemplateType::MiniCPMChat.to_string(), "minicpm-chat");
+    }
+
+    #[test]
+    fn test_render_chat_minicpm() {
+        let t = TemplateType::MiniCPMChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
+        assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
+        assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
     }
 }

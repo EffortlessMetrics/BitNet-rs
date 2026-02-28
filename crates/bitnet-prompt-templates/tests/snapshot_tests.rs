@@ -1034,6 +1034,84 @@ fn snapshot_stablelm_multi_turn() {
     insta::assert_snapshot!("stablelm_multi_turn", out);
 }
 
+// ── DbrxInstruct ────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_dbrx_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::DbrxInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("dbrx_single_turn", out);
+}
+
+#[test]
+fn snapshot_dbrx_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::DbrxInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("dbrx_with_system", out);
+}
+
+#[test]
+fn snapshot_dbrx_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::DbrxInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("dbrx_multi_turn", out);
+}
+
+// ── ExaoneChat ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_exaone_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::ExaoneChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("exaone_single_turn", out);
+}
+
+#[test]
+fn snapshot_exaone_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::ExaoneChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("exaone_with_system", out);
+}
+
+#[test]
+fn snapshot_exaone_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::ExaoneChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("exaone_multi_turn", out);
+}
+
+// ── MiniCPMChat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_minicpm_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::MiniCPMChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("minicpm_single_turn", out);
+}
+
+#[test]
+fn snapshot_minicpm_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::MiniCPMChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("minicpm_with_system", out);
+}
+
+#[test]
+fn snapshot_minicpm_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::MiniCPMChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("minicpm_multi_turn", out);
+}
+
 // ── BloomChat ───────────────────────────────────────────────────────
 
 #[test]

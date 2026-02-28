@@ -110,6 +110,12 @@ pub struct ModelCompatibilityMatrix {
     pub mistral_nemo_128k: TokenizerDownloadInfo,
     /// Snowflake Arctic with 32K vocabulary - BPE tokenizer
     pub arctic_32k: TokenizerDownloadInfo,
+    /// DBRX with 32K vocabulary - BPE tokenizer
+    pub dbrx_32k: TokenizerDownloadInfo,
+    /// EXAONE with 32K vocabulary - BPE tokenizer
+    pub exaone_32k: TokenizerDownloadInfo,
+    /// MiniCPM with 122K vocabulary - BPE tokenizer
+    pub minicpm_122k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -396,6 +402,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "arctic-32k".to_string(),
                 expected_vocab: Some(32000),
+            },
+            dbrx_32k: TokenizerDownloadInfo {
+                repo: "databricks/dbrx-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "dbrx-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            exaone_32k: TokenizerDownloadInfo {
+                repo: "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "exaone-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            minicpm_122k: TokenizerDownloadInfo {
+                repo: "openbmb/MiniCPM-2B-sft-bf16".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "minicpm-122k".to_string(),
+                expected_vocab: Some(122753),
             },
         }
     }

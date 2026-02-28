@@ -245,6 +245,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(4096),
             }),
+            "dbrx" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(32768),
+            }),
+            "exaone" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "minicpm" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
             _ => None,
         }
     }
@@ -329,6 +344,9 @@ impl ArchitectureRegistry {
             "adept",
             "xverse",
             "arctic",
+            "dbrx",
+            "exaone",
+            "minicpm",
         ]
     }
 
