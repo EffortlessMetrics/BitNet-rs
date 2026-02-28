@@ -72,6 +72,7 @@ avx512 = []
 neon = []
 cuda = ["dep:cudarc", "dep:half", "bitnet-device-probe/cuda"]
 rocm = ["bitnet-device-probe/rocm"]
+hip = ["rocm"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
 vulkan = ["bitnet-device-probe/vulkan"]
 oneapi = ["bitnet-common/oneapi", "bitnet-device-probe/oneapi"]

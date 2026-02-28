@@ -67,6 +67,8 @@ fn kernel_capabilities_cpu_only_snapshot() {
         cpu_rust: true,
         cuda_compiled: false,
         cuda_runtime: false,
+        hip_compiled: false,
+        hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
