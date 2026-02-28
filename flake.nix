@@ -10,7 +10,10 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
+        overlays = [
+          (import rust-overlay)
+          (import ./nix/gpu-overlay.nix)
+        ];
         pkgs = import nixpkgs { inherit system overlays; };
 
         # Toolchains: stable (day-to-day) + MSRV
@@ -32,6 +35,15 @@
           zlib
           oniguruma
           cargo-nextest  # Faster test runner with timeout protection
+        ];
+
+        # Additional deps for GPU builds (OpenCL + Vulkan)
+        gpuDeps = with pkgs; [
+          ocl-icd
+          opencl-headers
+          vulkan-headers
+          vulkan-loader
+          clinfo
         ];
 
         # Common env for rust builds: no sccache, no incremental
@@ -91,6 +103,10 @@
               rustc --version
             '';
           };
+
+          gpu = import ./nix/gpu-shell.nix {
+            inherit pkgs rustStable nativeDeps commonEnv;
+          };
         };
 
         # ----------------------------------------------------------
@@ -143,6 +159,36 @@
             cargoBuildFlags = [ "--package" "bitnet-st2gguf" ];
 
             nativeBuildInputs = [ rustStable ] ++ nativeDeps;
+            RUSTUP_TOOLCHAIN = commonEnv.RUSTUP_TOOLCHAIN;
+            RUSTC = "${rustStable}/bin/rustc";
+            CARGO_BUILD_TARGET = null;
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          };
+
+          bitnet-server-gpu = pkgs.rustPlatform.buildRustPackage {
+            pname = "bitnet-server-gpu";
+            version = "0.1.0";
+            src = ./.;
+
+            cargoLock.lockFile = ./Cargo.lock;
+            cargoBuildFlags = [ "--package" "bitnet-server" "--no-default-features" "--features" "gpu" ];
+
+            nativeBuildInputs = [ rustStable ] ++ nativeDeps ++ gpuDeps;
+            RUSTUP_TOOLCHAIN = commonEnv.RUSTUP_TOOLCHAIN;
+            RUSTC = "${rustStable}/bin/rustc";
+            CARGO_BUILD_TARGET = null;
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+          };
+
+          bitnet-cli-gpu = pkgs.rustPlatform.buildRustPackage {
+            pname = "bitnet-cli-gpu";
+            version = "0.1.0";
+            src = ./.;
+
+            cargoLock.lockFile = ./Cargo.lock;
+            cargoBuildFlags = [ "--package" "bitnet-cli" "--no-default-features" "--features" "gpu,full-cli" ];
+
+            nativeBuildInputs = [ rustStable ] ++ nativeDeps ++ gpuDeps;
             RUSTUP_TOOLCHAIN = commonEnv.RUSTUP_TOOLCHAIN;
             RUSTC = "${rustStable}/bin/rustc";
             CARGO_BUILD_TARGET = null;
@@ -247,6 +293,33 @@
               cp ci-nextest.log $out/
               cp target/nextest/ci/junit.xml $out/ || true
               echo "nextest checks passed" > $out/result
+            '';
+          };
+
+          # GPU workspace build check (compile-only, no hardware needed)
+          gpu-workspace = pkgs.stdenv.mkDerivation {
+            name = "ci-gpu-workspace";
+            src = ./.;
+            nativeBuildInputs = [ rustStable ] ++ nativeDeps ++ gpuDeps;
+
+            buildPhase = ''
+              set -euxo pipefail
+              export HOME=$(mktemp -d)
+              export RUSTUP_TOOLCHAIN=${commonEnv.RUSTUP_TOOLCHAIN}
+              export RUSTC_WRAPPER=${commonEnv.RUSTC_WRAPPER}
+              export CARGO_NET_GIT_FETCH_WITH_CLI=${commonEnv.CARGO_NET_GIT_FETCH_WITH_CLI}
+              export CARGO_INCREMENTAL=${commonEnv.CARGO_INCREMENTAL}
+              export LIBCLANG_PATH="${pkgs.libclang.lib}/lib"
+
+              echo ">>> Running GPU workspace build check…"
+              cargo build --workspace --no-default-features --features gpu 2>&1 | tee ci-gpu-build.log
+              cargo test --package bitnet-opencl 2>&1 | tee -a ci-gpu-build.log
+            '';
+
+            installPhase = ''
+              mkdir -p $out
+              cp ci-gpu-build.log $out/
+              echo "GPU workspace build checks passed" > $out/result
             '';
           };
         };
