@@ -11,6 +11,7 @@ pub mod engine;
 pub mod generation;
 pub mod gguf;
 pub mod kernel_recorder;
+pub mod kv_cache_optimized;
 pub mod layers;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
@@ -42,6 +43,9 @@ pub use generation::{
     AutoregressiveGenerator, GenConfig, SampleConfig, SamplingStrategy as GenSamplingStrategy,
 };
 pub use kernel_recorder::KernelRecorder;
+pub use kv_cache_optimized::{
+    CacheEvictionPolicy, CacheMetrics, EvictionConfig, Page, PageId, PagedKvCache,
+};
 pub use layers::{BitNetAttention, LookupTable, QuantizedLinear};
 pub use npu::{BITNET_ENABLE_NPU, map_device_token, npu_requested};
 pub use parity::{
