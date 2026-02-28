@@ -37,6 +37,8 @@ pub struct ModelConfig {
     pub rope_scaling: Option<RopeScaling>,
     /// RMSNorm epsilon for numerical stability
     pub rms_norm_eps: Option<f32>,
+    /// Normalization layer type (LayerNorm or RmsNorm)
+    pub norm_type: NormType,
     /// Tokenizer configuration
     pub tokenizer: TokenizerConfig,
 }
@@ -56,9 +58,20 @@ impl Default for ModelConfig {
             rope_theta: None,
             rope_scaling: None,
             rms_norm_eps: None,
+            norm_type: NormType::default(),
             tokenizer: TokenizerConfig::default(),
         }
     }
+}
+
+/// Normalization layer type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum NormType {
+    /// LayerNorm with mean subtraction (BitNet default)
+    #[default]
+    LayerNorm,
+    /// RMSNorm without mean subtraction (LLaMA/Phi/Mistral)
+    RmsNorm,
 }
 
 /// Supported model formats

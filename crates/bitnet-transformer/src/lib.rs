@@ -1,7 +1,7 @@
-use bitnet_common::{BitNetConfig, BitNetError, Result};
+use bitnet_common::{BitNetConfig, BitNetError, NormType, Result};
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
-use candle_nn::{LayerNorm, Linear, VarBuilder};
+use candle_nn::{LayerNorm, Linear, RmsNorm, VarBuilder};
 
 /// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
 fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
@@ -64,6 +64,7 @@ fn linear_with_optional_bias(
 /// Helper to create layer norm with optional bias.
 /// If `bias` is missing we use no-bias LayerNorm by default, or error when
 /// `BITNET_REQUIRE_LAYER_NORM_BIAS=1`.
+#[allow(dead_code)]
 fn layer_norm_with_optional_bias(
     normalized_shape: usize,
     eps: f64,
@@ -95,6 +96,78 @@ fn layer_norm_with_optional_bias(
                 normalized_shape
             );
             Ok(LayerNorm::new_no_bias(weight, eps))
+        }
+    }
+}
+
+/// Normalization layer that dispatches between LayerNorm and RmsNorm.
+pub enum NormLayer {
+    LayerNorm(LayerNorm),
+    RmsNorm {
+        inner: RmsNorm,
+        /// Retained reference to the weight tensor for diagnostics.
+        weight: Tensor,
+    },
+}
+
+impl NormLayer {
+    /// Access the weight (gamma) tensor regardless of norm variant.
+    pub fn weight(&self) -> &Tensor {
+        match self {
+            NormLayer::LayerNorm(ln) => ln.weight(),
+            NormLayer::RmsNorm { weight, .. } => weight,
+        }
+    }
+}
+
+impl Module for NormLayer {
+    fn forward(&self, x: &Tensor) -> candle_core::Result<Tensor> {
+        match self {
+            NormLayer::LayerNorm(ln) => ln.forward(x),
+            NormLayer::RmsNorm { inner, .. } => inner.forward(x),
+        }
+    }
+}
+
+/// Build a normalization layer based on model configuration.
+///
+/// - `NormType::LayerNorm` → LayerNorm (with mean subtraction, BitNet default)
+/// - `NormType::RmsNorm` → RmsNorm (without mean subtraction, LLaMA/Phi/Mistral)
+fn build_norm_layer(
+    normalized_shape: usize,
+    eps: f64,
+    norm_type: NormType,
+    vb: VarBuilder,
+) -> candle_core::Result<NormLayer> {
+    let weight = vb.get((normalized_shape,), "weight")?;
+
+    match norm_type {
+        NormType::RmsNorm => {
+            tracing::debug!("Using RmsNorm [{}]", normalized_shape);
+            Ok(NormLayer::RmsNorm {
+                inner: RmsNorm::new(weight.clone(), eps),
+                weight,
+            })
+        }
+        NormType::LayerNorm => {
+            match vb.get((normalized_shape,), "bias") {
+                Ok(bias) => {
+                    tracing::debug!("Using LayerNorm with bias [{}]", normalized_shape);
+                    Ok(NormLayer::LayerNorm(LayerNorm::new(weight, bias, eps)))
+                }
+                Err(err) => {
+                    if std::env::var("BITNET_REQUIRE_LAYER_NORM_BIAS")
+                        .ok()
+                        .is_some_and(|value| value == "1")
+                    {
+                        return Err(candle_core::Error::Msg(format!(
+                            "LayerNorm bias required but missing: {err}"
+                        )));
+                    }
+                    tracing::debug!("Using LayerNorm without bias [{}]", normalized_shape);
+                    Ok(NormLayer::LayerNorm(LayerNorm::new_no_bias(weight, eps)))
+                }
+            }
         }
     }
 }
@@ -946,8 +1019,8 @@ impl FeedForward {
 pub struct TransformerBlock {
     attention: MultiHeadAttention,
     feed_forward: FeedForward,
-    attention_norm: LayerNorm,
-    ffn_norm: LayerNorm,
+    attention_norm: NormLayer,
+    ffn_norm: NormLayer,
 }
 
 impl TransformerBlock {
@@ -956,19 +1029,23 @@ impl TransformerBlock {
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
 
-        tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
+        let norm_type = config.model.norm_type;
+
+        tracing::debug!("TransformerBlock using eps={} norm_type={:?} (from header)", eps, norm_type);
 
         Ok(Self {
             attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
             feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
-            attention_norm: layer_norm_with_optional_bias(
+            attention_norm: build_norm_layer(
                 hidden_size,
                 eps,
+                norm_type,
                 vb.pp("attention_norm"),
             )?,
-            ffn_norm: layer_norm_with_optional_bias(
+            ffn_norm: build_norm_layer(
                 hidden_size,
                 eps,
+                norm_type,
                 vb.pp("post_attention_layernorm"),
             )?,
         })
@@ -1262,7 +1339,7 @@ pub struct TransformerModel {
     pub embed_transposed: bool, // True if embeddings are stored as [hidden, vocab]
     pub embed_tied_weight: Option<Tensor>, // Cached transposed embedding weight for tied models [H, V]
     pub layers: Vec<TransformerBlock>,
-    pub norm: LayerNorm,
+    pub norm: NormLayer,
     pub lm_head: Option<Linear>,        // Optional for tied weights
     pub lm_head_weight: Option<Tensor>, // Direct access to lm_head weight for transposed handling
     pub lm_head_transposed: bool,       // True if lm_head is stored as [hidden, vocab]
@@ -1309,9 +1386,10 @@ impl TransformerModel {
 
         // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
-        tracing::info!("Final norm using RMSNorm eps={} (from header)", eps);
+        let norm_type = config.model.norm_type;
+        tracing::info!("Final norm using eps={} norm_type={:?} (from header)", eps, norm_type);
 
-        let norm = layer_norm_with_optional_bias(hidden_size, eps, vb.pp("final_norm"))?;
+        let norm = build_norm_layer(hidden_size, eps, norm_type, vb.pp("final_norm"))?;
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
@@ -2006,6 +2084,89 @@ mod tests {
             expected_ratio,
             actual_ratio
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_norm_layer_dispatch_produces_different_outputs() -> candle_core::Result<()> {
+        // RMSNorm (no mean subtraction) and LayerNorm (with mean subtraction)
+        // must produce different outputs for non-zero-mean input.
+        let device = Device::Cpu;
+        let hidden_size = 128;
+        let eps = 1e-5;
+
+        // Input with non-zero mean so the two norms diverge
+        let input_data: Vec<f32> =
+            (0..hidden_size).map(|i| 1.0 + (i as f32 / hidden_size as f32)).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+
+        let weight = Tensor::ones(hidden_size, DType::F32, &device)?;
+
+        // Build NormLayer::RmsNorm
+        let rms = NormLayer::RmsNorm {
+            inner: RmsNorm::new(weight.clone(), eps),
+            weight: weight.clone(),
+        };
+        let out_rms = rms.forward(&input)?;
+
+        // Build NormLayer::LayerNorm (no bias)
+        let ln = NormLayer::LayerNorm(LayerNorm::new_no_bias(weight, eps));
+        let out_ln = ln.forward(&input)?;
+
+        // They must differ for non-zero-mean input
+        let diff = out_rms.sub(&out_ln)?.abs()?.sum_all()?.to_scalar::<f32>()?;
+        assert!(
+            diff > 1e-4,
+            "RmsNorm and LayerNorm should produce different outputs, but diff={:.6e}",
+            diff
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_norm_layer_dispatches_rmsnorm() -> candle_core::Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let hidden_size = 64;
+        let eps = 1e-5;
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        let norm = build_norm_layer(hidden_size, eps, NormType::RmsNorm, vb)?;
+        assert!(matches!(norm, NormLayer::RmsNorm { .. }), "Expected RmsNorm variant");
+
+        let input_data: Vec<f32> = (0..hidden_size).map(|i| (i as f32 / 10.0).sin()).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+        let output = norm.forward(&input)?;
+        assert_eq!(output.shape(), input.shape());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_norm_layer_dispatches_layernorm() -> candle_core::Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let hidden_size = 64;
+        let eps = 1e-5;
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        let norm = build_norm_layer(hidden_size, eps, NormType::LayerNorm, vb)?;
+        assert!(matches!(norm, NormLayer::LayerNorm(_)), "Expected LayerNorm variant");
+
+        let input_data: Vec<f32> = (0..hidden_size).map(|i| (i as f32 / 10.0).sin()).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+        let output = norm.forward(&input)?;
+        assert_eq!(output.shape(), input.shape());
 
         Ok(())
     }
