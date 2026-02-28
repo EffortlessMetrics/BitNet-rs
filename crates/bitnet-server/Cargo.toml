@@ -21,11 +21,11 @@ anyhow.workspace = true
 async-stream = "0.3.6"
 async-trait = "0.1.89"
 axum.workspace = true
-bitnet-common = { path = "../bitnet-common" }
-bitnet-inference = { path = "../bitnet-inference" }
-bitnet-kernels = { path = "../bitnet-kernels" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }
 chrono.workspace = true

@@ -9,3 +9,7 @@
 **Vulnerability:** The server allowed loading model files from any path on the filesystem (e.g., via absolute paths) provided the file extension matched `.gguf` or `.safetensors`. This could allow attackers to probe for the existence of files or load sensitive data if it happened to have the correct extension.
 **Learning:** Checking for file extensions and blocking `..` is insufficient for path security when absolute paths are allowed. Always restrict file operations to a specific root directory or allowlist.
 **Prevention:** Implement a configuration option (`allowed_model_directories`) to restrict file loading to specific directories. Use `std::path::Path::starts_with` for robust path prefix checking, rather than string manipulation which can be bypassed (e.g., `/var/log` matching `/var/login`). Ensure existing path traversal protections are maintained.
+## 2024-03-01 - [Input Validation Blocks Valid CRLF]
+**Vulnerability:** Input validation in `sanitize_input` blocks carriage return (`\r`) characters, categorizing them as invalid control characters.
+**Learning:** This restricts valid payloads coming from environments (like Windows) or protocols (like HTTP standard format) that use CRLF for newlines, leading to unintentional denial of service for these valid requests.
+**Prevention:** Explicitly allow `\r` alongside `\n` and `\t` when filtering out control characters in text payloads.

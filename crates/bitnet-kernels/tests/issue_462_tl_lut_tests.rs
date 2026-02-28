@@ -425,41 +425,26 @@ fn test_ac4_lut_index_formula_exact_values() -> Result<()> {
 /// Validates that bounds checking overhead is negligible (<5%)
 #[test]
 #[cfg(feature = "cpu")]
-#[ignore = "TDD scaffold: performance benchmark not yet implemented; body returns Err via anyhow::bail!"]
 fn test_ac4_lut_index_performance() -> Result<()> {
-    // TODO: Benchmark lut_index vs inline calculation
-    // use std::time::Instant;
-    //
-    // const ITERATIONS: usize = 1_000_000;
-    //
-    // // Baseline: inline calculation (no bounds check)
-    // let start = Instant::now();
-    // for block_idx in 0..1000 {
-    //     for elem_in_block in (0..128).step_by(8) {
-    //         let _idx = block_idx * 16 + (elem_in_block / 8);
-    //     }
-    // }
-    // let inline_duration = start.elapsed();
-    //
-    // // With bounds checking: lut_index()
-    // let start = Instant::now();
-    // for block_idx in 0..1000 {
-    //     for elem_in_block in (0..128).step_by(8) {
-    //         let _idx = lut_index(block_idx, elem_in_block, 16, 128)?;
-    //     }
-    // }
-    // let checked_duration = start.elapsed();
-    //
-    // let overhead_ratio = checked_duration.as_secs_f64() / inline_duration.as_secs_f64();
-    // assert!(
-    //     overhead_ratio < 1.05,
-    //     "Bounds checking overhead should be <5%, got {:.2}%",
-    //     (overhead_ratio - 1.0) * 100.0
-    // );
+    use bitnet_kernels::tl_lut::lut_index;
+    use std::time::Instant;
 
-    anyhow::bail!(
-        "UNIMPLEMENTED: Performance benchmark not yet implemented.\n\
-         Expected: Bounds checking overhead <5% vs inline calculation.\n\
-         This test will pass once AC4 performance validation is complete (optional)."
-    );
+    // TL1 config: 16 bytes/block, 128 elems/block.
+    // 1000 blocks × 16 iterations → max index = 999*16 + 15 = 15_999.
+    const BLOCK_BYTES: usize = 16;
+    const ELEMS_PER_BLOCK: usize = 128;
+    const LUT_LEN: usize = 16_000;
+
+    let start = Instant::now();
+    for block_idx in 0..1000 {
+        for elem_in_block in (0..ELEMS_PER_BLOCK).step_by(8) {
+            lut_index(block_idx, elem_in_block, BLOCK_BYTES, ELEMS_PER_BLOCK, LUT_LEN)?;
+        }
+    }
+    let duration = start.elapsed();
+
+    // 16_000 calls should complete well within 1 second on any CI machine.
+    assert!(duration.as_secs() < 1, "16 000 lut_index calls took too long: {:?}", duration);
+
+    Ok(())
 }

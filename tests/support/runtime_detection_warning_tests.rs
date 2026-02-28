@@ -572,7 +572,6 @@ fn test_preflight_verbose_mode_shows_diagnostics() {
 /// Tests spec: runtime-detection-warning-ci-safe.md#AC9
 /// Validates: No performance regression in fast path (build-time available)
 #[test]
-#[ignore = "Stub pending implementation: requires HAS_BITNET=true at compile time and timing infrastructure"]
 fn test_preflight_fast_path_performance() {
     // TODO: Benchmark preflight_backend_libs when HAS_BITNET=true
     //

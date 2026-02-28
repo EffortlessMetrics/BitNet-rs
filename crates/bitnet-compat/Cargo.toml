@@ -6,12 +6,11 @@ rust-version.workspace = true
 authors = ["BitNet Contributors"]
 description = "Compatibility layer for drop-in llama.cpp replacement"
 license = "MIT OR Apache-2.0"
-publish = false
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev", optional = true }
 anyhow = "1.0.100"
 tracing = "0.1.41"
 serde_json.workspace = true
