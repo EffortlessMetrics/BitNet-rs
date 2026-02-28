@@ -215,7 +215,17 @@ impl DeviceManager {
             if bitnet_kernels::device_features::gpu_available_runtime() {
                 return self.primary_device;
             }
-            // GPU compiled but not available at runtime — fall back gracefully.
+        }
+
+        // Check OneAPI/OpenCL for Intel GPU devices.
+        if matches!(self.primary_device, Device::OpenCL(_))
+            && bitnet_kernels::device_features::oneapi_available_runtime()
+        {
+            return self.primary_device;
+        }
+
+        // Requested GPU not available at runtime — fall back gracefully.
+        if self.primary_device != self.fallback_device {
             log::warn!(
                 "Primary device {:?} unavailable at runtime; falling back to {:?}",
                 self.primary_device,

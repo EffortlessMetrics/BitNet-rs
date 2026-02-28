@@ -14,6 +14,15 @@
 //!
 //! Tests specification: docs/explanation/issue-439-spec.md#device-feature-detection-api
 
+/// Check if OneAPI/OpenCL support was compiled into this binary
+///
+/// Returns `true` if `feature="oneapi"` was enabled at compile time.
+/// This does NOT check runtime Intel GPU availability.
+#[inline]
+pub fn oneapi_compiled() -> bool {
+    cfg!(feature = "oneapi")
+}
+
 /// Check if GPU support was compiled into this binary
 ///
 /// Returns `true` if either `feature="gpu"` or `feature="cuda"` was enabled
@@ -101,44 +110,16 @@ pub fn gpu_available_runtime() -> bool {
     crate::gpu_utils::get_gpu_info().cuda
 }
 
-/// Check if Intel oneAPI GPU runtime is available.
+/// Check if an Intel GPU is available at runtime via OpenCL.
 ///
-/// Detection is best-effort via `sycl-ls`. Tests can force deterministic
-/// outcomes with `BITNET_GPU_FAKE=oneapi` / `BITNET_GPU_FAKE=none` unless
-/// strict mode is enabled.
-#[cfg(feature = "oneapi")]
-#[inline]
+/// Delegates to [`bitnet_device_probe::oneapi_available_runtime`] which
+/// checks `clinfo` and `sycl-ls`. Returns `false` when the `oneapi`
+/// feature is not compiled.
 pub fn oneapi_available_runtime() -> bool {
-    use std::env;
-    use std::process::{Command, Stdio};
-
-    let strict_mode = env::var("BITNET_STRICT_MODE")
-        .map(|v| v == "1" || v.to_lowercase() == "true")
-        .unwrap_or(false);
-
-    if !strict_mode {
-        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-            if fake.eq_ignore_ascii_case("oneapi") {
-                return true;
-            }
-            if fake.eq_ignore_ascii_case("none") {
-                return false;
-            }
-        }
+    if !oneapi_compiled() {
+        return false;
     }
-
-    Command::new("sycl-ls")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
-}
-
-#[cfg(not(feature = "oneapi"))]
-#[inline]
-pub fn oneapi_available_runtime() -> bool {
-    false
+    bitnet_device_probe::oneapi_available_runtime()
 }
 
 /// Stub implementation when GPU not compiled
