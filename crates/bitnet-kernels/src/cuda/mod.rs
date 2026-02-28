@@ -17,6 +17,9 @@ pub mod attention;
 pub mod qk256_gemv;
 pub mod rmsnorm;
 
-pub use attention::{AttentionKernelConfig, launch_attention};
+pub use attention::{
+    AttentionKernelConfig, HeadDim, KvCacheConfig, MhaConfig, MhaKvCache, launch_attention,
+    launch_mha_decode, launch_mha_prefill,
+};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
