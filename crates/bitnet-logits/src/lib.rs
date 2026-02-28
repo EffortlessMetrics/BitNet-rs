@@ -184,12 +184,21 @@ pub fn softmax_in_place(logits: &mut [f32]) {
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
     let mut sum = 0.0f32;
     for l in logits.iter_mut() {
-        *l = (*l - max).exp();
-        sum += *l;
+        let v = *l;
+        // Optimization: skip exp() for NEG_INFINITY which always yields 0.0.
+        // This is extremely common after top_k filtering sets out-of-bounds to NEG_INFINITY.
+        if v == f32::NEG_INFINITY {
+            *l = 0.0;
+        } else {
+            let exp = (v - max).exp();
+            *l = exp;
+            sum += exp;
+        }
     }
     if sum > 0.0 {
+        let inv_sum = 1.0 / sum;
         for l in logits.iter_mut() {
-            *l /= sum;
+            *l *= inv_sum;
         }
     } else {
         // Degenerate case: all exponentiated values underflowed to 0.

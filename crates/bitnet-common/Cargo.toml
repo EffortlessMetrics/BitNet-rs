@@ -41,7 +41,10 @@ integration-tests = []
 default = []
 cpu = []
 cuda = ["candle-core/cuda"]
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+rocm = []
+gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
+hip = []
+npu = []
 metal = []
 oneapi = []
 # Do NOT enable Candle's Metal feature on non-Apple hosts.

@@ -13,7 +13,7 @@ description = "Shared feature flag and BDD profile matrix contracts"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-runtime-profile-core = { path = "../bitnet-runtime-profile-core", version = "0.2.1-dev" }
+bitnet-runtime-profile-core = { path = "../bitnet-runtime-profile-core", version = "0.2.0-alpha.1" }
 
 [features]
 default = []
@@ -59,4 +59,5 @@ runtime-profile-trend = ["bitnet-runtime-profile-core/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-runtime-profile-core/runtime-profile-integration-tests"]
 
 [dev-dependencies]
+insta.workspace = true
 proptest.workspace = true

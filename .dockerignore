@@ -31,6 +31,7 @@ target
 *.log
 *.tmp
 /tmp
+rustc-ice-*.txt
 
 # Environment files (protect secrets)
 *.env
@@ -53,3 +54,15 @@ models/*.safetensors
 # Cache directories
 .cache/
 ~/.cache/
+
+# Development scripts and archives not needed for build
+archive/
+baselines/
+benchmarks/
+logs/
+media/
+verification/
+*.py
+*.patch
+bulk_close_commands.sh
+execute_phase1_actions.sh

@@ -56,9 +56,9 @@ fn test_token_equivalence() {
     // Verify exact token match
     assert_eq!(rust_tokens, cpp_tokens);
 }
-```
-
+```text
 **Validation Criteria:**
+
 - **Token-level matching**: Outputs must be identical
 - **Floating-point tolerance**: Within 1e-6 for numerical operations
 - **Model format compatibility**: Same model produces same results
@@ -81,9 +81,9 @@ fn benchmark_inference(c: &mut Criterion) {
         b.iter(|| bitnet_cpp::generate(&model, "test prompt"))
     });
 }
-```
-
+```text
 **Benchmark Metrics:**
+
 - **Inference Speed**: Tokens per second
 - **Memory Usage**: Peak and average memory consumption
 - **Cold Start Time**: Time to first token
@@ -104,19 +104,20 @@ fn test_api_compatibility() {
 
     assert_eq!(rust_result, cpp_result);
 }
-```
-
+```text
 ## Usage Instructions
 
 ### Prerequisites
 
 1. **Enable cross-validation features**:
+
    ```bash
    # Required for cross-validation
    cargo build --features crossval
    ```
 
 2. **Install system dependencies**:
+
    ```bash
    # Ubuntu/Debian
    sudo apt install clang cmake build-essential
@@ -130,6 +131,7 @@ fn test_api_compatibility() {
    ```
 
 3. **Download C++ implementation**:
+
    ```bash
    # Automatic setup
    ./ci/fetch_bitnet_cpp.sh
@@ -150,8 +152,7 @@ cargo test --features crossval
 cargo test --features crossval token_equivalence
 cargo test --features crossval numerical_accuracy
 cargo test --features crossval api_compatibility
-```
-
+```text
 #### Performance Benchmarks
 
 ```bash
@@ -162,8 +163,7 @@ cargo bench --features crossval
 cargo bench --features crossval inference_speed
 cargo bench --features crossval memory_usage
 cargo bench --features crossval model_loading
-```
-
+```text
 #### Comprehensive Validation
 
 ```bash
@@ -173,13 +173,13 @@ cargo bench --features crossval --release
 
 # Generate detailed reports
 cargo bench --features crossval -- --output-format html
-```
-
+```text
 ### Custom Test Fixtures
 
 Create custom test cases for your specific models:
 
 1. **Add test model** to `crossval/fixtures/`:
+
    ```json
    {
      "name": "my_custom_model",
@@ -192,6 +192,7 @@ Create custom test cases for your specific models:
    ```
 
 2. **Run tests with custom fixture**:
+
    ```bash
    cargo test --features crossval -- --test-fixture my_custom_model
    ```
@@ -200,26 +201,26 @@ Create custom test cases for your specific models:
 
 ### Accuracy Test Results
 
-**✅ PASS - Token Equivalence**
-```
+#### ✅ PASS - Token Equivalence
+
+```text
 [PASS] token_equivalence_test: Rust=150 tokens, C++=150 tokens
 ✓ All tokens match exactly
-```
-
-**❌ FAIL - Token Mismatch**
-```
+```text
+#### ❌ FAIL - Token Mismatch
+```text
 [FAIL] token_equivalence_test: Token mismatch at position 42
   Rust token: 1234
   C++ token:  1235
   Difference: 1
-```
-
+```text
 **Action**: Investigate numerical precision or algorithm differences
 
 ### Performance Benchmark Results
 
 **Example Output**:
-```
+
+```text
 Benchmark Results:
 ┌─────────────────┬─────────────┬─────────────┬─────────────┐
 │ Test            │ BitNet-rs   │ BitNet C++  │ Improvement │
@@ -229,16 +230,16 @@ Benchmark Results:
 │ Cold Start      │ 0.8s        │ 2.1s        │ 2.6x faster │
 │ Model Loading   │ 1.2s        │ 4.5s        │ 3.8x faster │
 └─────────────────┴─────────────┴─────────────┴─────────────┘
-```
-
+```text
 **Interpretation**:
+
 - **Green numbers**: BitNet-rs is faster/more efficient
 - **Red numbers**: Potential regression (investigate)
 - **Yellow numbers**: Within expected variance
 
 ### Memory Usage Analysis
 
-```
+```text
 Memory Usage Comparison:
 ┌─────────────────┬─────────────┬─────────────┐
 │ Component       │ BitNet-rs   │ BitNet C++  │
@@ -250,8 +251,7 @@ Memory Usage Comparison:
 ├─────────────────┼─────────────┼─────────────┤
 │ Total           │ 2.0 GB      │ 3.4 GB      │
 └─────────────────┴─────────────┴─────────────┘
-```
-
+```text
 ## Continuous Integration
 
 ### Automated Cross-Validation
@@ -274,8 +274,7 @@ jobs:
         run: cargo test --features crossval
       - name: Run benchmarks
         run: cargo bench --features crossval
-```
-
+```text
 ### Nightly Validation
 
 Extended validation runs nightly:
@@ -295,8 +294,7 @@ jobs:
         run: cargo test --features crossval --release -- --include-slow-tests
       - name: Performance regression detection
         run: cargo bench --features crossval --baseline
-```
-
+```text
 ## Troubleshooting
 
 ### Common Issues
@@ -304,27 +302,28 @@ jobs:
 #### 1. C++ Implementation Not Found
 
 **Error**:
-```
-ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
-```
 
+```text
+ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
+```text
 **Solution**:
+
 ```bash
 # Download and build C++ implementation
 ./ci/fetch_bitnet_cpp.sh
 
 # Or set custom path
 export BITNET_CPP_PATH=/path/to/bitnet.cpp
-```
-
+```text
 #### 2. Clang Not Available
 
 **Error**:
-```
-ERROR: clang not found - cannot generate C++ bindings
-```
 
+```text
+ERROR: clang not found - cannot generate C++ bindings
+```text
 **Solution**:
+
 ```bash
 # Ubuntu/Debian
 sudo apt install clang libclang-dev
@@ -334,16 +333,16 @@ xcode-select --install
 
 # Windows
 # Install LLVM from https://llvm.org/
-```
-
+```text
 #### 3. Token Mismatch Errors
 
 **Error**:
-```
-Token mismatch at position 15: Rust=1234, C++=1235
-```
 
+```text
+Token mismatch at position 15: Rust=1234, C++=1235
+```text
 **Investigation Steps**:
+
 1. Check model file integrity
 2. Verify identical model loading parameters
 3. Check for floating-point precision differences
@@ -352,11 +351,12 @@ Token mismatch at position 15: Rust=1234, C++=1235
 #### 4. Performance Regression
 
 **Error**:
-```
-Performance regression detected: 15% slower than baseline
-```
 
+```text
+Performance regression detected: 15% slower than baseline
+```text
 **Investigation Steps**:
+
 1. Profile the specific slow operation
 2. Check for debug builds (use `--release`)
 3. Verify system resources and load
@@ -372,8 +372,7 @@ RUST_LOG=debug cargo test --features crossval
 
 # Enable trace logging for specific modules
 RUST_LOG=bitnet_crossval=trace cargo test --features crossval
-```
-
+```text
 ### Performance Profiling
 
 Profile cross-validation performance:
@@ -386,8 +385,7 @@ cargo flamegraph --features crossval --bench performance
 # Memory profiling
 cargo install heaptrack
 heaptrack cargo bench --features crossval
-```
-
+```text
 ## Best Practices
 
 ### 1. Regular Validation

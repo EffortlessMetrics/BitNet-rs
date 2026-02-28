@@ -23,6 +23,8 @@ fn get_home_dir() -> PathBuf {
 fn main() {
     // Tell rustc that `cfg(have_cpp)` is a known conditional
     println!("cargo:rustc-check-cfg=cfg(have_cpp)");
+    println!("cargo:rustc-check-cfg=cfg(bitnet_build_gpu)");
+    println!("cargo:rustc-check-cfg=cfg(bitnet_build_hip)");
 
     // Always allow re-run if this file changes
     println!("cargo:rerun-if-changed=build.rs");
@@ -30,34 +32,64 @@ fn main() {
     // Unified GPU detection: honor both "gpu" and legacy "cuda" features for back-compat.
     // This ensures the build script recognizes GPU builds regardless of which feature is enabled.
     // See Issue #439 for unified predicate approach.
-    let gpu =
-        env::var_os("CARGO_FEATURE_GPU").is_some() || env::var_os("CARGO_FEATURE_CUDA").is_some();
+    let gpu = env::var_os("CARGO_FEATURE_GPU").is_some()
+        || env::var_os("CARGO_FEATURE_CUDA").is_some()
+        || env::var_os("CARGO_FEATURE_HIP").is_some();
+    let rocm = env::var_os("CARGO_FEATURE_ROCM").is_some();
 
-    if gpu {
+    if gpu || rocm {
         // Emit build-time cfg flag for unified GPU detection
         println!("cargo:rustc-cfg=bitnet_build_gpu");
+    }
 
-        // Add CUDA library paths
-        println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
-        println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");
-        println!("cargo:rustc-link-search=/usr/lib/x86_64-linux-gnu");
-        println!("cargo:rustc-link-search=/usr/lib64");
+    if gpu {
+        if env::var_os("CARGO_FEATURE_CUDA").is_some() || env::var_os("CARGO_FEATURE_GPU").is_some()
+        {
+            // Add CUDA library paths
+            println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
+            println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");
+            println!("cargo:rustc-link-search=/usr/lib/x86_64-linux-gnu");
+            println!("cargo:rustc-link-search=/usr/lib64");
 
-        // Try NVIDIA Jetson paths for ARM64
-        println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib");
-        println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib/stubs");
+            // Try NVIDIA Jetson paths for ARM64
+            println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib");
+            println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib/stubs");
 
-        // Common paths for CUDA installations
-        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux");
-        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib");
-        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib/stubs");
+            // Common paths for CUDA installations
+            println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux");
+            println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib");
+            println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib/stubs");
 
-        // Link CUDA libraries
-        println!("cargo:rustc-link-lib=cuda");
-        println!("cargo:rustc-link-lib=nvrtc");
-        println!("cargo:rustc-link-lib=curand");
-        println!("cargo:rustc-link-lib=cublas");
-        println!("cargo:rustc-link-lib=cublasLt");
+            // Link CUDA libraries
+            println!("cargo:rustc-link-lib=cuda");
+            println!("cargo:rustc-link-lib=nvrtc");
+            println!("cargo:rustc-link-lib=curand");
+            println!("cargo:rustc-link-lib=cublas");
+            println!("cargo:rustc-link-lib=cublasLt");
+        }
+
+        if env::var_os("CARGO_FEATURE_HIP").is_some() {
+            println!("cargo:rustc-cfg=bitnet_build_hip");
+            println!("cargo:rustc-link-search=/opt/rocm/lib");
+            println!("cargo:rustc-link-search=/opt/rocm/lib64");
+            println!("cargo:rustc-link-lib=amdhip64");
+            println!("cargo:rustc-link-lib=hiprtc");
+            println!("cargo:rustc-link-lib=rocblas");
+        }
+    }
+
+    if rocm {
+        let rocm_root = env_var("ROCM_PATH")
+            .or_else(|| env_var("ROCM_HOME"))
+            .or_else(|| env_var("HIP_PATH"))
+            .unwrap_or_else(|| "/opt/rocm".to_string());
+
+        println!("cargo:rustc-link-search={}/lib", rocm_root);
+        println!("cargo:rustc-link-search={}/lib64", rocm_root);
+
+        // Link core ROCm runtime libraries required for HIP kernel launch.
+        println!("cargo:rustc-link-lib=amdhip64");
+        println!("cargo:rustc-link-lib=hsa-runtime64");
     }
 
     // Only do FFI detection work if the crate feature "ffi" is enabled

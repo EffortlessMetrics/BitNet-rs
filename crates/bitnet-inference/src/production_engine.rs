@@ -93,6 +93,8 @@ impl PerformanceMetricsCollector {
         self.device_type = match device {
             Device::Cpu => "CPU".to_string(),
             Device::Cuda(id) => format!("CUDA:{}", id),
+            Device::Hip(id) => format!("HIP:{}", id),
+            Device::Npu => "NPU".to_string(),
             Device::Metal => "Metal".to_string(),
             Device::OpenCL(id) => format!("OpenCL:{}", id),
         };

@@ -180,6 +180,11 @@ docs:
 	@echo "$(GREEN)Generating documentation...$(NC)"
 	@$(CARGO) doc --workspace --no-deps --open
 
+## docs-check: Run automated documentation checks
+docs-check:
+	@echo "$(GREEN)Running documentation automation checks...$(NC)"
+	@scripts/docs_automation.sh
+
 #############################################################################
 # GPU TARGETS
 #############################################################################

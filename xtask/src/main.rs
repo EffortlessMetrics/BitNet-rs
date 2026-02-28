@@ -142,6 +142,10 @@ fn exp_backoff_ms(attempt: u32) -> u64 {
 }
 
 // Parse Retry-After header (supports both seconds and HTTP-date)
+fn bitnet_offline_enabled(cli_offline: bool) -> bool {
+    cli_offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1")
+}
+
 fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
     let raw = match headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok()) {
         Some(s) => s,
@@ -162,10 +166,10 @@ fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
 }
 
 fn validate_downloaded_len(downloaded: u64, expected_total: Option<u64>) -> Result<()> {
-    if let Some(total) = expected_total {
-        if downloaded != total {
-            bail!("download truncated: got {} bytes, expected {}", downloaded, total);
-        }
+    if let Some(total) = expected_total
+        && downloaded != total
+    {
+        bail!("download truncated: got {} bytes, expected {}", downloaded, total);
     }
     Ok(())
 }
@@ -249,6 +253,7 @@ enum Cmd {
     ///
     /// Environment:
     /// - HF_TOKEN: Authentication token for private repositories
+    /// - BITNET_OFFLINE=1: Skip all network calls and require local files
     /// - HTTP\[S\]_PROXY: Automatically respected for proxy connections
     DownloadModel {
         /// HF repo id (e.g., microsoft/bitnet-b1.58-2B-4T-gguf)
@@ -294,6 +299,9 @@ enum Cmd {
         /// Request timeout in seconds
         #[arg(long, default_value_t = 1800)]
         timeout: u64,
+        /// Skip network and only use local cache (or fail if missing)
+        #[arg(long)]
+        offline: bool,
     },
 
     /// Download LLaMA-3 tokenizer.json from HuggingFace
@@ -1120,6 +1128,7 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
+            offline,
         } => download_model_cmd(DownloadConfig {
             id: &id,
             file: &file,
@@ -1133,6 +1142,7 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
+            offline: offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
         }),
         Cmd::Tokenizer { into, source, force, verbose } => {
             // AC:ID llama3-tokenizer-api-contracts.md#xtask-tokenizer-v1
@@ -1386,6 +1396,7 @@ struct DownloadConfig<'a> {
     json: bool,
     retries: u32,
     timeout: u64,
+    offline: bool,
 }
 
 // Macro for emitting JSON events
@@ -1442,6 +1453,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         json,
         retries,
         timeout,
+        offline,
     } = config;
     fs::create_dir_all(out_dir)?;
 
@@ -1453,9 +1465,39 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     fs::create_dir_all(&dest_dir)?;
     let dest = dest_dir.join(safe_file);
 
+    if offline {
+        if dest.exists() {
+            if !json {
+                println!("✓ File is up to date (offline mode): {}", dest.display());
+            }
+            return Ok(());
+        } else {
+            bail!("Offline mode enabled but model file not found in cache");
+        }
+    }
+
     let revision = rev.unwrap_or("main");
     let url = format!("{base_url}/{id}/resolve/{revision}/{file}");
     let token = std::env::var("HF_TOKEN").ok();
+
+    let offline_mode = bitnet_offline_enabled(offline);
+    if offline_mode {
+        if verbose {
+            eprintln!("[VERBOSE] Offline mode enabled: BITNET_OFFLINE=1/--offline");
+        }
+        if dest.exists() {
+            if let Some(want) = sha256_hex {
+                verify_sha256(&dest, want)?;
+                println!("✓ SHA256 verified");
+            }
+            println!("✓ Offline mode: using existing file {}", dest.display());
+            return Ok(());
+        }
+        bail!(
+            "offline mode is enabled but model file is missing: {}. Disable offline mode or download first.",
+            dest.display()
+        );
+    }
 
     if verbose {
         eprintln!("[VERBOSE] URL: {}", url);
@@ -1774,6 +1816,23 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                         ev!(json, "retry", { wait_secs: wait, msg: "429" });
                         thread::sleep(Duration::from_secs(wait));
                         attempt += 1;
+                        continue;
+                    }
+                    StatusCode::INTERNAL_SERVER_ERROR
+                    | StatusCode::BAD_GATEWAY
+                    | StatusCode::SERVICE_UNAVAILABLE
+                    | StatusCode::GATEWAY_TIMEOUT
+                        if attempt < max_attempts =>
+                    {
+                        attempt += 1;
+                        let backoff = exp_backoff_ms(attempt);
+                        eprintln!(
+                            "   server error {}. Retrying in {} ms...",
+                            resp.status(),
+                            backoff
+                        );
+                        ev!(json, "retry", { wait_secs: backoff / 1000, msg: "5xx" });
+                        thread::sleep(Duration::from_millis(backoff));
                         continue;
                     }
                     StatusCode::PRECONDITION_FAILED | StatusCode::RANGE_NOT_SATISFIABLE => {
@@ -4010,6 +4069,7 @@ fn full_crossval_cmd(
         json: false,
         retries: 3,
         timeout: 1800,
+        offline: std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
     })?;
 
     println!();
@@ -6294,10 +6354,30 @@ fn try_auto_discover_tokenizer(model_path: &Path) -> Result<Option<PathBuf>> {
             println!("   Found: {}", path.display());
             Ok(Some(path.clone()))
         }
-        TokenizerStrategy::NeedsDownload(_) => {
-            println!("   Would download compatible tokenizer (async operation not supported yet)");
-            // For now, return None - async downloads would need runtime context
-            Ok(None)
+        TokenizerStrategy::NeedsDownload(download_info) => {
+            println!("   Downloading compatible tokenizer from {}", download_info.repo);
+            let downloader = bitnet_tokenizers::SmartTokenizerDownload::new()
+                .context("Failed to initialize tokenizer downloader")?;
+
+            #[cfg(feature = "inference")]
+            {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .context("Failed to initialize async runtime for tokenizer download")?;
+                let path = runtime
+                    .block_on(downloader.download_tokenizer(download_info))
+                    .context("Failed to download compatible tokenizer")?;
+                println!("   Downloaded tokenizer to: {}", path.display());
+                Ok(Some(path))
+            }
+            #[cfg(not(feature = "inference"))]
+            {
+                let _ = downloader;
+                bail!(
+                    "Tokenizer auto-download requires xtask built with the inference feature. Re-run with `cargo xtask --features inference ...` or pass --tokenizer."
+                );
+            }
         }
         TokenizerStrategy::EmbeddedGguf(_) => {
             println!("   Using embedded GGUF tokenizer");
@@ -6677,6 +6757,18 @@ mod tests {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(RETRY_AFTER, "10".parse().unwrap());
         assert_eq!(retry_after_secs(&headers), 10);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_bitnet_offline_enabled_helper() {
+        unsafe { std::env::remove_var("BITNET_OFFLINE") };
+        assert!(!bitnet_offline_enabled(false));
+        assert!(bitnet_offline_enabled(true));
+
+        unsafe { std::env::set_var("BITNET_OFFLINE", "1") };
+        assert!(bitnet_offline_enabled(false));
+        unsafe { std::env::remove_var("BITNET_OFFLINE") };
     }
 
     #[test]

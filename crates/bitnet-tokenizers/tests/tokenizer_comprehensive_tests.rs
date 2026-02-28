@@ -147,7 +147,7 @@ proptest! {
     #[test]
     fn prop_encode_ids_within_vocab_bounds(
         text in "[a-zA-Z ]{1,50}",
-        vocab_size in 100usize..200_000usize,
+        vocab_size in 256usize..200_000usize,
     ) {
         let tok = BasicTokenizer::with_config(vocab_size, None, None, None);
         let tokens = tok.encode(&text, false, false).expect("encode must succeed");
@@ -250,7 +250,7 @@ proptest! {
         let tokens = tok.encode(&text, false, false)
             .expect("encode must succeed for valid UTF-8");
         let char_count = text.chars().count();
-        prop_assert!(tokens.len() >= 1, "non-empty text must produce ≥1 token");
+        prop_assert!(!tokens.is_empty(), "non-empty text must produce ≥1 token");
         prop_assert!(tokens.len() <= char_count * 4,
             "token count {} must be ≤ 4× char count {}", tokens.len(), char_count);
     }

@@ -223,8 +223,6 @@ fn load_gguf_enhanced(
             CDevice::Cpu
         }
     };
-
-    // Extract configuration from GGUF metadata
     let config = extract_config_from_gguf(gguf_reader)?;
 
     // Collect all tensor information for validation

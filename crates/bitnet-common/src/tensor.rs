@@ -140,18 +140,24 @@ impl BitNetTensor {
         match device {
             Device::Cpu => Ok(candle_core::Device::Cpu),
             Device::Cuda(_id) => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                #[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
                 {
                     use candle_core::backend::BackendDevice;
                     let cuda_device = candle_core::CudaDevice::new(*_id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     Ok(candle_core::Device::Cuda(cuda_device))
                 }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "hip")))]
                 {
                     Err(BitNetError::Validation("CUDA not available".to_string()))
                 }
             }
+            Device::Hip(_id) => Err(BitNetError::Validation(
+                "HIP device requested but Candle HIP backend is not integrated yet".to_string(),
+            )),
+            Device::Npu => Err(BitNetError::Validation(
+                "NPU device requested but NPU backend is not integrated yet".to_string(),
+            )),
             Device::Metal => {
                 #[cfg(all(target_os = "macos", feature = "gpu"))]
                 {
@@ -251,17 +257,27 @@ impl Tensor for MockTensor {
         let candle_device = match &self.device {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(_id) => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                #[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
                 {
                     use candle_core::backend::BackendDevice;
                     let cuda_device = candle_core::CudaDevice::new(*_id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     candle_core::Device::Cuda(cuda_device)
                 }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "hip")))]
                 {
                     return Err(BitNetError::Validation("CUDA not available".to_string()));
                 }
+            }
+            Device::Hip(_id) => {
+                return Err(BitNetError::Validation(
+                    "HIP device requested but Candle HIP backend is not integrated yet".to_string(),
+                ));
+            }
+            Device::Npu => {
+                return Err(BitNetError::Validation(
+                    "NPU device requested but NPU backend is not integrated yet".to_string(),
+                ));
             }
             Device::Metal => {
                 #[cfg(all(target_os = "macos", feature = "gpu"))]

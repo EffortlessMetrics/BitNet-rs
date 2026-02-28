@@ -22,5 +22,8 @@
   "MD024": { "siblings_only": true },
 
   // Trailing punctuation in headings (release titles sometimes need it).
-  "MD026": { "punctuation": ".,;:!。，；：" }
+  "MD026": { "punctuation": ".,;:!。，；：" },
+
+  // Ordered list prefix - technical docs may use sequential or repeated 1.
+  "MD029": false
 }

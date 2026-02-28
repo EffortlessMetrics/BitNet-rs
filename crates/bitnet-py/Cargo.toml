@@ -21,11 +21,11 @@ test = false
 bench = false
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
-bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.2.0-alpha.1" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0-alpha.1" }
 
 pyo3 = { version = "0.27.1", features = ["extension-module", "abi3-py312"] }
 pyo3-async-runtimes = { version = "0.27.0", features = ["tokio-runtime"] }

@@ -19,17 +19,61 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Complete list of fuzz targets — must match fuzz/Cargo.toml [[bin]] entries.
+        # When adding a new fuzz target, add it here AND in fuzz-ci.yml fuzz-run matrix.
         target:
+          # Quantization
           - quantization_i2s
+          - quantization_input
           - quantization_tl1
           - quantization_tl2
-          - gguf_parser
-          - safetensors_parser
-          - tokenizer_discovery
-          - kernel_matmul
-          - quantization_input
-          - transformer_config
+          # GGUF parsing
+          - gguf_header
+          - gguf_header_parse
+          - gguf_header_roundtrip
           - gguf_kv_read
+          - gguf_metadata_values
+          - gguf_parser
+          - gguf_tensor_info
+          - gguf_writer_roundtrip
+          # SafeTensors
+          - safetensors_metadata
+          - safetensors_parser
+          # Kernels & compute
+          - kernel_dispatch
+          - kernel_matmul
+          - kv_cache_ops
+          - tl_lut_helper
+          # Tokenizer
+          - tokenizer_discovery
+          - tokenizer_encode
+          - tokenizer_encode_decode
+          - tokenizer_encode_no_panic
+          # Inference & generation
+          - generation_stop_check
+          - generation_stop_checker
+          - logits_transforms
+          - prompt_template
+          - prompt_template_no_panic
+          - rope_table_gen
+          - sampling_no_panic
+          - sampling_temperature
+          - stop_sequence
+          - transformer_config
+          # Validation & runtime
+          - architecture_detection
+          - engine_core_no_panic
+          - feature_activation_no_panic
+          - honest_compute_no_panic
+          - model_config_parse
+          - model_config_validation
+          - receipt_json_roundtrip
+          - runtime_context_parse_no_panic
+          - validation_no_panic
+          - vocab_size_extraction
+          # Token & model boundary testing
+          - tensor_shape_validate
+          - token_id_bounds
 
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4

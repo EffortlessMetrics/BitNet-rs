@@ -78,6 +78,16 @@
             cursor: not-allowed;
         }
 
+        button:focus-visible {
+            outline: 3px solid #0056b3;
+            outline-offset: 2px;
+        }
+
+        button.tab:focus-visible {
+            outline: 2px solid #007bff;
+            outline-offset: -2px;
+        }
+
         .input-group {
             margin: 15px 0;
         }
@@ -237,11 +247,11 @@
     </div>
 
     <div class="tabs" role="tablist" aria-label="Application Sections">
-        <button type="button" class="tab active" role="tab" aria-selected="true" aria-controls="basic-tab" id="tab-basic" onclick="switchTab('basic', this)">Basic Inference</button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="streaming-tab" id="tab-streaming" onclick="switchTab('streaming', this)">Streaming</button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="worker-tab" id="tab-worker" onclick="switchTab('worker', this)">Web Workers</button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="benchmark-tab" id="tab-benchmark" onclick="switchTab('benchmark', this)">Benchmarks</button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="settings-tab" id="tab-settings" onclick="switchTab('settings', this)">Settings</button>
+        <button type="button" class="tab active" role="tab" aria-selected="true" aria-controls="basic-tab" id="tab-basic" tabindex="0" onclick="switchTab('basic', this)">Basic Inference</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="streaming-tab" id="tab-streaming" tabindex="-1" onclick="switchTab('streaming', this)">Streaming</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="worker-tab" id="tab-worker" tabindex="-1" onclick="switchTab('worker', this)">Web Workers</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="benchmark-tab" id="tab-benchmark" tabindex="-1" onclick="switchTab('benchmark', this)">Benchmarks</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="settings-tab" id="tab-settings" tabindex="-1" onclick="switchTab('settings', this)">Settings</button>
     </div>
 
     <!-- Basic Inference Tab -->

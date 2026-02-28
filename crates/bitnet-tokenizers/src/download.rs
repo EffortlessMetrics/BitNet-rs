@@ -14,7 +14,6 @@ use tracing::{debug, info, warn};
 /// Intelligent tokenizer downloading with caching and resume capability
 pub struct SmartTokenizerDownload {
     cache_dir: PathBuf,
-    #[cfg(feature = "downloads")]
     client: reqwest::Client,
 }
 
@@ -40,7 +39,6 @@ impl SmartTokenizerDownload {
         // Use centralized cache directory management
         CacheManager::ensure_cache_directory(&cache_dir)?;
 
-        #[cfg(feature = "downloads")]
         let client = reqwest::Client::builder()
             .user_agent("BitNet-rs/0.1.0")
             .timeout(std::time::Duration::from_secs(300))
@@ -49,11 +47,7 @@ impl SmartTokenizerDownload {
                 BitNetError::Config(format!("HTTP client initialization failed: {}", e))
             })?;
 
-        Ok(Self {
-            cache_dir,
-            #[cfg(feature = "downloads")]
-            client,
-        })
+        Ok(Self { cache_dir, client })
     }
 
     /// Download tokenizer files for given download info
@@ -104,47 +98,36 @@ impl SmartTokenizerDownload {
         let tokenizer_cache_dir = self.cache_dir.join(&info.cache_key);
         CacheManager::ensure_cache_directory(&tokenizer_cache_dir)?;
 
-        // Download all files
-        #[cfg(not(feature = "downloads"))]
-        {
-            Err(TokenizerErrorHandler::config_error(
-                "Download feature not enabled. Build with --features downloads".to_string(),
-            ))
-        }
+        let mut primary_path: Option<PathBuf> = None;
+        for (i, filename) in info.files.iter().enumerate() {
+            let url = Self::get_download_url(&info.repo, filename);
+            let file_path = tokenizer_cache_dir.join(filename);
 
-        #[cfg(feature = "downloads")]
-        {
-            let mut primary_path: Option<PathBuf> = None;
-            for (i, filename) in info.files.iter().enumerate() {
-                let url = Self::get_download_url(&info.repo, filename);
-                let file_path = tokenizer_cache_dir.join(filename);
+            info!(
+                "Downloading file {}/{}: {} -> {}",
+                i + 1,
+                info.files.len(),
+                url,
+                file_path.display()
+            );
 
-                info!(
-                    "Downloading file {}/{}: {} -> {}",
-                    i + 1,
-                    info.files.len(),
-                    url,
-                    file_path.display()
-                );
+            self.download_file(&url, &file_path).await?;
 
-                self.download_file(&url, &file_path).await?;
-
-                // Use first .json file as primary, or first file if no json
-                if primary_path.is_none() && (filename.ends_with(".json") || i == 0) {
-                    primary_path = Some(file_path);
-                }
+            // Use first .json file as primary, or first file if no json
+            if primary_path.is_none() && (filename.ends_with(".json") || i == 0) {
+                primary_path = Some(file_path);
             }
-
-            let primary_file = primary_path.ok_or_else(|| {
-                TokenizerErrorHandler::config_error("No primary tokenizer file found".to_string())
-            })?;
-
-            // Validate downloaded tokenizer
-            self.validate_downloaded_tokenizer(&primary_file, info)?;
-
-            info!("Successfully downloaded tokenizer: {}", primary_file.display());
-            Ok(primary_file)
         }
+
+        let primary_file = primary_path.ok_or_else(|| {
+            TokenizerErrorHandler::config_error("No primary tokenizer file found".to_string())
+        })?;
+
+        // Validate downloaded tokenizer
+        self.validate_downloaded_tokenizer(&primary_file, info)?;
+
+        info!("Successfully downloaded tokenizer: {}", primary_file.display());
+        Ok(primary_file)
     }
 
     /// Check if tokenizer is already cached
@@ -201,7 +184,6 @@ impl SmartTokenizerDownload {
     /// Download individual file with resume capability
     ///
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac2-smarttokenizer-download-implementation
-    #[cfg(feature = "downloads")]
     async fn download_file(&self, url: &str, path: &Path) -> Result<()> {
         use std::io::Write;
 
@@ -282,14 +264,6 @@ impl SmartTokenizerDownload {
 
         info!("Successfully downloaded: {} ({} bytes)", path.display(), total_downloaded);
         Ok(())
-    }
-
-    #[cfg(not(feature = "downloads"))]
-    #[allow(dead_code)]
-    async fn download_file(&self, _url: &str, _path: &Path) -> Result<()> {
-        Err(BitNetError::Config(
-            "Download feature not enabled. Build with --features downloads".to_string(),
-        ))
     }
 
     /// Validate downloaded tokenizer against expected metadata

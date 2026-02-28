@@ -15,19 +15,19 @@ include = [
 ]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
-bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
-bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
-bitnet-receipts = { path = "../bitnet-receipts", version = "0.2.1-dev" }
-bitnet-rope = { path = "../bitnet-rope", version = "0.2.1-dev" }
-bitnet-logits = { path = "../bitnet-logits", version = "0.2.1-dev" }
-bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
-bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
-bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
-bitnet-sys = { path = "../bitnet-sys", version = "0.2.1-dev", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0-alpha.1" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0-alpha.1" }
+bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.0-alpha.1" }
+bitnet-receipts = { path = "../bitnet-receipts", version = "0.2.0-alpha.1" }
+bitnet-rope = { path = "../bitnet-rope", version = "0.2.0-alpha.1" }
+bitnet-logits = { path = "../bitnet-logits", version = "0.2.0-alpha.1" }
+bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.0-alpha.1" }
+bitnet-generation = { path = "../bitnet-generation", version = "0.2.0-alpha.1" }
+bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.0-alpha.1" }
+bitnet-sys = { path = "../bitnet-sys", version = "0.2.0-alpha.1", optional = true }
 anyhow.workspace = true
 futures.workspace = true
 futures-util = "0.3.31"
@@ -58,15 +58,16 @@ chrono = "0.4.42"
 serial_test = "3.2.0"
 bitnet-test-support.workspace = true
 insta.workspace = true
-bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.0-alpha.1" }
 
 [features]
 default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
 cuda = ["bitnet-kernels/cuda"]
+rocm = ["bitnet-kernels/rocm"]
 metal = ["bitnet-common/metal", "bitnet-models/metal"]
 npu-backend = ["bitnet-kernels/npu-backend", "metal"]
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []

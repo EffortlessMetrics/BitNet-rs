@@ -1093,3 +1093,344 @@ fn test_ln_gamma_validator_envelope() {
         assert!(result.is_ok(), "RMS at upper boundary should pass");
     }
 }
+
+// ---------- Extended validation tests ----------
+
+/// Build a GGUF with architecture metadata and tensors for validation testing.
+fn build_gguf_for_validation(
+    arch_kvs: Vec<(&str, GgufValue)>,
+    tensors: Vec<(&str, Vec<usize>, GgufTensorType, Vec<u8>)>,
+) -> Vec<u8> {
+    let mut data = Vec::<u8>::new();
+    const GGUF_VERSION: u32 = 2;
+    const ALIGN: usize = 32;
+
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&GGUF_VERSION.to_le_bytes());
+    data.extend_from_slice(&(tensors.len() as u64).to_le_bytes());
+    data.extend_from_slice(&(arch_kvs.len() as u64).to_le_bytes());
+
+    for (key, value) in arch_kvs {
+        let kb = key.as_bytes();
+        data.extend_from_slice(&(kb.len() as u64).to_le_bytes());
+        data.extend_from_slice(kb);
+        write_gguf_value(&mut data, value);
+    }
+
+    // Write tensor info section
+    let mut data_offsets: Vec<usize> = Vec::new();
+    let mut running_offset: usize = 0;
+    for (_name, _shape, _tt, blob) in &tensors {
+        data_offsets.push(running_offset);
+        running_offset += blob.len();
+    }
+
+    let _info_start = data.len();
+    for (i, (name, shape, tt, _blob)) in tensors.iter().enumerate() {
+        let nb = name.as_bytes();
+        data.extend_from_slice(&(nb.len() as u64).to_le_bytes());
+        data.extend_from_slice(nb);
+        data.extend_from_slice(&(shape.len() as u32).to_le_bytes());
+        for &d in shape {
+            data.extend_from_slice(&(d as u64).to_le_bytes());
+        }
+        let type_id: u32 = match tt {
+            GgufTensorType::F32 => 0,
+            GgufTensorType::F16 => 1,
+            GgufTensorType::I2_S => 36,
+            GgufTensorType::Q8_0 => 8,
+            _ => 0,
+        };
+        data.extend_from_slice(&type_id.to_le_bytes());
+        let real_offset = data_offsets[i] as u64;
+        data.extend_from_slice(&real_offset.to_le_bytes());
+    }
+
+    // Align
+    let pad = (ALIGN - (data.len() % ALIGN)) % ALIGN;
+    data.resize(data.len() + pad, 0);
+
+    // Append tensor data
+    for (_name, _shape, _tt, blob) in &tensors {
+        data.extend_from_slice(blob);
+    }
+
+    data
+}
+
+#[test]
+fn test_validates_tensor_shape_mismatch() {
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+            ("llama.embedding_length", GgufValue::U32(128)),
+            ("llama.vocab_size", GgufValue::U32(256)),
+        ],
+        vec![
+            // Embedding with wrong vocab dim (512 != 256)
+            ("token_embd.weight", vec![512, 128], GgufTensorType::F32, vec![0u8; 512 * 128 * 4]),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![128, 128],
+                GgufTensorType::F32,
+                vec![0u8; 128 * 128 * 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![128, 128],
+                GgufTensorType::F32,
+                vec![0u8; 128 * 128 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let result = reader.validate_tensor_shapes();
+    assert!(result.is_err(), "Should detect vocab_size mismatch");
+    let errors = result.unwrap_err();
+    assert!(
+        errors.iter().any(|e| e.contains("token_embd.weight") && e.contains("256")),
+        "Error should mention tensor name and expected dim: {errors:?}"
+    );
+}
+
+#[test]
+fn test_validates_tensor_shapes_pass() {
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+            ("llama.embedding_length", GgufValue::U32(128)),
+            ("llama.vocab_size", GgufValue::U32(256)),
+        ],
+        vec![
+            ("token_embd.weight", vec![256, 128], GgufTensorType::F32, vec![0u8; 256 * 128 * 4]),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![128, 128],
+                GgufTensorType::F32,
+                vec![0u8; 128 * 128 * 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![128, 128],
+                GgufTensorType::F32,
+                vec![0u8; 128 * 128 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    assert!(reader.validate_tensor_shapes().is_ok(), "Correct shapes should pass");
+}
+
+#[test]
+fn test_validates_weight_distribution_bounds() {
+    // Build tensor data with NaN values
+    let mut nan_blob = vec![0u8; 256 * 4];
+    for chunk in nan_blob.chunks_exact_mut(4) {
+        chunk.copy_from_slice(&f32::NAN.to_le_bytes());
+    }
+
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+        ],
+        vec![
+            ("token_embd.weight", vec![16, 16], GgufTensorType::F32, nan_blob),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4], // all-zero = zero variance
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let result = reader.validate_weight_distributions();
+    assert!(result.is_err(), "Should detect NaN/zero-variance weights");
+    let errors = result.unwrap_err();
+    assert!(errors.iter().any(|e| e.contains("NaN")), "Should report NaN: {errors:?}");
+    assert!(
+        errors.iter().any(|e| e.contains("zero variance")),
+        "Should report zero variance: {errors:?}"
+    );
+}
+
+#[test]
+fn test_validates_weight_distribution_healthy() {
+    // Normal-ish weight data: small floats
+    let values: Vec<f32> = (0..256).map(|i| ((i as f32) - 128.0) * 0.01).collect();
+    let blob: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
+
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+        ],
+        vec![
+            ("token_embd.weight", vec![16, 16], GgufTensorType::F32, blob.clone()),
+            ("layers.0.self_attn.q_proj.weight", vec![16, 16], GgufTensorType::F32, blob.clone()),
+            ("layers.0.mlp.gate_proj.weight", vec![16, 16], GgufTensorType::F32, blob),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    assert!(reader.validate_weight_distributions().is_ok(), "Healthy weights should pass");
+}
+
+#[test]
+fn test_validates_quantization_consistency() {
+    // Mix F32 weight tensors with I2_S — inconsistent
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+        ],
+        vec![
+            ("token_embd.weight", vec![16, 16], GgufTensorType::F32, vec![0u8; 256 * 4]),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+            (
+                "layers.1.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::I2_S,
+                vec![0u8; 16 * 16 / 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let result = reader.validate_quantization_consistency();
+    assert!(result.is_err(), "Mixed quant types should fail");
+    let errors = result.unwrap_err();
+    assert!(
+        errors.iter().any(|e| e.contains("differs from")),
+        "Should report type mismatch: {errors:?}"
+    );
+}
+
+#[test]
+fn test_validates_quantization_consistency_pass() {
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+        ],
+        vec![
+            ("token_embd.weight", vec![16, 16], GgufTensorType::F32, vec![0u8; 256 * 4]),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    assert!(
+        reader.validate_quantization_consistency().is_ok(),
+        "Consistent quant types should pass"
+    );
+}
+
+#[test]
+fn test_validates_layernorm_not_quantized() {
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+        ],
+        vec![
+            ("token_embd.weight", vec![16, 16], GgufTensorType::F32, vec![0u8; 256 * 4]),
+            ("blk.0.attn_norm.weight", vec![128], GgufTensorType::I2_S, vec![0u8; 32]),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let result = reader.validate_quantization_consistency();
+    assert!(result.is_err(), "Quantized layer-norm should fail");
+    let errors = result.unwrap_err();
+    assert!(
+        errors.iter().any(|e| e.contains("layer-norm") && e.contains("float")),
+        "Should report quantized layer-norm: {errors:?}"
+    );
+}
+
+#[test]
+fn test_validate_extended_combines_errors() {
+    let mut nan_blob = vec![0u8; 256 * 4];
+    for chunk in nan_blob.chunks_exact_mut(4) {
+        chunk.copy_from_slice(&f32::NAN.to_le_bytes());
+    }
+
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("test".to_string())),
+            ("llama.vocab_size", GgufValue::U32(256)),
+        ],
+        vec![
+            // Wrong vocab dim AND NaN data
+            ("token_embd.weight", vec![512, 16], GgufTensorType::F32, nan_blob),
+            (
+                "layers.0.self_attn.q_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+            (
+                "layers.0.mlp.gate_proj.weight",
+                vec![16, 16],
+                GgufTensorType::F32,
+                vec![0u8; 256 * 4],
+            ),
+        ],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let result = reader.validate_extended();
+    assert!(result.is_err(), "Multiple issues should produce combined error");
+    let msg = format!("{result:?}");
+    // Should combine shape + distribution errors
+    assert!(msg.contains("256"), "Combined error should mention shape issue");
+    assert!(msg.contains("NaN"), "Combined error should mention NaN issue");
+}

@@ -29,7 +29,7 @@ proptest! {
     /// Softmax output sums to approximately 1.0 for any finite input.
     #[test]
     fn softmax_sums_to_one(logits in finite_logits(-20.0, 20.0, 1..200)) {
-        let mut probs = logits.clone();
+        let mut probs = logits;
         softmax_in_place(&mut probs);
         let total: f32 = probs.iter().sum();
         prop_assert!((total - 1.0).abs() < 1e-4, "Softmax sum = {total}, expected ≈1.0");
@@ -38,7 +38,7 @@ proptest! {
     /// All softmax outputs are non-negative.
     #[test]
     fn softmax_all_non_negative(logits in finite_logits(-20.0, 20.0, 1..200)) {
-        let mut probs = logits.clone();
+        let mut probs = logits;
         softmax_in_place(&mut probs);
         for &p in &probs {
             prop_assert!(p >= 0.0, "Softmax produced negative probability {p}");
@@ -50,11 +50,11 @@ proptest! {
     fn softmax_preserves_argmax(logits in finite_logits(-10.0, 10.0, 2..100)) {
         // Only valid when there is a unique maximum.
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        let max_count = logits.iter().filter(|&&x| (x - max_val).abs() < f32::EPSILON).count();
         prop_assume!(max_count == 1);
 
         let pre_argmax = argmax(&logits);
-        let mut probs = logits.clone();
+        let mut probs = logits;
         softmax_in_place(&mut probs);
         let post_argmax = argmax(&probs);
         prop_assert_eq!(pre_argmax, post_argmax, "Argmax changed after softmax");
@@ -80,7 +80,7 @@ proptest! {
         temperature in 0.01f32..5.0f32
     ) {
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        let max_count = logits.iter().filter(|&&x| (x - max_val).abs() < f32::EPSILON).count();
         prop_assume!(max_count == 1);
 
         let expected = argmax(&logits);
@@ -135,7 +135,7 @@ proptest! {
     fn argmax_returns_max_index(logits in finite_logits(-10.0, 10.0, 1..100)) {
         let idx = argmax(&logits);
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        prop_assert_eq!(logits[idx], max_val, "argmax index does not point to maximum");
+        prop_assert!((logits[idx] - max_val).abs() < f32::EPSILON, "argmax index does not point to maximum");
     }
 
     /// argmax result is always a valid index.
@@ -285,7 +285,7 @@ proptest! {
         logits in finite_logits(-10.0, 10.0, 2..50),
     ) {
         let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        let max_count = logits.iter().filter(|&&x| (x - max_val).abs() < f32::EPSILON).count();
         prop_assume!(max_count == 1);
 
         let best_before = argmax(&logits);

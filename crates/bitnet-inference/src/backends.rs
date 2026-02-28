@@ -224,7 +224,7 @@ impl GpuBackend {
                 info!("Created GPU backend with device: {:?}", device);
                 Ok(Self { model, device, mixed_precision: false })
             }
-            _ => Err(anyhow::anyhow!("GPU backend requires CUDA device")),
+            _ => Err(anyhow::anyhow!("GPU backend requires CUDA or Metal device")),
         }
     }
 
@@ -247,7 +247,7 @@ impl GpuBackend {
     /// Check if GPU is available
     pub fn is_available() -> bool {
         // In a real implementation, this would check for GPU availability
-        cfg!(any(feature = "gpu", feature = "cuda"))
+        cfg!(any(feature = "gpu", feature = "cuda", all(feature = "metal", target_os = "macos")))
     }
 }
 

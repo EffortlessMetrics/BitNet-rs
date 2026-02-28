@@ -1,14 +1,30 @@
 version: '3.8'
 
+# ─────────────────────────────────────────────────────────────────
+# BitNet-rs Docker Compose
+#
+# Usage:
+#   docker compose up bitnet-cpu           # CPU inference server
+#   docker compose --profile gpu up        # GPU inference server
+#   docker compose --profile production up # CPU + nginx reverse proxy
+#   docker compose --profile monitoring up # CPU + prometheus + grafana
+#
+# Environment variables (set in shell or .env file):
+#   GIT_SHA        - Git commit hash for OCI labels
+#   GIT_BRANCH     - Git branch name for OCI labels
+#   GIT_DESCRIBE   - Git describe output for version label
+#   BITNET_THREADS - Rayon thread count (default: 4)
+#   CUDA_DEVICE    - GPU device index (default: 0)
+# ─────────────────────────────────────────────────────────────────
+
 services:
-  # CPU-only service
+  # CPU-only inference server
   bitnet-cpu:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime              # copies from builder-cpu stage
+      target: runtime
       args:
-        FEATURES: cpu
         VCS_REF: ${GIT_SHA:-unknown}
         VCS_BRANCH: ${GIT_BRANCH:-unknown}
         VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
@@ -17,31 +33,27 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./models:/models:ro
-      - ./data:/data
-      - bitnet_sccache:/home/bitnet/.cache/sccache
+      - ./models:/models:ro        # Model files (read-only)
+      - bitnet_data:/data           # Writable data (receipts, logs)
     environment:
-      - RUST_LOG=info
-      - BITNET_THREADS=4
-      - SCCACHE_DIR=/home/bitnet/.cache/sccache
-      - SCCACHE_CACHE_SIZE=10G
+      - RUST_LOG=info               # Log level: error|warn|info|debug|trace
+      - BITNET_THREADS=${BITNET_THREADS:-4}
     command: ["bitnet-server"]
     restart: unless-stopped
-    user: "10001:10001"  # Non-root UID/GID
+    user: "10001:10001"
     cap_drop:
-      - ALL  # Drop all Linux capabilities
+      - ALL
     security_opt:
       - no-new-privileges:true
-      - seccomp=default  # Default seccomp profile
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -51,14 +63,13 @@ services:
           cpus: '2'
           memory: 4G
 
-  # GPU-enabled service
+  # GPU-enabled inference server (requires NVIDIA Container Toolkit)
   bitnet-gpu:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime-gpu          # copies from builder-gpu stage
+      target: runtime-gpu
       args:
-        FEATURES: gpu
         VCS_REF: ${GIT_SHA:-unknown}
         VCS_BRANCH: ${GIT_BRANCH:-unknown}
         VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
@@ -68,30 +79,26 @@ services:
       - "8081:8080"
     volumes:
       - ./models:/models:ro
-      - ./data:/data
-      - bitnet_sccache:/home/bitnet/.cache/sccache
+      - bitnet_data_gpu:/data
     environment:
       - RUST_LOG=info
-      - CUDA_VISIBLE_DEVICES=0
-      - SCCACHE_DIR=/home/bitnet/.cache/sccache
-      - SCCACHE_CACHE_SIZE=10G
+      - CUDA_VISIBLE_DEVICES=${CUDA_DEVICE:-0}
     command: ["bitnet-server"]
     restart: unless-stopped
-    user: "10001:10001"  # Non-root UID/GID
+    user: "10001:10001"
     cap_drop:
-      - ALL  # Drop all Linux capabilities
+      - ALL
     security_opt:
       - no-new-privileges:true
-      - seccomp=default  # Default seccomp profile
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -155,9 +162,10 @@ services:
       - monitoring
 
 volumes:
+  bitnet_data:
+  bitnet_data_gpu:
   prometheus_data:
   grafana_data:
-  bitnet_sccache:
 
 networks:
   default:

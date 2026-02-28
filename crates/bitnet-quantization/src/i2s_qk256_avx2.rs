@@ -2,40 +2,22 @@
 //!
 //! This module provides AVX2-accelerated GEMV kernels for QK256 format.
 //!
-//! ## Current Status (MVP)
+//! ## Optimization Strategy
 //!
-//! The current implementation uses:
-//! - **Scalar unpacking**: 2-bit code extraction (64 bytes → 256 codes)
-//! - **Scalar LUT**: Code-to-float mapping via array indexing
-//! - **AVX2 FMA loop**: Vectorized dot product (8 f32 lanes)
-//! - **Scalar tail handling**: For non-multiple-of-8 elements
+//! The hot path uses several techniques for throughput:
 //!
-//! ### Performance
+//! - **SIMD variable shift** (`vpsrlvd`): Extracts 8 two-bit codes from 2 packed
+//!   bytes in 3 SIMD ops (broadcast → variable shift → mask), replacing 8 scalar
+//!   bit-extractions + `_mm256_setr_epi32`.
 //!
-//! Current measurements show the AVX2 path is **not yet faster** than the scalar
-//! reference (~0.76× speedup, target was 3-5×). This is because:
+//! - **4-wide accumulator bank**: Hides FMA latency (4–5 cycles on Haswell+) by
+//!   keeping 4 independent dependency chains in flight.
 //!
-//! 1. **Scalar unpacking bottleneck**: 2-bit extraction is not vectorized
-//! 2. **LUT overhead**: Scalar array indexing prevents full SIMD utilization
-//! 3. **Compiler auto-vectorization**: The scalar reference may be auto-vectorized
-//! 4. **Small block size**: 256 elements may not amortize SIMD setup overhead
+//! - **32-element inner loop**: Processes 8 packed bytes per iteration, amortizing
+//!   loop overhead and giving the out-of-order engine more independent work.
 //!
-//! ## Optimization Opportunities
-//!
-//! To achieve target speedup:
-//!
-//! 1. **SIMD LUT with VPSHUFB**: Use `_mm256_shuffle_epi8` for parallel code→weight
-//!    mapping. This requires careful handling of 2-bit → 4-element LUT indexing.
-//!
-//! 2. **Proper byte-level unpacking**: Current approach using `_mm256_srli_epi16`
-//!    shifts 16-bit lanes, not bytes. Need `_mm256_srli_epi64` or shuffle-based
-//!    extraction.
-//!
-//! 3. **Batch processing**: Process multiple blocks together to improve instruction
-//!    pipelining and reduce per-block overhead.
-//!
-//! 4. **Fused unpack+convert**: Eliminate intermediate `codes` buffer by directly
-//!    converting packed bits → f32 weights in SIMD registers.
+//! - **Software prefetch**: `_mm_prefetch(..., _MM_HINT_T0)` pulls the next block's
+//!   quantized data and input vector into L1 before they're needed.
 //!
 //! ## Safety
 //!
@@ -48,51 +30,51 @@ use std::arch::x86_64::*;
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
+/// Decode 8 two-bit codes from 2 packed bytes into 8 f32 weights using SIMD.
+///
+/// Uses `vpsrlvd` (per-lane variable shift) to extract all 8 codes in parallel:
+///   packed = b0 | (b1 << 16)  →  broadcast to all lanes  →  shift by [0,2,4,6,16,18,20,22]  →  mask 0x03
+///
+/// Then maps codes [0,1,2,3] → weights [-2,-1,+1,+2] via: `weight = code - 2 + (code >> 1) & 1`.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
-unsafe fn decode_8_weights_avx2(byte0: u8, byte1: u8) -> __m256 {
-    let codes = _mm256_setr_epi32(
-        (byte0 & 0x03) as i32,
-        ((byte0 >> 2) & 0x03) as i32,
-        ((byte0 >> 4) & 0x03) as i32,
-        ((byte0 >> 6) & 0x03) as i32,
-        (byte1 & 0x03) as i32,
-        ((byte1 >> 2) & 0x03) as i32,
-        ((byte1 >> 4) & 0x03) as i32,
-        ((byte1 >> 6) & 0x03) as i32,
-    );
+unsafe fn decode_8_weights_avx2(
+    byte0: u8,
+    byte1: u8,
+    shifts: __m256i,
+    mask_03: __m256i,
+    two: __m256i,
+    one: __m256i,
+) -> __m256 {
+    // Pack both bytes so per-lane shifts extract each 2-bit code:
+    //   lanes 0–3 shift byte0 by 0,2,4,6; lanes 4–7 shift byte1 by 0,2,4,6
+    //   (byte1 sits at bit 16, so shifts 16,18,20,22 reach its 2-bit fields).
+    let packed = (byte0 as i32) | ((byte1 as i32) << 16);
+    let broadcast = _mm256_set1_epi32(packed);
+    let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
 
-    // Convert codes in [0, 3] to weights [-2, -1, 1, 2] without scalar LUT lookups.
-    let two = _mm256_set1_epi32(2);
-    let one = _mm256_set1_epi32(1);
+    // codes ∈ {0,1,2,3} → weights ∈ {-2,-1,+1,+2}
     let shifted = _mm256_sub_epi32(codes, two);
     let correction = _mm256_and_si256(_mm256_srli_epi32::<1>(codes), one);
-    let corrected = _mm256_add_epi32(shifted, correction);
-    _mm256_cvtepi32_ps(corrected)
+    _mm256_cvtepi32_ps(_mm256_add_epi32(shifted, correction))
 }
 
-/// AVX2-accelerated dot product for one QK256 row
+/// AVX2-accelerated dot product for one QK256 row.
 ///
-/// Computes dot product between one quantized QK256 row and a dense input vector
-/// using AVX2 intrinsics for 2-bit unpacking, widening, and FMA operations.
+/// # Optimizations over the MVP scalar-unpack path
 ///
-/// # Arguments
-///
-/// * `qs_row` - Row-major packed bytes (N * 64 bytes, where N = ceil(cols/256))
-/// * `x` - Dense input vector (length = cols)
-/// * `cols` - Number of columns (may not be multiple of 256)
-///
-/// # Returns
-///
-/// Scalar dot product result
+/// 1. **SIMD code extraction**: `vpsrlvd` + broadcast replaces 8 scalar shifts per
+///    8-element group, cutting unpack cost from ~16 scalar ops to 3 SIMD ops per group.
+/// 2. **4-wide accumulator bank**: 4 independent FMA dependency chains hide the
+///    4-cycle FMA latency on Haswell/Skylake.
+/// 3. **32-element main loop**: 8 packed bytes → 32 codes → 4×FMA per iteration
+///    reduces loop overhead and improves µop throughput.
+/// 4. **Software prefetch**: L1 prefetch of the next block's packed bytes and input
+///    vector prevents demand-miss stalls on block boundaries.
 ///
 /// # Safety
 ///
-/// This function requires AVX2 support. Caller must ensure CPU has AVX2 capability.
-///
-/// # Performance
-///
-/// Target speedup: 3-5× over scalar gemv_qk256_row for typical matrix dimensions.
+/// Requires AVX2 + FMA. Caller must verify via `is_x86_feature_detected!`.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
@@ -109,59 +91,109 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     );
     debug_assert!(x.len() >= cols, "AVX2: x too short: {} < {}", x.len(), cols);
 
-    // SAFETY: All intrinsics are safe to call because:
-    // - Function is marked with #[target_feature(enable = "avx2")]
-    // - Caller must ensure AVX2 is available via runtime dispatch
-    // - All pointer operations are properly aligned and bounded
     unsafe {
-        // SIMD accumulators (8 f32 lanes each). Two accumulators reduce dependency chain pressure.
-        let mut acc_vec0 = _mm256_setzero_ps();
-        let mut acc_vec1 = _mm256_setzero_ps();
+        // Hoisted constants shared by every decode_8_weights_avx2 call.
+        let shifts = _mm256_setr_epi32(0, 2, 4, 6, 16, 18, 20, 22);
+        let mask_03 = _mm256_set1_epi32(0x03);
+        let two = _mm256_set1_epi32(2);
+        let one = _mm256_set1_epi32(1);
 
-        // Scalar accumulator for tail elements
+        // 4 independent FMA accumulators to saturate the FMA pipe.
+        let mut acc0 = _mm256_setzero_ps();
+        let mut acc1 = _mm256_setzero_ps();
+        let mut acc2 = _mm256_setzero_ps();
+        let mut acc3 = _mm256_setzero_ps();
+
         let mut scalar_acc = 0.0f32;
-
         let mut col = 0usize;
-        for blk in qs_row.chunks_exact(QK256_PACKED_BYTES) {
-            // Number of valid columns left in this block
+
+        let blk_ptr = qs_row.as_ptr();
+        let x_ptr = x.as_ptr();
+
+        for blk_idx in 0..blocks_needed {
+            let blk = blk_ptr.add(blk_idx * QK256_PACKED_BYTES);
             let take = QK256_BLOCK.min(cols - col);
 
-            let mut j = 0usize;
-            // Process 16 elements at a time (4 packed bytes).
-            while j + 16 <= take {
-                let packed_idx = j / 4;
-                let b0 = *blk.get_unchecked(packed_idx);
-                let b1 = *blk.get_unchecked(packed_idx + 1);
-                let b2 = *blk.get_unchecked(packed_idx + 2);
-                let b3 = *blk.get_unchecked(packed_idx + 3);
-
-                let w_vec0 = decode_8_weights_avx2(b0, b1);
-                let w_vec1 = decode_8_weights_avx2(b2, b3);
-
-                let x_vec0 = _mm256_loadu_ps(x.as_ptr().add(col + j));
-                let x_vec1 = _mm256_loadu_ps(x.as_ptr().add(col + j + 8));
-
-                acc_vec0 = _mm256_fmadd_ps(w_vec0, x_vec0, acc_vec0);
-                acc_vec1 = _mm256_fmadd_ps(w_vec1, x_vec1, acc_vec1);
-
-                j += 16;
+            // Prefetch next block's packed bytes and input vector into L1.
+            if blk_idx + 1 < blocks_needed {
+                _mm_prefetch(blk.add(QK256_PACKED_BYTES) as *const i8, _MM_HINT_T0);
+                _mm_prefetch(x_ptr.add(col + QK256_BLOCK) as *const i8, _MM_HINT_T0);
+                // Second cache-line of next input chunk (256 f32 = 1024 bytes ≈ 16 lines).
+                _mm_prefetch(x_ptr.add(col + QK256_BLOCK + 16) as *const i8, _MM_HINT_T0);
             }
 
+            let mut j = 0usize;
+
+            // --- 32-element main loop (8 packed bytes → 4 × 8-wide FMA) ---
+            while j + 32 <= take {
+                let pi = j / 4;
+
+                let w0 = decode_8_weights_avx2(
+                    *blk.add(pi),
+                    *blk.add(pi + 1),
+                    shifts,
+                    mask_03,
+                    two,
+                    one,
+                );
+                let w1 = decode_8_weights_avx2(
+                    *blk.add(pi + 2),
+                    *blk.add(pi + 3),
+                    shifts,
+                    mask_03,
+                    two,
+                    one,
+                );
+                let w2 = decode_8_weights_avx2(
+                    *blk.add(pi + 4),
+                    *blk.add(pi + 5),
+                    shifts,
+                    mask_03,
+                    two,
+                    one,
+                );
+                let w3 = decode_8_weights_avx2(
+                    *blk.add(pi + 6),
+                    *blk.add(pi + 7),
+                    shifts,
+                    mask_03,
+                    two,
+                    one,
+                );
+
+                let xj = col + j;
+                let x0 = _mm256_loadu_ps(x_ptr.add(xj));
+                let x1 = _mm256_loadu_ps(x_ptr.add(xj + 8));
+                let x2 = _mm256_loadu_ps(x_ptr.add(xj + 16));
+                let x3 = _mm256_loadu_ps(x_ptr.add(xj + 24));
+
+                acc0 = _mm256_fmadd_ps(w0, x0, acc0);
+                acc1 = _mm256_fmadd_ps(w1, x1, acc1);
+                acc2 = _mm256_fmadd_ps(w2, x2, acc2);
+                acc3 = _mm256_fmadd_ps(w3, x3, acc3);
+
+                j += 32;
+            }
+
+            // --- 8-element cleanup loop ---
             while j + 8 <= take {
-                let packed_idx = j / 4;
-                let b0 = *blk.get_unchecked(packed_idx);
-                let b1 = *blk.get_unchecked(packed_idx + 1);
-
-                let w_vec = decode_8_weights_avx2(b0, b1);
-                let x_vec = _mm256_loadu_ps(x.as_ptr().add(col + j));
-                acc_vec0 = _mm256_fmadd_ps(w_vec, x_vec, acc_vec0);
-
+                let pi = j / 4;
+                let w = decode_8_weights_avx2(
+                    *blk.add(pi),
+                    *blk.add(pi + 1),
+                    shifts,
+                    mask_03,
+                    two,
+                    one,
+                );
+                let xv = _mm256_loadu_ps(x_ptr.add(col + j));
+                acc0 = _mm256_fmadd_ps(w, xv, acc0);
                 j += 8;
             }
 
-            // Handle tail elements (fewer than 8 remaining) with scalar accumulation
+            // --- Scalar tail (< 8 elements) ---
             while j < take {
-                let packed_byte = blk[j / 4];
+                let packed_byte = *blk.add(j / 4);
                 let shift = (j % 4) * 2;
                 let code = (packed_byte >> shift) & 0x03;
                 let w = match code {
@@ -170,8 +202,7 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
                     2 => 1.0,
                     _ => 2.0,
                 };
-                let xi = x[col + j];
-                scalar_acc += w * xi;
+                scalar_acc += w * *x_ptr.add(col + j);
                 j += 1;
             }
 
@@ -181,19 +212,17 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             }
         }
 
-        let acc_vec = _mm256_add_ps(acc_vec0, acc_vec1);
+        // Merge 4 accumulators → 1, then horizontal sum.
+        let sum01 = _mm256_add_ps(acc0, acc1);
+        let sum23 = _mm256_add_ps(acc2, acc3);
+        let acc = _mm256_add_ps(sum01, sum23);
 
-        // Horizontal sum reduction: sum all 8 lanes of SIMD accumulators
-        // Extract two 128-bit halves and add them
-        let hi = _mm256_extractf128_ps(acc_vec, 1);
-        let lo = _mm256_castps256_ps128(acc_vec);
+        let hi = _mm256_extractf128_ps(acc, 1);
+        let lo = _mm256_castps256_ps128(acc);
         let sum128 = _mm_add_ps(hi, lo);
-
-        // Horizontal add within 128-bit vector
         let sum64 = _mm_hadd_ps(sum128, sum128);
         let sum32 = _mm_hadd_ps(sum64, sum64);
 
-        // Extract final scalar and add tail accumulator
         _mm_cvtss_f32(sum32) + scalar_acc
     }
 }
@@ -247,6 +276,13 @@ pub fn gemv_qk256_avx2(
     // All AVX2 intrinsics are properly guarded by #[target_feature(enable = "avx2")].
     unsafe {
         for (row, output) in y_out.iter_mut().enumerate().take(rows) {
+            // Prefetch next row's first cache line to overlap decode with memory.
+            if row + 1 < rows {
+                _mm_prefetch(
+                    qs_data.as_ptr().add((row + 1) * row_stride_bytes) as *const i8,
+                    _MM_HINT_T0,
+                );
+            }
             let start = row * row_stride_bytes;
             let end = start + row_stride_bytes;
             let row_bytes = &qs_data[start..end];

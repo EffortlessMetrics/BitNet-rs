@@ -47,7 +47,13 @@ pub fn oneapi_compiled() -> bool {
 /// Tests specification: docs/explanation/issue-439-spec.md#ac3-shared-helpers
 #[inline]
 pub fn gpu_compiled() -> bool {
-    cfg!(any(feature = "gpu", feature = "cuda"))
+    cfg!(any(feature = "gpu", feature = "cuda", feature = "hip"))
+}
+
+/// Check if HIP/ROCm support was compiled into this binary.
+#[inline]
+pub fn hip_compiled() -> bool {
+    cfg!(feature = "hip")
 }
 
 /// Check if GPU is available at runtime
@@ -86,7 +92,7 @@ pub fn gpu_compiled() -> bool {
 /// # Specification
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#ac3-shared-helpers
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
 #[inline]
 pub fn gpu_available_runtime() -> bool {
     use std::env;
@@ -98,16 +104,20 @@ pub fn gpu_available_runtime() -> bool {
 
     if strict_mode {
         // Strict mode: only real GPU detection
-        return crate::gpu_utils::get_gpu_info().cuda;
+        return crate::gpu_utils::get_gpu_info().cuda
+            || bitnet_device_probe::gpu_available_runtime();
     }
 
     // Check BITNET_GPU_FAKE first (deterministic testing)
     if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-        return fake.eq_ignore_ascii_case("cuda") || fake.eq_ignore_ascii_case("gpu");
+        return fake.eq_ignore_ascii_case("cuda")
+            || fake.eq_ignore_ascii_case("rocm")
+            || fake.eq_ignore_ascii_case("hip")
+            || fake.eq_ignore_ascii_case("gpu");
     }
 
     // Fall back to real GPU detection
-    crate::gpu_utils::get_gpu_info().cuda
+    crate::gpu_utils::get_gpu_info().cuda || bitnet_device_probe::gpu_available_runtime()
 }
 
 /// Check if an Intel GPU is available at runtime via OpenCL.
@@ -123,7 +133,7 @@ pub fn oneapi_available_runtime() -> bool {
 }
 
 /// Stub implementation when GPU not compiled
-#[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "hip")))]
 #[inline]
 pub fn gpu_available_runtime() -> bool {
     // Correct implementation: GPU never available if not compiled
@@ -164,14 +174,18 @@ pub fn device_capability_summary() -> String {
     // Runtime capabilities
     summary.push_str("  Runtime: ");
 
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "hip"))]
     {
         if gpu_available_runtime() {
             let info = crate::gpu_utils::get_gpu_info();
-            if let Some(version) = &info.cuda_version {
-                summary.push_str(&format!("CUDA {} ✓", version));
+            if info.cuda {
+                if let Some(version) = &info.cuda_version {
+                    summary.push_str(&format!("CUDA {} ✓", version));
+                } else {
+                    summary.push_str("CUDA ✓");
+                }
             } else {
-                summary.push_str("CUDA ✓");
+                summary.push_str("HIP/ROCm ✓");
             }
         } else {
             summary.push_str("CUDA ✗");
@@ -209,7 +223,9 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
     bitnet_common::kernel_registry::KernelCapabilities {
         cpu_rust: cfg!(feature = "cpu"),
         cuda_compiled: cfg!(any(feature = "gpu", feature = "cuda")),
-        cuda_runtime: gpu_available_runtime(),
+        cuda_runtime: crate::gpu_utils::get_gpu_info().cuda,
+        hip_compiled: cfg!(feature = "hip"),
+        hip_runtime: bitnet_device_probe::probe_gpu().rocm_available,
         oneapi_compiled: cfg!(feature = "oneapi"),
         oneapi_runtime: oneapi_available_runtime(),
         cpp_ffi: false,

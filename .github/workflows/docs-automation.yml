@@ -1,0 +1,57 @@
+name: Docs Automation
+
+on:
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - 'crates/**/src/**/*.rs'
+      - 'src/**/*.rs'
+      - 'scripts/docs_automation.sh'
+      - '.markdownlint.jsonc'
+      - '.lychee.toml'
+      - '.github/workflows/docs-automation.yml'
+  push:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - 'crates/**/src/**/*.rs'
+      - 'src/**/*.rs'
+      - 'scripts/docs_automation.sh'
+      - '.markdownlint.jsonc'
+      - '.lychee.toml'
+      - '.github/workflows/docs-automation.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-automation:
+    name: Lint + Link Check + Rustdoc
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: '1.92.0'
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: docs-automation
+
+      - name: Install docs tooling
+        run: |
+          cargo install --locked lychee --version 0.15.1
+          npm --global install markdownlint-cli2@0.18.1
+
+      - name: Run docs automation checks
+        run: scripts/docs_automation.sh
+
