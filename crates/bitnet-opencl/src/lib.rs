@@ -14,3 +14,5 @@ pub use wasm_shim::{
 //! data access, with automatic fallback to explicit buffer copies when USM
 //! is unavailable.
 pub mod usm;
+//! OpenCL backend utilities for BitNet inference.
+pub mod p2p;

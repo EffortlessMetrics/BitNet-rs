@@ -23,3 +23,9 @@ serial_test.workspace = true
 default = []
 [lints]
 workspace = true
+description = "OpenCL backend utilities for BitNet inference"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
