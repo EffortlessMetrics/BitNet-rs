@@ -12,6 +12,7 @@ pub mod generation;
 pub mod gguf;
 pub mod kernel_recorder;
 pub mod layers;
+pub mod batch_gpu;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
