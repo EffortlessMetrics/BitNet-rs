@@ -36,6 +36,7 @@ struct OpenClContext {
     context: Context,
     queue: CommandQueue,
     matmul_program: Option<Program>,
+    matmul_tiled_program: Option<Program>,
     _quantize_program: Option<Program>,
     _elementwise_program: Option<Program>,
 }
@@ -132,6 +133,11 @@ impl OpenClKernel {
                         crate::kernels::MATMUL_I2S_SRC,
                         "matmul_i2s",
                     );
+                    let matmul_tiled_program = Self::compile_program(
+                        &context,
+                        crate::kernels::MATMUL_I2S_TILED_SRC,
+                        "matmul_i2s_tiled",
+                    );
                     let quantize_program = Self::compile_program(
                         &context,
                         crate::kernels::QUANTIZE_I2S_SRC,
@@ -149,6 +155,7 @@ impl OpenClKernel {
                         context,
                         queue,
                         matmul_program,
+                        matmul_tiled_program,
                         _quantize_program: quantize_program,
                         _elementwise_program: elementwise_program,
                     };
@@ -219,9 +226,17 @@ impl KernelProvider for OpenClKernel {
             reason: "OpenCL context not initialized".into(),
         })?;
 
-        let program = ctx.matmul_program.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "matmul_i2s program not compiled".into(),
-        })?;
+        // Prefer tiled kernel when available; fall back to naive
+        let (program, kernel_name) = if let Some(ref tiled) = ctx.matmul_tiled_program {
+            (tiled, "matmul_i2s_tiled")
+        } else if let Some(ref naive) = ctx.matmul_program {
+            (naive, "matmul_i2s")
+        } else {
+            return Err(KernelError::GpuError {
+                reason: "No matmul program compiled".into(),
+            }
+            .into());
+        };
 
         use opencl3::kernel::{ExecuteKernel, Kernel};
 
@@ -274,8 +289,8 @@ impl KernelProvider for OpenClKernel {
                 })?;
         }
 
-        // Create and run kernel
-        let kernel = Kernel::create(program, "matmul_i2s").map_err(|e| {
+        // Create and run kernel (tiled or naive)
+        let kernel = Kernel::create(program, kernel_name).map_err(|e| {
             KernelError::GpuError {
                 reason: format!("Kernel create: {}", e),
             }
@@ -285,16 +300,31 @@ impl KernelProvider for OpenClKernel {
         let n_u32 = n as u32;
         let k_u32 = k as u32;
 
+        // Tiled kernel uses work-group-aligned global sizes
+        let tile_size = 16usize;
+        let (global_m, global_n) = if kernel_name == "matmul_i2s_tiled" {
+            let gm = ((m + tile_size - 1) / tile_size) * tile_size;
+            let gn = ((n + tile_size - 1) / tile_size) * tile_size;
+            (gm, gn)
+        } else {
+            (m, n)
+        };
+
         let event = unsafe {
-            ExecuteKernel::new(&kernel)
-                .set_arg(&buf_a.get())
+            let mut exec = ExecuteKernel::new(&kernel);
+            exec.set_arg(&buf_a.get())
                 .set_arg(&buf_b.get())
                 .set_arg(&buf_c.get())
                 .set_arg(&m_u32)
                 .set_arg(&n_u32)
                 .set_arg(&k_u32)
-                .set_global_work_sizes(&[m, n])
-                .enqueue_nd_range(&ctx.queue)
+                .set_global_work_sizes(&[global_m, global_n]);
+
+            if kernel_name == "matmul_i2s_tiled" {
+                exec.set_local_work_sizes(&[tile_size, tile_size]);
+            }
+
+            exec.enqueue_nd_range(&ctx.queue)
                 .map_err(|e| KernelError::GpuError {
                     reason: format!("Enqueue: {}", e),
                 })?
