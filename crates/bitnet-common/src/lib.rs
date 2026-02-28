@@ -4,6 +4,7 @@
 //! the BitNet ecosystem, including configuration, error handling, and tensor
 //! abstractions.
 
+pub mod arch_registry;
 pub mod backend_selection;
 pub mod config;
 pub mod error;
@@ -14,6 +15,7 @@ pub mod tensor;
 pub mod types;
 pub mod warn_once;
 
+pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub use backend_selection::{
     BackendRequest, BackendSelectionError, BackendSelectionResult, BackendStartupSummary,
     select_backend,

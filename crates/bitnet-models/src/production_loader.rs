@@ -322,19 +322,7 @@ impl ProductionModelLoader {
     /// Check if architecture is supported
     #[cfg(feature = "inference")]
     fn is_supported_architecture(&self, architecture: &str) -> bool {
-        matches!(
-            architecture.to_lowercase().as_str(),
-            "bitnet"
-                | "bitnet-b1.58"
-                | "llama"
-                | "mistral"
-                | "qwen"
-                | "gpt"
-                | "bert"
-                | "phi"
-                | "gemma"
-                | "gemma2"
-        )
+        bitnet_common::ArchitectureRegistry::is_known(architecture)
     }
 
     /// Add performance recommendations based on model properties

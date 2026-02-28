@@ -224,19 +224,7 @@ impl ModelLoader {
 
     /// Check if the architecture is supported
     fn is_supported_architecture(&self, architecture: &str) -> bool {
-        matches!(
-            architecture.to_lowercase().as_str(),
-            "bitnet"
-                | "bitnet-b1.58"
-                | "llama"
-                | "mistral"
-                | "qwen"
-                | "phi"
-                | "gemma"
-                | "gemma2"
-                | "gpt"
-                | "bert"
-        )
+        bitnet_common::ArchitectureRegistry::is_known(architecture)
     }
 
     /// Get available format loaders

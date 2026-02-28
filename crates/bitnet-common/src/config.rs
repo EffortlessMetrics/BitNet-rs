@@ -52,36 +52,14 @@ impl ModelConfig {
     /// (e.g. GGUF `general.architecture`) so that norm/activation/context defaults
     /// match what the architecture actually expects.
     pub fn apply_architecture_defaults(&mut self, architecture: &str) {
-        match architecture.to_lowercase().as_str() {
-            "phi" | "phi-4" | "phi-3" => {
-                self.norm_type = NormType::RmsNorm;
-                self.activation_type = ActivationType::Silu;
-                // Phi-4 defaults to 16K context when not explicitly set
+        if let Some(defaults) = crate::ArchitectureRegistry::lookup(architecture) {
+            self.norm_type = defaults.norm_type;
+            self.activation_type = defaults.activation_type;
+            if let Some(ctx) = defaults.default_context_length {
                 if self.max_position_embeddings == 2048 {
-                    self.max_position_embeddings = 16384;
+                    self.max_position_embeddings = ctx;
                 }
             }
-            "llama" | "mistral" => {
-                self.norm_type = NormType::RmsNorm;
-                self.activation_type = ActivationType::Silu;
-            }
-            "qwen" | "qwen2" | "qwen2.5" => {
-                self.norm_type = NormType::RmsNorm;
-                self.activation_type = ActivationType::Silu;
-            }
-            "bitnet" | "bitnet-b1.58" => {
-                self.norm_type = NormType::LayerNorm;
-                self.activation_type = ActivationType::Silu;
-            }
-            "gemma" | "gemma2" => {
-                self.norm_type = NormType::RmsNorm;
-                self.activation_type = ActivationType::Gelu;
-            }
-            "gpt" | "bert" => {
-                self.norm_type = NormType::LayerNorm;
-                self.activation_type = ActivationType::Gelu;
-            }
-            _ => {} // keep defaults
         }
     }
 }
