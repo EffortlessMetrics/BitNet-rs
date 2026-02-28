@@ -8,10 +8,15 @@
 //! - Performance indicators for SLA compliance
 
 pub mod cpu_monitor;
+pub mod gpu_health_endpoint;
 pub mod gpu_monitor;
 pub mod performance;
 
 // Re-export for convenience
 pub use cpu_monitor::{CpuInfo, MemoryHealthInfo, collect_cpu_info, collect_memory_health_info};
+pub use gpu_health_endpoint::{
+    GpuDeviceHealth, GpuHealthPollerConfig, GpuHealthResponse, GpuHealthState,
+    GpuHealthThresholds, create_gpu_health_route, spawn_gpu_health_poller,
+};
 pub use gpu_monitor::{GpuMemoryLeakDetector, GpuMemoryLeakStatus, GpuMetrics};
 pub use performance::{PerformanceIndicators, PerformanceMetrics};
