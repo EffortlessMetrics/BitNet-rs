@@ -93,7 +93,8 @@ fn layer_norm_with_optional_bias(
             tracing::debug!(
                 "Bias tensor missing for norm layer; using LayerNorm without bias (mean subtraction enabled) [{}]",
                 normalized_shape
-            )
+            );
+            Ok(LayerNorm::new_no_bias(weight, eps))
         }
     }
 }
