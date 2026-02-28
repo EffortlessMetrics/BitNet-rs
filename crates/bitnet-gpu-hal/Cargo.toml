@@ -1,5 +1,6 @@
 [package]
 name = "bitnet-gpu-hal"
+description = "GPU hardware abstraction layer for BitNet inference"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
