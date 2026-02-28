@@ -9,6 +9,7 @@ pub mod device;
 pub mod error;
 pub mod ffi;
 pub mod kernel;
+pub mod kernels;
 pub mod memory;
 pub mod stream;
 
