@@ -756,6 +756,10 @@ impl InferenceEngine {
                     Box::new(GpuBackend::new(model.clone(), device)?)
                 }
             }
+            Device::Hip(_) | Device::Npu => {
+                debug!("Using GPU backend (HIP/NPU)");
+                Box::new(GpuBackend::new(model.clone(), device)?)
+            }
         };
 
         let engine = Self {

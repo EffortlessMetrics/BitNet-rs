@@ -85,6 +85,9 @@ impl SafeTensorsLoader {
                 "Metal support not enabled; rebuild with --features metal (or gpu) on macOS"
                     .to_string(),
             )),
+            Device::Hip(_) | Device::Npu => Err(BitNetError::Validation(
+                "HIP/NPU devices are not yet supported for model loading".to_string(),
+            )),
         }
     }
 }

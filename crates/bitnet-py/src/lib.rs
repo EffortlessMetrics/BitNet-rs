@@ -233,6 +233,8 @@ pub fn device_to_string(device: &bitnet_common::Device) -> String {
         bitnet_common::Device::Cpu => "cpu".to_string(),
         bitnet_common::Device::Cuda(id) => format!("cuda:{}", id),
         bitnet_common::Device::Metal => "metal".to_string(),
+        bitnet_common::Device::Hip(id) => format!("hip:{}", id),
+        bitnet_common::Device::Npu => "npu".to_string(),
     }
 }
 

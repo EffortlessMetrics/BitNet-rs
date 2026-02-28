@@ -218,6 +218,14 @@ fn load_gguf_enhanced(
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
+        Device::Hip(_) | Device::Npu => {
+            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+            CDevice::Cpu
+        }
+        Device::Hip(_) | Device::Npu => {
+            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+            CDevice::Cpu
+        }
     };
 
     // Extract configuration from GGUF metadata
@@ -1664,6 +1672,10 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         },
         Device::Metal => {
             tracing::warn!("Metal device requested but not supported, fallback to CPU");
+            CDevice::Cpu
+        }
+        Device::Hip(_) | Device::Npu => {
+            tracing::warn!("HIP/NPU device requested but not supported, fallback to CPU");
             CDevice::Cpu
         }
     };

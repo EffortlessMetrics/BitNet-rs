@@ -404,6 +404,24 @@ pub fn select_backend(
                 Ok(Box::new(CpuBackend::new(model)?))
             }
         }
+        Device::Hip(_) => {
+            if GpuBackend::is_available() {
+                info!("Selected GPU backend (HIP/ROCm)");
+                Ok(Box::new(GpuBackend::new(model, device)?))
+            } else {
+                warn!("HIP requested but not available, falling back to CPU");
+                Ok(Box::new(CpuBackend::new(model)?))
+            }
+        }
+        Device::Npu => {
+            if NpuBackend::is_available() {
+                info!("Selected NPU backend");
+                Ok(Box::new(NpuBackend::new(model, device)?))
+            } else {
+                warn!("NPU requested but not available, falling back to CPU");
+                Ok(Box::new(CpuBackend::new(model)?))
+            }
+        }
     }
 }
 

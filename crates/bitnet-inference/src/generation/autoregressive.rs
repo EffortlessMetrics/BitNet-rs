@@ -280,6 +280,7 @@ impl AutoregressiveGenerator {
                 }
             }
             Device::Metal => PerformanceMode::Balanced,
+            Device::Hip(_) | Device::Npu => PerformanceMode::Balanced,
         }
     }
 
