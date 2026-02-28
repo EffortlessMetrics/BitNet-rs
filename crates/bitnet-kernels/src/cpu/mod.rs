@@ -1,5 +1,6 @@
 //! CPU kernel implementations
 
+pub mod embedding;
 pub mod fallback;
 pub mod fusion;
 pub mod quantized_matmul;
