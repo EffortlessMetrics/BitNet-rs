@@ -427,6 +427,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-ac05-types"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [
@@ -1308,14 +1316,12 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-ac05-types",
  "bitnet-common",
- "bitnet-device-config-core",
- "bitnet-eval-core",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-runtime-bootstrap",
- "bitnet-server-health-types-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",

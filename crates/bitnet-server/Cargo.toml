@@ -22,14 +22,12 @@ async-stream = "0.3.6"
 async-trait = "0.1.89"
 axum.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-device-config-core = { path = "../bitnet-device-config-core", version = "0.2.1-dev" }
-bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
+bitnet-ac05-types = { path = "../bitnet-ac05-types", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
-bitnet-server-health-types-core = { path = "../bitnet-server-health-types-core", version = "0.2.1-dev" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }
 chrono.workspace = true
 clap.workspace = true
@@ -95,7 +93,6 @@ cpu = [
 ]
 cuda = [
   "dep:cudarc",
-  "bitnet-device-config-core/cuda",
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
   "runtime-profile-core",
@@ -106,7 +103,6 @@ default = ["prometheus", "server"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
 gpu = [
   "cuda",
-  "bitnet-device-config-core/gpu",
   "bitnet-runtime-bootstrap/runtime-profile-gpu",
   "runtime-profile-core",
 ]

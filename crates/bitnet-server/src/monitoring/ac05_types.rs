@@ -1,9 +1,5 @@
 //! AC05 health check data structures.
 //!
-//! This module intentionally re-exports the shared types from
-//! `bitnet-server-health-types-core` to keep existing import paths stable.
+//! Re-exported from the SRP microcrate `bitnet-ac05-types`.
 
-pub use bitnet_server_health_types_core::{
-    Ac05HealthResponse, LivenessResponse, PerformanceIndicators, ReadinessChecks,
-    ReadinessResponse, SystemMetrics,
-};
+pub use bitnet_ac05_types::*;
