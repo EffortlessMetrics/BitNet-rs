@@ -13,6 +13,7 @@ pub mod webgpu_backend;
 pub mod async_runtime;
 pub mod backend_selector;
 pub mod bench_harness;
+pub mod config_management;
 pub mod deployment_manager;
 pub mod device_abstraction;
 pub mod embedding_layer;
@@ -96,7 +97,6 @@ pub mod test_harness;
 
 // === Infrastructure ===
 pub mod arch_registry;
-pub mod config_management;
 pub mod logging;
 pub mod migration_tool;
 pub mod thread_pool;
