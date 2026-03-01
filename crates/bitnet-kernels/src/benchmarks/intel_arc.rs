@@ -231,12 +231,7 @@ impl QuantizedBenchmark {
         seq_len: usize,
         label: impl Into<String>,
     ) -> Self {
-        Self {
-            hidden_dim: hidden,
-            intermediate_dim: intermediate,
-            seq_len,
-            label: label.into(),
-        }
+        Self { hidden_dim: hidden, intermediate_dim: intermediate, seq_len, label: label.into() }
     }
 
     /// BitNet 2B model dimensions (hidden=2048, intermediate=5504).
@@ -263,7 +258,15 @@ impl QuantizedBenchmark {
         let mut output = vec![0.0f32; self.intermediate_dim * self.seq_len];
 
         let start = Instant::now();
-        cpu_dequant_matvec(&packed, &scales, &input, &mut output, self.hidden_dim, self.intermediate_dim, self.seq_len);
+        cpu_dequant_matvec(
+            &packed,
+            &scales,
+            &input,
+            &mut output,
+            self.hidden_dim,
+            self.intermediate_dim,
+            self.seq_len,
+        );
         start.elapsed()
     }
 }
@@ -317,15 +320,16 @@ impl LayerNormBenchmark {
             let offset = b * self.hidden_size;
             let slice = &data[offset..offset + self.hidden_size];
             if self.rms_norm {
-                let mean_sq: f32 = slice.iter().map(|x| x * x).sum::<f32>() / self.hidden_size as f32;
+                let mean_sq: f32 =
+                    slice.iter().map(|x| x * x).sum::<f32>() / self.hidden_size as f32;
                 let inv = 1.0 / (mean_sq + eps).sqrt();
                 for (i, &v) in slice.iter().enumerate() {
                     out[offset + i] = v * inv;
                 }
             } else {
                 let mean: f32 = slice.iter().sum::<f32>() / self.hidden_size as f32;
-                let var: f32 = slice.iter().map(|x| (x - mean).powi(2)).sum::<f32>()
-                    / self.hidden_size as f32;
+                let var: f32 =
+                    slice.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / self.hidden_size as f32;
                 let inv = 1.0 / (var + eps).sqrt();
                 for (i, &v) in slice.iter().enumerate() {
                     out[offset + i] = (v - mean) * inv;
@@ -1114,10 +1118,7 @@ mod tests {
 
     #[test]
     fn test_result_cv() {
-        let r = BenchResult::new(
-            "cv",
-            vec![Duration::from_millis(10), Duration::from_millis(10)],
-        );
+        let r = BenchResult::new("cv", vec![Duration::from_millis(10), Duration::from_millis(10)]);
         assert!(r.cv() < 1e-9);
     }
 
