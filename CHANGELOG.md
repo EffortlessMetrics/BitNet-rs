@@ -4,6 +4,30 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Wave 99: Intel GPU Integration & Documentation
+
+- **Intel GPU architecture guide** (#1687): comprehensive Intel Arc backend design doc with architecture diagram, kernel categories, Xe-HPG optimization notes, and testing strategy
+- **Intel GPU smoke CI** (#1686): weekly Intel Arc CI workflow with compute runtime setup and Arc A770 setup documentation
+- **KV cache optimization** (#1685): per-layer KV cache manager with sliding window, page-based allocation, LRU/FIFO/MaxLength eviction (27 tests)
+- **Cross-crate integration tests** (#1684): 59 integration tests for kernel dispatch, config serialization, and error handling across crates
+
+### Wave 98: Core Kernel Infrastructure
+
+- **Tensor data validation** (#1683): production `TensorValidator` with NaN/Inf detection, shape checks, stride consistency, and alignment verification (36 tests)
+- **CPU 1D convolution kernel** (#1682): 1D convolution with padding, stride, dilation, and multi-channel support (34 tests)
+- **GEMM kernel with CPU fallback** (#1681): general matrix multiply with naive, tiled, and transposed variants plus GPU dispatch stub (35 tests)
+- **Insta snapshot tests** (#1680): wave 6 insta snapshot tests across 3 crates (41 tests)
+
+### Wave 97: Edge Case Hardening
+
+- **Batch & streaming edge cases** (#1679): batch processing and streaming generation edge case tests for inference (43 tests)
+- **Generation config edge cases** (#1678): generation config and sampling strategy edge case tests (47 tests)
+- **CPU softmax kernel** (#1677): numerically stable softmax with temperature scaling and SIMD optimization (33 tests)
+- **Quantization edge cases** (#1675): quantization algorithm edge case and boundary condition tests (54 tests)
+- **Tokenizer discovery tests** (#1672): tokenizer discovery matrix and model type detection tests (26 tests)
+- **Kernel capabilities edge cases** (#1671): kernel capabilities and SIMD detection edge case tests (26 tests)
+- **Logits & engine-core edge cases** (#1670): logits processing and engine-core edge case tests (78 tests)
+
 ### Wave 96: Inference Pipeline & Scheduling
 
 - **Inference scheduler** (#1631): 112 tests for task scheduling with priority queues, work stealing, and deadline-aware dispatch
