@@ -5,6 +5,7 @@
 //! outputs within a tolerance, tracks error rates, and automatically rolls
 //! back if the canary exceeds an error threshold.
 
+use bitnet_eval_core::l2_divergence;
 use std::fmt;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -77,12 +78,7 @@ pub struct ComparisonResult {
 
 /// Compare two output vectors and return the L2 divergence.
 pub fn compute_divergence(baseline: &[f32], canary: &[f32]) -> f64 {
-    if baseline.len() != canary.len() {
-        return f64::INFINITY;
-    }
-    let sum_sq: f64 =
-        baseline.iter().zip(canary.iter()).map(|(a, b)| ((*a as f64) - (*b as f64)).powi(2)).sum();
-    sum_sq.sqrt()
+    l2_divergence(baseline, canary)
 }
 
 // ---------------------------------------------------------------------------
