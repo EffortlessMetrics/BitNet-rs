@@ -64,6 +64,7 @@ pub mod mixed_precision;
 pub mod model_quantizer;
 pub mod quantization_toolkit;
 pub mod weight_compression;
+pub mod structured_output;
 
 // === Optimization ===
 pub mod compute_graph;
