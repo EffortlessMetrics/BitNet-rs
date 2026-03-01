@@ -192,17 +192,6 @@ pub enum SoftmaxMode {
 }
 
 // ---------------------------------------------------------------------------
-// CUDA kernel source
-// ---------------------------------------------------------------------------
-
-/// CUDA PTX source for the softmax kernel (placeholder — actual PTX is
-/// generated at build time for real GPU paths).
-pub const SOFTMAX_KERNEL_SRC: &str = r#"
-// Softmax CUDA kernel (stub)
-// Real implementation uses row-wise three-pass stable algorithm.
-"#;
-
-// ---------------------------------------------------------------------------
 // Launch configuration
 // ---------------------------------------------------------------------------
 
