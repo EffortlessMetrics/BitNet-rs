@@ -1,4 +1,5 @@
 use bitnet_common::{BitNetConfig, BitNetError, Result};
+use bitnet_qk256_dispatch::forward_qk256;
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
@@ -550,20 +551,15 @@ impl MultiHeadAttention {
         proj_name: &str,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
-        // Prefer remapped key, but keep fallbacks for partially-mapped sources.
-        let qk256_keys = [
-            format!("layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("model.layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("model.layers.{}.self_attn.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("layers.{}.self_attn.{}.weight.qk256_qs", self.layer_idx, proj_name),
-        ];
+        // Generate weight name based on layer index and projection name
+        // Format: "layers.{idx}.attention.{proj_name}.weight.qk256_qs"
+        let qk256_key =
+            format!("layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name);
 
-        // Check for QK256 data using known key variants
-        for qk256_key in &qk256_keys {
-            if let Some(qk256_tensor) = raw_tensors.get(qk256_key) {
-                tracing::debug!("Using QK256 kernel for {}", qk256_key);
-                return Self::forward_qk256(input, qk256_tensor, qk256_key);
-            }
+        // Check for QK256 data
+        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
+            tracing::debug!("Using QK256 kernel for {}", qk256_key);
+            return forward_qk256(input, qk256_tensor, &qk256_key);
         }
 
         // Probe: Why is QK256 not found? (layer 0 only, once)
@@ -572,7 +568,7 @@ impl MultiHeadAttention {
             FALLBACK_LOGGED.call_once(|| {
                 eprintln!(
                     "trace_fallback: QK256 key '{}' not found in raw_tensors ({}keys total)",
-                    qk256_keys[0],
+                    qk256_key,
                     raw_tensors.len()
                 );
                 // Show first few keys for debugging
@@ -588,122 +584,6 @@ impl MultiHeadAttention {
             proj_name
         );
         linear.forward(input).map_err(BitNetError::from)
-    }
-
-    /// Forward pass using QK256 kernel (static method)
-    fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
-        use bitnet_quantization::i2s_qk256::gemv_qk256;
-
-        // Extract dimensions
-        let dims = qk256_tensor.dims();
-        if dims.len() != 2 {
-            return Err(BitNetError::Validation(format!(
-                "QK256 tensor {} has invalid shape: {:?}",
-                weight_name, dims
-            )));
-        }
-
-        let rows = dims[0];
-        let row_stride_bytes = dims[1];
-
-        // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
-        // So: row_stride_bytes / 64 = number of 256-element blocks
-        // And: cols = (row_stride_bytes / 64) * 256
-        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
-        debug_assert!(
-            row_stride_bytes.is_multiple_of(64),
-            "QK256 row_stride_bytes must be multiple of 64"
-        );
-        let cols = row_stride_bytes
-            .checked_mul(4) // (bytes/64)*256 == bytes*4
-            .ok_or_else(|| {
-                BitNetError::Validation(format!(
-                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
-                    row_stride_bytes
-                ))
-            })?;
-
-        // Extract bytes
-        let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
-            BitNetError::Validation(format!(
-                "Failed to extract QK256 bytes for {}: {}",
-                weight_name, e
-            ))
-        })?;
-        let mut flat_bytes = Vec::with_capacity(rows * row_stride_bytes);
-        for row in bytes_2d {
-            flat_bytes.extend_from_slice(&row);
-        }
-
-        // Get input dimensions
-        let input_dims = input.dims();
-        let rank = input_dims.len();
-
-        // Handle different input shapes: [B, T, H] or [B, H]
-        let (batch_size, seq_len, input_cols) = match rank {
-            3 => (input_dims[0], input_dims[1], input_dims[2]),
-            2 => (input_dims[0], 1, input_dims[1]),
-            _ => {
-                return Err(BitNetError::Validation(format!(
-                    "Unsupported input shape for QK256: {:?}",
-                    input_dims
-                )));
-            }
-        };
-
-        // Validate input dimensions match QK256 tensor
-        if input_cols != cols {
-            return Err(BitNetError::Validation(format!(
-                "QK256 dimension mismatch for {}: input has {} cols but QK256 tensor expects {} cols",
-                weight_name, input_cols, cols
-            )));
-        }
-
-        // Flatten to 2D [batch * seq_len, in_features]
-        let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
-        let input_vec = input_flat.to_vec2::<f32>().map_err(|e| {
-            BitNetError::Validation(format!(
-                "Failed to convert input to f32 for {}: {}",
-                weight_name, e
-            ))
-        })?;
-
-        // Allocate output
-        let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
-
-        // Probe: Debug QK256 dimensions (layer 0 only, once)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1")
-            && weight_name.contains("layers.0.")
-        {
-            static DIM_LOGGED: std::sync::Once = std::sync::Once::new();
-            DIM_LOGGED.call_once(|| {
-                eprintln!(
-                    "trace_qk256: weight={} rows={} cols={} row_stride_bytes={} qk256_shape={:?}",
-                    weight_name, rows, cols, row_stride_bytes, dims
-                );
-            });
-        }
-
-        // Call QK256 kernel for each input row
-        for (i, input_row) in input_vec.iter().enumerate() {
-            gemv_qk256(&flat_bytes, input_row, &mut output_vec[i], rows, cols, row_stride_bytes)
-                .map_err(|e| {
-                    BitNetError::Validation(format!(
-                        "QK256 GEMV failed for {} at row {}: {}",
-                        weight_name, i, e
-                    ))
-                })?;
-        }
-
-        // Flatten output and reshape
-        let output_flat: Vec<f32> = output_vec.into_iter().flatten().collect();
-        let output_tensor = if rank == 3 {
-            Tensor::from_vec(output_flat, (batch_size, seq_len, rows), input.device())?
-        } else {
-            Tensor::from_vec(output_flat, (batch_size, rows), input.device())?
-        };
-
-        Ok(output_tensor)
     }
 
     /// PATCH 5: Create causal mask with [1, 1, Tq, Tk] shape
@@ -810,20 +690,15 @@ impl FeedForward {
         proj_name: &str,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
-        // Prefer remapped key, but keep fallbacks for partially-mapped sources.
-        let qk256_keys = [
-            format!("layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("model.layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("model.layers.{}.mlp.{}.weight.qk256_qs", self.layer_idx, proj_name),
-            format!("layers.{}.mlp.{}.weight.qk256_qs", self.layer_idx, proj_name),
-        ];
+        // Generate weight name based on layer index and projection name
+        // Format: "layers.{idx}.feed_forward.{proj_name}.weight.qk256_qs"
+        let qk256_key =
+            format!("layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name);
 
-        // Check for QK256 data using known key variants
-        for qk256_key in &qk256_keys {
-            if let Some(qk256_tensor) = raw_tensors.get(qk256_key) {
-                tracing::debug!("Using QK256 kernel for {}", qk256_key);
-                return Self::forward_qk256(input, qk256_tensor, qk256_key);
-            }
+        // Check for QK256 data
+        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
+            tracing::debug!("Using QK256 kernel for {}", qk256_key);
+            return forward_qk256(input, qk256_tensor, &qk256_key);
         }
 
         // Fall back to standard linear
@@ -833,122 +708,6 @@ impl FeedForward {
             proj_name
         );
         linear.forward(input).map_err(BitNetError::from)
-    }
-
-    /// Forward pass using QK256 kernel (static method - shared with MultiHeadAttention)
-    fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
-        use bitnet_quantization::i2s_qk256::gemv_qk256;
-
-        // Extract dimensions
-        let dims = qk256_tensor.dims();
-        if dims.len() != 2 {
-            return Err(BitNetError::Validation(format!(
-                "QK256 tensor {} has invalid shape: {:?}",
-                weight_name, dims
-            )));
-        }
-
-        let rows = dims[0];
-        let row_stride_bytes = dims[1];
-
-        // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
-        // So: row_stride_bytes / 64 = number of 256-element blocks
-        // And: cols = (row_stride_bytes / 64) * 256
-        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
-        debug_assert!(
-            row_stride_bytes.is_multiple_of(64),
-            "QK256 row_stride_bytes must be multiple of 64"
-        );
-        let cols = row_stride_bytes
-            .checked_mul(4) // (bytes/64)*256 == bytes*4
-            .ok_or_else(|| {
-                BitNetError::Validation(format!(
-                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
-                    row_stride_bytes
-                ))
-            })?;
-
-        // Extract bytes
-        let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
-            BitNetError::Validation(format!(
-                "Failed to extract QK256 bytes for {}: {}",
-                weight_name, e
-            ))
-        })?;
-        let mut flat_bytes = Vec::with_capacity(rows * row_stride_bytes);
-        for row in bytes_2d {
-            flat_bytes.extend_from_slice(&row);
-        }
-
-        // Get input dimensions
-        let input_dims = input.dims();
-        let rank = input_dims.len();
-
-        // Handle different input shapes: [B, T, H] or [B, H]
-        let (batch_size, seq_len, input_cols) = match rank {
-            3 => (input_dims[0], input_dims[1], input_dims[2]),
-            2 => (input_dims[0], 1, input_dims[1]),
-            _ => {
-                return Err(BitNetError::Validation(format!(
-                    "Unsupported input shape for QK256: {:?}",
-                    input_dims
-                )));
-            }
-        };
-
-        // Validate input dimensions match QK256 tensor
-        if input_cols != cols {
-            return Err(BitNetError::Validation(format!(
-                "QK256 dimension mismatch for {}: input has {} cols but QK256 tensor expects {} cols",
-                weight_name, input_cols, cols
-            )));
-        }
-
-        // Flatten to 2D [batch * seq_len, in_features]
-        let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
-        let input_vec = input_flat.to_vec2::<f32>().map_err(|e| {
-            BitNetError::Validation(format!(
-                "Failed to convert input to f32 for {}: {}",
-                weight_name, e
-            ))
-        })?;
-
-        // Allocate output
-        let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
-
-        // Probe: Debug QK256 dimensions (layer 0 only, once)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1")
-            && weight_name.contains("layers.0.")
-        {
-            static DIM_LOGGED: std::sync::Once = std::sync::Once::new();
-            DIM_LOGGED.call_once(|| {
-                eprintln!(
-                    "trace_qk256: weight={} rows={} cols={} row_stride_bytes={} qk256_shape={:?}",
-                    weight_name, rows, cols, row_stride_bytes, dims
-                );
-            });
-        }
-
-        // Call QK256 kernel for each input row
-        for (i, input_row) in input_vec.iter().enumerate() {
-            gemv_qk256(&flat_bytes, input_row, &mut output_vec[i], rows, cols, row_stride_bytes)
-                .map_err(|e| {
-                    BitNetError::Validation(format!(
-                        "QK256 GEMV failed for {} at row {}: {}",
-                        weight_name, i, e
-                    ))
-                })?;
-        }
-
-        // Flatten output and reshape
-        let output_flat: Vec<f32> = output_vec.into_iter().flatten().collect();
-        let output_tensor = if rank == 3 {
-            Tensor::from_vec(output_flat, (batch_size, seq_len, rows), input.device())?
-        } else {
-            Tensor::from_vec(output_flat, (batch_size, rows), input.device())?
-        };
-
-        Ok(output_tensor)
     }
 }
 
