@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_quantization.rs
-expression: "format!(\"shape={:?} qtype={} block_size={} numel={} scales_len={} data_len={}\",\nquantized.shape, quantized.qtype, quantized.block_size, quantized.numel(),\nquantized.scales.len(), quantized.data.len(),)"
----
-shape=[32] qtype=I2_S block_size=32 numel=32 scales_len=1 data_len=8

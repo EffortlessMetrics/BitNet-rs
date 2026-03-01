@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_quantization.rs
-expression: "QuantizationType::TL2.to_string()"
----
-TL2
