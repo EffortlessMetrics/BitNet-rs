@@ -63,7 +63,14 @@ pub use layernorm::{
 };
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
-pub use rope::{RopeConfig, compute_sincos_table, launch_rope, rope_forward, rope_forward_cpu};
+pub use rope::{
+    RopeConfig, apply_rope, apply_rope_batched, build_rope_freqs, compute_sincos_table,
+    launch_rope, launch_rope_backward, rope_backward, rope_backward_cpu, rope_forward,
+    rope_forward_cpu,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use rope::{ROPE_BACKWARD_KERNEL_SRC, ROPE_FORWARD_KERNEL_SRC};
 
 // Re-export scatter/gather types from the crate-level module (always compiled).
 pub use crate::scatter_gather::{
