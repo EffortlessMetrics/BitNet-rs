@@ -75,6 +75,29 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Multi-modal fusion** (#1478): Multi-modal fusion system for text/image/audio with 5 fusion strategies
 - **Feature store** (#1479): Feature store with LRU/LFU/FIFO/TTL eviction, memory limits, and versioning
 - **Streaming aggregator** (#1480): Streaming output aggregator with chunk ordering, backpressure, and fan-out/fan-in
+### Wave 70-74: Production Infrastructure & Core Operations
+
+- **Streaming aggregator** (#1480): Streaming output aggregation with chunk ordering and backpressure handling
+- **Inference cache** (#1481): Deterministic inference output caching with prefix matching and LRU eviction
+- **Custom ops** (#1482): Custom operator registry with type-safe signatures, fusion patterns, and computation graphs
+- **Model compiler** (#1483): Model compiler with IR graph and 5 optimization passes
+- **CHANGELOG waves 66-69** (#1484): Documentation update for waves 66-69
+- **Deployment manager** (#1485): Model deployment lifecycle with blue/green, canary, and rolling strategies
+- **Attention analyzer** (#1489): Attention pattern analysis with sparsity detection and head pruning
+- **Hardware tests** (#1492): Cross-backend hardware abstraction test framework with CPU reference implementations
+- **Tensor parallelism v2** (#1493): Advanced tensor parallelism with all-reduce, scatter-gather, and collective ops
+- **Prompt template** (#1494): Prompt template engine supporting ChatML, Llama2/3, Mistral, Phi3, Zephyr formats
+- **Config validator** (#1495): Configuration validation framework for inference, model, device, and server settings
+- **Memory allocator v2** (#1496): Advanced GPU memory allocator with buddy, slab, and arena strategies
+- **Workspace integration v12** (#1499): Consolidated 66 module declarations across 13 categories
+- **Load balancer** (#1500): Request load balancer with circuit breaker and consistent hashing
+- **Inference benchmark** (#1501): Inference benchmarking framework with percentile stats and regression detection
+- **Token sampler v2** (#1502): Advanced token sampling with logit processor pipeline and min-p/typical-p
+- **Semantic search** (#1505): Vector search engine with HNSW and IVF indexing
+- **Observability** (#1507): Comprehensive observability with metrics, tracing, structured logging, Prometheus export
+- **Rate limiter** (#1508): Rate limiting with token bucket, sliding window, leaky bucket, and per-user quotas
+- **Layer norm** (#1512): Layer normalization with RMSNorm, GroupNorm, and fused norm+activation
+- **API gateway** (#1514): API gateway with OpenAI-compatible endpoints, auth, and CORS
 
 ### Added
 - **CHANGELOG wave 59** (#1421): Documents PRs #1409–#1413
