@@ -948,6 +948,7 @@ dependencies = [
  "rand_chacha 0.9.0",
  "rayon",
  "serde",
+ "serde_json",
  "serial_test",
  "tempfile",
  "thiserror 2.0.18",
