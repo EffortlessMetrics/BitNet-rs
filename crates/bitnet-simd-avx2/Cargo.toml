@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-simd-avx2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP AVX2-focused SIMD f32 math primitives with scalar fallback"
+
+[dependencies]
+
+[features]
+default = []

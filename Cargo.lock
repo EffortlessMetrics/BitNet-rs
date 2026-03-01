@@ -815,11 +815,10 @@ dependencies = [
  "anyhow",
  "bindgen",
  "bitnet-common",
- "bitnet-cpu-activations",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
- "bitnet-simd",
+ "bitnet-simd-avx2",
  "bitnet-test-support",
  "bitnet-tests",
  "bytemuck",
@@ -829,6 +828,7 @@ dependencies = [
  "env_logger",
  "half",
  "insta",
+ "libm",
  "log",
  "memory-stats",
  "opencl3",
@@ -1209,6 +1209,10 @@ dependencies = [
 
 [[package]]
 name = "bitnet-simd"
+version = "0.2.1-dev"
+
+[[package]]
+name = "bitnet-simd-avx2"
 version = "0.2.1-dev"
 
 [[package]]
