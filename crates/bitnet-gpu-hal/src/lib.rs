@@ -78,6 +78,7 @@ pub mod ffn_block;
 pub mod rope_kernels;
 pub mod transformer_block;
 
+pub mod beam_search;
 // === Inference Pipeline ===
 pub mod autoregressive_generator;
 pub mod context_window;
