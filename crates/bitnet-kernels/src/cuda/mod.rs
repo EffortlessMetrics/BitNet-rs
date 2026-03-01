@@ -17,6 +17,7 @@
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
+//! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -27,6 +28,7 @@ pub mod activations;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod elementwise;
 pub mod fusion;
 pub mod kv_cache;
 pub mod pooling;
@@ -79,8 +81,17 @@ pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 
+pub use elementwise::{
+    ElementwiseConfig, ElementwiseOp, elementwise_cpu_fallback, elementwise_unary_cpu,
+    fused_elementwise_cpu, launch_elementwise_binary, launch_elementwise_unary,
+    launch_fused_add_mul,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;
