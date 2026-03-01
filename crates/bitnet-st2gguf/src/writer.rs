@@ -4,6 +4,7 @@
 //! It ensures proper alignment, metadata handling, and LayerNorm preservation.
 
 use anyhow::{Context, Result, anyhow};
+use bitnet_gguf_layout::align_up_u64;
 use std::fs::File;
 use std::io::{BufWriter, Seek, Write};
 use std::path::Path;
@@ -274,8 +275,7 @@ impl Default for GgufWriter {
 
 /// Align a value up to the specified alignment
 fn align_up(value: u64, alignment: u64) -> u64 {
-    let r = value % alignment;
-    if r == 0 { value } else { value + (alignment - r) }
+    align_up_u64(value, alignment)
 }
 
 #[cfg(test)]

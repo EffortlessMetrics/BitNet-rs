@@ -22,6 +22,7 @@ path = "src/main.rs"
 # BitNet-rs internal crates
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-gguf-layout.workspace = true
 
 # Core dependencies
 anyhow.workspace = true
@@ -43,6 +44,7 @@ half = "2.6.0"
 
 [dev-dependencies]
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-gguf-layout.workspace = true
 tempfile.workspace = true
 memmap2.workspace = true
 insta.workspace = true

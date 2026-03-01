@@ -14,6 +14,7 @@
 //! - Resource limits to prevent memory bombs
 
 use bitnet_common::{BitNetError, ModelError, Result, SecurityError, SecurityLimits};
+use bitnet_gguf_layout::align_up_usize;
 
 /// Returns the smallest `x >= off` such that `x % align == 0`.
 /// Safe for any `align >= 1`.
@@ -23,7 +24,7 @@ pub fn align_up(off: usize, align: usize) -> usize {
         return off;
     }
     debug_assert!(align.is_power_of_two(), "alignment should be power-of-two");
-    (off + align - 1) & !(align - 1)
+    align_up_usize(off, align)
 }
 
 /// Parsed GGUF header (v2/v3).

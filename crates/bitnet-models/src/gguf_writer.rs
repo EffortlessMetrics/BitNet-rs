@@ -22,6 +22,7 @@ use std::io::{self, Seek, Write};
 use std::path::Path;
 
 use bitnet_gguf::GGUF_MAGIC;
+use bitnet_gguf_layout::align_up_u64 as gguf_align_up_u64;
 
 // ---------------------------------------------------------------------------
 // Tensor data type (write-side mirror of the read-side enum)
@@ -532,10 +533,7 @@ fn pad_to_alignment<W: Write + Seek>(w: &mut W, alignment: usize) -> io::Result<
 /// Smallest value ≥ `offset` that is a multiple of `alignment`.
 #[inline]
 fn align_up_u64(offset: u64, alignment: u64) -> u64 {
-    if alignment == 0 {
-        return offset;
-    }
-    (offset + alignment - 1) & !(alignment - 1)
+    gguf_align_up_u64(offset, alignment)
 }
 
 // ---------------------------------------------------------------------------

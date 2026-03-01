@@ -797,6 +797,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-gguf-layout"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
@@ -973,6 +977,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-gguf",
+ "bitnet-gguf-layout",
  "bitnet-quantization",
  "bitnet-st2gguf",
  "bitnet-test-fixtures-core",
@@ -1398,6 +1403,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-gguf-layout",
  "bitnet-models",
  "bytemuck",
  "clap",

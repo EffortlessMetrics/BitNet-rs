@@ -114,6 +114,7 @@ members = [
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
   "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
   "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
+  "crates/bitnet-gguf-layout",
   "crates/bitnet-qk256-dispatch",
 ]
 resolver = "2"
@@ -385,6 +386,7 @@ harness = false
 required-features = ["cpu"]
 
 [workspace.dependencies]
+bitnet-gguf-layout = { path = "crates/bitnet-gguf-layout", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
