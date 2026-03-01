@@ -127,7 +127,6 @@ pub mod docker_ci;
 
 // === Existing Modules (prior waves) ===
 
-pub mod api_gateway;
 pub mod model_warmup;
 //
 // Provides checkpoint management for saving and resuming inference state,
@@ -144,10 +143,8 @@ pub mod streaming_aggregator;
 // topologies, double-buffered comm, and profiling.
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
-pub mod data_pipeline;
 pub mod error_recovery;
 pub mod generation;
-pub mod graph_executor;
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
@@ -157,6 +154,6 @@ pub mod graph_executor;
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
 pub mod memory_layout;
-// Provides throughput/latency/memory tracking, bottleneck detection,
-// alerting, and Prometheus/JSON/CSV export for inference pipelines.
-pub mod performance_monitor;
+// Provides model lifecycle management: state machine, loading orchestration,
+// warmup, cooldown, hot-swap, memory budgeting, and version management.
+pub mod model_lifecycle;
