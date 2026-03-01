@@ -1,0 +1,1047 @@
+{
+  "nodes": [
+    "bitnet",
+    "bitnet-bdd-grid",
+    "bitnet-bdd-grid-core",
+    "bitnet-bench-receipts",
+    "bitnet-cli",
+    "bitnet-cli-sampling-core",
+    "bitnet-common",
+    "bitnet-compat",
+    "bitnet-cpu-activations",
+    "bitnet-cpu-detect",
+    "bitnet-crossval",
+    "bitnet-device-probe",
+    "bitnet-download",
+    "bitnet-engine-core",
+    "bitnet-eval-core",
+    "bitnet-feature-contract",
+    "bitnet-feature-matrix",
+    "bitnet-ffi",
+    "bitnet-fuzz",
+    "bitnet-generation",
+    "bitnet-generation-events-core",
+    "bitnet-generation-stop-core",
+    "bitnet-ggml-ffi",
+    "bitnet-gguf",
+    "bitnet-honest-compute",
+    "bitnet-http-retry",
+    "bitnet-inference",
+    "bitnet-inference-metrics-core",
+    "bitnet-intel-gpu-id",
+    "bitnet-kernels",
+    "bitnet-kv-cache-policy-core",
+    "bitnet-logits",
+    "bitnet-logits-filters",
+    "bitnet-math",
+    "bitnet-models",
+    "bitnet-opencl",
+    "bitnet-prompt-templates",
+    "bitnet-prompt-templates-core",
+    "bitnet-py",
+    "bitnet-quantization",
+    "bitnet-receipts",
+    "bitnet-receipts-core",
+    "bitnet-repl-core",
+    "bitnet-rope",
+    "bitnet-runtime-bootstrap",
+    "bitnet-runtime-context",
+    "bitnet-runtime-context-core",
+    "bitnet-runtime-feature-flags",
+    "bitnet-runtime-feature-flags-core",
+    "bitnet-runtime-profile",
+    "bitnet-runtime-profile-contract",
+    "bitnet-runtime-profile-contract-core",
+    "bitnet-runtime-profile-core",
+    "bitnet-safetensors-ln",
+    "bitnet-sampling",
+    "bitnet-server",
+    "bitnet-simd",
+    "bitnet-st-tools",
+    "bitnet-st2gguf",
+    "bitnet-startup-contract",
+    "bitnet-startup-contract-core",
+    "bitnet-startup-contract-diagnostics",
+    "bitnet-startup-contract-guard",
+    "bitnet-sys",
+    "bitnet-test-env",
+    "bitnet-test-fixtures-core",
+    "bitnet-test-support",
+    "bitnet-testing-policy",
+    "bitnet-testing-policy-contract",
+    "bitnet-testing-policy-core",
+    "bitnet-testing-policy-interop",
+    "bitnet-testing-policy-kit",
+    "bitnet-testing-policy-runtime",
+    "bitnet-testing-policy-runtime-core",
+    "bitnet-testing-policy-tests",
+    "bitnet-testing-profile",
+    "bitnet-testing-scenarios",
+    "bitnet-testing-scenarios-core",
+    "bitnet-testing-scenarios-profile-core",
+    "bitnet-tests",
+    "bitnet-tests-new",
+    "bitnet-tokenizer-discovery-core",
+    "bitnet-tokenizers",
+    "bitnet-trace",
+    "bitnet-transformer",
+    "bitnet-validation",
+    "bitnet-vulkan",
+    "bitnet-vulkan-shaders",
+    "bitnet-warn-once",
+    "bitnet-wasm",
+    "bitnet-wasm-utils",
+    "bitnet-wgpu-bench",
+    "xtask"
+  ],
+  "edges": [
+    {
+      "from": "bitnet",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-device-probe"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-ggml-ffi"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-math"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-rope"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-tests"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-transformer"
+    },
+    {
+      "from": "bitnet",
+      "to": "bitnet-warn-once"
+    },
+    {
+      "from": "bitnet-bdd-grid",
+      "to": "bitnet-bdd-grid-core"
+    },
+    {
+      "from": "bitnet-bdd-grid",
+      "to": "bitnet-runtime-feature-flags"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-cli-sampling-core"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-eval-core"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-ggml-ffi"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-prompt-templates"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-repl-core"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-runtime-bootstrap"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-startup-contract-guard"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-tokenizer-discovery-core"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-cli",
+      "to": "bitnet-validation"
+    },
+    {
+      "from": "bitnet-common",
+      "to": "bitnet-math"
+    },
+    {
+      "from": "bitnet-common",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-common",
+      "to": "bitnet-warn-once"
+    },
+    {
+      "from": "bitnet-compat",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-compat",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-compat",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-ggml-ffi"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-sys"
+    },
+    {
+      "from": "bitnet-crossval",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-device-probe",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-device-probe",
+      "to": "bitnet-intel-gpu-id"
+    },
+    {
+      "from": "bitnet-download",
+      "to": "bitnet-http-retry"
+    },
+    {
+      "from": "bitnet-engine-core",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-engine-core",
+      "to": "bitnet-generation"
+    },
+    {
+      "from": "bitnet-engine-core",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet-feature-contract",
+      "to": "bitnet-bdd-grid"
+    },
+    {
+      "from": "bitnet-feature-contract",
+      "to": "bitnet-feature-matrix"
+    },
+    {
+      "from": "bitnet-feature-matrix",
+      "to": "bitnet-runtime-profile-core"
+    },
+    {
+      "from": "bitnet-ffi",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-ffi",
+      "to": "bitnet-compat"
+    },
+    {
+      "from": "bitnet-ffi",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-ffi",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-ffi",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-bdd-grid-core"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-engine-core"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-generation"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-gguf"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-honest-compute"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-prompt-templates"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-receipts"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-rope"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-runtime-feature-flags-core"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-sampling"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-st2gguf"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-fuzz",
+      "to": "bitnet-validation"
+    },
+    {
+      "from": "bitnet-generation",
+      "to": "bitnet-generation-events-core"
+    },
+    {
+      "from": "bitnet-generation",
+      "to": "bitnet-generation-stop-core"
+    },
+    {
+      "from": "bitnet-generation-events-core",
+      "to": "bitnet-generation-stop-core"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-device-probe"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-engine-core"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-generation"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-gguf"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-inference-metrics-core"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-kv-cache-policy-core"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-prompt-templates"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-receipts"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-rope"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-sampling"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-sys"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-inference",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-cpu-activations"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-cpu-detect"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-device-probe"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-ggml-ffi"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-simd"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-kernels",
+      "to": "bitnet-tests"
+    },
+    {
+      "from": "bitnet-logits",
+      "to": "bitnet-logits-filters"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-ggml-ffi"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-gguf"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-st2gguf"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-test-fixtures-core"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-trace"
+    },
+    {
+      "from": "bitnet-models",
+      "to": "bitnet-transformer"
+    },
+    {
+      "from": "bitnet-opencl",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-prompt-templates",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-prompt-templates",
+      "to": "bitnet-prompt-templates-core"
+    },
+    {
+      "from": "bitnet-prompt-templates-core",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-prompt-templates-core",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-py",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-py",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-py",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-py",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-py",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-quantization",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-quantization",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-quantization",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-receipts",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-receipts",
+      "to": "bitnet-receipts-core"
+    },
+    {
+      "from": "bitnet-receipts-core",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-receipts-core",
+      "to": "bitnet-honest-compute"
+    },
+    {
+      "from": "bitnet-receipts-core",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-runtime-bootstrap",
+      "to": "bitnet-startup-contract"
+    },
+    {
+      "from": "bitnet-runtime-context",
+      "to": "bitnet-runtime-context-core"
+    },
+    {
+      "from": "bitnet-runtime-context-core",
+      "to": "bitnet-bdd-grid-core"
+    },
+    {
+      "from": "bitnet-runtime-feature-flags",
+      "to": "bitnet-bdd-grid-core"
+    },
+    {
+      "from": "bitnet-runtime-feature-flags",
+      "to": "bitnet-runtime-feature-flags-core"
+    },
+    {
+      "from": "bitnet-runtime-feature-flags-core",
+      "to": "bitnet-bdd-grid-core"
+    },
+    {
+      "from": "bitnet-runtime-profile",
+      "to": "bitnet-feature-matrix"
+    },
+    {
+      "from": "bitnet-runtime-profile-contract",
+      "to": "bitnet-runtime-profile-contract-core"
+    },
+    {
+      "from": "bitnet-runtime-profile-contract-core",
+      "to": "bitnet-bdd-grid"
+    },
+    {
+      "from": "bitnet-runtime-profile-contract-core",
+      "to": "bitnet-runtime-context"
+    },
+    {
+      "from": "bitnet-runtime-profile-contract-core",
+      "to": "bitnet-runtime-feature-flags"
+    },
+    {
+      "from": "bitnet-runtime-profile-core",
+      "to": "bitnet-runtime-profile-contract"
+    },
+    {
+      "from": "bitnet-safetensors-ln",
+      "to": "bitnet-validation"
+    },
+    {
+      "from": "bitnet-sampling",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-eval-core"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-runtime-bootstrap"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-startup-contract-guard"
+    },
+    {
+      "from": "bitnet-server",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-st-tools",
+      "to": "bitnet-safetensors-ln"
+    },
+    {
+      "from": "bitnet-st2gguf",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-st2gguf",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-startup-contract",
+      "to": "bitnet-startup-contract-core"
+    },
+    {
+      "from": "bitnet-startup-contract-core",
+      "to": "bitnet-runtime-profile"
+    },
+    {
+      "from": "bitnet-startup-contract-diagnostics",
+      "to": "bitnet-runtime-bootstrap"
+    },
+    {
+      "from": "bitnet-startup-contract-guard",
+      "to": "bitnet-runtime-bootstrap"
+    },
+    {
+      "from": "bitnet-startup-contract-guard",
+      "to": "bitnet-startup-contract-diagnostics"
+    },
+    {
+      "from": "bitnet-test-support",
+      "to": "bitnet-test-env"
+    },
+    {
+      "from": "bitnet-testing-policy",
+      "to": "bitnet-testing-policy-core"
+    },
+    {
+      "from": "bitnet-testing-policy-contract",
+      "to": "bitnet-feature-contract"
+    },
+    {
+      "from": "bitnet-testing-policy-contract",
+      "to": "bitnet-runtime-feature-flags"
+    },
+    {
+      "from": "bitnet-testing-policy-contract",
+      "to": "bitnet-testing-policy-core"
+    },
+    {
+      "from": "bitnet-testing-policy-core",
+      "to": "bitnet-testing-profile"
+    },
+    {
+      "from": "bitnet-testing-policy-core",
+      "to": "bitnet-testing-scenarios-core"
+    },
+    {
+      "from": "bitnet-testing-policy-interop",
+      "to": "bitnet-runtime-feature-flags"
+    },
+    {
+      "from": "bitnet-testing-policy-interop",
+      "to": "bitnet-testing-policy-contract"
+    },
+    {
+      "from": "bitnet-testing-policy-interop",
+      "to": "bitnet-testing-policy-kit"
+    },
+    {
+      "from": "bitnet-testing-policy-kit",
+      "to": "bitnet-testing-policy"
+    },
+    {
+      "from": "bitnet-testing-policy-runtime",
+      "to": "bitnet-testing-policy-interop"
+    },
+    {
+      "from": "bitnet-testing-policy-runtime",
+      "to": "bitnet-testing-policy-runtime-core"
+    },
+    {
+      "from": "bitnet-testing-policy-runtime-core",
+      "to": "bitnet-testing-policy-interop"
+    },
+    {
+      "from": "bitnet-testing-policy-tests",
+      "to": "bitnet-testing-policy-runtime"
+    },
+    {
+      "from": "bitnet-testing-profile",
+      "to": "bitnet-runtime-profile"
+    },
+    {
+      "from": "bitnet-testing-scenarios",
+      "to": "bitnet-testing-scenarios-core"
+    },
+    {
+      "from": "bitnet-testing-scenarios-core",
+      "to": "bitnet-testing-scenarios-profile-core"
+    },
+    {
+      "from": "bitnet-testing-scenarios-profile-core",
+      "to": "bitnet-testing-profile"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-compat"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-crossval"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-device-probe"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-engine-core"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-generation"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-gguf"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-honest-compute"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-logits"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-prompt-templates"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-receipts"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-sampling"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-testing-policy-tests"
+    },
+    {
+      "from": "bitnet-tests",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-tests-new",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-tests-new",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-tests-new",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-tests-new",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-test-fixtures-core"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-tokenizers",
+      "to": "bitnet-tests"
+    },
+    {
+      "from": "bitnet-transformer",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-transformer",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-transformer",
+      "to": "bitnet-rope"
+    },
+    {
+      "from": "bitnet-transformer",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "bitnet-vulkan",
+      "to": "bitnet-vulkan-shaders"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-quantization"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-tokenizers"
+    },
+    {
+      "from": "bitnet-wasm",
+      "to": "bitnet-wasm-utils"
+    },
+    {
+      "from": "bitnet-wgpu-bench",
+      "to": "bitnet-bench-receipts"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-bdd-grid"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-common"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-crossval"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-download"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-inference"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-kernels"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-models"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-sys"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-test-support"
+    },
+    {
+      "from": "xtask",
+      "to": "bitnet-tokenizers"
+    }
+  ]
+}
