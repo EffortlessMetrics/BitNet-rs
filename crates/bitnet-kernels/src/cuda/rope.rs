@@ -25,6 +25,108 @@
 
 use bitnet_common::{KernelError, Result};
 
+// ── CUDA kernel source strings ───────────────────────────────────────
+
+/// CUDA kernel source for RoPE forward pass (FP32).
+///
+/// Each thread handles one `(position, dim_pair)` element. The kernel
+/// computes angles on-the-fly via `__sincosf` to avoid constant-memory
+/// pressure for large sequence lengths.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const ROPE_FORWARD_KERNEL_SRC: &str = r#"
+extern "C" __global__ void rope_forward_f32(
+    const float* __restrict__ input,
+    float* __restrict__ output,
+    const int head_dim,
+    const int seq_len,
+    const int n_heads,
+    const int position_offset,
+    const float theta_base,
+    const float scaling_factor,
+    const int interleaved
+) {
+    const int pos = blockIdx.x;
+    const int head = blockIdx.y;
+    const int half_dim = head_dim / 2;
+    const int i = threadIdx.x;
+    if (i >= half_dim) return;
+
+    float exponent = -2.0f * (float)i / (float)head_dim;
+    float inv_freq = powf(theta_base, exponent);
+    float angle = (float)(pos + position_offset) * inv_freq * scaling_factor;
+
+    float cos_val, sin_val;
+    __sincosf(angle, &sin_val, &cos_val);
+
+    int row_start = (head * seq_len + pos) * head_dim;
+
+    float x0, x1;
+    int idx0, idx1;
+    if (interleaved) {
+        idx0 = row_start + i;
+        idx1 = row_start + i + half_dim;
+    } else {
+        idx0 = row_start + 2 * i;
+        idx1 = row_start + 2 * i + 1;
+    }
+    x0 = input[idx0];
+    x1 = input[idx1];
+
+    output[idx0] = x0 * cos_val - x1 * sin_val;
+    output[idx1] = x0 * sin_val + x1 * cos_val;
+}
+"#;
+
+/// CUDA kernel source for RoPE backward pass (FP32).
+///
+/// The backward pass applies the transpose of the rotation matrix:
+///   `dx[2i]   =  dy[2i] * cos + dy[2i+1] * sin`
+///   `dx[2i+1] = -dy[2i] * sin + dy[2i+1] * cos`
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const ROPE_BACKWARD_KERNEL_SRC: &str = r#"
+extern "C" __global__ void rope_backward_f32(
+    const float* __restrict__ grad_output,
+    float* __restrict__ grad_input,
+    const int head_dim,
+    const int seq_len,
+    const int n_heads,
+    const int position_offset,
+    const float theta_base,
+    const float scaling_factor,
+    const int interleaved
+) {
+    const int pos = blockIdx.x;
+    const int head = blockIdx.y;
+    const int half_dim = head_dim / 2;
+    const int i = threadIdx.x;
+    if (i >= half_dim) return;
+
+    float exponent = -2.0f * (float)i / (float)head_dim;
+    float inv_freq = powf(theta_base, exponent);
+    float angle = (float)(pos + position_offset) * inv_freq * scaling_factor;
+
+    float cos_val, sin_val;
+    __sincosf(angle, &sin_val, &cos_val);
+
+    int row_start = (head * seq_len + pos) * head_dim;
+
+    float dy0, dy1;
+    int idx0, idx1;
+    if (interleaved) {
+        idx0 = row_start + i;
+        idx1 = row_start + i + half_dim;
+    } else {
+        idx0 = row_start + 2 * i;
+        idx1 = row_start + 2 * i + 1;
+    }
+    dy0 = grad_output[idx0];
+    dy1 = grad_output[idx1];
+
+    grad_input[idx0] =  dy0 * cos_val + dy1 * sin_val;
+    grad_input[idx1] = -dy0 * sin_val + dy1 * cos_val;
+}
+"#;
+
 /// Launch configuration for the RoPE kernel.
 #[derive(Debug, Clone)]
 pub struct RopeConfig {
@@ -48,6 +150,9 @@ pub struct RopeConfig {
     pub max_seq_len: usize,
     /// Threads per block — typically `head_dim / 2`, capped at 1024.
     pub threads_per_block: u32,
+    /// When `true`, use the GPT-NeoX interleaved layout where pairs are at
+    /// `(i, i + head_dim/2)` instead of `(2*i, 2*i+1)`.
+    pub interleaved: bool,
 }
 
 impl RopeConfig {
@@ -84,6 +189,7 @@ impl RopeConfig {
             scaling_factor: 1.0,
             max_seq_len: seq_len,
             threads_per_block,
+            interleaved: false,
         })
     }
 
@@ -112,6 +218,13 @@ impl RopeConfig {
     #[must_use]
     pub fn with_max_seq_len(mut self, max_seq_len: usize) -> Self {
         self.max_seq_len = max_seq_len;
+        self
+    }
+
+    /// Use the GPT-NeoX interleaved layout `(i, i + head_dim/2)`.
+    #[must_use]
+    pub fn with_interleaved(mut self, interleaved: bool) -> Self {
+        self.interleaved = interleaved;
         self
     }
 
@@ -194,11 +307,17 @@ pub fn rope_forward_cpu(input: &[f32], output: &mut [f32], config: &RopeConfig) 
                 let cos_val = angle.cos();
                 let sin_val = angle.sin();
 
-                let x0 = input[row_start + 2 * i];
-                let x1 = input[row_start + 2 * i + 1];
+                let (idx0, idx1) = if config.interleaved {
+                    (row_start + i, row_start + i + half_dim)
+                } else {
+                    (row_start + 2 * i, row_start + 2 * i + 1)
+                };
 
-                output[row_start + 2 * i] = x0 * cos_val - x1 * sin_val;
-                output[row_start + 2 * i + 1] = x0 * sin_val + x1 * cos_val;
+                let x0 = input[idx0];
+                let x1 = input[idx1];
+
+                output[idx0] = x0 * cos_val - x1 * sin_val;
+                output[idx1] = x0 * sin_val + x1 * cos_val;
             }
         }
     }
@@ -251,6 +370,225 @@ pub fn rope_forward(input: &[f32], output: &mut [f32], config: &RopeConfig) -> R
         }
     }
     rope_forward_cpu(input, output, config)
+}
+
+// ── Precomputed frequency table ──────────────────────────────────────
+
+/// Build a flat frequency table `[cos, sin, cos, sin, …]` for all
+/// `(position, dim_pair)` combinations.
+///
+/// Returns `max_seq_len × head_dim` floats. This is a convenience wrapper
+/// around [`compute_sincos_table`] for callers who only need `(head_dim,
+/// max_seq_len, theta)` without constructing a full [`RopeConfig`].
+pub fn build_rope_freqs(head_dim: usize, max_seq_len: usize, theta: f32) -> Vec<f32> {
+    let half_dim = head_dim / 2;
+    let inv_freq = compute_inv_freq(head_dim, theta);
+    let mut table = Vec::with_capacity(max_seq_len * head_dim);
+
+    for pos in 0..max_seq_len {
+        for i in 0..half_dim {
+            let angle = (pos as f32) * inv_freq[i];
+            table.push(angle.cos());
+            table.push(angle.sin());
+        }
+    }
+    table
+}
+
+// ── Explicit-position API ────────────────────────────────────────────
+
+/// Apply RoPE with an explicit position array (CPU fallback, GPU dispatch).
+///
+/// Unlike [`rope_forward`] which uses sequential positions
+/// `[0..seq_len)`, this function takes arbitrary per-token positions,
+/// enabling KV-cache-friendly non-contiguous position assignment.
+///
+/// # Arguments
+///
+/// * `input`     — `[n_heads × len(positions) × head_dim]` FP32
+/// * `positions` — one position per token (length = `seq_len` in config)
+/// * `config`    — launch configuration (`seq_len` must equal
+///   `positions.len()`)
+///
+/// Returns the rotated output as a new `Vec<f32>`.
+pub fn apply_rope(input: &[f32], positions: &[u32], config: &RopeConfig) -> Vec<f32> {
+    let n = config.n_heads * positions.len() * config.head_dim;
+    let mut output = vec![0.0f32; n];
+
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    {
+        if crate::device_features::gpu_available_runtime() {
+            if let Ok(()) = launch_rope(input, &mut output, config) {
+                return output;
+            }
+        }
+    }
+
+    let inv_freq = compute_inv_freq(config.head_dim, config.base);
+    let half_dim = config.head_dim / 2;
+
+    for head in 0..config.n_heads {
+        for (seq_idx, &pos) in positions.iter().enumerate() {
+            let actual_pos = pos as f32;
+            let row_start = head * positions.len() * config.head_dim + seq_idx * config.head_dim;
+
+            for i in 0..half_dim {
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
+                let cos_val = angle.cos();
+                let sin_val = angle.sin();
+
+                let (idx0, idx1) = if config.interleaved {
+                    (row_start + i, row_start + i + half_dim)
+                } else {
+                    (row_start + 2 * i, row_start + 2 * i + 1)
+                };
+
+                let x0 = input[idx0];
+                let x1 = input[idx1];
+
+                output[idx0] = x0 * cos_val - x1 * sin_val;
+                output[idx1] = x0 * sin_val + x1 * cos_val;
+            }
+        }
+    }
+    output
+}
+
+/// Apply RoPE to a batched tensor with sequential positions per batch.
+///
+/// Input shape: `[batch_size × n_heads × seq_len × head_dim]`.
+/// Each batch element uses positions `[0..seq_len)`.
+///
+/// Returns the rotated output as a new `Vec<f32>`.
+pub fn apply_rope_batched(
+    input: &[f32],
+    batch_size: usize,
+    seq_len: usize,
+    config: &RopeConfig,
+) -> Vec<f32> {
+    let per_batch = config.n_heads * seq_len * config.head_dim;
+    let total = batch_size * per_batch;
+    let mut output = vec![0.0f32; total];
+
+    let batch_cfg =
+        RopeConfig { seq_len, max_seq_len: seq_len.max(config.max_seq_len), ..config.clone() };
+
+    for b in 0..batch_size {
+        let start = b * per_batch;
+        let end = start + per_batch;
+        let mut batch_out = vec![0.0f32; per_batch];
+
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            if crate::device_features::gpu_available_runtime() {
+                if let Ok(()) = launch_rope(&input[start..end], &mut batch_out, &batch_cfg) {
+                    output[start..end].copy_from_slice(&batch_out);
+                    continue;
+                }
+            }
+        }
+
+        let _ = rope_forward_cpu(&input[start..end], &mut batch_out, &batch_cfg);
+        output[start..end].copy_from_slice(&batch_out);
+    }
+    output
+}
+
+// ── Backward pass ────────────────────────────────────────────────────
+
+/// RoPE backward pass on the CPU.
+///
+/// Computes `grad_input` from `grad_output` by applying the transpose of
+/// the rotation matrix:
+///   `dx[2i]   =  dy[2i] * cos(θ) + dy[2i+1] * sin(θ)`
+///   `dx[2i+1] = -dy[2i] * sin(θ) + dy[2i+1] * cos(θ)`
+pub fn rope_backward_cpu(
+    grad_output: &[f32],
+    grad_input: &mut [f32],
+    config: &RopeConfig,
+) -> Result<()> {
+    let expected_len = config.n_heads * config.seq_len * config.head_dim;
+    if grad_output.len() != expected_len || grad_input.len() != expected_len {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "RoPE backward buffer length mismatch: expected {expected_len}, \
+                 got grad_output={}, grad_input={}",
+                grad_output.len(),
+                grad_input.len(),
+            ),
+        }
+        .into());
+    }
+
+    let inv_freq = compute_inv_freq(config.head_dim, config.base);
+    let half_dim = config.head_dim / 2;
+
+    for head in 0..config.n_heads {
+        for pos in 0..config.seq_len {
+            let actual_pos = (pos + config.position_offset) as f32;
+            let row_start = head * config.seq_len * config.head_dim + pos * config.head_dim;
+
+            for i in 0..half_dim {
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
+                let cos_val = angle.cos();
+                let sin_val = angle.sin();
+
+                let (idx0, idx1) = if config.interleaved {
+                    (row_start + i, row_start + i + half_dim)
+                } else {
+                    (row_start + 2 * i, row_start + 2 * i + 1)
+                };
+
+                let dy0 = grad_output[idx0];
+                let dy1 = grad_output[idx1];
+
+                grad_input[idx0] = dy0 * cos_val + dy1 * sin_val;
+                grad_input[idx1] = -dy0 * sin_val + dy1 * cos_val;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Launch stub for the RoPE backward CUDA kernel.
+///
+/// # Errors
+///
+/// Returns `KernelError::GpuError` until a real PTX kernel is compiled.
+pub fn launch_rope_backward(
+    _grad_output: &[f32],
+    _grad_input: &mut [f32],
+    config: &RopeConfig,
+) -> Result<()> {
+    log::debug!(
+        "RoPE backward stub: head_dim={}, n_heads={}, seq_len={}, grid={:?}",
+        config.head_dim,
+        config.n_heads,
+        config.seq_len,
+        config.grid_dim(),
+    );
+    Err(KernelError::GpuError {
+        reason: "RoPE backward CUDA kernel not yet compiled — scaffold only".into(),
+    }
+    .into())
+}
+
+/// RoPE backward with automatic dispatch: GPU if available, else CPU.
+pub fn rope_backward(
+    grad_output: &[f32],
+    grad_input: &mut [f32],
+    config: &RopeConfig,
+) -> Result<()> {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    {
+        if crate::device_features::gpu_available_runtime() {
+            if let Ok(()) = launch_rope_backward(grad_output, grad_input, config) {
+                return Ok(());
+            }
+        }
+    }
+    rope_backward_cpu(grad_output, grad_input, config)
 }
 
 #[cfg(test)]
@@ -742,5 +1080,377 @@ mod tests {
         let mut output = vec![0.0f32; total];
         let result = launch_rope(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA RoPE launch failed: {result:?}");
+    }
+
+    #[test]
+    #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
+    fn test_cuda_rope_backward_launch() {
+        let cfg = RopeConfig::for_shape(128, 32, 64).unwrap();
+        let total = 32 * 64 * 128;
+        let grad_out = vec![1.0f32; total];
+        let mut grad_in = vec![0.0f32; total];
+        let result = launch_rope_backward(&grad_out, &mut grad_in, &cfg);
+        assert!(result.is_ok(), "CUDA RoPE backward launch failed: {result:?}");
+    }
+
+    // ── Interleaved layout ───────────────────────────────────────────
+
+    #[test]
+    fn test_rope_config_interleaved_default_false() {
+        let cfg = RopeConfig::for_shape(64, 1, 1).unwrap();
+        assert!(!cfg.interleaved);
+    }
+
+    #[test]
+    fn test_rope_config_with_interleaved() {
+        let cfg = RopeConfig::for_shape(64, 1, 1).unwrap().with_interleaved(true);
+        assert!(cfg.interleaved);
+    }
+
+    #[test]
+    fn test_rope_interleaved_identity_at_pos_zero() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap().with_interleaved(true);
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let mut output = vec![0.0f32; 4];
+        rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+        for (o, i) in output.iter().zip(input.iter()) {
+            assert!((o - i).abs() < 1e-6, "interleaved pos-0 identity: {o} vs {i}");
+        }
+    }
+
+    #[test]
+    fn test_rope_interleaved_preserves_norm() {
+        let head_dim = 8;
+        let cfg = RopeConfig::for_shape(head_dim, 2, 4).unwrap().with_interleaved(true);
+        let total = 2 * 4 * head_dim;
+        let input: Vec<f32> = (0..total).map(|i| (i as f32 + 1.0) * 0.1).collect();
+        let mut output = vec![0.0f32; total];
+        rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+
+        for head in 0..2 {
+            for pos in 0..4 {
+                let start = head * 4 * head_dim + pos * head_dim;
+                let in_norm: f32 =
+                    input[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+                let out_norm: f32 =
+                    output[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+                assert!(
+                    (in_norm - out_norm).abs() < 1e-4,
+                    "interleaved norm: head={head}, pos={pos}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_rope_interleaved_differs_from_default() {
+        let head_dim = 8;
+        let cfg_default = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
+        let cfg_interleaved = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_interleaved(true);
+        let input =
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out_default = vec![0.0f32; 16];
+        let mut out_interleaved = vec![0.0f32; 16];
+        rope_forward_cpu(&input, &mut out_default, &cfg_default).unwrap();
+        rope_forward_cpu(&input, &mut out_interleaved, &cfg_interleaved).unwrap();
+        // pos 0 is identity for both, pos 1 should differ
+        let any_diff =
+            (head_dim..2 * head_dim).any(|i| (out_default[i] - out_interleaved[i]).abs() > 1e-6);
+        assert!(any_diff, "interleaved should produce different rotation at pos>0");
+    }
+
+    // ── build_rope_freqs ─────────────────────────────────────────────
+
+    #[test]
+    fn test_build_rope_freqs_length() {
+        let table = build_rope_freqs(8, 16, 10_000.0);
+        assert_eq!(table.len(), 16 * 8);
+    }
+
+    #[test]
+    fn test_build_rope_freqs_matches_sincos_table() {
+        let cfg = RopeConfig::for_shape(8, 1, 16).unwrap().with_max_seq_len(16);
+        let via_config = compute_sincos_table(&cfg);
+        let via_standalone = build_rope_freqs(8, 16, 10_000.0);
+        assert_eq!(via_config.len(), via_standalone.len());
+        for (a, b) in via_config.iter().zip(via_standalone.iter()) {
+            assert!((a - b).abs() < 1e-6, "tables should match: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_build_rope_freqs_custom_theta() {
+        let t1 = build_rope_freqs(4, 4, 10_000.0);
+        let t2 = build_rope_freqs(4, 4, 500_000.0);
+        // pos 0 should be identical (angle=0)
+        for i in 0..4 {
+            assert!((t1[i] - t2[i]).abs() < 1e-6);
+        }
+        // pos 1 should differ
+        let any_diff = (4..8).any(|i| (t1[i] - t2[i]).abs() > 1e-6);
+        assert!(any_diff, "different theta should produce different freqs");
+    }
+
+    #[test]
+    fn test_build_rope_freqs_position_zero_is_cos1_sin0() {
+        let table = build_rope_freqs(4, 1, 10_000.0);
+        // At position 0, angle=0 for all dims → cos(0)=1, sin(0)=0
+        assert!((table[0] - 1.0).abs() < 1e-6);
+        assert!(table[1].abs() < 1e-6);
+        assert!((table[2] - 1.0).abs() < 1e-6);
+        assert!(table[3].abs() < 1e-6);
+    }
+
+    // ── apply_rope (explicit positions) ──────────────────────────────
+
+    #[test]
+    fn test_apply_rope_sequential_matches_forward() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 3).unwrap();
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+        let positions = [0u32, 1, 2];
+        let mut expected = vec![0.0f32; 12];
+        rope_forward_cpu(&input, &mut expected, &cfg).unwrap();
+
+        let result = apply_rope(&input, &positions, &cfg);
+        for (i, (a, b)) in result.iter().zip(expected.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "mismatch at {i}: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_apply_rope_noncontiguous_positions() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
+        let input = vec![1.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5];
+        // positions [0, 5] — non-contiguous
+        let result = apply_rope(&input, &[0, 5], &cfg);
+        // Position 0 is identity
+        for i in 0..head_dim {
+            assert!((result[i] - input[i]).abs() < 1e-6);
+        }
+        // Position 5 should differ from position 1
+        let cfg1 = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
+        let mut out_seq = vec![0.0f32; 8];
+        rope_forward_cpu(&input, &mut out_seq, &cfg1).unwrap();
+        let any_diff =
+            (0..head_dim).any(|i| (result[head_dim + i] - out_seq[head_dim + i]).abs() > 1e-4);
+        assert!(any_diff, "position 5 should differ from position 1");
+    }
+
+    #[test]
+    fn test_apply_rope_single_position() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap();
+        let input = vec![3.0, 4.0, 5.0, 6.0];
+        let result = apply_rope(&input, &[0], &cfg);
+        // Position 0 → identity
+        for (a, b) in result.iter().zip(input.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_apply_rope_multi_head() {
+        let head_dim = 4;
+        let n_heads = 2;
+        let cfg = RopeConfig::for_shape(head_dim, n_heads, 2).unwrap();
+        let total = n_heads * 2 * head_dim;
+        let input: Vec<f32> = (0..total).map(|i| (i as f32) * 0.1 + 1.0).collect();
+        let result = apply_rope(&input, &[0, 1], &cfg);
+        assert_eq!(result.len(), total);
+        assert!(result.iter().all(|x| x.is_finite()));
+    }
+
+    // ── apply_rope_batched ───────────────────────────────────────────
+
+    #[test]
+    fn test_apply_rope_batched_single_batch() {
+        let head_dim = 4;
+        let seq_len = 3;
+        let cfg = RopeConfig::for_shape(head_dim, 1, seq_len).unwrap();
+        let total = seq_len * head_dim;
+        let input: Vec<f32> = (0..total).map(|i| (i as f32) * 0.1).collect();
+
+        let batched = apply_rope_batched(&input, 1, seq_len, &cfg);
+        let mut expected = vec![0.0f32; total];
+        rope_forward_cpu(&input, &mut expected, &cfg).unwrap();
+
+        for (i, (a, b)) in batched.iter().zip(expected.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "batch mismatch at {i}: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_apply_rope_batched_multi_batch() {
+        let head_dim = 4;
+        let seq_len = 2;
+        let n_heads = 2;
+        let batch_size = 3;
+        let cfg = RopeConfig::for_shape(head_dim, n_heads, seq_len).unwrap();
+        let per_batch = n_heads * seq_len * head_dim;
+        let total = batch_size * per_batch;
+        let input: Vec<f32> = (0..total).map(|i| ((i * 7 + 3) as f32).sin()).collect();
+
+        let batched = apply_rope_batched(&input, batch_size, seq_len, &cfg);
+        assert_eq!(batched.len(), total);
+
+        // Each batch should match independent forward calls
+        for b in 0..batch_size {
+            let start = b * per_batch;
+            let end = start + per_batch;
+            let mut expected = vec![0.0f32; per_batch];
+            rope_forward_cpu(&input[start..end], &mut expected, &cfg).unwrap();
+            for i in 0..per_batch {
+                assert!(
+                    (batched[start + i] - expected[i]).abs() < 1e-5,
+                    "batch {b} idx {i}: {} vs {}",
+                    batched[start + i],
+                    expected[i],
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_apply_rope_batched_preserves_norm() {
+        let head_dim = 8;
+        let seq_len = 4;
+        let batch_size = 2;
+        let cfg = RopeConfig::for_shape(head_dim, 1, seq_len).unwrap();
+        let per_batch = seq_len * head_dim;
+        let total = batch_size * per_batch;
+        let input: Vec<f32> = (0..total).map(|i| (i as f32 + 1.0) * 0.1).collect();
+
+        let output = apply_rope_batched(&input, batch_size, seq_len, &cfg);
+        for b in 0..batch_size {
+            for pos in 0..seq_len {
+                let start = b * per_batch + pos * head_dim;
+                let in_n: f32 =
+                    input[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+                let out_n: f32 =
+                    output[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+                assert!((in_n - out_n).abs() < 1e-3, "batch norm: b={b} pos={pos}");
+            }
+        }
+    }
+
+    // ── Backward pass ────────────────────────────────────────────────
+
+    #[test]
+    fn test_rope_backward_identity_at_pos_zero() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap();
+        let grad_out = vec![1.0, 2.0, 3.0, 4.0];
+        let mut grad_in = vec![0.0f32; 4];
+        rope_backward_cpu(&grad_out, &mut grad_in, &cfg).unwrap();
+        // pos 0 → angle=0, transpose of identity rotation = identity
+        for (o, i) in grad_in.iter().zip(grad_out.iter()) {
+            assert!((o - i).abs() < 1e-6, "backward pos-0 identity: {o} vs {i}");
+        }
+    }
+
+    #[test]
+    fn test_rope_backward_is_inverse_of_forward() {
+        // forward(backward(x)) ≈ x for any input
+        let head_dim = 8;
+        let cfg = RopeConfig::for_shape(head_dim, 2, 4).unwrap();
+        let total = 2 * 4 * head_dim;
+        let original: Vec<f32> = (0..total).map(|i| ((i * 13 + 7) as f32).sin()).collect();
+
+        let mut forward_out = vec![0.0f32; total];
+        rope_forward_cpu(&original, &mut forward_out, &cfg).unwrap();
+
+        let mut roundtrip = vec![0.0f32; total];
+        rope_backward_cpu(&forward_out, &mut roundtrip, &cfg).unwrap();
+
+        for (i, (a, b)) in roundtrip.iter().zip(original.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-4, "roundtrip mismatch at {i}: {a} vs {b}",);
+        }
+    }
+
+    #[test]
+    fn test_rope_backward_buffer_mismatch() {
+        let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
+        let grad_out = vec![1.0f32; 4];
+        let mut grad_in_short = vec![0.0f32; 2];
+        assert!(rope_backward_cpu(&grad_out, &mut grad_in_short, &cfg).is_err());
+    }
+
+    #[test]
+    fn test_rope_backward_dispatch() {
+        let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
+        let grad_out = vec![1.0, 2.0, 3.0, 4.0];
+        let mut grad_in = vec![0.0f32; 4];
+        let result = rope_backward(&grad_out, &mut grad_in, &cfg);
+        assert!(result.is_ok(), "backward dispatch should succeed: {result:?}");
+    }
+
+    #[test]
+    fn test_rope_backward_zero_grad_preserved() {
+        let head_dim = 8;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
+        let total = 4 * head_dim;
+        let grad_out = vec![0.0f32; total];
+        let mut grad_in = vec![1.0f32; total];
+        rope_backward_cpu(&grad_out, &mut grad_in, &cfg).unwrap();
+        for val in &grad_in {
+            assert!(val.abs() < 1e-10, "zero grad not preserved");
+        }
+    }
+
+    #[test]
+    fn test_rope_backward_interleaved() {
+        let head_dim = 8;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_interleaved(true);
+        let total = 2 * head_dim;
+        let original: Vec<f32> = (0..total).map(|i| (i as f32) * 0.3 + 1.0).collect();
+
+        let mut forward_out = vec![0.0f32; total];
+        rope_forward_cpu(&original, &mut forward_out, &cfg).unwrap();
+
+        let mut roundtrip = vec![0.0f32; total];
+        rope_backward_cpu(&forward_out, &mut roundtrip, &cfg).unwrap();
+
+        for (i, (a, b)) in roundtrip.iter().zip(original.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-4, "interleaved roundtrip at {i}: {a} vs {b}",);
+        }
+    }
+
+    #[test]
+    fn test_rope_backward_norm_preservation() {
+        let head_dim = 16;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
+        let total = 4 * head_dim;
+        let grad_out: Vec<f32> = (0..total).map(|i| ((i * 11 + 5) as f32).cos()).collect();
+        let mut grad_in = vec![0.0f32; total];
+        rope_backward_cpu(&grad_out, &mut grad_in, &cfg).unwrap();
+
+        for pos in 0..4 {
+            let start = pos * head_dim;
+            let in_norm: f32 =
+                grad_out[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            let out_norm: f32 =
+                grad_in[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            assert!(
+                (in_norm - out_norm).abs() < 1e-3,
+                "backward norm at pos={pos}: {in_norm} vs {out_norm}"
+            );
+        }
+    }
+
+    // ── CUDA kernel source availability ──────────────────────────────
+
+    #[test]
+    #[ignore = "requires CUDA runtime — compile-check for kernel source strings"]
+    fn test_cuda_kernel_sources_compile() {
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            assert!(!ROPE_FORWARD_KERNEL_SRC.is_empty());
+            assert!(ROPE_FORWARD_KERNEL_SRC.contains("rope_forward_f32"));
+            assert!(!ROPE_BACKWARD_KERNEL_SRC.is_empty());
+            assert!(ROPE_BACKWARD_KERNEL_SRC.contains("rope_backward_f32"));
+        }
     }
 }
