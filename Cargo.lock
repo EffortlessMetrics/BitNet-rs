@@ -788,6 +788,7 @@ dependencies = [
  "env_logger",
  "half",
  "insta",
+ "libm",
  "log",
  "memory-stats",
  "opencl3",

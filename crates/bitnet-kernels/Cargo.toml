@@ -29,6 +29,7 @@ opencl3 = { version = "0.9", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
 half = { version = "2.7.1", optional = true }
+libm = "0.2.16"
 sysinfo = "0.37.2"
 memory-stats = "1.2.0"
 
