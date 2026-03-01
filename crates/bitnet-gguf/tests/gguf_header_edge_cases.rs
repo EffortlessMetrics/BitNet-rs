@@ -12,8 +12,8 @@
 //! - Constants (GGUF_MAGIC, GGUF_VERSION_MIN, GGUF_VERSION_MAX)
 
 use bitnet_gguf::{
-    GgufFileInfo, GgufMetadataKv, GgufValue, GgufValueType, TensorInfo, GGUF_MAGIC,
-    GGUF_VERSION_MAX, GGUF_VERSION_MIN, check_magic, parse_header, read_version,
+    GGUF_MAGIC, GGUF_VERSION_MAX, GGUF_VERSION_MIN, GgufFileInfo, GgufMetadataKv, GgufValue,
+    GgufValueType, TensorInfo, check_magic, parse_header, read_version,
 };
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,8 @@ fn version_range() {
 
 #[test]
 fn check_magic_valid() {
-    let data = b"GGUF\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    let data =
+        b"GGUF\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     assert!(check_magic(data));
 }
 
@@ -358,10 +359,8 @@ fn metadata_kv_debug() {
 
 #[test]
 fn metadata_kv_clone() {
-    let kv = GgufMetadataKv {
-        key: "llama.context_length".to_string(),
-        value: GgufValue::Uint32(4096),
-    };
+    let kv =
+        GgufMetadataKv { key: "llama.context_length".to_string(), value: GgufValue::Uint32(4096) };
     let cloned = kv.clone();
     assert_eq!(cloned.key, "llama.context_length");
 }
@@ -431,12 +430,7 @@ fn tensor_info_1d() {
 
 #[test]
 fn file_info_debug() {
-    let info = GgufFileInfo {
-        version: 3,
-        tensor_count: 291,
-        metadata_count: 24,
-        alignment: 32,
-    };
+    let info = GgufFileInfo { version: 3, tensor_count: 291, metadata_count: 24, alignment: 32 };
     let dbg = format!("{:?}", info);
     assert!(dbg.contains("291"));
     assert!(dbg.contains("version"));
@@ -444,12 +438,7 @@ fn file_info_debug() {
 
 #[test]
 fn file_info_clone() {
-    let info = GgufFileInfo {
-        version: 2,
-        tensor_count: 100,
-        metadata_count: 10,
-        alignment: 32,
-    };
+    let info = GgufFileInfo { version: 2, tensor_count: 100, metadata_count: 10, alignment: 32 };
     let cloned = info.clone();
     assert_eq!(cloned.version, info.version);
     assert_eq!(cloned.tensor_count, info.tensor_count);
