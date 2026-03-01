@@ -575,6 +575,8 @@ dependencies = [
  "log",
  "opencl3",
  "proptest",
+ "serde",
+ "serde_json",
  "serial_test",
  "temp-env",
 ]

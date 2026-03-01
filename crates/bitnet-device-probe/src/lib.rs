@@ -6,6 +6,7 @@
 pub use bitnet_common::kernel_registry::SimdLevel;
 
 pub mod power;
+pub mod perf_counters;
 
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
