@@ -773,6 +773,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-gguf-display"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-gguf",
+]
+
+[[package]]
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
@@ -812,6 +819,7 @@ dependencies = [
  "bitnet-engine-core",
  "bitnet-generation",
  "bitnet-gguf",
+ "bitnet-gguf-display",
  "bitnet-inference-metrics-core",
  "bitnet-kernels",
  "bitnet-kv-cache-policy-core",
