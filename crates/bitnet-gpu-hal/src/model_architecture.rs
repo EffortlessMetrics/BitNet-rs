@@ -115,12 +115,7 @@ pub struct QuantizationInfo {
 impl QuantizationInfo {
     /// Creates a new quantization info descriptor.
     pub fn new(scheme: impl Into<String>, bits: u8, block_size: usize, symmetric: bool) -> Self {
-        Self {
-            scheme: scheme.into(),
-            bits,
-            block_size,
-            symmetric,
-        }
+        Self { scheme: scheme.into(), bits, block_size, symmetric }
     }
 
     /// Predefined info for BitNet ternary (I2_S, 2-bit symmetric).
@@ -211,8 +206,8 @@ impl ArchConfig {
 
     /// Total parameter count estimate (excluding embeddings).
     pub fn estimated_param_count(&self) -> u64 {
-        let attn_params = self.num_layers as u64
-            * (4 * self.hidden_dim as u64 * self.hidden_dim as u64);
+        let attn_params =
+            self.num_layers as u64 * (4 * self.hidden_dim as u64 * self.hidden_dim as u64);
         let ffn_params =
             self.num_layers as u64 * (3 * self.hidden_dim as u64 * self.intermediate_dim as u64);
         let embed_params = self.vocab_size as u64 * self.hidden_dim as u64;
@@ -226,7 +221,17 @@ impl ArchConfig {
 
     /// Creates a standard BitNet-b1.58-2B config.
     pub fn bitnet_2b() -> Self {
-        Self::new("bitnet-b1.58-2B-4T", ArchitectureFamily::BitNet, 24, 32, 32, 2560, 6912, 32000, 4096)
+        Self::new(
+            "bitnet-b1.58-2B-4T",
+            ArchitectureFamily::BitNet,
+            24,
+            32,
+            32,
+            2560,
+            6912,
+            32000,
+            4096,
+        )
     }
 
     /// Creates a standard LLaMA-7B config.
@@ -544,14 +549,7 @@ impl ModelGraph {
             let depth = if layer.inputs.is_empty() {
                 0
             } else {
-                layer
-                    .inputs
-                    .iter()
-                    .filter_map(|id| depths.get(id))
-                    .max()
-                    .copied()
-                    .unwrap_or(0)
-                    + 1
+                layer.inputs.iter().filter_map(|id| depths.get(id)).max().copied().unwrap_or(0) + 1
             };
             depths.insert(layer.id.clone(), depth);
         }
@@ -578,8 +576,13 @@ impl ModelGraph {
         let mut graph = Self::new();
 
         // Embedding layer
-        let embed =
-            LayerDef::new("embed", LayerType::Embedding, 0, [arch.vocab_size, arch.hidden_dim], [1, arch.hidden_dim]);
+        let embed = LayerDef::new(
+            "embed",
+            LayerType::Embedding,
+            0,
+            [arch.vocab_size, arch.hidden_dim],
+            [1, arch.hidden_dim],
+        );
         graph.add_layer(embed).expect("embed layer");
 
         let mut prev_id = "embed".to_string();
@@ -751,38 +754,19 @@ impl ArchDetector {
         let mut patterns: HashMap<ArchitectureFamily, Vec<String>> = HashMap::new();
         patterns.insert(
             ArchitectureFamily::LLaMA,
-            vec![
-                "model.layers".into(),
-                "model.norm".into(),
-                "lm_head".into(),
-                "rotary_emb".into(),
-            ],
+            vec!["model.layers".into(), "model.norm".into(), "lm_head".into(), "rotary_emb".into()],
         );
         patterns.insert(
             ArchitectureFamily::GPT,
-            vec![
-                "transformer.h".into(),
-                "transformer.ln_f".into(),
-                "wte".into(),
-                "wpe".into(),
-            ],
+            vec!["transformer.h".into(), "transformer.ln_f".into(), "wte".into(), "wpe".into()],
         );
         patterns.insert(
             ArchitectureFamily::BitNet,
-            vec![
-                "bitlinear".into(),
-                "ternary".into(),
-                "model.layers".into(),
-                "bitnet".into(),
-            ],
+            vec!["bitlinear".into(), "ternary".into(), "model.layers".into(), "bitnet".into()],
         );
         patterns.insert(
             ArchitectureFamily::Mistral,
-            vec![
-                "model.layers".into(),
-                "sliding_window".into(),
-                "mistral".into(),
-            ],
+            vec!["model.layers".into(), "sliding_window".into(), "mistral".into()],
         );
         patterns.insert(
             ArchitectureFamily::Qwen,
@@ -840,10 +824,7 @@ impl ArchDetector {
     }
 
     /// Extracts a `TransformerConfig` heuristic based on detected family.
-    pub fn default_transformer_config(
-        &self,
-        family: ArchitectureFamily,
-    ) -> TransformerConfig {
+    pub fn default_transformer_config(&self, family: ArchitectureFamily) -> TransformerConfig {
         match family {
             ArchitectureFamily::LLaMA => TransformerConfig::llama_default(),
             ArchitectureFamily::GPT => TransformerConfig::gpt_default(),
@@ -896,7 +877,8 @@ impl ArchValidator {
             issues.push("num_layers must be > 0".into());
         }
         if config.num_layers > self.max_layers {
-            issues.push(format!("num_layers {} exceeds max {}", config.num_layers, self.max_layers));
+            issues
+                .push(format!("num_layers {} exceeds max {}", config.num_layers, self.max_layers));
         }
         if config.num_heads == 0 {
             issues.push("num_heads must be > 0".into());
@@ -910,7 +892,9 @@ impl ArchValidator {
                 config.num_kv_heads, config.num_heads
             ));
         }
-        if config.num_heads > 0 && config.num_kv_heads > 0 && config.num_heads % config.num_kv_heads != 0
+        if config.num_heads > 0
+            && config.num_kv_heads > 0
+            && config.num_heads % config.num_kv_heads != 0
         {
             issues.push(format!(
                 "num_heads ({}) not divisible by num_kv_heads ({})",
@@ -962,9 +946,7 @@ impl ArchValidator {
             }
             ArchitectureFamily::Mistral => {
                 if config.num_kv_heads >= config.num_heads && config.num_heads > 1 {
-                    issues.push(
-                        "Mistral typically uses GQA (num_kv_heads < num_heads)".into(),
-                    );
+                    issues.push("Mistral typically uses GQA (num_kv_heads < num_heads)".into());
                 }
             }
             _ => {}
@@ -974,11 +956,7 @@ impl ArchValidator {
     /// Validates and returns `Ok(())` or the first error.
     pub fn validate_strict(&self, config: &ArchConfig) -> Result<(), ArchError> {
         let issues = self.validate(config);
-        if issues.is_empty() {
-            Ok(())
-        } else {
-            Err(ArchError::ValidationError(issues.join("; ")))
-        }
+        if issues.is_empty() { Ok(()) } else { Err(ArchError::ValidationError(issues.join("; "))) }
     }
 }
 
@@ -1175,11 +1153,8 @@ impl ArchOptimizer {
         // Suggest KV cache optimization for GQA models.
         match transformer.attention_type {
             AttentionType::GroupedQuery | AttentionType::MultiQuery => {
-                let kv_ratio = if arch.num_kv_heads > 0 {
-                    arch.num_heads / arch.num_kv_heads
-                } else {
-                    1
-                };
+                let kv_ratio =
+                    if arch.num_kv_heads > 0 { arch.num_heads / arch.num_kv_heads } else { 1 };
                 hints.push(OptimizationHint {
                     category: OptimizationCategory::MemoryLayout,
                     description: format!(
@@ -1355,10 +1330,8 @@ impl ModelArchitectureEngine {
         let family = self.detector.detect(tensor_names, metadata)?;
         let transformer = self.detector.default_transformer_config(family);
 
-        let model_name = metadata
-            .get("general.name")
-            .cloned()
-            .unwrap_or_else(|| format!("{family}-model"));
+        let model_name =
+            metadata.get("general.name").cloned().unwrap_or_else(|| format!("{family}-model"));
 
         let config = ArchConfig::new(
             model_name,
@@ -1389,11 +1362,7 @@ impl ModelArchitectureEngine {
     }
 
     /// Builds a graph from an already-validated config.
-    pub fn build_graph(
-        &self,
-        config: &ArchConfig,
-        transformer: &TransformerConfig,
-    ) -> ModelGraph {
+    pub fn build_graph(&self, config: &ArchConfig, transformer: &TransformerConfig) -> ModelGraph {
         ModelGraph::from_config(config, transformer)
     }
 
@@ -1403,11 +1372,8 @@ impl ModelArchitectureEngine {
         analysis: &ArchAnalysis,
         pretty: bool,
     ) -> Result<String, ArchError> {
-        let format = if pretty {
-            SerializationFormat::JsonPretty
-        } else {
-            SerializationFormat::Json
-        };
+        let format =
+            if pretty { SerializationFormat::JsonPretty } else { SerializationFormat::Json };
         self.serializer.serialize_config(&analysis.config, format)
     }
 }
@@ -1738,11 +1704,12 @@ mod tests {
 
     #[test]
     fn test_transformer_builder_methods() {
-        let t = TransformerConfig::new(false, NormType::LayerNorm, AttentionType::MultiHead, "relu")
-            .with_gated_ffn(true)
-            .with_tie_embeddings(true)
-            .with_rope(5000.0, 2.0)
-            .with_norm_eps(1e-4);
+        let t =
+            TransformerConfig::new(false, NormType::LayerNorm, AttentionType::MultiHead, "relu")
+                .with_gated_ffn(true)
+                .with_tie_embeddings(true)
+                .with_rope(5000.0, 2.0)
+                .with_norm_eps(1e-4);
         assert!(!t.pre_norm);
         assert!(t.gated_ffn);
         assert!(t.tie_embeddings);
@@ -2010,10 +1977,8 @@ mod tests {
 
     #[test]
     fn test_error_display_missing_dep() {
-        let e = ArchError::MissingDependency {
-            layer: "attn_0".into(),
-            dependency: "norm_0".into(),
-        };
+        let e =
+            ArchError::MissingDependency { layer: "attn_0".into(), dependency: "norm_0".into() };
         assert!(e.to_string().contains("norm_0"));
     }
 
@@ -2153,7 +2118,8 @@ mod tests {
     #[test]
     fn test_validator_zero_layers() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("bad", ArchitectureFamily::LLaMA, 0, 32, 32, 4096, 11008, 32000, 4096);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::LLaMA, 0, 32, 32, 4096, 11008, 32000, 4096);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("num_layers")));
     }
@@ -2161,7 +2127,8 @@ mod tests {
     #[test]
     fn test_validator_zero_heads() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 0, 0, 4096, 11008, 32000, 4096);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 0, 0, 4096, 11008, 32000, 4096);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("num_heads")));
     }
@@ -2169,7 +2136,8 @@ mod tests {
     #[test]
     fn test_validator_kv_heads_exceeds_heads() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 8, 16, 4096, 11008, 32000, 4096);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 8, 16, 4096, 11008, 32000, 4096);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("num_kv_heads")));
     }
@@ -2177,7 +2145,8 @@ mod tests {
     #[test]
     fn test_validator_heads_not_divisible_by_kv() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 7, 3, 4096, 11008, 32000, 4096);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 7, 3, 4096, 11008, 32000, 4096);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("divisible")));
     }
@@ -2193,7 +2162,17 @@ mod tests {
     #[test]
     fn test_validator_exceeds_max_layers() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("huge", ArchitectureFamily::LLaMA, 999, 32, 32, 4096, 11008, 32000, 4096);
+        let c = ArchConfig::new(
+            "huge",
+            ArchitectureFamily::LLaMA,
+            999,
+            32,
+            32,
+            4096,
+            11008,
+            32000,
+            4096,
+        );
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("exceeds max")));
     }
@@ -2201,8 +2180,17 @@ mod tests {
     #[test]
     fn test_validator_exceeds_max_hidden() {
         let v = ArchValidator::new();
-        let c =
-            ArchConfig::new("huge", ArchitectureFamily::LLaMA, 32, 32, 32, 100000, 200000, 32000, 4096);
+        let c = ArchConfig::new(
+            "huge",
+            ArchitectureFamily::LLaMA,
+            32,
+            32,
+            32,
+            100000,
+            200000,
+            32000,
+            4096,
+        );
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("hidden_dim") && i.contains("exceeds")));
     }
@@ -2218,7 +2206,8 @@ mod tests {
     #[test]
     fn test_validator_zero_seq_len() {
         let v = ArchValidator::new();
-        let c = ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 32, 32, 4096, 11008, 32000, 0);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::LLaMA, 32, 32, 32, 4096, 11008, 32000, 0);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("max_seq_len")));
     }
@@ -2234,7 +2223,8 @@ mod tests {
     #[test]
     fn test_validator_strict_bitnet_hidden_not_256() {
         let v = ArchValidator::new().strict();
-        let c = ArchConfig::new("bad", ArchitectureFamily::BitNet, 24, 32, 32, 2500, 6912, 32000, 4096);
+        let c =
+            ArchConfig::new("bad", ArchitectureFamily::BitNet, 24, 32, 32, 2500, 6912, 32000, 4096);
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("256")));
     }
@@ -2249,8 +2239,17 @@ mod tests {
     #[test]
     fn test_validator_strict_mistral_gqa() {
         let v = ArchValidator::new().strict();
-        let c =
-            ArchConfig::new("bad-mistral", ArchitectureFamily::Mistral, 32, 32, 32, 4096, 11008, 32000, 4096);
+        let c = ArchConfig::new(
+            "bad-mistral",
+            ArchitectureFamily::Mistral,
+            32,
+            32,
+            32,
+            4096,
+            11008,
+            32000,
+            4096,
+        );
         let issues = v.validate(&c);
         assert!(issues.iter().any(|i| i.contains("GQA")));
     }
@@ -2292,7 +2291,8 @@ mod tests {
         let g = ModelGraph::from_config(&arch, &t);
         let o = ArchOptimizer::new();
         let hints = o.analyze(&g, &arch, &t);
-        let fusion: Vec<_> = hints.iter().filter(|h| h.category == OptimizationCategory::LayerFusion).collect();
+        let fusion: Vec<_> =
+            hints.iter().filter(|h| h.category == OptimizationCategory::LayerFusion).collect();
         assert!(!fusion.is_empty());
     }
 
@@ -2303,7 +2303,8 @@ mod tests {
         let g = ModelGraph::from_config(&arch, &t);
         let o = ArchOptimizer::new();
         let hints = o.analyze(&g, &arch, &t);
-        let pruning: Vec<_> = hints.iter().filter(|h| h.category == OptimizationCategory::Pruning).collect();
+        let pruning: Vec<_> =
+            hints.iter().filter(|h| h.category == OptimizationCategory::Pruning).collect();
         assert!(!pruning.is_empty());
     }
 
@@ -2336,8 +2337,19 @@ mod tests {
 
     #[test]
     fn test_optimizer_gqa_memory_hint() {
-        let arch = ArchConfig::new("gqa-test", ArchitectureFamily::LLaMA, 4, 32, 8, 4096, 11008, 32000, 4096);
-        let t = TransformerConfig::new(true, NormType::RMSNorm, AttentionType::GroupedQuery, "silu");
+        let arch = ArchConfig::new(
+            "gqa-test",
+            ArchitectureFamily::LLaMA,
+            4,
+            32,
+            8,
+            4096,
+            11008,
+            32000,
+            4096,
+        );
+        let t =
+            TransformerConfig::new(true, NormType::RMSNorm, AttentionType::GroupedQuery, "silu");
         let g = ModelGraph::from_config(&arch, &t);
         let o = ArchOptimizer::new();
         let hints = o.analyze(&g, &arch, &t);
@@ -2382,7 +2394,10 @@ mod tests {
         assert_eq!(OptimizationCategory::Pruning.to_string(), "Pruning");
         assert_eq!(OptimizationCategory::Quantization.to_string(), "Quantization");
         assert_eq!(OptimizationCategory::MemoryLayout.to_string(), "MemoryLayout");
-        assert_eq!(OptimizationCategory::AttentionOptimization.to_string(), "AttentionOptimization");
+        assert_eq!(
+            OptimizationCategory::AttentionOptimization.to_string(),
+            "AttentionOptimization"
+        );
     }
 
     // ─── ArchSerializer ──────────────────────────────────────────────────
@@ -2447,7 +2462,17 @@ mod tests {
     fn test_engine_analyze_llama() {
         let engine = ModelArchitectureEngine::new();
         let analysis = engine
-            .analyze_model(&llama_tensor_names(), &empty_metadata(), 32, 32, 32, 4096, 11008, 32000, 4096)
+            .analyze_model(
+                &llama_tensor_names(),
+                &empty_metadata(),
+                32,
+                32,
+                32,
+                4096,
+                11008,
+                32000,
+                4096,
+            )
             .unwrap();
         assert_eq!(analysis.family, ArchitectureFamily::LLaMA);
         assert!(!analysis.graph.is_empty());
@@ -2458,7 +2483,17 @@ mod tests {
     fn test_engine_analyze_gpt() {
         let engine = ModelArchitectureEngine::new();
         let analysis = engine
-            .analyze_model(&gpt_tensor_names(), &empty_metadata(), 12, 12, 12, 768, 3072, 50257, 1024)
+            .analyze_model(
+                &gpt_tensor_names(),
+                &empty_metadata(),
+                12,
+                12,
+                12,
+                768,
+                3072,
+                50257,
+                1024,
+            )
             .unwrap();
         assert_eq!(analysis.family, ArchitectureFamily::GPT);
     }
@@ -2467,7 +2502,17 @@ mod tests {
     fn test_engine_analyze_bitnet() {
         let engine = ModelArchitectureEngine::new();
         let analysis = engine
-            .analyze_model(&bitnet_tensor_names(), &empty_metadata(), 24, 32, 32, 2560, 6912, 32000, 4096)
+            .analyze_model(
+                &bitnet_tensor_names(),
+                &empty_metadata(),
+                24,
+                32,
+                32,
+                2560,
+                6912,
+                32000,
+                4096,
+            )
             .unwrap();
         assert_eq!(analysis.family, ArchitectureFamily::BitNet);
     }
@@ -2478,9 +2523,7 @@ mod tests {
         let mut meta = HashMap::new();
         meta.insert("general.name".into(), "my-custom-model".into());
         meta.insert("general.architecture".into(), "llama".into());
-        let analysis = engine
-            .analyze_model(&[], &meta, 4, 4, 4, 256, 512, 1000, 512)
-            .unwrap();
+        let analysis = engine.analyze_model(&[], &meta, 4, 4, 4, 256, 512, 1000, 512).unwrap();
         assert_eq!(analysis.config.model_name, "my-custom-model");
     }
 
@@ -2572,7 +2615,17 @@ mod tests {
     fn test_full_pipeline_bitnet() {
         let engine = ModelArchitectureEngine::new();
         let analysis = engine
-            .analyze_model(&bitnet_tensor_names(), &empty_metadata(), 24, 32, 32, 2560, 6912, 32000, 4096)
+            .analyze_model(
+                &bitnet_tensor_names(),
+                &empty_metadata(),
+                24,
+                32,
+                32,
+                2560,
+                6912,
+                32000,
+                4096,
+            )
             .unwrap();
 
         // Detection
@@ -2611,17 +2664,8 @@ mod tests {
         ];
 
         for (tensors, _label) in &families_and_tensors {
-            let result = engine.analyze_model(
-                tensors,
-                &empty_metadata(),
-                4,
-                4,
-                4,
-                256,
-                512,
-                1000,
-                512,
-            );
+            let result =
+                engine.analyze_model(tensors, &empty_metadata(), 4, 4, 4, 256, 512, 1000, 512);
             assert!(result.is_ok(), "failed for tensors matching expected family");
         }
     }
@@ -2641,16 +2685,26 @@ mod tests {
 
     #[test]
     fn test_config_param_count_scaling() {
-        let small = ArchConfig::new("small", ArchitectureFamily::LLaMA, 4, 4, 4, 256, 512, 1000, 512);
-        let large = ArchConfig::new("large", ArchitectureFamily::LLaMA, 32, 32, 32, 4096, 11008, 32000, 4096);
+        let small =
+            ArchConfig::new("small", ArchitectureFamily::LLaMA, 4, 4, 4, 256, 512, 1000, 512);
+        let large = ArchConfig::new(
+            "large",
+            ArchitectureFamily::LLaMA,
+            32,
+            32,
+            32,
+            4096,
+            11008,
+            32000,
+            4096,
+        );
         assert!(large.estimated_param_count() > small.estimated_param_count());
     }
 
     #[test]
     fn test_optimizer_no_hints_for_trivial_graph() {
         let mut g = ModelGraph::new();
-        g.add_layer(LayerDef::new("e", LayerType::Embedding, 0, [100, 10], [1, 10]))
-            .unwrap();
+        g.add_layer(LayerDef::new("e", LayerType::Embedding, 0, [100, 10], [1, 10])).unwrap();
         let arch = small_config(ArchitectureFamily::GPT);
         let t = TransformerConfig::gpt_default();
         let o = ArchOptimizer::new().without_fusion().without_pruning();
