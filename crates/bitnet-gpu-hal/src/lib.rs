@@ -132,6 +132,7 @@ pub mod checkpoint_manager;
 // Provides batched tokenization, parallel encoding/decoding,
 // and hardware abstraction for GPU-accelerated inference pipelines.
 pub mod batched_tokenization;
+pub mod prompt_processing;
 pub mod streaming_aggregator;
 // Parallel communication primitives for distributed GPU inference:
 // all-reduce, all-gather, reduce-scatter, broadcast, ring/tree
