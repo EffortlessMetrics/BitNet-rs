@@ -164,13 +164,20 @@ __global__ void rmsnorm_f32(
 pub struct LayerNormConfig {
     /// Epsilon added inside the square root for numerical stability.
     pub eps: f32,
+    /// Dimensions to normalise over (e.g. `[hidden_dim]`).
+    ///
+    /// When empty the caller passes `normalized_shape` explicitly to the
+    /// kernel functions.  When set, helpers such as
+    /// [`Self::normalized_shape_product`] return the product of these
+    /// dimensions.
+    pub normalized_shape: Vec<usize>,
     /// Whether to apply learnable affine parameters (gamma/beta).
     pub elementwise_affine: bool,
 }
 
 impl Default for LayerNormConfig {
     fn default() -> Self {
-        Self { eps: 1e-5, elementwise_affine: true }
+        Self { eps: 1e-5, normalized_shape: Vec::new(), elementwise_affine: true }
     }
 }
 
@@ -187,7 +194,7 @@ impl LayerNormConfig {
             }
             .into());
         }
-        Ok(Self { eps, elementwise_affine })
+        Ok(Self { eps, normalized_shape: Vec::new(), elementwise_affine })
     }
 
     /// Create a configuration with default epsilon (`1e-5`) and affine enabled.
@@ -220,6 +227,17 @@ impl LayerNormConfig {
     pub fn block_dim(&self, normalized_shape: usize) -> (u32, u32, u32) {
         let threads = (normalized_shape as u32).min(1024);
         (threads, 1, 1)
+    }
+
+    /// Set the normalised dimensions (e.g. `[hidden_dim]`).
+    pub fn with_normalized_shape(mut self, shape: Vec<usize>) -> Self {
+        self.normalized_shape = shape;
+        self
+    }
+
+    /// Product of all entries in [`Self::normalized_shape`], or `0` if empty.
+    pub fn normalized_shape_product(&self) -> usize {
+        if self.normalized_shape.is_empty() { 0 } else { self.normalized_shape.iter().product() }
     }
 }
 
@@ -394,6 +412,39 @@ pub fn rms_norm_cpu_fallback(
     }
 
     Ok(output)
+}
+
+/// Batched layer normalization on the CPU.
+///
+/// Applies [`layer_norm_cpu_fallback`] independently to each input slice.
+///
+/// # Arguments
+///
+/// * `inputs` — Batch of input tensors, each `[n_rows, normalized_shape]`
+/// * `gamma` — Shared per-element scale weights `[normalized_shape]`
+/// * `beta`  — Shared per-element bias `[normalized_shape]`
+/// * `config` — Configuration (uses `eps`, `elementwise_affine`)
+///
+/// The `normalized_shape` is taken from [`LayerNormConfig::normalized_shape_product`].
+///
+/// # Errors
+///
+/// Returns [`KernelError::InvalidArguments`] if `config.normalized_shape` is
+/// empty or if any individual input fails validation.
+pub fn batch_layer_norm_cpu(
+    inputs: &[&[f32]],
+    gamma: &[f32],
+    beta: &[f32],
+    config: &LayerNormConfig,
+) -> Result<Vec<Vec<f32>>> {
+    let ns = config.normalized_shape_product();
+    if ns == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "config.normalized_shape must be non-empty for batch_layer_norm_cpu".into(),
+        }
+        .into());
+    }
+    inputs.iter().map(|inp| layer_norm_cpu_fallback(inp, gamma, beta, ns, config)).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -1001,5 +1052,134 @@ mod tests {
             let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 4, &cfg).unwrap();
             assert!(output.iter().all(|v| v.is_finite()), "non-finite at eps={eps}");
         }
+    }
+
+    // -- normalized_shape field tests ---------------------------------------
+
+    #[test]
+    fn test_config_normalized_shape_default_empty() {
+        let cfg = LayerNormConfig::with_defaults();
+        assert!(cfg.normalized_shape.is_empty());
+        assert_eq!(cfg.normalized_shape_product(), 0);
+    }
+
+    #[test]
+    fn test_config_with_normalized_shape() {
+        let cfg = LayerNormConfig::with_defaults().with_normalized_shape(vec![256]);
+        assert_eq!(cfg.normalized_shape, vec![256]);
+        assert_eq!(cfg.normalized_shape_product(), 256);
+    }
+
+    #[test]
+    fn test_config_normalized_shape_multi_dim() {
+        let cfg = LayerNormConfig::with_defaults().with_normalized_shape(vec![4, 8]);
+        assert_eq!(cfg.normalized_shape_product(), 32);
+    }
+
+    // -- Batch layer norm CPU tests -----------------------------------------
+
+    #[test]
+    fn test_batch_layer_norm_single_input() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let batched = batch_layer_norm_cpu(&[&input], &gamma, &beta, &cfg).unwrap();
+        let single = layer_norm_cpu_fallback(&input, &gamma, &beta, 4, &cfg).unwrap();
+        assert_eq!(batched.len(), 1);
+        assert_eq!(batched[0], single);
+    }
+
+    #[test]
+    fn test_batch_layer_norm_multiple_inputs() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![3]);
+        let a = [1.0_f32, 2.0, 3.0];
+        let b = [10.0_f32, 20.0, 30.0];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
+        let batched = batch_layer_norm_cpu(&[&a, &b], &gamma, &beta, &cfg).unwrap();
+        assert_eq!(batched.len(), 2);
+        let exp_a = layer_norm_cpu_fallback(&a, &gamma, &beta, 3, &cfg).unwrap();
+        let exp_b = layer_norm_cpu_fallback(&b, &gamma, &beta, 3, &cfg).unwrap();
+        assert_eq!(batched[0], exp_a);
+        assert_eq!(batched[1], exp_b);
+    }
+
+    #[test]
+    fn test_batch_layer_norm_empty_batch() {
+        let cfg = LayerNormConfig::with_defaults().with_normalized_shape(vec![4]);
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let result: &[&[f32]] = &[];
+        let batched = batch_layer_norm_cpu(result, &gamma, &beta, &cfg).unwrap();
+        assert!(batched.is_empty());
+    }
+
+    #[test]
+    fn test_batch_layer_norm_rejects_empty_normalized_shape() {
+        let cfg = LayerNormConfig::with_defaults();
+        let input = [1.0_f32; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        assert!(batch_layer_norm_cpu(&[&input], &gamma, &beta, &cfg).is_err());
+    }
+
+    #[test]
+    fn test_batch_layer_norm_with_affine() {
+        let cfg = LayerNormConfig::with_defaults().with_normalized_shape(vec![4]);
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let gamma = [2.0; 4];
+        let beta = [0.5; 4];
+        let batched = batch_layer_norm_cpu(&[&input], &gamma, &beta, &cfg).unwrap();
+        let single = layer_norm_cpu_fallback(&input, &gamma, &beta, 4, &cfg).unwrap();
+        assert_eq!(batched[0], single);
+    }
+
+    #[test]
+    fn test_batch_layer_norm_all_zeros() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
+        let input = [0.0_f32; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let batched = batch_layer_norm_cpu(&[&input], &gamma, &beta, &cfg).unwrap();
+        assert!(batched[0].iter().all(|v| v.abs() < 1e-3));
+    }
+
+    #[test]
+    fn test_batch_layer_norm_large_values() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
+        let input = [1e7_f32, 1e7 + 1.0, 1e7 + 2.0, 1e7 + 3.0];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let batched = batch_layer_norm_cpu(&[&input], &gamma, &beta, &cfg).unwrap();
+        assert!(batched[0].iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_rms_norm_all_zeros() {
+        let cfg = LayerNormConfig::with_defaults();
+        let input = [0.0_f32; 4];
+        let gamma = [1.0; 4];
+        let output = rms_norm_cpu_fallback(&input, &gamma, 4, &cfg).unwrap();
+        assert!(output.iter().all(|v| v.abs() < 1e-3));
+    }
+
+    #[test]
+    fn test_rms_norm_large_values() {
+        let cfg = LayerNormConfig::with_defaults();
+        let input = [1e7_f32, 1e7 + 1.0, 1e7 + 2.0, 1e7 + 3.0];
+        let gamma = [1.0; 4];
+        let output = rms_norm_cpu_fallback(&input, &gamma, 4, &cfg).unwrap();
+        assert!(output.iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_layer_norm_all_zeros() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+        let input = [0.0_f32; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 4, &cfg).unwrap();
+        assert!(output.iter().all(|v| v.abs() < 1e-3));
     }
 }
