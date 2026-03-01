@@ -198,5 +198,5 @@ jobs:
         with:
           shared-key: intel-gpu-compile-clippy
 
-      - name: cargo clippy (oneapi)
+      - name: Clippy (oneapi)
         run: cargo clippy --locked --all-targets --no-default-features --features oneapi -- -D warnings
