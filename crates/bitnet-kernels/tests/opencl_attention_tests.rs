@@ -28,8 +28,7 @@ fn ref_attention_scores(
                 }
                 let mut dot = 0.0f32;
                 for d in 0..d_k {
-                    dot += q[h * seq_q * d_k + qi * d_k + d]
-                        * k[h * seq_k * d_k + ki * d_k + d];
+                    dot += q[h * seq_q * d_k + qi * d_k + d] * k[h * seq_k * d_k + ki * d_k + d];
                 }
                 scores[out_idx] = dot * inv_sqrt_dk;
             }
@@ -107,10 +106,7 @@ fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
 fn assert_approx_eq_slice(a: &[f32], b: &[f32], eps: f32) {
     assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
     for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-        assert!(
-            approx_eq(x, y, eps),
-            "mismatch at index {i}: {x} vs {y} (eps={eps})"
-        );
+        assert!(approx_eq(x, y, eps), "mismatch at index {i}: {x} vs {y} (eps={eps})");
     }
 }
 
@@ -222,10 +218,7 @@ fn test_causal_masking() {
         for ki in 0..seq {
             let s = scores[qi * seq + ki];
             if ki > qi {
-                assert!(
-                    s <= -1e8,
-                    "future position [{qi}][{ki}] should be masked, got {s}"
-                );
+                assert!(s <= -1e8, "future position [{qi}][{ki}] should be masked, got {s}");
             } else {
                 assert!(
                     s > -1e8,
@@ -264,10 +257,7 @@ fn test_softmax_sums_to_one() {
     for r in 0..num_rows {
         let start = r * row_len;
         let sum: f32 = data[start..start + row_len].iter().sum();
-        assert!(
-            approx_eq(sum, 1.0, 1e-5),
-            "row {r} softmax sum = {sum}, expected ~1.0"
-        );
+        assert!(approx_eq(sum, 1.0, 1e-5), "row {r} softmax sum = {sum}, expected ~1.0");
     }
 }
 
@@ -308,10 +298,7 @@ fn test_softmax_uniform_input() {
 
     let expected = 1.0 / n as f32;
     for (i, &v) in data.iter().enumerate() {
-        assert!(
-            approx_eq(v, expected, 1e-5),
-            "uniform softmax[{i}] = {v}, expected {expected}"
-        );
+        assert!(approx_eq(v, expected, 1e-5), "uniform softmax[{i}] = {v}, expected {expected}");
     }
 }
 
@@ -387,9 +374,7 @@ fn test_full_attention_pipeline_non_causal() {
     let k = vec![1.0f32; num_heads * seq * d_k];
     let v = vec![1.0f32; num_heads * seq * d_v];
 
-    let output = ref_attention(
-        &q, &k, &v, num_heads, seq, seq, d_k, d_v, false,
-    );
+    let output = ref_attention(&q, &k, &v, num_heads, seq, seq, d_k, d_v, false);
 
     // With all-ones Q, K, V and non-causal: all outputs should be 1.0
     for (i, &val) in output.iter().enumerate() {
@@ -538,7 +523,8 @@ fn test_d_k_one() {
         for ki in 0..seq {
             assert!(
                 approx_eq(scores[qi * seq + ki], q[qi], 1e-6),
-                "score[{qi}][{ki}] should be q[{qi}]={}", q[qi]
+                "score[{qi}][{ki}] should be q[{qi}]={}",
+                q[qi]
             );
         }
     }
@@ -558,10 +544,7 @@ fn test_large_seq_len() {
 
     // All values equal → uniform softmax → output = V average = [1.0, ...]
     for (i, &val) in output.iter().enumerate() {
-        assert!(
-            approx_eq(val, 1.0, 1e-3),
-            "output[{i}] = {val}, expected ~1.0"
-        );
+        assert!(approx_eq(val, 1.0, 1e-3), "output[{i}] = {val}, expected ~1.0");
     }
 }
 
@@ -613,18 +596,14 @@ fn test_softmax_preserves_ordering() {
 fn test_softmax_many_rows_all_sum_to_one() {
     let row_len = 10;
     let num_rows = 20;
-    let mut data: Vec<f32> = (0..num_rows * row_len)
-        .map(|i| ((i * 7 + 3) % 100) as f32 / 10.0 - 5.0)
-        .collect();
+    let mut data: Vec<f32> =
+        (0..num_rows * row_len).map(|i| ((i * 7 + 3) % 100) as f32 / 10.0 - 5.0).collect();
 
     ref_softmax_rows(&mut data, num_rows, row_len);
 
     for r in 0..num_rows {
         let sum: f32 = data[r * row_len..(r + 1) * row_len].iter().sum();
-        assert!(
-            approx_eq(sum, 1.0, 1e-5),
-            "row {r}: softmax sum = {sum}"
-        );
+        assert!(approx_eq(sum, 1.0, 1e-5), "row {r}: softmax sum = {sum}");
     }
 }
 
