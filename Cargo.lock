@@ -426,6 +426,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-avx512"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [
@@ -814,12 +818,11 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bindgen",
+ "bitnet-avx512",
  "bitnet-common",
- "bitnet-cpu-activations",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
- "bitnet-simd",
  "bitnet-test-support",
  "bitnet-tests",
  "bytemuck",
@@ -829,6 +832,7 @@ dependencies = [
  "env_logger",
  "half",
  "insta",
+ "libm",
  "log",
  "memory-stats",
  "opencl3",
@@ -988,6 +992,7 @@ name = "bitnet-quantization"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-avx512",
  "bitnet-common",
  "bitnet-kernels",
  "bitnet-models",

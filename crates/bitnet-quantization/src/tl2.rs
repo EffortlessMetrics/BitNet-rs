@@ -9,6 +9,7 @@ use crate::utils::{
     extract_f32_data, pack_unsigned_2bit_values, unpack_unsigned_2bit_values,
 };
 use crate::{QuantizedTensor, QuantizerTrait};
+use bitnet_avx512::{X86SimdFeatures, X86SimdTier};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 
 use candle_core::Device;
@@ -28,11 +29,8 @@ pub struct TL2Config {
 
 impl Default for TL2Config {
     fn default() -> Self {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        let (use_avx512, use_avx2) =
-            (is_x86_feature_detected!("avx512f"), is_x86_feature_detected!("avx2"));
-        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-        let (use_avx512, use_avx2) = (false, false);
+        let features = X86SimdFeatures::detect();
+        let (use_avx512, use_avx2) = (features.supports_avx512_core(), features.supports_avx2());
 
         Self {
             block_size: 128, // Larger blocks for x86 vectorization
@@ -121,49 +119,8 @@ pub struct TL2Quantizer {
     cpu_features: CpuFeatures,
 }
 
-/// CPU feature detection for optimal kernel selection
-#[derive(Debug, Clone)]
-struct CpuFeatures {
-    has_avx2: bool,
-    has_avx512f: bool,
-    has_avx512bw: bool,
-    has_avx512vl: bool,
-}
-
-impl CpuFeatures {
-    fn detect() -> Self {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            Self {
-                has_avx2: is_x86_feature_detected!("avx2"),
-                has_avx512f: is_x86_feature_detected!("avx512f"),
-                has_avx512bw: is_x86_feature_detected!("avx512bw"),
-                has_avx512vl: is_x86_feature_detected!("avx512vl"),
-            }
-        }
-        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-        {
-            Self { has_avx2: false, has_avx512f: false, has_avx512bw: false, has_avx512vl: false }
-        }
-    }
-
-    fn best_kernel(&self) -> KernelType {
-        if self.has_avx512f && self.has_avx512bw && self.has_avx512vl {
-            KernelType::AVX512
-        } else if self.has_avx2 {
-            KernelType::AVX2
-        } else {
-            KernelType::Scalar
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum KernelType {
-    Scalar,
-    AVX2,
-    AVX512,
-}
+/// CPU feature detection for optimal kernel selection.
+type CpuFeatures = X86SimdFeatures;
 
 impl TL2Quantizer {
     /// Create a new TL2 quantizer with automatic CPU feature detection
@@ -172,16 +129,16 @@ impl TL2Quantizer {
         let mut config = TL2Config::default();
 
         // Adjust configuration based on available features
-        match cpu_features.best_kernel() {
-            KernelType::AVX512 => {
+        match cpu_features.best_tier() {
+            X86SimdTier::Avx512 => {
                 config.block_size = 256; // Larger blocks for AVX-512
                 config.use_avx512 = true;
             }
-            KernelType::AVX2 => {
+            X86SimdTier::Avx2 => {
                 config.block_size = 128;
                 config.use_avx2 = true;
             }
-            KernelType::Scalar => {
+            X86SimdTier::Scalar => {
                 config.block_size = 64;
                 config.vectorized_tables = false;
             }
@@ -279,9 +236,11 @@ impl TL2Quantizer {
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
 
         // Select optimal quantization kernel
-        let quantized_data = match self.cpu_features.best_kernel() {
-            KernelType::AVX512 if self.config.use_avx512 => self.quantize_avx512(&data, &scales)?,
-            KernelType::AVX2 if self.config.use_avx2 => self.quantize_avx2(&data, &scales)?,
+        let quantized_data = match self.cpu_features.best_tier() {
+            X86SimdTier::Avx512 if self.config.use_avx512 => {
+                self.quantize_avx512(&data, &scales)?
+            }
+            X86SimdTier::Avx2 if self.config.use_avx2 => self.quantize_avx2(&data, &scales)?,
             _ => self.quantize_scalar(&data, &scales)?,
         };
 
@@ -334,11 +293,11 @@ impl TL2Quantizer {
         let quantized_data = self.unpack_tl2_values(&tensor.data, tensor.numel());
 
         // Select optimal dequantization kernel
-        let dequantized_data = match self.cpu_features.best_kernel() {
-            KernelType::AVX512 if self.config.use_avx512 => {
+        let dequantized_data = match self.cpu_features.best_tier() {
+            X86SimdTier::Avx512 if self.config.use_avx512 => {
                 self.dequantize_avx512(&quantized_data, &tensor.scales)?
             }
-            KernelType::AVX2 if self.config.use_avx2 => {
+            X86SimdTier::Avx2 if self.config.use_avx2 => {
                 self.dequantize_avx2(&quantized_data, &tensor.scales)?
             }
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
@@ -415,7 +374,7 @@ impl TL2Quantizer {
     /// AVX2-optimized quantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn quantize_avx2(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        if !is_x86_feature_detected!("avx2") {
+        if !self.cpu_features.supports_avx2() {
             return self.quantize_scalar(data, scales);
         }
 
@@ -438,7 +397,7 @@ impl TL2Quantizer {
     /// AVX2-optimized dequantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn dequantize_avx2(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        if !is_x86_feature_detected!("avx2") {
+        if !self.cpu_features.supports_avx2() {
             return self.dequantize_scalar(quantized, scales);
         }
 
@@ -458,7 +417,7 @@ impl TL2Quantizer {
     /// AVX-512 optimized quantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn quantize_avx512(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        if !is_x86_feature_detected!("avx512f") {
+        if !self.cpu_features.supports_avx512_core() {
             return self.quantize_avx2(data, scales);
         }
 
@@ -481,7 +440,7 @@ impl TL2Quantizer {
     /// AVX-512 optimized dequantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn dequantize_avx512(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        if !is_x86_feature_detected!("avx512f") {
+        if !self.cpu_features.supports_avx512_core() {
             return self.dequantize_avx2(quantized, scales);
         }
 
@@ -747,11 +706,11 @@ mod tests {
     #[test]
     fn test_cpu_feature_detection() {
         let features = CpuFeatures::detect();
-        let kernel = features.best_kernel();
+        let kernel = features.best_tier();
 
         // Should select some kernel type
         match kernel {
-            KernelType::Scalar | KernelType::AVX2 | KernelType::AVX512 => {
+            X86SimdTier::Scalar | X86SimdTier::Avx2 | X86SimdTier::Avx512 => {
                 // All valid
             }
         }
@@ -795,7 +754,7 @@ mod tests {
         assert!(quantizer.config.block_size >= 64);
 
         // CPU features detection should not panic (always valid)
-        let _ = quantizer.cpu_features.has_avx2;
+        let _ = quantizer.cpu_features.supports_avx2();
     }
 
     #[test]

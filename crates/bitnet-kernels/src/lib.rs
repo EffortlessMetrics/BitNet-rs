@@ -1,5 +1,7 @@
 //! High-performance compute kernels for BitNet
 
+#[cfg(all(target_arch = "x86_64", any(feature = "avx2", feature = "avx512")))]
+use bitnet_avx512::X86SimdFeatures;
 use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
@@ -122,7 +124,7 @@ impl KernelManager {
         // Add optimized CPU kernels in order of preference (best first)
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         {
-            if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw") {
+            if X86SimdFeatures::detect().supports_avx512_core() {
                 let insert_pos = if providers.is_empty() { 0 } else { providers.len() - 1 };
                 providers.insert(insert_pos, Box::new(cpu::Avx512Kernel));
             }
@@ -130,7 +132,7 @@ impl KernelManager {
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
-            if is_x86_feature_detected!("avx2") {
+            if X86SimdFeatures::detect().supports_avx2() {
                 let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
                 providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
             }
@@ -213,14 +215,14 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
 
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     {
-        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw") {
+        if X86SimdFeatures::detect().supports_avx512_core() {
             providers.insert(0, Box::new(cpu::Avx512Kernel));
         }
     }
 
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        if is_x86_feature_detected!("avx2") {
+        if X86SimdFeatures::detect().supports_avx2() {
             let insert_pos = if providers.is_empty() { 0 } else { providers.len() - 1 };
             providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
         }

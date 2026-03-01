@@ -2,6 +2,7 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
 use crate::{KernelProvider, cpu::fallback::FallbackKernel};
+use bitnet_avx512::X86SimdFeatures;
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
 #[allow(clippy::wildcard_imports)]
 use std::arch::x86_64::*;
@@ -18,7 +19,7 @@ impl KernelProvider for Avx2Kernel {
     }
 
     fn is_available(&self) -> bool {
-        is_x86_feature_detected!("avx2")
+        X86SimdFeatures::detect().supports_avx2()
     }
 
     fn matmul_i2s(
@@ -182,7 +183,7 @@ impl KernelProvider for Avx512Kernel {
 
     fn is_available(&self) -> bool {
         // Requires full width AVX-512 with byte/word support
-        is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw")
+        X86SimdFeatures::detect().supports_avx512_core()
     }
 
     fn matmul_i2s(
