@@ -2127,4 +2127,164 @@ mod tests {
         assert_eq!(attn.config().num_heads, 4);
         assert!(attn.config().causal_mask);
     }
+
+    // ── Edge case: max sequence length ───────────────────────────────
+
+    #[test]
+    fn attention_max_sequence_length() {
+        let seq = 256;
+        let head_dim = 4;
+        let n = seq * head_dim;
+        let q = vec![0.01_f32; n];
+        let k = vec![0.01_f32; n];
+        let v = vec![1.0_f32; n];
+        let out = scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
+        assert_eq!(out.len(), n);
+        assert!(out.iter().all(|v| v.is_finite()));
+    }
+
+    // ── Property tests ────────────────────────────────────────────────
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            /// Output length always equals `seq_q * head_dim` for single-head SDP.
+            #[test]
+            fn prop_sdp_output_shape(
+                head_dim in 1_usize..=16,
+                seq_len in 1_usize..=32,
+                causal in proptest::bool::ANY,
+            ) {
+                let n = seq_len * head_dim;
+                let q = vec![0.1_f32; n];
+                let k = vec![0.2_f32; n];
+                let v = vec![0.3_f32; n];
+                let out = scaled_dot_product_attention(
+                    &q, &k, &v, seq_len, seq_len, head_dim, causal,
+                ).unwrap();
+                prop_assert_eq!(out.len(), n);
+            }
+
+            /// Multi-head output length equals `seq_len * num_heads * head_dim`.
+            #[test]
+            fn prop_mha_output_shape(
+                num_heads in 1_usize..=4,
+                head_dim in 1_usize..=16,
+                seq_len in 1_usize..=16,
+                causal in proptest::bool::ANY,
+            ) {
+                let total = seq_len * num_heads * head_dim;
+                let q = vec![0.1_f32; total];
+                let k = vec![0.2_f32; total];
+                let v = vec![0.3_f32; total];
+                let out = multi_head_attention_cpu(
+                    &q, &k, &v, num_heads, head_dim, seq_len, causal,
+                ).unwrap();
+                prop_assert_eq!(out.len(), total);
+            }
+
+            /// Output is a convex combination of V rows: each dimension must
+            /// lie within the [min, max] range of V for that dimension.
+            #[test]
+            fn prop_output_within_value_range(
+                head_dim in 1_usize..=8,
+                seq_len in 1_usize..=16,
+                causal in proptest::bool::ANY,
+                v_seed in proptest::collection::vec(-50.0_f32..50.0, 1..=128),
+            ) {
+                let n = seq_len * head_dim;
+                let v: Vec<f32> = v_seed.iter().copied().cycle().take(n).collect();
+                let q = vec![0.5_f32; n];
+                let k = vec![0.5_f32; n];
+                let out = scaled_dot_product_attention(
+                    &q, &k, &v, seq_len, seq_len, head_dim, causal,
+                ).unwrap();
+
+                for d in 0..head_dim {
+                    let col: Vec<f32> =
+                        (0..seq_len).map(|r| v[r * head_dim + d]).collect();
+                    let v_min = col.iter().copied().fold(f32::INFINITY, f32::min);
+                    let v_max =
+                        col.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                    for r in 0..seq_len {
+                        let o = out[r * head_dim + d];
+                        prop_assert!(
+                            o >= v_min - 1e-4 && o <= v_max + 1e-4,
+                            "row {r} dim {d}: out={o} not in [{v_min}, {v_max}]"
+                        );
+                    }
+                }
+            }
+
+            /// All output values are finite for bounded inputs.
+            #[test]
+            fn prop_output_always_finite(
+                num_heads in 1_usize..=4,
+                head_dim in 1_usize..=16,
+                seq_len in 1_usize..=16,
+                causal in proptest::bool::ANY,
+            ) {
+                let total = seq_len * num_heads * head_dim;
+                let q = vec![0.3_f32; total];
+                let k = vec![0.3_f32; total];
+                let v = vec![0.7_f32; total];
+                let out = multi_head_attention_cpu(
+                    &q, &k, &v, num_heads, head_dim, seq_len, causal,
+                ).unwrap();
+                for (i, &val) in out.iter().enumerate() {
+                    prop_assert!(val.is_finite(), "non-finite at index {i}: {val}");
+                }
+            }
+
+            /// Softmax rows sum to 1: with constant V the output must equal
+            /// that constant (since ∑ weights * c = c).
+            #[test]
+            fn prop_softmax_rows_sum_to_one(
+                head_dim in 1_usize..=8,
+                seq_len in 1_usize..=16,
+                causal in proptest::bool::ANY,
+                constant in -100.0_f32..100.0,
+            ) {
+                let n = seq_len * head_dim;
+                let q = vec![0.5_f32; n];
+                let k = vec![0.5_f32; n];
+                let v = vec![constant; n];
+                let out = scaled_dot_product_attention(
+                    &q, &k, &v, seq_len, seq_len, head_dim, causal,
+                ).unwrap();
+                for (i, &val) in out.iter().enumerate() {
+                    prop_assert!(
+                        (val - constant).abs() < 1e-3,
+                        "index {i}: expected {constant}, got {val}"
+                    );
+                }
+            }
+
+            /// Causal attention: first row can only attend to position 0,
+            /// so output[0..head_dim] must equal V[0..head_dim].
+            #[test]
+            fn prop_causal_first_row_equals_v0(
+                head_dim in 1_usize..=8,
+                seq_len in 1_usize..=16,
+            ) {
+                let n = seq_len * head_dim;
+                let q = vec![1.0_f32; n];
+                let k = vec![1.0_f32; n];
+                let v: Vec<f32> = (0..n).map(|i| (i + 1) as f32).collect();
+                let out = scaled_dot_product_attention(
+                    &q, &k, &v, seq_len, seq_len, head_dim, true,
+                ).unwrap();
+                for d in 0..head_dim {
+                    prop_assert!(
+                        (out[d] - v[d]).abs() < 1e-4,
+                        "dim {d}: first row {}, expected {}",
+                        out[d],
+                        v[d]
+                    );
+                }
+            }
+        }
+    }
 }
