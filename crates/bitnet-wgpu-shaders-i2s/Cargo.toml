@@ -1,0 +1,10 @@
+[package]
+name = "bitnet-wgpu-shaders-i2s"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92.0"
+description = "WGSL compute shaders for I2_S 2-bit quantized inference (BitNet)"
+license = "MIT OR Apache-2.0"
+
+[dev-dependencies]
+naga = { version = "28", features = ["wgsl-in"] }
