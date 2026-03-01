@@ -45,6 +45,8 @@ pub enum KernelBackend {
     Hip,
     /// Intel oneAPI GPU kernels via SYCL/Level Zero runtime.
     OneApi,
+    /// OpenCL GPU kernels (Intel Arc, AMD, etc.).
+    OpenCL,
     /// C++ FFI bridge to bitnet.cpp / llama.cpp.
     CppFfi,
 }
@@ -56,6 +58,7 @@ impl fmt::Display for KernelBackend {
             KernelBackend::Cuda => write!(f, "cuda"),
             KernelBackend::Hip => write!(f, "hip"),
             KernelBackend::OneApi => write!(f, "oneapi"),
+            KernelBackend::OpenCL => write!(f, "opencl"),
             KernelBackend::CppFfi => write!(f, "cpp-ffi"),
         }
     }
@@ -64,7 +67,13 @@ impl fmt::Display for KernelBackend {
 impl KernelBackend {
     /// Returns true if this backend requires a GPU at runtime.
     pub fn requires_gpu(self) -> bool {
-        matches!(self, KernelBackend::Cuda | KernelBackend::Hip | KernelBackend::OneApi)
+        matches!(
+            self,
+            KernelBackend::Cuda
+                | KernelBackend::Hip
+                | KernelBackend::OneApi
+                | KernelBackend::OpenCL
+        )
     }
 
     /// Returns true if this backend is compiled in the current build.
@@ -74,6 +83,7 @@ impl KernelBackend {
             KernelBackend::Cuda => cfg!(feature = "cuda"),
             KernelBackend::Hip => cfg!(feature = "hip"),
             KernelBackend::OneApi => cfg!(feature = "oneapi"),
+            KernelBackend::OpenCL => cfg!(feature = "opencl"),
             // FFI availability is determined by the consumer crate's feature flags
             KernelBackend::CppFfi => false,
         }
@@ -100,6 +110,10 @@ pub struct KernelCapabilities {
     pub oneapi_compiled: bool,
     /// oneAPI runtime detected (e.g. `sycl-ls` sees a GPU device).
     pub oneapi_runtime: bool,
+    /// OpenCL backend is compiled (may still require runtime GPU/driver stack).
+    pub opencl_compiled: bool,
+    /// OpenCL runtime detected (e.g. OpenCL ICD loader finds a GPU device).
+    pub opencl_runtime: bool,
     /// C++ FFI bridge is compiled.
     pub cpp_ffi: bool,
     /// Best SIMD level available at compile time.
@@ -119,6 +133,8 @@ impl KernelCapabilities {
             hip_runtime: false,
             oneapi_compiled: cfg!(feature = "oneapi"),
             oneapi_runtime: false,
+            opencl_compiled: cfg!(feature = "opencl"),
+            opencl_runtime: false,
             cpp_ffi: false, // bitnet-common has no ffi feature; FFI detection is crate-local
             simd_level: compile_time_simd_level(),
         }
@@ -149,6 +165,13 @@ impl KernelCapabilities {
         self
     }
 
+    /// Fill in the `opencl_runtime` field from a live probe result.
+    #[must_use]
+    pub fn with_opencl_runtime(mut self, available: bool) -> Self {
+        self.opencl_runtime = available;
+        self
+    }
+
     /// Fill in the `cpp_ffi` field.
     #[must_use]
     pub fn with_cpp_ffi(mut self, available: bool) -> Self {
@@ -167,6 +190,9 @@ impl KernelCapabilities {
         }
         if self.oneapi_compiled {
             backends.push(KernelBackend::OneApi);
+        }
+        if self.opencl_compiled {
+            backends.push(KernelBackend::OpenCL);
         }
         if self.cpp_ffi {
             backends.push(KernelBackend::CppFfi);
@@ -187,6 +213,9 @@ impl KernelCapabilities {
         }
         if self.oneapi_compiled && self.oneapi_runtime {
             return Some(KernelBackend::OneApi);
+        }
+        if self.opencl_compiled && self.opencl_runtime {
+            return Some(KernelBackend::OpenCL);
         }
         if self.cpp_ffi {
             return Some(KernelBackend::CppFfi);
@@ -248,6 +277,7 @@ mod tests {
         assert_eq!(KernelBackend::Cuda.to_string(), "cuda");
         assert_eq!(KernelBackend::Hip.to_string(), "hip");
         assert_eq!(KernelBackend::OneApi.to_string(), "oneapi");
+        assert_eq!(KernelBackend::OpenCL.to_string(), "opencl");
         assert_eq!(KernelBackend::CppFfi.to_string(), "cpp-ffi");
     }
 
@@ -257,6 +287,7 @@ mod tests {
         assert!(KernelBackend::Cuda.requires_gpu());
         assert!(KernelBackend::Hip.requires_gpu());
         assert!(KernelBackend::OneApi.requires_gpu());
+        assert!(KernelBackend::OpenCL.requires_gpu());
         assert!(!KernelBackend::CppFfi.requires_gpu());
     }
 
@@ -281,6 +312,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -297,6 +330,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -313,6 +348,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: true,
             simd_level: SimdLevel::Avx2,
         };
@@ -332,6 +369,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -350,6 +389,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -375,6 +416,8 @@ mod tests {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -397,6 +440,8 @@ mod property_tests {
                 hip_runtime: false,
                 oneapi_compiled: false,
                 oneapi_runtime: false,
+                opencl_compiled: false,
+                opencl_runtime: false,
                 cpp_ffi,
                 simd_level: SimdLevel::Scalar,
             },
@@ -444,6 +489,8 @@ mod property_tests {
                 cpp_ffi: any_ffi,
                 oneapi_compiled: false,
                 oneapi_runtime: false,
+                opencl_compiled: false,
+                opencl_runtime: false,
                 simd_level: SimdLevel::Scalar,
             };
             prop_assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
@@ -459,13 +506,14 @@ mod property_tests {
                 Just(KernelBackend::Cuda),
                 Just(KernelBackend::Hip),
                 Just(KernelBackend::OneApi),
+                Just(KernelBackend::OpenCL),
                 Just(KernelBackend::CppFfi),
             ],
         ) {
             let requires = backend.requires_gpu();
             prop_assert_eq!(
                 requires,
-                backend == KernelBackend::Cuda || backend == KernelBackend::Hip || backend == KernelBackend::OneApi
+                backend == KernelBackend::Cuda || backend == KernelBackend::Hip || backend == KernelBackend::OneApi || backend == KernelBackend::OpenCL
             );
         }
     }

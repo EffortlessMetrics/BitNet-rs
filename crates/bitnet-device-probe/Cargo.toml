@@ -32,6 +32,7 @@ rocm = []
 vulkan = ["dep:ash"]
 npu = ["oneapi"]
 oneapi = ["dep:opencl3"]
+opencl = ["dep:opencl3"]
 
 [[test]]
 name = "oneapi_detection_bdd"

@@ -71,6 +71,8 @@ fn kernel_capabilities_cpu_only_snapshot() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };

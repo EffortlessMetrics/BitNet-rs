@@ -81,6 +81,7 @@ metal = ["bitnet-common/metal", "bitnet-models/metal"]
 npu-backend = ["bitnet-kernels/npu-backend", "metal"]
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
+opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl", "bitnet-quantization/opencl"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 bench = []  # Enable Criterion benchmarks
