@@ -14,6 +14,7 @@ members = [
   "crates/bitnet-runtime-feature-flags-core",
   "crates/bitnet-models",
   "crates/bitnet-quantization",
+  "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-rope",
@@ -96,6 +97,7 @@ default-members = [
   "crates/bitnet-test-env",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-prompt-templates",
