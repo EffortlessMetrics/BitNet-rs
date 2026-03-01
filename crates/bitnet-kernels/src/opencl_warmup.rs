@@ -112,7 +112,9 @@ impl WarmupConfig {
     /// Validate the config, returning an error if invalid.
     pub fn validate(&self) -> Result<(), WarmupError> {
         if self.dry_run_matmul && self.dry_run_size == 0 {
-            return Err(WarmupError::InvalidConfig("dry_run_size must be > 0 when dry_run_matmul is enabled".into()));
+            return Err(WarmupError::InvalidConfig(
+                "dry_run_size must be > 0 when dry_run_matmul is enabled".into(),
+            ));
         }
         if self.timeout_ms == 0 {
             return Err(WarmupError::InvalidConfig("timeout_ms must be > 0".into()));
@@ -147,10 +149,7 @@ impl WarmupReport {
     pub fn summary(&self) -> String {
         let ok = self.results.iter().filter(|r| r.success).count();
         let total = self.results.len();
-        format!(
-            "Warmup: {ok}/{total} phases succeeded in {ms}ms",
-            ms = self.total_duration_ms,
-        )
+        format!("Warmup: {ok}/{total} phases succeeded in {ms}ms", ms = self.total_duration_ms,)
     }
 
     /// Return phases that failed.
@@ -647,17 +646,14 @@ mod tests {
 
     #[test]
     fn test_error_display_phase_failed() {
-        let e = WarmupError::PhaseFailed {
-            phase: WarmupPhase::MemoryAllocation,
-            reason: "OOM".into(),
-        };
+        let e =
+            WarmupError::PhaseFailed { phase: WarmupPhase::MemoryAllocation, reason: "OOM".into() };
         assert_eq!(e.to_string(), "warmup phase MemoryAllocation failed: OOM");
     }
 
     #[test]
     fn test_error_is_std_error() {
-        let e: Box<dyn std::error::Error> =
-            Box::new(WarmupError::InvalidConfig("x".into()));
+        let e: Box<dyn std::error::Error> = Box::new(WarmupError::InvalidConfig("x".into()));
         assert!(!e.to_string().is_empty());
     }
 
