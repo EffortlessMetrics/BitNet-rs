@@ -24,6 +24,7 @@ pub mod activations;
 pub mod attention;
 pub mod batch_norm;
 pub mod kv_cache;
+pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantized_matmul;
 pub mod rmsnorm;
@@ -55,6 +56,7 @@ pub use crate::reduction::{
 // Re-export shaped reduction from the crate-level module.
 pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
 pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
+pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
