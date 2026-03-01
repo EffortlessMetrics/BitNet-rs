@@ -33,11 +33,31 @@
 use bitnet_common::KernelError;
 use bitnet_common::Result;
 
-// Re-export CPU fallback functions.
-pub use crate::cpu::transpose::{
-    TransposeConfig as CudaTransposeConfig, reshape as reshape_cpu,
-    transpose_2d as transpose_2d_cpu_fallback, transpose_nd as transpose_nd_cpu_fallback,
-};
+// CPU fallback wrappers delegating to `TransposeKernel` methods.
+use crate::cpu::transpose::TransposeKernel;
+
+/// Compatibility alias — the original `TransposeConfig` struct was removed;
+/// callers should migrate to `TransposeKernel` methods directly.
+pub type CudaTransposeConfig = ();
+
+/// CPU fallback for 2-D matrix transpose.
+pub fn transpose_2d_cpu_fallback(data: &[f32], rows: usize, cols: usize) -> Result<Vec<f32>> {
+    TransposeKernel::transpose_2d(data, rows, cols)
+}
+
+/// CPU fallback for N-D tensor transpose with arbitrary permutation.
+pub fn transpose_nd_cpu_fallback(
+    data: &[f32],
+    shape: &[usize],
+    perm: &[usize],
+) -> Result<Vec<f32>> {
+    TransposeKernel::transpose_nd(data, shape, perm)
+}
+
+/// CPU reshape (validates element-count parity, then reinterprets).
+pub fn reshape_cpu(data: &[f32], old_shape: &[usize], new_shape: &[usize]) -> Result<Vec<f32>> {
+    TransposeKernel::reshape(data, old_shape, new_shape)
+}
 
 // ---------------------------------------------------------------------------
 // CUDA kernel source (feature-gated)
@@ -210,7 +230,7 @@ pub fn transpose_2d_forward(
         }
         log::debug!("CUDA transpose_2d unavailable, falling back to CPU");
     }
-    let result = transpose_2d_cpu_fallback(input, rows, cols);
+    let result = transpose_2d_cpu_fallback(input, rows, cols)?;
     let n = rows * cols;
     output[..n].copy_from_slice(&result);
     Ok(())
