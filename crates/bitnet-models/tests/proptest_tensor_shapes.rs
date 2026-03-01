@@ -73,10 +73,7 @@ fn all_i2s_flavors() -> impl Strategy<Value = I2SFlavor> {
 
 /// Strategy producing all I2SLayoutKind variants.
 fn all_layout_kinds() -> impl Strategy<Value = I2SLayoutKind> {
-    prop_oneof![
-        Just(I2SLayoutKind::GgmlSplit),
-        Just(I2SLayoutKind::InlineF16),
-    ]
+    prop_oneof![Just(I2SLayoutKind::GgmlSplit), Just(I2SLayoutKind::InlineF16),]
 }
 
 /// Strategy for quant string aliases that should parse to a known type.

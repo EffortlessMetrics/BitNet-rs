@@ -12,12 +12,11 @@
 
 #![cfg(feature = "cpu")]
 
+use bitnet_quantization::I2SQuantizer;
 use bitnet_quantization::utils::{
     calculate_grouped_scales, calculate_mse, calculate_optimal_block_size, calculate_scale,
-    create_tensor_from_f32, dequantize_value, pack_2bit_values, quantize_value,
-    unpack_2bit_values,
+    create_tensor_from_f32, dequantize_value, pack_2bit_values, quantize_value, unpack_2bit_values,
 };
-use bitnet_quantization::I2SQuantizer;
 use candle_core::Device;
 use proptest::prelude::*;
 
