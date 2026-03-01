@@ -12,7 +12,6 @@ pub mod device_features;
 pub mod embedding;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-pub mod opencl_embedding;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
@@ -20,6 +19,7 @@ pub mod kernels;
 pub mod matmul;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+pub mod opencl_embedding;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
