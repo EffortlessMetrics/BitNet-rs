@@ -12,3 +12,4 @@ pub mod checkpoint_manager;
 // Provides batched tokenization, parallel encoding/decoding,
 // and hardware abstraction for GPU-accelerated inference pipelines.
 pub mod batched_tokenization;
+pub mod streaming_aggregator;
