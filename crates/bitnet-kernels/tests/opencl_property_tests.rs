@@ -7,10 +7,10 @@
 use proptest::prelude::*;
 
 use bitnet_kernels::opencl_buffer::{
-    align_size, optimal_buffer_size, validate_alignment, AlignedBuffer, BufferAlignment, BufferPool,
+    AlignedBuffer, BufferAlignment, BufferPool, align_size, optimal_buffer_size, validate_alignment,
 };
 use bitnet_kernels::opencl_cache::{
-    CacheConfig, CacheSerializer, CacheStats, KernelCacheManager, KernelCacheEntry, KernelCacheKey,
+    CacheConfig, CacheSerializer, CacheStats, KernelCacheEntry, KernelCacheKey, KernelCacheManager,
     SourceHasher,
 };
 use bitnet_kernels::opencl_embedding::{
@@ -40,9 +40,7 @@ fn arb_f32_vec(min_len: usize, max_len: usize) -> impl Strategy<Value = Vec<f32>
 #[allow(dead_code)]
 fn arb_matrix(max_dim: usize) -> impl Strategy<Value = (Vec<f32>, usize, usize)> {
     (1..=max_dim, 1..=max_dim).prop_flat_map(|(rows, cols)| {
-        prop::collection::vec(-1.0f32..1.0f32, rows * cols).prop_map(move |data| {
-            (data, rows, cols)
-        })
+        prop::collection::vec(-1.0f32..1.0f32, rows * cols).prop_map(move |data| (data, rows, cols))
     })
 }
 
