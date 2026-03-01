@@ -764,8 +764,8 @@ mod tests {
             return;
         }
 
-        let pattern = [1.5_f32, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1];
-        let input: Vec<f32> = pattern.iter().copied().cycle().take(64).collect();
+        let base = vec![1.5_f32, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1];
+        let input: Vec<f32> = base.iter().copied().cycle().take(64).collect();
         let mut output = vec![0u8; 16]; // 64 values / 4 per byte = 16 bytes
         let mut scales = vec![0.0f32; 1]; // 64 values / 64 per block = 1 block
 
