@@ -114,6 +114,10 @@ pub struct KernelCapabilities {
     pub opencl_compiled: bool,
     /// OpenCL runtime detected (e.g. OpenCL ICD loader finds a GPU device).
     pub opencl_runtime: bool,
+    /// Vulkan backend is compiled (may still require runtime GPU/driver).
+    pub vulkan_compiled: bool,
+    /// Vulkan runtime detected (GPU present and accessible).
+    pub vulkan_runtime: bool,
     /// C++ FFI bridge is compiled.
     pub cpp_ffi: bool,
     /// Best SIMD level available at compile time.
@@ -135,6 +139,8 @@ impl KernelCapabilities {
             oneapi_runtime: false,
             opencl_compiled: cfg!(feature = "opencl"),
             opencl_runtime: false,
+            vulkan_compiled: cfg!(feature = "vulkan"),
+            vulkan_runtime: false,
             cpp_ffi: false, // bitnet-common has no ffi feature; FFI detection is crate-local
             simd_level: compile_time_simd_level(),
         }
