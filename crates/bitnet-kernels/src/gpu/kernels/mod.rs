@@ -14,6 +14,8 @@ pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 
 /// Embedding lookup and output projection kernel source.
 pub const EMBEDDING_SRC: &str = include_str!("embedding.cl");
+/// Optimized RMSNorm kernel source (parallel reduction).
+pub const RMSNORM_SRC: &str = include_str!("rmsnorm.cl");
 
 #[cfg(test)]
 mod tests {
@@ -24,6 +26,7 @@ mod tests {
         assert!(!MATMUL_I2S_SRC.is_empty(), "matmul_i2s.cl should not be empty");
         assert!(!QUANTIZE_I2S_SRC.is_empty(), "quantize_i2s.cl should not be empty");
         assert!(!ELEMENTWISE_SRC.is_empty(), "elementwise.cl should not be empty");
+        assert!(!RMSNORM_SRC.is_empty(), "rmsnorm.cl should not be empty");
     }
 
     #[test]
@@ -31,6 +34,7 @@ mod tests {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
+        assert!(RMSNORM_SRC.contains("__kernel"), "rmsnorm.cl missing __kernel");
     }
 
     #[test]
@@ -73,6 +77,30 @@ mod tests {
         assert!(
             EMBEDDING_SRC.contains("embedding_lookup_padded"),
             "missing embedding_lookup_padded kernel"
+    fn rmsnorm_kernel_has_parallel_function() {
+        assert!(
+            RMSNORM_SRC.contains("rms_norm_parallel"),
+            "missing rms_norm_parallel kernel"
+        );
+    }
+
+    #[test]
+    fn rmsnorm_kernel_has_residual_fused_function() {
+        assert!(
+            RMSNORM_SRC.contains("rms_norm_residual"),
+            "missing rms_norm_residual kernel"
+        );
+    }
+
+    #[test]
+    fn rmsnorm_kernel_uses_local_memory_reduction() {
+        assert!(
+            RMSNORM_SRC.contains("__local"),
+            "rmsnorm kernel should use local memory"
+        );
+        assert!(
+            RMSNORM_SRC.contains("barrier"),
+            "rmsnorm kernel should use barriers for reduction"
         );
     }
 }
