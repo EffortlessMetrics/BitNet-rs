@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-testing-policy-runtime-core"
+name = "bitnet-testing-policy-state-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,12 +9,11 @@ repository.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Core runtime policy-state resolver for BDD-grid and feature-contract diagnostics"
+description = "Core runtime policy-state model and state resolvers for diagnostics"
 include = [
   "src/**",
   "Cargo.toml",
 ]
 
 [dependencies]
-bitnet-testing-policy-state-core = { path = "../bitnet-testing-policy-state-core", version = "0.2.1-dev" }
 bitnet-testing-policy-interop = { path = "../bitnet-testing-policy-interop", version = "0.2.1-dev" }
