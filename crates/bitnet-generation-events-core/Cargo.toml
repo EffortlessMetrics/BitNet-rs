@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-generation"
+name = "bitnet-generation-events-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,24 +8,15 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Decode-loop stopping logic and generation event types for BitNet inference"
+description = "Reusable generation stream event and stats types for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
 bitnet-generation-stop-core = { path = "../bitnet-generation-stop-core", version = "0.2.1-dev" }
-bitnet-generation-events-core = { path = "../bitnet-generation-events-core", version = "0.2.1-dev" }
 serde.workspace = true
 
 [dev-dependencies]
-proptest.workspace = true
 serde_json.workspace = true
-insta = { workspace = true }
-
-[features]
-default = []
-cpu = []
-gpu = ["cuda"]
-cuda = []
 
 [lints]
 workspace = true
