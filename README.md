@@ -16,7 +16,7 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
 
-> **v0.2.0:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
+> **v0.2.1-dev (pre-alpha):** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned. Significant correctness, performance, and validation work remains.
 
 ## Quick Start
 
@@ -45,10 +45,10 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | CPU inference — I2_S BitNet32 | ✅    | Production path; 10–20× faster than QK256 scalar |
 | CPU inference — I2_S QK256    | ✅    | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
 | GPU inference — CUDA          | ⚠️   | Implemented; receipt validation pending |
-| GPU inference — Metal         | ✅    | macOS/iOS via `--features metal` (#992) |
-| GPU inference — Vulkan        | ✅    | Runtime probing via `--features vulkan` (#993) |
-| GPU inference — Intel oneAPI  | ✅    | Intel CPU/GPU via `--features oneapi` (#986) |
-| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe` (#995) |
+| GPU inference — Metal         | ⚠️   | Feature gate + kernel stubs; validation in progress |
+| GPU inference — Vulkan        | ⚠️   | Runtime probing compiled; end-to-end validation pending |
+| GPU inference — Intel oneAPI  | ⚠️   | Intel CPU/GPU feature gate; validation in progress |
+| AMD ROCm detection            | ⚠️   | Device detection only; inference kernels not yet validated |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
 | Honest-compute receipts       | ✅    | Schema v1.0.0, 8 validation gates |
@@ -118,6 +118,9 @@ nix develop && nix build .#bitnet-cli && nix flake check
 | `ffi` | C++ FFI bridge for cross-validation |
 | `fixtures` | GGUF fixture-based integration tests (test-only) |
 | `full-cli` | Enable all CLI subcommands |
+| `rocm` | AMD ROCm detection (device probe; inference kernels not yet validated) |
+| `npu` | NPU detection via `bitnet-device-probe` |
+| `opencl` | Intel Arc OpenCL backend (experimental; `bitnet-opencl` crate) |
 
 Always use the unified GPU predicate in Rust code:
 ```rust
@@ -146,7 +149,7 @@ cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 ```
 
-The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (13 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for issues #254, #260, #469 — not failures to fix).
+The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (49 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d — TDD scaffolding for tracked issues. See justification strings.
 
 See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
 
@@ -160,15 +163,9 @@ cargo fmt --all && cargo clippy --all-targets --no-default-features --features c
 cargo nextest run --workspace --no-default-features --features cpu
 ```
 
-Note: ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for tracked issues #254, #260, #469). This is expected MVP behaviour, not failures to fix.
+Note: ~70 tests are intentionally `#[ignore]`-d. This is expected — they are TDD scaffolds for tracked issues. See `#[ignore = "..."]` justification strings.
 
 ## License
 
 Dual-licensed under [MIT](LICENSE) and [Apache 2.0](LICENSE).
 
-## QK256 Format
-We support the QK256 Format for models.
-
-For more details, see the [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md).
-
-Use `--strict-loader` for strict loading.

@@ -359,25 +359,28 @@ pub const fn vulkan_available_runtime() -> bool {
 /// println!("SIMD level: {level:?}");
 /// // level is one of: Scalar, Sse42, Avx2, Avx512, Neon
 /// ```
+#[allow(clippy::missing_const_for_fn)] // not const on x86_64 (runtime CPUID)
 pub fn detect_simd_level() -> SimdLevel {
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx512f") {
-            return SimdLevel::Avx512;
-        }
-        if is_x86_feature_detected!("avx2") {
-            return SimdLevel::Avx2;
-        }
-        if is_x86_feature_detected!("sse4.2") {
-            return SimdLevel::Sse42;
+            SimdLevel::Avx512
+        } else if is_x86_feature_detected!("avx2") {
+            SimdLevel::Avx2
+        } else if is_x86_feature_detected!("sse4.2") {
+            SimdLevel::Sse42
+        } else {
+            SimdLevel::Scalar
         }
     }
     #[cfg(target_arch = "aarch64")]
     {
-        // NEON is mandatory on AArch64.
-        return SimdLevel::Neon;
+        SimdLevel::Neon
     }
-    SimdLevel::Scalar
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    {
+        SimdLevel::Scalar
+    }
 }
 
 /// Snapshot of compile-time and runtime device capabilities.

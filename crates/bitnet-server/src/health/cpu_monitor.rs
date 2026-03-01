@@ -80,7 +80,7 @@ fn detect_simd_capabilities() -> Vec<String> {
 
     #[cfg(target_arch = "aarch64")]
     {
-        if is_aarch64_feature_detected!("neon") {
+        if std::arch::is_aarch64_feature_detected!("neon") {
             caps.push("NEON".to_string());
         }
     }
