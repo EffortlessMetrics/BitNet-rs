@@ -1,7 +1,6 @@
 //! Comprehensive property-based tests for `bitnet-common` foundational types.
 //!
 //! Complements `property_tests.rs` with deeper coverage of:
-//! - `ceil_div` mathematical invariants
 //! - `BitNetConfig` / `ConfigBuilder` validation invariants
 //! - Sub-error type message formatting
 //! - `BackendStartupSummary` field preservation and log-line format
@@ -21,63 +20,10 @@ use bitnet_common::{
         SecurityLimits,
     },
     kernel_registry::{KernelBackend, SimdLevel},
-    math::ceil_div,
     tensor::{ConcreteTensor, Tensor},
     types::{Device, GenerationConfig, QuantizationType},
 };
 use proptest::prelude::*;
-
-// ── ceil_div mathematical invariants ─────────────────────────────────────────
-
-proptest! {
-    /// ceil_div(n, d) * d >= n for all n and d > 0.
-    #[test]
-    fn prop_ceil_div_covers_n(
-        n in 0usize..=1_000_000,
-        d in 1usize..=4096,
-    ) {
-        let result = ceil_div(n, d);
-        prop_assert!(result.saturating_mul(d) >= n,
-            "ceil_div({n}, {d}) = {result} but {result} * {d} < {n}");
-    }
-
-    /// ceil_div(n, d) is the smallest integer k such that k * d >= n.
-    #[test]
-    fn prop_ceil_div_is_minimal(
-        n in 1usize..=100_000,
-        d in 1usize..=1024,
-    ) {
-        let result = ceil_div(n, d);
-        // The result minus one would leave some elements uncovered (if result > 0).
-        if result > 0 {
-            prop_assert!((result - 1).saturating_mul(d) < n,
-                "ceil_div({n}, {d}) = {result} is not minimal: {r} * {d} >= {n}",
-                r = result - 1);
-        }
-    }
-
-    /// When n is exactly divisible by d, ceil_div(n, d) == n / d.
-    #[test]
-    fn prop_ceil_div_exact_divisor(
-        k in 0usize..=10_000,
-        d in 1usize..=1024,
-    ) {
-        let n = k * d;
-        prop_assert_eq!(ceil_div(n, d), k);
-    }
-
-    /// ceil_div with d = 1 is the identity.
-    #[test]
-    fn prop_ceil_div_divisor_one_is_identity(n in 0usize..=1_000_000) {
-        prop_assert_eq!(ceil_div(n, 1), n);
-    }
-
-    /// ceil_div(0, d) is always 0.
-    #[test]
-    fn prop_ceil_div_numerator_zero(d in 1usize..=4096) {
-        prop_assert_eq!(ceil_div(0, d), 0);
-    }
-}
 
 // ── BitNetConfig validation invariants ───────────────────────────────────────
 

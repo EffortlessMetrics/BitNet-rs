@@ -1,0 +1,23 @@
+[package]
+name = "bitnet-warn-once"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Thread-safe warn-once utility for rate-limited logging in BitNet"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+serial_test.workspace = true
+tracing-subscriber.workspace = true

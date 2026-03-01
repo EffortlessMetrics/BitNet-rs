@@ -5,7 +5,7 @@ Thread-safe, rate-limited logging utility for BitNet-rs that eliminates log spam
 ## Quick Start
 
 ```rust
-use bitnet_common::warn_once;
+use bitnet_warn_once::warn_once;
 
 fn deprecated_api() {
     warn_once!("deprecated_v1", "This API is deprecated, please use v2");
@@ -23,7 +23,7 @@ fn deprecated_api() {
 
 ## Implementation
 
-Located in `crates/bitnet-common/src/warn_once.rs`:
+Located in `crates/bitnet-warn-once/src/lib.rs`:
 
 ### Public API
 
@@ -55,13 +55,13 @@ pub fn clear_registry_for_test();
 Run the test suite:
 
 ```bash
-cargo test -p bitnet-common --lib warn_once --no-default-features
+cargo test -p bitnet-warn-once --lib warn_once --no-default-features
 ```
 
 Run the demo example:
 
 ```bash
-cargo run -p bitnet-common --example warn_once_demo --no-default-features
+cargo run -p bitnet-warn-once --example warn_once_demo --no-default-features
 ```
 
 ## Test Coverage
@@ -75,17 +75,17 @@ cargo run -p bitnet-common --example warn_once_demo --no-default-features
 
 ## Documentation
 
-- **Module docs**: `crates/bitnet-common/src/warn_once.rs` (inline documentation)
+- **Module docs**: `crates/bitnet-warn-once/src/lib.rs` (inline documentation)
 - **Usage guide**: `docs/howto/use-warn-once.md` (comprehensive examples)
-- **Demo example**: `crates/bitnet-common/examples/warn_once_demo.rs` (runnable)
+- **Demo example**: `crates/bitnet-warn-once/examples/warn_once_demo.rs` (runnable)
 
 ## Integration
 
-The module is automatically re-exported from `bitnet-common`:
+The module is automatically re-exported from `bitnet-warn-once`:
 
 ```rust
-use bitnet_common::warn_once;         // Macro
-use bitnet_common::warn_once_fn;      // Function
+use bitnet_warn_once::warn_once;         // Macro
+use bitnet_warn_once::warn_once_fn;      // Function
 ```
 
 ## Performance
