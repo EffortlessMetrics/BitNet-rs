@@ -624,6 +624,10 @@ impl BatchEngine {
             Device::Cuda(_) => 50,
             Device::Metal => 60, // TODO: Adjust for Metal performance
             Device::Hip(_) | Device::Npu => 55, // HIP/NPU: similar to GPU performance
+            Device::Metal => 60, // TODO: Adjust for Metal performance
+            Device::Hip(_) | Device::Npu => 55, // HIP/NPU: similar to GPU performance
+            Device::OpenCL(_) => 55, // TODO: Adjust for OpenCL performance
+            Device::Metal => 60, // TODO: Adjust for Metal performance
             Device::OpenCL(_) => 55, // TODO: Adjust for OpenCL performance
         };
 
