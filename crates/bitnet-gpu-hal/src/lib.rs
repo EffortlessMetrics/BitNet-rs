@@ -94,8 +94,6 @@ pub mod compatibility_checker;
 pub mod e2e_integration;
 pub mod model_validator;
 pub mod npu_support;
-pub mod profiling;
-pub mod streaming;
 pub mod test_harness;
 
 // === Infrastructure ===
