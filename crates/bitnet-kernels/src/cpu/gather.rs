@@ -2,9 +2,9 @@
 //! index-based tensor access.
 //!
 //! These functions provide the building blocks for transformer embedding
-//! layers: [`gather`] selects rows from a 2-D table (the embedding
-//! lookup), [`scatter_add`] accumulates gradients back into positions,
-//! and [`index_select`] picks elements along an arbitrary dimension.
+//! layers: [`gather_rows`] selects rows from a 2-D table (the embedding
+//! lookup), [`scatter_add_rows`] accumulates gradients back into positions,
+//! and [`index_select_dim`] picks elements along an arbitrary dimension.
 //!
 //! All operations work on `f32` data with mandatory bounds checking.
 
@@ -30,7 +30,7 @@ fn invalid_args(reason: impl Into<String>) -> BitNetError {
 ///
 /// Returns an error if `num_rows` or `row_len` is zero, `table` is too
 /// short, or any index is out of bounds.
-pub fn gather(
+pub fn gather_rows(
     table: &[f32],
     num_rows: usize,
     row_len: usize,
@@ -75,7 +75,7 @@ pub fn gather(
 ///
 /// Returns an error when buffer sizes are inconsistent or any index is
 /// out of bounds.
-pub fn scatter_add(
+pub fn scatter_add_rows(
     table: &mut [f32],
     num_rows: usize,
     row_len: usize,
@@ -131,7 +131,7 @@ pub fn scatter_add(
 ///
 /// Returns an error when dimensions are zero, the buffer is the wrong
 /// length, or any index is out of bounds.
-pub fn index_select(
+pub fn index_select_dim(
     data: &[f32],
     outer: usize,
     dim_size: usize,
@@ -188,54 +188,54 @@ mod tests {
             7.0, 8.0, 9.0, // row 2
             10.0, 11.0, 12.0, // row 3
         ];
-        let out = gather(&table, 4, 3, &[2, 0, 3]).unwrap();
+        let out = gather_rows(&table, 4, 3, &[2, 0, 3]).unwrap();
         assert_eq!(out, vec![7.0, 8.0, 9.0, 1.0, 2.0, 3.0, 10.0, 11.0, 12.0]);
     }
 
     #[test]
     fn gather_single_row() {
         let table = [10.0, 20.0];
-        let out = gather(&table, 1, 2, &[0]).unwrap();
+        let out = gather_rows(&table, 1, 2, &[0]).unwrap();
         assert_eq!(out, vec![10.0, 20.0]);
     }
 
     #[test]
     fn gather_duplicate_indices() {
         let table = [1.0, 2.0, 3.0, 4.0]; // 2×2
-        let out = gather(&table, 2, 2, &[1, 1, 0, 1]).unwrap();
+        let out = gather_rows(&table, 2, 2, &[1, 1, 0, 1]).unwrap();
         assert_eq!(out, vec![3.0, 4.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
     fn gather_empty_indices() {
         let table = [1.0, 2.0, 3.0];
-        let out = gather(&table, 1, 3, &[]).unwrap();
+        let out = gather_rows(&table, 1, 3, &[]).unwrap();
         assert!(out.is_empty());
     }
 
     #[test]
     fn gather_out_of_bounds() {
         let table = [1.0, 2.0, 3.0, 4.0]; // 2×2
-        let err = gather(&table, 2, 2, &[0, 5]).unwrap_err();
+        let err = gather_rows(&table, 2, 2, &[0, 5]).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
     }
 
     #[test]
     fn gather_zero_rows() {
-        let err = gather(&[], 0, 3, &[]).unwrap_err();
+        let err = gather_rows(&[], 0, 3, &[]).unwrap_err();
         assert!(err.to_string().contains("must be > 0"));
     }
 
     #[test]
     fn gather_zero_row_len() {
-        let err = gather(&[], 2, 0, &[]).unwrap_err();
+        let err = gather_rows(&[], 2, 0, &[]).unwrap_err();
         assert!(err.to_string().contains("must be > 0"));
     }
 
     #[test]
     fn gather_table_too_short() {
         let table = [1.0, 2.0]; // only 2 elements
-        let err = gather(&table, 2, 2, &[0]).unwrap_err();
+        let err = gather_rows(&table, 2, 2, &[0]).unwrap_err();
         assert!(err.to_string().contains("table length"));
     }
 
@@ -245,7 +245,7 @@ mod tests {
     fn scatter_add_accumulates() {
         let mut table = [0.0f32; 6]; // 3×2
         let values = [1.0, 2.0, 3.0, 4.0]; // 2×2
-        scatter_add(&mut table, 3, 2, &[1, 1], &values).unwrap();
+        scatter_add_rows(&mut table, 3, 2, &[1, 1], &values).unwrap();
         // Both rows accumulated into row 1: [1+3, 2+4] = [4, 6]
         assert_eq!(table, [0.0, 0.0, 4.0, 6.0, 0.0, 0.0]);
     }
@@ -254,14 +254,14 @@ mod tests {
     fn scatter_add_disjoint() {
         let mut table = [0.0f32; 6]; // 3×2
         let values = [10.0, 20.0, 30.0, 40.0];
-        scatter_add(&mut table, 3, 2, &[0, 2], &values).unwrap();
+        scatter_add_rows(&mut table, 3, 2, &[0, 2], &values).unwrap();
         assert_eq!(table, [10.0, 20.0, 0.0, 0.0, 30.0, 40.0]);
     }
 
     #[test]
     fn scatter_add_empty_indices() {
         let mut table = [1.0, 2.0];
-        scatter_add(&mut table, 1, 2, &[], &[]).unwrap();
+        scatter_add_rows(&mut table, 1, 2, &[], &[]).unwrap();
         assert_eq!(table, [1.0, 2.0]); // unchanged
     }
 
@@ -269,14 +269,14 @@ mod tests {
     fn scatter_add_out_of_bounds() {
         let mut table = [0.0f32; 4]; // 2×2
         let values = [1.0, 2.0];
-        let err = scatter_add(&mut table, 2, 2, &[5], &values).unwrap_err();
+        let err = scatter_add_rows(&mut table, 2, 2, &[5], &values).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
     }
 
     #[test]
     fn scatter_add_values_too_short() {
         let mut table = [0.0f32; 4];
-        let err = scatter_add(&mut table, 2, 2, &[0, 1], &[1.0, 2.0]).unwrap_err();
+        let err = scatter_add_rows(&mut table, 2, 2, &[0, 1], &[1.0, 2.0]).unwrap_err();
         assert!(err.to_string().contains("values length"));
     }
 
@@ -286,7 +286,7 @@ mod tests {
     fn index_select_along_first_dim() {
         // shape [3, 2]: select along dim 0 (outer=1, dim=3, inner=2)
         let data = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
-        let out = index_select(&data, 1, 3, 2, &[2, 0]).unwrap();
+        let out = index_select_dim(&data, 1, 3, 2, &[2, 0]).unwrap();
         assert_eq!(out, vec![4.0, 5.0, 0.0, 1.0]);
     }
 
@@ -294,7 +294,7 @@ mod tests {
     fn index_select_along_middle_dim() {
         // shape [2, 3, 1]: select along dim 1 (outer=2, dim=3, inner=1)
         let data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
-        let out = index_select(&data, 2, 3, 1, &[1, 2]).unwrap();
+        let out = index_select_dim(&data, 2, 3, 1, &[1, 2]).unwrap();
         // outer 0: [20, 30], outer 1: [50, 60]
         assert_eq!(out, vec![20.0, 30.0, 50.0, 60.0]);
     }
@@ -302,26 +302,26 @@ mod tests {
     #[test]
     fn index_select_empty_indices() {
         let data = [1.0, 2.0, 3.0, 4.0];
-        let out = index_select(&data, 1, 4, 1, &[]).unwrap();
+        let out = index_select_dim(&data, 1, 4, 1, &[]).unwrap();
         assert!(out.is_empty());
     }
 
     #[test]
     fn index_select_out_of_bounds() {
         let data = [1.0, 2.0, 3.0, 4.0];
-        let err = index_select(&data, 1, 2, 2, &[5]).unwrap_err();
+        let err = index_select_dim(&data, 1, 2, 2, &[5]).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
     }
 
     #[test]
     fn index_select_zero_dim() {
-        let err = index_select(&[1.0], 1, 0, 1, &[]).unwrap_err();
+        let err = index_select_dim(&[1.0], 1, 0, 1, &[]).unwrap_err();
         assert!(err.to_string().contains("dim_size must be > 0"));
     }
 
     #[test]
     fn index_select_data_too_short() {
-        let err = index_select(&[1.0], 2, 2, 2, &[0]).unwrap_err();
+        let err = index_select_dim(&[1.0], 2, 2, 2, &[0]).unwrap_err();
         assert!(err.to_string().contains("data length"));
     }
 
@@ -336,10 +336,10 @@ mod tests {
             5.0, 6.0, // row 2
         ];
         let indices = [2, 0, 1];
-        let gathered = gather(&table, 3, 2, &indices).unwrap();
+        let gathered = gather_rows(&table, 3, 2, &indices).unwrap();
 
         let mut reconstructed = [0.0f32; 6];
-        scatter_add(&mut reconstructed, 3, 2, &indices, &gathered).unwrap();
+        scatter_add_rows(&mut reconstructed, 3, 2, &indices, &gathered).unwrap();
         assert_eq!(reconstructed, table);
     }
 
@@ -364,7 +364,7 @@ mod tests {
             fn gather_output_length(
                 (table, num_rows, row_len, indices) in gather_scenario()
             ) {
-                let out = gather(&table, num_rows, row_len, &indices).unwrap();
+                let out = gather_rows(&table, num_rows, row_len, &indices).unwrap();
                 prop_assert_eq!(out.len(), indices.len() * row_len);
             }
 
@@ -372,7 +372,7 @@ mod tests {
             fn gather_values_match_rows(
                 (table, num_rows, row_len, indices) in gather_scenario()
             ) {
-                let out = gather(&table, num_rows, row_len, &indices).unwrap();
+                let out = gather_rows(&table, num_rows, row_len, &indices).unwrap();
                 for (i, &idx) in indices.iter().enumerate() {
                     let expected = &table[idx * row_len..(idx + 1) * row_len];
                     let actual = &out[i * row_len..(i + 1) * row_len];
@@ -391,9 +391,9 @@ mod tests {
                             sorted.len() == indices.len() && indices.len() <= *num_rows
                         })
             ) {
-                let gathered = gather(&table, num_rows, row_len, &indices).unwrap();
+                let gathered = gather_rows(&table, num_rows, row_len, &indices).unwrap();
                 let mut reconstructed = vec![0.0f32; num_rows * row_len];
-                scatter_add(&mut reconstructed, num_rows, row_len, &indices, &gathered).unwrap();
+                scatter_add_rows(&mut reconstructed, num_rows, row_len, &indices, &gathered).unwrap();
                 // Only gathered rows should match — others stay zero.
                 for &idx in &indices {
                     let expected = &table[idx * row_len..(idx + 1) * row_len];
@@ -410,7 +410,7 @@ mod tests {
             ) {
                 let table = vec![0.0f32; num_rows * row_len];
                 if oob_idx >= num_rows {
-                    prop_assert!(gather(&table, num_rows, row_len, &[oob_idx]).is_err());
+                    prop_assert!(gather_rows(&table, num_rows, row_len, &[oob_idx]).is_err());
                 }
             }
 
@@ -423,7 +423,7 @@ mod tests {
                 let outer = 1usize;
                 let data = vec![0.0f32; outer * dim_size * inner];
                 let valid: Vec<usize> = indices.into_iter().filter(|&i| i < dim_size).collect();
-                let out = index_select(&data, outer, dim_size, inner, &valid).unwrap();
+                let out = index_select_dim(&data, outer, dim_size, inner, &valid).unwrap();
                 prop_assert_eq!(out.len(), outer * valid.len() * inner);
             }
         }
