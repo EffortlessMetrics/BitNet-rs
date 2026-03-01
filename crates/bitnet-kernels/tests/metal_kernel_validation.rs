@@ -460,13 +460,15 @@ mod apple_silicon_capabilities {
 
     #[test]
     fn apple_m1_supports_fp16_matmul() {
-        let q = CapabilityQuery::new(&apple_m1());
+        let binding = apple_m1();
+        let q = CapabilityQuery::new(&binding);
         assert!(q.supports(OperationCategory::MatrixOps, PrecisionSupport::FP16));
     }
 
     #[test]
     fn apple_m1_best_matmul_precision_is_fp16() {
-        let q = CapabilityQuery::new(&apple_m1());
+        let binding = apple_m1();
+        let q = CapabilityQuery::new(&binding);
         let best = q.best_precision_for(OperationCategory::MatrixOps);
         assert_eq!(best, Some(PrecisionSupport::FP16));
     }

@@ -12,9 +12,9 @@
 pub mod backend_dispatcher;
 pub mod backend_registry;
 pub mod context_pool;
+pub mod diagnostics;
 pub mod kv_cache;
 pub mod paged_attention;
-pub mod diagnostics;
 pub mod system_info;
 
 pub use diagnostics::{DiagnosticReport, GpuDiagnostics, format_json, format_report};
