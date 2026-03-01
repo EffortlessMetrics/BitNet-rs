@@ -117,6 +117,7 @@ pub mod tokenizer_wrapper;
 pub mod benchmark_harness;
 pub mod continuous_profiling;
 pub mod gpu_memory_profiler;
+pub mod gpu_topology;
 pub mod model_debugger;
 
 // === Testing & Validation ===
