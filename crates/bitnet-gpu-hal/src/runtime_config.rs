@@ -168,16 +168,12 @@ impl Default for EnvParser {
 impl EnvParser {
     /// Create a parser using the default `BITNET_` prefix.
     pub fn new() -> Self {
-        Self {
-            prefix: "BITNET_".into(),
-        }
+        Self { prefix: "BITNET_".into() }
     }
 
     /// Create a parser with a custom prefix.
     pub fn with_prefix(prefix: impl Into<String>) -> Self {
-        Self {
-            prefix: prefix.into(),
-        }
+        Self { prefix: prefix.into() }
     }
 
     /// Return the configured prefix.
@@ -207,9 +203,8 @@ impl EnvParser {
                 .map_err(|_| ConfigError::EnvParse(format!("invalid NUM_THREADS: {v}")))?;
         }
         if let Some(v) = vars.get(&format!("{}BATCH_SIZE", self.prefix)) {
-            cfg.batch_size = v
-                .parse()
-                .map_err(|_| ConfigError::EnvParse(format!("invalid BATCH_SIZE: {v}")))?;
+            cfg.batch_size =
+                v.parse().map_err(|_| ConfigError::EnvParse(format!("invalid BATCH_SIZE: {v}")))?;
         }
         if let Some(v) = vars.get(&format!("{}LOG_LEVEL", self.prefix)) {
             cfg.log_level = v.to_lowercase();
@@ -226,8 +221,7 @@ impl EnvParser {
         for (k, v) in vars {
             if let Some(name) = k.strip_prefix(&feature_prefix) {
                 let enabled = matches!(v.to_lowercase().as_str(), "1" | "true" | "yes");
-                cfg.feature_flags
-                    .set(name.to_lowercase(), enabled);
+                cfg.feature_flags.set(name.to_lowercase(), enabled);
             }
         }
 
@@ -282,10 +276,7 @@ impl ConfigFile {
 
     /// Create a handle with an explicit format.
     pub fn with_format(path: impl Into<PathBuf>, format: ConfigFormat) -> Self {
-        Self {
-            path: path.into(),
-            format,
-        }
+        Self { path: path.into(), format }
     }
 
     /// Return the file path.
@@ -335,12 +326,10 @@ impl ConfigFile {
         match path.extension().and_then(|e| e.to_str()) {
             Some("toml") => Ok(ConfigFormat::Toml),
             Some("json") => Ok(ConfigFormat::Json),
-            Some(ext) => Err(ConfigError::Validation(format!(
-                "unsupported config extension: .{ext}"
-            ))),
-            None => Err(ConfigError::Validation(
-                "config file has no extension".into(),
-            )),
+            Some(ext) => {
+                Err(ConfigError::Validation(format!("unsupported config extension: .{ext}")))
+            }
+            None => Err(ConfigError::Validation("config file has no extension".into())),
         }
     }
 }
@@ -372,18 +361,12 @@ pub struct ConfigSource {
 impl ConfigMerger {
     /// Create a new, empty merger.
     pub fn new() -> Self {
-        Self {
-            sources: Vec::new(),
-        }
+        Self { sources: Vec::new() }
     }
 
     /// Register a source. Higher priority overrides lower.
     pub fn add_source(&mut self, name: impl Into<String>, config: RuntimeConfig, priority: u32) {
-        self.sources.push(ConfigSource {
-            name: name.into(),
-            config,
-            priority,
-        });
+        self.sources.push(ConfigSource { name: name.into(), config, priority });
     }
 
     /// Return a reference to all registered sources.
@@ -505,10 +488,8 @@ impl ConfigValidator {
             errors.push("batch_size must be > 0".into());
         }
         if cfg.batch_size > self.max_batch_size {
-            errors.push(format!(
-                "batch_size {} exceeds max {}",
-                cfg.batch_size, self.max_batch_size
-            ));
+            errors
+                .push(format!("batch_size {} exceeds max {}", cfg.batch_size, self.max_batch_size));
         }
         if !self.allowed_log_levels.contains(&cfg.log_level) {
             errors.push(format!("invalid log_level: {}", cfg.log_level));
@@ -520,11 +501,7 @@ impl ConfigValidator {
     /// Convenience: validate and return a [`ConfigError`] if any violations.
     pub fn validate_strict(&self, cfg: &RuntimeConfig) -> Result<(), ConfigError> {
         let errors = self.validate(cfg);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(ConfigError::Validation(errors.join("; ")))
-        }
+        if errors.is_empty() { Ok(()) } else { Err(ConfigError::Validation(errors.join("; "))) }
     }
 }
 
@@ -679,10 +656,8 @@ static SNAPSHOT_VERSION: AtomicU64 = AtomicU64::new(1);
 impl ConfigSnapshot {
     /// Capture a snapshot of the given configuration.
     pub fn capture(cfg: &RuntimeConfig) -> Self {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let now =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         Self {
             config: cfg.clone(),
             captured_at_ms: now,
@@ -767,12 +742,8 @@ impl ConfigDiff {
         }
 
         // Feature flag changes
-        let all_flag_keys: HashSet<_> = old
-            .feature_flags
-            .names()
-            .into_iter()
-            .chain(new.feature_flags.names())
-            .collect();
+        let all_flag_keys: HashSet<_> =
+            old.feature_flags.names().into_iter().chain(new.feature_flags.names()).collect();
         for key in all_flag_keys {
             let ov = old.feature_flags.is_enabled(key);
             let nv = new.feature_flags.is_enabled(key);
@@ -969,17 +940,11 @@ mod tests {
     // ── Helpers ─────────────────────────────────────────────────────────
 
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
-        pairs
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect()
+        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
     }
 
     fn tmp_toml(cfg: &RuntimeConfig) -> tempfile::NamedTempFile {
-        let mut f = tempfile::Builder::new()
-            .suffix(".toml")
-            .tempfile()
-            .unwrap();
+        let mut f = tempfile::Builder::new().suffix(".toml").tempfile().unwrap();
         let text = toml::to_string_pretty(cfg).unwrap();
         f.write_all(text.as_bytes()).unwrap();
         f.flush().unwrap();
@@ -987,10 +952,7 @@ mod tests {
     }
 
     fn tmp_json(cfg: &RuntimeConfig) -> tempfile::NamedTempFile {
-        let mut f = tempfile::Builder::new()
-            .suffix(".json")
-            .tempfile()
-            .unwrap();
+        let mut f = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
         let text = serde_json::to_string_pretty(cfg).unwrap();
         f.write_all(text.as_bytes()).unwrap();
         f.flush().unwrap();
@@ -1156,9 +1118,7 @@ mod tests {
     #[test]
     fn test_env_parser_device_index() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_DEVICE_INDEX", "3")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_DEVICE_INDEX", "3")])).unwrap();
         assert_eq!(cfg.device_index, 3);
     }
 
@@ -1172,27 +1132,21 @@ mod tests {
     #[test]
     fn test_env_parser_num_threads() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_NUM_THREADS", "16")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_NUM_THREADS", "16")])).unwrap();
         assert_eq!(cfg.num_threads, 16);
     }
 
     #[test]
     fn test_env_parser_batch_size() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_BATCH_SIZE", "32")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_BATCH_SIZE", "32")])).unwrap();
         assert_eq!(cfg.batch_size, 32);
     }
 
     #[test]
     fn test_env_parser_log_level() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_LOG_LEVEL", "DEBUG")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_LOG_LEVEL", "DEBUG")])).unwrap();
         assert_eq!(cfg.log_level, "debug");
     }
 
@@ -1200,9 +1154,7 @@ mod tests {
     fn test_env_parser_profiling_true() {
         let parser = EnvParser::new();
         for val in &["1", "true", "yes"] {
-            let cfg = parser
-                .parse_from_map(&env(&[("BITNET_ENABLE_PROFILING", val)]))
-                .unwrap();
+            let cfg = parser.parse_from_map(&env(&[("BITNET_ENABLE_PROFILING", val)])).unwrap();
             assert!(cfg.enable_profiling, "failed for {val}");
         }
     }
@@ -1210,72 +1162,56 @@ mod tests {
     #[test]
     fn test_env_parser_profiling_false() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_ENABLE_PROFILING", "0")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_ENABLE_PROFILING", "0")])).unwrap();
         assert!(!cfg.enable_profiling);
     }
 
     #[test]
     fn test_env_parser_model_path() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MODEL_PATH", "/models/x.gguf")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MODEL_PATH", "/models/x.gguf")])).unwrap();
         assert_eq!(cfg.model_path.as_deref(), Some("/models/x.gguf"));
     }
 
     #[test]
     fn test_env_parser_memory_plain() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "1024")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "1024")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 1024);
     }
 
     #[test]
     fn test_env_parser_memory_kilobytes() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "4K")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "4K")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 4 * 1024);
     }
 
     #[test]
     fn test_env_parser_memory_megabytes() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "2M")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "2M")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 2 * 1024 * 1024);
     }
 
     #[test]
     fn test_env_parser_memory_gigabytes() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "8G")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "8G")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 8 * 1024 * 1024 * 1024);
     }
 
     #[test]
     fn test_env_parser_memory_terabytes() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "1T")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "1T")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 1024 * 1024 * 1024 * 1024);
     }
 
     #[test]
     fn test_env_parser_memory_empty() {
         let parser = EnvParser::new();
-        let cfg = parser
-            .parse_from_map(&env(&[("BITNET_MAX_MEMORY", "")]))
-            .unwrap();
+        let cfg = parser.parse_from_map(&env(&[("BITNET_MAX_MEMORY", "")])).unwrap();
         assert_eq!(cfg.max_memory_bytes, 0);
     }
 
@@ -1635,10 +1571,7 @@ mod tests {
         let v = ConfigValidator::new();
         let mut cfg = RuntimeConfig::default();
         cfg.num_threads = 0;
-        assert!(matches!(
-            v.validate_strict(&cfg),
-            Err(ConfigError::Validation(_))
-        ));
+        assert!(matches!(v.validate_strict(&cfg), Err(ConfigError::Validation(_))));
     }
 
     #[test]
@@ -2058,8 +1991,7 @@ mod tests {
 
     #[test]
     fn test_engine_missing_file_ok() {
-        let mut engine =
-            RuntimeConfigEngine::new().with_file("/nonexistent/path/config.toml");
+        let mut engine = RuntimeConfigEngine::new().with_file("/nonexistent/path/config.toml");
         // Missing file is not an error; it's just skipped.
         engine.load(&HashMap::new()).unwrap();
         assert_eq!(engine.current(), &RuntimeConfig::default());
