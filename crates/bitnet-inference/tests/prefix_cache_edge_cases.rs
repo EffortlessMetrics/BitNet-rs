@@ -50,12 +50,8 @@ fn config_custom() {
 
 #[test]
 fn eviction_policy_variants_are_distinct() {
-    let policies = [
-        EvictionPolicy::LRU,
-        EvictionPolicy::LFU,
-        EvictionPolicy::FIFO,
-        EvictionPolicy::TTL,
-    ];
+    let policies =
+        [EvictionPolicy::LRU, EvictionPolicy::LFU, EvictionPolicy::FIFO, EvictionPolicy::TTL];
     for (i, a) in policies.iter().enumerate() {
         for (j, b) in policies.iter().enumerate() {
             if i == j {
@@ -378,11 +374,8 @@ fn cache_entry_hits_increment() {
 
 #[test]
 fn eviction_on_max_entries() {
-    let cfg = PrefixCacheConfig {
-        max_entries: 2,
-        min_prefix_length: 1,
-        ..PrefixCacheConfig::default()
-    };
+    let cfg =
+        PrefixCacheConfig { max_entries: 2, min_prefix_length: 1, ..PrefixCacheConfig::default() };
     let mut cache = PrefixCache::new(cfg);
 
     cache.insert(&[1, 2, 3, 4], vec![0u8; 8]).unwrap();
@@ -557,11 +550,8 @@ fn stats_clone() {
 
 #[test]
 fn many_entries_with_eviction() {
-    let cfg = PrefixCacheConfig {
-        max_entries: 10,
-        min_prefix_length: 1,
-        ..PrefixCacheConfig::default()
-    };
+    let cfg =
+        PrefixCacheConfig { max_entries: 10, min_prefix_length: 1, ..PrefixCacheConfig::default() };
     let mut cache = PrefixCache::new(cfg);
 
     // Insert 20 entries — should trigger eviction after 10
