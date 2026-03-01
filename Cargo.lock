@@ -820,6 +820,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-metal"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-models"
 version = "0.2.1-dev"
 dependencies = [
