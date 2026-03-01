@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: "order_vals.join(\", \")"
+---
+Calibration=0, Quantization=1, Verification=2, PackingOptimization=3

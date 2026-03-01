@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave10.rs
+expression: codes
+---
+SUCCESS=0 GENERIC_FAIL=1 STRICT_TOKENIZER=4 NLL_TOO_HIGH=5 TAU_TOO_LOW=6 ARGMAX_MISMATCH=7 LN_SUSPICIOUS=8 PERF_FAIL=9 RSS_FAIL=10

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: err.to_string()
+---
+Resource limit exceeded: exceeded 16GB memory limit

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave10.rs
+expression: strategies
+---
+[
+    "PreferGpu",
+    "CpuOnly",
+    "PerformanceBased",
+    "LoadBalance",
+]

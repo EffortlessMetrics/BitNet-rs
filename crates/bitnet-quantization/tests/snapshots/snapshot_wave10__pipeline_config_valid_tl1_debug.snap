@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: cfg
+---
+PipelineConfig {
+    source_precision: F32,
+    target_precision: TL1,
+    calibration_samples: 200,
+    error_threshold: 0.005,
+}

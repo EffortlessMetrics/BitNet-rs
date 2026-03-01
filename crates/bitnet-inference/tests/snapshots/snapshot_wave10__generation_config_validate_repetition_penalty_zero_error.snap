@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave10.rs
+expression: err
+---
+repetition_penalty must be positive

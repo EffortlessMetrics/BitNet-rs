@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: err.to_string()
+---
+Quantization error: Invalid input dimensions: target precision cannot be F32
