@@ -152,6 +152,7 @@ pub mod instruction_tuning;
 pub mod model_hub;
 pub mod model_pruning;
 pub mod multimodal_fusion;
+pub mod semantic_search;
 
 // === SPIR-V ===
 pub mod perf_comparison;
