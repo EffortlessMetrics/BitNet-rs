@@ -6,8 +6,7 @@
 
 use bitnet_opencl::backend_registry::{BackendProvider, BackendRegistry};
 use bitnet_opencl::{
-    BackendDispatcher, BackendStatus, DispatchError, DispatchLog,
-    DispatchStrategy, Operation,
+    BackendDispatcher, BackendStatus, DispatchError, DispatchLog, DispatchStrategy, Operation,
 };
 
 // ── Mock backend ─────────────────────────────────────────────────────────────
