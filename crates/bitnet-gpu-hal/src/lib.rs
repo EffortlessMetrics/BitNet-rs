@@ -120,6 +120,7 @@ pub mod gpu_memory_profiler;
 pub mod model_debugger;
 
 // === Testing & Validation ===
+pub mod activation_kernels;
 pub mod compatibility_checker;
 pub mod cross_compile;
 pub mod e2e_integration;
