@@ -550,15 +550,20 @@ impl MultiHeadAttention {
         proj_name: &str,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
-        // Generate weight name based on layer index and projection name
-        // Format: "layers.{idx}.attention.{proj_name}.weight.qk256_qs"
-        let qk256_key =
-            format!("layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name);
+        // Prefer remapped key, but keep fallbacks for partially-mapped sources.
+        let qk256_keys = [
+            format!("layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("model.layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("model.layers.{}.self_attn.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("layers.{}.self_attn.{}.weight.qk256_qs", self.layer_idx, proj_name),
+        ];
 
-        // Check for QK256 data
-        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
-            tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return Self::forward_qk256(input, qk256_tensor, &qk256_key);
+        // Check for QK256 data using known key variants
+        for qk256_key in &qk256_keys {
+            if let Some(qk256_tensor) = raw_tensors.get(qk256_key) {
+                tracing::debug!("Using QK256 kernel for {}", qk256_key);
+                return Self::forward_qk256(input, qk256_tensor, qk256_key);
+            }
         }
 
         // Probe: Why is QK256 not found? (layer 0 only, once)
@@ -567,7 +572,7 @@ impl MultiHeadAttention {
             FALLBACK_LOGGED.call_once(|| {
                 eprintln!(
                     "trace_fallback: QK256 key '{}' not found in raw_tensors ({}keys total)",
-                    qk256_key,
+                    qk256_keys[0],
                     raw_tensors.len()
                 );
                 // Show first few keys for debugging
@@ -805,15 +810,20 @@ impl FeedForward {
         proj_name: &str,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
-        // Generate weight name based on layer index and projection name
-        // Format: "layers.{idx}.feed_forward.{proj_name}.weight.qk256_qs"
-        let qk256_key =
-            format!("layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name);
+        // Prefer remapped key, but keep fallbacks for partially-mapped sources.
+        let qk256_keys = [
+            format!("layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("model.layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("model.layers.{}.mlp.{}.weight.qk256_qs", self.layer_idx, proj_name),
+            format!("layers.{}.mlp.{}.weight.qk256_qs", self.layer_idx, proj_name),
+        ];
 
-        // Check for QK256 data
-        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
-            tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return Self::forward_qk256(input, qk256_tensor, &qk256_key);
+        // Check for QK256 data using known key variants
+        for qk256_key in &qk256_keys {
+            if let Some(qk256_tensor) = raw_tensors.get(qk256_key) {
+                tracing::debug!("Using QK256 kernel for {}", qk256_key);
+                return Self::forward_qk256(input, qk256_tensor, qk256_key);
+            }
         }
 
         // Fall back to standard linear
