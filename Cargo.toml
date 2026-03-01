@@ -18,6 +18,7 @@ members = [
   "crates/bitnet-quantization",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
+  "crates/bitnet-opencl-work-size", # SRP: OpenCL dispatch/workgroup heuristics
   "crates/bitnet-inference",
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
@@ -121,6 +122,7 @@ default-members = [
   "crates/bitnet-tokenizer-discovery-core",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
+  "crates/bitnet-opencl-work-size", # SRP: OpenCL dispatch/workgroup heuristics
   "crates/bitnet-inference",
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
