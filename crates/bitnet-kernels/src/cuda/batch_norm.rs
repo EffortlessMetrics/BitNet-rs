@@ -514,7 +514,7 @@ pub fn batch_norm_cpu_fallback(
         }
         .into());
     }
-    if input.len() % c != 0 {
+    if !input.len().is_multiple_of(c) {
         return Err(KernelError::InvalidArguments {
             reason: format!(
                 "batch_norm_cpu_fallback: input length {} not divisible by num_features {c}",
@@ -601,7 +601,7 @@ pub fn batch_norm_inference_cpu_fallback(
         .into());
     }
     let c = gamma.len();
-    if input.len() % c != 0 {
+    if !input.len().is_multiple_of(c) {
         return Err(KernelError::InvalidArguments {
             reason: format!(
                 "batch_norm_inference_cpu_fallback: input length {} not divisible by \
