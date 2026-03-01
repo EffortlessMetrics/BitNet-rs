@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 164
+expression: fmt_f32(&out)
+---
+-[FP], -[FP], -[FP], [FP], [FP], [FP], [FP], [FP]

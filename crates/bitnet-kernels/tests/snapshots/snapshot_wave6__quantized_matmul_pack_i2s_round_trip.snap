@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 269
+expression: "format!(\"packed=0x{packed:02x} binary=0b{packed:08b}\")"
+---
+packed=0x4d binary=0b01001101

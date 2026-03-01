@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 207
+expression: "format!(\"argmax={} value={:.6}\", result.index, result.value)"
+---
+argmax=5 value=5.000000

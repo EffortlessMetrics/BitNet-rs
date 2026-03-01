@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 126
+expression: fmt_f32(&out)
+---
+-0.333333, -0.333333, -0.208333, 0.000000, 0.135417, 0.291667, 0.666667, 1.666667
