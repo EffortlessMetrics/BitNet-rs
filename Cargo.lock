@@ -811,6 +811,7 @@ dependencies = [
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
+ "bitnet-simd",
  "bitnet-test-support",
  "bitnet-tests",
  "bytemuck",
@@ -1177,6 +1178,10 @@ dependencies = [
  "vergen-gix",
  "walkdir",
 ]
+
+[[package]]
+name = "bitnet-simd"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-st-tools"

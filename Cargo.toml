@@ -3,6 +3,7 @@ members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
   "crates/bitnet-math",
+  "crates/bitnet-simd",
   "crates/bitnet-warn-once",
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
@@ -92,6 +93,7 @@ resolver = "2"
 default-members = [
   "crates/bitnet-common",
   "crates/bitnet-math",
+  "crates/bitnet-simd",
   "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
   "crates/bitnet-rope",
