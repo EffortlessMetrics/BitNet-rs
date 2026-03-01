@@ -38,6 +38,7 @@ members = [
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
+  "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
@@ -114,6 +115,7 @@ default-members = [
   "crates/bitnet-receipts",
   "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
+  "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli",
   "crates/bitnet-server",
   "crates/bitnet-st2gguf",
