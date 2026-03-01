@@ -1,0 +1,19 @@
+[package]
+name = "bitnet-download-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Core SRP download helpers for offline toggles, content-range parsing, validation, and atomic metadata writes"
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

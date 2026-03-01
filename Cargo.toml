@@ -79,6 +79,7 @@ members = [
   "crates/bitnet-test-env",
   "crates/bitnet-test-fixtures-core",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download-core", # SRP: reusable download/offline/content-range core helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
@@ -150,6 +151,7 @@ default-members = [
   "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download-core", # SRP: reusable download/offline/content-range core helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
 ]
 
