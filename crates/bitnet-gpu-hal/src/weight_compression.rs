@@ -58,12 +58,7 @@ pub struct CompressionConfig {
 
 impl Default for CompressionConfig {
     fn default() -> Self {
-        Self {
-            format: CompressionFormat::Gptq,
-            group_size: 128,
-            bits: 4,
-            symmetric: true,
-        }
+        Self { format: CompressionFormat::Gptq, group_size: 128, bits: 4, symmetric: true }
     }
 }
 
@@ -98,9 +93,7 @@ impl CompressedTensor {
     /// Compression ratio (original f32 bytes / compressed bytes).
     pub fn compression_ratio(&self) -> f32 {
         let orig = self.original_elements() * 4;
-        let comp = self.compressed_bytes()
-            + self.scales.len() * 4
-            + self.zero_points.len() * 4;
+        let comp = self.compressed_bytes() + self.scales.len() * 4 + self.zero_points.len() * 4;
         if comp == 0 {
             return 0.0;
         }
@@ -123,10 +116,7 @@ pub trait WeightCompressor: Send + Sync {
     ) -> Result<CompressedTensor, HalError>;
 
     /// Decompress back to f32 weights.
-    fn decompress(
-        &self,
-        tensor: &CompressedTensor,
-    ) -> Result<Vec<f32>, HalError>;
+    fn decompress(&self, tensor: &CompressedTensor) -> Result<Vec<f32>, HalError>;
 
     /// Name of this compressor for logging.
     fn name(&self) -> &'static str;
@@ -156,11 +146,7 @@ impl WeightCompressor for GptqCompressor {
         if weights.is_empty() {
             return Err(HalError::EmptyInput);
         }
-        let group_size = if config.group_size == 0 {
-            weights.len()
-        } else {
-            config.group_size
-        };
+        let group_size = if config.group_size == 0 { weights.len() } else { config.group_size };
         let num_groups = weights.len().div_ceil(group_size);
         let mut scales = Vec::with_capacity(num_groups);
         let mut zero_points = Vec::new();
@@ -195,11 +181,7 @@ impl WeightCompressor for GptqCompressor {
             scales.push(scale);
 
             #[allow(clippy::cast_precision_loss)]
-            let zp = if config.symmetric {
-                (max_val / 2) as f32
-            } else {
-                0.0
-            };
+            let zp = if config.symmetric { (max_val / 2) as f32 } else { 0.0 };
             if !config.symmetric {
                 zero_points.push(zp);
             }
@@ -228,17 +210,10 @@ impl WeightCompressor for GptqCompressor {
         })
     }
 
-    fn decompress(
-        &self,
-        tensor: &CompressedTensor,
-    ) -> Result<Vec<f32>, HalError> {
+    fn decompress(&self, tensor: &CompressedTensor) -> Result<Vec<f32>, HalError> {
         let n = tensor.original_elements();
         let unpacked = unpack_nbit(&tensor.data, tensor.config.bits, n);
-        let group_size = if tensor.config.group_size == 0 {
-            n
-        } else {
-            tensor.config.group_size
-        };
+        let group_size = if tensor.config.group_size == 0 { n } else { tensor.config.group_size };
 
         let mut out = Vec::with_capacity(n);
         for (i, &q) in unpacked.iter().enumerate() {
@@ -298,11 +273,8 @@ impl WeightCompressor for AwqCompressor {
             return Err(HalError::EmptyInput);
         }
         // Scale weights by activation importance.
-        let scaled: Vec<f32> = weights
-            .iter()
-            .enumerate()
-            .map(|(i, &w)| w * self.effective_scale(i))
-            .collect();
+        let scaled: Vec<f32> =
+            weights.iter().enumerate().map(|(i, &w)| w * self.effective_scale(i)).collect();
 
         // Delegate to GPTQ-style quantization on the scaled weights.
         let gptq = GptqCompressor;
@@ -312,10 +284,7 @@ impl WeightCompressor for AwqCompressor {
         Ok(tensor)
     }
 
-    fn decompress(
-        &self,
-        tensor: &CompressedTensor,
-    ) -> Result<Vec<f32>, HalError> {
+    fn decompress(&self, tensor: &CompressedTensor) -> Result<Vec<f32>, HalError> {
         let gptq = GptqCompressor;
         let scaled = gptq.decompress(tensor)?;
         // Undo activation scaling.
@@ -370,11 +339,7 @@ impl WeightCompressor for TernaryCompressor {
         if weights.is_empty() {
             return Err(HalError::EmptyInput);
         }
-        let max_abs = weights
-            .iter()
-            .copied()
-            .map(f32::abs)
-            .fold(0.0_f32, f32::max);
+        let max_abs = weights.iter().copied().map(f32::abs).fold(0.0_f32, f32::max);
         let scale = if max_abs == 0.0 { 1.0 } else { max_abs };
         let threshold = 0.5;
 
@@ -415,10 +380,7 @@ impl WeightCompressor for TernaryCompressor {
         })
     }
 
-    fn decompress(
-        &self,
-        tensor: &CompressedTensor,
-    ) -> Result<Vec<f32>, HalError> {
+    fn decompress(&self, tensor: &CompressedTensor) -> Result<Vec<f32>, HalError> {
         let n = tensor.original_elements();
         let scale = tensor.scales.first().copied().unwrap_or(1.0);
 
@@ -462,15 +424,10 @@ impl CompressionAnalyzer {
             return 0.0;
         }
         let orig_bits = n * 32;
-        let group_size = if config.group_size == 0 {
-            n
-        } else {
-            config.group_size
-        };
+        let group_size = if config.group_size == 0 { n } else { config.group_size };
         let num_groups = n.div_ceil(group_size);
         // Compressed: bits per weight + 32-bit scale per group.
-        let comp_bits =
-            n * config.bits as usize + num_groups * 32;
+        let comp_bits = n * config.bits as usize + num_groups * 32;
         #[allow(clippy::cast_precision_loss)]
         {
             orig_bits as f32 / comp_bits as f32
@@ -478,9 +435,7 @@ impl CompressionAnalyzer {
     }
 
     /// Estimate decompression FLOPs per element.
-    pub const fn estimate_decompression_cost(
-        config: &CompressionConfig,
-    ) -> f32 {
+    pub const fn estimate_decompression_cost(config: &CompressionConfig) -> f32 {
         match config.format {
             // Dequant: multiply + subtract zero point.
             CompressionFormat::Gptq => 3.0,
@@ -503,12 +458,9 @@ impl CompressionAnalyzer {
         let decompressed = compressor.decompress(&compressed)?;
 
         #[allow(clippy::cast_precision_loss)]
-        let mse = weights
-            .iter()
-            .zip(decompressed.iter())
-            .map(|(&a, &b)| (a - b) * (a - b))
-            .sum::<f32>()
-            / weights.len().max(1) as f32;
+        let mse =
+            weights.iter().zip(decompressed.iter()).map(|(&a, &b)| (a - b) * (a - b)).sum::<f32>()
+                / weights.len().max(1) as f32;
 
         Ok(CompressionAnalysis {
             ratio: compressed.compression_ratio(),
@@ -536,13 +488,7 @@ impl DecompressionKernel {
     ///
     /// `packed` is the raw compressed bytes for one group.
     /// `scale` and `zero_point` are the group parameters.
-    pub fn decompress_group(
-        &self,
-        packed: &[u8],
-        scale: f32,
-        zero_point: f32,
-        output: &mut [f32],
-    ) {
+    pub fn decompress_group(&self, packed: &[u8], scale: f32, zero_point: f32, output: &mut [f32]) {
         let bits = self.config.bits;
         let unpacked = unpack_nbit(packed, bits, output.len());
         for (out, &q) in output.iter_mut().zip(unpacked.iter()) {
@@ -552,14 +498,9 @@ impl DecompressionKernel {
 
     /// Decompress a full [`CompressedTensor`] using the appropriate
     /// compressor.
-    pub fn decompress_tensor(
-        &self,
-        tensor: &CompressedTensor,
-    ) -> Result<Vec<f32>, HalError> {
+    pub fn decompress_tensor(&self, tensor: &CompressedTensor) -> Result<Vec<f32>, HalError> {
         match tensor.config.format {
-            CompressionFormat::TernaryPacked => {
-                TernaryCompressor.decompress(tensor)
-            }
+            CompressionFormat::TernaryPacked => TernaryCompressor.decompress(tensor),
             _ => GptqCompressor.decompress(tensor),
         }
     }
@@ -591,9 +532,7 @@ pub fn pack_nbit(vals: &[u8], bits: u8) -> Vec<u8> {
             if bit_offset + bits as usize > 8 && byte_idx + 1 < num_bytes {
                 out[byte_idx + 1] |= (v16 >> (8 - bit_offset)) as u8;
             }
-            if bit_offset + bits as usize > 16
-                && byte_idx + 2 < num_bytes
-            {
+            if bit_offset + bits as usize > 16 && byte_idx + 2 < num_bytes {
                 out[byte_idx + 2] |= (v16 >> (16 - bit_offset)) as u8;
             }
         }
@@ -617,11 +556,8 @@ pub fn unpack_nbit(data: &[u8], bits: u8, count: usize) -> Vec<u8> {
         let byte_idx = bit_pos / 8;
         let bit_offset = bit_pos % 8;
 
-        let mut val = if byte_idx < data.len() {
-            u16::from(data[byte_idx]) >> bit_offset
-        } else {
-            0
-        };
+        let mut val =
+            if byte_idx < data.len() { u16::from(data[byte_idx]) >> bit_offset } else { 0 };
         if bit_offset + bits as usize > 8 && byte_idx + 1 < data.len() {
             val |= u16::from(data[byte_idx + 1]) << (8 - bit_offset);
         }
@@ -679,15 +615,9 @@ mod tests {
         assert_eq!(CompressionFormat::Gptq.to_string(), "GPTQ");
         assert_eq!(CompressionFormat::Awq.to_string(), "AWQ");
         assert_eq!(CompressionFormat::SqueezeLlm.to_string(), "SqueezeLLM");
-        assert_eq!(
-            CompressionFormat::Bitsandbytes.to_string(),
-            "bitsandbytes"
-        );
+        assert_eq!(CompressionFormat::Bitsandbytes.to_string(), "bitsandbytes");
         assert_eq!(CompressionFormat::Ggml.to_string(), "GGML");
-        assert_eq!(
-            CompressionFormat::TernaryPacked.to_string(),
-            "TernaryPacked"
-        );
+        assert_eq!(CompressionFormat::TernaryPacked.to_string(), "TernaryPacked");
     }
 
     #[test]
@@ -847,8 +777,7 @@ mod tests {
     fn gptq_roundtrip_small_values() {
         let c = GptqCompressor;
         let cfg = CompressionConfig { bits: 4, ..Default::default() };
-        let weights: Vec<f32> =
-            (0..32).map(|i| (i as f32 - 16.0) * 0.1).collect();
+        let weights: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.1).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         assert_eq!(decompressed.len(), weights.len());
@@ -866,10 +795,7 @@ mod tests {
     #[test]
     fn gptq_per_tensor_group() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            group_size: 0,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { group_size: 0, ..Default::default() };
         let weights: Vec<f32> = (0..64).map(|i| i as f32 * 0.5).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         assert_eq!(compressed.scales.len(), 1);
@@ -878,13 +804,8 @@ mod tests {
     #[test]
     fn gptq_asymmetric_mode() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            symmetric: false,
-            group_size: 16,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..32).map(|i| (i as f32) * 0.2).collect();
+        let cfg = CompressionConfig { symmetric: false, group_size: 16, ..Default::default() };
+        let weights: Vec<f32> = (0..32).map(|i| (i as f32) * 0.2).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         assert!(!compressed.zero_points.is_empty());
         let decompressed = c.decompress(&compressed).unwrap();
@@ -917,11 +838,7 @@ mod tests {
     #[test]
     fn gptq_2bit_mode() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            bits: 2,
-            group_size: 8,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { bits: 2, group_size: 8, ..Default::default() };
         let weights: Vec<f32> = (0..16).map(|i| i as f32 * 0.3).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
@@ -931,13 +848,8 @@ mod tests {
     #[test]
     fn gptq_8bit_mode() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            bits: 8,
-            group_size: 32,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..64).map(|i| (i as f32 - 32.0) * 0.05).collect();
+        let cfg = CompressionConfig { bits: 8, group_size: 32, ..Default::default() };
+        let weights: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.05).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         // 8-bit should have lower error than 4-bit.
@@ -962,8 +874,7 @@ mod tests {
     fn awq_uniform_roundtrip() {
         let c = AwqCompressor::uniform();
         let cfg = CompressionConfig::default();
-        let weights: Vec<f32> =
-            (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
+        let weights: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         assert_eq!(decompressed.len(), weights.len());
@@ -971,15 +882,10 @@ mod tests {
 
     #[test]
     fn awq_with_activation_scales() {
-        let scales: Vec<f32> =
-            (0..32).map(|i| (i as f32).mul_add(0.1, 1.0)).collect();
+        let scales: Vec<f32> = (0..32).map(|i| (i as f32).mul_add(0.1, 1.0)).collect();
         let c = AwqCompressor::new(scales);
-        let cfg = CompressionConfig {
-            group_size: 32,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..32).map(|i| (i as f32 - 16.0) * 0.05).collect();
+        let cfg = CompressionConfig { group_size: 32, ..Default::default() };
+        let weights: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.05).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let _decompressed = c.decompress(&compressed).unwrap();
     }
@@ -1035,15 +941,9 @@ mod tests {
 
     #[test]
     fn ternary_encode_decode() {
-        assert_eq!(TernaryCompressor::decode_ternary(
-            TernaryCompressor::encode_ternary(1)
-        ), 1);
-        assert_eq!(TernaryCompressor::decode_ternary(
-            TernaryCompressor::encode_ternary(-1)
-        ), -1);
-        assert_eq!(TernaryCompressor::decode_ternary(
-            TernaryCompressor::encode_ternary(0)
-        ), 0);
+        assert_eq!(TernaryCompressor::decode_ternary(TernaryCompressor::encode_ternary(1)), 1);
+        assert_eq!(TernaryCompressor::decode_ternary(TernaryCompressor::encode_ternary(-1)), -1);
+        assert_eq!(TernaryCompressor::decode_ternary(TernaryCompressor::encode_ternary(0)), 0);
     }
 
     #[test]
@@ -1059,11 +959,8 @@ mod tests {
     #[test]
     fn ternary_config_overwritten() {
         let c = TernaryCompressor;
-        let cfg = CompressionConfig {
-            format: CompressionFormat::Gptq,
-            bits: 8,
-            ..Default::default()
-        };
+        let cfg =
+            CompressionConfig { format: CompressionFormat::Gptq, bits: 8, ..Default::default() };
         let compressed = c.compress(&[1.0, -1.0], &cfg).unwrap();
         assert_eq!(compressed.config.format, CompressionFormat::TernaryPacked);
         assert_eq!(compressed.config.bits, 2);
@@ -1102,20 +999,13 @@ mod tests {
 
     #[test]
     fn analyzer_ratio_empty() {
-        let r = CompressionAnalyzer::estimate_ratio(
-            0,
-            &CompressionConfig::default(),
-        );
+        let r = CompressionAnalyzer::estimate_ratio(0, &CompressionConfig::default());
         assert!((r).abs() < f32::EPSILON);
     }
 
     #[test]
     fn analyzer_ratio_4bit() {
-        let cfg = CompressionConfig {
-            bits: 4,
-            group_size: 128,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { bits: 4, group_size: 128, ..Default::default() };
         let r = CompressionAnalyzer::estimate_ratio(1024, &cfg);
         // 32 / (4 + 32/128) ≈ 7.5×
         assert!(r > 5.0 && r < 10.0, "ratio = {r}");
@@ -1123,43 +1013,30 @@ mod tests {
 
     #[test]
     fn analyzer_ratio_2bit() {
-        let cfg = CompressionConfig {
-            bits: 2,
-            group_size: 128,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { bits: 2, group_size: 128, ..Default::default() };
         let r = CompressionAnalyzer::estimate_ratio(1024, &cfg);
         assert!(r > 10.0, "ratio = {r}");
     }
 
     #[test]
     fn analyzer_decompression_cost_ordering() {
-        let gptq_cost = CompressionAnalyzer::estimate_decompression_cost(
-            &CompressionConfig {
-                format: CompressionFormat::Gptq,
-                ..Default::default()
-            },
-        );
-        let ternary_cost = CompressionAnalyzer::estimate_decompression_cost(
-            &CompressionConfig {
-                format: CompressionFormat::TernaryPacked,
-                ..Default::default()
-            },
-        );
+        let gptq_cost = CompressionAnalyzer::estimate_decompression_cost(&CompressionConfig {
+            format: CompressionFormat::Gptq,
+            ..Default::default()
+        });
+        let ternary_cost = CompressionAnalyzer::estimate_decompression_cost(&CompressionConfig {
+            format: CompressionFormat::TernaryPacked,
+            ..Default::default()
+        });
         assert!(ternary_cost <= gptq_cost);
     }
 
     #[test]
     fn analyzer_full_gptq() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            group_size: 32,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..64).map(|i| (i as f32 - 32.0) * 0.1).collect();
-        let analysis =
-            CompressionAnalyzer::analyze(&weights, &cfg, &c).unwrap();
+        let cfg = CompressionConfig { group_size: 32, ..Default::default() };
+        let weights: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.1).collect();
+        let analysis = CompressionAnalyzer::analyze(&weights, &cfg, &c).unwrap();
         assert!(analysis.ratio > 1.0);
         assert!(analysis.quality_loss_mse >= 0.0);
         assert_eq!(analysis.format, CompressionFormat::Gptq);
@@ -1174,10 +1051,8 @@ mod tests {
             group_size: 0,
             symmetric: true,
         };
-        let weights: Vec<f32> =
-            (0..128).map(|i| (i as f32 - 64.0) * 0.02).collect();
-        let analysis =
-            CompressionAnalyzer::analyze(&weights, &cfg, &c).unwrap();
+        let weights: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.02).collect();
+        let analysis = CompressionAnalyzer::analyze(&weights, &cfg, &c).unwrap();
         assert!(analysis.ratio > 1.0);
     }
 
@@ -1222,8 +1097,7 @@ mod tests {
     fn kernel_decompress_gptq_tensor() {
         let c = GptqCompressor;
         let cfg = CompressionConfig::default();
-        let weights: Vec<f32> =
-            (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
+        let weights: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let kernel = DecompressionKernel::new(cfg);
         let decompressed = kernel.decompress_tensor(&compressed).unwrap();
@@ -1241,22 +1115,14 @@ mod tests {
             Box::new(TernaryCompressor),
         ];
         for c in &compressors {
-            assert!(
-                c.compress(&[], &cfg).is_err(),
-                "{} should reject empty input",
-                c.name()
-            );
+            assert!(c.compress(&[], &cfg).is_err(), "{} should reject empty input", c.name());
         }
     }
 
     #[test]
     fn all_compressors_roundtrip_length() {
-        let cfg = CompressionConfig {
-            group_size: 16,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..48).map(|i| (i as f32 - 24.0) * 0.1).collect();
+        let cfg = CompressionConfig { group_size: 16, ..Default::default() };
+        let weights: Vec<f32> = (0..48).map(|i| (i as f32 - 24.0) * 0.1).collect();
         let compressors: Vec<Box<dyn WeightCompressor>> = vec![
             Box::new(GptqCompressor),
             Box::new(AwqCompressor::uniform()),
@@ -1265,12 +1131,7 @@ mod tests {
         for c in &compressors {
             let compressed = c.compress(&weights, &cfg).unwrap();
             let decompressed = c.decompress(&compressed).unwrap();
-            assert_eq!(
-                decompressed.len(),
-                weights.len(),
-                "{} changed output length",
-                c.name()
-            );
+            assert_eq!(decompressed.len(), weights.len(), "{} changed output length", c.name());
         }
     }
 
@@ -1288,10 +1149,7 @@ mod tests {
     #[test]
     fn single_element_gptq() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            group_size: 1,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { group_size: 1, ..Default::default() };
         let compressed = c.compress(&[42.0], &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         assert_eq!(decompressed.len(), 1);
@@ -1310,12 +1168,8 @@ mod tests {
     #[test]
     fn large_tensor_roundtrip() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            group_size: 128,
-            ..Default::default()
-        };
-        let weights: Vec<f32> =
-            (0..4096).map(|i| ((i as f32) * 0.7).sin()).collect();
+        let cfg = CompressionConfig { group_size: 128, ..Default::default() };
+        let weights: Vec<f32> = (0..4096).map(|i| ((i as f32) * 0.7).sin()).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         assert_eq!(decompressed.len(), 4096);
@@ -1326,8 +1180,7 @@ mod tests {
     fn negative_weights_gptq() {
         let c = GptqCompressor;
         let cfg = CompressionConfig::default();
-        let weights: Vec<f32> =
-            (0..128).map(|i| -(i as f32) * 0.01).collect();
+        let weights: Vec<f32> = (0..128).map(|i| -(i as f32) * 0.01).collect();
         let compressed = c.compress(&weights, &cfg).unwrap();
         let decompressed = c.decompress(&compressed).unwrap();
         assert_eq!(decompressed.len(), 128);
@@ -1349,10 +1202,7 @@ mod tests {
     #[test]
     fn group_size_larger_than_input() {
         let c = GptqCompressor;
-        let cfg = CompressionConfig {
-            group_size: 256,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { group_size: 256, ..Default::default() };
         let weights = vec![0.5_f32; 16];
         let compressed = c.compress(&weights, &cfg).unwrap();
         assert_eq!(compressed.scales.len(), 1);
@@ -1360,11 +1210,7 @@ mod tests {
 
     #[test]
     fn analyzer_per_tensor_group() {
-        let cfg = CompressionConfig {
-            group_size: 0,
-            bits: 4,
-            ..Default::default()
-        };
+        let cfg = CompressionConfig { group_size: 0, bits: 4, ..Default::default() };
         let r = CompressionAnalyzer::estimate_ratio(512, &cfg);
         // Per-tensor: only 1 group → overhead is tiny.
         assert!(r > 7.0, "ratio = {r}");
@@ -1377,9 +1223,6 @@ mod tests {
         let weights = vec![1.0_f32; 128];
         let compressed = c.compress(&weights, &cfg).unwrap();
         assert!(compressed.compressed_bytes() > 0);
-        assert!(
-            compressed.compressed_bytes()
-                < weights.len() * std::mem::size_of::<f32>()
-        );
+        assert!(compressed.compressed_bytes() < weights.len() * std::mem::size_of::<f32>());
     }
 }
