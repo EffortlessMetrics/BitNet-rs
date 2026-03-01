@@ -250,10 +250,7 @@ impl AllReduce {
     ///
     /// Each inner `Vec<f32>` is one worker's contribution; all must have
     /// the same length.  Returns the reduced vector.
-    pub fn execute(
-        &self,
-        inputs: &[Vec<f32>],
-    ) -> Result<Vec<f32>, CommError> {
+    pub fn execute(&self, inputs: &[Vec<f32>]) -> Result<Vec<f32>, CommError> {
         if inputs.len() != self.num_workers {
             return Err(CommError::SizeMismatch {
                 expected: self.num_workers,
@@ -263,10 +260,7 @@ impl AllReduce {
         let len = inputs[0].len();
         for (i, v) in inputs.iter().enumerate() {
             if v.len() != len {
-                return Err(CommError::SizeMismatch {
-                    expected: len,
-                    actual: v.len(),
-                });
+                return Err(CommError::SizeMismatch { expected: len, actual: v.len() });
             }
             if i >= self.num_workers {
                 return Err(CommError::InvalidWorker(i));
@@ -320,11 +314,7 @@ impl AllReduce {
 
 impl fmt::Display for AllReduce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "AllReduce(workers={}, op={})",
-            self.num_workers, self.op
-        )
+        write!(f, "AllReduce(workers={}, op={})", self.num_workers, self.op)
     }
 }
 
@@ -349,10 +339,7 @@ impl AllGather {
     /// Execute the all-gather on simulated per-worker chunks.
     ///
     /// Returns the concatenated result that every worker would receive.
-    pub fn execute(
-        &self,
-        chunks: &[Vec<f32>],
-    ) -> Result<Vec<f32>, CommError> {
+    pub fn execute(&self, chunks: &[Vec<f32>]) -> Result<Vec<f32>, CommError> {
         if chunks.len() != self.num_workers {
             return Err(CommError::SizeMismatch {
                 expected: self.num_workers,
@@ -399,10 +386,7 @@ impl ReduceScatter {
     ///
     /// Each worker provides data of the same length which must be evenly
     /// divisible by `num_workers`. Returns per-worker scattered chunks.
-    pub fn execute(
-        &self,
-        inputs: &[Vec<f32>],
-    ) -> Result<Vec<Vec<f32>>, CommError> {
+    pub fn execute(&self, inputs: &[Vec<f32>]) -> Result<Vec<Vec<f32>>, CommError> {
         if inputs.len() != self.num_workers {
             return Err(CommError::SizeMismatch {
                 expected: self.num_workers,
@@ -411,17 +395,11 @@ impl ReduceScatter {
         }
         let len = inputs[0].len();
         if len % self.num_workers != 0 {
-            return Err(CommError::SizeMismatch {
-                expected: len,
-                actual: len,
-            });
+            return Err(CommError::SizeMismatch { expected: len, actual: len });
         }
         for v in inputs {
             if v.len() != len {
-                return Err(CommError::SizeMismatch {
-                    expected: len,
-                    actual: v.len(),
-                });
+                return Err(CommError::SizeMismatch { expected: len, actual: v.len() });
             }
         }
 
@@ -431,21 +409,14 @@ impl ReduceScatter {
 
         // Scatter: split into equal chunks.
         let chunk_size = len / self.num_workers;
-        let scattered: Vec<Vec<f32>> = reduced
-            .chunks(chunk_size)
-            .map(|c| c.to_vec())
-            .collect();
+        let scattered: Vec<Vec<f32>> = reduced.chunks(chunk_size).map(|c| c.to_vec()).collect();
         Ok(scattered)
     }
 }
 
 impl fmt::Display for ReduceScatter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "ReduceScatter(workers={}, op={})",
-            self.num_workers, self.op
-        )
+        write!(f, "ReduceScatter(workers={}, op={})", self.num_workers, self.op)
     }
 }
 
@@ -476,19 +447,13 @@ impl Broadcast {
 
     /// Execute the broadcast: returns `num_workers` copies of `root_data`.
     pub fn execute(&self, root_data: &[f32]) -> Vec<Vec<f32>> {
-        (0..self.num_workers)
-            .map(|_| root_data.to_vec())
-            .collect()
+        (0..self.num_workers).map(|_| root_data.to_vec()).collect()
     }
 }
 
 impl fmt::Display for Broadcast {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Broadcast(workers={}, root={})",
-            self.num_workers, self.root
-        )
+        write!(f, "Broadcast(workers={}, root={})", self.num_workers, self.root)
     }
 }
 
@@ -532,9 +497,7 @@ impl RingTopology {
 
     /// Return all (sender, receiver) edges in the ring.
     pub fn edges(&self) -> Vec<(usize, usize)> {
-        (0..self.num_workers)
-            .map(|w| (w, (w + 1) % self.num_workers))
-            .collect()
+        (0..self.num_workers).map(|w| (w, (w + 1) % self.num_workers)).collect()
     }
 
     /// Number of steps required for a full ring all-reduce.
@@ -582,18 +545,11 @@ impl TreeTopology {
         if worker >= self.num_workers {
             return Err(CommError::InvalidWorker(worker));
         }
-        if worker == 0 {
-            Ok(None)
-        } else {
-            Ok(Some((worker - 1) / 2))
-        }
+        if worker == 0 { Ok(None) } else { Ok(Some((worker - 1) / 2)) }
     }
 
     /// Return the children of the given worker (0, 1, or 2 children).
-    pub fn children(
-        &self,
-        worker: usize,
-    ) -> Result<Vec<usize>, CommError> {
+    pub fn children(&self, worker: usize) -> Result<Vec<usize>, CommError> {
         if worker >= self.num_workers {
             return Err(CommError::InvalidWorker(worker));
         }
@@ -700,20 +656,12 @@ impl CommBuffer {
 
     /// Number of elements in the write buffer.
     pub fn write_len(&self) -> usize {
-        if self.front_is_write {
-            self.front.len()
-        } else {
-            self.back.len()
-        }
+        if self.front_is_write { self.front.len() } else { self.back.len() }
     }
 
     /// Number of elements in the read buffer.
     pub fn read_len(&self) -> usize {
-        if self.front_is_write {
-            self.back.len()
-        } else {
-            self.front.len()
-        }
+        if self.front_is_write { self.back.len() } else { self.front.len() }
     }
 
     /// Clear both buffers.
@@ -723,19 +671,11 @@ impl CommBuffer {
     }
 
     fn write_buf_mut(&mut self) -> &mut Vec<f32> {
-        if self.front_is_write {
-            &mut self.front
-        } else {
-            &mut self.back
-        }
+        if self.front_is_write { &mut self.front } else { &mut self.back }
     }
 
     fn read_buf_mut(&mut self) -> &mut Vec<f32> {
-        if self.front_is_write {
-            &mut self.back
-        } else {
-            &mut self.front
-        }
+        if self.front_is_write { &mut self.back } else { &mut self.front }
     }
 }
 
@@ -774,27 +714,14 @@ pub struct CommProfiler {
 
 impl CommProfiler {
     pub fn new() -> Self {
-        Self {
-            events: Vec::new(),
-            compute_time: Duration::ZERO,
-            comm_time: Duration::ZERO,
-        }
+        Self { events: Vec::new(), compute_time: Duration::ZERO, comm_time: Duration::ZERO }
     }
 
     /// Record a communication event.
-    pub fn record(
-        &mut self,
-        label: impl Into<String>,
-        duration: Duration,
-        elements: usize,
-    ) {
+    pub fn record(&mut self, label: impl Into<String>, duration: Duration, elements: usize) {
         let label = label.into();
         self.comm_time += duration;
-        self.events.push(CommEvent {
-            label,
-            duration,
-            elements,
-        });
+        self.events.push(CommEvent { label, duration, elements });
     }
 
     /// Record time spent on computation (non-communication).
@@ -866,18 +793,10 @@ impl CommProfiler {
     }
 
     /// Per-label aggregate: (total_duration, total_elements, count).
-    pub fn per_label_summary(
-        &self,
-    ) -> HashMap<String, (Duration, usize, usize)> {
-        let mut map: HashMap<String, (Duration, usize, usize)> =
-            HashMap::new();
+    pub fn per_label_summary(&self) -> HashMap<String, (Duration, usize, usize)> {
+        let mut map: HashMap<String, (Duration, usize, usize)> = HashMap::new();
         for e in &self.events {
-            let entry =
-                map.entry(e.label.clone()).or_insert((
-                    Duration::ZERO,
-                    0,
-                    0,
-                ));
+            let entry = map.entry(e.label.clone()).or_insert((Duration::ZERO, 0, 0));
             entry.0 += e.duration;
             entry.1 += e.elements;
             entry.2 += 1;
@@ -927,27 +846,17 @@ impl ParallelCommEngine {
             return Err(CommError::EmptyTopology);
         }
         let ring = match config.topology() {
-            TopologyKind::Ring => {
-                Some(RingTopology::new(config.num_workers())?)
-            }
+            TopologyKind::Ring => Some(RingTopology::new(config.num_workers())?),
             TopologyKind::Tree => None,
         };
         let tree = match config.topology() {
-            TopologyKind::Tree => {
-                Some(TreeTopology::new(config.num_workers())?)
-            }
+            TopologyKind::Tree => Some(TreeTopology::new(config.num_workers())?),
             TopologyKind::Ring => None,
         };
         let buffers = (0..config.num_workers())
             .map(|_| CommBuffer::new(config.send_buffer_capacity()))
             .collect();
-        Ok(Self {
-            config,
-            ring,
-            tree,
-            buffers,
-            profiler: CommProfiler::new(),
-        })
+        Ok(Self { config, ring, tree, buffers, profiler: CommProfiler::new() })
     }
 
     pub fn config(&self) -> &CommConfig {
@@ -967,20 +876,12 @@ impl ParallelCommEngine {
     }
 
     /// Access the communication buffer for a given worker.
-    pub fn buffer(
-        &self,
-        worker: usize,
-    ) -> Result<&CommBuffer, CommError> {
-        self.buffers
-            .get(worker)
-            .ok_or(CommError::InvalidWorker(worker))
+    pub fn buffer(&self, worker: usize) -> Result<&CommBuffer, CommError> {
+        self.buffers.get(worker).ok_or(CommError::InvalidWorker(worker))
     }
 
     /// Access the communication buffer mutably.
-    pub fn buffer_mut(
-        &mut self,
-        worker: usize,
-    ) -> Result<&mut CommBuffer, CommError> {
+    pub fn buffer_mut(&mut self, worker: usize) -> Result<&mut CommBuffer, CommError> {
         if worker >= self.buffers.len() {
             return Err(CommError::InvalidWorker(worker));
         }
@@ -988,11 +889,7 @@ impl ParallelCommEngine {
     }
 
     /// Perform an all-reduce across simulated worker inputs.
-    pub fn all_reduce(
-        &mut self,
-        inputs: &[Vec<f32>],
-        op: ReduceOp,
-    ) -> Result<Vec<f32>, CommError> {
+    pub fn all_reduce(&mut self, inputs: &[Vec<f32>], op: ReduceOp) -> Result<Vec<f32>, CommError> {
         let start = Instant::now();
         let ar = AllReduce::new(self.config.num_workers(), op);
         let result = ar.execute(inputs)?;
@@ -1003,10 +900,7 @@ impl ParallelCommEngine {
     }
 
     /// Perform an all-gather across simulated worker chunks.
-    pub fn all_gather(
-        &mut self,
-        chunks: &[Vec<f32>],
-    ) -> Result<Vec<f32>, CommError> {
+    pub fn all_gather(&mut self, chunks: &[Vec<f32>]) -> Result<Vec<f32>, CommError> {
         let start = Instant::now();
         let ag = AllGather::new(self.config.num_workers());
         let result = ag.execute(chunks)?;
@@ -1032,17 +926,12 @@ impl ParallelCommEngine {
     }
 
     /// Broadcast data from the given root worker.
-    pub fn broadcast(
-        &mut self,
-        root: usize,
-        data: &[f32],
-    ) -> Result<Vec<Vec<f32>>, CommError> {
+    pub fn broadcast(&mut self, root: usize, data: &[f32]) -> Result<Vec<Vec<f32>>, CommError> {
         let start = Instant::now();
         let bc = Broadcast::new(self.config.num_workers(), root)?;
         let result = bc.execute(data);
         let elapsed = start.elapsed();
-        self.profiler
-            .record("broadcast", elapsed, data.len());
+        self.profiler.record("broadcast", elapsed, data.len());
         Ok(result)
     }
 
@@ -1059,11 +948,7 @@ impl ParallelCommEngine {
 
 impl fmt::Display for ParallelCommEngine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "ParallelCommEngine({})",
-            self.config
-        )
+        write!(f, "ParallelCommEngine({})", self.config)
     }
 }
 
@@ -1173,10 +1058,7 @@ mod tests {
 
     #[test]
     fn test_error_size_mismatch() {
-        let e = CommError::SizeMismatch {
-            expected: 4,
-            actual: 3,
-        };
+        let e = CommError::SizeMismatch { expected: 4, actual: 3 };
         assert!(format!("{e}").contains("expected 4"));
     }
 
@@ -1203,9 +1085,7 @@ mod tests {
     #[test]
     fn test_allreduce_sum_two_workers() {
         let ar = AllReduce::new(2, ReduceOp::Sum);
-        let r = ar
-            .execute(&[vec![1.0, 2.0], vec![3.0, 4.0]])
-            .unwrap();
+        let r = ar.execute(&[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
         assert_eq!(r, vec![4.0, 6.0]);
     }
 
@@ -1219,27 +1099,21 @@ mod tests {
     #[test]
     fn test_allreduce_mean() {
         let ar = AllReduce::new(2, ReduceOp::Mean);
-        let r = ar
-            .execute(&[vec![2.0, 8.0], vec![4.0, 6.0]])
-            .unwrap();
+        let r = ar.execute(&[vec![2.0, 8.0], vec![4.0, 6.0]]).unwrap();
         assert_eq!(r, vec![3.0, 7.0]);
     }
 
     #[test]
     fn test_allreduce_max() {
         let ar = AllReduce::new(3, ReduceOp::Max);
-        let r = ar
-            .execute(&[vec![1.0, 9.0], vec![5.0, 2.0], vec![3.0, 7.0]])
-            .unwrap();
+        let r = ar.execute(&[vec![1.0, 9.0], vec![5.0, 2.0], vec![3.0, 7.0]]).unwrap();
         assert_eq!(r, vec![5.0, 9.0]);
     }
 
     #[test]
     fn test_allreduce_min() {
         let ar = AllReduce::new(3, ReduceOp::Min);
-        let r = ar
-            .execute(&[vec![1.0, 9.0], vec![5.0, 2.0], vec![3.0, 7.0]])
-            .unwrap();
+        let r = ar.execute(&[vec![1.0, 9.0], vec![5.0, 2.0], vec![3.0, 7.0]]).unwrap();
         assert_eq!(r, vec![1.0, 2.0]);
     }
 
@@ -1273,28 +1147,14 @@ mod tests {
     #[test]
     fn test_allreduce_sum_four_workers() {
         let ar = AllReduce::new(4, ReduceOp::Sum);
-        let r = ar
-            .execute(&[
-                vec![1.0],
-                vec![2.0],
-                vec![3.0],
-                vec![4.0],
-            ])
-            .unwrap();
+        let r = ar.execute(&[vec![1.0], vec![2.0], vec![3.0], vec![4.0]]).unwrap();
         assert_eq!(r, vec![10.0]);
     }
 
     #[test]
     fn test_allreduce_mean_four_workers() {
         let ar = AllReduce::new(4, ReduceOp::Mean);
-        let r = ar
-            .execute(&[
-                vec![4.0],
-                vec![8.0],
-                vec![12.0],
-                vec![16.0],
-            ])
-            .unwrap();
+        let r = ar.execute(&[vec![4.0], vec![8.0], vec![12.0], vec![16.0]]).unwrap();
         assert_eq!(r, vec![10.0]);
     }
 
@@ -1317,18 +1177,14 @@ mod tests {
     #[test]
     fn test_allgather_basic() {
         let ag = AllGather::new(3);
-        let r = ag
-            .execute(&[vec![1.0], vec![2.0], vec![3.0]])
-            .unwrap();
+        let r = ag.execute(&[vec![1.0], vec![2.0], vec![3.0]]).unwrap();
         assert_eq!(r, vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
     fn test_allgather_multi_element_chunks() {
         let ag = AllGather::new(2);
-        let r = ag
-            .execute(&[vec![1.0, 2.0], vec![3.0, 4.0]])
-            .unwrap();
+        let r = ag.execute(&[vec![1.0, 2.0], vec![3.0, 4.0]]).unwrap();
         assert_eq!(r, vec![1.0, 2.0, 3.0, 4.0]);
     }
 
@@ -1377,9 +1233,7 @@ mod tests {
     #[test]
     fn test_reduce_scatter_sum() {
         let rs = ReduceScatter::new(2, ReduceOp::Sum);
-        let r = rs
-            .execute(&[vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]])
-            .unwrap();
+        let r = rs.execute(&[vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]]).unwrap();
         assert_eq!(r.len(), 2);
         assert_eq!(r[0], vec![6.0, 8.0]);
         assert_eq!(r[1], vec![10.0, 12.0]);
@@ -1388,9 +1242,7 @@ mod tests {
     #[test]
     fn test_reduce_scatter_mean() {
         let rs = ReduceScatter::new(2, ReduceOp::Mean);
-        let r = rs
-            .execute(&[vec![2.0, 4.0], vec![6.0, 8.0]])
-            .unwrap();
+        let r = rs.execute(&[vec![2.0, 4.0], vec![6.0, 8.0]]).unwrap();
         assert_eq!(r[0], vec![4.0]);
         assert_eq!(r[1], vec![6.0]);
     }
@@ -1914,12 +1766,7 @@ mod tests {
     fn test_engine_allreduce() {
         let cfg = CommConfig::new(2);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        let r = e
-            .all_reduce(
-                &[vec![1.0, 2.0], vec![3.0, 4.0]],
-                ReduceOp::Sum,
-            )
-            .unwrap();
+        let r = e.all_reduce(&[vec![1.0, 2.0], vec![3.0, 4.0]], ReduceOp::Sum).unwrap();
         assert_eq!(r, vec![4.0, 6.0]);
         assert_eq!(e.profiler().event_count(), 1);
     }
@@ -1928,9 +1775,7 @@ mod tests {
     fn test_engine_allgather() {
         let cfg = CommConfig::new(3);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        let r = e
-            .all_gather(&[vec![1.0], vec![2.0], vec![3.0]])
-            .unwrap();
+        let r = e.all_gather(&[vec![1.0], vec![2.0], vec![3.0]]).unwrap();
         assert_eq!(r, vec![1.0, 2.0, 3.0]);
     }
 
@@ -1938,12 +1783,7 @@ mod tests {
     fn test_engine_reduce_scatter() {
         let cfg = CommConfig::new(2);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        let r = e
-            .reduce_scatter(
-                &[vec![1.0, 2.0], vec![3.0, 4.0]],
-                ReduceOp::Sum,
-            )
-            .unwrap();
+        let r = e.reduce_scatter(&[vec![1.0, 2.0], vec![3.0, 4.0]], ReduceOp::Sum).unwrap();
         assert_eq!(r, vec![vec![4.0], vec![6.0]]);
     }
 
@@ -1965,8 +1805,7 @@ mod tests {
 
     #[test]
     fn test_engine_buffer_access() {
-        let cfg = CommConfig::new(2)
-            .with_send_buffer_capacity(32);
+        let cfg = CommConfig::new(2).with_send_buffer_capacity(32);
         let e = ParallelCommEngine::new(cfg).unwrap();
         let b = e.buffer(0).unwrap();
         assert_eq!(b.capacity(), 32);
@@ -1999,11 +1838,7 @@ mod tests {
     fn test_engine_reset_profiler() {
         let cfg = CommConfig::new(2);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        e.all_reduce(
-            &[vec![1.0], vec![2.0]],
-            ReduceOp::Sum,
-        )
-        .unwrap();
+        e.all_reduce(&[vec![1.0], vec![2.0]], ReduceOp::Sum).unwrap();
         assert_eq!(e.profiler().event_count(), 1);
         e.reset_profiler();
         assert_eq!(e.profiler().event_count(), 0);
@@ -2013,18 +1848,13 @@ mod tests {
     fn test_engine_profiler_mut() {
         let cfg = CommConfig::new(1);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        e.profiler_mut()
-            .record_compute(Duration::from_millis(10));
-        assert_eq!(
-            e.profiler().total_compute_time(),
-            Duration::from_millis(10)
-        );
+        e.profiler_mut().record_compute(Duration::from_millis(10));
+        assert_eq!(e.profiler().total_compute_time(), Duration::from_millis(10));
     }
 
     #[test]
     fn test_engine_config_accessor() {
-        let cfg = CommConfig::new(3)
-            .with_backend(CommBackend::Network);
+        let cfg = CommConfig::new(3).with_backend(CommBackend::Network);
         let e = ParallelCommEngine::new(cfg).unwrap();
         assert_eq!(e.config().backend(), CommBackend::Network);
     }
@@ -2049,11 +1879,7 @@ mod tests {
     fn test_engine_multiple_ops_profiled() {
         let cfg = CommConfig::new(2);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        e.all_reduce(
-            &[vec![1.0], vec![2.0]],
-            ReduceOp::Sum,
-        )
-        .unwrap();
+        e.all_reduce(&[vec![1.0], vec![2.0]], ReduceOp::Sum).unwrap();
         e.all_gather(&[vec![1.0], vec![2.0]]).unwrap();
         e.broadcast(0, &[1.0]).unwrap();
         assert_eq!(e.profiler().event_count(), 3);
@@ -2067,9 +1893,7 @@ mod tests {
     fn test_engine_single_worker_allreduce() {
         let cfg = CommConfig::new(1);
         let mut e = ParallelCommEngine::new(cfg).unwrap();
-        let r = e
-            .all_reduce(&[vec![42.0]], ReduceOp::Sum)
-            .unwrap();
+        let r = e.all_reduce(&[vec![42.0]], ReduceOp::Sum).unwrap();
         assert_eq!(r, vec![42.0]);
     }
 
