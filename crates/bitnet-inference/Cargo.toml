@@ -59,6 +59,7 @@ proptest = "1.9.0"
 tempfile = "3.23.0"
 chrono = "0.4.42"
 serial_test = "3.2.0"
+temp-env.workspace = true
 bitnet-test-support.workspace = true
 insta.workspace = true
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
@@ -67,6 +68,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 [[bench]]
 name = "dense_ops"
 harness = false
+required-features = ["bench"]
 
 [features]
 default = []
