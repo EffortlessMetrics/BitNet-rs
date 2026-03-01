@@ -5,13 +5,8 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
-#[cfg(feature = "opencl")]
-pub mod opencl;
-#[cfg(feature = "opencl")]
-pub use opencl::{
-    IntelArcDetector, OpenClDeviceInfo, OpenClDeviceType, OpenClPlatformInfo, OpenClProbeResult,
-    ProbeResult, is_intel_arc_available, list_opencl_devices, probe_opencl,
-};
+pub mod power;
+pub mod perf_counters;
 
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
@@ -678,3 +673,5 @@ mod property_tests {
         );
     }
 }
+
+// retrigger-ci-placeholder: remove if needed
