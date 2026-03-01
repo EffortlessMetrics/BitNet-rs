@@ -1,6 +1,6 @@
 //! Structural validation tests for Vulkan GLSL compute shaders.
 
-use bitnet_vulkan::kernels::VulkanShaderSource;
+use bitnet_vulkan_shaders::VulkanShaderSource;
 
 // ---------------------------------------------------------------------------
 // Helper

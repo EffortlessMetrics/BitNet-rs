@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-vulkan"
+name = "bitnet-vulkan-shaders"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,19 +8,10 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Vulkan GLSL compute shaders for BitNet GPU inference"
+description = "Embedded Vulkan GLSL shader sources for BitNet GPU inference"
 rust-version.workspace = true
 
 [dependencies]
-bitnet-vulkan-shaders = { path = "../bitnet-vulkan-shaders", version = "0.2.1-dev" }
-
-[dev-dependencies]
-
-[features]
-default = []
-cpu = []
-gpu = ["cuda"]
-cuda = []
 
 [lints]
 workspace = true

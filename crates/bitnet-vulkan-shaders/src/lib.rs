@@ -34,12 +34,12 @@ impl VulkanShaderSource {
     /// Returns the raw GLSL source code for this shader.
     pub const fn glsl_source(&self) -> &'static str {
         match self {
-            Self::Matmul => include_str!("matmul.comp"),
-            Self::Softmax => include_str!("softmax.comp"),
-            Self::RmsNorm => include_str!("rmsnorm.comp"),
-            Self::Rope => include_str!("rope.comp"),
-            Self::Attention => include_str!("attention.comp"),
-            Self::Elementwise => include_str!("elementwise.comp"),
+            Self::Matmul => include_str!("kernels/matmul.comp"),
+            Self::Softmax => include_str!("kernels/softmax.comp"),
+            Self::RmsNorm => include_str!("kernels/rmsnorm.comp"),
+            Self::Rope => include_str!("kernels/rope.comp"),
+            Self::Attention => include_str!("kernels/attention.comp"),
+            Self::Elementwise => include_str!("kernels/elementwise.comp"),
         }
     }
 

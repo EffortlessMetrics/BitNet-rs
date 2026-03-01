@@ -1,11 +1,13 @@
-//! Vulkan GLSL compute shaders for `BitNet` GPU inference.
+//! Vulkan support surface for `BitNet` GPU inference.
 //!
-//! This crate provides embedded GLSL compute shader sources for the
-//! core neural-network operations needed by the `BitNet` inference engine:
-//! matrix multiplication, softmax, RMS normalization, rotary position
-//! embeddings, scaled dot-product attention, and element-wise activations.
-//!
-//! Shaders target Vulkan 1.0 (`#version 450`) and use tiled shared-memory
-//! algorithms and subgroup operations where applicable.
+//! `bitnet-vulkan` now focuses on Vulkan runtime integration points and
+//! re-exports embedded shader sources from `bitnet-vulkan-shaders`.
 
-pub mod kernels;
+pub use bitnet_vulkan_shaders::VulkanShaderSource;
+
+/// Backward-compatible kernel module re-export.
+pub mod kernels {
+    pub use bitnet_vulkan_shaders::VulkanShaderSource;
+}
+
+pub mod runtime;
