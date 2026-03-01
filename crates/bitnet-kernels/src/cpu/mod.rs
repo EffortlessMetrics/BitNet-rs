@@ -68,6 +68,9 @@ pub mod neon_softmax;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_transpose;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_convolution;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
