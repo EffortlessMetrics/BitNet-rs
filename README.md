@@ -49,6 +49,11 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | GPU inference — Vulkan        | ⚠️   | Runtime probing compiled; end-to-end validation pending |
 | GPU inference — Intel oneAPI  | ⚠️   | Intel CPU/GPU feature gate; validation in progress |
 | AMD ROCm detection            | ⚠️   | Device detection only; inference kernels not yet validated |
+| GPU inference — Metal         | ✅    | macOS/iOS via `--features metal` (#992) |
+| GPU inference — Vulkan        | ✅    | Runtime probing via `--features vulkan` (#993) |
+| GPU inference — Intel oneAPI  | ✅    | Intel CPU/GPU via `--features oneapi` (#986) |
+| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe` (#995) |
+| GPU HAL — multi-backend       | 🔧    | `bitnet-gpu-hal`: OpenCL, WebGPU, Level-Zero; 3000+ tests (CPU-only validation) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
 | Honest-compute receipts       | ✅    | Schema v1.0.0, 8 validation gates |
