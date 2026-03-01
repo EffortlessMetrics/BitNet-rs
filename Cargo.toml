@@ -60,6 +60,7 @@ members = [
   "crates/bitnet-runtime-profile-core",
   "crates/bitnet-runtime-profile-contract",
   "crates/bitnet-runtime-profile-contract-core",
+  "crates/bitnet-runtime-fingerprint-core",
   "crates/bitnet-testing-profile",
   "crates/bitnet-testing-scenarios",
   "crates/bitnet-testing-policy-core",
@@ -139,6 +140,7 @@ default-members = [
   "crates/bitnet-testing-policy-core",
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-runtime-profile-core",
+  "crates/bitnet-runtime-fingerprint-core",
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",

@@ -37,6 +37,7 @@ bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", ver
 bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
 bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.2.1-dev" }
+bitnet-runtime-fingerprint-core = { path = "../bitnet-runtime-fingerprint-core", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true

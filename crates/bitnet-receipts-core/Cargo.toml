@@ -17,8 +17,8 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-honest-compute = { path = "../bitnet-honest-compute", version = "0.2.1-dev" }
+bitnet-runtime-fingerprint-core = { path = "../bitnet-runtime-fingerprint-core", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
-rustc_version_runtime = "0.3.0"
 
 [features]
 gpu = ["dep:bitnet-kernels", "bitnet-kernels/gpu"]

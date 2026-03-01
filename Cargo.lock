@@ -472,6 +472,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
+ "bitnet-runtime-fingerprint-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizer-discovery-core",
  "bitnet-tokenizers",
@@ -1076,10 +1077,10 @@ dependencies = [
  "bitnet-common",
  "bitnet-honest-compute",
  "bitnet-kernels",
+ "bitnet-runtime-fingerprint-core",
  "chrono",
  "insta",
  "proptest",
- "rustc_version_runtime",
  "serde",
  "serde_json",
  "tempfile",
@@ -1153,6 +1154,15 @@ dependencies = [
  "insta",
  "proptest",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-runtime-fingerprint-core"
+version = "0.2.1-dev"
+dependencies = [
+ "rustc_version_runtime",
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]

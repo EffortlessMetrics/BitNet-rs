@@ -19,6 +19,7 @@ use bitnet_honest_compute::{
     classify_compute_path, validate_compute_path as validate_honest_compute_path,
     validate_kernel_ids as validate_honest_kernel_ids,
 };
+use bitnet_runtime_fingerprint_core::collect_runtime_fingerprint;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -288,34 +289,9 @@ impl InferenceReceipt {
 
     /// Collect relevant environment variables
     fn collect_env_vars() -> HashMap<String, String> {
-        let mut env_vars = HashMap::new();
+        let mut env_vars = collect_runtime_fingerprint(env!("CARGO_PKG_VERSION"));
 
-        // Determinism variables
-        if let Ok(val) = std::env::var("BITNET_DETERMINISTIC") {
-            env_vars.insert("BITNET_DETERMINISTIC".to_string(), val);
-        }
-        if let Ok(val) = std::env::var("BITNET_SEED") {
-            env_vars.insert("BITNET_SEED".to_string(), val);
-        }
-        if let Ok(val) = std::env::var("RAYON_NUM_THREADS") {
-            env_vars.insert("RAYON_NUM_THREADS".to_string(), val);
-        }
-
-        // Model path
-        if let Ok(val) = std::env::var("BITNET_GGUF") {
-            env_vars.insert("BITNET_GGUF".to_string(), val);
-        }
-
-        // System info
-        env_vars.insert("RUST_VERSION".to_string(), rustc_version_runtime::version().to_string());
-        env_vars.insert("BITNET_VERSION".to_string(), env!("CARGO_PKG_VERSION").to_string());
-        env_vars.insert(
-            "OS".to_string(),
-            format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
-        );
-
-        // Add CPU and GPU fingerprints (best-effort)
-        env_vars.insert("CPU_BRAND".to_string(), detect_cpu_brand());
+        // Add GPU fingerprints (best-effort)
         if let Some(gpu_info) = detect_gpu_info() {
             env_vars.insert("GPU_INFO".to_string(), gpu_info);
         }
@@ -573,22 +549,6 @@ impl InferenceReceipt {
 
 /// Detect CPU brand string (best-effort).
 /// Linux: reads `/proc/cpuinfo` model name; otherwise returns arch.
-fn detect_cpu_brand() -> String {
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-            for line in content.lines() {
-                if line.starts_with("model name")
-                    && let Some(brand) = line.split(':').nth(1)
-                {
-                    return brand.trim().to_string();
-                }
-            }
-        }
-    }
-    std::env::consts::ARCH.to_string()
-}
-
 /// Detect GPU information (best-effort)
 ///
 /// Uses bitnet-kernels GPU utilities to detect available GPUs.

@@ -59,6 +59,7 @@ use tracing::{debug, error, info, warn};
 
 use bitnet_inference::{InferenceEngine, KernelRecorder, SamplingConfig, TemplateType};
 use bitnet_models::ModelLoader;
+use bitnet_runtime_fingerprint_core::collect_runtime_fingerprint;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::Device;
 
@@ -977,15 +978,6 @@ impl InferenceCommand {
         // Determine backend from device
         let backend = self.device.as_deref().unwrap_or("cpu");
 
-        // Capture runtime environment (similar to xtask benchmark)
-        let rust_version = std::process::Command::new("rustc")
-            .arg("--version")
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_default();
-
         // Build receipt JSON (matching xtask format)
         // Capture actual kernel IDs from engine telemetry
         let mut kernels = if let Some(recorder) = engine.kernel_recorder() {
@@ -1021,11 +1013,7 @@ impl InferenceCommand {
             "deterministic": self.deterministic || self.greedy,
             "tokens_generated": tokens_generated,
             "kernels": kernels,
-            "environment": {
-                "BITNET_VERSION": env!("CARGO_PKG_VERSION"),
-                "OS": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
-                "RUST_VERSION": rust_version,
-            },
+            "environment": collect_runtime_fingerprint(env!("CARGO_PKG_VERSION")),
             "model": {
                 "path": self.model.as_ref().map(|p| p.display().to_string()).unwrap_or_default()
             }

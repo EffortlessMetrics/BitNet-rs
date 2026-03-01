@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-runtime-fingerprint-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SRP microcrate for collecting runtime environment fingerprints"
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rustc_version_runtime = "0.3.0"
+
+[dev-dependencies]
+temp-env = { workspace = true }
+serial_test = { workspace = true }
