@@ -1,104 +1,88 @@
 #![no_main]
 
 use arbitrary::Arbitrary;
+use bitnet_kernels::cpu::embedding::{
+    EmbeddingConfig, embedding_accumulate, embedding_lookup, embedding_lookup_simd,
+    normalize_embeddings,
+};
 use libfuzzer_sys::fuzz_target;
 
 #[derive(Arbitrary, Debug)]
 struct EmbeddingInput {
-    /// Number of vocabulary entries (clamped to small range).
-    vocab_size: u8,
-    /// Embedding dimension (clamped to small range).
-    embed_dim: u8,
-    /// Raw embedding table data (f32 bytes).
-    table_data: Vec<u8>,
-    /// Token IDs to look up.
-    token_ids: Vec<u16>,
+    ops: Vec<EmbedOp>,
 }
 
-// Minimal embedding table for fuzzing lookup logic.
-struct EmbeddingTable {
-    data: Vec<f32>,
-    vocab_size: usize,
-    embed_dim: usize,
-}
-
-impl EmbeddingTable {
-    fn new(data: Vec<f32>, vocab_size: usize, embed_dim: usize) -> Self {
-        Self { data, vocab_size, embed_dim }
-    }
-
-    /// Look up a single token's embedding. Returns None for out-of-bounds IDs.
-    fn lookup(&self, token_id: usize) -> Option<&[f32]> {
-        if token_id >= self.vocab_size {
-            return None;
-        }
-        let start = token_id * self.embed_dim;
-        let end = start + self.embed_dim;
-        if end > self.data.len() {
-            return None;
-        }
-        Some(&self.data[start..end])
-    }
-
-    /// Batch lookup: gather embeddings for a sequence of token IDs.
-    fn batch_lookup(&self, token_ids: &[usize]) -> Vec<f32> {
-        let mut result = Vec::with_capacity(token_ids.len() * self.embed_dim);
-        for &tid in token_ids {
-            if let Some(emb) = self.lookup(tid) {
-                result.extend_from_slice(emb);
-            }
-            // Out-of-bounds tokens are silently skipped (no panic).
-        }
-        result
-    }
+#[derive(Arbitrary, Debug)]
+enum EmbedOp {
+    Lookup { vocab_size: u8, dim: u8, indices: Vec<u8> },
+    SimdLookup { vocab_size: u8, dim: u8, indices: Vec<u8>, padding_idx: Option<u8> },
+    Accumulate { vocab_size: u8, dim: u8, indices: Vec<u8>, weights: Vec<f32> },
+    Normalize { dim: u8, data: Vec<f32> },
 }
 
 fuzz_target!(|input: EmbeddingInput| {
-    let vocab_size = (input.vocab_size as usize % 64) + 1;
-    let embed_dim = (input.embed_dim as usize % 32) + 1;
-    let required = vocab_size * embed_dim;
+    for op in input.ops.into_iter().take(256) {
+        match op {
+            EmbedOp::Lookup { vocab_size, dim, indices } => {
+                let vs = (vocab_size as usize).clamp(1, 64);
+                let d = (dim as usize).clamp(1, 32);
+                let table: Vec<f32> = (0..vs * d).map(|i| (i as f32) * 0.01).collect();
+                let idx: Vec<u32> = indices.iter().take(16).map(|&i| i as u32).collect();
+                let _ = embedding_lookup(&table, &idx, d);
+            }
+            EmbedOp::SimdLookup { vocab_size, dim, indices, padding_idx } => {
+                let vs = (vocab_size as usize).clamp(1, 64);
+                let d = (dim as usize).clamp(1, 32);
+                let table: Vec<f32> = (0..vs * d).map(|i| (i as f32) * 0.01).collect();
+                let idx: Vec<u32> = indices.iter().take(16).map(|&i| i as u32).collect();
+                let pad = padding_idx.map(|p| p as u32);
+                let config = EmbeddingConfig { vocab_size: vs, embedding_dim: d, padding_idx: pad };
 
-    // Build embedding table from raw bytes, padding with zeros if needed.
-    let aligned_len = (input.table_data.len() / 4) * 4;
-    let mut table: Vec<f32> = input.table_data[..aligned_len]
-        .chunks_exact(4)
-        .take(256)
-        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-        .collect();
-
-    // Pad to required size.
-    table.resize(required, 0.0);
-
-    let emb = EmbeddingTable::new(table, vocab_size, embed_dim);
-
-    // Invariant 1: Valid lookups return correct dimension.
-    let token_ids: Vec<usize> = input.token_ids.iter().take(256).map(|&t| t as usize).collect();
-
-    for &tid in &token_ids {
-        if tid < vocab_size {
-            let result = emb.lookup(tid);
-            assert!(result.is_some(), "valid token {tid} returned None");
-            assert_eq!(result.unwrap().len(), embed_dim, "wrong embedding dim for token {tid}");
-        } else {
-            // Invariant 2: Out-of-bounds tokens return None (no panic).
-            assert!(emb.lookup(tid).is_none(), "OOB token {tid} should be None");
+                if let Ok(out) = embedding_lookup_simd(&table, &idx, &config) {
+                    assert_eq!(out.len(), idx.len() * d);
+                    if let Some(pi) = pad {
+                        for (i, &id) in idx.iter().enumerate() {
+                            if id == pi && (id as usize) < vs {
+                                let slice = &out[i * d..(i + 1) * d];
+                                assert!(slice.iter().all(|&v| v == 0.0), "padding idx not zeroed");
+                            }
+                        }
+                    }
+                }
+            }
+            EmbedOp::Accumulate { vocab_size, dim, indices, weights } => {
+                let vs = (vocab_size as usize).clamp(1, 64);
+                let d = (dim as usize).clamp(1, 32);
+                let table: Vec<f32> = (0..vs * d).map(|i| (i as f32) * 0.01).collect();
+                let n = indices.len().min(16);
+                let idx: Vec<u32> = indices.iter().take(n).map(|&i| i as u32).collect();
+                let w: Vec<f32> = weights
+                    .iter()
+                    .take(n)
+                    .map(|&v| if v.is_finite() { v } else { 0.0 })
+                    .chain(std::iter::repeat_n(1.0f32, n.saturating_sub(weights.len())))
+                    .take(n)
+                    .collect();
+                let _ = embedding_accumulate(&table, &idx, &w, d);
+            }
+            EmbedOp::Normalize { dim, data } => {
+                let d = (dim as usize).clamp(1, 32);
+                let mut buf: Vec<f32> = data
+                    .into_iter()
+                    .take(d * 8)
+                    .map(|v| if v.is_finite() { v } else { 0.0 })
+                    .collect();
+                normalize_embeddings(&mut buf, d);
+                for chunk in buf.chunks(d) {
+                    if chunk.len() == d {
+                        let norm_sq: f32 = chunk.iter().map(|&x| x * x).sum();
+                        assert!(
+                            norm_sq < 1e-6 || (norm_sq - 1.0).abs() < 1e-4,
+                            "unexpected norm: {norm_sq}"
+                        );
+                    }
+                }
+            }
         }
     }
-
-    // Invariant 3: Batch lookup output dimension is correct.
-    let valid_ids: Vec<usize> = token_ids.iter().copied().filter(|&t| t < vocab_size).collect();
-    let batch = emb.batch_lookup(&valid_ids);
-    assert_eq!(
-        batch.len(),
-        valid_ids.len() * embed_dim,
-        "batch output dimension mismatch: expected {} got {}",
-        valid_ids.len() * embed_dim,
-        batch.len()
-    );
-
-    // Invariant 4: Batch with all-OOB tokens produces empty output.
-    let oob_ids: Vec<usize> =
-        token_ids.iter().copied().filter(|&t| t >= vocab_size).take(16).collect();
-    let oob_batch = emb.batch_lookup(&oob_ids);
-    assert!(oob_batch.is_empty(), "OOB batch should be empty, got len {}", oob_batch.len());
 });
