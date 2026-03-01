@@ -184,3 +184,4 @@ pub mod memory_layout;
 // OpenAI-compatible API server with SSE streaming, auth, health checks,
 // and Prometheus metrics for GPU-accelerated inference.
 pub mod api_server;
+pub mod weight_loader;
