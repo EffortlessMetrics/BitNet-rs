@@ -24,6 +24,7 @@ members = [
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
+  "crates/bitnet-qualcomm",      # SRP: Qualcomm NPU env/runtime selection helpers
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
@@ -169,6 +170,7 @@ bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", op
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
 bitnet-device-probe = { path = "crates/bitnet-device-probe", version = "0.2.1-dev", optional = true }
+bitnet-qualcomm = { path = "crates/bitnet-qualcomm", version = "0.2.1-dev", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -230,7 +232,7 @@ rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inf
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 opencl = ["kernels", "inference", "tokenizers", "bitnet-kernels/opencl", "bitnet-inference/opencl", "bitnet-quantization/opencl"]
-npu = ["dep:bitnet-device-probe", "bitnet-device-probe/npu"]
+npu = ["dep:bitnet-device-probe", "dep:bitnet-qualcomm", "bitnet-device-probe/npu"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
