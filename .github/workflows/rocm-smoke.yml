@@ -1,6 +1,14 @@
 name: ROCm Smoke Tests
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/rocm-smoke.yml'
+      - 'crates/bitnet-kernels/**'
+      - 'crates/bitnet-cli/**'
+      - 'crates/bitnet/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
   workflow_dispatch:
     inputs:
       run_parity:
@@ -16,10 +24,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   RUST_LOG: warn
+  CARGO_INCREMENTAL: 0
 
 jobs:
   # Always-on compile check (no ROCm runtime required)
@@ -88,6 +100,11 @@ jobs:
 
       - name: Build ROCm release
         run: cargo build --release --no-default-features --features rocm,cpu --locked
+
+      - name: Verify ROCm runtime availability
+        run: |
+          command -v rocm-smi
+          rocm-smi --showproductname --showdriverversion | head -20
 
       - name: ROCm kernel smoke (${{ matrix.test }})
         if: matrix.test == 'kernel-smoke'
