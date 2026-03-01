@@ -41,6 +41,11 @@ pub mod x86;
 pub mod arm;
 
 pub use activations::ActivationType;
+pub use activations::{
+    apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
+    hard_swish_vec, leaky_relu_vec, mish_vec, relu_inplace, silu_inplace, silu_vec, softplus_beta,
+    softplus_vec,
+};
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
 pub use scatter_gather::{
