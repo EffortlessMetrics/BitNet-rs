@@ -12,6 +12,7 @@
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
 //! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling
+//! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
@@ -24,6 +25,7 @@ pub mod attention;
 pub mod batch_norm;
 pub mod kv_cache;
 pub mod qk256_gemv;
+pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
@@ -55,5 +57,10 @@ pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
 pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
+pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use quantized_matmul::launch_i2s_matmul;
