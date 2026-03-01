@@ -12,7 +12,8 @@
 //! - [`rmsnorm`]: RMSNorm layer normalization
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
-//! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling
+//! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling,
+//!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //!
