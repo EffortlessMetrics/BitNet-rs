@@ -1,5 +1,6 @@
 //! CPU kernel implementations
 
+pub mod attention;
 pub mod embedding;
 pub mod fallback;
 pub mod fusion;
