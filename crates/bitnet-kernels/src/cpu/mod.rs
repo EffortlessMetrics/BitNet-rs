@@ -1,5 +1,6 @@
 //! CPU kernel implementations
 
+pub mod activations;
 pub mod attention;
 pub mod conv1d;
 pub mod embedding;
