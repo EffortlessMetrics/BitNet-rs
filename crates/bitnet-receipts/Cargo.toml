@@ -12,20 +12,15 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-chrono = { workspace = true }
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-honest-compute = { path = "../bitnet-honest-compute", version = "0.2.1-dev" }
-bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
-rustc_version_runtime = "0.3.0"
+bitnet-receipts-core = { path = "../bitnet-receipts-core", version = "0.2.1-dev", default-features = false }
 
 [features]
-gpu = ["dep:bitnet-kernels", "bitnet-kernels/gpu"]
-cuda = ["dep:bitnet-kernels", "bitnet-kernels/cuda"]
+gpu = ["bitnet-receipts-core/gpu"]
+cuda = ["bitnet-receipts-core/cuda"]
 
 [dev-dependencies]
 proptest = { workspace = true }
 insta = { workspace = true }
 tempfile = { workspace = true }
+serde_json = { workspace = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }

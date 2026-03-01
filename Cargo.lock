@@ -959,6 +959,18 @@ dependencies = [
 name = "bitnet-receipts"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-common",
+ "bitnet-receipts-core",
+ "insta",
+ "proptest",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "bitnet-receipts-core"
+version = "0.2.1-dev"
+dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-honest-compute",
