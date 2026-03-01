@@ -1,0 +1,14 @@
+[package]
+name = "bitnet-token-stream-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP core token stream buffering and UTF-8 chunk emission"
+
+[dependencies]
+tracing.workspace = true

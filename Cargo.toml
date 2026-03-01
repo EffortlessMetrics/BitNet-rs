@@ -39,6 +39,7 @@ members = [
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
+  "crates/bitnet-token-stream-core", # SRP: reusable token stream buffering + UTF-8 chunking
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
@@ -142,6 +143,7 @@ default-members = [
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",
+  "crates/bitnet-token-stream-core",
   "crates/bitnet-logits-filters",
   "crates/bitnet-generation",
   "crates/bitnet-generation-events-core",
