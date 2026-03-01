@@ -29,6 +29,13 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Logits & engine-core edge cases** (#1670): logits processing and engine-core edge case tests (78 tests)
 
 ### Wave 96: Inference Pipeline & Scheduling
+- **Graceful shutdown** (#1396): `ShutdownManager` with 5 phases, drain timeout, state checkpointing, cleanup hooks — 70 tests
+- **Function calling** (#1397): `FunctionRegistry` with call parsing, argument validation, parallel execution, retry policies — 60 tests
+- **Multi-model serving** (#1398): `MultiModelServer` with slot management, 4 routing strategies, model swapping — 68 tests
+- **Structured output** (#1399): Schema-constrained generation with JSON Schema, context-free grammar, regex constraints — 74 tests
+- **CHANGELOG wave 55** (#1395): 5 entries documenting PRs #1390–#1394
+
+## [v0.2.0] - 2026-02-28
 
 - **Inference scheduler** (#1631): 112 tests for task scheduling with priority queues, work stealing, and deadline-aware dispatch
 - **Attention mechanism** (#1632): 112 tests for multi-head/grouped-query attention with causal masking and flash-attention support
