@@ -1,0 +1,1020 @@
+{
+  "schema": "bitnet-maintenance-sbom-v1",
+  "generated_at": "2026-03-01T22:51:51.451001+00:00",
+  "workspace_root": "/workspace/BitNet-rs",
+  "component_count": 101,
+  "components": [
+    {
+      "name": "bitnet",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-device-probe",
+        "bitnet-ggml-ffi",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-logits",
+        "bitnet-math",
+        "bitnet-models",
+        "bitnet-quantization",
+        "bitnet-rope",
+        "bitnet-tests",
+        "bitnet-tokenizers",
+        "bitnet-transformer",
+        "bitnet-warn-once"
+      ]
+    },
+    {
+      "name": "bitnet-bdd-grid",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-bdd-grid/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid-core",
+        "bitnet-runtime-feature-flags"
+      ]
+    },
+    {
+      "name": "bitnet-bdd-grid-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-bdd-grid-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-bench-receipts",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-bench-receipts/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-cli",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-cli/Cargo.toml",
+      "dependencies": [
+        "bitnet-cli-sampling-core",
+        "bitnet-common",
+        "bitnet-eval-core",
+        "bitnet-ggml-ffi",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-models",
+        "bitnet-prompt-templates",
+        "bitnet-quantization",
+        "bitnet-repl-core",
+        "bitnet-runtime-bootstrap",
+        "bitnet-startup-contract-guard",
+        "bitnet-tokenizer-discovery-core",
+        "bitnet-tokenizers",
+        "bitnet-validation"
+      ]
+    },
+    {
+      "name": "bitnet-cli-sampling-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-cli-sampling-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-common",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-common/Cargo.toml",
+      "dependencies": [
+        "bitnet-math",
+        "bitnet-test-support",
+        "bitnet-warn-once"
+      ]
+    },
+    {
+      "name": "bitnet-compat",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-compat/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-models",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-cpu-activations",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-cpu-activations/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-cpu-detect",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-cpu-detect/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-crossval",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crossval/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-ggml-ffi",
+        "bitnet-inference",
+        "bitnet-models",
+        "bitnet-sys",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-device-probe",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-device-probe/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-intel-gpu-id"
+      ]
+    },
+    {
+      "name": "bitnet-download",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-download/Cargo.toml",
+      "dependencies": [
+        "bitnet-http-retry"
+      ]
+    },
+    {
+      "name": "bitnet-engine-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-engine-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-generation",
+        "bitnet-logits"
+      ]
+    },
+    {
+      "name": "bitnet-eval-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-eval-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-feature-contract",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-feature-contract/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid",
+        "bitnet-feature-matrix"
+      ]
+    },
+    {
+      "name": "bitnet-feature-matrix",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-feature-matrix/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-profile-core"
+      ]
+    },
+    {
+      "name": "bitnet-ffi",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-ffi/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-compat",
+        "bitnet-inference",
+        "bitnet-models",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-fuzz",
+      "version": "0.0.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/fuzz/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid-core",
+        "bitnet-common",
+        "bitnet-engine-core",
+        "bitnet-generation",
+        "bitnet-gguf",
+        "bitnet-honest-compute",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-logits",
+        "bitnet-models",
+        "bitnet-prompt-templates",
+        "bitnet-quantization",
+        "bitnet-receipts",
+        "bitnet-rope",
+        "bitnet-runtime-feature-flags-core",
+        "bitnet-sampling",
+        "bitnet-st2gguf",
+        "bitnet-tokenizers",
+        "bitnet-validation"
+      ]
+    },
+    {
+      "name": "bitnet-generation",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-generation/Cargo.toml",
+      "dependencies": [
+        "bitnet-generation-events-core",
+        "bitnet-generation-stop-core"
+      ]
+    },
+    {
+      "name": "bitnet-generation-events-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-generation-events-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-generation-stop-core"
+      ]
+    },
+    {
+      "name": "bitnet-generation-stop-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-generation-stop-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-ggml-ffi",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-ggml-ffi/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-gguf",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-gguf/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-gpu-hal",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-gpu-hal/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-honest-compute",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-honest-compute/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-http-retry",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-http-retry/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-inference",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-inference/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-device-probe",
+        "bitnet-engine-core",
+        "bitnet-generation",
+        "bitnet-gguf",
+        "bitnet-inference-metrics-core",
+        "bitnet-kernels",
+        "bitnet-kv-cache-policy-core",
+        "bitnet-logits",
+        "bitnet-models",
+        "bitnet-prompt-templates",
+        "bitnet-quantization",
+        "bitnet-receipts",
+        "bitnet-rope",
+        "bitnet-sampling",
+        "bitnet-sys",
+        "bitnet-test-support",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-inference-metrics-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-inference-metrics-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-intel-gpu-id",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-intel-gpu-id/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-kernels",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-kernels/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-cpu-activations",
+        "bitnet-cpu-detect",
+        "bitnet-device-probe",
+        "bitnet-ggml-ffi",
+        "bitnet-quantization",
+        "bitnet-simd",
+        "bitnet-test-support",
+        "bitnet-tests"
+      ]
+    },
+    {
+      "name": "bitnet-kv-cache-policy-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-kv-cache-policy-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-logits",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-logits/Cargo.toml",
+      "dependencies": [
+        "bitnet-logits-filters"
+      ]
+    },
+    {
+      "name": "bitnet-logits-filters",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-logits-filters/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-math",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-math/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-metal",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-metal/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-models",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-models/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-ggml-ffi",
+        "bitnet-gguf",
+        "bitnet-quantization",
+        "bitnet-st2gguf",
+        "bitnet-test-fixtures-core",
+        "bitnet-test-support",
+        "bitnet-trace",
+        "bitnet-transformer"
+      ]
+    },
+    {
+      "name": "bitnet-opencl",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-opencl/Cargo.toml",
+      "dependencies": [
+        "bitnet-common"
+      ]
+    },
+    {
+      "name": "bitnet-prompt-templates",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-prompt-templates/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-prompt-templates-core"
+      ]
+    },
+    {
+      "name": "bitnet-prompt-templates-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-prompt-templates-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-py",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-py/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-inference",
+        "bitnet-models",
+        "bitnet-quantization",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-quantization",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-quantization/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-kernels",
+        "bitnet-models"
+      ]
+    },
+    {
+      "name": "bitnet-receipts",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-receipts/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-receipts-core"
+      ]
+    },
+    {
+      "name": "bitnet-receipts-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-receipts-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-honest-compute",
+        "bitnet-kernels"
+      ]
+    },
+    {
+      "name": "bitnet-repl-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-repl-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-rocm",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-rocm/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-rope",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-rope/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-runtime-bootstrap",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-bootstrap/Cargo.toml",
+      "dependencies": [
+        "bitnet-startup-contract"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-context",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-context/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-context-core"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-context-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-context-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid-core"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-feature-flags",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-feature-flags/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid-core",
+        "bitnet-runtime-feature-flags-core"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-feature-flags-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-feature-flags-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid-core"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-profile",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-profile/Cargo.toml",
+      "dependencies": [
+        "bitnet-feature-matrix"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-profile-contract",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-profile-contract/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-profile-contract-core"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-profile-contract-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-profile-contract-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-bdd-grid",
+        "bitnet-runtime-context",
+        "bitnet-runtime-feature-flags"
+      ]
+    },
+    {
+      "name": "bitnet-runtime-profile-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-runtime-profile-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-profile-contract"
+      ]
+    },
+    {
+      "name": "bitnet-safetensors-ln",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-safetensors-ln/Cargo.toml",
+      "dependencies": [
+        "bitnet-validation"
+      ]
+    },
+    {
+      "name": "bitnet-sampling",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-sampling/Cargo.toml",
+      "dependencies": [
+        "bitnet-logits"
+      ]
+    },
+    {
+      "name": "bitnet-server",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-server/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-eval-core",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-models",
+        "bitnet-runtime-bootstrap",
+        "bitnet-startup-contract-guard",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-simd",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-simd/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-st-tools",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-st-tools/Cargo.toml",
+      "dependencies": [
+        "bitnet-safetensors-ln"
+      ]
+    },
+    {
+      "name": "bitnet-st2gguf",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-st2gguf/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-models"
+      ]
+    },
+    {
+      "name": "bitnet-startup-contract",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-startup-contract/Cargo.toml",
+      "dependencies": [
+        "bitnet-startup-contract-core"
+      ]
+    },
+    {
+      "name": "bitnet-startup-contract-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-startup-contract-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-profile"
+      ]
+    },
+    {
+      "name": "bitnet-startup-contract-diagnostics",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-startup-contract-diagnostics/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-bootstrap"
+      ]
+    },
+    {
+      "name": "bitnet-startup-contract-guard",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-startup-contract-guard/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-bootstrap",
+        "bitnet-startup-contract-diagnostics"
+      ]
+    },
+    {
+      "name": "bitnet-sys",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-sys/Cargo.toml",
+      "dependencies": [
+        "xtask-build-helper"
+      ]
+    },
+    {
+      "name": "bitnet-test-env",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-test-env/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-test-fixtures-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-test-fixtures-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-test-support",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-test-support/Cargo.toml",
+      "dependencies": [
+        "bitnet-test-env"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-policy-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-contract",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-contract/Cargo.toml",
+      "dependencies": [
+        "bitnet-feature-contract",
+        "bitnet-runtime-feature-flags",
+        "bitnet-testing-policy-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-profile",
+        "bitnet-testing-scenarios-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-interop",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-interop/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-feature-flags",
+        "bitnet-testing-policy-contract",
+        "bitnet-testing-policy-kit"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-kit",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-kit/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-policy"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-runtime",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-runtime/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-policy-interop",
+        "bitnet-testing-policy-runtime-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-runtime-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-runtime-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-policy-interop"
+      ]
+    },
+    {
+      "name": "bitnet-testing-policy-tests",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-policy-tests/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-policy-runtime"
+      ]
+    },
+    {
+      "name": "bitnet-testing-profile",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-profile/Cargo.toml",
+      "dependencies": [
+        "bitnet-runtime-profile"
+      ]
+    },
+    {
+      "name": "bitnet-testing-scenarios",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-scenarios/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-scenarios-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-scenarios-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-scenarios-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-scenarios-profile-core"
+      ]
+    },
+    {
+      "name": "bitnet-testing-scenarios-profile-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-testing-scenarios-profile-core/Cargo.toml",
+      "dependencies": [
+        "bitnet-testing-profile"
+      ]
+    },
+    {
+      "name": "bitnet-tests",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/tests/Cargo.toml",
+      "dependencies": [
+        "bitnet",
+        "bitnet-common",
+        "bitnet-compat",
+        "bitnet-crossval",
+        "bitnet-device-probe",
+        "bitnet-engine-core",
+        "bitnet-generation",
+        "bitnet-gguf",
+        "bitnet-honest-compute",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-logits",
+        "bitnet-models",
+        "bitnet-prompt-templates",
+        "bitnet-quantization",
+        "bitnet-receipts",
+        "bitnet-sampling",
+        "bitnet-test-support",
+        "bitnet-testing-policy-tests",
+        "bitnet-tokenizers"
+      ]
+    },
+    {
+      "name": "bitnet-tests-new",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/tests-new/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-models"
+      ]
+    },
+    {
+      "name": "bitnet-tokenizer-discovery-core",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-tokenizer-discovery-core/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-tokenizers",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-tokenizers/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-models",
+        "bitnet-quantization",
+        "bitnet-test-fixtures-core",
+        "bitnet-test-support",
+        "bitnet-tests"
+      ]
+    },
+    {
+      "name": "bitnet-trace",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-trace/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-transformer",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-transformer/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-quantization",
+        "bitnet-rope",
+        "bitnet-test-support"
+      ]
+    },
+    {
+      "name": "bitnet-validation",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-validation/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-vulkan",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-vulkan/Cargo.toml",
+      "dependencies": [
+        "bitnet-vulkan-shaders"
+      ]
+    },
+    {
+      "name": "bitnet-vulkan-shaders",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-vulkan-shaders/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-warn-once",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-warn-once/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-wasm",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wasm/Cargo.toml",
+      "dependencies": [
+        "bitnet-common",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-models",
+        "bitnet-quantization",
+        "bitnet-tokenizers",
+        "bitnet-wasm-utils"
+      ]
+    },
+    {
+      "name": "bitnet-wasm-utils",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wasm-utils/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-wgpu",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wgpu/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-wgpu-bench",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wgpu-bench/Cargo.toml",
+      "dependencies": [
+        "bitnet-bench-receipts"
+      ]
+    },
+    {
+      "name": "bitnet-wgpu-runner",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wgpu-runner/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "bitnet-wgpu-shaders-i2s",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/crates/bitnet-wgpu-shaders-i2s/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "migrate-gen-config",
+      "version": "0.2.1-dev",
+      "license": null,
+      "manifest_path": "/workspace/BitNet-rs/tools/migrate-gen-config/Cargo.toml",
+      "dependencies": []
+    },
+    {
+      "name": "xtask",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/xtask/Cargo.toml",
+      "dependencies": [
+        "bitnet",
+        "bitnet-bdd-grid",
+        "bitnet-common",
+        "bitnet-crossval",
+        "bitnet-download",
+        "bitnet-inference",
+        "bitnet-kernels",
+        "bitnet-models",
+        "bitnet-sys",
+        "bitnet-test-support",
+        "bitnet-tokenizers",
+        "xtask-build-helper"
+      ]
+    },
+    {
+      "name": "xtask-build-helper",
+      "version": "0.2.1-dev",
+      "license": "MIT OR Apache-2.0",
+      "manifest_path": "/workspace/BitNet-rs/xtask-build-helper/Cargo.toml",
+      "dependencies": []
+    }
+  ]
+}
