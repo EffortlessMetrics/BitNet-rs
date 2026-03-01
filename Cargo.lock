@@ -818,7 +818,15 @@ dependencies = [
 name = "bitnet-logits"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-logits-filters",
  "insta",
+ "proptest",
+]
+
+[[package]]
+name = "bitnet-logits-filters"
+version = "0.2.1-dev"
+dependencies = [
  "proptest",
 ]
 

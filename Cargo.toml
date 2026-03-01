@@ -25,6 +25,7 @@ members = [
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-logits",        # SRP: pure logits transform functions
+  "crates/bitnet-logits-filters", # SRP: reusable logits/probability filtering transforms
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
@@ -110,6 +111,7 @@ default-members = [
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",
+  "crates/bitnet-logits-filters",
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
