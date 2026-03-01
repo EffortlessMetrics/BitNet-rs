@@ -18,6 +18,7 @@
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`matmul`]: Dense f32/f16 matrix multiplication (tiled GEMM) with batched and
 //!   transpose support
+//! - [`linear`]: Linear projection (y = xW^T + bias) CUDA kernel and launch stub
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
 //! - [`embedding`]: Token and positional embedding lookup with padding support
@@ -38,6 +39,7 @@ pub mod embedding;
 pub mod fusion;
 pub mod kv_cache;
 pub mod layernorm;
+pub mod linear;
 pub mod matmul;
 pub mod pooling;
 pub mod qk256_gemv;
@@ -70,6 +72,7 @@ pub use layernorm::{
     LayerNormConfig, batch_layer_norm_cpu, layer_norm_cpu_fallback, layer_norm_forward,
     rms_norm_cpu_fallback, rms_norm_forward,
 };
+pub use linear::{LINEAR_KERNEL_SRC, launch_linear};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
 pub use rope::{
