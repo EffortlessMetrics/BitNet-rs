@@ -873,6 +873,7 @@ dependencies = [
  "env_logger",
  "log",
  "opencl3",
+ "serial_test",
  "thiserror 2.0.18",
 ]
 
