@@ -154,3 +154,6 @@ pub mod generation;
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
 pub mod memory_layout;
+// Provides throughput/latency/memory tracking, bottleneck detection,
+// alerting, and Prometheus/JSON/CSV export for inference pipelines.
+pub mod performance_monitor;
