@@ -2,7 +2,6 @@ use bitnet_common::Result;
 use candle_core::{DType, Device, Tensor};
 use regex::Regex;
 /// Weight mapping utilities for loading model weights from various formats
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -256,21 +255,8 @@ pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<S
 }
 
 /// Normalize exporter name drift to our canonical names.
-/// Known drifts:
-///  - attn_sub_norm <-> attention_sub_norm
-///  - ffn_sub_norm  <-> mlp_sub_layernorm
-fn normalize_name(name: &str) -> Cow<'_, str> {
-    if name.contains("attention_sub_norm") {
-        // Map Microsoft's variation to our canonical name
-        let s = name.replace("attention_sub_norm", "attn_sub_norm");
-        return Cow::Owned(s);
-    }
-    if name.contains("mlp_sub_layernorm") {
-        // Map to our canonical FFN sub norm
-        let s = name.replace("mlp_sub_layernorm", "ffn_sub_norm");
-        return Cow::Owned(s);
-    }
-    Cow::Borrowed(name)
+fn normalize_name(name: &str) -> std::borrow::Cow<'_, str> {
+    bitnet_weight_name_normalization::normalize_exporter_name_drift(name)
 }
 
 /// Helper to get 2D tensor dimensions

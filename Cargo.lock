@@ -902,6 +902,7 @@ dependencies = [
  "bitnet-test-support",
  "bitnet-trace",
  "bitnet-transformer",
+ "bitnet-weight-name-normalization",
  "bytemuck",
  "candle-core",
  "candle-nn",
@@ -1656,6 +1657,10 @@ dependencies = [
  "wasm-bindgen-test",
  "web-sys",
 ]
+
+[[package]]
+name = "bitnet-weight-name-normalization"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-wgpu"
