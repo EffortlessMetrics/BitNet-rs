@@ -370,11 +370,12 @@ impl QuantizationKernels {
     unsafe fn quantize_neon_block(&self, data: &[f32], output: &mut [i8], scale: f32, bits: u8) {
         use std::arch::aarch64::*;
 
-        unsafe {
-            let max_val = ((1 << (bits - 1)) - 1) as f32;
-            let min_val = -(1 << (bits - 1)) as f32;
+        let max_val = ((1 << (bits - 1)) - 1) as f32;
+        let min_val = -(1 << (bits - 1)) as f32;
 
-            let inv_scale = if scale.is_finite() && scale != 0.0 { 1.0 / scale } else { 0.0 };
+        let inv_scale = if scale.is_finite() && scale != 0.0 { 1.0 / scale } else { 0.0 };
+        // Safety: caller guarantees NEON is available via #[target_feature(enable = "neon")]
+        unsafe {
             let inv_scale_vec = vdupq_n_f32(inv_scale);
             let min_val_vec = vdupq_n_f32(min_val);
             let max_val_vec = vdupq_n_f32(max_val);
@@ -416,6 +417,7 @@ impl QuantizationKernels {
     unsafe fn dequantize_neon_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
         use std::arch::aarch64::*;
 
+        // Safety: caller guarantees NEON is available via #[target_feature(enable = "neon")]
         unsafe {
             let scale_vec = vdupq_n_f32(scale);
 
