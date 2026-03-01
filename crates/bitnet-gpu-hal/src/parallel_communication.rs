@@ -70,9 +70,10 @@ impl fmt::Display for ReduceOp {
 // ── CommBackend ────────────────────────────────────────────────────────
 
 /// Communication backend used for data transfer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CommBackend {
     /// Simulated in-process communication for testing.
+    #[default]
     Simulated,
     /// Shared-memory transport for single-node multi-GPU.
     SharedMemory,
@@ -90,18 +91,13 @@ impl fmt::Display for CommBackend {
     }
 }
 
-impl Default for CommBackend {
-    fn default() -> Self {
-        Self::Simulated
-    }
-}
-
 // ── TopologyKind ───────────────────────────────────────────────────────
 
 /// Topology strategy for collective communication.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TopologyKind {
     /// Ring-based: each worker communicates with its left/right neighbours.
+    #[default]
     Ring,
     /// Tree-based: hierarchical reduction/broadcast.
     Tree,
@@ -113,12 +109,6 @@ impl fmt::Display for TopologyKind {
             Self::Ring => write!(f, "Ring"),
             Self::Tree => write!(f, "Tree"),
         }
-    }
-}
-
-impl Default for TopologyKind {
-    fn default() -> Self {
-        Self::Ring
     }
 }
 

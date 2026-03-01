@@ -325,7 +325,7 @@ pub enum GpuHalError {
     Backend(BackendError),
     /// An error with attached rich context.
     Contextualized {
-        error: Box<GpuHalError>,
+        error: Box<Self>,
         context: ErrorContext,
     },
     /// Catch-all for errors that don't fit other categories.

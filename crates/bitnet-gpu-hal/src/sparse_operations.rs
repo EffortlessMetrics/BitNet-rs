@@ -996,11 +996,9 @@ impl SparseAnalyzer {
         }
         let mut max_nnz = 0usize;
         let mut min_nnz = usize::MAX;
-        let mut nnz_per_row = Vec::with_capacity(mat.rows);
 
         for r in 0..mat.rows {
             let count = mat.row_indices[r + 1] - mat.row_indices[r];
-            nnz_per_row.push(count);
             max_nnz = max_nnz.max(count);
             min_nnz = min_nnz.min(count);
         }
@@ -1079,8 +1077,7 @@ impl SparseAnalyzer {
                             // Check this position exists
                             let row_start = mat.row_indices[gr];
                             let row_end = mat.row_indices[gr + 1];
-                            let found =
-                                mat.col_indices[row_start..row_end].iter().any(|&c| c == gc);
+                            let found = mat.col_indices[row_start..row_end].contains(&gc);
                             if !found {
                                 return false;
                             }

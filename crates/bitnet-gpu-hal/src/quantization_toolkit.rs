@@ -267,10 +267,9 @@ impl PerChannelQuantizer {
         assert!(quantized.len() % channels == 0);
         let ch_size = quantized.len() / channels;
         let mut output = Vec::with_capacity(quantized.len());
-        for ch in 0..channels {
+        for (ch, &scale) in scales.iter().enumerate().take(channels) {
             let start = ch * ch_size;
             let end = start + ch_size;
-            let scale = scales[ch];
             for &q in &quantized[start..end] {
                 output.push(q as f32 * scale);
             }
@@ -353,7 +352,7 @@ impl CalibrationDataset {
             }
             CalibrationStrategy::MovingAverage { window } => {
                 let n = self.samples.len();
-                let start = if n > window { n - window } else { 0 };
+                let start = n.saturating_sub(window);
                 let recent = &self.samples[start..];
                 let mut rmin = f32::INFINITY;
                 let mut rmax = f32::NEG_INFINITY;
@@ -496,13 +495,14 @@ impl MixedPrecisionSelector {
     pub fn select(&self, sensitivity: &LayerSensitivity) -> (u8, QuantizationError) {
         // Sort candidates ascending (prefer fewer bits).
         let mut cands: Vec<u8> = self.candidates.clone();
-        cands.sort();
+        cands.sort_unstable();
 
         for &bits in &cands {
-            if let Some((_, err)) = sensitivity.errors.iter().find(|(b, _)| *b == bits) {
-                if err.mse <= self.mse_threshold && err.cosine_similarity >= self.cosine_threshold {
-                    return (bits, err.clone());
-                }
+            if let Some((_, err)) = sensitivity.errors.iter().find(|(b, _)| *b == bits)
+                && err.mse <= self.mse_threshold
+                && err.cosine_similarity >= self.cosine_threshold
+            {
+                return (bits, err.clone());
             }
         }
 
@@ -605,10 +605,9 @@ impl DequantKernel {
         assert!(channels > 0);
         assert_eq!(scales.len(), channels);
         let ch_size = quantized.len() / channels;
-        for ch in 0..channels {
+        for (ch, &s) in scales.iter().enumerate().take(channels) {
             let start = ch * ch_size;
             let end = start + ch_size;
-            let s = scales[ch];
             for i in start..end {
                 output[i] = quantized[i] as f32 * s;
             }
@@ -626,7 +625,7 @@ impl DequantKernel {
         assert_eq!(quantized.len(), output.len());
         assert_eq!(bias.len(), output.len());
         for i in 0..output.len() {
-            output[i] = quantized[i] as f32 * scale + bias[i];
+            output[i] = (quantized[i] as f32).mul_add(scale, bias[i]);
         }
     }
 }

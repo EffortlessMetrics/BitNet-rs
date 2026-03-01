@@ -217,7 +217,7 @@ impl TokenAccumulator {
 
     /// Flush up to the last sentence-ending punctuation (`.`, `!`, `?`).
     pub fn flush_sentence(&mut self) -> Option<String> {
-        let end = self.buffer.rfind(|c: char| c == '.' || c == '!' || c == '?');
+        let end = self.buffer.rfind(['.', '!', '?']);
         if let Some(pos) = end {
             let flushed = self.buffer[..=pos].to_string();
             self.buffer = self.buffer[pos + 1..].to_string();
