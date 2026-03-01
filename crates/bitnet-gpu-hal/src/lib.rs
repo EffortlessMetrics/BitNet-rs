@@ -138,6 +138,3 @@ pub mod streaming_aggregator;
 // Parallel communication primitives for distributed GPU inference:
 // all-reduce, all-gather, reduce-scatter, broadcast, ring/tree
 // topologies, double-buffered comm, and profiling.
-pub mod deployment_manager;
-pub mod generation;
-pub mod model_warmup;
