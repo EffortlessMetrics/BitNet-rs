@@ -40,3 +40,394 @@ name = "quantization_i2s"
 path = "fuzz_targets/quantization_i2s.rs"
 test = false
 doc = false
+
+
+[[bin]]
+name = "quantization_tl1"
+path = "fuzz_targets/quantization_tl1.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "quantization_tl2"
+path = "fuzz_targets/quantization_tl2.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_parser"
+path = "fuzz_targets/gguf_parser.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_header"
+path = "fuzz_targets/gguf_header.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "safetensors_parser"
+path = "fuzz_targets/safetensors_parser.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "safetensors_metadata"
+path = "fuzz_targets/safetensors_metadata.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "kernel_matmul"
+path = "fuzz_targets/kernel_matmul.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "architecture_detection"
+path = "fuzz_targets/architecture_detection.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tl_lut_helper"
+path = "fuzz_targets/tl_lut_helper.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_discovery"
+path = "fuzz_targets/tokenizer_discovery.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "vocab_size_extraction"
+path = "fuzz_targets/vocab_size_extraction.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "logits_transforms"
+path = "fuzz_targets/logits_transforms.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "generation_stop_check"
+path = "fuzz_targets/generation_stop_check.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "generation_stop_checker"
+path = "fuzz_targets/generation_stop_checker.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rope_table_gen"
+path = "fuzz_targets/rope_table_gen.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_encode"
+path = "fuzz_targets/tokenizer_encode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_metadata_values"
+path = "fuzz_targets/gguf_metadata_values.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_encode_decode"
+path = "fuzz_targets/tokenizer_encode_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "quantization_input"
+path = "fuzz_targets/quantization_input.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "transformer_config"
+path = "fuzz_targets/transformer_config.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_kv_read"
+path = "fuzz_targets/gguf_kv_read.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_header_roundtrip"
+path = "fuzz_targets/gguf_header_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_header_parse"
+path = "fuzz_targets/gguf_header_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "sampling_no_panic"
+path = "fuzz_targets/sampling_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "receipt_json_roundtrip"
+path = "fuzz_targets/receipt_json_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "prompt_template_no_panic"
+path = "fuzz_targets/prompt_template_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_writer_roundtrip"
+path = "fuzz_targets/gguf_writer_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_encode_no_panic"
+path = "fuzz_targets/tokenizer_encode_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "validation_no_panic"
+path = "fuzz_targets/validation_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "engine_core_no_panic"
+path = "fuzz_targets/engine_core_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "honest_compute_no_panic"
+path = "fuzz_targets/honest_compute_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "runtime_context_parse_no_panic"
+path = "fuzz_targets/runtime_context_parse_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "feature_activation_no_panic"
+path = "fuzz_targets/feature_activation_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "kernel_dispatch"
+path = "fuzz_targets/kernel_dispatch.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "kv_cache_ops"
+path = "fuzz_targets/kv_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "model_config_parse"
+path = "fuzz_targets/model_config_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "sampling_temperature"
+path = "fuzz_targets/sampling_temperature.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tensor_shape_validate"
+path = "fuzz_targets/tensor_shape_validate.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "opencl_ternary_pack"
+path = "fuzz_targets/opencl_ternary_pack.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "softmax_stability"
+path = "fuzz_targets/softmax_stability.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "device_opencl_construct"
+path = "fuzz_targets/device_opencl_construct.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "embedding_lookup"
+path = "fuzz_targets/embedding_lookup.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "pooling_dims"
+path = "fuzz_targets/pooling_dims.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tensor_validation"
+path = "fuzz_targets/tensor_validation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "config_validation"
+path = "fuzz_targets/config_validation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "scatter_indices"
+path = "fuzz_targets/scatter_indices.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "memory_pool_alloc"
+path = "fuzz_targets/memory_pool_alloc.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "memory_layout"
+path = "fuzz_targets/memory_layout.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_attention_scores"
+path = "fuzz_targets/fuzz_attention_scores.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_matmul_shapes"
+path = "fuzz_targets/fuzz_matmul_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_layer_norm"
+path = "fuzz_targets/fuzz_layer_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_ops"
+path = "fuzz_targets/fuzz_kv_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_reduction_ops"
+path = "fuzz_targets/fuzz_reduction_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rope_rotation"
+path = "fuzz_targets/rope_rotation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "conv1d_shapes"
+path = "fuzz_targets/conv1d_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "reduction_ops"
+path = "fuzz_targets/reduction_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "batch_norm_params"
+path = "fuzz_targets/batch_norm_params.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "prefix_cache_ops"
+path = "fuzz_targets/prefix_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "layer_norm"
+path = "fuzz_targets/layer_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "simd_math"
+path = "fuzz_targets/simd_math.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "loss_functions"
+path = "fuzz_targets/loss_functions.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "broadcast_shape_fuzz"
+path = "fuzz_targets/broadcast_shape_fuzz.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantize_dequant_roundtrip"
+path = "fuzz_targets/fuzz_quantize_dequant_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_gguf_header_parse"
+path = "fuzz_targets/fuzz_gguf_header_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_tokenizer_decode_arbitrary"
+path = "fuzz_targets/fuzz_tokenizer_decode_arbitrary.rs"
+test = false
+doc = false
