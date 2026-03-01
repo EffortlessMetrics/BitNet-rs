@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: debugs
+---
+[
+    "ReLU",
+    "LeakyReLU(0.01)",
+    "GELU",
+    "GELUTanh",
+    "SiLU",
+    "Swish(1.0)",
+    "Sigmoid",
+    "Tanh",
+    "HardSigmoid",
+    "HardSwish",
+    "Mish",
+    "Softplus",
+    "ELU(1.0)",
+    "SELU",
+    "QuickGELU",
+]

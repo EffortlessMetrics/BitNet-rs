@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: cfg
+---
+CpuEmbeddingConfig {
+    vocab_size: 32000,
+    embed_dim: 768,
+    padding_idx: Some(
+        0,
+    ),
+    max_norm: Some(
+        1.0,
+    ),
+}

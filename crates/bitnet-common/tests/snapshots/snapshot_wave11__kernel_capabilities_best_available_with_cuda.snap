@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: caps.best_available()
+---
+Some(
+    Cuda,
+)

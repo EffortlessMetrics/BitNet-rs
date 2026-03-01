@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: displays
+---
+[
+    "Unsupported quantization type: Q4_K",
+    "Quantization failed: overflow",
+    "Invalid block size: 7",
+    "Resource limit exceeded: OOM",
+    "Invalid input dimensions: wrong shape",
+    "Memory allocation failed: no memory",
+]

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: cfg
+---
+StrictModeConfig {
+    enabled: false,
+    fail_on_mock: false,
+    require_quantization: false,
+    enforce_quantized_inference: false,
+    validate_performance: false,
+    ci_enhanced_mode: false,
+    log_all_validations: false,
+    fail_fast_on_any_mock: false,
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: result.summary()
+---
+requested=auto detected=[cpu-rust] selected=cpu-rust

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: cfg
+---
+LayerNormConfig {
+    normalized_shape: [
+        64,
+        128,
+    ],
+    eps: 1e-6,
+    elementwise_affine: false,
+}
