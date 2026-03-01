@@ -5,6 +5,14 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+#[cfg(feature = "opencl")]
+pub mod opencl;
+#[cfg(feature = "opencl")]
+pub use opencl::{
+    IntelArcDetector, OpenClDeviceInfo, OpenClDeviceType, OpenClPlatformInfo, OpenClProbeResult,
+    ProbeResult, is_intel_arc_available, list_opencl_devices, probe_opencl,
+};
+
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
 /// CPU capabilities detected at runtime.
