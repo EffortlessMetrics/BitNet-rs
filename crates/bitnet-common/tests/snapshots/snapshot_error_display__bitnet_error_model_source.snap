@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: source
+---
+Model not found: /model.gguf

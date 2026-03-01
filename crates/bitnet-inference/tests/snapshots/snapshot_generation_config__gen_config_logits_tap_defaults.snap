@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: "format!(\"tap_steps={}, topk={}\", cfg.logits_tap_steps, cfg.logits_topk)"
+---
+tap_steps=0, topk=10

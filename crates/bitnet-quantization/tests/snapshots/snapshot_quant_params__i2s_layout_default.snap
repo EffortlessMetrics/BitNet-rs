@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: "format!(\"block_size={} bytes_per_block={} data={} scale={}\", l.block_size,\nl.bytes_per_block, l.data_bytes_per_block, l.scale_bytes_per_block,)"
+---
+block_size=32 bytes_per_block=10 data=8 scale=2

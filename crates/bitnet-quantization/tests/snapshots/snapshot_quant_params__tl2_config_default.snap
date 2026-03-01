@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: "format!(\"TL2Config {{ block_size: {}, lookup_table_size: {}, precision_bits: {}, vectorized_tables: {} }}\",\nconfig.block_size, config.lookup_table_size, config.precision_bits,\nconfig.vectorized_tables,)"
+---
+TL2Config { block_size: 128, lookup_table_size: 256, precision_bits: 2, vectorized_tables: true }

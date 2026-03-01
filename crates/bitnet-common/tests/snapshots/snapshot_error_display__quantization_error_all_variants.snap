@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: displays
+---
+[
+    "Unsupported quantization type: Q4_K_M",
+    "Quantization failed: scale underflow",
+    "Invalid block size: 7",
+    "Resource limit exceeded: exceeded 4GB allocation",
+    "Invalid input dimensions: shape [0, 128] has zero dim",
+    "Memory allocation failed: out of memory",
+]

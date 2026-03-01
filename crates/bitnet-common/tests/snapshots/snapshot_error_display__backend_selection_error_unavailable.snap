@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: err.to_string()
+---
+requested backend 'gpu' is not available; compiled backends: [cpu-rust]
