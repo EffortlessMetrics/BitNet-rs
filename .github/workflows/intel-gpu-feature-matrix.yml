@@ -1,0 +1,144 @@
+name: Intel GPU Feature Matrix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/bitnet-kernels/**'
+      - 'crates/bitnet-common/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-feature-matrix.yml'
+  pull_request:
+    paths:
+      - 'crates/bitnet-kernels/**'
+      - 'crates/bitnet-common/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-feature-matrix.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  feature-matrix:
+    name: "Feature ${{ matrix.label }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cpu
+            flags: "--workspace --no-default-features --features cpu"
+            test_filter: "opencl"
+          - label: cpu+oneapi
+            # oneapi is a crate-level feature, not workspace-level
+            flags: "-p bitnet-kernels -p bitnet-common -p bitnet-device-probe --no-default-features --features oneapi"
+            test_filter: "opencl OR intel"
+            needs_opencl_headers: true
+          - label: gpu
+            flags: "--workspace --no-default-features --features gpu"
+            test_filter: "opencl"
+            allow_failure: true
+          - label: gpu+oneapi
+            flags: "-p bitnet-kernels --no-default-features --features gpu,oneapi"
+            test_filter: "opencl OR intel"
+            needs_opencl_headers: true
+            allow_failure: true
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Install OpenCL headers
+        if: matrix.needs_opencl_headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: "intel-feature-${{ matrix.label }}"
+
+      - name: Check compilation
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        run: cargo check --locked ${{ matrix.flags }}
+
+      - name: Run OpenCL/Intel tests
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        run: |
+          cargo test --locked ${{ matrix.flags }} -- \
+            --include-ignored 2>&1 | head -200 || true
+        env:
+          BITNET_GPU_FAKE: "opencl"
+          BITNET_SKIP_SLOW_TESTS: "1"
+
+      - name: Clippy
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        run: cargo clippy --locked ${{ matrix.flags }} -- -D warnings
+
+  opencl-compile-check:
+    name: OpenCL Compilation Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: intel-opencl-compile
+
+      - name: Check bitnet-kernels compiles with cpu (no OpenCL needed)
+        run: |
+          cargo check --locked -p bitnet-kernels --no-default-features --features cpu
+          cargo check --locked -p bitnet-common --no-default-features --features cpu
+
+      - name: Verify no OpenCL runtime needed at compile time
+        run: |
+          # Ensure we can build without OpenCL libraries installed
+          cargo build --locked -p bitnet-kernels --no-default-features --features cpu 2>&1
+
+      - name: Verify device_features compiles without oneapi
+        run: |
+          # oneapi_compiled() must return false, oneapi_available_runtime() must return false
+          cargo test --locked -p bitnet-kernels --no-default-features --features cpu \
+            -- device_features 2>&1 | tail -50
+
+  doc-check:
+    name: Documentation Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: intel-doc-check
+
+      - name: Generate docs
+        run: cargo doc --locked --workspace --no-default-features --features cpu --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"

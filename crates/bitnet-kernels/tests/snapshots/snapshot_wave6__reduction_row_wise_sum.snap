@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 221
+expression: fmt_f32(&result)
+---
+6.000000, 15.000000

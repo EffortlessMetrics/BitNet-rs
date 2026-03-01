@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 213
+expression: "format!(\"argmin={} value={:.6}\", result.index, result.value)"
+---
+argmin=4 value=-2.000000

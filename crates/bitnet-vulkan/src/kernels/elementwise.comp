@@ -1,0 +1,66 @@
+#version 450
+// Element-wise operations compute shader
+// Supports: SiLU, GELU, Add, Mul via push-constant op selector
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// Op codes
+const uint OP_SILU = 0;
+const uint OP_GELU = 1;
+const uint OP_ADD  = 2;
+const uint OP_MUL  = 3;
+
+layout(push_constant) uniform PushConstants {
+    uint N;      // number of elements
+    uint op;     // operation selector (see OP_ constants above)
+} params;
+
+layout(set = 0, binding = 0) readonly buffer InputA {
+    float data[];
+} a_buf;
+
+// Second input used for binary ops (add, mul); unused for unary ops
+layout(set = 0, binding = 1) readonly buffer InputB {
+    float data[];
+} b_buf;
+
+layout(set = 0, binding = 2) writeonly buffer Output {
+    float data[];
+} out_buf;
+
+// SiLU(x) = x * sigmoid(x)
+float silu(float x) {
+    return x / (1.0 + exp(-x));
+}
+
+// GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x^3)))
+float gelu(float x) {
+    const float SQRT_2_OVER_PI = 0.7978845608;
+    const float COEFF = 0.044715;
+    float x3 = x * x * x;
+    float inner = SQRT_2_OVER_PI * (x + COEFF * x3);
+    return 0.5 * x * (1.0 + tanh(inner));
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+
+    if (idx >= params.N) return;
+
+    float val_a = a_buf.data[idx];
+
+    float result;
+    if (params.op == OP_SILU) {
+        result = silu(val_a);
+    } else if (params.op == OP_GELU) {
+        result = gelu(val_a);
+    } else if (params.op == OP_ADD) {
+        result = val_a + b_buf.data[idx];
+    } else if (params.op == OP_MUL) {
+        result = val_a * b_buf.data[idx];
+    } else {
+        result = val_a; // passthrough for unknown ops
+    }
+
+    out_buf.data[idx] = result;
+}
