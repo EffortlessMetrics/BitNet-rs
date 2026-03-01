@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: c
+---
+{
+  "device": "Cpu",
+  "available": true,
+  "memory_total_mb": 32768,
+  "memory_free_mb": 16384,
+  "compute_capability": null,
+  "simd_support": [
+    "AVX2",
+    "AVX-512"
+  ],
+  "avg_tokens_per_second": 15.0,
+  "last_benchmark": null
+}

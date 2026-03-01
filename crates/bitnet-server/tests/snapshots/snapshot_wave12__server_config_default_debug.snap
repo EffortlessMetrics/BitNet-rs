@@ -1,0 +1,85 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: cfg
+---
+ServerConfig {
+    server: ServerSettings {
+        host: "0.0.0.0",
+        port: 8080,
+        workers: None,
+        keep_alive: 60s,
+        request_timeout: 300s,
+        graceful_shutdown_timeout: 30s,
+        default_model_path: None,
+        default_tokenizer_path: None,
+        default_device: Auto,
+    },
+    model_manager: ModelManagerConfig {
+        max_concurrent_loads: 2,
+        model_cache_size: 3,
+        load_timeout: 300s,
+        validation_enabled: true,
+        memory_limit_gb: Some(
+            16.0,
+        ),
+    },
+    execution_router: ExecutionRouterConfig {
+        strategy: PerformanceBased,
+        fallback_enabled: true,
+        health_check_interval: 30s,
+        performance_threshold_tps: 10.0,
+        memory_threshold_percent: 0.8,
+        benchmark_on_startup: true,
+    },
+    batch_engine: BatchEngineConfig {
+        max_batch_size: 16,
+        batch_timeout: 100ms,
+        max_concurrent_batches: 4,
+        priority_queue_enabled: true,
+        adaptive_batching: true,
+        quantization_aware: true,
+        simd_optimization: true,
+    },
+    concurrency: ConcurrencyConfig {
+        max_concurrent_requests: 100,
+        max_requests_per_second: 50,
+        max_requests_per_minute: 1000,
+        rate_limit_window: 60s,
+        backpressure_threshold: 0.8,
+        circuit_breaker_enabled: true,
+        circuit_breaker_failure_threshold: 10,
+        circuit_breaker_timeout: 30s,
+        per_ip_rate_limit: Some(
+            10,
+        ),
+        global_rate_limit: Some(
+            100,
+        ),
+    },
+    security: SecurityConfig {
+        jwt_secret: None,
+        require_authentication: false,
+        max_prompt_length: 8192,
+        max_tokens_per_request: 2048,
+        allowed_origins: [
+            "*",
+        ],
+        allowed_model_directories: [],
+        blocked_ips: {},
+        rate_limit_by_ip: true,
+        input_sanitization: true,
+        content_filtering: true,
+    },
+    monitoring: MonitoringConfig {
+        prometheus_enabled: true,
+        prometheus_path: "/metrics",
+        opentelemetry_enabled: false,
+        opentelemetry_endpoint: None,
+        otlp_endpoint: None,
+        health_path: "/health",
+        metrics_interval: 10,
+        structured_logging: true,
+        log_level: "info",
+        log_format: "json",
+    },
+}

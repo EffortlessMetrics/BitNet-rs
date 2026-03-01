@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: d
+---
+Gpu(
+    0,
+)

@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: c
+---
+{
+  "max_tokens": 256,
+  "stop_sequences": [
+    "</s>",
+    "\n\n"
+  ],
+  "stop_token_ids": [
+    128009
+  ],
+  "stream": true
+}

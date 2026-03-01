@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: c
+---
+{
+  "strategy": "PerformanceBased",
+  "fallback_enabled": true,
+  "health_check_interval": {
+    "secs": 30,
+    "nanos": 0
+  },
+  "performance_threshold_tps": 10.0,
+  "memory_threshold_percent": 0.8,
+  "benchmark_on_startup": true
+}

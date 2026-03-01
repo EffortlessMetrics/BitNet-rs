@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: c
+---
+SamplingConfig {
+    temperature: 2.0,
+    top_k: 200,
+    top_p: 0.99,
+    repetition_penalty: 1.3,
+    seed: None,
+}

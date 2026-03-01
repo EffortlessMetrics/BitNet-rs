@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: variants
+---
+[
+    "LRU",
+    "SlidingWindow",
+    "AttentionBased",
+]

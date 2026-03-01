@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: s
+---
+MinPSampler {
+    min_p: 0.0,
+}

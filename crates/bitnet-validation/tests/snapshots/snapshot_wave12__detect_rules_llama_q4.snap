@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-validation/tests/snapshot_wave12.rs
+expression: r.name
+---
+generic

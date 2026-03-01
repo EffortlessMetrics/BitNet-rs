@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: "format!(\"token_id={tok}\")"
+---
+token_id=3

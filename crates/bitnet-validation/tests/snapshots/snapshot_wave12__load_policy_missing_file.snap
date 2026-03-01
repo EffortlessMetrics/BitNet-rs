@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-validation/tests/snapshot_wave12.rs
+expression: "format!(\"{}\", result.unwrap_err())"
+---
+No such file or directory (os error 2)
