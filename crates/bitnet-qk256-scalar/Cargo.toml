@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-qk256-scalar"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Scalar GGML I2_S (QK256) primitives"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+anyhow.workspace = true
+
+[dev-dependencies]
+rand.workspace = true

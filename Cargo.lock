@@ -984,6 +984,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-qk256-scalar"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "rand 0.9.2",
+]
+
+[[package]]
 name = "bitnet-quantization"
 version = "0.2.1-dev"
 dependencies = [
@@ -991,6 +999,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-qk256-scalar",
  "bytemuck",
  "candle-core",
  "criterion 0.7.0",

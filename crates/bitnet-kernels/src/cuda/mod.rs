@@ -166,13 +166,11 @@ pub use matmul::{launch_matmul, launch_matmul_f16};
 pub use quantized_matmul::launch_i2s_matmul;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use quantize::{
     DEQUANTIZE_I2S_KERNEL_SRC, DEQUANTIZE_TERNARY_KERNEL_SRC, QUANTIZE_I2S_KERNEL_SRC,
     QUANTIZE_TERNARY_KERNEL_SRC,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use fusion::{
     FUSION_KERNEL_SRC, launch_fused_add_rmsnorm_cuda, launch_fused_gelu_linear_cuda,
     launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
 };
