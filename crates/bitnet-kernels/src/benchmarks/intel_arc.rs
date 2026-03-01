@@ -251,7 +251,7 @@ impl QuantizedBenchmark {
 
     /// Run a CPU reference: simulated dequant + matvec.
     pub fn run_cpu_reference(&self) -> Duration {
-        let packed_len = (self.hidden_dim * self.intermediate_dim + 3) / 4;
+        let packed_len = (self.hidden_dim * self.intermediate_dim).div_ceil(4);
         let packed = vec![0xAAu8; packed_len];
         let scales = vec![1.0f32; self.intermediate_dim];
         let input = vec![1.0f32; self.hidden_dim * self.seq_len];
@@ -381,7 +381,7 @@ impl BenchResult {
             return Duration::ZERO;
         }
         let mid = self.samples.len() / 2;
-        if self.samples.len() % 2 == 0 {
+        if self.samples.len().is_multiple_of(2) {
             (self.samples[mid - 1] + self.samples[mid]) / 2
         } else {
             self.samples[mid]
@@ -614,7 +614,7 @@ impl BenchRunner {
             let _ = f(i);
         }
         // Timed
-        (0..self.config.bench_iterations).map(|i| f(i)).collect()
+        (0..self.config.bench_iterations).map(f).collect()
     }
 }
 
