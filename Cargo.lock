@@ -870,6 +870,7 @@ name = "bitnet-prompt-templates"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-common",
  "bitnet-tokenizers",
  "criterion 0.5.1",
  "insta",
