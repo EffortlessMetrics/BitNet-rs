@@ -1,5 +1,4 @@
 //! Module stub - implementation pending merge from feature branch
-<<<<<<< HEAD
 //! Model pruning strategies for neural network weight reduction.
 //!
 //! Provides magnitude-based, structured, and movement pruning with
@@ -1818,6 +1817,3 @@ mod tests {
         }
     }
 }
-=======
-// Module will be populated when corresponding PR is merged.
->>>>>>> 5d6c1831 (feat(gpu-hal): workspace integration v7 — register waves 48-51 modules)

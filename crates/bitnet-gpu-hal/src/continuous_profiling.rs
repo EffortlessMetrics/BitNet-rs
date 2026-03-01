@@ -1,5 +1,4 @@
 //! Module stub - implementation pending merge from feature branch
-<<<<<<< HEAD
 //! Continuous profiling with CPU/GPU/memory/latency tracking.
 //!
 //! Provides [`ContinuousProfiler`] for production profiling with
@@ -2353,6 +2352,3 @@ mod tests {
         assert_eq!(h, vec![(10, 3)]);
     }
 }
-=======
-// Module will be populated when corresponding PR is merged.
->>>>>>> 5d6c1831 (feat(gpu-hal): workspace integration v7 — register waves 48-51 modules)
