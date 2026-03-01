@@ -6,13 +6,8 @@
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 use log::{debug, info, warn};
-use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
-use opencl3::context::Context;
-use opencl3::device::{CL_DEVICE_TYPE_GPU, Device};
-use opencl3::memory::{Buffer, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY, ClMem};
-use opencl3::platform::get_platforms;
-use opencl3::program::Program;
-use opencl3::types::{CL_BLOCKING, cl_device_id};
+use opencl3::kernel::{ExecuteKernel, Kernel};
+use opencl3::memory::ClMem;
 
 /// OpenCL kernel provider for Intel Arc GPUs.
 ///
