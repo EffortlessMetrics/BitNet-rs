@@ -31,6 +31,7 @@ bitnet-kv-cache-policy-core = { path = "../bitnet-kv-cache-policy-core", version
 bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
 bitnet-inference-metrics-core = { path = "../bitnet-inference-metrics-core", version = "0.2.1-dev" }
 bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
+bitnet-token-stream-core = { path = "../bitnet-token-stream-core", version = "0.2.1-dev" }
 bitnet-sys = { path = "../bitnet-sys", version = "0.2.1-dev", optional = true }
 anyhow.workspace = true
 futures.workspace = true
