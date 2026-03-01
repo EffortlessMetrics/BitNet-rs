@@ -254,15 +254,39 @@ The GPU HAL (`bitnet-gpu-hal`) provides a unified abstraction layer:
 - No real GPU hardware testing yet (CPU-only validation)
 
 ### 🔲 What's Planned
+### 🔲 Phase 9: GPU Kernel Implementations (Planned)
 
-1. **Real-model crossval receipts** (gated on model download infrastructure)
-   - Full crossval lane with C++ reference producing JSON receipts on nightly
-   - Requires: `BITNET_CPP_DIR` provisioned on nightly runner
+| Capability | Target Crate | Status |
+|---|---|---|
+| Metal compute-shader BitNet GEMV for Apple Silicon | `bitnet-metal` | 🔲 Planned |
+| Vulkan SPIR-V BitNet GEMV for cross-platform GPU | `bitnet-vulkan` | 🔲 Planned |
+| ROCm/HIP kernel implementations for AMD GPUs | `bitnet-rocm` | 🔲 Planned |
+| Real-model crossval receipts (gated on model download infra) | `crossval/` | 🔲 Planned |
 
 2. **Metal kernel implementations** — compute-shader BitNet GEMV for Apple Silicon
 3. **Vulkan kernel implementations** — SPIR-V BitNet GEMV for cross-platform GPU
 4. **ROCm/HIP kernel implementations** — AMD GPU acceleration
 5. **Real GPU hardware validation** — end-to-end testing on Intel Arc, NVIDIA, AMD hardware
+### 🔲 Phase 10: Multi-GPU Backend Ecosystem (v0.2.0-alpha)
+
+| PR | Branch | Description |
+|----|--------|-------------|
+| #1158 | gpu-config-management | GPU runtime configuration and device selection |
+| #1161 | gpu-hot-reload | Dynamic backend hot-reloading |
+| #1163 | gpu-leak-detector | GPU memory leak detection tooling |
+| #1165 | gpu-hal-abstraction | Unified GPU Hardware Abstraction Layer (`bitnet-gpu-hal`) |
+| #1167 | opencl-backend | Intel OpenCL 3.0 compute backend (`bitnet-opencl`) |
+| #1169 | level-zero-backend | Intel Level Zero low-level backend (`bitnet-level-zero`) |
+| #1171 | webgpu-backend | WebGPU/WGSL compute shaders (`bitnet-webgpu`) |
+| #1173 | rocm-backend | AMD ROCm/HIP backend (`bitnet-rocm`) |
+| #1175 | multi-device-scheduler | Multi-device work scheduling and load balancing |
+| #1177 | gpu-profiling | GPU kernel profiling and performance telemetry |
+
+**Goals:**
+- Unified `--device auto` selection across all backends
+- Hot-reloadable backend configuration without restart
+- Memory leak detection for long-running server deployments
+- Cross-vendor GPU HAL enabling single kernel source for multiple backends
 
 ---
 

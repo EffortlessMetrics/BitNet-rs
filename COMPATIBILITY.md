@@ -181,6 +181,23 @@ While not breaking compatibility, we guarantee:
 - For the full hardware compatibility matrix, feature support per backend, and driver links see [GPU Compatibility Matrix](docs/GPU_COMPATIBILITY_MATRIX.md)
 - For throughput targets and memory requirements see [GPU Performance Expectations](docs/GPU_PERFORMANCE_EXPECTATIONS.md)
 
+### GPU Backend Compatibility
+
+| Backend | Feature Flag | Min Hardware | Driver Requirements | Status |
+|---------|-------------|-------------|-------------------|--------|
+| NVIDIA CUDA | `gpu` / `cuda` | Compute 6.0+ (Pascal) | CUDA 11.0+ toolkit | ✅ Production |
+| Intel oneAPI | `oneapi` | Arc A-series (A770/A750) | Intel compute runtime + OpenCL ICD | 🔶 Alpha |
+| Apple Metal | `metal` | M1/M2/M3+ Apple Silicon | macOS 11+ (Big Sur) | 🧪 Experimental |
+| Vulkan | `vulkan` | Any Vulkan 1.3 GPU | Vulkan 1.3 driver | 🧪 Experimental |
+| AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Experimental |
+| WebGPU | `webgpu` | Any wgpu-compatible GPU | Browser or native wgpu | 🧪 Experimental |
+
+**Backend selection** is controlled by `--device`:
+- `auto` (default): Probes available backends and selects the best (CUDA > Metal > Vulkan > OpenCL > CPU)
+- Explicit: `cuda`, `opencl`, `vulkan`, `cpu`
+
+**Runtime detection**: `bitnet-device-probe` probes hardware at startup and reports `requested=X detected=[…] selected=Y` via `BackendStartupSummary`.
+
 ### Operating System Support
 
 **Supported Platforms:**
