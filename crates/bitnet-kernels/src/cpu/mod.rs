@@ -50,6 +50,9 @@ pub mod neon_elementwise;
 pub mod neon_layernorm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_batch_norm;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_reductions;
 
 pub use activations::ActivationType;
