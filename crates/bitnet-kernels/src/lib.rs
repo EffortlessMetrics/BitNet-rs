@@ -26,7 +26,7 @@ pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
 pub mod opencl_memory;
 pub mod opencl_pipeline;
-pub mod opencl_transformer;
+pub mod opencl_quantized;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
