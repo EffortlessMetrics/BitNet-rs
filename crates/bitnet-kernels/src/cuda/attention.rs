@@ -1268,8 +1268,7 @@ mod tests {
 
     #[test]
     fn test_cuda_attention_config_alias() {
-        let cfg: CudaAttentionConfig =
-            CudaAttentionConfig::for_shape(4, 64, 16, 16, true).unwrap();
+        let cfg: CudaAttentionConfig = CudaAttentionConfig::for_shape(4, 64, 16, 16, true).unwrap();
         assert_eq!(cfg.n_heads, 4);
         assert_eq!(cfg.head_dim, 64);
         assert!(cfg.causal);
@@ -1316,10 +1315,7 @@ mod tests {
 
         assert_eq!(standard.len(), chunked.len());
         for (a, b) in standard.iter().zip(chunked.iter()) {
-            assert!(
-                (a - b).abs() < 1e-4,
-                "chunked vs standard mismatch: {a} vs {b}"
-            );
+            assert!((a - b).abs() < 1e-4, "chunked vs standard mismatch: {a} vs {b}");
         }
     }
 
@@ -1334,10 +1330,7 @@ mod tests {
         let chunked = chunked_attention_cpu(&q, &k, &v, &cfg, 2).unwrap();
 
         for (a, b) in standard.iter().zip(chunked.iter()) {
-            assert!(
-                (a - b).abs() < 1e-4,
-                "chunked causal mismatch: {a} vs {b}"
-            );
+            assert!((a - b).abs() < 1e-4, "chunked causal mismatch: {a} vs {b}");
         }
     }
 
@@ -1441,8 +1434,7 @@ mod tests {
         let out_big = attention_cpu_fallback(&q, &k, &v, &cfg_big).unwrap();
 
         // Large scale sharpens attention → outputs should differ
-        let diff: f32 =
-            out_default.iter().zip(out_big.iter()).map(|(a, b)| (a - b).abs()).sum();
+        let diff: f32 = out_default.iter().zip(out_big.iter()).map(|(a, b)| (a - b).abs()).sum();
         assert!(diff > 1e-3, "different scales should produce different outputs");
     }
 
