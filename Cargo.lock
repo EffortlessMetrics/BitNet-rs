@@ -391,6 +391,7 @@ dependencies = [
  "bitnet-math",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-quantization-bits",
  "bitnet-rope",
  "bitnet-tests",
  "bitnet-tokenizers",
@@ -819,6 +820,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-prompt-templates",
  "bitnet-quantization",
+ "bitnet-quantization-bits",
  "bitnet-receipts",
  "bitnet-rope",
  "bitnet-sampling",
@@ -1069,6 +1071,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-quantization-bits",
  "bytemuck",
  "candle-core",
  "criterion 0.7.0",
@@ -1084,6 +1087,10 @@ dependencies = [
  "thiserror 2.0.18",
  "tracing",
 ]
+
+[[package]]
+name = "bitnet-quantization-bits"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-receipts"
