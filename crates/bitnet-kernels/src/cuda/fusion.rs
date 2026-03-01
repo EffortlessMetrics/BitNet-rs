@@ -419,7 +419,7 @@ impl FusedElementwiseLaunchConfig {
 
     /// CUDA grid dimensions.
     pub fn grid_dim(&self) -> (u32, u32, u32) {
-        let blocks = (self.n as u32 + self.threads_per_block - 1) / self.threads_per_block;
+        let blocks = (self.n as u32).div_ceil(self.threads_per_block);
         (blocks, 1, 1)
     }
 
@@ -468,7 +468,7 @@ pub fn fused_rmsnorm_linear_cpu(
         }
         .into());
     }
-    if weight.len() % n != 0 {
+    if !weight.len().is_multiple_of(n) {
         return Err(KernelError::InvalidArguments {
             reason: format!("weight length {} not divisible by n={n}", weight.len()),
         }
@@ -513,7 +513,7 @@ pub fn fused_gelu_linear_cpu(
             KernelError::InvalidArguments { reason: "input must be non-empty".into() }.into()
         );
     }
-    if weight.len() % n != 0 {
+    if !weight.len().is_multiple_of(n) {
         return Err(KernelError::InvalidArguments {
             reason: format!("weight length {} not divisible by n={n}", weight.len()),
         }
@@ -807,10 +807,10 @@ pub fn fused_rmsnorm_linear(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if let Ok(cfg) = FusedMatmulLaunchConfig::new(input.len(), output.len()) {
-            if launch_fused_rmsnorm_linear_cuda(input, weight, gamma, output, &cfg, eps).is_ok() {
-                return Ok(());
-            }
+        if let Ok(cfg) = FusedMatmulLaunchConfig::new(input.len(), output.len())
+            && launch_fused_rmsnorm_linear_cuda(input, weight, gamma, output, &cfg, eps).is_ok()
+        {
+            return Ok(());
         }
     }
     fused_rmsnorm_linear_cpu(input, weight, gamma, output, eps)
@@ -825,10 +825,10 @@ pub fn fused_gelu_linear(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if let Ok(cfg) = FusedMatmulLaunchConfig::new(input.len(), output.len()) {
-            if launch_fused_gelu_linear_cuda(input, weight, bias, output, &cfg).is_ok() {
-                return Ok(());
-            }
+        if let Ok(cfg) = FusedMatmulLaunchConfig::new(input.len(), output.len())
+            && launch_fused_gelu_linear_cuda(input, weight, bias, output, &cfg).is_ok()
+        {
+            return Ok(());
         }
     }
     fused_gelu_linear_cpu(input, weight, bias, output)
@@ -843,10 +843,10 @@ pub fn fused_softmax_mask(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(scores.len()) {
-            if launch_fused_softmax_mask_cuda(scores, mask, output, &cfg, scale).is_ok() {
-                return Ok(());
-            }
+        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(scores.len())
+            && launch_fused_softmax_mask_cuda(scores, mask, output, &cfg, scale).is_ok()
+        {
+            return Ok(());
         }
     }
     fused_softmax_mask_cpu(scores, mask, output, scale)
@@ -862,10 +862,10 @@ pub fn fused_add_rmsnorm(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(a.len()) {
-            if launch_fused_add_rmsnorm_cuda(a, b, gamma, output, &cfg, eps).is_ok() {
-                return Ok(());
-            }
+        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(a.len())
+            && launch_fused_add_rmsnorm_cuda(a, b, gamma, output, &cfg, eps).is_ok()
+        {
+            return Ok(());
         }
     }
     fused_add_rmsnorm_cpu(a, b, gamma, output, eps)
@@ -875,10 +875,10 @@ pub fn fused_add_rmsnorm(
 pub fn fused_scale_add(a: &[f32], b: &[f32], output: &mut [f32], scale: f32) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(a.len()) {
-            if launch_fused_scale_add_cuda(a, b, output, &cfg, scale).is_ok() {
-                return Ok(());
-            }
+        if let Ok(cfg) = FusedElementwiseLaunchConfig::new(a.len())
+            && launch_fused_scale_add_cuda(a, b, output, &cfg, scale).is_ok()
+        {
+            return Ok(());
         }
     }
     fused_scale_add_cpu(a, b, output, scale)

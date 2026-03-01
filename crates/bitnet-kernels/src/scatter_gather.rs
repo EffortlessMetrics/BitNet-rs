@@ -402,10 +402,10 @@ pub fn gather_forward(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime() {
-            if let Ok(()) = launch_gather(src, indices, output, kernel, config) {
-                return Ok(());
-            }
+        if crate::device_features::gpu_available_runtime()
+            && let Ok(()) = launch_gather(src, indices, output, kernel, config)
+        {
+            return Ok(());
         }
     }
     gather_cpu(src, indices, output, kernel, config)
@@ -422,10 +422,10 @@ pub fn scatter_forward(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime() {
-            if let Ok(()) = launch_scatter(src, indices, dst, dst_shape, config, mode) {
-                return Ok(());
-            }
+        if crate::device_features::gpu_available_runtime()
+            && let Ok(()) = launch_scatter(src, indices, dst, dst_shape, config, mode)
+        {
+            return Ok(());
         }
     }
     scatter_cpu(src, indices, dst, dst_shape, config, mode)
