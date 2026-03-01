@@ -25,7 +25,6 @@ mod config;
 mod exit;
 #[cfg(feature = "full-cli")]
 mod ln_rules;
-mod sampling;
 mod score;
 pub mod tokenizer_discovery;
 
@@ -967,9 +966,9 @@ async fn run_simple_generation(
     assert_greedy: bool,
     no_warnings: bool,
 ) -> Result<()> {
-    use crate::sampling::Sampler;
     use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
+    use bitnet_sampling::{SamplingConfig, SamplingStrategy};
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
 
@@ -1240,7 +1239,13 @@ async fn run_simple_generation(
     let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
 
     // Create sampler
-    let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
+    let mut sampler = SamplingStrategy::new(SamplingConfig {
+        temperature,
+        top_k: top_k as u32,
+        top_p,
+        repetition_penalty,
+        seed,
+    });
 
     print!("Generating: {}", formatted_prompt);
     std::io::Write::flush(&mut std::io::stdout())?;
@@ -1374,7 +1379,7 @@ async fn run_simple_generation(
 
         // Sample next token
         let t3 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
-        let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
         if let Some(t) = t3 {
             eprintln!("timing: sample_us={}", t.elapsed().as_micros());
         }
