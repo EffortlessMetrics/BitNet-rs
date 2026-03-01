@@ -1,114 +1,93 @@
 #version 450
-// Scaled dot-product attention compute shader
-// attn = softmax(Q * K^T / sqrt(d_k)) * V
-// Single-head variant; dispatch one workgroup per query row.
 
-#extension GL_KHR_shader_subgroup_arithmetic : enable
+// Scaled dot-product attention compute shader.
+// attn = softmax(Q @ K^T / sqrt(d_k)) @ V
+// Each workgroup processes one (batch, head, query_position) triple.
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 256) in;
 
-layout(push_constant) uniform PushConstants {
-    uint seq_len;   // sequence / KV length
-    uint head_dim;  // dimension per head
-    float scale;    // 1.0 / sqrt(head_dim)
-} params;
+layout(set = 0, binding = 0) readonly buffer Query { float q[]; };
+layout(set = 0, binding = 1) readonly buffer Key { float k[]; };
+layout(set = 0, binding = 2) readonly buffer Value { float v[]; };
+layout(set = 0, binding = 3) writeonly buffer Output { float out_data[]; };
 
-layout(set = 0, binding = 0) readonly buffer Query {
-    float data[];
-} q_buf;
-
-layout(set = 0, binding = 1) readonly buffer Key {
-    float data[];
-} k_buf;
-
-layout(set = 0, binding = 2) readonly buffer Value {
-    float data[];
-} v_buf;
-
-layout(set = 0, binding = 3) writeonly buffer Output {
-    float data[];
-} out_buf;
+layout(push_constant) uniform Params {
+    uint seq_len;
+    uint head_dim;
+    uint kv_len;
+};
 
 shared float shared_scores[256];
 shared float shared_max[256];
 shared float shared_sum[256];
 
 void main() {
-    uint q_row = gl_WorkGroupID.x;
     uint tid = gl_LocalInvocationID.x;
-    uint wgSize = gl_WorkGroupSize.x;
+    uint wg = gl_WorkGroupID.x;
 
-    // --- Phase 1: compute QK^T scores ---
-    // Each thread handles a subset of K rows
-    float local_max = -1.0 / 0.0;
-    for (uint k_row = tid; k_row < params.seq_len; k_row += wgSize) {
+    // wg encodes (batch_head, query_pos) — one workgroup per query position
+    uint query_pos = wg;
+    float scale = 1.0 / sqrt(float(head_dim));
+
+    // Phase 1: compute Q·K^T scores
+    // Each thread handles a subset of kv positions
+    float local_max = -3.402823e+38;
+    for (uint kv = tid; kv < kv_len; kv += 256u) {
         float dot = 0.0;
-        for (uint d = 0; d < params.head_dim; d++) {
-            dot += q_buf.data[q_row * params.head_dim + d]
-                 * k_buf.data[k_row * params.head_dim + d];
+        for (uint d = 0u; d < head_dim; d++) {
+            dot += q[query_pos * head_dim + d] * k[kv * head_dim + d];
         }
-        float score = dot * params.scale;
-        shared_scores[k_row % wgSize] = score;
+        float score = dot * scale;
+        shared_scores[tid] = score;
         local_max = max(local_max, score);
     }
-
-    // Reduce max across workgroup via subgroups
-    local_max = subgroupMax(local_max);
-    shared_max[gl_SubgroupID] = local_max;
+    shared_max[tid] = local_max;
     barrier();
-    memoryBarrierShared();
 
-    if (tid < gl_NumSubgroups) {
-        local_max = shared_max[tid];
-    } else {
-        local_max = -1.0 / 0.0;
+    // Reduce max
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_max[tid] = max(shared_max[tid], shared_max[tid + s]);
+        }
+        barrier();
     }
-    local_max = subgroupMax(local_max);
-    float row_max = subgroupBroadcastFirst(local_max);
-    barrier();
+    float row_max = shared_max[0];
 
-    // --- Phase 2: numerically stable softmax ---
+    // Phase 2: softmax numerator + denominator
     float local_sum = 0.0;
-    for (uint k_row = tid; k_row < params.seq_len; k_row += wgSize) {
-        // Recompute score (avoids large shared memory for long seqs)
+    for (uint kv = tid; kv < kv_len; kv += 256u) {
         float dot = 0.0;
-        for (uint d = 0; d < params.head_dim; d++) {
-            dot += q_buf.data[q_row * params.head_dim + d]
-                 * k_buf.data[k_row * params.head_dim + d];
+        for (uint d = 0u; d < head_dim; d++) {
+            dot += q[query_pos * head_dim + d] * k[kv * head_dim + d];
         }
-        float score = dot * params.scale;
-        float w = exp(score - row_max);
-        local_sum += w;
+        float score = dot * scale;
+        float e = exp(score - row_max);
+        // Store attention weight temporarily
+        shared_scores[tid] = e;
+        local_sum += e;
     }
-
-    local_sum = subgroupAdd(local_sum);
-    shared_sum[gl_SubgroupID] = local_sum;
-    barrier();
-    memoryBarrierShared();
-
-    if (tid < gl_NumSubgroups) {
-        local_sum = shared_sum[tid];
-    } else {
-        local_sum = 0.0;
-    }
-    local_sum = subgroupAdd(local_sum);
-    float sum_exp = subgroupBroadcastFirst(local_sum);
-    float inv_sum = 1.0 / sum_exp;
+    shared_sum[tid] = local_sum;
     barrier();
 
-    // --- Phase 3: weighted sum over V ---
-    for (uint d = tid; d < params.head_dim; d += wgSize) {
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_sum[tid] += shared_sum[tid + s];
+        }
+        barrier();
+    }
+    float total = shared_sum[0];
+
+    // Phase 3: weighted sum of values
+    for (uint d = tid; d < head_dim; d += 256u) {
         float acc = 0.0;
-        for (uint k_row = 0; k_row < params.seq_len; k_row++) {
-            // Recompute attention weight for this k_row
+        for (uint kv = 0u; kv < kv_len; kv++) {
             float dot = 0.0;
-            for (uint dd = 0; dd < params.head_dim; dd++) {
-                dot += q_buf.data[q_row * params.head_dim + dd]
-                     * k_buf.data[k_row * params.head_dim + dd];
+            for (uint dd = 0u; dd < head_dim; dd++) {
+                dot += q[query_pos * head_dim + dd] * k[kv * head_dim + dd];
             }
-            float w = exp(dot * params.scale - row_max) * inv_sum;
-            acc += w * v_buf.data[k_row * params.head_dim + d];
+            float w = exp(dot * scale - row_max) / total;
+            acc += w * v[kv * head_dim + d];
         }
-        out_buf.data[q_row * params.head_dim + d] = acc;
+        out_data[query_pos * head_dim + d] = acc;
     }
 }

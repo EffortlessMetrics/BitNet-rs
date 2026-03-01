@@ -1,67 +1,48 @@
 #version 450
-// RMS normalization compute shader
-// out[i] = (x[i] / rms) * weight[i]
-// where rms = sqrt(mean(x^2) + eps)
 
-#extension GL_KHR_shader_subgroup_arithmetic : enable
+// RMS normalization compute shader.
+// output[i] = (input[i] / rms) * weight[i]
+// where rms = sqrt(mean(input^2) + eps)
+// Each workgroup processes one row of length N.
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 256) in;
 
-layout(push_constant) uniform PushConstants {
-    uint N;     // vector dimension
-    float eps;  // numerical stability epsilon
-} params;
+layout(set = 0, binding = 0) readonly buffer Input { float data_in[]; };
+layout(set = 0, binding = 1) readonly buffer Weight { float weight[]; };
+layout(set = 0, binding = 2) writeonly buffer Output { float data_out[]; };
 
-layout(set = 0, binding = 0) readonly buffer Input {
-    float data[];
-} input_buf;
-
-layout(set = 0, binding = 1) readonly buffer Weight {
-    float data[];
-} weight_buf;
-
-layout(set = 0, binding = 2) writeonly buffer Output {
-    float data[];
-} output_buf;
+layout(push_constant) uniform Params {
+    uint N;
+    float eps;
+};
 
 shared float shared_sq_sum[256];
 
 void main() {
-    uint row = gl_WorkGroupID.x;
     uint tid = gl_LocalInvocationID.x;
-    uint wgSize = gl_WorkGroupSize.x;
+    uint row = gl_WorkGroupID.x;
+    uint row_start = row * N;
 
-    uint row_offset = row * params.N;
-
-    // Phase 1: compute sum of squares
-    float local_sq_sum = 0.0;
-    for (uint i = tid; i < params.N; i += wgSize) {
-        float val = input_buf.data[row_offset + i];
-        local_sq_sum += val * val;
+    // Phase 1: sum of squares
+    float local_sq = 0.0;
+    for (uint i = tid; i < N; i += 256u) {
+        float val = data_in[row_start + i];
+        local_sq += val * val;
     }
-
-    // Subgroup reduction
-    local_sq_sum = subgroupAdd(local_sq_sum);
-    shared_sq_sum[gl_SubgroupID] = local_sq_sum;
-    barrier();
-    memoryBarrierShared();
-
-    // Cross-subgroup reduction
-    if (tid < gl_NumSubgroups) {
-        local_sq_sum = shared_sq_sum[tid];
-    } else {
-        local_sq_sum = 0.0;
-    }
-    local_sq_sum = subgroupAdd(local_sq_sum);
-    float total_sq_sum = subgroupBroadcastFirst(local_sq_sum);
+    shared_sq_sum[tid] = local_sq;
     barrier();
 
-    // Phase 2: compute RMS and normalize
-    float rms = sqrt(total_sq_sum / float(params.N) + params.eps);
-    float inv_rms = 1.0 / rms;
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_sq_sum[tid] += shared_sq_sum[tid + s];
+        }
+        barrier();
+    }
 
-    for (uint i = tid; i < params.N; i += wgSize) {
-        output_buf.data[row_offset + i] =
-            input_buf.data[row_offset + i] * inv_rms * weight_buf.data[i];
+    float rms = sqrt(shared_sq_sum[0] / float(N) + eps);
+
+    // Phase 2: normalize and scale
+    for (uint i = tid; i < N; i += 256u) {
+        data_out[row_start + i] = (data_in[row_start + i] / rms) * weight[i];
     }
 }

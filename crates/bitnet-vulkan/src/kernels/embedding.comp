@@ -1,0 +1,30 @@
+#version 450
+
+// Token embedding lookup compute shader.
+// For each token ID, copies the corresponding embedding row to the output.
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) readonly buffer EmbTable { float emb_table[]; };
+layout(set = 0, binding = 1) readonly buffer TokenIds { uint token_ids[]; };
+layout(set = 0, binding = 2) writeonly buffer Output { float data_out[]; };
+
+layout(push_constant) uniform Params {
+    uint num_tokens;
+    uint embed_dim;
+};
+
+shared float shared_scratch[256];
+
+void main() {
+    uint gid = gl_GlobalInvocationID.x;
+    uint total_elements = num_tokens * embed_dim;
+
+    if (gid >= total_elements) return;
+
+    uint token_idx = gid / embed_dim;
+    uint dim_idx = gid % embed_dim;
+
+    uint token_id = token_ids[token_idx];
+    data_out[token_idx * embed_dim + dim_idx] = emb_table[token_id * embed_dim + dim_idx];
+}

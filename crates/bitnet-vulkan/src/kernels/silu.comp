@@ -1,0 +1,33 @@
+#version 450
+
+// SiLU (Swish) activation compute shader.
+// SiLU(x) = x * sigmoid(x) = x / (1 + exp(-x))
+// Optionally fused with element-wise multiply (gate * silu(x)).
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) readonly buffer Input { float data_in[]; };
+layout(set = 0, binding = 1) readonly buffer Gate { float gate[]; };
+layout(set = 0, binding = 2) writeonly buffer Output { float data_out[]; };
+
+layout(push_constant) uniform Params {
+    uint N;
+    uint fused_gate;  // 1 = gate * silu(x), 0 = silu(x) only
+};
+
+shared float shared_scratch[256];
+
+void main() {
+    uint gid = gl_GlobalInvocationID.x;
+
+    if (gid >= N) return;
+
+    float x = data_in[gid];
+    float silu_x = x / (1.0 + exp(-x));
+
+    if (fused_gate != 0u) {
+        data_out[gid] = gate[gid] * silu_x;
+    } else {
+        data_out[gid] = silu_x;
+    }
+}
