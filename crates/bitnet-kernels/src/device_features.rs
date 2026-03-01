@@ -284,9 +284,7 @@ fn probe_intel_gpu_real() -> IntelGpuInfo {
     if let Ok(output) = std::process::Command::new("sycl-ls").output() {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            if stdout.contains("Intel")
-                && (stdout.contains("Arc") || stdout.contains("gpu"))
-            {
+            if stdout.contains("Intel") && (stdout.contains("Arc") || stdout.contains("gpu")) {
                 info.detected = true;
                 info.device_name = "Intel GPU (via sycl-ls)".to_string();
             }
@@ -295,9 +293,7 @@ fn probe_intel_gpu_real() -> IntelGpuInfo {
 
     // Fallback to clinfo
     if !info.detected {
-        if let Ok(output) =
-            std::process::Command::new("clinfo").arg("--list").output()
-        {
+        if let Ok(output) = std::process::Command::new("clinfo").arg("--list").output() {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if stdout.contains("Intel") {
