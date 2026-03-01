@@ -650,4 +650,543 @@ mod tests {
         let exp = reference_bn_inference(&input, &vec![1.0; c], &vec![0.0; c], &rm, &rv, 1e-5);
         assert!(approx_eq(&out, &exp, TOL));
     }
+
+    // == Comprehensive: forward pass with known inputs/outputs ===============
+
+    #[test]
+    fn forward_known_values_single_channel() {
+        // batch=4, features=1, input=[1,2,3,4] → mean=2.5, var=1.25
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![1.0_f32, 2.0, 3.0, 4.0];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+
+        let mean = 2.5_f64;
+        let var = 1.25_f64;
+        let inv_std = 1.0 / (var + 1e-5_f64).sqrt();
+        for (i, &x) in input.iter().enumerate() {
+            let expected = ((x as f64 - mean) * inv_std) as f32;
+            assert!(
+                (out[i] - expected).abs() < 1e-5,
+                "idx {i}: got {}, expected {expected}",
+                out[i]
+            );
+        }
+    }
+
+    #[test]
+    fn forward_known_values_two_channels() {
+        // batch=3, features=2
+        // ch0: [10, 20, 30] → mean=20, var=200/3
+        // ch1: [-1, 0, 1]  → mean=0, var=2/3
+        let cfg = BatchNormConfig { num_features: 2, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![10.0, -1.0, 20.0, 0.0, 30.0, 1.0];
+        let (out, _, _) =
+            batch_norm_forward(&input, &[1.0; 2], &[0.0; 2], &[0.0; 2], &[1.0; 2], &cfg).unwrap();
+
+        let mean0 = 20.0_f64;
+        let var0 = 200.0 / 3.0;
+        let inv0 = 1.0 / (var0 + 1e-5_f64).sqrt();
+        for b in 0..3 {
+            let expected = ((input[b * 2] as f64 - mean0) * inv0) as f32;
+            assert!(
+                (out[b * 2] - expected).abs() < 1e-4,
+                "ch0 b{b}: got {}, expected {expected}",
+                out[b * 2]
+            );
+        }
+
+        let mean1 = 0.0_f64;
+        let var1 = 2.0 / 3.0;
+        let inv1 = 1.0 / (var1 + 1e-5_f64).sqrt();
+        for b in 0..3 {
+            let expected = ((input[b * 2 + 1] as f64 - mean1) * inv1) as f32;
+            assert!(
+                (out[b * 2 + 1] - expected).abs() < 1e-4,
+                "ch1 b{b}: got {}, expected {expected}",
+                out[b * 2 + 1]
+            );
+        }
+    }
+
+    #[test]
+    fn inference_known_values_with_affine() {
+        // running_mean=10, running_var=25, gamma=2, beta=-1
+        let input = vec![10.0_f32, 15.0, 5.0, 20.0];
+        let gamma = [2.0_f32];
+        let beta = [-1.0_f32];
+        let rmean = [10.0_f32];
+        let rvar = [25.0_f32];
+        let out = batch_norm_inference(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+
+        let inv_std = 1.0 / (25.0_f64 + 1e-5).sqrt();
+        for (i, &x) in input.iter().enumerate() {
+            let expected = ((x as f64 - 10.0) * inv_std * 2.0 + (-1.0)) as f32;
+            assert!(
+                (out[i] - expected).abs() < 1e-4,
+                "idx {i}: got {}, expected {expected}",
+                out[i]
+            );
+        }
+    }
+
+    // == Edge cases ===========================================================
+
+    #[test]
+    fn forward_all_zeros_input() {
+        let c = 3;
+        let cfg = BatchNormConfig { num_features: c, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![0.0_f32; 12]; // batch=4, features=3
+        let (out, _, _) =
+            batch_norm_forward(&input, &[1.0; 3], &[0.0; 3], &[0.0; 3], &[1.0; 3], &cfg).unwrap();
+
+        // mean=0, var=0 → output = (0 - 0) / sqrt(eps) * 1 + 0 = 0
+        assert!(out.iter().all(|&v| v.abs() < TOL), "expected all ~0: {out:?}");
+    }
+
+    #[test]
+    fn forward_all_negative_input() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![-10.0_f32, -20.0, -30.0, -40.0];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+
+        let mean: f32 = out.iter().sum::<f32>() / 4.0;
+        assert!(mean.abs() < TOL, "mean={mean}");
+        assert!(out.iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn forward_mixed_positive_negative_symmetric() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![-100.0_f32, -50.0, 50.0, 100.0]; // mean=0
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+
+        let mean: f32 = out.iter().sum::<f32>() / 4.0;
+        assert!(mean.abs() < TOL, "mean={mean}");
+        // Symmetric input → symmetric output
+        assert!((out[0] + out[3]).abs() < TOL, "symmetry: {} + {} != 0", out[0], out[3]);
+        assert!((out[1] + out[2]).abs() < TOL, "symmetry: {} + {} != 0", out[1], out[2]);
+    }
+
+    #[test]
+    fn forward_single_element_batch_single_feature() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let (out, _, _) =
+            batch_norm_forward(&[42.0], &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        // Single element: mean=42, var=0 → (42-42)/sqrt(eps) = 0
+        assert!(out[0].abs() < 1e-2, "output={}", out[0]);
+    }
+
+    #[test]
+    fn forward_large_batch_1024() {
+        let c = 4;
+        let n = 1024;
+        let cfg = BatchNormConfig { num_features: c, eps: 1e-5, momentum: 0.1, training: true };
+        let input: Vec<f32> = (0..n * c).map(|i| (i % n) as f32).collect();
+        let (out, _, _) = batch_norm_forward(
+            &input,
+            &vec![1.0; c],
+            &vec![0.0; c],
+            &vec![0.0; c],
+            &vec![1.0; c],
+            &cfg,
+        )
+        .unwrap();
+
+        for ch in 0..c {
+            let ch_mean: f32 = (0..n).map(|b| out[b * c + ch]).sum::<f32>() / n as f32;
+            assert!(ch_mean.abs() < 1e-3, "ch {ch}: mean={ch_mean}");
+        }
+    }
+
+    #[test]
+    fn forward_large_num_features() {
+        let c = 512;
+        let n = 2;
+        let cfg = BatchNormConfig { num_features: c, eps: 1e-5, momentum: 0.1, training: true };
+        let input: Vec<f32> = (0..n * c).map(|i| (i as f32) * 0.01 - 2.56).collect();
+        let (out, _, _) = batch_norm_forward(
+            &input,
+            &vec![1.0; c],
+            &vec![0.0; c],
+            &vec![0.0; c],
+            &vec![1.0; c],
+            &cfg,
+        )
+        .unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite in output");
+    }
+
+    #[test]
+    fn forward_constant_per_channel_different_channels() {
+        // Each channel is constant but different across channels
+        let cfg = BatchNormConfig { num_features: 3, eps: 1e-5, momentum: 0.1, training: true };
+        // batch=4, ch0=1.0, ch1=2.0, ch2=3.0
+        let input = vec![
+            1.0, 2.0, 3.0, //
+            1.0, 2.0, 3.0, //
+            1.0, 2.0, 3.0, //
+            1.0, 2.0, 3.0,
+        ];
+        let (out, _, _) =
+            batch_norm_forward(&input, &[1.0; 3], &[0.0; 3], &[0.0; 3], &[1.0; 3], &cfg).unwrap();
+
+        // Zero variance per channel → all outputs ≈ 0
+        assert!(out.iter().all(|&v| v.abs() < 1e-2), "expected ~0 for constant channels: {out:?}");
+    }
+
+    // == Epsilon parameter effects ============================================
+
+    #[test]
+    fn epsilon_zero_variance_sensitivity() {
+        // Constant input means var=0, so eps dominates the denominator
+        for &eps in &[1e-1_f32, 1e-3, 1e-5, 1e-8] {
+            let cfg = BatchNormConfig { num_features: 1, eps, momentum: 0.1, training: true };
+            let (out, _, _) =
+                batch_norm_forward(&[5.0; 4], &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+            assert!(out.iter().all(|v| v.is_finite()), "eps={eps}: non-finite output: {out:?}");
+        }
+    }
+
+    #[test]
+    fn epsilon_affects_output_magnitude() {
+        // With non-zero variance, different eps values produce different results
+        let input = vec![0.0_f32, 1.0]; // batch=2, features=1, mean=0.5, var=0.25
+
+        let cfg_small =
+            BatchNormConfig { num_features: 1, eps: 1e-8, momentum: 0.1, training: true };
+        let (out_small, _, _) =
+            batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg_small).unwrap();
+
+        let cfg_large =
+            BatchNormConfig { num_features: 1, eps: 1.0, momentum: 0.1, training: true };
+        let (out_large, _, _) =
+            batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg_large).unwrap();
+
+        // Larger eps → smaller magnitude output (larger denominator)
+        let mag_small = out_small.iter().map(|v| v.abs()).sum::<f32>();
+        let mag_large = out_large.iter().map(|v| v.abs()).sum::<f32>();
+        assert!(
+            mag_small > mag_large,
+            "smaller eps should produce larger magnitude: small={mag_small}, large={mag_large}"
+        );
+    }
+
+    #[test]
+    fn epsilon_does_not_affect_zero_mean_property() {
+        // Regardless of eps, output mean should be ~0 in training mode
+        for &eps in &[1e-1_f32, 1e-5, 1e-10] {
+            let cfg = BatchNormConfig { num_features: 1, eps, momentum: 0.1, training: true };
+            let (out, _, _) =
+                batch_norm_forward(&[1.0, 2.0, 3.0, 4.0], &[1.0], &[0.0], &[0.0], &[1.0], &cfg)
+                    .unwrap();
+            let mean: f32 = out.iter().sum::<f32>() / 4.0;
+            assert!(mean.abs() < TOL, "eps={eps}: mean={mean}");
+        }
+    }
+
+    // == Momentum parameter effects ===========================================
+
+    #[test]
+    fn momentum_zero_no_update() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.0, training: true };
+        let (_, um, uv) =
+            batch_norm_forward(&[10.0, 20.0, 30.0, 40.0], &[1.0], &[0.0], &[0.0], &[1.0], &cfg)
+                .unwrap();
+        // momentum=0 → running stats unchanged from initial (mean=0, var=1)
+        assert!(um[0].abs() < 1e-10, "running_mean={}", um[0]);
+        assert!((uv[0] - 1.0).abs() < 1e-10, "running_var={}", uv[0]);
+    }
+
+    #[test]
+    fn momentum_one_full_replacement() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 1.0, training: true };
+        let (_, um, uv) =
+            batch_norm_forward(&[2.0, 4.0, 6.0, 8.0], &[1.0], &[0.0], &[0.0], &[1.0], &cfg)
+                .unwrap();
+        // momentum=1 → running_mean = batch_mean = 5.0
+        assert!((um[0] - 5.0).abs() < TOL, "running_mean={}", um[0]);
+        // running_var = batch_var = 5.0
+        assert!((uv[0] - 5.0).abs() < 0.01, "running_var={}", uv[0]);
+    }
+
+    #[test]
+    fn momentum_convergence() {
+        // After many batches with same data, running stats should converge
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![2.0_f32, 4.0, 6.0, 8.0]; // mean=5, var=5
+
+        let mut rm = vec![0.0_f32];
+        let mut rv = vec![1.0_f32];
+        for _ in 0..100 {
+            let (_, new_rm, new_rv) =
+                batch_norm_forward(&input, &[1.0], &[0.0], &rm, &rv, &cfg).unwrap();
+            rm = new_rm;
+            rv = new_rv;
+        }
+
+        // Should converge to batch mean=5
+        assert!((rm[0] - 5.0).abs() < 1e-3, "running_mean={}", rm[0]);
+        // Should converge to batch var=5
+        assert!((rv[0] - 5.0).abs() < 0.1, "running_var={}", rv[0]);
+    }
+
+    #[test]
+    fn momentum_interpolation() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.5, training: true };
+
+        // Batch 1: mean=3
+        let (_, rm1, rv1) =
+            batch_norm_forward(&[2.0, 4.0], &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        // running_mean = 0.5*0 + 0.5*3 = 1.5
+        assert!((rm1[0] - 1.5).abs() < TOL, "after batch1: rm={}", rm1[0]);
+
+        // Batch 2: mean=7
+        let (_, rm2, _) =
+            batch_norm_forward(&[6.0, 8.0], &[1.0], &[0.0], &rm1, &rv1, &cfg).unwrap();
+        // running_mean = 0.5*1.5 + 0.5*7 = 4.25
+        assert!((rm2[0] - 4.25).abs() < TOL, "after batch2: rm={}", rm2[0]);
+    }
+
+    // == Numerical stability ==================================================
+
+    #[test]
+    fn forward_very_large_values_stability() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![1e30_f32, 1e30 + 1.0, 1e30 + 2.0, 1e30 + 3.0];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite: {out:?}");
+    }
+
+    #[test]
+    fn forward_very_small_values_stability() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![1e-30_f32, 2e-30, 3e-30, 4e-30];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite: {out:?}");
+        let mean: f32 = out.iter().sum::<f32>() / 4.0;
+        assert!(mean.abs() < 1e-3, "mean={mean}");
+    }
+
+    #[test]
+    fn forward_mixed_magnitude_values_stability() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let input = vec![1e-10_f32, 1.0, 1e10, 1e-10];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite: {out:?}");
+    }
+
+    #[test]
+    fn forward_subnormal_values_stability() {
+        let cfg = BatchNormConfig { num_features: 1, eps: 1e-5, momentum: 0.1, training: true };
+        let tiny = f32::MIN_POSITIVE / 2.0; // subnormal
+        let input = vec![tiny, tiny * 2.0, tiny * 3.0, tiny * 4.0];
+        let (out, _, _) = batch_norm_forward(&input, &[1.0], &[0.0], &[0.0], &[1.0], &cfg).unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite: {out:?}");
+    }
+
+    #[test]
+    fn inference_large_running_var_stability() {
+        let input = vec![1.0_f32, 2.0, 3.0, 4.0];
+        let out = batch_norm_inference(&input, &[1.0], &[0.0], &[0.0], &[1e30], 1e-5).unwrap();
+        // Very large variance → outputs near zero
+        assert!(
+            out.iter().all(|v| v.is_finite() && v.abs() < 1e-10),
+            "expected near-zero: {out:?}"
+        );
+    }
+
+    // == Property tests using proptest ========================================
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        /// Strategy for a valid batch normalization scenario.
+        fn bn_scenario() -> impl Strategy<Value = (usize, usize, Vec<f32>)> {
+            (1..=64_usize, 1..=16_usize).prop_flat_map(|(batch, features)| {
+                let len = batch * features;
+                (Just(batch), Just(features), proptest::collection::vec(-100.0_f32..100.0, len))
+            })
+        }
+
+        proptest! {
+            /// After training-mode batch norm, per-channel output mean ≈ 0.
+            #[test]
+            fn prop_training_output_mean_near_zero(
+                (batch, features, input) in bn_scenario()
+            ) {
+                let cfg = BatchNormConfig {
+                    num_features: features, eps: 1e-5, momentum: 0.1, training: true,
+                };
+                let (out, _, _) = batch_norm_forward(
+                    &input,
+                    &vec![1.0; features],
+                    &vec![0.0; features],
+                    &vec![0.0; features],
+                    &vec![1.0; features],
+                    &cfg,
+                ).unwrap();
+
+                for ch in 0..features {
+                    let ch_sum: f32 =
+                        (0..batch).map(|b| out[b * features + ch]).sum();
+                    let ch_mean = ch_sum / batch as f32;
+                    prop_assert!(
+                        ch_mean.abs() < 1e-3,
+                        "ch {}: mean={} (batch={}, features={})",
+                        ch, ch_mean, batch, features
+                    );
+                }
+            }
+
+            /// After training-mode batch norm (batch>1, non-constant channels),
+            /// per-channel output variance ≈ 1.
+            #[test]
+            fn prop_training_output_variance_near_one(
+                (batch, features, input) in (2..=64_usize, 1..=16_usize)
+                    .prop_flat_map(|(b, f)| {
+                        let len = b * f;
+                        (
+                            Just(b),
+                            Just(f),
+                            proptest::collection::vec(-100.0_f32..100.0, len),
+                        )
+                    })
+                    .prop_filter("need non-constant channels", |(batch, features, input)| {
+                        (0..*features).all(|ch| {
+                            let first = input[ch];
+                            (1..*batch).any(|b| (input[b * features + ch] - first).abs() > 1e-6)
+                        })
+                    })
+            ) {
+                let cfg = BatchNormConfig {
+                    num_features: features, eps: 1e-5, momentum: 0.1, training: true,
+                };
+                let (out, _, _) = batch_norm_forward(
+                    &input,
+                    &vec![1.0; features],
+                    &vec![0.0; features],
+                    &vec![0.0; features],
+                    &vec![1.0; features],
+                    &cfg,
+                ).unwrap();
+
+                for ch in 0..features {
+                    let ch_vals: Vec<f32> =
+                        (0..batch).map(|b| out[b * features + ch]).collect();
+                    let ch_mean: f32 = ch_vals.iter().sum::<f32>() / batch as f32;
+                    let ch_var: f32 = ch_vals
+                        .iter()
+                        .map(|x| (x - ch_mean).powi(2))
+                        .sum::<f32>()
+                        / batch as f32;
+                    prop_assert!(
+                        (ch_var - 1.0).abs() < 0.05,
+                        "ch {}: var={} (batch={}, features={})",
+                        ch, ch_var, batch, features
+                    );
+                }
+            }
+
+            /// All outputs should be finite for arbitrary finite inputs.
+            #[test]
+            fn prop_output_always_finite(
+                (batch, features, input) in bn_scenario()
+            ) {
+                let cfg = BatchNormConfig {
+                    num_features: features, eps: 1e-5, momentum: 0.1, training: true,
+                };
+                let (out, um, uv) = batch_norm_forward(
+                    &input,
+                    &vec![1.0; features],
+                    &vec![0.0; features],
+                    &vec![0.0; features],
+                    &vec![1.0; features],
+                    &cfg,
+                ).unwrap();
+                prop_assert!(out.iter().all(|v| v.is_finite()), "non-finite output");
+                prop_assert!(um.iter().all(|v| v.is_finite()), "non-finite running_mean");
+                prop_assert!(uv.iter().all(|v| v.is_finite()), "non-finite running_var");
+            }
+
+            /// Running mean should be finite and bounded by input range.
+            #[test]
+            fn prop_running_mean_bounded(
+                (batch, features, input) in bn_scenario()
+            ) {
+                let cfg = BatchNormConfig {
+                    num_features: features, eps: 1e-5, momentum: 0.1, training: true,
+                };
+                let (_, um, _) = batch_norm_forward(
+                    &input,
+                    &vec![1.0; features],
+                    &vec![0.0; features],
+                    &vec![0.0; features],
+                    &vec![1.0; features],
+                    &cfg,
+                ).unwrap();
+
+                for ch in 0..features {
+                    let ch_min = (0..batch)
+                        .map(|b| input[b * features + ch])
+                        .fold(f32::INFINITY, f32::min);
+                    let ch_max = (0..batch)
+                        .map(|b| input[b * features + ch])
+                        .fold(f32::NEG_INFINITY, f32::max);
+                    prop_assert!(
+                        um[ch].is_finite(),
+                        "ch {}: running_mean={} not finite", ch, um[ch]
+                    );
+                    prop_assert!(
+                        um[ch].abs() <= ch_max.abs().max(ch_min.abs()) + 1.0,
+                        "ch {}: running_mean={} out of range [{}, {}]",
+                        ch, um[ch], ch_min, ch_max
+                    );
+                }
+            }
+
+            /// Running variance should be non-negative after any training step.
+            #[test]
+            fn prop_running_var_non_negative(
+                (batch, features, input) in bn_scenario()
+            ) {
+                let cfg = BatchNormConfig {
+                    num_features: features, eps: 1e-5, momentum: 0.1, training: true,
+                };
+                let (_, _, uv) = batch_norm_forward(
+                    &input,
+                    &vec![1.0; features],
+                    &vec![0.0; features],
+                    &vec![0.0; features],
+                    &vec![1.0; features],
+                    &cfg,
+                ).unwrap();
+
+                for ch in 0..features {
+                    prop_assert!(
+                        uv[ch] >= 0.0 && uv[ch].is_finite(),
+                        "ch {}: running_var={} should be >= 0 and finite", ch, uv[ch]
+                    );
+                }
+            }
+
+            /// Eval mode is deterministic with fixed running stats.
+            #[test]
+            fn prop_eval_deterministic(
+                (batch, features, input) in bn_scenario()
+            ) {
+                let rmean: Vec<f32> = (0..features).map(|ch| ch as f32).collect();
+                let rvar: Vec<f32> = (0..features).map(|ch| (ch + 1) as f32).collect();
+                let gamma = vec![1.0_f32; features];
+                let beta = vec![0.0_f32; features];
+
+                let out1 =
+                    batch_norm_inference(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+                let out2 =
+                    batch_norm_inference(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+
+                prop_assert_eq!(&out1, &out2, "eval should be deterministic");
+            }
+        }
+    }
 }
