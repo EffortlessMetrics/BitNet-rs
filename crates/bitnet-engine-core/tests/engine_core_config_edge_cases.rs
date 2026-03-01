@@ -7,8 +7,8 @@
 use std::collections::HashSet;
 
 use bitnet_engine_core::{
-    BackendInfo, ConcurrencyConfig, ConfigError, EngineState, EngineStateError,
-    EngineStateTracker, SessionConfig, SessionId, SessionMetrics, VALID_BACKENDS,
+    BackendInfo, ConcurrencyConfig, ConfigError, EngineState, EngineStateError, EngineStateTracker,
+    SessionConfig, SessionId, SessionMetrics, VALID_BACKENDS,
 };
 
 // ---------------------------------------------------------------------------
@@ -223,11 +223,7 @@ fn error_message_from_running_mentions_running() {
     let mut tracker = EngineStateTracker::new();
     tracker.start().unwrap();
     let err = tracker.start().unwrap_err();
-    assert!(
-        err.to_string().contains("Running"),
-        "expected 'Running' in error: {}",
-        err
-    );
+    assert!(err.to_string().contains("Running"), "expected 'Running' in error: {}", err);
 }
 
 #[test]
@@ -236,11 +232,7 @@ fn error_message_from_done_mentions_done() {
     tracker.start().unwrap();
     tracker.finish().unwrap();
     let err = tracker.start().unwrap_err();
-    assert!(
-        err.to_string().contains("Done"),
-        "expected 'Done' in error: {}",
-        err
-    );
+    assert!(err.to_string().contains("Done"), "expected 'Done' in error: {}", err);
 }
 
 #[test]
@@ -311,11 +303,8 @@ fn session_metrics_fractional_tps_roundtrip() {
 
 #[test]
 fn session_metrics_json_has_expected_keys() {
-    let m = SessionMetrics {
-        tokens_per_second: 10.0,
-        time_to_first_token_ms: 50.0,
-        total_tokens: 100,
-    };
+    let m =
+        SessionMetrics { tokens_per_second: 10.0, time_to_first_token_ms: 50.0, total_tokens: 100 };
     let json = serde_json::to_string(&m).unwrap();
     assert!(json.contains("tokens_per_second"));
     assert!(json.contains("time_to_first_token_ms"));
@@ -411,7 +400,8 @@ fn session_id_format_prefix() {
 
 #[test]
 fn session_id_500_unique() {
-    let ids: HashSet<String> = (0..500).map(|_| SessionId::generate().as_str().to_owned()).collect();
+    let ids: HashSet<String> =
+        (0..500).map(|_| SessionId::generate().as_str().to_owned()).collect();
     assert_eq!(ids.len(), 500, "all 500 session IDs must be unique");
 }
 

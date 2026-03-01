@@ -57,11 +57,8 @@ fn config_default_stop_criteria_is_default() {
 
 #[test]
 fn config_with_zero_max_new_tokens() {
-    let cfg = GenerationConfig {
-        max_new_tokens: 0,
-        seed: None,
-        stop_criteria: StopCriteria::default(),
-    };
+    let cfg =
+        GenerationConfig { max_new_tokens: 0, seed: None, stop_criteria: StopCriteria::default() };
     assert_eq!(cfg.max_new_tokens, 0);
 }
 
@@ -127,10 +124,7 @@ fn stop_string_is_case_sensitive_no_match() {
 #[test]
 fn stop_string_is_case_sensitive_exact_match() {
     let c = make_criteria(&[], &["STOP"], 0, None);
-    assert_eq!(
-        check_stop(&c, 1, &[], "STOP"),
-        Some(StopReason::StopString("STOP".to_string()))
-    );
+    assert_eq!(check_stop(&c, 1, &[], "STOP"), Some(StopReason::StopString("STOP".to_string())));
 }
 
 #[test]
@@ -138,10 +132,7 @@ fn stop_string_mixed_case_no_match() {
     let c = make_criteria(&[], &["Stop"], 0, None);
     assert!(check_stop(&c, 1, &[], "STOP").is_none());
     assert!(check_stop(&c, 1, &[], "stop").is_none());
-    assert_eq!(
-        check_stop(&c, 1, &[], "Stop"),
-        Some(StopReason::StopString("Stop".to_string()))
-    );
+    assert_eq!(check_stop(&c, 1, &[], "Stop"), Some(StopReason::StopString("Stop".to_string())));
 }
 
 // ---------------------------------------------------------------------------
@@ -152,10 +143,7 @@ fn stop_string_mixed_case_no_match() {
 fn overlapping_pattern_aa_in_aaa() {
     let c = make_criteria(&[], &["aa"], 0, None);
     // "aaa" contains "aa" starting at index 0
-    assert_eq!(
-        check_stop(&c, 1, &[], "aaa"),
-        Some(StopReason::StopString("aa".to_string()))
-    );
+    assert_eq!(check_stop(&c, 1, &[], "aaa"), Some(StopReason::StopString("aa".to_string())));
 }
 
 #[test]
@@ -358,10 +346,7 @@ fn stats_default_is_zeroed() {
 
 #[test]
 fn stats_very_high_throughput() {
-    let s = GenerationStats {
-        tokens_generated: usize::MAX,
-        tokens_per_second: f64::MAX,
-    };
+    let s = GenerationStats { tokens_generated: usize::MAX, tokens_per_second: f64::MAX };
     assert_eq!(s.tokens_generated, usize::MAX);
     assert_eq!(s.tokens_per_second, f64::MAX);
 }
@@ -377,10 +362,7 @@ fn stats_nan_tokens_per_second_serde() {
 
 #[test]
 fn stats_infinity_tokens_per_second_serde() {
-    let s = GenerationStats {
-        tokens_generated: 1,
-        tokens_per_second: f64::INFINITY,
-    };
+    let s = GenerationStats { tokens_generated: 1, tokens_per_second: f64::INFINITY };
     let json = serde_json::to_string(&s).unwrap();
     assert!(!json.is_empty());
 }
@@ -442,20 +424,14 @@ fn stream_sequence_empty_generation_only_done() {
 fn stop_tokens_and_strings_together_token_wins_when_matched() {
     let c = make_criteria(&[42], &["end"], 0, None);
     // Token 42 matches stop_token_ids
-    assert_eq!(
-        check_stop(&c, 42, &[], "end"),
-        Some(StopReason::StopTokenId(42))
-    );
+    assert_eq!(check_stop(&c, 42, &[], "end"), Some(StopReason::StopTokenId(42)));
 }
 
 #[test]
 fn stop_tokens_and_strings_together_string_wins_when_token_unmatched() {
     let c = make_criteria(&[42], &["end"], 0, None);
     // Token 99 does not match stop_token_ids, but "end" is in the tail
-    assert_eq!(
-        check_stop(&c, 99, &[], "the end"),
-        Some(StopReason::StopString("end".to_string()))
-    );
+    assert_eq!(check_stop(&c, 99, &[], "the end"), Some(StopReason::StopString("end".to_string())));
 }
 
 #[test]
@@ -466,22 +442,13 @@ fn stop_tokens_and_eos_and_strings_and_max_all_set() {
     assert!(check_stop(&c, 1, &[1, 2], "hello").is_none());
 
     // Stop token match
-    assert_eq!(
-        check_stop(&c, 100, &[1, 2], "hello"),
-        Some(StopReason::StopTokenId(100))
-    );
+    assert_eq!(check_stop(&c, 100, &[1, 2], "hello"), Some(StopReason::StopTokenId(100)));
 
     // EOS match (no stop token match)
-    assert_eq!(
-        check_stop(&c, 50, &[1, 2], "hello"),
-        Some(StopReason::EosToken)
-    );
+    assert_eq!(check_stop(&c, 50, &[1, 2], "hello"), Some(StopReason::EosToken));
 
     // Max tokens (no token/EOS match)
-    assert_eq!(
-        check_stop(&c, 1, &vec![0u32; 10], "hello"),
-        Some(StopReason::MaxTokens)
-    );
+    assert_eq!(check_stop(&c, 1, &vec![0u32; 10], "hello"), Some(StopReason::MaxTokens));
 
     // String match (no token/EOS/max match)
     assert_eq!(
@@ -517,11 +484,7 @@ fn config_serde_roundtrip_complex() {
         seed: Some(u64::MAX),
         stop_criteria: StopCriteria {
             stop_token_ids: vec![0, 1, u32::MAX],
-            stop_strings: vec![
-                "</s>".to_string(),
-                "\n\n".to_string(),
-                "🛑".to_string(),
-            ],
+            stop_strings: vec!["</s>".to_string(), "\n\n".to_string(), "🛑".to_string()],
             max_tokens: 512,
             eos_token_id: Some(2),
         },
@@ -538,7 +501,8 @@ fn config_serde_roundtrip_complex() {
 
 #[test]
 fn config_serde_roundtrip_seed_none() {
-    let cfg = GenerationConfig { max_new_tokens: 1, seed: None, stop_criteria: StopCriteria::default() };
+    let cfg =
+        GenerationConfig { max_new_tokens: 1, seed: None, stop_criteria: StopCriteria::default() };
     let json = serde_json::to_string(&cfg).unwrap();
     let cfg2: GenerationConfig = serde_json::from_str(&json).unwrap();
     assert!(cfg2.seed.is_none());
@@ -588,15 +552,9 @@ fn all_types_debug_format_no_panic() {
     let _ = format!("{:?}", GenerationConfig::default());
     let _ = format!("{:?}", GenerationStats::default());
     let _ = format!("{:?}", TokenEvent { id: 0, text: String::new() });
+    let _ = format!("{:?}", StreamEvent::Token(TokenEvent { id: 0, text: String::new() }));
     let _ = format!(
         "{:?}",
-        StreamEvent::Token(TokenEvent { id: 0, text: String::new() })
-    );
-    let _ = format!(
-        "{:?}",
-        StreamEvent::Done {
-            reason: StopReason::MaxTokens,
-            stats: GenerationStats::default(),
-        }
+        StreamEvent::Done { reason: StopReason::MaxTokens, stats: GenerationStats::default() }
     );
 }
