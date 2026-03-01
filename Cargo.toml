@@ -24,6 +24,7 @@ members = [
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
   "crates/bitnet-receipts",
+  "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
@@ -110,6 +111,7 @@ default-members = [
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-receipts",
+  "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
   "crates/bitnet-cli",
   "crates/bitnet-server",
