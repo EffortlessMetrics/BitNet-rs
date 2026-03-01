@@ -31,13 +31,15 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `OpenCL` GPU device capability query and selection for `BitNet` inference.
+//!
+//! This crate provides infrastructure for querying GPU hardware capabilities,
+//! validating model-device compatibility, and selecting the best device from
+//! multiple candidates.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
+pub mod device_capabilities;
+
+pub use device_capabilities::{
+    CapabilityCheckResult, DeviceCapabilityChecker, DeviceSelector, DeviceSelectorError,
+    GpuDeviceCapabilities, ModelRequirements, ScoredDevice, format_device_info,
 };

@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "OpenCL backend for BitNet GPU inference on Intel Arc GPUs"
+description = "OpenCL GPU device capability query and selection for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
@@ -28,11 +29,6 @@ temp-env.workspace = true
 [features]
 default = []
 oneapi = ["dep:opencl3"]
-cpu = []
-gpu = ["cuda"]
-cuda = []
-opencl = []
-vulkan = []
 
 [lints]
 workspace = true
