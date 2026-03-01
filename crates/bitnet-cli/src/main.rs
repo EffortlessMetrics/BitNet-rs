@@ -25,7 +25,6 @@ mod config;
 mod exit;
 #[cfg(feature = "full-cli")]
 mod ln_rules;
-mod sampling;
 mod score;
 pub mod tokenizer_discovery;
 
@@ -967,7 +966,7 @@ async fn run_simple_generation(
     assert_greedy: bool,
     no_warnings: bool,
 ) -> Result<()> {
-    use crate::sampling::Sampler;
+    use bitnet_cli_sampling_core::Sampler;
     use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
     use bitnet_tokenizers::Tokenizer;
