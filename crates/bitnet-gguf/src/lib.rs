@@ -3,6 +3,9 @@
 //! Provides a minimal, dependency-light library for inspecting GGUF files:
 //! magic validation, version detection, and header field extraction.
 //!
+
+// GGUF header fields are u64 per spec; truncation casts are safe on 64-bit targets.
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 //! The **full** GGUF parser (metadata key-value pairs, tensor data) lives in
 //! `bitnet-models`; this crate focuses on the portable, zero-copy subset.
 //!
@@ -22,6 +25,8 @@
 //! ```
 
 use std::path::Path;
+
+pub mod kv;
 
 // ---------------------------------------------------------------------------
 // Constants
