@@ -115,10 +115,7 @@ impl Default for ProfilingSession {
 impl ProfilingSession {
     /// Create a new, empty profiling session.
     pub fn new() -> Self {
-        Self {
-            profiles: Vec::new(),
-            start_time: Instant::now(),
-        }
+        Self { profiles: Vec::new(), start_time: Instant::now() }
     }
 
     /// Record a kernel execution profile.
@@ -143,10 +140,7 @@ impl ProfilingSession {
 
     /// Return all profiles for a given kernel name.
     pub fn by_kernel(&self, name: &str) -> Vec<&KernelProfile> {
-        self.profiles
-            .iter()
-            .filter(|p| p.kernel_name == name)
-            .collect()
+        self.profiles.iter().filter(|p| p.kernel_name == name).collect()
     }
 
     /// Return the `n` slowest kernels by execution time.
@@ -163,11 +157,7 @@ impl ProfilingSession {
 
     /// Total GPU execution time across all recorded kernels (milliseconds).
     pub fn total_gpu_time_ms(&self) -> f64 {
-        self.profiles
-            .iter()
-            .map(|p| p.execution_time_us())
-            .sum::<f64>()
-            / 1_000.0
+        self.profiles.iter().map(|p| p.execution_time_us()).sum::<f64>() / 1_000.0
     }
 
     /// Compute a [`SessionSummary`] with per-kernel statistics.
@@ -183,10 +173,7 @@ impl ProfilingSession {
         // Group by kernel name.
         let mut groups: HashMap<String, Vec<f64>> = HashMap::new();
         for p in &self.profiles {
-            groups
-                .entry(p.kernel_name.clone())
-                .or_default()
-                .push(p.execution_time_us());
+            groups.entry(p.kernel_name.clone()).or_default().push(p.execution_time_us());
         }
 
         let kernel_breakdown = groups
@@ -203,26 +190,11 @@ impl ProfilingSession {
                     0.0
                 };
                 let std_dev_us = variance.sqrt();
-                (
-                    name,
-                    KernelStats {
-                        count,
-                        total_us,
-                        min_us,
-                        max_us,
-                        avg_us,
-                        std_dev_us,
-                    },
-                )
+                (name, KernelStats { count, total_us, min_us, max_us, avg_us, std_dev_us })
             })
             .collect();
 
-        SessionSummary {
-            total_kernels,
-            total_gpu_time_ms,
-            avg_kernel_time_us,
-            kernel_breakdown,
-        }
+        SessionSummary { total_kernels, total_gpu_time_ms, avg_kernel_time_us, kernel_breakdown }
     }
 }
 
@@ -291,14 +263,8 @@ impl ProfilingReport {
     pub fn to_json(&self) -> String {
         // Hand-rolled to avoid pulling in serde for this module.
         let mut out = String::from("{\n");
-        out.push_str(&format!(
-            "  \"total_kernels\": {},\n",
-            self.summary.total_kernels
-        ));
-        out.push_str(&format!(
-            "  \"total_gpu_time_ms\": {:.6},\n",
-            self.summary.total_gpu_time_ms
-        ));
+        out.push_str(&format!("  \"total_kernels\": {},\n", self.summary.total_kernels));
+        out.push_str(&format!("  \"total_gpu_time_ms\": {:.6},\n", self.summary.total_gpu_time_ms));
         out.push_str(&format!(
             "  \"avg_kernel_time_us\": {:.6},\n",
             self.summary.avg_kernel_time_us
@@ -340,11 +306,7 @@ impl ProfilingReport {
 
 /// Truncate a kernel name to `max_len` characters, appending `..` if needed.
 fn truncate_name(name: &str, max_len: usize) -> String {
-    if name.len() <= max_len {
-        name.to_string()
-    } else {
-        format!("{}..", &name[..max_len - 2])
-    }
+    if name.len() <= max_len { name.to_string() } else { format!("{}..", &name[..max_len - 2]) }
 }
 
 // ===========================================================================
@@ -509,9 +471,9 @@ mod tests {
     #[test]
     fn test_slowest_n() {
         let mut session = ProfilingSession::new();
-        session.record(make_profile("fast", 0, 0, 0, 1_000));   // 1 µs
+        session.record(make_profile("fast", 0, 0, 0, 1_000)); // 1 µs
         session.record(make_profile("slow", 0, 0, 0, 100_000)); // 100 µs
-        session.record(make_profile("mid", 0, 0, 0, 50_000));   // 50 µs
+        session.record(make_profile("mid", 0, 0, 0, 50_000)); // 50 µs
         let top2 = session.slowest(2);
         assert_eq!(top2.len(), 2);
         assert_eq!(top2[0].kernel_name, "slow");
@@ -598,7 +560,9 @@ mod tests {
         session.record(make_profile("b", 0, 0, 0, 20_000));
         session.record(make_profile("c", 0, 0, 0, 30_000));
         let total = session.total_gpu_time_ms();
-        for p in [&session.by_kernel("a")[0], &session.by_kernel("b")[0], &session.by_kernel("c")[0]] {
+        for p in
+            [&session.by_kernel("a")[0], &session.by_kernel("b")[0], &session.by_kernel("c")[0]]
+        {
             assert!(total >= p.execution_time_us() / 1_000.0);
         }
         // total = sum
