@@ -503,3 +503,39 @@ name = "fuzz_template_detect"
 path = "fuzz_targets/fuzz_template_detect.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_transpose_ops"
+path = "fuzz_targets/fuzz_transpose_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_fused_kernels"
+path = "fuzz_targets/fuzz_fused_kernels.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_conv2d_shapes"
+path = "fuzz_targets/fuzz_conv2d_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_shaped_reduction"
+path = "fuzz_targets/fuzz_shaped_reduction.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantized_matmul"
+path = "fuzz_targets/fuzz_quantized_matmul.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_activation_elementwise"
+path = "fuzz_targets/fuzz_activation_elementwise.rs"
+test = false
+doc = false
