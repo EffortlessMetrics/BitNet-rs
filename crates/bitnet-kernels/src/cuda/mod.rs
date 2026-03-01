@@ -53,7 +53,8 @@ pub use activations::{
     launch_silu_gate, silu_gate_cpu,
 };
 pub use attention::{
-    AttentionConfig, AttentionKernelConfig, attention_cpu_fallback, attention_forward,
+    AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
+    attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
     launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
 };
 
