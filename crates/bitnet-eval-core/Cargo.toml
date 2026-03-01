@@ -1,0 +1,15 @@
+[package]
+name = "bitnet-eval-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP helpers for evaluation and scoring math"
+
+[lib]
+name = "bitnet_eval_core"
+path = "src/lib.rs"

@@ -452,6 +452,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "bitnet-common",
+ "bitnet-eval-core",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-kernels",
@@ -599,6 +600,10 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "bitnet-eval-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-feature-contract"
