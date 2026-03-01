@@ -67,7 +67,13 @@ impl fmt::Display for KernelBackend {
 impl KernelBackend {
     /// Returns true if this backend requires a GPU at runtime.
     pub fn requires_gpu(self) -> bool {
-        matches!(self, KernelBackend::Cuda | KernelBackend::Hip | KernelBackend::OneApi | KernelBackend::OpenCL)
+        matches!(
+            self,
+            KernelBackend::Cuda
+                | KernelBackend::Hip
+                | KernelBackend::OneApi
+                | KernelBackend::OpenCL
+        )
     }
 
     /// Returns true if this backend is compiled in the current build.
