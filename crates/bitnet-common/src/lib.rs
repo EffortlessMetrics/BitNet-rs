@@ -10,6 +10,8 @@ pub mod config;
 
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
+pub mod gpu_config;
+pub mod gpu_error;
 pub mod kernel_registry;
 pub mod memory_pool;
 pub mod strict_mode;
