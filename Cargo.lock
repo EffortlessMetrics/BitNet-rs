@@ -595,6 +595,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-download"
+version = "0.2.1-dev"
+dependencies = [
+ "httpdate",
+ "reqwest",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "bitnet-engine-core"
 version = "0.2.1-dev"
 dependencies = [
@@ -9381,6 +9390,7 @@ dependencies = [
  "bitnet-bdd-grid",
  "bitnet-common",
  "bitnet-crossval",
+ "bitnet-download",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
