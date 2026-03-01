@@ -4,6 +4,38 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Wave 96: Inference Pipeline & Scheduling
+
+- **Inference scheduler** (#1631): 112 tests for task scheduling with priority queues, work stealing, and deadline-aware dispatch
+- **Attention mechanism** (#1632): 112 tests for multi-head/grouped-query attention with causal masking and flash-attention support
+- **KV cache manager** (#1634): 106 tests for key-value cache lifecycle with paged allocation and eviction policies
+- **Activation catalog** (#1640): 133 tests for GELU/SiLU/ReLU/Swish activation functions with fused variants
+- **Tensor math primitives** (#1641): 112 tests for element-wise, reduction, and broadcast operations on typed tensors
+- **Model architecture** (#1642): 121 tests for transformer block composition with layer normalization and residual connections
+- **Runtime config** (#1643): 117 tests for hierarchical configuration with env/file/CLI override resolution
+- **DType system** (#1644): 118 tests for numeric type metadata, promotion rules, and cast validation
+- **Sampling strategies** (#1646): 112 tests for top-k, top-p, temperature, repetition penalty, and greedy decoding
+- **Embedding operations** (#1630): 111 tests for token/positional embedding lookup with RoPE and learned encodings
+
+### Wave 95: GPU HAL Foundation Modules
+
+- **Kernel autotuner** (#1239): 96 tests for runtime kernel parameter search with performance profiling and cache
+- **Execution planner** (#1629): 107 tests for compute graph scheduling with operator fusion and memory planning
+- **Quantization toolkit** (#1621): 96 tests for weight quantization schemes with calibration and accuracy validation
+- **Parallel communication** (#1617): 122 tests for collective operations (all-reduce, scatter, gather) across devices
+- **Model serialization** (#1619): 122 tests for GGUF/SafeTensors model I/O with lazy loading and integrity checks
+- **Error taxonomy** (#1618): 99 tests for structured error hierarchy with context propagation and recovery hints
+- **Device abstraction layer** (#1371): 105 tests for unified device API across CPU/CUDA/Level-Zero/Metal backends
+- **Tokenizer pipeline** (#1622): 124 tests for BPE/WordPiece/Unigram tokenization with pre/post-processing steps
+
+### Wave 94: Workspace Integration
+
+- **Workspace integration v17** (#1625): 91 module declarations consolidating new GPU HAL crates into workspace
+
+### Wave 93: Documentation
+
+- **CHANGELOG waves 87-92** (#1616): Documentation update for waves 87-92
+
 ### Wave 86: Training Support & Production Infrastructure
 
 - **Gradient checkpoint** (#1586): 89 tests for memory-efficient training with activation checkpointing
