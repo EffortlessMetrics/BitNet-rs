@@ -63,22 +63,19 @@ impl PoolingConfig {
         padding: usize,
     ) -> Result<Self> {
         if input_len == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: "input_len must be > 0".into(),
-            }
-            .into());
+            return Err(
+                KernelError::InvalidArguments { reason: "input_len must be > 0".into() }.into()
+            );
         }
         if kernel_size == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: "kernel_size must be > 0".into(),
-            }
-            .into());
+            return Err(
+                KernelError::InvalidArguments { reason: "kernel_size must be > 0".into() }.into()
+            );
         }
         if stride == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: "stride must be > 0".into(),
-            }
-            .into());
+            return Err(
+                KernelError::InvalidArguments { reason: "stride must be > 0".into() }.into()
+            );
         }
 
         let out_len = output_len(input_len, kernel_size, stride, padding);
@@ -94,25 +91,13 @@ impl PoolingConfig {
         }
 
         let threads_per_block = (out_len as u32).min(1024);
-        Ok(Self {
-            pool_type,
-            input_len,
-            kernel_size,
-            stride,
-            padding,
-            threads_per_block,
-        })
+        Ok(Self { pool_type, input_len, kernel_size, stride, padding, threads_per_block })
     }
 
     /// Number of output elements this configuration produces.
     #[inline]
     pub fn output_len(&self) -> usize {
-        output_len(
-            self.input_len,
-            self.kernel_size,
-            self.stride,
-            self.padding,
-        )
+        output_len(self.input_len, self.kernel_size, self.stride, self.padding)
     }
 
     /// CUDA grid dimensions `(ceil(output_len / threads_per_block), 1, 1)`.
@@ -134,12 +119,7 @@ impl PoolingConfig {
 
 /// Number of output elements for a 1-D pooling window.
 #[inline]
-fn output_len(
-    input_len: usize,
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
-) -> usize {
+fn output_len(input_len: usize, kernel_size: usize, stride: usize, padding: usize) -> usize {
     let padded = input_len + 2 * padding;
     if padded < kernel_size {
         return 0;
@@ -159,29 +139,17 @@ fn output_len(
 ///
 /// Returns [`KernelError::InvalidArguments`] when slice lengths are
 /// too small for the configured operation.
-pub fn pooling_cpu(
-    input: &[f32],
-    output: &mut [f32],
-    config: &PoolingConfig,
-) -> Result<()> {
+pub fn pooling_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig) -> Result<()> {
     let out_n = config.output_len();
     if input.len() < config.input_len {
         return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "pooling input length {} < expected {}",
-                input.len(),
-                config.input_len
-            ),
+            reason: format!("pooling input length {} < expected {}", input.len(), config.input_len),
         }
         .into());
     }
     if output.len() < out_n {
         return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "pooling output length {} < expected {}",
-                output.len(),
-                out_n
-            ),
+            reason: format!("pooling output length {} < expected {}", output.len(), out_n),
         }
         .into());
     }
@@ -197,12 +165,7 @@ pub fn pooling_cpu(
     Ok(())
 }
 
-fn max_pool_cpu(
-    input: &[f32],
-    output: &mut [f32],
-    config: &PoolingConfig,
-    out_n: usize,
-) {
+fn max_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n: usize) {
     let n = config.input_len;
     let pad = config.padding;
     for i in 0..out_n {
@@ -210,11 +173,8 @@ fn max_pool_cpu(
         let mut max_val = f32::NEG_INFINITY;
         for k in 0..config.kernel_size {
             let pos = ws + k;
-            let val = if pos < pad || pos >= n + pad {
-                f32::NEG_INFINITY
-            } else {
-                input[pos - pad]
-            };
+            let val =
+                if pos < pad || pos >= n + pad { f32::NEG_INFINITY } else { input[pos - pad] };
             if val > max_val {
                 max_val = val;
             }
@@ -223,12 +183,7 @@ fn max_pool_cpu(
     }
 }
 
-fn avg_pool_cpu(
-    input: &[f32],
-    output: &mut [f32],
-    config: &PoolingConfig,
-    out_n: usize,
-) {
+fn avg_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n: usize) {
     let n = config.input_len;
     let pad = config.padding;
     for i in 0..out_n {
@@ -254,11 +209,7 @@ fn avg_pool_cpu(
 ///
 /// Returns `KernelError::GpuError` until a real PTX kernel is compiled
 /// and loaded.
-pub fn launch_pooling(
-    _input: &[f32],
-    _output: &mut [f32],
-    config: &PoolingConfig,
-) -> Result<()> {
+pub fn launch_pooling(_input: &[f32], _output: &mut [f32], config: &PoolingConfig) -> Result<()> {
     log::debug!(
         "pooling stub: type={:?}, input_len={}, kernel={}, \
          stride={}, padding={}, grid={:?}",
@@ -270,8 +221,7 @@ pub fn launch_pooling(
         config.grid_dim(),
     );
     Err(KernelError::GpuError {
-        reason: "pooling CUDA kernel not yet compiled — scaffold only"
-            .into(),
+        reason: "pooling CUDA kernel not yet compiled — scaffold only".into(),
     }
     .into())
 }
@@ -282,11 +232,7 @@ pub fn launch_pooling(
 
 /// Apply pooling with automatic dispatch: GPU if available, else CPU
 /// fallback.
-pub fn pooling_forward(
-    input: &[f32],
-    output: &mut [f32],
-    config: &PoolingConfig,
-) -> Result<()> {
+pub fn pooling_forward(input: &[f32], output: &mut [f32], config: &PoolingConfig) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         if crate::device_features::gpu_available_runtime() {
@@ -309,61 +255,49 @@ mod tests {
     const TOL: f32 = 1e-6;
 
     fn approx_eq(a: &[f32], b: &[f32], tol: f32) -> bool {
-        a.len() == b.len()
-            && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+        a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
     }
 
     // -- Config tests ---------------------------------------------------
 
     #[test]
     fn config_basic() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 10, 3, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 10, 3, 1, 0).unwrap();
         assert_eq!(cfg.output_len(), 8);
         assert_eq!(cfg.threads_per_block, 8);
     }
 
     #[test]
     fn config_with_padding() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Average, 5, 3, 1, 1).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 5, 3, 1, 1).unwrap();
         // (5 + 2 - 3) / 1 + 1 = 5
         assert_eq!(cfg.output_len(), 5);
     }
 
     #[test]
     fn config_rejects_zero_input() {
-        assert!(
-            PoolingConfig::new(CudaPoolType::Max, 0, 3, 1, 0).is_err()
-        );
+        assert!(PoolingConfig::new(CudaPoolType::Max, 0, 3, 1, 0).is_err());
     }
 
     #[test]
     fn config_rejects_zero_kernel() {
-        assert!(
-            PoolingConfig::new(CudaPoolType::Max, 10, 0, 1, 0).is_err()
-        );
+        assert!(PoolingConfig::new(CudaPoolType::Max, 10, 0, 1, 0).is_err());
     }
 
     #[test]
     fn config_rejects_zero_stride() {
-        assert!(
-            PoolingConfig::new(CudaPoolType::Max, 10, 3, 0, 0).is_err()
-        );
+        assert!(PoolingConfig::new(CudaPoolType::Max, 10, 3, 0, 0).is_err());
     }
 
     #[test]
     fn config_rejects_zero_output() {
         // kernel_size > input_len + 2*padding → 0 outputs
-        assert!(
-            PoolingConfig::new(CudaPoolType::Max, 2, 10, 1, 0).is_err()
-        );
+        assert!(PoolingConfig::new(CudaPoolType::Max, 2, 10, 1, 0).is_err());
     }
 
     #[test]
     fn config_grid_dim() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 2048, 2, 2, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 2048, 2, 2, 0).unwrap();
         assert_eq!(cfg.output_len(), 1024);
         assert_eq!(cfg.grid_dim(), (1, 1, 1));
         assert_eq!(cfg.block_dim(), (1024, 1, 1));
@@ -371,14 +305,7 @@ mod tests {
 
     #[test]
     fn config_grid_dim_large() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            4096,
-            2,
-            1,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 4096, 2, 1, 0).unwrap();
         // output_len = 4095, threads_per_block = 1024
         let (gx, _, _) = cfg.grid_dim();
         assert_eq!(gx, 4); // ceil(4095 / 1024) = 4
@@ -388,8 +315,7 @@ mod tests {
 
     #[test]
     fn cpu_max_pool_basic() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
         let input = [1.0, 3.0, 2.0, 5.0, 4.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -398,8 +324,7 @@ mod tests {
 
     #[test]
     fn cpu_max_pool_stride_2() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 6, 2, 2, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 6, 2, 2, 0).unwrap();
         let input = [1.0, 3.0, 2.0, 5.0, 4.0, 6.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -408,8 +333,7 @@ mod tests {
 
     #[test]
     fn cpu_max_pool_with_padding() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 3, 3, 1, 1).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 3, 3, 1, 1).unwrap();
         let input = [1.0, 2.0, 3.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -418,8 +342,7 @@ mod tests {
 
     #[test]
     fn cpu_max_pool_negative_values() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 5, 3, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 5, 3, 1, 0).unwrap();
         let input = [-5.0, -3.0, -4.0, -1.0, -2.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -428,8 +351,7 @@ mod tests {
 
     #[test]
     fn cpu_max_pool_single_element() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 1, 1, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 1, 1, 1, 0).unwrap();
         let input = [42.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -440,14 +362,7 @@ mod tests {
 
     #[test]
     fn cpu_avg_pool_basic() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            5,
-            2,
-            1,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 5, 2, 1, 0).unwrap();
         let input = [1.0, 3.0, 2.0, 5.0, 4.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -456,14 +371,7 @@ mod tests {
 
     #[test]
     fn cpu_avg_pool_stride_2() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            4,
-            2,
-            2,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 4, 2, 2, 0).unwrap();
         let input = [2.0, 4.0, 6.0, 8.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -472,14 +380,7 @@ mod tests {
 
     #[test]
     fn cpu_avg_pool_with_padding() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            3,
-            3,
-            1,
-            1,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 3, 3, 1, 1).unwrap();
         let input = [3.0, 6.0, 9.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -489,14 +390,7 @@ mod tests {
 
     #[test]
     fn cpu_avg_pool_single_element() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            1,
-            1,
-            1,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 1, 1, 1, 0).unwrap();
         let input = [7.0];
         let mut output = vec![0.0; cfg.output_len()];
         pooling_cpu(&input, &mut output, &cfg).unwrap();
@@ -507,8 +401,7 @@ mod tests {
 
     #[test]
     fn cpu_rejects_short_input() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 10, 3, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 10, 3, 1, 0).unwrap();
         let input = [1.0; 5]; // need 10
         let mut output = vec![0.0; cfg.output_len()];
         assert!(pooling_cpu(&input, &mut output, &cfg).is_err());
@@ -516,8 +409,7 @@ mod tests {
 
     #[test]
     fn cpu_rejects_short_output() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
         let input = [1.0; 5];
         let mut output = [0.0; 1]; // need 4
         assert!(pooling_cpu(&input, &mut output, &cfg).is_err());
@@ -527,8 +419,7 @@ mod tests {
 
     #[test]
     fn forward_dispatches_cpu() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 5, 2, 1, 0).unwrap();
         let input = [1.0, 3.0, 2.0, 5.0, 4.0];
         let mut output = vec![0.0; cfg.output_len()];
         let result = pooling_forward(&input, &mut output, &cfg);
@@ -538,14 +429,7 @@ mod tests {
 
     #[test]
     fn forward_matches_cpu_avg() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            6,
-            3,
-            2,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 6, 3, 2, 0).unwrap();
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let mut out_fwd = vec![0.0; cfg.output_len()];
         let mut out_cpu = vec![0.0; cfg.output_len()];
@@ -553,36 +437,23 @@ mod tests {
         pooling_forward(&input, &mut out_fwd, &cfg).unwrap();
         pooling_cpu(&input, &mut out_cpu, &cfg).unwrap();
 
-        for (i, (&f, &c)) in
-            out_fwd.iter().zip(out_cpu.iter()).enumerate()
-        {
-            assert!(
-                (f - c).abs() < TOL,
-                "mismatch at {i}: forward={f}, cpu={c}"
-            );
+        for (i, (&f, &c)) in out_fwd.iter().zip(out_cpu.iter()).enumerate() {
+            assert!((f - c).abs() < TOL, "mismatch at {i}: forward={f}, cpu={c}");
         }
     }
 
     #[test]
     fn forward_large_input() {
         let n = 1024;
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, n, 4, 4, 0).unwrap();
-        let input: Vec<f32> =
-            (0..n).map(|i| (i as f32).sin()).collect();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, n, 4, 4, 0).unwrap();
+        let input: Vec<f32> = (0..n).map(|i| (i as f32).sin()).collect();
         let mut output = vec![0.0; cfg.output_len()];
         pooling_forward(&input, &mut output, &cfg).unwrap();
         assert_eq!(output.len(), 256);
         for (i, &v) in output.iter().enumerate() {
             let window = &input[i * 4..i * 4 + 4];
-            let expected = window
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max);
-            assert!(
-                (v - expected).abs() < TOL,
-                "mismatch at {i}: got={v}, expected={expected}"
-            );
+            let expected = window.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+            assert!((v - expected).abs() < TOL, "mismatch at {i}: got={v}, expected={expected}");
         }
     }
 
@@ -591,35 +462,20 @@ mod tests {
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_pooling_max_launch() {
-        let cfg =
-            PoolingConfig::new(CudaPoolType::Max, 1024, 4, 4, 0)
-                .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Max, 1024, 4, 4, 0).unwrap();
         let input = vec![1.0_f32; 1024];
         let mut output = vec![0.0_f32; cfg.output_len()];
         let result = launch_pooling(&input, &mut output, &cfg);
-        assert!(
-            result.is_ok(),
-            "CUDA max pooling launch failed: {result:?}"
-        );
+        assert!(result.is_ok(), "CUDA max pooling launch failed: {result:?}");
     }
 
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_pooling_avg_launch() {
-        let cfg = PoolingConfig::new(
-            CudaPoolType::Average,
-            1024,
-            4,
-            4,
-            0,
-        )
-        .unwrap();
+        let cfg = PoolingConfig::new(CudaPoolType::Average, 1024, 4, 4, 0).unwrap();
         let input = vec![1.0_f32; 1024];
         let mut output = vec![0.0_f32; cfg.output_len()];
         let result = launch_pooling(&input, &mut output, &cfg);
-        assert!(
-            result.is_ok(),
-            "CUDA avg pooling launch failed: {result:?}"
-        );
+        assert!(result.is_ok(), "CUDA avg pooling launch failed: {result:?}");
     }
 }
