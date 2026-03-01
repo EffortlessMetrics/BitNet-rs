@@ -65,6 +65,7 @@ pub mod opencl_token_gen;
 pub mod opencl_transformer;
 pub mod opencl_weight_manager;
 pub mod opencl_work_size;
+pub mod opencl_zero_copy;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
