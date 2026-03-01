@@ -82,8 +82,8 @@ fn pipeline_attention_to_projection() {
     let proj_dim = 16;
 
     let qkv = pseudo_random(7, seq_len * dim);
-    let attn_out = scaled_dot_product_attention(&qkv, &qkv, &qkv, seq_len, seq_len, dim, true)
-        .unwrap();
+    let attn_out =
+        scaled_dot_product_attention(&qkv, &qkv, &qkv, seq_len, seq_len, dim, true).unwrap();
     assert_eq!(attn_out.len(), seq_len * dim);
 
     let weight = pseudo_random(13, dim * proj_dim);
@@ -124,8 +124,7 @@ fn pipeline_full_embedding_attention_layernorm_projection() {
     assert_eq!(attn_out.len(), seq_len * embed_dim);
 
     // Step 3: Residual + LayerNorm
-    let residual: Vec<f32> =
-        embeddings.iter().zip(&attn_out).map(|(e, a)| e + a).collect();
+    let residual: Vec<f32> = embeddings.iter().zip(&attn_out).map(|(e, a)| e + a).collect();
     let gamma = vec![1.0f32; embed_dim];
     let config = LayerNormConfig::new(vec![embed_dim]);
     let normed = layer_norm(&residual, &gamma, None, &config).unwrap();
@@ -249,10 +248,9 @@ fn shape_attention_preserves_dimensions() {
     for seq_len in [1, 2, 8, 16] {
         let head_dim = 8;
         let data = vec![0.1f32; seq_len * head_dim];
-        let out = scaled_dot_product_attention(
-            &data, &data, &data, seq_len, seq_len, head_dim, false,
-        )
-        .unwrap();
+        let out =
+            scaled_dot_product_attention(&data, &data, &data, seq_len, seq_len, head_dim, false)
+                .unwrap();
         assert_eq!(out.len(), seq_len * head_dim, "attention shape mismatch for seq_len={seq_len}");
     }
 }
@@ -347,10 +345,9 @@ fn edge_large_sequence_attention() {
     let seq_len = 128;
     let head_dim = 8;
     let data = pseudo_random(1000, seq_len * head_dim);
-    let output = scaled_dot_product_attention(
-        &data, &data, &data, seq_len, seq_len, head_dim, true,
-    )
-    .unwrap();
+    let output =
+        scaled_dot_product_attention(&data, &data, &data, seq_len, seq_len, head_dim, true)
+            .unwrap();
     assert_eq!(output.len(), seq_len * head_dim);
     assert!(no_nan_inf(&output));
 }

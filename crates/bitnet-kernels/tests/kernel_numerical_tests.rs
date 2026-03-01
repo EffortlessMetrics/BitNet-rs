@@ -63,10 +63,7 @@ fn softmax_reference_sums_to_one_various_sizes() {
         let input = pseudo_random(size as u64, size);
         let sm = reference_softmax(&input);
         let sum: f32 = sm.iter().sum();
-        assert!(
-            (sum - 1.0).abs() < 1e-5,
-            "softmax sum={sum} for size={size}, expected ≈ 1.0"
-        );
+        assert!((sum - 1.0).abs() < 1e-5, "softmax sum={sum} for size={size}, expected ≈ 1.0");
     }
 }
 
@@ -139,10 +136,7 @@ fn attention_symmetric_input_symmetric_output() {
         for d in 0..head_dim {
             let first = output[d];
             let current = output[i * head_dim + d];
-            assert!(
-                (first - current).abs() < 1e-5,
-                "row0[{d}]={first} vs row{i}[{d}]={current}"
-            );
+            assert!((first - current).abs() < 1e-5, "row0[{d}]={first} vs row{i}[{d}]={current}");
         }
     }
 }
