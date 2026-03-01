@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave9.rs
+expression: "CanaryConfig::default()"
+---
+CanaryConfig {
+    canary_ratio: 0.05,
+    output_tolerance: 0.001,
+    rollback_threshold: 0.1,
+    min_requests_for_decision: 100,
+}

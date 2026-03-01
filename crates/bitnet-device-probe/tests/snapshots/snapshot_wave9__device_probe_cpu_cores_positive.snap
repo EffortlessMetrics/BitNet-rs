@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
+expression: "format!(\"cores_positive={} threads_positive={}\", probe.cpu.cores >= 1,\nprobe.cpu.threads >= 1)"
+---
+cores_positive=true threads_positive=true

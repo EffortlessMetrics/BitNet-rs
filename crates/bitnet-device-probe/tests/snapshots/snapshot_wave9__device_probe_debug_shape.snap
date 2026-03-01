@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
+expression: debug
+---
+DeviceProbe { cpu: CpuProbe { simd_level: [SIMD], cores: [N], threads: [N] }, cuda_available: false, rocm_available: false, npu_available: false, oneapi_available: false }

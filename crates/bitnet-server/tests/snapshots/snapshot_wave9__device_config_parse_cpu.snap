@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave9.rs
+expression: "format!(\"{cfg:?}\")"
+---
+Cpu

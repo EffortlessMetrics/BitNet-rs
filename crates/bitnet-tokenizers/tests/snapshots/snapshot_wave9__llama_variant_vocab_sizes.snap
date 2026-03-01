@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave9.rs
+expression: "output.join(\"\\n\")"
+---
+Llama2: vocab=32000
+Llama3: vocab=128256
+CodeLlama: vocab=32016

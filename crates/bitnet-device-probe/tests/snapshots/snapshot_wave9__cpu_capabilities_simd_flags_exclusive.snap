@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
+expression: "format!(\"avx_neon_exclusive={exclusive}\")"
+---
+avx_neon_exclusive=true

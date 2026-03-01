@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
+expression: caps
+---
+NpuCapabilities {
+    available: false,
+    accel_device_present: false,
+}
