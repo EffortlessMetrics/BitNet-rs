@@ -3,9 +3,8 @@
 //! the full DeviceProbe path.
 
 use bitnet_device_probe::{
-    CpuCapabilities, DeviceCapabilities, DeviceProbe, GpuCapabilities, SimdLevel,
-    detect_simd_level, gpu_available_runtime, gpu_compiled, probe_cpu, probe_device, probe_gpu,
-    simd_level_rank,
+    DeviceCapabilities, SimdLevel, detect_simd_level, gpu_available_runtime, gpu_compiled,
+    probe_cpu, probe_device, probe_gpu, simd_level_rank,
 };
 
 // ── CPU Capabilities ─────────────────────────────────────────────────────
