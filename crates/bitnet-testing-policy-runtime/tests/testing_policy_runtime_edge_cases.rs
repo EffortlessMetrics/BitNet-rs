@@ -19,7 +19,8 @@ fn state_from_environment_has_context() {
 #[test]
 fn state_from_environment_has_profile() {
     let state = RuntimePolicyState::from_environment();
-    assert!(!state.active_profile.features.labels().is_empty());
+    assert_eq!(state.active_profile.scenario, state.context.scenario);
+    assert_eq!(state.active_profile.environment, state.context.environment);
 }
 
 #[test]
