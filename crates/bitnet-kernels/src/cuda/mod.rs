@@ -24,6 +24,8 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`pipeline`]: Inference pipeline orchestrator — plans, validates, and estimates memory
+//!   for an ordered sequence of transformer-layer kernel steps
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -42,6 +44,7 @@ pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
+pub mod pipeline;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
@@ -186,3 +189,5 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use pipeline::{InferencePipeline, PipelineStep, TransformerLayerConfig};
