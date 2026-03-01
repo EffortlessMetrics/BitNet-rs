@@ -25,38 +25,24 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KvCacheError {
     /// Requested layer index exceeds available layers.
-    LayerOutOfBounds {
-        requested: usize,
-        available: usize,
-    },
+    LayerOutOfBounds { requested: usize, available: usize },
     /// Cache has reached its maximum sequence length.
-    CacheFull {
-        max_len: usize,
-    },
+    CacheFull { max_len: usize },
     /// Input slice length does not match expected row size.
-    DimensionMismatch {
-        expected: usize,
-        got: usize,
-    },
+    DimensionMismatch { expected: usize, got: usize },
 }
 
 impl fmt::Display for KvCacheError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::LayerOutOfBounds { requested, available } => {
-                write!(
-                    f,
-                    "layer index {requested} out of bounds (available: {available})"
-                )
+                write!(f, "layer index {requested} out of bounds (available: {available})")
             }
             Self::CacheFull { max_len } => {
                 write!(f, "KV cache is full (max_len={max_len})")
             }
             Self::DimensionMismatch { expected, got } => {
-                write!(
-                    f,
-                    "dimension mismatch: expected {expected} elements, got {got}"
-                )
+                write!(f, "dimension mismatch: expected {expected} elements, got {got}")
             }
         }
     }
@@ -164,8 +150,7 @@ impl KvCacheEntry {
 
         let offset = self.current_len * self.row_len;
         self.key_cache[offset..offset + self.row_len].copy_from_slice(key_row);
-        self.value_cache[offset..offset + self.row_len]
-            .copy_from_slice(value_row);
+        self.value_cache[offset..offset + self.row_len].copy_from_slice(value_row);
         self.current_len += 1;
         Ok(())
     }
@@ -220,25 +205,21 @@ impl KvCache {
     }
 
     /// Append one token's key/value to a specific layer.
-    pub fn append_layer(
-        &mut self,
-        layer_idx: usize,
-        keys: &[f32],
-        values: &[f32],
-    ) -> Result<()> {
+    pub fn append_layer(&mut self, layer_idx: usize, keys: &[f32], values: &[f32]) -> Result<()> {
         let available = self.layers.len();
-        let entry = self.layers.get_mut(layer_idx).ok_or(
-            KvCacheError::LayerOutOfBounds { requested: layer_idx, available },
-        )?;
+        let entry = self
+            .layers
+            .get_mut(layer_idx)
+            .ok_or(KvCacheError::LayerOutOfBounds { requested: layer_idx, available })?;
         entry.append(keys, values)
     }
 
     /// Get an immutable reference to a layer's cache entry.
     pub fn get_layer(&self, layer_idx: usize) -> Result<&KvCacheEntry> {
         let available = self.layers.len();
-        self.layers.get(layer_idx).ok_or(
-            KvCacheError::LayerOutOfBounds { requested: layer_idx, available },
-        )
+        self.layers
+            .get(layer_idx)
+            .ok_or(KvCacheError::LayerOutOfBounds { requested: layer_idx, available })
     }
 
     /// Clear all layers.
@@ -258,10 +239,7 @@ impl KvCache {
     pub fn memory_usage_bytes(&self) -> usize {
         self.layers
             .iter()
-            .map(|e| {
-                (e.key_cache.len() + e.value_cache.len())
-                    * std::mem::size_of::<f32>()
-            })
+            .map(|e| (e.key_cache.len() + e.value_cache.len()) * std::mem::size_of::<f32>())
             .sum()
     }
 }
@@ -450,20 +428,14 @@ mod tests {
     fn entry_key_dimension_mismatch() {
         let mut entry = KvCacheEntry::new(4, 2);
         let err = entry.append(&[1.0], &[3.0, 4.0]).unwrap_err();
-        assert_eq!(
-            err,
-            KvCacheError::DimensionMismatch { expected: 2, got: 1 }
-        );
+        assert_eq!(err, KvCacheError::DimensionMismatch { expected: 2, got: 1 });
     }
 
     #[test]
     fn entry_value_dimension_mismatch() {
         let mut entry = KvCacheEntry::new(4, 2);
         let err = entry.append(&[1.0, 2.0], &[3.0]).unwrap_err();
-        assert_eq!(
-            err,
-            KvCacheError::DimensionMismatch { expected: 2, got: 1 }
-        );
+        assert_eq!(err, KvCacheError::DimensionMismatch { expected: 2, got: 1 });
     }
 
     #[test]
@@ -519,22 +491,15 @@ mod tests {
             dtype_bytes: 4,
         };
         let mut cache = KvCache::new(cfg);
-        let err =
-            cache.append_layer(5, &[1.0, 2.0], &[3.0, 4.0]).unwrap_err();
-        assert_eq!(
-            err,
-            KvCacheError::LayerOutOfBounds { requested: 5, available: 2 }
-        );
+        let err = cache.append_layer(5, &[1.0, 2.0], &[3.0, 4.0]).unwrap_err();
+        assert_eq!(err, KvCacheError::LayerOutOfBounds { requested: 5, available: 2 });
     }
 
     #[test]
     fn cache_layer_out_of_bounds_get() {
         let cache = KvCache::new(default_config());
         let err = cache.get_layer(100).unwrap_err();
-        assert_eq!(
-            err,
-            KvCacheError::LayerOutOfBounds { requested: 100, available: 4 }
-        );
+        assert_eq!(err, KvCacheError::LayerOutOfBounds { requested: 100, available: 4 });
     }
 
     #[test]
@@ -600,10 +565,7 @@ mod tests {
         }
         let layer = cache.get_layer(0).unwrap();
         assert!(layer.is_full());
-        assert_eq!(
-            layer.get_keys(3),
-            &[0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
-        );
+        assert_eq!(layer.get_keys(3), &[0.0, 0.5, 1.0, 1.5, 2.0, 2.5]);
     }
 
     #[test]
@@ -616,12 +578,8 @@ mod tests {
             dtype_bytes: 4,
         };
         let mut cache = KvCache::new(cfg);
-        let err =
-            cache.append_layer(0, &[1.0, 2.0], &[3.0, 4.0]).unwrap_err();
-        assert_eq!(
-            err,
-            KvCacheError::DimensionMismatch { expected: 6, got: 2 }
-        );
+        let err = cache.append_layer(0, &[1.0, 2.0], &[3.0, 4.0]).unwrap_err();
+        assert_eq!(err, KvCacheError::DimensionMismatch { expected: 6, got: 2 });
     }
 
     #[test]
@@ -643,10 +601,7 @@ mod tests {
     #[test]
     fn error_display_layer_out_of_bounds() {
         let e = KvCacheError::LayerOutOfBounds { requested: 5, available: 4 };
-        assert_eq!(
-            e.to_string(),
-            "layer index 5 out of bounds (available: 4)"
-        );
+        assert_eq!(e.to_string(), "layer index 5 out of bounds (available: 4)");
     }
 
     #[test]
@@ -658,16 +613,12 @@ mod tests {
     #[test]
     fn error_display_dimension_mismatch() {
         let e = KvCacheError::DimensionMismatch { expected: 64, got: 32 };
-        assert_eq!(
-            e.to_string(),
-            "dimension mismatch: expected 64 elements, got 32"
-        );
+        assert_eq!(e.to_string(), "dimension mismatch: expected 64 elements, got 32");
     }
 
     #[test]
     fn error_is_std_error() {
-        let e: Box<dyn std::error::Error> =
-            Box::new(KvCacheError::CacheFull { max_len: 1 });
+        let e: Box<dyn std::error::Error> = Box::new(KvCacheError::CacheFull { max_len: 1 });
         assert!(e.to_string().contains("full"));
     }
 
