@@ -5,6 +5,7 @@ pub mod conv1d;
 pub mod embedding;
 pub mod fallback;
 pub mod fusion;
+pub mod layer_norm;
 pub mod pooling;
 pub mod quantized_matmul;
 pub mod rope;
