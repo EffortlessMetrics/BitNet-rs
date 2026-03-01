@@ -20,6 +20,7 @@ pub mod npu;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
+pub mod scatter_gather;
 mod stubs;
 pub mod tl_lut;
 
