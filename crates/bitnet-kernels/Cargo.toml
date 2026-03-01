@@ -92,6 +92,14 @@ harness = false
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
 
+[[test]]
+name = "apple_silicon_benchmarks"
+path = "tests/apple_silicon_benchmarks.rs"
+
+[[test]]
+name = "neon_correctness_exhaustive"
+path = "tests/neon_correctness_exhaustive.rs"
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
