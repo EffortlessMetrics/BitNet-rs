@@ -1,0 +1,204 @@
+name: "macOS (Apple Silicon)"
+
+# Validates CPU inference and Metal feature compilation on macOS/arm64.
+# Runs on Apple Silicon (M1) runners to catch platform-specific issues
+# before they reach production.
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'crates/**'
+      - 'crossval/**'
+      - 'tests/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/macos-arm64.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/**'
+      - 'crossval/**'
+      - 'tests/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/macos-arm64.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: "-D warnings"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  BITNET_SKIP_SLOW_TESTS: "1"
+
+jobs:
+  # Job 1: Build and test CPU inference on Apple Silicon
+  build-cpu:
+    name: "macOS: Build & Test (CPU)"
+    runs-on: macos-14  # Apple Silicon M1
+    timeout-minutes: 25
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: macos-arm64-cpu
+
+      - name: Build core crates (CPU)
+        run: |
+          cargo build --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --no-default-features --features cpu
+
+      - name: Run unit tests (CPU)
+        run: |
+          cargo test --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu \
+            -- --nocapture
+
+      - name: Run CPU golden path E2E tests
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
+  # Job 2: Metal feature compilation check
+  build-metal:
+    name: "macOS: Build (Metal)"
+    runs-on: macos-14  # Apple Silicon M1
+    timeout-minutes: 25
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: macos-arm64-metal
+
+      - name: Check Metal feature compiles
+        run: |
+          cargo check --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-transformer \
+            -p bitnet-inference \
+            --no-default-features --features cpu,metal
+
+  # Job 3: Clippy linting on macOS/arm64
+  clippy:
+    name: "macOS: Clippy"
+    runs-on: macos-14  # Apple Silicon M1
+    timeout-minutes: 15
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: macos-arm64-clippy
+
+      - name: Run clippy (CPU, libs only)
+        run: |
+          cargo clippy --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu
+
+  # Job 4: Formatting check
+  fmt:
+    name: "macOS: Format"
+    runs-on: macos-14  # Apple Silicon M1
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  # Summary job for branch protection
+  macos-arm64-success:
+    name: macOS arm64 Success
+    runs-on: macos-14
+    timeout-minutes: 5
+    needs: [build-cpu, build-metal, clippy, fmt]
+    if: always()
+    steps:
+      - name: Summarize results
+        if: always()
+        run: |
+          echo "macOS arm64 results:"
+          echo "  Build CPU:   ${{ needs.build-cpu.result }}"
+          echo "  Build Metal: ${{ needs.build-metal.result }}"
+          echo "  Clippy:      ${{ needs.clippy.result }}"
+          echo "  Format:      ${{ needs.fmt.result }}"
+
+      - name: Check all jobs succeeded
+        if: always()
+        run: |
+          bad=0
+          for r in "${{ needs.build-cpu.result }}" \
+                   "${{ needs.build-metal.result }}" \
+                   "${{ needs.clippy.result }}" \
+                   "${{ needs.fmt.result }}"; do
+            [ "$r" = "success" ] || bad=1
+          done
+          if [ $bad -ne 0 ]; then
+            echo "❌ One or more macOS arm64 CI jobs failed (or were cancelled)"; exit 1
+          fi
+          echo "✅ macOS arm64 CI jobs succeeded"
