@@ -57,6 +57,7 @@ use std::{
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
+use bitnet_cli_device_core::CliDevicePreference;
 use bitnet_inference::{InferenceEngine, KernelRecorder, SamplingConfig, TemplateType};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
@@ -730,12 +731,12 @@ impl InferenceCommand {
     fn determine_device(&self, config: &CliConfig) -> Result<Device> {
         let device_str = self.device.as_ref().unwrap_or(&config.default_device);
 
-        match device_str.as_str() {
-            "cpu" => {
+        match CliDevicePreference::parse(device_str).map_err(anyhow::Error::from)? {
+            CliDevicePreference::Cpu => {
                 info!("Using CPU device");
                 Ok(Device::Cpu)
             }
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
+            CliDevicePreference::Gpu => {
                 #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
@@ -750,7 +751,7 @@ impl InferenceCommand {
                     anyhow::bail!("Binary not built with GPU support");
                 }
             }
-            "auto" => {
+            CliDevicePreference::Auto => {
                 #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
@@ -767,10 +768,9 @@ impl InferenceCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
-                device_str
-            ),
+            CliDevicePreference::Metal => {
+                anyhow::bail!("Metal/NPU device selection is not supported for this command")
+            }
         }
     }
 

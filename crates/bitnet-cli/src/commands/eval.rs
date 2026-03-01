@@ -6,12 +6,32 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
-use bitnet_eval_core::topk_stable_indices;
+use bitnet_cli_device_core::CliDevicePreference;
+use bitnet_eval_core::{log_softmax_stable, topk_stable_indices};
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
-use bitnet_scoring_core::{NllStats, observe_target_nll, sanitize_logits_in_place};
 
 use crate::config::CliConfig;
+
+/// Running sum of NLL and the number of predicted tokens (T-1)
+#[derive(Clone, Copy, Debug, Default)]
+struct NllStats {
+    sum: f64,      // total negative log-likelihood over predicted tokens
+    tokens: usize, // number of predicted tokens (T-1), padding excluded
+}
+
+impl NllStats {
+    #[inline]
+    fn mean(self) -> f64 {
+        if self.tokens > 0 { self.sum / self.tokens as f64 } else { 0.0 }
+    }
+
+    #[inline]
+    fn add(&mut self, other: NllStats) {
+        self.sum += other.sum;
+        self.tokens += other.tokens;
+    }
+}
 
 /// Evaluate model perplexity and performance
 #[derive(Debug, Args)]
@@ -317,12 +337,14 @@ impl EvalCommand {
     fn determine_device(&self) -> Result<candle_core::Device> {
         use candle_core::Device;
 
-        match self.device.as_str() {
-            "cpu" => Ok(Device::Cpu),
-            "npu" | "metal" => Device::new_metal(0).context("NPU/Metal requested but unavailable"),
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
+        match CliDevicePreference::parse(&self.device).map_err(anyhow::Error::from)? {
+            CliDevicePreference::Cpu => Ok(Device::Cpu),
+            CliDevicePreference::Metal => {
+                Device::new_metal(0).context("NPU/Metal requested but unavailable")
+            }
+            CliDevicePreference::Gpu => Device::cuda_if_available(0)
                 .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)"),
-            "auto" => {
+            CliDevicePreference::Auto => {
                 if let Ok(device) = Device::cuda_if_available(0) {
                     Ok(device)
                 } else if let Ok(device) = Device::new_metal(0) {
@@ -331,10 +353,6 @@ impl EvalCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, metal, npu, auto",
-                self.device
-            ),
         }
     }
 
@@ -400,8 +418,12 @@ impl EvalCommand {
             let mut logits =
                 engine.eval_ids(&prefix).await.context("eval_ids in teacher-forcing")?;
 
-            // Demote non-finite values for robustness
-            sanitize_logits_in_place(&mut logits);
+            // Demote NaNs for robustness
+            for v in &mut logits {
+                if !v.is_finite() {
+                    *v = f32::NEG_INFINITY;
+                }
+            }
 
             // Skip padding tokens if specified
             if let Some(pid) = pad_id
@@ -411,11 +433,15 @@ impl EvalCommand {
                 continue;
             }
 
+            // Compute log probabilities
+            let logp = log_softmax_stable(&logits);
             let target = current_token as usize;
-            if target >= logits.len() {
-                anyhow::bail!("target index {} out of bounds", target);
-            }
-            observe_target_nll(&mut stats, &logits, target);
+            let lp = *logp
+                .get(target)
+                .ok_or_else(|| anyhow::anyhow!("target index {} out of bounds", target))?;
+
+            stats.sum -= lp as f64;
+            stats.tokens += 1;
 
             prefix.push(current_token);
         }
@@ -462,7 +488,7 @@ impl EvalCommand {
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
         let mean_nll = agg.mean();
-        let perplexity = agg.perplexity();
+        let perplexity = mean_nll.exp();
         let predicted = agg.tokens.max(1); // T-1 token count
 
         Ok(EvalResults {
@@ -511,7 +537,7 @@ impl EvalCommand {
         };
 
         let mean_nll = stats.mean();
-        let perplexity = stats.perplexity();
+        let perplexity = mean_nll.exp();
         let predicted = stats.tokens.max(1);
 
         // Optional logits dump (teacher-forced)
@@ -521,8 +547,12 @@ impl EvalCommand {
                 for (step, t) in (0..(tf_ids.len() - 1)).take(steps).enumerate() {
                     let mut logits: Vec<f32> = engine.eval_ids(&tf_ids[..=t]).await?;
 
-                    // Demote non-finite values to -inf
-                    sanitize_logits_in_place(&mut logits);
+                    // Demote NaNs to -inf
+                    for v in &mut logits {
+                        if !v.is_finite() {
+                            *v = f32::NEG_INFINITY;
+                        }
+                    }
 
                     let k = self.logits_topk.min(logits.len());
                     let idx = topk_stable_indices(&logits, k);

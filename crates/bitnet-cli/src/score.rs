@@ -3,6 +3,7 @@ use clap::Args;
 use serde_json::json;
 use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 
+use bitnet_cli_device_core::CliDevicePreference;
 use bitnet_common::Device as BNDevice;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::{GgufReader, ModelLoader};
@@ -61,13 +62,13 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
     };
 
     // Determine device
-    let device = match args.device.as_str() {
-        "cpu" => Device::Cpu,
-        "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
+    let device_pref = CliDevicePreference::parse(&args.device).map_err(anyhow::Error::from)?;
+    let device = match device_pref {
+        CliDevicePreference::Cpu => Device::Cpu,
+        CliDevicePreference::Gpu => Device::cuda_if_available(0)
             .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)")?,
-        "npu" | "metal" => anyhow::bail!("NPU/Metal not supported in this build"),
-        "auto" => Device::cuda_if_available(0).unwrap_or(Device::Cpu),
-        other => anyhow::bail!("invalid device: {other}"),
+        CliDevicePreference::Metal => anyhow::bail!("NPU/Metal not supported in this build"),
+        CliDevicePreference::Auto => Device::cuda_if_available(0).unwrap_or(Device::Cpu),
     };
 
     // Load model and create inference engine

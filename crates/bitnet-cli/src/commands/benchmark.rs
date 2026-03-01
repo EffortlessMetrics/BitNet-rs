@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
+use bitnet_cli_device_core::CliDevicePreference;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
@@ -257,19 +258,19 @@ impl BenchmarkCommand {
     fn determine_device(&self, config: &CliConfig) -> Result<Device> {
         let device_str = self.device.as_ref().unwrap_or(&config.default_device);
 
-        match device_str.as_str() {
-            "cpu" | "auto" => {
+        match CliDevicePreference::parse(device_str).map_err(anyhow::Error::from)? {
+            CliDevicePreference::Cpu | CliDevicePreference::Auto => {
                 info!("Using CPU device for benchmarking");
                 Ok(Device::Cpu)
             }
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
+            CliDevicePreference::Gpu => {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
-                device_str
-            ),
+            CliDevicePreference::Metal => {
+                warn!("Metal/NPU benchmarking backend not yet implemented, falling back to CPU");
+                Ok(Device::Cpu)
+            }
         }
     }
 
