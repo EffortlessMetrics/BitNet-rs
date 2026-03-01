@@ -34,6 +34,7 @@ pub mod x86;
 #[cfg(target_arch = "aarch64")]
 pub mod arm;
 
+pub use activations::ActivationType;
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
 pub use scatter_gather::{

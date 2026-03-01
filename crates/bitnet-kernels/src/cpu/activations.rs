@@ -1,650 +1,794 @@
 //! CPU activation function kernels.
 //!
-//! Comprehensive set of element-wise activation functions for CPU
-//! inference, complementing the CUDA activations in
-//! `crate::cuda::activations`.
-//!
-//! # Provided activations
-//!
-//! | Function | Formula |
-//! |---|---|
-//! | ReLU | `max(0, x)` |
-//! | LeakyReLU | `x if x≥0, α·x otherwise` |
-//! | PReLU | per-channel LeakyReLU |
-//! | GELU (exact) | `0.5·x·(1 + erf(x/√2))` |
-//! | GELU (fast) | tanh approximation |
-//! | SiLU / Swish | `x·σ(x)` |
-//! | Sigmoid | `1/(1+exp(−x))` |
-//! | Tanh | `tanh(x)` |
-//! | Mish | `x·tanh(softplus(x))` |
-//! | HardSwish | piecewise linear approx of Swish |
-//! | HardSigmoid | piecewise linear approx of Sigmoid |
-//!
-//! Each function has an out-of-place variant (`*_activate`) and an
-//! in-place variant (`*_activate_inplace`).
+//! Provides 15 activation functions commonly used in neural networks,
+//! with elementwise apply, in-place, and derivative variants.
 
-use std::f32::consts::SQRT_2;
+use std::f32::consts::PI;
 
-// -----------------------------------------------------------------------
-// Scalar helpers
-// -----------------------------------------------------------------------
+// ── Activation type enum ────────────────────────────────────────────
 
-/// Abramowitz & Stegun approximation of `erf(x)` (max error ≈ 1.5e-7).
-#[inline]
-fn erff_approx(x: f32) -> f32 {
-    let sign = x.signum();
-    let a = x.abs();
-    let t = 1.0 / (1.0 + 0.327_591_1 * a);
-    let t2 = t * t;
-    let t3 = t2 * t;
-    let t4 = t3 * t;
-    let t5 = t4 * t;
-    let poly = 0.254_829_6 * t - 0.284_496_74 * t2 + 1.421_413_8 * t3 - 1.453_152_1 * t4
-        + 1.061_405_4 * t5;
-    sign * (1.0 - poly * (-a * a).exp())
+/// Supported activation function types.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ActivationType {
+    /// Rectified Linear Unit: max(0, x)
+    ReLU,
+    /// Leaky ReLU: x if x > 0, else alpha * x
+    LeakyReLU(f32),
+    /// Gaussian Error Linear Unit (erf approximation)
+    GELU,
+    /// GELU with tanh approximation
+    GELUTanh,
+    /// Sigmoid Linear Unit: x * sigmoid(x)
+    SiLU,
+    /// Swish with beta parameter: x * sigmoid(beta * x)
+    Swish(f32),
+    /// Logistic sigmoid: 1 / (1 + exp(-x))
+    Sigmoid,
+    /// Hyperbolic tangent
+    Tanh,
+    /// Hard sigmoid: clamp(x/6 + 0.5, 0, 1)
+    HardSigmoid,
+    /// Hard swish: x * hard_sigmoid(x)
+    HardSwish,
+    /// Mish: x * tanh(softplus(x))
+    Mish,
+    /// Softplus: ln(1 + exp(x))
+    Softplus,
+    /// Exponential Linear Unit: x if x > 0, else alpha * (exp(x) - 1)
+    ELU(f32),
+    /// Scaled ELU: lambda * (x if x > 0, else alpha * (exp(x) - 1))
+    SELU,
+    /// Quick GELU: x * sigmoid(1.702 * x)
+    QuickGELU,
 }
 
-/// Scalar sigmoid: `1 / (1 + exp(-x))`.
+// SELU constants (Klambauer et al., 2017)
+const SELU_ALPHA: f32 = 1.6732632;
+const SELU_LAMBDA: f32 = 1.050_701;
+
+// ── Individual activation functions ─────────────────────────────────
+
+/// ReLU: max(0, x), preserving NaN
 #[inline]
-fn sigmoid_scalar(x: f32) -> f32 {
+pub fn relu(x: f32) -> f32 {
+    if x.is_nan() { x } else { x.max(0.0) }
+}
+
+/// Leaky ReLU: x if x >= 0, else alpha * x
+#[inline]
+pub fn leaky_relu(x: f32, alpha: f32) -> f32 {
+    if x.is_nan() || x >= 0.0 { x } else { alpha * x }
+}
+
+/// Sigmoid: 1 / (1 + exp(-x))
+#[inline]
+pub fn sigmoid(x: f32) -> f32 {
     1.0 / (1.0 + (-x).exp())
 }
 
-/// Scalar SiLU (Swish): `x · σ(x)`.
+/// Tanh activation (delegates to std)
 #[inline]
-fn silu_scalar(x: f32) -> f32 {
-    x * sigmoid_scalar(x)
+pub fn tanh_act(x: f32) -> f32 {
+    x.tanh()
 }
 
-/// Scalar exact GELU: `0.5 · x · (1 + erf(x / √2))`.
+/// GELU using the erf-based formula: x * 0.5 * (1 + erf(x / sqrt(2)))
 #[inline]
-fn gelu_exact_scalar(x: f32) -> f32 {
-    0.5 * x * (1.0 + erff_approx(x / SQRT_2))
+pub fn gelu(x: f32) -> f32 {
+    // Use the tanh approximation of erf for f32:
+    // erf(a) ≈ tanh(sqrt(2/pi) * (a + 0.044715 * a^3))
+    // So GELU ≈ 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+    // But the "true" GELU uses erf directly. We use libm's erff via f64.
+    let xd = x as f64;
+    let cdf = 0.5 * (1.0 + libm::erf(xd / std::f64::consts::SQRT_2));
+    (xd * cdf) as f32
 }
 
-/// Scalar fast GELU (tanh approximation).
+/// GELU with tanh approximation: 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
 #[inline]
-fn gelu_fast_scalar(x: f32) -> f32 {
-    const SQRT_2_OVER_PI: f32 = 0.797_884_6;
-    const COEFF: f32 = 0.044_715;
-    let inner = SQRT_2_OVER_PI * (x + COEFF * x * x * x);
+pub fn gelu_tanh(x: f32) -> f32 {
+    let sqrt_2_over_pi = (2.0 / PI).sqrt();
+    let inner = sqrt_2_over_pi * (x + 0.044715 * x * x * x);
     0.5 * x * (1.0 + inner.tanh())
 }
 
-/// Scalar Mish: `x · tanh(softplus(x))` where `softplus(x) = ln(1+exp(x))`.
+/// SiLU (Swish-1): x * sigmoid(x)
 #[inline]
-fn mish_scalar(x: f32) -> f32 {
-    let sp = (1.0_f32 + x.exp()).ln();
-    x * sp.tanh()
+pub fn silu(x: f32) -> f32 {
+    x * sigmoid(x)
 }
 
-/// Scalar HardSwish (MobileNetV3).
+/// Swish: x * sigmoid(beta * x)
 #[inline]
-fn hard_swish_scalar(x: f32) -> f32 {
-    if x <= -3.0 {
-        0.0
-    } else if x >= 3.0 {
-        x
+pub fn swish(x: f32, beta: f32) -> f32 {
+    x * sigmoid(beta * x)
+}
+
+/// Hard sigmoid: clamp(x/6 + 0.5, 0, 1)
+#[inline]
+pub fn hard_sigmoid(x: f32) -> f32 {
+    if x.is_nan() {
+        return x;
+    }
+    (x / 6.0 + 0.5).clamp(0.0, 1.0)
+}
+
+/// Hard swish: x * hard_sigmoid(x)
+#[inline]
+pub fn hard_swish(x: f32) -> f32 {
+    x * hard_sigmoid(x)
+}
+
+/// Softplus: ln(1 + exp(x)), with numerical stability
+#[inline]
+pub fn softplus(x: f32) -> f32 {
+    if x > 20.0 {
+        x // For large x, softplus ≈ x
+    } else if x < -20.0 {
+        0.0 // For very negative x, softplus ≈ 0
     } else {
-        x * (x + 3.0) / 6.0
+        (1.0 + x.exp()).ln()
     }
 }
 
-/// Scalar HardSigmoid.
+/// Mish: x * tanh(softplus(x))
 #[inline]
-fn hard_sigmoid_scalar(x: f32) -> f32 {
-    if x <= -3.0 {
-        0.0
-    } else if x >= 3.0 {
-        1.0
-    } else {
-        (x + 3.0) / 6.0
+pub fn mish(x: f32) -> f32 {
+    x * softplus(x).tanh()
+}
+
+/// ELU: x if x > 0, else alpha * (exp(x) - 1)
+#[inline]
+pub fn elu(x: f32, alpha: f32) -> f32 {
+    if x > 0.0 { x } else { alpha * (x.exp() - 1.0) }
+}
+
+/// SELU: lambda * ELU(x, alpha) with fixed constants
+#[inline]
+pub fn selu(x: f32) -> f32 {
+    SELU_LAMBDA * elu(x, SELU_ALPHA)
+}
+
+/// Quick GELU: x * sigmoid(1.702 * x)
+#[inline]
+pub fn quick_gelu(x: f32) -> f32 {
+    x * sigmoid(1.702 * x)
+}
+
+// ── Dispatch helpers ────────────────────────────────────────────────
+
+/// Apply a single activation function to a scalar value.
+#[inline]
+fn apply_one(x: f32, activation: ActivationType) -> f32 {
+    match activation {
+        ActivationType::ReLU => relu(x),
+        ActivationType::LeakyReLU(alpha) => leaky_relu(x, alpha),
+        ActivationType::GELU => gelu(x),
+        ActivationType::GELUTanh => gelu_tanh(x),
+        ActivationType::SiLU => silu(x),
+        ActivationType::Swish(beta) => swish(x, beta),
+        ActivationType::Sigmoid => sigmoid(x),
+        ActivationType::Tanh => tanh_act(x),
+        ActivationType::HardSigmoid => hard_sigmoid(x),
+        ActivationType::HardSwish => hard_swish(x),
+        ActivationType::Mish => mish(x),
+        ActivationType::Softplus => softplus(x),
+        ActivationType::ELU(alpha) => elu(x, alpha),
+        ActivationType::SELU => selu(x),
+        ActivationType::QuickGELU => quick_gelu(x),
     }
 }
 
-// -----------------------------------------------------------------------
-// Out-of-place public API
-// -----------------------------------------------------------------------
+// ── Public vectorised API ───────────────────────────────────────────
 
-/// Apply ReLU: `max(0, x)`.
-pub fn relu_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = x.max(0.0);
+/// Apply `activation` elementwise, returning a new vector.
+pub fn activate(input: &[f32], activation: ActivationType) -> Vec<f32> {
+    input.iter().map(|&x| apply_one(x, activation)).collect()
+}
+
+/// Apply `activation` elementwise in-place.
+pub fn activate_inplace(input: &mut [f32], activation: ActivationType) {
+    for x in input.iter_mut() {
+        *x = apply_one(*x, activation);
     }
 }
 
-/// Apply Leaky ReLU with negative slope `alpha`.
-pub fn leaky_relu_activate(input: &[f32], output: &mut [f32], alpha: f32) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = if x >= 0.0 { x } else { alpha * x };
-    }
-}
-
-/// Apply PReLU with per-channel slopes.
+/// Compute the derivative of `activation` at each element.
 ///
-/// `slopes` length must equal the channel count.  Elements in `input`
-/// are assumed to be laid out as `[..., channels]` with the channel
-/// dimension last.
-pub fn prelu_activate(input: &[f32], output: &mut [f32], slopes: &[f32]) {
-    debug_assert!(output.len() >= input.len());
-    debug_assert!(!slopes.is_empty());
-    let c = slopes.len();
-    for (i, (&x, o)) in input.iter().zip(output.iter_mut()).enumerate() {
-        let alpha = slopes[i % c];
-        *o = if x >= 0.0 { x } else { alpha * x };
-    }
+/// For most activations the derivative is with respect to the
+/// *pre-activation* input (i.e. the value before the activation was
+/// applied).
+pub fn activate_derivative(input: &[f32], activation: ActivationType) -> Vec<f32> {
+    input.iter().map(|&x| derivative_one(x, activation)).collect()
 }
 
-/// Apply exact GELU: `0.5·x·(1 + erf(x/√2))`.
-pub fn gelu_exact_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = gelu_exact_scalar(x);
-    }
-}
-
-/// Apply fast GELU (tanh approximation).
-pub fn gelu_fast_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = gelu_fast_scalar(x);
-    }
-}
-
-/// Apply SiLU / Swish: `x·σ(x)`.
-pub fn silu_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = silu_scalar(x);
-    }
-}
-
-/// Apply Sigmoid: `1/(1+exp(−x))`.
-pub fn sigmoid_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = sigmoid_scalar(x);
-    }
-}
-
-/// Apply Tanh.
-pub fn tanh_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = x.tanh();
-    }
-}
-
-/// Apply Mish: `x·tanh(softplus(x))`.
-pub fn mish_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = mish_scalar(x);
-    }
-}
-
-/// Apply HardSwish (MobileNetV3).
-pub fn hard_swish_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = hard_swish_scalar(x);
-    }
-}
-
-/// Apply HardSigmoid.
-pub fn hard_sigmoid_activate(input: &[f32], output: &mut [f32]) {
-    debug_assert!(output.len() >= input.len());
-    for (o, &x) in output.iter_mut().zip(input.iter()) {
-        *o = hard_sigmoid_scalar(x);
-    }
-}
-
-// -----------------------------------------------------------------------
-// In-place public API
-// -----------------------------------------------------------------------
-
-/// In-place ReLU.
-pub fn relu_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = x.max(0.0);
-    }
-}
-
-/// In-place Leaky ReLU.
-pub fn leaky_relu_activate_inplace(data: &mut [f32], alpha: f32) {
-    for x in data.iter_mut() {
-        if *x < 0.0 {
-            *x *= alpha;
+/// Derivative of a single activation at a scalar value.
+#[inline]
+fn derivative_one(x: f32, activation: ActivationType) -> f32 {
+    match activation {
+        ActivationType::ReLU => {
+            if x > 0.0 {
+                1.0
+            } else {
+                0.0
+            }
+        }
+        ActivationType::LeakyReLU(alpha) => {
+            if x >= 0.0 {
+                1.0
+            } else {
+                alpha
+            }
+        }
+        ActivationType::GELU => {
+            // d/dx GELU ≈ Φ(x) + x·φ(x)
+            let xd = x as f64;
+            let sqrt2 = std::f64::consts::SQRT_2;
+            let phi = 0.5 * (1.0 + libm::erf(xd / sqrt2)); // CDF
+            let pdf = (-(xd * xd) / 2.0).exp() / (2.0 * std::f64::consts::PI).sqrt();
+            (phi + xd * pdf) as f32
+        }
+        ActivationType::GELUTanh => {
+            // Numerical derivative via central differences
+            let h = 1e-4_f32;
+            (gelu_tanh(x + h) - gelu_tanh(x - h)) / (2.0 * h)
+        }
+        ActivationType::SiLU => {
+            let s = sigmoid(x);
+            s + x * s * (1.0 - s)
+        }
+        ActivationType::Swish(beta) => {
+            let s = sigmoid(beta * x);
+            s + beta * x * s * (1.0 - s)
+        }
+        ActivationType::Sigmoid => {
+            let s = sigmoid(x);
+            s * (1.0 - s)
+        }
+        ActivationType::Tanh => {
+            let t = x.tanh();
+            1.0 - t * t
+        }
+        ActivationType::HardSigmoid => {
+            if !(-3.0..=3.0).contains(&x) {
+                0.0
+            } else {
+                1.0 / 6.0
+            }
+        }
+        ActivationType::HardSwish => {
+            if x <= -3.0 {
+                0.0
+            } else if x >= 3.0 {
+                1.0
+            } else {
+                x / 3.0 + 0.5
+            }
+        }
+        ActivationType::Mish => {
+            let h = 1e-4_f32;
+            (mish(x + h) - mish(x - h)) / (2.0 * h)
+        }
+        ActivationType::Softplus => sigmoid(x),
+        ActivationType::ELU(alpha) => {
+            if x > 0.0 {
+                1.0
+            } else {
+                alpha * x.exp()
+            }
+        }
+        ActivationType::SELU => {
+            if x > 0.0 {
+                SELU_LAMBDA
+            } else {
+                SELU_LAMBDA * SELU_ALPHA * x.exp()
+            }
+        }
+        ActivationType::QuickGELU => {
+            let s = sigmoid(1.702 * x);
+            s + 1.702 * x * s * (1.0 - s)
         }
     }
 }
 
-/// In-place exact GELU.
-pub fn gelu_exact_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = gelu_exact_scalar(*x);
-    }
-}
-
-/// In-place fast GELU.
-pub fn gelu_fast_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = gelu_fast_scalar(*x);
-    }
-}
-
-/// In-place SiLU / Swish.
-pub fn silu_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = silu_scalar(*x);
-    }
-}
-
-/// In-place Sigmoid.
-pub fn sigmoid_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = sigmoid_scalar(*x);
-    }
-}
-
-/// In-place Tanh.
-pub fn tanh_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = x.tanh();
-    }
-}
-
-/// In-place Mish.
-pub fn mish_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = mish_scalar(*x);
-    }
-}
-
-/// In-place HardSwish.
-pub fn hard_swish_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = hard_swish_scalar(*x);
-    }
-}
-
-/// In-place HardSigmoid.
-pub fn hard_sigmoid_activate_inplace(data: &mut [f32]) {
-    for x in data.iter_mut() {
-        *x = hard_sigmoid_scalar(*x);
-    }
-}
-
-// -----------------------------------------------------------------------
-// Tests
-// -----------------------------------------------------------------------
+// ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const EPS: f32 = 1e-5;
-
-    fn assert_close(a: f32, b: f32, tol: f32) {
-        assert!((a - b).abs() <= tol, "expected {a} ≈ {b} (diff={})", (a - b).abs());
+    fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
+        if a.is_nan() && b.is_nan() {
+            return true;
+        }
+        (a - b).abs() < tol
     }
 
-    // -- ReLU --
+    fn numerical_derivative(f: impl Fn(f32) -> f32, x: f32, h: f32) -> f32 {
+        (f(x + h) - f(x - h)) / (2.0 * h)
+    }
+
+    // ── ReLU ──
 
     #[test]
     fn test_relu_positive() {
-        let input = [1.0, 2.5, 0.1];
-        let mut out = [0.0; 3];
-        relu_activate(&input, &mut out);
-        assert_eq!(out, [1.0, 2.5, 0.1]);
+        assert_eq!(relu(5.0), 5.0);
+        assert_eq!(relu(0.1), 0.1);
     }
 
     #[test]
     fn test_relu_negative() {
-        let input = [-1.0, -0.5, 0.0];
-        let mut out = [0.0; 3];
-        relu_activate(&input, &mut out);
-        assert_eq!(out, [0.0, 0.0, 0.0]);
+        assert_eq!(relu(-5.0), 0.0);
+        assert_eq!(relu(-0.1), 0.0);
     }
 
     #[test]
-    fn test_relu_inplace() {
-        let mut data = [-2.0, 0.0, 3.0];
-        relu_activate_inplace(&mut data);
-        assert_eq!(data, [0.0, 0.0, 3.0]);
+    fn test_relu_zero() {
+        assert_eq!(relu(0.0), 0.0);
     }
 
-    // -- Leaky ReLU --
+    // ── LeakyReLU ──
 
     #[test]
     fn test_leaky_relu() {
-        let input = [1.0, -1.0, 0.0];
-        let mut out = [0.0; 3];
-        leaky_relu_activate(&input, &mut out, 0.01);
-        assert_close(out[0], 1.0, EPS);
-        assert_close(out[1], -0.01, EPS);
-        assert_close(out[2], 0.0, EPS);
+        assert_eq!(leaky_relu(2.0, 0.01), 2.0);
+        assert!(approx_eq(leaky_relu(-2.0, 0.01), -0.02, 1e-6));
+        assert_eq!(leaky_relu(0.0, 0.01), 0.0);
+    }
+
+    // ── Sigmoid ──
+
+    #[test]
+    fn test_sigmoid_at_zero() {
+        assert!(approx_eq(sigmoid(0.0), 0.5, 1e-6));
     }
 
     #[test]
-    fn test_leaky_relu_inplace() {
-        let mut data = [-10.0, 5.0];
-        leaky_relu_activate_inplace(&mut data, 0.2);
-        assert_close(data[0], -2.0, EPS);
-        assert_close(data[1], 5.0, EPS);
-    }
-
-    // -- PReLU --
-
-    #[test]
-    fn test_prelu_per_channel() {
-        // 2 channels, 4 elements total
-        let input = [1.0, -1.0, 2.0, -2.0];
-        let slopes = [0.1, 0.25];
-        let mut out = [0.0; 4];
-        prelu_activate(&input, &mut out, &slopes);
-        assert_close(out[0], 1.0, EPS);
-        assert_close(out[1], -0.25, EPS);
-        assert_close(out[2], 2.0, EPS);
-        assert_close(out[3], -0.5, EPS);
-    }
-
-    // -- GELU exact --
-
-    #[test]
-    fn test_gelu_exact_zero() {
-        let input = [0.0];
-        let mut out = [999.0];
-        gelu_exact_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
+    fn test_sigmoid_extremes() {
+        assert!(sigmoid(100.0) > 0.999);
+        assert!(sigmoid(-100.0) < 0.001);
     }
 
     #[test]
-    fn test_gelu_exact_positive() {
-        let input = [1.0];
-        let mut out = [0.0];
-        gelu_exact_activate(&input, &mut out);
-        // GELU(1) ≈ 0.8413
-        assert_close(out[0], 0.8413, 1e-3);
+    fn test_sigmoid_symmetry() {
+        let x = 2.5;
+        assert!(approx_eq(sigmoid(x) + sigmoid(-x), 1.0, 1e-6));
+    }
+
+    // ── Tanh ──
+
+    #[test]
+    fn test_tanh_at_zero() {
+        assert!(approx_eq(tanh_act(0.0), 0.0, 1e-6));
     }
 
     #[test]
-    fn test_gelu_exact_inplace() {
-        let mut data = [0.0, 1.0, -1.0];
-        gelu_exact_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert!(data[1] > 0.5);
-        assert!(data[2] < 0.0);
+    fn test_tanh_extremes() {
+        assert!(tanh_act(100.0) > 0.999);
+        assert!(tanh_act(-100.0) < -0.999);
     }
 
-    // -- GELU fast --
+    // ── GELU ──
 
     #[test]
-    fn test_gelu_fast_close_to_exact() {
-        let input: Vec<f32> = (-20..=20).map(|i| i as f32 * 0.25).collect();
-        let mut exact = vec![0.0; input.len()];
-        let mut fast = vec![0.0; input.len()];
-        gelu_exact_activate(&input, &mut exact);
-        gelu_fast_activate(&input, &mut fast);
-        for (e, f) in exact.iter().zip(fast.iter()) {
-            assert_close(*e, *f, 0.02);
+    fn test_gelu_at_zero() {
+        assert!(approx_eq(gelu(0.0), 0.0, 1e-6));
+    }
+
+    #[test]
+    fn test_gelu_positive_region() {
+        // GELU(x) ≈ x for large positive x
+        assert!(gelu(5.0) > 4.99);
+    }
+
+    #[test]
+    fn test_gelu_negative_region() {
+        // GELU is slightly negative for small negative inputs
+        assert!(gelu(-0.5) < 0.0);
+    }
+
+    // ── GELUTanh ──
+
+    #[test]
+    fn test_gelu_tanh_close_to_gelu() {
+        for x in [-2.0, -1.0, 0.0, 1.0, 2.0] {
+            assert!(
+                approx_eq(gelu_tanh(x), gelu(x), 0.02),
+                "GELUTanh({x}) = {} vs GELU({x}) = {}",
+                gelu_tanh(x),
+                gelu(x)
+            );
         }
     }
 
-    #[test]
-    fn test_gelu_fast_inplace() {
-        let mut data = [0.0, 1.0];
-        gelu_fast_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert!(data[1] > 0.5);
-    }
-
-    // -- SiLU / Swish --
+    // ── SiLU ──
 
     #[test]
-    fn test_silu_zero() {
-        let input = [0.0];
-        let mut out = [999.0];
-        silu_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
+    fn test_silu_at_zero() {
+        assert!(approx_eq(silu(0.0), 0.0, 1e-6));
     }
 
     #[test]
-    fn test_silu_known_value() {
-        // SiLU(1) = 1/(1+exp(-1)) ≈ 0.7311
-        let input = [1.0];
-        let mut out = [0.0];
-        silu_activate(&input, &mut out);
-        assert_close(out[0], 0.7311, 1e-3);
+    fn test_silu_positive() {
+        // SiLU(x) ≈ x for large positive x
+        assert!(silu(10.0) > 9.99);
     }
 
     #[test]
-    fn test_silu_inplace() {
-        let mut data = [0.0, 1.0, -1.0];
-        silu_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert!(data[1] > 0.0);
-        assert!(data[2] < 0.0);
+    fn test_silu_negative() {
+        // SiLU has a small negative trough around x ≈ -1.28
+        assert!(silu(-1.28) < 0.0);
     }
 
-    // -- Sigmoid --
+    // ── Swish ──
 
     #[test]
-    fn test_sigmoid_bounds() {
-        let input = [-100.0, 0.0, 100.0];
-        let mut out = [0.0; 3];
-        sigmoid_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
-        assert_close(out[1], 0.5, EPS);
-        assert_close(out[2], 1.0, EPS);
+    fn test_swish_beta_one_equals_silu() {
+        for x in [-2.0, -1.0, 0.0, 1.0, 2.0] {
+            assert!(approx_eq(swish(x, 1.0), silu(x), 1e-6));
+        }
     }
 
+    // ── HardSigmoid ──
+
     #[test]
-    fn test_sigmoid_inplace() {
-        let mut data = [0.0];
-        sigmoid_activate_inplace(&mut data);
-        assert_close(data[0], 0.5, EPS);
+    fn test_hard_sigmoid_clamp() {
+        assert!(approx_eq(hard_sigmoid(0.0), 0.5, 1e-6));
+        assert_eq!(hard_sigmoid(-10.0), 0.0);
+        assert_eq!(hard_sigmoid(10.0), 1.0);
     }
 
-    // -- Tanh --
+    // ── HardSwish ──
 
     #[test]
-    fn test_tanh_known_values() {
-        let input = [0.0, 1.0, -1.0];
-        let mut out = [0.0; 3];
-        tanh_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
-        assert_close(out[1], 1.0_f32.tanh(), EPS);
-        assert_close(out[2], (-1.0_f32).tanh(), EPS);
+    fn test_hard_swish_at_zero() {
+        assert!(approx_eq(hard_swish(0.0), 0.0, 1e-6));
     }
 
     #[test]
-    fn test_tanh_inplace() {
-        let mut data = [0.0, 100.0, -100.0];
-        tanh_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert_close(data[1], 1.0, EPS);
-        assert_close(data[2], -1.0, EPS);
+    fn test_hard_swish_extremes() {
+        assert_eq!(hard_swish(-4.0), 0.0);
+        assert!(approx_eq(hard_swish(4.0), 4.0, 1e-6));
     }
 
-    // -- Mish --
+    // ── Softplus ──
 
     #[test]
-    fn test_mish_zero() {
-        let input = [0.0];
-        let mut out = [999.0];
-        mish_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
+    fn test_softplus_positive() {
+        // softplus(0) = ln(2)
+        assert!(approx_eq(softplus(0.0), 2.0_f32.ln(), 1e-5));
+    }
+
+    #[test]
+    fn test_softplus_large_input() {
+        // For large x, softplus ≈ x
+        assert!(approx_eq(softplus(50.0), 50.0, 1e-3));
+    }
+
+    // ── Mish ──
+
+    #[test]
+    fn test_mish_at_zero() {
+        assert!(approx_eq(mish(0.0), 0.0, 1e-5));
     }
 
     #[test]
     fn test_mish_positive() {
-        let input = [1.0];
-        let mut out = [0.0];
-        mish_activate(&input, &mut out);
-        // Mish(1) = 1·tanh(ln(1+e)) ≈ 0.8651
-        assert_close(out[0], 0.8651, 1e-3);
+        // Mish(x) ≈ x for large positive x
+        assert!(mish(10.0) > 9.99);
+    }
+
+    // ── ELU ──
+
+    #[test]
+    fn test_elu_positive() {
+        assert_eq!(elu(2.0, 1.0), 2.0);
     }
 
     #[test]
-    fn test_mish_inplace() {
-        let mut data = [0.0, 1.0];
-        mish_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert!(data[1] > 0.5);
-    }
-
-    // -- HardSwish --
-
-    #[test]
-    fn test_hard_swish_regions() {
-        let input = [-4.0, -3.0, 0.0, 3.0, 4.0];
-        let mut out = [0.0; 5];
-        hard_swish_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS); // below -3
-        assert_close(out[1], 0.0, EPS); // boundary
-        assert_close(out[2], 0.0, EPS); // midpoint
-        assert_close(out[3], 3.0, EPS); // boundary
-        assert_close(out[4], 4.0, EPS); // above 3
+    fn test_elu_negative() {
+        let val = elu(-1.0, 1.0);
+        assert!(val < 0.0 && val > -1.0);
     }
 
     #[test]
-    fn test_hard_swish_inplace() {
-        let mut data = [-4.0, 0.0, 4.0];
-        hard_swish_activate_inplace(&mut data);
-        assert_close(data[0], 0.0, EPS);
-        assert_close(data[1], 0.0, EPS);
-        assert_close(data[2], 4.0, EPS);
+    fn test_elu_zero() {
+        assert!(approx_eq(elu(0.0, 1.0), 0.0, 1e-6));
     }
 
-    // -- HardSigmoid --
+    // ── SELU ──
 
     #[test]
-    fn test_hard_sigmoid_regions() {
-        let input = [-4.0, -3.0, 0.0, 3.0, 4.0];
-        let mut out = [0.0; 5];
-        hard_sigmoid_activate(&input, &mut out);
-        assert_close(out[0], 0.0, EPS);
-        assert_close(out[1], 0.0, EPS);
-        assert_close(out[2], 0.5, EPS);
-        assert_close(out[3], 1.0, EPS);
-        assert_close(out[4], 1.0, EPS);
+    fn test_selu_positive() {
+        assert!(approx_eq(selu(1.0), SELU_LAMBDA, 1e-5));
     }
 
     #[test]
-    fn test_hard_sigmoid_inplace() {
-        let mut data = [0.0];
-        hard_sigmoid_activate_inplace(&mut data);
-        assert_close(data[0], 0.5, EPS);
+    fn test_selu_zero() {
+        // SELU(0) = lambda * alpha * (exp(0)-1) = 0
+        assert!(approx_eq(selu(0.0), 0.0, 1e-5));
     }
 
-    // -- Edge cases: empty slices --
+    // ── QuickGELU ──
 
     #[test]
-    fn test_empty_input() {
-        let input: [f32; 0] = [];
-        let mut out: [f32; 0] = [];
-        relu_activate(&input, &mut out);
-        silu_activate(&input, &mut out);
-        sigmoid_activate(&input, &mut out);
-        tanh_activate(&input, &mut out);
-        mish_activate(&input, &mut out);
-        gelu_exact_activate(&input, &mut out);
-        gelu_fast_activate(&input, &mut out);
-        hard_swish_activate(&input, &mut out);
-        hard_sigmoid_activate(&input, &mut out);
+    fn test_quick_gelu_at_zero() {
+        assert!(approx_eq(quick_gelu(0.0), 0.0, 1e-6));
     }
-
-    // -- Edge cases: NaN propagation --
 
     #[test]
-    fn test_nan_propagation() {
-        let input = [f32::NAN];
-        let mut out = [0.0];
-
-        // ReLU uses f32::max which returns the non-NaN argument per
-        // IEEE 754-2008 minNum/maxNum, so NaN → 0.0 is correct.
-        relu_activate(&input, &mut out);
-        assert_eq!(out[0], 0.0, "ReLU(NaN) = max(0,NaN) = 0");
-
-        silu_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "SiLU should propagate NaN");
-
-        sigmoid_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "Sigmoid should propagate NaN");
-
-        tanh_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "Tanh should propagate NaN");
-
-        gelu_exact_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "GELU exact should propagate NaN");
-
-        gelu_fast_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "GELU fast should propagate NaN");
-
-        mish_activate(&input, &mut out);
-        assert!(out[0].is_nan(), "Mish should propagate NaN");
+    fn test_quick_gelu_close_to_gelu() {
+        for x in [-1.0, 0.0, 1.0, 2.0] {
+            assert!(
+                approx_eq(quick_gelu(x), gelu(x), 0.05),
+                "QuickGELU({x}) = {} vs GELU({x}) = {}",
+                quick_gelu(x),
+                gelu(x)
+            );
+        }
     }
 
-    // -- Edge cases: Inf handling --
+    // ── activate / activate_inplace ──
+
+    #[test]
+    fn test_activate_relu_vec() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let out = activate(&input, ActivationType::ReLU);
+        assert_eq!(out, vec![0.0, 0.0, 0.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn test_activate_inplace_sigmoid() {
+        let mut data = vec![0.0, 1.0, -1.0];
+        let expected = activate(&data, ActivationType::Sigmoid);
+        activate_inplace(&mut data, ActivationType::Sigmoid);
+        for (a, b) in data.iter().zip(expected.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_activate_empty() {
+        let empty: Vec<f32> = vec![];
+        assert!(activate(&empty, ActivationType::ReLU).is_empty());
+    }
+
+    #[test]
+    fn test_activate_inplace_empty() {
+        let mut empty: Vec<f32> = vec![];
+        activate_inplace(&mut empty, ActivationType::ReLU);
+        assert!(empty.is_empty());
+    }
+
+    #[test]
+    fn test_activate_matches_individual_functions() {
+        let input = vec![-3.0, -1.5, 0.0, 1.5, 3.0];
+        let types_and_fns: Vec<(ActivationType, Box<dyn Fn(f32) -> f32>)> = vec![
+            (ActivationType::ReLU, Box::new(relu)),
+            (ActivationType::LeakyReLU(0.01), Box::new(|x| leaky_relu(x, 0.01))),
+            (ActivationType::GELU, Box::new(gelu)),
+            (ActivationType::GELUTanh, Box::new(gelu_tanh)),
+            (ActivationType::SiLU, Box::new(silu)),
+            (ActivationType::Swish(1.0), Box::new(|x| swish(x, 1.0))),
+            (ActivationType::Sigmoid, Box::new(sigmoid)),
+            (ActivationType::Tanh, Box::new(tanh_act)),
+            (ActivationType::HardSigmoid, Box::new(hard_sigmoid)),
+            (ActivationType::HardSwish, Box::new(hard_swish)),
+            (ActivationType::Mish, Box::new(mish)),
+            (ActivationType::Softplus, Box::new(softplus)),
+            (ActivationType::ELU(1.0), Box::new(|x| elu(x, 1.0))),
+            (ActivationType::SELU, Box::new(selu)),
+            (ActivationType::QuickGELU, Box::new(quick_gelu)),
+        ];
+        for (act_type, f) in &types_and_fns {
+            let via_dispatch = activate(&input, *act_type);
+            let via_fn: Vec<f32> = input.iter().map(|&x| f(x)).collect();
+            for (i, (a, b)) in via_dispatch.iter().zip(via_fn.iter()).enumerate() {
+                assert!(approx_eq(*a, *b, 1e-5), "{act_type:?} mismatch at {i}: {a} vs {b}");
+            }
+        }
+    }
+
+    // ── NaN propagation ──
+
+    #[test]
+    fn test_nan_propagation_all_activations() {
+        let activations = [
+            ActivationType::ReLU,
+            ActivationType::LeakyReLU(0.01),
+            ActivationType::GELU,
+            ActivationType::GELUTanh,
+            ActivationType::SiLU,
+            ActivationType::Swish(1.5),
+            ActivationType::Sigmoid,
+            ActivationType::Tanh,
+            ActivationType::HardSigmoid,
+            ActivationType::HardSwish,
+            ActivationType::Mish,
+            ActivationType::Softplus,
+            ActivationType::ELU(1.0),
+            ActivationType::SELU,
+            ActivationType::QuickGELU,
+        ];
+        for act in &activations {
+            let out = activate(&[f32::NAN], *act);
+            assert!(out[0].is_nan(), "{act:?} did not propagate NaN");
+        }
+    }
+
+    // ── Infinity handling ──
 
     #[test]
     fn test_inf_handling() {
-        let pos_inf = [f32::INFINITY];
-        let neg_inf = [f32::NEG_INFINITY];
-        let mut out = [0.0];
+        // ReLU(+inf) = +inf, ReLU(-inf) = 0
+        assert_eq!(relu(f32::INFINITY), f32::INFINITY);
+        assert_eq!(relu(f32::NEG_INFINITY), 0.0);
 
-        relu_activate(&pos_inf, &mut out);
-        assert_eq!(out[0], f32::INFINITY);
-        relu_activate(&neg_inf, &mut out);
-        assert_eq!(out[0], 0.0);
+        // Sigmoid(+inf) → 1, Sigmoid(-inf) → 0
+        assert!(approx_eq(sigmoid(f32::INFINITY), 1.0, 1e-5));
+        assert!(approx_eq(sigmoid(f32::NEG_INFINITY), 0.0, 1e-5));
 
-        sigmoid_activate(&pos_inf, &mut out);
-        assert_close(out[0], 1.0, EPS);
-        sigmoid_activate(&neg_inf, &mut out);
-        assert_close(out[0], 0.0, EPS);
-
-        tanh_activate(&pos_inf, &mut out);
-        assert_close(out[0], 1.0, EPS);
-        tanh_activate(&neg_inf, &mut out);
-        assert_close(out[0], -1.0, EPS);
-
-        hard_sigmoid_activate(&pos_inf, &mut out);
-        assert_close(out[0], 1.0, EPS);
-        hard_sigmoid_activate(&neg_inf, &mut out);
-        assert_close(out[0], 0.0, EPS);
+        // Tanh(+inf) → 1, Tanh(-inf) → -1
+        assert!(approx_eq(tanh_act(f32::INFINITY), 1.0, 1e-5));
+        assert!(approx_eq(tanh_act(f32::NEG_INFINITY), -1.0, 1e-5));
     }
 
-    // -- Consistency: in-place vs out-of-place --
+    // ── Zeros ──
 
     #[test]
-    fn test_inplace_matches_out_of_place() {
-        let input = [-2.0, -1.0, 0.0, 0.5, 1.0, 2.0, 5.0];
-        let n = input.len();
+    fn test_all_activations_at_zero() {
+        // Most activations at zero should be deterministic
+        assert_eq!(relu(0.0), 0.0);
+        assert_eq!(leaky_relu(0.0, 0.01), 0.0);
+        assert!(approx_eq(gelu(0.0), 0.0, 1e-6));
+        assert!(approx_eq(gelu_tanh(0.0), 0.0, 1e-6));
+        assert!(approx_eq(silu(0.0), 0.0, 1e-6));
+        assert!(approx_eq(sigmoid(0.0), 0.5, 1e-6));
+        assert!(approx_eq(tanh_act(0.0), 0.0, 1e-6));
+        assert!(approx_eq(hard_sigmoid(0.0), 0.5, 1e-6));
+        assert!(approx_eq(hard_swish(0.0), 0.0, 1e-6));
+        assert!(approx_eq(mish(0.0), 0.0, 1e-5));
+        assert!(approx_eq(softplus(0.0), 2.0_f32.ln(), 1e-5));
+        assert!(approx_eq(elu(0.0, 1.0), 0.0, 1e-6));
+        assert!(approx_eq(selu(0.0), 0.0, 1e-5));
+        assert!(approx_eq(quick_gelu(0.0), 0.0, 1e-6));
+    }
 
-        macro_rules! check_pair {
-            ($oop:ident, $ip:ident $(, $arg:expr)*) => {{
-                let mut oop_out = vec![0.0; n];
-                $oop(&input, &mut oop_out $(, $arg)*);
-                let mut ip_data = input.to_vec();
-                $ip(&mut ip_data $(, $arg)*);
-                for (a, b) in oop_out.iter().zip(ip_data.iter()) {
-                    assert_close(*a, *b, EPS);
-                }
-            }};
+    // ── Derivative tests ──
+
+    #[test]
+    fn test_relu_derivative() {
+        let d = activate_derivative(&[-1.0, 0.0, 1.0], ActivationType::ReLU);
+        assert_eq!(d, vec![0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn test_sigmoid_derivative() {
+        // sigmoid'(0) = sigmoid(0)*(1-sigmoid(0)) = 0.25
+        let d = activate_derivative(&[0.0], ActivationType::Sigmoid);
+        assert!(approx_eq(d[0], 0.25, 1e-5));
+    }
+
+    #[test]
+    fn test_tanh_derivative() {
+        // tanh'(0) = 1 - tanh(0)^2 = 1
+        let d = activate_derivative(&[0.0], ActivationType::Tanh);
+        assert!(approx_eq(d[0], 1.0, 1e-5));
+    }
+
+    #[test]
+    fn test_softplus_derivative_is_sigmoid() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let d = activate_derivative(&input, ActivationType::Softplus);
+        let s = activate(&input, ActivationType::Sigmoid);
+        for (a, b) in d.iter().zip(s.iter()) {
+            assert!(approx_eq(*a, *b, 1e-5));
         }
+    }
 
-        check_pair!(relu_activate, relu_activate_inplace);
-        check_pair!(leaky_relu_activate, leaky_relu_activate_inplace, 0.1);
-        check_pair!(gelu_exact_activate, gelu_exact_activate_inplace);
-        check_pair!(gelu_fast_activate, gelu_fast_activate_inplace);
-        check_pair!(silu_activate, silu_activate_inplace);
-        check_pair!(sigmoid_activate, sigmoid_activate_inplace);
-        check_pair!(tanh_activate, tanh_activate_inplace);
-        check_pair!(mish_activate, mish_activate_inplace);
-        check_pair!(hard_swish_activate, hard_swish_activate_inplace);
-        check_pair!(hard_sigmoid_activate, hard_sigmoid_activate_inplace);
+    #[test]
+    fn test_derivative_numerical_check() {
+        // Verify analytical derivatives against numerical for several types
+        let test_points = [-2.0_f32, -0.5, 0.5, 2.0];
+        let activations = [
+            ActivationType::ReLU,
+            ActivationType::SiLU,
+            ActivationType::Sigmoid,
+            ActivationType::Tanh,
+            ActivationType::ELU(1.0),
+            ActivationType::SELU,
+            ActivationType::QuickGELU,
+        ];
+        let h = 1e-4;
+        for act in &activations {
+            for &x in &test_points {
+                // Skip ReLU at discontinuity near zero
+                if matches!(act, ActivationType::ReLU) && x.abs() < 0.1 {
+                    continue;
+                }
+                let analytical = activate_derivative(&[x], *act)[0];
+                let numerical = numerical_derivative(|v| activate(&[v], *act)[0], x, h);
+                assert!(
+                    approx_eq(analytical, numerical, 1e-2),
+                    "{act:?} derivative at {x}: analytical={analytical}, \
+                     numerical={numerical}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_leaky_relu_derivative() {
+        let alpha = 0.1;
+        let d = activate_derivative(&[-1.0, 0.0, 1.0], ActivationType::LeakyReLU(alpha));
+        assert!(approx_eq(d[0], alpha, 1e-5));
+        assert!(approx_eq(d[1], 1.0, 1e-5));
+        assert!(approx_eq(d[2], 1.0, 1e-5));
+    }
+
+    #[test]
+    fn test_hard_sigmoid_derivative() {
+        let d = activate_derivative(&[-5.0, 0.0, 5.0], ActivationType::HardSigmoid);
+        assert!(approx_eq(d[0], 0.0, 1e-5)); // outside [-3,3]
+        assert!(approx_eq(d[1], 1.0 / 6.0, 1e-5)); // inside
+        assert!(approx_eq(d[2], 0.0, 1e-5)); // outside
+    }
+
+    #[test]
+    fn test_elu_derivative() {
+        let d = activate_derivative(&[-1.0, 0.5], ActivationType::ELU(1.0));
+        assert!(approx_eq(d[0], (-1.0_f32).exp(), 1e-5));
+        assert!(approx_eq(d[1], 1.0, 1e-5));
+    }
+
+    // ── Edge cases ──
+
+    #[test]
+    fn test_large_input_stability() {
+        let large = vec![100.0, -100.0, 1000.0, -1000.0];
+        // These should not panic or produce NaN (except where mathematically
+        // expected, e.g. ELU(-1000) ≈ -alpha which is fine)
+        for act in [
+            ActivationType::ReLU,
+            ActivationType::Sigmoid,
+            ActivationType::Tanh,
+            ActivationType::HardSigmoid,
+            ActivationType::HardSwish,
+            ActivationType::Softplus,
+            ActivationType::SELU,
+        ] {
+            let out = activate(&large, act);
+            for (i, v) in out.iter().enumerate() {
+                assert!(!v.is_nan(), "{act:?} produced NaN at index {i} for input {}", large[i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_negative_inputs() {
+        let neg = vec![-0.001, -0.01, -0.1, -1.0, -10.0];
+        let relu_out = activate(&neg, ActivationType::ReLU);
+        assert!(relu_out.iter().all(|&v| v == 0.0));
+
+        let leaky_out = activate(&neg, ActivationType::LeakyReLU(0.1));
+        assert!(leaky_out.iter().all(|&v| v < 0.0));
+    }
+
+    #[test]
+    fn test_monotonicity_sigmoid() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::Sigmoid);
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "Sigmoid not monotonic at i={i}");
+        }
+    }
+
+    #[test]
+    fn test_monotonicity_relu() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::ReLU);
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "ReLU not monotonic at i={i}");
+        }
     }
 }
