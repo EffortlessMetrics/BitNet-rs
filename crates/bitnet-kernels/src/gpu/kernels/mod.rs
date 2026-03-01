@@ -15,6 +15,9 @@ pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 /// Embedding lookup and output projection kernel source.
 pub const EMBEDDING_SRC: &str = include_str!("embedding.cl");
 
+/// Rotary Position Embedding (RoPE) kernel source.
+pub const ROPE_SRC: &str = include_str!("rope.cl");
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,6 +76,32 @@ mod tests {
         assert!(
             EMBEDDING_SRC.contains("embedding_lookup_padded"),
             "missing embedding_lookup_padded kernel"
+        );
+    }
+
+    #[test]
+    fn rope_source_is_not_empty() {
+        assert!(!ROPE_SRC.is_empty(), "rope.cl should not be empty");
+    }
+
+    #[test]
+    fn rope_source_contains_kernel_keyword() {
+        assert!(ROPE_SRC.contains("__kernel"), "rope.cl missing __kernel");
+    }
+
+    #[test]
+    fn rope_kernels_have_expected_functions() {
+        assert!(ROPE_SRC.contains("rope_apply"), "missing rope_apply kernel");
+        assert!(ROPE_SRC.contains("rope_apply_cached"), "missing rope_apply_cached kernel");
+    }
+
+    #[test]
+    fn rope_kernel_has_required_parameters() {
+        assert!(ROPE_SRC.contains("head_dim"), "rope kernel missing head_dim parameter");
+        assert!(ROPE_SRC.contains("theta_base"), "rope kernel missing theta_base parameter");
+        assert!(
+            ROPE_SRC.contains("position_offset"),
+            "rope kernel missing position_offset parameter"
         );
     }
 }

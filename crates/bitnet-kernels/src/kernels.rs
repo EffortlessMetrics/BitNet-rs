@@ -176,3 +176,12 @@ __kernel void softmax(
     }
 }
 "#;
+
+/// OpenCL kernel source for Rotary Position Embedding (RoPE).
+///
+/// Two kernels optimized for Intel Arc A770:
+/// - `rope_apply`: real-time sin/cos computation per position
+/// - `rope_apply_cached`: pre-computed frequency table for repeated calls
+///
+/// Supports KV cache continuation via `position_offset`.
+pub const ROPE_SRC: &str = include_str!("gpu/kernels/rope.cl");
