@@ -1,0 +1,66 @@
+name: Phase 1 PR Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'crates/**/src/**'
+      - 'src/**'
+      - 'benches/**'
+      - '.github/CODEOWNERS'
+      - '.github/workflows/phase1-pr-evidence.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Generate PR maintenance evidence
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6
+        with:
+          toolchain: '1.92.0'
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+
+      - name: Install evidence tooling
+        run: |
+          cargo install --locked cargo-public-api --version 0.44.2
+          cargo install --locked cargo-cyclonedx --version 0.5.7
+          cargo install --locked cargo-deny --version 0.18.2
+          cargo install --locked cargo-audit --version 0.22.0
+
+      - name: Generate evidence reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/public_api
+
+          cargo tree --workspace --edges normal --charset utf8 > reports/deps-crates.txt
+          cargo cyclonedx --format json --output-file reports/sbom.json
+          cargo deny check licenses > reports/licenses.txt
+          cargo audit --json > reports/vuln-audit.json || true
+
+          for crate in bitnet_core bitnet_quant; do
+            if cargo metadata --no-deps --format-version=1 | jq -e --arg c "$crate" '.packages[] | select(.name == $c)' > /dev/null; then
+              cargo public-api -p "$crate" > "reports/public_api/${crate}.txt"
+            fi
+          done
+
+      - name: Upload evidence artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+          name: phase1-pr-evidence-${{ github.sha }}
+          path: reports/
+          if-no-files-found: error
