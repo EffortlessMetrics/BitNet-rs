@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: err
+---
+temperature must be non-negative

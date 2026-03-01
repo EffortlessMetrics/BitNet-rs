@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: cfg
+---
+SamplingConfig {
+    temperature: 1.0,
+    top_k: Some(
+        50,
+    ),
+    top_p: Some(
+        0.9,
+    ),
+    repetition_penalty: 1.1,
+    do_sample: true,
+}

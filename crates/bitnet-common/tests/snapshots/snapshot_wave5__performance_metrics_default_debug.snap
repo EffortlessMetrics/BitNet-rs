@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: metrics
+---
+PerformanceMetrics {
+    tokens_per_second: 0.0,
+    latency_ms: 0.0,
+    memory_usage_mb: 0.0,
+    gpu_utilization: None,
+}

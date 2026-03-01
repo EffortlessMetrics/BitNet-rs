@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: displays
+---
+[
+    "auto",
+    "cpu",
+    "gpu",
+    "cuda",
+    "hip",
+    "oneapi",
+]

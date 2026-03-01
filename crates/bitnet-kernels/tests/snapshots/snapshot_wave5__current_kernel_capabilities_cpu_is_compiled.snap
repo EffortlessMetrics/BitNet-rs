@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: "format!(\"cpu_rust={}\", caps.cpu_rust)"
+---
+cpu_rust=true

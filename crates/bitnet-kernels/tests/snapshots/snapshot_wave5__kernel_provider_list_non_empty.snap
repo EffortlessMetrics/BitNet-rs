@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: "format!(\"provider_count={} providers={:?}\", providers.len(), providers)"
+---
+provider_count=3 providers=["avx512", "avx2", "fallback"]
