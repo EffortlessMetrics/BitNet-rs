@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-download-validate-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "SRP core download validation primitives for content-range parsing and length checks"
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true

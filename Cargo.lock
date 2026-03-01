@@ -623,9 +623,16 @@ dependencies = [
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-download-validate-core",
  "bitnet-http-retry",
  "httpdate",
  "reqwest",
+]
+
+[[package]]
+name = "bitnet-download-validate-core"
+version = "0.2.1-dev"
+dependencies = [
  "thiserror 2.0.18",
 ]
 
