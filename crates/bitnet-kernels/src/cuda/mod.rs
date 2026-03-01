@@ -8,6 +8,7 @@
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
 //! - [`batch_norm`]: Batch normalization with training/eval mode support
+//! - [`conv1d`]: 1-D convolution with stride, padding, dilation, groups
 //! - [`rmsnorm`]: RMSNorm layer normalization
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
@@ -23,6 +24,7 @@
 pub mod activations;
 pub mod attention;
 pub mod batch_norm;
+pub mod conv1d;
 pub mod kv_cache;
 pub mod pooling;
 pub mod qk256_gemv;
@@ -37,6 +39,9 @@ pub use activations::{
 };
 pub use attention::{AttentionKernelConfig, launch_attention};
 pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
+pub use conv1d::{
+    Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d,
+};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
