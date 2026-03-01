@@ -483,6 +483,45 @@ mod tests {
         gemv_qk256(&qs_data, &x, &mut y_out, 1, 256, 64).unwrap();
     }
 
+    #[test]
+    fn gemv_rejects_invalid_row_stride() {
+        let rows = 1usize;
+        let cols = 256usize;
+        let bad_row_stride = 32usize;
+        let qs_data = vec![0u8; bad_row_stride];
+        let x = vec![0.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        let err = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, bad_row_stride)
+            .expect_err("invalid row_stride_bytes should error");
+
+        assert!(
+            err.to_string().contains("row_stride_bytes"),
+            "error should mention row_stride_bytes, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn gemv_force_scalar_override_works() {
+        let rows = 2usize;
+        let cols = 256usize;
+        let row_stride_bytes = QK256_PACKED_BYTES;
+        let qs_data = vec![0xAAu8; rows * row_stride_bytes]; // +1.0 weights
+        let x = vec![1.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        // SAFETY: This test is single-threaded; no other threads read this env var.
+        unsafe { std::env::set_var("BITNET_FORCE_SCALAR", "1") };
+        let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes);
+        unsafe { std::env::remove_var("BITNET_FORCE_SCALAR") };
+
+        result.expect("scalar override should run successfully");
+        for &v in &y_out {
+            assert!((v - 256.0).abs() < 1e-5, "Expected 256.0, got {}", v);
+        }
+    }
+
     /// Regression test for QK256 size tolerance (prevents enhanced→minimal fallback)
     ///
     /// This test verifies that the `I2SQk256NoScale::new` constructor accepts
