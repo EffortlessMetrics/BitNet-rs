@@ -2,6 +2,7 @@
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
 pub mod batch_engine;
+pub mod ab_test;
 // Expose `caching` only when generating docs to avoid -Dwarnings dead_code in scaffolding.
 #[cfg(doc)]
 pub mod caching;
