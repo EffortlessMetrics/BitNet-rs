@@ -18,6 +18,7 @@ pub mod device_abstraction;
 pub mod embedding_layer;
 pub mod error_taxonomy;
 pub mod hal_traits;
+pub use hal_traits::{HalError, HalResult};
 
 // === Compute Kernels ===
 pub mod activation_functions;
