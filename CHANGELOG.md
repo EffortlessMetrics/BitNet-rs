@@ -25,6 +25,33 @@ All notable changes to bitnet-rs will be documented in this file.
 
 - **PR #1063**: Closed destructive force-push that removed 813 lines from workspace config; superseded by fresh attention kernel (#1920)
 
+### Added — A770 OpenCL Inference Pipeline (Waves 105–107)
+
+- **Batch Inference**: Padding, scheduling, and batched operations for OpenCL inference pipeline, 51 tests (#1985)
+- **Reduction Kernels** (`reduction.cl`): argmax, sum, mean, L2 norm, log-sum-exp with tree reduction, 48 tests (#1986)
+- **Tensor Operations**: transpose, permute, concat, broadcast, gather for OpenCL tensors, 43 tests (#1987)
+- **Multi-Device Discovery**: Intel GPU multi-device discovery and selection with priority-based ranking, 43 tests (#1988)
+- **Cross-Validation Harness**: OpenCL vs CPU golden-vector cross-validation framework, 46 tests (#1989)
+- **Optimized Tiled MatMul**: 16×16 tiles with float4 vectorization and batched dispatch, 56 tests (#2005)
+- **Flash Attention** (`flash_attention.cl`): Memory-efficient block-tiled attention for long sequences, 40 tests (#1991)
+- **Fused Operations**: norm+linear, SwiGLU, bias+activation fused kernels for reduced memory traffic, 58 tests (#1993)
+- **Autoregressive Generation**: Token generation loop with sampling strategies for OpenCL backend, 61 tests (#1995)
+
+### Testing — A770 OpenCL (Waves 105–107)
+
+- **Property-Based Tests**: Property-based tests for OpenCL CPU reference implementations, 77 tests (#1999)
+
+### Added — A770 OpenCL Infrastructure (Wave 104)
+
+- **Device Warmup**: OpenCL device warmup module with kernel pre-compilation and buffer pre-allocation, 43 tests (#1957)
+- **Telemetry/Metrics**: Telemetry and metrics collection for OpenCL kernel execution, 44 tests (#1958)
+- **Intel GPU Architecture Docs**: Intel GPU architecture documentation for Xe-HPG optimization guidelines (#1959)
+- **Work Scheduler**: DAG-based task scheduling with dependency resolution and priority dispatch, 46 tests (#1960)
+
+### Testing — A770 OpenCL (Wave 104)
+
+- **E2E Integration Tests**: End-to-end integration tests for OpenCL compute kernels, 41 tests (#1967)
+
 ### Wave 99: Intel GPU Integration & Documentation
 
 - **Intel GPU architecture guide** (#1687): comprehensive Intel Arc backend design doc with architecture diagram, kernel categories, Xe-HPG optimization notes, and testing strategy
