@@ -1449,6 +1449,14 @@ name = "bitnet-testing-policy-runtime-core"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-testing-policy-interop",
+ "bitnet-testing-policy-state-core",
+]
+
+[[package]]
+name = "bitnet-testing-policy-state-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-testing-policy-interop",
 ]
 
 [[package]]
