@@ -15,6 +15,7 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
+pub mod matmul;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod reduction;
