@@ -65,8 +65,8 @@ pub use batch_norm::{
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use layernorm::{
-    LayerNormConfig, layer_norm_cpu_fallback, layer_norm_forward, rms_norm_cpu_fallback,
-    rms_norm_forward,
+    LayerNormConfig, batch_layer_norm_cpu, layer_norm_cpu_fallback, layer_norm_forward,
+    rms_norm_cpu_fallback, rms_norm_forward,
 };
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
