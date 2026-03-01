@@ -31,13 +31,14 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `OpenCL` GPU backend with memory profiling for `BitNet` inference.
+//!
+//! This crate provides:
+//!
+//! - [`memory_profiler::MemoryProfiler`] — thread-safe allocation tracker
+//!   with per-category budgets, snapshots, and timeline recording.
+//! - [`allocation_optimizer::AllocationOptimizer`] — analyses profiler
+//!   data and suggests pool sizes, pre-allocation hints, and compaction.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod allocation_optimizer;
+pub mod memory_profiler;
