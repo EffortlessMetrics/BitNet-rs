@@ -1,13 +1,10 @@
-version: '3.8'
-
-# ─────────────────────────────────────────────────────────────────
-# BitNet-rs Docker Compose
+# Docker Compose for BitNet-rs
 #
 # Usage:
-#   docker compose up bitnet-cpu           # CPU inference server
-#   docker compose --profile gpu up        # GPU inference server
-#   docker compose --profile production up # CPU + nginx reverse proxy
-#   docker compose --profile monitoring up # CPU + prometheus + grafana
+#   docker compose up bitnet-cpu            # CPU inference server
+#   docker compose --profile gpu up         # GPU inference server
+#   docker compose --profile production up  # CPU + nginx reverse proxy
+#   docker compose --profile monitoring up  # CPU + Prometheus + Grafana
 #
 # Environment variables (set in shell or .env file):
 #   GIT_SHA        - Git commit hash for OCI labels
@@ -18,7 +15,7 @@ version: '3.8'
 # ─────────────────────────────────────────────────────────────────
 
 services:
-  # CPU-only inference server
+  # ── CPU inference server ──────────────────────────────────────────
   bitnet-cpu:
     build:
       context: .
@@ -38,7 +35,7 @@ services:
     environment:
       - RUST_LOG=info               # Log level: error|warn|info|debug|trace
       - BITNET_THREADS=${BITNET_THREADS:-4}
-    command: ["bitnet-server"]
+    command: ["server"]
     restart: unless-stopped
     user: "10001:10001"
     cap_drop:
@@ -63,7 +60,7 @@ services:
           cpus: '2'
           memory: 4G
 
-  # GPU-enabled inference server (requires NVIDIA Container Toolkit)
+  # ── GPU (CUDA) inference server ───────────────────────────────────
   bitnet-gpu:
     build:
       context: .
@@ -83,7 +80,7 @@ services:
     environment:
       - RUST_LOG=info
       - CUDA_VISIBLE_DEVICES=${CUDA_DEVICE:-0}
-    command: ["bitnet-server"]
+    command: ["server"]
     restart: unless-stopped
     user: "10001:10001"
     cap_drop:
@@ -112,7 +109,7 @@ services:
     profiles:
       - gpu
 
-  # Load balancer (optional)
+  # ── Reverse proxy (optional) ─────────────────────────────────────
   nginx:
     image: nginx:1.25-alpine
     container_name: bitnet-lb
@@ -128,7 +125,7 @@ services:
     profiles:
       - production
 
-  # Monitoring with Prometheus (optional)
+  # ── Monitoring (optional) ─────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: bitnet-prometheus
@@ -144,7 +141,6 @@ services:
     profiles:
       - monitoring
 
-  # Grafana for visualization (optional)
   grafana:
     image: grafana/grafana:10.4.3
     container_name: bitnet-grafana
