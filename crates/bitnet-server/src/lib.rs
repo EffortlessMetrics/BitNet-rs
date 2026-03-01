@@ -1,8 +1,7 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
-pub mod batch_engine;
-pub mod canary;
+pub use bitnet_batch_engine as batch_engine;
 // Expose `caching` only when generating docs to avoid -Dwarnings dead_code in scaffolding.
 #[cfg(doc)]
 pub mod caching;
@@ -11,15 +10,11 @@ mod caching;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
-pub mod gpu_streaming;
 pub mod health;
 pub mod model_manager;
-pub mod model_registry;
 pub mod monitoring;
 pub mod security;
-pub mod sse;
 pub mod streaming;
-pub mod websocket;
 
 use anyhow::Result;
 use axum::{
@@ -275,8 +270,6 @@ impl BitNetServer {
             // Server statistics and management
             .route("/v1/stats", get(server_stats_handler))
             .route("/v1/devices", get(device_status_handler))
-            // GPU streaming endpoint
-            .route("/api/v1/generate/stream", post(gpu_streaming::gpu_stream_handler))
             // Root endpoint
             .route("/", get(root_handler))
             .with_state(app_state);

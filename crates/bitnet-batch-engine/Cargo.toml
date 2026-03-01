@@ -1,0 +1,25 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Batch processing engine with quantization-aware optimization"
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "bitnet-batch-engine"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
+serde.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[features]
+cpu = []
+cuda = []
+gpu = ["cuda"]

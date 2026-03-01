@@ -17,6 +17,7 @@ include = [
 ]
 
 [dependencies]
+bitnet-batch-engine = { path = "../bitnet-batch-engine", version = "0.2.1-dev" }
 anyhow.workspace = true
 async-stream = "0.3.6"
 async-trait = "0.1.89"

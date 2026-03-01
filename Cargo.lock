@@ -426,6 +426,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-batch-engine"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-common",
+ "bitnet-inference",
+ "serde",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [
@@ -1161,6 +1174,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-batch-engine",
  "bitnet-common",
  "bitnet-inference",
  "bitnet-kernels",
