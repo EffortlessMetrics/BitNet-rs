@@ -9,7 +9,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, RwLock, Semaphore, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+
+use crate::model_manager::ModelManager;
 use uuid::Uuid;
 
 /// Batch processing configuration
@@ -201,11 +203,23 @@ pub struct BatchEngine {
     batch_counter: AtomicU64,
     total_processing_time: AtomicU64,
     total_tokens_generated: AtomicU64,
+    /// Optional model manager for real inference.  When `None`, the engine
+    /// falls back to the simulated path for backwards-compatibility.
+    model_manager: Option<Arc<ModelManager>>,
 }
 
 impl BatchEngine {
-    /// Create a new batch engine
+    /// Create a new batch engine (simulation fallback when no model is wired).
     pub fn new(config: BatchEngineConfig) -> Self {
+        Self::new_inner(config, None)
+    }
+
+    /// Create a batch engine that dispatches requests to a real inference model.
+    pub fn new_with_model_manager(config: BatchEngineConfig, model_manager: Arc<ModelManager>) -> Self {
+        Self::new_inner(config, Some(model_manager))
+    }
+
+    fn new_inner(config: BatchEngineConfig, model_manager: Option<Arc<ModelManager>>) -> Self {
         Self {
             batch_semaphore: Arc::new(Semaphore::new(config.max_concurrent_batches)),
             config,
@@ -226,6 +240,7 @@ impl BatchEngine {
             batch_counter: AtomicU64::new(0),
             total_processing_time: AtomicU64::new(0),
             total_tokens_generated: AtomicU64::new(0),
+            model_manager,
         }
     }
 
@@ -557,46 +572,108 @@ impl BatchEngine {
             processing.insert(batch_id.clone(), batch.clone());
         }
 
-        // TODO: Execute batch with actual inference engine
-        // For now, simulate execution
-        let execution_duration = self.simulate_batch_execution(&batch).await?;
+        // Attempt real inference when a model is wired; fall back to simulation otherwise.
+        let active_model = if let Some(ref mm) = self.model_manager {
+            mm.get_active_model().await
+        } else {
+            None
+        };
 
-        // Update statistics
-        self.batch_counter.fetch_add(1, Ordering::Relaxed);
-        self.total_processing_time
-            .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
-
-        // Deliver responses to all requests in this batch.
         let pending_requests = {
             let mut responses = self.batch_responses.lock().await;
             responses.remove(&batch_id).unwrap_or_default()
         };
 
-        for pending in pending_requests {
-            let simulated_tokens = pending.request.max_tokens.clamp(1, 64) as u64;
-            let simulated_text = format!(
-                "Simulated response for prompt: {}",
-                pending.request.prompt.chars().take(200).collect::<String>()
-            );
+        let batch_start = Instant::now();
 
-            let result = BatchResult {
-                request_id: pending.request.id,
-                generated_text: simulated_text,
-                tokens_generated: simulated_tokens,
-                execution_time: execution_duration,
-                device_used: batch.device,
-                quantization_type: pending
-                    .request
-                    .quantization_hint
-                    .unwrap_or_else(|| "I2S".to_string()),
-                batch_id: batch_id.clone(),
-                batch_size: batch.size(),
-            };
+        if let Some(managed_model) = active_model {
+            // Real inference path: process each request in the batch sequentially.
+            // (Batched forward pass is a future optimisation; this is correct behaviour now.)
+            for pending in pending_requests {
+                let req_start = Instant::now();
+                let result = managed_model
+                    .engine
+                    .generate_with_config(&pending.request.prompt, &pending.request.config)
+                    .await;
 
-            if pending.response_tx.send(Ok(result)).is_err() {
-                debug!(batch_id = %batch_id, "Dropped response for cancelled request");
+                let execution_time = req_start.elapsed();
+
+                match result {
+                    Ok(generated_text) => {
+                        // Rough token count: split on whitespace as a cheap proxy.
+                        let tokens_generated = generated_text.split_whitespace().count() as u64;
+                        self.total_tokens_generated
+                            .fetch_add(tokens_generated, Ordering::Relaxed);
+
+                        let batch_result = BatchResult {
+                            request_id: pending.request.id,
+                            generated_text,
+                            tokens_generated,
+                            execution_time,
+                            device_used: batch.device,
+                            quantization_type: pending
+                                .request
+                                .quantization_hint
+                                .unwrap_or_else(|| "I2S".to_string()),
+                            batch_id: batch_id.clone(),
+                            batch_size: batch.size(),
+                        };
+
+                        managed_model.update_usage();
+
+                        if pending.response_tx.send(Ok(batch_result)).is_err() {
+                            debug!(batch_id = %batch_id, "Dropped response for cancelled request");
+                        }
+                    }
+                    Err(e) => {
+                        error!(error = %e, "Real inference failed; returning error to caller");
+                        let _ = pending.response_tx.send(Err(e));
+                    }
+                }
+            }
+        } else {
+            // Simulation path: no model loaded yet.
+            if self.model_manager.is_some() {
+                warn!(
+                    batch_id = %batch_id,
+                    "Model manager is set but no model is loaded; falling back to simulation"
+                );
+            }
+            let simulation_duration = self.simulate_batch_execution(&batch).await?;
+
+            for pending in pending_requests {
+                let simulated_tokens = pending.request.max_tokens.clamp(1, 64) as u64;
+                let simulated_text = format!(
+                    "Simulated response for prompt: {}",
+                    pending.request.prompt.chars().take(200).collect::<String>()
+                );
+
+                let result = BatchResult {
+                    request_id: pending.request.id,
+                    generated_text: simulated_text,
+                    tokens_generated: simulated_tokens,
+                    execution_time: simulation_duration,
+                    device_used: batch.device,
+                    quantization_type: pending
+                        .request
+                        .quantization_hint
+                        .unwrap_or_else(|| "I2S".to_string()),
+                    batch_id: batch_id.clone(),
+                    batch_size: batch.size(),
+                };
+
+                if pending.response_tx.send(Ok(result)).is_err() {
+                    debug!(batch_id = %batch_id, "Dropped response for cancelled request");
+                }
             }
         }
+
+        let execution_duration = batch_start.elapsed();
+
+        // Update statistics
+        self.batch_counter.fetch_add(1, Ordering::Relaxed);
+        self.total_processing_time
+            .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
 
         // Remove from processing map
         {
@@ -729,6 +806,7 @@ impl Clone for BatchEngine {
             total_tokens_generated: AtomicU64::new(
                 self.total_tokens_generated.load(Ordering::Relaxed),
             ),
+            model_manager: self.model_manager.clone(),
         }
     }
 }

@@ -58,6 +58,26 @@ jobs:
           - runtime_context_parse_no_panic
           - validation_no_panic
           - vocab_size_extraction
+          # Wave-9 targets (previously missing from matrix)
+          - kernel_dispatch
+          - kv_cache_ops
+          - model_config_parse
+          - sampling_temperature
+          - tensor_shape_validate
+          - opencl_ternary_pack
+          - softmax_stability
+          - device_opencl_construct
+          - embedding_lookup
+          - pooling_dims
+          - tensor_validation
+          - config_validation
+          - scatter_indices
+          - memory_pool_alloc
+          - memory_layout
+          # Wave-10 targets
+          - conv1d_quantized
+          - rope_extreme_positions
+          - pooling_ops
 
     steps:
       - name: Checkout

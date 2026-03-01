@@ -328,3 +328,21 @@ name = "memory_layout"
 path = "fuzz_targets/memory_layout.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "conv1d_quantized"
+path = "fuzz_targets/conv1d_quantized.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rope_extreme_positions"
+path = "fuzz_targets/rope_extreme_positions.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "pooling_ops"
+path = "fuzz_targets/pooling_ops.rs"
+test = false
+doc = false

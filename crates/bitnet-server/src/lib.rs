@@ -49,6 +49,86 @@ use monitoring::{
     metrics::MetricsCollector,
 };
 
+/// OpenAI-compatible `/v1/completions` request schema
+#[derive(Deserialize)]
+pub struct CompletionsRequest {
+    pub model: String,
+    pub prompt: String,
+    pub max_tokens: Option<u32>,
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub top_k: Option<u32>,
+    pub stream: Option<bool>,
+    pub stop: Option<serde_json::Value>,
+}
+
+/// A single choice in the `/v1/completions` response
+#[derive(Serialize)]
+pub struct CompletionsChoice {
+    pub text: String,
+    pub index: usize,
+    pub finish_reason: &'static str,
+    pub logprobs: Option<()>,
+}
+
+/// Token usage stats for OpenAI-compatible responses
+#[derive(Serialize)]
+pub struct UsageStats {
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_tokens: usize,
+}
+
+/// OpenAI-compatible `/v1/completions` response schema
+#[derive(Serialize)]
+pub struct CompletionsResponse {
+    pub id: String,
+    pub object: &'static str,
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<CompletionsChoice>,
+    pub usage: UsageStats,
+}
+
+/// A message in the chat completions messages array
+#[derive(Deserialize, Serialize, Clone)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+/// OpenAI-compatible `/v1/chat/completions` request schema
+#[derive(Deserialize)]
+pub struct ChatCompletionsRequest {
+    pub model: String,
+    pub messages: Vec<ChatMessage>,
+    pub max_tokens: Option<u32>,
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub top_k: Option<u32>,
+    pub stream: Option<bool>,
+    pub stop: Option<serde_json::Value>,
+}
+
+/// A single choice in the `/v1/chat/completions` response
+#[derive(Serialize)]
+pub struct ChatCompletionsChoice {
+    pub message: ChatMessage,
+    pub index: usize,
+    pub finish_reason: &'static str,
+}
+
+/// OpenAI-compatible `/v1/chat/completions` response schema
+#[derive(Serialize)]
+pub struct ChatCompletionsResponse {
+    pub id: String,
+    pub object: &'static str,
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<ChatCompletionsChoice>,
+    pub usage: UsageStats,
+}
+
 #[derive(Deserialize)]
 pub struct InferenceRequest {
     pub prompt: String,
@@ -173,8 +253,11 @@ impl BitNetServer {
         let execution_router =
             Arc::new(ExecutionRouter::new(config.execution_router.clone(), devices).await?);
 
-        // Initialize batch engine
-        let batch_engine = Arc::new(BatchEngine::new(config.batch_engine.clone()));
+        // Initialize batch engine with the model manager so it can call real inference.
+        let batch_engine = Arc::new(batch_engine::BatchEngine::new_with_model_manager(
+            config.batch_engine.clone(),
+            Arc::clone(&model_manager),
+        ));
 
         // Initialize concurrency manager
         let concurrency_manager = Arc::new(ConcurrencyManager::new(config.concurrency.clone()));
@@ -258,6 +341,9 @@ impl BitNetServer {
         };
 
         let mut app = Router::new()
+            // OpenAI-compatible endpoints
+            .route("/v1/completions", post(openai_completions_handler))
+            .route("/v1/chat/completions", post(openai_chat_completions_handler))
             // Core inference endpoints
             .route("/v1/inference", post(enhanced_inference_handler))
             .route("/v1/inference/stream", post(streaming::streaming_handler))
@@ -469,6 +555,168 @@ async fn enhanced_inference_handler(
     };
 
     Ok(Json(response))
+}
+
+/// Build the prompt string from a list of chat messages using a simple instruct-style template.
+///
+/// Converts `[{role: "user", content: "..."}, {role: "assistant", content: "..."}]` into
+/// a single string that the underlying generation engine can consume.
+fn build_chat_prompt(messages: &[ChatMessage]) -> String {
+    let mut prompt = String::new();
+    for msg in messages {
+        match msg.role.as_str() {
+            "system" => {
+                prompt.push_str("System: ");
+                prompt.push_str(&msg.content);
+                prompt.push('\n');
+            }
+            "user" => {
+                prompt.push_str("User: ");
+                prompt.push_str(&msg.content);
+                prompt.push('\n');
+            }
+            "assistant" => {
+                prompt.push_str("Assistant: ");
+                prompt.push_str(&msg.content);
+                prompt.push('\n');
+            }
+            other => {
+                prompt.push_str(other);
+                prompt.push_str(": ");
+                prompt.push_str(&msg.content);
+                prompt.push('\n');
+            }
+        }
+    }
+    // Signal to the model that it should produce the next assistant turn.
+    prompt.push_str("Assistant:");
+    prompt
+}
+
+/// Estimate prompt token count from character length (rough approximation: ~4 chars/token).
+fn estimate_prompt_tokens(prompt: &str) -> usize {
+    (prompt.len() / 4).max(1)
+}
+
+/// Unix timestamp (seconds since epoch).
+fn unix_timestamp() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// OpenAI-compatible `/v1/completions` handler.
+///
+/// Accepts the standard OpenAI completions schema and calls the loaded inference model.
+/// Returns a 503 when no model has been loaded, or a 500 on generation failure.
+async fn openai_completions_handler(
+    State(state): State<ProductionAppState>,
+    Json(request): Json<CompletionsRequest>,
+) -> Result<Json<CompletionsResponse>, StatusCode> {
+    let model = state.model_manager.get_active_model().await.ok_or_else(|| {
+        warn!("completions request received but no model is loaded");
+        StatusCode::SERVICE_UNAVAILABLE
+    })?;
+
+    let config = {
+        let mut cfg = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(request.max_tokens.unwrap_or(64))
+            .with_temperature(request.temperature.unwrap_or(1.0))
+            .with_top_p(request.top_p.unwrap_or(0.9))
+            .with_top_k(request.top_k.unwrap_or(50));
+        cfg.repetition_penalty = 1.0;
+        cfg
+    };
+
+    let generated = model.engine.generate_with_config(&request.prompt, &config).await.map_err(
+        |e| {
+            error!(error = %e, "completions generation failed");
+            StatusCode::INTERNAL_SERVER_ERROR
+        },
+    )?;
+
+    model.update_usage();
+
+    let prompt_tokens = estimate_prompt_tokens(&request.prompt);
+    let completion_tokens = estimate_prompt_tokens(&generated);
+
+    Ok(Json(CompletionsResponse {
+        id: format!("cmpl-{}", Uuid::new_v4()),
+        object: "text_completion",
+        created: unix_timestamp(),
+        model: request.model,
+        choices: vec![CompletionsChoice {
+            text: generated,
+            index: 0,
+            finish_reason: "stop",
+            logprobs: None,
+        }],
+        usage: UsageStats {
+            prompt_tokens,
+            completion_tokens,
+            total_tokens: prompt_tokens + completion_tokens,
+        },
+    }))
+}
+
+/// OpenAI-compatible `/v1/chat/completions` handler.
+///
+/// Accepts the standard chat completions schema (messages array), builds a prompt
+/// using a simple instruct-style template, runs inference, and returns the result
+/// in OpenAI chat completion format.
+async fn openai_chat_completions_handler(
+    State(state): State<ProductionAppState>,
+    Json(request): Json<ChatCompletionsRequest>,
+) -> Result<Json<ChatCompletionsResponse>, StatusCode> {
+    if request.messages.is_empty() {
+        warn!("chat/completions request with empty messages array");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let model = state.model_manager.get_active_model().await.ok_or_else(|| {
+        warn!("chat/completions request received but no model is loaded");
+        StatusCode::SERVICE_UNAVAILABLE
+    })?;
+
+    let prompt = build_chat_prompt(&request.messages);
+
+    let config = {
+        let mut cfg = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(request.max_tokens.unwrap_or(64))
+            .with_temperature(request.temperature.unwrap_or(1.0))
+            .with_top_p(request.top_p.unwrap_or(0.9))
+            .with_top_k(request.top_k.unwrap_or(50));
+        cfg.repetition_penalty = 1.0;
+        cfg
+    };
+
+    let generated = model.engine.generate_with_config(&prompt, &config).await.map_err(|e| {
+        error!(error = %e, "chat/completions generation failed");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    model.update_usage();
+
+    let prompt_tokens = estimate_prompt_tokens(&prompt);
+    let completion_tokens = estimate_prompt_tokens(&generated);
+
+    Ok(Json(ChatCompletionsResponse {
+        id: format!("chatcmpl-{}", Uuid::new_v4()),
+        object: "chat.completion",
+        created: unix_timestamp(),
+        model: request.model,
+        choices: vec![ChatCompletionsChoice {
+            message: ChatMessage { role: "assistant".to_string(), content: generated },
+            index: 0,
+            finish_reason: "stop",
+        }],
+        usage: UsageStats {
+            prompt_tokens,
+            completion_tokens,
+            total_tokens: prompt_tokens + completion_tokens,
+        },
+    }))
 }
 
 /// Legacy inference handler for backwards compatibility
