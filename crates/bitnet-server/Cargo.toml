@@ -27,6 +27,7 @@ bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
+bitnet-build-info-core = { path = "../bitnet-build-info-core", version = "0.2.1-dev" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }
 chrono.workspace = true
 clap.workspace = true

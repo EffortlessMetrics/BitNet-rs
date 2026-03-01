@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
     routing::get,
 };
+use bitnet_build_info_core::collect as collect_build_info_core;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -39,13 +40,8 @@ pub struct ComponentHealth {
 /// Build metadata included in health response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildInfo {
-    pub version: String,
-    pub git_sha: String,
-    pub git_branch: String,
-    pub build_timestamp: String,
-    pub rustc_version: String,
-    pub cargo_target: String,
-    pub cargo_profile: String,
+    #[serde(flatten)]
+    pub core: bitnet_build_info_core::BuildInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cuda_version: Option<String>,
 }
@@ -152,19 +148,7 @@ impl HealthChecker {
             uptime_seconds: self.start_time.elapsed().as_secs(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             build: BuildInfo {
-                version: env!("CARGO_PKG_VERSION").to_string(),
-                git_sha: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string(),
-                git_branch: option_env!("VERGEN_GIT_BRANCH").unwrap_or("unknown").to_string(),
-                build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                rustc_version: option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown").to_string(),
-                cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                cargo_profile: option_env!("VERGEN_CARGO_OPT_LEVEL")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                core: collect_build_info_core(env!("CARGO_PKG_VERSION")),
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 cuda_version: Some(self.get_cuda_version()),
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]

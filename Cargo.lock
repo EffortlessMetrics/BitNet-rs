@@ -382,6 +382,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bitnet-build-info-core",
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
@@ -443,6 +444,13 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-build-info-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1089,6 +1097,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-build-info-core",
  "bitnet-common",
  "bitnet-inference",
  "bitnet-kernels",

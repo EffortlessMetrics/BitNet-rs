@@ -27,6 +27,7 @@ members = [
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
+  "crates/bitnet-build-info-core", # SRP: shared vergen build metadata capture
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
@@ -169,6 +170,7 @@ bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", op
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
 bitnet-device-probe = { path = "crates/bitnet-device-probe", version = "0.2.1-dev", optional = true }
+bitnet-build-info-core = { path = "crates/bitnet-build-info-core", version = "0.2.1-dev" }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
