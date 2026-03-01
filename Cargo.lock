@@ -539,6 +539,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-cpu-primitives"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+]
+
+[[package]]
 name = "bitnet-crossval"
 version = "0.2.1-dev"
 dependencies = [
@@ -735,6 +742,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bitnet-common",
+ "bitnet-cpu-primitives",
  "bitnet-device-probe",
  "bitnet-engine-core",
  "bitnet-generation",
