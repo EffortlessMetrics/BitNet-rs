@@ -94,7 +94,7 @@ pub enum GgufValue {
     F32(f32),
     Bool(bool),
     String(String),
-    Array(Vec<GgufValue>),
+    Array(Vec<Self>),
     U64(u64),
     I64(i64),
     F64(f64),
@@ -203,7 +203,7 @@ fn value_from_type_scalar<R: Read>(r: &mut R, ty: u32) -> Result<GgufValue> {
 }
 
 #[inline]
-fn scalar_size_bytes(ty: u32) -> Option<usize> {
+const fn scalar_size_bytes(ty: u32) -> Option<usize> {
     match ty {
         0 | 1 | 7 => Some(1),
         2 | 3 => Some(2),
@@ -250,15 +250,16 @@ fn read_array_value<R: Read + Seek>(r: &mut R) -> Result<Vec<GgufValue>> {
             } else {
                 // skip remaining elements in one shot
                 let rem = len - i;
-                let skip = (rem as u128) * (sz as u128); // avoid overflow
+                let skip = u128::from(rem) * (sz as u128); // avoid overflow
                 if skip > i64::MAX as u128 {
                     // If skip is too large, do it in chunks
-                    let chunk_size = 1_000_000_000; // 1GB chunks
+                    let chunk_size: u128 = 1_000_000_000; // 1GB chunks
                     let mut remaining = skip;
                     while remaining > 0 {
-                        let to_skip = remaining.min(chunk_size as u128) as i64;
-                        r.seek(SeekFrom::Current(to_skip))?;
-                        remaining -= to_skip as u128;
+                        let to_skip = remaining.min(chunk_size);
+                        #[allow(clippy::cast_possible_truncation)] // bounded by chunk_size (1GB)
+                        r.seek(SeekFrom::Current(to_skip as i64))?;
+                        remaining -= to_skip;
                     }
                 } else {
                     r.seek(SeekFrom::Current(skip as i64))?;
