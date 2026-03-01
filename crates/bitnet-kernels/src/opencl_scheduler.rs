@@ -124,8 +124,7 @@ impl ExecutionSchedule {
     ///
     /// Returns 0.0 when the critical path is zero.
     pub fn sequential_overhead_pct(&self, scheduler: &WorkScheduler) -> f64 {
-        let sequential_total: u64 =
-            scheduler.tasks.iter().map(|t| t.estimated_duration_ns).sum();
+        let sequential_total: u64 = scheduler.tasks.iter().map(|t| t.estimated_duration_ns).sum();
         if self.critical_path_ns == 0 {
             return 0.0;
         }
@@ -167,11 +166,7 @@ impl WorkScheduler {
     }
 
     /// Register an additional dependency between two existing tasks.
-    pub fn add_dependency(
-        &mut self,
-        task_id: u64,
-        depends_on: u64,
-    ) -> Result<(), SchedulerError> {
+    pub fn add_dependency(&mut self, task_id: u64, depends_on: u64) -> Result<(), SchedulerError> {
         if !self.has_task(task_id) {
             return Err(SchedulerError::TaskNotFound(task_id));
         }
@@ -232,11 +227,7 @@ impl WorkScheduler {
     }
 
     /// Mark a task as failed with a reason.
-    pub fn mark_failed(
-        &mut self,
-        task_id: u64,
-        reason: String,
-    ) -> Result<(), SchedulerError> {
+    pub fn mark_failed(&mut self, task_id: u64, reason: String) -> Result<(), SchedulerError> {
         if !self.has_task(task_id) {
             return Err(SchedulerError::TaskNotFound(task_id));
         }
@@ -246,9 +237,7 @@ impl WorkScheduler {
 
     /// True when every task is `Completed` or `Failed`.
     pub fn is_complete(&self) -> bool {
-        self.states.iter().all(|(_, s)| {
-            matches!(s, TaskState::Completed | TaskState::Failed(_))
-        })
+        self.states.iter().all(|(_, s)| matches!(s, TaskState::Completed | TaskState::Failed(_)))
     }
 
     /// Total number of tasks.
@@ -370,12 +359,7 @@ impl WorkScheduler {
         }
     }
 
-    fn dfs_cycle(
-        &self,
-        id: u64,
-        visited: &mut HashSet<u64>,
-        on_stack: &mut HashSet<u64>,
-    ) -> bool {
+    fn dfs_cycle(&self, id: u64, visited: &mut HashSet<u64>, on_stack: &mut HashSet<u64>) -> bool {
         visited.insert(id);
         on_stack.insert(id);
 
@@ -907,10 +891,7 @@ mod tests {
     fn test_add_dependency_missing_task() {
         let mut sched = WorkScheduler::new();
         let a = sched.add_task(task("a", vec![], 100, 1));
-        assert_eq!(
-            sched.add_dependency(999, a).unwrap_err(),
-            SchedulerError::TaskNotFound(999)
-        );
+        assert_eq!(sched.add_dependency(999, a).unwrap_err(), SchedulerError::TaskNotFound(999));
     }
 
     #[test]
@@ -1026,12 +1007,8 @@ mod tests {
         let mut leaves = Vec::new();
         for root_id in &roots {
             for j in 0..4 {
-                let id = sched.add_task(task(
-                    &format!("leaf_{root_id}_{j}"),
-                    vec![*root_id],
-                    50,
-                    1,
-                ));
+                let id =
+                    sched.add_task(task(&format!("leaf_{root_id}_{j}"), vec![*root_id], 50, 1));
                 leaves.push(id);
             }
         }
