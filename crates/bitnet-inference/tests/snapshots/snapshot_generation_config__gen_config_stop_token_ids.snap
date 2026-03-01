@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: "format!(\"{:?}\", cfg.stop_token_ids)"
+---
+[128009, 128001, 2]

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: displays
+---
+[
+    "Input validation failed: prompt exceeds 1MB",
+    "Memory allocation attack detected: tensor claims 999TB",
+    "Resource limit exceeded: memory = 5000000000 exceeds limit 4000000000",
+    "Malformed data structure: negative tensor dimension",
+    "Unsafe operation blocked: mmap - file from untrusted source",
+]

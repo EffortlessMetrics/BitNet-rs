@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: description
+---
+I2S block: 256 elements → 66 total bytes (data=64, scale=2)

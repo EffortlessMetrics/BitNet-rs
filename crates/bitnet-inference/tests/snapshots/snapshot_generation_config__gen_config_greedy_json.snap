@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: cfg
+---
+{
+  "max_new_tokens": 16,
+  "temperature": 0.0,
+  "top_k": 1,
+  "top_p": 1.0,
+  "repetition_penalty": 1.0,
+  "stop_sequences": [],
+  "stop_token_ids": [],
+  "stop_string_window": 64,
+  "seed": 42,
+  "skip_special_tokens": true,
+  "eos_token_id": null,
+  "logits_tap_steps": 0,
+  "logits_topk": 10,
+  "add_bos": false
+}

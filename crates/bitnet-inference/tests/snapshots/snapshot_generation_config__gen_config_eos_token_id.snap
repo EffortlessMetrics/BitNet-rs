@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: "format!(\"eos_token_id={:?}\", cfg.eos_token_id)"
+---
+eos_token_id=Some(128001)

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: config
+---
+TL1Config {
+    block_size: 64,
+    lookup_table_size: 256,
+    use_asymmetric: false,
+    precision_bits: 2,
+}
