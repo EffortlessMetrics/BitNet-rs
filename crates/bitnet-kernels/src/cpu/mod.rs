@@ -28,6 +28,8 @@ pub use pooling::{
 pub mod quantize;
 pub mod quantized_matmul;
 pub mod reduction;
+pub mod residual;
+pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
 pub mod rope;
 pub mod scatter_gather;
 pub mod simd_math;
