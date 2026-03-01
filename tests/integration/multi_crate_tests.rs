@@ -337,10 +337,21 @@ mod generation_tests {
     #[test]
     fn stream_events_token_and_done() {
         let events: Vec<StreamEvent> = vec![
-            StreamEvent::Token(TokenEvent { id: 42, text: "Hello".to_string() }),
+            StreamEvent::Token(TokenEvent {
+                id: 42,
+                text: "Hello".to_string(),
+                latency_ms: 1.0,
+                position: 0,
+            }),
             StreamEvent::Done {
                 reason: StopReason::MaxTokens,
-                stats: GenerationStats { tokens_generated: 1, tokens_per_second: 10.0 },
+                stats: GenerationStats {
+                    tokens_generated: 1,
+                    tokens_per_second: 10.0,
+                    total_duration_ms: 100.0,
+                    mean_token_latency_ms: 1.0,
+                    time_to_first_token_ms: 1.0,
+                },
             },
         ];
         let tokens: Vec<_> = events.iter().filter(|e| matches!(e, StreamEvent::Token(_))).collect();

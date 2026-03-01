@@ -4,5 +4,8 @@ expression: json
 ---
 {
   "tokens_generated": 0,
-  "tokens_per_second": 0.0
+  "tokens_per_second": 0.0,
+  "total_duration_ms": 0.0,
+  "mean_token_latency_ms": 0.0,
+  "time_to_first_token_ms": 0.0
 }
