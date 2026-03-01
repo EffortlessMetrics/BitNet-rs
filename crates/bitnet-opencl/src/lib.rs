@@ -31,13 +31,14 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
-
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+// OpenCL 3.0 backend for BitNet inference.
+// Provides Unified Shared Memory (USM) support for zero-copy host-device
+// data access, with automatic fallback to explicit buffer copies when USM
+// is unavailable.
+pub mod usm;
+// OpenCL backend utilities for BitNet inference.
+pub mod execution_graph;
+pub mod memory_planner;
+pub mod p2p;
+pub mod pipeline;
+pub mod pipeline_builder;
