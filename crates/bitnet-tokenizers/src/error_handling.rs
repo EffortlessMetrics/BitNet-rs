@@ -7,6 +7,7 @@
 
 use anyhow::Result as AnyhowResult;
 use bitnet_common::{BitNetError, ModelError, Result};
+pub use bitnet_tokenizer_model_core::ModelTypeDetector;
 use std::path::{Path, PathBuf};
 use tracing::warn;
 //use crate::{CacheManager, ModelTypeDetector};
@@ -204,56 +205,6 @@ impl CacheManager {
             Ok(model_cache.join(format!("vocab_{}", size)))
         } else {
             Ok(model_cache)
-        }
-    }
-}
-
-/// Model type detection utilities for neural network tokenizers
-pub struct ModelTypeDetector;
-
-impl ModelTypeDetector {
-    /// Detect model type from vocabulary size and metadata
-    pub fn detect_from_vocab_size(vocab_size: usize) -> String {
-        match vocab_size {
-            32000 => "llama2".to_string(),
-            128256 => "llama3".to_string(),
-            32016 => "codellama".to_string(),
-            50257 => "gpt2".to_string(),
-            _ => "unknown".to_string(),
-        }
-    }
-
-    /// Check if vocabulary size indicates large model requiring GPU acceleration
-    pub fn requires_gpu_acceleration(vocab_size: usize) -> bool {
-        vocab_size > 65536
-    }
-
-    /// Validate vocabulary size is reasonable for neural network inference
-    pub fn validate_vocab_size(vocab_size: usize) -> Result<()> {
-        if vocab_size == 0 {
-            return Err(TokenizerErrorHandler::config_error(
-                "Vocabulary size cannot be zero".to_string(),
-            ));
-        }
-
-        if vocab_size > 2_000_000 {
-            return Err(TokenizerErrorHandler::config_error(format!(
-                "Vocabulary size {} exceeds reasonable limit (2M)",
-                vocab_size
-            )));
-        }
-
-        Ok(())
-    }
-
-    /// Get expected vocabulary size for known model types
-    pub fn expected_vocab_size(model_type: &str) -> Option<usize> {
-        match model_type {
-            "llama2" => Some(32000),
-            "llama3" => Some(128256),
-            "codellama" => Some(32016),
-            "gpt2" => Some(50257),
-            _ => None,
         }
     }
 }

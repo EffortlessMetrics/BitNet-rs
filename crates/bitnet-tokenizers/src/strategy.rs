@@ -4,10 +4,10 @@
 //! and BitNet models with proper special token handling and neural network-specific configurations.
 
 use crate::{
-    Tokenizer,
+    ModelTypeDetector, Tokenizer,
     discovery::{TokenizerDiscovery, TokenizerStrategy},
     download::SmartTokenizerDownload,
-    error_handling::{ModelTypeDetector, TokenizerErrorHandler},
+    error_handling::TokenizerErrorHandler,
 };
 use bitnet_common::QuantizationType;
 use bitnet_common::{BitNetError, Result};
