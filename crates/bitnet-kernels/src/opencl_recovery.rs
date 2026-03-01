@@ -365,14 +365,9 @@ impl RecoveryExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::Cell;
     use std::sync::atomic::AtomicU32;
 
     // ---- helpers -----------------------------------------------------------
-
-    fn ok_gpu<T: Default>() -> Result<T, OpenClError> {
-        Ok(T::default())
-    }
 
     fn fail_gpu(err: OpenClError) -> impl Fn() -> Result<i32, OpenClError> {
         move || Err(err)
