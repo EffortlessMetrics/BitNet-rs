@@ -1,0 +1,27 @@
+[package]
+name = "bitnet-tests-new"
+description = "Next-generation integration tests for bitnet-rs"
+version.workspace = true
+edition.workspace = true
+license = "MIT OR Apache-2.0"
+publish = false
+autotests = false
+autobenches = false
+
+[lib]
+name = "bitnet_tests_new"
+path = "lib.rs"
+
+[[test]]
+name = "gpu_integration_tests"
+path = "gpu_integration_tests.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait = "0.1.89"
+tokio = { version = "1.48.0", features = ["full"] }
+
+bitnet-common = { path = "../crates/bitnet-common", version = "0.2.1-dev" }
+bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev", default-features = false, features = ["cpu", "rt-tokio"] }
+bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev" }
+bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev" }
