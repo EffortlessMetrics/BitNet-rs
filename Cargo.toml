@@ -75,6 +75,7 @@ members = [
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
   "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
+  "crates/bitnet-wgpu-shaders", # WGSL compute shaders for WebGPU inference
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
