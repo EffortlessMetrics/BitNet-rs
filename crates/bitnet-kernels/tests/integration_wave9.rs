@@ -14,9 +14,7 @@
 //! - error propagation through composed pipelines
 
 use bitnet_kernels::convolution::{Conv2DParams, conv2d};
-use bitnet_kernels::cpu::activations::{
-    gelu_exact_activate, relu_activate, relu_activate_inplace, silu_activate,
-};
+use bitnet_kernels::cpu::activations::{ActivationType, activate, activate_inplace};
 use bitnet_kernels::cpu::attention::{
     AttentionConfig, AttentionKernel, GqaConfig, apply_mask, causal_mask,
 };
@@ -144,8 +142,7 @@ fn quantized_matmul_relu_reduction_pipeline() {
     let mut logits = vec![0.0f32; m * n];
     i2s_matmul_f32(&activations, &weights, &scales, &mut logits, m, n, k, block_size).unwrap();
 
-    let mut activated = vec![0.0f32; logits.len()];
-    relu_activate(&logits, &mut activated);
+    let activated = activate(&logits, ActivationType::ReLU);
     assert!(activated.iter().all(|&v| v >= 0.0));
 
     let means = reduce_rows_f32(&activated, m, n, ReductionOp::Mean).unwrap();
@@ -187,8 +184,7 @@ fn conv2d_silu_maxpool_pipeline() {
     .unwrap();
     assert_eq!(conv_out.len(), out_c * out_h * out_w);
 
-    let mut activated = vec![0.0f32; conv_out.len()];
-    silu_activate(&conv_out, &mut activated);
+    let activated = activate(&conv_out, ActivationType::SiLU);
     assert_eq!(activated.len(), conv_out.len());
 
     let pool_cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
@@ -385,8 +381,7 @@ fn fused_gelu_linear_matches_separate_ops() {
 
     let fused = fused_gelu_linear(&input, &weight, &bias).unwrap();
 
-    let mut gelu_out = vec![0.0f32; dim];
-    gelu_exact_activate(&input, &mut gelu_out);
+    let gelu_out = activate(&input, ActivationType::GELU);
     let manual: Vec<f32> = weight
         .chunks_exact(dim)
         .map(|row| row.iter().zip(&gelu_out).map(|(w, g)| w * g).sum::<f32>())
@@ -488,8 +483,7 @@ fn pooling_activation_reduction_pipeline() {
     let pooled = PoolingKernel::apply(&data, &pool_cfg).unwrap();
     assert_eq!(pooled.len(), 4);
 
-    let mut activated = vec![0.0f32; pooled.len()];
-    silu_activate(&pooled, &mut activated);
+    let activated = activate(&pooled, ActivationType::SiLU);
     assert_eq!(activated.len(), 4);
 
     let max_val = reduce_f32(&activated, ReductionOp::Max);
@@ -612,11 +606,10 @@ fn mini_transformer_block_pipeline() {
 fn relu_inplace_matches_outofplace() {
     let data: Vec<f32> = (-5..5).map(|i| i as f32 * 0.3).collect();
 
-    let mut oop = vec![0.0f32; data.len()];
-    relu_activate(&data, &mut oop);
+    let oop = activate(&data, ActivationType::ReLU);
 
     let mut ip = data.clone();
-    relu_activate_inplace(&mut ip);
+    activate_inplace(&mut ip, ActivationType::ReLU);
 
     assert_slice_close(&ip, &oop, 0.0, "relu_inplace_vs_oop");
 }
@@ -772,8 +765,7 @@ fn quantized_matmul_gelu_layernorm_pipeline() {
     let mut logits = vec![0.0f32; m * n];
     i2s_matmul_f32(&activations, &weights, &scales, &mut logits, m, n, k, block_size).unwrap();
 
-    let mut activated = vec![0.0f32; logits.len()];
-    gelu_exact_activate(&logits, &mut activated);
+    let activated = activate(&logits, ActivationType::GELU);
 
     let ln_cfg = LayerNormConfig::new(vec![n]);
     let gamma = vec![1.0f32; n];

@@ -14,6 +14,9 @@
 //! - SIMD math: vector_add is commutative
 //! - SIMD math: sigmoid outputs lie in (0, 1) for finite inputs
 //! - RoPE: rotation preserves vector magnitudes
+//!
+//! Requires `gpu` or `cuda` feature for softmax/conv1d modules.
+#![cfg(any(feature = "gpu", feature = "cuda"))]
 
 use bitnet_kernels::cpu::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward, conv1d_output_width};
 use bitnet_kernels::cpu::embedding;

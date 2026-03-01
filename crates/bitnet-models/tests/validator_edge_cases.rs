@@ -6,7 +6,7 @@ use bitnet_models::validator::{
     ModelInfo, ModelValidator, OverallStatus, Severity, TensorInfo, TensorStats, ValidationCheck,
     ValidationConfig,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 // ─── Helper ─────────────────────────────────────────────────────────
 

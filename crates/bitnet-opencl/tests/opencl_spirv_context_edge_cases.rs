@@ -10,7 +10,7 @@ use bitnet_opencl::context_pool::{
 };
 use bitnet_opencl::{
     CompileOptions, CompilerBackend, KernelSource, OptimizationLevel, SPIRV_MAGIC, SpirVCompiler,
-    SpirVError, SpirVModule, SpirVValidator, SpirvKernelRegistry,
+    SpirVError, SpirVModule, SpirvKernelRegistry,
 };
 
 // ── SpirvKernelRegistry tests ────────────────────────────────────────────────

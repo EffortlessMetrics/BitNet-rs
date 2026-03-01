@@ -19,6 +19,8 @@ fn test_auto_select_falls_back_to_cpu() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };
@@ -54,6 +56,8 @@ fn test_backend_priority_ordering() {
         hip_runtime: true,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: bitnet_common::SimdLevel::Avx2,
     };
@@ -75,6 +79,8 @@ fn test_hip_selected_when_cuda_unavailable() {
         hip_runtime: true,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };
@@ -93,6 +99,8 @@ fn test_oneapi_selected_when_no_cuda_or_hip() {
         hip_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };
@@ -146,6 +154,8 @@ fn test_no_backends_available_returns_none() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };

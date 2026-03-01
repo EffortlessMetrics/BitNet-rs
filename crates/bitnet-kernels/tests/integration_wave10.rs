@@ -11,7 +11,7 @@
 //! - Quantization → dequantization roundtrip accuracy
 
 use bitnet_kernels::convolution::{Conv2DParams, conv2d};
-use bitnet_kernels::cpu::activations::{gelu_exact_activate, relu_activate, silu_activate};
+use bitnet_kernels::cpu::activations::{ActivationType, activate};
 use bitnet_kernels::cpu::attention::{
     AttentionConfig, AttentionKernel, attention_with_kv_cache, causal_attention,
 };
@@ -194,8 +194,7 @@ fn norm_linear_gelu_pipeline() {
     let projected = naive_matmul(&normed, &weight, seq, hidden, dim);
 
     // GELU activation
-    let mut activated = vec![0.0f32; projected.len()];
-    gelu_exact_activate(&projected, &mut activated);
+    let activated = activate(&projected, ActivationType::GELU);
     // GELU(x) >= 0 for x > 0, approximately zero for large negative x
     assert!(activated.iter().all(|v| v.is_finite()));
 }
@@ -223,8 +222,7 @@ fn rmsnorm_linear_silu_pipeline() {
     let projected = naive_matmul(&normed, &weight, seq, ff_dim, dim);
 
     // SiLU activation
-    let mut activated = vec![0.0f32; projected.len()];
-    silu_activate(&projected, &mut activated);
+    let activated = activate(&projected, ActivationType::SiLU);
     assert!(activated.iter().all(|v| v.is_finite()));
 }
 
@@ -273,8 +271,7 @@ fn layernorm_quantized_matmul_relu_pipeline() {
     i2s_matmul_f32(&normed, &weights, &scales, &mut logits, m, out_dim, dim, block_size).unwrap();
 
     // ReLU activation
-    let mut activated = vec![0.0f32; logits.len()];
-    relu_activate(&logits, &mut activated);
+    let activated = activate(&logits, ActivationType::ReLU);
     assert!(activated.iter().all(|&v| v >= 0.0), "ReLU output must be non-negative");
 }
 
@@ -429,8 +426,7 @@ fn batch_norm_inference_silu_pool_pipeline() {
     assert_eq!(normed.len(), batch * features);
 
     // SiLU activation
-    let mut activated = vec![0.0f32; normed.len()];
-    silu_activate(&normed, &mut activated);
+    let activated = activate(&normed, ActivationType::SiLU);
 
     // Max pooling over features per sample
     let pool_cfg = PoolConfig {
@@ -732,8 +728,7 @@ fn full_transformer_block_pipeline() {
     // FFN: linear → GELU → linear
     let w1: Vec<f32> = (0..dim * dim).map(|i| ((i % 3) as f32 - 1.0) * 0.2).collect();
     let hidden = naive_matmul(&normed2, &w1, seq, dim, dim);
-    let mut activated = vec![0.0f32; hidden.len()];
-    gelu_exact_activate(&hidden, &mut activated);
+    let activated = activate(&hidden, ActivationType::GELU);
     let w2: Vec<f32> = (0..dim * dim).map(|i| ((i % 4) as f32 - 1.5) * 0.1).collect();
     let ffn_out = naive_matmul(&activated, &w2, seq, dim, dim);
 

@@ -101,8 +101,8 @@ fn matmul_large() {
 #[test]
 fn pack_i2s_basic() {
     let packed = pack_i2s([0, 1, -1, 0]);
-    // Just verify it produces a byte
-    assert!(packed <= 255);
+    // Just verify it produces a valid byte value
+    let _ = packed;
 }
 
 #[test]

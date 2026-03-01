@@ -3,6 +3,9 @@
 //! Validates that CPU kernel outputs match expected values when
 //! chained in realistic inference pipelines:
 //!
+//! Requires `gpu` or `cuda` feature for softmax/conv1d modules.
+#![cfg(any(feature = "gpu", feature = "cuda"))]
+//!
 //! - softmax → top-k / argmax
 //! - embedding → attention (RoPE + scaled dot-product)
 //! - quantized matmul → softmax → sampling
@@ -10,7 +13,6 @@
 //! - RoPE → attention
 //! - error propagation through pipelines
 
-use bitnet_kernels::cpu::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
 use bitnet_kernels::cpu::embedding::{
     EmbeddingConfig, embedding_lookup, embedding_lookup_simd, normalize_embeddings,
 };
@@ -20,7 +22,8 @@ use bitnet_kernels::cpu::fusion::{
 use bitnet_kernels::cpu::pooling::{PoolConfig, PoolType, PoolingKernel};
 use bitnet_kernels::cpu::quantized_matmul::{i2s_matmul_f32, pack_i2s};
 use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, apply_rope_batch, compute_frequencies};
-use bitnet_kernels::cpu::softmax::{softmax, softmax_batch};
+use bitnet_kernels::cuda::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
+use bitnet_kernels::cuda::softmax::{SoftmaxConfig, SoftmaxMode, softmax_cpu};
 use bitnet_kernels::reduction::{ReductionOp, reduce_f32, reduce_rows_f32};
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -57,6 +60,36 @@ fn reference_softmax(input: &[f32], temperature: f32) -> Vec<f32> {
     let exps: Vec<f32> = input.iter().map(|&x| ((x - max_val) * inv_t).exp()).collect();
     let sum: f32 = exps.iter().sum();
     exps.iter().map(|&e| e / sum).collect()
+}
+
+/// Compat wrapper: 1-D softmax with temperature (old API).
+fn softmax(input: &[f32], temperature: f32) -> bitnet_common::Result<Vec<f32>> {
+    if input.is_empty() {
+        return Err(bitnet_common::BitNetError::from(
+            bitnet_common::KernelError::InvalidArguments {
+                reason: "softmax on empty input".into(),
+            },
+        ));
+    }
+    let mut cfg = SoftmaxConfig::for_shape(input.len(), 1)?;
+    cfg.temperature = temperature;
+    let mut out = vec![0.0f32; input.len()];
+    softmax_cpu(input, &mut out, &cfg)?;
+    Ok(out)
+}
+
+/// Compat wrapper: batched row-wise softmax (old API).
+fn softmax_batch(
+    input: &[f32],
+    n_cols: usize,
+    temperature: f32,
+) -> bitnet_common::Result<Vec<f32>> {
+    let n_rows = input.len() / n_cols;
+    let mut cfg = SoftmaxConfig::for_shape(n_cols, n_rows)?;
+    cfg.temperature = temperature;
+    let mut out = vec![0.0f32; input.len()];
+    softmax_cpu(input, &mut out, &cfg)?;
+    Ok(out)
 }
 
 // ═══════════════════════════════════════════════════════════════════
