@@ -670,5 +670,3 @@ mod property_tests {
         );
     }
 }
-
-// retrigger-ci-placeholder: remove if needed
