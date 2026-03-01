@@ -4,6 +4,27 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — Intel Arc A770 / OpenCL GPU Backend (Waves 99–103)
+
+- **Capability Detection** (`bitnet-device-probe`): Enhanced Intel Arc A770 capability detection with tier-based classification (A770/A750/A580/A380/A310), PCI device ID matching, and 28 tests (#1913)
+- **Buffer Alignment**: A770 Xe-HPG cache-line-aligned buffer management with 64B alignment, DMA page alignment, buffer pool with reuse, 26 tests (#1912)
+- **Dispatch Sizing**: A770 workgroup constraint validation with Xe-HPG limits (1024 max workgroup, 64KB SLM, subgroups 8/16/32), 1D/2D dispatch optimization, 36 tests (#1918)
+- **Error Recovery**: OpenCL error recovery with configurable retry policies and automatic CPU fallback, 28 tests (#1916)
+- **SPIR-V Cache**: Filesystem-backed SPIR-V compilation cache with SHA-256 keying, LRU eviction, device fingerprinting, 28 tests (#1921)
+- **Kernel Profiling**: OpenCL kernel profiling framework with nanosecond timestamps, bandwidth/GFLOPS metrics, ASCII/JSON reports, 32 tests (#1922)
+- **Numerical Stability**: A770 OpenCL numerical stability regression harness with configurable tolerances and CPU reference implementations, 20 tests (#1914)
+
+### Added — OpenCL Compute Kernels (Waves 99–103)
+
+- **Activation Kernels** (`activations.cl`): SiLU, GELU, ReLU, fused SiLU×mul, elementwise ops, numerically stable softmax with tree reduction, 28 tests (#1919)
+- **Attention Kernel** (`attention.cl`): Scaled dot-product attention with float4 vectorization, causal masking, tree-reduction softmax, 27 tests (#1920)
+- **Normalization Kernels** (`normalization.cl`): RMSNorm and LayerNorm with tree-reduction, local memory optimization, 33 tests (#1927)
+- **RoPE Kernel** (`rope.cl`): Rotary Position Embedding with pre-computed frequency caching, 36 tests (#1924)
+
+### Fixed (Waves 99–103)
+
+- **PR #1063**: Closed destructive force-push that removed 813 lines from workspace config; superseded by fresh attention kernel (#1920)
+
 ### Wave 99: Intel GPU Integration & Documentation
 
 - **Intel GPU architecture guide** (#1687): comprehensive Intel Arc backend design doc with architecture diagram, kernel categories, Xe-HPG optimization notes, and testing strategy
