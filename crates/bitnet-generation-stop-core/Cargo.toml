@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-generation"
+name = "bitnet-generation-stop-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,17 +8,14 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Decode-loop stopping logic and generation event types for BitNet inference"
+description = "Core stop criteria contracts and stop checking logic for BitNet generation"
 rust-version.workspace = true
 
 [dependencies]
-bitnet-generation-stop-core = { path = "../bitnet-generation-stop-core", version = "0.2.1-dev" }
 serde.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-serde_json.workspace = true
-insta = { workspace = true }
 
 [features]
 default = []
