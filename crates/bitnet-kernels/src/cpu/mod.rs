@@ -8,6 +8,7 @@ pub mod pooling;
 pub mod quantized_matmul;
 pub mod rope;
 pub mod simd_math;
+pub mod softmax;
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
