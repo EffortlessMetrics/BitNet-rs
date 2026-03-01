@@ -155,3 +155,7 @@ path = "tests/rope_validation.rs"
 [[test]]
 name = "snapshot_wave6"
 path = "tests/snapshot_wave6.rs"
+
+[[test]]
+name = "proptest_wave10"
+path = "tests/proptest_wave10.rs"
