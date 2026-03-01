@@ -328,3 +328,33 @@ name = "memory_layout"
 path = "fuzz_targets/memory_layout.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_attention_scores"
+path = "fuzz_targets/fuzz_attention_scores.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_matmul_shapes"
+path = "fuzz_targets/fuzz_matmul_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_layer_norm"
+path = "fuzz_targets/fuzz_layer_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_ops"
+path = "fuzz_targets/fuzz_kv_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_reduction_ops"
+path = "fuzz_targets/fuzz_reduction_ops.rs"
+test = false
+doc = false
