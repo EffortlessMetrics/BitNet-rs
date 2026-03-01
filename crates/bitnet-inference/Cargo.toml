@@ -20,6 +20,7 @@ bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
+bitnet-quantization-bits.workspace = true
 bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
 bitnet-receipts = { path = "../bitnet-receipts", version = "0.2.1-dev" }
 bitnet-rope = { path = "../bitnet-rope", version = "0.2.1-dev" }

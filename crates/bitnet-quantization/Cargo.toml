@@ -23,6 +23,7 @@ candle-core.workspace = true
 rayon.workspace = true
 serde.workspace = true
 tracing.workspace = true
+bitnet-quantization-bits.workspace = true
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
 
 [dev-dependencies]

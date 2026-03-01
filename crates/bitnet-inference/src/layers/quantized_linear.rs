@@ -1736,26 +1736,7 @@ mod utils {
 
     /// Unpack 2-bit values from packed byte array
     pub fn unpack_2bit_values(packed: &[u8], count: usize) -> Vec<i8> {
-        let mut unpacked = Vec::with_capacity(count);
-
-        for &byte in packed.iter() {
-            if unpacked.len() >= count {
-                break;
-            }
-
-            // Extract 4 values from each byte (2 bits each)
-            for shift in [0, 2, 4, 6] {
-                if unpacked.len() >= count {
-                    break;
-                }
-                let value = ((byte >> shift) & 0b11) as i8;
-                // Convert from [0,3] to [-2,1] range for I2S
-                unpacked.push(value - 2);
-            }
-        }
-
-        unpacked.truncate(count);
-        unpacked
+        bitnet_quantization_bits::unpack_signed_2bit(packed, count)
     }
 
     /// Quantize input data to I2S format

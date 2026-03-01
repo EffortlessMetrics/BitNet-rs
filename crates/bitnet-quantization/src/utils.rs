@@ -1,6 +1,9 @@
 //! Utility functions for quantization operations
 
 use bitnet_common::{BitNetTensor, QuantizationError, Result};
+use bitnet_quantization_bits::{
+    pack_signed_2bit, pack_unsigned_2bit, unpack_signed_2bit, unpack_unsigned_2bit,
+};
 use candle_core::{DType, Device, Tensor as CandleTensor};
 
 /// Calculate the scale factor for quantization with numerical stability
@@ -55,70 +58,26 @@ pub fn calculate_grouped_scales(data: &[f32], block_size: usize, bits: u8) -> Ve
 
 /// Pack 4 2-bit values into a single byte
 pub fn pack_2bit_values(values: &[i8]) -> Vec<u8> {
-    let mut packed = Vec::with_capacity(values.len().div_ceil(4));
-
-    for chunk in values.chunks(4) {
-        let mut byte = 0u8;
-        for (i, &val) in chunk.iter().enumerate() {
-            // Clamp to 2-bit signed range [-2, 1]
-            let clamped = val.clamp(-2, 1);
-            // Convert to unsigned 2-bit [0, 3]
-            let unsigned = (clamped + 2) as u8;
-            byte |= unsigned << (i * 2);
-        }
-        packed.push(byte);
-    }
-
-    packed
+    pack_signed_2bit(values)
 }
 
 /// Unpack 4 2-bit values from a single byte
 pub fn unpack_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
-    let mut values = Vec::with_capacity(output_len);
-
-    for &byte in packed {
-        for i in 0..4 {
-            if values.len() >= output_len {
-                break;
-            }
-            let unsigned = (byte >> (i * 2)) & 0x3;
-            let signed = unsigned as i8 - 2; // Convert back to signed [-2, 1]
-            values.push(signed);
-        }
-    }
-
-    values
+    unpack_signed_2bit(packed, output_len)
 }
 
 /// Pack 4 unsigned 2-bit codes (range [0, 3]) into a single byte.
 ///
 /// Used by TL1/TL2 quantizers which output raw LUT codes in `[0, num_levels-1]`.
 pub fn pack_unsigned_2bit_values(values: &[i8]) -> Vec<u8> {
-    let mut packed = Vec::with_capacity(values.len().div_ceil(4));
-    for chunk in values.chunks(4) {
-        let mut byte = 0u8;
-        for (i, &val) in chunk.iter().enumerate() {
-            byte |= ((val as u8) & 0x3) << (i * 2);
-        }
-        packed.push(byte);
-    }
-    packed
+    pack_unsigned_2bit(values)
 }
 
 /// Unpack 4 unsigned 2-bit codes from a single byte, returning values in `[0, 3]`.
 ///
 /// Inverse of [`pack_unsigned_2bit_values`].
 pub fn unpack_unsigned_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
-    let mut values = Vec::with_capacity(output_len);
-    for &byte in packed {
-        for i in 0..4 {
-            if values.len() >= output_len {
-                break;
-            }
-            values.push(((byte >> (i * 2)) & 0x3) as i8);
-        }
-    }
-    values
+    unpack_unsigned_2bit(packed, output_len)
 }
 
 /// Quantize a single value to n-bit signed integer with numerical stability

@@ -16,6 +16,7 @@ members = [
   "crates/bitnet-runtime-feature-flags-core",
   "crates/bitnet-models",
   "crates/bitnet-quantization",
+  "crates/bitnet-quantization-bits",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
@@ -111,6 +112,7 @@ default-members = [
   "crates/bitnet-simd",
   "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
+  "crates/bitnet-quantization-bits",
   "crates/bitnet-rope",
   "crates/bitnet-transformer",
   "crates/bitnet-test-support",
@@ -199,6 +201,7 @@ bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
+bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 
 # Optional crates based on features
@@ -357,6 +360,7 @@ required-features = ["cpu"]
 
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
+bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
