@@ -1,0 +1,17 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "SRP microcrate for AC05 server health response types"
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "bitnet-ac05-types"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
