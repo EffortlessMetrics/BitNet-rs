@@ -43,7 +43,7 @@ pub use embedding::{
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
-pub use rope::{RopeConfig, launch_rope, rope_forward, rope_forward_cpu};
+pub use rope::{RopeConfig, compute_sincos_table, launch_rope, rope_forward, rope_forward_cpu};
 
 // Re-export scatter/gather types from the crate-level module (always compiled).
 pub use crate::scatter_gather::{
