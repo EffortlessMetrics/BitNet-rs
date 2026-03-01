@@ -70,6 +70,9 @@ pub mod neon_quantized_matmul;
 pub mod neon_reductions;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_scatter_gather;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_softmax;
 
 #[cfg(target_arch = "aarch64")]
