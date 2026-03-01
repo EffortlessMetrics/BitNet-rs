@@ -21,6 +21,9 @@ pub mod arm;
 pub use fallback::*;
 pub use simd_math::*;
 
+// Re-export position-encoding embedding types.
+pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
+
 #[cfg(target_arch = "x86_64")]
 pub use x86::*;
 
