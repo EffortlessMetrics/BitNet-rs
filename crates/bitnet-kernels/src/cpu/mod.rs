@@ -8,6 +8,7 @@ pub mod fusion;
 pub mod pooling;
 pub mod quantized_matmul;
 pub mod rope;
+pub mod scatter_gather;
 pub mod simd_math;
 pub mod softmax;
 
