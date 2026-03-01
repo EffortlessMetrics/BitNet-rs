@@ -28,6 +28,7 @@ pub mod metal_compute;
 pub mod npu;
 pub mod opencl_attention;
 pub mod opencl_buffer;
+pub mod opencl_tensor_allocator;
 pub mod opencl_cache;
 pub mod opencl_context;
 pub mod opencl_continuous_batch;
