@@ -395,7 +395,7 @@ pub fn detect_simd_level() -> bitnet_common::kernel_registry::SimdLevel {
     bitnet_device_probe::detect_simd_level()
 }
 
-/// Build a fully-populated [`KernelCapabilities`] by combining compile-time
+/// Build a fully-populated [`bitnet_common::kernel_registry::KernelCapabilities`] by combining compile-time
 /// feature flags with a live runtime GPU probe.
 ///
 /// This is the canonical way for binaries (CLI, server) to determine what

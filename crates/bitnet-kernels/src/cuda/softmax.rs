@@ -45,7 +45,7 @@
 //!
 //! # CUDA kernel
 //!
-//! [`SOFTMAX_KERNEL_SRC`] contains a CUDA C kernel string that uses warp-
+//! `SOFTMAX_KERNEL_SRC` contains a CUDA C kernel string that uses warp-
 //! level `__shfl_xor_sync` intrinsics for intra-warp reductions and
 //! shared memory for cross-warp communication.  It supports temperature
 //! scaling and causal masking via kernel parameters.

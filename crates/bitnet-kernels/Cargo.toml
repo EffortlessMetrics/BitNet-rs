@@ -58,6 +58,10 @@ rand_chacha = "0.9.0"
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
 
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
+wgpu = { version = "24", features = ["metal"] }
+pollster = "0.4"
+
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # x86-specific dependencies
 
@@ -101,6 +105,10 @@ path = "tests/apple_silicon_benchmarks.rs"
 [[test]]
 name = "neon_correctness_exhaustive"
 path = "tests/neon_correctness_exhaustive.rs"
+
+[[test]]
+name = "metal_device_integration_tests"
+path = "tests/metal_device_integration_tests.rs"
 
 [[example]]
 name = "gpu_validation"

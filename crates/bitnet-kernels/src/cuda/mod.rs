@@ -27,7 +27,7 @@
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
-//! compilation and kernel dispatch are handled by the parent [`super::gpu::cuda`]
+//! compilation and kernel dispatch are handled by the parent `super::gpu::cuda`
 //! module via `cudarc`.
 
 pub mod activations;
