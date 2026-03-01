@@ -10,6 +10,7 @@ pub mod pooling;
 pub mod quantized_matmul;
 pub mod reduction;
 pub mod rope;
+pub mod scatter_gather;
 pub mod simd_math;
 
 #[cfg(target_arch = "x86_64")]
