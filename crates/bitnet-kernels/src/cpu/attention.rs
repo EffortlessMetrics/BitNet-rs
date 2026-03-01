@@ -1,9 +1,10 @@
 //! CPU SIMD-optimized attention computation kernel.
 //!
 //! Provides scaled dot-product attention, multi-head attention (MHA),
-//! and grouped-query attention (GQA) with optional causal masking.
-//! Each public function performs runtime AVX2 detection and falls back
-//! to a scalar implementation on platforms without AVX2.
+//! grouped-query attention (GQA), and incremental KV-cache attention
+//! with optional causal masking.  Each public function performs runtime
+//! AVX2 detection and falls back to a scalar implementation on platforms
+//! without AVX2.
 
 #[cfg(target_arch = "x86_64")]
 #[allow(clippy::wildcard_imports)]
@@ -394,6 +395,173 @@ impl AttentionKernel {
 
         Ok(output)
     }
+}
+
+// ── CpuAttentionConfig ─────────────────────────────────────────────
+
+/// Batched attention configuration mirroring the CUDA
+/// [`AttentionKernelConfig`](crate::cuda::attention::AttentionKernelConfig)
+/// shape contract.
+#[derive(Debug, Clone)]
+pub struct CpuAttentionConfig {
+    /// Batch size (number of independent sequences).
+    pub batch_size: usize,
+    /// Number of attention heads.
+    pub num_heads: usize,
+    /// Sequence length of query tokens.
+    pub seq_len: usize,
+    /// Per-head embedding dimension.
+    pub head_dim: usize,
+    /// Softmax temperature scale.  `None` → `1 / √head_dim`.
+    pub scale: Option<f32>,
+    /// Whether to apply a causal (upper-triangular) mask.
+    pub causal_mask: bool,
+}
+
+impl CpuAttentionConfig {
+    /// Resolved scale factor: explicit value or `1/√head_dim`.
+    #[inline]
+    pub fn resolved_scale(&self) -> f32 {
+        self.scale.unwrap_or_else(|| 1.0 / (self.head_dim as f32).sqrt())
+    }
+
+    /// Validate the configuration.
+    pub fn validate(&self) -> Result<()> {
+        if self.batch_size == 0 {
+            return Err(invalid_arg("batch_size must be > 0"));
+        }
+        if self.num_heads == 0 {
+            return Err(invalid_arg("num_heads must be > 0"));
+        }
+        if self.head_dim == 0 {
+            return Err(invalid_arg("head_dim must be > 0"));
+        }
+        if self.seq_len == 0 {
+            return Err(invalid_arg("seq_len must be > 0"));
+        }
+        Ok(())
+    }
+}
+
+// ── Convenience wrappers ──────────────────────────────────────────
+
+/// Build a causal mask and apply it to `scores` in-place.
+///
+/// `scores` has shape `[seq_len, seq_len]`.
+pub fn apply_causal_mask(scores: &mut [f32], seq_len: usize) -> Result<()> {
+    let expected = seq_len * seq_len;
+    if scores.len() != expected {
+        return Err(invalid_arg("scores length must equal seq_len * seq_len"));
+    }
+    let mask = causal_mask(seq_len);
+    apply_mask(scores, &mask)
+}
+
+// ── Standalone function wrappers ──────────────────────────────────
+
+/// Scaled dot-product attention (free function).
+///
+/// Equivalent to [`AttentionKernel::scaled_dot_product`] with
+/// `scale = 1/√head_dim` and an optional causal mask.
+pub fn scaled_dot_product_attention(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    seq_q: usize,
+    seq_k: usize,
+    head_dim: usize,
+    causal: bool,
+) -> Result<Vec<f32>> {
+    let scale = 1.0 / (head_dim as f32).sqrt();
+    let mask_vec = if causal && seq_q == seq_k { Some(causal_mask(seq_q)) } else { None };
+    let mask_ref = mask_vec.as_deref();
+    AttentionKernel::scaled_dot_product(q, k, v, mask_ref, scale, seq_q, seq_k, head_dim)
+}
+
+/// Masked attention — convenience for causal self-attention.
+///
+/// Always applies a causal mask.  Delegates to
+/// [`scaled_dot_product_attention`] with `causal = true`.
+pub fn masked_attention(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    seq_len: usize,
+    head_dim: usize,
+) -> Result<Vec<f32>> {
+    scaled_dot_product_attention(q, k, v, seq_len, seq_len, head_dim, true)
+}
+
+/// Full multi-head attention (free function).
+///
+/// * `q` — `[seq_len, num_heads * head_dim]`
+/// * `k` — `[seq_len, num_heads * head_dim]`
+/// * `v` — `[seq_len, num_heads * head_dim]`
+///
+/// Returns `[seq_len, num_heads * head_dim]`.
+pub fn multi_head_attention_cpu(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    num_heads: usize,
+    head_dim: usize,
+    seq_len: usize,
+    causal: bool,
+) -> Result<Vec<f32>> {
+    let cfg = AttentionConfig { num_heads, head_dim, seq_len, causal, scale: None };
+    AttentionKernel::multi_head_attention(q, k, v, &cfg)
+}
+
+/// Incremental attention with KV cache for autoregressive decoding.
+///
+/// During generation the query is a single new token (`seq_q = 1`)
+/// while the key/value tensors grow by one position each step.
+///
+/// * `q`       — new query, shape `[1, head_dim]`
+/// * `k_cache` — cached keys,  shape `[cache_len, head_dim]`
+/// * `v_cache` — cached values, shape `[cache_len, head_dim]`
+/// * `k_new`   — new key,   shape `[1, head_dim]`
+/// * `v_new`   — new value, shape `[1, head_dim]`
+///
+/// The function appends `k_new` / `v_new` to the caches **in-place**
+/// and returns the attention output of shape `[1, head_dim]`.
+pub fn attention_with_kv_cache(
+    q: &[f32],
+    k_cache: &mut Vec<f32>,
+    v_cache: &mut Vec<f32>,
+    k_new: &[f32],
+    v_new: &[f32],
+    head_dim: usize,
+) -> Result<Vec<f32>> {
+    if head_dim == 0 {
+        return Err(invalid_arg("head_dim must be > 0"));
+    }
+    if q.len() != head_dim {
+        return Err(invalid_arg("q must have length head_dim"));
+    }
+    if k_new.len() != head_dim {
+        return Err(invalid_arg("k_new must have length head_dim"));
+    }
+    if v_new.len() != head_dim {
+        return Err(invalid_arg("v_new must have length head_dim"));
+    }
+    if !k_cache.len().is_multiple_of(head_dim) {
+        return Err(invalid_arg("k_cache length must be a multiple of head_dim"));
+    }
+    if !v_cache.len().is_multiple_of(head_dim) {
+        return Err(invalid_arg("v_cache length must be a multiple of head_dim"));
+    }
+
+    // Append new key/value to caches.
+    k_cache.extend_from_slice(k_new);
+    v_cache.extend_from_slice(v_new);
+
+    let seq_kv = k_cache.len() / head_dim;
+    let scale = 1.0 / (head_dim as f32).sqrt();
+
+    // No causal mask needed: seq_q == 1, so the single query token
+    // can attend to all cached positions.
+    AttentionKernel::scaled_dot_product(q, k_cache, v_cache, None, scale, 1, seq_kv, head_dim)
 }
 
 // ── Head extraction / scatter helpers ──────────────────────────────
@@ -977,5 +1145,294 @@ mod tests {
         let scalar = scalar_qk(&q, &k, seq, seq, dim);
         let dispatched = dispatch_qk(&q, &k, seq, seq, dim);
         assert!(slices_approx_eq(&scalar, &dispatched), "scalar and dispatch diverge");
+    }
+
+    // ── CpuAttentionConfig ─────────────────────────────────────────
+
+    #[test]
+    fn cpu_config_default_scale() {
+        let cfg = CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 4,
+            seq_len: 8,
+            head_dim: 64,
+            scale: None,
+            causal_mask: false,
+        };
+        let expected = 1.0 / 64.0_f32.sqrt();
+        assert!(approx_eq(cfg.resolved_scale(), expected));
+    }
+
+    #[test]
+    fn cpu_config_validate_zero_batch() {
+        let cfg = CpuAttentionConfig {
+            batch_size: 0,
+            num_heads: 4,
+            seq_len: 8,
+            head_dim: 64,
+            scale: None,
+            causal_mask: false,
+        };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn cpu_config_validate_ok() {
+        let cfg = CpuAttentionConfig {
+            batch_size: 2,
+            num_heads: 4,
+            seq_len: 8,
+            head_dim: 64,
+            scale: Some(0.5),
+            causal_mask: true,
+        };
+        assert!(cfg.validate().is_ok());
+        assert!(approx_eq(cfg.resolved_scale(), 0.5));
+    }
+
+    // ── apply_causal_mask ──────────────────────────────────────────
+
+    #[test]
+    fn apply_causal_mask_basic() {
+        let mut scores = vec![1.0; 9]; // 3×3
+        apply_causal_mask(&mut scores, 3).unwrap();
+        // Diagonal and below unchanged (1.0 + 0.0)
+        assert_eq!(scores[0], 1.0);
+        assert_eq!(scores[3], 1.0);
+        assert_eq!(scores[4], 1.0);
+        // Upper triangle should be -inf
+        assert!(scores[1].is_infinite() && scores[1] < 0.0);
+        assert!(scores[2].is_infinite() && scores[2] < 0.0);
+        assert!(scores[5].is_infinite() && scores[5] < 0.0);
+    }
+
+    #[test]
+    fn apply_causal_mask_length_mismatch() {
+        let mut scores = vec![1.0; 5];
+        assert!(apply_causal_mask(&mut scores, 3).is_err());
+    }
+
+    // ── scaled_dot_product_attention (free function) ───────────────
+
+    #[test]
+    fn sdpa_free_fn_no_mask() {
+        let dim = 4;
+        let q = vec![1.0; dim];
+        let k = vec![1.0; dim];
+        let v = vec![2.0; dim];
+        let out = scaled_dot_product_attention(&q, &k, &v, 1, 1, dim, false).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    #[test]
+    fn sdpa_free_fn_causal() {
+        let dim = 2;
+        let seq = 3;
+        let q = vec![1.0; seq * dim];
+        let k = vec![1.0; seq * dim];
+        let v: Vec<f32> = (0..seq).flat_map(|i| vec![i as f32; dim]).collect();
+        let out = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, true).unwrap();
+        // Row 0 can only attend to position 0
+        assert!(approx_eq(out[0], 0.0));
+        assert!(approx_eq(out[1], 0.0));
+    }
+
+    // ── masked_attention ───────────────────────────────────────────
+
+    #[test]
+    fn masked_attention_single_token() {
+        let dim = 4;
+        let q = vec![1.0; dim];
+        let k = vec![1.0; dim];
+        let v = vec![3.0; dim];
+        let out = masked_attention(&q, &k, &v, 1, dim).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    #[test]
+    fn masked_attention_first_row_self_only() {
+        let dim = 2;
+        let seq = 4;
+        let q = vec![1.0; seq * dim];
+        let k = vec![1.0; seq * dim];
+        let mut v = vec![0.0; seq * dim];
+        for t in 0..seq {
+            for d in 0..dim {
+                v[t * dim + d] = (t + 1) as f32;
+            }
+        }
+        let out = masked_attention(&q, &k, &v, seq, dim).unwrap();
+        // Position 0 only attends to itself → v[0] = 1.0
+        assert!(approx_eq(out[0], 1.0));
+        assert!(approx_eq(out[1], 1.0));
+    }
+
+    // ── multi_head_attention_cpu (free function) ───────────────────
+
+    #[test]
+    fn mha_cpu_free_fn_matches_method() {
+        let heads = 2;
+        let dim = 4;
+        let seq = 3;
+        let n = seq * heads * dim;
+        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
+        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
+        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
+
+        let cfg = AttentionConfig {
+            num_heads: heads,
+            head_dim: dim,
+            seq_len: seq,
+            causal: false,
+            scale: None,
+        };
+        let expected = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
+        let actual = multi_head_attention_cpu(&q, &k, &v, heads, dim, seq, false).unwrap();
+        assert!(slices_approx_eq(&expected, &actual));
+    }
+
+    // ── attention_with_kv_cache ────────────────────────────────────
+
+    #[test]
+    fn kv_cache_single_step() {
+        let dim = 4;
+        let q = vec![1.0; dim];
+        let mut k_cache = Vec::new();
+        let mut v_cache = Vec::new();
+        let k_new = vec![1.0; dim];
+        let v_new = vec![2.0; dim];
+        let out =
+            attention_with_kv_cache(&q, &mut k_cache, &mut v_cache, &k_new, &v_new, dim).unwrap();
+        // Single entry → attention weight = 1 → output = v_new
+        assert!(slices_approx_eq(&out, &v_new));
+        assert_eq!(k_cache.len(), dim);
+        assert_eq!(v_cache.len(), dim);
+    }
+
+    #[test]
+    fn kv_cache_incremental_two_steps() {
+        let dim = 2;
+        // Step 1: cache is empty, add first token.
+        let mut k_cache = Vec::new();
+        let mut v_cache = Vec::new();
+        let q1 = vec![1.0, 0.0];
+        let k1 = vec![1.0, 0.0];
+        let v1 = vec![10.0, 20.0];
+        let out1 = attention_with_kv_cache(&q1, &mut k_cache, &mut v_cache, &k1, &v1, dim).unwrap();
+        assert!(slices_approx_eq(&out1, &v1));
+
+        // Step 2: add second token, cache now has 2 entries.
+        let q2 = vec![1.0, 0.0];
+        let k2 = vec![1.0, 0.0];
+        let v2 = vec![30.0, 40.0];
+        let out2 = attention_with_kv_cache(&q2, &mut k_cache, &mut v_cache, &k2, &v2, dim).unwrap();
+        assert_eq!(k_cache.len(), 2 * dim);
+        assert_eq!(v_cache.len(), 2 * dim);
+        // Both keys identical → uniform attention → average of v1,v2
+        let expected_d0 = (10.0 + 30.0) / 2.0;
+        let expected_d1 = (20.0 + 40.0) / 2.0;
+        assert!(approx_eq(out2[0], expected_d0));
+        assert!(approx_eq(out2[1], expected_d1));
+    }
+
+    #[test]
+    fn kv_cache_growing_sequence() {
+        let dim = 4;
+        let mut k_cache = Vec::new();
+        let mut v_cache = Vec::new();
+        for step in 0..5 {
+            let q = vec![1.0; dim];
+            let k_new = vec![1.0; dim];
+            let v_new = vec![step as f32; dim];
+            let out = attention_with_kv_cache(&q, &mut k_cache, &mut v_cache, &k_new, &v_new, dim)
+                .unwrap();
+            assert_eq!(out.len(), dim);
+            assert_eq!(k_cache.len(), (step + 1) * dim);
+        }
+    }
+
+    #[test]
+    fn kv_cache_rejects_bad_head_dim() {
+        let mut kc = Vec::new();
+        let mut vc = Vec::new();
+        assert!(attention_with_kv_cache(&[], &mut kc, &mut vc, &[], &[], 0).is_err());
+    }
+
+    #[test]
+    fn kv_cache_rejects_mismatched_q() {
+        let mut kc = Vec::new();
+        let mut vc = Vec::new();
+        assert!(
+            attention_with_kv_cache(&[1.0, 2.0], &mut kc, &mut vc, &[1.0], &[1.0], 1,).is_err()
+        );
+    }
+
+    // ── Numerical stability / edge-case tests ──────────────────────
+
+    #[test]
+    fn softmax_all_neg_infinity() {
+        let mut row = vec![f32::NEG_INFINITY; 4];
+        softmax_row(&mut row);
+        // All -inf → exp(-inf)=0 → sum=0 → values remain 0
+        for &v in &row {
+            assert!(v == 0.0 || v.is_nan());
+        }
+    }
+
+    #[test]
+    fn sdp_nan_in_query_propagates() {
+        let dim = 2;
+        let q = vec![f32::NAN, 1.0];
+        let k = vec![1.0, 1.0];
+        let v = vec![1.0, 1.0];
+        let out = AttentionKernel::scaled_dot_product(&q, &k, &v, None, 1.0, 1, 1, dim).unwrap();
+        // NaN in scores should propagate through softmax
+        assert!(out.iter().any(|&x| x.is_nan()), "NaN should propagate through attention");
+    }
+
+    #[test]
+    fn sdp_large_head_dim() {
+        let dim = 256;
+        let seq = 2;
+        let q: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.001).collect();
+        let k: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.001).collect();
+        let v: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.01).collect();
+        let out = AttentionKernel::scaled_dot_product(
+            &q,
+            &k,
+            &v,
+            None,
+            1.0 / (dim as f32).sqrt(),
+            seq,
+            seq,
+            dim,
+        )
+        .unwrap();
+        assert_eq!(out.len(), seq * dim);
+        assert!(out.iter().all(|x| x.is_finite()));
+    }
+
+    #[test]
+    fn mha_single_head_single_token() {
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 8, seq_len: 1, causal: true, scale: None };
+        let n = 8;
+        let q = vec![1.0; n];
+        let k = vec![1.0; n];
+        let v = vec![0.5; n];
+        let out = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    #[test]
+    fn sdp_asymmetric_seq_lengths() {
+        // seq_q=1 (decode step), seq_k=4 (cached)
+        let dim = 2;
+        let q = vec![1.0, 0.0]; // 1×2
+        let k = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]; // 4×2
+        let v = vec![1.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0]; // 4×2
+        let out = AttentionKernel::scaled_dot_product(&q, &k, &v, None, 1.0, 1, 4, dim).unwrap();
+        assert_eq!(out.len(), dim);
+        assert!(out.iter().all(|x| x.is_finite()));
     }
 }
