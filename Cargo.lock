@@ -459,6 +459,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-prompt-templates",
  "bitnet-quantization",
+ "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
@@ -1003,6 +1004,14 @@ dependencies = [
  "rustc_version_runtime",
  "serde",
  "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "bitnet-repl-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
  "tempfile",
 ]
 

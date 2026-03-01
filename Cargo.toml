@@ -29,6 +29,7 @@ members = [
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
+  "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
@@ -121,6 +122,7 @@ default-members = [
   "crates/bitnet-logits",
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
+  "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download",      # SRP: download mechanics primitives
