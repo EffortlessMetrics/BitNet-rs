@@ -291,7 +291,7 @@ impl GgufLoader {
         }
     }
 
-    /// Validate LayerNorm gamma statistics to catch quantization artifacts.
+    /// Validate LayerNorm gamma statisticsto catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
     /// If stats are suspicious, fail in strict mode or warn otherwise.
@@ -384,11 +384,9 @@ impl GgufLoader {
 
         // Check if correction is configured (policy or env)
         let cfg = Self::select_ln_rescale_cfg(policy_plan);
-        if cfg.is_none() {
+        let Some((target_rms, clamp)) = cfg else {
             return Ok((w, None));
-        }
-
-        let (target_rms, clamp) = cfg.unwrap();
+        };
 
         // Convert to FP32 for statistics
         let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
@@ -823,7 +821,8 @@ impl FormatLoader for GgufLoader {
             // Read entire file into memory
             let buf = std::fs::read(path).map_err(BitNetError::Io)?;
             _owned = Some(buf);
-            _owned.as_ref().unwrap().as_slice()
+            // SAFETY: `_owned` was just assigned `Some` on the line above
+            _owned.as_ref().expect("_owned was just assigned").as_slice()
         };
 
         let reader = GgufReader::new(data)?;
