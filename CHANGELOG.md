@@ -4,6 +4,53 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Wave 86: Training Support & Production Infrastructure
+
+- **Gradient checkpoint** (#1586): 89 tests for memory-efficient training with activation checkpointing
+- **Continuous profiling** (#1362): 112 tests for CPU/GPU/latency tracking and production observability
+- **Server protocol** (#1585): 112 tests for OpenAI-compatible API with streaming and tool-use support
+- **Workspace v15** (#1580): 127 module stubs consolidating new crates into workspace
+
+### Wave 85: Async Runtime & Distributed Inference
+
+- **Async runtime** (#1575): 96 tests for concurrent task management with structured cancellation
+- **Quantization algorithms** (#1581): 106 tests for AWQ/GPTQ/SmoothQuant weight compression
+- **Multi-device** (#1582): 106 tests for heterogeneous compute across CPU/GPU devices
+- **Docker GPU CI** (#1572): Intel/NVIDIA/CPU Docker images and CI workflow for GPU testing
+- **Performance comparison** (#1583): 94 tests for cross-backend benchmarking and regression detection
+
+### Wave 84: HAL Unification & Pipeline Validation
+
+- **HAL traits** (#1571): 113 tests for unified GPU hardware abstraction layer traits
+- **Backend selector** (#1573): 90 tests for automatic backend detection and fallback chains
+- **SPIR-V compiler** (#1576): 105 tests for shader compilation, optimization, and caching
+- **Benchmark harness** (#1577): 97 tests for performance measurement and statistical analysis
+- **E2E integration** (#1579): 122 tests for full pipeline validation across all backends
+
+### Wave 83: GPU Backend HAL Suite
+
+- **Level Zero** (#1566): 114 tests for Intel low-level GPU access via oneAPI Level-Zero
+- **Metal** (#1564): 112 tests for Apple GPU compute with MSL shader pipeline
+- **ROCm** (#1569): 108 tests for AMD HIP backend and device management
+- **WebGPU** (#1567): 121 tests for cross-platform wgpu compute on Vulkan/Metal/DX12
+- **CUDA HAL** (#1568): 115 tests for NVIDIA CUDA backend with unified HAL interface
+
+### Wave 82: Compute Infrastructure & Model Support
+
+- **Mixed precision** (#1339): 92 tests for FP32/FP16/BF16/INT8 type casting and promotion
+- **Thread pool** (#1563): 85 tests for work-stealing executor with configurable parallelism
+- **Architecture registry** (#1560): 113 tests for LLaMA/BitNet/GPT2/Mistral model detection
+- **Compute graph** (#1562): 94 tests for DAG optimization with dead-code elimination and common subexpression elimination
+- **Workspace v14** (#1558): 109 module stubs integrating new infrastructure crates
+
+### Wave 81: Storage, Profiling & Kernel Optimization
+
+- **Memory-mapped I/O** (#1556): 165 tests for zero-copy model loading with LRU page pool
+- **Tensor serialization** (#1559): 93 tests for Binary/SafeTensors/NumPy format support
+- **GPU memory profiler** (#1554): 87 tests for allocation tracking and leak detection
+- **Kernel fusion** (#1555): 86 tests for pattern matching and optimization passes
+- **CHANGELOG waves 75-80** (#1549): Documentation update for waves 75-80
+
 ### Wave 66-69: Advanced Inference Pipeline & Production Features
 
 - **Inference profiler** (#1455): GPU-HAL inference profiling with layer-level timing, bottleneck detection, and optimization suggestions
