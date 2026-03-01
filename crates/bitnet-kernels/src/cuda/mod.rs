@@ -5,6 +5,7 @@
 //! in the BitNet transformer pipeline:
 //!
 //! - [`activations`]: SiLU, GELU, ReLU, and fused SiLU-gate activations
+//! - [`fusion`]: Fused operation pairs (RMSNorm+Linear, GELU+Linear, etc.)
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
 //! - [`batch_norm`]: Batch normalization with training/eval mode support
@@ -25,6 +26,7 @@ pub mod activations;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod fusion;
 pub mod kv_cache;
 pub mod pooling;
 pub mod qk256_gemv;
@@ -59,6 +61,12 @@ pub use crate::reduction::{
 // Re-export shaped reduction from the crate-level module.
 pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
 pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
+pub use fusion::{
+    FusedElementwiseLaunchConfig, FusedMatmulLaunchConfig, FusedOp, FusionConfig, FusionError,
+    fused_add_rmsnorm, fused_add_rmsnorm_cpu, fused_gelu_linear, fused_gelu_linear_cpu,
+    fused_rmsnorm_linear, fused_rmsnorm_linear_cpu, fused_scale_add, fused_scale_add_cpu,
+    fused_softmax_mask, fused_softmax_mask_cpu,
+};
 pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
@@ -69,3 +77,9 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use fusion::{
+    FUSION_KERNEL_SRC, launch_fused_add_rmsnorm_cuda, launch_fused_gelu_linear_cuda,
+    launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
+};
