@@ -31,13 +31,22 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `OpenCL` backend with unified model format support for `BitNet` inference.
+//!
+//! This crate provides:
+//! - [`model_format`]: Auto-detection of GGUF, `SafeTensors`, and ONNX formats
+//! - [`model_loader_unified`]: Format-agnostic model loading trait and registry
+//! - [`error`]: Structured error types for format and loading failures
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
+pub mod error;
+pub mod model_format;
+pub mod model_loader_unified;
+
+// Re-export primary public types.
+pub use error::ModelFormatError;
+pub use model_format::{
+    ModelFormat, ModelFormatDetector, ModelMetadata, QuantizationHint, detect_format,
 };
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
+pub use model_loader_unified::{
+    DeviceId, GgufLoader, ModelLoaderRegistry, ModelWeights, SafeTensorsLoader, UnifiedModelLoader,
 };
