@@ -234,6 +234,8 @@ mod tests {
             opencl_compiled: false,
             opencl_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -250,6 +252,8 @@ mod tests {
             opencl_compiled: false,
             opencl_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -266,6 +270,8 @@ mod tests {
             opencl_compiled: false,
             opencl_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -337,6 +343,8 @@ mod tests {
             opencl_compiled: false,
             opencl_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let err = select_backend(BackendRequest::Auto, &empty_caps).unwrap_err();

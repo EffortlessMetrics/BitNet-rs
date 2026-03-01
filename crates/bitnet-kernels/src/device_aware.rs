@@ -72,6 +72,7 @@ impl DeviceAwareQuantizer {
                 (None, cpu_provider)
             }
             Device::Hip(_) | Device::Npu | Device::Cpu | Device::Metal | Device::OpenCL(_) => {
+            Device::Cpu | Device::Metal | Device::OpenCL(_) | Device::Vulkan(_) => {
                 // For CPU, Metal, and OpenCL, just use CPU provider
                 let cpu_provider = Self::create_best_cpu_provider()?;
                 (None, cpu_provider)

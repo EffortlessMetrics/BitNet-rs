@@ -236,6 +236,7 @@ pub fn device_to_string(device: &bitnet_common::Device) -> String {
         bitnet_common::Device::Hip(id) => format!("hip:{}", id),
         bitnet_common::Device::Npu => "npu".to_string(),
         bitnet_common::Device::OpenCL(id) => format!("opencl:{}", id),
+        bitnet_common::Device::Vulkan(id) => format!("vulkan:{}", id),
     }
 }
 

@@ -25,6 +25,8 @@ fn cpu_only_avx2() -> KernelCapabilities {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }
@@ -41,6 +43,8 @@ fn cuda_with_runtime() -> KernelCapabilities {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }
@@ -57,6 +61,8 @@ fn all_backends() -> KernelCapabilities {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx512,
     }
 }
@@ -73,6 +79,8 @@ fn empty_caps() -> KernelCapabilities {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Scalar,
     }
 }
@@ -290,6 +298,8 @@ fn with_cuda_runtime_true_sets_flag() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     let caps = caps.with_cuda_runtime(true);
@@ -309,6 +319,8 @@ fn with_cuda_runtime_false_clears_flag() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
     .with_cuda_runtime(false);
@@ -370,6 +382,8 @@ fn compiled_backends_only_ffi() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Scalar,
     };
     let backends = caps.compiled_backends();
@@ -408,6 +422,8 @@ fn compiled_backends_cuda_not_listed_when_only_runtime_missing() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     let backends = caps.compiled_backends();
@@ -445,6 +461,8 @@ fn best_available_is_cpu_when_cuda_compiled_but_no_runtime() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     assert_eq!(caps.best_available(), Some(KernelBackend::CpuRust));
@@ -463,6 +481,8 @@ fn best_available_is_ffi_when_no_cuda_runtime_but_ffi_present() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Scalar,
     };
     assert_eq!(caps.best_available(), Some(KernelBackend::CppFfi));
@@ -486,6 +506,8 @@ fn best_available_prefers_ffi_over_cpu_when_no_cuda() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     assert_eq!(caps.best_available(), Some(KernelBackend::CppFfi));
@@ -538,6 +560,8 @@ fn summary_reflects_simd_level_for_neon() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Neon,
     };
     let s = caps.summary();
@@ -576,6 +600,8 @@ fn kernel_capabilities_clone_is_independent() {
         opencl_compiled: false,
         opencl_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     let cloned = original.clone();

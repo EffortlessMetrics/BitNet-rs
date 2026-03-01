@@ -13,6 +13,10 @@ KernelCapabilities {
     oneapi_runtime: false,
     opencl_compiled: false,
     opencl_runtime: false,
+    oneapi_compiled: false,
+    oneapi_runtime: false,
     cpp_ffi: false,
+    vulkan_compiled: false,
+    vulkan_runtime: false,
     simd_level: Avx2,
 }

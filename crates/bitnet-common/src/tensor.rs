@@ -174,6 +174,9 @@ impl BitNetTensor {
                 }
             }
             Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
+            Device::OpenCL(_) | Device::Vulkan(_) => {
+                Ok(candle_core::Device::Cpu)
+            }
         }
     }
 
@@ -291,7 +294,7 @@ impl Tensor for MockTensor {
                     ));
                 }
             }
-            Device::OpenCL(_) => candle_core::Device::Cpu, // OpenCL uses its own buffer management
+            Device::OpenCL(_) | Device::Vulkan(_) => candle_core::Device::Cpu,
         };
 
         CandleTensor::from_slice(&self.data, self.shape.as_slice(), &candle_device)

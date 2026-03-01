@@ -97,6 +97,7 @@ impl PerformanceMetricsCollector {
             Device::Npu => "NPU".to_string(),
             Device::Metal => "Metal".to_string(),
             Device::OpenCL(id) => format!("OpenCL:{}", id),
+            Device::Vulkan(id) => format!("Vulkan:{}", id),
         };
     }
 
@@ -220,7 +221,7 @@ impl DeviceManager {
         }
 
         // Check OneAPI/OpenCL for Intel GPU devices.
-        if matches!(self.primary_device, Device::OpenCL(_))
+        if matches!(self.primary_device, Device::OpenCL(_) | Device::Vulkan(_))
             && bitnet_kernels::device_features::oneapi_available_runtime()
         {
             return self.primary_device;
@@ -374,6 +375,7 @@ impl ProductionInferenceEngine {
             Device::Cpu => "cpu",
             Device::Cuda(_) | Device::Metal | Device::Hip(_) | Device::Npu => "gpu",
             Device::Cuda(_) | Device::Metal | Device::OpenCL(_) => "gpu",
+            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) | Device::Vulkan(_) => "gpu",
         };
         let detected: Vec<String> =
             caps.compiled_backends().iter().map(|b| b.to_string()).collect();
