@@ -102,7 +102,13 @@ pub use fusion::{
     fused_softmax_mask, fused_softmax_mask_cpu,
 };
 pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
-pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
+pub use softmax::{
+    SoftmaxConfig, launch_softmax, online_softmax_cpu, softmax_backward_cpu, softmax_cpu,
+    softmax_forward,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use softmax::SOFTMAX_KERNEL_SRC;
 
 pub use matmul::{
     MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward, matmul_forward,

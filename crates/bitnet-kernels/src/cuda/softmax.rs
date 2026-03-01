@@ -17,6 +17,16 @@
 //! dimension (`n_rows`).  For typical vocabulary sizes (32 000 – 128 000) the
 //! kernel achieves high memory-bandwidth utilisation on Ampere+.
 //!
+//! # Online (one-pass) softmax
+//!
+//! [`online_softmax_cpu`] implements the *online softmax* algorithm
+//! (Milakov & Gimelshein, 2018) which fuses the max-finding and
+//! exp-sum-accumulation into a single pass.  A running maximum `m` is
+//! maintained; whenever a new maximum is encountered the partial sum is
+//! rescaled by `exp(m_old − m_new)`.  This avoids a separate max-reduction
+//! pass and halves memory traffic for bandwidth-bound workloads while
+//! remaining numerically equivalent to the three-pass version.
+//!
 //! # Enhanced features
 //!
 //! - **Causal masking** — optional upper-triangular mask that sets future
@@ -29,6 +39,16 @@
 //! - **Batched multi-head attention** — [`batched_softmax_cpu`] operates
 //!   over `[batch, n_heads, seq_len, seq_len]` attention score tensors
 //!   with optional causal masking per head.
+//! - **Backward pass** — [`softmax_backward_cpu`] computes the Jacobian-
+//!   vector product `dL/dx = softmax(x) ⊙ (dL/dy − dot(dL/dy, softmax(x)))`
+//!   for gradient computation.
+//!
+//! # CUDA kernel
+//!
+//! [`SOFTMAX_KERNEL_SRC`] contains a CUDA C kernel string that uses warp-
+//! level `__shfl_xor_sync` intrinsics for intra-warp reductions and
+//! shared memory for cross-warp communication.  It supports temperature
+//! scaling and causal masking via kernel parameters.
 //!
 //! # CPU fallback
 //!
@@ -36,6 +56,124 @@
 //! correctness testing and non-GPU environments.
 
 use bitnet_common::{KernelError, Result};
+
+// ---------------------------------------------------------------------------
+// CUDA kernel source — warp-level online softmax
+// ---------------------------------------------------------------------------
+
+/// CUDA C kernel implementing numerically stable online softmax with
+/// warp-level `__shfl_xor_sync` reductions.
+///
+/// **Algorithm** (per row, one thread-block):
+/// 1. Each thread computes a local `(max, exp_sum)` pair over its strided
+///    slice of the row using the online update rule.
+/// 2. Warp-level butterfly reduction (`__shfl_xor_sync`) merges the 32
+///    lanes into a single warp-level `(max, sum)`.
+/// 3. The first lane of each warp writes to shared memory; after a
+///    `__syncthreads()` barrier the first warp reduces across warps.
+/// 4. A final broadcast gives every thread the global `(max, sum)`.
+/// 5. Each thread normalises its elements: `exp((x - max) / T) / sum`.
+///
+/// Supports temperature scaling (`inv_temp`) and causal masking
+/// (`causal_mask` flag — positions where `col > row_idx` are treated as
+/// `−∞`).
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const SOFTMAX_KERNEL_SRC: &str = r#"
+// Online softmax with warp-level reductions.
+// Grid: (n_rows, 1, 1)   Block: (blockDim.x, 1, 1)
+
+extern "C" __global__ void softmax_online(
+    const float* __restrict__ input,
+    float*       __restrict__ output,
+    int   n_cols,
+    float inv_temp,
+    int   causal_mask,
+    int   log_mode)
+{
+    const int row = blockIdx.x;
+    const int tid = threadIdx.x;
+    const int row_off = row * n_cols;
+
+    // --- Phase 1: online max + exp-sum per thread -----------------------
+    float local_max = -1e38f;
+    float local_sum = 0.0f;
+
+    for (int col = tid; col < n_cols; col += blockDim.x) {
+        float val = input[row_off + col];
+        if (causal_mask && col > row) val = -1e38f;
+        if (val > local_max) {
+            local_sum = local_sum * expf(local_max - val) + 1.0f;
+            local_max = val;
+        } else {
+            local_sum += expf(val - local_max);
+        }
+    }
+
+    // --- Phase 2: warp-level butterfly reduction -----------------------
+    const unsigned FULL_MASK = 0xFFFFFFFFu;
+    for (int offset = 16; offset >= 1; offset >>= 1) {
+        float other_max = __shfl_xor_sync(FULL_MASK, local_max, offset);
+        float other_sum = __shfl_xor_sync(FULL_MASK, local_sum, offset);
+        float new_max = fmaxf(local_max, other_max);
+        local_sum = local_sum * expf(local_max - new_max)
+                   + other_sum * expf(other_max - new_max);
+        local_max = new_max;
+    }
+
+    // --- Phase 3: cross-warp reduction via shared memory ---------------
+    __shared__ float smem_max[32];
+    __shared__ float smem_sum[32];
+    const int lane   = tid & 31;
+    const int warpId = tid >> 5;
+
+    if (lane == 0) {
+        smem_max[warpId] = local_max;
+        smem_sum[warpId] = local_sum;
+    }
+    __syncthreads();
+
+    const int n_warps = (blockDim.x + 31) / 32;
+    if (tid < 32) {
+        local_max = (tid < n_warps) ? smem_max[tid] : -1e38f;
+        local_sum = (tid < n_warps) ? smem_sum[tid] : 0.0f;
+        for (int offset = 16; offset >= 1; offset >>= 1) {
+            float om = __shfl_xor_sync(FULL_MASK, local_max, offset);
+            float os = __shfl_xor_sync(FULL_MASK, local_sum, offset);
+            float nm = fmaxf(local_max, om);
+            local_sum = local_sum * expf(local_max - nm)
+                       + os * expf(om - nm);
+            local_max = nm;
+        }
+    }
+    __syncthreads();
+
+    // Broadcast final (max, sum) from lane 0 of warp 0.
+    if (tid == 0) {
+        smem_max[0] = local_max;
+        smem_sum[0] = local_sum;
+    }
+    __syncthreads();
+
+    const float row_max = smem_max[0];
+    const float row_sum = smem_sum[0];
+    const float log_sum = logf(row_sum);
+
+    // --- Phase 4: write normalised output ------------------------------
+    for (int col = tid; col < n_cols; col += blockDim.x) {
+        float val = input[row_off + col];
+        if (causal_mask && col > row) {
+            output[row_off + col] = log_mode ? -1e38f : 0.0f;
+        } else {
+            float shifted = (val - row_max) * inv_temp;
+            if (log_mode) {
+                output[row_off + col] = shifted - log_sum;
+            } else {
+                output[row_off + col] = expf(shifted) / row_sum;
+            }
+        }
+    }
+}
+"#;
 
 // ---------------------------------------------------------------------------
 // Softmax mode
@@ -454,6 +592,157 @@ pub fn batched_softmax_cpu(
             &per_row_cfg,
         )?;
     }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// CPU fallback — online (one-pass) softmax
+// ---------------------------------------------------------------------------
+
+/// One-pass *online* softmax on the CPU (Milakov & Gimelshein, 2018).
+///
+/// Instead of a separate max-reduction pass, this algorithm maintains a
+/// running maximum `m` and rescales the partial exponential sum whenever a
+/// larger element is encountered:
+///
+/// ```text
+/// for x_i in row:
+///     if x_i > m:
+///         sum = sum * exp(m_old − x_i) + 1
+///         m   = x_i
+///     else:
+///         sum = sum + exp(x_i − m)
+/// ```
+///
+/// The result is numerically equivalent to the three-pass [`softmax_cpu`]
+/// but touches memory only twice (read + write) instead of three times.
+///
+/// Supports temperature scaling and causal masking identical to
+/// [`softmax_cpu`].
+///
+/// # Errors
+///
+/// Returns [`KernelError::InvalidArguments`] if slice lengths are
+/// inconsistent with `config`.
+pub fn online_softmax_cpu(input: &[f32], output: &mut [f32], config: &SoftmaxConfig) -> Result<()> {
+    let total = config.n_rows * config.n_cols;
+    if input.len() < total {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("online softmax input length {} < expected {}", input.len(), total),
+        }
+        .into());
+    }
+    if output.len() < total {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("online softmax output length {} < expected {}", output.len(), total),
+        }
+        .into());
+    }
+
+    let inv_temp = 1.0_f32 / config.temperature;
+
+    for row in 0..config.n_rows {
+        let start = row * config.n_cols;
+        let row_in = &input[start..start + config.n_cols];
+        let row_out = &mut output[start..start + config.n_cols];
+
+        // --- Single-pass: running (max, exp-sum) on scaled values ---
+        // We work on u_i = x_i * inv_temp so that the online accumulation
+        // is equivalent to the three-pass version with temperature.
+        let mut m = f32::NEG_INFINITY;
+        let mut s = 0.0_f32;
+
+        for (col, &x) in row_in.iter().enumerate() {
+            let v = if config.causal_mask && col > row { f32::NEG_INFINITY } else { x * inv_temp };
+            if v > m {
+                s = s * (m - v).exp() + 1.0;
+                m = v;
+            } else {
+                s += (v - m).exp();
+            }
+        }
+
+        // --- Write normalised output ---
+        let log_sum = s.ln();
+        for (col, (&x, out)) in row_in.iter().zip(row_out.iter_mut()).enumerate() {
+            if config.causal_mask && col > row {
+                *out = match config.mode {
+                    SoftmaxMode::Standard => 0.0,
+                    SoftmaxMode::LogSoftmax => f32::NEG_INFINITY,
+                };
+            } else {
+                let u = x * inv_temp;
+                *out = match config.mode {
+                    SoftmaxMode::Standard => (u - m).exp() / s,
+                    SoftmaxMode::LogSoftmax => (u - m) - log_sum,
+                };
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// CPU fallback — softmax backward (Jacobian-vector product)
+// ---------------------------------------------------------------------------
+
+/// Compute the backward pass of softmax: `dL/dx = y ⊙ (dL/dy − dot(dL/dy, y))`
+/// where `y = softmax(x)`.
+///
+/// This is the Jacobian-vector product of the softmax with respect to its
+/// input, given upstream gradients `grad_output` and the forward-pass
+/// output `softmax_output`.
+///
+/// Each row is processed independently.
+///
+/// # Arguments
+///
+/// * `softmax_output` — Forward-pass softmax output `[n_rows, n_cols]`
+/// * `grad_output`    — Upstream gradient `dL/dy` `[n_rows, n_cols]`
+/// * `grad_input`     — Output gradient `dL/dx` `[n_rows, n_cols]` (written)
+/// * `n_rows`         — Number of rows
+/// * `n_cols`         — Number of columns per row
+///
+/// # Errors
+///
+/// Returns [`KernelError::InvalidArguments`] if any slice is too short.
+pub fn softmax_backward_cpu(
+    softmax_output: &[f32],
+    grad_output: &[f32],
+    grad_input: &mut [f32],
+    n_rows: usize,
+    n_cols: usize,
+) -> Result<()> {
+    let total = n_rows * n_cols;
+    if softmax_output.len() < total || grad_output.len() < total || grad_input.len() < total {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "softmax_backward: need at least {total} elements, got \
+                 softmax_output={}, grad_output={}, grad_input={}",
+                softmax_output.len(),
+                grad_output.len(),
+                grad_input.len()
+            ),
+        }
+        .into());
+    }
+
+    for row in 0..n_rows {
+        let off = row * n_cols;
+        let y = &softmax_output[off..off + n_cols];
+        let dy = &grad_output[off..off + n_cols];
+        let dx = &mut grad_input[off..off + n_cols];
+
+        // dot = sum_j (y_j * dy_j)
+        let dot: f32 = y.iter().zip(dy.iter()).map(|(&yi, &dyi)| yi * dyi).sum();
+
+        // dx_i = y_i * (dy_i - dot)
+        for ((dxi, &yi), &dyi) in dx.iter_mut().zip(y.iter()).zip(dy.iter()) {
+            *dxi = yi * (dyi - dot);
+        }
+    }
+
     Ok(())
 }
 
@@ -1085,5 +1374,432 @@ mod tests {
         let mut output = vec![0.0_f32; 32000];
         let result = launch_softmax(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA log-softmax failed: {result:?}");
+    }
+
+    // == Online softmax tests ============================================
+
+    #[test]
+    fn test_online_softmax_matches_standard() {
+        let cfg = SoftmaxConfig::for_shape(6, 2).unwrap();
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
+        let mut out_std = [0.0_f32; 12];
+        let mut out_online = [0.0_f32; 12];
+        softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+        online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+
+        for (i, (&a, &b)) in out_std.iter().zip(out_online.iter()).enumerate() {
+            assert!(
+                (a - b).abs() < 1e-6,
+                "online vs standard mismatch at {i}: std={a}, online={b}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_numerical_stability() {
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let input = [1e30_f32, 1e30 + 1.0, 1e30 - 1.0, 1e30 + 0.5];
+        let mut output = [0.0_f32; 4];
+        online_softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+        let sum: f32 = output.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-5, "sum={sum}");
+        assert!(output.iter().all(|&v| v.is_finite()), "non-finite output");
+    }
+
+    #[test]
+    fn test_online_softmax_with_temperature() {
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap().with_temperature(0.5).unwrap();
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let mut out_online = [0.0_f32; 4];
+        let mut out_std = [0.0_f32; 4];
+        online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+        softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+
+        for (i, (&a, &b)) in out_std.iter().zip(out_online.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-6, "temp mismatch at {i}: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_causal_mask() {
+        let n = 4;
+        let cfg = SoftmaxConfig::for_shape(n, n).unwrap().with_causal_mask();
+        let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let mut out_online = vec![0.0_f32; 16];
+        let mut out_std = vec![0.0_f32; 16];
+        online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+        softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+
+        for (i, (&a, &b)) in out_std.iter().zip(out_online.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-6, "causal mismatch at {i}: std={a}, online={b}");
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_log_mode() {
+        let cfg = SoftmaxConfig::for_shape(5, 1).unwrap().with_log_softmax();
+        let input = [0.5_f32, 1.5, -0.3, 2.1, 0.0];
+        let mut out_online = [0.0_f32; 5];
+        let mut out_std = [0.0_f32; 5];
+        online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+        softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+
+        for (i, (&a, &b)) in out_std.iter().zip(out_online.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "log-mode mismatch at {i}: std={a}, online={b}");
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_single_element() {
+        let cfg = SoftmaxConfig::for_shape(1, 1).unwrap();
+        let input = [42.0_f32];
+        let mut output = [0.0_f32; 1];
+        online_softmax_cpu(&input, &mut output, &cfg).unwrap();
+        assert!((output[0] - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_online_softmax_all_zeros() {
+        let n = 8;
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let input = vec![0.0_f32; n];
+        let mut output = vec![0.0_f32; n];
+        online_softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+        let expected = 1.0 / n as f32;
+        for (i, &v) in output.iter().enumerate() {
+            assert!((v - expected).abs() < 1e-6, "all-zeros: elem {i} = {v}, expected {expected}");
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_all_same_values() {
+        let n = 16;
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let input = vec![7.7_f32; n];
+        let mut output = vec![0.0_f32; n];
+        online_softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+        let expected = 1.0 / n as f32;
+        for &v in &output {
+            assert!((v - expected).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_rejects_short_slices() {
+        let cfg = SoftmaxConfig::for_shape(4, 2).unwrap();
+        let short = [1.0_f32; 4]; // need 8
+        let mut out = [0.0_f32; 8];
+        assert!(online_softmax_cpu(&short, &mut out, &cfg).is_err());
+
+        let full = [1.0_f32; 8];
+        let mut short_out = [0.0_f32; 4];
+        assert!(online_softmax_cpu(&full, &mut short_out, &cfg).is_err());
+    }
+
+    // == Large vocabulary tests ==========================================
+
+    #[test]
+    fn test_cpu_softmax_large_vocab_32k() {
+        let n = 32_000;
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.001) - 16.0).collect();
+        let mut output = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+        let sum: f32 = output.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-4, "32k vocab sum={sum}");
+        assert!(output.iter().all(|&v| v.is_finite() && v >= 0.0));
+    }
+
+    #[test]
+    fn test_cpu_softmax_large_vocab_128k() {
+        let n = 128_000;
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.0001) - 6.4).collect();
+        let mut output = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+        let sum: f32 = output.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-3, "128k vocab sum={sum}");
+        assert!(output.iter().all(|&v| v.is_finite() && v >= 0.0));
+    }
+
+    #[test]
+    fn test_online_softmax_large_vocab_32k() {
+        let n = 32_000;
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.001) - 16.0).collect();
+        let mut out_std = vec![0.0_f32; n];
+        let mut out_online = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+        online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+
+        let max_diff: f32 = out_std
+            .iter()
+            .zip(out_online.iter())
+            .map(|(&a, &b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        assert!(max_diff < 1e-5, "32k vocab max_diff={max_diff}");
+    }
+
+    // == Softmax backward tests ==========================================
+
+    #[test]
+    fn test_softmax_backward_basic() {
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let mut y = [0.0_f32; 4];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        let dy = [1.0_f32, 0.0, 0.0, 0.0];
+        let mut dx = [0.0_f32; 4];
+        softmax_backward_cpu(&y, &dy, &mut dx, 1, 4).unwrap();
+
+        let sum: f32 = dx.iter().sum();
+        assert!(sum.abs() < 1e-6, "backward sum={sum}, expected ~0");
+        assert!(dx[0] > 0.0, "dx[0] should be positive, got {}", dx[0]);
+        for i in 1..4 {
+            assert!(dx[i] < 0.0, "dx[{i}] should be negative, got {}", dx[i]);
+        }
+    }
+
+    #[test]
+    fn test_softmax_backward_gradient_sum_zero() {
+        let cfg = SoftmaxConfig::for_shape(5, 1).unwrap();
+        let input = [0.5_f32, 1.5, -0.3, 2.1, 0.0];
+        let mut y = [0.0_f32; 5];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        let dy = [0.2, -0.5, 0.8, 0.1, -0.3];
+        let mut dx = [0.0_f32; 5];
+        softmax_backward_cpu(&y, &dy, &mut dx, 1, 5).unwrap();
+
+        let sum: f32 = dx.iter().sum();
+        assert!(sum.abs() < 1e-6, "backward sum={sum}");
+    }
+
+    #[test]
+    fn test_softmax_backward_identity_gradient() {
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let input = [1.0_f32, 2.0, 3.0, 4.0];
+        let mut y = [0.0_f32; 4];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        let mut dx = [0.0_f32; 4];
+        softmax_backward_cpu(&y, &y, &mut dx, 1, 4).unwrap();
+
+        let sum_sq: f32 = y.iter().map(|v| v * v).sum();
+        for (i, (&dxi, &yi)) in dx.iter().zip(y.iter()).enumerate() {
+            let expected = yi * (yi - sum_sq);
+            assert!(
+                (dxi - expected).abs() < 1e-7,
+                "identity grad mismatch at {i}: {dxi} vs {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_softmax_backward_multi_row() {
+        let cfg = SoftmaxConfig::for_shape(3, 2).unwrap();
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut y = [0.0_f32; 6];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        let dy = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+        let mut dx = [0.0_f32; 6];
+        softmax_backward_cpu(&y, &dy, &mut dx, 2, 3).unwrap();
+
+        let sum_r0: f32 = dx[0..3].iter().sum();
+        let sum_r1: f32 = dx[3..6].iter().sum();
+        assert!(sum_r0.abs() < 1e-6, "row0 backward sum={sum_r0}");
+        assert!(sum_r1.abs() < 1e-6, "row1 backward sum={sum_r1}");
+    }
+
+    #[test]
+    fn test_softmax_backward_rejects_short_slices() {
+        let y = [0.25_f32; 4];
+        let dy = [1.0_f32; 4];
+        let mut dx = [0.0_f32; 2]; // too short
+        assert!(softmax_backward_cpu(&y, &dy, &mut dx, 1, 4).is_err());
+    }
+
+    // == Comparison: naive vs stable =====================================
+
+    /// Naive (numerically unstable) softmax for comparison.
+    fn naive_softmax(input: &[f32]) -> Vec<f32> {
+        let exps: Vec<f32> = input.iter().map(|&x| x.exp()).collect();
+        let sum: f32 = exps.iter().sum();
+        exps.iter().map(|&e| e / sum).collect()
+    }
+
+    #[test]
+    fn test_naive_vs_stable_small_values() {
+        let input = [0.1_f32, 0.2, 0.3, 0.4];
+        let naive = naive_softmax(&input);
+
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let mut stable = [0.0_f32; 4];
+        softmax_cpu(&input, &mut stable, &cfg).unwrap();
+
+        for (i, (&n, &s)) in naive.iter().zip(stable.iter()).enumerate() {
+            assert!((n - s).abs() < 1e-6, "small values differ at {i}: naive={n}, stable={s}");
+        }
+    }
+
+    #[test]
+    fn test_naive_overflows_stable_does_not() {
+        let input = [500.0_f32, 501.0, 502.0];
+        let naive = naive_softmax(&input);
+        let naive_has_nan = naive.iter().any(|v| v.is_nan() || v.is_infinite());
+
+        let cfg = SoftmaxConfig::for_shape(3, 1).unwrap();
+        let mut stable = [0.0_f32; 3];
+        softmax_cpu(&input, &mut stable, &cfg).unwrap();
+
+        assert!(stable.iter().all(|&v| v.is_finite()), "stable produced non-finite");
+        let sum: f32 = stable.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-5, "stable sum={sum}");
+
+        if naive_has_nan {
+            assert!(stable.iter().all(|&v| v.is_finite()));
+        }
+    }
+
+    // == CUDA kernel source tests ========================================
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_softmax_kernel_src_is_nonempty() {
+        assert!(!SOFTMAX_KERNEL_SRC.is_empty());
+        assert!(SOFTMAX_KERNEL_SRC.contains("softmax_online"));
+        assert!(SOFTMAX_KERNEL_SRC.contains("__shfl_xor_sync"));
+        assert!(SOFTMAX_KERNEL_SRC.contains("__shared__"));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Property tests (proptest)
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Strategy for generating a row of logits with reasonable values.
+    fn logits_vec(max_len: usize) -> impl Strategy<Value = Vec<f32>> {
+        proptest::collection::vec(-50.0_f32..50.0_f32, 1..max_len)
+    }
+
+    proptest! {
+        #[test]
+        fn prop_softmax_output_sums_to_one(input in logits_vec(256)) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+            let mut output = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+            let sum: f32 = output.iter().sum();
+            prop_assert!((sum - 1.0).abs() < 1e-4, "sum={sum}");
+        }
+
+        #[test]
+        fn prop_softmax_output_non_negative(input in logits_vec(256)) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+            let mut output = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+            for (i, &v) in output.iter().enumerate() {
+                prop_assert!(v >= 0.0, "negative at {i}: {v}");
+            }
+        }
+
+        #[test]
+        fn prop_softmax_preserves_order(input in logits_vec(128)) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+            let mut output = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+            for i in 0..n {
+                for j in (i + 1)..n {
+                    if input[i] > input[j] {
+                        prop_assert!(output[i] >= output[j],
+                            "order violation: input[{i}]={} > input[{j}]={} \
+                             but output[{i}]={} < output[{j}]={}",
+                            input[i], input[j], output[i], output[j]);
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn prop_online_matches_standard(input in logits_vec(256)) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+            let mut out_std = vec![0.0_f32; n];
+            let mut out_online = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut out_std, &cfg).unwrap();
+            online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
+
+            let max_diff: f32 = out_std.iter().zip(out_online.iter())
+                .map(|(&a, &b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            prop_assert!(max_diff < 1e-5, "max_diff={max_diff}");
+        }
+
+        #[test]
+        fn prop_softmax_backward_sums_to_zero(
+            input in logits_vec(64),
+            grad in logits_vec(64),
+        ) {
+            let n = input.len().min(grad.len());
+            if n == 0 { return Ok(()); }
+            let input = &input[..n];
+            let grad = &grad[..n];
+
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+            let mut y = vec![0.0_f32; n];
+            softmax_cpu(input, &mut y, &cfg).unwrap();
+
+            let mut dx = vec![0.0_f32; n];
+            softmax_backward_cpu(&y, grad, &mut dx, 1, n).unwrap();
+
+            let sum: f32 = dx.iter().sum();
+            prop_assert!(sum.abs() < 1e-4, "backward sum={sum}");
+        }
+
+        #[test]
+        fn prop_temperature_preserves_probability(
+            input in logits_vec(64),
+            temp in 0.01_f32..100.0_f32,
+        ) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap()
+                .with_temperature(temp).unwrap();
+            let mut output = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+            let sum: f32 = output.iter().sum();
+            prop_assert!((sum - 1.0).abs() < 1e-3, "temp={temp} sum={sum}");
+            for &v in &output {
+                prop_assert!(v >= 0.0 && v.is_finite());
+            }
+        }
+
+        #[test]
+        fn prop_log_softmax_exp_sums_to_one(input in logits_vec(128)) {
+            let n = input.len();
+            let cfg = SoftmaxConfig::for_shape(n, 1).unwrap().with_log_softmax();
+            let mut output = vec![0.0_f32; n];
+            softmax_cpu(&input, &mut output, &cfg).unwrap();
+
+            let sum: f32 = output.iter().map(|&v| v.exp()).sum();
+            prop_assert!((sum - 1.0).abs() < 1e-4, "exp(log-softmax) sum={sum}");
+        }
     }
 }
