@@ -8,9 +8,7 @@
 //! 5. Property tests (proptest) for norm preservation and invertibility
 //! 6. Determinism and consistency tests
 
-use bitnet_kernels::cpu::rope::{
-    apply_rope, apply_rope_batch, compute_frequencies, RopeConfig,
-};
+use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, apply_rope_batch, compute_frequencies};
 use proptest::prelude::*;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -162,10 +160,7 @@ fn rope_cos2_plus_sin2_equals_one() {
             let cos_val = freqs[idx];
             let sin_val = freqs[idx + 1];
             let sum = cos_val * cos_val + sin_val * sin_val;
-            assert!(
-                (sum - 1.0).abs() < 1e-5,
-                "cos²+sin²≠1 at pos={pos}, pair={i}: {sum}"
-            );
+            assert!((sum - 1.0).abs() < 1e-5, "cos²+sin²≠1 at pos={pos}, pair={i}: {sum}");
         }
     }
 }
@@ -211,10 +206,7 @@ fn rope_known_value_head_dim4_pos1() {
     apply_rope(&mut data, 1, 4, &freqs);
 
     for (i, (got, want)) in data.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            (got - want).abs() < 1e-5,
-            "dim {i}: got {got}, expected {want}"
-        );
+        assert!((got - want).abs() < 1e-5, "dim {i}: got {got}, expected {want}");
     }
 }
 
@@ -241,10 +233,8 @@ fn rope_known_value_head_dim2_pos5() {
     let mut data = vec![2.0, -1.0];
 
     let angle = 5.0f32;
-    let expected = [
-        2.0 * angle.cos() - (-1.0) * angle.sin(),
-        2.0 * angle.sin() + (-1.0) * angle.cos(),
-    ];
+    let expected =
+        [2.0 * angle.cos() - (-1.0) * angle.sin(), 2.0 * angle.sin() + (-1.0) * angle.cos()];
 
     apply_rope(&mut data, 5, 2, &freqs);
 
@@ -309,10 +299,7 @@ fn rope_large_positions_1m_tokens() {
 
     apply_rope(&mut data, max_pos, head_dim, &freqs);
 
-    assert!(
-        data.iter().all(|x| x.is_finite()),
-        "Large position produced non-finite values"
-    );
+    assert!(data.iter().all(|x| x.is_finite()), "Large position produced non-finite values");
     let norm_after = l2_norm(&data);
     assert!(
         (norm_before - norm_after).abs() < 1e-2,
@@ -419,8 +406,7 @@ fn rope_kernel_matches_reference_implementation() {
         let freqs = compute_frequencies(&cfg);
 
         for pos in [0, 1, 5, 10, 19] {
-            let original: Vec<f32> =
-                (0..head_dim).map(|i| (i as f32 + 1.0) * 0.3 - 0.5).collect();
+            let original: Vec<f32> = (0..head_dim).map(|i| (i as f32 + 1.0) * 0.3 - 0.5).collect();
 
             let mut kernel_data = original.clone();
             apply_rope(&mut kernel_data, pos, head_dim, &freqs);
@@ -453,14 +439,7 @@ fn rope_batch_matches_reference() {
 
     // Kernel batch
     let mut batch_data = original.clone();
-    apply_rope_batch(
-        &mut batch_data,
-        start_pos,
-        seq_len,
-        num_heads,
-        head_dim,
-        &freqs,
-    );
+    apply_rope_batch(&mut batch_data, start_pos, seq_len, num_heads, head_dim, &freqs);
 
     // Reference per-head
     let mut ref_data = original.clone();
@@ -468,20 +447,12 @@ fn rope_batch_matches_reference() {
         let position = start_pos + s;
         for h in 0..num_heads {
             let offset = (s * num_heads + h) * head_dim;
-            reference_rope(
-                &mut ref_data[offset..offset + head_dim],
-                position,
-                head_dim,
-                base,
-            );
+            reference_rope(&mut ref_data[offset..offset + head_dim], position, head_dim, base);
         }
     }
 
     for (i, (b, r)) in batch_data.iter().zip(ref_data.iter()).enumerate() {
-        assert!(
-            (b - r).abs() < 1e-4,
-            "Batch/ref mismatch at index {i}: {b} vs {r}"
-        );
+        assert!((b - r).abs() < 1e-4, "Batch/ref mismatch at index {i}: {b} vs {r}");
     }
 }
 
@@ -698,12 +669,7 @@ fn rope_batch_multi_head_all_same_pattern() {
     let freqs = compute_frequencies(&cfg);
 
     let pattern: Vec<f32> = (0..head_dim).map(|i| (i as f32 + 1.0) * 0.5).collect();
-    let mut data: Vec<f32> = pattern
-        .iter()
-        .copied()
-        .cycle()
-        .take(num_heads * head_dim)
-        .collect();
+    let mut data: Vec<f32> = pattern.iter().copied().cycle().take(num_heads * head_dim).collect();
 
     apply_rope_batch(&mut data, 2, 1, num_heads, head_dim, &freqs);
 
@@ -743,9 +709,7 @@ fn rope_batch_preserves_magnitude_all_heads() {
     apply_rope_batch(&mut data, 0, seq_len, num_heads, head_dim, &freqs);
 
     // Check norms after
-    for (idx, (s, h)) in (0..seq_len)
-        .flat_map(|s| (0..num_heads).map(move |h| (s, h)))
-        .enumerate()
+    for (idx, (s, h)) in (0..seq_len).flat_map(|s| (0..num_heads).map(move |h| (s, h))).enumerate()
     {
         let off = (s * num_heads + h) * head_dim;
         let norm_after = l2_norm(&data[off..off + head_dim]);
@@ -783,10 +747,7 @@ fn rope_batch_non_8_aligned_head_dim() {
     }
 
     for (i, (b, r)) in batch.iter().zip(reference.iter()).enumerate() {
-        assert!(
-            (b - r).abs() < 1e-5,
-            "Non-aligned mismatch at {i}: {b} vs {r}"
-        );
+        assert!((b - r).abs() < 1e-5, "Non-aligned mismatch at {i}: {b} vs {r}");
     }
 }
 
