@@ -299,7 +299,7 @@ fn get_available_disk_space(_path: &Path) -> Option<u64> {
         let mut statvfs: libc::statvfs = unsafe { mem::zeroed() };
 
         if unsafe { libc::statvfs(path_cstr.as_ptr(), &mut statvfs) } == 0 {
-            Some(statvfs.f_bavail * statvfs.f_frsize)
+            Some(u64::from(statvfs.f_bavail) * u64::from(statvfs.f_frsize))
         } else {
             None
         }
