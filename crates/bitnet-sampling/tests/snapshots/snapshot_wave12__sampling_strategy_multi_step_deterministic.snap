@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: tokens
+---
+[
+    45,
+    48,
+    44,
+    49,
+]

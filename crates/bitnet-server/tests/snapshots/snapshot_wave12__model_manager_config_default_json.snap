@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: c
+---
+{
+  "max_concurrent_loads": 2,
+  "model_cache_size": 3,
+  "load_timeout": {
+    "secs": 300,
+    "nanos": 0
+  },
+  "validation_enabled": true,
+  "memory_limit_gb": 16.0
+}

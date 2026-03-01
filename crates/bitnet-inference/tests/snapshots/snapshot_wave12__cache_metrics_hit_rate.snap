@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: "format!(\"hit_rate={:.2}\", m.hit_rate())"
+---
+hit_rate=0.75

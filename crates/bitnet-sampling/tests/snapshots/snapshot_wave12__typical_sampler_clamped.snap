@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: s
+---
+TypicalSampler {
+    typical_p: 1.0,
+}

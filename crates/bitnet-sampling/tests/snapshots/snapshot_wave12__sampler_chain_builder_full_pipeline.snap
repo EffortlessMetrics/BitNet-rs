@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: chain.stages()
+---
+[
+    Temperature(
+        0.8,
+    ),
+    TopK(
+        40,
+    ),
+    TopP(
+        0.9,
+    ),
+    MinP(
+        0.05,
+    ),
+    Typical(
+        0.95,
+    ),
+]

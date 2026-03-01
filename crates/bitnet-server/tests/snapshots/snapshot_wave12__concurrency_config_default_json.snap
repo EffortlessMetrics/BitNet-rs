@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: c
+---
+{
+  "max_concurrent_requests": 100,
+  "max_requests_per_second": 50,
+  "max_requests_per_minute": 1000,
+  "rate_limit_window": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "backpressure_threshold": 0.8,
+  "circuit_breaker_enabled": true,
+  "circuit_breaker_failure_threshold": 10,
+  "circuit_breaker_timeout": {
+    "secs": 30,
+    "nanos": 0
+  },
+  "per_ip_rate_limit": 10,
+  "global_rate_limit": 100
+}

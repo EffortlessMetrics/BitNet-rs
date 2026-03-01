@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: "format!(\"p50={:?} p90={:?} p95={:?}\", h.p50(), h.p90(), h.p95())"
+---
+p50=Some(42.0) p90=Some(42.0) p95=Some(42.0)

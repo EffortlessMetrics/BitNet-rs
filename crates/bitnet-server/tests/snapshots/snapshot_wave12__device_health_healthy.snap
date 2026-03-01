@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave12.rs
+expression: "DeviceHealth::Healthy"
+---
+Healthy

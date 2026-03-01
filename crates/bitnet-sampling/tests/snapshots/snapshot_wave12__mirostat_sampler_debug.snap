@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+expression: s
+---
+MirostatSampler {
+    tau: 5.0,
+    eta: 0.1,
+    mu: 10.0,
+    rng: ChaCha8Rng {
+        rng: BlockRng {
+            core: ChaChaXCore {},
+            result_len: 64,
+            index: 64,
+        },
+    },
+}

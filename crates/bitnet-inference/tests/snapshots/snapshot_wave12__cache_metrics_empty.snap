@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: m
+---
+CacheMetrics {
+    hits: 0,
+    misses: 0,
+    memory_bytes: 0,
+    evictions: 0,
+}

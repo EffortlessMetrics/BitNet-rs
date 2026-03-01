@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave12.rs
+expression: m
+---
+{
+  "prompt_tokens": 256,
+  "generated_tokens": 1024,
+  "time_to_first_token_ms": 10.0,
+  "total_generation_time_ms": 1000.0,
+  "tokens_per_second": 1024.0,
+  "peak_memory_bytes": 8000000000,
+  "cache_hit_rate": 0.95
+}

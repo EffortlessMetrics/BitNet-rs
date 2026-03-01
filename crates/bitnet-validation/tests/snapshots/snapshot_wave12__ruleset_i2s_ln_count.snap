@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-validation/tests/snapshot_wave12.rs
+expression: "format!(\"ln_thresholds={}\", r.ln.len())"
+---
+ln_thresholds=4
