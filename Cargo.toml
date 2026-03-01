@@ -64,6 +64,7 @@ members = [
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
   "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
+    "crates/bitnet-rocm",          # HIP compute kernels for AMD ROCm backend",
   "crossval",
   "tests",
   "xtask",
