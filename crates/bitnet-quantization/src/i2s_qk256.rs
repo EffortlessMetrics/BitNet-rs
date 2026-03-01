@@ -351,6 +351,16 @@ pub fn gemv_qk256(
     cols: usize,
     row_stride_bytes: usize,
 ) -> Result<()> {
+    let expected_stride = cols.div_ceil(QK256_BLOCK) * QK256_PACKED_BYTES;
+    if row_stride_bytes != expected_stride {
+        bail!(
+            "I2S_QK256: row_stride_bytes {} != expected {} for cols={}",
+            row_stride_bytes,
+            expected_stride,
+            cols
+        );
+    }
+
     // Runtime dispatch: probe for AVX2 support on x86_64
     #[cfg(target_arch = "x86_64")]
     {
@@ -481,6 +491,45 @@ mod tests {
         let mut y_out = vec![0.0f32; 2]; // Wrong size!
 
         gemv_qk256(&qs_data, &x, &mut y_out, 1, 256, 64).unwrap();
+    }
+
+    #[test]
+    fn gemv_rejects_invalid_row_stride() {
+        let rows = 1usize;
+        let cols = 256usize;
+        let bad_row_stride = 32usize;
+        let qs_data = vec![0u8; bad_row_stride];
+        let x = vec![0.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        let err = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, bad_row_stride)
+            .expect_err("invalid row_stride_bytes should error");
+
+        assert!(
+            err.to_string().contains("row_stride_bytes"),
+            "error should mention row_stride_bytes, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn gemv_force_scalar_override_works() {
+        let rows = 2usize;
+        let cols = 256usize;
+        let row_stride_bytes = QK256_PACKED_BYTES;
+        let qs_data = vec![0xAAu8; rows * row_stride_bytes]; // +1.0 weights
+        let x = vec![1.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        // SAFETY: This test is single-threaded; no other threads read this env var.
+        unsafe { std::env::set_var("BITNET_FORCE_SCALAR", "1") };
+        let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes);
+        unsafe { std::env::remove_var("BITNET_FORCE_SCALAR") };
+
+        result.expect("scalar override should run successfully");
+        for &v in &y_out {
+            assert!((v - 256.0).abs() < 1e-5, "Expected 256.0, got {}", v);
+        }
     }
 
     /// Regression test for QK256 size tolerance (prevents enhanced→minimal fallback)
@@ -744,11 +793,8 @@ mod tests {
     /// Test for stride mismatch (panics in debug mode via debug_assert)
     ///
     /// This test verifies that mismatched row_stride_bytes vs cols is caught
-    /// by the debug_assert in gemv_qk256_row. In release builds, this test
-    /// is skipped since debug_assert is disabled.
+    /// by the validation in gemv_qk256 and returned as an error.
     #[test]
-    #[should_panic(expected = "row bytes mismatch")]
-    #[cfg(debug_assertions)]
     fn qk256_stride_mismatch_panics() {
         let rows = 1usize;
         let cols = 256usize;
@@ -757,7 +803,12 @@ mod tests {
         let x = vec![1.0f32; cols];
         let mut y_out = vec![0.0f32; rows];
 
-        // This will panic in debug mode due to debug_assert in gemv_qk256_row
-        let _ = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride);
+        let err = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride)
+            .expect_err("mismatched row_stride_bytes should error");
+        assert!(
+            err.to_string().contains("row_stride_bytes"),
+            "error should mention row_stride_bytes, got: {}",
+            err
+        );
     }
 }
