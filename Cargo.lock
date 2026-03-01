@@ -1489,6 +1489,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-vulkan"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-warn-once"
 version = "0.2.1-dev"
 dependencies = [
