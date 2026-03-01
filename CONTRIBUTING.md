@@ -701,6 +701,35 @@ gh pr edit 123 --remove-label quant,perf,crossval
 
 **See also:** `.github/workflows/` for individual workflow definitions and trigger conditions.
 
+## GPU Backend Development
+
+If you're contributing GPU backend code (kernels, new backends, device selection),
+see the dedicated GPU guides:
+
+- **[GPU Contributor Guide](docs/GPU_CONTRIBUTOR_GUIDE.md)** — Step-by-step guides for
+  adding kernels and backends, testing without hardware, and GPU code style conventions
+- **[GPU Development Workflow](docs/GPU_DEVELOPMENT_WORKFLOW.md)** — Branch naming,
+  PR templates, CI pipeline, review checklists, and performance regression detection
+
+**Quick start for GPU contributors:**
+
+```bash
+# Build and test without GPU hardware
+cargo build --no-default-features --features cpu
+cargo nextest run --workspace --no-default-features --features cpu
+
+# Build with GPU support (requires CUDA toolkit)
+cargo build --no-default-features --features gpu
+
+# Test GPU code paths without hardware
+BITNET_GPU_FAKE=1 cargo test -p bitnet-kernels --no-default-features --features gpu
+```
+
+GPU branches use the `intel-gpu/<feature-name>` naming convention. Add the `gpu` label
+to your PR to trigger GPU-specific CI checks on self-hosted runners.
+
+---
+
 ## Architecture Guidelines
 
 ### Crate Organization
