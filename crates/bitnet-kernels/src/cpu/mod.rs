@@ -63,6 +63,9 @@ pub mod neon_batch_norm;
 pub mod neon_reductions;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_softmax;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_transpose;
 
 pub use activations::ActivationType;
