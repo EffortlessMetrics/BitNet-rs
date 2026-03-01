@@ -155,6 +155,98 @@ pub fn quick_gelu(x: f32) -> f32 {
     x * sigmoid(1.702 * x)
 }
 
+/// Softplus with configurable beta: (1/beta) * ln(1 + exp(beta * x))
+#[inline]
+pub fn softplus_beta(x: f32, beta: f32) -> f32 {
+    let bx = beta * x;
+    if bx > 20.0 {
+        x
+    } else if bx < -20.0 {
+        0.0
+    } else {
+        (1.0 + bx.exp()).ln() / beta
+    }
+}
+
+// ── Slice-based convenience functions ───────────────────────────────
+
+/// GELU (erf-based) applied elementwise to a slice.
+pub fn gelu_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| gelu(v)).collect()
+}
+
+/// Fast GELU approximation (tanh-based) applied elementwise.
+pub fn gelu_approx_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| gelu_tanh(v)).collect()
+}
+
+/// SiLU/Swish applied elementwise to a slice.
+pub fn silu_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| silu(v)).collect()
+}
+
+/// Mish applied elementwise to a slice.
+pub fn mish_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| mish(v)).collect()
+}
+
+/// Softplus with beta applied elementwise to a slice.
+pub fn softplus_vec(x: &[f32], beta: f32) -> Vec<f32> {
+    x.iter().map(|&v| softplus_beta(v, beta)).collect()
+}
+
+/// Hard sigmoid applied elementwise to a slice.
+pub fn hard_sigmoid_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| hard_sigmoid(v)).collect()
+}
+
+/// Hard swish applied elementwise to a slice.
+pub fn hard_swish_vec(x: &[f32]) -> Vec<f32> {
+    x.iter().map(|&v| hard_swish(v)).collect()
+}
+
+/// Leaky ReLU applied elementwise to a slice.
+pub fn leaky_relu_vec(x: &[f32], negative_slope: f32) -> Vec<f32> {
+    x.iter().map(|&v| leaky_relu(v, negative_slope)).collect()
+}
+
+/// ELU applied elementwise to a slice.
+pub fn elu_vec(x: &[f32], alpha: f32) -> Vec<f32> {
+    x.iter().map(|&v| elu(v, alpha)).collect()
+}
+
+// ── Named in-place variants ─────────────────────────────────────────
+
+/// GELU activation applied in-place.
+pub fn gelu_inplace(x: &mut [f32]) {
+    for v in x.iter_mut() {
+        *v = gelu(*v);
+    }
+}
+
+/// SiLU activation applied in-place.
+pub fn silu_inplace(x: &mut [f32]) {
+    for v in x.iter_mut() {
+        *v = silu(*v);
+    }
+}
+
+/// ReLU activation applied in-place.
+pub fn relu_inplace(x: &mut [f32]) {
+    for v in x.iter_mut() {
+        *v = relu(*v);
+    }
+}
+
+// ── Dispatcher ──────────────────────────────────────────────────────
+
+/// Apply an activation function elementwise, returning a new vector.
+///
+/// This is the primary dispatch entry point for activation functions.
+pub fn apply_activation(x: &[f32], activation: ActivationType) -> Vec<f32> {
+    activate(x, activation)
+}
+
 // ── Dispatch helpers ────────────────────────────────────────────────
 
 /// Apply a single activation function to a scalar value.
@@ -790,5 +882,286 @@ mod tests {
         for i in 1..out.len() {
             assert!(out[i] >= out[i - 1] - 1e-6, "ReLU not monotonic at i={i}");
         }
+    }
+
+    // ── softplus_beta tests ──
+
+    #[test]
+    fn test_softplus_beta_one_matches_standard() {
+        for x in [-2.0, -1.0, 0.0, 1.0, 2.0, 10.0] {
+            assert!(
+                approx_eq(softplus_beta(x, 1.0), softplus(x), 1e-5),
+                "softplus_beta(1.0) mismatch at {x}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_softplus_beta_scaling() {
+        // Higher beta → steeper transition (closer to ReLU)
+        let x = 0.5;
+        let low = softplus_beta(x, 1.0);
+        let high = softplus_beta(x, 10.0);
+        assert!(high < low, "Higher beta should yield sharper (lower) output near origin");
+    }
+
+    #[test]
+    fn test_softplus_beta_numerical_stability() {
+        // Large and small inputs should not panic or produce NaN
+        assert!(!softplus_beta(100.0, 1.0).is_nan());
+        assert!(!softplus_beta(-100.0, 1.0).is_nan());
+        assert!(!softplus_beta(100.0, 5.0).is_nan());
+        assert!(!softplus_beta(-100.0, 5.0).is_nan());
+        assert!(approx_eq(softplus_beta(100.0, 1.0), 100.0, 1e-3));
+        assert!(approx_eq(softplus_beta(-100.0, 1.0), 0.0, 1e-3));
+    }
+
+    // ── Slice-based function tests ──
+
+    #[test]
+    fn test_gelu_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = gelu_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| gelu(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_gelu_approx_vec_matches_gelu_tanh() {
+        let input = vec![-3.0, -1.5, 0.0, 1.5, 3.0];
+        let vec_out = gelu_approx_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| gelu_tanh(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_silu_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = silu_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| silu(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_mish_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = mish_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| mish(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_softplus_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = softplus_vec(&input, 1.0);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| softplus_beta(x, 1.0)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_hard_sigmoid_vec_matches_scalar() {
+        let input = vec![-5.0, -3.0, 0.0, 3.0, 5.0];
+        let vec_out = hard_sigmoid_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| hard_sigmoid(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_hard_swish_vec_matches_scalar() {
+        let input = vec![-5.0, -3.0, 0.0, 3.0, 5.0];
+        let vec_out = hard_swish_vec(&input);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| hard_swish(x)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_leaky_relu_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = leaky_relu_vec(&input, 0.01);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| leaky_relu(x, 0.01)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_elu_vec_matches_scalar() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let vec_out = elu_vec(&input, 1.0);
+        let scalar_out: Vec<f32> = input.iter().map(|&x| elu(x, 1.0)).collect();
+        for (a, b) in vec_out.iter().zip(scalar_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    // ── In-place variant tests ──
+
+    #[test]
+    fn test_gelu_inplace_matches_allocating() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let expected = gelu_vec(&input);
+        let mut buf = input;
+        gelu_inplace(&mut buf);
+        for (a, b) in buf.iter().zip(expected.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_silu_inplace_matches_allocating() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let expected = silu_vec(&input);
+        let mut buf = input;
+        silu_inplace(&mut buf);
+        for (a, b) in buf.iter().zip(expected.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6));
+        }
+    }
+
+    #[test]
+    fn test_relu_inplace_matches_allocating() {
+        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let expected = activate(&input, ActivationType::ReLU);
+        let mut buf = input;
+        relu_inplace(&mut buf);
+        assert_eq!(buf, expected);
+    }
+
+    // ── apply_activation dispatcher test ──
+
+    #[test]
+    fn test_apply_activation_matches_activate() {
+        let input = vec![-3.0, -1.0, 0.0, 1.0, 3.0];
+        for act in [
+            ActivationType::ReLU,
+            ActivationType::GELU,
+            ActivationType::SiLU,
+            ActivationType::Mish,
+            ActivationType::Softplus,
+            ActivationType::ELU(1.0),
+        ] {
+            let a = activate(&input, act);
+            let b = apply_activation(&input, act);
+            assert_eq!(a, b, "apply_activation mismatch for {act:?}");
+        }
+    }
+
+    // ── Monotonicity tests for additional activations ──
+
+    #[test]
+    fn test_monotonicity_softplus() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::Softplus);
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "Softplus not monotonic at i={i}");
+        }
+    }
+
+    #[test]
+    fn test_monotonicity_elu() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::ELU(1.0));
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "ELU not monotonic at i={i}");
+        }
+    }
+
+    #[test]
+    fn test_monotonicity_leaky_relu() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::LeakyReLU(0.01));
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "LeakyReLU not monotonic at i={i}");
+        }
+    }
+
+    #[test]
+    fn test_monotonicity_hard_sigmoid() {
+        let input: Vec<f32> = (-50..=50).map(|i| i as f32 * 0.1).collect();
+        let out = activate(&input, ActivationType::HardSigmoid);
+        for i in 1..out.len() {
+            assert!(out[i] >= out[i - 1] - 1e-6, "HardSigmoid not monotonic at i={i}");
+        }
+    }
+
+    // ── Boundary and shape tests ──
+
+    #[test]
+    fn test_mish_bounded_below() {
+        // Mish has a global minimum ≈ -0.31 near x ≈ -1.19
+        let input: Vec<f32> = (-100..=100).map(|i| i as f32 * 0.05).collect();
+        let out = mish_vec(&input);
+        for &v in &out {
+            assert!(v >= -0.32, "Mish should be bounded below by ≈ -0.31, got {v}");
+        }
+    }
+
+    #[test]
+    fn test_hard_swish_matches_relu_for_large() {
+        // For x >> 3, hard_swish(x) ≈ x
+        for x in [10.0, 50.0, 100.0] {
+            assert!(approx_eq(hard_swish(x), x, 1e-5), "hard_swish({x}) should ≈ x");
+        }
+    }
+
+    #[test]
+    fn test_elu_alpha_zero_is_relu() {
+        let input = vec![-3.0, -1.0, 0.0, 1.0, 3.0];
+        let elu_out = elu_vec(&input, 0.0);
+        let relu_out = activate(&input, ActivationType::ReLU);
+        for (a, b) in elu_out.iter().zip(relu_out.iter()) {
+            assert!(approx_eq(*a, *b, 1e-6), "ELU(alpha=0) should match ReLU");
+        }
+    }
+
+    #[test]
+    fn test_gelu_approximation_quality() {
+        // gelu_approx should be within 0.02 of true GELU for typical range
+        let input: Vec<f32> = (-40..=40).map(|i| i as f32 * 0.1).collect();
+        let exact = gelu_vec(&input);
+        let approx = gelu_approx_vec(&input);
+        for (i, (&e, &a)) in exact.iter().zip(approx.iter()).enumerate() {
+            assert!(
+                approx_eq(e, a, 0.02),
+                "GELU approx too far from exact at index {i}: exact={e}, approx={a}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_vec_functions_empty_input() {
+        let empty: &[f32] = &[];
+        assert!(gelu_vec(empty).is_empty());
+        assert!(gelu_approx_vec(empty).is_empty());
+        assert!(silu_vec(empty).is_empty());
+        assert!(mish_vec(empty).is_empty());
+        assert!(softplus_vec(empty, 1.0).is_empty());
+        assert!(hard_sigmoid_vec(empty).is_empty());
+        assert!(hard_swish_vec(empty).is_empty());
+        assert!(leaky_relu_vec(empty, 0.01).is_empty());
+        assert!(elu_vec(empty, 1.0).is_empty());
+    }
+
+    #[test]
+    fn test_inplace_empty_input() {
+        let mut empty: Vec<f32> = vec![];
+        gelu_inplace(&mut empty);
+        silu_inplace(&mut empty);
+        relu_inplace(&mut empty);
+        assert!(empty.is_empty());
     }
 }
