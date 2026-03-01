@@ -3,11 +3,20 @@
 //! This crate intentionally stays tiny so NVIDIA-specific heuristics can be
 //! shared across backend/runtime crates without pulling in larger dependencies.
 
+/// PCI vendor ID used by NVIDIA GPUs.
+pub const NVIDIA_VENDOR_ID: u32 = 0x10DE;
+
 /// Threads per warp on NVIDIA hardware.
 pub const NVIDIA_WARP_SIZE: u32 = 32;
 
 /// Canonical 1-D workgroup candidate sizes for NVIDIA tuning sweeps.
 pub const NVIDIA_1D_WORKGROUP_CANDIDATES: [u32; 4] = [64, 128, 256, 512];
+
+/// Returns `true` when a PCI vendor ID belongs to NVIDIA.
+#[must_use]
+pub const fn is_nvidia_vendor(vendor_id: u32) -> bool {
+    vendor_id == NVIDIA_VENDOR_ID
+}
 
 /// Returns `true` if the workgroup size is aligned to warp boundaries.
 #[must_use]
@@ -38,6 +47,13 @@ pub const fn optimal_workgroup_size_1d(elements: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vendor_id_detects_nvidia() {
+        assert!(is_nvidia_vendor(NVIDIA_VENDOR_ID));
+        assert!(!is_nvidia_vendor(0x8086));
+        assert!(!is_nvidia_vendor(0x1002));
+    }
 
     #[test]
     fn candidates_are_warp_aligned() {

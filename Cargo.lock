@@ -996,6 +996,9 @@ dependencies = [
 [[package]]
 name = "bitnet-nvidia"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "bitnet-opencl"

@@ -1,6 +1,7 @@
 //! GPU device initialization and adapter discovery.
 
 use crate::error::WgpuError;
+use bitnet_nvidia::is_nvidia_vendor;
 
 /// Configuration for wgpu device creation.
 #[derive(Debug, Clone)]
@@ -110,12 +111,9 @@ impl WgpuDevice {
         }
     }
 
-    /// PCI vendor ID for NVIDIA.
-    const NVIDIA_VENDOR_ID: u32 = 0x10DE;
-
     /// Returns `true` if the adapter is an NVIDIA GPU.
     pub fn is_nvidia(&self) -> bool {
-        self.adapter.get_info().vendor == Self::NVIDIA_VENDOR_ID
+        is_nvidia_vendor(self.adapter.get_info().vendor)
     }
 
     /// Returns `true` if the device supports subgroup (warp/wave) operations.
@@ -237,6 +235,12 @@ mod tests {
     fn device_info_is_clone_and_debug() {
         fn assert_clone_debug<T: Clone + std::fmt::Debug>() {}
         assert_clone_debug::<DeviceInfo>();
+    }
+
+    #[test]
+    fn nvidia_vendor_id_constant_matches_expected() {
+        assert_eq!(bitnet_nvidia::NVIDIA_VENDOR_ID, 0x10DE);
+        assert!(is_nvidia_vendor(bitnet_nvidia::NVIDIA_VENDOR_ID));
     }
 
     #[test]
