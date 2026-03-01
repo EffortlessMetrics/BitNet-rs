@@ -8,6 +8,9 @@ pub mod opencl_backend;
 pub mod rocm_backend;
 pub mod vulkan_compute;
 pub mod webgpu_backend;
+pub mod inference_config;
+
+use std::fmt;
 
 // === HAL Core ===
 pub mod async_runtime;
