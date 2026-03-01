@@ -80,6 +80,7 @@ vulkan = ["bitnet-device-probe/vulkan"]
 oneapi = ["dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
 opencl = ["dep:opencl3", "bitnet-common/opencl", "bitnet-device-probe/opencl"]
 ffi = ["dep:cc", "dep:bindgen"]
+metal = []
 inference = []
 strict = []  # Strict mode for mock elimination validation
 
