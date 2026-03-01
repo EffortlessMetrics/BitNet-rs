@@ -748,11 +748,7 @@ mod tests {
 
     #[test]
     fn test_gpu_utilization_empty_stages() {
-        let exec = PipelineExecution {
-            stages: vec![],
-            total_time_ns: 0,
-            tokens_generated: 0,
-        };
+        let exec = PipelineExecution { stages: vec![], total_time_ns: 0, tokens_generated: 0 };
         assert_eq!(exec.gpu_utilization(), 0.0);
     }
 
@@ -794,11 +790,7 @@ mod tests {
 
     #[test]
     fn test_slowest_stage_empty() {
-        let exec = PipelineExecution {
-            stages: vec![],
-            total_time_ns: 0,
-            tokens_generated: 0,
-        };
+        let exec = PipelineExecution { stages: vec![], total_time_ns: 0, tokens_generated: 0 };
         assert!(exec.slowest_stage().is_none());
     }
 
@@ -898,10 +890,8 @@ mod tests {
 
     #[test]
     fn test_error_display_stage_failure() {
-        let err = PipelineError::StageFailure {
-            stage: PipelineStage::Attention,
-            reason: "OOM".into(),
-        };
+        let err =
+            PipelineError::StageFailure { stage: PipelineStage::Attention, reason: "OOM".into() };
         let msg = format!("{err}");
         assert!(msg.contains("Attention") && msg.contains("OOM"));
     }
@@ -920,8 +910,7 @@ mod tests {
 
     #[test]
     fn test_error_is_std_error() {
-        let err: Box<dyn std::error::Error> =
-            Box::new(PipelineError::InvalidConfig("test".into()));
+        let err: Box<dyn std::error::Error> = Box::new(PipelineError::InvalidConfig("test".into()));
         assert!(!err.to_string().is_empty());
     }
 
