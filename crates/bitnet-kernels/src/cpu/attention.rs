@@ -210,6 +210,18 @@ fn avx2_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<
     scores
 }
 
+// ── NEON implementations (aarch64 only) ─────────────────────────────
+
+// TODO(simd): Implement NEON-accelerated dot product for ARM targets.
+//
+// The NEON path should mirror `avx2_dot` using `float32x4_t` intrinsics:
+//   - `vld1q_f32` for aligned/unaligned loads
+//   - `vfmaq_f32` for fused multiply-add (ARMv8.2+)
+//   - `vaddvq_f32` for horizontal reduction
+//
+// Expected uplift: ~2-4× over scalar on Apple M-series and Cortex-A76+.
+// Gate behind `#[cfg(target_arch = "aarch64")]` with `#[target_feature(enable = "neon")]`.
+
 // ── Dispatch helpers ───────────────────────────────────────────────
 
 /// Compute Q·K^T, choosing the best available SIMD path.
@@ -220,6 +232,7 @@ fn dispatch_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> 
             return avx2_qk(q, k, seq_q, seq_k, dim);
         }
     }
+    // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
     scalar_qk(q, k, seq_q, seq_k, dim)
 }
 
@@ -440,6 +453,141 @@ impl CpuAttentionConfig {
             return Err(invalid_arg("seq_len must be > 0"));
         }
         Ok(())
+    }
+}
+
+// ── CpuAttention ───────────────────────────────────────────────────
+
+/// High-level CPU attention executor coupling configuration with computation.
+///
+/// Supports batched multi-head attention with optional causal masking and
+/// runtime SIMD dispatch (AVX2 on x86_64, scalar fallback elsewhere).
+///
+/// # SIMD Dispatch
+///
+/// - **x86_64 + AVX2/FMA**: 256-bit vector dot products for Q·K^T
+/// - **aarch64 + NEON**: TODO — planned NEON acceleration for ARM targets
+/// - **Fallback**: Scalar implementation on all other platforms
+///
+/// # Example
+///
+/// ```
+/// # use bitnet_kernels::cpu::attention::{CpuAttention, CpuAttentionConfig};
+/// let attn = CpuAttention::new(CpuAttentionConfig {
+///     batch_size: 1,
+///     num_heads: 4,
+///     seq_len: 8,
+///     head_dim: 64,
+///     scale: None,
+///     causal_mask: true,
+/// }).unwrap();
+/// # let total = 1 * 8 * 4 * 64;
+/// # let q = vec![0.1_f32; total];
+/// # let k = vec![0.1_f32; total];
+/// # let v = vec![0.1_f32; total];
+/// let output = attn.forward(&q, &k, &v).unwrap();
+/// assert_eq!(output.len(), total);
+/// ```
+pub struct CpuAttention {
+    config: CpuAttentionConfig,
+}
+
+impl CpuAttention {
+    /// Create a new `CpuAttention` executor, validating the configuration.
+    pub fn new(config: CpuAttentionConfig) -> Result<Self> {
+        config.validate()?;
+        Ok(Self { config })
+    }
+
+    /// Execute batched multi-head attention.
+    ///
+    /// * `q` — queries, shape `[batch_size, seq_len, num_heads * head_dim]` (row-major)
+    /// * `k` — keys,    shape `[batch_size, seq_len, num_heads * head_dim]`
+    /// * `v` — values,  shape `[batch_size, seq_len, num_heads * head_dim]`
+    ///
+    /// Returns output of shape `[batch_size, seq_len, num_heads * head_dim]`.
+    pub fn forward(&self, q: &[f32], k: &[f32], v: &[f32]) -> Result<Vec<f32>> {
+        let CpuAttentionConfig {
+            batch_size,
+            num_heads,
+            seq_len,
+            head_dim,
+            causal_mask: causal,
+            ..
+        } = self.config;
+        let model_dim = num_heads * head_dim;
+        let batch_stride = seq_len * model_dim;
+        let total = batch_size * batch_stride;
+
+        if q.len() != total {
+            return Err(invalid_arg(
+                "q length does not match batch_size * seq_len * num_heads * head_dim",
+            ));
+        }
+        if k.len() != total {
+            return Err(invalid_arg(
+                "k length does not match batch_size * seq_len * num_heads * head_dim",
+            ));
+        }
+        if v.len() != total {
+            return Err(invalid_arg(
+                "v length does not match batch_size * seq_len * num_heads * head_dim",
+            ));
+        }
+
+        let cfg =
+            AttentionConfig { num_heads, head_dim, seq_len, causal, scale: self.config.scale };
+
+        let mut output = Vec::with_capacity(total);
+        for b in 0..batch_size {
+            let start = b * batch_stride;
+            let end = start + batch_stride;
+            let batch_out = AttentionKernel::multi_head_attention(
+                &q[start..end],
+                &k[start..end],
+                &v[start..end],
+                &cfg,
+            )?;
+            output.extend_from_slice(&batch_out);
+        }
+
+        Ok(output)
+    }
+
+    /// Execute single-head attention on per-head slices (no multi-head split).
+    ///
+    /// * `q` — query,  shape `[seq_q, head_dim]`
+    /// * `k` — key,    shape `[seq_k, head_dim]`
+    /// * `v` — value,  shape `[seq_k, head_dim]`
+    ///
+    /// Returns output of shape `[seq_q, head_dim]`.
+    pub fn forward_single_head(
+        &self,
+        q: &[f32],
+        k: &[f32],
+        v: &[f32],
+        seq_q: usize,
+        seq_k: usize,
+    ) -> Result<Vec<f32>> {
+        let head_dim = self.config.head_dim;
+        let scale = self.config.resolved_scale();
+        let mask_vec =
+            if self.config.causal_mask && seq_q == seq_k { Some(causal_mask(seq_q)) } else { None };
+        AttentionKernel::scaled_dot_product(
+            q,
+            k,
+            v,
+            mask_vec.as_deref(),
+            scale,
+            seq_q,
+            seq_k,
+            head_dim,
+        )
+    }
+
+    /// Access the underlying configuration.
+    pub fn config(&self) -> &CpuAttentionConfig {
+        &self.config
     }
 }
 
@@ -1729,5 +1877,254 @@ mod tests {
         apply_rotary_embedding(&mut q2, &mut k2, positions, head_dim).unwrap();
         assert_eq!(q1, q2);
         assert_eq!(k1, k2);
+    }
+
+    // ── CpuAttention ──────────────────────────────────────────────
+
+    #[test]
+    fn cpu_attention_basic_forward() {
+        let heads = 2;
+        let dim = 4;
+        let seq = 3;
+        let batch = 1;
+        let total = batch * seq * heads * dim;
+        let q: Vec<f32> = (0..total).map(|i| (i as f32) * 0.01).collect();
+        let k: Vec<f32> = (0..total).map(|i| (i as f32) * 0.02).collect();
+        let v: Vec<f32> = (0..total).map(|i| (i as f32) * 0.03).collect();
+
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: batch,
+            num_heads: heads,
+            seq_len: seq,
+            head_dim: dim,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let out = attn.forward(&q, &k, &v).unwrap();
+        assert_eq!(out.len(), total);
+        assert!(out.iter().all(|x| x.is_finite()));
+    }
+
+    #[test]
+    fn cpu_attention_matches_mha() {
+        let heads = 2;
+        let dim = 4;
+        let seq = 3;
+        let n = seq * heads * dim;
+        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
+        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
+        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
+
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: heads,
+            seq_len: seq,
+            head_dim: dim,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let cpu_out = attn.forward(&q, &k, &v).unwrap();
+        let mha_out = multi_head_attention_cpu(&q, &k, &v, heads, dim, seq, false).unwrap();
+        assert!(slices_approx_eq(&cpu_out, &mha_out));
+    }
+
+    #[test]
+    fn cpu_attention_batched() {
+        let heads = 2;
+        let dim = 4;
+        let seq = 2;
+        let batch = 3;
+        let batch_stride = seq * heads * dim;
+        let total = batch * batch_stride;
+        let q = vec![0.1; total];
+        let k = vec![0.1; total];
+        let v = vec![0.2; total];
+
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: batch,
+            num_heads: heads,
+            seq_len: seq,
+            head_dim: dim,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let out = attn.forward(&q, &k, &v).unwrap();
+        assert_eq!(out.len(), total);
+        // All batches should produce identical output (same input)
+        let batch0 = &out[..batch_stride];
+        for b in 1..batch {
+            let batch_b = &out[b * batch_stride..(b + 1) * batch_stride];
+            assert!(slices_approx_eq(batch0, batch_b));
+        }
+    }
+
+    #[test]
+    fn cpu_attention_causal_mask() {
+        let heads = 1;
+        let dim = 2;
+        let seq = 3;
+        let model_dim = heads * dim;
+        let n = seq * model_dim;
+        let q = vec![1.0; n];
+        let k = vec![1.0; n];
+        let mut v = vec![0.0_f32; n];
+        for t in 0..seq {
+            for d in 0..model_dim {
+                v[t * model_dim + d] = t as f32;
+            }
+        }
+
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: heads,
+            seq_len: seq,
+            head_dim: dim,
+            scale: Some(1.0),
+            causal_mask: true,
+        })
+        .unwrap();
+        let out = attn.forward(&q, &k, &v).unwrap();
+        // Position 0 can only attend to itself → output ≈ v[0] = 0.0
+        assert!(approx_eq(out[0], 0.0));
+        assert!(approx_eq(out[1], 0.0));
+    }
+
+    #[test]
+    fn cpu_attention_single_token() {
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 1,
+            seq_len: 1,
+            head_dim: 4,
+            scale: None,
+            causal_mask: true,
+        })
+        .unwrap();
+        let v = vec![5.0; 4];
+        let out = attn.forward(&[1.0; 4], &[1.0; 4], &v).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    #[test]
+    fn cpu_attention_numerical_stability() {
+        let dim = 64;
+        let seq = 4;
+        let heads = 2;
+        let total = seq * heads * dim;
+        // Large values that could cause overflow without stable softmax
+        let q: Vec<f32> = (0..total).map(|i| 500.0 + (i as f32) * 0.1).collect();
+        let k: Vec<f32> = (0..total).map(|i| 500.0 + (i as f32) * 0.1).collect();
+        let v: Vec<f32> = (0..total).map(|i| (i as f32) * 0.01).collect();
+
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: heads,
+            seq_len: seq,
+            head_dim: dim,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let out = attn.forward(&q, &k, &v).unwrap();
+        assert_eq!(out.len(), total);
+        assert!(out.iter().all(|x| x.is_finite()), "output should be finite for large inputs");
+    }
+
+    #[test]
+    fn cpu_attention_shape_validation_q() {
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 2,
+            seq_len: 3,
+            head_dim: 4,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let correct = vec![0.0; 24];
+        let wrong = vec![0.0; 10];
+        assert!(attn.forward(&wrong, &correct, &correct).is_err());
+    }
+
+    #[test]
+    fn cpu_attention_shape_validation_k() {
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 2,
+            seq_len: 3,
+            head_dim: 4,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let correct = vec![0.0; 24];
+        let wrong = vec![0.0; 10];
+        assert!(attn.forward(&correct, &wrong, &correct).is_err());
+    }
+
+    #[test]
+    fn cpu_attention_shape_validation_v() {
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 2,
+            seq_len: 3,
+            head_dim: 4,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let correct = vec![0.0; 24];
+        let wrong = vec![0.0; 10];
+        assert!(attn.forward(&correct, &correct, &wrong).is_err());
+    }
+
+    #[test]
+    fn cpu_attention_invalid_config() {
+        assert!(
+            CpuAttention::new(CpuAttentionConfig {
+                batch_size: 0,
+                num_heads: 2,
+                seq_len: 3,
+                head_dim: 4,
+                scale: None,
+                causal_mask: false,
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn cpu_attention_forward_single_head() {
+        let attn = CpuAttention::new(CpuAttentionConfig {
+            batch_size: 1,
+            num_heads: 1,
+            seq_len: 1,
+            head_dim: 4,
+            scale: None,
+            causal_mask: false,
+        })
+        .unwrap();
+        let v = vec![7.0; 4];
+        let out = attn.forward_single_head(&[1.0; 4], &[1.0; 4], &v, 1, 1).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    #[test]
+    fn cpu_attention_config_accessor() {
+        let cfg = CpuAttentionConfig {
+            batch_size: 2,
+            num_heads: 4,
+            seq_len: 8,
+            head_dim: 64,
+            scale: Some(0.5),
+            causal_mask: true,
+        };
+        let attn = CpuAttention::new(cfg.clone()).unwrap();
+        assert_eq!(attn.config().batch_size, 2);
+        assert_eq!(attn.config().num_heads, 4);
+        assert!(attn.config().causal_mask);
     }
 }

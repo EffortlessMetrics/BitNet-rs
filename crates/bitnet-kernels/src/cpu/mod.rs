@@ -3,9 +3,9 @@
 pub mod activations;
 pub mod attention;
 pub use attention::{
-    AttentionConfig, AttentionKernel, CpuAttentionConfig, GqaConfig, apply_rotary_embedding,
-    attention_with_kv_cache, causal_attention, causal_mask, masked_attention,
-    multi_head_attention_cpu, scaled_dot_product_attention,
+    AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig,
+    apply_rotary_embedding, attention_with_kv_cache, causal_attention, causal_mask,
+    masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
 };
 pub mod batch_norm;
 pub mod conv2d;
