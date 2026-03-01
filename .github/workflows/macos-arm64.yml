@@ -26,6 +26,7 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/macos-arm64.yml'
   workflow_dispatch:
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -116,6 +117,7 @@ jobs:
           cargo check --locked \
             -p bitnet-common \
             -p bitnet-models \
+            -p bitnet-metal \
             -p bitnet-transformer \
             -p bitnet-inference \
             --no-default-features --features cpu,metal
@@ -151,7 +153,8 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --lib \
-            --no-default-features --features cpu
+            --no-default-features --features cpu \
+            -- -D warnings
 
   # Job 4: Formatting check
   fmt:
