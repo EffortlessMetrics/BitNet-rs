@@ -29,6 +29,7 @@ pub mod npu;
 pub mod opencl_buffer;
 pub mod opencl_cache;
 pub mod opencl_context;
+pub mod opencl_kernel_fusion;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
 pub mod opencl_embedding;
