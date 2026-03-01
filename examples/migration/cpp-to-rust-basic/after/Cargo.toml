@@ -9,10 +9,6 @@ license = "MIT OR Apache-2.0"
 name = "main"
 path = "src/main.rs"
 
-[[bin]]
-name = "benchmark"
-path = "src/benchmark.rs"
-
 [dependencies]
 # In a real implementation, this would be the actual bitnet crate
 # bitnet = "0.1"
