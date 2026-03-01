@@ -13,27 +13,21 @@
 //   opencl_quantized, opencl_transformer
 
 use bitnet_kernels::opencl_buffer::{
-    optimal_buffer_size, validate_alignment, AlignedBuffer, BufferPool,
+    AlignedBuffer, BufferPool, optimal_buffer_size, validate_alignment,
 };
 use bitnet_kernels::opencl_cache::{
-    CacheConfig, CacheEvictionStrategy, CachePolicy, KernelCacheKey,
-    KernelCacheManager,
+    CacheConfig, CacheEvictionStrategy, CachePolicy, KernelCacheKey, KernelCacheManager,
 };
 use bitnet_kernels::opencl_context::OpenClContextConfig;
 use bitnet_kernels::opencl_embedding::{
-    embedding_lookup_ref, output_projection_ref, EmbeddingConfig, EmbeddingTable,
-    OutputProjection,
+    EmbeddingConfig, EmbeddingTable, OutputProjection, embedding_lookup_ref, output_projection_ref,
 };
-use bitnet_kernels::opencl_kernel_sources::{
-    KernelProgramId, KernelSourceRegistry,
-};
+use bitnet_kernels::opencl_kernel_sources::{KernelProgramId, KernelSourceRegistry};
 use bitnet_kernels::opencl_pipeline::{
     GenerationConfig, InferencePipeline, PipelineBuilder, PipelineConfig, PipelineStage,
     PipelineStatus, StopReason, TokenGenerator,
 };
-use bitnet_kernels::opencl_work_size::{
-    IntelArcWorkSizeHints, WorkSizeOptimizer,
-};
+use bitnet_kernels::opencl_work_size::{IntelArcWorkSizeHints, WorkSizeOptimizer};
 
 // ============================================================================
 // Helper: CPU reference implementations for modules not yet exported
@@ -110,9 +104,7 @@ impl CpuKvCache {
         let scores: Vec<f32> = self
             .k
             .iter()
-            .map(|k| {
-                query.iter().zip(k.iter()).map(|(q, k)| q * k).sum::<f32>() * scale
-            })
+            .map(|k| query.iter().zip(k.iter()).map(|(q, k)| q * k).sum::<f32>() * scale)
             .collect();
         let probs = cpu_softmax(&scores);
         // weighted sum of V
@@ -137,9 +129,7 @@ fn e2e_full_forward_pass_embedding_to_output() {
     let eps = 1e-5;
 
     // Create embedding table with deterministic weights
-    let weight: Vec<f32> = (0..vocab_size * embed_dim)
-        .map(|i| pseudo_random(42, i))
-        .collect();
+    let weight: Vec<f32> = (0..vocab_size * embed_dim).map(|i| pseudo_random(42, i)).collect();
     let config = EmbeddingConfig::new(vocab_size, embed_dim);
     let table = EmbeddingTable::new(weight.clone(), config).unwrap();
 
@@ -173,9 +163,7 @@ fn e2e_full_forward_pass_embedding_to_output() {
     assert!(ffn_out.iter().all(|v| v.is_finite()));
 
     // Step 5: Output projection
-    let proj_weight: Vec<f32> = (0..vocab_size * embed_dim)
-        .map(|i| pseudo_random(99, i))
-        .collect();
+    let proj_weight: Vec<f32> = (0..vocab_size * embed_dim).map(|i| pseudo_random(99, i)).collect();
     let proj = OutputProjection::new(proj_weight, vocab_size, embed_dim).unwrap();
     let mut logits = vec![0.0f32; vocab_size];
     proj.forward(&ffn_out, &mut logits, 1).unwrap();
@@ -188,9 +176,7 @@ fn e2e_full_forward_pass_dimensions_preserved() {
     let vocab_size = 128;
     let embed_dim = 64;
 
-    let weight: Vec<f32> = (0..vocab_size * embed_dim)
-        .map(|i| pseudo_random(7, i))
-        .collect();
+    let weight: Vec<f32> = (0..vocab_size * embed_dim).map(|i| pseudo_random(7, i)).collect();
     let config = EmbeddingConfig::new(vocab_size, embed_dim);
     let table = EmbeddingTable::new(weight, config).unwrap();
 
@@ -296,15 +282,9 @@ fn e2e_ternary_quantize_dequantize_round_trip() {
 
     // Verify ternary values preserved
     for (i, &t) in ternary.iter().enumerate() {
-        assert!(
-            t == -1 || t == 0 || t == 1,
-            "element {i} should be ternary, got {t}"
-        );
+        assert!(t == -1 || t == 0 || t == 1, "element {i} should be ternary, got {t}");
         let expected = t as f32 * scale;
-        assert!(
-            (dequantized[i] - expected).abs() < 1e-6,
-            "round-trip mismatch at {i}"
-        );
+        assert!((dequantized[i] - expected).abs() < 1e-6, "round-trip mismatch at {i}");
     }
 }
 
@@ -683,7 +663,10 @@ fn e2e_sequential_generation_with_reset() {
     assert!(result1.generated_tokens > 0);
     assert!(result2.generated_tokens > 0);
     // After reset, results should be deterministic (same input → same output)
-    assert_eq!(result1.tokens, result2.tokens, "deterministic pipeline should produce same output after reset");
+    assert_eq!(
+        result1.tokens, result2.tokens,
+        "deterministic pipeline should produce same output after reset"
+    );
 }
 
 // ============================================================================
@@ -696,9 +679,7 @@ fn e2e_embedding_feeds_pipeline() {
     let embed_dim = 32;
 
     // Create embedding table
-    let weight: Vec<f32> = (0..vocab_size * embed_dim)
-        .map(|i| pseudo_random(77, i))
-        .collect();
+    let weight: Vec<f32> = (0..vocab_size * embed_dim).map(|i| pseudo_random(77, i)).collect();
     let config = EmbeddingConfig::new(vocab_size, embed_dim);
     let table = EmbeddingTable::new(weight, config).unwrap();
 
@@ -720,9 +701,7 @@ fn e2e_embedding_feeds_pipeline() {
 fn e2e_output_projection_ref_matches_struct() {
     let vocab_size = 16;
     let hidden_size = 8;
-    let weight: Vec<f32> = (0..vocab_size * hidden_size)
-        .map(|i| pseudo_random(55, i))
-        .collect();
+    let weight: Vec<f32> = (0..vocab_size * hidden_size).map(|i| pseudo_random(55, i)).collect();
     let hidden: Vec<f32> = (0..hidden_size).map(|i| pseudo_random(66, i)).collect();
 
     // Via struct
@@ -732,14 +711,10 @@ fn e2e_output_projection_ref_matches_struct() {
 
     // Via free function
     let mut logits_ref = vec![0.0f32; vocab_size];
-    output_projection_ref(&hidden, &weight, &mut logits_ref, 1, hidden_size, vocab_size)
-        .unwrap();
+    output_projection_ref(&hidden, &weight, &mut logits_ref, 1, hidden_size, vocab_size).unwrap();
 
     for (i, (&a, &b)) in logits_struct.iter().zip(logits_ref.iter()).enumerate() {
-        assert!(
-            (a - b).abs() < 1e-5,
-            "mismatch at {i}: struct={a}, ref={b}"
-        );
+        assert!((a - b).abs() < 1e-5, "mismatch at {i}: struct={a}, ref={b}");
     }
 }
 
@@ -753,11 +728,7 @@ fn e2e_kernel_source_registry_feeds_cache() {
     let cache = KernelCacheManager::new(CacheConfig::default());
 
     // For each kernel, create a cache key from its source
-    let ids = [
-        KernelProgramId::Matmul,
-        KernelProgramId::RmsNorm,
-        KernelProgramId::Softmax,
-    ];
+    let ids = [KernelProgramId::Matmul, KernelProgramId::RmsNorm, KernelProgramId::Softmax];
 
     for id in &ids {
         let source = registry.get(id).expect("kernel should be registered");
@@ -916,23 +887,13 @@ fn e2e_embedding_ref_with_aligned_buffer() {
 
     // Perform lookup using ref function
     let mut output = vec![0.0f32; embed_dim];
-    embedding_lookup_ref(
-        &[7],
-        weight_buf.as_slice(),
-        &mut output,
-        vocab_size,
-        embed_dim,
-        None,
-    )
-    .unwrap();
+    embedding_lookup_ref(&[7], weight_buf.as_slice(), &mut output, vocab_size, embed_dim, None)
+        .unwrap();
 
     // Verify output matches expected slice
     let expected = &weight_buf.as_slice()[7 * embed_dim..8 * embed_dim];
     for (i, (&out, &exp)) in output.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            (out - exp).abs() < 1e-6,
-            "mismatch at {i}: got {out}, expected {exp}"
-        );
+        assert!((out - exp).abs() < 1e-6, "mismatch at {i}: got {out}, expected {exp}");
     }
 }
 
@@ -953,11 +914,7 @@ fn e2e_kernel_registry_covers_pipeline_stages() {
     ];
 
     for id in &required {
-        assert!(
-            registry.get(id).is_some(),
-            "registry should have kernel for {:?}",
-            id
-        );
+        assert!(registry.get(id).is_some(), "registry should have kernel for {:?}", id);
     }
 
     // All kernels should have at least one entry point
@@ -989,10 +946,8 @@ fn e2e_kernel_source_contains_opencl_syntax() {
 #[test]
 fn e2e_context_and_cache_configs_validate_together() {
     // Context config with profiling enabled (for timing data)
-    let ctx_config = OpenClContextConfig {
-        enable_profiling: true,
-        ..OpenClContextConfig::default()
-    };
+    let ctx_config =
+        OpenClContextConfig { enable_profiling: true, ..OpenClContextConfig::default() };
     assert!(ctx_config.enable_profiling);
 
     // Cache config should be valid
