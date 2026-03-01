@@ -31,10 +31,7 @@ fn llama_config_with_fast_preset() {
     let mut model = ModelConfig::default();
     model.apply_architecture_defaults("llama");
 
-    let inference = InferenceConfigBuilder::new()
-        .preset(InferencePreset::Fast)
-        .build()
-        .unwrap();
+    let inference = InferenceConfigBuilder::new().preset(InferencePreset::Fast).build().unwrap();
 
     assert_eq!(model.norm_type, NormType::RmsNorm);
     assert_eq!(model.activation_type, ActivationType::Silu);
@@ -65,10 +62,8 @@ fn bitnet_config_with_deterministic_preset() {
     let mut model = ModelConfig::default();
     model.apply_architecture_defaults("bitnet");
 
-    let inference = InferenceConfigBuilder::new()
-        .preset(InferencePreset::Deterministic)
-        .build()
-        .unwrap();
+    let inference =
+        InferenceConfigBuilder::new().preset(InferencePreset::Deterministic).build().unwrap();
 
     assert_eq!(model.norm_type, NormType::LayerNorm);
     assert_eq!(model.activation_type, ActivationType::Silu);
@@ -81,10 +76,7 @@ fn mistral_config_with_debug_preset() {
     let mut model = ModelConfig::default();
     model.apply_architecture_defaults("mistral");
 
-    let inference = InferenceConfigBuilder::new()
-        .preset(InferencePreset::Debug)
-        .build()
-        .unwrap();
+    let inference = InferenceConfigBuilder::new().preset(InferencePreset::Debug).build().unwrap();
 
     assert_eq!(model.norm_type, NormType::RmsNorm);
     assert_eq!(model.activation_type, ActivationType::Silu);
