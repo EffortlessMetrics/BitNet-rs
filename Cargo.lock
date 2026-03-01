@@ -753,7 +753,15 @@ dependencies = [
 name = "bitnet-honest-compute"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-honest-compute-core",
  "insta",
+ "proptest",
+]
+
+[[package]]
+name = "bitnet-honest-compute-core"
+version = "0.2.1-dev"
+dependencies = [
  "proptest",
 ]
 
@@ -1025,7 +1033,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
- "bitnet-honest-compute",
+ "bitnet-honest-compute-core",
  "bitnet-kernels",
  "chrono",
  "insta",

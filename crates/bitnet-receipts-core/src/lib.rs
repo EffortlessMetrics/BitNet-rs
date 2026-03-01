@@ -15,7 +15,7 @@
 
 use anyhow::{Result, anyhow};
 use bitnet_common::CorrectionRecord;
-use bitnet_honest_compute::{
+use bitnet_honest_compute_core::{
     classify_compute_path, validate_compute_path as validate_honest_compute_path,
     validate_kernel_ids as validate_honest_kernel_ids,
 };

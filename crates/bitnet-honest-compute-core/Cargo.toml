@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-honest-compute"
+name = "bitnet-honest-compute-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,19 +10,15 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Core honest-compute policy helpers for compute-path and kernel ID validation"
-readme = "README.md"
 include = [
   "src/**",
   "Cargo.toml",
-  "README.md",
 ]
 
 [dependencies]
-bitnet-honest-compute-core = { path = "../bitnet-honest-compute-core", version = "0.2.1-dev" }
 
 [features]
 default = []
 
 [dev-dependencies]
-proptest = { workspace = true }
-insta = { workspace = true }
+proptest.workspace = true

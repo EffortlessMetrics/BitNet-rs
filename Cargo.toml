@@ -23,6 +23,7 @@ members = [
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
+  "crates/bitnet-honest-compute-core",
   "crates/bitnet-receipts",
   "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
