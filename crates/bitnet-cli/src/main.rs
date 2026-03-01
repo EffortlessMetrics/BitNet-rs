@@ -12,7 +12,10 @@ use bitnet_common::Tensor;
 use bitnet_startup_contract_guard::{
     ContractPolicy, RuntimeComponent, evaluate_and_emit, feature_line,
 };
-use candle_core::{DType, IndexOp};
+use bitnet_tensor_diagnostics_core::{
+    compute_rms, extract_last_token_hidden, extract_logits_2d, tensor_to_vec,
+};
+use candle_core::DType;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
@@ -1564,120 +1567,6 @@ async fn run_simple_generation(
     }
 
     Ok(())
-}
-
-/// Extract last token hidden state from 3D tensor \[B,T,H\] -> \[B,H\]
-fn extract_last_token_hidden(
-    tensor: &bitnet_common::ConcreteTensor,
-) -> Result<bitnet_common::ConcreteTensor> {
-    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
-
-    let shape = tensor.shape();
-    if shape.len() != 3 {
-        return Err(BitNetError::Validation("Expected 3D tensor".into()).into());
-    }
-
-    let (batch_size, seq_len, hidden_size) = (shape[0], shape[1], shape[2]);
-
-    match tensor {
-        ConcreteTensor::BitNet(t) => {
-            let candle = t.as_candle();
-            // Extract last token: [B, T, H] -> [B, H]
-            let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?;
-            Ok(ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(last)))
-        }
-        ConcreteTensor::Mock(_) => {
-            // Return mock hidden state [B, H]
-            Ok(ConcreteTensor::mock(vec![batch_size, hidden_size]))
-        }
-    }
-}
-
-/// Extract logits vector from 2D tensor \[B,V\] -> `Vec<f32>`
-fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
-    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
-
-    let shape = tensor.shape();
-    if shape.len() != 2 {
-        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
-    }
-
-    let (_batch, _vocab) = (shape[0], shape[1]);
-
-    match tensor {
-        ConcreteTensor::BitNet(t) => {
-            let candle = t.as_candle();
-            // Extract first batch: [B, V] -> [V]
-            let batch_0 = candle.i(0)?;
-            let batch_0 =
-                if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
-            Ok(batch_0.to_vec1::<f32>()?)
-        }
-        ConcreteTensor::Mock(_) => {
-            // Return mock logits for testing
-            Ok(vec![0.1; 50257])
-        }
-    }
-}
-
-/// Extract logits vector from tensor (legacy function for compatibility)
-#[allow(dead_code)]
-fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
-    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
-
-    let shape = tensor.shape();
-    if shape.len() != 3 {
-        return Err(BitNetError::Validation("Expected 3D tensor".into()).into());
-    }
-
-    let (_batch, seq_len, _vocab) = (shape[0], shape[1], shape[2]);
-
-    match tensor {
-        ConcreteTensor::BitNet(t) => {
-            let candle = t.as_candle();
-            let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?.i(0)?;
-            let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
-            Ok(last.to_vec1::<f32>()?)
-        }
-        ConcreteTensor::Mock(_) => {
-            // Return mock logits for testing
-            Ok(vec![0.1; 50257])
-        }
-    }
-}
-
-/// Convert tensor to f32 vector for diagnostics
-fn tensor_to_vec(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
-    use bitnet_common::ConcreteTensor;
-
-    match tensor {
-        ConcreteTensor::BitNet(t) => {
-            let candle = t.as_candle();
-            let candle_f32 = if candle.dtype() != DType::F32 {
-                candle.to_dtype(DType::F32)?
-            } else {
-                candle.clone()
-            };
-            // Flatten to 1D vector
-            let flattened = candle_f32.flatten_all()?;
-            Ok(flattened.to_vec1::<f32>()?)
-        }
-        ConcreteTensor::Mock(mock) => {
-            // Return mock values - use shape from tensor
-            let size: usize = mock.shape().iter().product();
-            Ok(vec![0.1; size])
-        }
-    }
-}
-
-/// Compute RMS (root mean square) of a vector
-#[inline]
-fn compute_rms(xs: &[f32]) -> f32 {
-    if xs.is_empty() {
-        return 0.0;
-    }
-    let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
-    (sum_sq / (xs.len() as f32)).sqrt()
 }
 
 /// Show system information

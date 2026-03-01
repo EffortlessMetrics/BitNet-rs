@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-tensor-diagnostics-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP microcrate for tensor extraction and diagnostics helpers"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+
+candle-core.workspace = true

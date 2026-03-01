@@ -472,6 +472,7 @@ dependencies = [
  "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
  "bitnet-startup-contract-guard",
+ "bitnet-tensor-diagnostics-core",
  "bitnet-tokenizers",
  "bitnet-validation",
  "bytemuck",
@@ -1318,6 +1319,14 @@ dependencies = [
  "proptest",
  "thiserror 2.0.18",
  "xtask-build-helper",
+]
+
+[[package]]
+name = "bitnet-tensor-diagnostics-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "candle-core",
 ]
 
 [[package]]
