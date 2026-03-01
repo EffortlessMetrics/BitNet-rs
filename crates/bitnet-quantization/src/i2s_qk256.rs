@@ -793,11 +793,8 @@ mod tests {
     /// Test for stride mismatch (panics in debug mode via debug_assert)
     ///
     /// This test verifies that mismatched row_stride_bytes vs cols is caught
-    /// by the debug_assert in gemv_qk256_row. In release builds, this test
-    /// is skipped since debug_assert is disabled.
+    /// by the validation in gemv_qk256 and returned as an error.
     #[test]
-    #[should_panic(expected = "row bytes mismatch")]
-    #[cfg(debug_assertions)]
     fn qk256_stride_mismatch_panics() {
         let rows = 1usize;
         let cols = 256usize;
@@ -806,7 +803,12 @@ mod tests {
         let x = vec![1.0f32; cols];
         let mut y_out = vec![0.0f32; rows];
 
-        // This will panic in debug mode due to debug_assert in gemv_qk256_row
-        let _ = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride);
+        let err = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride)
+            .expect_err("mismatched row_stride_bytes should error");
+        assert!(
+            err.to_string().contains("row_stride_bytes"),
+            "error should mention row_stride_bytes, got: {}",
+            err
+        );
     }
 }
