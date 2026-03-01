@@ -6,6 +6,7 @@
 //!
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
+//! - [`batch_norm`]: Batch normalization with training/eval mode support
 //! - [`rmsnorm`]: RMSNorm layer normalization
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
@@ -17,6 +18,7 @@
 //! module via `cudarc`.
 
 pub mod attention;
+pub mod batch_norm;
 pub mod kv_cache;
 pub mod qk256_gemv;
 pub mod rmsnorm;
@@ -24,6 +26,7 @@ pub mod rope;
 pub mod softmax;
 
 pub use attention::{AttentionKernelConfig, launch_attention};
+pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
