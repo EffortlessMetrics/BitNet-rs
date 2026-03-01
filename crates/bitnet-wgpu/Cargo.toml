@@ -7,6 +7,7 @@ description = "wgpu-based GPU compute backend for BitNet inference (Vulkan/Metal
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+bitnet-nvidia = { path = "../bitnet-nvidia" }
 wgpu = { version = "24", features = ["vulkan-portability"] }
 bytemuck = { version = "1", features = ["derive"] }
 pollster = "0.4"

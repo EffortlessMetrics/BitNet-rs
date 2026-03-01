@@ -985,6 +985,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-nvidia"
+version = "0.1.0"
+
+[[package]]
 name = "bitnet-opencl"
 version = "0.2.1-dev"
 dependencies = [
@@ -1772,6 +1776,7 @@ dependencies = [
 name = "bitnet-wgpu"
 version = "0.1.0"
 dependencies = [
+ "bitnet-nvidia",
  "bytemuck",
  "pollster",
  "proptest",
@@ -1786,7 +1791,11 @@ name = "bitnet-wgpu-bench"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+ "bitnet-nvidia",
  "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
