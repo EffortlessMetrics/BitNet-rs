@@ -105,7 +105,8 @@ pub use kv_cache::{
 
 // Re-export new embedding operations.
 pub use embedding::{
-    embedding_bag_mean, embedding_bag_sum, embedding_lookup_with_padding, positional_embedding,
+    add_positional_encoding, embedding_bag_mean, embedding_bag_sum, embedding_lookup_batched,
+    embedding_lookup_with_padding, positional_embedding, positional_encoding,
 };
 
 #[cfg(target_arch = "x86_64")]
