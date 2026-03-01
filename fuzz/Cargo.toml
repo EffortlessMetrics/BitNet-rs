@@ -390,6 +390,24 @@ test = false
 doc = false
 
 [[bin]]
+name = "layer_norm"
+path = "fuzz_targets/layer_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "simd_math"
+path = "fuzz_targets/simd_math.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "loss_functions"
+path = "fuzz_targets/loss_functions.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "broadcast_shape_fuzz"
 path = "fuzz_targets/broadcast_shape_fuzz.rs"
 test = false
