@@ -4,6 +4,9 @@
 //! including context pooling, local memory optimizations, prefetch
 //! pipelines, KV cache, paged attention, and multi-backend GPU dispatch
 //! with automatic selection.
+//! pipelines, KV cache, paged attention, and CPU reference implementations
+//! with OpenCL kernel sources for I2_S dequantization, QK256 block
+//! dequantization, and ternary matrix multiply.
 
 pub mod backend_dispatcher;
 pub mod backend_registry;
@@ -16,3 +19,5 @@ pub use backend_dispatcher::{
     DispatchLog, DispatchStrategy, Operation,
 };
 pub use backend_registry::{BackendInfo, BackendProvider, BackendRegistry};
+pub mod quantized_kernels;
+pub mod quantized_ops;
