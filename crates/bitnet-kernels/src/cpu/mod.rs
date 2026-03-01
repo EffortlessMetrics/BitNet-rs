@@ -8,6 +8,7 @@ pub mod fallback;
 pub mod fusion;
 pub mod kv_cache;
 pub mod layer_norm;
+pub mod loss;
 pub mod pooling;
 pub use pooling::{
     PoolConfig, PoolType, PoolingConfig, PoolingKernel, adaptive_avg_pool_1d, adaptive_avg_pool_2d,
@@ -33,6 +34,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
+pub use loss::LossReduction;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
