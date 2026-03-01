@@ -4,6 +4,7 @@ use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
 pub mod benchmarks;
+pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
