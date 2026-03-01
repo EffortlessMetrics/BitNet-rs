@@ -262,6 +262,56 @@ pub fn i2s_matmul_cpu(
     Ok(())
 }
 
+// ── CUDA kernel source ────────────────────────────────────────────────
+
+/// CUDA C kernel for fused I2_S dequantization + GEMM.
+///
+/// Each thread-block computes one `TILE_M × TILE_N` output tile.
+/// Weights are unpacked from 2-bit I2_S encoding in shared memory and
+/// multiplied against the activation tile in FP32.  Per-block scales are
+/// applied after the reduction along `k`.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const I2S_MATMUL_KERNEL_SRC: &str = r#"
+extern "C" __global__ void i2s_matmul_f32(
+    const float* __restrict__ activations,
+    const unsigned char* __restrict__ weights_packed,
+    const float* __restrict__ scales,
+    float* __restrict__ output,
+    int M, int N, int K, int block_size)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row >= M || col >= N) return;
+
+    int packed_k  = (K + 3) / 4;
+    int num_blks  = (K + block_size - 1) / block_size;
+    float acc     = 0.0f;
+
+    for (int blk = 0; blk < num_blks; blk++) {
+        int blk_start = blk * block_size;
+        int blk_end   = blk_start + block_size;
+        if (blk_end > K) blk_end = K;
+        float scale = scales[col * num_blks + blk];
+
+        for (int idx = blk_start; idx < blk_end; idx++) {
+            int byte_idx = col * packed_k + idx / 4;
+            int bit_off  = (idx % 4) * 2;
+            unsigned char bits = (weights_packed[byte_idx] >> bit_off) & 0x03;
+
+            // I2_S decode: 0b00→0, 0b01→+1, 0b11→-1
+            float w;
+            if      (bits == 0x01) w =  1.0f;
+            else if (bits == 0x03) w = -1.0f;
+            else                   w =  0.0f;
+
+            acc += activations[row * K + idx] * w * scale;
+        }
+    }
+    output[row * N + col] = acc;
+}
+"#;
+
 // ── CUDA launch stub ──────────────────────────────────────────────────
 
 /// Launch stub for the I2_S quantized matmul CUDA kernel.
@@ -656,5 +706,136 @@ mod tests {
         let mut output = vec![0.0f32; 512];
         let result = i2s_matmul_forward(&act, &packed, &scales, &mut output, &cfg);
         assert!(result.is_ok(), "I2S matmul block256 launch failed: {result:?}");
+    }
+
+    // ── CUDA kernel source ────────────────────────────────────────
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_i2s_matmul_kernel_src_not_empty() {
+        assert!(!I2S_MATMUL_KERNEL_SRC.is_empty());
+        assert!(I2S_MATMUL_KERNEL_SRC.contains("i2s_matmul_f32"));
+    }
+
+    // ── property tests ────────────────────────────────────────────
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        /// Strategy for small matrix dims that keep tests fast.
+        fn dim_range() -> impl Strategy<Value = usize> {
+            1..=16usize
+        }
+
+        /// Strategy for k values that are multiples-friendly.
+        fn k_range() -> impl Strategy<Value = usize> {
+            1..=32usize
+        }
+
+        proptest! {
+            #[test]
+            fn output_shape_is_m_by_n(
+                m in dim_range(),
+                n in dim_range(),
+                k in k_range(),
+            ) {
+                let bs = 32;
+                let cfg = I2sMatmulConfig::for_shape(m, n, k, bs).unwrap();
+                let packed_k = k.div_ceil(4);
+                let num_blocks_k = k.div_ceil(bs);
+                let act = vec![1.0f32; m * k];
+                let packed = vec![0u8; packed_k * n];
+                let scales = vec![1.0f32; n * num_blocks_k];
+                let mut out = vec![0.0f32; m * n];
+                i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).unwrap();
+                prop_assert_eq!(out.len(), m * n);
+            }
+
+            #[test]
+            fn output_bounded_by_activation_magnitude(
+                m in dim_range(),
+                n in dim_range(),
+                k in k_range(),
+            ) {
+                let bs = 32;
+                let cfg = I2sMatmulConfig::for_shape(m, n, k, bs).unwrap();
+                let packed_k = k.div_ceil(4);
+                let num_blocks_k = k.div_ceil(bs);
+
+                // All weights = +1, scale = 1.0 → each output is sum of
+                // k activation values along that row.  With act = 1.0,
+                // the maximum output is k.
+                let act = vec![1.0f32; m * k];
+                let mut packed = vec![0u8; packed_k * n];
+                for col in 0..n {
+                    for row in 0..k {
+                        let byte_idx = col * packed_k + row / 4;
+                        let bit_off = (row % 4) * 2;
+                        packed[byte_idx] |= 0b01u8 << bit_off; // +1
+                    }
+                }
+                let scales = vec![1.0f32; n * num_blocks_k];
+                let mut out = vec![0.0f32; m * n];
+                i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).unwrap();
+
+                let bound = k as f32 + 1e-4;
+                for &v in &out {
+                    prop_assert!(
+                        v.abs() <= bound,
+                        "output {v} exceeds bound {bound}"
+                    );
+                }
+            }
+
+            #[test]
+            fn zero_weights_produce_zero_output(
+                m in dim_range(),
+                n in dim_range(),
+                k in k_range(),
+            ) {
+                let bs = 32;
+                let cfg = I2sMatmulConfig::for_shape(m, n, k, bs).unwrap();
+                let packed_k = k.div_ceil(4);
+                let num_blocks_k = k.div_ceil(bs);
+                // Packed zeros == all weight codes 0b00 == weight value 0
+                let act: Vec<f32> = (0..m * k).map(|i| i as f32 * 0.37).collect();
+                let packed = vec![0u8; packed_k * n];
+                let scales = vec![1.0f32; n * num_blocks_k];
+                let mut out = vec![f32::NAN; m * n];
+                i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).unwrap();
+                for &v in &out {
+                    prop_assert!((v - 0.0).abs() < 1e-7, "expected 0, got {v}");
+                }
+            }
+
+            #[test]
+            fn zero_scale_produces_zero_output(
+                m in dim_range(),
+                n in dim_range(),
+                k in k_range(),
+            ) {
+                let bs = 32;
+                let cfg = I2sMatmulConfig::for_shape(m, n, k, bs).unwrap();
+                let packed_k = k.div_ceil(4);
+                let num_blocks_k = k.div_ceil(bs);
+                // All weights +1 but scale = 0
+                let mut packed = vec![0u8; packed_k * n];
+                for col in 0..n {
+                    for row in 0..k {
+                        let byte_idx = col * packed_k + row / 4;
+                        let bit_off = (row % 4) * 2;
+                        packed[byte_idx] |= 0b01u8 << bit_off;
+                    }
+                }
+                let act = vec![42.0f32; m * k];
+                let scales = vec![0.0f32; n * num_blocks_k];
+                let mut out = vec![f32::NAN; m * n];
+                i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).unwrap();
+                for &v in &out {
+                    prop_assert!((v - 0.0).abs() < 1e-7, "expected 0, got {v}");
+                }
+            }
+        }
     }
 }

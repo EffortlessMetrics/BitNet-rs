@@ -162,7 +162,7 @@ pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SR
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use matmul::{launch_matmul, launch_matmul_f16};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use quantized_matmul::launch_i2s_matmul;
+pub use quantized_matmul::{I2S_MATMUL_KERNEL_SRC, launch_i2s_matmul};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantize::{
