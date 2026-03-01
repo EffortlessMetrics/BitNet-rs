@@ -38,6 +38,10 @@ services:
       - RUST_BACKTRACE=1
       - RUST_LOG=warn
       - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - NVIDIA_REQUIRE_CUDA=cuda>=12.2
+      - CUDA_CACHE_MAXSIZE=2147483648
+      - CARGO_TARGET_DIR=/app/target
     deploy:
       resources:
         limits:
@@ -50,6 +54,7 @@ services:
               capabilities: [gpu]
     volumes:
       - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
       - gpu-target:/app/target
       - ${BITNET_MODEL_DIR:-./models}:/models:ro
 
@@ -90,6 +95,7 @@ services:
 
 volumes:
   cargo-registry:
+  cargo-git:
   cpu-target:
   gpu-target:
   intel-target:
