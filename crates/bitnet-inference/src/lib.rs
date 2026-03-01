@@ -47,6 +47,7 @@ pub(crate) use tensor_ext::TensorDeviceExt;
 
 pub use backends::{Backend, CpuBackend, GpuBackend};
 pub use batch::{BatchConfig, BatchRequest, BatchResult, BatchScheduler, SingleResult};
+pub use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
 pub use engine::{InferenceEngine, InferenceResult};
@@ -73,7 +74,7 @@ pub use prefix_cache::{
 };
 pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
-    ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
+    ProductionInferenceEngine,
 };
 pub use prompt_template::{ChatRole, ChatTurn, PromptTemplate, TemplateType};
 pub use receipts::{

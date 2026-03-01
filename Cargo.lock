@@ -782,6 +782,7 @@ dependencies = [
  "bitnet-engine-core",
  "bitnet-generation",
  "bitnet-gguf",
+ "bitnet-inference-metrics-core",
  "bitnet-kernels",
  "bitnet-logits",
  "bitnet-models",
@@ -819,6 +820,13 @@ dependencies = [
  "tokio-test",
  "tracing",
  "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "bitnet-inference-metrics-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

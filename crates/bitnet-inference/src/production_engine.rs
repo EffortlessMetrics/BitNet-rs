@@ -16,9 +16,9 @@ use crate::{GenerationConfig, InferenceEngine};
 #[cfg(feature = "inference")]
 use bitnet_common::KernelCapabilities;
 use bitnet_common::{BackendStartupSummary, BitNetError, Device, InferenceError, Result};
+use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(feature = "inference")]
@@ -27,45 +27,6 @@ use tokio::sync::RwLock;
 use tracing::info;
 #[cfg(feature = "inference")]
 use tracing::{debug, instrument};
-
-/// Enhanced timing metrics for detailed performance tracking
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct TimingMetrics {
-    /// Prefill latency in milliseconds
-    pub prefill_ms: Option<u64>,
-    /// Decode latency in milliseconds
-    pub decode_ms: Option<u64>,
-    /// Tokenization encode time in milliseconds
-    pub tokenization_encode_ms: Option<u64>,
-    /// Tokenization decode time in milliseconds
-    pub tokenization_decode_ms: Option<u64>,
-    /// End-to-end total time in milliseconds
-    pub total_ms: u64,
-}
-
-/// Enhanced throughput metrics for performance analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ThroughputMetrics {
-    /// Prefill throughput in tokens per second
-    pub prefill_tokens_per_sec: Option<f64>,
-    /// Decode throughput in tokens per second
-    pub decode_tokens_per_sec: Option<f64>,
-    /// End-to-end throughput in tokens per second
-    pub end_to_end_tokens_per_sec: f64,
-    /// Total tokens generated
-    pub total_tokens: usize,
-}
-
-impl Default for ThroughputMetrics {
-    fn default() -> Self {
-        Self {
-            prefill_tokens_per_sec: None,
-            decode_tokens_per_sec: None,
-            end_to_end_tokens_per_sec: 0.0,
-            total_tokens: 0,
-        }
-    }
-}
 
 /// Comprehensive performance metrics collector
 #[derive(Debug, Clone, Default)]

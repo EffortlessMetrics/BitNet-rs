@@ -18,6 +18,7 @@ members = [
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
+  "crates/bitnet-inference-metrics-core", # SRP: shared inference timing/throughput metric DTOs
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
   "crates/bitnet-prompt-templates",
@@ -111,6 +112,7 @@ default-members = [
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
+  "crates/bitnet-inference-metrics-core", # SRP: shared inference timing/throughput metric DTOs
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-receipts",
