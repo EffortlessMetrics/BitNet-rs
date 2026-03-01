@@ -625,6 +625,28 @@ pub fn launch_softmax(_input: &[f32], _output: &mut [f32], config: &SoftmaxConfi
     .into())
 }
 
+/// Launch log-softmax CUDA kernel stub.
+///
+/// Returns `KernelError::GpuError` until a real PTX kernel is compiled.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_log_softmax(input: &[f32], output: &mut [f32], config: &SoftmaxConfig) -> Result<()> {
+    let mut cfg = config.clone();
+    cfg.mode = SoftmaxMode::LogSoftmax;
+    launch_softmax(input, output, &cfg)
+}
+
+/// Convenience CPU fallback returning an allocated `Vec<f32>`.
+pub fn softmax_cpu_fallback(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    config: &SoftmaxConfig,
+) -> Vec<f32> {
+    let mut output = vec![0.0f32; rows * cols];
+    let _ = softmax_cpu(input, &mut output, config);
+    output
+}
+
 // ---------------------------------------------------------------------------
 // Unified dispatch
 // ---------------------------------------------------------------------------
