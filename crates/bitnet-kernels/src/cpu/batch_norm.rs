@@ -1148,7 +1148,7 @@ mod tests {
             /// Running variance should be non-negative after any training step.
             #[test]
             fn prop_running_var_non_negative(
-                (batch, features, input) in bn_scenario()
+                (_batch, features, input) in bn_scenario()
             ) {
                 let cfg = BatchNormConfig {
                     num_features: features, eps: 1e-5, momentum: 0.1, training: true,
@@ -1173,7 +1173,7 @@ mod tests {
             /// Eval mode is deterministic with fixed running stats.
             #[test]
             fn prop_eval_deterministic(
-                (batch, features, input) in bn_scenario()
+                (_batch, features, input) in bn_scenario()
             ) {
                 let rmean: Vec<f32> = (0..features).map(|ch| ch as f32).collect();
                 let rvar: Vec<f32> = (0..features).map(|ch| (ch + 1) as f32).collect();
