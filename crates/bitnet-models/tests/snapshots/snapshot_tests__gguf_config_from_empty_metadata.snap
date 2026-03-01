@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"arch={} vocab_size={} hidden_size={} num_layers={} num_heads={} head_dim={} max_seq_len={}\",\ncfg.architecture, cfg.vocab_size, cfg.hidden_size, cfg.num_layers,\ncfg.num_heads, cfg.head_dim, cfg.max_seq_len,)"
+---
+arch=llama vocab_size=32000 hidden_size=4096 num_layers=32 num_heads=32 head_dim=128 max_seq_len=2048

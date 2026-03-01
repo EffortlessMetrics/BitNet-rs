@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"prompt_tokens={} generated_tokens={} peak_memory_bytes={}\",\nsnapshot.prompt_tokens, snapshot.generated_tokens,\nsnapshot.peak_memory_bytes,)"
+---
+prompt_tokens=128 generated_tokens=64 peak_memory_bytes=1073741824

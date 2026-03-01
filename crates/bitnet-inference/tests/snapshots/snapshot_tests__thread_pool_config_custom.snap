@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: cfg
+---
+ThreadPoolConfig {
+    num_threads: 16,
+    affinity: true,
+    priority: 2,
+    name_prefix: "custom-inf",
+}

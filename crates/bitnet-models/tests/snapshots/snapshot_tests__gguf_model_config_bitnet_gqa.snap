@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: cfg
+---
+GgufModelConfig {
+    architecture: "bitnet",
+    model_name: Some(
+        "BitNet-2B",
+    ),
+    vocab_size: 100000,
+    hidden_size: 2048,
+    num_layers: 24,
+    num_heads: 16,
+    num_kv_heads: 4,
+    head_dim: 128,
+    intermediate_size: 5504,
+    max_seq_len: 2048,
+    rope_theta: 500000.0,
+    rope_scaling: None,
+    quantization: GgufQuantizationConfig {
+        bit_width: 2,
+        block_size: 64,
+        format: "I2_S",
+    },
+}

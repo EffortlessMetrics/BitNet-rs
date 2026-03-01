@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"num_threads={} affinity={} priority={} name_prefix={}\",\ncfg.num_threads, cfg.affinity, cfg.priority, cfg.name_prefix,)"
+---
+num_threads=4 affinity=false priority=0 name_prefix=bitnet-inf

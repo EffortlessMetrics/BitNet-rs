@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"max_batch_size={} timeout_ms={} max_total_tokens={}\",\ncfg.max_batch_size, cfg.timeout.as_millis(), cfg.max_total_tokens,)"
+---
+max_batch_size=8 timeout_ms=30000 max_total_tokens=8192

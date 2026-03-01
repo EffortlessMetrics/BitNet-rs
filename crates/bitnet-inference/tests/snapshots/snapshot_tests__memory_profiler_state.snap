@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"current_bytes={} peak_bytes={} alloc_count={} dealloc_count={}\",\nprofiler.current_bytes(), profiler.peak_bytes(), profiler.allocation_count(),\nprofiler.deallocation_count(),)"
+---
+current_bytes=2048 peak_bytes=3072 alloc_count=2 dealloc_count=1
