@@ -37,6 +37,7 @@ pub mod opencl_kv_cache;
 pub mod opencl_pipeline;
 pub mod opencl_registry;
 pub mod opencl_token_gen;
+pub mod opencl_tokenizer_bridge;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
