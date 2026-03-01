@@ -10,12 +10,10 @@ documentation.workspace = true
 description = "SRP download mechanics helpers for retry, offline mode, metadata, and validation"
 
 [dependencies]
-bitnet-http-retry = { path = "../bitnet-http-retry", version = "0.2.1-dev" }
-reqwest = { workspace = true, features = ["blocking"] }
-thiserror.workspace = true
+bitnet-download-core = { path = "../bitnet-download-core", version = "0.2.1-dev" }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-httpdate = "1.0.3"

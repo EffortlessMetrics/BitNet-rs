@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-download-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "SRP download primitives for retry/header parsing and payload validation"
+
+[dependencies]
+reqwest = { workspace = true }
+httpdate = "1.0.3"
+thiserror.workspace = true
+
+[lints]
+workspace = true
