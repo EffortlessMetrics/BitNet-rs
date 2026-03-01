@@ -463,12 +463,16 @@ mod tests {
 
     #[test]
     fn test_speedup_f32() {
-        assert!((ComputePrecision::Float32.theoretical_speedup_vs_f32() - 1.0).abs() < f64::EPSILON);
+        assert!(
+            (ComputePrecision::Float32.theoretical_speedup_vs_f32() - 1.0).abs() < f64::EPSILON
+        );
     }
 
     #[test]
     fn test_speedup_f16() {
-        assert!((ComputePrecision::Float16.theoretical_speedup_vs_f32() - 2.0).abs() < f64::EPSILON);
+        assert!(
+            (ComputePrecision::Float16.theoretical_speedup_vs_f32() - 2.0).abs() < f64::EPSILON
+        );
     }
 
     #[test]
