@@ -5,7 +5,7 @@
 //! produced by the CPU kernels so that accidental numerical regressions
 //! are caught at review time.
 
-use bitnet_kernels::cpu::{conv1d, embedding, quantized_matmul, rope, softmax};
+use bitnet_kernels::cpu::{embedding, quantized_matmul, rope};
 use bitnet_kernels::reduction::{self, ReductionOp};
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -17,73 +17,94 @@ fn fmt_f32(v: &[f32]) -> String {
 }
 
 // ── softmax ────────────────────────────────────────────────────────
+// These tests require the cuda module (gated behind feature = "gpu" or "cuda")
 
-#[test]
-fn softmax_uniform_input() {
-    let input = vec![1.0, 1.0, 1.0, 1.0];
-    let out = softmax::softmax(&input, 1.0).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
-}
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+mod softmax_tests {
+    use super::*;
+    use bitnet_kernels::cuda::softmax;
 
-#[test]
-fn softmax_ascending_input() {
-    let input = vec![0.0, 1.0, 2.0, 3.0];
-    let out = softmax::softmax(&input, 1.0).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
-}
+    #[test]
+    fn softmax_uniform_input() {
+        let input = vec![1.0, 1.0, 1.0, 1.0];
+        let mut out = vec![0.0; 4];
+        let cfg = softmax::SoftmaxConfig::for_shape(4, 1).unwrap();
+        softmax::softmax_cpu(&input, &mut out, &cfg).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
 
-#[test]
-fn softmax_with_temperature() {
-    let input = vec![0.0, 1.0, 2.0, 3.0];
-    let out = softmax::softmax(&input, 0.5).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
-}
+    #[test]
+    fn softmax_ascending_input() {
+        let input = vec![0.0, 1.0, 2.0, 3.0];
+        let mut out = vec![0.0; 4];
+        let cfg = softmax::SoftmaxConfig::for_shape(4, 1).unwrap();
+        softmax::softmax_cpu(&input, &mut out, &cfg).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
 
-#[test]
-fn softmax_batch_two_rows() {
-    // Two rows of length 3
-    let input = vec![1.0, 2.0, 3.0, 0.0, 0.0, 0.0];
-    let out = softmax::softmax_batch(&input, 3, 1.0).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
+    #[test]
+    fn softmax_with_temperature() {
+        let input = vec![0.0, 1.0, 2.0, 3.0];
+        let mut out = vec![0.0; 4];
+        let cfg = softmax::SoftmaxConfig::for_shape(4, 1).unwrap().with_temperature(0.5).unwrap();
+        softmax::softmax_cpu(&input, &mut out, &cfg).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
+
+    #[test]
+    fn softmax_batch_two_rows() {
+        let input = vec![1.0, 2.0, 3.0, 0.0, 0.0, 0.0];
+        let mut out = vec![0.0; 6];
+        let cfg = softmax::SoftmaxConfig::for_shape(3, 2).unwrap();
+        softmax::softmax_cpu(&input, &mut out, &cfg).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
 }
 
 // ── conv1d ─────────────────────────────────────────────────────────
+// These tests require the cuda module (gated behind feature = "gpu" or "cuda")
 
-#[test]
-fn conv1d_simple_no_padding() {
-    let config = conv1d::Conv1dConfig {
-        in_channels: 1,
-        out_channels: 1,
-        kernel_size: 3,
-        stride: 1,
-        padding: conv1d::PaddingMode::Zero(0),
-        dilation: 1,
-        groups: 1,
-        bias: false,
-    };
-    let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // [1, 5]
-    let weight = vec![1.0, 0.0, -1.0]; // [1, 1, 3]
-    let out = conv1d::conv1d_forward(&input, &weight, None, &config).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
-}
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+mod conv1d_tests {
+    use super::*;
+    use bitnet_kernels::cuda::conv1d;
 
-#[test]
-fn conv1d_with_bias_and_padding() {
-    let config = conv1d::Conv1dConfig {
-        in_channels: 1,
-        out_channels: 1,
-        kernel_size: 3,
-        stride: 1,
-        padding: conv1d::PaddingMode::Zero(1),
-        dilation: 1,
-        groups: 1,
-        bias: true,
-    };
-    let input = vec![1.0, 2.0, 3.0, 4.0];
-    let weight = vec![0.5, 0.5, 0.5];
-    let bias = vec![0.1];
-    let out = conv1d::conv1d_forward(&input, &weight, Some(&bias), &config).unwrap();
-    insta::assert_snapshot!(fmt_f32(&out));
+    #[test]
+    fn conv1d_simple_no_padding() {
+        let config = conv1d::Conv1dConfig {
+            in_channels: 1,
+            out_channels: 1,
+            kernel_size: 3,
+            stride: 1,
+            padding: conv1d::PaddingMode::Zero(0),
+            dilation: 1,
+            groups: 1,
+            bias: false,
+        };
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let weight = vec![1.0, 0.0, -1.0];
+        let out = conv1d::conv1d_forward(&input, &weight, None, &config).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
+
+    #[test]
+    fn conv1d_with_bias_and_padding() {
+        let config = conv1d::Conv1dConfig {
+            in_channels: 1,
+            out_channels: 1,
+            kernel_size: 3,
+            stride: 1,
+            padding: conv1d::PaddingMode::Zero(1),
+            dilation: 1,
+            groups: 1,
+            bias: true,
+        };
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let weight = vec![0.5, 0.5, 0.5];
+        let bias = vec![0.1];
+        let out = conv1d::conv1d_forward(&input, &weight, Some(&bias), &config).unwrap();
+        insta::assert_snapshot!(fmt_f32(&out));
+    }
 }
 
 // ── embedding lookup ───────────────────────────────────────────────

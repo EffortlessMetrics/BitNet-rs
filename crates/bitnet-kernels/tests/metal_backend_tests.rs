@@ -8,7 +8,9 @@ use bitnet_common::Device;
 use bitnet_kernels::capability_matrix::{
     DeviceClass, OperationCategory, PrecisionSupport, SupportLevel, apple_m1,
 };
-use bitnet_kernels::gpu_utils::{GpuInfo, get_gpu_info};
+use bitnet_kernels::gpu_utils::GpuInfo;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use bitnet_kernels::gpu_utils::get_gpu_info;
 
 // ── Constants for Metal hardware constraints ────────────────────────────────
 
@@ -26,6 +28,7 @@ const METAL_MIN_UNIFIED_MEMORY_GB: u64 = 8;
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_device_detection {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

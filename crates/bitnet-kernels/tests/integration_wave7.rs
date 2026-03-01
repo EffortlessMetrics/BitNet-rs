@@ -10,7 +10,9 @@
 //! - RoPE → attention
 //! - error propagation through pipelines
 
-use bitnet_kernels::cpu::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
+// Conv1d/softmax tests are feature-gated; imports become unused on CPU-only builds.
+#![allow(unused_imports, dead_code)]
+
 use bitnet_kernels::cpu::embedding::{
     EmbeddingConfig, embedding_lookup, embedding_lookup_simd, normalize_embeddings,
 };
@@ -20,7 +22,10 @@ use bitnet_kernels::cpu::fusion::{
 use bitnet_kernels::cpu::pooling::{PoolConfig, PoolType, PoolingKernel};
 use bitnet_kernels::cpu::quantized_matmul::{i2s_matmul_f32, pack_i2s};
 use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, apply_rope_batch, compute_frequencies};
-use bitnet_kernels::cpu::softmax::{softmax, softmax_batch};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use bitnet_kernels::cuda::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use bitnet_kernels::cuda::softmax::{SoftmaxConfig, softmax_cpu};
 use bitnet_kernels::reduction::{ReductionOp, reduce_f32, reduce_rows_f32};
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -59,14 +64,34 @@ fn reference_softmax(input: &[f32], temperature: f32) -> Vec<f32> {
     exps.iter().map(|&e| e / sum).collect()
 }
 
+/// Helper: run softmax on a single row via the cuda softmax kernel.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+fn run_softmax(input: &[f32], temp: f32) -> Vec<f32> {
+    let config = SoftmaxConfig::for_shape(input.len(), 1).unwrap().with_temperature(temp).unwrap();
+    let mut output = vec![0.0f32; input.len()];
+    softmax_cpu(input, &mut output, &config).unwrap();
+    output
+}
+
+/// Helper: run batched row-wise softmax via the cuda softmax kernel.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+fn run_softmax_batch(input: &[f32], cols: usize, temp: f32) -> Vec<f32> {
+    let n_rows = input.len() / cols;
+    let config = SoftmaxConfig::for_shape(cols, n_rows).unwrap().with_temperature(temp).unwrap();
+    let mut output = vec![0.0f32; input.len()];
+    softmax_cpu(input, &mut output, &config).unwrap();
+    output
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // 1. Softmax → Top-K Pipeline
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn softmax_then_argmax_picks_highest_logit() {
     let logits = vec![1.0, 3.0, 0.5, 2.0, -1.0];
-    let probs = softmax(&logits, 1.0).unwrap();
+    let probs = run_softmax(&logits, 1.0);
 
     // Softmax preserves ordering → argmax must be index 1.
     assert_eq!(argmax(&probs), 1);
@@ -75,22 +100,24 @@ fn softmax_then_argmax_picks_highest_logit() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn softmax_then_topk_returns_correct_order() {
     let logits = vec![0.1, 5.0, 3.0, 4.0, 2.0, 1.0];
-    let probs = softmax(&logits, 1.0).unwrap();
+    let probs = run_softmax(&logits, 1.0);
     let top3 = top_k(&probs, 3);
 
     assert_eq!(top3, vec![1, 3, 2], "top-3 indices by descending prob");
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn softmax_temperature_affects_topk_spread() {
     let logits = vec![2.0, 2.1, 0.0, 0.0];
 
     // Low temperature → sharper distribution.
-    let sharp = softmax(&logits, 0.1).unwrap();
+    let sharp = run_softmax(&logits, 0.1);
     // High temperature → flatter distribution.
-    let flat = softmax(&logits, 10.0).unwrap();
+    let flat = run_softmax(&logits, 10.0);
 
     let sharp_gap = sharp[1] - sharp[0];
     let flat_gap = flat[1] - flat[0];
@@ -98,9 +125,10 @@ fn softmax_temperature_affects_topk_spread() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn softmax_cross_validates_with_manual_reference() {
     let logits = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-    let kernel_probs = softmax(&logits, 1.0).unwrap();
+    let kernel_probs = run_softmax(&logits, 1.0);
     let ref_probs = reference_softmax(&logits, 1.0);
 
     assert_slice_close(&kernel_probs, &ref_probs, 1e-5, "softmax_xval");
@@ -155,6 +183,7 @@ fn embedding_simd_matches_scalar_lookup() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn embedding_then_dot_product_attention_scores() {
     let dim = 4;
     // Q and K from embedding lookup (2 tokens × dim).
@@ -182,7 +211,7 @@ fn embedding_then_dot_product_attention_scores() {
     }
 
     // Apply softmax row-wise.
-    let attn_weights = softmax_batch(&scores, seq_len, 1.0).unwrap();
+    let attn_weights = run_softmax_batch(&scores, seq_len, 1.0);
 
     // Orthogonal embeddings → diagonal-dominant attention.
     assert!(attn_weights[0] > attn_weights[1], "self-attention on token 0 should be strongest");
@@ -198,6 +227,7 @@ fn embedding_then_dot_product_attention_scores() {
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn quantized_matmul_then_softmax_produces_valid_distribution() {
     // m=1 (single input row), n=4 (4 output logits), k=8.
     let m = 1;
@@ -223,13 +253,14 @@ fn quantized_matmul_then_softmax_produces_valid_distribution() {
     }
 
     // Softmax of uniform logits → uniform distribution.
-    let probs = softmax(&logits, 1.0).unwrap();
+    let probs = run_softmax(&logits, 1.0);
     for &p in &probs {
         assert_close(p, 0.25, 1e-5, "uniform_prob");
     }
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn quantized_matmul_with_mixed_weights_affects_sampling() {
     let m = 1;
     let n = 4;
@@ -256,7 +287,7 @@ fn quantized_matmul_with_mixed_weights_affects_sampling() {
     assert_close(logits[2], 0.0, EPS, "col2_logit");
     assert_close(logits[3], 0.0, EPS, "col3_logit");
 
-    let probs = softmax(&logits, 1.0).unwrap();
+    let probs = run_softmax(&logits, 1.0);
     // Column 0 should dominate after softmax.
     assert_eq!(argmax(&probs), 0);
     assert!(probs[0] > 0.95, "dominant prob: {}", probs[0]);
@@ -267,6 +298,7 @@ fn quantized_matmul_with_mixed_weights_affects_sampling() {
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn conv1d_then_max_pool_then_rmsnorm() {
     let in_ch = 1;
     let out_ch = 1;
@@ -310,6 +342,7 @@ fn conv1d_then_max_pool_then_rmsnorm() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn conv1d_with_bias_then_avg_pool() {
     let input = vec![1.0, 2.0, 3.0, 4.0]; // 1 channel, width 4
     let weight = vec![1.0, 1.0]; // kernel_size = 2
@@ -362,6 +395,7 @@ fn rope_preserves_vector_norm() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn rope_batch_then_attention_scores() {
     let head_dim = 4;
     let seq_len = 3;
@@ -386,7 +420,7 @@ fn rope_batch_then_attention_scores() {
         }
     }
 
-    let attn = softmax_batch(&scores, seq_len, 1.0).unwrap();
+    let attn = run_softmax_batch(&scores, seq_len, 1.0);
 
     // Diagonal should be strongest (same-position alignment).
     for i in 0..seq_len {
@@ -430,22 +464,24 @@ fn rope_different_positions_yield_different_rotations() {
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn reduction_max_agrees_with_softmax_argmax() {
     let data = vec![0.5, 3.2, 1.1, 2.8, 0.1];
     let max_val = reduce_f32(&data, ReductionOp::Max);
-    let probs = softmax(&data, 1.0).unwrap();
+    let probs = run_softmax(&data, 1.0);
     let max_idx = argmax(&probs);
 
     assert_close(max_val, data[max_idx], 0.0, "max_idx_match");
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn row_reduction_sum_matches_softmax_row_sums() {
     let rows = 3;
     let cols = 4;
     let data: Vec<f32> = (0..rows * cols).map(|i| (i as f32) * 0.5).collect();
 
-    let attn = softmax_batch(&data, cols, 1.0).unwrap();
+    let attn = run_softmax_batch(&data, cols, 1.0);
     let row_sums = reduce_rows_f32(&attn, rows, cols, ReductionOp::Sum).unwrap();
 
     for (r, &s) in row_sums.iter().enumerate() {
@@ -479,9 +515,10 @@ fn fused_softmax_mask_then_argmax_respects_mask() {
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn empty_input_propagates_through_softmax_pipeline() {
     let empty: Vec<f32> = vec![];
-    let res = softmax(&empty, 1.0);
+    let res = SoftmaxConfig::for_shape(empty.len(), 1);
     assert!(res.is_err(), "softmax on empty should fail");
 }
 
@@ -507,6 +544,7 @@ fn fusion_dimension_mismatch_propagates() {
 }
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn conv1d_invalid_groups_propagates_error() {
     let input = vec![1.0, 2.0, 3.0, 4.0];
     let weight = vec![1.0];
@@ -529,6 +567,7 @@ fn conv1d_invalid_groups_propagates_error() {
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn full_embedding_to_sampling_pipeline() {
     let vocab = 8;
     let dim = 4;
@@ -554,7 +593,7 @@ fn full_embedding_to_sampling_pipeline() {
     assert_eq!(logits.len(), n_classes);
 
     // Softmax → probabilities.
-    let probs = softmax(&logits, 1.0).unwrap();
+    let probs = run_softmax(&logits, 1.0);
     assert_close(probs.iter().sum::<f32>(), 1.0, 1e-5, "final_prob_sum");
     // With uniform weights both classes should be ~0.5.
     for &p in &probs {

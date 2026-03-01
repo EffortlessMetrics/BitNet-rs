@@ -1071,12 +1071,12 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_batch_norm_launch() {
         let config = BatchNormConfig::new(64).unwrap();
-        let mut state = BatchNormState::new(&config);
-        let input = vec![1.0_f32; 32 * 64];
-        let mut output = vec![0.0_f32; 32 * 64];
+        let _state = BatchNormState::new(&config);
+        let _input = vec![1.0_f32; 32 * 64];
+        let _output = vec![0.0_f32; 32 * 64];
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
-            let result = launch_batch_norm(&input, &mut output, &mut state, &config, 32, true);
+            let result = launch_batch_norm(&_input, &mut _output, &mut _state, &config, 32, true);
             assert!(result.is_ok(), "CUDA batch_norm launch failed: {result:?}");
         }
     }

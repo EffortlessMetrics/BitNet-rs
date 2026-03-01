@@ -8,6 +8,9 @@
 //! - Softmax: all outputs lie in [0, 1]
 //! - Softmax: in-place and allocating paths agree
 //! - Embedding: lookup with valid indices returns correct-size output
+
+// Conv1d/softmax helpers become unused on CPU-only builds.
+#![allow(dead_code)]
 //! - Embedding: normalize produces unit-length vectors
 //! - SIMD math: fast_exp agrees with scalar exp within tolerance
 //! - SIMD math: dot product is commutative
@@ -15,11 +18,13 @@
 //! - SIMD math: sigmoid outputs lie in (0, 1) for finite inputs
 //! - RoPE: rotation preserves vector magnitudes
 
-use bitnet_kernels::cpu::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward, conv1d_output_width};
 use bitnet_kernels::cpu::embedding;
 use bitnet_kernels::cpu::rope::{self, RopeConfig};
 use bitnet_kernels::cpu::simd_math;
-use bitnet_kernels::cpu::softmax;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use bitnet_kernels::cuda::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use bitnet_kernels::cuda::softmax;
 use proptest::prelude::*;
 
 // -------------------------------------------------------------------
@@ -45,6 +50,7 @@ fn finite_f32_vec_pair(max_len: usize) -> impl Strategy<Value = (Vec<f32>, Vec<f
 // Properties: Conv1d — output dimension correctness
 // -------------------------------------------------------------------
 
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(128))]
 
@@ -73,7 +79,7 @@ proptest! {
             bias: false,
         };
         prop_assert_eq!(
-            conv1d_output_width(&cfg, input_width),
+            cfg.output_width(input_width),
             expected,
         );
     }
@@ -98,7 +104,7 @@ proptest! {
             bias: false,
         };
         prop_assert_eq!(
-            conv1d_output_width(&cfg, input_width),
+            cfg.output_width(input_width),
             expected,
         );
     }
@@ -141,13 +147,17 @@ proptest! {
 // Properties: Softmax — distribution invariants
 // -------------------------------------------------------------------
 
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(128))]
 
     /// Softmax outputs sum to approximately 1.0.
     #[test]
     fn prop_softmax_sums_to_one(input in finite_f32_vec(256)) {
-        let out = softmax::softmax(&input, 1.0)
+        let config = softmax::SoftmaxConfig::for_shape(input.len(), 1)
+            .expect("config must succeed");
+        let mut out = vec![0.0f32; input.len()];
+        softmax::softmax_cpu(&input, &mut out, &config)
             .expect("softmax on finite input must succeed");
         let sum: f32 = out.iter().sum();
         prop_assert!(
@@ -161,7 +171,10 @@ proptest! {
     fn prop_softmax_outputs_in_unit_interval(
         input in finite_f32_vec(256),
     ) {
-        let out = softmax::softmax(&input, 1.0)
+        let config = softmax::SoftmaxConfig::for_shape(input.len(), 1)
+            .expect("config must succeed");
+        let mut out = vec![0.0f32; input.len()];
+        softmax::softmax_cpu(&input, &mut out, &config)
             .expect("softmax must succeed");
         for (i, &v) in out.iter().enumerate() {
             prop_assert!(
@@ -176,10 +189,15 @@ proptest! {
     fn prop_softmax_inplace_matches_alloc(
         input in finite_f32_vec(128),
     ) {
-        let expected = softmax::softmax(&input, 1.0)
+        let config = softmax::SoftmaxConfig::for_shape(input.len(), 1)
+            .expect("config must succeed");
+        let mut expected = vec![0.0f32; input.len()];
+        softmax::softmax_cpu(&input, &mut expected, &config)
             .expect("softmax must succeed");
         let mut data = input.clone();
-        softmax::softmax_inplace(&mut data, 1.0)
+        let inplace_config = softmax::SoftmaxConfig::for_shape(data.len(), 1)
+            .expect("config must succeed");
+        softmax::softmax_cpu_inplace(&mut data, &inplace_config)
             .expect("softmax_inplace must succeed");
         for (i, (&a, &b)) in data.iter().zip(expected.iter()).enumerate() {
             prop_assert!(
