@@ -26,13 +26,9 @@ pub enum MemoryError {
 impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::BudgetExceeded {
-                requested,
-                available,
-            } => write!(
-                f,
-                "budget exceeded: requested {requested} bytes, {available} available"
-            ),
+            Self::BudgetExceeded { requested, available } => {
+                write!(f, "budget exceeded: requested {requested} bytes, {available} available")
+            }
             Self::InvalidAllocationId(id) => write!(f, "invalid allocation id: {id}"),
             Self::ZeroSizeAllocation => write!(f, "zero-byte allocation is not allowed"),
             Self::InvalidAlignment(a) => {
@@ -105,12 +101,7 @@ impl AllocationConfig {
 
 impl Default for AllocationConfig {
     fn default() -> Self {
-        Self {
-            region: MemoryRegion::Device,
-            size_bytes: 0,
-            alignment: 64,
-            name: String::new(),
-        }
+        Self { region: MemoryRegion::Device, size_bytes: 0, alignment: 64, name: String::new() }
     }
 }
 
@@ -370,12 +361,7 @@ impl TransferTracker {
         bytes: usize,
         duration_ns: u64,
     ) {
-        self.events.push(TransferEvent {
-            src,
-            dst,
-            bytes,
-            duration_ns,
-        });
+        self.events.push(TransferEvent { src, dst, bytes, duration_ns });
     }
 
     /// Total bytes moved across all recorded transfers.
@@ -507,10 +493,7 @@ mod tests {
     #[test]
     fn deallocate_unknown_id_is_error() {
         let mut pool = MemoryPool::new();
-        assert_eq!(
-            pool.deallocate(999),
-            Err(MemoryError::InvalidAllocationId(999)),
-        );
+        assert_eq!(pool.deallocate(999), Err(MemoryError::InvalidAllocationId(999)),);
     }
 
     #[test]
@@ -604,11 +587,7 @@ mod tests {
     #[test]
     fn budget_allows_within_limit() {
         let pool = MemoryPool::new();
-        let budget = MemoryBudget {
-            device_limit: 4096,
-            host_limit: 4096,
-            unified_limit: 4096,
-        };
+        let budget = MemoryBudget { device_limit: 4096, host_limit: 4096, unified_limit: 4096 };
         assert!(budget.can_allocate(&pool, &device_config("a", 1024)));
     }
 
@@ -616,11 +595,7 @@ mod tests {
     fn budget_rejects_over_limit() {
         let mut pool = MemoryPool::new();
         pool.allocate(device_config("a", 4000)).unwrap();
-        let budget = MemoryBudget {
-            device_limit: 4096,
-            host_limit: 4096,
-            unified_limit: 4096,
-        };
+        let budget = MemoryBudget { device_limit: 4096, host_limit: 4096, unified_limit: 4096 };
         // 4000 aligned to 64 = 4032; 4032 + 128 = 4160 > 4096
         assert!(!budget.can_allocate(&pool, &device_config("b", 128)));
     }
@@ -629,22 +604,14 @@ mod tests {
     fn budget_checks_per_region() {
         let mut pool = MemoryPool::new();
         pool.allocate(device_config("a", 4000)).unwrap();
-        let budget = MemoryBudget {
-            device_limit: 4096,
-            host_limit: 8192,
-            unified_limit: 8192,
-        };
+        let budget = MemoryBudget { device_limit: 4096, host_limit: 8192, unified_limit: 8192 };
         assert!(budget.can_allocate(&pool, &host_config("h", 1024)));
     }
 
     #[test]
     fn budget_utilization_empty() {
         let pool = MemoryPool::new();
-        let budget = MemoryBudget {
-            device_limit: 1024,
-            host_limit: 1024,
-            unified_limit: 1024,
-        };
+        let budget = MemoryBudget { device_limit: 1024, host_limit: 1024, unified_limit: 1024 };
         assert!((budget.utilization(&pool) - 0.0).abs() < f64::EPSILON);
     }
 
@@ -652,11 +619,7 @@ mod tests {
     fn budget_utilization_partial() {
         let mut pool = MemoryPool::new();
         pool.allocate(device_config("a", 512)).unwrap();
-        let budget = MemoryBudget {
-            device_limit: 1024,
-            host_limit: 1024,
-            unified_limit: 1024,
-        };
+        let budget = MemoryBudget { device_limit: 1024, host_limit: 1024, unified_limit: 1024 };
         let u = budget.utilization(&pool);
         assert!(u > 0.0 && u < 1.0);
     }
@@ -664,11 +627,7 @@ mod tests {
     #[test]
     fn budget_utilization_zero_limits() {
         let pool = MemoryPool::new();
-        let budget = MemoryBudget {
-            device_limit: 0,
-            host_limit: 0,
-            unified_limit: 0,
-        };
+        let budget = MemoryBudget { device_limit: 0, host_limit: 0, unified_limit: 0 };
         assert!((budget.utilization(&pool) - 0.0).abs() < f64::EPSILON);
     }
 
@@ -787,12 +746,7 @@ mod tests {
     fn transfer_bandwidth_calculation() {
         let mut t = TransferTracker::default();
         // 1 GB in 1 second = 1 GB/s
-        t.record_transfer(
-            MemoryRegion::Host,
-            MemoryRegion::Device,
-            1_000_000_000,
-            1_000_000_000,
-        );
+        t.record_transfer(MemoryRegion::Host, MemoryRegion::Device, 1_000_000_000, 1_000_000_000);
         let bw = t.average_bandwidth_gbps();
         assert!((bw - 1.0).abs() < 0.01);
     }
@@ -844,11 +798,7 @@ mod tests {
     fn unified_budget_separate_from_device() {
         let mut pool = MemoryPool::new();
         pool.allocate(unified_config("u", 4096)).unwrap();
-        let budget = MemoryBudget {
-            device_limit: 1024,
-            host_limit: 1024,
-            unified_limit: 8192,
-        };
+        let budget = MemoryBudget { device_limit: 1024, host_limit: 1024, unified_limit: 8192 };
         assert!(budget.can_allocate(&pool, &device_config("d", 512)));
         assert!(budget.can_allocate(&pool, &unified_config("u2", 4000)));
     }
@@ -860,11 +810,7 @@ mod tests {
     #[test]
     fn pinned_region_uses_host_limit() {
         let pool = MemoryPool::new();
-        let budget = MemoryBudget {
-            device_limit: 0,
-            host_limit: 1024,
-            unified_limit: 0,
-        };
+        let budget = MemoryBudget { device_limit: 0, host_limit: 1024, unified_limit: 0 };
         assert!(budget.can_allocate(&pool, &pinned_config("p", 512)));
     }
 
@@ -880,10 +826,7 @@ mod tests {
     #[test]
     fn zero_byte_alloc_rejected() {
         let mut pool = MemoryPool::new();
-        assert_eq!(
-            pool.allocate(device_config("z", 0)),
-            Err(MemoryError::ZeroSizeAllocation),
-        );
+        assert_eq!(pool.allocate(device_config("z", 0)), Err(MemoryError::ZeroSizeAllocation),);
     }
 
     #[test]
@@ -936,9 +879,7 @@ mod tests {
         let mut pool = MemoryPool::new();
         let mut ids = Vec::new();
         for i in 0..100 {
-            let id = pool
-                .allocate(device_config(&format!("buf{i}"), 64 * (i + 1)))
-                .unwrap();
+            let id = pool.allocate(device_config(&format!("buf{i}"), 64 * (i + 1))).unwrap();
             ids.push(id);
         }
         assert_eq!(pool.allocation_count(), 100);
@@ -981,10 +922,7 @@ mod tests {
 
     #[test]
     fn error_display_budget_exceeded() {
-        let e = MemoryError::BudgetExceeded {
-            requested: 100,
-            available: 50,
-        };
+        let e = MemoryError::BudgetExceeded { requested: 100, available: 50 };
         let s = format!("{e}");
         assert!(s.contains("100"));
         assert!(s.contains("50"));
