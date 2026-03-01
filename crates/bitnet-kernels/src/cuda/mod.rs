@@ -54,7 +54,10 @@ pub use attention::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use attention::ATTENTION_KERNEL_SRC;
-pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
+pub use batch_norm::{
+    BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
+    batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
+};
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use layernorm::{
@@ -112,6 +115,9 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
 pub use layernorm::LAYERNORM_KERNEL_SRC;
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SRC};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;

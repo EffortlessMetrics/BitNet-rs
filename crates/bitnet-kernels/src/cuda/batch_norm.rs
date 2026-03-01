@@ -24,8 +24,121 @@
 //!
 //! [`batch_norm_cpu`] provides an equivalent pure-Rust implementation for
 //! correctness testing and non-GPU environments.
+//!
+//! # Standalone fallback functions
+//!
+//! [`batch_norm_cpu_fallback`] and [`batch_norm_inference_cpu_fallback`] provide
+//! self-contained pure-Rust implementations that accept explicit parameter
+//! slices (gamma, beta, running_mean, running_var) and return a newly allocated
+//! `Vec<f32>`, making them convenient for one-shot usage without constructing
+//! a [`BatchNormKernel`].
 
 use bitnet_common::{KernelError, Result};
+
+// ---------------------------------------------------------------------------
+// CUDA kernel source strings
+// ---------------------------------------------------------------------------
+
+/// CUDA kernel source for batch normalization forward pass (training mode).
+///
+/// One thread-block per feature channel. Performs a parallel reduction over the
+/// batch dimension to compute per-channel mean and variance, updates running
+/// statistics via EMA, then normalises and applies affine transform.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const BATCH_NORM_TRAIN_KERNEL_SRC: &str = r#"
+extern "C" __global__ void batch_norm_train_f32(
+    const float* __restrict__ input,
+    float* __restrict__ output,
+    const float* __restrict__ gamma,
+    const float* __restrict__ beta,
+    float* __restrict__ running_mean,
+    float* __restrict__ running_var,
+    int batch_size,
+    int num_features,
+    float eps,
+    float momentum)
+{
+    int c = blockIdx.x;
+    int tid = threadIdx.x;
+
+    extern __shared__ float sdata[];
+    float* s_sum  = sdata;
+    float* s_sum2 = sdata + blockDim.x;
+
+    float local_sum  = 0.0f;
+    float local_sum2 = 0.0f;
+    for (int b = tid; b < batch_size; b += blockDim.x) {
+        float val = input[b * num_features + c];
+        local_sum  += val;
+        local_sum2 += val * val;
+    }
+    s_sum[tid]  = local_sum;
+    s_sum2[tid] = local_sum2;
+    __syncthreads();
+
+    // Tree reduction
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            s_sum[tid]  += s_sum[tid + stride];
+            s_sum2[tid] += s_sum2[tid + stride];
+        }
+        __syncthreads();
+    }
+
+    float mean = s_sum[0] / (float)batch_size;
+    float var  = s_sum2[0] / (float)batch_size - mean * mean;
+
+    // Update running statistics (only lane 0 writes)
+    if (tid == 0) {
+        running_mean[c] = (1.0f - momentum) * running_mean[c] + momentum * mean;
+        // Bessel's correction for running variance
+        float unbiased_var = (batch_size > 1)
+            ? (s_sum2[0] - (float)batch_size * mean * mean) / (float)(batch_size - 1)
+            : var;
+        running_var[c] = (1.0f - momentum) * running_var[c] + momentum * unbiased_var;
+    }
+
+    float inv_std = rsqrtf(var + eps);
+    float g = gamma[c];
+    float b_val = beta[c];
+
+    for (int n = tid; n < batch_size; n += blockDim.x) {
+        int idx = n * num_features + c;
+        output[idx] = (input[idx] - mean) * inv_std * g + b_val;
+    }
+}
+"#;
+
+/// CUDA kernel source for batch normalization forward pass (inference mode).
+///
+/// Uses pre-computed running mean and variance — no batch reduction needed.
+/// Each thread processes multiple elements via grid-stride loop.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const BATCH_NORM_INFERENCE_KERNEL_SRC: &str = r#"
+extern "C" __global__ void batch_norm_inference_f32(
+    const float* __restrict__ input,
+    float* __restrict__ output,
+    const float* __restrict__ gamma,
+    const float* __restrict__ beta,
+    const float* __restrict__ running_mean,
+    const float* __restrict__ running_var,
+    int batch_size,
+    int num_features,
+    float eps)
+{
+    int c = blockIdx.x;
+
+    float mean    = running_mean[c];
+    float inv_std = rsqrtf(running_var[c] + eps);
+    float g       = gamma[c];
+    float b_val   = beta[c];
+
+    for (int n = threadIdx.x; n < batch_size; n += blockDim.x) {
+        int idx = n * num_features + c;
+        output[idx] = (input[idx] - mean) * inv_std * g + b_val;
+    }
+}
+"#;
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -106,6 +219,65 @@ impl BatchNormConfig {
     /// Threads per block — one thread per sample in the batch.
     pub fn block_dim(&self, batch_size: usize) -> (u32, u32, u32) {
         ((batch_size as u32).min(1024), 1, 1)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CUDA-specific launch configuration
+// ---------------------------------------------------------------------------
+
+/// Lightweight CUDA launch configuration for batch normalization.
+///
+/// This is a simplified config struct suitable for passing to CUDA kernel
+/// launches. It carries only the parameters needed by the GPU kernels
+/// (num_features, eps, momentum) without the higher-level policy flags
+/// (`affine`, `track_running_stats`) that live in [`BatchNormConfig`].
+#[derive(Debug, Clone, Copy)]
+pub struct CudaBatchNormConfig {
+    /// Number of feature channels (C).
+    pub num_features: usize,
+    /// Epsilon for numerical stability inside `rsqrtf(var + eps)`.
+    pub eps: f32,
+    /// Momentum for exponential moving average of running statistics.
+    pub momentum: f32,
+}
+
+impl CudaBatchNormConfig {
+    /// Create a new CUDA batch-norm config.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `num_features` is zero.
+    pub fn new(num_features: usize, eps: f32, momentum: f32) -> Result<Self> {
+        if num_features == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: "CudaBatchNormConfig: num_features must be non-zero".into(),
+            }
+            .into());
+        }
+        Ok(Self { num_features, eps, momentum })
+    }
+
+    /// Build from a full [`BatchNormConfig`].
+    pub fn from_config(config: &BatchNormConfig) -> Self {
+        Self { num_features: config.num_features, eps: config.eps, momentum: config.momentum }
+    }
+
+    /// Grid dimensions for the CUDA launch — one block per channel.
+    pub fn grid_dim(&self) -> (u32, u32, u32) {
+        (self.num_features as u32, 1, 1)
+    }
+
+    /// Block dimensions — one thread per sample, capped at 1024.
+    pub fn block_dim(&self, batch_size: usize) -> (u32, u32, u32) {
+        ((batch_size as u32).min(1024), 1, 1)
+    }
+
+    /// Shared memory bytes needed by the training kernel (two float arrays of
+    /// `block_dim.0` elements each).
+    pub fn shared_mem_bytes(&self, batch_size: usize) -> u32 {
+        let threads = (batch_size as u32).min(1024);
+        threads * 2 * 4 // 2 arrays × sizeof(f32)
     }
 }
 
@@ -307,6 +479,169 @@ pub fn batch_norm_cpu(
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Standalone CPU fallback functions
+// ---------------------------------------------------------------------------
+
+/// Standalone CPU batch normalization forward pass (training mode).
+///
+/// Accepts explicit parameter slices and returns a newly allocated output
+/// vector. This is a convenience wrapper that does not require constructing
+/// a [`BatchNormKernel`] or [`BatchNormState`].
+///
+/// * `input`        — `[batch_size, num_features]` (FP32, row-major)
+/// * `gamma`        — Per-channel scale `[num_features]`
+/// * `beta`         — Per-channel shift `[num_features]`
+/// * `running_mean` — Running mean `[num_features]` (updated in-place via EMA)
+/// * `running_var`  — Running variance `[num_features]` (updated in-place via EMA)
+/// * `config`       — CUDA-style launch config carrying `num_features`, `eps`, `momentum`
+///
+/// Returns `Vec<f32>` of length `input.len()`.
+pub fn batch_norm_cpu_fallback(
+    input: &[f32],
+    gamma: &[f32],
+    beta: &[f32],
+    running_mean: &mut [f32],
+    running_var: &mut [f32],
+    config: &CudaBatchNormConfig,
+) -> Result<Vec<f32>> {
+    let c = config.num_features;
+    if c == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "batch_norm_cpu_fallback: num_features must be non-zero".into(),
+        }
+        .into());
+    }
+    if input.len() % c != 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "batch_norm_cpu_fallback: input length {} not divisible by num_features {c}",
+                input.len()
+            ),
+        }
+        .into());
+    }
+    let batch_size = input.len() / c;
+    if batch_size == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "batch_norm_cpu_fallback: batch_size must be non-zero".into(),
+        }
+        .into());
+    }
+    if gamma.len() < c || beta.len() < c || running_mean.len() < c || running_var.len() < c {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("batch_norm_cpu_fallback: parameter slices must have length >= {c}"),
+        }
+        .into());
+    }
+
+    let n = batch_size as f32;
+    let mut output = vec![0.0_f32; input.len()];
+
+    for ch in 0..c {
+        // Compute batch mean
+        let mut sum = 0.0_f32;
+        for b in 0..batch_size {
+            sum += input[b * c + ch];
+        }
+        let batch_mean = sum / n;
+
+        // Compute batch variance (biased)
+        let mut var_sum = 0.0_f32;
+        for b in 0..batch_size {
+            let diff = input[b * c + ch] - batch_mean;
+            var_sum += diff * diff;
+        }
+        let batch_var = var_sum / n;
+
+        // Update running statistics
+        let m = config.momentum;
+        running_mean[ch] = (1.0 - m) * running_mean[ch] + m * batch_mean;
+        let unbiased_var = if batch_size > 1 { var_sum / (n - 1.0) } else { batch_var };
+        running_var[ch] = (1.0 - m) * running_var[ch] + m * unbiased_var;
+
+        // Normalise + affine
+        let inv_std = 1.0 / (batch_var + config.eps).sqrt();
+        for b in 0..batch_size {
+            let idx = b * c + ch;
+            output[idx] = (input[idx] - batch_mean) * inv_std * gamma[ch] + beta[ch];
+        }
+    }
+
+    Ok(output)
+}
+
+/// Standalone CPU batch normalization forward pass (inference mode).
+///
+/// Uses pre-computed running mean and variance — no batch statistics are
+/// computed and no state is mutated.
+///
+/// * `input`        — `[batch_size, num_features]` (FP32, row-major)
+/// * `gamma`        — Per-channel scale `[num_features]`
+/// * `beta`         — Per-channel shift `[num_features]`
+/// * `running_mean` — Pre-computed running mean `[num_features]`
+/// * `running_var`  — Pre-computed running variance `[num_features]`
+/// * `eps`          — Epsilon for numerical stability
+///
+/// Returns `Vec<f32>` of length `input.len()`.
+pub fn batch_norm_inference_cpu_fallback(
+    input: &[f32],
+    gamma: &[f32],
+    beta: &[f32],
+    running_mean: &[f32],
+    running_var: &[f32],
+    eps: f32,
+) -> Result<Vec<f32>> {
+    if gamma.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "batch_norm_inference_cpu_fallback: gamma must be non-empty".into(),
+        }
+        .into());
+    }
+    let c = gamma.len();
+    if input.len() % c != 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "batch_norm_inference_cpu_fallback: input length {} not divisible by \
+                 num_features {c}",
+                input.len()
+            ),
+        }
+        .into());
+    }
+    let batch_size = input.len() / c;
+    if batch_size == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "batch_norm_inference_cpu_fallback: batch_size must be non-zero".into(),
+        }
+        .into());
+    }
+    if beta.len() < c || running_mean.len() < c || running_var.len() < c {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "batch_norm_inference_cpu_fallback: parameter slices must have length >= {c}"
+            ),
+        }
+        .into());
+    }
+
+    let mut output = vec![0.0_f32; input.len()];
+
+    for ch in 0..c {
+        let mean = running_mean[ch];
+        let inv_std = 1.0 / (running_var[ch] + eps).sqrt();
+        let g = gamma[ch];
+        let b = beta[ch];
+
+        for batch in 0..batch_size {
+            let idx = batch * c + ch;
+            output[idx] = (input[idx] - mean) * inv_std * g + b;
+        }
+    }
+
+    Ok(output)
 }
 
 // ---------------------------------------------------------------------------
@@ -744,5 +1079,318 @@ mod tests {
             let result = launch_batch_norm(&input, &mut output, &mut state, &config, 32, true);
             assert!(result.is_ok(), "CUDA batch_norm launch failed: {result:?}");
         }
+    }
+
+    // -- CudaBatchNormConfig tests ------------------------------------------
+
+    #[test]
+    fn test_cuda_config_new() {
+        let cfg = CudaBatchNormConfig::new(64, 1e-5, 0.1).unwrap();
+        assert_eq!(cfg.num_features, 64);
+        assert!((cfg.eps - 1e-5).abs() < 1e-10);
+        assert!((cfg.momentum - 0.1).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_cuda_config_rejects_zero_features() {
+        assert!(CudaBatchNormConfig::new(0, 1e-5, 0.1).is_err());
+    }
+
+    #[test]
+    fn test_cuda_config_from_batch_norm_config() {
+        let cfg = BatchNormConfig::new(128).unwrap().with_eps(1e-6);
+        let cuda_cfg = CudaBatchNormConfig::from_config(&cfg);
+        assert_eq!(cuda_cfg.num_features, 128);
+        assert!((cuda_cfg.eps - 1e-6).abs() < 1e-12);
+        assert!((cuda_cfg.momentum - 0.1).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_cuda_config_grid_and_block_dim() {
+        let cfg = CudaBatchNormConfig::new(256, 1e-5, 0.1).unwrap();
+        assert_eq!(cfg.grid_dim(), (256, 1, 1));
+        assert_eq!(cfg.block_dim(64), (64, 1, 1));
+        assert_eq!(cfg.block_dim(2048), (1024, 1, 1)); // capped
+    }
+
+    #[test]
+    fn test_cuda_config_shared_mem_bytes() {
+        let cfg = CudaBatchNormConfig::new(8, 1e-5, 0.1).unwrap();
+        // batch_size=32 → threads=32 → 32*2*4 = 256 bytes
+        assert_eq!(cfg.shared_mem_bytes(32), 256);
+        // batch_size=2048 → threads capped at 1024 → 1024*2*4 = 8192
+        assert_eq!(cfg.shared_mem_bytes(2048), 8192);
+    }
+
+    // -- batch_norm_cpu_fallback tests --------------------------------------
+
+    #[test]
+    fn test_cpu_fallback_training_normalises() {
+        let cfg = CudaBatchNormConfig::new(1, 1e-5, 0.1).unwrap();
+        let input = [2.0_f32, 4.0, 6.0, 8.0]; // batch=4, features=1
+        let gamma = [1.0];
+        let beta = [0.0];
+        let mut rmean = [0.0_f32];
+        let mut rvar = [1.0_f32];
+
+        let out =
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).unwrap();
+
+        let mean: f32 = out.iter().sum::<f32>() / 4.0;
+        assert!(mean.abs() < 1e-5, "mean={mean}");
+    }
+
+    #[test]
+    fn test_cpu_fallback_training_multi_channel() {
+        let cfg = CudaBatchNormConfig::new(3, 1e-5, 0.1).unwrap();
+        let input = [1.0, 100.0, -5.0, 3.0, 200.0, 5.0]; // batch=2, features=3
+        let gamma = [1.0, 1.0, 1.0];
+        let beta = [0.0, 0.0, 0.0];
+        let mut rmean = [0.0_f32; 3];
+        let mut rvar = [1.0_f32; 3];
+
+        let out =
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).unwrap();
+        assert_eq!(out.len(), 6);
+
+        for ch in 0..3 {
+            let ch_mean = (out[ch] + out[3 + ch]) / 2.0;
+            assert!(ch_mean.abs() < 1e-4, "ch {ch}: mean={ch_mean}");
+        }
+    }
+
+    #[test]
+    fn test_cpu_fallback_updates_running_stats() {
+        let cfg = CudaBatchNormConfig::new(1, 1e-5, 0.1).unwrap();
+        let input = [2.0_f32, 4.0, 6.0, 8.0]; // mean=5
+        let gamma = [1.0];
+        let beta = [0.0];
+        let mut rmean = [0.0_f32];
+        let mut rvar = [1.0_f32];
+
+        let _ =
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).unwrap();
+
+        // running_mean = 0.9*0 + 0.1*5 = 0.5
+        assert!((rmean[0] - 0.5).abs() < 1e-5, "rmean={}", rmean[0]);
+        assert!(rvar[0] > 0.0, "rvar should be positive");
+    }
+
+    #[test]
+    fn test_cpu_fallback_with_affine() {
+        let cfg = CudaBatchNormConfig::new(1, 1e-5, 0.1).unwrap();
+        let input = [0.0_f32, 2.0]; // batch=2
+        let gamma = [3.0];
+        let beta = [1.0];
+        let mut rmean = [0.0_f32];
+        let mut rvar = [1.0_f32];
+
+        let out =
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).unwrap();
+        // mean=1, var=1, inv_std≈1 → out[0] = (0-1)*1*3+1 = -2, out[1] = (2-1)*1*3+1 = 4
+        assert!((out[0] - (-2.0)).abs() < 0.1, "out[0]={}", out[0]);
+        assert!((out[1] - 4.0).abs() < 0.1, "out[1]={}", out[1]);
+    }
+
+    #[test]
+    fn test_cpu_fallback_rejects_empty_input() {
+        let cfg = CudaBatchNormConfig::new(2, 1e-5, 0.1).unwrap();
+        let input: [f32; 0] = [];
+        let gamma = [1.0, 1.0];
+        let beta = [0.0, 0.0];
+        let mut rmean = [0.0_f32; 2];
+        let mut rvar = [1.0_f32; 2];
+        assert!(
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).is_err()
+        );
+    }
+
+    #[test]
+    fn test_cpu_fallback_rejects_misaligned_input() {
+        let cfg = CudaBatchNormConfig::new(3, 1e-5, 0.1).unwrap();
+        let input = [1.0_f32; 5]; // 5 not divisible by 3
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
+        let mut rmean = [0.0_f32; 3];
+        let mut rvar = [1.0_f32; 3];
+        assert!(
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).is_err()
+        );
+    }
+
+    #[test]
+    fn test_cpu_fallback_rejects_short_params() {
+        let cfg = CudaBatchNormConfig::new(4, 1e-5, 0.1).unwrap();
+        let input = [1.0_f32; 8]; // batch=2, features=4
+        let gamma = [1.0; 2]; // too short
+        let beta = [0.0; 4];
+        let mut rmean = [0.0_f32; 4];
+        let mut rvar = [1.0_f32; 4];
+        assert!(
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).is_err()
+        );
+    }
+
+    // -- batch_norm_inference_cpu_fallback tests -----------------------------
+
+    #[test]
+    fn test_inference_fallback_basic() {
+        let input = [5.0_f32, 7.0, 3.0, 9.0]; // batch=4, features=1
+        let gamma = [1.0];
+        let beta = [0.0];
+        let rmean = [5.0_f32];
+        let rvar = [4.0_f32];
+
+        let out =
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+
+        // (5-5)/sqrt(4+eps) ≈ 0
+        assert!(out[0].abs() < 1e-4, "out[0]={}", out[0]);
+        // (7-5)/sqrt(4+eps) ≈ 1
+        assert!((out[1] - 1.0).abs() < 1e-3, "out[1]={}", out[1]);
+    }
+
+    #[test]
+    fn test_inference_fallback_multi_channel() {
+        // batch=2, features=2
+        let input = [10.0_f32, 20.0, 10.0, 20.0];
+        let gamma = [1.0, 2.0];
+        let beta = [0.0, 1.0];
+        let rmean = [10.0, 20.0];
+        let rvar = [1.0, 4.0];
+
+        let out =
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+        assert_eq!(out.len(), 4);
+        // ch0: (10-10)/sqrt(1+eps)*1+0 ≈ 0
+        assert!(out[0].abs() < 1e-3, "out[0]={}", out[0]);
+        // ch1: (20-20)/sqrt(4+eps)*2+1 ≈ 1
+        assert!((out[1] - 1.0).abs() < 1e-3, "out[1]={}", out[1]);
+    }
+
+    #[test]
+    fn test_inference_fallback_with_affine() {
+        let input = [0.0_f32, 1.0]; // batch=2, features=1
+        let gamma = [2.0];
+        let beta = [3.0];
+        let rmean = [0.0];
+        let rvar = [1.0];
+
+        let out =
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+        // y = (x - 0)/sqrt(1+eps)*2+3 ≈ x*2+3
+        assert!((out[0] - 3.0).abs() < 1e-3, "out[0]={}", out[0]);
+        assert!((out[1] - 5.0).abs() < 1e-3, "out[1]={}", out[1]);
+    }
+
+    #[test]
+    fn test_inference_fallback_numerical_stability() {
+        let input = [5.0_f32; 4]; // constant → zero-var case uses running_var
+        let gamma = [1.0];
+        let beta = [0.0];
+        let rmean = [5.0];
+        let rvar = [1e-12]; // very small running variance
+
+        let out =
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+        assert!(out.iter().all(|v| v.is_finite()), "non-finite: {out:?}");
+    }
+
+    #[test]
+    fn test_inference_fallback_rejects_empty_gamma() {
+        let input = [1.0_f32; 4];
+        let gamma: [f32; 0] = [];
+        let beta: [f32; 0] = [];
+        let rmean: [f32; 0] = [];
+        let rvar: [f32; 0] = [];
+        assert!(
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).is_err()
+        );
+    }
+
+    #[test]
+    fn test_inference_fallback_rejects_misaligned() {
+        let input = [1.0_f32; 5]; // 5 not divisible by 2
+        let gamma = [1.0, 1.0];
+        let beta = [0.0, 0.0];
+        let rmean = [0.0, 0.0];
+        let rvar = [1.0, 1.0];
+        assert!(
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).is_err()
+        );
+    }
+
+    // -- Cross-check: standalone fallback vs BatchNormKernel -----------------
+
+    #[test]
+    fn test_fallback_matches_kernel_training() {
+        let c = 3;
+        let batch = 4;
+        let input: Vec<f32> = (0..batch * c).map(|i| i as f32 * 0.5 - 3.0).collect();
+
+        // Use BatchNormKernel
+        let mut kernel = BatchNormKernel::new(c).unwrap();
+        let mut kernel_output = vec![0.0_f32; batch * c];
+        kernel.forward(&input, &mut kernel_output, batch, true).unwrap();
+
+        // Use standalone fallback
+        let cfg = CudaBatchNormConfig::from_config(&kernel.config);
+        let gamma = vec![1.0_f32; c];
+        let beta = vec![0.0_f32; c];
+        let mut rmean = vec![0.0_f32; c];
+        let mut rvar = vec![1.0_f32; c];
+        let fallback_output =
+            batch_norm_cpu_fallback(&input, &gamma, &beta, &mut rmean, &mut rvar, &cfg).unwrap();
+
+        for i in 0..kernel_output.len() {
+            assert!(
+                (kernel_output[i] - fallback_output[i]).abs() < 1e-5,
+                "mismatch at {i}: kernel={}, fallback={}",
+                kernel_output[i],
+                fallback_output[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_inference_fallback_matches_kernel_eval() {
+        let c = 2;
+        let batch = 3;
+        let input: Vec<f32> = (0..batch * c).map(|i| i as f32 + 1.0).collect();
+
+        // Use BatchNormKernel in eval mode with known stats
+        let mut kernel = BatchNormKernel::new(c).unwrap();
+        kernel.state.running_mean = vec![3.0, 4.0];
+        kernel.state.running_var = vec![2.0, 5.0];
+        let mut kernel_output = vec![0.0_f32; batch * c];
+        kernel.forward(&input, &mut kernel_output, batch, false).unwrap();
+
+        // Use standalone inference fallback
+        let gamma = vec![1.0_f32; c];
+        let beta = vec![0.0_f32; c];
+        let rmean = vec![3.0_f32, 4.0];
+        let rvar = vec![2.0_f32, 5.0];
+        let fallback_output =
+            batch_norm_inference_cpu_fallback(&input, &gamma, &beta, &rmean, &rvar, 1e-5).unwrap();
+
+        for i in 0..kernel_output.len() {
+            assert!(
+                (kernel_output[i] - fallback_output[i]).abs() < 1e-5,
+                "mismatch at {i}: kernel={}, fallback={}",
+                kernel_output[i],
+                fallback_output[i]
+            );
+        }
+    }
+
+    // -- CUDA kernel source string tests ------------------------------------
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_cuda_kernel_source_strings_non_empty() {
+        assert!(!BATCH_NORM_TRAIN_KERNEL_SRC.is_empty());
+        assert!(!BATCH_NORM_INFERENCE_KERNEL_SRC.is_empty());
+        assert!(BATCH_NORM_TRAIN_KERNEL_SRC.contains("batch_norm_train_f32"));
+        assert!(BATCH_NORM_INFERENCE_KERNEL_SRC.contains("batch_norm_inference_f32"));
     }
 }
