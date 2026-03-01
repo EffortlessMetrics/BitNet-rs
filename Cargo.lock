@@ -595,7 +595,9 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
+ "bitnet-intel-gpu-id",
  "insta",
+ "libloading 0.8.9",
  "log",
  "opencl3",
  "pollster",
@@ -817,6 +819,10 @@ dependencies = [
  "tracing",
  "wasm-bindgen-futures",
 ]
+
+[[package]]
+name = "bitnet-intel-gpu-id"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-kernels"

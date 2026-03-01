@@ -6,6 +6,10 @@
 
 use std::fmt;
 
+use bitnet_intel_gpu_id::{
+    is_intel_arc_device as shared_is_intel_arc_device, is_intel_vendor as shared_is_intel_vendor,
+};
+
 // ── OpenCL C constants ──────────────────────────────────────────────────────
 
 const CL_SUCCESS: i32 = 0;
@@ -106,12 +110,12 @@ impl OpenClDeviceInfo {
 
     /// Returns `true` if vendor string contains "Intel" (case-insensitive).
     pub fn is_intel(&self) -> bool {
-        self.vendor.to_ascii_lowercase().contains("intel")
+        shared_is_intel_vendor(&self.vendor)
     }
 
     /// Returns `true` if this looks like an Intel Arc GPU.
     pub fn is_intel_arc(&self) -> bool {
-        self.is_intel() && self.is_gpu() && self.name.to_ascii_lowercase().contains("arc")
+        self.is_gpu() && shared_is_intel_arc_device(&self.vendor, &self.name)
     }
 }
 
@@ -168,42 +172,14 @@ impl ProbeResult {
 pub struct IntelArcDetector;
 
 impl IntelArcDetector {
-    /// Known Intel Arc device name patterns.
-    const ARC_PATTERNS: &[&str] = &[
-        "arc a",
-        "arc b",
-        "arc a770",
-        "arc a750",
-        "arc a580",
-        "arc a380",
-        "arc a310",
-        "arc b580",
-        "arc b570",
-        "arc pro",
-        "arc graphics",
-    ];
-
     /// Returns `true` if the vendor/device pair looks like an Intel Arc.
     pub fn is_arc(vendor: &str, device_name: &str) -> bool {
-        let vendor_lower = vendor.to_ascii_lowercase();
-        let device_lower = device_name.to_ascii_lowercase();
-
-        if !vendor_lower.contains("intel") {
-            return false;
-        }
-        // Check known patterns
-        for pattern in Self::ARC_PATTERNS {
-            if device_lower.contains(pattern) {
-                return true;
-            }
-        }
-        // Fallback: "arc" anywhere in the device name from Intel vendor
-        device_lower.contains("arc")
+        shared_is_intel_arc_device(vendor, device_name)
     }
 
     /// Returns `true` if the vendor looks like Intel (regardless of device).
     pub fn is_intel_vendor(vendor: &str) -> bool {
-        vendor.to_ascii_lowercase().contains("intel")
+        shared_is_intel_vendor(vendor)
     }
 }
 

@@ -13,9 +13,11 @@ rust-version.workspace = true
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-intel-gpu-id = { path = "../bitnet-intel-gpu-id", version = "0.2.1-dev" }
 log.workspace = true
 ash = { version = "0.38.0", optional = true }
 opencl3 = { version = "0.9", optional = true }
+libloading = { version = "0.8.9", optional = true }
 wgpu = { version = "24", features = ["vulkan-portability"], optional = true }
 pollster = { version = "0.4", optional = true }
 
@@ -34,7 +36,7 @@ rocm = []
 vulkan = ["dep:ash"]
 npu = ["oneapi"]
 oneapi = ["dep:opencl3"]
-opencl = ["dep:opencl3"]
+opencl = ["dep:opencl3", "dep:libloading"]
 wgpu-probe = ["dep:wgpu", "dep:pollster"]
 
 [[test]]
