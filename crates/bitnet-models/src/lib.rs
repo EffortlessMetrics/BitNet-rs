@@ -1,6 +1,7 @@
 //! Model definitions and loading for BitNet inference
 
 pub mod bitnet;
+pub mod checkpoint;
 pub mod config;
 pub mod correction_policy;
 pub mod fingerprint;
