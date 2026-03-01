@@ -5,9 +5,12 @@ pub mod cuda_backend;
 pub mod level_zero_backend;
 pub mod metal_backend;
 pub mod opencl_backend;
+pub mod resource_limiter;
 pub mod rocm_backend;
 pub mod vulkan_compute;
 pub mod webgpu_backend;
+
+use std::fmt;
 
 // === HAL Core ===
 pub mod async_runtime;
