@@ -65,7 +65,7 @@ BitNet-rs supports inference on multiple GPU platforms:
 |---------|-------------|--------|----------|
 | NVIDIA CUDA | `--features gpu` | ✅ Production | GeForce/Tesla/A100+ |
 | Intel Arc (OpenCL) | `--features oneapi` | 🔶 Alpha | Arc A770/A750 |
-| AMD ROCm | `--features rocm` | 🧪 Experimental | RX 7900 XT+ |
+| AMD ROCm | `--features rocm` | 🧪 Experimental | Unvalidated target: RDNA3-class AMD GPUs |
 | Vulkan | `--features vulkan` | 🧪 Experimental | Any Vulkan 1.3 GPU |
 | Apple Metal | `--features metal` | 🧪 Experimental | M1/M2/M3+ |
 | WebGPU | `--features webgpu` | 🧪 Experimental | Browser/wgpu |
