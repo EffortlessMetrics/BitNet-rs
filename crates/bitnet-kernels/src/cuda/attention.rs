@@ -27,6 +27,12 @@
 
 use bitnet_common::{KernelError, Result};
 
+/// Alias for [`AttentionKernelConfig`] — the CUDA-specific launch configuration.
+///
+/// Provides a discoverable name matching the `Cuda*Config` naming convention
+/// used by other kernel modules (e.g. `CudaTransposeConfig`, `CudaBatchNormConfig`).
+pub type CudaAttentionConfig = AttentionKernelConfig;
+
 // ---------------------------------------------------------------------------
 // CUDA kernel source (compiled at runtime via NVRTC when `gpu`/`cuda` active)
 // ---------------------------------------------------------------------------
@@ -575,6 +581,219 @@ pub fn multi_head_attention_cpu_fallback(
 }
 
 // ---------------------------------------------------------------------------
+// CPU convenience wrapper
+// ---------------------------------------------------------------------------
+
+/// Pure-Rust CPU reference for scaled dot-product attention.
+///
+/// Dispatches to single-head or multi-head depending on `config.num_heads`.
+/// This is the canonical CPU entry-point; `attention_cpu_fallback` and
+/// `multi_head_attention_cpu_fallback` are the underlying per-variant
+/// implementations.
+pub fn attention_forward_cpu(
+    query: &[f32],
+    key: &[f32],
+    value: &[f32],
+    config: &AttentionConfig,
+) -> Result<Vec<f32>> {
+    if config.num_heads > 1 {
+        multi_head_attention_cpu_fallback(query, key, value, config)
+    } else {
+        attention_cpu_fallback(query, key, value, config)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Flash-attention style chunked CPU reference
+// ---------------------------------------------------------------------------
+
+/// Default chunk size (number of K/V positions per chunk) for the chunked
+/// CPU attention implementation.  Chosen to keep the temporary score buffer
+/// small enough for L1/L2 cache while still amortising the per-chunk
+/// overhead.
+const DEFAULT_CHUNK_SIZE: usize = 64;
+
+/// Flash-attention style chunked single-head attention (CPU reference).
+///
+/// Instead of materialising the full `[seq_q, seq_kv]` score matrix, this
+/// implementation streams K/V in chunks of `chunk_size` positions and
+/// maintains a running softmax accumulator (online softmax trick).  Memory
+/// usage is `O(seq_q * chunk_size)` instead of `O(seq_q * seq_kv)`.
+///
+/// The numerical result is equivalent to [`attention_cpu_fallback`] within
+/// floating-point tolerance.
+///
+/// # Arguments
+///
+/// * `query`      — `[seq_len, head_dim]` (FP32, row-major)
+/// * `key`        — `[seq_len, head_dim]` (FP32, row-major)
+/// * `value`      — `[seq_len, head_dim]` (FP32, row-major)
+/// * `config`     — Attention configuration
+/// * `chunk_size` — Number of K/V positions per chunk (`0` → use default)
+pub fn chunked_attention_cpu(
+    query: &[f32],
+    key: &[f32],
+    value: &[f32],
+    config: &AttentionConfig,
+    chunk_size: usize,
+) -> Result<Vec<f32>> {
+    let expected = config.seq_len * config.head_dim;
+    if query.len() < expected || key.len() < expected || value.len() < expected {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "chunked_attention_cpu: tensor length mismatch, expected {expected}, \
+                 got q={}, k={}, v={}",
+                query.len(),
+                key.len(),
+                value.len()
+            ),
+        }
+        .into());
+    }
+
+    let seq = config.seq_len;
+    let dim = config.head_dim;
+    let scale = config.scale;
+    let cs = if chunk_size == 0 { DEFAULT_CHUNK_SIZE } else { chunk_size };
+
+    let mut output = vec![0.0_f32; expected];
+
+    for i in 0..seq {
+        // Per-query running accumulators for online softmax
+        let mut running_max = f32::NEG_INFINITY;
+        let mut running_sum = 0.0_f32;
+        let mut acc = vec![0.0_f32; dim]; // weighted V accumulator
+
+        // Determine effective KV length (causal limits to positions ≤ i)
+        let kv_len = if config.causal { i + 1 } else { seq };
+
+        // Stream K/V in chunks
+        let mut chunk_start = 0;
+        while chunk_start < kv_len {
+            let chunk_end = (chunk_start + cs).min(kv_len);
+            let chunk_len = chunk_end - chunk_start;
+
+            // Compute scores for this chunk: Q[i] · K[j]^T * scale
+            let mut scores = vec![0.0_f32; chunk_len];
+            let mut chunk_max = f32::NEG_INFINITY;
+            for (ci, j) in (chunk_start..chunk_end).enumerate() {
+                let mut dot = 0.0_f32;
+                for d in 0..dim {
+                    dot += query[i * dim + d] * key[j * dim + d];
+                }
+                scores[ci] = dot * scale;
+                if scores[ci] > chunk_max {
+                    chunk_max = scores[ci];
+                }
+            }
+
+            // Online softmax update: merge this chunk into running state
+            // Algorithm: if new_max > running_max, rescale existing accumulators.
+            let new_max = running_max.max(chunk_max);
+
+            // Rescale previous accumulator if max changed
+            if running_sum > 0.0 {
+                let correction = (running_max - new_max).exp();
+                running_sum *= correction;
+                for a in acc.iter_mut() {
+                    *a *= correction;
+                }
+            }
+
+            // Add this chunk's contribution
+            let mut chunk_sum = 0.0_f32;
+            for (ci, &score) in scores.iter().enumerate().take(chunk_len) {
+                let w = (score - new_max).exp();
+                chunk_sum += w;
+                let j = chunk_start + ci;
+                for d in 0..dim {
+                    acc[d] += w * value[j * dim + d];
+                }
+            }
+
+            running_max = new_max;
+            running_sum += chunk_sum;
+            chunk_start = chunk_end;
+        }
+
+        // Normalise
+        if running_sum > 0.0 {
+            let inv = 1.0 / running_sum;
+            for d in 0..dim {
+                output[i * dim + d] = acc[d] * inv;
+            }
+        }
+    }
+
+    Ok(output)
+}
+
+// ---------------------------------------------------------------------------
+// Batch attention
+// ---------------------------------------------------------------------------
+
+/// Pure-Rust CPU fallback for batched multi-head attention.
+///
+/// Applies multi-head attention independently per batch element.
+///
+/// # Arguments
+///
+/// * `query` — `[batch, num_heads, seq_len, head_dim]` (FP32, row-major)
+/// * `key`   — `[batch, num_heads, seq_len, head_dim]` (FP32, row-major)
+/// * `value` — `[batch, num_heads, seq_len, head_dim]` (FP32, row-major)
+/// * `config` — Attention configuration (`num_heads`, `seq_len`, `head_dim`)
+/// * `batch_size` — Number of independent sequences in the batch
+///
+/// # Returns
+///
+/// Output tensor `[batch, num_heads, seq_len, head_dim]` as a flat `Vec<f32>`.
+pub fn batch_attention_cpu(
+    query: &[f32],
+    key: &[f32],
+    value: &[f32],
+    config: &AttentionConfig,
+    batch_size: usize,
+) -> Result<Vec<f32>> {
+    if batch_size == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "batch_attention_cpu: batch_size must be non-zero".into(),
+        }
+        .into());
+    }
+    let per_batch = config.num_heads * config.seq_len * config.head_dim;
+    let total = batch_size * per_batch;
+    if query.len() < total || key.len() < total || value.len() < total {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "batch_attention_cpu: tensor length mismatch, expected {total}, \
+                 got q={}, k={}, v={}",
+                query.len(),
+                key.len(),
+                value.len()
+            ),
+        }
+        .into());
+    }
+
+    let mut output = vec![0.0_f32; total];
+
+    for b in 0..batch_size {
+        let offset = b * per_batch;
+        let q_batch = &query[offset..offset + per_batch];
+        let k_batch = &key[offset..offset + per_batch];
+        let v_batch = &value[offset..offset + per_batch];
+        let batch_out = if config.num_heads > 1 {
+            multi_head_attention_cpu_fallback(q_batch, k_batch, v_batch, config)?
+        } else {
+            attention_cpu_fallback(q_batch, k_batch, v_batch, config)?
+        };
+        output[offset..offset + per_batch].copy_from_slice(&batch_out);
+    }
+
+    Ok(output)
+}
+
+// ---------------------------------------------------------------------------
 // Unified dispatch
 // ---------------------------------------------------------------------------
 
@@ -603,11 +822,7 @@ pub fn attention_forward(
             // GPU launch failed — fall through to CPU path
         }
     }
-    if config.num_heads > 1 {
-        multi_head_attention_cpu_fallback(query, key, value, config)
-    } else {
-        attention_cpu_fallback(query, key, value, config)
-    }
+    attention_forward_cpu(query, key, value, config)
 }
 
 #[cfg(test)]
@@ -1047,5 +1262,196 @@ mod tests {
         assert!(!ATTENTION_KERNEL_SRC.is_empty(), "CUDA kernel source should not be empty");
         assert!(ATTENTION_KERNEL_SRC.contains("sdp_attention_f32"));
         assert!(ATTENTION_KERNEL_SRC.contains("sdp_attention_causal_f32"));
+    }
+
+    // ── CudaAttentionConfig alias test ────────────────────────────────
+
+    #[test]
+    fn test_cuda_attention_config_alias() {
+        let cfg: CudaAttentionConfig = CudaAttentionConfig::for_shape(4, 64, 16, 16, true).unwrap();
+        assert_eq!(cfg.n_heads, 4);
+        assert_eq!(cfg.head_dim, 64);
+        assert!(cfg.causal);
+    }
+
+    // ── attention_forward_cpu wrapper tests ────────────────────────────
+
+    #[test]
+    fn test_attention_forward_cpu_single() {
+        let cfg = AttentionConfig::new(1, 4, 2, false).unwrap();
+        let q = vec![1.0_f32; 8];
+        let k = vec![1.0_f32; 8];
+        let v = vec![2.0_f32; 8];
+        let out = attention_forward_cpu(&q, &k, &v, &cfg).unwrap();
+        assert_eq!(out.len(), 8);
+        for &val in &out {
+            assert!((val - 2.0).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn test_attention_forward_cpu_multi() {
+        let cfg = AttentionConfig::new(2, 4, 3, false).unwrap();
+        let total = 2 * 3 * 4;
+        let q = vec![0.5_f32; total];
+        let k = vec![0.5_f32; total];
+        let v = vec![1.0_f32; total];
+        let out = attention_forward_cpu(&q, &k, &v, &cfg).unwrap();
+        assert_eq!(out.len(), total);
+        assert!(out.iter().all(|v| v.is_finite()));
+    }
+
+    // ── Chunked (flash-attention style) CPU tests ─────────────────────
+
+    #[test]
+    fn test_chunked_matches_standard_noncausal() {
+        let cfg = AttentionConfig::new(1, 4, 8, false).unwrap();
+        let q: Vec<f32> = (0..32).map(|i| (i as f32) * 0.1).collect();
+        let k: Vec<f32> = (0..32).map(|i| ((i + 7) as f32) * 0.05).collect();
+        let v: Vec<f32> = (0..32).map(|i| (i as f32) * 0.2).collect();
+
+        let standard = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
+        let chunked = chunked_attention_cpu(&q, &k, &v, &cfg, 3).unwrap();
+
+        assert_eq!(standard.len(), chunked.len());
+        for (a, b) in standard.iter().zip(chunked.iter()) {
+            assert!((a - b).abs() < 1e-4, "chunked vs standard mismatch: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_chunked_matches_standard_causal() {
+        let cfg = AttentionConfig::new(1, 2, 6, true).unwrap();
+        let q = vec![1.0_f32; 12];
+        let k: Vec<f32> = (0..12).map(|i| i as f32 * 0.1).collect();
+        let v: Vec<f32> = (0..12).map(|i| i as f32).collect();
+
+        let standard = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
+        let chunked = chunked_attention_cpu(&q, &k, &v, &cfg, 2).unwrap();
+
+        for (a, b) in standard.iter().zip(chunked.iter()) {
+            assert!((a - b).abs() < 1e-4, "chunked causal mismatch: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_chunked_default_chunk_size() {
+        // chunk_size=0 should use default and still produce correct results
+        let cfg = AttentionConfig::new(1, 2, 4, false).unwrap();
+        let q = vec![1.0_f32; 8];
+        let k = vec![1.0_f32; 8];
+        let v = vec![3.0_f32; 8];
+        let out = chunked_attention_cpu(&q, &k, &v, &cfg, 0).unwrap();
+        for &val in &out {
+            assert!((val - 3.0).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn test_chunked_single_token() {
+        let cfg = AttentionConfig::new(1, 4, 1, false).unwrap();
+        let q = vec![1.0, 2.0, 3.0, 4.0];
+        let k = vec![0.5, 0.5, 0.5, 0.5];
+        let v = vec![10.0, 20.0, 30.0, 40.0];
+        let out = chunked_attention_cpu(&q, &k, &v, &cfg, 1).unwrap();
+        for d in 0..4 {
+            assert!((out[d] - v[d]).abs() < 1e-5, "seq_len=1 chunked should return V");
+        }
+    }
+
+    #[test]
+    fn test_chunked_rejects_short_tensors() {
+        let cfg = AttentionConfig::new(1, 4, 8, false).unwrap();
+        let short = vec![0.0_f32; 16]; // need 32
+        let ok = vec![0.0_f32; 32];
+        assert!(chunked_attention_cpu(&short, &ok, &ok, &cfg, 4).is_err());
+    }
+
+    // ── Batch attention tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_batch_attention_single_batch() {
+        let cfg = AttentionConfig::new(1, 2, 3, false).unwrap();
+        let q = vec![1.0_f32; 6];
+        let k = vec![1.0_f32; 6];
+        let v = vec![5.0_f32; 6];
+
+        let single = attention_forward_cpu(&q, &k, &v, &cfg).unwrap();
+        let batched = batch_attention_cpu(&q, &k, &v, &cfg, 1).unwrap();
+
+        for (a, b) in single.iter().zip(batched.iter()) {
+            assert!((a - b).abs() < 1e-5, "batch=1 should match single");
+        }
+    }
+
+    #[test]
+    fn test_batch_attention_two_batches() {
+        let cfg = AttentionConfig::new(2, 2, 2, false).unwrap();
+        let per_batch = 2 * 2 * 2; // heads * seq * dim = 8
+        // Batch 0: all ones; Batch 1: counting
+        let mut q = vec![1.0_f32; per_batch];
+        q.extend((0..per_batch).map(|i| i as f32 * 0.1));
+        let mut k = vec![1.0_f32; per_batch];
+        k.extend((0..per_batch).map(|i| (i as f32 + 1.0) * 0.1));
+        let mut v = vec![3.0_f32; per_batch];
+        v.extend((0..per_batch).map(|i| i as f32));
+
+        let out = batch_attention_cpu(&q, &k, &v, &cfg, 2).unwrap();
+        assert_eq!(out.len(), 2 * per_batch);
+        assert!(out.iter().all(|v| v.is_finite()));
+
+        // Batch 0 (uniform) → output == V = 3.0
+        for &val in &out[..per_batch] {
+            assert!((val - 3.0).abs() < 1e-4, "batch 0 uniform: {val}");
+        }
+    }
+
+    #[test]
+    fn test_batch_attention_rejects_zero_batch() {
+        let cfg = AttentionConfig::new(1, 2, 2, false).unwrap();
+        let t = vec![0.0_f32; 4];
+        assert!(batch_attention_cpu(&t, &t, &t, &cfg, 0).is_err());
+    }
+
+    #[test]
+    fn test_batch_attention_rejects_short_tensors() {
+        let cfg = AttentionConfig::new(1, 2, 2, false).unwrap();
+        let short = vec![0.0_f32; 4]; // need 8 for batch=2
+        assert!(batch_attention_cpu(&short, &short, &short, &cfg, 2).is_err());
+    }
+
+    // ── Scale factor verification ─────────────────────────────────────
+
+    #[test]
+    fn test_scale_factor_affects_output() {
+        let cfg_default = AttentionConfig::new(1, 4, 2, false).unwrap();
+        let cfg_big = AttentionConfig::new(1, 4, 2, false).unwrap().with_scale(10.0);
+        let q = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+        let k = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+        let v = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
+
+        let out_default = attention_cpu_fallback(&q, &k, &v, &cfg_default).unwrap();
+        let out_big = attention_cpu_fallback(&q, &k, &v, &cfg_big).unwrap();
+
+        // Large scale sharpens attention → outputs should differ
+        let diff: f32 = out_default.iter().zip(out_big.iter()).map(|(a, b)| (a - b).abs()).sum();
+        assert!(diff > 1e-3, "different scales should produce different outputs");
+    }
+
+    // ── Equal Q=K=V edge case ─────────────────────────────────────────
+
+    #[test]
+    fn test_equal_qkv() {
+        // When Q == K == V, output should equal the input (uniform attention
+        // over identical values returns those values).
+        let cfg = AttentionConfig::new(1, 2, 3, false).unwrap();
+        let data = vec![1.0, 2.0, 1.0, 2.0, 1.0, 2.0];
+        let out = attention_cpu_fallback(&data, &data, &data, &cfg).unwrap();
+        for i in 0..6 {
+            assert!(
+                (out[i] - data[i]).abs() < 1e-4,
+                "Q==K==V: output should match input at index {i}"
+            );
+        }
     }
 }
