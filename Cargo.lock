@@ -576,6 +576,7 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
+ "bitnet-nvidia",
  "insta",
  "log",
  "opencl3",
@@ -787,6 +788,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
+ "bitnet-nvidia",
  "bitnet-quantization",
  "bitnet-test-support",
  "bitnet-tests",
@@ -874,6 +876,10 @@ dependencies = [
  "tracing",
  "url",
 ]
+
+[[package]]
+name = "bitnet-nvidia"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-opencl"

@@ -1,0 +1,20 @@
+[package]
+name = "bitnet-nvidia"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "NVIDIA runtime/vendor detection helpers for BitNet GPU probing"
+rust-version.workspace = true
+
+[dependencies]
+
+[features]
+default = []
+
+[lints]
+workspace = true

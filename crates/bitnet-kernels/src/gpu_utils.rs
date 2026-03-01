@@ -126,7 +126,8 @@ fn detect_real_gpu_info() -> GpuInfo {
             .map(|out| out.contains("Metal") || out.contains("Apple"))
             .unwrap_or(false);
 
-    let cuda = probe_command("nvidia-smi", &["--query-gpu=gpu_name", "--format=csv,noheader"]);
+    let cuda = bitnet_nvidia::cuda_runtime_available()
+        || probe_command("nvidia-smi", &["--query-gpu=gpu_name", "--format=csv,noheader"]);
 
     let cuda_version = if cuda { get_cuda_version() } else { None };
 

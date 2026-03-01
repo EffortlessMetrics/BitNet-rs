@@ -220,7 +220,7 @@ fn cuda_available_runtime() -> bool {
         return fake.contains("cuda") || fake.contains("gpu");
     }
 
-    command_ok("nvidia-smi", &[])
+    bitnet_nvidia::cuda_runtime_available()
 }
 
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]

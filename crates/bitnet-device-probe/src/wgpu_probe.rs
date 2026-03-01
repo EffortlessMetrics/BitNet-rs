@@ -113,14 +113,9 @@ pub struct WgpuDeviceInfo {
     pub shader_f16: bool,
 }
 
-/// NVIDIA PCI vendor ID.
-const NVIDIA_VENDOR_ID: u32 = 0x10DE;
-
 /// Check whether a probed device is an NVIDIA GPU.
 pub fn is_nvidia(info: &WgpuDeviceInfo) -> bool {
-    info.vendor == NVIDIA_VENDOR_ID
-        || info.name.to_ascii_lowercase().contains("nvidia")
-        || info.driver.to_ascii_lowercase().contains("nvidia")
+    bitnet_nvidia::is_nvidia_device(info.vendor, &info.name, &info.driver)
 }
 
 /// Check whether a probed device uses the Vulkan backend.
@@ -283,7 +278,7 @@ mod tests {
 
     #[test]
     fn is_nvidia_by_vendor_id() {
-        let info = make_info(|i| i.vendor = NVIDIA_VENDOR_ID);
+        let info = make_info(|i| i.vendor = bitnet_nvidia::NVIDIA_VENDOR_ID);
         assert!(is_nvidia(&info));
     }
 
