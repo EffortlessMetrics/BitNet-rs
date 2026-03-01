@@ -604,6 +604,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-device-config-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-common",
+ "bitnet-kernels",
+ "serde",
+]
+
+[[package]]
 name = "bitnet-device-probe"
 version = "0.2.1-dev"
 dependencies = [
@@ -1286,6 +1296,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bitnet-common",
+ "bitnet-device-config-core",
  "bitnet-eval-core",
  "bitnet-inference",
  "bitnet-kernels",
