@@ -372,8 +372,9 @@ impl ProductionInferenceEngine {
         let caps = KernelCapabilities::from_compile_time();
         let requested = match device {
             Device::Cpu => "cpu",
-            Device::Cuda(_) | Device::Metal | Device::Hip(_) | Device::Npu => "gpu",
-            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) => "gpu",
+            Device::Cuda(_) | Device::Metal | Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+                "gpu"
+            }
         };
         let detected: Vec<String> =
             caps.compiled_backends().iter().map(|b| b.to_string()).collect();
