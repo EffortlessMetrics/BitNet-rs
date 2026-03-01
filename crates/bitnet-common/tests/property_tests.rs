@@ -392,5 +392,3 @@ proptest! {
         prop_assert!(caps.best_available().is_some());
     }
 }
-
-

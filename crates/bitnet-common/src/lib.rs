@@ -29,15 +29,15 @@ pub use backend_selection::{
     BackendRequest, BackendSelectionError, BackendSelectionResult, BackendStartupSummary,
     select_backend,
 };
+pub use bitnet_math::ceil_div;
+pub use bitnet_warn_once::warn_once;
+pub use bitnet_warn_once::warn_once_fn;
 pub use config::*;
 pub use error::*;
 pub use kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
-pub use bitnet_math::ceil_div;
 pub use strict_mode::{
     ComputationType, MissingKernelScenario, MockInferencePath, PerformanceMetrics,
     StrictModeConfig, StrictModeEnforcer,
 };
 pub use tensor::*;
 pub use types::*;
-pub use bitnet_warn_once::warn_once;
-pub use bitnet_warn_once::warn_once_fn;
