@@ -117,6 +117,11 @@ pub use embedding::{
     position_embedding_forward,
 };
 
+pub use reduction_warp::{
+    WarpReductionOp, log_softmax_cpu_fallback, segmented_reduce_cpu_fallback,
+    softmax_warp_cpu_fallback, warp_reduce_cpu_fallback,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
 
@@ -138,3 +143,9 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use reduction_warp::{
+    WARP_REDUCTION_KERNEL_SRC, launch_segmented_warp_reduce, launch_warp_reduce,
+    launch_warp_softmax,
+};
