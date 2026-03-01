@@ -16,6 +16,7 @@ pub mod dequant;
 pub use conv2d::{Conv2dConfig, compute_output_size, conv2d, depthwise_conv2d, im2col};
 pub mod embedding;
 pub mod fallback;
+pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -81,6 +82,7 @@ pub use activations::{
 };
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
+pub use ffn::{FfnActivation, FfnConfig, ffn_forward, ffn_forward_batched, gated_ffn_forward};
 pub use gating::{GatingType, apply_gating, geglu, reglu, swiglu};
 pub use scatter_gather::{
     ScatterGatherConfig, ScatterReduce, gather_1d, gather_2d, index_select, scatter_1d, scatter_2d,
