@@ -194,7 +194,7 @@ pub struct InferenceReceipt {
     /// Backend used: "cpu" | "cuda" | "metal"
     pub backend: String,
 
-    /// Backend selection summary: "requested=X detected=[Y] selected=Z"
+    /// Backend selection summary: "requested=X detected=\[Y\] selected=Z"
     /// Populated from BackendSelectionResult::summary() at receipt generation time.
     #[serde(default)]
     pub backend_summary: String,
