@@ -1,8 +1,20 @@
-# GPU Setup (CUDA 12.x)
+# GPU Setup
 
-This guide is the canonical setup for running BitNet-rs with the `gpu` feature.
+This guide is the canonical setup for running BitNet-rs with GPU acceleration.
 
-> **Status:** CUDA inference is implemented, but full GPU receipt-validation parity is still in progress.
+> **Status:** CUDA inference is implemented, but full GPU receipt-validation parity is still in progress. Intel Arc (OpenCL) support is under active development.
+
+## Supported Backends
+
+| Backend | Hardware | Feature Flag | Status |
+|---------|----------|-------------|--------|
+| CUDA | NVIDIA GPUs | `gpu` / `cuda` | Implemented |
+| OpenCL | Intel Arc (A770/A750/A580), AMD GPUs | `opencl` | In development |
+| CPU | Any x86-64 / ARM64 | `cpu` | Stable |
+
+---
+
+## CUDA Setup (NVIDIA, CUDA 12.x)
 
 ## Requirements
 
@@ -101,3 +113,39 @@ cargo build -vv --no-default-features --features gpu
 - `docs/development/gpu-setup-guide.md` (extended examples)
 - `docs/howto/receipt-verification.md`
 - `docs/reference/validation-gates.md`
+
+---
+
+## Intel Arc Setup (OpenCL)
+
+For Intel Arc A770/A750/A580 GPUs, see the dedicated guide:
+[`docs/GPU_SETUP_INTEL.md`](GPU_SETUP_INTEL.md) (PR #1686).
+
+For the overall Intel GPU backend architecture, see:
+[`docs/INTEL_GPU_ARCHITECTURE.md`](INTEL_GPU_ARCHITECTURE.md).
+
+### Quick Start (Intel)
+
+1. Install Intel compute runtime (NEO driver):
+
+```bash
+# Ubuntu 22.04+
+sudo apt-get install -y intel-opencl-icd intel-level-zero-gpu
+```
+
+2. Verify OpenCL:
+
+```bash
+clinfo | grep "Device Name"
+# Should show: Intel(R) Arc(TM) A770 Graphics
+```
+
+3. Build and test:
+
+```bash
+cargo build --no-default-features --features cpu   # CPU fallback (always works)
+cargo test -p bitnet-kernels --no-default-features --features cpu  # Kernel tests
+```
+
+> **Note:** The `opencl` feature flag is under development. Currently, OpenCL kernels
+> have CPU reference implementations that run in all builds.
