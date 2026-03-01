@@ -358,3 +358,21 @@ name = "fuzz_reduction_ops"
 path = "fuzz_targets/fuzz_reduction_ops.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "rope_rotation"
+path = "fuzz_targets/rope_rotation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "conv1d_shapes"
+path = "fuzz_targets/conv1d_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "reduction_ops"
+path = "fuzz_targets/reduction_ops.rs"
+test = false
+doc = false
