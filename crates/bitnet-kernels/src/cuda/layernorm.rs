@@ -1182,4 +1182,244 @@ mod tests {
         let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 4, &cfg).unwrap();
         assert!(output.iter().all(|v| v.abs() < 1e-3));
     }
+
+    // -- Large hidden dim tests --------------------------------------------
+
+    #[test]
+    fn test_layer_norm_large_hidden_dim_4096() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+        let hidden = 4096;
+        let input: Vec<f32> = (0..hidden).map(|i| (i as f32) * 0.01 - 20.0).collect();
+        let gamma = vec![1.0_f32; hidden];
+        let beta = vec![0.0_f32; hidden];
+        let output = layer_norm_cpu_fallback(&input, &gamma, &beta, hidden, &cfg).unwrap();
+
+        assert_eq!(output.len(), hidden);
+        assert!(output.iter().all(|v| v.is_finite()));
+        let mean: f32 = output.iter().sum::<f32>() / hidden as f32;
+        assert!(mean.abs() < 1e-4, "mean should be ~0, got {mean}");
+    }
+
+    #[test]
+    fn test_layer_norm_large_hidden_dim_8192() {
+        let cfg = LayerNormConfig::with_defaults();
+        let hidden = 8192;
+        let input: Vec<f32> = (0..hidden).map(|i| ((i as f32) * 0.37).sin()).collect();
+        let gamma = vec![1.0_f32; hidden];
+        let beta = vec![0.0_f32; hidden];
+        let output = layer_norm_cpu_fallback(&input, &gamma, &beta, hidden, &cfg).unwrap();
+
+        assert_eq!(output.len(), hidden);
+        assert!(output.iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_rms_norm_large_hidden_dim_4096() {
+        let cfg = LayerNormConfig::with_defaults();
+        let hidden = 4096;
+        let input: Vec<f32> = (0..hidden).map(|i| (i as f32) * 0.001 + 0.5).collect();
+        let gamma = vec![1.0_f32; hidden];
+        let output = rms_norm_cpu_fallback(&input, &gamma, hidden, &cfg).unwrap();
+
+        assert_eq!(output.len(), hidden);
+        assert!(output.iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_rms_norm_large_hidden_dim_8192() {
+        let cfg = LayerNormConfig::with_defaults();
+        let hidden = 8192;
+        let input: Vec<f32> = (0..hidden).map(|i| ((i as f32) * 0.13).cos()).collect();
+        let gamma = vec![1.0_f32; hidden];
+        let output = rms_norm_cpu_fallback(&input, &gamma, hidden, &cfg).unwrap();
+
+        assert_eq!(output.len(), hidden);
+        assert!(output.iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_layer_norm_large_batch_4096() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+        let hidden = 4096;
+        let n_rows = 8;
+        let input: Vec<f32> = (0..hidden * n_rows).map(|i| ((i as f32) * 0.07).sin()).collect();
+        let gamma = vec![1.0_f32; hidden];
+        let beta = vec![0.0_f32; hidden];
+        let output = layer_norm_cpu_fallback(&input, &gamma, &beta, hidden, &cfg).unwrap();
+
+        assert_eq!(output.len(), hidden * n_rows);
+        for row in 0..n_rows {
+            let start = row * hidden;
+            let row_out = &output[start..start + hidden];
+            let mean: f32 = row_out.iter().sum::<f32>() / hidden as f32;
+            assert!(mean.abs() < 1e-4, "row {row} mean should be ~0, got {mean}");
+        }
+    }
+
+    // -- Zero variance edge case -------------------------------------------
+
+    #[test]
+    fn test_layer_norm_zero_variance_constant_row() {
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+        let input = [42.0_f32; 256];
+        let gamma = vec![1.0; 256];
+        let beta = vec![0.0; 256];
+        let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 256, &cfg).unwrap();
+
+        // Constant input → zero variance → all outputs near zero
+        assert!(output.iter().all(|v| v.abs() < 1e-2));
+    }
+
+    // -- Eps sensitivity ---------------------------------------------------
+
+    #[test]
+    fn test_rms_norm_eps_sensitivity() {
+        let input = [1e-7_f32, 2e-7, 3e-7, 4e-7];
+        let gamma = [1.0; 4];
+
+        for eps in [1e-12, 1e-8, 1e-6, 1e-5, 1e-3] {
+            let cfg = LayerNormConfig::new(eps, true).unwrap();
+            let output = rms_norm_cpu_fallback(&input, &gamma, 4, &cfg).unwrap();
+            assert!(output.iter().all(|v| v.is_finite()), "non-finite output at eps={eps}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Property-based tests (proptest)
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn proptest_config() -> ProptestConfig {
+        ProptestConfig::with_cases(200)
+    }
+
+    /// Strategy producing vectors of a fixed length in a reasonable range.
+    fn vec_f32_fixed(len: usize) -> impl Strategy<Value = Vec<f32>> {
+        prop::collection::vec(-100.0f32..100.0f32, len..=len)
+    }
+
+    /// Strategy for hidden dims typical in transformers.
+    fn hidden_dim_strategy() -> impl Strategy<Value = usize> {
+        prop_oneof![Just(32), Just(64), Just(128), Just(256), Just(512)]
+    }
+
+    proptest! {
+        #![proptest_config(proptest_config())]
+
+        /// LayerNorm output (no affine) should have approximately zero mean.
+        #[test]
+        fn prop_layer_norm_zero_mean(dim in hidden_dim_strategy()) {
+            let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+            let input: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.1 - (dim as f32 * 0.05)).collect();
+            let gamma = vec![1.0_f32; dim];
+            let beta = vec![0.0_f32; dim];
+            let output = layer_norm_cpu_fallback(&input, &gamma, &beta, dim, &cfg).unwrap();
+
+            let mean: f32 = output.iter().sum::<f32>() / dim as f32;
+            prop_assert!(mean.abs() < 1e-3, "mean={mean} for dim={dim}");
+        }
+
+        /// LayerNorm output (no affine) should have approximately unit variance.
+        #[test]
+        fn prop_layer_norm_unit_variance(dim in hidden_dim_strategy()) {
+            let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+            let input: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.3 - (dim as f32 * 0.15)).collect();
+            let gamma = vec![1.0_f32; dim];
+            let beta = vec![0.0_f32; dim];
+            let output = layer_norm_cpu_fallback(&input, &gamma, &beta, dim, &cfg).unwrap();
+
+            let mean: f32 = output.iter().sum::<f32>() / dim as f32;
+            let var: f32 = output.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / dim as f32;
+            prop_assert!((var - 1.0).abs() < 0.05, "var={var} for dim={dim}");
+        }
+
+        /// LayerNorm output should always be finite for finite input.
+        #[test]
+        fn prop_layer_norm_finite_output(input in vec_f32_fixed(64)) {
+            let cfg = LayerNormConfig::with_defaults();
+            let gamma = vec![1.0_f32; 64];
+            let beta = vec![0.0_f32; 64];
+            let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 64, &cfg).unwrap();
+            prop_assert!(output.iter().all(|v| v.is_finite()));
+        }
+
+        /// RMSNorm should preserve sign of input when gamma=1.
+        #[test]
+        fn prop_rms_norm_preserves_sign(input in vec_f32_fixed(64)) {
+            let cfg = LayerNormConfig::with_defaults();
+            let gamma = vec![1.0_f32; 64];
+            let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
+
+            for (i, (&inp, &out)) in input.iter().zip(output.iter()).enumerate() {
+                if inp.abs() > 1e-6 && out.abs() > 1e-6 {
+                    prop_assert_eq!(
+                        inp.signum() as i32,
+                        out.signum() as i32,
+                        "sign mismatch at idx={}: input={}, output={}",
+                        i, inp, out
+                    );
+                }
+            }
+        }
+
+        /// RMSNorm should be scale-invariant: RMSNorm(a*x) ≈ RMSNorm(x) for a > 0.
+        #[test]
+        fn prop_rms_norm_scale_invariance(
+            input in vec_f32_fixed(64),
+            scale in 0.1f32..10.0f32,
+        ) {
+            let cfg = LayerNormConfig::with_defaults();
+            let gamma = vec![1.0_f32; 64];
+
+            let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
+            let scaled: Vec<f32> = input.iter().map(|x| x * scale).collect();
+            let output_scaled = rms_norm_cpu_fallback(&scaled, &gamma, 64, &cfg).unwrap();
+
+            for (i, (&a, &b)) in output.iter().zip(output_scaled.iter()).enumerate() {
+                if a.abs() > 1e-6 && b.abs() > 1e-6 {
+                    prop_assert!(
+                        (a - b).abs() < 0.1,
+                        "idx={i}: base={a}, scaled={b}, scale={scale}"
+                    );
+                }
+            }
+        }
+
+        /// RMSNorm output should always be finite for finite input.
+        #[test]
+        fn prop_rms_norm_finite_output(input in vec_f32_fixed(64)) {
+            let cfg = LayerNormConfig::with_defaults();
+            let gamma = vec![1.0_f32; 64];
+            let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
+            prop_assert!(output.iter().all(|v| v.is_finite()));
+        }
+
+        /// Forward dispatch should match CPU fallback (since no GPU available in test).
+        #[test]
+        fn prop_forward_matches_cpu(input in vec_f32_fixed(32)) {
+            let cfg = LayerNormConfig::new(1e-5, false).unwrap();
+            let gamma = vec![1.0_f32; 32];
+            let beta = vec![0.0_f32; 32];
+
+            let fwd = layer_norm_forward(&input, &gamma, &beta, 32, &cfg).unwrap();
+            let cpu = layer_norm_cpu_fallback(&input, &gamma, &beta, 32, &cfg).unwrap();
+            prop_assert_eq!(fwd, cpu);
+        }
+
+        /// RMS forward dispatch should match CPU fallback.
+        #[test]
+        fn prop_rms_forward_matches_cpu(input in vec_f32_fixed(32)) {
+            let cfg = LayerNormConfig::with_defaults();
+            let gamma = vec![1.0_f32; 32];
+
+            let fwd = rms_norm_forward(&input, &gamma, 32, &cfg).unwrap();
+            let cpu = rms_norm_cpu_fallback(&input, &gamma, 32, &cfg).unwrap();
+            prop_assert_eq!(fwd, cpu);
+        }
+    }
 }
