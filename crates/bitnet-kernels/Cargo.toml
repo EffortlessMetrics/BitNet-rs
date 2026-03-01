@@ -110,6 +110,10 @@ path = "tests/neon_correctness_exhaustive.rs"
 name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
 
+[[test]]
+name = "opencl_fuzz_targets"
+path = "tests/opencl_fuzz_targets.rs"
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
