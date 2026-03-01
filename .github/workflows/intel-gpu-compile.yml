@@ -1,0 +1,202 @@
+name: Intel GPU Compile Check
+
+on:
+  pull_request:
+    paths:
+      - 'crates/bitnet-kernels/src/gpu/**'
+      - 'crates/bitnet-kernels/src/opencl_*'
+      - 'crates/bitnet-opencl/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-compile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'crates/bitnet-kernels/src/gpu/**'
+      - 'crates/bitnet-kernels/src/opencl_*'
+      - 'crates/bitnet-opencl/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-compile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  compile-check-cpu:
+    name: Compile Check (CPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: intel-gpu-compile-cpu
+
+      - name: cargo check --workspace (cpu)
+        run: cargo check --locked --workspace --no-default-features --features cpu
+
+  compile-check-oneapi:
+    name: Compile Check (OneAPI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Install OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: intel-gpu-compile-oneapi
+
+      - name: cargo check --workspace (oneapi)
+        run: cargo check --locked --workspace --no-default-features --features oneapi
+
+  opencl-kernel-lint:
+    name: OpenCL Kernel Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Validate .cl files exist and are non-empty
+        run: |
+          CL_DIR="crates/bitnet-kernels/src/gpu/kernels"
+          echo "Checking OpenCL kernel directory: $CL_DIR"
+
+          CL_FILES=$(find "$CL_DIR" -name '*.cl' -type f)
+          if [ -z "$CL_FILES" ]; then
+            echo "::error::No .cl kernel files found in $CL_DIR"
+            exit 1
+          fi
+
+          echo "Found kernel files:"
+          FAIL=0
+          for f in $CL_FILES; do
+            SIZE=$(wc -c < "$f")
+            echo "  $f ($SIZE bytes)"
+            if [ "$SIZE" -eq 0 ]; then
+              echo "::error file=$f::Kernel file is empty"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All .cl files are non-empty."
+
+      - name: Check for common OpenCL issues
+        run: |
+          CL_DIR="crates/bitnet-kernels/src/gpu/kernels"
+          FAIL=0
+
+          for f in $(find "$CL_DIR" -name '*.cl' -type f); do
+            echo "--- Checking $f ---"
+
+            # Every kernel file should have at least one __kernel function
+            if ! grep -q '__kernel' "$f"; then
+              echo "::warning file=$f::No __kernel function found"
+            fi
+
+            # Check for unsafe pointer casts without proper address space qualifiers
+            if grep -n 'void\s*\*' "$f" | grep -v '__global\|__local\|__constant\|__private'; then
+              echo "::warning file=$f::Found unqualified void* pointer (consider adding address space qualifier)"
+            fi
+
+            # Check for missing barrier synchronization around local memory usage
+            if grep -q '__local' "$f" && ! grep -q 'barrier' "$f"; then
+              echo "::warning file=$f::Uses __local memory but no barrier() call found"
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
+            exit 1
+          fi
+          echo "OpenCL lint checks complete."
+
+  cpu-fallback-tests:
+    name: CPU Fallback Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Install OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: intel-gpu-compile-fallback
+
+      - name: Run opencl module tests (CPU fallback)
+        run: |
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_cache
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_context
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_kernel_sources
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_embedding
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_pipeline
+          cargo test --locked --no-default-features --features cpu,oneapi \
+            -p bitnet-kernels -- opencl_work_size
+
+  clippy-gpu:
+    name: Clippy (OneAPI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Install OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: intel-gpu-compile-clippy
+
+      - name: cargo clippy (oneapi)
+        run: cargo clippy --locked --all-targets --no-default-features --features oneapi -- -D warnings
