@@ -146,6 +146,7 @@ pub mod streaming_aggregator;
 pub mod data_pipeline;
 pub mod error_recovery;
 pub mod generation;
+pub mod graph_executor;
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
