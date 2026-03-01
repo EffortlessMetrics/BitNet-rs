@@ -9,6 +9,7 @@
 //! - [`attention`]: Scaled dot-product attention with causal masking
 //! - [`batch_norm`]: Batch normalization with training/eval mode support
 //! - [`rmsnorm`]: RMSNorm layer normalization
+//! - [`embedding`]: Token embedding lookup with position encoding
 //! - [`rope`]: Rotary Position Embedding (RoPE)
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
 //! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling
@@ -22,6 +23,7 @@
 pub mod activations;
 pub mod attention;
 pub mod batch_norm;
+pub mod embedding;
 pub mod kv_cache;
 pub mod qk256_gemv;
 pub mod rmsnorm;
@@ -34,6 +36,10 @@ pub use activations::{
 };
 pub use attention::{AttentionKernelConfig, launch_attention};
 pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
+pub use embedding::{
+    EmbeddingConfig, EmbeddingDtype, PositionEncoding, embedding_forward, embedding_lookup_cpu,
+    launch_embedding, sinusoidal_position_encoding,
+};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
