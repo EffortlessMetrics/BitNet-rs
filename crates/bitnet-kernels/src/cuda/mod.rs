@@ -34,7 +34,13 @@ pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
     launch_silu_gate, silu_gate_cpu,
 };
-pub use attention::{AttentionKernelConfig, launch_attention};
+pub use attention::{
+    AttentionConfig, AttentionKernelConfig, attention_cpu_fallback, attention_forward,
+    launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use attention::ATTENTION_KERNEL_SRC;
 pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
