@@ -2,6 +2,7 @@
 
 pub mod activations;
 pub mod attention;
+pub mod attention_mask;
 pub use attention::{
     AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig,
     apply_rotary_embedding, attention_with_kv_cache, causal_attention, causal_mask,
