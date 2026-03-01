@@ -53,6 +53,9 @@ pub use crate::reduction::{
     ReductionConfig, ReductionOp, launch_reduce_cols_f32, launch_reduce_f32,
     launch_reduce_rows_f32, reduce_cols_f32, reduce_f32, reduce_rows_f32,
 };
+// Re-export shaped reduction from the crate-level module.
+pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
+pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
