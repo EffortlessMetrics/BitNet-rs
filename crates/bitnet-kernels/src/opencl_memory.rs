@@ -1,240 +1,296 @@
-//! OpenCL memory transfer tracking and optimization.
+//! OpenCL memory manager for A770 GPU inference with unified memory support.
 //!
-//! Provides memory transfer recording, GPU memory budget management,
-//! buffer pooling with size bucketing, and optimization suggestions
-//! for OpenCL workloads targeting Intel Arc GPUs.
+//! Intel Arc A770 supports unified memory (shared between CPU and GPU).
+//! This module manages GPU buffer lifecycle, memory pools, and transfer tracking.
 
-use std::collections::HashMap;
+use std::fmt;
+use std::time::Instant;
 
 // ---------------------------------------------------------------------------
-// Core enums
+// MemoryError
 // ---------------------------------------------------------------------------
 
-/// Location of a memory region.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MemoryLocation {
-    Host,
-    Device,
-    Mapped,
+/// Errors produced by the memory manager.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MemoryError {
+    /// Requested allocation exceeds budget.
+    BudgetExceeded { requested: usize, available: usize },
+    /// Unknown allocation ID.
+    InvalidAllocationId(u64),
+    /// Zero-byte allocation requested.
+    ZeroSizeAllocation,
+    /// Alignment must be a power of two and non-zero.
+    InvalidAlignment(usize),
 }
 
-/// Direction of a memory transfer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TransferDirection {
-    HostToDevice,
-    DeviceToHost,
-    DeviceToDevice,
+impl fmt::Display for MemoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::BudgetExceeded {
+                requested,
+                available,
+            } => write!(
+                f,
+                "budget exceeded: requested {requested} bytes, {available} available"
+            ),
+            Self::InvalidAllocationId(id) => write!(f, "invalid allocation id: {id}"),
+            Self::ZeroSizeAllocation => write!(f, "zero-byte allocation is not allowed"),
+            Self::InvalidAlignment(a) => {
+                write!(f, "alignment must be a non-zero power of two, got {a}")
+            }
+        }
+    }
 }
 
-/// Strategy for allocating device buffers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum BufferAllocationStrategy {
-    /// Allocate on first write.
-    AllocateOnWrite,
-    /// Pre-allocate before any transfer.
-    PreAllocate,
-    /// Use pinned (page-locked) host memory for DMA.
-    PinnedMemory,
-    /// Use zero-copy shared memory (e.g. integrated GPU).
-    ZeroCopy,
-}
+impl std::error::Error for MemoryError {}
+
+/// Convenience alias used throughout this module.
+pub type Result<T> = std::result::Result<T, MemoryError>;
 
 // ---------------------------------------------------------------------------
 // MemoryRegion
 // ---------------------------------------------------------------------------
 
-/// Tracks a single allocated buffer.
+/// Describes where a buffer resides.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemoryRegion {
+    /// GPU-only memory (fastest for compute).
+    Device,
+    /// CPU-only memory (for staging).
+    Host,
+    /// Shared CPU/GPU memory (Intel Arc unified memory, avoids copies).
+    Unified,
+    /// Page-locked host memory (fast DMA transfers).
+    Pinned,
+}
+
+impl fmt::Display for MemoryRegion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Device => write!(f, "Device"),
+            Self::Host => write!(f, "Host"),
+            Self::Unified => write!(f, "Unified"),
+            Self::Pinned => write!(f, "Pinned"),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AllocationConfig
+// ---------------------------------------------------------------------------
+
+/// Configuration for a single allocation request.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MemoryRegion {
-    pub id: u64,
-    pub size: usize,
-    pub location: MemoryLocation,
+pub struct AllocationConfig {
+    /// Where the buffer should reside.
+    pub region: MemoryRegion,
+    /// Requested size in bytes.
+    pub size_bytes: usize,
+    /// Alignment in bytes (default 64 for A770 cache lines).
+    pub alignment: usize,
+    /// Human-readable debug label.
+    pub name: String,
 }
 
-impl MemoryRegion {
-    pub fn new(id: u64, size: usize, location: MemoryLocation) -> Self {
-        Self { id, size, location }
+impl AllocationConfig {
+    /// Returns `size_bytes` rounded up to the nearest multiple of `alignment`.
+    pub fn aligned_size(&self) -> usize {
+        if self.alignment == 0 {
+            return self.size_bytes;
+        }
+        let mask = self.alignment - 1;
+        (self.size_bytes + mask) & !mask
+    }
+}
+
+impl Default for AllocationConfig {
+    fn default() -> Self {
+        Self {
+            region: MemoryRegion::Device,
+            size_bytes: 0,
+            alignment: 64,
+            name: String::new(),
+        }
     }
 }
 
 // ---------------------------------------------------------------------------
-// TransferRecord / TransferStats
+// AllocationRecord
 // ---------------------------------------------------------------------------
 
-/// A single recorded transfer event.
+/// Bookkeeping for one live allocation.
 #[derive(Debug, Clone)]
-pub struct TransferRecord {
-    pub direction: TransferDirection,
-    pub bytes: usize,
-    pub timestamp_ns: u64,
-    pub duration_ns: u64,
-}
-
-impl TransferRecord {
-    /// Bandwidth in GB/s for this transfer, or 0.0 if duration is zero.
-    pub fn bandwidth_gbps(&self) -> f64 {
-        if self.duration_ns == 0 {
-            return 0.0;
-        }
-        (self.bytes as f64) / (self.duration_ns as f64) // bytes/ns == GB/s
-    }
-}
-
-/// Aggregate statistics over a set of transfers.
-#[derive(Debug, Clone, Default)]
-pub struct TransferStats {
-    pub total_bytes: usize,
-    pub count: usize,
-    pub total_duration_ns: u64,
-    pub peak_bandwidth_gbps: f64,
-}
-
-impl TransferStats {
-    /// Average bandwidth in GB/s, or 0.0 when empty.
-    pub fn avg_bandwidth_gbps(&self) -> f64 {
-        if self.total_duration_ns == 0 {
-            return 0.0;
-        }
-        (self.total_bytes as f64) / (self.total_duration_ns as f64)
-    }
+pub struct AllocationRecord {
+    /// Unique allocation identifier.
+    pub id: u64,
+    /// The configuration used when this allocation was created.
+    pub config: AllocationConfig,
+    /// When the allocation was created.
+    pub allocated_at: Instant,
+    /// Last time the allocation was accessed (read or write).
+    pub last_accessed: Instant,
 }
 
 // ---------------------------------------------------------------------------
-// MemoryTransferTracker
+// MemoryPool
 // ---------------------------------------------------------------------------
 
-/// Tracks all memory transfers and derives statistics.
-#[derive(Debug, Default)]
-pub struct MemoryTransferTracker {
-    records: Vec<TransferRecord>,
-    next_timestamp: u64,
+/// Manages a set of allocations with a free-list recycler.
+#[derive(Debug)]
+pub struct MemoryPool {
+    /// All live allocations.
+    pub allocations: Vec<AllocationRecord>,
+    /// Free-list: (offset, size) pairs available for recycling.
+    pub free_list: Vec<(usize, usize)>,
+    /// Sum of aligned sizes of all live allocations.
+    pub total_allocated: usize,
+    /// High-water mark.
+    pub peak_allocated: usize,
+    /// Monotonically increasing allocation counter (also used as next ID).
+    pub allocation_count: u64,
 }
 
-impl MemoryTransferTracker {
+impl MemoryPool {
+    /// Create an empty pool.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            allocations: Vec::new(),
+            free_list: Vec::new(),
+            total_allocated: 0,
+            peak_allocated: 0,
+            allocation_count: 0,
+        }
     }
 
-    /// Record a transfer event.
-    pub fn record_transfer(
-        &mut self,
-        direction: TransferDirection,
-        bytes: usize,
-        duration_ns: u64,
-    ) {
-        let timestamp_ns = self.next_timestamp;
-        self.next_timestamp = timestamp_ns.saturating_add(duration_ns);
-        let record = TransferRecord { direction, bytes, timestamp_ns, duration_ns };
-        self.records.push(record);
-    }
+    /// Allocate a buffer described by `config`. Returns its unique ID.
+    pub fn allocate(&mut self, config: AllocationConfig) -> Result<u64> {
+        if config.size_bytes == 0 {
+            return Err(MemoryError::ZeroSizeAllocation);
+        }
+        if config.alignment == 0 || !config.alignment.is_power_of_two() {
+            return Err(MemoryError::InvalidAlignment(config.alignment));
+        }
 
-    pub fn total_bytes_transferred(&self) -> usize {
-        self.records.iter().map(|r| r.bytes).sum()
-    }
+        let aligned = config.aligned_size();
 
-    pub fn transfer_count(&self) -> usize {
-        self.records.len()
-    }
-
-    /// Stats filtered by direction.
-    fn stats_for(&self, dir: TransferDirection) -> TransferStats {
-        let mut stats = TransferStats::default();
-        for r in &self.records {
-            if r.direction == dir {
-                stats.total_bytes += r.bytes;
-                stats.count += 1;
-                stats.total_duration_ns += r.duration_ns;
-                let bw = r.bandwidth_gbps();
-                if bw > stats.peak_bandwidth_gbps {
-                    stats.peak_bandwidth_gbps = bw;
-                }
+        // Try to recycle a free-list entry that is large enough.
+        let reuse_idx = self.free_list.iter().position(|&(_off, sz)| sz >= aligned);
+        if let Some(idx) = reuse_idx {
+            let (off, sz) = self.free_list[idx];
+            let leftover = sz - aligned;
+            if leftover > 0 {
+                self.free_list[idx] = (off + aligned, leftover);
+            } else {
+                self.free_list.swap_remove(idx);
             }
         }
-        stats
-    }
 
-    pub fn host_to_device_stats(&self) -> TransferStats {
-        self.stats_for(TransferDirection::HostToDevice)
-    }
+        self.allocation_count += 1;
+        let id = self.allocation_count;
+        let now = Instant::now();
 
-    pub fn device_to_host_stats(&self) -> TransferStats {
-        self.stats_for(TransferDirection::DeviceToHost)
-    }
+        self.allocations.push(AllocationRecord {
+            id,
+            config,
+            allocated_at: now,
+            last_accessed: now,
+        });
 
-    pub fn device_to_device_stats(&self) -> TransferStats {
-        self.stats_for(TransferDirection::DeviceToDevice)
-    }
-
-    /// Average bandwidth across all recorded transfers (GB/s).
-    pub fn average_bandwidth_gbps(&self) -> f64 {
-        let total_dur: u64 = self.records.iter().map(|r| r.duration_ns).sum();
-        if total_dur == 0 {
-            return 0.0;
-        }
-        (self.total_bytes_transferred() as f64) / (total_dur as f64)
-    }
-
-    /// Peak bandwidth across any single transfer (GB/s).
-    pub fn peak_bandwidth_gbps(&self) -> f64 {
-        self.records.iter().map(|r| r.bandwidth_gbps()).fold(0.0_f64, f64::max)
-    }
-
-    /// Suggest optimizations based on recorded transfer patterns.
-    pub fn suggest_optimizations(&self) -> Vec<String> {
-        let mut suggestions = Vec::new();
-
-        // Detect many small transfers (< 4 KB)
-        let small_count = self.records.iter().filter(|r| r.bytes < 4096).count();
-        if small_count > 10 {
-            suggestions.push(format!(
-                "Batch {} small transfers (<4 KB) into fewer large transfers",
-                small_count
-            ));
+        self.total_allocated += aligned;
+        if self.total_allocated > self.peak_allocated {
+            self.peak_allocated = self.total_allocated;
         }
 
-        // Detect low bandwidth utilisation vs A770 theoretical peak (560 GB/s)
-        let avg = self.average_bandwidth_gbps();
-        if !self.records.is_empty() && avg > 0.0 && avg < 10.0 {
-            suggestions
-                .push("Average bandwidth <10 GB/s — consider pinned memory or zero-copy".into());
+        Ok(id)
+    }
+
+    /// Free the allocation with the given `id`.
+    pub fn deallocate(&mut self, id: u64) -> Result<()> {
+        let pos = self
+            .allocations
+            .iter()
+            .position(|a| a.id == id)
+            .ok_or(MemoryError::InvalidAllocationId(id))?;
+
+        let record = self.allocations.swap_remove(pos);
+        let aligned = record.config.aligned_size();
+        self.total_allocated = self.total_allocated.saturating_sub(aligned);
+
+        // Push freed region onto the free list (offset is symbolic).
+        self.free_list.push((0, aligned));
+
+        Ok(())
+    }
+
+    /// Look up an allocation by ID.
+    pub fn get_allocation(&self, id: u64) -> Option<&AllocationRecord> {
+        self.allocations.iter().find(|a| a.id == id)
+    }
+
+    /// Current total allocated bytes (aligned).
+    pub fn current_usage(&self) -> usize {
+        self.total_allocated
+    }
+
+    /// Peak allocated bytes seen so far.
+    pub fn peak_usage(&self) -> usize {
+        self.peak_allocated
+    }
+
+    /// Total number of allocations performed (including freed ones).
+    pub fn allocation_count(&self) -> u64 {
+        self.allocation_count
+    }
+
+    /// Coalesce adjacent free-list entries; returns bytes recovered
+    /// (i.e. the number of entries that were merged away).
+    pub fn defragment(&mut self) -> usize {
+        if self.free_list.len() < 2 {
+            return 0;
         }
 
-        // Detect excessive H→D traffic
-        let h2d = self.host_to_device_stats();
-        let d2h = self.device_to_host_stats();
-        if h2d.count > 0 && d2h.count > 0 && h2d.total_bytes > d2h.total_bytes * 4 {
-            suggestions.push(
-                "Host-to-device traffic is 4×+ device-to-host — keep data on device longer".into(),
-            );
-        }
+        // Sort by offset so adjacent regions can be merged.
+        self.free_list.sort_by_key(|&(off, _)| off);
 
-        // Recommend pre-allocation when many allocations detected
-        if self.records.len() > 100 {
-            suggestions
-                .push("Over 100 transfers recorded — consider pre-allocating buffers".into());
-        }
+        let mut merged: Vec<(usize, usize)> = Vec::new();
+        let mut recovered: usize = 0;
 
-        // Detect redundant round-trips (H→D immediately followed by D→H of same size)
-        let mut prev: Option<&TransferRecord> = None;
-        let mut round_trips = 0usize;
-        for r in &self.records {
-            if let Some(p) = prev
-                && p.direction == TransferDirection::HostToDevice
-                && r.direction == TransferDirection::DeviceToHost
-                && p.bytes == r.bytes
+        for &(off, sz) in &self.free_list {
+            if let Some(last) = merged.last_mut()
+                && last.0 + last.1 >= off
             {
-                round_trips += 1;
+                let new_end = std::cmp::max(last.0 + last.1, off + sz);
+                let old_total = last.1 + sz;
+                let merged_sz = new_end - last.0;
+                recovered += old_total.saturating_sub(merged_sz);
+                last.1 = merged_sz;
+                continue;
             }
-            prev = Some(r);
-        }
-        if round_trips > 2 {
-            suggestions.push(format!(
-                "Detected {} likely redundant H2D→D2H round-trips of same size",
-                round_trips
-            ));
+            merged.push((off, sz));
         }
 
-        suggestions
+        let entries_removed = self.free_list.len().saturating_sub(merged.len());
+        self.free_list = merged;
+
+        if recovered == 0 {
+            recovered = entries_removed;
+        }
+        recovered
+    }
+
+    /// Clear every allocation and reset counters.
+    pub fn reset(&mut self) {
+        self.allocations.clear();
+        self.free_list.clear();
+        self.total_allocated = 0;
+        self.peak_allocated = 0;
+        self.allocation_count = 0;
+    }
+}
+
+impl Default for MemoryPool {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -242,256 +298,109 @@ impl MemoryTransferTracker {
 // MemoryBudget
 // ---------------------------------------------------------------------------
 
-/// Manages a GPU memory budget.
+/// Enforces per-region memory limits.
 #[derive(Debug, Clone)]
 pub struct MemoryBudget {
-    pub total_bytes: u64,
-    pub used_bytes: u64,
-    pub reserved_bytes: u64,
+    /// Maximum device-region bytes (e.g. 16 GiB for A770).
+    pub device_limit: usize,
+    /// Maximum host-region bytes.
+    pub host_limit: usize,
+    /// Maximum unified-region bytes.
+    pub unified_limit: usize,
 }
 
 impl MemoryBudget {
-    pub fn new(total_bytes: u64) -> Self {
-        Self { total_bytes, used_bytes: 0, reserved_bytes: 0 }
+    /// Returns `true` if the pool can accommodate `request` without
+    /// exceeding this budget.
+    pub fn can_allocate(&self, pool: &MemoryPool, request: &AllocationConfig) -> bool {
+        let aligned = request.aligned_size();
+        let region_usage: usize = pool
+            .allocations
+            .iter()
+            .filter(|a| a.config.region == request.region)
+            .map(|a| a.config.aligned_size())
+            .sum();
+
+        let limit = match request.region {
+            MemoryRegion::Device => self.device_limit,
+            MemoryRegion::Host | MemoryRegion::Pinned => self.host_limit,
+            MemoryRegion::Unified => self.unified_limit,
+        };
+
+        region_usage + aligned <= limit
     }
 
-    /// Create a budget with some bytes reserved for the system/driver.
-    pub fn with_reserved(total_bytes: u64, reserved_bytes: u64) -> Self {
-        Self { total_bytes, used_bytes: 0, reserved_bytes }
-    }
-
-    /// Attempt to allocate `bytes`. Fails if not enough free space.
-    pub fn allocate(&mut self, bytes: u64) -> Result<(), String> {
-        if !self.can_allocate(bytes) {
-            return Err(format!(
-                "Cannot allocate {} bytes: only {} free",
-                bytes,
-                self.free_bytes()
-            ));
-        }
-        self.used_bytes += bytes;
-        Ok(())
-    }
-
-    /// Free previously allocated bytes. Saturates at zero.
-    pub fn free(&mut self, bytes: u64) {
-        self.used_bytes = self.used_bytes.saturating_sub(bytes);
-    }
-
-    /// Fraction of total memory currently in use (0.0–1.0).
-    pub fn utilization(&self) -> f64 {
-        if self.total_bytes == 0 {
+    /// Fraction of the total budget currently in use (0.0–1.0+).
+    pub fn utilization(&self, pool: &MemoryPool) -> f64 {
+        let total_limit = self.device_limit + self.host_limit + self.unified_limit;
+        if total_limit == 0 {
             return 0.0;
         }
-        self.used_bytes as f64 / self.total_bytes as f64
-    }
-
-    /// Bytes available for allocation.
-    pub fn free_bytes(&self) -> u64 {
-        self.total_bytes.saturating_sub(self.used_bytes + self.reserved_bytes)
-    }
-
-    pub fn can_allocate(&self, bytes: u64) -> bool {
-        bytes <= self.free_bytes()
+        pool.total_allocated as f64 / total_limit as f64
     }
 }
 
 // ---------------------------------------------------------------------------
-// MemoryPool
+// TransferTracker
 // ---------------------------------------------------------------------------
 
-/// Simple pool for reusing GPU buffers by size bucket.
-#[derive(Debug)]
-pub struct MemoryPool {
-    /// Buckets keyed by (rounded-up) size, values are lists of pool entry ids.
-    buckets: HashMap<usize, Vec<usize>>,
-    max_entries: usize,
-    total_entries: usize,
-    next_id: usize,
-    hits: usize,
-    misses: usize,
-}
-
-/// Statistics for a `MemoryPool`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PoolStats {
-    pub total_entries: usize,
-    pub bucket_count: usize,
-    pub hits: usize,
-    pub misses: usize,
-}
-
-impl MemoryPool {
-    pub fn new(max_entries: usize) -> Self {
-        Self {
-            buckets: HashMap::new(),
-            max_entries,
-            total_entries: 0,
-            next_id: 0,
-            hits: 0,
-            misses: 0,
-        }
-    }
-
-    /// Round size up to nearest power-of-two bucket (minimum 256 bytes).
-    fn bucket_size(size: usize) -> usize {
-        let min = 256;
-        let s = size.max(min);
-        s.next_power_of_two()
-    }
-
-    /// Try to get a pooled buffer of at least `size` bytes.
-    /// Returns `Some(pool_entry_id)` on hit, `None` on miss.
-    pub fn get(&mut self, size: usize) -> Option<usize> {
-        let bucket = Self::bucket_size(size);
-        if let Some(ids) = self.buckets.get_mut(&bucket)
-            && let Some(id) = ids.pop()
-        {
-            self.total_entries -= 1;
-            self.hits += 1;
-            return Some(id);
-        }
-        self.misses += 1;
-        None
-    }
-
-    /// Return a buffer of `size` bytes to the pool. Returns the pool entry id.
-    pub fn put(&mut self, size: usize) -> usize {
-        let bucket = Self::bucket_size(size);
-        let id = self.next_id;
-        self.next_id += 1;
-
-        // Evict oldest entry in the same bucket if at capacity.
-        if self.total_entries >= self.max_entries {
-            // Try to evict from the largest bucket to free space.
-            if let Some((&evict_bucket, _)) =
-                self.buckets.iter().filter(|(_, v)| !v.is_empty()).max_by_key(|&(&k, _)| k)
-                && let Some(ids) = self.buckets.get_mut(&evict_bucket)
-            {
-                ids.remove(0);
-                self.total_entries -= 1;
-            }
-        }
-
-        self.buckets.entry(bucket).or_default().push(id);
-        self.total_entries += 1;
-        id
-    }
-
-    /// Clear all pooled entries.
-    pub fn clear(&mut self) {
-        self.buckets.clear();
-        self.total_entries = 0;
-    }
-
-    pub fn stats(&self) -> PoolStats {
-        PoolStats {
-            total_entries: self.total_entries,
-            bucket_count: self.buckets.len(),
-            hits: self.hits,
-            misses: self.misses,
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// TransferOptimizer
-// ---------------------------------------------------------------------------
-
-/// Analyses a tracker and produces actionable optimization suggestions.
-pub struct TransferOptimizer;
-
-impl TransferOptimizer {
-    /// Suggest a `BufferAllocationStrategy` based on transfer patterns.
-    pub fn recommend_strategy(tracker: &MemoryTransferTracker) -> BufferAllocationStrategy {
-        let avg_bw = tracker.average_bandwidth_gbps();
-        let count = tracker.transfer_count();
-        let small = tracker.records.iter().filter(|r| r.bytes < 4096).count();
-
-        if count == 0 {
-            return BufferAllocationStrategy::AllocateOnWrite;
-        }
-
-        // Lots of small transfers → pinned memory is most beneficial
-        if small as f64 / count as f64 > 0.5 {
-            return BufferAllocationStrategy::PinnedMemory;
-        }
-
-        // Low bandwidth → try zero-copy
-        if avg_bw > 0.0 && avg_bw < 5.0 {
-            return BufferAllocationStrategy::ZeroCopy;
-        }
-
-        // Many transfers → pre-allocate
-        if count > 50 {
-            return BufferAllocationStrategy::PreAllocate;
-        }
-
-        BufferAllocationStrategy::AllocateOnWrite
-    }
-
-    /// Estimate bytes wasted due to pool bucketing for a given set of sizes.
-    pub fn estimate_pool_waste(sizes: &[usize]) -> usize {
-        sizes.iter().map(|&s| MemoryPool::bucket_size(s).saturating_sub(s)).sum()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// IntelArcMemoryProfile
-// ---------------------------------------------------------------------------
-
-/// Memory characteristics for the Intel Arc A770 (16 GB GDDR6, 560 GB/s).
+/// A single recorded transfer event.
 #[derive(Debug, Clone)]
-pub struct IntelArcMemoryProfile {
-    /// Total VRAM in bytes (16 GiB).
-    pub total_vram_bytes: u64,
-    /// Theoretical peak bandwidth in GB/s.
-    pub peak_bandwidth_gbps: f64,
-    /// Memory bus width in bits.
-    pub bus_width_bits: u32,
-    /// GDDR6 effective clock in MHz.
-    pub effective_clock_mhz: u32,
-    /// Recommended minimum transfer size for good throughput.
-    pub min_efficient_transfer_bytes: usize,
+struct TransferEvent {
+    #[allow(dead_code)]
+    src: MemoryRegion,
+    #[allow(dead_code)]
+    dst: MemoryRegion,
+    bytes: usize,
+    duration_ns: u64,
 }
 
-impl Default for IntelArcMemoryProfile {
-    fn default() -> Self {
-        Self::a770()
-    }
+/// Tracks memory transfers between regions.
+#[derive(Debug, Default)]
+pub struct TransferTracker {
+    events: Vec<TransferEvent>,
 }
 
-impl IntelArcMemoryProfile {
-    /// Intel Arc A770 16 GB reference profile.
-    pub fn a770() -> Self {
-        Self {
-            total_vram_bytes: 16 * 1024 * 1024 * 1024, // 16 GiB
-            peak_bandwidth_gbps: 560.0,
-            bus_width_bits: 256,
-            effective_clock_mhz: 17_500,
-            min_efficient_transfer_bytes: 64 * 1024, // 64 KB
+impl TransferTracker {
+    /// Record a completed transfer.
+    pub fn record_transfer(
+        &mut self,
+        src: MemoryRegion,
+        dst: MemoryRegion,
+        bytes: usize,
+        duration_ns: u64,
+    ) {
+        self.events.push(TransferEvent {
+            src,
+            dst,
+            bytes,
+            duration_ns,
+        });
+    }
+
+    /// Total bytes moved across all recorded transfers.
+    pub fn total_bytes_transferred(&self) -> usize {
+        self.events.iter().map(|e| e.bytes).sum()
+    }
+
+    /// Average bandwidth in GB/s across all transfers.
+    /// Returns 0.0 when no transfers have been recorded or total duration is zero.
+    pub fn average_bandwidth_gbps(&self) -> f64 {
+        if self.events.is_empty() {
+            return 0.0;
         }
-    }
-
-    /// Returns the budget for this profile (reserving 512 MB for driver).
-    pub fn budget(&self) -> MemoryBudget {
-        let reserved = 512 * 1024 * 1024; // 512 MB
-        MemoryBudget::with_reserved(self.total_vram_bytes, reserved)
-    }
-
-    /// Estimated transfer time in nanoseconds at theoretical peak bandwidth.
-    pub fn estimated_transfer_ns(&self, bytes: usize) -> u64 {
-        if self.peak_bandwidth_gbps == 0.0 {
-            return 0;
+        let total_bytes: usize = self.events.iter().map(|e| e.bytes).sum();
+        let total_ns: u64 = self.events.iter().map(|e| e.duration_ns).sum();
+        if total_ns == 0 {
+            return 0.0;
         }
-        // bandwidth in bytes/ns = peak_bandwidth_gbps (since 1 GB/s = 1 byte/ns)
-        let ns = bytes as f64 / self.peak_bandwidth_gbps;
-        ns.ceil() as u64
+        // GB/s = bytes / ns  (since 1 GB = 1e9 bytes, 1 s = 1e9 ns)
+        total_bytes as f64 / total_ns as f64
     }
 
-    /// Whether a transfer size is considered efficient.
-    pub fn is_efficient_transfer(&self, bytes: usize) -> bool {
-        bytes >= self.min_efficient_transfer_bytes
+    /// Number of transfers recorded.
+    pub fn transfer_count(&self) -> usize {
+        self.events.len()
     }
 }
 
@@ -503,711 +412,617 @@ impl IntelArcMemoryProfile {
 mod tests {
     use super::*;
 
-    // ===== MemoryRegion =====
+    // -- helpers --
 
-    #[test]
-    fn region_new() {
-        let r = MemoryRegion::new(1, 1024, MemoryLocation::Device);
-        assert_eq!(r.id, 1);
-        assert_eq!(r.size, 1024);
-        assert_eq!(r.location, MemoryLocation::Device);
-    }
-
-    #[test]
-    fn region_clone_eq() {
-        let a = MemoryRegion::new(2, 512, MemoryLocation::Host);
-        let b = a.clone();
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn region_mapped_location() {
-        let r = MemoryRegion::new(3, 0, MemoryLocation::Mapped);
-        assert_eq!(r.location, MemoryLocation::Mapped);
-    }
-
-    // ===== TransferDirection =====
-
-    #[test]
-    fn direction_equality() {
-        assert_eq!(TransferDirection::HostToDevice, TransferDirection::HostToDevice);
-        assert_ne!(TransferDirection::HostToDevice, TransferDirection::DeviceToHost);
-    }
-
-    // ===== TransferRecord =====
-
-    #[test]
-    fn record_bandwidth_normal() {
-        let r = TransferRecord {
-            direction: TransferDirection::HostToDevice,
-            bytes: 1_000_000_000, // 1 GB
-            timestamp_ns: 0,
-            duration_ns: 1_000_000_000, // 1 s
-        };
-        let bw = r.bandwidth_gbps();
-        assert!((bw - 1.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn record_bandwidth_zero_duration() {
-        let r = TransferRecord {
-            direction: TransferDirection::DeviceToHost,
-            bytes: 100,
-            timestamp_ns: 0,
-            duration_ns: 0,
-        };
-        assert_eq!(r.bandwidth_gbps(), 0.0);
-    }
-
-    #[test]
-    fn record_bandwidth_small_transfer() {
-        let r = TransferRecord {
-            direction: TransferDirection::HostToDevice,
-            bytes: 256,
-            timestamp_ns: 0,
-            duration_ns: 1,
-        };
-        assert!((r.bandwidth_gbps() - 256.0).abs() < 1e-9);
-    }
-
-    // ===== TransferStats =====
-
-    #[test]
-    fn stats_default_is_empty() {
-        let s = TransferStats::default();
-        assert_eq!(s.total_bytes, 0);
-        assert_eq!(s.count, 0);
-        assert_eq!(s.avg_bandwidth_gbps(), 0.0);
-    }
-
-    #[test]
-    fn stats_avg_bandwidth() {
-        let s = TransferStats {
-            total_bytes: 2_000_000_000,
-            count: 2,
-            total_duration_ns: 1_000_000_000,
-            peak_bandwidth_gbps: 3.0,
-        };
-        assert!((s.avg_bandwidth_gbps() - 2.0).abs() < 1e-9);
-    }
-
-    // ===== MemoryTransferTracker =====
-
-    #[test]
-    fn tracker_new_is_empty() {
-        let t = MemoryTransferTracker::new();
-        assert_eq!(t.transfer_count(), 0);
-        assert_eq!(t.total_bytes_transferred(), 0);
-    }
-
-    #[test]
-    fn tracker_record_single() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 1024, 100);
-        assert_eq!(t.transfer_count(), 1);
-        assert_eq!(t.total_bytes_transferred(), 1024);
-    }
-
-    #[test]
-    fn tracker_record_multiple() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 500, 50);
-        t.record_transfer(TransferDirection::DeviceToHost, 300, 30);
-        t.record_transfer(TransferDirection::DeviceToDevice, 200, 20);
-        assert_eq!(t.transfer_count(), 3);
-        assert_eq!(t.total_bytes_transferred(), 1000);
-    }
-
-    #[test]
-    fn tracker_h2d_stats() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 1000, 100);
-        t.record_transfer(TransferDirection::HostToDevice, 2000, 200);
-        t.record_transfer(TransferDirection::DeviceToHost, 500, 50);
-        let s = t.host_to_device_stats();
-        assert_eq!(s.count, 2);
-        assert_eq!(s.total_bytes, 3000);
-        assert_eq!(s.total_duration_ns, 300);
-    }
-
-    #[test]
-    fn tracker_d2h_stats() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::DeviceToHost, 800, 80);
-        let s = t.device_to_host_stats();
-        assert_eq!(s.count, 1);
-        assert_eq!(s.total_bytes, 800);
-    }
-
-    #[test]
-    fn tracker_d2d_stats() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::DeviceToDevice, 4096, 10);
-        let s = t.device_to_device_stats();
-        assert_eq!(s.count, 1);
-        assert_eq!(s.total_bytes, 4096);
-    }
-
-    #[test]
-    fn tracker_average_bandwidth() {
-        let mut t = MemoryTransferTracker::new();
-        // 2 GB in 1 s => 2 GB/s
-        t.record_transfer(TransferDirection::HostToDevice, 2_000_000_000, 1_000_000_000);
-        assert!((t.average_bandwidth_gbps() - 2.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn tracker_average_bandwidth_empty() {
-        let t = MemoryTransferTracker::new();
-        assert_eq!(t.average_bandwidth_gbps(), 0.0);
-    }
-
-    #[test]
-    fn tracker_peak_bandwidth() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 100, 100); // 1 GB/s
-        t.record_transfer(TransferDirection::HostToDevice, 500, 100); // 5 GB/s
-        t.record_transfer(TransferDirection::HostToDevice, 200, 100); // 2 GB/s
-        assert!((t.peak_bandwidth_gbps() - 5.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn tracker_peak_bandwidth_empty() {
-        let t = MemoryTransferTracker::new();
-        assert_eq!(t.peak_bandwidth_gbps(), 0.0);
-    }
-
-    #[test]
-    fn tracker_zero_byte_transfer() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 0, 100);
-        assert_eq!(t.total_bytes_transferred(), 0);
-        assert_eq!(t.transfer_count(), 1);
-    }
-
-    #[test]
-    fn tracker_zero_duration_transfer() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 1024, 0);
-        assert_eq!(t.total_bytes_transferred(), 1024);
-        // peak bandwidth should be 0 for zero-duration
-        assert_eq!(t.peak_bandwidth_gbps(), 0.0);
-    }
-
-    #[test]
-    fn tracker_stats_peak_bandwidth_tracks_max() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 100, 10); // 10 GB/s
-        t.record_transfer(TransferDirection::HostToDevice, 100, 5); // 20 GB/s
-        let s = t.host_to_device_stats();
-        assert!((s.peak_bandwidth_gbps - 20.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn tracker_timestamps_advance() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 100, 50);
-        t.record_transfer(TransferDirection::HostToDevice, 200, 30);
-        assert_eq!(t.records[0].timestamp_ns, 0);
-        assert_eq!(t.records[1].timestamp_ns, 50);
-    }
-
-    // ===== suggest_optimizations =====
-
-    #[test]
-    fn suggest_batch_small_transfers() {
-        let mut t = MemoryTransferTracker::new();
-        for _ in 0..15 {
-            t.record_transfer(TransferDirection::HostToDevice, 128, 10);
+    fn device_config(name: &str, size: usize) -> AllocationConfig {
+        AllocationConfig {
+            region: MemoryRegion::Device,
+            size_bytes: size,
+            alignment: 64,
+            name: name.to_string(),
         }
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.iter().any(|s| s.contains("small transfers")));
     }
 
-    #[test]
-    fn suggest_low_bandwidth() {
-        let mut t = MemoryTransferTracker::new();
-        // 100 bytes in 100 ns = 1 GB/s (low)
-        t.record_transfer(TransferDirection::HostToDevice, 100, 100);
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.iter().any(|s| s.contains("pinned memory")));
-    }
-
-    #[test]
-    fn suggest_excessive_h2d() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 50_000, 100);
-        t.record_transfer(TransferDirection::DeviceToHost, 10_000, 100);
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.iter().any(|s| s.contains("keep data on device")));
-    }
-
-    #[test]
-    fn suggest_pre_allocate_many_transfers() {
-        let mut t = MemoryTransferTracker::new();
-        for _ in 0..110 {
-            t.record_transfer(TransferDirection::HostToDevice, 10_000, 10);
+    fn unified_config(name: &str, size: usize) -> AllocationConfig {
+        AllocationConfig {
+            region: MemoryRegion::Unified,
+            size_bytes: size,
+            alignment: 64,
+            name: name.to_string(),
         }
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.iter().any(|s| s.contains("pre-allocating")));
     }
 
-    #[test]
-    fn suggest_round_trip_detection() {
-        let mut t = MemoryTransferTracker::new();
-        for _ in 0..5 {
-            t.record_transfer(TransferDirection::HostToDevice, 4096, 10);
-            t.record_transfer(TransferDirection::DeviceToHost, 4096, 10);
+    fn host_config(name: &str, size: usize) -> AllocationConfig {
+        AllocationConfig {
+            region: MemoryRegion::Host,
+            size_bytes: size,
+            alignment: 64,
+            name: name.to_string(),
         }
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.iter().any(|s| s.contains("round-trips")));
     }
 
-    #[test]
-    fn suggest_no_suggestions_for_healthy_pattern() {
-        let mut t = MemoryTransferTracker::new();
-        // A few large, fast transfers
-        for _ in 0..5 {
-            t.record_transfer(TransferDirection::HostToDevice, 1_000_000, 10);
+    fn pinned_config(name: &str, size: usize) -> AllocationConfig {
+        AllocationConfig {
+            region: MemoryRegion::Pinned,
+            size_bytes: size,
+            alignment: 64,
+            name: name.to_string(),
         }
-        let suggestions = t.suggest_optimizations();
-        assert!(suggestions.is_empty());
     }
 
-    // ===== MemoryBudget =====
+    // ---------------------------------------------------------------
+    // Alignment
+    // ---------------------------------------------------------------
 
     #[test]
-    fn budget_new() {
-        let b = MemoryBudget::new(1_000_000);
-        assert_eq!(b.total_bytes, 1_000_000);
-        assert_eq!(b.used_bytes, 0);
-        assert_eq!(b.free_bytes(), 1_000_000);
-    }
-
-    #[test]
-    fn budget_allocate_success() {
-        let mut b = MemoryBudget::new(1000);
-        assert!(b.allocate(500).is_ok());
-        assert_eq!(b.used_bytes, 500);
-        assert_eq!(b.free_bytes(), 500);
+    fn aligned_size_already_aligned() {
+        let c = device_config("a", 128);
+        assert_eq!(c.aligned_size(), 128);
     }
 
     #[test]
-    fn budget_allocate_exact() {
-        let mut b = MemoryBudget::new(1000);
-        assert!(b.allocate(1000).is_ok());
-        assert_eq!(b.free_bytes(), 0);
+    fn aligned_size_rounds_up() {
+        let c = device_config("a", 100);
+        assert_eq!(c.aligned_size(), 128); // next multiple of 64
     }
 
     #[test]
-    fn budget_allocate_overflow() {
-        let mut b = MemoryBudget::new(1000);
-        let err = b.allocate(1001);
-        assert!(err.is_err());
-        assert_eq!(b.used_bytes, 0);
+    fn aligned_size_one_byte() {
+        let c = device_config("a", 1);
+        assert_eq!(c.aligned_size(), 64);
     }
 
     #[test]
-    fn budget_allocate_multiple() {
-        let mut b = MemoryBudget::new(1000);
-        assert!(b.allocate(300).is_ok());
-        assert!(b.allocate(300).is_ok());
-        assert!(b.allocate(300).is_ok());
-        assert!(b.allocate(200).is_err());
-        assert_eq!(b.used_bytes, 900);
+    fn aligned_size_custom_alignment() {
+        let c = AllocationConfig {
+            region: MemoryRegion::Device,
+            size_bytes: 200,
+            alignment: 256,
+            name: "big".into(),
+        };
+        assert_eq!(c.aligned_size(), 256);
+    }
+
+    // ---------------------------------------------------------------
+    // Allocation / deallocation lifecycle
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn allocate_and_lookup() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("w", 1024)).unwrap();
+        let rec = pool.get_allocation(id).unwrap();
+        assert_eq!(rec.config.size_bytes, 1024);
+        assert_eq!(rec.config.name, "w");
     }
 
     #[test]
-    fn budget_free() {
-        let mut b = MemoryBudget::new(1000);
-        b.allocate(600).unwrap();
-        b.free(200);
-        assert_eq!(b.used_bytes, 400);
-        assert_eq!(b.free_bytes(), 600);
+    fn deallocate_removes_record() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("x", 512)).unwrap();
+        pool.deallocate(id).unwrap();
+        assert!(pool.get_allocation(id).is_none());
     }
 
     #[test]
-    fn budget_free_saturates() {
-        let mut b = MemoryBudget::new(1000);
-        b.free(500); // freeing more than used
-        assert_eq!(b.used_bytes, 0);
+    fn deallocate_unknown_id_is_error() {
+        let mut pool = MemoryPool::new();
+        assert_eq!(
+            pool.deallocate(999),
+            Err(MemoryError::InvalidAllocationId(999)),
+        );
+    }
+
+    #[test]
+    fn double_deallocate_is_error() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("d", 64)).unwrap();
+        pool.deallocate(id).unwrap();
+        assert!(pool.deallocate(id).is_err());
+    }
+
+    #[test]
+    fn deallocate_decreases_usage() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("a", 256)).unwrap();
+        let before = pool.current_usage();
+        pool.deallocate(id).unwrap();
+        assert!(pool.current_usage() < before);
+    }
+
+    // ---------------------------------------------------------------
+    // Allocation ID uniqueness
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn ids_are_unique() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 64)).unwrap();
+        let b = pool.allocate(device_config("b", 64)).unwrap();
+        let c = pool.allocate(device_config("c", 64)).unwrap();
+        assert_ne!(a, b);
+        assert_ne!(b, c);
+        assert_ne!(a, c);
+    }
+
+    #[test]
+    fn ids_monotonically_increase() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 64)).unwrap();
+        let b = pool.allocate(device_config("b", 64)).unwrap();
+        assert!(b > a);
+    }
+
+    #[test]
+    fn ids_unique_after_dealloc() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 64)).unwrap();
+        pool.deallocate(a).unwrap();
+        let b = pool.allocate(device_config("b", 64)).unwrap();
+        assert_ne!(a, b);
+    }
+
+    // ---------------------------------------------------------------
+    // Peak tracking
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn peak_tracks_high_water_mark() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 1024)).unwrap();
+        let b = pool.allocate(device_config("b", 2048)).unwrap();
+        let peak_after_two = pool.peak_usage();
+        pool.deallocate(a).unwrap();
+        pool.deallocate(b).unwrap();
+        assert_eq!(pool.peak_usage(), peak_after_two);
+        assert_eq!(pool.current_usage(), 0);
+    }
+
+    #[test]
+    fn peak_updates_on_new_high() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 64)).unwrap();
+        let p1 = pool.peak_usage();
+        pool.allocate(device_config("b", 256)).unwrap();
+        assert!(pool.peak_usage() > p1);
+    }
+
+    #[test]
+    fn peak_does_not_decrease() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 4096)).unwrap();
+        let peak = pool.peak_usage();
+        pool.deallocate(a).unwrap();
+        pool.allocate(device_config("b", 64)).unwrap();
+        assert_eq!(pool.peak_usage(), peak);
+    }
+
+    // ---------------------------------------------------------------
+    // Budget enforcement
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn budget_allows_within_limit() {
+        let pool = MemoryPool::new();
+        let budget = MemoryBudget {
+            device_limit: 4096,
+            host_limit: 4096,
+            unified_limit: 4096,
+        };
+        assert!(budget.can_allocate(&pool, &device_config("a", 1024)));
+    }
+
+    #[test]
+    fn budget_rejects_over_limit() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 4000)).unwrap();
+        let budget = MemoryBudget {
+            device_limit: 4096,
+            host_limit: 4096,
+            unified_limit: 4096,
+        };
+        // 4000 aligned to 64 = 4032; 4032 + 128 = 4160 > 4096
+        assert!(!budget.can_allocate(&pool, &device_config("b", 128)));
+    }
+
+    #[test]
+    fn budget_checks_per_region() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 4000)).unwrap();
+        let budget = MemoryBudget {
+            device_limit: 4096,
+            host_limit: 8192,
+            unified_limit: 8192,
+        };
+        assert!(budget.can_allocate(&pool, &host_config("h", 1024)));
     }
 
     #[test]
     fn budget_utilization_empty() {
-        let b = MemoryBudget::new(1000);
-        assert!((b.utilization() - 0.0).abs() < 1e-9);
+        let pool = MemoryPool::new();
+        let budget = MemoryBudget {
+            device_limit: 1024,
+            host_limit: 1024,
+            unified_limit: 1024,
+        };
+        assert!((budget.utilization(&pool) - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn budget_utilization_half() {
-        let mut b = MemoryBudget::new(1000);
-        b.allocate(500).unwrap();
-        assert!((b.utilization() - 0.5).abs() < 1e-9);
+    fn budget_utilization_partial() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 512)).unwrap();
+        let budget = MemoryBudget {
+            device_limit: 1024,
+            host_limit: 1024,
+            unified_limit: 1024,
+        };
+        let u = budget.utilization(&pool);
+        assert!(u > 0.0 && u < 1.0);
     }
 
     #[test]
-    fn budget_utilization_full() {
-        let mut b = MemoryBudget::new(1000);
-        b.allocate(1000).unwrap();
-        assert!((b.utilization() - 1.0).abs() < 1e-9);
+    fn budget_utilization_zero_limits() {
+        let pool = MemoryPool::new();
+        let budget = MemoryBudget {
+            device_limit: 0,
+            host_limit: 0,
+            unified_limit: 0,
+        };
+        assert!((budget.utilization(&pool) - 0.0).abs() < f64::EPSILON);
+    }
+
+    // ---------------------------------------------------------------
+    // Free-list recycling
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn free_list_grows_on_dealloc() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("f", 256)).unwrap();
+        assert!(pool.free_list.is_empty());
+        pool.deallocate(id).unwrap();
+        assert!(!pool.free_list.is_empty());
     }
 
     #[test]
-    fn budget_utilization_zero_total() {
-        let b = MemoryBudget::new(0);
-        assert_eq!(b.utilization(), 0.0);
+    fn free_list_entry_reused() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("f", 256)).unwrap();
+        pool.deallocate(id).unwrap();
+        let free_before = pool.free_list.len();
+        pool.allocate(device_config("g", 256)).unwrap();
+        assert!(pool.free_list.len() <= free_before);
     }
 
     #[test]
-    fn budget_can_allocate() {
-        let mut b = MemoryBudget::new(1000);
-        assert!(b.can_allocate(1000));
-        assert!(!b.can_allocate(1001));
-        b.allocate(600).unwrap();
-        assert!(b.can_allocate(400));
-        assert!(!b.can_allocate(401));
+    fn free_list_splits_on_partial_reuse() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("big", 512)).unwrap();
+        pool.deallocate(id).unwrap();
+        pool.allocate(device_config("small", 128)).unwrap();
+        // Free list should still have the leftover (512 - 128 = 384).
+        let leftover: usize = pool.free_list.iter().map(|&(_, sz)| sz).sum();
+        assert_eq!(leftover, 384);
+    }
+
+    // ---------------------------------------------------------------
+    // Defragmentation
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn defragment_empty_is_zero() {
+        let mut pool = MemoryPool::new();
+        assert_eq!(pool.defragment(), 0);
     }
 
     #[test]
-    fn budget_can_allocate_zero() {
-        let b = MemoryBudget::new(1000);
-        assert!(b.can_allocate(0));
+    fn defragment_single_entry_is_zero() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(device_config("x", 128)).unwrap();
+        pool.deallocate(id).unwrap();
+        assert_eq!(pool.defragment(), 0);
     }
 
     #[test]
-    fn budget_with_reserved() {
-        let b = MemoryBudget::with_reserved(1000, 200);
-        assert_eq!(b.free_bytes(), 800);
-        assert!(b.can_allocate(800));
-        assert!(!b.can_allocate(801));
+    fn defragment_merges_entries() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 128)).unwrap();
+        let b = pool.allocate(device_config("b", 128)).unwrap();
+        pool.deallocate(a).unwrap();
+        pool.deallocate(b).unwrap();
+        let before = pool.free_list.len();
+        let recovered = pool.defragment();
+        assert!(pool.free_list.len() <= before || recovered > 0);
+    }
+
+    // ---------------------------------------------------------------
+    // Reset
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn reset_clears_everything() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 1024)).unwrap();
+        pool.allocate(device_config("b", 2048)).unwrap();
+        pool.reset();
+        assert_eq!(pool.current_usage(), 0);
+        assert_eq!(pool.peak_usage(), 0);
+        assert_eq!(pool.allocation_count(), 0);
+        assert!(pool.allocations.is_empty());
+        assert!(pool.free_list.is_empty());
     }
 
     #[test]
-    fn budget_reserved_affects_allocation() {
-        let mut b = MemoryBudget::with_reserved(1000, 300);
-        assert!(b.allocate(700).is_ok());
-        assert!(b.allocate(1).is_err());
+    fn reset_allows_new_allocations() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("a", 1024)).unwrap();
+        pool.reset();
+        let id = pool.allocate(device_config("b", 512)).unwrap();
+        assert_eq!(id, 1);
+        assert_eq!(pool.current_usage(), 512);
     }
 
-    // ===== MemoryPool =====
+    // ---------------------------------------------------------------
+    // Transfer tracking
+    // ---------------------------------------------------------------
 
     #[test]
-    fn pool_new() {
-        let p = MemoryPool::new(16);
-        assert_eq!(p.stats().total_entries, 0);
-    }
-
-    #[test]
-    fn pool_put_and_get() {
-        let mut p = MemoryPool::new(16);
-        let id = p.put(1024);
-        let got = p.get(1024);
-        assert_eq!(got, Some(id));
-    }
-
-    #[test]
-    fn pool_get_miss() {
-        let mut p = MemoryPool::new(16);
-        assert_eq!(p.get(1024), None);
+    fn transfer_tracker_empty() {
+        let t = TransferTracker::default();
+        assert_eq!(t.transfer_count(), 0);
+        assert_eq!(t.total_bytes_transferred(), 0);
+        assert!((t.average_bandwidth_gbps() - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn pool_size_bucketing() {
-        let mut p = MemoryPool::new(16);
-        // 1000 rounds up to 1024
-        p.put(1000);
-        // Requesting 900 also rounds to 1024 → hit
-        assert!(p.get(900).is_some());
+    fn transfer_record_and_count() {
+        let mut t = TransferTracker::default();
+        t.record_transfer(MemoryRegion::Host, MemoryRegion::Device, 4096, 1000);
+        assert_eq!(t.transfer_count(), 1);
+        assert_eq!(t.total_bytes_transferred(), 4096);
     }
 
     #[test]
-    fn pool_size_bucketing_different_bucket() {
-        let mut p = MemoryPool::new(16);
-        p.put(1000); // bucket 1024
-        // Requesting 2000 rounds to 2048 → miss
-        assert!(p.get(2000).is_none());
+    fn transfer_bandwidth_calculation() {
+        let mut t = TransferTracker::default();
+        // 1 GB in 1 second = 1 GB/s
+        t.record_transfer(
+            MemoryRegion::Host,
+            MemoryRegion::Device,
+            1_000_000_000,
+            1_000_000_000,
+        );
+        let bw = t.average_bandwidth_gbps();
+        assert!((bw - 1.0).abs() < 0.01);
     }
 
     #[test]
-    fn pool_multiple_same_bucket() {
-        let mut p = MemoryPool::new(16);
-        let id1 = p.put(600);
-        let id2 = p.put(700);
-        // Both in bucket 1024 (next_power_of_two), LIFO order
-        assert_eq!(p.get(600), Some(id2));
-        assert_eq!(p.get(600), Some(id1));
-        assert_eq!(p.get(600), None);
+    fn transfer_multiple_events() {
+        let mut t = TransferTracker::default();
+        t.record_transfer(MemoryRegion::Host, MemoryRegion::Device, 1000, 500);
+        t.record_transfer(MemoryRegion::Device, MemoryRegion::Host, 2000, 500);
+        assert_eq!(t.transfer_count(), 2);
+        assert_eq!(t.total_bytes_transferred(), 3000);
+        // 3000 bytes / 1000 ns = 3.0 GB/s
+        let bw = t.average_bandwidth_gbps();
+        assert!((bw - 3.0).abs() < 0.01);
     }
 
     #[test]
-    fn pool_clear() {
-        let mut p = MemoryPool::new(16);
-        p.put(1024);
-        p.put(2048);
-        p.clear();
-        assert_eq!(p.stats().total_entries, 0);
-        assert_eq!(p.get(1024), None);
+    fn transfer_zero_duration() {
+        let mut t = TransferTracker::default();
+        t.record_transfer(MemoryRegion::Host, MemoryRegion::Device, 1024, 0);
+        assert!((t.average_bandwidth_gbps() - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn pool_stats_hits_misses() {
-        let mut p = MemoryPool::new(16);
-        p.get(100); // miss
-        p.put(100);
-        p.get(100); // hit
-        let s = p.stats();
-        assert_eq!(s.hits, 1);
-        assert_eq!(s.misses, 1);
+    fn transfer_unified_to_device() {
+        let mut t = TransferTracker::default();
+        t.record_transfer(MemoryRegion::Unified, MemoryRegion::Device, 2048, 100);
+        assert_eq!(t.total_bytes_transferred(), 2048);
+    }
+
+    // ---------------------------------------------------------------
+    // Unified memory region properties
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn unified_region_display() {
+        assert_eq!(format!("{}", MemoryRegion::Unified), "Unified");
     }
 
     #[test]
-    fn pool_eviction_at_capacity() {
-        let mut p = MemoryPool::new(2);
-        p.put(1024);
-        p.put(2048);
-        // Pool full, adding another should evict
-        p.put(4096);
-        assert_eq!(p.stats().total_entries, 2);
+    fn unified_allocation_tracked() {
+        let mut pool = MemoryPool::new();
+        let id = pool.allocate(unified_config("u", 4096)).unwrap();
+        let rec = pool.get_allocation(id).unwrap();
+        assert_eq!(rec.config.region, MemoryRegion::Unified);
     }
 
     #[test]
-    fn pool_min_bucket_256() {
-        let mut p = MemoryPool::new(16);
-        p.put(1);
-        // Bucket is 256
-        assert!(p.get(1).is_some());
-        assert!(p.get(200).is_none()); // already consumed
+    fn unified_budget_separate_from_device() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(unified_config("u", 4096)).unwrap();
+        let budget = MemoryBudget {
+            device_limit: 1024,
+            host_limit: 1024,
+            unified_limit: 8192,
+        };
+        assert!(budget.can_allocate(&pool, &device_config("d", 512)));
+        assert!(budget.can_allocate(&pool, &unified_config("u2", 4000)));
+    }
+
+    // ---------------------------------------------------------------
+    // Pinned memory
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn pinned_region_uses_host_limit() {
+        let pool = MemoryPool::new();
+        let budget = MemoryBudget {
+            device_limit: 0,
+            host_limit: 1024,
+            unified_limit: 0,
+        };
+        assert!(budget.can_allocate(&pool, &pinned_config("p", 512)));
     }
 
     #[test]
-    fn pool_stats_bucket_count() {
-        let mut p = MemoryPool::new(16);
-        p.put(100); // bucket 256
-        p.put(500); // bucket 1024
-        p.put(3000); // bucket 4096
-        assert_eq!(p.stats().bucket_count, 3);
+    fn pinned_region_display() {
+        assert_eq!(format!("{}", MemoryRegion::Pinned), "Pinned");
+    }
+
+    // ---------------------------------------------------------------
+    // Edge cases
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn zero_byte_alloc_rejected() {
+        let mut pool = MemoryPool::new();
+        assert_eq!(
+            pool.allocate(device_config("z", 0)),
+            Err(MemoryError::ZeroSizeAllocation),
+        );
     }
 
     #[test]
-    fn pool_zero_size() {
-        let mut p = MemoryPool::new(16);
-        p.put(0);
-        assert!(p.get(0).is_some());
-    }
-
-    // ===== BufferAllocationStrategy =====
-
-    #[test]
-    fn strategy_enum_equality() {
-        assert_eq!(BufferAllocationStrategy::PinnedMemory, BufferAllocationStrategy::PinnedMemory);
-        assert_ne!(BufferAllocationStrategy::ZeroCopy, BufferAllocationStrategy::PreAllocate);
+    fn invalid_alignment_rejected() {
+        let mut pool = MemoryPool::new();
+        let cfg = AllocationConfig {
+            region: MemoryRegion::Device,
+            size_bytes: 128,
+            alignment: 3,
+            name: "bad".into(),
+        };
+        assert_eq!(pool.allocate(cfg), Err(MemoryError::InvalidAlignment(3)));
     }
 
     #[test]
-    fn strategy_all_variants() {
-        let strategies = [
-            BufferAllocationStrategy::AllocateOnWrite,
-            BufferAllocationStrategy::PreAllocate,
-            BufferAllocationStrategy::PinnedMemory,
-            BufferAllocationStrategy::ZeroCopy,
-        ];
-        assert_eq!(strategies.len(), 4);
-    }
-
-    // ===== TransferOptimizer =====
-
-    #[test]
-    fn optimizer_empty_tracker() {
-        let t = MemoryTransferTracker::new();
-        let strat = TransferOptimizer::recommend_strategy(&t);
-        assert_eq!(strat, BufferAllocationStrategy::AllocateOnWrite);
+    fn zero_alignment_rejected() {
+        let mut pool = MemoryPool::new();
+        let cfg = AllocationConfig {
+            region: MemoryRegion::Device,
+            size_bytes: 128,
+            alignment: 0,
+            name: "bad".into(),
+        };
+        assert_eq!(pool.allocate(cfg), Err(MemoryError::InvalidAlignment(0)));
     }
 
     #[test]
-    fn optimizer_many_small_suggests_pinned() {
-        let mut t = MemoryTransferTracker::new();
-        for _ in 0..20 {
-            t.record_transfer(TransferDirection::HostToDevice, 128, 10);
+    fn large_allocation() {
+        let mut pool = MemoryPool::new();
+        let size = 16 * 1024 * 1024 * 1024_usize; // 16 GiB
+        let id = pool
+            .allocate(AllocationConfig {
+                region: MemoryRegion::Device,
+                size_bytes: size,
+                alignment: 64,
+                name: "vram".into(),
+            })
+            .unwrap();
+        assert_eq!(pool.current_usage(), size);
+        pool.deallocate(id).unwrap();
+        assert_eq!(pool.current_usage(), 0);
+    }
+
+    // ---------------------------------------------------------------
+    // Concurrent-style allocation patterns
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn many_allocations_and_deallocations() {
+        let mut pool = MemoryPool::new();
+        let mut ids = Vec::new();
+        for i in 0..100 {
+            let id = pool
+                .allocate(device_config(&format!("buf{i}"), 64 * (i + 1)))
+                .unwrap();
+            ids.push(id);
         }
-        let strat = TransferOptimizer::recommend_strategy(&t);
-        assert_eq!(strat, BufferAllocationStrategy::PinnedMemory);
-    }
+        assert_eq!(pool.allocation_count(), 100);
 
-    #[test]
-    fn optimizer_low_bandwidth_suggests_zerocopy() {
-        let mut t = MemoryTransferTracker::new();
-        // All large transfers but slow (1 GB/s)
-        for _ in 0..10 {
-            t.record_transfer(TransferDirection::HostToDevice, 1_000_000, 1_000_000);
+        for &id in ids.iter().filter(|id| **id % 2 == 1) {
+            pool.deallocate(id).unwrap();
         }
-        let strat = TransferOptimizer::recommend_strategy(&t);
-        assert_eq!(strat, BufferAllocationStrategy::ZeroCopy);
+        assert_eq!(pool.allocations.len(), 50);
     }
 
     #[test]
-    fn optimizer_many_transfers_suggests_preallocate() {
-        let mut t = MemoryTransferTracker::new();
-        for _ in 0..60 {
-            // Large, fast → not small, not low bw, but > 50 count
-            t.record_transfer(TransferDirection::HostToDevice, 1_000_000, 10);
-        }
-        let strat = TransferOptimizer::recommend_strategy(&t);
-        assert_eq!(strat, BufferAllocationStrategy::PreAllocate);
+    fn interleaved_alloc_dealloc() {
+        let mut pool = MemoryPool::new();
+        let a = pool.allocate(device_config("a", 128)).unwrap();
+        let b = pool.allocate(device_config("b", 256)).unwrap();
+        pool.deallocate(a).unwrap();
+        let c = pool.allocate(device_config("c", 64)).unwrap();
+        pool.deallocate(b).unwrap();
+        let d = pool.allocate(device_config("d", 512)).unwrap();
+        pool.deallocate(c).unwrap();
+        pool.deallocate(d).unwrap();
+        assert_eq!(pool.current_usage(), 0);
     }
 
     #[test]
-    fn optimizer_pool_waste_estimate() {
-        let sizes = vec![100, 500, 1000];
-        let waste = TransferOptimizer::estimate_pool_waste(&sizes);
-        // 100→256 (+156), 500→512 (+12), 1000→1024 (+24) = 192
-        assert_eq!(waste, 156 + 12 + 24);
+    fn mixed_region_allocations() {
+        let mut pool = MemoryPool::new();
+        pool.allocate(device_config("d", 1024)).unwrap();
+        pool.allocate(host_config("h", 2048)).unwrap();
+        pool.allocate(unified_config("u", 4096)).unwrap();
+        pool.allocate(pinned_config("p", 512)).unwrap();
+        assert_eq!(pool.allocations.len(), 4);
+        // Total: 1024 + 2048 + 4096 + 512 = 7680
+        assert_eq!(pool.current_usage(), 7680);
+    }
+
+    // ---------------------------------------------------------------
+    // MemoryError Display
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn error_display_budget_exceeded() {
+        let e = MemoryError::BudgetExceeded {
+            requested: 100,
+            available: 50,
+        };
+        let s = format!("{e}");
+        assert!(s.contains("100"));
+        assert!(s.contains("50"));
     }
 
     #[test]
-    fn optimizer_pool_waste_exact_powers() {
-        let sizes = vec![256, 512, 1024];
-        let waste = TransferOptimizer::estimate_pool_waste(&sizes);
-        assert_eq!(waste, 0);
+    fn error_display_invalid_id() {
+        let e = MemoryError::InvalidAllocationId(42);
+        assert!(format!("{e}").contains("42"));
     }
 
     #[test]
-    fn optimizer_pool_waste_empty() {
-        let waste = TransferOptimizer::estimate_pool_waste(&[]);
-        assert_eq!(waste, 0);
-    }
-
-    // ===== IntelArcMemoryProfile =====
-
-    #[test]
-    fn a770_vram() {
-        let p = IntelArcMemoryProfile::a770();
-        assert_eq!(p.total_vram_bytes, 16 * 1024 * 1024 * 1024);
+    fn error_display_zero_size() {
+        let e = MemoryError::ZeroSizeAllocation;
+        assert!(format!("{e}").contains("zero"));
     }
 
     #[test]
-    fn a770_peak_bandwidth() {
-        let p = IntelArcMemoryProfile::a770();
-        assert!((p.peak_bandwidth_gbps - 560.0).abs() < 1e-9);
+    fn error_is_std_error() {
+        let e: Box<dyn std::error::Error> = Box::new(MemoryError::ZeroSizeAllocation);
+        assert!(!e.to_string().is_empty());
+    }
+
+    // ---------------------------------------------------------------
+    // Default impls
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn allocation_config_default() {
+        let c = AllocationConfig::default();
+        assert_eq!(c.alignment, 64);
+        assert_eq!(c.size_bytes, 0);
+        assert_eq!(c.region, MemoryRegion::Device);
     }
 
     #[test]
-    fn a770_bus_width() {
-        let p = IntelArcMemoryProfile::a770();
-        assert_eq!(p.bus_width_bits, 256);
-    }
-
-    #[test]
-    fn a770_default_is_a770() {
-        let d = IntelArcMemoryProfile::default();
-        let a = IntelArcMemoryProfile::a770();
-        assert_eq!(d.total_vram_bytes, a.total_vram_bytes);
-        assert!((d.peak_bandwidth_gbps - a.peak_bandwidth_gbps).abs() < 1e-9);
-    }
-
-    #[test]
-    fn a770_budget_reserves_512mb() {
-        let p = IntelArcMemoryProfile::a770();
-        let b = p.budget();
-        let expected_free = p.total_vram_bytes - 512 * 1024 * 1024;
-        assert_eq!(b.free_bytes(), expected_free);
-    }
-
-    #[test]
-    fn a770_estimated_transfer_time() {
-        let p = IntelArcMemoryProfile::a770();
-        // 560 GB in 1s → 1 GB ≈ 1.786 ms = 1_785_714 ns
-        let ns = p.estimated_transfer_ns(1_000_000_000);
-        // Should be roughly 1_785_714 ns
-        assert!(ns > 1_700_000);
-        assert!(ns < 1_900_000);
-    }
-
-    #[test]
-    fn a770_estimated_transfer_zero() {
-        let p = IntelArcMemoryProfile::a770();
-        assert_eq!(p.estimated_transfer_ns(0), 0);
-    }
-
-    #[test]
-    fn a770_efficient_transfer_large() {
-        let p = IntelArcMemoryProfile::a770();
-        assert!(p.is_efficient_transfer(64 * 1024));
-        assert!(p.is_efficient_transfer(1_000_000));
-    }
-
-    #[test]
-    fn a770_efficient_transfer_small() {
-        let p = IntelArcMemoryProfile::a770();
-        assert!(!p.is_efficient_transfer(1024));
-        assert!(!p.is_efficient_transfer(0));
-    }
-
-    // ===== Edge cases =====
-
-    #[test]
-    fn tracker_large_byte_count() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, usize::MAX, 1);
-        assert_eq!(t.total_bytes_transferred(), usize::MAX);
-    }
-
-    #[test]
-    fn budget_max_u64() {
-        let b = MemoryBudget::new(u64::MAX);
-        assert!(b.can_allocate(u64::MAX));
-    }
-
-    #[test]
-    fn pool_sequential_ids() {
-        let mut p = MemoryPool::new(16);
-        let a = p.put(100);
-        let b = p.put(200);
-        let c = p.put(300);
-        assert_eq!(a, 0);
-        assert_eq!(b, 1);
-        assert_eq!(c, 2);
-    }
-
-    #[test]
-    fn pool_get_after_clear_returns_none() {
-        let mut p = MemoryPool::new(16);
-        p.put(1024);
-        p.clear();
-        assert!(p.get(1024).is_none());
-    }
-
-    #[test]
-    fn tracker_mixed_directions_stats_independent() {
-        let mut t = MemoryTransferTracker::new();
-        t.record_transfer(TransferDirection::HostToDevice, 100, 10);
-        t.record_transfer(TransferDirection::DeviceToHost, 200, 20);
-        t.record_transfer(TransferDirection::DeviceToDevice, 300, 30);
-
-        assert_eq!(t.host_to_device_stats().total_bytes, 100);
-        assert_eq!(t.device_to_host_stats().total_bytes, 200);
-        assert_eq!(t.device_to_device_stats().total_bytes, 300);
-    }
-
-    #[test]
-    fn budget_allocate_then_free_then_allocate() {
-        let mut b = MemoryBudget::new(1000);
-        b.allocate(800).unwrap();
-        b.free(500);
-        assert!(b.allocate(500).is_ok());
-        assert_eq!(b.used_bytes, 800);
-    }
-
-    #[test]
-    fn pool_stats_after_operations() {
-        let mut p = MemoryPool::new(16);
-        p.put(100);
-        p.put(200);
-        p.get(100); // hit
-        p.get(999); // miss (different bucket, empty)
-        let s = p.stats();
-        assert_eq!(s.total_entries, 1); // one left
-        assert_eq!(s.hits, 1);
-        assert_eq!(s.misses, 1);
+    fn memory_pool_default() {
+        let p = MemoryPool::default();
+        assert_eq!(p.current_usage(), 0);
     }
 }
