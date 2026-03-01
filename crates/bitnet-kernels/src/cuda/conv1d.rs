@@ -25,6 +25,100 @@
 
 use bitnet_common::{KernelError, Result};
 
+// ── CUDA kernel source ─────────────────────────────────────────────
+
+/// CUDA C source for grouped 1-D convolution.
+///
+/// Grid:  `(ceil(out_w / blockDim.x), out_channels, 1)`
+/// Block: `(threads_per_block, 1, 1)`
+///
+/// Each thread computes one `(oc, ow)` output element.  The inner loop
+/// walks over `ic_per_group` input channels and `kernel_size` taps,
+/// collapsing to a single-channel loop for depthwise convolution.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const CONV1D_KERNEL_SRC: &str = r#"
+extern "C" __global__ void conv1d_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ weight,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int in_channels,
+    int input_width,
+    int out_channels,
+    int out_width,
+    int kernel_size,
+    int stride,
+    int pad_left,
+    int dilation,
+    int groups,
+    int has_bias)
+{
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oc = blockIdx.y;
+
+    if (ow >= out_width || oc >= out_channels) return;
+
+    int oc_per_group = out_channels / groups;
+    int ic_per_group = in_channels / groups;
+    int g = oc / oc_per_group;
+
+    float sum = 0.0f;
+    for (int ic_local = 0; ic_local < ic_per_group; ic_local++) {
+        int ic = g * ic_per_group + ic_local;
+        int w_base = (oc * ic_per_group + ic_local) * kernel_size;
+        for (int k = 0; k < kernel_size; k++) {
+            int iw = ow * stride + k * dilation;
+            int iw_unpadded = iw - pad_left;
+            if (iw_unpadded >= 0 && iw_unpadded < input_width) {
+                sum += input[ic * input_width + iw_unpadded]
+                     * weight[w_base + k];
+            }
+        }
+    }
+
+    if (has_bias) {
+        sum += bias[oc];
+    }
+    output[oc * out_width + ow] = sum;
+}
+
+extern "C" __global__ void conv1d_depthwise_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ weight,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int channels,
+    int input_width,
+    int out_width,
+    int kernel_size,
+    int stride,
+    int pad_left,
+    int dilation,
+    int has_bias)
+{
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int ch = blockIdx.y;
+
+    if (ow >= out_width || ch >= channels) return;
+
+    float sum = 0.0f;
+    int w_base = ch * kernel_size;
+    for (int k = 0; k < kernel_size; k++) {
+        int iw = ow * stride + k * dilation;
+        int iw_unpadded = iw - pad_left;
+        if (iw_unpadded >= 0 && iw_unpadded < input_width) {
+            sum += input[ch * input_width + iw_unpadded]
+                 * weight[w_base + k];
+        }
+    }
+
+    if (has_bias) {
+        sum += bias[ch];
+    }
+    output[ch * out_width + ow] = sum;
+}
+"#;
+
 // ── Configuration ──────────────────────────────────────────────────
 
 /// Padding mode for 1-D convolution.
@@ -577,5 +671,125 @@ mod tests {
         let weight = vec![0.0f32; 64 * 1 * 3];
         let result = launch_conv1d(&input, &weight, None, &c, 256);
         assert!(result.is_ok(), "CUDA depthwise failed: {result:?}");
+    }
+
+    #[test]
+    #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
+    #[allow(unused_variables, unused_mut)]
+    fn cuda_conv1d_strided() {
+        let c = cfg(32, 64, 3, 2, PaddingMode::Zero(1), 1, 1, true);
+        let input = vec![1.0f32; 32 * 128];
+        let weight = vec![0.01f32; 64 * 32 * 3];
+        let bias = vec![0.5f32; 64];
+        let result = launch_conv1d(&input, &weight, Some(&bias), &c, 128);
+        assert!(result.is_ok(), "CUDA strided conv1d failed: {result:?}");
+    }
+
+    // ── CUDA kernel source ────────────────────────────────
+
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[test]
+    fn kernel_source_contains_entry_points() {
+        assert!(!CONV1D_KERNEL_SRC.is_empty());
+        assert!(CONV1D_KERNEL_SRC.contains("conv1d_f32"));
+        assert!(CONV1D_KERNEL_SRC.contains("conv1d_depthwise_f32"));
+    }
+
+    // ── Additional edge-case coverage ─────────────────────
+
+    #[test]
+    fn cpu_single_element_input() {
+        let input = vec![42.0];
+        let weight = vec![2.0];
+        let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        assert!(approx_eq(&out, &[84.0], TOL));
+    }
+
+    #[test]
+    fn cpu_kernel_size_1_multichannel() {
+        // kernel_size=1 acts as a pointwise (1x1) convolution
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2 ch, width 3
+        let weight = vec![1.0, -1.0, 2.0, 1.0]; // 2 oc * 2 ic * 1 ks = 4
+        let c = cfg(2, 2, 1, 1, PaddingMode::Zero(0), 1, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        // oc0: 1*1+(-1)*4, 1*2+(-1)*5, 1*3+(-1)*6 = -3, -3, -3
+        // oc1: 2*1+1*4, 2*2+1*5, 2*3+1*6 = 6, 9, 12
+        assert!(approx_eq(&out, &[-3.0, -3.0, -3.0, 6.0, 9.0, 12.0], TOL));
+    }
+
+    #[test]
+    fn cpu_large_dilation() {
+        // dilation=3, ks=2, length-7 input
+        let input = vec![1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 3.0];
+        let weight = vec![1.0, 1.0];
+        let c = cfg(1, 1, 2, 1, PaddingMode::Zero(0), 3, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        // ow=0: in[0]+in[3]=3, ow=1: in[1]+in[4]=0, ow=2: in[2]+in[5]=0, ow=3: in[3]+in[6]=5
+        assert!(approx_eq(&out, &[3.0, 0.0, 0.0, 5.0], TOL));
+    }
+
+    #[test]
+    fn cpu_stride_and_dilation_combined() {
+        let input: Vec<f32> = (1..=10).map(|x| x as f32).collect();
+        let weight = vec![1.0, 1.0];
+        // stride=2, dilation=2 => effective_ks=3
+        let c = cfg(1, 1, 2, 2, PaddingMode::Zero(0), 2, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        // ow=0: in[0]+in[2]=4, ow=1: in[2]+in[4]=8, ow=2: in[4]+in[6]=12, ow=3: in[6]+in[8]=16
+        assert!(approx_eq(&out, &[4.0, 8.0, 12.0, 16.0], TOL));
+    }
+
+    #[test]
+    fn cpu_multi_output_channels() {
+        let input = vec![1.0, 2.0, 3.0];
+        // 3 oc, 1 ic, ks=2 => 3*1*2 = 6 weights
+        let weight = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+        let c = cfg(1, 3, 2, 1, PaddingMode::Zero(0), 1, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        // oc0: [1,0] => 1*1+0*2=1, 1*2+0*3=2
+        // oc1: [0,1] => 0*1+1*2=2, 0*2+1*3=3
+        // oc2: [1,1] => 1*1+1*2=3, 1*2+1*3=5
+        assert!(approx_eq(&out, &[1.0, 2.0, 2.0, 3.0, 3.0, 5.0], TOL));
+    }
+
+    #[test]
+    fn cpu_same_padding_stride_2() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let weight = vec![1.0, 1.0, 1.0];
+        let c = cfg(1, 1, 3, 2, PaddingMode::Same, 1, 1, false);
+        let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
+        assert_eq!(out.len(), 2); // ceil(4/2) = 2
+    }
+
+    #[test]
+    fn error_zero_in_channels() {
+        let c = cfg(0, 1, 1, 1, PaddingMode::Zero(0), 1, 1, false);
+        assert!(conv1d_cpu(&[], &[1.0], None, &c).is_err());
+    }
+
+    #[test]
+    fn error_zero_out_channels() {
+        let c = cfg(1, 0, 1, 1, PaddingMode::Zero(0), 1, 1, false);
+        assert!(conv1d_cpu(&[1.0], &[], None, &c).is_err());
+    }
+
+    #[test]
+    fn error_bias_true_but_none_provided() {
+        let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, true);
+        assert!(conv1d_cpu(&[1.0], &[1.0], None, &c).is_err());
+    }
+
+    #[test]
+    fn grid_and_block_dims() {
+        let c = cfg(1, 4, 3, 1, PaddingMode::Zero(0), 1, 1, false);
+        let out_w = c.output_width(10); // (10-3)/1+1 = 8
+        assert_eq!(out_w, 8);
+        let (gx, gy, gz) = c.grid_dim(out_w, 256);
+        assert_eq!(gx, 1); // 8/256 rounded up = 1
+        assert_eq!(gy, 4); // out_channels
+        assert_eq!(gz, 1);
+        let (bx, by, bz) = c.block_dim(256);
+        assert_eq!((bx, by, bz), (256, 1, 1));
     }
 }

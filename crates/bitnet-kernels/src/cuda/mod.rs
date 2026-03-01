@@ -62,6 +62,8 @@ pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
 };
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use conv1d::CONV1D_KERNEL_SRC;
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use layernorm::{

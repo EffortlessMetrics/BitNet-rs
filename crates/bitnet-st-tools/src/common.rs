@@ -137,7 +137,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
     Ok(rms)
 }
 
-/// Cast LN gamma bytes to f16 (returns owned Vec<u8> with f16 encoding).
+/// Cast LN gamma bytes to f16 (returns owned `Vec<u8>` with f16 encoding).
 pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>> {
     let dtype = t.dtype();
     let shape = t.shape();
