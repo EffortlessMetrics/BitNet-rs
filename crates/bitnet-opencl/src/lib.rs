@@ -31,13 +31,15 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+// GPU tensor operations library for BitNet inference.
+//
+// Provides a high-level `GpuTensorOps` trait that dispatches to GPU
+// kernels when available, falling back to pure-CPU reference
+// implementations for correctness validation.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
+pub mod tensor_ops;
+pub mod tensor_ops_cpu;
+
+pub use tensor_ops::{
+    Backend, GpuTensorOps, Tensor, TensorError, TensorOpsDispatcher, TensorResult, TensorShape,
 };
