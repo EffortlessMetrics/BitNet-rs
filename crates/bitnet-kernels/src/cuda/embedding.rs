@@ -24,6 +24,100 @@
 use bitnet_common::{BitNetError, KernelError, Result};
 
 // ───────────────────────────────────────────────────────────────────
+// CUDA kernel source
+// ───────────────────────────────────────────────────────────────────
+
+/// CUDA C source for the token embedding lookup kernel.
+///
+/// Grid: `(seq_len, 1, 1)`.  Block: `(min(embedding_dim, 1024), 1, 1)`.
+///
+/// Each block gathers one row from `table` using `token_ids[blockIdx.x]`.
+/// When a token matches `padding_idx` the output row is zeroed.  Threads
+/// stride across the embedding dimension so that dimensions > 1024 are
+/// handled without wasted lanes.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const EMBEDDING_LOOKUP_KERNEL_SRC: &str = r#"
+extern "C" __global__ void embedding_lookup_f32(
+    const float* __restrict__ table,
+    const unsigned int* __restrict__ token_ids,
+    float* __restrict__ output,
+    int vocab_size,
+    int embedding_dim,
+    int padding_idx)
+{
+    int seq_pos = blockIdx.x;
+    unsigned int token_id = token_ids[seq_pos];
+
+    float* out_row = output + seq_pos * embedding_dim;
+
+    // Zero-fill for padding tokens.
+    if ((int)token_id == padding_idx) {
+        for (int d = threadIdx.x; d < embedding_dim; d += blockDim.x) {
+            out_row[d] = 0.0f;
+        }
+        return;
+    }
+
+    // Bounds check — clamp to last valid row to avoid UB.
+    if (token_id >= (unsigned int)vocab_size) {
+        token_id = (unsigned int)(vocab_size - 1);
+    }
+
+    const float* src_row = table + token_id * embedding_dim;
+
+    for (int d = threadIdx.x; d < embedding_dim; d += blockDim.x) {
+        out_row[d] = src_row[d];
+    }
+}
+"#;
+
+/// CUDA C source for fused token + position embedding.
+///
+/// Grid: `(seq_len, 1, 1)`.  Block: `(min(embedding_dim, 1024), 1, 1)`.
+///
+/// Performs `output[pos] = table[token_id] + pos_table[pos + offset]` in a
+/// single pass, halving global memory traffic compared to two separate
+/// kernels.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const EMBEDDING_WITH_POSITION_KERNEL_SRC: &str = r#"
+extern "C" __global__ void embedding_with_position_f32(
+    const float* __restrict__ table,
+    const unsigned int* __restrict__ token_ids,
+    const float* __restrict__ pos_table,
+    float* __restrict__ output,
+    int vocab_size,
+    int embedding_dim,
+    int position_offset,
+    int padding_idx)
+{
+    int seq_pos = blockIdx.x;
+    unsigned int token_id = token_ids[seq_pos];
+
+    float* out_row = output + seq_pos * embedding_dim;
+    int abs_pos = seq_pos + position_offset;
+    const float* pos_row = pos_table + abs_pos * embedding_dim;
+
+    // Padding tokens get only the positional component.
+    if ((int)token_id == padding_idx) {
+        for (int d = threadIdx.x; d < embedding_dim; d += blockDim.x) {
+            out_row[d] = pos_row[d];
+        }
+        return;
+    }
+
+    if (token_id >= (unsigned int)vocab_size) {
+        token_id = (unsigned int)(vocab_size - 1);
+    }
+
+    const float* src_row = table + token_id * embedding_dim;
+
+    for (int d = threadIdx.x; d < embedding_dim; d += blockDim.x) {
+        out_row[d] = src_row[d] + pos_row[d];
+    }
+}
+"#;
+
+// ───────────────────────────────────────────────────────────────────
 // Launch configuration
 // ───────────────────────────────────────────────────────────────────
 
@@ -628,5 +722,221 @@ mod tests {
         let cfg = PositionEmbeddingConfig::new(512, 768, 128).unwrap();
         let result = launch_position_embedding(&mut emb, &pos_table, &cfg);
         assert!(result.is_ok(), "CUDA position embedding launch failed: {result:?}");
+    }
+
+    // ── CUDA kernel source tests ────────────────────────────────
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_embedding_kernel_src_not_empty() {
+        assert!(
+            !EMBEDDING_LOOKUP_KERNEL_SRC.is_empty(),
+            "embedding lookup CUDA kernel source should not be empty"
+        );
+        assert!(EMBEDDING_LOOKUP_KERNEL_SRC.contains("embedding_lookup_f32"));
+    }
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_position_kernel_src_not_empty() {
+        assert!(
+            !EMBEDDING_WITH_POSITION_KERNEL_SRC.is_empty(),
+            "position embedding CUDA kernel source should not be empty"
+        );
+        assert!(EMBEDDING_WITH_POSITION_KERNEL_SRC.contains("embedding_with_position_f32"));
+    }
+
+    // ── Large vocabulary tests ──────────────────────────────────
+
+    #[test]
+    fn test_cpu_lookup_large_vocab_32k() {
+        let vocab_size = 32_000;
+        let dim = 4;
+        let table: Vec<f32> = (0..vocab_size * dim).map(|i| i as f32).collect();
+        let cfg = EmbeddingKernelConfig::new(vocab_size, dim, 2).unwrap();
+        let out = embedding_lookup_cpu(&table, &[0, 31_999], &cfg).unwrap();
+        assert_eq!(&out[0..dim], &[0.0, 1.0, 2.0, 3.0]);
+        let base = 31_999.0 * dim as f32;
+        assert_eq!(&out[dim..2 * dim], &[base, base + 1.0, base + 2.0, base + 3.0]);
+    }
+
+    #[test]
+    fn test_cpu_lookup_large_vocab_128k() {
+        let vocab_size = 128_000;
+        let dim = 2;
+        let table: Vec<f32> = (0..vocab_size * dim).map(|i| i as f32).collect();
+        let cfg = EmbeddingKernelConfig::new(vocab_size, dim, 1).unwrap();
+        let last_id = (vocab_size - 1) as u32;
+        let out = embedding_lookup_cpu(&table, &[last_id], &cfg).unwrap();
+        let base = (vocab_size - 1) as f32 * dim as f32;
+        assert_eq!(out, &[base, base + 1.0]);
+    }
+
+    // ── Sequential token ID tests ───────────────────────────────
+
+    #[test]
+    fn test_cpu_lookup_sequential_ids() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 4).unwrap();
+        let out = embedding_lookup_cpu(&table, &[0, 1, 2, 3], &cfg).unwrap();
+        assert_eq!(out, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]);
+    }
+
+    #[test]
+    fn test_cpu_lookup_reverse_sequential() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 4).unwrap();
+        let out = embedding_lookup_cpu(&table, &[3, 2, 1, 0], &cfg).unwrap();
+        assert_eq!(out, &[10.0, 11.0, 12.0, 7.0, 8.0, 9.0, 4.0, 5.0, 6.0, 1.0, 2.0, 3.0]);
+    }
+
+    // ── Edge-case tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_cpu_lookup_single_token() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 1).unwrap();
+        let out = embedding_lookup_cpu(&table, &[0], &cfg).unwrap();
+        assert_eq!(out, &[1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn test_cpu_lookup_max_vocab_index() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 1).unwrap();
+        let out = embedding_lookup_cpu(&table, &[3], &cfg).unwrap();
+        assert_eq!(out, &[10.0, 11.0, 12.0]);
+    }
+
+    #[test]
+    fn test_cpu_lookup_all_padding() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 3).unwrap().with_padding_idx(0);
+        let out = embedding_lookup_cpu(&table, &[0, 0, 0], &cfg).unwrap();
+        assert!(out.iter().all(|&v| v == 0.0), "all-padding output should be zeros");
+    }
+
+    #[test]
+    fn test_cpu_lookup_boundary_oob() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 1).unwrap();
+        // Exactly one past the end.
+        assert!(embedding_lookup_cpu(&table, &[4], &cfg).is_err());
+        // Far out of bounds.
+        assert!(embedding_lookup_cpu(&table, &[u32::MAX], &cfg).is_err());
+    }
+
+    // ── Numerical precision tests ───────────────────────────────
+
+    #[test]
+    fn test_cpu_position_precision_f32() {
+        // Verify no catastrophic cancellation with large + small values.
+        let dim = 4;
+        let mut emb = vec![1e6_f32; dim];
+        let pos_table = vec![1e-6_f32; dim];
+        let pos_cfg = PositionEmbeddingConfig::new(1, dim, 1).unwrap();
+        embedding_with_position_cpu(&mut emb, &pos_table, &pos_cfg).unwrap();
+        for &v in &emb {
+            assert!((v - 1_000_000.000_001).abs() < 0.1, "precision loss: {v}");
+        }
+    }
+
+    #[test]
+    fn test_cpu_lookup_negative_weights() {
+        let table = vec![-1.0, -2.0, -3.0, 4.0, 5.0, 6.0];
+        let cfg = EmbeddingKernelConfig::new(2, 3, 2).unwrap();
+        let out = embedding_lookup_cpu(&table, &[0, 1], &cfg).unwrap();
+        assert_eq!(out, &[-1.0, -2.0, -3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_cpu_position_idempotent_zero_table() {
+        let dim = 3;
+        let mut emb = vec![1.0, 2.0, 3.0];
+        let pos_table = vec![0.0; dim];
+        let pos_cfg = PositionEmbeddingConfig::new(1, dim, 1).unwrap();
+        embedding_with_position_cpu(&mut emb, &pos_table, &pos_cfg).unwrap();
+        assert_eq!(emb, &[1.0, 2.0, 3.0]);
+    }
+
+    // ── Forward dispatch consistency ────────────────────────────
+
+    #[test]
+    fn test_forward_padding_consistent() {
+        let table = sample_table();
+        let cfg = EmbeddingKernelConfig::new(4, 3, 3).unwrap().with_padding_idx(2);
+        let fwd = embedding_forward(&table, &[0, 2, 3], &cfg).unwrap();
+        let cpu = embedding_lookup_cpu(&table, &[0, 2, 3], &cfg).unwrap();
+        assert_eq!(fwd, cpu);
+    }
+
+    // ── Property tests ──────────────────────────────────────────
+
+    mod proptests {
+        use super::*;
+        use proptest::prelude::*;
+
+        prop_compose! {
+            /// Generate a valid (vocab_size, dim, seq_len) triple with
+            /// a matching table and token-id vector.
+            fn embedding_args()(
+                vocab_size in 1_usize..64,
+                dim in 1_usize..32,
+                seq_len in 1_usize..32,
+            )(
+                token_ids in proptest::collection::vec(0..vocab_size as u32, seq_len),
+                table in proptest::collection::vec(-1e3_f32..1e3, vocab_size * dim),
+                vocab_size in Just(vocab_size),
+                dim in Just(dim),
+                seq_len in Just(seq_len),
+            ) -> (Vec<f32>, Vec<u32>, usize, usize, usize) {
+                (table, token_ids, vocab_size, dim, seq_len)
+            }
+        }
+
+        proptest! {
+            #[test]
+            fn prop_lookup_output_shape(
+                (table, ids, vocab, dim, seq) in embedding_args()
+            ) {
+                let cfg = EmbeddingKernelConfig::new(vocab, dim, seq).unwrap();
+                let out = embedding_lookup_cpu(&table, &ids, &cfg).unwrap();
+                prop_assert_eq!(out.len(), seq * dim);
+            }
+
+            #[test]
+            fn prop_lookup_is_gather(
+                (table, ids, vocab, dim, seq) in embedding_args()
+            ) {
+                let cfg = EmbeddingKernelConfig::new(vocab, dim, seq).unwrap();
+                let out = embedding_lookup_cpu(&table, &ids, &cfg).unwrap();
+                for (i, &id) in ids.iter().enumerate() {
+                    let src = &table[id as usize * dim..(id as usize + 1) * dim];
+                    prop_assert_eq!(&out[i * dim..(i + 1) * dim], src);
+                }
+            }
+
+            #[test]
+            fn prop_padding_zeroed(
+                (table, _ids, vocab, dim, seq) in embedding_args()
+            ) {
+                let cfg = EmbeddingKernelConfig::new(vocab, dim, seq)
+                    .unwrap()
+                    .with_padding_idx(0);
+                let ids: Vec<u32> = vec![0; seq];
+                let out = embedding_lookup_cpu(&table, &ids, &cfg).unwrap();
+                prop_assert!(out.iter().all(|&v| v == 0.0));
+            }
+
+            #[test]
+            fn prop_forward_matches_cpu(
+                (table, ids, vocab, dim, seq) in embedding_args()
+            ) {
+                let cfg = EmbeddingKernelConfig::new(vocab, dim, seq).unwrap();
+                let fwd = embedding_forward(&table, &ids, &cfg).unwrap();
+                let cpu = embedding_lookup_cpu(&table, &ids, &cfg).unwrap();
+                prop_assert_eq!(fwd, cpu);
+            }
+        }
     }
 }

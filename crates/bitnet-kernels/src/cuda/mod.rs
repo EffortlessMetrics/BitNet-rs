@@ -126,6 +126,9 @@ pub use embedding::{
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use embedding::{EMBEDDING_LOOKUP_KERNEL_SRC, EMBEDDING_WITH_POSITION_KERNEL_SRC};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
