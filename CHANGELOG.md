@@ -25,6 +25,22 @@ All notable changes to bitnet-rs will be documented in this file.
 
 - **PR #1063**: Closed destructive force-push that removed 813 lines from workspace config; superseded by fresh attention kernel (#1920)
 
+### Added — A770 OpenCL Advanced Infrastructure (Waves 108–109)
+
+- **SIMD-OpenCL Bridge**: Unified dispatch selecting best backend (CPU SIMD vs OpenCL GPU) with automatic fallback, 42 tests (#2048)
+- **Error Catalog**: Comprehensive OpenCL error types with diagnostic info and recovery suggestions, 42 tests (#2049)
+- **Model Weight Loader**: GGUF weight loading optimized for OpenCL buffer upload, 48 tests (#2063)
+- **Paged KV Cache**: vLLM-style paged attention for efficient long-sequence inference, 48 tests (#2070)
+- **Criterion Benchmarks v2**: Expanded performance benchmark suite for OpenCL kernels (#2071)
+- **Kernel Test Harness**: Reusable test infrastructure for OpenCL kernel validation, 43 tests (#2090)
+- **Context/Queue Pool**: Efficient resource pooling for multi-stream OpenCL execution, 46 tests (#2093)
+- **Speculative Decoding**: Draft-verify-accept speculative token generation for OpenCL backend, 43 tests (#2094)
+- **INT8 DP4A Kernels**: Intel Xe-HPG hardware-accelerated INT8 dot product kernels, 60 tests (#2095)
+
+### Testing — A770 OpenCL (Waves 108–109)
+
+- **Fuzz Proptest Targets**: Randomized property testing for OpenCL CPU reference implementations, 30+ tests (#2096)
+
 ### Added — A770 OpenCL Inference Pipeline (Waves 105–107)
 
 - **Batch Inference**: Padding, scheduling, and batched operations for OpenCL inference pipeline, 51 tests (#1985)
