@@ -151,6 +151,7 @@ pub mod serving_runtime;
 // === ML Operations ===
 pub mod gradient_checkpoint;
 pub mod instruction_tuning;
+pub mod model_architecture;
 pub mod model_hub;
 pub mod model_pruning;
 pub mod multimodal_fusion;
