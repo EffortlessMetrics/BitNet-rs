@@ -20,6 +20,7 @@ members = [
   "crates/bitnet-inference",
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
@@ -112,6 +113,7 @@ default-members = [
   "crates/bitnet-test-fixtures-core",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-tokenizer-discovery-core",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
