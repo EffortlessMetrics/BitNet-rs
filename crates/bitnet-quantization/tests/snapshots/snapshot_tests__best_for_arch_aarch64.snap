@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_tests.rs
+assertion_line: 42
+expression: "format!(\"{}\", best)"
+---
+TL1

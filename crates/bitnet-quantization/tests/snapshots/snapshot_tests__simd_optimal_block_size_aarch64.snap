@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_tests.rs
+assertion_line: 120
+expression: "format!(\"block_size={block_size}\")"
+---
+block_size=64

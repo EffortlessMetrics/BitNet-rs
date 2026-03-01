@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_tests.rs
+expression: caps
+---
+SimdCapabilities {
+    has_avx512: true,
+    has_avx2: true,
+    has_neon: false,
+    has_sse4_1: true,
+}

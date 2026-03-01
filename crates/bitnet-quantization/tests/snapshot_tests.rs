@@ -82,14 +82,24 @@ use bitnet_quantization::simd_ops::{QuantizationStrategy, SimdCapabilities};
 #[test]
 fn simd_capabilities_detect_debug() {
     let caps = SimdCapabilities::detect();
-    insta::assert_debug_snapshot!("simd_capabilities_detect", caps);
+    let name = if cfg!(target_arch = "aarch64") {
+        "simd_capabilities_detect_aarch64"
+    } else {
+        "simd_capabilities_detect"
+    };
+    insta::assert_debug_snapshot!(name, caps);
 }
 
 #[test]
 fn simd_capabilities_best_strategy() {
     let caps = SimdCapabilities::detect();
     let strategy = caps.best_quantization_strategy();
-    insta::assert_snapshot!("simd_best_strategy", format!("{strategy:?}"));
+    let name = if cfg!(target_arch = "aarch64") {
+        "simd_best_strategy_aarch64"
+    } else {
+        "simd_best_strategy"
+    };
+    insta::assert_snapshot!(name, format!("{strategy:?}"));
 }
 
 #[test]
@@ -117,7 +127,12 @@ fn simd_optimal_block_size() {
     let caps = SimdCapabilities::detect();
     let block_size = caps.optimal_block_size();
     assert!((32..=256).contains(&block_size), "block_size should be 32..256");
-    insta::assert_snapshot!("simd_optimal_block_size", format!("block_size={block_size}"));
+    let name = if cfg!(target_arch = "aarch64") {
+        "simd_optimal_block_size_aarch64"
+    } else {
+        "simd_optimal_block_size"
+    };
+    insta::assert_snapshot!(name, format!("block_size={block_size}"));
 }
 
 #[test]

@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_tests.rs
+assertion_line: 92
+expression: "format!(\"{strategy:?}\")"
+---
+NEON
