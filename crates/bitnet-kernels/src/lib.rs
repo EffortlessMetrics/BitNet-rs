@@ -23,6 +23,7 @@ pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
 pub mod scatter_gather;
+pub mod shaped_reduction;
 mod stubs;
 pub mod tl_lut;
 
