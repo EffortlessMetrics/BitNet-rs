@@ -41,6 +41,7 @@ pub mod layernorm;
 pub mod matmul;
 pub mod pooling;
 pub mod qk256_gemv;
+pub mod quantize;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
@@ -107,6 +108,10 @@ pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 pub use matmul::{
     MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward, matmul_forward,
 };
+pub use quantize::{
+    QuantMethod, QuantizeConfig, calibrate_scales, dequantize_i2s_cpu, dequantize_ternary_cpu,
+    quantize_i2s_cpu, quantize_ternary_cpu,
+};
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
@@ -133,6 +138,7 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use layernorm::LAYERNORM_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
@@ -142,6 +148,12 @@ pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SR
 pub use matmul::{launch_matmul, launch_matmul_f16};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use quantize::{
+    DEQUANTIZE_I2S_KERNEL_SRC, DEQUANTIZE_TERNARY_KERNEL_SRC, QUANTIZE_I2S_KERNEL_SRC,
+    QUANTIZE_TERNARY_KERNEL_SRC,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use fusion::{
