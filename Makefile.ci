@@ -26,3 +26,17 @@ accept-pr:
 
 accept-nightly:
 	@LANE=NIGHTLY XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) scripts/ci-acceptance-gate-v2.sh
+
+# GPU CI targets
+.PHONY: ci-gpu-build ci-gpu-test ci-gpu-lint ci-gpu-full
+
+ci-gpu-build:
+	cargo build --workspace --no-default-features --features oneapi
+
+ci-gpu-test:
+	cargo nextest run -p bitnet-opencl --no-default-features --features cpu --profile ci
+
+ci-gpu-lint:
+	cargo clippy -p bitnet-opencl --no-default-features --features cpu -- -D warnings
+
+ci-gpu-full: ci-gpu-lint ci-gpu-test ci-gpu-build

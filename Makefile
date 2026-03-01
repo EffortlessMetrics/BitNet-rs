@@ -425,3 +425,34 @@ verbose:
 	@RUST_LOG=debug $(CARGO) run --release --no-default-features --features $(FEATURES)
 
 .SILENT: help list
+
+#############################################################################
+# GPU BACKEND TARGETS
+#############################################################################
+
+.PHONY: build-opencl test-opencl lint-gpu bench-gpu ci-gpu
+
+## build-opencl: Build with Intel GPU (OpenCL) support
+build-opencl:
+	cargo build --no-default-features --features oneapi
+
+## test-opencl: Test OpenCL microcrate
+test-opencl:
+	cargo test -p bitnet-opencl --no-default-features --features cpu
+
+## lint-gpu: Lint all GPU microcrates
+lint-gpu:
+	cargo clippy -p bitnet-opencl --no-default-features --features cpu -- -D warnings
+
+## bench-gpu: Run GPU benchmarks (CPU reference)
+bench-gpu:
+	cargo bench --no-default-features --features cpu,bench -- gpu
+
+## check-gpu-features: Verify GPU feature combinations compile
+check-gpu-features:
+	cargo check --no-default-features --features cpu
+	cargo check --no-default-features --features oneapi
+
+## ci-gpu: Full GPU CI check
+ci-gpu: lint-gpu test-opencl check-gpu-features
+	@echo "GPU CI checks passed!"
