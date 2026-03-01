@@ -298,6 +298,16 @@ fn gemv_qk256_scalar(
     cols: usize,
     row_stride_bytes: usize,
 ) -> Result<()> {
+    let expected_row_stride_bytes = cols.div_ceil(QK256_BLOCK) * QK256_PACKED_BYTES;
+    if row_stride_bytes != expected_row_stride_bytes {
+        bail!(
+            "I2S_QK256: row_stride_bytes {} != expected {} for cols {}",
+            row_stride_bytes,
+            expected_row_stride_bytes,
+            cols
+        );
+    }
+
     if y_out.len() != rows {
         bail!("I2S_QK256: y_out length {} != rows {}", y_out.len(), rows);
     }
