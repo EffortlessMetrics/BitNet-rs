@@ -648,6 +648,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-compat",
+ "bitnet-ffi-error",
  "bitnet-inference",
  "bitnet-models",
  "bitnet-tokenizers",
@@ -662,6 +663,13 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bitnet-ffi-error"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
 ]
 
 [[package]]
