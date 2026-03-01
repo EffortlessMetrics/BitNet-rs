@@ -33,6 +33,7 @@ serial_test = "3.1"
 rand.workspace = true
 rand_chacha = "0.9"
 insta = { workspace = true, features = ["json"] }
+serde_json.workspace = true
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
