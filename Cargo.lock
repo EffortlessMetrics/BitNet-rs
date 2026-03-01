@@ -987,6 +987,7 @@ name = "bitnet-opencl"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-common",
+ "bitnet-spirv",
  "env_logger",
  "log",
  "opencl3",
@@ -994,7 +995,6 @@ dependencies = [
  "serde_json",
  "serial_test",
  "temp-env",
- "tempfile",
  "thiserror 2.0.18",
 ]
 
@@ -1300,6 +1300,14 @@ dependencies = [
 [[package]]
 name = "bitnet-simd"
 version = "0.2.1-dev"
+
+[[package]]
+name = "bitnet-spirv"
+version = "0.2.1-dev"
+dependencies = [
+ "tempfile",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "bitnet-st-tools"

@@ -85,6 +85,7 @@ members = [
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
+  "crates/bitnet-spirv",         # SRP: SPIR-V compile/validate/cache utilities
   "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
     "crates/bitnet-rocm",          # HIP compute kernels for AMD ROCm backend",
   "crates/bitnet-vulkan",        # Vulkan GLSL compute shaders for GPU inference
