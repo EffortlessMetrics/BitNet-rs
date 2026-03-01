@@ -163,6 +163,8 @@ fn arb_caps() -> impl Strategy<Value = KernelCapabilities> {
             simd_level,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
         },
     )
 }
@@ -239,6 +241,8 @@ proptest! {
             simd_level: SimdLevel::Scalar,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
         };
         let backends = caps.compiled_backends();
         prop_assert!(backends.contains(&KernelBackend::CpuRust),

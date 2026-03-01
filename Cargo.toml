@@ -221,6 +221,7 @@ gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-infer
 rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inference/rocm", "bitnet-quantization/rocm"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
+opencl = ["kernels", "inference", "tokenizers", "bitnet-kernels/opencl", "bitnet-inference/opencl", "bitnet-quantization/opencl"]
 npu = ["dep:bitnet-device-probe", "bitnet-device-probe/npu"]
 
 # Component features

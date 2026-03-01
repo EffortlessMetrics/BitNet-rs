@@ -157,6 +157,52 @@ pub fn oneapi_available_runtime() -> bool {
     false
 }
 
+/// Check if OpenCL support was compiled into this binary.
+#[inline]
+pub fn opencl_compiled() -> bool {
+    cfg!(feature = "opencl")
+}
+
+/// Check if an OpenCL-capable GPU runtime is available.
+///
+/// Detection is best-effort via `clinfo`. Tests can force deterministic
+/// outcomes with `BITNET_GPU_FAKE=opencl` / `BITNET_GPU_FAKE=none` unless
+/// strict mode is enabled.
+#[cfg(feature = "opencl")]
+#[inline]
+pub fn opencl_available_runtime() -> bool {
+    use std::env;
+    use std::process::{Command, Stdio};
+
+    let strict_mode = env::var("BITNET_STRICT_MODE")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false);
+
+    if !strict_mode {
+        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+            if fake.eq_ignore_ascii_case("opencl") {
+                return true;
+            }
+            if fake.eq_ignore_ascii_case("none") {
+                return false;
+            }
+        }
+    }
+
+    Command::new("clinfo")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(feature = "opencl"))]
+#[inline]
+pub fn opencl_available_runtime() -> bool {
+    false
+}
+
 /// Stub implementation when GPU not compiled
 #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "hip")))]
 #[inline]
@@ -253,6 +299,8 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
         hip_runtime: bitnet_device_probe::probe_gpu().rocm_available,
         oneapi_compiled: cfg!(feature = "oneapi"),
         oneapi_runtime: oneapi_available_runtime(),
+        opencl_compiled: cfg!(feature = "opencl"),
+        opencl_runtime: opencl_available_runtime(),
         cpp_ffi: false,
         simd_level: detect_simd_level(),
     }

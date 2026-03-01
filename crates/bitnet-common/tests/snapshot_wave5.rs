@@ -63,6 +63,8 @@ fn kernel_capabilities_summary_cpu_only() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };
@@ -81,6 +83,8 @@ fn kernel_capabilities_summary_full_stack() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Avx512,
     };
@@ -99,6 +103,8 @@ fn kernel_capabilities_compiled_backends_priority_order() {
         hip_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Scalar,
     };

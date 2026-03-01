@@ -214,6 +214,8 @@ proptest! {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -236,6 +238,8 @@ proptest! {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -256,6 +260,8 @@ proptest! {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -381,6 +387,8 @@ proptest! {
             hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
+            opencl_compiled: false,
+            opencl_runtime: false,
             cpp_ffi,
             simd_level: SimdLevel::Scalar,
         };
