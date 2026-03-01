@@ -143,3 +143,5 @@ pub mod streaming_aggregator;
 pub mod generation;
 pub mod model_warmup;
 // GPU hardware abstraction layer for `BitNet` inference.
+// DAG-based execution planner with memory planning, stream scheduling,
+// kernel launch configuration, pipeline parallelism, and cost modeling.
