@@ -1373,7 +1373,7 @@ async fn run_simple_generation(
 
         // Sample next token
         let t3 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
-        let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
         if let Some(t) = t3 {
             eprintln!("timing: sample_us={}", t.elapsed().as_micros());
         }
