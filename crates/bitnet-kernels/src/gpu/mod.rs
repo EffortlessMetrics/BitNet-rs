@@ -20,6 +20,7 @@ mod tests;
 pub use benchmark::*;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use cuda::*;
+pub use dispatch::*;
 pub use memory_optimization::*;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use mixed_precision::*;

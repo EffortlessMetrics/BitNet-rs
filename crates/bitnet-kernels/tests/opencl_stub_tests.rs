@@ -2,6 +2,7 @@
 //! Tests for the OpenCL kernel provider under the `oneapi` feature.
 
 use bitnet_kernels::KernelProvider;
+use bitnet_kernels::KernelProvider;
 use bitnet_kernels::gpu::opencl::OpenClKernel;
 
 #[test]
