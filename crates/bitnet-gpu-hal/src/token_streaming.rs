@@ -6,8 +6,8 @@
 //! keep-alives, and per-stream metrics.
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -104,14 +104,7 @@ impl TokenStream {
             config.backpressure_threshold,
             config.buffer_size,
         ));
-        Self {
-            rx,
-            tx,
-            protocol,
-            config,
-            metrics: Arc::new(StreamMetrics::new()),
-            backpressure,
-        }
+        Self { rx, tx, protocol, config, metrics: Arc::new(StreamMetrics::new()), backpressure }
     }
 
     /// Obtain a producer handle that can send events into this stream.
@@ -339,8 +332,7 @@ impl StreamFormatter for SseFormatter {
     fn format(&self, event: &StreamEvent) -> String {
         match event {
             StreamEvent::Token(t) => {
-                let payload =
-                    serde_json::json!({ "token": t }).to_string();
+                let payload = serde_json::json!({ "token": t }).to_string();
                 format!("event: token\ndata: {payload}\n\n")
             }
             StreamEvent::Metadata(v) => {
@@ -349,8 +341,7 @@ impl StreamFormatter for SseFormatter {
             }
             StreamEvent::Heartbeat => "event: heartbeat\ndata: \n\n".to_string(),
             StreamEvent::Error(e) => {
-                let payload =
-                    serde_json::json!({ "error": e }).to_string();
+                let payload = serde_json::json!({ "error": e }).to_string();
                 format!("event: error\ndata: {payload}\n\n")
             }
             StreamEvent::Done => "event: done\ndata: [DONE]\n\n".to_string(),
@@ -433,12 +424,7 @@ impl StreamBuffer {
     /// Create a buffer that flushes after `capacity` items or
     /// `max_delay`, whichever comes first.
     pub fn new(capacity: usize, max_delay: Duration) -> Self {
-        Self {
-            buf: VecDeque::with_capacity(capacity),
-            capacity,
-            max_delay,
-            first_insert: None,
-        }
+        Self { buf: VecDeque::with_capacity(capacity), capacity, max_delay, first_insert: None }
     }
 
     /// Push an event into the buffer.
@@ -492,14 +478,10 @@ impl StreamBuffer {
 // ── Helper: build formatter for a protocol ────────────────────────────
 
 /// Return a boxed formatter appropriate for `protocol`.
-pub fn formatter_for_protocol(
-    protocol: StreamProtocol,
-) -> Box<dyn StreamFormatter> {
+pub fn formatter_for_protocol(protocol: StreamProtocol) -> Box<dyn StreamFormatter> {
     match protocol {
         StreamProtocol::ServerSentEvents => Box::new(SseFormatter),
-        StreamProtocol::WebSocket | StreamProtocol::Chunked => {
-            Box::new(JsonLinesFormatter)
-        }
+        StreamProtocol::WebSocket | StreamProtocol::Chunked => Box::new(JsonLinesFormatter),
         StreamProtocol::Grpc => Box::new(JsonLinesFormatter),
     }
 }
@@ -659,8 +641,7 @@ mod tests {
 
     #[tokio::test]
     async fn stream_send_recv_done() {
-        let mut stream =
-            TokenStream::new(StreamProtocol::WebSocket, StreamConfig::default());
+        let mut stream = TokenStream::new(StreamProtocol::WebSocket, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Done).await.unwrap();
         let event = stream.recv().await.unwrap();
@@ -669,8 +650,7 @@ mod tests {
 
     #[tokio::test]
     async fn stream_send_recv_heartbeat() {
-        let mut stream =
-            TokenStream::new(StreamProtocol::Chunked, StreamConfig::default());
+        let mut stream = TokenStream::new(StreamProtocol::Chunked, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Heartbeat).await.unwrap();
         let event = stream.recv().await.unwrap();
@@ -679,8 +659,7 @@ mod tests {
 
     #[tokio::test]
     async fn stream_send_recv_error() {
-        let mut stream =
-            TokenStream::new(StreamProtocol::Grpc, StreamConfig::default());
+        let mut stream = TokenStream::new(StreamProtocol::Grpc, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Error("fail".into())).await.unwrap();
         let event = stream.recv().await.unwrap();
@@ -704,10 +683,7 @@ mod tests {
             TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         for i in 0..5 {
-            producer
-                .send(StreamEvent::Token(format!("tok{i}")))
-                .await
-                .unwrap();
+            producer.send(StreamEvent::Token(format!("tok{i}"))).await.unwrap();
         }
         for i in 0..5 {
             let event = stream.recv().await.unwrap();
@@ -717,8 +693,7 @@ mod tests {
 
     #[tokio::test]
     async fn stream_protocol_accessor() {
-        let stream =
-            TokenStream::new(StreamProtocol::WebSocket, StreamConfig::default());
+        let stream = TokenStream::new(StreamProtocol::WebSocket, StreamConfig::default());
         assert_eq!(stream.protocol(), StreamProtocol::WebSocket);
     }
 
@@ -730,15 +705,13 @@ mod tests {
             max_idle_ms: 2_000,
             backpressure_threshold: 12,
         };
-        let stream =
-            TokenStream::new(StreamProtocol::ServerSentEvents, cfg);
+        let stream = TokenStream::new(StreamProtocol::ServerSentEvents, cfg);
         assert_eq!(stream.config().buffer_size, 16);
     }
 
     #[tokio::test]
     async fn stream_closed_on_producer_drop() {
-        let stream =
-            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
+        let stream = TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         drop(producer);
         // The internal tx is still alive (held by stream).
@@ -767,8 +740,7 @@ mod tests {
 
     #[tokio::test]
     async fn metrics_produced_count() {
-        let stream =
-            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
+        let stream = TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Token("a".into())).await.unwrap();
         producer.send(StreamEvent::Token("b".into())).await.unwrap();
@@ -779,8 +751,7 @@ mod tests {
 
     #[tokio::test]
     async fn metrics_elapsed_is_positive() {
-        let stream =
-            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
+        let stream = TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         // Elapsed should be non-negative (may be zero on fast machines).
         assert!(stream.metrics().elapsed().as_nanos() < u128::MAX);
     }
@@ -863,11 +834,8 @@ mod tests {
 
     #[tokio::test]
     async fn producer_should_pause_reflects_backpressure() {
-        let cfg = StreamConfig {
-            buffer_size: 64,
-            backpressure_threshold: 2,
-            ..StreamConfig::default()
-        };
+        let cfg =
+            StreamConfig { buffer_size: 64, backpressure_threshold: 2, ..StreamConfig::default() };
         let stream = TokenStream::new(StreamProtocol::ServerSentEvents, cfg);
         let producer = stream.producer();
         assert!(!producer.should_pause());
@@ -932,8 +900,7 @@ mod tests {
         let f = JsonLinesFormatter;
         let out = f.format(&StreamEvent::Token("hi".into()));
         assert!(out.ends_with('\n'));
-        let parsed: serde_json::Value =
-            serde_json::from_str(out.trim()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
         assert_eq!(parsed["type"], "token");
         assert_eq!(parsed["data"], "hi");
     }
@@ -942,8 +909,7 @@ mod tests {
     fn jsonl_format_heartbeat() {
         let f = JsonLinesFormatter;
         let out = f.format(&StreamEvent::Heartbeat);
-        let parsed: serde_json::Value =
-            serde_json::from_str(out.trim()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
         assert_eq!(parsed["type"], "heartbeat");
     }
 
@@ -951,8 +917,7 @@ mod tests {
     fn jsonl_format_done() {
         let f = JsonLinesFormatter;
         let out = f.format(&StreamEvent::Done);
-        let parsed: serde_json::Value =
-            serde_json::from_str(out.trim()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
         assert_eq!(parsed["type"], "done");
     }
 
@@ -960,8 +925,7 @@ mod tests {
     fn jsonl_format_error() {
         let f = JsonLinesFormatter;
         let out = f.format(&StreamEvent::Error("err".into()));
-        let parsed: serde_json::Value =
-            serde_json::from_str(out.trim()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
         assert_eq!(parsed["type"], "error");
         assert_eq!(parsed["data"], "err");
     }
@@ -971,8 +935,7 @@ mod tests {
         let f = JsonLinesFormatter;
         let val = serde_json::json!({"x": 42});
         let out = f.format(&StreamEvent::Metadata(val));
-        let parsed: serde_json::Value =
-            serde_json::from_str(out.trim()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
         assert_eq!(parsed["type"], "metadata");
         assert_eq!(parsed["data"]["x"], 42);
     }
@@ -1006,10 +969,7 @@ mod tests {
     #[test]
     fn raw_format_error() {
         let f = RawTextFormatter;
-        assert_eq!(
-            f.format(&StreamEvent::Error("x".into())),
-            "[ERROR] x"
-        );
+        assert_eq!(f.format(&StreamEvent::Error("x".into())), "[ERROR] x");
     }
 
     #[test]
@@ -1144,11 +1104,8 @@ mod tests {
     #[test]
     fn jsonl_each_line_is_valid_json() {
         let f = JsonLinesFormatter;
-        let events = vec![
-            StreamEvent::Token("a".into()),
-            StreamEvent::Heartbeat,
-            StreamEvent::Done,
-        ];
+        let events =
+            vec![StreamEvent::Token("a".into()), StreamEvent::Heartbeat, StreamEvent::Done];
         for e in &events {
             let line = f.format(e);
             serde_json::from_str::<serde_json::Value>(line.trim())
@@ -1166,10 +1123,8 @@ mod tests {
 
     #[tokio::test]
     async fn stream_interleaved_event_types() {
-        let mut stream = TokenStream::new(
-            StreamProtocol::ServerSentEvents,
-            StreamConfig::default(),
-        );
+        let mut stream =
+            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         let events = vec![
             StreamEvent::Token("a".into()),
@@ -1214,10 +1169,8 @@ mod tests {
 
     #[tokio::test]
     async fn metrics_heartbeat_not_counted_as_token() {
-        let mut stream = TokenStream::new(
-            StreamProtocol::ServerSentEvents,
-            StreamConfig::default(),
-        );
+        let mut stream =
+            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Heartbeat).await.unwrap();
         stream.recv().await.unwrap();
@@ -1226,10 +1179,8 @@ mod tests {
 
     #[tokio::test]
     async fn metrics_error_not_counted_as_token() {
-        let mut stream = TokenStream::new(
-            StreamProtocol::ServerSentEvents,
-            StreamConfig::default(),
-        );
+        let mut stream =
+            TokenStream::new(StreamProtocol::ServerSentEvents, StreamConfig::default());
         let producer = stream.producer();
         producer.send(StreamEvent::Error("e".into())).await.unwrap();
         stream.recv().await.unwrap();
