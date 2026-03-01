@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-qualcomm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Qualcomm NPU runtime selection and environment policy helpers for BitNet"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+
+[dev-dependencies]
+temp-env.workspace = true

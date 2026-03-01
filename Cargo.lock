@@ -743,6 +743,7 @@ dependencies = [
  "bitnet-logits",
  "bitnet-models",
  "bitnet-prompt-templates",
+ "bitnet-qualcomm",
  "bitnet-quantization",
  "bitnet-receipts",
  "bitnet-rope",
@@ -787,6 +788,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
+ "bitnet-qualcomm",
  "bitnet-quantization",
  "bitnet-test-support",
  "bitnet-tests",
@@ -929,6 +931,14 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "bitnet-qualcomm"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "temp-env",
 ]
 
 [[package]]

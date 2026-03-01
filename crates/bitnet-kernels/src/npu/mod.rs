@@ -7,34 +7,20 @@
 //! bindings are wired in.
 
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
+use bitnet_qualcomm::{QualcommNpuBackend, npu_requested};
 
 use crate::KernelProvider;
 
 /// NPU kernel provider for Qualcomm SDK integration points.
 #[derive(Debug, Clone, Default)]
 pub struct NpuKernel {
-    backend: NpuBackend,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NpuBackend {
-    Qnn,
-    Snpe,
-}
-
-impl Default for NpuBackend {
-    fn default() -> Self {
-        match std::env::var("BITNET_NPU_BACKEND") {
-            Ok(value) if value.eq_ignore_ascii_case("snpe") => Self::Snpe,
-            _ => Self::Qnn,
-        }
-    }
+    backend: QualcommNpuBackend,
 }
 
 impl NpuKernel {
     /// Create an NPU kernel provider.
     pub fn new() -> Self {
-        Self { backend: NpuBackend::default() }
+        Self { backend: QualcommNpuBackend::from_env() }
     }
 
     /// Whether NPU support was enabled for this build.
@@ -42,20 +28,11 @@ impl NpuKernel {
         cfg!(feature = "npu-backend")
     }
 
-    fn npu_enabled() -> bool {
-        std::env::var("BITNET_ENABLE_NPU")
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false)
-    }
-
     fn unavailable_err(&self, op: &str) -> BitNetError {
         BitNetError::Kernel(KernelError::ExecutionFailed {
             reason: format!(
                 "NPU operation '{op}' is not yet wired to Qualcomm {} runtime",
-                match self.backend {
-                    NpuBackend::Qnn => "QNN",
-                    NpuBackend::Snpe => "SNPE",
-                }
+                self.backend.runtime_name(),
             ),
         })
     }
@@ -63,14 +40,11 @@ impl NpuKernel {
 
 impl KernelProvider for NpuKernel {
     fn name(&self) -> &'static str {
-        match self.backend {
-            NpuBackend::Qnn => "npu-qnn",
-            NpuBackend::Snpe => "npu-snpe",
-        }
+        self.backend.kernel_name()
     }
 
     fn is_available(&self) -> bool {
-        Self::compiled() && Self::npu_enabled()
+        Self::compiled() && npu_requested()
     }
 
     fn matmul_i2s(

@@ -10,10 +10,11 @@ use bitnet_models::Model;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
-use crate::cache::KVCache;
+use bitnet_qualcomm::{
+    BITNET_ENABLE_NPU, BITNET_NPU_ALLOW_FALLBACK, allow_cpu_fallback, npu_requested,
+};
 
-const NPU_ENABLE_ENV: &str = "BITNET_ENABLE_NPU";
-const NPU_FALLBACK_ENV: &str = "BITNET_NPU_ALLOW_FALLBACK";
+use crate::cache::KVCache;
 
 /// Trait for inference backends
 #[async_trait]
@@ -160,7 +161,7 @@ impl NpuBackend {
     pub fn new(model: Arc<dyn Model>, device: Device) -> Result<Self> {
         if !Self::is_available() {
             return Err(anyhow::anyhow!(
-                "NPU backend unavailable. Set {NPU_ENABLE_ENV}=1 and compile with metal support on macOS"
+                "NPU backend unavailable. Set {BITNET_ENABLE_NPU}=1 and compile with metal support on macOS"
             ));
         }
 
@@ -168,9 +169,7 @@ impl NpuBackend {
             return Err(anyhow::anyhow!("NPU backend currently requires Device::Metal"));
         }
 
-        let allow_cpu_fallback = std::env::var(NPU_FALLBACK_ENV)
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(true);
+        let allow_cpu_fallback = allow_cpu_fallback();
 
         info!(
             "Created NPU backend (device={:?}, allow_cpu_fallback={})",
@@ -182,11 +181,7 @@ impl NpuBackend {
 
     /// Check if NPU backend is available in current build/runtime.
     pub fn is_available() -> bool {
-        let enabled = std::env::var(NPU_ENABLE_ENV)
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false);
-
-        enabled && cfg!(target_os = "macos")
+        npu_requested() && cfg!(target_os = "macos")
     }
 
     fn ensure_npu_tensor(&self, input: &ConcreteTensor) -> Result<ConcreteTensor> {
@@ -206,7 +201,7 @@ impl NpuBackend {
         }
 
         Err(anyhow::anyhow!(
-            "NPU tensor transfer is not available and fallback is disabled via {NPU_FALLBACK_ENV}=0"
+            "NPU tensor transfer is not available and fallback is disabled via {BITNET_NPU_ALLOW_FALLBACK}=0"
         ))
     }
 }
