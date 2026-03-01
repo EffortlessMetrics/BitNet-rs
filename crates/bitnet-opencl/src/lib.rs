@@ -31,13 +31,16 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `bitnet-opencl` – GPU-aware server inference handler with load
+//! balancing and device health checking.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
+pub mod health_check;
+pub mod server_handler;
+
+pub use health_check::{
+    DeviceHealthChecker, ErrorRateMonitor, HealthConfig, HealthReport, HealthStatus,
 };
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
+pub use server_handler::{
+    BalancingStrategy, GpuInferenceHandler, HandlerConfig, HandlerError, InferenceRequest,
+    InferenceResponse, LoadBalancer, RequestPriority, RequestQueue, SamplingConfig,
 };
