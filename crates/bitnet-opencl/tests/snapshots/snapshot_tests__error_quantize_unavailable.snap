@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+Kernel error: Kernel execution failed: OpenCL operation 'quantize' is not yet wired to an OpenCL runtime

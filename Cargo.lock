@@ -883,6 +883,12 @@ dependencies = [
  "serial_test",
  "temp-env",
  "tempfile",
+ "bitnet-test-support",
+ "insta",
+ "log",
+ "proptest",
+ "serial_test",
+ "temp-env",
  "thiserror 2.0.18",
 ]
 

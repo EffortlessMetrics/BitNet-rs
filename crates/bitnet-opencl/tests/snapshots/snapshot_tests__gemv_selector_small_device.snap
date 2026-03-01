@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: cases
+---
+- - 64
+  - 256
+  - "small: small"
+- - 2048
+  - 2048
+  - "large: large-reduction"
+- - 16384
+  - 16384
+  - "very_large: large-reduction"

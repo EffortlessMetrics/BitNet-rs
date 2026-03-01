@@ -1,0 +1,64 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_tests.rs
+expression: "kernels::ATTENTION_SOURCE"
+---
+__kernel void attention(
+    __global const float* q,
+    __global const float* k,
+    __global const float* v,
+    __global float*       output,
+    const uint n_heads,
+    const uint seq_len_q,
+    const uint seq_len_kv,
+    const uint head_dim,
+    const float scale,
+    const uint causal)
+{
+    const uint head = get_group_id(1);
+    const uint qi   = get_group_id(0) * get_local_size(0) + get_local_id(0);
+
+    if (qi >= seq_len_q) return;
+
+    const uint q_offset = head * seq_len_q  * head_dim;
+    const uint k_offset = head * seq_len_kv * head_dim;
+    const uint v_offset = k_offset;
+
+    /* Compute attention scores: softmax(Q·Kᵀ / scale) · V */
+    float max_score = -INFINITY;
+    for (uint ki = 0; ki < seq_len_kv; ++ki) {
+        if (causal && ki > qi) break;
+        float dot = 0.0f;
+        for (uint d = 0; d < head_dim; ++d) {
+            dot += q[q_offset + qi * head_dim + d]
+                 * k[k_offset + ki * head_dim + d];
+        }
+        float s = dot * scale;
+        if (s > max_score) max_score = s;
+    }
+
+    float sum_exp = 0.0f;
+    for (uint ki = 0; ki < seq_len_kv; ++ki) {
+        if (causal && ki > qi) break;
+        float dot = 0.0f;
+        for (uint d = 0; d < head_dim; ++d) {
+            dot += q[q_offset + qi * head_dim + d]
+                 * k[k_offset + ki * head_dim + d];
+        }
+        sum_exp += exp(dot * scale - max_score);
+    }
+
+    for (uint d = 0; d < head_dim; ++d) {
+        float out_val = 0.0f;
+        for (uint ki = 0; ki < seq_len_kv; ++ki) {
+            if (causal && ki > qi) break;
+            float dot = 0.0f;
+            for (uint dd = 0; dd < head_dim; ++dd) {
+                dot += q[q_offset + qi * head_dim + dd]
+                     * k[k_offset + ki * head_dim + dd];
+            }
+            float w = exp(dot * scale - max_score) / sum_exp;
+            out_val += w * v[v_offset + ki * head_dim + d];
+        }
+        output[q_offset + qi * head_dim + d] = out_val;
+    }
+}
