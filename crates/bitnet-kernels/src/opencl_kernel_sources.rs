@@ -198,10 +198,7 @@ impl KernelSourceRegistry {
             KernelSource {
                 id: KernelProgramId::Quantized,
                 source: QUANTIZED_CL_SOURCE,
-                entry_points: vec![
-                    "dequantize_i2s".to_string(),
-                    "quantized_matvec".to_string(),
-                ],
+                entry_points: vec!["dequantize_i2s".to_string(), "quantized_matvec".to_string()],
                 required_version: "1.2",
                 build_options: vec![],
                 local_mem_estimate: 0,
@@ -239,21 +236,12 @@ impl KernelSourceRegistry {
 
     /// Get all entry point names across all kernels.
     pub fn all_entry_points(&self) -> Vec<String> {
-        self.sources
-            .values()
-            .flat_map(|s| s.entry_points.clone())
-            .collect()
+        self.sources.values().flat_map(|s| s.entry_points.clone()).collect()
     }
 
     /// Get build options string for a kernel.
-    pub fn build_options_string(
-        &self,
-        id: &KernelProgramId,
-    ) -> String {
-        self.sources
-            .get(id)
-            .map(|s| s.build_options.join(" "))
-            .unwrap_or_default()
+    pub fn build_options_string(&self, id: &KernelProgramId) -> String {
+        self.sources.get(id).map(|s| s.build_options.join(" ")).unwrap_or_default()
     }
 }
 
@@ -605,8 +593,7 @@ mod tests {
     #[test]
     fn test_get_softmax_temperature() {
         let reg = KernelSourceRegistry::new();
-        let src =
-            reg.get(&KernelProgramId::SoftmaxTemperature).unwrap();
+        let src = reg.get(&KernelProgramId::SoftmaxTemperature).unwrap();
         assert_eq!(src.id, KernelProgramId::SoftmaxTemperature);
     }
 
@@ -650,10 +637,7 @@ mod tests {
     #[test]
     fn test_get_missing_custom_returns_none() {
         let reg = KernelSourceRegistry::new();
-        assert!(
-            reg.get(&KernelProgramId::Custom("missing".into()))
-                .is_none()
-        );
+        assert!(reg.get(&KernelProgramId::Custom("missing".into())).is_none());
     }
 
     #[test]
@@ -687,14 +671,8 @@ mod tests {
         let reg = KernelSourceRegistry::new();
         let src = reg.get(&KernelProgramId::Quantized).unwrap();
         assert_eq!(src.entry_points.len(), 2);
-        assert!(
-            src.entry_points
-                .contains(&"dequantize_i2s".to_string())
-        );
-        assert!(
-            src.entry_points
-                .contains(&"quantized_matvec".to_string())
-        );
+        assert!(src.entry_points.contains(&"dequantize_i2s".to_string()));
+        assert!(src.entry_points.contains(&"quantized_matvec".to_string()));
     }
 
     #[test]
@@ -738,24 +716,21 @@ mod tests {
     #[test]
     fn test_build_options_string_tiled() {
         let reg = KernelSourceRegistry::new();
-        let opts =
-            reg.build_options_string(&KernelProgramId::MatmulTiled);
+        let opts = reg.build_options_string(&KernelProgramId::MatmulTiled);
         assert_eq!(opts, "-DTILE_SIZE=16");
     }
 
     #[test]
     fn test_build_options_string_empty_for_matmul() {
         let reg = KernelSourceRegistry::new();
-        let opts =
-            reg.build_options_string(&KernelProgramId::Matmul);
+        let opts = reg.build_options_string(&KernelProgramId::Matmul);
         assert_eq!(opts, "");
     }
 
     #[test]
     fn test_build_options_string_missing_kernel() {
         let reg = KernelSourceRegistry::new();
-        let opts =
-            reg.build_options_string(&KernelProgramId::Attention);
+        let opts = reg.build_options_string(&KernelProgramId::Attention);
         assert_eq!(opts, "");
     }
 
@@ -764,8 +739,7 @@ mod tests {
     #[test]
     fn test_register_custom_kernel() {
         let mut reg = KernelSourceRegistry::new();
-        let custom_id =
-            KernelProgramId::Custom("my_kernel".into());
+        let custom_id = KernelProgramId::Custom("my_kernel".into());
         reg.register(KernelSource {
             id: custom_id.clone(),
             source: "__kernel void my_fn() {}",
@@ -783,8 +757,7 @@ mod tests {
     #[test]
     fn test_register_custom_overwrites() {
         let mut reg = KernelSourceRegistry::new();
-        let custom_id =
-            KernelProgramId::Custom("test".into());
+        let custom_id = KernelProgramId::Custom("test".into());
         reg.register(KernelSource {
             id: custom_id.clone(),
             source: "__kernel void v1() {}",
@@ -833,50 +806,32 @@ mod tests {
 
     #[test]
     fn test_display_matmul_tiled() {
-        assert_eq!(
-            KernelProgramId::MatmulTiled.to_string(),
-            "matmul_tiled"
-        );
+        assert_eq!(KernelProgramId::MatmulTiled.to_string(), "matmul_tiled");
     }
 
     #[test]
     fn test_display_matmul_batched() {
-        assert_eq!(
-            KernelProgramId::MatmulBatched.to_string(),
-            "matmul_batched"
-        );
+        assert_eq!(KernelProgramId::MatmulBatched.to_string(), "matmul_batched");
     }
 
     #[test]
     fn test_display_softmax() {
-        assert_eq!(
-            KernelProgramId::Softmax.to_string(),
-            "softmax"
-        );
+        assert_eq!(KernelProgramId::Softmax.to_string(), "softmax");
     }
 
     #[test]
     fn test_display_softmax_temperature() {
-        assert_eq!(
-            KernelProgramId::SoftmaxTemperature.to_string(),
-            "softmax_temperature"
-        );
+        assert_eq!(KernelProgramId::SoftmaxTemperature.to_string(), "softmax_temperature");
     }
 
     #[test]
     fn test_display_layer_norm() {
-        assert_eq!(
-            KernelProgramId::LayerNorm.to_string(),
-            "layer_norm"
-        );
+        assert_eq!(KernelProgramId::LayerNorm.to_string(), "layer_norm");
     }
 
     #[test]
     fn test_display_rms_norm() {
-        assert_eq!(
-            KernelProgramId::RmsNorm.to_string(),
-            "rms_norm"
-        );
+        assert_eq!(KernelProgramId::RmsNorm.to_string(), "rms_norm");
     }
 
     #[test]
@@ -886,34 +841,22 @@ mod tests {
 
     #[test]
     fn test_display_elementwise() {
-        assert_eq!(
-            KernelProgramId::Elementwise.to_string(),
-            "elementwise"
-        );
+        assert_eq!(KernelProgramId::Elementwise.to_string(), "elementwise");
     }
 
     #[test]
     fn test_display_quantized() {
-        assert_eq!(
-            KernelProgramId::Quantized.to_string(),
-            "quantized"
-        );
+        assert_eq!(KernelProgramId::Quantized.to_string(), "quantized");
     }
 
     #[test]
     fn test_display_attention() {
-        assert_eq!(
-            KernelProgramId::Attention.to_string(),
-            "attention"
-        );
+        assert_eq!(KernelProgramId::Attention.to_string(), "attention");
     }
 
     #[test]
     fn test_display_custom() {
-        assert_eq!(
-            KernelProgramId::Custom("foo".into()).to_string(),
-            "custom:foo"
-        );
+        assert_eq!(KernelProgramId::Custom("foo".into()).to_string(), "custom:foo");
     }
 
     // ── Source validity ────────────────────────────────────────────
@@ -937,8 +880,7 @@ mod tests {
     #[test]
     fn test_matmul_batched_source_contains_function() {
         let reg = KernelSourceRegistry::new();
-        let src =
-            reg.get(&KernelProgramId::MatmulBatched).unwrap();
+        let src = reg.get(&KernelProgramId::MatmulBatched).unwrap();
         assert!(!src.source.is_empty());
         assert!(src.source.contains("matmul_batched"));
     }
@@ -954,8 +896,7 @@ mod tests {
     #[test]
     fn test_softmax_temp_source_contains_function() {
         let reg = KernelSourceRegistry::new();
-        let src =
-            reg.get(&KernelProgramId::SoftmaxTemperature).unwrap();
+        let src = reg.get(&KernelProgramId::SoftmaxTemperature).unwrap();
         assert!(!src.source.is_empty());
         assert!(src.source.contains("softmax_temperature"));
     }
@@ -990,10 +931,7 @@ mod tests {
         let src = reg.get(&KernelProgramId::Elementwise).unwrap();
         assert!(!src.source.is_empty());
         for name in &["add", "mul", "silu", "gelu"] {
-            assert!(
-                src.source.contains(name),
-                "missing function: {name}"
-            );
+            assert!(src.source.contains(name), "missing function: {name}");
         }
     }
 
@@ -1011,10 +949,7 @@ mod tests {
         let reg = KernelSourceRegistry::new();
         for id in reg.kernel_ids() {
             let src = reg.get(id).unwrap();
-            assert!(
-                src.source.contains("__kernel"),
-                "{id} source missing __kernel keyword"
-            );
+            assert!(src.source.contains("__kernel"), "{id} source missing __kernel keyword");
         }
     }
 
@@ -1025,10 +960,7 @@ mod tests {
         let reg = KernelSourceRegistry::new();
         for id in reg.kernel_ids() {
             let src = reg.get(id).unwrap();
-            assert_eq!(
-                src.required_version, "1.2",
-                "{id} should require OpenCL 1.2"
-            );
+            assert_eq!(src.required_version, "1.2", "{id} should require OpenCL 1.2");
         }
     }
 
