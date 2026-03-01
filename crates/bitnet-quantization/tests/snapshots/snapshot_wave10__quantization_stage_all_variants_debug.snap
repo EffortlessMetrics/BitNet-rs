@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: debug
+---
+[
+    "Calibration",
+    "Quantization",
+    "Verification",
+    "PackingOptimization",
+]

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave10.rs
+expression: debug
+---
+[
+    "F32",
+    "I2S",
+    "TL1",
+    "TL2",
+]

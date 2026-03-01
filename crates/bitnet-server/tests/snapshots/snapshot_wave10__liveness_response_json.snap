@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave10.rs
+expression: resp
+---
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T12:00:00Z"
+}

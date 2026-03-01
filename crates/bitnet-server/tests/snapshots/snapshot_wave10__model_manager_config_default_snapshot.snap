@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave10.rs
+expression: "format!(\"max_concurrent_loads={} model_cache_size={} load_timeout_secs={} validation={} memory_limit_gb={:?}\",\ncfg.max_concurrent_loads, cfg.model_cache_size, cfg.load_timeout.as_secs(),\ncfg.validation_enabled, cfg.memory_limit_gb)"
+---
+max_concurrent_loads=2 model_cache_size=3 load_timeout_secs=300 validation=true memory_limit_gb=Some(16.0)

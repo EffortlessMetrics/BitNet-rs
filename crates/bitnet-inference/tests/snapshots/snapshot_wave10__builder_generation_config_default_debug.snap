@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave10.rs
+expression: cfg
+---
+GenerationConfig {
+    max_tokens: 128,
+    stop_sequences: [],
+    stop_token_ids: [],
+    stream: false,
+}
