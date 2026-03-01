@@ -184,5 +184,9 @@ pub use fusion::{
     launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
 };
 
+pub use memory::{
+    BufferHandle, GpuBuffer, MemoryPool, PoolStats, TransferKind, TransferPlan, transfer_plan,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
