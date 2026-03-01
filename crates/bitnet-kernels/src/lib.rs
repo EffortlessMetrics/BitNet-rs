@@ -30,6 +30,7 @@ pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
 pub mod opencl_pipeline;
 pub mod opencl_registry;
+pub mod opencl_rope_cache;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
