@@ -118,6 +118,7 @@ pub fn gpu_available_runtime() -> bool {
 }
 
 /// Check if Intel oneAPI GPU runtime is available.
+/// Check if an Intel GPU is available at runtime via `OpenCL`.
 ///
 /// Detection is best-effort via `sycl-ls`. Tests can force deterministic
 /// outcomes with `BITNET_GPU_FAKE=oneapi` / `BITNET_GPU_FAKE=none` unless
