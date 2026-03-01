@@ -31,13 +31,14 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! OpenCL-based GPU acceleration for `BitNet` inference.
+//!
+//! This crate provides GPU-ready tokenization and batch processing
+//! infrastructure.  The MVP uses CPU-side byte-level tokenization
+//! behind a batch-oriented API designed for future GPU offloading.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod batch_processor;
+pub mod tokenizer_gpu;
+
+pub use batch_processor::{BatchProcessor, InferenceBatch};
+pub use tokenizer_gpu::{GpuTokenizer, GpuTokenizerConfig, PaddingStrategy, TruncationStrategy};
