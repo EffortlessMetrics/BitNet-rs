@@ -1091,7 +1091,7 @@ mod tests {
             /// All outputs should be finite for arbitrary finite inputs.
             #[test]
             fn prop_output_always_finite(
-                (batch, features, input) in bn_scenario()
+                (_batch, features, input) in bn_scenario()
             ) {
                 let cfg = BatchNormConfig {
                     num_features: features, eps: 1e-5, momentum: 0.1, training: true,
