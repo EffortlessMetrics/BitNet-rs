@@ -32,6 +32,18 @@ fn scalar_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
     a.iter().zip(b).map(|(&x, &y)| x + y).collect()
 }
 
+fn scalar_vector_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
+    a.iter().zip(b).map(|(&x, &y)| x * y).collect()
+}
+
+fn scalar_vector_scale(data: &[f32], scale: f32) -> Vec<f32> {
+    data.iter().map(|&v| v * scale).collect()
+}
+
+fn scalar_l2_norm(data: &[f32]) -> f32 {
+    data.iter().map(|&v| v * v).sum::<f32>().sqrt()
+}
+
 // ── AVX2 implementations (x86_64 only) ─────────────────────────────
 
 /// Horizontal sum of all 8 lanes in a `__m256`.
@@ -227,6 +239,69 @@ unsafe fn avx2_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
     out
 }
 
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn avx2_vector_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
+    let len = a.len();
+    let mut out = vec![0.0f32; len];
+    let chunks = len / 8;
+
+    for i in 0..chunks {
+        let off = i * 8;
+        unsafe {
+            let va = _mm256_loadu_ps(a.as_ptr().add(off));
+            let vb = _mm256_loadu_ps(b.as_ptr().add(off));
+            _mm256_storeu_ps(out.as_mut_ptr().add(off), _mm256_mul_ps(va, vb));
+        }
+    }
+    for i in (chunks * 8)..len {
+        out[i] = a[i] * b[i];
+    }
+    out
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn avx2_vector_scale(data: &[f32], scale: f32) -> Vec<f32> {
+    let len = data.len();
+    let mut out = vec![0.0f32; len];
+    let chunks = len / 8;
+
+    unsafe {
+        let vs = _mm256_set1_ps(scale);
+        for i in 0..chunks {
+            let off = i * 8;
+            let v = _mm256_loadu_ps(data.as_ptr().add(off));
+            _mm256_storeu_ps(out.as_mut_ptr().add(off), _mm256_mul_ps(v, vs));
+        }
+    }
+    for i in (chunks * 8)..len {
+        out[i] = data[i] * scale;
+    }
+    out
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn avx2_l2_norm(data: &[f32]) -> f32 {
+    let len = data.len();
+    let chunks = len / 8;
+
+    unsafe {
+        let mut acc = _mm256_setzero_ps();
+        for i in 0..chunks {
+            let off = i * 8;
+            let v = _mm256_loadu_ps(data.as_ptr().add(off));
+            acc = _mm256_add_ps(acc, _mm256_mul_ps(v, v));
+        }
+        let mut sum = hsum_avx2(acc);
+        for &v in &data[(chunks * 8)..] {
+            sum += v * v;
+        }
+        sum.sqrt()
+    }
+}
+
 // ── Public dispatch functions ───────────────────────────────────────
 
 /// Fast vectorised exponential.  AVX2 when available, scalar otherwise.
@@ -293,6 +368,44 @@ pub fn simd_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
         }
     }
     scalar_vector_add(a, b)
+}
+
+/// SIMD-accelerated element-wise vector multiplication.
+///
+/// # Panics
+///
+/// Panics if `a.len() != b.len()`.
+pub fn simd_vector_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
+    assert_eq!(a.len(), b.len(), "vector mul requires equal-length slices");
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") {
+            return unsafe { avx2_vector_mul(a, b) };
+        }
+    }
+    scalar_vector_mul(a, b)
+}
+
+/// SIMD-accelerated scalar multiplication of every element.
+pub fn simd_vector_scale(data: &[f32], scale: f32) -> Vec<f32> {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") {
+            return unsafe { avx2_vector_scale(data, scale) };
+        }
+    }
+    scalar_vector_scale(data, scale)
+}
+
+/// SIMD-accelerated L2 (Euclidean) norm.
+pub fn simd_l2_norm(data: &[f32]) -> f32 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") {
+            return unsafe { avx2_l2_norm(data) };
+        }
+    }
+    scalar_l2_norm(data)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
@@ -557,5 +670,143 @@ mod tests {
         assert!(fast_sigmoid_f32(&[]).is_empty());
         assert_eq!(simd_dot_product(&[], &[]), 0.0);
         assert!(simd_vector_add(&[], &[]).is_empty());
+        assert!(simd_vector_mul(&[], &[]).is_empty());
+        assert!(simd_vector_scale(&[], 2.0).is_empty());
+        assert_eq!(simd_l2_norm(&[]), 0.0);
+    }
+
+    // ── vector mul ──
+
+    #[test]
+    fn test_vector_mul_basic() {
+        let a = vec![1.0, 2.0, 3.0, 4.0];
+        let b = vec![5.0, 6.0, 7.0, 8.0];
+        let result = simd_vector_mul(&a, &b);
+        assert_eq!(result, vec![5.0, 12.0, 21.0, 32.0]);
+    }
+
+    #[test]
+    fn test_vector_mul_zeros() {
+        let a = vec![0.0; 16];
+        let b: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let result = simd_vector_mul(&a, &b);
+        assert!(result.iter().all(|&x| x == 0.0));
+    }
+
+    #[test]
+    fn test_vector_mul_identity() {
+        let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let ones = vec![1.0; 16];
+        let result = simd_vector_mul(&a, &ones);
+        assert_eq!(result, a);
+    }
+
+    #[test]
+    fn test_vector_mul_negative() {
+        let a = vec![1.0, -2.0, 3.0, -4.0];
+        let b = vec![-1.0, 2.0, -3.0, 4.0];
+        let result = simd_vector_mul(&a, &b);
+        assert_eq!(result, vec![-1.0, -4.0, -9.0, -16.0]);
+    }
+
+    #[test]
+    fn test_vector_mul_various_lengths() {
+        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+            let a: Vec<f32> = (0..len).map(|i| i as f32).collect();
+            let b: Vec<f32> = (0..len).map(|i| (i as f32) * 0.5).collect();
+            let result = simd_vector_mul(&a, &b);
+            let expected: Vec<f32> = a.iter().zip(&b).map(|(x, y)| x * y).collect();
+            assert_eq!(result.len(), len);
+            assert!(max_abs_error(&result, &expected) < 1e-5, "Failed for len={len}");
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "vector mul requires equal-length slices")]
+    fn test_vector_mul_length_mismatch() {
+        simd_vector_mul(&[1.0, 2.0], &[3.0]);
+    }
+
+    // ── vector scale ──
+
+    #[test]
+    fn test_vector_scale_basic() {
+        let data = vec![1.0, 2.0, 3.0, 4.0];
+        let result = simd_vector_scale(&data, 3.0);
+        assert_eq!(result, vec![3.0, 6.0, 9.0, 12.0]);
+    }
+
+    #[test]
+    fn test_vector_scale_zero() {
+        let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let result = simd_vector_scale(&data, 0.0);
+        assert!(result.iter().all(|&x| x == 0.0));
+    }
+
+    #[test]
+    fn test_vector_scale_identity() {
+        let data: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
+        let result = simd_vector_scale(&data, 1.0);
+        assert_eq!(result, data);
+    }
+
+    #[test]
+    fn test_vector_scale_negative() {
+        let data = vec![1.0, -2.0, 3.0, -4.0];
+        let result = simd_vector_scale(&data, -2.0);
+        assert_eq!(result, vec![-2.0, 4.0, -6.0, 8.0]);
+    }
+
+    #[test]
+    fn test_vector_scale_various_lengths() {
+        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+            let data: Vec<f32> = (0..len).map(|i| i as f32).collect();
+            let result = simd_vector_scale(&data, 2.5);
+            let expected: Vec<f32> = data.iter().map(|&v| v * 2.5).collect();
+            assert_eq!(result.len(), len);
+            assert!(max_abs_error(&result, &expected) < 1e-5, "Failed for len={len}");
+        }
+    }
+
+    // ── l2 norm ──
+
+    #[test]
+    fn test_l2_norm_basic() {
+        let data = vec![3.0, 4.0];
+        let result = simd_l2_norm(&data);
+        assert!((result - 5.0).abs() < 1e-5, "||[3,4]|| should be 5, got {result}");
+    }
+
+    #[test]
+    fn test_l2_norm_unit_vector() {
+        let data = vec![1.0, 0.0, 0.0];
+        let result = simd_l2_norm(&data);
+        assert!((result - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_l2_norm_zeros() {
+        let data = vec![0.0; 16];
+        assert_eq!(simd_l2_norm(&data), 0.0);
+    }
+
+    #[test]
+    fn test_l2_norm_single_element() {
+        assert!((simd_l2_norm(&[5.0]) - 5.0).abs() < 1e-5);
+        assert!((simd_l2_norm(&[-5.0]) - 5.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_l2_norm_various_lengths() {
+        for &len in &[1, 7, 8, 15, 16, 100, 1024] {
+            let data: Vec<f32> = (0..len).map(|i| (i as f32) * 0.01).collect();
+            let result = simd_l2_norm(&data);
+            let expected = data.iter().map(|&v| v * v).sum::<f32>().sqrt();
+            let tol = expected.abs() * 1e-5 + 1e-5;
+            assert!(
+                (result - expected).abs() < tol,
+                "Failed for len={len}: {result} vs {expected}"
+            );
+        }
     }
 }
