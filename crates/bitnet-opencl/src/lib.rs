@@ -12,8 +12,10 @@
 pub mod backend_dispatcher;
 pub mod backend_registry;
 pub mod context_pool;
+pub mod diagnostics;
 pub mod kv_cache;
 pub mod paged_attention;
+pub mod system_info;
 
 pub use backend_dispatcher::{
     BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchDecision, DispatchError,
@@ -26,8 +28,13 @@ pub mod spirv;
 pub mod spirv_kernels;
 
 // Re-exports for convenience.
+pub use diagnostics::{
+    CudaStatus, DiagnosticIssue, DiagnosticReport, DriverStatus, FeatureStatus, GpuDiagnostics,
+    MemoryStatus, OpenClStatus, SmokeTestResult, VulkanStatus, format_json, format_report,
+};
 pub use spirv::{
     CompileOptions, CompilerBackend, OptimizationLevel, SPIRV_MAGIC, SpirVCache, SpirVCompiler,
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
+pub use system_info::{SystemInfo, collect_system_info};
