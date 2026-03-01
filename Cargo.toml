@@ -2,6 +2,7 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
   "crates/bitnet-warn-once",
@@ -96,6 +97,7 @@ resolver = "2"
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
 default-members = [
   "crates/bitnet-common",
+  "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
   "crates/bitnet-warn-once",
