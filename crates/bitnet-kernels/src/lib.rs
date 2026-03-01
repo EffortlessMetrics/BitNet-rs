@@ -21,6 +21,7 @@ pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_buffer;
+pub mod opencl_flash_attention;
 pub mod opencl_cache;
 pub mod opencl_context;
 #[path = "gpu/opencl_dispatch.rs"]
