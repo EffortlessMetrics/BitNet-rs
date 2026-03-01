@@ -31,13 +31,23 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! `OpenCL` compute backend and model sharding for `BitNet` multi-GPU
+//! inference.
+//!
+//! This crate provides infrastructure for distributing model inference
+//! across multiple GPU devices, including:
+//!
+//! - [`model_sharding`] — strategy selection, shard planning, and
+//!   cross-device transfer estimation
+//! - [`layer_partition`] — transformer layer distribution with
+//!   memory-constrained placement
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
+pub mod layer_partition;
+pub mod model_sharding;
+
+// Re-export primary types for convenience.
+pub use layer_partition::{LayerPartitioner, PartitionError, PartitionPlan};
+pub use model_sharding::{
+    CrossDeviceTransfer, DeviceBackend, DeviceDescriptor, ModelArchitecture, ModelShard,
+    ShardAssignment, ShardPlanner, ShardingError, ShardingPlan, ShardingStrategy,
 };
