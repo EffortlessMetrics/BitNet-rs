@@ -1,0 +1,27 @@
+[package]
+name = "bitnet-wgpu-shaders"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "WGSL compute shader sources for BitNet inference kernels"
+rust-version.workspace = true
+
+[dependencies]
+# Pure embedded shader sources – no runtime deps required.
+
+[dev-dependencies]
+naga = { version = "24", features = ["wgsl-in"] }
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+
+[lints]
+workspace = true
