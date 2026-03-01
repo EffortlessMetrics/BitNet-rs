@@ -24,6 +24,7 @@ pub mod discovery;
 pub mod download;
 pub mod error_handling;
 pub mod fallback;
+pub mod gpu;
 pub mod strategy;
 
 use bitnet_common::{BitNetError, ModelError, Result};
