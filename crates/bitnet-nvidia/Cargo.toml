@@ -7,3 +7,6 @@ description = "NVIDIA-specific GPU tuning heuristics shared across BitNet backen
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+
+[dev-dependencies]
+proptest = "1"
