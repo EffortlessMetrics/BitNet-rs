@@ -1,12 +1,12 @@
 # Dual-Backend Cross-Validation - Implementation Roadmap
 
-**Status:** Ready for Execution
+**Status:** Partially Implemented — See CLAUDE.md for current state
 **Based On:**
 - Comprehensive exploration (10 reports, 150KB documentation)
 - ChatGPT detailed plan (Phases A-E)
 - dual-backend-crossval-spec.md (v1.0)
 
-**Last Updated:** 2025-10-25
+**Last Updated:** 2026-02-28
 
 ---
 
@@ -36,12 +36,30 @@ This document provides a file-by-file implementation breakdown for dual-backend 
 - Serial test patterns (#[serial(bitnet_env)])
 - 12/12 unit tests passing in token_parity.rs
 
-❌ **Critical Gaps Identified**
+❌ **Critical Gaps Identified** (as of Oct 2025 — see status notes below)
 1. No --cpp-backend flag (backend selection missing)
 2. No --prompt-template flag in crossval-per-token
 3. No bitnet.cpp FFI shim (need to create bitnet_cpp_wrapper.c)
 4. Library discovery not backend-aware (build.rs needs updates)
 5. Per-position logits not exposed in public API
+
+---
+
+## Implementation Status (Feb 2026)
+
+This document was written in Oct 2025 as a pre-implementation plan for dual-backend
+cross-validation. As of Feb 2026, most of the planned work has shipped:
+
+**Phase A (Shipped):** CLI flow order bug fixed; `--dump-ids`, `--dump-cpp-ids`, `--verbose` flags implemented
+**Phase B (Shipped):** `--prompt-template` flag integrated; template applied before tokenization; `--system-prompt` supported
+**Phase C (Shipped):** `CppBackend` enum implemented; `--cpp-backend` flag; auto-detection from model path; preflight validation
+**Phase D (Shipped):** `bitnet_cpp_wrapper.c` created; `crossval/build.rs` updated; Rust bindings and backend dispatcher implemented
+**Phase E (Shipped):** Integration tests added; documentation updated
+
+The 19-27 hour estimate reflected Oct 2025 planning. Actual implementation delivered
+all phases. Remaining gaps are noted in `docs/reference/implementation-targets.md`.
+
+See `CLAUDE.md` -> Cross-Validation CLI Reference for current command usage.
 
 ---
 
@@ -107,6 +125,8 @@ let rust_logits = eval_rust_logits_all_positions(&engine, &model, &rust_tokens)?
 
 **Acceptance:** AC-F1 (token parity pre-gate before logits)
 
+**Status: RESOLVED** — Flow order fixed; token parity pre-gate is in place.
+
 ---
 
 ### Task A2: Add --dump-ids and --dump-cpp-ids flags
@@ -145,6 +165,8 @@ if args.dump_cpp_ids {
 
 **Acceptance:** AC7 (diagnostic flags)
 
+**Status: RESOLVED** — `--dump-ids` and `--dump-cpp-ids` flags implemented.
+
 ---
 
 ### Task A3: Add --verbose flag
@@ -167,6 +189,8 @@ struct CrossvalPerToken {
 ```
 
 **Acceptance:** AC7 (diagnostic flags)
+
+**Status: RESOLVED** — `--verbose` flag implemented.
 
 ---
 
@@ -221,6 +245,8 @@ impl From<TemplateTypeArg> for TemplateType {
 
 **Acceptance:** FR2 (template support), ChatGPT Phase B
 
+**Status: RESOLVED** — `--prompt-template` flag integrated with auto-detection.
+
 ---
 
 ### Task B2: Apply template to prompt before tokenization
@@ -263,6 +289,8 @@ let rust_tokens = tokenizer.encode(&formatted_prompt, add_bos, parse_special)?;
 - Auto-detection: `crates/bitnet-inference/src/prompt_template.rs:200-320`
 
 **Acceptance:** FR2 (template support), ChatGPT Phase B
+
+**Status: RESOLVED** — Template applied before tokenization; `--system-prompt` supported.
 
 ---
 
@@ -314,6 +342,8 @@ impl CppBackend {
 
 **Acceptance:** FR1 (backend selection), ChatGPT Phase A
 
+**Status: RESOLVED** — `CppBackend` enum implemented with auto-detection heuristics.
+
 ---
 
 ### Task C2: Add --cpp-backend CLI flag
@@ -336,6 +366,8 @@ struct CrossvalPerToken {
 ```
 
 **Acceptance:** FR1 (backend selection)
+
+**Status: RESOLVED** — `--cpp-backend` flag implemented; auto-detection from model path works.
 
 ---
 
@@ -402,6 +434,8 @@ fn preflight_backend_libs(backend: CppBackend, verbose: bool) -> Result<()> {
 
 **Acceptance:** FR2 (library preflight), ChatGPT Phase A
 
+**Status: RESOLVED** — Preflight validation implemented; `cargo run -p xtask --features crossval-all -- preflight --backend bitnet` works.
+
 ---
 
 ### Task C4: Integrate backend selection into crossval flow
@@ -433,6 +467,8 @@ fn crossval_per_token_cmd(args: CrossvalPerToken) -> Result<()> {
 ```
 
 **Acceptance:** FR1 (backend selection), FR2 (preflight)
+
+**Status: RESOLVED** — Backend selection integrated into crossval flow.
 
 ---
 
@@ -477,6 +513,8 @@ extern "C" int bitnet_eval_with_tokens(
 
 **Acceptance:** FR3 (bitnet.cpp tokenizer), FR4 (bitnet.cpp eval), ChatGPT Phase C
 
+**Status: RESOLVED** — `bitnet_cpp_wrapper.c` created; Rust bindings implemented.
+
 ---
 
 ### Task D2: Update crossval/build.rs for backend-aware discovery
@@ -490,7 +528,7 @@ extern "C" int bitnet_eval_with_tokens(
 
 **Key Changes:**
 1. Search for libbitnet* in addition to libllama*/libggml*
-2. Priority-based search (BITNET_CROSSVAL_LIBDIR → standard paths)
+2. Priority-based search (BITNET_CROSSVAL_LIBDIR -> standard paths)
 3. Emit build metadata: `CROSSVAL_HAS_BITNET`, `CROSSVAL_HAS_LLAMA`
 4. Print diagnostic warnings about which libs were found
 
@@ -499,6 +537,8 @@ extern "C" int bitnet_eval_with_tokens(
 - Current build.rs: `crossval/build.rs:1-100`
 
 **Acceptance:** NFR2 (build system compatibility), ChatGPT Phase C
+
+**Status: RESOLVED** — `crossval/build.rs` updated with backend-aware library discovery.
 
 ---
 
@@ -561,6 +601,8 @@ pub fn eval_bitnet(
 
 **Acceptance:** FR3, FR4 (bitnet.cpp integration)
 
+**Status: RESOLVED** — Rust bindings and safe wrappers implemented.
+
 ---
 
 ### Task D4: Create backend dispatcher in xtask
@@ -609,6 +651,8 @@ fn eval_cpp(
 ```
 
 **Acceptance:** FR1 (backend selection), FR3/FR4 (backend-specific calls)
+
+**Status: RESOLVED** — Backend dispatcher implemented and routes correctly.
 
 ---
 
@@ -664,6 +708,8 @@ fn format_token_mismatch_error(error: &TokenParityError) -> String {
 
 **Acceptance:** AC3, AC4 (backend-specific error messages)
 
+**Status: RESOLVED** — Token parity errors include backend context.
+
 ---
 
 ### Task E2: Add integration tests
@@ -683,14 +729,14 @@ fn test_backend_autodetect_bitnet() {
 
 // AC2: Library preflight
 #[test]
-#[ignore] // Requires bitnet.cpp installation
+#[ignore = "requires bitnet.cpp installation"]
 fn test_bitnet_backend_preflight() {
     preflight_backend_libs(CppBackend::BitNet, false).expect("bitnet.cpp libs");
 }
 
 // AC8: End-to-end Lane A (BitNet vs bitnet.cpp)
 #[test]
-#[ignore] // Requires bitnet.cpp + model
+#[ignore = "requires bitnet.cpp + model"]
 #[serial(bitnet_env)]
 fn test_lane_a_bitnet_parity() {
     // Full pipeline test
@@ -698,7 +744,7 @@ fn test_lane_a_bitnet_parity() {
 
 // AC9: End-to-end Lane B (bitnet-rs vs llama.cpp)
 #[test]
-#[ignore] // Requires llama.cpp + model
+#[ignore = "requires llama.cpp + model"]
 #[serial(bitnet_env)]
 fn test_lane_b_llama_parity() {
     // Full pipeline test
@@ -712,12 +758,14 @@ fn test_lane_b_llama_parity() {
 
 **Acceptance:** AC8, AC9, AC12 (test tags)
 
+**Status: RESOLVED** — Integration tests added; real-model tests gated with `#[ignore]` and justification strings per workspace conventions.
+
 ---
 
 ### Task E3: Update documentation
 **Files:**
 - `docs/howto/cpp-setup.md` (extend with bitnet.cpp setup)
-- `docs/explanation/dual-backend-crossval.md` (new - architecture overview)
+- `docs/explanation/dual-backend-crossval.md` (architecture overview)
 - `CLAUDE.md` (add new crossval-per-token flags)
 
 **Estimated LOC:** +400 lines across 3 files
@@ -731,11 +779,13 @@ fn test_lane_b_llama_parity() {
 
 **Acceptance:** Documentation completeness
 
+**Status: RESOLVED** — Documentation updated; `CLAUDE.md` Cross-Validation CLI Reference section reflects all shipped flags.
+
 ---
 
 ## Implementation Order & Dependencies
 
-### Recommended Execution Order
+### Recommended Execution Order (Historical — All Shipped)
 
 ```
 Day 1 (Morning):
@@ -811,34 +861,34 @@ Day 4:
 Before marking each phase complete:
 
 **Phase A:**
-- [ ] Flow order fix verified (token parity before logits)
-- [ ] --dump-ids prints Rust tokens
-- [ ] --dump-cpp-ids prints C++ tokens
-- [ ] --verbose prints backend selection
+- [x] Flow order fix verified (token parity before logits)
+- [x] --dump-ids prints Rust tokens
+- [x] --dump-cpp-ids prints C++ tokens
+- [x] --verbose prints backend selection
 
 **Phase B:**
-- [ ] --prompt-template accepts {raw,instruct,llama3-chat,auto}
-- [ ] --system-prompt works with chat templates
-- [ ] Template applied before tokenization
-- [ ] BOS/special token handling correct per template
+- [x] --prompt-template accepts {raw,instruct,llama3-chat,auto}
+- [x] --system-prompt works with chat templates
+- [x] Template applied before tokenization
+- [x] BOS/special token handling correct per template
 
 **Phase C:**
-- [ ] CppBackend enum defined (BitNet, Llama)
-- [ ] --cpp-backend flag works
-- [ ] Auto-detection from model path works
-- [ ] Preflight fails gracefully with setup instructions
+- [x] CppBackend enum defined (BitNet, Llama)
+- [x] --cpp-backend flag works
+- [x] Auto-detection from model path works
+- [x] Preflight fails gracefully with setup instructions
 
 **Phase D:**
-- [ ] bitnet_cpp_wrapper.c compiles
-- [ ] build.rs finds libbitnet*
-- [ ] Rust bindings safe and tested
-- [ ] Backend dispatcher routes correctly
+- [x] bitnet_cpp_wrapper.c compiles
+- [x] build.rs finds libbitnet*
+- [x] Rust bindings safe and tested
+- [x] Backend dispatcher routes correctly
 
 **Phase E:**
-- [ ] Token parity errors include backend context
-- [ ] Integration tests pass for both lanes
-- [ ] Documentation complete and accurate
-- [ ] Manual smoke tests successful
+- [x] Token parity errors include backend context
+- [x] Integration tests added (real-model tests gated with #[ignore])
+- [x] Documentation complete and accurate
+- [x] Manual smoke tests successful
 
 ---
 
@@ -878,12 +928,12 @@ Before marking each phase complete:
 
 ## File Summary
 
-**Files to Create:**
+**Files Created:**
 1. `crossval/src/bitnet_cpp_wrapper.c` (~250 LOC)
 2. `crossval/tests/dual_backend_integration.rs` (~300 LOC)
 3. `docs/explanation/dual-backend-crossval.md` (~200 LOC)
 
-**Files to Modify:**
+**Files Modified:**
 1. `xtask/src/main.rs` (+200 LOC)
 2. `crossval/build.rs` (+100 LOC)
 3. `crossval/src/cpp_bindings.rs` (+80 LOC)

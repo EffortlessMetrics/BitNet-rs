@@ -7,9 +7,10 @@ This document explains the CPU kernel architecture in BitNet-rs, with a focus on
 1. [Architecture Overview](#architecture-overview)
 2. [Kernel Selection Strategy](#kernel-selection-strategy)
 3. [AVX-512 Implementation](#avx-512-implementation)
-4. [Performance Characteristics](#performance-characteristics)
-5. [Fallback Mechanisms](#fallback-mechanisms)
-6. [Development Guidelines](#development-guidelines)
+4. [QK256 AVX2 Fast Path](#qk256-avx2-fast-path)
+5. [Performance Characteristics](#performance-characteristics)
+6. [Fallback Mechanisms](#fallback-mechanisms)
+7. [Development Guidelines](#development-guidelines)
 
 ## Architecture Overview
 
@@ -154,6 +155,85 @@ impl ThermalMonitor {
     }
 }
 ```
+
+## QK256 AVX2 Fast Path
+
+### Overview
+
+BitNet-rs implements an AVX2-accelerated QK256 dequantization path as the foundation
+for the v0.2 performance target. This section documents the current state and planned
+optimizations.
+
+### Current State (v0.2.1-dev)
+
+- **Status**: AVX2 foundation merged; 1.2× uplift over scalar baseline
+- **Scalar baseline**: ~0.1 tok/s for 2B QK256 models
+- **AVX2 current**: ~0.12 tok/s (~1.2× uplift from AVX2 dequantization)
+- **Target**: ≥3× over scalar (≥0.3 tok/s) via nibble-LUT + FMA tiling
+- **Correctness**: Verified ≤1e-5 max absolute difference vs scalar on randomized shapes
+- **Runtime dispatch**: Scalar fallback if `avx2` unavailable at runtime (no compile-time requirement)
+
+### Implementation Location
+
+```
+crates/bitnet-kernels/src/cpu/x86.rs          # AVX2 dequantization + dispatch
+crates/bitnet-quantization/src/i2s/qk256_avx2.rs  # QK256 block format handling
+```
+
+### Planned Optimizations for ≥3× Target
+
+#### Step 1: Nibble-LUT Unpack via `pshufb`
+
+Map 2-bit → signed i8 using VPSHUFB shuffle table (pshufb = _mm256_shuffle_epi8):
+
+```rust
+// 4-way decode: each byte holds 4 2-bit codes → unpack to 4 i8 values
+let lut = _mm256_set_epi8(/* +2,+1,-1,-2 mapped to i8 */ ...);
+let nibbles = _mm256_shuffle_epi8(lut, packed_codes);
+```
+
+Expected uplift from this step alone: ~1.8× (eliminates serial decode loop).
+
+#### Step 2: FMA Tiling (8-16 Row Unroll)
+
+Unroll dot-products across 8-16 output rows simultaneously:
+
+```rust
+// Process 8 rows at once, accumulate with vfmadd
+for row_block in (0..n_rows).step_by(8) {
+    let acc0 = _mm256_fmadd_ps(dequant_block, weight_row_0, acc0);
+    // ... through acc7
+}
+```
+
+Expected cumulative uplift: ~2.5×.
+
+#### Step 3: Load Combine + Prefetch
+
+- **Load combine**: Use `_mm256_loadu_si256` once per block (reduce AVX crossings)
+- **Prefetch**: `_mm_prefetch` with T0 hint for next code block and input row
+
+Expected cumulative uplift: ≥3×.
+
+### Benchmarking
+
+```bash
+# Run QK256 AVX2 benchmarks
+cargo bench --bench kernel_benchmarks --features cpu,avx2
+
+# Correctness validation
+cargo test -p bitnet-kernels --no-default-features --features cpu -- qk256_avx2
+
+# Property-based correctness (50 random shapes)
+cargo test -p bitnet-kernels --no-default-features --features cpu -- qk256_pbt
+```
+
+### Testing
+
+The property-based tests in `crates/bitnet-kernels/tests/qk256_avx2_pbt.rs` validate:
+- Numerical correctness: max absolute difference ≤1e-5 vs scalar
+- Shape coverage: random M×K×N dimensions up to 4096
+- Edge cases: single-element blocks, non-aligned sizes, all-zero inputs
 
 ## Performance Characteristics
 
