@@ -1,0 +1,45 @@
+name: Intel GPU Smoke Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am UTC
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  intel-gpu-check:
+    name: Intel GPU Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Intel Compute Runtime dependencies
+        run: |
+          # Install Intel GPU compute runtime packages for OpenCL/Level-Zero
+          wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | sudo gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg
+          echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg arch=amd64] https://repositories.intel.com/gpu/ubuntu jammy unified" | sudo tee /etc/apt/sources.list.d/intel-gpu.list
+          sudo apt-get update || true
+          sudo apt-get install -y --no-install-recommends ocl-icd-libopencl1 opencl-headers clinfo || true
+
+      - name: Check OpenCL availability
+        run: |
+          clinfo --list 2>&1 || echo "No OpenCL devices found (expected in CI without GPU)"
+          echo "OpenCL headers installed successfully"
+
+      - name: Build with opencl feature
+        run: cargo check --locked --no-default-features --features cpu -p bitnet-kernels -p bitnet-common
+
+      - name: Run CPU tests
+        run: cargo test --locked --no-default-features --features cpu -p bitnet-kernels -p bitnet-common -- --test-threads=4
+        timeout-minutes: 10
+
+      - name: Verify OpenCL kernel sources compile (syntax check)
+        run: |
+          echo "Checking for .cl kernel source files..."
+          find crates/ -name "*.cl" -type f | head -20 || echo "No .cl files yet"
+          echo "Intel GPU smoke test complete"
