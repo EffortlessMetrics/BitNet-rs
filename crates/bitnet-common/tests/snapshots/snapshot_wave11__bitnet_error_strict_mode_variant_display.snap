@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: err.to_string()
+---
+Strict mode violation: suspicious LayerNorm gamma

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: scenario
+---
+MissingKernelScenario {
+    quantization_type: I2S,
+    device: Cuda(
+        0,
+    ),
+    fallback_available: true,
+}

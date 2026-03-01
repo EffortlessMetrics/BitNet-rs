@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: caps
+---
+KernelCapabilities {
+    cpu_rust: true,
+    cuda_compiled: false,
+    cuda_runtime: false,
+    hip_compiled: false,
+    hip_runtime: false,
+    oneapi_compiled: false,
+    oneapi_runtime: false,
+    opencl_compiled: false,
+    opencl_runtime: false,
+    cpp_ffi: false,
+    simd_level: Scalar,
+}

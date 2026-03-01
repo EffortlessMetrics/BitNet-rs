@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: displays
+---
+[
+    "Input validation failed: bad utf8",
+    "Memory allocation attack detected: 2TB alloc",
+    "Resource limit exceeded: tensor_elements = 2000000000 exceeds limit 1000000000",
+    "Malformed data structure: truncated header",
+    "Unsafe operation blocked: mmap - symlink",
+]

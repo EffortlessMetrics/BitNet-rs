@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: cfg
+---
+GroupNormConfig {
+    num_groups: 8,
+    num_channels: 64,
+    spatial_size: 256,
+    eps: 1e-5,
+    elementwise_affine: true,
+}

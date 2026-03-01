@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: cfg
+---
+TransposeConfig {
+    shape: [
+        3,
+        4,
+    ],
+    permutation: [
+        1,
+        0,
+    ],
+}

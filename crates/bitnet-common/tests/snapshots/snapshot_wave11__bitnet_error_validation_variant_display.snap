@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: err.to_string()
+---
+Validation error: shape mismatch in layer 3

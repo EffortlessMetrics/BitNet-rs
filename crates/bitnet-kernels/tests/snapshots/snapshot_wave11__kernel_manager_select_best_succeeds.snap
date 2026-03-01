@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: "format!(\"provider_name={name}\")"
+---
+provider_name=[PROVIDER]

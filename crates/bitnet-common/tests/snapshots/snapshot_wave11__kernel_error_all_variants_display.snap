@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave11.rs
+expression: displays
+---
+[
+    "No available kernel provider",
+    "Kernel execution failed: timeout",
+    "Unsupported architecture: mips",
+    "GPU error: no device",
+    "Unsupported hardware: required avx512, available sse4.2",
+    "Invalid arguments: dim mismatch",
+    "Quantization failed: bad block",
+    "Matrix multiplication failed: shape error",
+]

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave11.rs
+expression: "format!(\"has_name={}\", name.is_some())"
+---
+has_name=false
