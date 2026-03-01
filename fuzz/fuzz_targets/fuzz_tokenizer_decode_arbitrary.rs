@@ -1,6 +1,8 @@
 #![no_main]
 
-use bitnet_tokenizers::{BasicTokenizer, Tokenizer, TokenizerConfig, universal::UniversalTokenizer};
+use bitnet_tokenizers::{
+    BasicTokenizer, Tokenizer, TokenizerConfig, universal::UniversalTokenizer,
+};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
