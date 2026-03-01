@@ -115,6 +115,13 @@ impl NeonKernel {
                     let mut acc1 = vdupq_n_s32(0);
                     let mut acc2 = vdupq_n_s32(0);
                     let mut acc3 = vdupq_n_s32(0);
+        for i in 0..m {
+            for j in 0..n {
+                let mut l = 0usize;
+                let mut acc0 = vdupq_n_s32(0);
+                let mut acc1 = vdupq_n_s32(0);
+                let mut acc2 = vdupq_n_s32(0);
+                let mut acc3 = vdupq_n_s32(0);
 
                     while l + 16 <= k {
                         let a_vec = vld1q_s8(a.as_ptr().add(i * k + l));
@@ -137,6 +144,15 @@ impl NeonKernel {
 
                         l += 16;
                     }
+                    let a_lo = vmovl_s8(vget_low_s8(a_vec));
+                    let a_hi = vmovl_s8(vget_high_s8(a_vec));
+                    let b_lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(b_vec)));
+                    let b_hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(b_vec)));
+
+                    acc0 = vaddq_s32(acc0, vmull_s16(vget_low_s16(a_lo), vget_low_s16(b_lo)));
+                    acc1 = vaddq_s32(acc1, vmull_s16(vget_high_s16(a_lo), vget_high_s16(b_lo)));
+                    acc2 = vaddq_s32(acc2, vmull_s16(vget_low_s16(a_hi), vget_low_s16(b_hi)));
+                    acc3 = vaddq_s32(acc3, vmull_s16(vget_high_s16(a_hi), vget_high_s16(b_hi)));
 
                     let mut sum =
                         (vaddvq_s32(acc0) + vaddvq_s32(acc1) + vaddvq_s32(acc2) + vaddvq_s32(acc3))
@@ -149,6 +165,17 @@ impl NeonKernel {
 
                     c[i * n + j] = sum;
                 }
+
+                let mut sum =
+                    (vaddvq_s32(acc0) + vaddvq_s32(acc1) + vaddvq_s32(acc2) + vaddvq_s32(acc3))
+                        as f32;
+
+                while l < k {
+                    sum += (a[i * k + l] as f32) * (b[l * n + j] as f32);
+                    l += 1;
+                }
+
+                c[i * n + j] = sum;
             }
 
             Ok(())
@@ -201,6 +228,9 @@ impl NeonKernel {
                 // Find maximum absolute value using NEON
                 let mut max_vec = vdupq_n_f32(0.0);
                 let mut i = 0;
+            // Find maximum absolute value using NEON
+            let mut max_vec = vdupq_n_f32(0.0);
+            let mut i = 0;
 
                 // Process 4 elements at a time
                 while i + 4 <= block.len() {
@@ -212,6 +242,8 @@ impl NeonKernel {
 
                 // Find maximum in the vector
                 let max_val = vmaxvq_f32(max_vec);
+            // Find maximum in the vector
+            let max_val = vmaxvq_f32(max_vec);
 
                 // Handle remaining elements
                 let mut final_max = max_val;
@@ -222,6 +254,9 @@ impl NeonKernel {
                 let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
                 *scale_out = scale;
                 let scale_vec = vdupq_n_f32(scale);
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
+            scales[block_idx] = scale;
+            let scale_vec = vdupq_n_f32(scale);
 
                 // Quantize block using vectorized lookup
                 i = 0;
@@ -342,6 +377,9 @@ impl NeonKernel {
                 // Find maximum absolute value using NEON
                 let mut max_vec = vdupq_n_f32(0.0);
                 let mut i = 0;
+            // Find maximum absolute value using NEON
+            let mut max_vec = vdupq_n_f32(0.0);
+            let mut i = 0;
 
                 while i + 4 <= block.len() {
                     let vals = vld1q_f32(block.as_ptr().add(i));
@@ -352,6 +390,8 @@ impl NeonKernel {
 
                 let max_val = vmaxvq_f32(max_vec);
                 let mut final_max = max_val;
+            let max_val = vmaxvq_f32(max_vec);
+            let mut final_max = max_val;
 
                 for &val in &block[i..] {
                     final_max = final_max.max(val.abs());
@@ -360,6 +400,9 @@ impl NeonKernel {
                 let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
                 *scale_out = scale;
                 let scale_vec = vdupq_n_f32(scale);
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
+            scales[block_idx] = scale;
+            let scale_vec = vdupq_n_f32(scale);
 
                 // Vectorized quantization using NEON comparisons
                 i = 0;
