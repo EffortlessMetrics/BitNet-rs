@@ -153,8 +153,7 @@ pub mod generation;
 
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
-pub mod config_validator;
 pub mod memory_layout;
-// Provides model lifecycle management: state machine, loading orchestration,
-// warmup, cooldown, hot-swap, memory budgeting, and version management.
-pub mod model_lifecycle;
+// OpenAI-compatible API server with SSE streaming, auth, health checks,
+// and Prometheus metrics for GPU-accelerated inference.
+pub mod api_server;
