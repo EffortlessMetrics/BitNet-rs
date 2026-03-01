@@ -105,7 +105,15 @@ pub use fusion::{
     fused_rmsnorm_linear, fused_rmsnorm_linear_cpu, fused_scale_add, fused_scale_add_cpu,
     fused_softmax_mask, fused_softmax_mask_cpu,
 };
-pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
+pub use pooling::{
+    AdaptivePool2dConfig, CudaPoolType, Pool2dConfig, PoolingConfig, adaptive_avg_pool2d_cpu,
+    adaptive_avg_pool2d_forward, avg_pool2d_cpu, avg_pool2d_forward, launch_adaptive_avg_pool2d,
+    launch_avg_pool2d, launch_max_pool2d, max_pool2d_cpu, max_pool2d_forward, pooling_cpu,
+    pooling_forward,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use pooling::{ADAPTIVE_AVG_POOL2D_KERNEL_SRC, AVG_POOL2D_KERNEL_SRC, MAX_POOL2D_KERNEL_SRC};
 pub use softmax::{
     SoftmaxConfig, launch_softmax, online_softmax_cpu, softmax_backward_cpu, softmax_cpu,
     softmax_forward,
