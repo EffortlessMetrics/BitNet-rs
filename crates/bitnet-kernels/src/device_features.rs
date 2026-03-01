@@ -140,6 +140,9 @@ pub fn oneapi_available_runtime() -> bool {
             return false;
         }
     }
+    if !oneapi_compiled() {
+        return false;
+    }
 
     Command::new("sycl-ls")
         .stdout(Stdio::null())
