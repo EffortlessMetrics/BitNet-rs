@@ -39,9 +39,24 @@ pub fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
     xs.iter().map(|&v| v - lse).collect()
 }
 
+/// L2 divergence (Euclidean distance) between two vectors.
+///
+/// Returns `f64::INFINITY` when vector lengths do not match.
+#[must_use]
+pub fn l2_divergence(baseline: &[f32], canary: &[f32]) -> f64 {
+    if baseline.len() != canary.len() {
+        return f64::INFINITY;
+    }
+
+    let sum_sq: f64 =
+        baseline.iter().zip(canary.iter()).map(|(a, b)| ((*a as f64) - (*b as f64)).powi(2)).sum();
+
+    sum_sq.sqrt()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{log_softmax_stable, topk_stable_indices};
+    use super::{l2_divergence, log_softmax_stable, topk_stable_indices};
 
     #[test]
     fn topk_is_deterministic_for_ties() {
@@ -56,5 +71,16 @@ mod tests {
         let logp = log_softmax_stable(&logits);
         let p_sum: f32 = logp.iter().map(|v| v.exp()).sum();
         assert!((p_sum - 1.0).abs() < 1e-5, "sum was {p_sum}");
+    }
+
+    #[test]
+    fn l2_divergence_zero_for_identical_vectors() {
+        let a = vec![0.1f32, -2.5, 3.0, 9.75];
+        assert_eq!(l2_divergence(&a, &a), 0.0);
+    }
+
+    #[test]
+    fn l2_divergence_returns_infinity_for_mismatched_lengths() {
+        assert!(l2_divergence(&[1.0f32, 2.0], &[1.0]).is_infinite());
     }
 }

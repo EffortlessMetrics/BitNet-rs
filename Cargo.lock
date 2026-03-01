@@ -1162,6 +1162,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bitnet-common",
+ "bitnet-eval-core",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
