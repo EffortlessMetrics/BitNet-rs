@@ -38,6 +38,14 @@ pub struct RopeConfig {
     pub position_offset: usize,
     /// Rotation base frequency (default `10_000.0`).
     pub base: f32,
+    /// Frequency scaling factor (default `1.0`). Applied as a multiplier on
+    /// the inverse-frequency table, allowing NTK-aware RoPE and YaRN-style
+    /// frequency interpolation.
+    pub scaling_factor: f32,
+    /// Maximum sequence length for pre-computed sin/cos tables (defaults to
+    /// `seq_len`). Set this larger when you plan to cache a table covering
+    /// positions beyond the current batch.
+    pub max_seq_len: usize,
     /// Threads per block — typically `head_dim / 2`, capped at 1024.
     pub threads_per_block: u32,
 }
@@ -73,6 +81,8 @@ impl RopeConfig {
             seq_len,
             position_offset: 0,
             base: 10_000.0,
+            scaling_factor: 1.0,
+            max_seq_len: seq_len,
             threads_per_block,
         })
     }
@@ -88,6 +98,20 @@ impl RopeConfig {
     #[must_use]
     pub fn with_position_offset(mut self, offset: usize) -> Self {
         self.position_offset = offset;
+        self
+    }
+
+    /// Override the frequency scaling factor (default `1.0`).
+    #[must_use]
+    pub fn with_scaling_factor(mut self, factor: f32) -> Self {
+        self.scaling_factor = factor;
+        self
+    }
+
+    /// Override `max_seq_len` for pre-computed sin/cos tables.
+    #[must_use]
+    pub fn with_max_seq_len(mut self, max_seq_len: usize) -> Self {
+        self.max_seq_len = max_seq_len;
         self
     }
 
@@ -114,6 +138,29 @@ fn compute_inv_freq(head_dim: usize, base: f32) -> Vec<f32> {
             base.powf(exponent)
         })
         .collect()
+}
+
+/// Pre-compute an interleaved `[cos, sin, cos, sin, …]` table for
+/// `max_seq_len` positions × `head_dim/2` dimension pairs.
+///
+/// Total length: `max_seq_len × head_dim`.
+///
+/// This is the CUDA-style analogue of `cpu::rope::compute_frequencies` and
+/// uses the same interleaved layout so that the two modules can share tables
+/// when needed.
+pub fn compute_sincos_table(config: &RopeConfig) -> Vec<f32> {
+    let half_dim = config.head_dim / 2;
+    let inv_freq = compute_inv_freq(config.head_dim, config.base);
+    let mut table = Vec::with_capacity(config.max_seq_len * config.head_dim);
+
+    for pos in 0..config.max_seq_len {
+        for i in 0..half_dim {
+            let angle = (pos as f32) * inv_freq[i] * config.scaling_factor;
+            table.push(angle.cos());
+            table.push(angle.sin());
+        }
+    }
+    table
 }
 
 /// Apply RoPE on the CPU (fallback path).
@@ -143,7 +190,7 @@ pub fn rope_forward_cpu(input: &[f32], output: &mut [f32], config: &RopeConfig) 
             let row_start = head * config.seq_len * config.head_dim + pos * config.head_dim;
 
             for i in 0..half_dim {
-                let angle = actual_pos * inv_freq[i];
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
                 let cos_val = angle.cos();
                 let sin_val = angle.sin();
 
@@ -220,6 +267,8 @@ mod tests {
         assert_eq!(cfg.seq_len, 512);
         assert_eq!(cfg.position_offset, 0);
         assert!((cfg.base - 10_000.0).abs() < 1e-3);
+        assert!((cfg.scaling_factor - 1.0).abs() < 1e-6);
+        assert_eq!(cfg.max_seq_len, 512);
         assert_eq!(cfg.threads_per_block, 64); // 128/2 = 64
     }
 
@@ -267,6 +316,99 @@ mod tests {
         let cfg = RopeConfig::for_shape(128, 8, 64).unwrap();
         assert_eq!(cfg.grid_dim(), (64, 8, 1));
         assert_eq!(cfg.block_dim(), (64, 1, 1)); // 128/2
+    }
+
+    #[test]
+    fn test_rope_config_with_scaling_factor() {
+        let cfg = RopeConfig::for_shape(64, 1, 1).unwrap().with_scaling_factor(2.0);
+        assert!((cfg.scaling_factor - 2.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_rope_config_with_max_seq_len() {
+        let cfg = RopeConfig::for_shape(64, 1, 4).unwrap().with_max_seq_len(8192);
+        assert_eq!(cfg.max_seq_len, 8192);
+        assert_eq!(cfg.seq_len, 4);
+    }
+
+    // ── Sin/cos table generation ─────────────────────────────────────
+
+    #[test]
+    fn test_sincos_table_length() {
+        let cfg = RopeConfig::for_shape(8, 1, 16).unwrap().with_max_seq_len(16);
+        let table = compute_sincos_table(&cfg);
+        assert_eq!(table.len(), 16 * 8);
+    }
+
+    #[test]
+    fn test_sincos_table_position_zero() {
+        let cfg = RopeConfig::for_shape(4, 1, 2).unwrap().with_max_seq_len(2);
+        let table = compute_sincos_table(&cfg);
+        assert!((table[0] - 1.0).abs() < 1e-6, "cos(0) should be 1");
+        assert!(table[1].abs() < 1e-6, "sin(0) should be 0");
+        assert!((table[2] - 1.0).abs() < 1e-6, "cos(0) should be 1");
+        assert!(table[3].abs() < 1e-6, "sin(0) should be 0");
+    }
+
+    #[test]
+    fn test_sincos_table_known_values() {
+        let cfg = RopeConfig::for_shape(2, 1, 2).unwrap().with_max_seq_len(2);
+        let table = compute_sincos_table(&cfg);
+        let expected_cos = 1.0f32.cos();
+        let expected_sin = 1.0f32.sin();
+        assert!(
+            (table[2] - expected_cos).abs() < 1e-5,
+            "cos(1): got {}, expected {expected_cos}",
+            table[2]
+        );
+        assert!(
+            (table[3] - expected_sin).abs() < 1e-5,
+            "sin(1): got {}, expected {expected_sin}",
+            table[3]
+        );
+    }
+
+    #[test]
+    fn test_sincos_table_with_scaling_factor() {
+        let cfg1 = RopeConfig::for_shape(4, 1, 4).unwrap().with_max_seq_len(4);
+        let cfg2 =
+            RopeConfig::for_shape(4, 1, 4).unwrap().with_max_seq_len(4).with_scaling_factor(2.0);
+        let t1 = compute_sincos_table(&cfg1);
+        let t2 = compute_sincos_table(&cfg2);
+        for i in 0..4 {
+            assert!((t1[i] - t2[i]).abs() < 1e-6);
+        }
+        let any_diff = (4..8).any(|i| (t1[i] - t2[i]).abs() > 1e-4);
+        assert!(any_diff, "scaling_factor should change table values");
+    }
+
+    #[test]
+    fn test_sincos_table_matches_forward() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_max_seq_len(2);
+        let table = compute_sincos_table(&cfg);
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut output = vec![0.0f32; 8];
+        rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+
+        let pos = 1;
+        let half = head_dim / 2;
+        for i in 0..half {
+            let cos_val = table[pos * head_dim + 2 * i];
+            let sin_val = table[pos * head_dim + 2 * i + 1];
+            let x0 = input[pos * head_dim + 2 * i];
+            let x1 = input[pos * head_dim + 2 * i + 1];
+            let expected0 = x0 * cos_val - x1 * sin_val;
+            let expected1 = x0 * sin_val + x1 * cos_val;
+            assert!(
+                (output[pos * head_dim + 2 * i] - expected0).abs() < 1e-5,
+                "table/forward mismatch at pair {i}"
+            );
+            assert!(
+                (output[pos * head_dim + 2 * i + 1] - expected1).abs() < 1e-5,
+                "table/forward mismatch at pair {i}"
+            );
+        }
     }
 
     // ── CPU forward correctness ──────────────────────────────────────
@@ -470,6 +612,93 @@ mod tests {
         let any_diff = (0..head_dim)
             .any(|i| (out_default[head_dim + i] - out_custom[head_dim + i]).abs() > 1e-4);
         assert!(any_diff, "different base should produce different rotations");
+    }
+
+    #[test]
+    fn test_rope_cpu_scaling_factor_identity() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
+        let cfg_explicit = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_scaling_factor(1.0);
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out1 = vec![0.0f32; 8];
+        let mut out2 = vec![0.0f32; 8];
+        rope_forward_cpu(&input, &mut out1, &cfg).unwrap();
+        rope_forward_cpu(&input, &mut out2, &cfg_explicit).unwrap();
+        for (a, b) in out1.iter().zip(out2.iter()) {
+            assert!((a - b).abs() < 1e-6, "scaling_factor=1.0 should match default");
+        }
+    }
+
+    #[test]
+    fn test_rope_cpu_scaling_factor_changes_output() {
+        let head_dim = 4;
+        let cfg1 = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
+        let cfg2 = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_scaling_factor(0.5);
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out1 = vec![0.0f32; 8];
+        let mut out2 = vec![0.0f32; 8];
+        rope_forward_cpu(&input, &mut out1, &cfg1).unwrap();
+        rope_forward_cpu(&input, &mut out2, &cfg2).unwrap();
+        for i in 0..head_dim {
+            assert!((out1[i] - out2[i]).abs() < 1e-6);
+        }
+        let any_diff =
+            (0..head_dim).any(|i| (out1[head_dim + i] - out2[head_dim + i]).abs() > 1e-4);
+        assert!(any_diff, "different scaling_factor should change rotations");
+    }
+
+    // ── Property tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_rope_zero_input_preserved() {
+        for head_dim in [2, 4, 8, 64] {
+            let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
+            let total = 4 * head_dim;
+            let input = vec![0.0f32; total];
+            let mut output = vec![1.0f32; total];
+            rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+            for (i, val) in output.iter().enumerate() {
+                assert!(val.abs() < 1e-10, "zero input not preserved at index {i}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_rope_different_positions_different_rotations() {
+        let head_dim = 4;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
+        let total = 4 * head_dim;
+        let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0].into_iter().cycle().take(total).collect();
+        let mut output = vec![0.0f32; total];
+        rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+        for p in 0..3 {
+            let start_a = p * head_dim;
+            let start_b = (p + 1) * head_dim;
+            let any_diff =
+                (0..head_dim).any(|d| (output[start_a + d] - output[start_b + d]).abs() > 1e-6);
+            assert!(any_diff, "pos {p} and {} should differ", p + 1);
+        }
+    }
+
+    #[test]
+    fn test_rope_norm_preservation_various_inputs() {
+        let head_dim = 16;
+        let cfg = RopeConfig::for_shape(head_dim, 1, 8).unwrap();
+        let total = 8 * head_dim;
+        let input: Vec<f32> = (0..total).map(|i| ((i * 37 + 13) as f32).sin() * 3.0).collect();
+        let mut output = vec![0.0f32; total];
+        rope_forward_cpu(&input, &mut output, &cfg).unwrap();
+        for pos in 0..8 {
+            let start = pos * head_dim;
+            let in_norm: f32 =
+                input[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            let out_norm: f32 =
+                output[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            assert!(
+                (in_norm - out_norm).abs() < 1e-3,
+                "norm not preserved at pos={pos}: {in_norm} vs {out_norm}"
+            );
+        }
     }
 
     // ── Inverse-frequency table ──────────────────────────────────────

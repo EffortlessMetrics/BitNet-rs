@@ -602,4 +602,44 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_apply_rope_zero_input_preserved() {
+        let head_dim = 64;
+        let seq_len = 4;
+        let num_heads = 2;
+        let total = seq_len * num_heads * head_dim;
+        let mut data = vec![0.0f32; total];
+        let freqs = compute_frequencies(&RopeConfig::new(head_dim, seq_len));
+        apply_rope_batch_scalar(&mut data, 0, seq_len, num_heads, head_dim, &freqs);
+        for (i, val) in data.iter().enumerate() {
+            assert!(val.abs() < 1e-10, "zero not preserved at index {i}");
+        }
+    }
+
+    #[test]
+    fn test_batch_rope_norm_preservation_many_positions() {
+        let head_dim = 32;
+        let seq_len = 32;
+        let num_heads = 4;
+        let total = seq_len * num_heads * head_dim;
+        let mut data: Vec<f32> = (0..total).map(|i| ((i * 37 + 13) as f32).sin() * 2.5).collect();
+        let norms_before: Vec<f32> = (0..seq_len * num_heads)
+            .map(|chunk| {
+                let start = chunk * head_dim;
+                data[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt()
+            })
+            .collect();
+        let freqs = compute_frequencies(&RopeConfig::new(head_dim, seq_len));
+        apply_rope_batch_scalar(&mut data, 0, seq_len, num_heads, head_dim, &freqs);
+        for (chunk, norm_before) in norms_before.iter().enumerate() {
+            let start = chunk * head_dim;
+            let norm_after: f32 =
+                data[start..start + head_dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            assert!(
+                (norm_before - norm_after).abs() < 1e-3,
+                "norm not preserved at chunk {chunk}: {norm_before} vs {norm_after}"
+            );
+        }
+    }
 }
