@@ -27,8 +27,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy workspace
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY src/ ./src/
 COPY crates/ ./crates/
+COPY crossval/ ./crossval/
+COPY tests/ ./tests/
+COPY tests-new/ ./tests-new/
+COPY xtask/ ./xtask/
+COPY xtask-build-helper/ ./xtask-build-helper/
+COPY fuzz/ ./fuzz/
+COPY tools/ ./tools/
 
 # Compile check with oneapi feature (validates Intel backend wiring)
 RUN cargo check --workspace --locked --no-default-features --features cpu,oneapi \

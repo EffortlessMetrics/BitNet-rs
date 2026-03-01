@@ -12,6 +12,8 @@
 pub mod backend_dispatcher;
 pub mod backend_registry;
 pub mod context_pool;
+pub mod diagnostics;
+pub mod system_info;
 pub mod kv_cache;
 pub mod paged_attention;
 
@@ -20,6 +22,8 @@ pub use backend_dispatcher::{
     DispatchLog, DispatchStrategy, Operation,
 };
 pub use backend_registry::{BackendInfo, BackendProvider, BackendRegistry};
+pub use diagnostics::{DiagnosticReport, GpuDiagnostics, format_json, format_report};
+pub use system_info::collect_system_info;
 pub mod quantized_kernels;
 pub mod quantized_ops;
 pub mod spirv;
