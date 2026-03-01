@@ -22,5 +22,8 @@ cpu = []
 gpu = ["cuda"]
 cuda = []
 
+[[test]]
+name = "metal_shader_validation"
+
 [lints]
 workspace = true
