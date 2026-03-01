@@ -351,6 +351,16 @@ pub fn gemv_qk256(
     cols: usize,
     row_stride_bytes: usize,
 ) -> Result<()> {
+    let expected_stride = cols.div_ceil(QK256_BLOCK) * QK256_PACKED_BYTES;
+    if row_stride_bytes != expected_stride {
+        bail!(
+            "I2S_QK256: row_stride_bytes {} != expected {} for cols={}",
+            row_stride_bytes,
+            expected_stride,
+            cols
+        );
+    }
+
     // Runtime dispatch: probe for AVX2 support on x86_64
     #[cfg(target_arch = "x86_64")]
     {
