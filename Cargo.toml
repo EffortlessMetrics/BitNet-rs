@@ -61,6 +61,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
   "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
@@ -114,6 +115,7 @@ default-members = [
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download",      # SRP: download mechanics primitives
 ]
 
 [package]
