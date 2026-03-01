@@ -3,6 +3,8 @@
 //! Provides unified compile-time and runtime device capability queries,
 //! extracted from `bitnet-kernels` for use by the broader workspace.
 
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+use bitnet_amd_probe::rocm_runtime_available;
 pub use bitnet_common::kernel_registry::SimdLevel;
 
 #[cfg(feature = "opencl")]
@@ -229,7 +231,7 @@ fn rocm_available_runtime() -> bool {
         return fake.contains("rocm") || fake.contains("gpu");
     }
 
-    command_ok("rocm-smi", &["--showid"])
+    rocm_runtime_available()
 }
 
 #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]

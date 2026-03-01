@@ -26,6 +26,7 @@ members = [
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
+  "crates/bitnet-amd-probe",     # SRP: AMD ROCm runtime probing helpers
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-feature-matrix",
@@ -160,6 +161,7 @@ version = "0.2.1-dev"
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-amd-probe = { path = "crates/bitnet-amd-probe", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
@@ -321,6 +323,7 @@ required-features = ["cpu"]
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-amd-probe = { path = "crates/bitnet-amd-probe", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

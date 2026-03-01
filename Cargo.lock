@@ -382,6 +382,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bitnet-amd-probe",
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
@@ -423,6 +424,14 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "vergen",
+]
+
+[[package]]
+name = "bitnet-amd-probe"
+version = "0.2.1-dev"
+dependencies = [
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]
@@ -575,6 +584,7 @@ name = "bitnet-device-probe"
 version = "0.2.1-dev"
 dependencies = [
  "ash",
+ "bitnet-amd-probe",
  "bitnet-common",
  "insta",
  "log",
@@ -879,6 +889,7 @@ dependencies = [
 name = "bitnet-opencl"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-amd-probe",
  "bitnet-common",
  "env_logger",
  "log",

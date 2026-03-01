@@ -8,6 +8,7 @@ use std::fmt::Write as _;
 use serde::{Deserialize, Serialize};
 
 use crate::system_info::{self, SystemInfo};
+use bitnet_amd_probe::detect_amd_driver;
 
 // ── Status types ─────────────────────────────────────────────────────────────
 
@@ -151,11 +152,9 @@ impl GpuDiagnostics {
             };
         }
 
-        if command_succeeds("rocm-smi", &["--showid"]) {
-            return DriverStatus {
-                found: true,
-                description: "AMD ROCm driver detected (rocm-smi)".to_owned(),
-            };
+        let amd = detect_amd_driver();
+        if amd.found {
+            return DriverStatus { found: true, description: amd.description };
         }
 
         DriverStatus { found: false, description: "not found".to_owned() }

@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-amd-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP microcrate for AMD ROCm runtime probing"
+rust-version.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+serial_test.workspace = true
+temp-env.workspace = true
+
+[lints]
+workspace = true
