@@ -62,7 +62,7 @@ fn bitnet_version() -> &'static str {
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
-use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
+use commands::{ConvertCommand, GpuReportCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -383,6 +383,25 @@ enum Commands {
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
 
+    #[cfg(feature = "full-cli")]
+    /// Generate GPU compatibility report
+    ///
+    /// Detects all GPUs, probes drivers and capabilities, and generates
+    /// a JSON or HTML report for diagnostics and support.
+    ///
+    /// # Examples
+    ///
+    /// JSON report to stdout:
+    ///   bitnet gpu-report
+    ///
+    /// HTML report to file:
+    ///   bitnet gpu-report --format html --output gpu-report.html
+    ///
+    /// Include kernel execution tests:
+    ///   bitnet gpu-report --test-kernels
+    #[command(alias = "gpu-report")]
+    GpuReport(GpuReportCommand),
+
     /// Check GGUF file compatibility using header validation
     CompatCheck {
         /// Path to .gguf file
@@ -403,13 +422,6 @@ enum Commands {
         /// Limit number of KV pairs to show (default: 20)
         #[arg(long, default_value_t = 20)]
         kv_limit: usize,
-    },
-
-    /// List all supported model architectures
-    ListArchitectures {
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
     },
 
     /// List all available prompt templates
@@ -578,48 +590,10 @@ async fn main() -> Result<()> {
         Some(Commands::Info) => show_system_info().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::GpuReport(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
-        }
-        Some(Commands::ListArchitectures { json }) => {
-            use bitnet_common::ArchitectureRegistry;
-
-            if json {
-                let archs: Vec<_> = ArchitectureRegistry::known_architectures()
-                    .iter()
-                    .filter_map(|arch| {
-                        ArchitectureRegistry::lookup(arch).map(|defaults| {
-                            serde_json::json!({
-                                "architecture": arch,
-                                "norm_type": format!("{:?}", defaults.norm_type),
-                                "activation_type": format!("{:?}", defaults.activation_type),
-                                "default_context_length": defaults.default_context_length,
-                            })
-                        })
-                    })
-                    .collect();
-                println!("{}", serde_json::to_string_pretty(&archs).unwrap());
-            } else {
-                println!(
-                    "{:<30} {:<12} {:<12} {}",
-                    "Architecture", "Norm", "Activation", "Context"
-                );
-                println!("{}", "-".repeat(70));
-                for arch in ArchitectureRegistry::known_architectures() {
-                    if let Some(defaults) = ArchitectureRegistry::lookup(arch) {
-                        println!(
-                            "{:<30} {:<12} {:<12} {}",
-                            arch,
-                            format!("{:?}", defaults.norm_type),
-                            format!("{:?}", defaults.activation_type),
-                            defaults
-                                .default_context_length
-                                .map_or("default".to_string(), |v| v.to_string()),
-                        );
-                    }
-                }
-            }
-            Ok(())
         }
         Some(Commands::ListTemplates { json }) => {
             use bitnet_prompt_templates::TemplateType;
