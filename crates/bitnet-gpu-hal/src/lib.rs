@@ -144,6 +144,7 @@ pub mod parallel_communication;
 // === Server & Serving ===
 pub mod cache_system;
 pub mod inference_scheduler;
+pub mod inference_tracing;
 pub mod rate_limiter;
 pub mod server_protocol;
 pub mod serving_runtime;
