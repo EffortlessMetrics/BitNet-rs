@@ -316,13 +316,7 @@ pub fn i2s_matmul_forward(
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         if crate::device_features::gpu_available_runtime()
-            && let Ok(()) = launch_i2s_matmul(
-                activations,
-                weights_packed,
-                scales,
-                output,
-                config,
-            )
+            && let Ok(()) = launch_i2s_matmul(activations, weights_packed, scales, output, config)
         {
             return Ok(());
         }
@@ -516,8 +510,7 @@ mod tests {
 
     #[test]
     fn test_non_unit_scales() {
-        let (m, n, k, bs) =
-            (2usize, 2usize, 4usize, 32usize);
+        let (m, n, k, bs) = (2usize, 2usize, 4usize, 32usize);
         let packed_k = k.div_ceil(4);
         let num_blocks_k = k.div_ceil(bs);
 
@@ -538,9 +531,7 @@ mod tests {
         let cfg = I2sMatmulConfig::for_shape(m, n, k, bs).unwrap();
         // col0: 4 × 1.0 × 2.0 = 8.0,  col1: 4 × 1.0 × 0.5 = 2.0
         let expected = vec![8.0, 2.0, 8.0, 2.0];
-        run_cpu_and_forward(
-            &act, &packed, &scales, &cfg, &expected, 1e-5,
-        );
+        run_cpu_and_forward(&act, &packed, &scales, &cfg, &expected, 1e-5);
     }
 
     // ── batch / larger matrices ───────────────────────────────────
