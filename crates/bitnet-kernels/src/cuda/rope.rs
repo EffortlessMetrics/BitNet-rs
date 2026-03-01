@@ -158,7 +158,7 @@ pub struct RopeConfig {
 impl RopeConfig {
     /// Create a configuration for the given shape.
     pub fn for_shape(head_dim: usize, n_heads: usize, seq_len: usize) -> Result<Self> {
-        if head_dim == 0 || !head_dim.is_multiple_of(2) {
+        if head_dim == 0 || head_dim % 2 != 0 {
             return Err(KernelError::InvalidArguments {
                 reason: format!("RoPE head_dim must be even and non-zero, got {head_dim}"),
             }
@@ -262,12 +262,13 @@ fn compute_inv_freq(head_dim: usize, base: f32) -> Vec<f32> {
 /// uses the same interleaved layout so that the two modules can share tables
 /// when needed.
 pub fn compute_sincos_table(config: &RopeConfig) -> Vec<f32> {
+    let half_dim = config.head_dim / 2;
     let inv_freq = compute_inv_freq(config.head_dim, config.base);
     let mut table = Vec::with_capacity(config.max_seq_len * config.head_dim);
 
     for pos in 0..config.max_seq_len {
-        for &freq in &inv_freq {
-            let angle = (pos as f32) * freq * config.scaling_factor;
+        for i in 0..half_dim {
+            let angle = (pos as f32) * inv_freq[i] * config.scaling_factor;
             table.push(angle.cos());
             table.push(angle.sin());
         }
@@ -301,8 +302,8 @@ pub fn rope_forward_cpu(input: &[f32], output: &mut [f32], config: &RopeConfig) 
             let actual_pos = (pos + config.position_offset) as f32;
             let row_start = head * config.seq_len * config.head_dim + pos * config.head_dim;
 
-            for (i, &freq) in inv_freq.iter().enumerate() {
-                let angle = actual_pos * freq * config.scaling_factor;
+            for i in 0..half_dim {
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
                 let cos_val = angle.cos();
                 let sin_val = angle.sin();
 
@@ -361,10 +362,11 @@ pub fn launch_rope(_input: &[f32], _output: &mut [f32], config: &RopeConfig) -> 
 pub fn rope_forward(input: &[f32], output: &mut [f32], config: &RopeConfig) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime()
-            && let Ok(()) = launch_rope(input, output, config)
-        {
-            return Ok(());
+        if crate::device_features::gpu_available_runtime() {
+            if let Ok(()) = launch_rope(input, output, config) {
+                return Ok(());
+            }
+            // GPU launch failed — fall through to CPU path
         }
     }
     rope_forward_cpu(input, output, config)
@@ -379,11 +381,12 @@ pub fn rope_forward(input: &[f32], output: &mut [f32], config: &RopeConfig) -> R
 /// around [`compute_sincos_table`] for callers who only need `(head_dim,
 /// max_seq_len, theta)` without constructing a full [`RopeConfig`].
 pub fn build_rope_freqs(head_dim: usize, max_seq_len: usize, theta: f32) -> Vec<f32> {
+    let half_dim = head_dim / 2;
     let inv_freq = compute_inv_freq(head_dim, theta);
     let mut table = Vec::with_capacity(max_seq_len * head_dim);
 
     for pos in 0..max_seq_len {
-        for &freq in &inv_freq {
+        for &freq in inv_freq.iter().take(half_dim) {
             let angle = (pos as f32) * freq;
             table.push(angle.cos());
             table.push(angle.sin());
@@ -414,10 +417,10 @@ pub fn apply_rope(input: &[f32], positions: &[u32], config: &RopeConfig) -> Vec<
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime()
-            && let Ok(()) = launch_rope(input, &mut output, config)
-        {
-            return output;
+        if crate::device_features::gpu_available_runtime() {
+            if let Ok(()) = launch_rope(input, &mut output, config) {
+                return output;
+            }
         }
     }
 
@@ -429,8 +432,8 @@ pub fn apply_rope(input: &[f32], positions: &[u32], config: &RopeConfig) -> Vec<
             let actual_pos = pos as f32;
             let row_start = head * positions.len() * config.head_dim + seq_idx * config.head_dim;
 
-            for (i, &freq) in inv_freq.iter().enumerate() {
-                let angle = actual_pos * freq * config.scaling_factor;
+            for i in 0..half_dim {
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
                 let cos_val = angle.cos();
                 let sin_val = angle.sin();
 
@@ -477,11 +480,11 @@ pub fn apply_rope_batched(
 
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
-            if crate::device_features::gpu_available_runtime()
-                && let Ok(()) = launch_rope(&input[start..end], &mut batch_out, &batch_cfg)
-            {
-                output[start..end].copy_from_slice(&batch_out);
-                continue;
+            if crate::device_features::gpu_available_runtime() {
+                if let Ok(()) = launch_rope(&input[start..end], &mut batch_out, &batch_cfg) {
+                    output[start..end].copy_from_slice(&batch_out);
+                    continue;
+                }
             }
         }
 
@@ -525,8 +528,8 @@ pub fn rope_backward_cpu(
             let actual_pos = (pos + config.position_offset) as f32;
             let row_start = head * config.seq_len * config.head_dim + pos * config.head_dim;
 
-            for (i, &freq) in inv_freq.iter().enumerate() {
-                let angle = actual_pos * freq * config.scaling_factor;
+            for i in 0..half_dim {
+                let angle = actual_pos * inv_freq[i] * config.scaling_factor;
                 let cos_val = angle.cos();
                 let sin_val = angle.sin();
 
@@ -579,10 +582,10 @@ pub fn rope_backward(
 ) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime()
-            && let Ok(()) = launch_rope_backward(grad_output, grad_input, config)
-        {
-            return Ok(());
+        if crate::device_features::gpu_available_runtime() {
+            if let Ok(()) = launch_rope_backward(grad_output, grad_input, config) {
+                return Ok(());
+            }
         }
     }
     rope_backward_cpu(grad_output, grad_input, config)
