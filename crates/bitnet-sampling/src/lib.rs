@@ -17,6 +17,7 @@ pub use strategies::{
 };
 
 use anyhow::{Context, Result};
+use bitnet_probability::{renormalize_in_place, sample_categorical};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
@@ -180,13 +181,7 @@ impl SamplingStrategy {
         }
 
         // Re-normalize after top-p (top-p zeroes entries without renormalizing).
-        let sum: f32 = buf.iter().sum();
-        if sum > 0.0 {
-            let inv_sum = 1.0 / sum;
-            for p in buf.iter_mut() {
-                *p *= inv_sum;
-            }
-        }
+        let _ = renormalize_in_place(&mut buf);
 
         let token = self.sample_from_distribution(&buf)?;
         *self.token_counts.entry(token).or_insert(0) += 1;
@@ -243,26 +238,11 @@ impl SamplingStrategy {
             return Ok(idx as u32);
         }
 
-        // Sample using cumulative distribution
+        // Sample using cumulative distribution.
         let random_value: f32 = self.rng.random();
-        let mut cumulative = 0.0;
-
-        for (i, &prob) in probabilities.iter().enumerate() {
-            cumulative += prob;
-            if random_value <= cumulative {
-                // Ensure token ID is within vocabulary bounds
-                debug_assert!(
-                    i < vocab_size,
-                    "Sampled token {} exceeds vocab size {}",
-                    i,
-                    vocab_size
-                );
-                return Ok(i as u32);
-            }
-        }
-
-        // Fallback to last valid token (clamped to vocab size)
-        Ok((vocab_size - 1) as u32)
+        let idx = sample_categorical(probabilities, random_value).expect("non-empty checked above");
+        debug_assert!(idx < vocab_size, "Sampled token {} exceeds vocab size {}", idx, vocab_size);
+        Ok(idx as u32)
     }
 
     /// Reset token counts for a new sequence.

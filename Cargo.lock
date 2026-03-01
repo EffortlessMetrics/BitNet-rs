@@ -982,6 +982,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-probability"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-prompt-templates"
 version = "0.2.1-dev"
 dependencies = [
@@ -1208,6 +1215,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-logits",
+ "bitnet-probability",
  "insta",
  "proptest",
  "rand 0.9.2",
