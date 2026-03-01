@@ -1356,6 +1356,7 @@ mod tests {
     // ── CUDA launch tests (GPU hardware required) ──────────────────
 
     #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_rmsnorm_linear_launch() {
         let inp = vec![1.0f32; 128];
@@ -1368,6 +1369,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_gelu_linear_launch() {
         let inp = vec![1.0f32; 128];
@@ -1380,6 +1382,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_softmax_mask_launch() {
         let sc = vec![1.0f32; 256];
@@ -1391,6 +1394,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_add_rmsnorm_launch() {
         let a = vec![1.0f32; 256];
@@ -1403,6 +1407,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_scale_add_launch() {
         let a = vec![1.0f32; 256];

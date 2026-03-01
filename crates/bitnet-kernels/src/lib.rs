@@ -7,7 +7,6 @@ pub mod benchmarks;
 pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
-#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
