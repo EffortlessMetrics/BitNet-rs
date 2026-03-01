@@ -34,6 +34,7 @@ pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_registry;
 pub mod opencl_rope_cache;
+pub mod opencl_stream_decode;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
