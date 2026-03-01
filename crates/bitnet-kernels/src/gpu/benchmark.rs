@@ -4,9 +4,11 @@
 //! GPU and CPU kernel performance across different matrix sizes and
 //! configurations.
 
+#[cfg(target_arch = "x86_64")]
+use crate::cpu::x86::Avx2Kernel;
 use crate::gpu::cuda::CudaKernel;
 use crate::gpu::validation::PerformanceResult;
-use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
+use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::Result;
 
 use std::time::Instant;
