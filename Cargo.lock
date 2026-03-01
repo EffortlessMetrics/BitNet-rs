@@ -587,6 +587,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-generation",
+ "bitnet-logits",
  "insta",
  "proptest",
  "serde",
