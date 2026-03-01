@@ -1539,6 +1539,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-wgpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "pollster",
+ "proptest",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "wgpu",
+]
+
+[[package]]
 name = "bitnet-wgpu-bench"
 version = "0.1.0"
 dependencies = [
