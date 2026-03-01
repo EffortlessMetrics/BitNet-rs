@@ -1052,6 +1052,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-qk256-dispatch"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "bitnet-quantization",
+ "bitnet-test-support",
+ "candle-core",
+]
+
+[[package]]
 name = "bitnet-quantization"
 version = "0.2.1-dev"
 dependencies = [
@@ -1656,6 +1666,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-qk256-dispatch",
  "bitnet-quantization",
  "bitnet-rope",
  "bitnet-test-support",
