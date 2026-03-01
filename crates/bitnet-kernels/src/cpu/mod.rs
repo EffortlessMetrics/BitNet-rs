@@ -7,6 +7,7 @@ pub mod fallback;
 pub mod fusion;
 pub mod pooling;
 pub mod quantized_matmul;
+pub mod reduction;
 pub mod rope;
 pub mod simd_math;
 pub mod softmax;
