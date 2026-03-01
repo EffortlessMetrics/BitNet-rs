@@ -1,12 +1,6 @@
 //! High-performance compute kernels for BitNet
 
 use bitnet_common::{QuantizationType, Result};
-#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
-use bitnet_cpu_detect::avx2_available;
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-use bitnet_cpu_detect::avx512_available;
-#[cfg(all(target_arch = "aarch64", feature = "neon"))]
-use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
 pub mod benchmarks;
@@ -18,7 +12,7 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi", feature = "opencl"))]
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
@@ -26,23 +20,18 @@ pub mod kernels;
 pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
-pub mod opencl_attention;
 pub mod opencl_buffer;
 pub mod opencl_cache;
 pub mod opencl_context;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
 pub mod opencl_embedding;
-pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
-pub mod opencl_memory;
 pub mod opencl_pipeline;
 pub mod opencl_profiling;
-pub mod opencl_quantized;
 pub mod opencl_registry;
-pub mod opencl_token_gen;
-pub mod opencl_transformer;
+pub mod opencl_speculative;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
@@ -135,7 +124,7 @@ impl KernelManager {
         // Add optimized CPU kernels in order of preference (best first)
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         {
-            if avx512_available() {
+            if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw") {
                 let insert_pos = if providers.is_empty() { 0 } else { providers.len() - 1 };
                 providers.insert(insert_pos, Box::new(cpu::Avx512Kernel));
             }
@@ -143,7 +132,7 @@ impl KernelManager {
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
-            if avx2_available() {
+            if is_x86_feature_detected!("avx2") {
                 let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
                 providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
             }
@@ -151,7 +140,7 @@ impl KernelManager {
 
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         {
-            if neon_available() {
+            if std::arch::is_aarch64_feature_detected!("neon") {
                 let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
                 providers.insert(insert_pos, Box::new(cpu::NeonKernel));
             }
@@ -226,14 +215,14 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
 
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     {
-        if avx512_available() {
+        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw") {
             providers.insert(0, Box::new(cpu::Avx512Kernel));
         }
     }
 
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        if avx2_available() {
+        if is_x86_feature_detected!("avx2") {
             let insert_pos = if providers.is_empty() { 0 } else { providers.len() - 1 };
             providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
         }
@@ -241,7 +230,7 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
 
     #[cfg(all(target_arch = "aarch64", feature = "neon"))]
     {
-        if neon_available() {
+        if std::arch::is_aarch64_feature_detected!("neon") {
             providers.insert(0, Box::new(cpu::NeonKernel));
         }
     }
