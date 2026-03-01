@@ -31,3 +31,6 @@ cuda = []
 
 [lints]
 workspace = true
+rust-version.workspace = true
+description = "GPU hardware abstraction layer for BitNet inference"
+license.workspace = true
