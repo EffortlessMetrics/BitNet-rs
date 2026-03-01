@@ -20,6 +20,7 @@ pub mod kernels;
 pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+pub mod opencl_simd_bridge;
 pub mod opencl_buffer;
 pub mod opencl_cache;
 pub mod opencl_context;
