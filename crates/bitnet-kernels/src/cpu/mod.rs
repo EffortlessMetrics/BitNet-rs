@@ -21,6 +21,7 @@ pub mod rope;
 pub mod scatter_gather;
 pub mod simd_math;
 pub mod simd_matmul;
+pub mod transpose;
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
