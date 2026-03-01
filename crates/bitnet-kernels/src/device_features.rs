@@ -132,14 +132,12 @@ pub fn oneapi_available_runtime() -> bool {
         .map(|v| v == "1" || v.to_lowercase() == "true")
         .unwrap_or(false);
 
-    if !strict_mode {
-        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-            if fake.eq_ignore_ascii_case("oneapi") {
-                return true;
-            }
-            if fake.eq_ignore_ascii_case("none") {
-                return false;
-            }
+    if !strict_mode && let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+        if fake.eq_ignore_ascii_case("oneapi") {
+            return true;
+        }
+        if fake.eq_ignore_ascii_case("none") {
+            return false;
         }
     }
 
@@ -257,20 +255,20 @@ pub struct IntelGpuInfo {
 /// 3. `clinfo` command (if OpenCL runtime installed)
 pub fn probe_intel_gpu() -> IntelGpuInfo {
     // Check fake GPU environment first (unless strict mode)
-    if std::env::var("BITNET_STRICT_MODE").unwrap_or_default() != "1" {
-        if let Ok(val) = std::env::var("BITNET_GPU_FAKE") {
-            if val.contains("opencl") || val.contains("intel") {
-                return IntelGpuInfo {
-                    detected: true,
-                    device_name: "Intel Arc A770 (simulated)".to_string(),
-                    driver_version: "simulated".to_string(),
-                    opencl_version: "OpenCL 3.0".to_string(),
-                    memory_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
-                    compute_units: 32,
-                    max_work_group_size: 1024,
-                    level_zero_available: true,
-                };
-            }
+    if std::env::var("BITNET_STRICT_MODE").unwrap_or_default() != "1"
+        && let Ok(val) = std::env::var("BITNET_GPU_FAKE")
+    {
+        if val.contains("opencl") || val.contains("intel") {
+            return IntelGpuInfo {
+                detected: true,
+                device_name: "Intel Arc A770 (simulated)".to_string(),
+                driver_version: "simulated".to_string(),
+                opencl_version: "OpenCL 3.0".to_string(),
+                memory_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
+                compute_units: 32,
+                max_work_group_size: 1024,
+                level_zero_available: true,
+            };
         }
     }
 
@@ -281,35 +279,32 @@ fn probe_intel_gpu_real() -> IntelGpuInfo {
     let mut info = IntelGpuInfo::default();
 
     // Try sycl-ls first (Intel oneAPI)
-    if let Ok(output) = std::process::Command::new("sycl-ls").output() {
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            if stdout.contains("Intel") && (stdout.contains("Arc") || stdout.contains("gpu")) {
-                info.detected = true;
-                info.device_name = "Intel GPU (via sycl-ls)".to_string();
-            }
+    if let Ok(output) = std::process::Command::new("sycl-ls").output()
+        && output.status.success()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if stdout.contains("Intel") && (stdout.contains("Arc") || stdout.contains("gpu")) {
+            info.detected = true;
+            info.device_name = "Intel GPU (via sycl-ls)".to_string();
         }
     }
 
     // Fallback to clinfo
-    if !info.detected {
-        if let Ok(output) = std::process::Command::new("clinfo").arg("--list").output() {
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                if stdout.contains("Intel") {
-                    info.detected = true;
-                    for line in stdout.lines() {
-                        if line.contains("Arc")
-                            || (line.contains("Intel") && line.contains("Graphics"))
-                        {
-                            info.device_name = line.trim().to_string();
-                            break;
-                        }
-                    }
-                    if info.device_name.is_empty() {
-                        info.device_name = "Intel GPU (via clinfo)".to_string();
-                    }
+    if !info.detected
+        && let Ok(output) = std::process::Command::new("clinfo").arg("--list").output()
+        && output.status.success()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if stdout.contains("Intel") {
+            info.detected = true;
+            for line in stdout.lines() {
+                if line.contains("Arc") || (line.contains("Intel") && line.contains("Graphics")) {
+                    info.device_name = line.trim().to_string();
+                    break;
                 }
+            }
+            if info.device_name.is_empty() {
+                info.device_name = "Intel GPU (via clinfo)".to_string();
             }
         }
     }
