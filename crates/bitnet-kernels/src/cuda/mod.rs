@@ -100,11 +100,11 @@ pub use fusion::{
 pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
-pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 pub use quantize::{
     QuantMethod, QuantizeConfig, calibrate_scales, dequantize_i2s_cpu, dequantize_ternary_cpu,
     quantize_i2s_cpu, quantize_ternary_cpu,
 };
+pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
     transpose_nd_cpu_fallback,

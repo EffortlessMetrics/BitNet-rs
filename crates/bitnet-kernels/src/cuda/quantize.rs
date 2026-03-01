@@ -65,10 +65,9 @@ impl Default for QuantizeConfig {
 /// Returns an error if `config.block_size` is zero.
 pub fn calibrate_scales(input: &[f32], config: &QuantizeConfig) -> Result<Vec<f32>> {
     if config.block_size == 0 {
-        return Err(KernelError::InvalidArguments {
-            reason: "block_size must be > 0".into(),
-        }
-        .into());
+        return Err(
+            KernelError::InvalidArguments { reason: "block_size must be > 0".into() }.into()
+        );
     }
     let num_blocks = input.len().div_ceil(config.block_size);
     let mut scales = Vec::with_capacity(num_blocks);
@@ -129,10 +128,9 @@ fn block_scale(block: &[f32], method: QuantMethod) -> f32 {
 /// Returns an error if `config.block_size` is zero.
 pub fn quantize_ternary_cpu(input: &[f32], config: &QuantizeConfig) -> Result<(Vec<i8>, f32)> {
     if config.block_size == 0 {
-        return Err(KernelError::InvalidArguments {
-            reason: "block_size must be > 0".into(),
-        }
-        .into());
+        return Err(
+            KernelError::InvalidArguments { reason: "block_size must be > 0".into() }.into()
+        );
     }
     if input.is_empty() {
         return Ok((Vec::new(), 0.0));
@@ -199,10 +197,9 @@ fn decode_i2s(bits: u8) -> i8 {
 /// Returns an error if `block_size` is zero.
 pub fn quantize_i2s_cpu(input: &[f32], block_size: usize) -> Result<(Vec<u8>, Vec<f32>)> {
     if block_size == 0 {
-        return Err(KernelError::InvalidArguments {
-            reason: "block_size must be > 0".into(),
-        }
-        .into());
+        return Err(
+            KernelError::InvalidArguments { reason: "block_size must be > 0".into() }.into()
+        );
     }
     if input.is_empty() {
         return Ok((Vec::new(), Vec::new()));
@@ -255,17 +252,18 @@ pub fn dequantize_i2s_cpu(
     output_len: usize,
 ) -> Result<Vec<f32>> {
     if block_size == 0 {
-        return Err(KernelError::InvalidArguments {
-            reason: "block_size must be > 0".into(),
-        }
-        .into());
+        return Err(
+            KernelError::InvalidArguments { reason: "block_size must be > 0".into() }.into()
+        );
     }
     let required_bytes = output_len.div_ceil(4);
     if packed.len() < required_bytes {
         return Err(KernelError::InvalidArguments {
             reason: format!(
                 "packed buffer too small: need {} bytes for {} elements, got {}",
-                required_bytes, output_len, packed.len()
+                required_bytes,
+                output_len,
+                packed.len()
             ),
         }
         .into());
@@ -273,11 +271,7 @@ pub fn dequantize_i2s_cpu(
     let num_blocks = output_len.div_ceil(block_size);
     if scales.len() < num_blocks {
         return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "scales too short: need {} blocks, got {}",
-                num_blocks,
-                scales.len()
-            ),
+            reason: format!("scales too short: need {} blocks, got {}", num_blocks, scales.len()),
         }
         .into());
     }
@@ -412,20 +406,14 @@ mod tests {
 
     fn assert_all_ternary(vals: &[i8]) {
         for (i, &v) in vals.iter().enumerate() {
-            assert!(
-                v == -1 || v == 0 || v == 1,
-                "non-ternary value {v} at index {i}"
-            );
+            assert!(v == -1 || v == 0 || v == 1, "non-ternary value {v} at index {i}");
         }
     }
 
     fn assert_close(a: &[f32], b: &[f32], tol: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch");
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() <= tol,
-                "mismatch at {i}: {x} vs {y} (tol {tol})"
-            );
+            assert!((x - y).abs() <= tol, "mismatch at {i}: {x} vs {y} (tol {tol})");
         }
     }
 
