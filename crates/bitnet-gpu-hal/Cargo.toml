@@ -8,16 +8,17 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "GPU hardware abstraction layer for BitNet inference"
+description = "GPU hardware abstraction layer with multi-model serving for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 log.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
-toml = { workspace = true }
 
 [dev-dependencies]
+insta = { workspace = true }
 proptest.workspace = true
 serde = { workspace = true }
 serde_json.workspace = true

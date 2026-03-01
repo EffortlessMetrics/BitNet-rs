@@ -706,12 +706,13 @@ dependencies = [
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-common",
+ "insta",
  "log",
  "proptest",
  "serde",
  "serde_json",
  "tempfile",
- "toml",
 ]
 
 [[package]]
