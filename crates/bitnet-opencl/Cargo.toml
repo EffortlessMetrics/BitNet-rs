@@ -14,6 +14,7 @@ rust-version.workspace = true
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 log.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 opencl3 = { version = "0.9", optional = true }
 
