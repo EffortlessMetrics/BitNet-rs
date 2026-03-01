@@ -90,6 +90,7 @@ members = [
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download-core", # SRP: core download validation and atomic file helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
+  "crates/bitnet-download-core", # SRP: pure download utility helpers
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-nvidia",        # SRP: NVIDIA-specific tuning heuristics
@@ -171,6 +172,7 @@ default-members = [
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download",      # SRP: download mechanics primitives
+  "crates/bitnet-download-core", # SRP: pure download utility helpers
 ]
 
 [package]

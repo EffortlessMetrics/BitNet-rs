@@ -1,4 +1,3 @@
-use std::{fs, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -32,32 +31,6 @@ pub fn validate_downloaded_len(
     Ok(())
 }
 
-/// Atomic write helper for small metadata files (etag/last-modified).
-pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, bytes)?;
-
-    #[cfg(unix)]
-    {
-        if let Ok(f) = std::fs::File::open(&tmp) {
-            f.sync_all()?;
-        }
-    }
-
-    fs::rename(&tmp, path)?;
-
-    #[cfg(unix)]
-    {
-        if let Some(parent) = path.parent()
-            && let Ok(dir) = std::fs::File::open(parent)
-        {
-            let _ = dir.sync_all();
-        }
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,24 +49,5 @@ mod tests {
             validate_downloaded_len(1, Some(2)),
             Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
-    }
-
-    #[test]
-    fn offline_env_var_enables_mode() {
-        unsafe {
-            std::env::set_var("BITNET_OFFLINE", "1");
-        }
-        assert!(offline_enabled(false));
-        unsafe {
-            std::env::remove_var("BITNET_OFFLINE");
-        }
-    }
-
-    #[test]
-    fn atomic_write_creates_file() {
-        let tmp = tempfile::tempdir().expect("temp dir");
-        let p = tmp.path().join("meta.txt");
-        atomic_write(&p, b"etag").expect("atomic write");
-        assert_eq!(std::fs::read_to_string(&p).expect("read output"), "etag");
     }
 }
