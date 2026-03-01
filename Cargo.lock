@@ -1597,6 +1597,7 @@ dependencies = [
  "bitnet-test-fixtures-core",
  "bitnet-test-support",
  "bitnet-tests",
+ "bitnet-tokenizers-core",
  "dirs",
  "futures-util",
  "insta",
@@ -1614,6 +1615,14 @@ dependencies = [
  "tokenizers",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "bitnet-tokenizers-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "serde",
 ]
 
 [[package]]

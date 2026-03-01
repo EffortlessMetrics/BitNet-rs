@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-tokenizers-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core tokenizer contracts and fallback tokenizer primitives"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true
