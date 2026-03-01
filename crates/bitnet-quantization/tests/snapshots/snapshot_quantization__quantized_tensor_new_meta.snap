@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_quantization.rs
-expression: "format!(\"shape={:?} qtype={} block_size={} numel={} compression_ratio={:.1}\",\nqt.shape, qt.qtype, qt.block_size, qt.numel(), qt.compression_ratio(),)"
----
-shape=[32] qtype=I2_S block_size=32 numel=32 compression_ratio=10.7

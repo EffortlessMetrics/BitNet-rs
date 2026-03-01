@@ -1,9 +1,0 @@
----
-source: crates/bitnet-models/tests/snapshot_model_config.rs
-expression: "LoadConfig::default()"
----
-LoadConfig {
-    use_mmap: true,
-    validate_checksums: true,
-    progress_callback: false,
-}

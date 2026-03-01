@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_quantization.rs
-expression: "format!(\"block_size={} bytes_per_block={} data_bytes={} scale_bytes={}\",\nlayout.block_size, layout.bytes_per_block, layout.data_bytes_per_block,\nlayout.scale_bytes_per_block,)"
----
-block_size=256 bytes_per_block=66 data_bytes=64 scale_bytes=2

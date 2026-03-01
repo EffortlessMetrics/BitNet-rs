@@ -1,5 +1,0 @@
----
-source: crates/bitnet-models/tests/snapshot_model_config.rs
-expression: "format!(\"SafeTensors={} Gguf={}\", ModelFormat::SafeTensors.extension(),\nModelFormat::Gguf.extension(),)"
----
-SafeTensors=safetensors Gguf=gguf

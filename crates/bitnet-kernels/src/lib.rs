@@ -9,14 +9,12 @@ pub mod cpu;
 pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
-pub mod embedding;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
-pub mod matmul;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod reduction;

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-tokenizers/tests/snapshot_tokenizer_config.rs
-expression: "format!(\"new_model_type={} default_model_type={} equal={}\", new.model_type,\ndefault.model_type, new.model_type == default.model_type && new.vocab_size ==\ndefault.vocab_size && new.add_bos == default.add_bos && new.add_eos ==\ndefault.add_eos,)"
----
-new_model_type= default_model_type= equal=true

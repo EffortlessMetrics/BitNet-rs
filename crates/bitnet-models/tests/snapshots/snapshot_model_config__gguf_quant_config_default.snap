@@ -1,9 +1,0 @@
----
-source: crates/bitnet-models/tests/snapshot_model_config.rs
-expression: "GgufQuantizationConfig::default()"
----
-GgufQuantizationConfig {
-    bit_width: 2,
-    block_size: 64,
-    format: "I2_S",
-}

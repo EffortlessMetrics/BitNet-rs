@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_quantization.rs
-expression: "QuantizationType::I2S.to_string()"
----
-I2_S

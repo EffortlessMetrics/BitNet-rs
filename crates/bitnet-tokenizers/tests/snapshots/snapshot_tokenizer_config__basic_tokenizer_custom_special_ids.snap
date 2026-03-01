@@ -1,5 +1,0 @@
----
-source: crates/bitnet-tokenizers/tests/snapshot_tokenizer_config.rs
-expression: "format!(\"bos={:?} eos={:?} pad={:?} vocab_size={}\", tok.bos_token_id(),\ntok.eos_token_id(), tok.pad_token_id(), tok.vocab_size(),)"
----
-bos=Some(128000) eos=Some(128001) pad=Some(128002) vocab_size=128256
