@@ -414,8 +414,8 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
         hip_runtime: bitnet_device_probe::probe_gpu().rocm_available,
         oneapi_compiled: cfg!(feature = "oneapi"),
         oneapi_runtime: oneapi_available_runtime(),
-        opencl_compiled: cfg!(feature = "opencl"),
-        opencl_runtime: opencl_available_runtime(),
+        vulkan_compiled: cfg!(feature = "vulkan"),
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: detect_simd_level(),
     }

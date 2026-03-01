@@ -25,6 +25,7 @@ pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
 pub mod opencl_pipeline;
 pub mod opencl_work_size;
+pub mod quantized_gpu;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
