@@ -179,6 +179,33 @@ impl OpenClKernel {
     pub fn platform_name(&self) -> &str {
         &self.platform_name
     }
+
+    fn compile_program(
+        context: &Context,
+        source: &str,
+        name: &str,
+    ) -> Option<Program> {
+        match Program::create_and_build_from_source(context, source, "") {
+            Ok(program) => {
+                info!("Compiled OpenCL program: {}", name);
+                Some(program)
+            }
+            Err(e) => {
+                warn!("Failed to compile OpenCL program '{}': {}", name, e);
+                None
+            }
+        }
+    }
+
+    /// Get the device name.
+    pub fn device_name(&self) -> &str {
+        &self.device_name
+    }
+
+    /// Get the platform name.
+    pub fn platform_name(&self) -> &str {
+        &self.platform_name
+    }
 }
 
 impl KernelProvider for OpenClKernel {
