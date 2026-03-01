@@ -355,3 +355,34 @@ mod tests {
         }
     }
 }
+//! WebGPU / WGSL kernel sources for `BitNet` browser inference.
+//!
+//! This crate embeds WGSL compute shaders required for running LLM inference
+//! on WebGPU-capable devices. No runtime GPU dependency is introduced —
+//! the shaders are compiled into the binary as static strings and are
+//! validated at test time.
+//!
+//! # Kernels provided
+//!
+//! | Kernel | Entry point(s) | Description |
+//! |--------|---------------|-------------|
+//! | `matmul` | `main` | Tiled 16×16 matrix multiply |
+//! | `softmax` | `main` | Numerically-stable row softmax |
+//! | `rmsnorm` | `main` | RMS layer normalization |
+//! | `rope` | `main` | Rotary position embeddings |
+//! | `attention` | `main` | Fused scaled dot-product attention |
+//! | `elementwise` | `add`, `mul`, `silu`, `gelu` | Pointwise ops |
+
+
+pub use kernels::{
+    // Raw WGSL constants
+    ATTENTION_WGSL,
+    ELEMENTWISE_WGSL,
+    MATMUL_WGSL,
+    RMSNORM_WGSL,
+    ROPE_WGSL,
+    SOFTMAX_WGSL,
+    WgslKernelSource,
+    kernel_source,
+    validate_wgsl_structure,
+};
