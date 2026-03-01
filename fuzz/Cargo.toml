@@ -539,3 +539,39 @@ name = "fuzz_activation_elementwise"
 path = "fuzz_targets/fuzz_activation_elementwise.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_attention_mask"
+path = "fuzz_targets/fuzz_attention_mask.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_pipeline_config"
+path = "fuzz_targets/fuzz_pipeline_config.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_eviction"
+path = "fuzz_targets/fuzz_kv_cache_eviction.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_token_sampling"
+path = "fuzz_targets/fuzz_token_sampling.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_embedding_lookup"
+path = "fuzz_targets/fuzz_embedding_lookup.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_gguf_header"
+path = "fuzz_targets/fuzz_gguf_header.rs"
+test = false
+doc = false

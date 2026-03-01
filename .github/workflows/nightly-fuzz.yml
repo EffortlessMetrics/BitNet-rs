@@ -61,6 +61,12 @@ jobs:
           - batch_norm_params
           - prefix_cache_ops
           - broadcast_shape_fuzz
+          - fuzz_attention_mask
+          - fuzz_pipeline_config
+          - fuzz_kv_cache_eviction
+          - fuzz_token_sampling
+          - fuzz_embedding_lookup
+          - fuzz_gguf_header
 
     steps:
       - name: Checkout
