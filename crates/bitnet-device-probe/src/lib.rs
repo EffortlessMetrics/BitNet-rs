@@ -13,6 +13,14 @@ pub use opencl::{
     ProbeResult, is_intel_arc_available, list_opencl_devices, probe_opencl,
 };
 
+#[cfg(feature = "wgpu-probe")]
+pub mod wgpu_probe;
+#[cfg(feature = "wgpu-probe")]
+pub use wgpu_probe::{
+    WgpuBackend, WgpuDeviceInfo, WgpuDeviceType, WgpuLimits, is_nvidia, is_vulkan_backend,
+    probe_best_wgpu_device, probe_wgpu_devices, supports_f16,
+};
+
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
 /// CPU capabilities detected at runtime.
