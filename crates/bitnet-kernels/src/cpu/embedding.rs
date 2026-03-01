@@ -567,6 +567,128 @@ pub fn unpack_embedding_lookup(packed: &PackedEmbeddingTable, indices: &[u32]) -
     Ok(output)
 }
 
+// ── Convenience wrappers (usize indices) ────────────────────────────
+
+/// Embedding lookup with explicit padding: entries matching `config.padding_idx`
+/// are zeroed out in the result.
+///
+/// `table` is row-major `[vocab_size, embedding_dim]`.
+/// Returns `[indices.len(), embedding_dim]`.
+pub fn embedding_lookup_with_padding(
+    table: &[f32],
+    indices: &[usize],
+    config: &EmbeddingConfig,
+) -> Result<Vec<f32>> {
+    let u32_indices: Vec<u32> = indices
+        .iter()
+        .map(|&i| u32::try_from(i).map_err(|_| index_out_of_bounds(u32::MAX, config.vocab_size)))
+        .collect::<Result<_>>()?;
+    scalar_lookup(table, &u32_indices, config.embedding_dim, config.padding_idx)
+}
+
+/// EmbeddingBag with **sum** reduction.
+///
+/// `offsets` defines bag boundaries: bag `b` spans
+/// `indices[offsets[b]..offsets[b+1]]` (last bag runs to end of `indices`).
+/// Returns `[offsets.len(), embedding_dim]`.
+pub fn embedding_bag_sum(
+    table: &[f32],
+    indices: &[usize],
+    offsets: &[usize],
+    config: &EmbeddingConfig,
+) -> Result<Vec<f32>> {
+    embedding_bag_reduce(table, indices, offsets, config, BagReduce::Sum)
+}
+
+/// EmbeddingBag with **mean** reduction.
+///
+/// Same semantics as [`embedding_bag_sum`] but each bag is divided by its
+/// element count. Empty bags produce zero vectors.
+pub fn embedding_bag_mean(
+    table: &[f32],
+    indices: &[usize],
+    offsets: &[usize],
+    config: &EmbeddingConfig,
+) -> Result<Vec<f32>> {
+    embedding_bag_reduce(table, indices, offsets, config, BagReduce::Mean)
+}
+
+/// Generate a sinusoidal positional-encoding matrix.
+///
+/// Returns `[seq_len, embedding_dim]` using the standard formulation:
+/// - even columns: `sin(pos / 10000^(2i/d))`
+/// - odd columns:  `cos(pos / 10000^(2i/d))`
+pub fn positional_embedding(seq_len: usize, embedding_dim: usize) -> Vec<f32> {
+    let mut output = vec![0.0f32; seq_len * embedding_dim];
+    for pos in 0..seq_len {
+        let start = pos * embedding_dim;
+        compute_sinusoidal_pe(pos, embedding_dim, &mut output[start..start + embedding_dim]);
+    }
+    output
+}
+
+// ── Internal bag helpers ────────────────────────────────────────────
+
+enum BagReduce {
+    Sum,
+    Mean,
+}
+
+fn embedding_bag_reduce(
+    table: &[f32],
+    indices: &[usize],
+    offsets: &[usize],
+    config: &EmbeddingConfig,
+    mode: BagReduce,
+) -> Result<Vec<f32>> {
+    let dim = config.embedding_dim;
+    if offsets.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let n_bags = offsets.len();
+    let mut output = vec![0.0f32; n_bags * dim];
+
+    for bag in 0..n_bags {
+        let start = offsets[bag];
+        let end = if bag + 1 < n_bags { offsets[bag + 1] } else { indices.len() };
+        if start > end || start > indices.len() {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!("invalid offset {start} for bag {bag}"),
+            }));
+        }
+        let bag_indices = &indices[start..end];
+        let bag_len = bag_indices.len();
+        let dst_start = bag * dim;
+
+        for &idx in bag_indices {
+            if idx >= config.vocab_size {
+                return Err(index_out_of_bounds(
+                    u32::try_from(idx).unwrap_or(u32::MAX),
+                    config.vocab_size,
+                ));
+            }
+            if config.padding_idx.is_some_and(|p| idx == p as usize) {
+                continue;
+            }
+            let src = idx * dim;
+            for (o, &t) in output[dst_start..dst_start + dim].iter_mut().zip(&table[src..src + dim])
+            {
+                *o += t;
+            }
+        }
+
+        if matches!(mode, BagReduce::Mean) && bag_len > 0 {
+            let inv = 1.0 / bag_len as f32;
+            for v in &mut output[dst_start..dst_start + dim] {
+                *v *= inv;
+            }
+        }
+    }
+
+    Ok(output)
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1134,5 +1256,271 @@ mod tests {
         let result = embedding_with_learned_position(&table, &[0], &cfg, &pos, 0).unwrap();
         let norm: f32 = result.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 2.0).abs() < 1e-4);
+    }
+
+    // ── embedding_lookup_with_padding tests ─────────────────────
+
+    #[test]
+    fn test_lookup_with_padding_basic() {
+        let table = vec![1.0, 2.0, 3.0, 4.0]; // vocab=2, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: None };
+        let out = embedding_lookup_with_padding(&table, &[0, 1], &cfg).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn test_lookup_with_padding_zeros_pad() {
+        let table = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: Some(0) };
+        let out = embedding_lookup_with_padding(&table, &[0, 1], &cfg).unwrap();
+        assert_eq!(out, vec![0.0, 0.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn test_lookup_with_padding_all_pad() {
+        let table = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: Some(1) };
+        let out = embedding_lookup_with_padding(&table, &[1, 1], &cfg).unwrap();
+        assert_eq!(out, vec![0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_lookup_with_padding_empty_indices() {
+        let table = vec![1.0, 2.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        let out = embedding_lookup_with_padding(&table, &[], &cfg).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn test_lookup_with_padding_oob() {
+        let table = vec![1.0, 2.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        assert!(embedding_lookup_with_padding(&table, &[5], &cfg).is_err());
+    }
+
+    #[test]
+    fn test_lookup_with_padding_single_element() {
+        let table = vec![7.0, 8.0, 9.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 3, padding_idx: None };
+        let out = embedding_lookup_with_padding(&table, &[0], &cfg).unwrap();
+        assert_eq!(out, vec![7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn test_lookup_with_padding_duplicate_indices() {
+        let table = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: None };
+        let out = embedding_lookup_with_padding(&table, &[0, 0, 1], &cfg).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0, 3.0, 4.0]);
+    }
+
+    // ── embedding_bag_sum tests ─────────────────────────────────
+
+    #[test]
+    fn test_bag_sum_single_bag() {
+        let table = vec![1.0, 2.0, 3.0, 4.0]; // vocab=2, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0, 1], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![4.0, 6.0]);
+    }
+
+    #[test]
+    fn test_bag_sum_two_bags() {
+        let table = vec![1.0, 10.0, 100.0]; // vocab=3, dim=1
+        let cfg = EmbeddingConfig { vocab_size: 3, embedding_dim: 1, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0, 1, 2], &[0, 2], &cfg).unwrap();
+        assert_eq!(out, vec![11.0, 100.0]);
+    }
+
+    #[test]
+    fn test_bag_sum_empty_offsets() {
+        let table = vec![1.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0], &[], &cfg).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn test_bag_sum_oob_index() {
+        let table = vec![1.0, 2.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        assert!(embedding_bag_sum(&table, &[5], &[0], &cfg).is_err());
+    }
+
+    #[test]
+    fn test_bag_sum_with_padding() {
+        let table = vec![1.0, 2.0, 3.0, 4.0]; // vocab=2, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: Some(0) };
+        // Bag contains [0(pad), 1] -> only row 1 contributes
+        let out = embedding_bag_sum(&table, &[0, 1], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn test_bag_sum_single_element_bags() {
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // vocab=3, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 3, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0, 1, 2], &[0, 1, 2], &cfg).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_bag_sum_empty_bag_at_end() {
+        // Last bag has no indices (offset == indices.len()).
+        let table = vec![1.0, 2.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0], &[0, 1], &cfg).unwrap();
+        // Bag 0 = [0], Bag 1 = [] (empty)
+        assert_eq!(out, vec![1.0, 2.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_bag_sum_all_same_index() {
+        let table = vec![2.0, 3.0]; // vocab=1, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_sum(&table, &[0, 0, 0], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![6.0, 9.0]);
+    }
+
+    // ── embedding_bag_mean tests ────────────────────────────────
+
+    #[test]
+    fn test_bag_mean_single_bag() {
+        let table = vec![2.0, 4.0, 6.0, 8.0]; // vocab=2, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_mean(&table, &[0, 1], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![4.0, 6.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_two_bags() {
+        let table = vec![1.0, 3.0, 5.0]; // vocab=3, dim=1
+        let cfg = EmbeddingConfig { vocab_size: 3, embedding_dim: 1, padding_idx: None };
+        let out = embedding_bag_mean(&table, &[0, 1, 2], &[0, 2], &cfg).unwrap();
+        assert_eq!(out, vec![2.0, 5.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_single_element() {
+        let table = vec![10.0, 20.0]; // vocab=1, dim=2
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 2, padding_idx: None };
+        let out = embedding_bag_mean(&table, &[0], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![10.0, 20.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_empty_bag_at_end() {
+        let table = vec![4.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
+        let out = embedding_bag_mean(&table, &[0], &[0, 1], &cfg).unwrap();
+        // Bag 0 = mean([4.0]) = 4.0, Bag 1 = empty → 0.0
+        assert_eq!(out, vec![4.0, 0.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_uniform_values() {
+        let table = vec![5.0, 5.0, 5.0]; // vocab=3, dim=1
+        let cfg = EmbeddingConfig { vocab_size: 3, embedding_dim: 1, padding_idx: None };
+        let out = embedding_bag_mean(&table, &[0, 1, 2], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![5.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_with_padding() {
+        let table = vec![10.0, 20.0]; // vocab=2, dim=1
+        let cfg = EmbeddingConfig { vocab_size: 2, embedding_dim: 1, padding_idx: Some(0) };
+        // Bag has [0(pad), 1] — sum = 20, count = 2 → mean = 10
+        let out = embedding_bag_mean(&table, &[0, 1], &[0], &cfg).unwrap();
+        assert_eq!(out, vec![10.0]);
+    }
+
+    #[test]
+    fn test_bag_mean_oob() {
+        let table = vec![1.0];
+        let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
+        assert!(embedding_bag_mean(&table, &[9], &[0], &cfg).is_err());
+    }
+
+    // ── positional_embedding tests ──────────────────────────────
+
+    #[test]
+    fn test_positional_embedding_shape() {
+        let pe = positional_embedding(5, 8);
+        assert_eq!(pe.len(), 40);
+    }
+
+    #[test]
+    fn test_positional_embedding_position_zero() {
+        let pe = positional_embedding(1, 4);
+        // pos=0: sin(0)=0, cos(0)=1 for the first pair
+        assert!((pe[0] - 0.0).abs() < 1e-6); // sin(0)
+        assert!((pe[1] - 1.0).abs() < 1e-6); // cos(0)
+    }
+
+    #[test]
+    fn test_positional_embedding_distinct_positions() {
+        let pe = positional_embedding(3, 4);
+        let row0 = &pe[0..4];
+        let row1 = &pe[4..8];
+        let row2 = &pe[8..12];
+        // Each position should differ
+        assert_ne!(row0, row1);
+        assert_ne!(row1, row2);
+        assert_ne!(row0, row2);
+    }
+
+    #[test]
+    fn test_positional_embedding_zero_seq_len() {
+        let pe = positional_embedding(0, 8);
+        assert!(pe.is_empty());
+    }
+
+    #[test]
+    fn test_positional_embedding_zero_dim() {
+        let pe = positional_embedding(5, 0);
+        assert!(pe.is_empty());
+    }
+
+    #[test]
+    fn test_positional_embedding_bounded_values() {
+        let pe = positional_embedding(100, 64);
+        for &v in &pe {
+            assert!(v >= -1.0 && v <= 1.0, "PE value {v} out of [-1,1]");
+        }
+    }
+
+    #[test]
+    fn test_positional_embedding_sin_cos_pattern() {
+        let pe = positional_embedding(1, 6);
+        // Even indices are sin, odd are cos; for pos=0 and first pair:
+        // sin(0)=0, cos(0)=1
+        assert!((pe[0]).abs() < 1e-6);
+        assert!((pe[1] - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_positional_embedding_deterministic() {
+        let pe1 = positional_embedding(10, 16);
+        let pe2 = positional_embedding(10, 16);
+        assert_eq!(pe1, pe2);
+    }
+
+    #[test]
+    fn test_positional_embedding_dim_1() {
+        let pe = positional_embedding(3, 1);
+        assert_eq!(pe.len(), 3);
+        // dim=1 → only sin column
+        assert!((pe[0] - 0.0f32.sin()).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_positional_embedding_large_position() {
+        let pe = positional_embedding(1000, 4);
+        assert_eq!(pe.len(), 4000);
+        // Values should still be bounded
+        for &v in &pe {
+            assert!(v >= -1.0 && v <= 1.0);
+        }
     }
 }

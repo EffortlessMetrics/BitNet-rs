@@ -46,6 +46,11 @@ pub use kv_cache::{
     kv_cache_memory_usage, kv_cache_slice, paged_kv_cache_alloc,
 };
 
+// Re-export new embedding operations.
+pub use embedding::{
+    embedding_bag_mean, embedding_bag_sum, embedding_lookup_with_padding, positional_embedding,
+};
+
 #[cfg(target_arch = "x86_64")]
 pub use x86::*;
 
