@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: "format!(\"add_bos={}\", cfg.add_bos)"
+---
+add_bos=true

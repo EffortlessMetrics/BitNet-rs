@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: config
+---
+QuantizationConfig {
+    quantization_type: I2S,
+    block_size: 64,
+    precision: 0.0001,
+}

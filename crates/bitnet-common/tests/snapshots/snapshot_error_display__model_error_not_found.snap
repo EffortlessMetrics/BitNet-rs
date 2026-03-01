@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: err.to_string()
+---
+Model not found: /models/missing.gguf

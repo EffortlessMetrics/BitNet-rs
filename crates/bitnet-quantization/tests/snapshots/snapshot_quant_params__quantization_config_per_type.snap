@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quant_params.rs
+expression: configs
+---
+[
+    "I2_S: block_size=64, precision=0.0001",
+    "TL1: block_size=64, precision=0.0001",
+    "TL2: block_size=64, precision=0.0001",
+]
