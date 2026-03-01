@@ -12,13 +12,13 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-pub mod opencl_embedding;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
 pub mod reduction;
 #[cfg(feature = "rocm")]

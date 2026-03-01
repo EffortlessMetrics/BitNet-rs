@@ -185,12 +185,7 @@ impl TiedEmbedding {
     }
 
     /// Project hidden states to logits (reverse direction, lm_head).
-    pub fn project(
-        &self,
-        hidden: &[f32],
-        output: &mut [f32],
-        seq_len: usize,
-    ) -> Result<()> {
+    pub fn project(&self, hidden: &[f32], output: &mut [f32], seq_len: usize) -> Result<()> {
         output_projection_ref(
             hidden,
             &self.weight,
@@ -477,26 +472,17 @@ mod tests {
 
     #[test]
     fn opencl_source_has_embedding_lookup_kernel() {
-        assert!(
-            EMBEDDING_CL.contains("embedding_lookup"),
-            "missing embedding_lookup kernel"
-        );
+        assert!(EMBEDDING_CL.contains("embedding_lookup"), "missing embedding_lookup kernel");
     }
 
     #[test]
     fn opencl_source_has_output_projection_kernel() {
-        assert!(
-            EMBEDDING_CL.contains("output_projection"),
-            "missing output_projection kernel"
-        );
+        assert!(EMBEDDING_CL.contains("output_projection"), "missing output_projection kernel");
     }
 
     #[test]
     fn opencl_source_has_embedding_rms_norm_kernel() {
-        assert!(
-            EMBEDDING_CL.contains("embedding_rms_norm"),
-            "missing embedding_rms_norm kernel"
-        );
+        assert!(EMBEDDING_CL.contains("embedding_rms_norm"), "missing embedding_rms_norm kernel");
     }
 
     #[test]
@@ -663,8 +649,7 @@ mod tests {
     fn lookup_ref_all_oov_zeroed() {
         let weight = vec![99.0; 12]; // vocab=3, dim=4
         let mut out = vec![1.0; 12];
-        embedding_lookup_ref(&[100, u32::MAX, 3], &weight, &mut out, 3, 4, None)
-            .unwrap();
+        embedding_lookup_ref(&[100, u32::MAX, 3], &weight, &mut out, 3, 4, None).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
 
@@ -770,18 +755,14 @@ mod tests {
     fn projection_ref_rejects_short_hidden() {
         let weight = vec![1.0; 4];
         let mut out = vec![0.0; 2];
-        assert!(
-            output_projection_ref(&[1.0], &weight, &mut out, 1, 2, 2).is_err()
-        );
+        assert!(output_projection_ref(&[1.0], &weight, &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
     fn projection_ref_rejects_short_weight() {
         let hidden = vec![1.0; 2];
         let mut out = vec![0.0; 2];
-        assert!(
-            output_projection_ref(&hidden, &[1.0], &mut out, 1, 2, 2).is_err()
-        );
+        assert!(output_projection_ref(&hidden, &[1.0], &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
@@ -789,9 +770,7 @@ mod tests {
         let hidden = vec![1.0; 2];
         let weight = vec![1.0; 4];
         let mut out = vec![0.0; 1]; // too small
-        assert!(
-            output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).is_err()
-        );
+        assert!(output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
@@ -981,8 +960,7 @@ mod tests {
         let mut data = vec![2.0, 2.0, 2.0, 2.0];
         norm.normalize(&mut data, 1).unwrap();
         // After normalization, RMS should ≈ 1.0
-        let rms: f32 =
-            (data.iter().map(|v| v * v).sum::<f32>() / 4.0).sqrt();
+        let rms: f32 = (data.iter().map(|v| v * v).sum::<f32>() / 4.0).sqrt();
         assert!((rms - 1.0).abs() < 1e-4);
     }
 
@@ -1081,12 +1059,8 @@ mod tests {
             let mut logits = vec![0.0; 4];
             tied.project(&emb, &mut logits, 1).unwrap();
             // Argmax of logits should be token_id
-            let argmax = logits
-                .iter()
-                .enumerate()
-                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
-                .unwrap()
-                .0;
+            let argmax =
+                logits.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
             assert_eq!(argmax, token_id as usize);
         }
     }
