@@ -29,19 +29,12 @@ pub struct FlashAttentionConfig {
 impl FlashAttentionConfig {
     /// Create a new config with the given head dimension and number of heads.
     pub fn new(head_dim: usize, num_heads: usize) -> Self {
-        Self {
-            head_dim,
-            num_heads,
-            block_size: 64,
-            causal: false,
-            scale: None,
-        }
+        Self { head_dim, num_heads, block_size: 64, causal: false, scale: None }
     }
 
     /// Effective scale factor.
     pub fn effective_scale(&self) -> f32 {
-        self.scale
-            .unwrap_or_else(|| 1.0 / (self.head_dim as f32).sqrt())
+        self.scale.unwrap_or_else(|| 1.0 / (self.head_dim as f32).sqrt())
     }
 }
 
@@ -66,10 +59,7 @@ impl fmt::Display for FlashAttentionError {
                 write!(f, "sequence length {n} exceeds maximum")
             }
             Self::BlockSizeMismatch { expected, actual } => {
-                write!(
-                    f,
-                    "block size mismatch: expected {expected}, got {actual}"
-                )
+                write!(f, "block size mismatch: expected {expected}, got {actual}")
             }
             Self::NumericalInstability(msg) => {
                 write!(f, "numerical instability: {msg}")
@@ -189,10 +179,7 @@ pub fn cpu_flash_attention(
             }
 
             // Online softmax update
-            let block_max = block_scores
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let block_max = block_scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let new_max = row_max[i].max(block_max);
 
             // Rescale previous accumulator
@@ -214,8 +201,7 @@ pub fn cpu_flash_attention(
                 out[i * head_dim + d] *= correction * row_sum[i];
                 for (jj, &exp_val) in block_exp.iter().enumerate() {
                     let j = j_start + jj;
-                    out[i * head_dim + d] +=
-                        exp_val * v[j * head_dim + d];
+                    out[i * head_dim + d] += exp_val * v[j * head_dim + d];
                 }
                 if new_sum > 0.0 {
                     out[i * head_dim + d] /= new_sum;
@@ -285,10 +271,7 @@ pub fn cpu_multi_head_attention(
 
 /// Compute attention weight statistics from a softmax-normalised score
 /// matrix.
-pub fn cpu_attention_stats(
-    scores: &[f32],
-    seq_len: usize,
-) -> AttentionStats {
+pub fn cpu_attention_stats(scores: &[f32], seq_len: usize) -> AttentionStats {
     assert_eq!(scores.len(), seq_len * seq_len);
 
     let mut max_w = f32::NEG_INFINITY;
@@ -326,8 +309,7 @@ pub fn cpu_block_softmax(
     running_max: f32,
     running_sum: f32,
 ) -> (Vec<f32>, f32, f32) {
-    let block_max =
-        block.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let block_max = block.iter().copied().fold(f32::NEG_INFINITY, f32::max);
     let new_max = running_max.max(block_max);
 
     let correction = (running_max - new_max).exp();
@@ -477,10 +459,7 @@ mod tests {
         assert_eq!(a.len(), b.len(), "{ctx}: length mismatch");
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
             let diff = (x - y).abs();
-            assert!(
-                diff < tol,
-                "{ctx}: index {i} differs: {x} vs {y} (diff {diff})"
-            );
+            assert!(diff < tol, "{ctx}: index {i} differs: {x} vs {y} (diff {diff})");
         }
     }
 
@@ -507,10 +486,7 @@ mod tests {
     fn test_config_custom_scale() {
         let mut cfg = FlashAttentionConfig::new(64, 8);
         cfg.scale = Some(0.42);
-        assert!(
-            (cfg.effective_scale() - 0.42).abs() < 1e-6,
-            "custom scale should be used"
-        );
+        assert!((cfg.effective_scale() - 0.42).abs() < 1e-6, "custom scale should be used");
     }
 
     #[test]
@@ -535,17 +511,13 @@ mod tests {
 
     #[test]
     fn test_error_display_block_mismatch() {
-        let e = FlashAttentionError::BlockSizeMismatch {
-            expected: 64,
-            actual: 32,
-        };
+        let e = FlashAttentionError::BlockSizeMismatch { expected: 64, actual: 32 };
         assert!(e.to_string().contains("expected 64"));
     }
 
     #[test]
     fn test_error_display_numerical() {
-        let e =
-            FlashAttentionError::NumericalInstability("NaN detected".into());
+        let e = FlashAttentionError::NumericalInstability("NaN detected".into());
         assert!(e.to_string().contains("NaN"));
     }
 
@@ -579,10 +551,7 @@ mod tests {
                 if j <= i {
                     assert_eq!(val, 0.0, "({i},{j}) should be 0.0");
                 } else {
-                    assert!(
-                        val.is_infinite() && val < 0.0,
-                        "({i},{j}) should be -inf"
-                    );
+                    assert!(val.is_infinite() && val < 0.0, "({i},{j}) should be -inf");
                 }
             }
         }
@@ -626,8 +595,7 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 2);
         let v = rand_vec(seq_len * head_dim, 3);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let out = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
         assert_eq!(out.len(), seq_len * head_dim);
     }
 
@@ -639,8 +607,7 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 20);
         let v = rand_vec(seq_len * head_dim, 30);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let out = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
         // Sanity: output is finite
         assert!(out.iter().all(|x| x.is_finite()));
     }
@@ -654,11 +621,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 200);
         let v = rand_vec(seq_len * head_dim, 300);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "flash vs std seq4");
     }
 
@@ -669,11 +633,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 201);
         let v = rand_vec(seq_len * head_dim, 301);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "flash vs std seq8");
     }
 
@@ -684,11 +645,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 202);
         let v = rand_vec(seq_len * head_dim, 302);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "flash vs std seq16");
     }
 
@@ -713,11 +671,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 1002);
         let v = rand_vec(seq_len * head_dim, 1003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "block boundary 63");
     }
 
@@ -728,11 +683,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 1005);
         let v = rand_vec(seq_len * head_dim, 1006);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "block boundary 64");
     }
 
@@ -743,11 +695,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 1008);
         let v = rand_vec(seq_len * head_dim, 1009);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "block boundary 65");
     }
 
@@ -758,11 +707,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 1011);
         let v = rand_vec(seq_len * head_dim, 1012);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "block boundary 128");
     }
 
@@ -773,11 +719,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 1014);
         let v = rand_vec(seq_len * head_dim, 1015);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "block boundary 129");
     }
 
@@ -790,11 +733,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 2002);
         let v = rand_vec(seq_len * head_dim, 2003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "head_dim 32");
     }
 
@@ -805,11 +745,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 2005);
         let v = rand_vec(seq_len * head_dim, 2006);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "head_dim 64");
     }
 
@@ -820,11 +757,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 2008);
         let v = rand_vec(seq_len * head_dim, 2009);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, bs, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, bs, scale);
         assert_close(&flash, &std, 1e-4, "head_dim 128");
     }
 
@@ -838,9 +772,7 @@ mod tests {
         let k = rand_vec(n, 3002);
         let v = rand_vec(n, 3003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out = cpu_multi_head_attention(
-            &q, &k, &v, seq_len, head_dim, num_heads, scale,
-        );
+        let out = cpu_multi_head_attention(&q, &k, &v, seq_len, head_dim, num_heads, scale);
         assert_eq!(out.len(), n);
         assert!(out.iter().all(|x| x.is_finite()));
     }
@@ -853,9 +785,7 @@ mod tests {
         let k = rand_vec(n, 3005);
         let v = rand_vec(n, 3006);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out = cpu_multi_head_attention(
-            &q, &k, &v, seq_len, head_dim, num_heads, scale,
-        );
+        let out = cpu_multi_head_attention(&q, &k, &v, seq_len, head_dim, num_heads, scale);
         assert_eq!(out.len(), n);
     }
 
@@ -867,9 +797,7 @@ mod tests {
         let k = rand_vec(n, 3008);
         let v = rand_vec(n, 3009);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out = cpu_multi_head_attention(
-            &q, &k, &v, seq_len, head_dim, num_heads, scale,
-        );
+        let out = cpu_multi_head_attention(&q, &k, &v, seq_len, head_dim, num_heads, scale);
         assert_eq!(out.len(), n);
     }
 
@@ -900,11 +828,9 @@ mod tests {
     #[test]
     fn test_block_softmax_single_block_matches_full() {
         let scores = vec![1.0, 2.0, 3.0, 4.0];
-        let (exp_block, new_max, new_sum) =
-            cpu_block_softmax(&scores, f32::NEG_INFINITY, 0.0);
+        let (exp_block, new_max, new_sum) = cpu_block_softmax(&scores, f32::NEG_INFINITY, 0.0);
         let full = softmax_row(&scores);
-        let normalised: Vec<f32> =
-            exp_block.iter().map(|&e| e / new_sum).collect();
+        let normalised: Vec<f32> = exp_block.iter().map(|&e| e / new_sum).collect();
         assert_close(&normalised, &full, 1e-6, "block softmax single");
         assert!((new_max - 4.0).abs() < 1e-6);
     }
@@ -917,21 +843,14 @@ mod tests {
         let full_sm = softmax_row(&full_scores);
 
         // Process block1
-        let (_, m1, s1) =
-            cpu_block_softmax(&block1, f32::NEG_INFINITY, 0.0);
+        let (_, m1, s1) = cpu_block_softmax(&block1, f32::NEG_INFINITY, 0.0);
         // Process block2 with running stats from block1
         let (exp2, m2, s2) = cpu_block_softmax(&block2, m1, s1);
 
         // The second block's exponentials normalised by total sum
         // should match the last two elements of the full softmax
-        let normalised2: Vec<f32> =
-            exp2.iter().map(|&e| e / s2).collect();
-        assert_close(
-            &normalised2,
-            &full_sm[2..],
-            1e-5,
-            "block softmax two blocks (block2)",
-        );
+        let normalised2: Vec<f32> = exp2.iter().map(|&e| e / s2).collect();
+        assert_close(&normalised2, &full_sm[2..], 1e-5, "block softmax two blocks (block2)");
         // Verify total sum integrates both blocks
         assert!(m2 >= m1);
         assert!(s2 > s1);
@@ -947,8 +866,7 @@ mod tests {
         let v = rand_vec(seq_len * head_dim, 5003);
         let scale = 1.0 / (head_dim as f32).sqrt();
 
-        let out_nc =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let out_nc = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
 
         // Build causal scores manually
         let mut scores = vec![0.0f32; seq_len * seq_len];
@@ -964,10 +882,8 @@ mod tests {
         cpu_apply_causal_mask(&mut scores, seq_len);
         // Softmax rows
         for i in 0..seq_len {
-            let row =
-                &mut scores[i * seq_len..(i + 1) * seq_len];
-            let max_v =
-                row.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+            let row = &mut scores[i * seq_len..(i + 1) * seq_len];
+            let max_v = row.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let mut sum = 0.0f32;
             for val in row.iter_mut() {
                 *val = (*val - max_v).exp();
@@ -982,17 +898,13 @@ mod tests {
             for j in 0..seq_len {
                 let w = scores[i * seq_len + j];
                 for d in 0..head_dim {
-                    out_c[i * head_dim + d] +=
-                        w * v[j * head_dim + d];
+                    out_c[i * head_dim + d] += w * v[j * head_dim + d];
                 }
             }
         }
 
         // They must differ (seq_len > 1)
-        let any_diff = out_nc
-            .iter()
-            .zip(out_c.iter())
-            .any(|(a, b)| (a - b).abs() > 1e-6);
+        let any_diff = out_nc.iter().zip(out_c.iter()).any(|(a, b)| (a - b).abs() > 1e-6);
         assert!(any_diff, "causal and non-causal should differ");
     }
 
@@ -1002,29 +914,16 @@ mod tests {
     fn test_numerical_stability_large_values() {
         let (seq_len, head_dim) = (4, 32);
         // Large values that would overflow naive exp without max-subtract
-        let q: Vec<f32> = (0..seq_len * head_dim)
-            .map(|i| 100.0 + (i as f32) * 0.01)
-            .collect();
+        let q: Vec<f32> = (0..seq_len * head_dim).map(|i| 100.0 + (i as f32) * 0.01).collect();
         let k = q.clone();
-        let v: Vec<f32> = (0..seq_len * head_dim)
-            .map(|i| (i as f32) * 0.1)
-            .collect();
+        let v: Vec<f32> = (0..seq_len * head_dim).map(|i| (i as f32) * 0.1).collect();
         let scale = 1.0 / (head_dim as f32).sqrt();
 
-        let out_std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let out_flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, 2, scale,
-        );
+        let out_std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let out_flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, 2, scale);
 
-        assert!(
-            out_std.iter().all(|x| x.is_finite()),
-            "standard output should be finite"
-        );
-        assert!(
-            out_flash.iter().all(|x| x.is_finite()),
-            "flash output should be finite"
-        );
+        assert!(out_std.iter().all(|x| x.is_finite()), "standard output should be finite");
+        assert!(out_flash.iter().all(|x| x.is_finite()), "flash output should be finite");
         assert_close(&out_flash, &out_std, 1e-3, "large values");
     }
 
@@ -1038,8 +937,7 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 7002);
         let v = rand_vec(seq_len * head_dim, 7003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let out =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let out = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
         assert_eq!(out.len(), v.len(), "output shape == value shape");
     }
 
@@ -1068,11 +966,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 8002);
         let v = rand_vec(seq_len * head_dim, 8003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std_out =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let mha_out = cpu_multi_head_attention(
-            &q, &k, &v, seq_len, head_dim, 1, scale,
-        );
+        let std_out = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let mha_out = cpu_multi_head_attention(&q, &k, &v, seq_len, head_dim, 1, scale);
         assert_close(&mha_out, &std_out, 1e-6, "MHA(1) == standard");
     }
 
@@ -1085,11 +980,8 @@ mod tests {
         let k = rand_vec(seq_len * head_dim, 9002);
         let v = rand_vec(seq_len * head_dim, 9003);
         let scale = 1.0 / (head_dim as f32).sqrt();
-        let std =
-            cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
-        let flash = cpu_flash_attention(
-            &q, &k, &v, seq_len, head_dim, 1, scale,
-        );
+        let std = cpu_standard_attention(&q, &k, &v, seq_len, head_dim, scale);
+        let flash = cpu_flash_attention(&q, &k, &v, seq_len, head_dim, 1, scale);
         assert_close(&flash, &std, 1e-4, "block_size=1");
     }
 }
