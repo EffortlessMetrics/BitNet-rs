@@ -1,0 +1,15 @@
+[package]
+name = "bitnet-cpu-ops"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "CPU dense ops microcrate for inference activation, normalization, and attention kernels"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+rayon.workspace = true
