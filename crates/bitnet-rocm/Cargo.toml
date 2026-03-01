@@ -18,6 +18,7 @@ include = [
 [dependencies]
 
 [dev-dependencies]
+insta.workspace = true
 
 [features]
 default = []

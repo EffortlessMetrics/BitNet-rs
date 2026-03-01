@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
+expression: variants
+---
+[
+    Device,
+    Shared,
+    Pinned,
+]

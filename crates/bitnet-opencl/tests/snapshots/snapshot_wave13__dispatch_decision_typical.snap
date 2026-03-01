@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: decision
+---
+DispatchDecision {
+    chosen_backend: "opencl-arc",
+    reason: "highest priority score",
+    alternatives_available: [
+        "cpu",
+        "vulkan",
+    ],
+    operation: MatMul,
+}

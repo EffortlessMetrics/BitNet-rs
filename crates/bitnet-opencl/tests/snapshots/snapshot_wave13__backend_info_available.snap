@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: info
+---
+BackendInfo {
+    name: "intel-arc-a770",
+    status: Available,
+    capabilities: [
+        MatMul,
+        Softmax,
+        Attention,
+    ],
+    priority_score: 100,
+}

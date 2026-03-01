@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: report
+---
+ValidationReport {
+    findings: [],
+}

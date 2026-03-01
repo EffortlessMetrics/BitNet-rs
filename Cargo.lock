@@ -796,6 +796,7 @@ dependencies = [
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
+ "insta",
  "log",
  "proptest",
  "serde",
@@ -1014,6 +1015,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-spirv",
  "env_logger",
+ "insta",
  "log",
  "opencl3",
  "serde",
@@ -1162,6 +1164,9 @@ dependencies = [
 [[package]]
 name = "bitnet-rocm"
 version = "0.2.1-dev"
+dependencies = [
+ "insta",
+]
 
 [[package]]
 name = "bitnet-rope"
