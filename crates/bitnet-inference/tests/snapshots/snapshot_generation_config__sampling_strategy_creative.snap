@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: strat
+---
+SamplingStrategy {
+    config: SamplingConfig {
+        temperature: 1.2,
+        top_k: Some(
+            100,
+        ),
+        top_p: Some(
+            0.9,
+        ),
+        repetition_penalty: 1.2,
+        do_sample: true,
+    },
+    repetition_counts: {},
+    current_repetition_penalty: 1.2,
+}

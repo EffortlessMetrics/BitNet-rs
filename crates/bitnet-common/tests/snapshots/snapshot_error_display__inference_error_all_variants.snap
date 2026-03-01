@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: displays
+---
+[
+    "Generation failed: KV cache overflow",
+    "Invalid input: empty prompt",
+    "Context length exceeded: 8192",
+    "Tokenization failed: unknown byte sequence",
+]

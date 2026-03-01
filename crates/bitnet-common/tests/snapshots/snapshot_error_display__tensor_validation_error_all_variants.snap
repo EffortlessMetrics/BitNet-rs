@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: displays
+---
+[
+    "zero dimension at axis 1 in shape [32, 0, 64]",
+    "total elements 2000000000 exceeds maximum 1000000000",
+    "9 dimensions exceeds maximum 8",
+    "NaN detected at index 42",
+    "Inf detected at index 7, value=inf",
+    "value 999 at index 3 outside range [-1, 1]",
+    "stride mismatch at axis 2: expected 64 (C-contiguous), got 128",
+    "alignment 4 does not meet required 32",
+]

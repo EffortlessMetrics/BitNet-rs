@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: outer.to_string()
+---
+Kernel error: No available kernel provider

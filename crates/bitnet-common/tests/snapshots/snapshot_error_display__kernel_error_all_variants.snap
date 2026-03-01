@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-common/tests/snapshot_error_display.rs
+expression: displays
+---
+[
+    "No available kernel provider",
+    "Kernel execution failed: CUDA out of memory",
+    "Unsupported architecture: riscv64",
+    "GPU error: device lost",
+    "Unsupported hardware: required AVX2, available SSE4.2",
+    "Invalid arguments: batch size must be > 0",
+    "Quantization failed: invalid block alignment",
+    "Matrix multiplication failed: dimension mismatch: 128 vs 256",
+]

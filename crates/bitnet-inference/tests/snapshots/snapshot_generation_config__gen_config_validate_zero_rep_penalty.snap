@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_generation_config.rs
+expression: err
+---
+repetition_penalty must be positive
