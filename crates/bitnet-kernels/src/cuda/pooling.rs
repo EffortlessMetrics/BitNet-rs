@@ -375,6 +375,7 @@ pub struct Pool2dConfig {
 
 impl Pool2dConfig {
     /// Create a new config with the given spatial parameters and unit dilation.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         batch: usize,
         channels: usize,
@@ -393,6 +394,7 @@ impl Pool2dConfig {
     }
 
     /// Create a new config with explicit dilation parameters.
+    #[allow(clippy::too_many_arguments)]
     pub fn with_dilation(
         batch: usize,
         channels: usize,
