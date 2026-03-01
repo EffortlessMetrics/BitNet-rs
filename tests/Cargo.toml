@@ -162,6 +162,10 @@ required-features = ["fixtures"]
 name = "test_reporting_minimal"
 path = "test_reporting_minimal.rs"
 
+[[test]]
+name = "bdd_integration_wave2"
+path = "bdd_integration_wave2.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"
