@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-download-core"
+version = "0.2.1-dev"
+edition = "2024"
+description = "Core download validation and file helpers for BitNet"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/BitNet-Project/BitNet"
+
+[dependencies]
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }
