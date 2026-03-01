@@ -689,6 +689,72 @@ fn embedding_bag_reduce(
     Ok(output)
 }
 
+// ── Batched & positional-encoding helpers ────────────────────────────
+
+/// Batched embedding lookup for multiple sequences.
+///
+/// Each element of `indices` is a slice of token IDs for one sequence.
+/// Returns a flat `[total_tokens, embed_dim]` tensor with the sequences
+/// concatenated in order.
+pub fn embedding_lookup_batched(
+    table: &[f32],
+    indices: &[&[u32]],
+    vocab_size: usize,
+    embed_dim: usize,
+) -> Result<Vec<f32>> {
+    if embed_dim == 0 {
+        return Ok(Vec::new());
+    }
+    let total_tokens: usize = indices.iter().map(|seq| seq.len()).sum();
+    let mut output = Vec::with_capacity(total_tokens * embed_dim);
+
+    for &seq in indices {
+        for &idx in seq {
+            if (idx as usize) >= vocab_size {
+                return Err(index_out_of_bounds(idx, vocab_size));
+            }
+            let src = (idx as usize) * embed_dim;
+            output.extend_from_slice(&table[src..src + embed_dim]);
+        }
+    }
+    Ok(output)
+}
+
+/// Generate a sinusoidal positional-encoding matrix with configurable base.
+///
+/// Returns `[seq_len, embed_dim]`:
+/// - even columns: `sin(pos / base^(2i/d))`
+/// - odd columns:  `cos(pos / base^(2i/d))`
+pub fn positional_encoding(seq_len: usize, embed_dim: usize, base: f32) -> Vec<f32> {
+    let mut output = vec![0.0f32; seq_len * embed_dim];
+    let d = embed_dim as f32;
+    for pos in 0..seq_len {
+        let start = pos * embed_dim;
+        for i in 0..embed_dim {
+            let dim_pair = (i / 2) as f32;
+            let angle = (pos as f32) / base.powf(2.0 * dim_pair / d);
+            output[start + i] = if i % 2 == 0 { angle.sin() } else { angle.cos() };
+        }
+    }
+    output
+}
+
+/// Add a pre-computed positional-encoding matrix to embeddings in-place.
+///
+/// Both `embeddings` and `pos_enc` must have shape `[seq_len, embed_dim]`.
+pub fn add_positional_encoding(
+    embeddings: &mut [f32],
+    pos_enc: &[f32],
+    seq_len: usize,
+    embed_dim: usize,
+) {
+    debug_assert_eq!(embeddings.len(), seq_len * embed_dim);
+    debug_assert_eq!(pos_enc.len(), seq_len * embed_dim);
+    for (e, &p) in embeddings.iter_mut().zip(pos_enc.iter()) {
+        *e += p;
+    }
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1522,5 +1588,254 @@ mod tests {
         for &v in &pe {
             assert!(v >= -1.0 && v <= 1.0);
         }
+    }
+
+    // ── embedding_lookup (with vocab_size param) tests ──────────
+
+    #[test]
+    fn test_lookup_known_values() {
+        // table: vocab=2, dim=3 → [[1,2,3],[4,5,6]]
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let out = embedding_lookup(&table, &[0, 1], 3).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_lookup_reordered_indices() {
+        // table: vocab=3, dim=3 → [[1,2,3],[4,5,6],[7,8,9]]
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let out = embedding_lookup(&table, &[0, 2], 3).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn test_lookup_repeated_index() {
+        let table = vec![10.0, 20.0, 30.0, 40.0];
+        let out = embedding_lookup(&table, &[1, 1, 0], 2).unwrap();
+        assert_eq!(out, vec![30.0, 40.0, 30.0, 40.0, 10.0, 20.0]);
+    }
+
+    #[test]
+    fn test_lookup_oob_error() {
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let err = embedding_lookup(&table, &[2], 3);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_lookup_output_shape() {
+        let table = vec![0.0; 5 * 8]; // vocab=5, dim=8
+        let indices: Vec<u32> = vec![0, 3, 4, 1];
+        let out = embedding_lookup(&table, &indices, 8).unwrap();
+        assert_eq!(out.len(), indices.len() * 8);
+    }
+
+    // ── embedding_lookup_batched tests ──────────────────────────
+
+    #[test]
+    fn test_batched_single_sequence() {
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let seq: &[u32] = &[0, 1];
+        let out = embedding_lookup_batched(&table, &[seq], 2, 3).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_batched_two_sequences() {
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let s0: &[u32] = &[0];
+        let s1: &[u32] = &[2, 1];
+        let out = embedding_lookup_batched(&table, &[s0, s1], 3, 3).unwrap();
+        assert_eq!(out, vec![1.0, 2.0, 3.0, 7.0, 8.0, 9.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn test_batched_empty_sequence() {
+        let table = vec![1.0, 2.0];
+        let s0: &[u32] = &[];
+        let s1: &[u32] = &[0];
+        let out = embedding_lookup_batched(&table, &[s0, s1], 1, 2).unwrap();
+        assert_eq!(out, vec![1.0, 2.0]);
+    }
+
+    #[test]
+    fn test_batched_all_empty() {
+        let table = vec![1.0, 2.0];
+        let s: &[u32] = &[];
+        let out = embedding_lookup_batched(&table, &[s, s], 1, 2).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn test_batched_oob_error() {
+        let table = vec![1.0, 2.0, 3.0, 4.0];
+        let s: &[u32] = &[0, 5]; // 5 >= vocab_size=2
+        let err = embedding_lookup_batched(&table, &[s], 2, 2);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_batched_output_shape() {
+        let table = vec![0.0; 4 * 6]; // vocab=4, dim=6
+        let s0: &[u32] = &[0, 1];
+        let s1: &[u32] = &[2, 3, 0];
+        let out = embedding_lookup_batched(&table, &[s0, s1], 4, 6).unwrap();
+        assert_eq!(out.len(), 5 * 6);
+    }
+
+    #[test]
+    fn test_batched_matches_sequential_lookups() {
+        let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let s0: &[u32] = &[0, 2];
+        let s1: &[u32] = &[1];
+        let batched = embedding_lookup_batched(&table, &[s0, s1], 3, 3).unwrap();
+
+        let mut sequential = embedding_lookup(&table, &[0, 2], 3).unwrap();
+        sequential.extend(embedding_lookup(&table, &[1], 3).unwrap());
+        assert_eq!(batched, sequential);
+    }
+
+    #[test]
+    fn test_batched_zero_embed_dim() {
+        let table: Vec<f32> = vec![];
+        let s: &[u32] = &[0];
+        let out = embedding_lookup_batched(&table, &[s], 1, 0).unwrap();
+        assert!(out.is_empty());
+    }
+
+    // ── positional_encoding (configurable base) tests ───────────
+
+    #[test]
+    fn test_pe_base10000_matches_positional_embedding() {
+        let pe1 = positional_embedding(5, 8);
+        let pe2 = positional_encoding(5, 8, 10_000.0);
+        for (a, b) in pe1.iter().zip(pe2.iter()) {
+            assert!((a - b).abs() < 1e-6, "mismatch: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_pe_position_zero_sin_cos() {
+        let pe = positional_encoding(1, 4, 10_000.0);
+        assert!((pe[0] - 0.0).abs() < 1e-6); // sin(0)
+        assert!((pe[1] - 1.0).abs() < 1e-6); // cos(0)
+    }
+
+    #[test]
+    fn test_pe_shape() {
+        let pe = positional_encoding(7, 16, 10_000.0);
+        assert_eq!(pe.len(), 7 * 16);
+    }
+
+    #[test]
+    fn test_pe_different_bases_differ() {
+        let pe_a = positional_encoding(4, 8, 10_000.0);
+        let pe_b = positional_encoding(4, 8, 1_000.0);
+        assert_ne!(pe_a, pe_b);
+    }
+
+    #[test]
+    fn test_pe_bounded_values() {
+        let pe = positional_encoding(50, 32, 10_000.0);
+        for &v in &pe {
+            assert!((-1.0..=1.0).contains(&v), "PE value {v} out of [-1,1]");
+        }
+    }
+
+    #[test]
+    fn test_pe_sin_cos_alternation() {
+        // For pos=1, dim=6: indices 0,2,4 are sin; 1,3,5 are cos
+        let pe = positional_encoding(2, 6, 10_000.0);
+        let row1 = &pe[6..12]; // pos=1
+        let d = 6.0f32;
+        for i in 0..3 {
+            let dim_pair = i as f32;
+            let angle = 1.0 / 10_000f32.powf(2.0 * dim_pair / d);
+            let expected_sin = angle.sin();
+            let expected_cos = angle.cos();
+            assert!((row1[2 * i] - expected_sin).abs() < 1e-5, "sin mismatch at dim {}", 2 * i,);
+            assert!(
+                (row1[2 * i + 1] - expected_cos).abs() < 1e-5,
+                "cos mismatch at dim {}",
+                2 * i + 1,
+            );
+        }
+    }
+
+    #[test]
+    fn test_pe_orthogonality_different_positions() {
+        let pe = positional_encoding(3, 64, 10_000.0);
+        let row0 = &pe[0..64];
+        let row1 = &pe[64..128];
+        let row2 = &pe[128..192];
+        // Different positions should have distinct encodings
+        let dot01: f32 = row0.iter().zip(row1).map(|(a, b)| a * b).sum();
+        let dot02: f32 = row0.iter().zip(row2).map(|(a, b)| a * b).sum();
+        let norm0: f32 = row0.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm1: f32 = row1.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm2: f32 = row2.iter().map(|x| x * x).sum::<f32>().sqrt();
+        // Cosine similarity should be < 1 (not identical)
+        let cos01 = dot01 / (norm0 * norm1);
+        let cos02 = dot02 / (norm0 * norm2);
+        assert!(cos01 < 0.99, "pos 0 & 1 too similar: {cos01}");
+        assert!(cos02 < 0.99, "pos 0 & 2 too similar: {cos02}");
+    }
+
+    #[test]
+    fn test_pe_zero_seq_len() {
+        let pe = positional_encoding(0, 8, 10_000.0);
+        assert!(pe.is_empty());
+    }
+
+    #[test]
+    fn test_pe_zero_dim() {
+        let pe = positional_encoding(5, 0, 10_000.0);
+        assert!(pe.is_empty());
+    }
+
+    #[test]
+    fn test_pe_deterministic() {
+        let a = positional_encoding(10, 16, 10_000.0);
+        let b = positional_encoding(10, 16, 10_000.0);
+        assert_eq!(a, b);
+    }
+
+    // ── add_positional_encoding tests ───────────────────────────
+
+    #[test]
+    fn test_add_pe_basic() {
+        let mut emb = vec![1.0, 2.0, 3.0, 4.0];
+        let pe = vec![0.1, 0.2, 0.3, 0.4];
+        add_positional_encoding(&mut emb, &pe, 2, 2);
+        assert!((emb[0] - 1.1).abs() < 1e-6);
+        assert!((emb[1] - 2.2).abs() < 1e-6);
+        assert!((emb[2] - 3.3).abs() < 1e-6);
+        assert!((emb[3] - 4.4).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_add_pe_with_generated_encoding() {
+        let table = vec![10.0, 20.0, 30.0, 40.0]; // vocab=2, dim=2
+        let mut emb = embedding_lookup(&table, &[0, 1], 2).unwrap();
+        let pe = positional_encoding(2, 2, 10_000.0);
+        let emb_before = emb.clone();
+        add_positional_encoding(&mut emb, &pe, 2, 2);
+        // Each element should have changed by the PE value
+        for (i, (&after, &before)) in emb.iter().zip(emb_before.iter()).enumerate() {
+            assert!(
+                (after - before - pe[i]).abs() < 1e-6,
+                "mismatch at {i}: {after} != {before} + {}",
+                pe[i],
+            );
+        }
+    }
+
+    #[test]
+    fn test_add_pe_zero_encoding_is_identity() {
+        let mut emb = vec![5.0, 6.0, 7.0, 8.0];
+        let pe = vec![0.0; 4];
+        let orig = emb.clone();
+        add_positional_encoding(&mut emb, &pe, 2, 2);
+        assert_eq!(emb, orig);
     }
 }
