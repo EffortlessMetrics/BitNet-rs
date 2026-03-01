@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-intel-gpu-id"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Intel GPU identification heuristics shared across BitNet GPU backends"
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
