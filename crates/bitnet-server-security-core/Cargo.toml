@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-server-security-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "SRP microcrate for server-side security header/IP parsing primitives"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+http = "1.3.1"
+
+[lints]
+workspace = true

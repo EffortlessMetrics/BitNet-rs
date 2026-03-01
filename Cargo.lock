@@ -1183,6 +1183,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-runtime-bootstrap",
+ "bitnet-server-security-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",
@@ -1222,6 +1223,13 @@ dependencies = [
  "uuid",
  "vergen-gix",
  "walkdir",
+]
+
+[[package]]
+name = "bitnet-server-security-core"
+version = "0.2.1-dev"
+dependencies = [
+ "http",
 ]
 
 [[package]]
