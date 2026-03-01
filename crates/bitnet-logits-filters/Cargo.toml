@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-logits"
+name = "bitnet-logits-filters"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,21 +8,16 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Pure logits transform functions for BitNet LLM inference"
+description = "SRP microcrate for probability/logit filtering transforms"
 rust-version.workspace = true
 
 [dependencies]
-bitnet-logits-filters = { path = "../bitnet-logits-filters", version = "0.2.1-dev" }
 
 [dev-dependencies]
 proptest.workspace = true
-insta = { workspace = true }
 
 [features]
 default = []
-cpu = []
-gpu = ["cuda"]
-cuda = []
 
 [lints]
 workspace = true
