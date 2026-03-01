@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|system|>
+You are a Rust expert.</s>
+<|user|>
+How does borrowing work?</s>
+<|assistant|>

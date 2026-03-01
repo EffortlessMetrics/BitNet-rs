@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[gMASK]<sop><|user|>
+Explain photosynthesis briefly.<|assistant|>

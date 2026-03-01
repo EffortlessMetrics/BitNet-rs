@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: output
+---
+[
+    "Cpu",
+    "Cuda(0)",
+    "Hip(1)",
+    "Npu",
+    "Metal",
+    "OpenCL(2)",
+]

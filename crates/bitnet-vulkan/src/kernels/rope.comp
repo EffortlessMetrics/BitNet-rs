@@ -1,0 +1,54 @@
+#version 450
+// Rotary Position Embedding (RoPE) compute shader
+// Applies rotation in pairs: (x0, x1) -> (x0*cos - x1*sin, x0*sin + x1*cos)
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    uint seq_len;   // sequence length
+    uint head_dim;  // dimension per attention head (must be even)
+    uint num_heads; // number of attention heads
+    float theta;    // RoPE base frequency (typically 10000.0)
+} params;
+
+layout(set = 0, binding = 0) buffer InOut {
+    float data[];
+} io_buf;
+
+layout(set = 0, binding = 1) readonly buffer Positions {
+    uint data[];
+} pos_buf;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+
+    uint half_dim = params.head_dim / 2;
+    uint total_pairs = params.seq_len * params.num_heads * half_dim;
+
+    if (idx >= total_pairs) return;
+
+    // Decompose index into (seq_pos, head, pair_idx)
+    uint pair_idx = idx % half_dim;
+    uint remainder = idx / half_dim;
+    uint head = remainder % params.num_heads;
+    uint seq_idx = remainder / params.num_heads;
+
+    uint pos = pos_buf.data[seq_idx];
+
+    // Compute rotation angle: pos * theta^(-2*pair_idx / head_dim)
+    float freq = pow(params.theta, -float(2 * pair_idx) / float(params.head_dim));
+    float angle = float(pos) * freq;
+    float cos_val = cos(angle);
+    float sin_val = sin(angle);
+
+    // Locate the pair in the flat buffer
+    uint base = (seq_idx * params.num_heads + head) * params.head_dim;
+    uint i0 = base + pair_idx;
+    uint i1 = base + pair_idx + half_dim;
+
+    float x0 = io_buf.data[i0];
+    float x1 = io_buf.data[i1];
+
+    io_buf.data[i0] = x0 * cos_val - x1 * sin_val;
+    io_buf.data[i1] = x0 * sin_val + x1 * cos_val;
+}

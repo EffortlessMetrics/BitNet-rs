@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[gMASK]<sop><|system|>
+You are a science tutor.<|user|>
+What is ATP?<|assistant|>

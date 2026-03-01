@@ -1,0 +1,23 @@
+[package]
+name = "bitnet-rocm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "HIP compute kernels for AMD GPU inference via ROCm"
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+]
+
+[dependencies]
+
+[dev-dependencies]
+
+[features]
+default = []

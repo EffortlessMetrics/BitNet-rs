@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+attention shape mismatch: Q=[1, 8, 16, 64], K=[1, 8, 16, 32], V=[1, 8, 16, 32] — Q head_dim must match K head_dim

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: err
+---
+top_p must be in range (0.0, 1.0]

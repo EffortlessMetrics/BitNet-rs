@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<reserved_106>Explain photosynthesis briefly.<reserved_107>

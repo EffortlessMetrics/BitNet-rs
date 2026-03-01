@@ -14,17 +14,22 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 memmap2.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
 insta = { workspace = true }
 tempfile.workspace = true
+serde_json.workspace = true
 
 [features]
 default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
+rt-tokio = ["dep:tokio", "tokio/fs", "tokio/io-util"]
 
 [lints]
 workspace = true

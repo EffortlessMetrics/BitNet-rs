@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+GPT4 Correct User: You are a science tutor.
+
+What is ATP?<|end_of_turn|>GPT4 Correct Assistant:

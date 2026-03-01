@@ -1,0 +1,67 @@
+/// Element-wise operations for BitNet inference.
+
+/// Vector addition: C[i] = A[i] + B[i]
+__kernel void vec_add(
+    __global const float* A,
+    __global const float* B,
+    __global float* C,
+    const uint N
+) {
+    const uint i = get_global_id(0);
+    if (i < N) {
+        C[i] = A[i] + B[i];
+    }
+}
+
+/// RMS normalization: out[i] = x[i] * rsqrt(mean(x^2) + eps) * weight[i]
+__kernel void rms_norm(
+    __global const float* input,
+    __global const float* weight,
+    __global float* output,
+    const uint N,
+    const float eps
+) {
+    // This kernel works on a single row at a time
+    // get_global_id(0) is the row index
+    const uint row = get_global_id(0);
+    const uint offset = row * N;
+
+    // Compute sum of squares
+    float sum_sq = 0.0f;
+    for (uint i = 0; i < N; i++) {
+        float val = input[offset + i];
+        sum_sq += val * val;
+    }
+
+    float rms = rsqrt(sum_sq / (float)N + eps);
+
+    for (uint i = 0; i < N; i++) {
+        output[offset + i] = input[offset + i] * rms * weight[i];
+    }
+}
+
+/// Scale tensor: out[i] = input[i] * scale
+__kernel void scale(
+    __global const float* input,
+    __global float* output,
+    const uint N,
+    const float scale_val
+) {
+    const uint i = get_global_id(0);
+    if (i < N) {
+        output[i] = input[i] * scale_val;
+    }
+}
+
+/// SiLU activation: out[i] = x[i] * sigmoid(x[i]) = x[i] / (1 + exp(-x[i]))
+__kernel void silu(
+    __global const float* input,
+    __global float* output,
+    const uint N
+) {
+    const uint i = get_global_id(0);
+    if (i < N) {
+        float x = input[i];
+        output[i] = x / (1.0f + exp(-x));
+    }
+}

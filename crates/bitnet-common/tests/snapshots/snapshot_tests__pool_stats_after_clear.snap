@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: stats
+---
+PoolStats {
+    hits: 0,
+    misses: 1,
+    pooled_bytes: 0,
+    active_bytes: 0,
+}

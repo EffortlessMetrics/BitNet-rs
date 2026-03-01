@@ -1,0 +1,12 @@
+# ADR-0002: GPU Backend Strategy
+- **Status:** Accepted
+- **Date:** 2026-02-28
+- **Context:** We need a consistent and extensible way to support multiple GPU backends (CUDA, Metal, Vulkan, Intel oneAPI) across the BitNet-rs inference engine, avoiding code duplication while maintaining fallback capability to the SIMD-optimized CPU path.
+- **Decision:** Implement an additive backend model where a unified `gpu` Cargo feature acts as an umbrella. Code specific to a backend is gated by specific features (e.g., `cuda`, `metal`, `vulkan`, `oneapi`), allowing them to be compiled in together if desired. We use `bitnet-device-probe` to detect capabilities at runtime, enabling graceful fallback to the CPU if requested GPU backends are unavailable on the host system.
+- **Consequences:**
+  - *Positive:* Simplifies the developer experience by providing a single `gpu` feature for users while supporting diverse hardware. Cleanly separates backend-specific logic without penalizing standard CPU builds.
+  - *Negative:* Increases compilation time when multiple backends are enabled. Requires maintaining feature-gate parity and testing across multiple hardware configurations.
+- **Alternatives considered:**
+  - *Exclusive features:* Allowing only one GPU feature at a time. Rejected because it complicates CI and downstream usage.
+  - *Dynamic loading:* Loading backend implementations as dynamic libraries. Rejected due to complexity in distribution and potential performance overhead.
+- **How to revert:** Remove the unified `gpu` feature and revert to specific, mutually exclusive backend selection logic throughout the codebase.

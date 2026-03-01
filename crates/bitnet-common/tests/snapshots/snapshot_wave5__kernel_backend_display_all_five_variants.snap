@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: displays
+---
+[
+    "cpu-rust",
+    "cuda",
+    "hip",
+    "oneapi",
+    "cpp-ffi",
+]

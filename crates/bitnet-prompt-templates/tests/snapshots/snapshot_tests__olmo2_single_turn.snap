@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|im_start|>system
+You are OLMo 2, a helpful AI assistant.<|im_end|>
+<|im_start|>user
+Explain photosynthesis briefly.<|im_end|>
+<|im_start|>assistant

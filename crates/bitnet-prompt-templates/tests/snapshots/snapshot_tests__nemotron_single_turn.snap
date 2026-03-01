@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<extra_id_0>System
+You are a helpful, respectful and honest assistant.
+<extra_id_1>User
+Explain photosynthesis briefly.
+<extra_id_1>Assistant

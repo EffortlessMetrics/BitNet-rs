@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+GPT4 Correct User: Explain photosynthesis briefly.<|end_of_turn|>GPT4 Correct Assistant:

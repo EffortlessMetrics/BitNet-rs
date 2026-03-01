@@ -27,6 +27,7 @@ bitnet-logits = { path = "../bitnet-logits", version = "0.2.1-dev" }
 bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
 bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
 bitnet-sys = { path = "../bitnet-sys", version = "0.2.1-dev", optional = true }
 anyhow.workspace = true
 futures.workspace = true
@@ -50,15 +51,26 @@ gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
 rustc_version_runtime = "0.3.0"
 chrono = "0.4.42"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2.177"
+
 [dev-dependencies]
 tokio-test = "0.4.4"
 proptest = "1.9.0"
 tempfile = "3.23.0"
 chrono = "0.4.42"
 serial_test = "3.2.0"
+temp-env.workspace = true
 bitnet-test-support.workspace = true
 insta.workspace = true
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
+bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "dense_ops"
+harness = false
+required-features = ["bench"]
 
 [features]
 default = []
@@ -69,10 +81,12 @@ metal = ["bitnet-common/metal", "bitnet-models/metal"]
 npu-backend = ["bitnet-kernels/npu-backend", "metal"]
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
+opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl", "bitnet-quantization/opencl"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
+bench = []  # Enable Criterion benchmarks
 # Runtime selection
-rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros"]
+rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros", "bitnet-gguf/rt-tokio"]
 rt-wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 # Only run GPU-dependent tests when requested:
 gpu-tests = []

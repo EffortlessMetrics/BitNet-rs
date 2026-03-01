@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: order
+---
+[
+    1,
+    2,
+    0,
+]

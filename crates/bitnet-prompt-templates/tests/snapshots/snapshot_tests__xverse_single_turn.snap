@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+Human: Explain photosynthesis briefly.
+
+Assistant:

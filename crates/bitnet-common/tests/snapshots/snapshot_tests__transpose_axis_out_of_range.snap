@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+transpose axis 5 out of range for 2-D tensor

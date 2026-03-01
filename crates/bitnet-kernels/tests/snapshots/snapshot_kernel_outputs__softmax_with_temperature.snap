@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_kernel_outputs.rs
+expression: fmt_f32(&out)
+---
+[0.002144, 0.015842, 0.117059, 0.864955]

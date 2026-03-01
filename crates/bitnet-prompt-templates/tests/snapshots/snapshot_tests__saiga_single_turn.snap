@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|im_start|>system
+╨ó╤ï ΓÇö ╨í╨░╨╣╨│╨░, ╤Ç╤â╤ü╤ü╨║╨╛╤Å╨╖╤ï╤ç╨╜╤ï╨╣ ╨░╨▓╤é╨╛╨╝╨░╤é╨╕╤ç╨╡╤ü╨║╨╕╨╣ ╨░╤ü╤ü╨╕╤ü╤é╨╡╨╜╤é. ╨ó╤ï ╤Ç╨░╨╖╨│╨╛╨▓╨░╤Ç╨╕╨▓╨░╨╡╤ê╤î ╤ü ╨╗╤Ä╨┤╤î╨╝╨╕ ╨╕ ╨┐╨╛╨╝╨╛╨│╨░╨╡╤ê╤î ╨╕╨╝.<|im_end|>
+<|im_start|>user
+Explain photosynthesis briefly.<|im_end|>
+<|im_start|>assistant

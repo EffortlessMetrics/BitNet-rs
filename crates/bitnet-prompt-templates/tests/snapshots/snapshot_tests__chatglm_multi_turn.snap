@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[gMASK]<sop><|system|>
+You are a Rust expert.<|user|>
+How does borrowing work?<|assistant|>

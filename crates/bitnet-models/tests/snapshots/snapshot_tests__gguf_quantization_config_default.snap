@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: qcfg
+---
+GgufQuantizationConfig {
+    bit_width: 2,
+    block_size: 64,
+    format: "I2_S",
+}

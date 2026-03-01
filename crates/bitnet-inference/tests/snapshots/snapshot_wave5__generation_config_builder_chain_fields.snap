@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: "format!(\"max_new_tokens={} temperature={} top_k={} top_p={} seed={:?}\",\ncfg.max_new_tokens, cfg.temperature, cfg.top_k, cfg.top_p, cfg.seed,)"
+---
+max_new_tokens=16 temperature=0.5 top_k=10 top_p=0.8 seed=Some(42)

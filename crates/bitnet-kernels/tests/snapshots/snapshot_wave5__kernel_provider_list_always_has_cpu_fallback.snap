@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: "format!(\"has_cpu_fallback={has_cpu}\")"
+---
+has_cpu_fallback=true

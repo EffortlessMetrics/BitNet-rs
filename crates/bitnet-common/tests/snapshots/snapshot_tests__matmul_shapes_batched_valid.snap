@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: result
+---
+[
+    2,
+    3,
+    5,
+]

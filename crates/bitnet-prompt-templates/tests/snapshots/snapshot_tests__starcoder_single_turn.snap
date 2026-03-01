@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+Write a fibonacci function in Python.

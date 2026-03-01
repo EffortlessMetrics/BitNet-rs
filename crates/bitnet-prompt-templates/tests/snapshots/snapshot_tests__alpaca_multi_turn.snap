@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+You are a Rust expert.
+
+### Instruction:
+How does borrowing work?
+
+### Response:

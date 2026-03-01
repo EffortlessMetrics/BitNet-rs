@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[INST] <<SYS>>
+You are a Python expert.
+<</SYS>>
+
+Write a sort function. [/INST]

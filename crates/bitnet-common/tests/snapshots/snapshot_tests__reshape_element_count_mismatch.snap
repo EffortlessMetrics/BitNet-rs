@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+reshape element count mismatch: source has 6 elements but target shape [4, 4] requires 16

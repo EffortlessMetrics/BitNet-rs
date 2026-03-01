@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"hits={} misses={} total_allocations={} active_bytes={} pooled_bytes={}\",\nstats.hits, stats.misses, stats.total_allocations(), stats.active_bytes,\nstats.pooled_bytes,)"
+---
+hits=0 misses=2 total_allocations=2 active_bytes=384 pooled_bytes=0

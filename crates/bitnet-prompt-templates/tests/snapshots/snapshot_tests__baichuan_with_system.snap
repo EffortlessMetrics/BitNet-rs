@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<reserved_106>You are a science tutor.<reserved_107><reserved_106>What is ATP?<reserved_107>

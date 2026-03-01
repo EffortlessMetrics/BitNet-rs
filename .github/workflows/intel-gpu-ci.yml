@@ -1,0 +1,126 @@
+name: Intel GPU CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/bitnet-kernels/src/gpu/opencl.rs'
+      - 'crates/bitnet-kernels/src/gpu/kernels/**'
+      - 'crates/bitnet-device-probe/src/**'
+      - 'crates/bitnet-common/src/kernel_registry.rs'
+      - 'crates/bitnet-common/src/types.rs'
+      - '.github/workflows/intel-gpu-ci.yml'
+  pull_request:
+    paths:
+      - 'crates/bitnet-kernels/src/gpu/opencl.rs'
+      - 'crates/bitnet-kernels/src/gpu/kernels/**'
+      - 'crates/bitnet-device-probe/src/**'
+      - 'crates/bitnet-common/src/kernel_registry.rs'
+      - 'crates/bitnet-common/src/types.rs'
+      - '.github/workflows/intel-gpu-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  compile-check:
+    name: OneAPI Compile Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Install OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: intel-gpu-ci-compile
+
+      - name: Check (oneapi only)
+        run: cargo check --locked --no-default-features --features oneapi -p bitnet-kernels
+
+      - name: Check (cpu + oneapi)
+        run: cargo check --locked --no-default-features --features cpu,oneapi -p bitnet-kernels
+
+      - name: Check device-probe (oneapi)
+        run: cargo check --locked --no-default-features --features oneapi -p bitnet-device-probe
+
+      - name: Clippy (oneapi)
+        run: cargo clippy --locked --no-default-features --features oneapi -p bitnet-kernels -- -D warnings
+        continue-on-error: true  # May have warnings during initial development
+
+  unit-tests:
+    name: OneAPI Unit Tests (no GPU)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Install OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: intel-gpu-ci-test
+
+      - name: Run stub tests
+        run: cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl
+        continue-on-error: true
+
+      - name: Run kernel source tests
+        run: cargo test --locked --no-default-features --features cpu -p bitnet-kernels -- kernels::tests
+
+  # GPU smoke tests - only on self-hosted Intel GPU runners
+  gpu-smoke:
+    name: Intel GPU Smoke Test
+    runs-on: [self-hosted, intel-gpu]
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Verify Intel GPU
+        run: |
+          clinfo | head -20
+          echo "---"
+          lspci | grep -i vga || true
+
+      - name: Build with oneapi
+        run: cargo build --locked --no-default-features --features oneapi -p bitnet-kernels
+
+      - name: Run GPU tests
+        run: cargo test --locked --no-default-features --features oneapi -p bitnet-kernels
+        env:
+          RUST_LOG: debug

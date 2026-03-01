@@ -2,6 +2,8 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-math",
+  "crates/bitnet-warn-once",
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",
@@ -59,19 +61,27 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-gpu-hal",       # GPU HAL with multi-model serving
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
+  "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
+  "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
+    "crates/bitnet-rocm",          # HIP compute kernels for AMD ROCm backend",
+  "crates/bitnet-vulkan",        # Vulkan GLSL compute shaders for GPU inference
   "crossval",
   "tests",
+  "tests-new",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
+  "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
 default-members = [
   "crates/bitnet-common",
+  "crates/bitnet-math",
+  "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
   "crates/bitnet-rope",
   "crates/bitnet-transformer",
@@ -145,6 +155,8 @@ version = "0.2.1-dev"
 [dependencies]
 # Core crates - always included
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
+bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
+bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
@@ -214,6 +226,7 @@ gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-infer
 rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inference/rocm", "bitnet-quantization/rocm"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
+opencl = ["kernels", "inference", "tokenizers", "bitnet-kernels/opencl", "bitnet-inference/opencl", "bitnet-quantization/opencl"]
 npu = ["dep:bitnet-device-probe", "bitnet-device-probe/npu"]
 
 # Component features
@@ -298,6 +311,8 @@ harness = false
 required-features = ["cpu", "bench"]
 
 [workspace.dependencies]
+bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
+bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

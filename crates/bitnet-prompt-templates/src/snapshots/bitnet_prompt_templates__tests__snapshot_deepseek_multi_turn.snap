@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-prompt-templates/src/lib.rs
+expression: result
+---
+<|im_start|>system
+You are friendly.<|im_end|>
+<|im_start|>user
+Hello<|im_end|>
+<|im_start|>assistant
+Hi!<|im_end|>
+<|im_start|>user
+How are you?<|im_end|>
+<|im_start|>assistant

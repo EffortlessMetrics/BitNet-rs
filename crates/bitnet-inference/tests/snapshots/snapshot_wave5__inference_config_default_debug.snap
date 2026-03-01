@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: cfg
+---
+InferenceConfig {
+    max_context_length: 2048,
+    num_threads: [N],
+    batch_size: 1,
+    mixed_precision: false,
+    memory_pool_size: 536870912,
+}

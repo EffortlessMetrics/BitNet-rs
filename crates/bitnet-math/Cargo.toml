@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-math"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Mathematical operations and utilities for BitNet"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+# No runtime dependencies
+
+[dev-dependencies]
+proptest.workspace = true

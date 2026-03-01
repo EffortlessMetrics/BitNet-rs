@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: caps.summary()
+---
+simd=[SIMD] backends=[cpu-rust]

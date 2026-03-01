@@ -1,0 +1,83 @@
+#version 450
+// Numerically stable softmax compute shader
+// Operates on rows of length N: out[i] = exp(in[i] - max) / sum(exp(in[j] - max))
+
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    uint N;         // row length
+    uint num_rows;  // number of rows
+} params;
+
+layout(set = 0, binding = 0) readonly buffer Input {
+    float data[];
+} input_buf;
+
+layout(set = 0, binding = 1) writeonly buffer Output {
+    float data[];
+} output_buf;
+
+shared float shared_max[256];
+shared float shared_sum[256];
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    uint tid = gl_LocalInvocationID.x;
+    uint wgSize = gl_WorkGroupSize.x;
+
+    if (row >= params.num_rows) return;
+
+    uint row_offset = row * params.N;
+
+    // Phase 1: find row maximum (numerically stable)
+    float local_max = -1.0 / 0.0; // -inf
+    for (uint i = tid; i < params.N; i += wgSize) {
+        local_max = max(local_max, input_buf.data[row_offset + i]);
+    }
+
+    // Subgroup reduction for max
+    local_max = subgroupMax(local_max);
+    shared_max[gl_SubgroupID] = local_max;
+    barrier();
+    memoryBarrierShared();
+
+    // Final reduction across subgroups
+    if (tid < gl_NumSubgroups) {
+        local_max = shared_max[tid];
+    } else {
+        local_max = -1.0 / 0.0;
+    }
+    local_max = subgroupMax(local_max);
+    float row_max = subgroupBroadcastFirst(local_max);
+    barrier();
+
+    // Phase 2: compute sum of exp(x - max)
+    float local_sum = 0.0;
+    for (uint i = tid; i < params.N; i += wgSize) {
+        local_sum += exp(input_buf.data[row_offset + i] - row_max);
+    }
+
+    // Subgroup reduction for sum
+    local_sum = subgroupAdd(local_sum);
+    shared_sum[gl_SubgroupID] = local_sum;
+    barrier();
+    memoryBarrierShared();
+
+    if (tid < gl_NumSubgroups) {
+        local_sum = shared_sum[tid];
+    } else {
+        local_sum = 0.0;
+    }
+    local_sum = subgroupAdd(local_sum);
+    float row_sum = subgroupBroadcastFirst(local_sum);
+    barrier();
+
+    // Phase 3: write normalized output
+    float inv_sum = 1.0 / row_sum;
+    for (uint i = tid; i < params.N; i += wgSize) {
+        output_buf.data[row_offset + i] =
+            exp(input_buf.data[row_offset + i] - row_max) * inv_sum;
+    }
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: "format!(\"temperature={} top_k={} top_p={} repetition_penalty={}\",\ncfg.temperature, cfg.top_k, cfg.top_p, cfg.repetition_penalty,)"
+---
+temperature=0 top_k=1 top_p=1 repetition_penalty=1

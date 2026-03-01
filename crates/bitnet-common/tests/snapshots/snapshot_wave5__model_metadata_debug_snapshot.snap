@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave5.rs
+expression: meta
+---
+ModelMetadata {
+    name: "test-model",
+    version: "1.0.0",
+    architecture: "bitnet",
+    vocab_size: 32000,
+    context_length: 2048,
+    quantization: Some(
+        I2S,
+    ),
+    fingerprint: None,
+    corrections_applied: None,
+}
