@@ -127,6 +127,7 @@ pub mod docker_ci;
 
 // === Existing Modules (prior waves) ===
 
+pub mod api_gateway;
 pub mod model_warmup;
 //
 // Provides checkpoint management for saving and resuming inference state,
