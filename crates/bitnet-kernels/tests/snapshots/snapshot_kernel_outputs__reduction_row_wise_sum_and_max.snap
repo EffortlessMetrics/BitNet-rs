@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_kernel_outputs.rs
+expression: "format!(\"sums={} maxes={}\", fmt_f32(&sums), fmt_f32(&maxes),)"
+---
+sums=[6.000000, 15.000000] maxes=[3.000000, 6.000000]
