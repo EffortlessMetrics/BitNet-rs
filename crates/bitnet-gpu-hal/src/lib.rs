@@ -85,6 +85,7 @@ pub mod autoregressive_generator;
 pub mod context_window;
 pub mod dynamic_batching;
 pub mod inference_pipeline;
+pub mod inference_session;
 pub mod kv_cache_manager;
 pub mod sampling_strategies;
 
