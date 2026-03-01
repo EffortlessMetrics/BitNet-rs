@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quantization.rs
+expression: formatted
+---
+[
+  "1.000000",
+  "2.000000"
+]

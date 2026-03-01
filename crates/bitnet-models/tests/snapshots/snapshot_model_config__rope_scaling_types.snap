@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-models/tests/snapshot_model_config.rs
+expression: types
+---
+[
+  "None",
+  "Linear",
+  "Ntk",
+  "YaRn"
+]

@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_tokenizer_config.rs
+expression: "TokenizerConfig::default()"
+---
+TokenizerConfig {
+    model_type: "",
+    vocab_size: 0,
+    pre_tokenizer: None,
+    add_bos: false,
+    add_eos: false,
+    add_space_prefix: false,
+    byte_fallback: false,
+    bos_token_id: None,
+    eos_token_id: None,
+    pad_token_id: None,
+    unk_token_id: None,
+    vocabulary: None,
+    bpe_merges: None,
+}

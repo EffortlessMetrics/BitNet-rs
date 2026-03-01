@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-models/tests/snapshot_model_config.rs
+expression: config
+---
+{
+  "architecture": "bitnet",
+  "model_name": null,
+  "vocab_size": 32000,
+  "hidden_size": 2048,
+  "num_layers": 24,
+  "num_heads": 16,
+  "num_kv_heads": 16,
+  "head_dim": 128,
+  "intermediate_size": 8192,
+  "max_seq_len": 2048,
+  "rope_theta": 10000.0,
+  "rope_scaling": null,
+  "quantization": {
+    "bit_width": 2,
+    "block_size": 64,
+    "format": "I2_S"
+  }
+}
