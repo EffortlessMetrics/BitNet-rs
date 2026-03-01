@@ -89,6 +89,7 @@ pub mod sampling_strategies;
 // === Quantization ===
 pub mod mixed_precision;
 pub mod model_quantizer;
+pub mod quant_calibration;
 pub mod quantization_toolkit;
 pub mod weight_compression;
 
