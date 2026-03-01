@@ -105,52 +105,54 @@ impl NeonKernel {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        c.fill(0.0);
+        unsafe {
+            c.fill(0.0);
 
-        for i in 0..m {
-            for j in 0..n {
-                let mut l = 0usize;
-                let mut acc0 = vdupq_n_s32(0);
-                let mut acc1 = vdupq_n_s32(0);
-                let mut acc2 = vdupq_n_s32(0);
-                let mut acc3 = vdupq_n_s32(0);
+            for i in 0..m {
+                for j in 0..n {
+                    let mut l = 0usize;
+                    let mut acc0 = vdupq_n_s32(0);
+                    let mut acc1 = vdupq_n_s32(0);
+                    let mut acc2 = vdupq_n_s32(0);
+                    let mut acc3 = vdupq_n_s32(0);
 
-                while l + 16 <= k {
-                    let a_vec = vld1q_s8(a.as_ptr().add(i * k + l));
+                    while l + 16 <= k {
+                        let a_vec = vld1q_s8(a.as_ptr().add(i * k + l));
 
-                    let mut b_col = [0u8; 16];
-                    for kk in 0..16 {
-                        b_col[kk] = b[(l + kk) * n + j];
+                        let mut b_col = [0u8; 16];
+                        for kk in 0..16 {
+                            b_col[kk] = b[(l + kk) * n + j];
+                        }
+                        let b_vec = vld1q_u8(b_col.as_ptr());
+
+                        let a_lo = vmovl_s8(vget_low_s8(a_vec));
+                        let a_hi = vmovl_s8(vget_high_s8(a_vec));
+                        let b_lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(b_vec)));
+                        let b_hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(b_vec)));
+
+                        acc0 = vaddq_s32(acc0, vmull_s16(vget_low_s16(a_lo), vget_low_s16(b_lo)));
+                        acc1 = vaddq_s32(acc1, vmull_s16(vget_high_s16(a_lo), vget_high_s16(b_lo)));
+                        acc2 = vaddq_s32(acc2, vmull_s16(vget_low_s16(a_hi), vget_low_s16(b_hi)));
+                        acc3 = vaddq_s32(acc3, vmull_s16(vget_high_s16(a_hi), vget_high_s16(b_hi)));
+
+                        l += 16;
                     }
-                    let b_vec = vld1q_u8(b_col.as_ptr());
 
-                    let a_lo = vmovl_s8(vget_low_s8(a_vec));
-                    let a_hi = vmovl_s8(vget_high_s8(a_vec));
-                    let b_lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(b_vec)));
-                    let b_hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(b_vec)));
+                    let mut sum =
+                        (vaddvq_s32(acc0) + vaddvq_s32(acc1) + vaddvq_s32(acc2) + vaddvq_s32(acc3))
+                            as f32;
 
-                    acc0 = vaddq_s32(acc0, vmull_s16(vget_low_s16(a_lo), vget_low_s16(b_lo)));
-                    acc1 = vaddq_s32(acc1, vmull_s16(vget_high_s16(a_lo), vget_high_s16(b_lo)));
-                    acc2 = vaddq_s32(acc2, vmull_s16(vget_low_s16(a_hi), vget_low_s16(b_hi)));
-                    acc3 = vaddq_s32(acc3, vmull_s16(vget_high_s16(a_hi), vget_high_s16(b_hi)));
+                    while l < k {
+                        sum += (a[i * k + l] as f32) * (b[l * n + j] as f32);
+                        l += 1;
+                    }
 
-                    l += 16;
+                    c[i * n + j] = sum;
                 }
-
-                let mut sum =
-                    (vaddvq_s32(acc0) + vaddvq_s32(acc1) + vaddvq_s32(acc2) + vaddvq_s32(acc3))
-                        as f32;
-
-                while l < k {
-                    sum += (a[i * k + l] as f32) * (b[l * n + j] as f32);
-                    l += 1;
-                }
-
-                c[i * n + j] = sum;
             }
-        }
 
-        Ok(())
+            Ok(())
+        }
     }
 
     /// NEON optimized TL1 quantization
@@ -162,7 +164,7 @@ impl NeonKernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 64;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
         let required_output_bytes = packed_2bit_bytes(input.len());
 
         if output.len() < required_output_bytes {
@@ -185,106 +187,108 @@ impl NeonKernel {
             }));
         }
 
-        output[..required_output_bytes].fill(0);
+        unsafe {
+            output[..required_output_bytes].fill(0);
 
-        // TL1 lookup table optimized for ARM
-        let lut = [-1.0f32, -0.33, 0.33, 1.0];
+            // TL1 lookup table optimized for ARM
+            let lut = [-1.0f32, -0.33, 0.33, 1.0];
 
-        for block_idx in 0..num_blocks {
-            let start = block_idx * BLOCK_SIZE;
-            let end = (start + BLOCK_SIZE).min(input.len());
-            let block = &input[start..end];
+            for (block_idx, scale_out) in scales.iter_mut().enumerate().take(num_blocks) {
+                let start = block_idx * BLOCK_SIZE;
+                let end = (start + BLOCK_SIZE).min(input.len());
+                let block = &input[start..end];
 
-            // Find maximum absolute value using NEON
-            let mut max_vec = vdupq_n_f32(0.0);
-            let mut i = 0;
+                // Find maximum absolute value using NEON
+                let mut max_vec = vdupq_n_f32(0.0);
+                let mut i = 0;
 
-            // Process 4 elements at a time
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                let abs_vals = vabsq_f32(vals);
-                max_vec = vmaxq_f32(max_vec, abs_vals);
-                i += 4;
-            }
+                // Process 4 elements at a time
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    let abs_vals = vabsq_f32(vals);
+                    max_vec = vmaxq_f32(max_vec, abs_vals);
+                    i += 4;
+                }
 
-            // Find maximum in the vector
-            let max_val = vmaxvq_f32(max_vec);
+                // Find maximum in the vector
+                let max_val = vmaxvq_f32(max_vec);
 
-            // Handle remaining elements
-            let mut final_max = max_val;
-            for &val in &block[i..] {
-                final_max = final_max.max(val.abs());
-            }
+                // Handle remaining elements
+                let mut final_max = max_val;
+                for &val in &block[i..] {
+                    final_max = final_max.max(val.abs());
+                }
 
-            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
-            let scale_vec = vdupq_n_f32(scale);
+                let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
+                *scale_out = scale;
+                let scale_vec = vdupq_n_f32(scale);
 
-            // Quantize block using vectorized lookup
-            i = 0;
+                // Quantize block using vectorized lookup
+                i = 0;
 
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                let normalized = vdivq_f32(vals, scale_vec);
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    let normalized = vdivq_f32(vals, scale_vec);
 
-                // Find closest values in lookup table for each element.
-                // vgetq_lane_f32 requires a compile-time constant lane index,
-                // so we extract all 4 lanes via vst1q_f32 instead.
-                let mut lane_vals = [0.0f32; 4];
-                vst1q_f32(lane_vals.as_mut_ptr(), normalized);
-                let mut quantized = [0u8; 4];
+                    // Find closest values in lookup table for each element.
+                    // vgetq_lane_f32 requires a compile-time constant lane index,
+                    // so we extract all 4 lanes via vst1q_f32 instead.
+                    let mut lane_vals = [0.0f32; 4];
+                    vst1q_f32(lane_vals.as_mut_ptr(), normalized);
+                    let mut quantized = [0u8; 4];
 
-                for j in 0..4 {
-                    let val = lane_vals[j];
+                    for j in 0..4 {
+                        let val = lane_vals[j];
+                        let mut best_idx = 0;
+                        let mut best_dist = (val - lut[0]).abs();
+
+                        for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
+                            let dist = (val - lut_val).abs();
+                            if dist < best_dist {
+                                best_dist = dist;
+                                best_idx = idx;
+                            }
+                        }
+                        quantized[j] = best_idx as u8;
+                    }
+
+                    // Pack 4 values into one byte (2 bits each)
+                    let byte_idx = (start + i) / 4;
+                    if byte_idx < output.len() {
+                        output[byte_idx] = quantized[0]
+                            | (quantized[1] << 2)
+                            | (quantized[2] << 4)
+                            | (quantized[3] << 6);
+                    }
+
+                    i += 4;
+                }
+
+                // Handle remaining elements
+                for (j, &val) in block[i..].iter().enumerate() {
+                    let normalized = val / scale;
                     let mut best_idx = 0;
-                    let mut best_dist = (val - lut[0]).abs();
+                    let mut best_dist = (normalized - lut[0]).abs();
 
                     for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
-                        let dist = (val - lut_val).abs();
+                        let dist = (normalized - lut_val).abs();
                         if dist < best_dist {
                             best_dist = dist;
                             best_idx = idx;
                         }
                     }
-                    quantized[j] = best_idx as u8;
-                }
 
-                // Pack 4 values into one byte (2 bits each)
-                let byte_idx = (start + i) / 4;
-                if byte_idx < output.len() {
-                    output[byte_idx] = quantized[0]
-                        | (quantized[1] << 2)
-                        | (quantized[2] << 4)
-                        | (quantized[3] << 6);
-                }
+                    let byte_idx = (start + i + j) / 4;
+                    let bit_offset = ((start + i + j) % 4) * 2;
 
-                i += 4;
-            }
-
-            // Handle remaining elements
-            for (j, &val) in block[i..].iter().enumerate() {
-                let normalized = val / scale;
-                let mut best_idx = 0;
-                let mut best_dist = (normalized - lut[0]).abs();
-
-                for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
-                    let dist = (normalized - lut_val).abs();
-                    if dist < best_dist {
-                        best_dist = dist;
-                        best_idx = idx;
+                    if byte_idx < output.len() {
+                        output[byte_idx] |= (best_idx as u8) << bit_offset;
                     }
                 }
-
-                let byte_idx = (start + i + j) / 4;
-                let bit_offset = ((start + i + j) % 4) * 2;
-
-                if byte_idx < output.len() {
-                    output[byte_idx] |= (best_idx as u8) << bit_offset;
-                }
             }
-        }
 
-        Ok(())
+            Ok(())
+        }
     }
 
     /// NEON optimized I2_S quantization
@@ -299,7 +303,7 @@ impl NeonKernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 32;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
         let required_output_bytes = packed_2bit_bytes(input.len());
 
         if output.len() < required_output_bytes {
@@ -322,87 +326,89 @@ impl NeonKernel {
             }));
         }
 
-        let threshold_pos = vdupq_n_f32(0.5);
-        let threshold_neg = vdupq_n_f32(-0.5);
-        // Codes: +1 → 1, -1 → 3, 0 → 0
-        let code_pos = vdupq_n_u32(1);
-        let code_neg = vdupq_n_u32(3);
-        output[..required_output_bytes].fill(0);
+        unsafe {
+            let threshold_pos = vdupq_n_f32(0.5);
+            let threshold_neg = vdupq_n_f32(-0.5);
+            // Codes: +1 → 1, -1 → 3, 0 → 0
+            let code_pos = vdupq_n_u32(1);
+            let code_neg = vdupq_n_u32(3);
+            output[..required_output_bytes].fill(0);
 
-        for block_idx in 0..num_blocks {
-            let start = block_idx * BLOCK_SIZE;
-            let end = (start + BLOCK_SIZE).min(input.len());
-            let block = &input[start..end];
+            for (block_idx, scale_out) in scales.iter_mut().enumerate().take(num_blocks) {
+                let start = block_idx * BLOCK_SIZE;
+                let end = (start + BLOCK_SIZE).min(input.len());
+                let block = &input[start..end];
 
-            // Find maximum absolute value using NEON
-            let mut max_vec = vdupq_n_f32(0.0);
-            let mut i = 0;
+                // Find maximum absolute value using NEON
+                let mut max_vec = vdupq_n_f32(0.0);
+                let mut i = 0;
 
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                let abs_vals = vabsq_f32(vals);
-                max_vec = vmaxq_f32(max_vec, abs_vals);
-                i += 4;
-            }
-
-            let max_val = vmaxvq_f32(max_vec);
-            let mut final_max = max_val;
-
-            for &val in &block[i..] {
-                final_max = final_max.max(val.abs());
-            }
-
-            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
-            let scale_vec = vdupq_n_f32(scale);
-
-            // Vectorized quantization using NEON comparisons
-            i = 0;
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                let normalized = vdivq_f32(vals, scale_vec);
-
-                // Vectorized classification: compare all 4 lanes simultaneously
-                let gt_pos = vcgtq_f32(normalized, threshold_pos); // mask: val > 0.5
-                let lt_neg = vcltq_f32(normalized, threshold_neg); // mask: val < -0.5
-
-                // Select codes: positive → 1, negative → 3, else → 0
-                let codes = vorrq_u32(vandq_u32(gt_pos, code_pos), vandq_u32(lt_neg, code_neg));
-
-                // Pack 4 codes into one byte (2 bits each)
-                let byte_idx = (start + i) / 4;
-                if byte_idx < output.len() {
-                    let c0 = vgetq_lane_u32(codes, 0) as u8;
-                    let c1 = vgetq_lane_u32(codes, 1) as u8;
-                    let c2 = vgetq_lane_u32(codes, 2) as u8;
-                    let c3 = vgetq_lane_u32(codes, 3) as u8;
-                    output[byte_idx] = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    let abs_vals = vabsq_f32(vals);
+                    max_vec = vmaxq_f32(max_vec, abs_vals);
+                    i += 4;
                 }
 
-                i += 4;
-            }
+                let max_val = vmaxvq_f32(max_vec);
+                let mut final_max = max_val;
 
-            // Handle remaining elements
-            for (j, &val) in block[i..].iter().enumerate() {
-                let normalized = val / scale;
-                let quantized = if normalized > 0.5 {
-                    1u8
-                } else if normalized < -0.5 {
-                    3u8
-                } else {
-                    0u8
-                };
+                for &val in &block[i..] {
+                    final_max = final_max.max(val.abs());
+                }
 
-                let byte_idx = (start + i + j) / 4;
-                let bit_offset = ((start + i + j) % 4) * 2;
+                let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
+                *scale_out = scale;
+                let scale_vec = vdupq_n_f32(scale);
 
-                if byte_idx < output.len() {
-                    output[byte_idx] |= quantized << bit_offset;
+                // Vectorized quantization using NEON comparisons
+                i = 0;
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    let normalized = vdivq_f32(vals, scale_vec);
+
+                    // Vectorized classification: compare all 4 lanes simultaneously
+                    let gt_pos = vcgtq_f32(normalized, threshold_pos); // mask: val > 0.5
+                    let lt_neg = vcltq_f32(normalized, threshold_neg); // mask: val < -0.5
+
+                    // Select codes: positive → 1, negative → 3, else → 0
+                    let codes = vorrq_u32(vandq_u32(gt_pos, code_pos), vandq_u32(lt_neg, code_neg));
+
+                    // Pack 4 codes into one byte (2 bits each)
+                    let byte_idx = (start + i) / 4;
+                    if byte_idx < output.len() {
+                        let c0 = vgetq_lane_u32(codes, 0) as u8;
+                        let c1 = vgetq_lane_u32(codes, 1) as u8;
+                        let c2 = vgetq_lane_u32(codes, 2) as u8;
+                        let c3 = vgetq_lane_u32(codes, 3) as u8;
+                        output[byte_idx] = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
+                    }
+
+                    i += 4;
+                }
+
+                // Handle remaining elements
+                for (j, &val) in block[i..].iter().enumerate() {
+                    let normalized = val / scale;
+                    let quantized = if normalized > 0.5 {
+                        1u8
+                    } else if normalized < -0.5 {
+                        3u8
+                    } else {
+                        0u8
+                    };
+
+                    let byte_idx = (start + i + j) / 4;
+                    let bit_offset = ((start + i + j) % 4) * 2;
+
+                    if byte_idx < output.len() {
+                        output[byte_idx] |= quantized << bit_offset;
+                    }
                 }
             }
+
+            Ok(())
         }
-
-        Ok(())
     }
 
     /// NEON optimized TL2 quantization
@@ -417,7 +423,7 @@ impl NeonKernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 128;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
         let required_output_bytes = packed_2bit_bytes(input.len());
 
         if output.len() < required_output_bytes {
@@ -440,87 +446,89 @@ impl NeonKernel {
             }));
         }
 
-        // TL2 LUT: [-1.2, -0.4, 0.4, 1.2]
-        // Bucket boundaries: < -0.8 → 0, [-0.8, 0) → 1, [0, 0.8) → 2, >= 0.8 → 3
-        let bound_neg = vdupq_n_f32(-0.8);
-        let bound_zero = vdupq_n_f32(0.0);
-        let bound_pos = vdupq_n_f32(0.8);
-        let one = vdupq_n_u32(1);
-        output[..required_output_bytes].fill(0);
+        unsafe {
+            // TL2 LUT: [-1.2, -0.4, 0.4, 1.2]
+            // Bucket boundaries: < -0.8 → 0, [-0.8, 0) → 1, [0, 0.8) → 2, >= 0.8 → 3
+            let bound_neg = vdupq_n_f32(-0.8);
+            let bound_zero = vdupq_n_f32(0.0);
+            let bound_pos = vdupq_n_f32(0.8);
+            let one = vdupq_n_u32(1);
+            output[..required_output_bytes].fill(0);
 
-        for block_idx in 0..num_blocks {
-            let start = block_idx * BLOCK_SIZE;
-            let end = (start + BLOCK_SIZE).min(input.len());
-            let block = &input[start..end];
+            for (block_idx, scale_out) in scales.iter_mut().enumerate().take(num_blocks) {
+                let start = block_idx * BLOCK_SIZE;
+                let end = (start + BLOCK_SIZE).min(input.len());
+                let block = &input[start..end];
 
-            // Vectorized max-abs
-            let mut max_vec = vdupq_n_f32(0.0);
-            let mut i = 0;
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                max_vec = vmaxq_f32(max_vec, vabsq_f32(vals));
-                i += 4;
-            }
-            let mut final_max = vmaxvq_f32(max_vec);
-            for &val in &block[i..] {
-                final_max = final_max.max(val.abs());
-            }
-
-            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
-            let scale_vec = vdupq_n_f32(scale);
-
-            i = 0;
-            while i + 4 <= block.len() {
-                let vals = vld1q_f32(block.as_ptr().add(i));
-                let normalized = vdivq_f32(vals, scale_vec);
-
-                // Vectorized bucket classification using boundary comparisons:
-                // code = (normalized >= -0.8) + (normalized >= 0.0) + (normalized >= 0.8)
-                let ge_neg = vcgeq_f32(normalized, bound_neg);
-                let ge_zero = vcgeq_f32(normalized, bound_zero);
-                let ge_pos = vcgeq_f32(normalized, bound_pos);
-
-                // Each mask is all-1s (0xFFFFFFFF) or 0; AND with 1 gives 0 or 1
-                let codes = vaddq_u32(
-                    vaddq_u32(vandq_u32(ge_neg, one), vandq_u32(ge_zero, one)),
-                    vandq_u32(ge_pos, one),
-                );
-
-                let byte_idx = (start + i) / 4;
-                if byte_idx < output.len() {
-                    let c0 = vgetq_lane_u32(codes, 0) as u8;
-                    let c1 = vgetq_lane_u32(codes, 1) as u8;
-                    let c2 = vgetq_lane_u32(codes, 2) as u8;
-                    let c3 = vgetq_lane_u32(codes, 3) as u8;
-                    output[byte_idx] = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
+                // Vectorized max-abs
+                let mut max_vec = vdupq_n_f32(0.0);
+                let mut i = 0;
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    max_vec = vmaxq_f32(max_vec, vabsq_f32(vals));
+                    i += 4;
+                }
+                let mut final_max = vmaxvq_f32(max_vec);
+                for &val in &block[i..] {
+                    final_max = final_max.max(val.abs());
                 }
 
-                i += 4;
-            }
+                let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
+                *scale_out = scale;
+                let scale_vec = vdupq_n_f32(scale);
 
-            // Scalar tail
-            let lut = [-1.2f32, -0.4, 0.4, 1.2];
-            for (j, &val) in block[i..].iter().enumerate() {
-                let normalized = val / scale;
-                let mut best_idx = 0;
-                let mut best_dist = (normalized - lut[0]).abs();
-                for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
-                    let dist = (normalized - lut_val).abs();
-                    if dist < best_dist {
-                        best_dist = dist;
-                        best_idx = idx;
+                i = 0;
+                while i + 4 <= block.len() {
+                    let vals = vld1q_f32(block.as_ptr().add(i));
+                    let normalized = vdivq_f32(vals, scale_vec);
+
+                    // Vectorized bucket classification using boundary comparisons:
+                    // code = (normalized >= -0.8) + (normalized >= 0.0) + (normalized >= 0.8)
+                    let ge_neg = vcgeq_f32(normalized, bound_neg);
+                    let ge_zero = vcgeq_f32(normalized, bound_zero);
+                    let ge_pos = vcgeq_f32(normalized, bound_pos);
+
+                    // Each mask is all-1s (0xFFFFFFFF) or 0; AND with 1 gives 0 or 1
+                    let codes = vaddq_u32(
+                        vaddq_u32(vandq_u32(ge_neg, one), vandq_u32(ge_zero, one)),
+                        vandq_u32(ge_pos, one),
+                    );
+
+                    let byte_idx = (start + i) / 4;
+                    if byte_idx < output.len() {
+                        let c0 = vgetq_lane_u32(codes, 0) as u8;
+                        let c1 = vgetq_lane_u32(codes, 1) as u8;
+                        let c2 = vgetq_lane_u32(codes, 2) as u8;
+                        let c3 = vgetq_lane_u32(codes, 3) as u8;
+                        output[byte_idx] = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
+                    }
+
+                    i += 4;
+                }
+
+                // Scalar tail
+                let lut = [-1.2f32, -0.4, 0.4, 1.2];
+                for (j, &val) in block[i..].iter().enumerate() {
+                    let normalized = val / scale;
+                    let mut best_idx = 0;
+                    let mut best_dist = (normalized - lut[0]).abs();
+                    for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
+                        let dist = (normalized - lut_val).abs();
+                        if dist < best_dist {
+                            best_dist = dist;
+                            best_idx = idx;
+                        }
+                    }
+                    let byte_idx = (start + i + j) / 4;
+                    let bit_offset = ((start + i + j) % 4) * 2;
+                    if byte_idx < output.len() {
+                        output[byte_idx] |= (best_idx as u8) << bit_offset;
                     }
                 }
-                let byte_idx = (start + i + j) / 4;
-                let bit_offset = ((start + i + j) % 4) * 2;
-                if byte_idx < output.len() {
-                    output[byte_idx] |= (best_idx as u8) << bit_offset;
-                }
             }
-        }
 
-        Ok(())
+            Ok(())
+        }
     }
 
     /// Dequantize QK256 format data to f32 with NEON acceleration
@@ -667,31 +675,33 @@ impl NeonKernel {
                 codes[base + 3] = (byte >> 6) & 0x03;
             }
 
-            let scale_vec = vdupq_n_f32(scale);
+            unsafe {
+                let scale_vec = vdupq_n_f32(scale);
 
-            // Process 4 elements at a time with NEON
-            let mut elem_idx = 0;
-            while elem_idx + 4 <= QK256 {
-                let weights = vld1q_f32(
-                    [
-                        LUT[codes[elem_idx] as usize],
-                        LUT[codes[elem_idx + 1] as usize],
-                        LUT[codes[elem_idx + 2] as usize],
-                        LUT[codes[elem_idx + 3] as usize],
-                    ]
-                    .as_ptr(),
-                );
+                // Process 4 elements at a time with NEON
+                let mut elem_idx = 0;
+                while elem_idx + 4 <= QK256 {
+                    let weights = vld1q_f32(
+                        [
+                            LUT[codes[elem_idx] as usize],
+                            LUT[codes[elem_idx + 1] as usize],
+                            LUT[codes[elem_idx + 2] as usize],
+                            LUT[codes[elem_idx + 3] as usize],
+                        ]
+                        .as_ptr(),
+                    );
 
-                let scaled = vmulq_f32(weights, scale_vec);
-                vst1q_f32(output.as_mut_ptr().add(block_start + elem_idx), scaled);
+                    let scaled = vmulq_f32(weights, scale_vec);
+                    vst1q_f32(output.as_mut_ptr().add(block_start + elem_idx), scaled);
 
-                elem_idx += 4;
-            }
+                    elem_idx += 4;
+                }
 
-            // Scalar tail
-            while elem_idx < QK256 && block_start + elem_idx < total_elements {
-                output[block_start + elem_idx] = LUT[codes[elem_idx] as usize] * scale;
-                elem_idx += 1;
+                // Scalar tail
+                while elem_idx < QK256 && block_start + elem_idx < total_elements {
+                    output[block_start + elem_idx] = LUT[codes[elem_idx] as usize] * scale;
+                    elem_idx += 1;
+                }
             }
         }
 
