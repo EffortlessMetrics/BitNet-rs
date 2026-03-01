@@ -151,14 +151,10 @@ impl GuardrailConfig {
     /// Validate the configuration itself.
     pub fn validate(&self) -> Result<(), GuardrailError> {
         if self.max_input_length == 0 {
-            return Err(GuardrailError::Config(
-                "max_input_length must be > 0".into(),
-            ));
+            return Err(GuardrailError::Config("max_input_length must be > 0".into()));
         }
         if self.max_output_length == 0 {
-            return Err(GuardrailError::Config(
-                "max_output_length must be > 0".into(),
-            ));
+            return Err(GuardrailError::Config("max_output_length must be > 0".into()));
         }
         Ok(())
     }
@@ -186,11 +182,7 @@ pub struct InputValidator {
 impl InputValidator {
     /// Create a new validator with the given maximum input length.
     pub fn new(max_length: usize) -> Self {
-        Self {
-            max_length,
-            blocked_patterns: Vec::new(),
-            allow_empty: false,
-        }
+        Self { max_length, blocked_patterns: Vec::new(), allow_empty: false }
     }
 
     /// Add a blocked substring pattern.
@@ -207,9 +199,7 @@ impl InputValidator {
     pub fn validate(&self, input: &str) -> Result<(), GuardrailError> {
         // Empty check
         if !self.allow_empty && input.trim().is_empty() {
-            return Err(GuardrailError::InputValidation(
-                "empty input not allowed".into(),
-            ));
+            return Err(GuardrailError::InputValidation("empty input not allowed".into()));
         }
 
         // Length check
@@ -223,9 +213,7 @@ impl InputValidator {
 
         // Null byte check
         if input.contains('\0') {
-            return Err(GuardrailError::InputValidation(
-                "input contains null bytes".into(),
-            ));
+            return Err(GuardrailError::InputValidation("input contains null bytes".into()));
         }
 
         // Control character check (allow newline, tab, carriage return)
@@ -356,9 +344,7 @@ impl OutputFilter {
                 let mut end = i + 1;
                 let mut has_dot = false;
                 while end < chars.len()
-                    && (chars[end].is_alphanumeric()
-                        || chars[end] == '.'
-                        || chars[end] == '-')
+                    && (chars[end].is_alphanumeric() || chars[end] == '.' || chars[end] == '-')
                 {
                     if chars[end] == '.' {
                         has_dot = true;
@@ -367,8 +353,7 @@ impl OutputFilter {
                 }
                 if start < i && has_dot {
                     // Remove previously appended local-part chars
-                    let local_len: usize =
-                        chars[start..i].iter().map(|c| c.len_utf8()).sum();
+                    let local_len: usize = chars[start..i].iter().map(|c| c.len_utf8()).sum();
                     result.truncate(result.len() - local_len);
                     result.push_str("[EMAIL REDACTED]");
                     i = end;
@@ -389,7 +374,9 @@ impl OutputFilter {
         let mut i = 0;
 
         while i < chars.len() {
-            if chars[i].is_ascii_digit() || (chars[i] == '+' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) {
+            if chars[i].is_ascii_digit()
+                || (chars[i] == '+' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
+            {
                 let start = i;
                 let mut digit_count = 0u32;
                 let mut j = i;
@@ -452,19 +439,11 @@ pub struct TokenBudgetEnforcer {
 impl TokenBudgetEnforcer {
     /// Create a new enforcer with per-request and per-session limits.
     pub fn new(per_request_limit: u64, per_session_limit: u64) -> Self {
-        Self {
-            per_request_limit,
-            per_session_limit,
-            session_usage: HashMap::new(),
-        }
+        Self { per_request_limit, per_session_limit, session_usage: HashMap::new() }
     }
 
     /// Check whether a request for `token_count` tokens is allowed.
-    pub fn check_request(
-        &self,
-        session_id: &str,
-        token_count: u64,
-    ) -> Result<(), GuardrailError> {
+    pub fn check_request(&self, session_id: &str, token_count: u64) -> Result<(), GuardrailError> {
         if token_count > self.per_request_limit {
             return Err(GuardrailError::TokenBudgetExceeded {
                 limit: self.per_request_limit,
@@ -485,10 +464,7 @@ impl TokenBudgetEnforcer {
 
     /// Record that `token_count` tokens were consumed for a session.
     pub fn record_usage(&mut self, session_id: &str, token_count: u64) {
-        *self
-            .session_usage
-            .entry(session_id.to_string())
-            .or_insert(0) += token_count;
+        *self.session_usage.entry(session_id.to_string()).or_insert(0) += token_count;
     }
 
     /// Return cumulative usage for a session.
@@ -538,11 +514,7 @@ struct TokenBucket {
 impl RateLimiter {
     /// Create a rate limiter with `capacity` burst and `refill_rate` tokens/s.
     pub fn new(capacity: u64, refill_rate: f64) -> Self {
-        Self {
-            capacity,
-            refill_rate,
-            buckets: HashMap::new(),
-        }
+        Self { capacity, refill_rate, buckets: HashMap::new() }
     }
 
     /// Try to consume one request for `key`. Returns `Ok(())` if allowed.
@@ -551,17 +523,13 @@ impl RateLimiter {
     }
 
     /// Try to consume `n` tokens for `key`.
-    pub fn try_acquire_n(
-        &mut self,
-        key: &str,
-        n: u64,
-    ) -> Result<(), GuardrailError> {
+    pub fn try_acquire_n(&mut self, key: &str, n: u64) -> Result<(), GuardrailError> {
         let now = Instant::now();
         let cap = self.capacity as f64;
-        let bucket = self.buckets.entry(key.to_string()).or_insert(TokenBucket {
-            tokens: cap,
-            last_refill: now,
-        });
+        let bucket = self
+            .buckets
+            .entry(key.to_string())
+            .or_insert(TokenBucket { tokens: cap, last_refill: now });
 
         // Refill
         let elapsed = now.duration_since(bucket.last_refill).as_secs_f64();
@@ -575,9 +543,7 @@ impl RateLimiter {
         } else {
             let deficit = needed - bucket.tokens;
             let wait_ms = (deficit / self.refill_rate * 1000.0).ceil() as u64;
-            Err(GuardrailError::RateLimited {
-                retry_after_ms: wait_ms,
-            })
+            Err(GuardrailError::RateLimited { retry_after_ms: wait_ms })
         }
     }
 
@@ -585,10 +551,10 @@ impl RateLimiter {
     pub fn remaining(&mut self, key: &str) -> u64 {
         let now = Instant::now();
         let cap = self.capacity as f64;
-        let bucket = self.buckets.entry(key.to_string()).or_insert(TokenBucket {
-            tokens: cap,
-            last_refill: now,
-        });
+        let bucket = self
+            .buckets
+            .entry(key.to_string())
+            .or_insert(TokenBucket { tokens: cap, last_refill: now });
         let elapsed = now.duration_since(bucket.last_refill).as_secs_f64();
         let current = (bucket.tokens + elapsed * self.refill_rate).min(cap);
         current.floor() as u64
@@ -626,11 +592,7 @@ pub struct ContentClassifier {
 impl ContentClassifier {
     /// Create a classifier. If `strict`, warnings are promoted to blocked.
     pub fn new(strict: bool) -> Self {
-        Self {
-            warning_patterns: Vec::new(),
-            blocked_patterns: Vec::new(),
-            strict,
-        }
+        Self { warning_patterns: Vec::new(), blocked_patterns: Vec::new(), strict }
     }
 
     /// Add a pattern that triggers a warning-level classification.
@@ -655,11 +617,7 @@ impl ContentClassifier {
 
         for pattern in &self.warning_patterns {
             if lower.contains(pattern.as_str()) {
-                return if self.strict {
-                    SafetyLevel::Blocked
-                } else {
-                    SafetyLevel::Warning
-                };
+                return if self.strict { SafetyLevel::Blocked } else { SafetyLevel::Warning };
             }
         }
 
@@ -725,19 +683,11 @@ pub enum AuditEventType {
 impl AuditLogger {
     /// Create a new logger that keeps at most `max_entries` records.
     pub fn new(max_entries: usize) -> Self {
-        Self {
-            entries: Vec::new(),
-            max_entries,
-        }
+        Self { entries: Vec::new(), max_entries }
     }
 
     /// Log an event.
-    pub fn log(
-        &mut self,
-        event_type: AuditEventType,
-        message: &str,
-        key: Option<&str>,
-    ) {
+    pub fn log(&mut self, event_type: AuditEventType, message: &str, key: Option<&str>) {
         if self.entries.len() >= self.max_entries && self.max_entries > 0 {
             self.entries.remove(0);
         }
@@ -758,18 +708,12 @@ impl AuditLogger {
 
     /// Return entries of a specific type.
     pub fn entries_by_type(&self, event_type: AuditEventType) -> Vec<&AuditEntry> {
-        self.entries
-            .iter()
-            .filter(|e| e.event_type == event_type)
-            .collect()
+        self.entries.iter().filter(|e| e.event_type == event_type).collect()
     }
 
     /// Return entries for a specific key.
     pub fn entries_by_key(&self, key: &str) -> Vec<&AuditEntry> {
-        self.entries
-            .iter()
-            .filter(|e| e.key.as_deref() == Some(key))
-            .collect()
+        self.entries.iter().filter(|e| e.key.as_deref() == Some(key)).collect()
     }
 
     /// Clear all entries.
@@ -830,11 +774,7 @@ impl CircuitBreaker {
     /// * `failure_threshold` — consecutive failures before opening.
     /// * `success_threshold` — successes in half-open before closing.
     /// * `recovery_timeout` — time to wait before transitioning to half-open.
-    pub fn new(
-        failure_threshold: u32,
-        success_threshold: u32,
-        recovery_timeout: Duration,
-    ) -> Self {
+    pub fn new(failure_threshold: u32, success_threshold: u32, recovery_timeout: Duration) -> Self {
         Self {
             state: CircuitState::Closed,
             failure_count: 0,
@@ -867,10 +807,7 @@ impl CircuitBreaker {
                     }
                 }
                 Err(GuardrailError::CircuitOpen {
-                    reason: format!(
-                        "circuit open after {} failures",
-                        self.failure_count
-                    ),
+                    reason: format!("circuit open after {} failures", self.failure_count),
                 })
             }
         }
@@ -1066,32 +1003,20 @@ impl SafetyGuardrailEngine {
             token_budget: TokenBudgetEnforcer::new(4096, 0),
             rate_limiter: RateLimiter::new(100, 10.0),
             classifier,
-            circuit_breaker: CircuitBreaker::new(
-                5,
-                2,
-                Duration::from_secs(30),
-            ),
+            circuit_breaker: CircuitBreaker::new(5, 2, Duration::from_secs(30)),
             audit_logger: AuditLogger::new(10_000),
             report: GuardrailReport::new(),
         }
     }
 
     /// Build with custom token budget limits.
-    pub fn with_token_budget(
-        mut self,
-        per_request: u64,
-        per_session: u64,
-    ) -> Self {
+    pub fn with_token_budget(mut self, per_request: u64, per_session: u64) -> Self {
         self.token_budget = TokenBudgetEnforcer::new(per_request, per_session);
         self
     }
 
     /// Build with custom rate limiter settings.
-    pub fn with_rate_limiter(
-        mut self,
-        capacity: u64,
-        refill_rate: f64,
-    ) -> Self {
+    pub fn with_rate_limiter(mut self, capacity: u64, refill_rate: f64) -> Self {
         self.rate_limiter = RateLimiter::new(capacity, refill_rate);
         self
     }
@@ -1103,11 +1028,8 @@ impl SafetyGuardrailEngine {
         success_threshold: u32,
         recovery_timeout: Duration,
     ) -> Self {
-        self.circuit_breaker = CircuitBreaker::new(
-            failure_threshold,
-            success_threshold,
-            recovery_timeout,
-        );
+        self.circuit_breaker =
+            CircuitBreaker::new(failure_threshold, success_threshold, recovery_timeout);
         self
     }
 
@@ -1171,9 +1093,7 @@ impl SafetyGuardrailEngine {
 
         // Token budget
         if self.config.token_budget_enabled {
-            if let Err(e) =
-                self.token_budget.check_request(session_id, token_count)
-            {
+            if let Err(e) = self.token_budget.check_request(session_id, token_count) {
                 self.report.budget_rejections += 1;
                 self.audit_logger.log(
                     AuditEventType::TokenBudgetCheck,
@@ -1540,9 +1460,7 @@ mod tests {
         let mut f = OutputFilter::new(10000);
         f.set_redact_emails(true);
         f.set_redact_phone_numbers(true);
-        let result = f
-            .filter("Email a@b.com or call 1234567890")
-            .unwrap();
+        let result = f.filter("Email a@b.com or call 1234567890").unwrap();
         assert!(result.contains("[EMAIL REDACTED]"));
         assert!(result.contains("[PHONE REDACTED]"));
     }
@@ -1643,10 +1561,7 @@ mod tests {
 
     #[test]
     fn budget_error_display() {
-        let e = GuardrailError::TokenBudgetExceeded {
-            limit: 100,
-            requested: 200,
-        };
+        let e = GuardrailError::TokenBudgetExceeded { limit: 100, requested: 200 };
         let msg = format!("{e}");
         assert!(msg.contains("100"));
         assert!(msg.contains("200"));
@@ -2072,14 +1987,9 @@ mod tests {
         let variants = [
             GuardrailError::InputValidation("bad".into()),
             GuardrailError::OutputFiltered("nope".into()),
-            GuardrailError::TokenBudgetExceeded {
-                limit: 1,
-                requested: 2,
-            },
+            GuardrailError::TokenBudgetExceeded { limit: 1, requested: 2 },
             GuardrailError::RateLimited { retry_after_ms: 5 },
-            GuardrailError::CircuitOpen {
-                reason: "tripped".into(),
-            },
+            GuardrailError::CircuitOpen { reason: "tripped".into() },
             GuardrailError::Config("invalid".into()),
         ];
         for v in &variants {
@@ -2145,23 +2055,22 @@ mod tests {
 
     #[test]
     fn engine_disabled_config_passthrough() {
-        let mut engine =
-            SafetyGuardrailEngine::new(GuardrailConfig::disabled());
+        let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::disabled());
         assert!(engine.check_input("", "s1", 999_999).is_ok());
     }
 
     #[test]
     fn engine_with_token_budget() {
-        let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::default())
-            .with_token_budget(10, 20);
+        let mut engine =
+            SafetyGuardrailEngine::new(GuardrailConfig::default()).with_token_budget(10, 20);
         assert!(engine.check_input("ok", "s1", 10).is_ok());
         assert!(engine.check_input("ok", "s1", 11).is_err());
     }
 
     #[test]
     fn engine_with_rate_limiter() {
-        let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::default())
-            .with_rate_limiter(2, 0.001);
+        let mut engine =
+            SafetyGuardrailEngine::new(GuardrailConfig::default()).with_rate_limiter(2, 0.001);
         assert!(engine.check_input("a", "s1", 1).is_ok());
         assert!(engine.check_input("b", "s1", 1).is_ok());
         assert!(engine.check_input("c", "s1", 1).is_err());
@@ -2205,8 +2114,8 @@ mod tests {
 
     #[test]
     fn engine_output_records_token_usage() {
-        let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::default())
-            .with_token_budget(100, 50);
+        let mut engine =
+            SafetyGuardrailEngine::new(GuardrailConfig::default()).with_token_budget(100, 50);
         engine.check_output("result", "s1", 30).unwrap();
         // Now session has 30 used, only 20 remaining
         assert!(engine.check_input("ok", "s1", 21).is_err());
@@ -2228,9 +2137,7 @@ mod tests {
     fn engine_output_filter_mut() {
         let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::default());
         engine.output_filter_mut().set_redact_emails(true);
-        let r = engine
-            .check_output("contact a@b.com", "s1", 1)
-            .unwrap();
+        let r = engine.check_output("contact a@b.com", "s1", 1).unwrap();
         assert!(r.contains("[EMAIL REDACTED]"));
     }
 }
