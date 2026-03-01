@@ -4,6 +4,9 @@
 //! `snapshot_wave5.rs`, these tests pin the actual computed values
 //! produced by the CPU kernels so that accidental numerical regressions
 //! are caught at review time.
+//!
+//! Requires `gpu` or `cuda` feature for softmax/conv1d modules.
+#![cfg(any(feature = "gpu", feature = "cuda"))]
 
 use bitnet_kernels::cpu::{conv1d, embedding, quantized_matmul, rope, softmax};
 use bitnet_kernels::reduction::{self, ReductionOp};

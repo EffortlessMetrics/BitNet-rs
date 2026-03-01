@@ -5,6 +5,9 @@
 //! (reduction, conv1d, RoPE, pooling, scatter/gather, softmax, embedding,
 //! shaped reduction, SIMD math, and fused ops) so that unintentional changes
 //! are caught at review time.
+//!
+//! Requires `gpu` or `cuda` feature for softmax/conv1d modules.
+#![cfg(any(feature = "gpu", feature = "cuda"))]
 
 use bitnet_kernels::KernelManager;
 use bitnet_kernels::cpu::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};

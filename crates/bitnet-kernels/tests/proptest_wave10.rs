@@ -10,7 +10,7 @@
 //! - Gather/scatter round-trip with identity indices
 //! - Quantization pack/unpack round-trip preserves values
 
-use bitnet_kernels::cpu::activations;
+use bitnet_kernels::cpu::activations::{ActivationType, activate};
 use bitnet_kernels::cpu::layer_norm::{LayerNormConfig, layer_norm};
 use bitnet_kernels::cpu::reduction::ReductionKernel;
 use bitnet_kernels::reduction::{ReductionOp, reduce_f32};
@@ -199,8 +199,7 @@ proptest! {
     /// Sigmoid output always in [0, 1].
     #[test]
     fn prop_sigmoid_range(input in finite_f32_vec(256)) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::sigmoid_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::Sigmoid);
         for (i, &v) in output.iter().enumerate() {
             prop_assert!(
                 (0.0..=1.0).contains(&v),
@@ -212,8 +211,7 @@ proptest! {
     /// ReLU output always ≥ 0.
     #[test]
     fn prop_relu_nonnegative(input in finite_f32_vec(256)) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::relu_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::ReLU);
         for (i, &v) in output.iter().enumerate() {
             prop_assert!(v >= 0.0, "relu[{i}]={v} < 0");
         }
@@ -222,8 +220,7 @@ proptest! {
     /// ReLU preserves positive values exactly.
     #[test]
     fn prop_relu_preserves_positive(input in finite_f32_vec(256)) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::relu_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::ReLU);
         for (i, (&inp, &out)) in input.iter().zip(output.iter()).enumerate() {
             if inp > 0.0 {
                 prop_assert_eq!(out, inp, "relu should preserve positive at [{}]", i);
@@ -234,8 +231,7 @@ proptest! {
     /// Tanh output always in [-1, 1].
     #[test]
     fn prop_tanh_range(input in finite_f32_vec(256)) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::tanh_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::Tanh);
         for (i, &v) in output.iter().enumerate() {
             prop_assert!(
                 (-1.0..=1.0).contains(&v),
@@ -249,8 +245,7 @@ proptest! {
     fn prop_sigmoid_monotone(input in finite_f32_vec(256)) {
         let mut sorted = input.clone();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let mut output = vec![0.0f32; sorted.len()];
-        activations::sigmoid_activate(&sorted, &mut output);
+        let output = activate(&sorted, ActivationType::Sigmoid);
         for i in 1..output.len() {
             prop_assert!(
                 output[i] >= output[i - 1] - 1e-6,
@@ -263,8 +258,7 @@ proptest! {
     /// GELU output is bounded: gelu(x) ≥ -0.17 for all x (known lower bound).
     #[test]
     fn prop_gelu_lower_bound(input in finite_f32_vec(256)) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::gelu_exact_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::GELU);
         for (i, &v) in output.iter().enumerate() {
             prop_assert!(
                 v >= -0.2,
@@ -278,8 +272,7 @@ proptest! {
     fn prop_silu_at_zero_and_small(
         input in prop::collection::vec(-0.01f32..0.01f32, 1..=64)
     ) {
-        let mut output = vec![0.0f32; input.len()];
-        activations::silu_activate(&input, &mut output);
+        let output = activate(&input, ActivationType::SiLU);
         for (i, &v) in output.iter().enumerate() {
             prop_assert!(
                 v.abs() < 0.02,

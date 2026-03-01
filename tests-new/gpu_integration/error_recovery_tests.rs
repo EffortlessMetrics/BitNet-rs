@@ -59,6 +59,8 @@ fn test_kernel_compilation_failure_recovery() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };
@@ -81,6 +83,8 @@ fn test_device_lost_recovery() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        opencl_compiled: false,
+        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: bitnet_common::SimdLevel::Scalar,
     };

@@ -8,7 +8,9 @@ use bitnet_common::Device;
 use bitnet_kernels::capability_matrix::{
     DeviceClass, OperationCategory, PrecisionSupport, SupportLevel, apple_m1,
 };
-use bitnet_kernels::gpu_utils::{GpuInfo, get_gpu_info};
+use bitnet_kernels::gpu_utils::GpuInfo;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use bitnet_kernels::gpu_utils::get_gpu_info;
 
 // ── Constants for Metal hardware constraints ────────────────────────────────
 
@@ -26,6 +28,7 @@ const METAL_MIN_UNIFIED_MEMORY_GB: u64 = 8;
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_device_detection {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
@@ -103,6 +106,7 @@ mod metal_device_detection {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_feature_gate {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
@@ -174,6 +178,7 @@ mod metal_feature_gate {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_buffer_alignment {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
@@ -221,6 +226,7 @@ mod metal_buffer_alignment {
 
 #[cfg(test)]
 mod metal_buffer_alignment_proptest {
+    #[allow(unused_imports)]
     use super::*;
     use proptest::prelude::*;
 
@@ -261,6 +267,7 @@ mod metal_buffer_alignment_proptest {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_workgroup_limits {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
@@ -340,6 +347,7 @@ mod metal_workgroup_limits {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_memory_estimation {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
@@ -391,6 +399,7 @@ mod metal_memory_estimation {
 // ═══════════════════════════════════════════════════════════════════════════
 
 mod metal_shader_availability {
+    #[allow(unused_imports)]
     use super::*;
 
     /// Verify the Apple M1 capability profile includes matrix ops.

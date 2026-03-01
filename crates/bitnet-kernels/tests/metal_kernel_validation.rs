@@ -7,8 +7,8 @@
 
 use bitnet_common::Device;
 use bitnet_kernels::capability_matrix::{
-    CapabilityQuery, CompatibilityReport, DeviceCapabilityMatrix, DeviceClass, DeviceProfile,
-    OperationCategory, PrecisionSupport, SupportLevel, apple_m1,
+    CapabilityQuery, CompatibilityReport, DeviceCapabilityMatrix, DeviceClass, OperationCategory,
+    PrecisionSupport, SupportLevel, apple_m1,
 };
 use bitnet_kernels::gpu_utils::GpuInfo;
 
@@ -460,13 +460,15 @@ mod apple_silicon_capabilities {
 
     #[test]
     fn apple_m1_supports_fp16_matmul() {
-        let q = CapabilityQuery::new(&apple_m1());
+        let profile = apple_m1();
+        let q = CapabilityQuery::new(&profile);
         assert!(q.supports(OperationCategory::MatrixOps, PrecisionSupport::FP16));
     }
 
     #[test]
     fn apple_m1_best_matmul_precision_is_fp16() {
-        let q = CapabilityQuery::new(&apple_m1());
+        let profile = apple_m1();
+        let q = CapabilityQuery::new(&profile);
         let best = q.best_precision_for(OperationCategory::MatrixOps);
         assert_eq!(best, Some(PrecisionSupport::FP16));
     }

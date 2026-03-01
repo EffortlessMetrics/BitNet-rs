@@ -1,7 +1,7 @@
 //! Edge-case tests for OpenCL paged attention, page allocator, KV cache,
 //! and GQA configuration.
 
-use bitnet_opencl::kv_cache::{CacheMemoryStats, GpuKvCache, KvCacheConfig, PageTable};
+use bitnet_opencl::kv_cache::{CacheMemoryStats, GpuKvCache, KvCacheConfig};
 use bitnet_opencl::paged_attention::{
     GqaConfig, PageAllocator, PagedAttentionEngine, kv_config_for_gqa,
 };
@@ -92,7 +92,7 @@ fn allocator_defragment_no_moves_when_contiguous() {
 #[test]
 fn allocator_defragment_with_gap() {
     let mut alloc = PageAllocator::new(8);
-    let p0 = alloc.allocate().unwrap(); // gets page from end
+    let _p0 = alloc.allocate().unwrap(); // gets page from end
     let p1 = alloc.allocate().unwrap();
     let _p2 = alloc.allocate().unwrap();
 

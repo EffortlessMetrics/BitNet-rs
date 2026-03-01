@@ -4,10 +4,9 @@
 //! load-based, specific backend), error paths, capability matrix queries,
 //! dispatch logging, and degraded/unavailable backend handling.
 
-use bitnet_opencl::backend_registry::{BackendInfo, BackendProvider, BackendRegistry};
+use bitnet_opencl::backend_registry::{BackendProvider, BackendRegistry};
 use bitnet_opencl::{
-    BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchError, DispatchLog,
-    DispatchStrategy, Operation,
+    BackendDispatcher, BackendStatus, DispatchError, DispatchLog, DispatchStrategy, Operation,
 };
 
 // ── Mock backend ─────────────────────────────────────────────────────────────

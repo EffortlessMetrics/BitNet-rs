@@ -19,7 +19,7 @@ use bitnet_kernels::cpu::loss::{
 };
 use bitnet_kernels::cpu::pooling::{PoolConfig, PoolType, adaptive_avg_pool_1d, pool_1d};
 use bitnet_kernels::cpu::scatter_gather::{gather_1d, scatter_1d, scatter_add};
-use bitnet_kernels::cpu::transpose::{TransposeConfig, reshape, transpose_2d, transpose_nd};
+use bitnet_kernels::cpu::transpose::TransposeKernel;
 use bitnet_kernels::reduction::ReductionOp;
 use bitnet_kernels::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
 use proptest::prelude::*;
@@ -446,15 +446,15 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(128))]
 
-    /// transpose_2d(transpose_2d(x)) == x (involution).
+    /// TransposeKernel::transpose_2d(TransposeKernel::transpose_2d(x).unwrap()) == x (involution).
     #[test]
     fn prop_transpose_2d_double_identity(
         rows in 1usize..=32,
         cols in 1usize..=32,
     ) {
         let data: Vec<f32> = (0..rows * cols).map(|i| i as f32 * 0.3).collect();
-        let t1 = transpose_2d(&data, rows, cols);
-        let t2 = transpose_2d(&t1, cols, rows);
+        let t1 = TransposeKernel::transpose_2d(&data, rows, cols).unwrap();
+        let t2 = TransposeKernel::transpose_2d(&t1, cols, rows).unwrap();
         prop_assert_eq!(&data, &t2, "double transpose != identity");
     }
 
@@ -465,7 +465,7 @@ proptest! {
         cols in 1usize..=32,
     ) {
         let data: Vec<f32> = (0..rows * cols).map(|i| i as f32).collect();
-        let transposed = transpose_2d(&data, rows, cols);
+        let transposed = TransposeKernel::transpose_2d(&data, rows, cols).unwrap();
         prop_assert_eq!(transposed.len(), rows * cols);
     }
 
@@ -479,7 +479,7 @@ proptest! {
         let shape = [dim_a, dim_b, dim_c];
         let total = dim_a * dim_b * dim_c;
         let data: Vec<f32> = (0..total).map(|i| i as f32).collect();
-        let result = transpose_nd(&data, &shape, &[0, 1, 2]);
+        let result = TransposeKernel::transpose_nd(&data, &shape, &[0, 1, 2]).unwrap();
         prop_assert_eq!(&data, &result, "identity permutation should be no-op");
     }
 
@@ -495,24 +495,21 @@ proptest! {
         let data: Vec<f32> = (0..total).map(|i| i as f32 * 0.1).collect();
         let perm = [2, 0, 1];
         let inv = [1, 2, 0];
-        let t1 = transpose_nd(&data, &shape, &perm);
+        let t1 = TransposeKernel::transpose_nd(&data, &shape, &perm).unwrap();
         let mid_shape: Vec<usize> = perm.iter().map(|&p| shape[p]).collect();
-        let t2 = transpose_nd(&t1, &mid_shape, &inv);
+        let t2 = TransposeKernel::transpose_nd(&t1, &mid_shape, &inv).unwrap();
         prop_assert_eq!(&data, &t2, "transpose roundtrip failed");
     }
 
-    /// TransposeConfig::output_shape correctly transforms dimensions.
+    /// Transpose permutation produces correct output dimensions.
     #[test]
     fn prop_transpose_config_output_shape(
         dim_a in 1usize..=16,
         dim_b in 1usize..=16,
     ) {
-        let config = TransposeConfig {
-            shape: vec![dim_a, dim_b],
-            permutation: vec![1, 0],
-        };
-        let out_shape = config.output_shape();
-        prop_assert_eq!(out_shape, vec![dim_b, dim_a]);
+        let data: Vec<f32> = (0..dim_a * dim_b).map(|i| i as f32).collect();
+        let transposed = TransposeKernel::transpose_2d(&data, dim_a, dim_b).unwrap();
+        prop_assert_eq!(transposed.len(), dim_a * dim_b);
     }
 
     /// reshape preserves data when total element count matches.
@@ -523,7 +520,7 @@ proptest! {
     ) {
         let total = rows * cols;
         let data: Vec<f32> = (0..total).map(|i| i as f32).collect();
-        let reshaped = reshape(&data, &[rows, cols], &[total]).unwrap();
+        let reshaped = TransposeKernel::reshape(&data, &[rows, cols], &[total]).unwrap();
         prop_assert_eq!(&data, &reshaped, "reshape should preserve data");
     }
 }

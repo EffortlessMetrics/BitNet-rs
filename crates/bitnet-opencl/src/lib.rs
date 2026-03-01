@@ -41,3 +41,8 @@ pub use model_validator::{
 pub use numerical_validator::{
     ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
 };
+pub mod diagnostics;
+pub mod system_info;
+
+pub use diagnostics::{DiagnosticReport, GpuDiagnostics, format_json, format_report};
+pub use system_info::collect_system_info;
