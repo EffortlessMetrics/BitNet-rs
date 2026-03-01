@@ -26,6 +26,7 @@ pub mod opencl_context;
 pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
 pub mod opencl_pipeline;
+pub mod opencl_precision;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
