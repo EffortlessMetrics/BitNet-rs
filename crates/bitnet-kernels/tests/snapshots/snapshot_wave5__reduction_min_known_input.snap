@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: "format!(\"{result:.6}\")"
+---
+-7.000000

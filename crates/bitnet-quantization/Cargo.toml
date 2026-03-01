@@ -44,6 +44,7 @@ cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
+opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl"]
 inference = []
 
 [[bench]]

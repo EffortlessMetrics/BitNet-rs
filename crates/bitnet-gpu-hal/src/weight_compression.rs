@@ -144,7 +144,7 @@ impl WeightCompressor for GptqCompressor {
         config: &CompressionConfig,
     ) -> Result<CompressedTensor, HalError> {
         if weights.is_empty() {
-            return Err(HalError::EmptyInput);
+            return Err(HalError::InvalidArgument { index: 0, reason: "empty input".to_string() });
         }
         let group_size = if config.group_size == 0 { weights.len() } else { config.group_size };
         let num_groups = weights.len().div_ceil(group_size);
@@ -270,7 +270,7 @@ impl WeightCompressor for AwqCompressor {
         config: &CompressionConfig,
     ) -> Result<CompressedTensor, HalError> {
         if weights.is_empty() {
-            return Err(HalError::EmptyInput);
+            return Err(HalError::InvalidArgument { index: 0, reason: "empty input".to_string() });
         }
         // Scale weights by activation importance.
         let scaled: Vec<f32> =
@@ -337,7 +337,7 @@ impl WeightCompressor for TernaryCompressor {
         config: &CompressionConfig,
     ) -> Result<CompressedTensor, HalError> {
         if weights.is_empty() {
-            return Err(HalError::EmptyInput);
+            return Err(HalError::InvalidArgument { index: 0, reason: "empty input".to_string() });
         }
         let max_abs = weights.iter().copied().map(f32::abs).fold(0.0_f32, f32::max);
         let scale = if max_abs == 0.0 { 1.0 } else { max_abs };

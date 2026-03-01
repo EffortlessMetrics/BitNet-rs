@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave6.rs
+assertion_line: 183
+expression: result
+---
+ValueWithIndex {
+    value: 5.0,
+    index: 5,
+}
