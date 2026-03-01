@@ -559,6 +559,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-cpu-detect"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-crossval"
 version = "0.2.1-dev"
 dependencies = [
@@ -844,6 +848,7 @@ dependencies = [
  "bindgen",
  "bitnet-common",
  "bitnet-cpu-activations",
+ "bitnet-cpu-detect",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",

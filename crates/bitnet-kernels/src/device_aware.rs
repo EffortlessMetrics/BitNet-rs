@@ -7,6 +7,10 @@
 use crate::gpu;
 use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+use bitnet_cpu_detect::avx2_available;
+#[cfg(all(target_arch = "aarch64", feature = "neon"))]
+use bitnet_cpu_detect::neon_available;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use sysinfo;
@@ -91,7 +95,7 @@ impl DeviceAwareQuantizer {
         // Try optimized CPU kernels first
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
-            if is_x86_feature_detected!("avx2") {
+            if avx2_available() {
                 log::debug!("Using AVX2 CPU kernel for fallback");
                 return Ok(Box::new(cpu::Avx2Kernel));
             }
@@ -99,7 +103,7 @@ impl DeviceAwareQuantizer {
 
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         {
-            if std::arch::is_aarch64_feature_detected!("neon") {
+            if neon_available() {
                 log::debug!("Using NEON CPU kernel for fallback");
                 return Ok(Box::new(cpu::NeonKernel));
             }
@@ -703,7 +707,7 @@ mod tests {
         // On x86_64, we should either get AVX2 or fallback
         #[cfg(feature = "avx2")]
         {
-            if is_x86_feature_detected!("avx2") {
+            if avx2_available() {
                 assert!(
                     provider_name.contains("avx2"),
                     "Should use AVX2 kernel when feature is available: {}",
@@ -738,7 +742,7 @@ mod tests {
         // On aarch64, we should either get NEON or fallback
         #[cfg(feature = "neon")]
         {
-            if std::arch::is_aarch64_feature_detected!("neon") {
+            if neon_available() {
                 assert!(
                     provider_name.contains("neon"),
                     "Should use NEON kernel when feature is available: {}",
