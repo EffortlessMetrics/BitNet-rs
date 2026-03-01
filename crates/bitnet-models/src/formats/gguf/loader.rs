@@ -291,7 +291,7 @@ impl GgufLoader {
         }
     }
 
-    /// Validate LayerNorm gamma statistics to catch quantization artifacts.
+    /// Validate LayerNorm gamma statisticsto catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
     /// If stats are suspicious, fail in strict mode or warn otherwise.

@@ -173,7 +173,10 @@ impl BitNetTensor {
                     ))
                 }
             }
-            Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
+            Device::OpenCL(_) => {
+                // OpenCL uses its own buffer management; fall back to CPU for Candle
+                Ok(candle_core::Device::Cpu)
+            }
         }
     }
 
@@ -224,7 +227,9 @@ impl Tensor for BitNetTensor {
                 BitNetError::Validation(format!("Failed to convert tensor to slice: {}", e))
             })?;
             let _ = self.host_data.set(vec);
-            Ok(cast_slice(self.host_data.get().unwrap().as_slice()))
+            // SAFETY: `set` was called immediately above; even if it fails (already
+            // initialized by a concurrent call), `get()` will return `Some`.
+            Ok(cast_slice(self.host_data.get().expect("host_data was just initialized").as_slice()))
         }
     }
 
