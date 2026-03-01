@@ -634,8 +634,7 @@ mod tests {
     #[test]
     fn round_trip_large() {
         let n = 1024;
-        let original: Vec<f32> =
-            (0..n).map(|i| [1.0, -1.0, 0.0, 1.0][i % 4]).collect();
+        let original: Vec<f32> = (0..n).map(|i| [1.0, -1.0, 0.0, 1.0][i % 4]).collect();
         let packed = Dequantizer::quantize_to_i2s(&original, 1.0);
         let recovered = Dequantizer::dequantize_i2s(&packed, 1.0);
         assert_eq!(recovered, original);
