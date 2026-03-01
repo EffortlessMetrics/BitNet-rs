@@ -194,6 +194,7 @@ pub mod error_recovery;
 
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
+pub mod memory_defrag;
 pub mod memory_layout;
 // OpenAI-compatible API server with SSE streaming, auth, health checks,
 // and Prometheus metrics for GPU-accelerated inference.
