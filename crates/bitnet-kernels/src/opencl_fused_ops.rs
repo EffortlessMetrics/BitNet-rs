@@ -90,11 +90,7 @@ impl Default for FusionConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FusedOpsError {
     /// Input/weight dimensions are incompatible.
-    DimensionMismatch {
-        expected: usize,
-        got: usize,
-        context: &'static str,
-    },
+    DimensionMismatch { expected: usize, got: usize, context: &'static str },
     /// The requested fusion pattern is not supported.
     UnsupportedFusion(FusedOp),
     /// A numerical error occurred (NaN / Inf produced).
@@ -163,13 +159,7 @@ pub fn cpu_rmsnorm(input: &[f32], gamma: &[f32], eps: f32) -> Vec<f32> {
 }
 
 /// Row-major matrix multiply: C[m×n] = A[m×k] @ B[k×n].
-pub fn cpu_matmul(
-    a: &[f32],
-    b: &[f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) -> Vec<f32> {
+pub fn cpu_matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
     assert_eq!(a.len(), m * k, "A must be m×k");
     assert_eq!(b.len(), k * n, "B must be k×n");
     let mut c = vec![0.0_f32; m * n];
@@ -253,8 +243,7 @@ pub fn cpu_fused_linear_silu(
         for j in 0..out_features {
             let mut acc = 0.0_f32;
             for p in 0..in_features {
-                acc += input[i * in_features + p]
-                    * weight[p * out_features + j];
+                acc += input[i * in_features + p] * weight[p * out_features + j];
             }
             if let Some(b) = bias {
                 acc += b[j];
@@ -287,8 +276,7 @@ pub fn cpu_fused_linear_gelu(
         for j in 0..out_features {
             let mut acc = 0.0_f32;
             for p in 0..in_features {
-                acc += input[i * in_features + p]
-                    * weight[p * out_features + j];
+                acc += input[i * in_features + p] * weight[p * out_features + j];
             }
             if let Some(b) = bias {
                 acc += b[j];
@@ -355,12 +343,7 @@ pub fn cpu_fused_bias_add_activation(
 /// In-place affine transform: `data[j] = data[j] * scale[j] + shift[j]`.
 ///
 /// Used as the final step of LayerNorm (after centering + dividing by stddev).
-pub fn cpu_fused_scale_shift(
-    data: &mut [f32],
-    scale: &[f32],
-    shift: &[f32],
-    cols: usize,
-) {
+pub fn cpu_fused_scale_shift(data: &mut [f32], scale: &[f32], shift: &[f32], cols: usize) {
     assert_eq!(scale.len(), cols);
     assert_eq!(shift.len(), cols);
     assert_eq!(data.len() % cols, 0);
@@ -378,10 +361,7 @@ pub fn cpu_fused_scale_shift(
 pub fn cpu_fused_quantize_dequantize(data: &[f32], bits: u8) -> Vec<f32> {
     assert!((2..=16).contains(&bits), "bits must be in [2, 16]");
     let max_val = (1_u32 << (bits - 1)) - 1;
-    let max_abs = data
-        .iter()
-        .map(|v| v.abs())
-        .fold(0.0_f32, f32::max);
+    let max_abs = data.iter().map(|v| v.abs()).fold(0.0_f32, f32::max);
     if max_abs == 0.0 {
         return data.to_vec();
     }
@@ -540,10 +520,7 @@ mod tests {
         assert_eq!(a.len(), b.len(), "length mismatch");
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
             let diff = (x - y).abs();
-            assert!(
-                diff <= tol,
-                "element {i}: {x} vs {y} (diff={diff}, tol={tol})"
-            );
+            assert!(diff <= tol, "element {i}: {x} vs {y} (diff={diff}, tol={tol})");
         }
     }
 
@@ -575,12 +552,7 @@ mod tests {
         // For x > y > 0, SiLU(x) > SiLU(y)
         let vals = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
         for w in vals.windows(2) {
-            assert!(
-                cpu_silu(w[1]) > cpu_silu(w[0]),
-                "SiLU not monotone at {} vs {}",
-                w[0],
-                w[1]
-            );
+            assert!(cpu_silu(w[1]) > cpu_silu(w[0]), "SiLU not monotone at {} vs {}", w[0], w[1]);
         }
     }
 
@@ -610,8 +582,7 @@ mod tests {
         for &x in &[-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0] {
             let approx = cpu_gelu(x);
             // Exact: 0.5 * x * (1 + erf(x / sqrt(2)))
-            let exact =
-                0.5 * x * (1.0 + libm::erff(x / std::f32::consts::SQRT_2));
+            let exact = 0.5 * x * (1.0 + libm::erff(x / std::f32::consts::SQRT_2));
             assert!(
                 (approx - exact).abs() < 2e-3,
                 "GELU approx vs exact at x={x}: {approx} vs {exact}"
@@ -719,14 +690,11 @@ mod tests {
     #[test]
     fn test_fused_rmsnorm_linear_vs_separate_small() {
         let (rows, cols, out) = (2, 4, 3);
-        let input: Vec<f32> =
-            (0..rows * cols).map(|i| (i as f32 + 1.0) * 0.1).collect();
-        let weight: Vec<f32> =
-            (0..cols * out).map(|i| (i as f32 + 1.0) * 0.05).collect();
+        let input: Vec<f32> = (0..rows * cols).map(|i| (i as f32 + 1.0) * 0.1).collect();
+        let weight: Vec<f32> = (0..cols * out).map(|i| (i as f32 + 1.0) * 0.05).collect();
         let gamma = vec![1.0; cols];
 
-        let fused =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let fused = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
 
         // Separate: norm each row then matmul
         let mut normed = vec![0.0_f32; rows * cols];
@@ -743,15 +711,11 @@ mod tests {
     #[test]
     fn test_fused_rmsnorm_linear_vs_separate_medium() {
         let (rows, cols, out) = (8, 64, 32);
-        let input: Vec<f32> =
-            (0..rows * cols).map(|i| ((i % 17) as f32 - 8.0) * 0.1).collect();
-        let weight: Vec<f32> =
-            (0..cols * out).map(|i| ((i % 13) as f32 - 6.0) * 0.02).collect();
-        let gamma: Vec<f32> =
-            (0..cols).map(|i| 0.5 + (i % 5) as f32 * 0.1).collect();
+        let input: Vec<f32> = (0..rows * cols).map(|i| ((i % 17) as f32 - 8.0) * 0.1).collect();
+        let weight: Vec<f32> = (0..cols * out).map(|i| ((i % 13) as f32 - 6.0) * 0.02).collect();
+        let gamma: Vec<f32> = (0..cols).map(|i| 0.5 + (i % 5) as f32 * 0.1).collect();
 
-        let fused =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let fused = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
 
         let mut normed = vec![0.0_f32; rows * cols];
         for i in 0..rows {
@@ -768,12 +732,10 @@ mod tests {
     fn test_fused_rmsnorm_linear_single_row() {
         let (rows, cols, out) = (1, 8, 4);
         let input: Vec<f32> = (0..cols).map(|i| i as f32 + 1.0).collect();
-        let weight: Vec<f32> =
-            (0..cols * out).map(|i| (i as f32) * 0.01).collect();
+        let weight: Vec<f32> = (0..cols * out).map(|i| (i as f32) * 0.01).collect();
         let gamma = vec![1.0; cols];
 
-        let fused =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let fused = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
 
         let normed = cpu_rmsnorm(&input, &gamma, EPS);
         let separate = cpu_matmul(&normed, &weight, rows, out, cols);
@@ -787,8 +749,7 @@ mod tests {
         let input = vec![1.0; rows * cols];
         let weight = vec![0.1; cols * out];
         let gamma = vec![1.0; cols];
-        let result =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let result = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
         assert_eq!(result.len(), rows * out);
     }
 
@@ -798,8 +759,7 @@ mod tests {
         let input = vec![0.0; rows * cols];
         let weight = vec![1.0; cols * out];
         let gamma = vec![1.0; cols];
-        let result =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let result = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
         // Zero input normalised is still zero → output is zero
         for &v in &result {
             assert!(v.abs() < 1e-3);
@@ -813,10 +773,8 @@ mod tests {
     #[test]
     fn test_fused_linear_silu_vs_separate() {
         let (rows, inf, outf) = (2, 4, 3);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
-        let weight: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
+        let weight: Vec<f32> = (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
 
         let fused = cpu_fused_linear_silu(&input, &weight, None, rows, inf, outf);
 
@@ -829,23 +787,16 @@ mod tests {
     #[test]
     fn test_fused_linear_silu_with_bias() {
         let (rows, inf, outf) = (2, 4, 3);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| (i as f32) * 0.1).collect();
-        let weight: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32) * 0.02).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| (i as f32) * 0.1).collect();
+        let weight: Vec<f32> = (0..inf * outf).map(|i| (i as f32) * 0.02).collect();
         let bias = vec![0.1, -0.2, 0.3];
 
-        let fused =
-            cpu_fused_linear_silu(&input, &weight, Some(&bias), rows, inf, outf);
+        let fused = cpu_fused_linear_silu(&input, &weight, Some(&bias), rows, inf, outf);
 
         let mm = cpu_matmul(&input, &weight, rows, outf, inf);
         let separate: Vec<f32> = mm
             .chunks(outf)
-            .flat_map(|row| {
-                row.iter()
-                    .zip(bias.iter())
-                    .map(|(&v, &b)| cpu_silu(v + b))
-            })
+            .flat_map(|row| row.iter().zip(bias.iter()).map(|(&v, &b)| cpu_silu(v + b)))
             .collect();
 
         assert_approx_eq(&fused, &separate, TOL);
@@ -856,8 +807,7 @@ mod tests {
         let (rows, inf, outf) = (5, 8, 3);
         let input = vec![1.0; rows * inf];
         let weight = vec![0.1; inf * outf];
-        let result =
-            cpu_fused_linear_silu(&input, &weight, None, rows, inf, outf);
+        let result = cpu_fused_linear_silu(&input, &weight, None, rows, inf, outf);
         assert_eq!(result.len(), rows * outf);
     }
 
@@ -868,10 +818,8 @@ mod tests {
     #[test]
     fn test_fused_linear_gelu_vs_separate() {
         let (rows, inf, outf) = (2, 4, 3);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
-        let weight: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
+        let weight: Vec<f32> = (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
 
         let fused = cpu_fused_linear_gelu(&input, &weight, None, rows, inf, outf);
 
@@ -884,23 +832,16 @@ mod tests {
     #[test]
     fn test_fused_linear_gelu_with_bias() {
         let (rows, inf, outf) = (3, 6, 4);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| (i as f32) * 0.05).collect();
-        let weight: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32) * 0.01).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| (i as f32) * 0.05).collect();
+        let weight: Vec<f32> = (0..inf * outf).map(|i| (i as f32) * 0.01).collect();
         let bias = vec![0.5, -0.5, 0.1, -0.1];
 
-        let fused =
-            cpu_fused_linear_gelu(&input, &weight, Some(&bias), rows, inf, outf);
+        let fused = cpu_fused_linear_gelu(&input, &weight, Some(&bias), rows, inf, outf);
 
         let mm = cpu_matmul(&input, &weight, rows, outf, inf);
         let separate: Vec<f32> = mm
             .chunks(outf)
-            .flat_map(|row| {
-                row.iter()
-                    .zip(bias.iter())
-                    .map(|(&v, &b)| cpu_gelu(v + b))
-            })
+            .flat_map(|row| row.iter().zip(bias.iter()).map(|(&v, &b)| cpu_gelu(v + b)))
             .collect();
 
         assert_approx_eq(&fused, &separate, TOL);
@@ -911,8 +852,7 @@ mod tests {
         let (rows, inf, outf) = (4, 16, 8);
         let input = vec![0.5; rows * inf];
         let weight = vec![0.01; inf * outf];
-        let result =
-            cpu_fused_linear_gelu(&input, &weight, None, rows, inf, outf);
+        let result = cpu_fused_linear_gelu(&input, &weight, None, rows, inf, outf);
         assert_eq!(result.len(), rows * outf);
     }
 
@@ -923,25 +863,17 @@ mod tests {
     #[test]
     fn test_gate_up_proj_vs_separate() {
         let (rows, inf, outf) = (2, 4, 3);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
-        let gate_w: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
-        let up_w: Vec<f32> =
-            (0..inf * outf).map(|i| (i as f32 + 2.0) * 0.03).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| (i as f32 + 1.0) * 0.1).collect();
+        let gate_w: Vec<f32> = (0..inf * outf).map(|i| (i as f32 + 1.0) * 0.05).collect();
+        let up_w: Vec<f32> = (0..inf * outf).map(|i| (i as f32 + 2.0) * 0.03).collect();
 
-        let fused = cpu_fused_gate_up_proj(
-            &input, &gate_w, &up_w, rows, inf, outf,
-        );
+        let fused = cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
 
         // Separate: SiLU(input @ gate) * (input @ up)
         let gate_out = cpu_matmul(&input, &gate_w, rows, outf, inf);
         let up_out = cpu_matmul(&input, &up_w, rows, outf, inf);
-        let separate: Vec<f32> = gate_out
-            .iter()
-            .zip(up_out.iter())
-            .map(|(&g, &u)| cpu_silu(g) * u)
-            .collect();
+        let separate: Vec<f32> =
+            gate_out.iter().zip(up_out.iter()).map(|(&g, &u)| cpu_silu(g) * u).collect();
 
         assert_approx_eq(&fused, &separate, TOL);
     }
@@ -949,24 +881,16 @@ mod tests {
     #[test]
     fn test_gate_up_proj_medium() {
         let (rows, inf, outf) = (4, 64, 32);
-        let input: Vec<f32> =
-            (0..rows * inf).map(|i| ((i % 11) as f32 - 5.0) * 0.1).collect();
-        let gate_w: Vec<f32> =
-            (0..inf * outf).map(|i| ((i % 7) as f32 - 3.0) * 0.02).collect();
-        let up_w: Vec<f32> =
-            (0..inf * outf).map(|i| ((i % 9) as f32 - 4.0) * 0.03).collect();
+        let input: Vec<f32> = (0..rows * inf).map(|i| ((i % 11) as f32 - 5.0) * 0.1).collect();
+        let gate_w: Vec<f32> = (0..inf * outf).map(|i| ((i % 7) as f32 - 3.0) * 0.02).collect();
+        let up_w: Vec<f32> = (0..inf * outf).map(|i| ((i % 9) as f32 - 4.0) * 0.03).collect();
 
-        let fused = cpu_fused_gate_up_proj(
-            &input, &gate_w, &up_w, rows, inf, outf,
-        );
+        let fused = cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
 
         let gate_out = cpu_matmul(&input, &gate_w, rows, outf, inf);
         let up_out = cpu_matmul(&input, &up_w, rows, outf, inf);
-        let separate: Vec<f32> = gate_out
-            .iter()
-            .zip(up_out.iter())
-            .map(|(&g, &u)| cpu_silu(g) * u)
-            .collect();
+        let separate: Vec<f32> =
+            gate_out.iter().zip(up_out.iter()).map(|(&g, &u)| cpu_silu(g) * u).collect();
 
         assert_approx_eq(&fused, &separate, TOL);
     }
@@ -977,8 +901,7 @@ mod tests {
         let input = vec![0.1; rows * inf];
         let gate_w = vec![0.01; inf * outf];
         let up_w = vec![0.01; inf * outf];
-        let result =
-            cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
+        let result = cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
         assert_eq!(result.len(), rows * outf);
     }
 
@@ -988,8 +911,7 @@ mod tests {
         let input = vec![0.0; rows * inf];
         let gate_w = vec![1.0; inf * outf];
         let up_w = vec![1.0; inf * outf];
-        let result =
-            cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
+        let result = cpu_fused_gate_up_proj(&input, &gate_w, &up_w, rows, inf, outf);
         for &v in &result {
             assert!(v.abs() < 1e-7);
         }
@@ -1011,12 +933,7 @@ mod tests {
     fn test_bias_activation_relu() {
         let mut data = vec![-1.0, 2.0, 0.5, -3.0];
         let bias = vec![0.5, -0.5];
-        cpu_fused_bias_add_activation(
-            &mut data,
-            &bias,
-            2,
-            ActivationType::ReLU,
-        );
+        cpu_fused_bias_add_activation(&mut data, &bias, 2, ActivationType::ReLU);
         // [-1+0.5=-0.5→0, 2-0.5=1.5, 0.5+0.5=1.0, -3-0.5=-3.5→0]
         assert_approx_eq(&data, &[0.0, 1.5, 1.0, 0.0], TOL);
     }
@@ -1025,12 +942,7 @@ mod tests {
     fn test_bias_activation_silu() {
         let mut data = vec![1.0, -1.0];
         let bias = vec![0.0, 0.0];
-        cpu_fused_bias_add_activation(
-            &mut data,
-            &bias,
-            2,
-            ActivationType::SiLU,
-        );
+        cpu_fused_bias_add_activation(&mut data, &bias, 2, ActivationType::SiLU);
         assert!((data[0] - cpu_silu(1.0)).abs() < TOL);
         assert!((data[1] - cpu_silu(-1.0)).abs() < TOL);
     }
@@ -1039,12 +951,7 @@ mod tests {
     fn test_bias_activation_gelu() {
         let mut data = vec![0.5, -0.5, 1.0, -1.0];
         let bias = vec![0.0, 0.0];
-        cpu_fused_bias_add_activation(
-            &mut data,
-            &bias,
-            2,
-            ActivationType::GELU,
-        );
+        cpu_fused_bias_add_activation(&mut data, &bias, 2, ActivationType::GELU);
         assert!((data[0] - cpu_gelu(0.5)).abs() < TOL);
         assert!((data[1] - cpu_gelu(-0.5)).abs() < TOL);
     }
@@ -1053,12 +960,7 @@ mod tests {
     fn test_bias_activation_tanh() {
         let mut data = vec![1.0, -1.0];
         let bias = vec![0.5, -0.5];
-        cpu_fused_bias_add_activation(
-            &mut data,
-            &bias,
-            2,
-            ActivationType::Tanh,
-        );
+        cpu_fused_bias_add_activation(&mut data, &bias, 2, ActivationType::Tanh);
         assert!((data[0] - 1.5_f32.tanh()).abs() < TOL);
         assert!((data[1] - (-1.5_f32).tanh()).abs() < TOL);
     }
@@ -1107,10 +1009,7 @@ mod tests {
         let max_abs = 1.0_f32;
         let step = max_abs / 127.0;
         for (&orig, &recon) in data.iter().zip(result.iter()) {
-            assert!(
-                (orig - recon).abs() <= step + 1e-7,
-                "orig={orig}, recon={recon}, step={step}"
-            );
+            assert!((orig - recon).abs() <= step + 1e-7, "orig={orig}, recon={recon}, step={step}");
         }
     }
 
@@ -1121,10 +1020,7 @@ mod tests {
         // 4-bit: max_val=7, scale=1.0/7≈0.143
         let step = 1.0 / 7.0;
         for (&orig, &recon) in data.iter().zip(result.iter()) {
-            assert!(
-                (orig - recon).abs() <= step + 1e-5,
-                "4-bit: orig={orig}, recon={recon}"
-            );
+            assert!((orig - recon).abs() <= step + 1e-5, "4-bit: orig={orig}, recon={recon}");
         }
     }
 
@@ -1171,8 +1067,7 @@ mod tests {
         let input = vec![0.5; rows * cols];
         let weight = vec![0.01; cols * out];
         let gamma = vec![1.0; cols];
-        let fused =
-            cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
+        let fused = cpu_fused_rmsnorm_linear(&input, &weight, &gamma, rows, cols, out, EPS);
 
         let mut normed = vec![0.0_f32; rows * cols];
         for i in 0..rows {
@@ -1191,8 +1086,7 @@ mod tests {
         let (rows, inf, outf) = (4, 8, 1);
         let input: Vec<f32> = (0..rows * inf).map(|i| i as f32 * 0.1).collect();
         let weight: Vec<f32> = (0..inf).map(|i| i as f32 * 0.1).collect();
-        let fused =
-            cpu_fused_linear_silu(&input, &weight, None, rows, inf, outf);
+        let fused = cpu_fused_linear_silu(&input, &weight, None, rows, inf, outf);
 
         let mm = cpu_matmul(&input, &weight, rows, outf, inf);
         let separate: Vec<f32> = mm.iter().map(|&v| cpu_silu(v)).collect();
@@ -1267,11 +1161,8 @@ mod tests {
 
     #[test]
     fn test_fused_ops_error_display() {
-        let err = FusedOpsError::DimensionMismatch {
-            expected: 64,
-            got: 32,
-            context: "weight rows",
-        };
+        let err =
+            FusedOpsError::DimensionMismatch { expected: 64, got: 32, context: "weight rows" };
         let msg = format!("{err}");
         assert!(msg.contains("64"));
         assert!(msg.contains("32"));
