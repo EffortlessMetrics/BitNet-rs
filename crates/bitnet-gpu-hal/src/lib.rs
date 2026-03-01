@@ -129,6 +129,10 @@ pub mod cross_compile;
 pub mod e2e_integration;
 pub mod kernel_jit;
 pub mod model_validator;
+<<<<<<< HEAD
+=======
+pub mod npu_support;
+>>>>>>> 76401297 (fix: remove phantom module declarations (profiling, streaming))
 pub mod test_harness;
 pub mod token_streaming;
 
