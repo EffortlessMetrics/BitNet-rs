@@ -3,12 +3,12 @@
 //! Covers MockTokenizer roundtrip, ModelTypeDetector, ModelCompatibilityMatrix
 //! structure, Vocabulary operations, and token estimation utilities.
 
+use bitnet_tokenizers::MockTokenizer;
+use bitnet_tokenizers::Tokenizer;
 use bitnet_tokenizers::discovery::ModelCompatibilityMatrix;
 use bitnet_tokenizers::error_handling::ModelTypeDetector;
-use bitnet_tokenizers::MockTokenizer;
 use bitnet_tokenizers::utils::{estimate_tokens, validate_roundtrip};
 use bitnet_tokenizers::vocabulary::{VocabConfig, Vocabulary};
-use bitnet_tokenizers::Tokenizer;
 use std::collections::HashMap;
 
 // --- MockTokenizer tests ---
@@ -304,10 +304,7 @@ fn vocabulary_is_special_token() {
     token_to_id.insert("<bos>".to_string(), 0);
     token_to_id.insert("hello".to_string(), 1);
 
-    let config = VocabConfig {
-        bos_token: Some("<bos>".to_string()),
-        ..VocabConfig::default()
-    };
+    let config = VocabConfig { bos_token: Some("<bos>".to_string()), ..VocabConfig::default() };
 
     let vocab = Vocabulary::new(token_to_id, config);
     assert!(vocab.is_special_token(0));
@@ -357,14 +354,10 @@ fn vocabulary_iter() {
 
 #[test]
 fn vocabulary_merge_disjoint() {
-    let v1 = Vocabulary::new(
-        HashMap::from([("a".into(), 0), ("b".into(), 1)]),
-        VocabConfig::default(),
-    );
-    let v2 = Vocabulary::new(
-        HashMap::from([("c".into(), 0), ("d".into(), 1)]),
-        VocabConfig::default(),
-    );
+    let v1 =
+        Vocabulary::new(HashMap::from([("a".into(), 0), ("b".into(), 1)]), VocabConfig::default());
+    let v2 =
+        Vocabulary::new(HashMap::from([("c".into(), 0), ("d".into(), 1)]), VocabConfig::default());
     let merged = Vocabulary::merge_vocabularies(&[v1, v2]);
     assert_eq!(merged.vocab_size(), 4);
     assert!(merged.contains("a"));
@@ -373,14 +366,10 @@ fn vocabulary_merge_disjoint() {
 
 #[test]
 fn vocabulary_merge_overlap_deduplicates() {
-    let v1 = Vocabulary::new(
-        HashMap::from([("a".into(), 0), ("b".into(), 1)]),
-        VocabConfig::default(),
-    );
-    let v2 = Vocabulary::new(
-        HashMap::from([("b".into(), 0), ("c".into(), 1)]),
-        VocabConfig::default(),
-    );
+    let v1 =
+        Vocabulary::new(HashMap::from([("a".into(), 0), ("b".into(), 1)]), VocabConfig::default());
+    let v2 =
+        Vocabulary::new(HashMap::from([("b".into(), 0), ("c".into(), 1)]), VocabConfig::default());
     let merged = Vocabulary::merge_vocabularies(&[v1, v2]);
     assert_eq!(merged.vocab_size(), 3);
 }
