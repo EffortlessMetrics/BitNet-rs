@@ -1070,6 +1070,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
+    #[allow(unused_variables, unused_mut)]
     fn test_cuda_rope_launch() {
         let cfg = RopeConfig::for_shape(128, 32, 64).unwrap();
         let total = 32 * 64 * 128;
@@ -1081,6 +1082,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
+    #[allow(unused_variables, unused_mut)]
     fn test_cuda_rope_backward_launch() {
         let cfg = RopeConfig::for_shape(128, 32, 64).unwrap();
         let total = 32 * 64 * 128;
@@ -1441,6 +1443,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires CUDA runtime — compile-check for kernel source strings"]
+    #[allow(unused_variables, unused_mut)]
     fn test_cuda_kernel_sources_compile() {
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
