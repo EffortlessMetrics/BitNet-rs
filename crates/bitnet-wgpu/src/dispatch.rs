@@ -1,5 +1,6 @@
 //! Workgroup dispatch helpers and NVIDIA-tuned sizing.
 
+use bitnet_nvidia::optimal_workgroup_size_1d;
 use std::fmt;
 
 /// Configuration for a single compute dispatch.
@@ -42,9 +43,6 @@ pub fn compute_dispatch_size(total_elements: u32, workgroup_size: u32) -> u32 {
     total_elements.div_ceil(workgroup_size)
 }
 
-/// NVIDIA warp size (threads per warp on all NVIDIA architectures).
-const NVIDIA_WARP_SIZE: u32 = 32;
-
 /// Return an NVIDIA-tuned workgroup size for 1-D dispatches.
 ///
 /// Heuristics:
@@ -52,19 +50,7 @@ const NVIDIA_WARP_SIZE: u32 = 32;
 /// - Prefer 256 for Blackwell / Ada / Ampere (good occupancy).
 /// - Fall back to 128 for very small workloads, 64 for tiny ones.
 pub fn optimal_workgroup_size_nvidia(elements: u32) -> u32 {
-    if elements == 0 {
-        return NVIDIA_WARP_SIZE;
-    }
-    if elements <= 64 {
-        // Tiny: one or two warps.
-        NVIDIA_WARP_SIZE * 2 // 64
-    } else if elements <= 256 {
-        // Small: four warps.
-        128
-    } else {
-        // Default: eight warps — best occupancy on Blackwell / RTX 5070 Ti.
-        256
-    }
+    optimal_workgroup_size_1d(elements)
 }
 
 /// Records dispatches for profiling / diagnostics.
@@ -152,7 +138,7 @@ mod tests {
     #[test]
     fn nvidia_workgroup_zero_elements() {
         let ws = optimal_workgroup_size_nvidia(0);
-        assert_eq!(ws, NVIDIA_WARP_SIZE);
+        assert_eq!(ws, bitnet_nvidia::NVIDIA_WARP_SIZE);
     }
 
     #[test]
@@ -180,7 +166,11 @@ mod tests {
     fn nvidia_workgroup_always_warp_aligned() {
         for n in [0, 1, 32, 33, 64, 65, 128, 256, 257, 512, 100_000] {
             let ws = optimal_workgroup_size_nvidia(n);
-            assert_eq!(ws % NVIDIA_WARP_SIZE, 0, "ws={ws} not warp-aligned for n={n}");
+            assert_eq!(
+                ws % bitnet_nvidia::NVIDIA_WARP_SIZE,
+                0,
+                "ws={ws} not warp-aligned for n={n}"
+            );
         }
     }
 
