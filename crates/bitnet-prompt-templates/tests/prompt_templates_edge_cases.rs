@@ -247,9 +247,9 @@ fn detect_fim_from_jinja() {
 }
 
 #[test]
-fn detect_no_info_falls_back_to_instruct() {
+fn detect_no_info_falls_back_to_raw() {
     let t = TemplateType::detect(None, None);
-    assert_eq!(t, TemplateType::Instruct);
+    assert_eq!(t, TemplateType::Raw);
 }
 
 #[test]
