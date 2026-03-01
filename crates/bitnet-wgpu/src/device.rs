@@ -80,7 +80,7 @@ impl WgpuDevice {
                 None,
             )
             .await
-            .map_err(|e| WgpuError::device(e))?;
+            .map_err(WgpuError::device)?;
 
         tracing::info!(
             adapter = %adapter.get_info().name,

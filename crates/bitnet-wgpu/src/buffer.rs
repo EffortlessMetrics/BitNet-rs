@@ -84,7 +84,7 @@ impl GpuBuffer {
         });
         device.device().poll(wgpu::Maintain::Wait);
 
-        rx.recv().map_err(|e| WgpuError::mapping(e))?.map_err(|e| WgpuError::mapping(e))?;
+        rx.recv().map_err(WgpuError::mapping)?.map_err(WgpuError::mapping)?;
 
         let view = slice.get_mapped_range();
         let result: Vec<T> = bytemuck::cast_slice(&view).to_vec();
