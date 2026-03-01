@@ -70,61 +70,6 @@ name = "ffi_integration"
 path = "tests/ffi_integration.rs"
 required-features = ["ffi"]
 
-[[test]]
-name = "token_equivalence"
-path = "tests/token_equivalence.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "performance_validation"
-path = "tests/performance_validation.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "iq2s_validation"
-path = "tests/iq2s_validation.rs"
-required-features = ["iq2s-ffi"]
-
-[[test]]
-name = "parity_bitnetcpp"
-path = "tests/parity_bitnetcpp.rs"
-required-features = ["crossval", "integration-tests"]
-
-[[test]]
-name = "cpp_wrapper_smoke_test"
-path = "tests/cpp_wrapper_smoke_test.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "ffi_socket_tests"
-path = "tests/ffi_socket_tests.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "ffi_integration_tests"
-path = "tests/ffi_integration_tests.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "ffi_error_tests"
-path = "tests/ffi_error_tests.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "ffi_fallback_tests"
-path = "tests/ffi_fallback_tests.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "cpp_wrapper_null_vocab_tests"
-path = "tests/cpp_wrapper_null_vocab_tests.rs"
-required-features = ["ffi"]
-
-[[test]]
-name = "kv_position_tracking_tests"
-path = "tests/kv_position_tracking_tests.rs"
-required-features = ["crossval"]
-
 [[example]]
 name = "test_llama_ffi"
 required-features = ["ffi"]

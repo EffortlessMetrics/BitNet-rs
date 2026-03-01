@@ -39,6 +39,8 @@
 //! # }
 //! ```
 
+pub mod gpu;
+
 use candle_core::{DType, Tensor};
 use serde::{Deserialize, Serialize};
 use std::env;
