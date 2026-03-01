@@ -11,6 +11,7 @@ pub mod webgpu_backend;
 
 // === HAL Core ===
 pub mod async_runtime;
+pub mod attention_variants;
 pub mod backend_selector;
 pub mod bench_harness;
 pub mod config_management;
