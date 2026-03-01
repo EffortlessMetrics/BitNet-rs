@@ -1698,6 +1698,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-tokenizer-heuristics"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-tokenizer-model-core"
 version = "0.2.1-dev"
 dependencies = [
@@ -1714,10 +1718,9 @@ dependencies = [
  "bitnet-common",
  "bitnet-models",
  "bitnet-quantization",
- "bitnet-test-fixtures-core",
  "bitnet-test-support",
  "bitnet-tests",
- "bitnet-tokenizer-model-core",
+ "bitnet-tokenizer-heuristics",
  "dirs",
  "futures-util",
  "insta",

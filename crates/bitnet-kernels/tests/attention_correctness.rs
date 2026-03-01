@@ -27,11 +27,7 @@ fn ref_softmax(row: &[f32]) -> Vec<f32> {
     let max = row.iter().copied().fold(f32::NEG_INFINITY, f32::max);
     let exps: Vec<f32> = row.iter().map(|&v| (v - max).exp()).collect();
     let sum: f32 = exps.iter().sum();
-    if sum == 0.0 {
-        vec![0.0; row.len()]
-    } else {
-        exps.iter().map(|&e| e / sum).collect()
-    }
+    if sum == 0.0 { vec![0.0; row.len()] } else { exps.iter().map(|&e| e / sum).collect() }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -53,8 +49,7 @@ fn sdpa_identity_query_key_known_output() {
     let k = vec![1.0, 0.0, 0.0, 1.0]; // 2 keys
     let v = vec![10.0, 20.0, 30.0, 40.0]; // 2 values
 
-    let result =
-        scaled_dot_product_attention(&q, &k, &v, 2, 2, head_dim, false).unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, 2, 2, head_dim, false).unwrap();
 
     // scale = 1/√2 ≈ 0.7071
     let scale = 1.0 / (2.0_f32).sqrt();
@@ -82,10 +77,9 @@ fn sdpa_explicit_scale_overrides_default() {
     let v = vec![5.0; head_dim];
     let custom_scale = 0.25;
 
-    let result = AttentionKernel::scaled_dot_product(
-        &q, &k, &v, None, custom_scale, 1, 1, head_dim,
-    )
-    .unwrap();
+    let result =
+        AttentionKernel::scaled_dot_product(&q, &k, &v, None, custom_scale, 1, 1, head_dim)
+            .unwrap();
 
     // Single KV pair → softmax of single element = 1.0 → output = v
     for (i, &val) in result.iter().enumerate() {
@@ -101,8 +95,7 @@ fn sdpa_cross_attention_different_seq_lengths() {
     let k = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0]; // 3 keys
     let v = vec![1.0, 0.0, 0.0, 1.0, 0.5, 0.5]; // 3 values
 
-    let result =
-        scaled_dot_product_attention(&q, &k, &v, 1, 3, head_dim, false).unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, 1, 3, head_dim, false).unwrap();
     assert_eq!(result.len(), head_dim);
 
     // Compute reference: scores = [q·k0, q·k1, q·k2] = [1, 0, 1], scale=1/√2
@@ -128,10 +121,8 @@ fn attention_weights_sum_to_one_uniform_scores() {
     let k = vec![1.0; seq_len * head_dim];
     let v = vec![1.0; seq_len * head_dim];
 
-    let result = scaled_dot_product_attention(
-        &q, &k, &v, seq_len, seq_len, head_dim, false,
-    )
-    .unwrap();
+    let result =
+        scaled_dot_product_attention(&q, &k, &v, seq_len, seq_len, head_dim, false).unwrap();
 
     // Output should be V (all 1.0) since uniform attention * uniform V = V
     for (i, &val) in result.iter().enumerate() {
@@ -148,8 +139,7 @@ fn attention_weights_sum_to_one_varying_scores() {
     let k = vec![1.0, 0.0, 0.0, 1.0, -1.0, 0.0]; // 3 keys
     let v = vec![0.0, 0.0, 10.0, 10.0, 5.0, 5.0]; // 3 values
 
-    let result =
-        scaled_dot_product_attention(&q, &k, &v, 1, 3, head_dim, false).unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, 1, 3, head_dim, false).unwrap();
 
     // Output must be in convex hull: each dim in [0, 10]
     for &val in &result {
@@ -198,20 +188,12 @@ fn causal_sdpa_first_token_attends_only_to_self() {
         }
     }
 
-    let result = scaled_dot_product_attention(
-        &q, &k, &v, seq, seq, head_dim, true,
-    )
-    .unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
 
     // First row (token 0): with causal mask, can only attend to position 0
     // → output should exactly equal V[0]
     for d in 0..head_dim {
-        assert!(
-            approx_eq(result[d], v[d]),
-            "token 0, dim {d}: got {} want {}",
-            result[d],
-            v[d]
-        );
+        assert!(approx_eq(result[d], v[d]), "token 0, dim {d}: got {} want {}", result[d], v[d]);
     }
 }
 
@@ -225,13 +207,10 @@ fn causal_sdpa_last_token_attends_to_all_preceding() {
     let v = vec![
         10.0, 0.0, // token 0
         0.0, 10.0, // token 1
-        5.0, 5.0,  // token 2
+        5.0, 5.0, // token 2
     ];
 
-    let result = scaled_dot_product_attention(
-        &q, &k, &v, seq, seq, head_dim, true,
-    )
-    .unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
 
     // Last token (index 2) attends uniformly to all 3 → average of V rows
     let expected_0 = (10.0 + 0.0 + 5.0) / 3.0;
@@ -285,10 +264,7 @@ fn multi_head_different_heads_produce_different_outputs() {
         30.0, 40.0, 30.0, 40.0,
     ];
 
-    let result = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, false,
-    )
-    .unwrap();
+    let result = multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, false).unwrap();
     assert_eq!(result.len(), seq_len * model_dim);
 
     // Head 0 output for token 0 (indices 0..2) should differ from
@@ -309,15 +285,9 @@ fn multi_head_single_head_equals_sdpa() {
     let k = vec![1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
     let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
 
-    let mha = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, false,
-    )
-    .unwrap();
+    let mha = multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, false).unwrap();
 
-    let sdpa = scaled_dot_product_attention(
-        &q, &k, &v, seq_len, seq_len, head_dim, false,
-    )
-    .unwrap();
+    let sdpa = scaled_dot_product_attention(&q, &k, &v, seq_len, seq_len, head_dim, false).unwrap();
 
     for (i, (&a, &b)) in mha.iter().zip(sdpa.iter()).enumerate() {
         assert!(approx_eq(a, b), "index {i}: mha={a} sdpa={b}");
@@ -341,28 +311,18 @@ fn multi_head_causal_preserves_causality() {
     let q = vec![1.0; seq_len * model_dim];
     let k = vec![1.0; seq_len * model_dim];
 
-    let causal_out = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, true,
-    )
-    .unwrap();
-    let non_causal_out = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, false,
-    )
-    .unwrap();
+    let causal_out =
+        multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, true).unwrap();
+    let non_causal_out =
+        multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, false).unwrap();
 
     // Token 0 with causal: attends only to self → equals V[0]
     // Token 0 without causal: attends to all → average of all V rows
     // These should differ (unless all V rows are identical, which they're not)
     let t0_causal = &causal_out[0..model_dim];
     let t0_non_causal = &non_causal_out[0..model_dim];
-    let differs = t0_causal
-        .iter()
-        .zip(t0_non_causal)
-        .any(|(a, b)| (a - b).abs() > EPS);
-    assert!(
-        differs,
-        "causal token 0 should differ from non-causal (different visible set)"
-    );
+    let differs = t0_causal.iter().zip(t0_non_causal).any(|(a, b)| (a - b).abs() > EPS);
+    assert!(differs, "causal token 0 should differ from non-causal (different visible set)");
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -373,13 +333,8 @@ fn multi_head_causal_preserves_causality() {
 fn kv_cache_append_and_readback() {
     let num_heads = 2;
     let head_dim = 4;
-    let cfg = KvCacheConfig {
-        num_layers: 1,
-        num_heads,
-        head_dim,
-        max_seq_len: 16,
-        dtype: KvDtype::F32,
-    };
+    let cfg =
+        KvCacheConfig { num_layers: 1, num_heads, head_dim, max_seq_len: 16, dtype: KvDtype::F32 };
     let mut cache = KvCache::new(cfg).unwrap();
     let te = num_heads * head_dim; // 8
 
@@ -447,10 +402,8 @@ fn attention_with_kv_cache_incremental_decoding() {
     let k1 = vec![1.0; head_dim];
     let v1 = vec![10.0; head_dim];
 
-    let out1 = attention_with_kv_cache(
-        &q1, &mut k_cache, &mut v_cache, &k1, &v1, head_dim,
-    )
-    .unwrap();
+    let out1 =
+        attention_with_kv_cache(&q1, &mut k_cache, &mut v_cache, &k1, &v1, head_dim).unwrap();
     assert_eq!(out1.len(), head_dim);
     // Only one KV → output = V
     for &val in &out1 {
@@ -463,10 +416,8 @@ fn attention_with_kv_cache_incremental_decoding() {
     let k2 = vec![1.0; head_dim];
     let v2 = vec![20.0; head_dim];
 
-    let out2 = attention_with_kv_cache(
-        &q2, &mut k_cache, &mut v_cache, &k2, &v2, head_dim,
-    )
-    .unwrap();
+    let out2 =
+        attention_with_kv_cache(&q2, &mut k_cache, &mut v_cache, &k2, &v2, head_dim).unwrap();
     assert_eq!(out2.len(), head_dim);
     assert_eq!(k_cache.len(), 2 * head_dim);
     // Uniform Q·K → equal attention → average of V: (10+20)/2 = 15
@@ -479,10 +430,8 @@ fn attention_with_kv_cache_incremental_decoding() {
     let k3 = vec![1.0; head_dim];
     let v3 = vec![30.0; head_dim];
 
-    let out3 = attention_with_kv_cache(
-        &q3, &mut k_cache, &mut v_cache, &k3, &v3, head_dim,
-    )
-    .unwrap();
+    let out3 =
+        attention_with_kv_cache(&q3, &mut k_cache, &mut v_cache, &k3, &v3, head_dim).unwrap();
     // 3 values → average = (10+20+30)/3 = 20
     for &val in &out3 {
         assert!(approx_eq(val, 20.0), "step3: got {val} want 20.0");
@@ -500,8 +449,7 @@ fn sdpa_seq_len_1_returns_value_unchanged() {
     let q = vec![0.5; head_dim];
     let k = vec![0.5; head_dim];
 
-    let result =
-        scaled_dot_product_attention(&q, &k, &v, 1, 1, head_dim, false).unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, 1, 1, head_dim, false).unwrap();
 
     // Single KV → softmax([score]) = [1.0] → output = V exactly
     for (i, (&got, &want)) in result.iter().zip(v.iter()).enumerate() {
@@ -516,8 +464,7 @@ fn sdpa_seq_len_1_causal_returns_value_unchanged() {
     let q = vec![1.0; head_dim];
     let k = vec![1.0; head_dim];
 
-    let result =
-        scaled_dot_product_attention(&q, &k, &v, 1, 1, head_dim, true).unwrap();
+    let result = scaled_dot_product_attention(&q, &k, &v, 1, 1, head_dim, true).unwrap();
 
     for (i, (&got, &want)) in result.iter().zip(v.iter()).enumerate() {
         assert!(approx_eq(got, want), "dim {i}: got {got} want {want}");
@@ -587,10 +534,8 @@ fn causal_attention_wrapper_matches_mha_causal() {
         scale: None,
     };
     let causal_result = causal_attention(&q, &k, &v, &cfg).unwrap();
-    let mha_causal = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, true,
-    )
-    .unwrap();
+    let mha_causal =
+        multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, true).unwrap();
 
     for (i, (&a, &b)) in causal_result.iter().zip(mha_causal.iter()).enumerate() {
         assert!(approx_eq(a, b), "index {i}: causal_attn={a} mha={b}");
@@ -622,10 +567,8 @@ fn gqa_1to1_equals_standard_mha() {
         scale: None,
     };
     let gqa_result = AttentionKernel::grouped_query_attention(&q, &k, &v, &gqa_cfg).unwrap();
-    let mha_result = multi_head_attention_cpu(
-        &q, &k, &v, num_heads, head_dim, seq_len, false,
-    )
-    .unwrap();
+    let mha_result =
+        multi_head_attention_cpu(&q, &k, &v, num_heads, head_dim, seq_len, false).unwrap();
 
     for (i, (&a, &b)) in gqa_result.iter().zip(mha_result.iter()).enumerate() {
         assert!(approx_eq(a, b), "index {i}: gqa={a} mha={b}");
@@ -645,18 +588,10 @@ fn gqa_multiple_queries_per_kv_head() {
 
     let q = vec![1.0; seq_len * q_dim];
     let k = vec![1.0; seq_len * kv_dim];
-    let v: Vec<f32> = (0..seq_len * kv_dim)
-        .map(|i| (i as f32) * 10.0)
-        .collect();
+    let v: Vec<f32> = (0..seq_len * kv_dim).map(|i| (i as f32) * 10.0).collect();
 
-    let cfg = GqaConfig {
-        num_q_heads,
-        num_kv_heads,
-        head_dim,
-        seq_len,
-        causal: false,
-        scale: None,
-    };
+    let cfg =
+        GqaConfig { num_q_heads, num_kv_heads, head_dim, seq_len, causal: false, scale: None };
     let result = AttentionKernel::grouped_query_attention(&q, &k, &v, &cfg).unwrap();
     assert_eq!(result.len(), seq_len * q_dim);
 
@@ -669,19 +604,13 @@ fn gqa_multiple_queries_per_kv_head() {
     let h0_t0 = &result[0..head_dim];
     let h1_t0 = &result[head_dim..2 * head_dim];
     for (i, (&a, &b)) in h0_t0.iter().zip(h1_t0.iter()).enumerate() {
-        assert!(
-            approx_eq(a, b),
-            "grouped heads 0,1 should match at dim {i}: {a} vs {b}"
-        );
+        assert!(approx_eq(a, b), "grouped heads 0,1 should match at dim {i}: {a} vs {b}");
     }
 
     let h2_t0 = &result[2 * head_dim..3 * head_dim];
     let h3_t0 = &result[3 * head_dim..4 * head_dim];
     for (i, (&a, &b)) in h2_t0.iter().zip(h3_t0.iter()).enumerate() {
-        assert!(
-            approx_eq(a, b),
-            "grouped heads 2,3 should match at dim {i}: {a} vs {b}"
-        );
+        assert!(approx_eq(a, b), "grouped heads 2,3 should match at dim {i}: {a} vs {b}");
     }
 
     // The two groups should differ (different KV heads → different V)
@@ -707,35 +636,19 @@ fn gqa_causal_masks_future() {
         }
     }
 
-    let cfg_causal = GqaConfig {
-        num_q_heads,
-        num_kv_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        scale: None,
-    };
-    let cfg_non_causal = GqaConfig {
-        num_q_heads,
-        num_kv_heads,
-        head_dim,
-        seq_len,
-        causal: false,
-        scale: None,
-    };
+    let cfg_causal =
+        GqaConfig { num_q_heads, num_kv_heads, head_dim, seq_len, causal: true, scale: None };
+    let cfg_non_causal =
+        GqaConfig { num_q_heads, num_kv_heads, head_dim, seq_len, causal: false, scale: None };
 
-    let causal_out =
-        AttentionKernel::grouped_query_attention(&q, &k, &v, &cfg_causal).unwrap();
+    let causal_out = AttentionKernel::grouped_query_attention(&q, &k, &v, &cfg_causal).unwrap();
     let non_causal_out =
         AttentionKernel::grouped_query_attention(&q, &k, &v, &cfg_non_causal).unwrap();
 
     // Token 0 should differ: causal sees only self, non-causal sees all
     let t0_causal = &causal_out[0..q_dim];
     let t0_non_causal = &non_causal_out[0..q_dim];
-    let differs = t0_causal
-        .iter()
-        .zip(t0_non_causal)
-        .any(|(a, b)| (a - b).abs() > EPS);
+    let differs = t0_causal.iter().zip(t0_non_causal).any(|(a, b)| (a - b).abs() > EPS);
     assert!(differs, "GQA causal should differ from non-causal at token 0");
 }
 
@@ -767,10 +680,8 @@ fn sdpa_deterministic_across_calls() {
     let k: Vec<f32> = (0..seq * head_dim).map(|i| (i as f32) * 0.02).collect();
     let v: Vec<f32> = (0..seq * head_dim).map(|i| (i as f32) * 0.07).collect();
 
-    let r1 =
-        scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
-    let r2 =
-        scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
+    let r1 = scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
+    let r2 = scaled_dot_product_attention(&q, &k, &v, seq, seq, head_dim, true).unwrap();
 
     assert_eq!(r1.len(), r2.len());
     for (i, (&a, &b)) in r1.iter().zip(r2.iter()).enumerate() {

@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-tokenizer-heuristics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Pure tokenizer/model heuristic helpers for architecture + vocab inference"
+rust-version.workspace = true
+
+[features]
+default = []
+
+[lints]
+workspace = true

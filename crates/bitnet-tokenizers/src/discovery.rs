@@ -9,6 +9,10 @@ use crate::{
 };
 use bitnet_common::{BitNetError, Result};
 use bitnet_models::GgufReader;
+use bitnet_tokenizer_heuristics::{
+    NamedTensorShape, default_vocab_for_architecture, detect_architecture_from_tensor_names,
+    infer_vocab_from_embedding_tensors,
+};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -714,52 +718,26 @@ impl TokenizerDiscovery {
     /// Try to infer vocabulary size from embedding tensor shape
     fn try_infer_vocab_from_embeddings(reader: &GgufReader) -> Option<usize> {
         let tensor_names = reader.tensor_names();
-        for name in tensor_names {
-            if (name.contains("token_embd")
-                || name.contains("wte")
-                || name.contains("embed")
-                || name.contains("embeddings"))
-                && let Some(info) = reader.get_tensor_info_by_name(name)
-            {
-                let shape = &info.shape;
-                if !shape.is_empty() {
-                    let possible_vocab = shape[0];
-                    // Sanity check - vocab size should be reasonable
-                    if (100..2_000_000).contains(&possible_vocab) {
-                        debug!(
-                            "Inferred vocab_size {} from embedding tensor '{}'",
-                            possible_vocab, name
-                        );
-                        return Some(possible_vocab);
-                    }
-                }
-            }
+        let tensor_shapes: Vec<_> = tensor_names
+            .iter()
+            .filter_map(|name| {
+                reader
+                    .get_tensor_info_by_name(name)
+                    .map(|info| NamedTensorShape { name, shape: info.shape.as_slice() })
+            })
+            .collect();
+
+        let inferred = infer_vocab_from_embedding_tensors(&tensor_shapes);
+        if let Some(vocab_size) = inferred {
+            debug!("Inferred vocab_size {} from embedding tensor shape", vocab_size);
         }
-        None
+        inferred
     }
 
     /// Get architecture-specific default vocabulary size
     fn get_architecture_default_vocab(reader: &GgufReader) -> Option<usize> {
         let arch = reader.get_string_metadata("general.architecture")?;
-        match arch.as_str() {
-            "llama" => {
-                // Distinguish between LLaMA-2 (32K) and LLaMA-3 (128K)
-                if let Some(name) = reader.get_string_metadata("general.name") {
-                    if name.contains("llama-3") || name.contains("llama3") {
-                        Some(128256)
-                    } else {
-                        Some(32000)
-                    }
-                } else {
-                    Some(32000) // Default to LLaMA-2
-                }
-            }
-            "gpt2" => Some(50257),
-            "gptneox" => Some(50257),
-            "bert" => Some(30522),
-            "t5" => Some(32128),
-            _ => None,
-        }
+        default_vocab_for_architecture(&arch, reader.get_string_metadata("general.name").as_deref())
     }
 
     /// Extract vocabulary size from GGUF metadata
@@ -805,25 +783,8 @@ impl TokenizerDiscovery {
 
     /// Detect architecture from model name
     fn detect_architecture_from_name(name: &str) -> Option<String> {
-        let name_lower = name.to_lowercase();
-
-        // Architecture detection patterns: (architecture, patterns)
-        let name_patterns = [
-            ("bitnet", &["bitnet", "bitlinear"] as &[&str]),
-            ("llama", &["llama"]),
-            ("gpt2", &["gpt2", "gpt-2"]),
-            ("gptneox", &["gpt-neo", "gptneox", "gpt-j"]),
-            ("bert", &["bert"]),
-            ("t5", &["t5"]),
-        ];
-
-        for (arch, patterns) in name_patterns {
-            if patterns.iter().any(|pattern| name_lower.contains(pattern)) {
-                debug!("Detected {} architecture from model name", arch);
-                return Some(arch.to_string());
-            }
-        }
-        None
+        bitnet_tokenizer_heuristics::detect_architecture_from_name(name)
+            .map(std::string::ToString::to_string)
     }
 
     /// Extract model architecture type from GGUF metadata
@@ -863,62 +824,13 @@ impl TokenizerDiscovery {
 
     /// Detect architecture from tensor name patterns
     fn detect_architecture_from_tensors(tensor_names: &[&str]) -> Result<String> {
-        // Architecture detection patterns: (architecture, patterns, description)
-        let architecture_patterns = [
-            (
-                "bitnet",
-                &["bitlinear", "bitnet"] as &[&str],
-                "BitNet architecture from tensor patterns",
-            ),
-            (
-                "llama",
-                &["attn_q", "attn_k", "attn_v", "attention.wq", "attention.wk"],
-                "LLaMA architecture from tensor patterns",
-            ),
-            ("t5", &["encoder", "decoder", "relative_attention_bias"], "T5 architecture"),
-            ("bert", &["encoder", "self", "attention"], "BERT architecture"),
-            ("gptneox", &["gpt_neox", "gptneox"], "GPT-Neo/J architecture"),
-        ];
-
-        // Check each architecture pattern
-        for (arch, patterns, description) in architecture_patterns {
-            let has_patterns = if arch == "gpt2" {
-                // GPT-2 requires compound pattern matching
-                tensor_names.iter().any(|name| {
-                    (name.contains("mlp") || name.contains("c_fc"))
-                        && (name.contains("attn") || name.contains("c_attn"))
-                })
-            } else if arch == "bert" || arch == "t5" {
-                // BERT and T5 require multiple pattern matching
-                patterns
-                    .iter()
-                    .all(|pattern| tensor_names.iter().any(|name| name.contains(pattern)))
-            } else {
-                // Simple pattern matching for other architectures
-                patterns
-                    .iter()
-                    .any(|pattern| tensor_names.iter().any(|name| name.contains(pattern)))
-            };
-
-            if has_patterns {
-                debug!("Detected {}", description);
-                return Ok(arch.to_string());
-            }
+        let arch = detect_architecture_from_tensor_names(tensor_names);
+        if arch == "transformer" {
+            warn!("Could not determine specific architecture, defaulting to 'transformer'");
+        } else {
+            debug!("Detected {} architecture from tensor patterns", arch);
         }
-
-        // GPT-2 detection with compound pattern (handled separately)
-        let has_gpt2_patterns = tensor_names.iter().any(|name| {
-            (name.contains("mlp") || name.contains("c_fc"))
-                && (name.contains("attn") || name.contains("c_attn"))
-        });
-        if has_gpt2_patterns {
-            debug!("Detected GPT-2 architecture from tensor patterns");
-            return Ok("gpt2".to_string());
-        }
-
-        // Default fallback to generic transformer
-        warn!("Could not determine specific architecture, defaulting to 'transformer'");
-        Ok("transformer".to_string())
+        Ok(arch.to_string())
     }
 
     /// Check for co-located tokenizer files in model directory

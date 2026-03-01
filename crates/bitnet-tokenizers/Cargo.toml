@@ -20,7 +20,7 @@ include = [
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
-bitnet-tokenizer-model-core = { path = "../bitnet-tokenizer-model-core", version = "0.2.1-dev" }
+bitnet-tokenizer-heuristics = { path = "../bitnet-tokenizer-heuristics", version = "0.2.1-dev" }
 anyhow.workspace = true
 tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -64,6 +64,5 @@ temp-env = "0.3.6"
 serial_test.workspace = true
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
-bitnet-test-fixtures-core = { path = "../bitnet-test-fixtures-core", version = "0.2.1-dev" }
 proptest = { workspace = true }
 insta = { workspace = true }
