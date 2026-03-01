@@ -179,6 +179,7 @@ pub mod checkpoint_manager;
 pub mod batched_tokenization;
 pub mod prompt_processing;
 pub mod streaming_aggregator;
+pub mod structured_output;
 // Parallel communication primitives for distributed GPU inference:
 // all-reduce, all-gather, reduce-scatter, broadcast, ring/tree
 // topologies, double-buffered comm, and profiling.
