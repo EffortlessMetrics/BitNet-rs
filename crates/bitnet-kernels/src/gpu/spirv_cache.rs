@@ -332,9 +332,7 @@ impl SpirvCache {
                 Err(_) => {
                     // Stale entry — remove from index.
                     let meta = self.index.remove(key).unwrap();
-                    self.stats
-                        .total_size_bytes
-                        .fetch_sub(meta.size, Ordering::Relaxed);
+                    self.stats.total_size_bytes.fetch_sub(meta.size, Ordering::Relaxed);
                     self.stats.entry_count.fetch_sub(1, Ordering::Relaxed);
                     self.lru_order.retain(|k| k != key);
                     self.stats.misses.fetch_add(1, Ordering::Relaxed);
@@ -371,24 +369,16 @@ impl SpirvCache {
         let size = binary.len() as u64;
 
         // Update index.
-        if let Some(old) = self.index.insert(
-            key.clone(),
-            CacheEntryMeta {
-                path,
-                size,
-                last_accessed: SystemTime::now(),
-            },
-        ) {
-            self.stats
-                .total_size_bytes
-                .fetch_sub(old.size, Ordering::Relaxed);
+        if let Some(old) = self
+            .index
+            .insert(key.clone(), CacheEntryMeta { path, size, last_accessed: SystemTime::now() })
+        {
+            self.stats.total_size_bytes.fetch_sub(old.size, Ordering::Relaxed);
         } else {
             self.stats.entry_count.fetch_add(1, Ordering::Relaxed);
         }
 
-        self.stats
-            .total_size_bytes
-            .fetch_add(size, Ordering::Relaxed);
+        self.stats.total_size_bytes.fetch_add(size, Ordering::Relaxed);
 
         // Update LRU.
         self.lru_order.retain(|k| k != key);
@@ -431,9 +421,7 @@ impl SpirvCache {
     fn remove_entry(&mut self, key: &CacheKey) {
         if let Some(meta) = self.index.remove(key) {
             let _ = fs::remove_file(&meta.path);
-            self.stats
-                .total_size_bytes
-                .fetch_sub(meta.size, Ordering::Relaxed);
+            self.stats.total_size_bytes.fetch_sub(meta.size, Ordering::Relaxed);
             self.stats.entry_count.fetch_sub(1, Ordering::Relaxed);
         }
         self.lru_order.retain(|k| k != key);
@@ -462,29 +450,16 @@ impl SpirvCache {
             // We cannot reconstruct the full CacheKey from the filename alone,
             // so we use the filename as a synthetic key. Real lookups will
             // populate proper keys via `store`.
-            let fname = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-                .to_string();
+            let fname = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string();
             let synthetic_key = CacheKey {
                 kernel_source_hash: filename_to_synthetic_hash(&fname),
                 compile_options: String::new(),
                 device_fingerprint: self.config.device_fingerprint.clone(),
             };
 
-            self.index.insert(
-                synthetic_key.clone(),
-                CacheEntryMeta {
-                    path,
-                    size,
-                    last_accessed,
-                },
-            );
+            self.index.insert(synthetic_key.clone(), CacheEntryMeta { path, size, last_accessed });
             self.lru_order.push(synthetic_key);
-            self.stats
-                .total_size_bytes
-                .fetch_add(size, Ordering::Relaxed);
+            self.stats.total_size_bytes.fetch_add(size, Ordering::Relaxed);
             self.stats.entry_count.fetch_add(1, Ordering::Relaxed);
         }
     }
@@ -591,10 +566,7 @@ fn sha256_hash(data: &[u8]) -> [u8; 32] {
         for i in 16..64 {
             let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
             let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
-            w[i] = w[i - 16]
-                .wrapping_add(s0)
-                .wrapping_add(w[i - 7])
-                .wrapping_add(s1);
+            w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
         }
 
         let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh] = h;
@@ -602,11 +574,7 @@ fn sha256_hash(data: &[u8]) -> [u8; 32] {
         for i in 0..64 {
             let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             let ch = (e & f) ^ ((!e) & g);
-            let temp1 = hh
-                .wrapping_add(s1)
-                .wrapping_add(ch)
-                .wrapping_add(K[i])
-                .wrapping_add(w[i]);
+            let temp1 = hh.wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
             let s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             let maj = (a & b) ^ (a & c) ^ (b & c);
             let temp2 = s0.wrapping_add(maj);
@@ -750,12 +718,8 @@ mod tests {
 
     #[test]
     fn stats_snapshot_display() {
-        let snap = CacheStatsSnapshot {
-            hits: 7,
-            misses: 3,
-            total_size_bytes: 1024,
-            entry_count: 2,
-        };
+        let snap =
+            CacheStatsSnapshot { hits: 7, misses: 3, total_size_bytes: 1024, entry_count: 2 };
         let s = format!("{snap}");
         assert!(s.contains("hits=7"));
         assert!(s.contains("misses=3"));
@@ -973,10 +937,7 @@ mod tests {
         // NIST test vector for empty string
         let digest = sha256_hash(b"");
         let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
-        assert_eq!(
-            hex,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
+        assert_eq!(hex, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     }
 
     #[test]
@@ -984,10 +945,7 @@ mod tests {
         // NIST test vector for "abc"
         let digest = sha256_hash(b"abc");
         let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
-        assert_eq!(
-            hex,
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
+        assert_eq!(hex, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     }
 
     // -- Default config tests -----------------------------------------------
