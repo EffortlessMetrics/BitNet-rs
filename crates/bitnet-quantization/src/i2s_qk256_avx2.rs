@@ -27,6 +27,7 @@
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
+#[cfg(target_arch = "x86_64")]
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
