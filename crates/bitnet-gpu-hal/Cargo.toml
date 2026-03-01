@@ -31,3 +31,4 @@ cuda = []
 
 [lints]
 workspace = true
+description = "GPU hardware abstraction layer with backend capability matrix and feature negotiation"
