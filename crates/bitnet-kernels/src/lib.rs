@@ -22,6 +22,7 @@ pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_cache;
+pub mod opencl_quantize;
 pub mod opencl_context;
 pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
