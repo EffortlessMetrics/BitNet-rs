@@ -564,6 +564,97 @@ pub fn attention_with_kv_cache(
     AttentionKernel::scaled_dot_product(q, k_cache, v_cache, None, scale, 1, seq_kv, head_dim)
 }
 
+/// Causal self-attention convenience function.
+///
+/// Forces `causal = true` regardless of the `config.causal` field, then
+/// delegates to [`AttentionKernel::multi_head_attention`].
+///
+/// * `q` — `[seq_len, num_heads * head_dim]`
+/// * `k` — `[seq_len, num_heads * head_dim]`
+/// * `v` — `[seq_len, num_heads * head_dim]`
+pub fn causal_attention(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    config: &AttentionConfig,
+) -> Result<Vec<f32>> {
+    let mut causal_cfg = config.clone();
+    causal_cfg.causal = true;
+    AttentionKernel::multi_head_attention(q, k, v, &causal_cfg)
+}
+
+/// Apply rotary position embeddings (RoPE) to query and key tensors in-place.
+///
+/// Rotates consecutive dimension pairs `(x[2i], x[2i+1])` at each token
+/// position using sinusoidal frequencies derived from `base = 10 000`.
+///
+/// Both `q` and `k` must have length `positions.len() * cols` where `cols`
+/// is any multiple of `head_dim` (e.g., `num_heads * head_dim`).
+///
+/// * `q` — mutable query tensor, laid out as `[num_positions, cols]`
+/// * `k` — mutable key tensor, same layout
+/// * `positions` — absolute token positions, one per row
+/// * `head_dim` — per-head dimension (must be even and > 0)
+pub fn apply_rotary_embedding(
+    q: &mut [f32],
+    k: &mut [f32],
+    positions: &[usize],
+    head_dim: usize,
+) -> Result<()> {
+    if head_dim == 0 || !head_dim.is_multiple_of(2) {
+        return Err(invalid_arg("head_dim must be even and > 0"));
+    }
+    if positions.is_empty() {
+        return Ok(());
+    }
+    let num_pos = positions.len();
+    if !q.len().is_multiple_of(num_pos) {
+        return Err(invalid_arg("q length must be divisible by number of positions"));
+    }
+    if !k.len().is_multiple_of(num_pos) {
+        return Err(invalid_arg("k length must be divisible by number of positions"));
+    }
+    let q_cols = q.len() / num_pos;
+    let k_cols = k.len() / num_pos;
+    if !q_cols.is_multiple_of(head_dim) {
+        return Err(invalid_arg("q row width must be a multiple of head_dim"));
+    }
+    if !k_cols.is_multiple_of(head_dim) {
+        return Err(invalid_arg("k row width must be a multiple of head_dim"));
+    }
+
+    rope_inplace(q, positions, head_dim, q_cols);
+    rope_inplace(k, positions, head_dim, k_cols);
+    Ok(())
+}
+
+/// Apply RoPE rotation to a single tensor in-place.
+fn rope_inplace(data: &mut [f32], positions: &[usize], head_dim: usize, cols: usize) {
+    let half_dim = head_dim / 2;
+    let base: f32 = 10_000.0;
+    let num_heads_in_row = cols / head_dim;
+
+    for (p_idx, &pos) in positions.iter().enumerate() {
+        let row = &mut data[p_idx * cols..(p_idx + 1) * cols];
+        for h in 0..num_heads_in_row {
+            let head_start = h * head_dim;
+            for i in 0..half_dim {
+                let exponent = -(2.0 * i as f32) / head_dim as f32;
+                let theta = base.powf(exponent);
+                let angle = pos as f32 * theta;
+                let (sin_a, cos_a) = angle.sin_cos();
+
+                let idx0 = head_start + 2 * i;
+                let idx1 = head_start + 2 * i + 1;
+                let x0 = row[idx0];
+                let x1 = row[idx1];
+                row[idx0] = x0 * cos_a - x1 * sin_a;
+                row[idx1] = x0 * sin_a + x1 * cos_a;
+            }
+        }
+    }
+}
+
 // ── Head extraction / scatter helpers ──────────────────────────────
 
 /// Extract head `h` from an interleaved `[seq_len, num_heads * head_dim]`
@@ -1434,5 +1525,209 @@ mod tests {
         let out = AttentionKernel::scaled_dot_product(&q, &k, &v, None, 1.0, 1, 4, dim).unwrap();
         assert_eq!(out.len(), dim);
         assert!(out.iter().all(|x| x.is_finite()));
+    }
+
+    // ── causal_attention ───────────────────────────────────────────
+
+    #[test]
+    fn causal_attn_first_position_self_only() {
+        let cfg =
+            AttentionConfig { num_heads: 2, head_dim: 2, seq_len: 3, causal: false, scale: None };
+        let model_dim = cfg.num_heads * cfg.head_dim;
+        let n = cfg.seq_len * model_dim;
+        let q = vec![1.0; n];
+        let k = vec![1.0; n];
+        let mut v = vec![0.0_f32; n];
+        for t in 0..cfg.seq_len {
+            for d in 0..model_dim {
+                v[t * model_dim + d] = (t * model_dim + d) as f32;
+            }
+        }
+        let out = causal_attention(&q, &k, &v, &cfg).unwrap();
+        // Position 0 can only see itself → output ≈ v[0..model_dim]
+        assert!(slices_approx_eq(&out[..model_dim], &v[..model_dim]));
+    }
+
+    #[test]
+    fn causal_attn_matches_mha_causal() {
+        let cfg =
+            AttentionConfig { num_heads: 2, head_dim: 4, seq_len: 3, causal: true, scale: None };
+        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
+        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
+        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
+        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
+        let mha = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
+        let ca = causal_attention(&q, &k, &v, &cfg).unwrap();
+        assert!(slices_approx_eq(&mha, &ca));
+    }
+
+    #[test]
+    fn causal_attn_forces_causal_flag() {
+        // Config says causal=false, but causal_attention should override.
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 2, seq_len: 3, causal: false, scale: None };
+        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
+        let q = vec![1.0; n];
+        let k = vec![1.0; n];
+        let mut v = vec![0.0_f32; n];
+        for t in 0..cfg.seq_len {
+            for d in 0..cfg.head_dim {
+                v[t * cfg.head_dim + d] = t as f32;
+            }
+        }
+        let out = causal_attention(&q, &k, &v, &cfg).unwrap();
+        // Position 0 can only attend to itself → output row 0 ≈ 0.0
+        assert!(approx_eq(out[0], 0.0));
+        assert!(approx_eq(out[1], 0.0));
+    }
+
+    #[test]
+    fn causal_attn_single_token() {
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 1, causal: false, scale: None };
+        let v = vec![5.0; 4];
+        let out = causal_attention(&[1.0; 4], &[1.0; 4], &v, &cfg).unwrap();
+        assert!(slices_approx_eq(&out, &v));
+    }
+
+    // ── apply_rotary_embedding ─────────────────────────────────────
+
+    #[test]
+    fn rope_position_zero_no_change() {
+        let head_dim = 4;
+        let original = vec![1.0, 2.0, 3.0, 4.0];
+        let mut q = original.clone();
+        let mut k = original.clone();
+        apply_rotary_embedding(&mut q, &mut k, &[0], head_dim).unwrap();
+        // At position 0, angle = 0 → cos=1, sin=0 → no change
+        assert!(slices_approx_eq(&q, &original));
+        assert!(slices_approx_eq(&k, &original));
+    }
+
+    #[test]
+    fn rope_modifies_nonzero_position() {
+        let head_dim = 4;
+        let original = vec![1.0, 2.0, 3.0, 4.0];
+        let mut q = original.clone();
+        let mut k = vec![0.0; head_dim]; // k unchanged at zeros
+        apply_rotary_embedding(&mut q, &mut k, &[1], head_dim).unwrap();
+        // At position 1, angles are non-zero → values should change
+        assert!(!slices_approx_eq(&q, &original));
+    }
+
+    #[test]
+    fn rope_pair_rotation_preserves_norm() {
+        // Rotation preserves the L2 norm of each (x0, x1) pair.
+        let head_dim = 2;
+        let mut q: Vec<f32> = vec![3.0, 4.0]; // norm = 5
+        let mut k: Vec<f32> = vec![1.0, 0.0]; // norm = 1
+        let q_norm_before = (q[0] * q[0] + q[1] * q[1]).sqrt();
+        let k_norm_before = (k[0] * k[0] + k[1] * k[1]).sqrt();
+        apply_rotary_embedding(&mut q, &mut k, &[7], head_dim).unwrap();
+        let q_norm_after = (q[0] * q[0] + q[1] * q[1]).sqrt();
+        let k_norm_after = (k[0] * k[0] + k[1] * k[1]).sqrt();
+        assert!(approx_eq(q_norm_before, q_norm_after));
+        assert!(approx_eq(k_norm_before, k_norm_after));
+    }
+
+    #[test]
+    fn rope_multi_head() {
+        let head_dim = 4;
+        let num_heads = 2;
+        let cols = num_heads * head_dim;
+        let mut q = vec![1.0; cols];
+        let mut k = vec![1.0; cols];
+        apply_rotary_embedding(&mut q, &mut k, &[3], head_dim).unwrap();
+        // Both heads should be rotated identically (same position)
+        assert!(slices_approx_eq(&q[..head_dim], &q[head_dim..]));
+        assert!(slices_approx_eq(&k[..head_dim], &k[head_dim..]));
+    }
+
+    #[test]
+    fn rope_multiple_positions() {
+        let head_dim = 4;
+        let mut q = vec![1.0; 3 * head_dim]; // 3 positions
+        let mut k = vec![1.0; 3 * head_dim];
+        apply_rotary_embedding(&mut q, &mut k, &[0, 1, 2], head_dim).unwrap();
+        // Position 0 unchanged
+        assert!(slices_approx_eq(&q[..head_dim], &[1.0; 4]));
+        // Position 1 and 2 should differ
+        assert!(!slices_approx_eq(&q[head_dim..2 * head_dim], &q[..head_dim]));
+        assert!(!slices_approx_eq(&q[2 * head_dim..3 * head_dim], &q[head_dim..2 * head_dim]));
+    }
+
+    #[test]
+    fn rope_rejects_odd_head_dim() {
+        let mut q = vec![1.0; 3];
+        let mut k = vec![1.0; 3];
+        assert!(apply_rotary_embedding(&mut q, &mut k, &[0], 3).is_err());
+    }
+
+    #[test]
+    fn rope_rejects_zero_head_dim() {
+        let mut q = vec![];
+        let mut k = vec![];
+        assert!(apply_rotary_embedding(&mut q, &mut k, &[0], 0).is_err());
+    }
+
+    #[test]
+    fn rope_empty_positions_is_noop() {
+        let original = vec![1.0, 2.0, 3.0, 4.0];
+        let mut q = original.clone();
+        let mut k = original.clone();
+        apply_rotary_embedding(&mut q, &mut k, &[], 4).unwrap();
+        assert_eq!(q, original);
+        assert_eq!(k, original);
+    }
+
+    #[test]
+    fn rope_q_k_independent() {
+        let head_dim = 4;
+        let mut q = vec![1.0, 2.0, 3.0, 4.0];
+        let mut k = vec![5.0, 6.0, 7.0, 8.0];
+        let k_before = k.clone();
+        apply_rotary_embedding(&mut q, &mut k, &[1], head_dim).unwrap();
+        // k should be rotated by the same angles but from its own initial values
+        let mut k_standalone = k_before.clone();
+        let mut dummy = vec![0.0; head_dim];
+        apply_rotary_embedding(&mut dummy, &mut k_standalone, &[1], head_dim).unwrap();
+        assert!(slices_approx_eq(&k, &k_standalone));
+    }
+
+    #[test]
+    fn rope_dimension_mismatch() {
+        let mut q = vec![1.0; 5]; // not divisible by head_dim=4
+        let mut k = vec![1.0; 4];
+        assert!(apply_rotary_embedding(&mut q, &mut k, &[0], 4).is_err());
+    }
+
+    #[test]
+    fn rope_large_head_dim_norm_preserved() {
+        let head_dim = 64;
+        let mut q: Vec<f32> = (0..head_dim).map(|i| (i as f32) * 0.1).collect();
+        let mut k = q.clone();
+        let q_norm_sq: f32 = q.iter().map(|x| x * x).sum();
+        apply_rotary_embedding(&mut q, &mut k, &[42], head_dim).unwrap();
+        let q_norm_sq_after: f32 = q.iter().map(|x| x * x).sum();
+        // Total norm is sum of per-pair norms, each preserved by rotation
+        assert!(
+            (q_norm_sq - q_norm_sq_after).abs() < 1e-3,
+            "norm changed: {q_norm_sq} → {q_norm_sq_after}"
+        );
+    }
+
+    #[test]
+    fn rope_deterministic() {
+        let head_dim = 4;
+        let positions = &[0, 5, 10];
+        let original = vec![1.0; 3 * head_dim];
+        let mut q1 = original.clone();
+        let mut k1 = original.clone();
+        let mut q2 = original.clone();
+        let mut k2 = original.clone();
+        apply_rotary_embedding(&mut q1, &mut k1, positions, head_dim).unwrap();
+        apply_rotary_embedding(&mut q2, &mut k2, positions, head_dim).unwrap();
+        assert_eq!(q1, q2);
+        assert_eq!(k1, k2);
     }
 }
