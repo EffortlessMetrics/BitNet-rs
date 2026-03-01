@@ -16,6 +16,7 @@
 //! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling,
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
+//! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
@@ -35,6 +36,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod transpose;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
@@ -72,6 +74,10 @@ pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
+pub use transpose::{
+    CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
+    transpose_nd_cpu_fallback,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
@@ -84,3 +90,6 @@ pub use fusion::{
     FUSION_KERNEL_SRC, launch_fused_add_rmsnorm_cuda, launch_fused_gelu_linear_cuda,
     launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
 };
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
