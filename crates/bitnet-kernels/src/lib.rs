@@ -20,6 +20,7 @@ pub mod kernels;
 pub mod npu;
 pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
+pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
