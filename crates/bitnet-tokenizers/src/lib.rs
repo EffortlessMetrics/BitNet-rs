@@ -24,6 +24,7 @@ pub mod discovery;
 pub mod download;
 pub mod error_handling;
 pub mod fallback;
+pub mod gpu;
 pub mod strategy;
 pub mod utils;
 pub mod vocabulary;
