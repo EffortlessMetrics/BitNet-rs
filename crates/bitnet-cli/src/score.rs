@@ -4,9 +4,9 @@ use serde_json::json;
 use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 
 use bitnet_common::Device as BNDevice;
-use bitnet_eval_core::log_softmax_stable;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::{GgufReader, ModelLoader};
+use bitnet_scoring_core::{NllStats, observe_target_nll, sanitize_logits_in_place};
 use candle_core::Device;
 
 #[derive(Args, Debug)]
@@ -84,8 +84,7 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
     let lines: Vec<&str> = data.lines().filter(|l| !l.trim().is_empty()).collect();
 
     let start = Instant::now();
-    let mut total_tokens: usize = 0; // predicted tokens (T-1)
-    let mut total_nll: f64 = 0.0;
+    let mut stats = NllStats::default();
 
     'outer: for chunk in lines.chunks(args.batch_size) {
         for line in chunk {
@@ -95,7 +94,7 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
             }
 
             let max_steps = if args.max_tokens > 0 {
-                args.max_tokens.saturating_sub(total_tokens).min(ids.len() - 1)
+                args.max_tokens.saturating_sub(stats.tokens).min(ids.len() - 1)
             } else {
                 ids.len() - 1
             };
@@ -104,17 +103,14 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
             prefix.push(ids[0]);
             for t in 0..max_steps {
                 let mut logits = engine.eval_ids(&prefix).await?;
-                for v in &mut logits {
-                    if !v.is_finite() {
-                        *v = f32::NEG_INFINITY;
-                    }
-                }
-                let logp = log_softmax_stable(&logits);
+                sanitize_logits_in_place(&mut logits);
                 let target = ids[t + 1] as usize;
-                total_nll -= logp[target] as f64;
-                total_tokens += 1;
+                if target >= logits.len() {
+                    anyhow::bail!("target index {} out of bounds", target);
+                }
+                observe_target_nll(&mut stats, &logits, target);
                 prefix.push(ids[t + 1]);
-                if args.max_tokens > 0 && total_tokens >= args.max_tokens {
+                if args.max_tokens > 0 && stats.tokens >= args.max_tokens {
                     break 'outer;
                 }
             }
@@ -123,15 +119,15 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
 
     let tokenizer_origin = if args.tokenizer.is_some() { "external" } else { "embedded" };
 
-    let mean_nll = if total_tokens > 0 { total_nll / total_tokens as f64 } else { 0.0 };
-    let ppl = mean_nll.exp();
+    let mean_nll = stats.mean();
+    let ppl = stats.perplexity();
     let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     let out = json!({
         "type": "score",
         "model": args.model.display().to_string(),
         "dataset": args.file.display().to_string(),
-        "tokens": total_tokens,
+        "tokens": stats.tokens,
         "mean_nll": mean_nll,
         "ppl": ppl,
         "latency": { "total_ms": latency_ms },

@@ -6,31 +6,12 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
-use bitnet_eval_core::{log_softmax_stable, topk_stable_indices};
+use bitnet_eval_core::topk_stable_indices;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
+use bitnet_scoring_core::{NllStats, observe_target_nll, sanitize_logits_in_place};
 
 use crate::config::CliConfig;
-
-/// Running sum of NLL and the number of predicted tokens (T-1)
-#[derive(Clone, Copy, Debug, Default)]
-struct NllStats {
-    sum: f64,      // total negative log-likelihood over predicted tokens
-    tokens: usize, // number of predicted tokens (T-1), padding excluded
-}
-
-impl NllStats {
-    #[inline]
-    fn mean(self) -> f64 {
-        if self.tokens > 0 { self.sum / self.tokens as f64 } else { 0.0 }
-    }
-
-    #[inline]
-    fn add(&mut self, other: NllStats) {
-        self.sum += other.sum;
-        self.tokens += other.tokens;
-    }
-}
 
 /// Evaluate model perplexity and performance
 #[derive(Debug, Args)]
@@ -419,12 +400,8 @@ impl EvalCommand {
             let mut logits =
                 engine.eval_ids(&prefix).await.context("eval_ids in teacher-forcing")?;
 
-            // Demote NaNs for robustness
-            for v in &mut logits {
-                if !v.is_finite() {
-                    *v = f32::NEG_INFINITY;
-                }
-            }
+            // Demote non-finite values for robustness
+            sanitize_logits_in_place(&mut logits);
 
             // Skip padding tokens if specified
             if let Some(pid) = pad_id
@@ -434,15 +411,11 @@ impl EvalCommand {
                 continue;
             }
 
-            // Compute log probabilities
-            let logp = log_softmax_stable(&logits);
             let target = current_token as usize;
-            let lp = *logp
-                .get(target)
-                .ok_or_else(|| anyhow::anyhow!("target index {} out of bounds", target))?;
-
-            stats.sum -= lp as f64;
-            stats.tokens += 1;
+            if target >= logits.len() {
+                anyhow::bail!("target index {} out of bounds", target);
+            }
+            observe_target_nll(&mut stats, &logits, target);
 
             prefix.push(current_token);
         }
@@ -489,7 +462,7 @@ impl EvalCommand {
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
         let mean_nll = agg.mean();
-        let perplexity = mean_nll.exp();
+        let perplexity = agg.perplexity();
         let predicted = agg.tokens.max(1); // T-1 token count
 
         Ok(EvalResults {
@@ -538,7 +511,7 @@ impl EvalCommand {
         };
 
         let mean_nll = stats.mean();
-        let perplexity = mean_nll.exp();
+        let perplexity = stats.perplexity();
         let predicted = stats.tokens.max(1);
 
         // Optional logits dump (teacher-forced)
@@ -548,12 +521,8 @@ impl EvalCommand {
                 for (step, t) in (0..(tf_ids.len() - 1)).take(steps).enumerate() {
                     let mut logits: Vec<f32> = engine.eval_ids(&tf_ids[..=t]).await?;
 
-                    // Demote NaNs to -inf
-                    for v in &mut logits {
-                        if !v.is_finite() {
-                            *v = f32::NEG_INFINITY;
-                        }
-                    }
+                    // Demote non-finite values to -inf
+                    sanitize_logits_in_place(&mut logits);
 
                     let k = self.logits_topk.min(logits.len());
                     let idx = topk_stable_indices(&logits, k);
