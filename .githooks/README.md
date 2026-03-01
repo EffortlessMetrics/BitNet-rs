@@ -16,19 +16,14 @@ git config core.hooksPath .githooks
 
 Runs before every commit to check:
 
-1. **#[ignore] Annotation Hygiene**
-   - Ensures all `#[ignore]` attributes include a reason
-   - Prevents bare `#[ignore]` markers from being committed
-   - Enforces pattern: `#[ignore = "reason"]` or comment before attribute
-
-2. **Environment Mutation Safety**
-   - Warns about raw `std::env::set_var()` / `remove_var()` calls
-   - Encourages EnvGuard pattern with `#[serial(bitnet_env)]`
-   - Prevents test race conditions and environment pollution
+1. **GenerationConfig Builder Enforcement**
+   - Prevents `GenerationConfig { ... }` struct literals in test files
+   - Enforces builder API: `GenerationConfig::greedy().with_max_tokens(10)`
+   - Scans only `*.rs` files under `crates/bitnet-inference/tests`
 
 ## Hook Status
 
-- **pre-commit**: Enabled (checks #[ignore] and env mutations)
+- **pre-commit**: Enabled (checks GenerationConfig builder usage)
 - **commit-msg**: Not implemented
 - **pre-push**: Not implemented
 
