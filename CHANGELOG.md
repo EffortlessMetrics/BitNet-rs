@@ -278,6 +278,49 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Embedding layer** (#1273): token embedding with batch lookup and tied output projection, 45 tests
 - **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios, 78 tests
 - **CHANGELOG waves 29-32** (#1271): 17 entries covering GPU HAL infrastructure PRs
+
+#### Wave 80 (in progress)
+- **RoPE kernels**: Rotary position embedding with NTK/YaRN/DynamicNTK scaling
+- **Tokenizer wrapper**: BPE/WordPiece/SentencePiece with chat templates
+- **GGUF writer**: Model export with header/metadata/tensor serialization
+- **OpenCL backend**: Full API surface with platform/device/buffer management
+- **Vulkan compute**: Compute pipeline with descriptor sets and synchronization
+
+#### Wave 79
+- **Embedding layer** (#1245): 104 tests for token/position embeddings with RoPE/ALiBi
+- **Softmax kernel** (#1541): 94 tests for numerically stable softmax variants
+- **Cross-attention** (#1543): 101 tests for encoder-decoder cross-attention
+- **Autoregressive generator** (#1544): 102 tests for sampling strategies and beam search
+- **GGUF model loader** (#1546): 139 tests for lazy tensor loading and device placement
+
+#### Wave 78
+- **GPU buffer** (#1536): 80 tests for buffer pool management and staging
+- **Workspace integration v13** (#1535): 91 module stubs across 15 categories
+- **Transformer block** (#1224): 100 tests for decoder block with residual connections
+- **Inference pipeline** (#1537): 91 tests for end-to-end inference orchestration
+- **Model quantizer** (#1542): 90 tests for multi-format quantization pipeline
+
+#### Wave 77
+- **Dynamic batching** (#1344): 96 tests for adaptive batch formation and scheduling
+- **Context window** (#1529): 76 tests for context management and eviction
+- **Matmul kernels** (#1534): 84 tests for matrix multiplication with tiling
+- **Attention compute** (#1531): 87 tests for scaled dot-product attention with KV cache
+- **FFN block** (#1533): 90 tests for standard, gated, and MoE feed-forward networks
+
+#### Wave 76
+- **Graph executor** (#1523): 84 tests for computation graph execution engine
+- **Data pipeline** (#1525): 76 tests for streaming data loading and preprocessing
+- **Error recovery v2** (#1522): 103 tests for resilient error handling and retry
+- **Shape tracker** (#1521): 87 tests for tensor shape tracking and validation
+- **CHANGELOG waves 70-74** (#1518): Documentation update
+
+#### Wave 75
+- **API gateway** (#1514): 76 tests for rate limiting, routing, health endpoints
+- **Weight loader** (#1516): 88 tests for weight loading and device placement
+- **Activation functions** (#1519): 129 tests for GELU, SiLU, ReLU, Swish, Mish, etc.
+- **Layer normalization** (#1512): 87 tests for LayerNorm and RMSNorm implementations
+- **Kernel launcher** (#1513): 90 tests for GPU kernel dispatch and configuration
+
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
