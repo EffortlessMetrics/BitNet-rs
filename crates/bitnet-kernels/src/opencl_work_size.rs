@@ -157,15 +157,9 @@ fn clamp_local(local: usize, simd_width: usize, max_work_group_size: usize) -> u
 // ---------------------------------------------------------------------------
 
 /// Calculates optimal global/local work sizes for OpenCL dispatches.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WorkSizeOptimizer {
     config: WorkSizeConfig,
-}
-
-impl Default for WorkSizeOptimizer {
-    fn default() -> Self {
-        Self { config: WorkSizeConfig::default() }
-    }
 }
 
 impl WorkSizeOptimizer {
@@ -333,7 +327,7 @@ impl WorkSizeOptimizer {
         let total_groups = rows; // exactly one group per row
         let useful = rows * cols;
         let efficiency =
-            useful as f64 / (total_items.max(1) * ((cols + local - 1) / local).max(1)) as f64;
+            useful as f64 / (total_items.max(1) * cols.div_ceil(local).max(1)) as f64;
         // Clamp to (0, 1].
         let efficiency = efficiency.clamp(f64::MIN_POSITIVE, 1.0);
 
