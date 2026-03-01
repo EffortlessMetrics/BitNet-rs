@@ -9,6 +9,7 @@ pub use attention::{
 };
 pub mod batch_norm;
 pub mod conv2d;
+pub mod dequant;
 pub use conv2d::{Conv2dConfig, compute_output_size, conv2d, depthwise_conv2d, im2col};
 pub mod embedding;
 pub mod fallback;
