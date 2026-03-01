@@ -104,7 +104,7 @@ impl PoolingConfig {
     pub fn grid_dim(&self) -> (u32, u32, u32) {
         let n = self.output_len() as u32;
         let tpb = self.threads_per_block;
-        ((n + tpb - 1) / tpb, 1, 1)
+        (n.div_ceil(tpb), 1, 1)
     }
 
     /// CUDA block dimensions.
@@ -168,7 +168,7 @@ pub fn pooling_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig) ->
 fn max_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n: usize) {
     let n = config.input_len;
     let pad = config.padding;
-    for i in 0..out_n {
+    for (i, out_val) in output.iter_mut().enumerate().take(out_n) {
         let ws = i * config.stride;
         let mut max_val = f32::NEG_INFINITY;
         for k in 0..config.kernel_size {
@@ -179,14 +179,14 @@ fn max_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n
                 max_val = val;
             }
         }
-        output[i] = max_val;
+        *out_val = max_val;
     }
 }
 
 fn avg_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n: usize) {
     let n = config.input_len;
     let pad = config.padding;
-    for i in 0..out_n {
+    for (i, out_val) in output.iter_mut().enumerate().take(out_n) {
         let ws = i * config.stride;
         let mut sum = 0.0_f32;
         for k in 0..config.kernel_size {
@@ -195,7 +195,7 @@ fn avg_pool_cpu(input: &[f32], output: &mut [f32], config: &PoolingConfig, out_n
                 sum += input[pos - pad];
             }
         }
-        output[i] = sum / config.kernel_size as f32;
+        *out_val = sum / config.kernel_size as f32;
     }
 }
 
@@ -235,10 +235,10 @@ pub fn launch_pooling(_input: &[f32], _output: &mut [f32], config: &PoolingConfi
 pub fn pooling_forward(input: &[f32], output: &mut [f32], config: &PoolingConfig) -> Result<()> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        if crate::device_features::gpu_available_runtime() {
-            if let Ok(()) = launch_pooling(input, output, config) {
-                return Ok(());
-            }
+        if crate::device_features::gpu_available_runtime()
+            && let Ok(()) = launch_pooling(input, output, config)
+        {
+            return Ok(());
         }
     }
     pooling_cpu(input, output, config)
