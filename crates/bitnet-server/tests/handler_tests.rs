@@ -396,8 +396,8 @@ fn config_builder_rejects_zero_max_prompt_length() {
 
 #[test]
 fn validator_accepts_valid_temperature() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -412,8 +412,8 @@ fn validator_accepts_valid_temperature() {
 
 #[test]
 fn validator_rejects_temperature_above_2() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -428,8 +428,8 @@ fn validator_rejects_temperature_above_2() {
 
 #[test]
 fn validator_rejects_negative_temperature() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -444,8 +444,8 @@ fn validator_rejects_negative_temperature() {
 
 #[test]
 fn validator_rejects_top_p_out_of_range() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -460,8 +460,8 @@ fn validator_rejects_top_p_out_of_range() {
 
 #[test]
 fn validator_rejects_top_k_zero() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -476,8 +476,8 @@ fn validator_rejects_top_k_zero() {
 
 #[test]
 fn validator_rejects_top_k_above_1000() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -492,8 +492,8 @@ fn validator_rejects_top_k_above_1000() {
 
 #[test]
 fn validator_rejects_repetition_penalty_out_of_range() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: None,
@@ -552,36 +552,36 @@ fn validator_rejects_max_tokens_exceeding_limit() {
 
 #[test]
 fn validator_rejects_empty_model_path() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     assert!(validator.validate_model_request("").is_err());
 }
 
 #[test]
 fn validator_rejects_path_traversal() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     assert!(validator.validate_model_request("../../etc/passwd.gguf").is_err());
 }
 
 #[test]
 fn validator_rejects_non_gguf_extension() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     assert!(validator.validate_model_request("/models/model.bin").is_err());
 }
 
 #[test]
 fn validator_accepts_gguf_extension() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     assert!(validator.validate_model_request("/models/model.gguf").is_ok());
 }
 
 #[test]
 fn validator_accepts_safetensors_extension() {
-    let validator = bitnet_server::security::SecurityValidator::new(SecurityConfig::default())
-        .unwrap();
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
     assert!(validator.validate_model_request("/models/model.safetensors").is_ok());
 }
 
@@ -690,10 +690,7 @@ fn server_config_toml_round_trip() {
     let deserialized: ServerConfig = toml::from_str(&toml_str).unwrap();
     assert_eq!(deserialized.server.host, original.server.host);
     assert_eq!(deserialized.server.port, original.server.port);
-    assert_eq!(
-        deserialized.batch_engine.max_batch_size,
-        original.batch_engine.max_batch_size
-    );
+    assert_eq!(deserialized.batch_engine.max_batch_size, original.batch_engine.max_batch_size);
 }
 
 // ---------------------------------------------------------------------------

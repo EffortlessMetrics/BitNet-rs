@@ -33,6 +33,7 @@ pub mod opencl_context;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
 pub mod opencl_embedding;
+pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;

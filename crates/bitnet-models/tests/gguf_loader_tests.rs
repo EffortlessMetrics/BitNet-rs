@@ -108,10 +108,7 @@ fn header_zero_tensors() {
 fn metadata_architecture_string() {
     let buf = build_minimal_gguf("bitnet");
     let reader = GgufReader::new(&buf).expect("parse");
-    assert_eq!(
-        reader.get_string_metadata("general.architecture"),
-        Some("bitnet".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.architecture"), Some("bitnet".to_string()));
 }
 
 #[test]
@@ -139,14 +136,8 @@ fn metadata_f32_values() {
 fn metadata_string_values() {
     let buf = build_full_metadata_gguf();
     let reader = GgufReader::new(&buf).expect("parse");
-    assert_eq!(
-        reader.get_string_metadata("general.name"),
-        Some("test-llama-7b".to_string())
-    );
-    assert_eq!(
-        reader.get_string_metadata("general.description"),
-        Some("test model".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.name"), Some("test-llama-7b".to_string()));
+    assert_eq!(reader.get_string_metadata("general.description"), Some("test model".to_string()));
 }
 
 #[test]
@@ -248,30 +239,21 @@ fn tensor_type_preserved() {
 fn detect_llama_architecture() {
     let buf = build_minimal_gguf("llama");
     let reader = GgufReader::new(&buf).expect("parse");
-    assert_eq!(
-        reader.get_string_metadata("general.architecture"),
-        Some("llama".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.architecture"), Some("llama".to_string()));
 }
 
 #[test]
 fn detect_bitnet_architecture() {
     let buf = build_minimal_gguf("bitnet");
     let reader = GgufReader::new(&buf).expect("parse");
-    assert_eq!(
-        reader.get_string_metadata("general.architecture"),
-        Some("bitnet".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.architecture"), Some("bitnet".to_string()));
 }
 
 #[test]
 fn detect_phi_architecture() {
     let buf = build_minimal_gguf("phi");
     let reader = GgufReader::new(&buf).expect("parse");
-    assert_eq!(
-        reader.get_string_metadata("general.architecture"),
-        Some("phi".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.architecture"), Some("phi".to_string()));
 }
 
 #[test]
@@ -596,18 +578,12 @@ fn roundtrip_metadata_preserved() {
     let buf = cursor.into_inner();
     let reader = GgufReader::new(&buf).expect("parse");
 
-    assert_eq!(
-        reader.get_string_metadata("general.architecture"),
-        Some("bitnet".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("general.architecture"), Some("bitnet".to_string()));
     assert_eq!(
         reader.get_string_metadata("general.description"),
         Some("roundtrip test".to_string())
     );
-    assert_eq!(
-        reader.get_string_metadata("custom.author"),
-        Some("test-harness".to_string())
-    );
+    assert_eq!(reader.get_string_metadata("custom.author"), Some("test-harness".to_string()));
     assert_eq!(reader.get_u32_metadata("custom.version"), Some(42));
     let temp = reader.get_f32_metadata("custom.temperature").unwrap();
     assert!((temp - 0.7).abs() < f32::EPSILON);
