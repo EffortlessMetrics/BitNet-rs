@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-download-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "SRP core download utilities: backoff, retry-after parsing, and length validation"
+
+[dependencies]
+httpdate = "1.0.3"
+thiserror.workspace = true
+
+[lints]
+workspace = true

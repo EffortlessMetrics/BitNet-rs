@@ -71,6 +71,7 @@ members = [
   "crates/bitnet-test-support",
   "crates/bitnet-test-env",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download-core", # SRP: pure download retry/validation primitives
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
@@ -135,6 +136,7 @@ default-members = [
   "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-download-core", # SRP: pure download retry/validation primitives
   "crates/bitnet-download",      # SRP: download mechanics primitives
 ]
 
