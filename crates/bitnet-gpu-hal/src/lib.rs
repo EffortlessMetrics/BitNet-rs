@@ -117,6 +117,7 @@ pub mod tokenizer_wrapper;
 
 // === Profiling & Debugging ===
 pub mod benchmark_harness;
+pub mod benchmark_suite;
 pub mod continuous_profiling;
 pub mod gpu_memory_profiler;
 pub mod gpu_topology;
