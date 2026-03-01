@@ -155,7 +155,8 @@ pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>
             out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
         }
         Dtype::BF16 => {
-            let xs: &[u16] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad bf16 size"))?;
+            let xs: &[u16] =
+                bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad bf16 size"))?;
             out.extend(xs.iter().take(n).map(|&b| {
                 let v = bf16::from_bits(b).to_f32();
                 f16::from_f32(v).to_bits()
