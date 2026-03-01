@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: fmt6(&out)
+---
+-0.958924, 0.283662, 0.479426, 0.877583, 0.049979, 0.998750, 0.005000, 0.999987
