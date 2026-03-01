@@ -31,13 +31,10 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+/// OpenCL 3.0 USM (Unified Shared Memory) support.
+pub mod usm;
+/// Peer-to-peer GPU communication utilities.
+pub mod p2p;
+/// PagedAttention KV cache for GPU inference.
+pub mod paged_kv;
