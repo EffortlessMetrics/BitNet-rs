@@ -168,8 +168,8 @@ pub fn launch_transpose_2d(
         .map_err(|e| KernelError::GpuError { reason: format!("device alloc failed: {e:?}") })?;
 
     let tile = 32u32;
-    let gx = (cols as u32 + tile - 1) / tile;
-    let gy = (rows as u32 + tile - 1) / tile;
+    let gx = (cols as u32).div_ceil(tile);
+    let gy = (rows as u32).div_ceil(tile);
     let launch_cfg =
         LaunchConfig { grid_dim: (gx, gy, 1), block_dim: (tile, tile, 1), shared_mem_bytes: 0 };
     let rows_i = rows as i32;

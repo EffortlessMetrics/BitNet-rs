@@ -241,8 +241,8 @@ impl KvCacheBuffer {
 
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
-            if crate::device_features::gpu_available_runtime() {
-                if let Ok(()) = launch_append_kv(
+            if crate::device_features::gpu_available_runtime()
+                && let Ok(()) = launch_append_kv(
                     &mut self.keys,
                     &mut self.values,
                     layer,
@@ -250,11 +250,11 @@ impl KvCacheBuffer {
                     key_data,
                     value_data,
                     &self.config,
-                ) {
-                    self.update_layer_len_after_append(layer, pos);
-                    self.record_op(start);
-                    return Ok(());
-                }
+                )
+            {
+                self.update_layer_len_after_append(layer, pos);
+                self.record_op(start);
+                return Ok(());
             }
         }
 
@@ -319,7 +319,7 @@ impl KvCacheBuffer {
             }
             .into());
         }
-        if self.config.head_dim % 2 != 0 {
+        if !self.config.head_dim.is_multiple_of(2) {
             return Err(KernelError::InvalidArguments {
                 reason: format!("rotate_kv requires even head_dim, got {}", self.config.head_dim,),
             }
@@ -424,8 +424,8 @@ impl KvCacheBuffer {
             for (seq_idx, &pos) in positions.iter().enumerate() {
                 let row = head_off + seq_idx * head_dim;
                 let actual_pos = pos as f32;
-                for i in 0..half_dim {
-                    let angle = actual_pos * inv_freq[i];
+                for (i, &freq) in inv_freq.iter().enumerate() {
+                    let angle = actual_pos * freq;
                     let cos_val = angle.cos();
                     let sin_val = angle.sin();
                     let x0 = self.keys[row + 2 * i];
