@@ -218,12 +218,10 @@ fn load_gguf_enhanced(
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
-        Device::OpenCL(_) => {
-            tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
-            CDevice::Cpu
-        }
-        Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!(
+                "HIP/NPU/OpenCL device requested but not supported, falling back to CPU"
+            );
             CDevice::Cpu
         }
     };
@@ -566,12 +564,10 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
-        Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
-            CDevice::Cpu
-        }
-        Device::OpenCL(_) => {
-            tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!(
+                "HIP/NPU/OpenCL device requested but not supported, falling back to CPU"
+            );
             CDevice::Cpu
         }
     };
@@ -1002,7 +998,9 @@ fn cast_scales_to_f32(
         candle_core::DType::F64 => {
             let mut out = Vec::with_capacity(n);
             for chunk in bytes.chunks_exact(8).take(n) {
-                out.push(f64::from_le_bytes(chunk.try_into().unwrap()) as f32);
+                out.push(f64::from_le_bytes(
+                    chunk.try_into().map_err(|_| anyhow::anyhow!("f64 chunk size mismatch"))?,
+                ) as f32);
             }
             Ok(out)
         }
@@ -1680,12 +1678,8 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
             tracing::warn!("Metal device requested but not supported, fallback to CPU");
             CDevice::Cpu
         }
-        Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, fallback to CPU");
-            CDevice::Cpu
-        }
-        Device::OpenCL(_) => {
-            tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!("HIP/NPU/OpenCL device requested but not supported, fallback to CPU");
             CDevice::Cpu
         }
     };

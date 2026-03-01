@@ -13,13 +13,14 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
+// OpenCL kernel sources (always compiled — just embedded string constants)
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
+#[path = "gpu/kernels/mod.rs"]
 pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
-pub mod opencl_cache;
 pub mod opencl_context;
 pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
@@ -76,6 +77,18 @@ impl KernelManager {
                 }
             } else {
                 log::debug!("CUDA kernel not available");
+            }
+        }
+
+        #[cfg(feature = "oneapi")]
+        {
+            if let Ok(opencl_kernel) = gpu::opencl::OpenClKernel::new() {
+                if opencl_kernel.is_available() {
+                    log::info!("OpenCL kernel available, adding to providers");
+                    providers.insert(0, Box::new(opencl_kernel));
+                }
+            } else {
+                log::debug!("OpenCL kernel not available");
             }
         }
 

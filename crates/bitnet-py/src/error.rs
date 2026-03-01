@@ -1,6 +1,6 @@
-use pyo3::prelude::*;
-use pyo3::exceptions::{PyException, PyRuntimeError, PyValueError, PyIOError};
 use bitnet_common::BitNetError;
+use pyo3::exceptions::{PyException, PyIOError, PyRuntimeError, PyValueError};
+use pyo3::prelude::*;
 
 /// Python exception type for BitNet errors
 #[pyclass(extends=PyException)]
@@ -15,10 +15,7 @@ pub struct PyBitNetError {
 impl PyBitNetError {
     #[new]
     fn new(message: String, error_type: Option<String>) -> Self {
-        Self {
-            message,
-            error_type: error_type.unwrap_or_else(|| "BitNetError".to_string()),
-        }
+        Self { message, error_type: error_type.unwrap_or_else(|| "BitNetError".to_string()) }
     }
 
     fn __str__(&self) -> String {
@@ -34,7 +31,9 @@ impl From<BitNetError> for PyErr {
     fn from(err: BitNetError) -> Self {
         match err {
             BitNetError::Model(e) => PyValueError::new_err(format!("Model error: {}", e)),
-            BitNetError::Quantization(e) => PyValueError::new_err(format!("Quantization error: {}", e)),
+            BitNetError::Quantization(e) => {
+                PyValueError::new_err(format!("Quantization error: {}", e))
+            }
             BitNetError::Kernel(e) => PyRuntimeError::new_err(format!("Kernel error: {}", e)),
             BitNetError::Inference(e) => PyRuntimeError::new_err(format!("Inference error: {}", e)),
             BitNetError::Io(e) => PyIOError::new_err(format!("IO error: {}", e)),
