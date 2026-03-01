@@ -5,6 +5,12 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+pub mod intel_arc;
+pub use intel_arc::{
+    IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
+    is_arc_alchemist,
+};
+
 #[cfg(feature = "opencl")]
 pub mod opencl;
 #[cfg(feature = "opencl")]
