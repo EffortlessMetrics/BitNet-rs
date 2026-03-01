@@ -14,6 +14,7 @@ pub mod execution_router;
 pub mod gpu_streaming;
 pub mod health;
 pub mod model_manager;
+pub mod model_registry;
 pub mod monitoring;
 pub mod security;
 pub mod streaming;
