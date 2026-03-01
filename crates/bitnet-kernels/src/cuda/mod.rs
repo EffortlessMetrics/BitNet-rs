@@ -122,6 +122,8 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use layernorm::LAYERNORM_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
