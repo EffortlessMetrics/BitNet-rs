@@ -40,6 +40,9 @@ pub mod x86;
 #[cfg(target_arch = "aarch64")]
 pub mod arm;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_layernorm;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
