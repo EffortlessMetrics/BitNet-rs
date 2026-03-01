@@ -1,0 +1,14 @@
+--- crates/bitnet-opencl/src/lib.rs
++++ crates/bitnet-opencl/src/lib.rs
+@@ -10,6 +10,11 @@
+ pub mod backend_registry;
+ pub mod context_pool;
+ pub mod kv_cache;
+ pub mod paged_attention;
++pub mod diagnostics;
++pub mod system_info;
++
++pub use diagnostics::{DiagnosticReport, GpuDiagnostics, format_json, format_report};
++pub use system_info::collect_system_info;
+
+ pub use backend_dispatcher::{
