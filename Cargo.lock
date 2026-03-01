@@ -462,7 +462,6 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "bitnet-cli-sampling-core",
  "bitnet-common",
  "bitnet-eval-core",
  "bitnet-ggml-ffi",
@@ -474,9 +473,7 @@ dependencies = [
  "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
  "bitnet-sampling",
- "bitnet-scoring-core",
  "bitnet-startup-contract-guard",
- "bitnet-tokenizer-discovery-core",
  "bitnet-tokenizers",
  "bitnet-validation",
  "bytemuck",
