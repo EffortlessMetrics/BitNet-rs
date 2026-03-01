@@ -311,6 +311,11 @@ name = "kernel_ops"
 harness = false
 required-features = ["cpu", "bench"]
 
+[[bench]]
+name = "neon_simd"
+harness = false
+required-features = ["cpu"]
+
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
