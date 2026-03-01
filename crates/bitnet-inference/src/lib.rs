@@ -15,6 +15,7 @@ pub mod gguf;
 pub mod kernel_recorder;
 pub mod kv_cache_optimized;
 pub mod layers;
+pub mod memory_pool;
 pub mod metrics;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
