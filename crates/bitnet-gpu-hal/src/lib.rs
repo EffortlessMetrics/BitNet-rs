@@ -93,6 +93,9 @@ pub mod model_debugger;
 pub mod compatibility_checker;
 pub mod e2e_integration;
 pub mod model_validator;
+pub mod data_parallel;
+pub mod profiling;
+pub mod streaming;
 pub mod test_harness;
 
 // === Infrastructure ===
