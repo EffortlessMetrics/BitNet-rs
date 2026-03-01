@@ -31,6 +31,9 @@ fn cpu_capabilities_debug_shape() {
     insta::with_settings!({
         filters => vec![
             (r"core_count: \d+", "core_count: [N]"),
+            (r"has_avx2: (true|false)", "has_avx2: [ARCH]"),
+            (r"has_avx512: (true|false)", "has_avx512: [ARCH]"),
+            (r"has_neon: (true|false)", "has_neon: [ARCH]"),
         ]
     }, {
         insta::assert_snapshot!(debug);
