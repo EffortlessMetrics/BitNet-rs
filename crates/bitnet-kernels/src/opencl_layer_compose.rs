@@ -50,19 +50,13 @@ impl LayerConfig {
     /// Validate that the configuration is internally consistent.
     pub fn validate(&self) -> Result<(), LayerComposeError> {
         if self.hidden_dim == 0 {
-            return Err(LayerComposeError::InvalidConfig(
-                "hidden_dim must be non-zero".into(),
-            ));
+            return Err(LayerComposeError::InvalidConfig("hidden_dim must be non-zero".into()));
         }
         if self.num_heads == 0 {
-            return Err(LayerComposeError::InvalidConfig(
-                "num_heads must be non-zero".into(),
-            ));
+            return Err(LayerComposeError::InvalidConfig("num_heads must be non-zero".into()));
         }
         if self.head_dim == 0 {
-            return Err(LayerComposeError::InvalidConfig(
-                "head_dim must be non-zero".into(),
-            ));
+            return Err(LayerComposeError::InvalidConfig("head_dim must be non-zero".into()));
         }
         if self.intermediate_dim == 0 {
             return Err(LayerComposeError::InvalidConfig(
@@ -70,9 +64,7 @@ impl LayerConfig {
             ));
         }
         if self.epsilon <= 0.0 {
-            return Err(LayerComposeError::InvalidConfig(
-                "epsilon must be positive".into(),
-            ));
+            return Err(LayerComposeError::InvalidConfig("epsilon must be positive".into()));
         }
         if self.num_heads * self.head_dim != self.hidden_dim {
             return Err(LayerComposeError::DimensionMismatch {
@@ -175,11 +167,7 @@ pub struct TransformerBlock {
 #[derive(Debug, Clone)]
 pub enum LayerComposeError {
     /// Tensor dimensions do not match expectations.
-    DimensionMismatch {
-        expected: usize,
-        got: usize,
-        context: String,
-    },
+    DimensionMismatch { expected: usize, got: usize, context: String },
     /// Layer configuration is invalid.
     InvalidConfig(String),
     /// A compute operation failed.
@@ -190,10 +178,7 @@ impl fmt::Display for LayerComposeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DimensionMismatch { expected, got, context } => {
-                write!(
-                    f,
-                    "dimension mismatch: expected {expected}, got {got} ({context})"
-                )
+                write!(f, "dimension mismatch: expected {expected}, got {got} ({context})")
             }
             Self::InvalidConfig(msg) => write!(f, "invalid config: {msg}"),
             Self::ComputeError(msg) => write!(f, "compute error: {msg}"),
@@ -215,11 +200,7 @@ pub fn cpu_rmsnorm(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     debug_assert_eq!(n, weight.len());
     let sq_sum: f32 = input.iter().map(|&v| v * v).sum();
     let rms = (sq_sum / n as f32 + eps).sqrt();
-    input
-        .iter()
-        .zip(weight.iter())
-        .map(|(&xi, &wi)| xi * wi / rms)
-        .collect()
+    input.iter().zip(weight.iter()).map(|(&xi, &wi)| xi * wi / rms).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -227,13 +208,7 @@ pub fn cpu_rmsnorm(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
 // ---------------------------------------------------------------------------
 
 /// Row-major matrix multiply: `C[m,n] = A[m,k] @ B[k,n]`.
-pub fn cpu_linear(
-    input: &[f32],
-    weight: &[f32],
-    m: usize,
-    k: usize,
-    n: usize,
-) -> Vec<f32> {
+pub fn cpu_linear(input: &[f32], weight: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
     debug_assert_eq!(input.len(), m * k);
     debug_assert_eq!(weight.len(), k * n);
     let mut output = vec![0.0_f32; m * n];
@@ -380,12 +355,8 @@ pub fn cpu_attention_layer(
     let projected = cpu_linear(&attn_out, &block.o_proj, seq_len, h, h);
 
     // 6. Residual connection
-    let hidden_out: Vec<f32> = input
-        .hidden_states
-        .iter()
-        .zip(projected.iter())
-        .map(|(&a, &b)| a + b)
-        .collect();
+    let hidden_out: Vec<f32> =
+        input.hidden_states.iter().zip(projected.iter()).map(|(&a, &b)| a + b).collect();
 
     Ok(LayerOutput {
         hidden_states: hidden_out,
@@ -435,21 +406,13 @@ pub fn cpu_ffn_layer(
     let up = cpu_linear(&normed, &block.up_proj, seq_len, h, inter);
 
     // 3. SwiGLU: silu(gate) * up
-    let activated: Vec<f32> = gate
-        .iter()
-        .zip(up.iter())
-        .map(|(&g, &u)| cpu_silu(g) * u)
-        .collect();
+    let activated: Vec<f32> = gate.iter().zip(up.iter()).map(|(&g, &u)| cpu_silu(g) * u).collect();
 
     // 4. Down projection: [seq_len, inter] @ [inter, h]
     let ffn_out = cpu_linear(&activated, &block.down_proj, seq_len, inter, h);
 
     // 5. Residual connection
-    let result: Vec<f32> = hidden
-        .iter()
-        .zip(ffn_out.iter())
-        .map(|(&a, &b)| a + b)
-        .collect();
+    let result: Vec<f32> = hidden.iter().zip(ffn_out.iter()).map(|(&a, &b)| a + b).collect();
 
     Ok(result)
 }
@@ -490,9 +453,7 @@ pub fn cpu_multi_block_forward(
     blocks: &[TransformerBlock],
 ) -> Result<LayerOutput, LayerComposeError> {
     if blocks.is_empty() {
-        return Err(LayerComposeError::InvalidConfig(
-            "blocks must not be empty".into(),
-        ));
+        return Err(LayerComposeError::InvalidConfig("blocks must not be empty".into()));
     }
 
     let seq_len = input.position_ids.len();
@@ -505,11 +466,7 @@ pub fn cpu_multi_block_forward(
     let mut val_accum = current.new_value.clone();
 
     for block in &blocks[1..] {
-        let cache = KVSlice {
-            key_cache: &key_accum,
-            value_cache: &val_accum,
-            cache_len: seq_len,
-        };
+        let cache = KVSlice { key_cache: &key_accum, value_cache: &val_accum, cache_len: seq_len };
         let layer_input = LayerInput {
             hidden_states: &current.hidden_states,
             attention_mask: input.attention_mask,
@@ -638,10 +595,7 @@ mod tests {
         let rms = (x.iter().map(|v| v * v).sum::<f32>() / 4.0 + 1e-5).sqrt();
         for (i, &val) in out.iter().enumerate() {
             let expected = x[i] / rms;
-            assert!(
-                (val - expected).abs() < 1e-5,
-                "rmsnorm[{i}]: expected {expected}, got {val}"
-            );
+            assert!((val - expected).abs() < 1e-5, "rmsnorm[{i}]: expected {expected}, got {val}");
         }
     }
 
@@ -755,42 +709,25 @@ mod tests {
             head_dim: 4,
             ..tiny_config()
         };
-        assert!(matches!(
-            cfg.validate(),
-            Err(LayerComposeError::DimensionMismatch { .. })
-        ));
+        assert!(matches!(cfg.validate(), Err(LayerComposeError::DimensionMismatch { .. })));
     }
 
     #[test]
     fn test_config_zero_hidden() {
         let cfg = LayerConfig { hidden_dim: 0, ..tiny_config() };
-        assert!(matches!(
-            cfg.validate(),
-            Err(LayerComposeError::InvalidConfig(_))
-        ));
+        assert!(matches!(cfg.validate(), Err(LayerComposeError::InvalidConfig(_))));
     }
 
     #[test]
     fn test_config_zero_heads() {
-        let cfg = LayerConfig {
-            hidden_dim: 4,
-            num_heads: 0,
-            head_dim: 4,
-            ..tiny_config()
-        };
-        assert!(matches!(
-            cfg.validate(),
-            Err(LayerComposeError::InvalidConfig(_))
-        ));
+        let cfg = LayerConfig { hidden_dim: 4, num_heads: 0, head_dim: 4, ..tiny_config() };
+        assert!(matches!(cfg.validate(), Err(LayerComposeError::InvalidConfig(_))));
     }
 
     #[test]
     fn test_config_negative_epsilon() {
         let cfg = LayerConfig { epsilon: -1.0, ..tiny_config() };
-        assert!(matches!(
-            cfg.validate(),
-            Err(LayerComposeError::InvalidConfig(_))
-        ));
+        assert!(matches!(cfg.validate(), Err(LayerComposeError::InvalidConfig(_))));
     }
 
     // =====================================================================
@@ -837,11 +774,8 @@ mod tests {
         // Second pass with cache from first
         let hidden2 = vec![0.2_f32; h];
         let pos2 = vec![1_u32];
-        let cache = KVSlice {
-            key_cache: &out1.new_key,
-            value_cache: &out1.new_value,
-            cache_len: 1,
-        };
+        let cache =
+            KVSlice { key_cache: &out1.new_key, value_cache: &out1.new_value, cache_len: 1 };
         let input2 = make_input(&hidden2, &pos2, None, Some(cache));
         let out2 = cpu_attention_layer(&input2, &block).unwrap();
         assert_eq!(out2.hidden_states.len(), h);
@@ -1054,14 +988,8 @@ mod tests {
         let positions = vec![0_u32];
         let input = make_input(&hidden, &positions, None, None);
         let out = cpu_multi_block_forward(&input, &blocks).unwrap();
-        assert!(
-            !out.hidden_states.iter().any(|v| v.is_nan()),
-            "NaN in multi-layer output"
-        );
-        assert!(
-            !out.hidden_states.iter().any(|v| v.is_infinite()),
-            "Inf in multi-layer output"
-        );
+        assert!(!out.hidden_states.iter().any(|v| v.is_nan()), "NaN in multi-layer output");
+        assert!(!out.hidden_states.iter().any(|v| v.is_infinite()), "Inf in multi-layer output");
     }
 
     #[test]
