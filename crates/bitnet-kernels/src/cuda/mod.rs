@@ -37,6 +37,7 @@ pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
 pub mod fusion;
+pub mod gating;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
@@ -139,6 +140,11 @@ pub use embedding::{
     embedding_with_position_cpu, launch_embedding_lookup, launch_position_embedding,
     position_embedding_forward,
 };
+
+pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use embedding::{EMBEDDING_LOOKUP_KERNEL_SRC, EMBEDDING_WITH_POSITION_KERNEL_SRC};
