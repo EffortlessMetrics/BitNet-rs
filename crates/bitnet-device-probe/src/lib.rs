@@ -266,6 +266,7 @@ fn accel_device_exists() -> bool {
 
 /// Check if Intel oneAPI/`OpenCL` support was compiled.
 #[inline]
+/// Check if Intel oneAPI/OpenCL support was compiled.
 pub const fn oneapi_compiled() -> bool {
     cfg!(feature = "oneapi")
 }
@@ -480,6 +481,8 @@ pub struct DeviceProbe {
     pub rocm_available: bool,
     /// Whether an Intel NPU was found at runtime.
     pub npu_available: bool,
+    /// Whether an Intel GPU was found at runtime via `OpenCL`.
+    /// Whether an Intel GPU was found at runtime via OpenCL.
     /// Whether an Intel GPU was found at runtime via `OpenCL`.
     pub oneapi_available: bool,
 }
