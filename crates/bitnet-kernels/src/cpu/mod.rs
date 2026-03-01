@@ -13,6 +13,7 @@ pub use conv2d::{Conv2dConfig, compute_output_size, conv2d, depthwise_conv2d, im
 pub mod embedding;
 pub mod fallback;
 pub mod fusion;
+pub mod gating;
 pub mod kv_cache;
 pub mod layer_norm;
 pub use layer_norm::{
@@ -51,6 +52,7 @@ pub use activations::{
 };
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
+pub use gating::{GatingType, apply_gating, geglu, reglu, swiglu};
 pub use scatter_gather::{
     ScatterGatherConfig, ScatterReduce, gather_1d, gather_2d, index_select, scatter_1d, scatter_2d,
     scatter_add, scatter_max,
