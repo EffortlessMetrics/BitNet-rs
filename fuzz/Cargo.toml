@@ -28,6 +28,7 @@ bitnet-receipts = { path = "../crates/bitnet-receipts", version = "0.2.1-dev" }
 bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates", version = "0.2.1-dev" }
 bitnet-validation = { path = "../crates/bitnet-validation", version = "0.2.1-dev" }
 bitnet-engine-core = { path = "../crates/bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev" }
 bitnet-honest-compute = { path = "../crates/bitnet-honest-compute", version = "0.2.1-dev" }
 bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core", version = "0.2.1-dev" }
 bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core", version = "0.2.1-dev" }
@@ -277,5 +278,23 @@ doc = false
 [[bin]]
 name = "device_opencl_construct"
 path = "fuzz_targets/device_opencl_construct.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "pooling_dims"
+path = "fuzz_targets/pooling_dims.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "config_validation"
+path = "fuzz_targets/config_validation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "scatter_indices"
+path = "fuzz_targets/scatter_indices.rs"
 test = false
 doc = false
