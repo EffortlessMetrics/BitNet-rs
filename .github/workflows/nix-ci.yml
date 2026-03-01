@@ -1,0 +1,60 @@
+name: Nix CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**'
+      - 'src/**'
+      - 'scripts/ci-local.sh'
+      - '.github/workflows/nix-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**'
+      - 'src/**'
+      - 'scripts/ci-local.sh'
+      - '.github/workflows/nix-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  flake-check:
+    name: Flake checks (ubuntu-22.04)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v17
+
+      - name: Configure Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v7
+
+      - name: Validate flake metadata
+        run: nix flake metadata --accept-flake-config
+
+      - name: Run reproducible flake checks
+        run: nix flake check --accept-flake-config --print-build-logs
+
+      - name: Build release artifacts
+        run: |
+          nix build --accept-flake-config --print-build-logs .#bitnet-server
+          nix build --accept-flake-config --print-build-logs .#bitnet-cli
+          nix build --accept-flake-config --print-build-logs .#bitnet-st2gguf
