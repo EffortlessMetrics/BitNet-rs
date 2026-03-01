@@ -81,14 +81,50 @@ fi
 
 info "Validating metadata and packaging for publishable crates..."
 PUBLISHABLE=$(python - <<'PY'
-import tomllib,glob,os
-paths=['Cargo.toml']+sorted(glob.glob('crates/*/Cargo.toml'))
-for p in paths:
-  d=tomllib.load(open(p,'rb'))
-  pkg=d.get('package')
-  if not pkg: continue
-  if pkg.get('publish') is False: continue
+import json
+import subprocess
+import tomllib
+
+meta = json.loads(subprocess.check_output(['cargo', 'metadata', '--no-deps', '--format-version', '1']))
+workspace_members = set(meta['workspace_members'])
+for pkg in meta['packages']:
+  if pkg['id'] not in workspace_members:
+    continue
+  manifest = tomllib.load(open(pkg['manifest_path'], 'rb'))
+  if manifest.get('package', {}).get('publish') is False:
+    continue
   print(pkg['name'])
+PY
+)
+
+PUBLISHABLE_LEAVES=$(python - <<'PY'
+import json
+import subprocess
+import tomllib
+
+meta = json.loads(subprocess.check_output(['cargo', 'metadata', '--format-version', '1']))
+workspace_members = set(meta['workspace_members'])
+publishable = set()
+for pkg in meta['packages']:
+  if pkg['id'] not in workspace_members:
+    continue
+  manifest = tomllib.load(open(pkg['manifest_path'], 'rb'))
+  if manifest.get('package', {}).get('publish') is False:
+    continue
+  publishable.add(pkg['name'])
+
+for pkg in meta['packages']:
+  if pkg['id'] not in workspace_members:
+    continue
+  if pkg['name'] not in publishable:
+    continue
+  has_internal_publishable_dep = False
+  for dep in pkg.get('dependencies', []):
+    if dep.get('name') in publishable:
+      has_internal_publishable_dep = True
+      break
+  if not has_internal_publishable_dep:
+    print(pkg['name'])
 PY
 )
 
@@ -116,6 +152,18 @@ for pkg in $PUBLISHABLE; do
 done
 
 pass "All publishable crates pass packaging checks"
+
+if [[ -n "$PUBLISHABLE_LEAVES" ]]; then
+  info "Running crates.io dry-run publish checks for leaf crates..."
+  for pkg in $PUBLISHABLE_LEAVES; do
+    info "Dry-run publish for $pkg"
+    cargo publish --dry-run -p "$pkg"
+    pass "$pkg dry-run publish check passed"
+  done
+  pass "Leaf crate publish dry-runs passed"
+else
+  warn "No publishable leaf crates found; skipping dry-run publish checks"
+fi
 
 echo
 echo "🚀 BitNet-rs crates.io readiness checks complete"
