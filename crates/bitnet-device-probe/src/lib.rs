@@ -375,6 +375,7 @@ pub fn detect_simd_level() -> SimdLevel {
     }
     #[cfg(target_arch = "aarch64")]
     {
+        // NEON is mandatory on AArch64.
         SimdLevel::Neon
     }
     #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
