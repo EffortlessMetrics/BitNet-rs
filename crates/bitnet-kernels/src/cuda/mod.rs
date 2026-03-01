@@ -31,6 +31,7 @@ pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
+pub mod embedding;
 pub mod fusion;
 pub mod kv_cache;
 pub mod layernorm;
@@ -97,6 +98,12 @@ pub use elementwise::{
     ElementwiseConfig, ElementwiseOp, elementwise_cpu_fallback, elementwise_unary_cpu,
     fused_elementwise_cpu, launch_elementwise_binary, launch_elementwise_unary,
     launch_fused_add_mul,
+};
+
+pub use embedding::{
+    EmbeddingKernelConfig, PositionEmbeddingConfig, embedding_forward, embedding_lookup_cpu,
+    embedding_with_position_cpu, launch_embedding_lookup, launch_position_embedding,
+    position_embedding_forward,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
