@@ -370,41 +370,43 @@ impl QuantizationKernels {
     unsafe fn quantize_neon_block(&self, data: &[f32], output: &mut [i8], scale: f32, bits: u8) {
         use std::arch::aarch64::*;
 
-        let max_val = ((1 << (bits - 1)) - 1) as f32;
-        let min_val = -(1 << (bits - 1)) as f32;
+        unsafe {
+            let max_val = ((1 << (bits - 1)) - 1) as f32;
+            let min_val = -(1 << (bits - 1)) as f32;
 
-        let inv_scale = if scale.is_finite() && scale != 0.0 { 1.0 / scale } else { 0.0 };
-        let inv_scale_vec = vdupq_n_f32(inv_scale);
-        let min_val_vec = vdupq_n_f32(min_val);
-        let max_val_vec = vdupq_n_f32(max_val);
+            let inv_scale = if scale.is_finite() && scale != 0.0 { 1.0 / scale } else { 0.0 };
+            let inv_scale_vec = vdupq_n_f32(inv_scale);
+            let min_val_vec = vdupq_n_f32(min_val);
+            let max_val_vec = vdupq_n_f32(max_val);
 
-        let chunks = data.chunks_exact(4);
-        let remainder = chunks.remainder();
+            let chunks = data.chunks_exact(4);
+            let remainder = chunks.remainder();
 
-        for (i, chunk) in chunks.enumerate() {
-            let data_vec = vld1q_f32(chunk.as_ptr());
-            let scaled = vmulq_f32(data_vec, inv_scale_vec);
-            let rounded = vrndnq_f32(scaled);
-            let clamped = vmaxq_f32(vminq_f32(rounded, max_val_vec), min_val_vec);
+            for (i, chunk) in chunks.enumerate() {
+                let data_vec = vld1q_f32(chunk.as_ptr());
+                let scaled = vmulq_f32(data_vec, inv_scale_vec);
+                let rounded = vrndnq_f32(scaled);
+                let clamped = vmaxq_f32(vminq_f32(rounded, max_val_vec), min_val_vec);
 
-            // Convert to i32 and then to i8
-            let i32_vec = vcvtq_s32_f32(clamped);
-            let i16_vec = vqmovn_s32(i32_vec);
-            let i8_vec = vqmovn_s16(vcombine_s16(i16_vec, i16_vec));
+                // Convert to i32 and then to i8
+                let i32_vec = vcvtq_s32_f32(clamped);
+                let i16_vec = vqmovn_s32(i32_vec);
+                let i8_vec = vqmovn_s16(vcombine_s16(i16_vec, i16_vec));
 
-            // Store 4 bytes
-            let result = vget_lane_u32::<0>(vreinterpret_u32_s8(i8_vec));
-            std::ptr::copy_nonoverlapping(
-                &result as *const u32 as *const i8,
-                output.as_mut_ptr().add(i * 4),
-                4,
-            );
-        }
+                // Store 4 bytes
+                let result = vget_lane_u32::<0>(vreinterpret_u32_s8(i8_vec));
+                std::ptr::copy_nonoverlapping(
+                    &result as *const u32 as *const i8,
+                    output.as_mut_ptr().add(i * 4),
+                    4,
+                );
+            }
 
-        // Handle remainder with scalar code
-        for (i, &value) in remainder.iter().enumerate() {
-            let idx = data.len() - remainder.len() + i;
-            output[idx] = quantize_value_scalar(value, scale, bits);
+            // Handle remainder with scalar code
+            for (i, &value) in remainder.iter().enumerate() {
+                let idx = data.len() - remainder.len() + i;
+                output[idx] = quantize_value_scalar(value, scale, bits);
+            }
         }
     }
 
@@ -414,28 +416,30 @@ impl QuantizationKernels {
     unsafe fn dequantize_neon_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
         use std::arch::aarch64::*;
 
-        let scale_vec = vdupq_n_f32(scale);
+        unsafe {
+            let scale_vec = vdupq_n_f32(scale);
 
-        let chunks = quantized.chunks_exact(4);
-        let remainder = chunks.remainder();
+            let chunks = quantized.chunks_exact(4);
+            let remainder = chunks.remainder();
 
-        for (i, chunk) in chunks.enumerate() {
-            // Load 4 i8 values
-            let i8_vec = vreinterpret_s8_u32(vld1_dup_u32(chunk.as_ptr() as *const u32));
+            for (i, chunk) in chunks.enumerate() {
+                // Load 4 i8 values
+                let i8_vec = vreinterpret_s8_u32(vld1_dup_u32(chunk.as_ptr() as *const u32));
 
-            // Convert to i32 and then to f32
-            let i16_vec = vmovl_s8(i8_vec);
-            let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
-            let f32_vec = vcvtq_f32_s32(i32_vec);
-            let result = vmulq_f32(f32_vec, scale_vec);
+                // Convert to i32 and then to f32
+                let i16_vec = vmovl_s8(i8_vec);
+                let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
+                let f32_vec = vcvtq_f32_s32(i32_vec);
+                let result = vmulq_f32(f32_vec, scale_vec);
 
-            vst1q_f32(output.as_mut_ptr().add(i * 4), result);
-        }
+                vst1q_f32(output.as_mut_ptr().add(i * 4), result);
+            }
 
-        // Handle remainder with scalar code
-        for (i, &value) in remainder.iter().enumerate() {
-            let idx = quantized.len() - remainder.len() + i;
-            output[idx] = dequantize_value_scalar(value, scale);
+            // Handle remainder with scalar code
+            for (i, &value) in remainder.iter().enumerate() {
+                let idx = quantized.len() - remainder.len() + i;
+                output[idx] = dequantize_value_scalar(value, scale);
+            }
         }
     }
 }
