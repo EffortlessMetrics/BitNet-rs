@@ -79,13 +79,7 @@ impl MetricSample {
         value: f64,
         unit: impl Into<String>,
     ) -> Self {
-        Self {
-            metric_type,
-            name: name.into(),
-            value,
-            unit: unit.into(),
-            timestamp_ns: now_ns(),
-        }
+        Self { metric_type, name: name.into(), value, unit: unit.into(), timestamp_ns: now_ns() }
     }
 }
 
@@ -106,7 +100,13 @@ pub struct MetricAggregation {
 impl MetricAggregation {
     fn from_values(values: &[f64]) -> Self {
         if values.is_empty() {
-            return Self { count: 0, sum: 0.0, min: f64::INFINITY, max: f64::NEG_INFINITY, values: Vec::new() };
+            return Self {
+                count: 0,
+                sum: 0.0,
+                min: f64::INFINITY,
+                max: f64::NEG_INFINITY,
+                values: Vec::new(),
+            };
         }
         let count = values.len() as u64;
         let sum: f64 = values.iter().sum();
@@ -363,11 +363,7 @@ fn escape_json(s: &str) -> String {
 }
 
 fn format_f64(v: f64) -> String {
-    if v == v.floor() && v.abs() < 1e15 {
-        format!("{v:.1}")
-    } else {
-        format!("{v}")
-    }
+    if v == v.floor() && v.abs() < 1e15 { format!("{v:.1}") } else { format!("{v}") }
 }
 
 // ---------------------------------------------------------------------------
@@ -446,8 +442,13 @@ mod tests {
     fn ring_buffer_evicts_oldest() {
         let mut col = TelemetryCollector::new(3);
         for i in 0..5 {
-            col.record(MetricSample::new(MetricType::KernelExecution, format!("k{i}"), i as f64, "ms"))
-                .unwrap();
+            col.record(MetricSample::new(
+                MetricType::KernelExecution,
+                format!("k{i}"),
+                i as f64,
+                "ms",
+            ))
+            .unwrap();
         }
         assert_eq!(col.sample_count(), 3);
         assert_eq!(col.samples[0].name, "k2");
