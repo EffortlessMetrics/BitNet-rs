@@ -67,6 +67,7 @@ members = [
     "crates/bitnet-rocm",          # HIP compute kernels for AMD ROCm backend",
   "crates/bitnet-vulkan",        # Vulkan GLSL compute shaders for GPU inference
   "crates/bitnet-wgpu-bench",    # Benchmarking and profiling harness for wgpu compute kernels
+  "crates/bitnet-wgpu-runner",   # WebGPU kernel runner for GPU compute dispatch
   "crossval",
   "tests",
   "tests-new",
