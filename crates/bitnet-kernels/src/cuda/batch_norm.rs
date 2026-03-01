@@ -1069,6 +1069,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
+    #[allow(unused_variables, unused_mut)]
     fn test_cuda_batch_norm_launch() {
         let config = BatchNormConfig::new(64).unwrap();
         let mut state = BatchNormState::new(&config);
