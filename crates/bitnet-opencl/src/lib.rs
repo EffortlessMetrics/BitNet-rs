@@ -31,13 +31,12 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! OpenCL GPU backend and receipt validation for BitNet inference.
+//!
+//! Provides [`GpuReceipt`] for capturing GPU inference execution metadata
+//! and [`GpuReceiptValidator`] with 8 validation gates matching the existing
+//! `ci/inference.json` receipt schema.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod receipts;
+
+pub use receipts::{GateError, GpuReceipt, GpuReceiptValidator, HybridReceipt};
