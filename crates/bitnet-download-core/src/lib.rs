@@ -107,10 +107,7 @@ mod tests {
         assert!(validate_downloaded_len(1024, None).is_ok());
         assert!(matches!(
             validate_downloaded_len(1, Some(2)),
-            Err(DownloadValidationError::Truncated {
-                downloaded: 1,
-                expected: 2
-            })
+            Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
     }
 }

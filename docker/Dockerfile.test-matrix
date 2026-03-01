@@ -15,8 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY src/ ./src/
 COPY crates/ ./crates/
+COPY crossval/ ./crossval/
+COPY tests/ ./tests/
+COPY xtask/ ./xtask/
+COPY xtask-build-helper/ ./xtask-build-helper/
+COPY benches/ ./benches/
+COPY fuzz/ ./fuzz/
 
 # ── CPU feature build + test ─────────────────────────────────────
 FROM base AS test-cpu

@@ -70,9 +70,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             RETRY_AFTER,
-            httpdate::fmt_http_date(future)
-                .parse()
-                .expect("valid retry-after date"),
+            httpdate::fmt_http_date(future).parse().expect("valid retry-after date"),
         );
 
         let wait = retry_after_secs_at(&headers, now);
@@ -86,9 +84,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             RETRY_AFTER,
-            httpdate::fmt_http_date(past)
-                .parse()
-                .expect("valid retry-after date"),
+            httpdate::fmt_http_date(past).parse().expect("valid retry-after date"),
         );
 
         assert_eq!(retry_after_secs_at(&headers, now), 5);
