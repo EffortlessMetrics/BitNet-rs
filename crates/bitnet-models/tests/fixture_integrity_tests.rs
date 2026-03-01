@@ -11,12 +11,18 @@
 //!
 //! See: SPEC-2025-006 (Fixture Contract and Validation)
 
-use std::path::PathBuf;
+use bitnet_test_fixtures_core::{
+    fixture_path_from_workspace, load_fixture_bytes, load_fixture_string,
+};
+use std::path::Path;
 
 /// Helper to get fixture paths relative to repository root
-fn fixture_path(filename: &str) -> PathBuf {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    PathBuf::from(manifest_dir).join("../../ci/fixtures/qk256").join(filename)
+fn fixture_path(filename: &str) -> std::path::PathBuf {
+    fixture_path_from_workspace(
+        Path::new(env!("CARGO_MANIFEST_DIR")),
+        2,
+        Path::new("ci/fixtures/qk256").join(filename),
+    )
 }
 
 /// Validate GGUF header structure (magic, version)
@@ -54,7 +60,7 @@ fn test_qk256_4x256_header_integrity() {
     let path = fixture_path("qk256_4x256.gguf");
     assert!(path.exists(), "Fixture qk256_4x256.gguf should exist at {:?}", path);
 
-    let bytes = std::fs::read(&path).expect("Should read qk256_4x256.gguf");
+    let bytes = load_fixture_bytes(&path).expect("Should read qk256_4x256.gguf");
     validate_gguf_header(&bytes, "qk256_4x256.gguf");
 
     // Verify expected size (from exploration: 10,816 bytes)
@@ -66,7 +72,7 @@ fn test_qk256_3x300_header_integrity() {
     let path = fixture_path("qk256_3x300.gguf");
     assert!(path.exists(), "Fixture qk256_3x300.gguf should exist at {:?}", path);
 
-    let bytes = std::fs::read(&path).expect("Should read qk256_3x300.gguf");
+    let bytes = load_fixture_bytes(&path).expect("Should read qk256_3x300.gguf");
     validate_gguf_header(&bytes, "qk256_3x300.gguf");
 
     // Verify expected size (from exploration: 10,696 bytes)
@@ -78,7 +84,7 @@ fn test_bitnet32_2x64_header_integrity() {
     let path = fixture_path("bitnet32_2x64.gguf");
     assert!(path.exists(), "Fixture bitnet32_2x64.gguf should exist at {:?}", path);
 
-    let bytes = std::fs::read(&path).expect("Should read bitnet32_2x64.gguf");
+    let bytes = load_fixture_bytes(&path).expect("Should read bitnet32_2x64.gguf");
     validate_gguf_header(&bytes, "bitnet32_2x64.gguf");
 
     // Verify expected size (from exploration: 8,832 bytes)
@@ -98,12 +104,15 @@ fn test_all_fixtures_present() {
 
 #[test]
 fn test_sha256sums_file_present() {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let sha256sums_path = PathBuf::from(manifest_dir).join("../../ci/fixtures/qk256/SHA256SUMS");
+    let sha256sums_path = fixture_path_from_workspace(
+        Path::new(env!("CARGO_MANIFEST_DIR")),
+        2,
+        "ci/fixtures/qk256/SHA256SUMS",
+    );
 
     assert!(sha256sums_path.exists(), "SHA256SUMS file should exist at {:?}", sha256sums_path);
 
-    let content = std::fs::read_to_string(&sha256sums_path).expect("Should read SHA256SUMS");
+    let content = load_fixture_string(&sha256sums_path).expect("Should read SHA256SUMS");
 
     // Verify it contains all three fixtures
     assert!(content.contains("qk256_4x256.gguf"), "SHA256SUMS should contain qk256_4x256.gguf");

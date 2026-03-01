@@ -24,6 +24,7 @@
 //! file.write_all(&fixture_bytes).unwrap();
 //! ```
 
+use bitnet_test_fixtures_core::{fixture_path_from_workspace, load_fixture_bytes as load_bytes};
 use std::path::{Path, PathBuf};
 
 /// Get the absolute path to a fixture in `ci/fixtures/qk256/`
@@ -41,20 +42,13 @@ use std::path::{Path, PathBuf};
 /// Panics if the workspace root cannot be determined or fixture doesn't exist
 pub fn fixture_path(filename: &str) -> PathBuf {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-
-    // CARGO_MANIFEST_DIR points to crates/bitnet-models
-    // Navigate from crates/bitnet-models → workspace root
-    let workspace_root = manifest_dir
-        .parent() // crates
-        .and_then(|p| p.parent()) // workspace root
-        .expect("Failed to determine workspace root");
-
-    let fixture_path = workspace_root.join("ci/fixtures/qk256").join(filename);
+    let fixture_path =
+        fixture_path_from_workspace(manifest_dir, 2, Path::new("ci/fixtures/qk256").join(filename));
 
     if !fixture_path.exists() {
         panic!(
-            "Fixture not found: {}\nExpected path: {:?}\nWorkspace root: {:?}\nManifest dir: {:?}",
-            filename, fixture_path, workspace_root, manifest_dir
+            "Fixture not found: {}\nExpected path: {:?}\nManifest dir: {:?}",
+            filename, fixture_path, manifest_dir
         );
     }
 
@@ -76,7 +70,7 @@ pub fn fixture_path(filename: &str) -> PathBuf {
 /// Panics if the file cannot be read
 pub fn load_fixture_bytes(filename: &str) -> Vec<u8> {
     let path = fixture_path(filename);
-    std::fs::read(&path).unwrap_or_else(|e| {
+    load_bytes(&path).unwrap_or_else(|e| {
         panic!("Failed to read fixture {}: {}", filename, e);
     })
 }

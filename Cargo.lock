@@ -882,6 +882,7 @@ dependencies = [
  "bitnet-gguf",
  "bitnet-quantization",
  "bitnet-st2gguf",
+ "bitnet-test-fixtures-core",
  "bitnet-test-support",
  "bitnet-trace",
  "bitnet-transformer",
@@ -1312,6 +1313,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-test-fixtures-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-test-support"
 version = "0.2.1-dev"
 dependencies = [
@@ -1512,6 +1517,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-test-fixtures-core",
  "bitnet-test-support",
  "bitnet-tests",
  "dirs",

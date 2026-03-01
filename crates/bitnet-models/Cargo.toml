@@ -53,6 +53,7 @@ sha2 = "0.10.9"
 sysinfo = "0.37.2"
 bitnet-st2gguf = { path = "../bitnet-st2gguf", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
+bitnet-test-fixtures-core = { path = "../bitnet-test-fixtures-core", version = "0.2.1-dev" }
 insta.workspace = true
 
 [features]

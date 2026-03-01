@@ -63,5 +63,6 @@ temp-env = "0.3.6"
 serial_test.workspace = true
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
+bitnet-test-fixtures-core = { path = "../bitnet-test-fixtures-core", version = "0.2.1-dev" }
 proptest = { workspace = true }
 insta = { workspace = true }
