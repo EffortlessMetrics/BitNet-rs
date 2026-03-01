@@ -16,6 +16,8 @@
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
 //! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling,
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
+//! - [`matmul`]: Dense f32/f16 matrix multiplication (tiled GEMM) with batched and
+//!   transpose support
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
 //! - [`embedding`]: Token and positional embedding lookup with padding support
@@ -36,6 +38,7 @@ pub mod embedding;
 pub mod fusion;
 pub mod kv_cache;
 pub mod layernorm;
+pub mod matmul;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantized_matmul;
@@ -99,6 +102,9 @@ pub use fusion::{
 pub use pooling::{CudaPoolType, PoolingConfig, pooling_cpu, pooling_forward};
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
+pub use matmul::{
+    MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward, matmul_forward,
+};
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
@@ -127,6 +133,8 @@ pub use layernorm::LAYERNORM_KERNEL_SRC;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SRC};
 
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use matmul::{launch_matmul, launch_matmul_f16};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;
 
