@@ -15,6 +15,10 @@ pub mod fallback;
 pub mod fusion;
 pub mod kv_cache;
 pub mod layer_norm;
+pub use layer_norm::{
+    GroupNormConfig, LayerNormConfig, batch_group_norm, batch_instance_norm, batch_layer_norm,
+    batch_rms_norm, group_norm, instance_norm, layer_norm as cpu_layer_norm, rms_norm,
+};
 pub mod loss;
 pub mod pooling;
 pub use pooling::{
