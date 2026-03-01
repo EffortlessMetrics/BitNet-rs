@@ -30,6 +30,10 @@ pub mod arm;
 
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
+pub use scatter_gather::{
+    ScatterGatherConfig, ScatterReduce, gather_1d, gather_2d, index_select, scatter_1d, scatter_2d,
+    scatter_add, scatter_max,
+};
 pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
