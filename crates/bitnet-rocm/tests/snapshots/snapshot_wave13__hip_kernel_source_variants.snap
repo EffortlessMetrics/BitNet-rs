@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-rocm/tests/snapshot_wave13.rs
+expression: variants
+---
+[
+    Matmul,
+    Softmax,
+    RmsNorm,
+    Rope,
+    Attention,
+    Elementwise,
+]

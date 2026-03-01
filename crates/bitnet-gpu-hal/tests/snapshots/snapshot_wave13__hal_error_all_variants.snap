@@ -1,0 +1,40 @@
+---
+source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
+expression: variants
+---
+[
+    DeviceNotFound(
+        "gpu:0",
+    ),
+    OutOfMemory {
+        requested: 1024,
+        available: 512,
+    },
+    CompilationFailed(
+        "error",
+    ),
+    KernelLaunchFailed(
+        "failed",
+    ),
+    InvalidArgument {
+        index: 0,
+        reason: "bad type",
+    },
+    BufferAccessError(
+        "out of bounds",
+    ),
+    QueueError(
+        "stalled",
+    ),
+    Timeout {
+        operation: "op",
+        elapsed_ms: 100,
+    },
+    Unsupported(
+        "fp64",
+    ),
+    BackendError {
+        backend: "vulkan",
+        message: "init failed",
+    },
+]

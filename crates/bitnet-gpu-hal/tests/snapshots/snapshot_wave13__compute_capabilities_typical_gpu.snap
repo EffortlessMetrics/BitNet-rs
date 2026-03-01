@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
+expression: caps
+---
+ComputeCapabilities {
+    max_workgroup_size: [
+        1024,
+        1024,
+        64,
+    ],
+    max_grid_size: [
+        2147483647,
+        65535,
+        65535,
+    ],
+    max_shared_memory_bytes: 49152,
+    compute_units: 80,
+    supports_fp16: true,
+    supports_int8: true,
+    supports_subgroups: true,
+}

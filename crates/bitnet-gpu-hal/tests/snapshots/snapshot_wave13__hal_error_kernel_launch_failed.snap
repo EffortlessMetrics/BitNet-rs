@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
+expression: err.to_string()
+---
+kernel launch failed: invalid grid dimensions

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
+expression: stats
+---
+AllocatorStats {
+    total_allocated: 268435456,
+    allocation_count: 42,
+    peak_allocated: 536870912,
+}

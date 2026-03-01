@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-rocm/tests/snapshot_wave13.rs
+expression: first_line
+---
+/**

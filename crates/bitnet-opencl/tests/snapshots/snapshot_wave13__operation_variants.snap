@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: ops
+---
+[
+    MatMul,
+    Quantize,
+    Dequantize,
+    Softmax,
+    LayerNorm,
+    Attention,
+    RoPE,
+    Sampling,
+]

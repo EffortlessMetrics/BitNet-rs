@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: stats.to_string()
+---
+n=100, mean=NaN, std=inf, min=-inf, max=inf [NaN=5, Inf=3]

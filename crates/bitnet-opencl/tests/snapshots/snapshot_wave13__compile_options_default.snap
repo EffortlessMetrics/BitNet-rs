@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-opencl/tests/snapshot_wave13.rs
+expression: opts
+---
+CompileOptions {
+    target_device: None,
+    optimization_level: Full,
+    defines: [],
+}
