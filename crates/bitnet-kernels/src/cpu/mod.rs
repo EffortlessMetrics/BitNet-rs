@@ -52,6 +52,9 @@ pub mod neon_layernorm;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_reductions;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_transpose;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
