@@ -1,13 +1,12 @@
 //! Configuration management with environment variable support
 
 use anyhow::Result;
-use bitnet_common::Device;
+pub use bitnet_device_config_core::DeviceConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
 use std::net::IpAddr;
 use std::path::Path;
-use std::str::FromStr;
 use std::time::Duration;
 
 use crate::batch_engine::BatchEngineConfig;
@@ -16,78 +15,6 @@ use crate::execution_router::{DeviceSelectionStrategy, ExecutionRouterConfig};
 use crate::model_manager::ModelManagerConfig;
 use crate::monitoring::MonitoringConfig;
 use crate::security::SecurityConfig;
-
-/// Device configuration mode for server initialization
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub enum DeviceConfig {
-    /// Automatically select the best available device (prefer GPU if available)
-    #[default]
-    Auto,
-    /// Force CPU execution
-    Cpu,
-    /// Force GPU execution on specific device ID
-    Gpu(usize),
-}
-
-impl FromStr for DeviceConfig {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "auto" => Ok(DeviceConfig::Auto),
-            "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
-            s if s.starts_with("gpu:") => {
-                let id_str = &s[4..];
-                let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
-            }
-            s if s.starts_with("cuda:") => {
-                let id_str = &s[5..];
-                let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
-            }
-            s if s.starts_with("vulkan:") => {
-                let id_str = &s[7..];
-                let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
-            }
-            s if s.starts_with("opencl:") => {
-                let id_str = &s[7..];
-                let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
-            }
-            s if s.starts_with("ocl:") => {
-                let id_str = &s[4..];
-                let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
-            }
-            _ => anyhow::bail!("Unknown device config: {}", s),
-        }
-    }
-}
-
-impl DeviceConfig {
-    /// Resolve device configuration to actual device
-    pub fn resolve(&self) -> Device {
-        match self {
-            DeviceConfig::Auto => {
-                // Auto: prefer GPU if available at runtime
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
-                {
-                    use bitnet_kernels::device_features::gpu_available_runtime;
-                    if gpu_available_runtime() { Device::Cuda(0) } else { Device::Cpu }
-                }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                {
-                    Device::Cpu
-                }
-            }
-            DeviceConfig::Cpu => Device::Cpu,
-            DeviceConfig::Gpu(id) => Device::Cuda(*id),
-        }
-    }
-}
 
 /// Complete server configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

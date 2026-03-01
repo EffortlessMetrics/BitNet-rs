@@ -31,6 +31,7 @@ members = [
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-intel-gpu-id",  # SRP: Intel GPU/Arc identification heuristics
+  "crates/bitnet-device-config-core", # SRP: shared device config parsing/resolution primitives
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-logits-filters", # SRP: reusable logits/probability filtering transforms
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
