@@ -485,6 +485,409 @@ unsafe fn hsum_avx2(v: __m256) -> f32 {
     _mm_cvtss_f32(sums2)
 }
 
+// ── Tile configuration ─────────────────────────────────────────────────
+
+/// Cache-tile parameters for [`simd_matmul_f32_tiled`].
+///
+/// Tiling partitions the GEMM into sub-blocks that fit in L1/L2 cache,
+/// dramatically reducing cache misses for large matrices.  The default
+/// tile sizes (64x64x64) target a 32 KiB L1d / 256 KiB L2 hierarchy
+/// common on modern x86 desktop and server parts.
+#[derive(Debug, Clone, Copy)]
+pub struct TileConfig {
+    /// Tile rows (M dimension).  Must be > 0.
+    pub tile_m: usize,
+    /// Tile columns (N dimension).  Must be > 0.
+    pub tile_n: usize,
+    /// Tile depth (K dimension).  Must be > 0.
+    pub tile_k: usize,
+}
+
+impl TileConfig {
+    /// Sensible defaults for a 32 KiB L1d cache.
+    pub const DEFAULT: Self = Self { tile_m: 64, tile_n: 64, tile_k: 64 };
+
+    /// Smaller tiles for systems with a 16 KiB L1d cache.
+    pub const SMALL: Self = Self { tile_m: 32, tile_n: 32, tile_k: 32 };
+
+    /// Larger tiles for systems with a 64+ KiB L1d cache (e.g. Zen 4).
+    pub const LARGE: Self = Self { tile_m: 128, tile_n: 128, tile_k: 128 };
+
+    /// Create a custom tile configuration.
+    pub fn new(tile_m: usize, tile_n: usize, tile_k: usize) -> Self {
+        Self { tile_m, tile_n, tile_k }
+    }
+}
+
+impl Default for TileConfig {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
+// ── Tiled f32 GEMM ────────────────────────────────────────────────────
+
+/// Cache-tiled f32 GEMM with AVX2/AVX-512 dispatch.
+///
+/// Semantics are identical to [`simd_matmul_f32`] --- this variant
+/// additionally partitions the work into cache-friendly tiles controlled
+/// by [`TileConfig`].  For small matrices the tiling overhead is
+/// negligible; for large ones it can yield 2-4x speedup from reduced
+/// L2/L3 misses.
+///
+/// `C = alpha * op(A) * op(B) + beta * C`
+pub fn simd_matmul_f32_tiled(
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    cfg: &SimdMatmulConfig,
+    tiles: &TileConfig,
+) -> Result<()> {
+    validate_f32_args(a, b, c, cfg)?;
+
+    if tiles.tile_m == 0 || tiles.tile_n == 0 || tiles.tile_k == 0 {
+        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+            reason: "tile dimensions must be > 0".into(),
+        }));
+    }
+
+    let SimdMatmulConfig { m, n, k, alpha, beta, transpose_a, transpose_b } = *cfg;
+
+    let ld_a = if transpose_a { m } else { k };
+    let ld_b = if transpose_b { k } else { n };
+
+    // Apply beta to existing C.
+    if beta == 0.0 {
+        c[..m * n].fill(0.0);
+    } else if (beta - 1.0).abs() > f32::EPSILON {
+        for v in c[..m * n].iter_mut() {
+            *v *= beta;
+        }
+    }
+
+    // Tile over K (outer) -> M -> N so that the B-tile stays hot in cache
+    // across all M-rows that read it.
+    for kk in (0..k).step_by(tiles.tile_k) {
+        let k_end = (kk + tiles.tile_k).min(k);
+        for ii in (0..m).step_by(tiles.tile_m) {
+            let i_end = (ii + tiles.tile_m).min(m);
+            for jj in (0..n).step_by(tiles.tile_n) {
+                let j_end = (jj + tiles.tile_n).min(n);
+
+                #[cfg(target_arch = "x86_64")]
+                {
+                    if has_avx512f() {
+                        // Safety: guarded by runtime AVX-512F check.
+                        unsafe {
+                            gemm_tile_avx512(
+                                a,
+                                b,
+                                c,
+                                ii,
+                                i_end,
+                                jj,
+                                j_end,
+                                kk,
+                                k_end,
+                                n,
+                                ld_a,
+                                ld_b,
+                                alpha,
+                                transpose_a,
+                                transpose_b,
+                            );
+                        }
+                        continue;
+                    }
+                    if has_avx2() {
+                        // Safety: guarded by runtime AVX2 check.
+                        unsafe {
+                            gemm_tile_avx2(
+                                a,
+                                b,
+                                c,
+                                ii,
+                                i_end,
+                                jj,
+                                j_end,
+                                kk,
+                                k_end,
+                                n,
+                                ld_a,
+                                ld_b,
+                                alpha,
+                                transpose_a,
+                                transpose_b,
+                            );
+                        }
+                        continue;
+                    }
+                }
+                gemm_tile_scalar(
+                    a,
+                    b,
+                    c,
+                    ii,
+                    i_end,
+                    jj,
+                    j_end,
+                    kk,
+                    k_end,
+                    n,
+                    ld_a,
+                    ld_b,
+                    alpha,
+                    transpose_a,
+                    transpose_b,
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+// ── Runtime AVX-512F detection ─────────────────────────────────────────
+
+/// Returns `true` when AVX-512F is available at runtime.
+#[inline]
+fn has_avx512f() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        is_x86_feature_detected!("avx512f")
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
+    }
+}
+
+// ── Scalar tile kernel ─────────────────────────────────────────────────
+
+#[allow(clippy::too_many_arguments)]
+fn gemm_tile_scalar(
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    i0: usize,
+    i1: usize,
+    j0: usize,
+    j1: usize,
+    k0: usize,
+    k1: usize,
+    n: usize,
+    ld_a: usize,
+    ld_b: usize,
+    alpha: f32,
+    ta: bool,
+    tb: bool,
+) {
+    for i in i0..i1 {
+        for j in j0..j1 {
+            let mut acc = 0.0f32;
+            for l in k0..k1 {
+                acc += elem(a, i, l, ld_a, ta) * elem(b, l, j, ld_b, tb);
+            }
+            c[i * n + j] += alpha * acc;
+        }
+    }
+}
+
+// ── AVX2 tile kernel ───────────────────────────────────────────────────
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+#[allow(clippy::too_many_arguments)]
+unsafe fn gemm_tile_avx2(
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    i0: usize,
+    i1: usize,
+    j0: usize,
+    j1: usize,
+    k0: usize,
+    k1: usize,
+    n: usize,
+    ld_a: usize,
+    ld_b: usize,
+    alpha: f32,
+    ta: bool,
+    tb: bool,
+) {
+    // Fast path: both A and B non-transposed.
+    if !ta && !tb {
+        for i in i0..i1 {
+            for j in j0..j1 {
+                let mut acc = _mm256_setzero_ps();
+                let mut l = k0;
+                while l + 8 <= k1 {
+                    let av = _mm256_loadu_ps(a.as_ptr().add(i * ld_a + l));
+                    let bv = _mm256_set_ps(
+                        *b.get_unchecked((l + 7) * ld_b + j),
+                        *b.get_unchecked((l + 6) * ld_b + j),
+                        *b.get_unchecked((l + 5) * ld_b + j),
+                        *b.get_unchecked((l + 4) * ld_b + j),
+                        *b.get_unchecked((l + 3) * ld_b + j),
+                        *b.get_unchecked((l + 2) * ld_b + j),
+                        *b.get_unchecked((l + 1) * ld_b + j),
+                        *b.get_unchecked(l * ld_b + j),
+                    );
+                    acc = _mm256_fmadd_ps(av, bv, acc);
+                    l += 8;
+                }
+                let mut sum = hsum_avx2(acc);
+                for l2 in l..k1 {
+                    sum += a[i * ld_a + l2] * b[l2 * ld_b + j];
+                }
+                *c.get_unchecked_mut(i * n + j) += alpha * sum;
+            }
+        }
+    } else if ta && !tb {
+        // A transposed (k*m stored), B normal.
+        for i in i0..i1 {
+            for j in j0..j1 {
+                let mut acc = _mm256_setzero_ps();
+                let mut l = k0;
+                while l + 8 <= k1 {
+                    let av = _mm256_set_ps(
+                        *a.get_unchecked((l + 7) * ld_a + i),
+                        *a.get_unchecked((l + 6) * ld_a + i),
+                        *a.get_unchecked((l + 5) * ld_a + i),
+                        *a.get_unchecked((l + 4) * ld_a + i),
+                        *a.get_unchecked((l + 3) * ld_a + i),
+                        *a.get_unchecked((l + 2) * ld_a + i),
+                        *a.get_unchecked((l + 1) * ld_a + i),
+                        *a.get_unchecked(l * ld_a + i),
+                    );
+                    let bv = _mm256_set_ps(
+                        *b.get_unchecked((l + 7) * ld_b + j),
+                        *b.get_unchecked((l + 6) * ld_b + j),
+                        *b.get_unchecked((l + 5) * ld_b + j),
+                        *b.get_unchecked((l + 4) * ld_b + j),
+                        *b.get_unchecked((l + 3) * ld_b + j),
+                        *b.get_unchecked((l + 2) * ld_b + j),
+                        *b.get_unchecked((l + 1) * ld_b + j),
+                        *b.get_unchecked(l * ld_b + j),
+                    );
+                    acc = _mm256_fmadd_ps(av, bv, acc);
+                    l += 8;
+                }
+                let mut sum = hsum_avx2(acc);
+                for l2 in l..k1 {
+                    sum += a[l2 * ld_a + i] * b[l2 * ld_b + j];
+                }
+                *c.get_unchecked_mut(i * n + j) += alpha * sum;
+            }
+        }
+    } else if !ta && tb {
+        // A normal, B transposed (n*k stored) -> both rows contiguous.
+        for i in i0..i1 {
+            for j in j0..j1 {
+                let mut acc = _mm256_setzero_ps();
+                let mut l = k0;
+                while l + 8 <= k1 {
+                    let av = _mm256_loadu_ps(a.as_ptr().add(i * ld_a + l));
+                    let bv = _mm256_loadu_ps(b.as_ptr().add(j * ld_b + l));
+                    acc = _mm256_fmadd_ps(av, bv, acc);
+                    l += 8;
+                }
+                let mut sum = hsum_avx2(acc);
+                for l2 in l..k1 {
+                    sum += a[i * ld_a + l2] * b[j * ld_b + l2];
+                }
+                *c.get_unchecked_mut(i * n + j) += alpha * sum;
+            }
+        }
+    } else {
+        // Both transposed: fall back to scalar for this tile.
+        gemm_tile_scalar(a, b, c, i0, i1, j0, j1, k0, k1, n, ld_a, ld_b, alpha, ta, tb);
+    }
+}
+
+// ── AVX-512 tile kernel ────────────────────────────────────────────────
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f")]
+#[allow(clippy::too_many_arguments)]
+unsafe fn gemm_tile_avx512(
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    i0: usize,
+    i1: usize,
+    j0: usize,
+    j1: usize,
+    k0: usize,
+    k1: usize,
+    n: usize,
+    ld_a: usize,
+    ld_b: usize,
+    alpha: f32,
+    ta: bool,
+    tb: bool,
+) {
+    if !ta && !tb {
+        for i in i0..i1 {
+            for j in j0..j1 {
+                let mut acc = _mm512_setzero_ps();
+                let mut l = k0;
+                // 16-wide loop
+                while l + 16 <= k1 {
+                    let av = _mm512_loadu_ps(a.as_ptr().add(i * ld_a + l));
+                    let bv = _mm512_set_ps(
+                        *b.get_unchecked((l + 15) * ld_b + j),
+                        *b.get_unchecked((l + 14) * ld_b + j),
+                        *b.get_unchecked((l + 13) * ld_b + j),
+                        *b.get_unchecked((l + 12) * ld_b + j),
+                        *b.get_unchecked((l + 11) * ld_b + j),
+                        *b.get_unchecked((l + 10) * ld_b + j),
+                        *b.get_unchecked((l + 9) * ld_b + j),
+                        *b.get_unchecked((l + 8) * ld_b + j),
+                        *b.get_unchecked((l + 7) * ld_b + j),
+                        *b.get_unchecked((l + 6) * ld_b + j),
+                        *b.get_unchecked((l + 5) * ld_b + j),
+                        *b.get_unchecked((l + 4) * ld_b + j),
+                        *b.get_unchecked((l + 3) * ld_b + j),
+                        *b.get_unchecked((l + 2) * ld_b + j),
+                        *b.get_unchecked((l + 1) * ld_b + j),
+                        *b.get_unchecked(l * ld_b + j),
+                    );
+                    acc = _mm512_fmadd_ps(av, bv, acc);
+                    l += 16;
+                }
+                let mut sum = _mm512_reduce_add_ps(acc);
+                // Scalar tail
+                for l2 in l..k1 {
+                    sum += a[i * ld_a + l2] * b[l2 * ld_b + j];
+                }
+                *c.get_unchecked_mut(i * n + j) += alpha * sum;
+            }
+        }
+    } else if !ta && tb {
+        // A normal, B transposed -> both rows contiguous.
+        for i in i0..i1 {
+            for j in j0..j1 {
+                let mut acc = _mm512_setzero_ps();
+                let mut l = k0;
+                while l + 16 <= k1 {
+                    let av = _mm512_loadu_ps(a.as_ptr().add(i * ld_a + l));
+                    let bv = _mm512_loadu_ps(b.as_ptr().add(j * ld_b + l));
+                    acc = _mm512_fmadd_ps(av, bv, acc);
+                    l += 16;
+                }
+                let mut sum = _mm512_reduce_add_ps(acc);
+                for l2 in l..k1 {
+                    sum += a[i * ld_a + l2] * b[j * ld_b + l2];
+                }
+                *c.get_unchecked_mut(i * n + j) += alpha * sum;
+            }
+        }
+    } else {
+        // Other transpose combos: delegate to AVX2 tile kernel.
+        gemm_tile_avx2(a, b, c, i0, i1, j0, j1, k0, k1, n, ld_a, ld_b, alpha, ta, tb);
+    }
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -867,5 +1270,375 @@ mod tests {
         let mut out = vec![0.0f32; m * n];
         simd_matmul_i2s(&act, &packed, &scales, &mut out, m, n, k, bs).unwrap();
         assert_close(&out, &expected, 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tiled_tests {
+    use super::*;
+
+    fn assert_close(a: &[f32], b: &[f32], tol: f32) {
+        assert_eq!(a.len(), b.len(), "length mismatch");
+        for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
+            assert!((x - y).abs() <= tol, "mismatch at {i}: {x} vs {y} (tol {tol})");
+        }
+    }
+
+    fn naive_matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
+        let mut c = vec![0.0f32; m * n];
+        for i in 0..m {
+            for j in 0..n {
+                let mut s = 0.0f32;
+                for l in 0..k {
+                    s += a[i * k + l] * b[l * n + j];
+                }
+                c[i * n + j] = s;
+            }
+        }
+        c
+    }
+
+    #[test]
+    fn test_tiled_basic_correctness_vs_naive() {
+        let (m, n, k) = (8, 8, 8);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::DEFAULT;
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.2).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_matches_untiled() {
+        let (m, n, k) = (16, 16, 32);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(4, 4, 8);
+        let a: Vec<f32> = (0..m * k).map(|i| ((i as f32) * 0.37).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| ((i as f32) * 0.23).cos()).collect();
+        let mut c_tiled = vec![0.0f32; m * n];
+        let mut c_untiled = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_tiled, &cfg, &tiles).unwrap();
+        simd_matmul_f32(&a, &b, &mut c_untiled, &cfg).unwrap();
+        assert_close(&c_tiled, &c_untiled, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_identity_matrix() {
+        let n = 16;
+        let cfg = SimdMatmulConfig::new(n, n, n);
+        let tiles = TileConfig::new(4, 4, 4);
+        let a: Vec<f32> = (0..n * n).map(|i| (i as f32) + 1.0).collect();
+        let mut eye = vec![0.0f32; n * n];
+        for i in 0..n {
+            eye[i * n + i] = 1.0;
+        }
+        let mut c = vec![0.0f32; n * n];
+        simd_matmul_f32_tiled(&a, &eye, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &a, 1e-5);
+    }
+
+    #[test]
+    fn test_tiled_transpose_a() {
+        let (m, n, k) = (4, 4, 8);
+        let mut cfg = SimdMatmulConfig::new(m, n, k);
+        cfg.transpose_a = true;
+        let tiles = TileConfig::new(2, 2, 4);
+        let a: Vec<f32> = (0..k * m).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.2).collect();
+        let mut c_tiled = vec![0.0f32; m * n];
+        let mut c_ref = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_tiled, &cfg, &tiles).unwrap();
+        simd_matmul_f32(&a, &b, &mut c_ref, &cfg).unwrap();
+        assert_close(&c_tiled, &c_ref, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_transpose_b() {
+        let (m, n, k) = (4, 4, 8);
+        let mut cfg = SimdMatmulConfig::new(m, n, k);
+        cfg.transpose_b = true;
+        let tiles = TileConfig::new(2, 2, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..n * k).map(|i| (i as f32) * 0.2).collect();
+        let mut c_tiled = vec![0.0f32; m * n];
+        let mut c_ref = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_tiled, &cfg, &tiles).unwrap();
+        simd_matmul_f32(&a, &b, &mut c_ref, &cfg).unwrap();
+        assert_close(&c_tiled, &c_ref, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_transpose_both() {
+        let (m, n, k) = (4, 4, 8);
+        let mut cfg = SimdMatmulConfig::new(m, n, k);
+        cfg.transpose_a = true;
+        cfg.transpose_b = true;
+        let tiles = TileConfig::new(2, 2, 4);
+        let a: Vec<f32> = (0..k * m).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..n * k).map(|i| (i as f32) * 0.2).collect();
+        let mut c_tiled = vec![0.0f32; m * n];
+        let mut c_ref = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_tiled, &cfg, &tiles).unwrap();
+        simd_matmul_f32(&a, &b, &mut c_ref, &cfg).unwrap();
+        assert_close(&c_tiled, &c_ref, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_tall_skinny() {
+        let (m, n, k) = (64, 4, 16);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(8, 2, 8);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.01).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.02).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-2);
+    }
+
+    #[test]
+    fn test_tiled_wide_short() {
+        let (m, n, k) = (4, 64, 16);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(2, 16, 8);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.01).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.02).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-2);
+    }
+
+    #[test]
+    fn test_tiled_256x256() {
+        let (m, n, k) = (256, 256, 256);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::DEFAULT;
+        let a: Vec<f32> = (0..m * k).map(|i| ((i as f32) * 0.001).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| ((i as f32) * 0.002).cos()).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        let max_err =
+            c.iter().zip(expected.iter()).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+        assert!(max_err < 0.5, "max error {max_err} exceeds 0.5");
+    }
+
+    #[test]
+    fn test_tiled_512x512() {
+        let (m, n, k) = (512, 512, 512);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::LARGE;
+        let a: Vec<f32> = (0..m * k).map(|i| ((i as f32) * 0.0001).sin() * 0.01).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| ((i as f32) * 0.0002).cos() * 0.01).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        let max_err =
+            c.iter().zip(expected.iter()).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+        assert!(max_err < 1e-4, "max error {max_err} exceeds 1e-4");
+    }
+
+    #[test]
+    fn test_tiled_numerical_precision_vs_naive() {
+        let (m, n, k) = (32, 32, 64);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(8, 8, 16);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32 + 1.0).recip()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32 + 1.0).recip()).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-4);
+    }
+
+    #[test]
+    fn test_tiled_alpha_beta() {
+        let (m, n, k) = (8, 8, 8);
+        let mut cfg = SimdMatmulConfig::new(m, n, k);
+        cfg.alpha = 2.5;
+        cfg.beta = 0.5;
+        let tiles = TileConfig::new(4, 4, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1).collect();
+        let mut c_tiled = vec![1.0f32; m * n];
+        let mut c_ref = vec![1.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_tiled, &cfg, &tiles).unwrap();
+        simd_matmul_f32(&a, &b, &mut c_ref, &cfg).unwrap();
+        assert_close(&c_tiled, &c_ref, 1e-3);
+    }
+
+    #[test]
+    fn test_tiled_not_divisible_by_tile() {
+        let (m, n, k) = (7, 7, 7);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(4, 4, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-3);
+    }
+
+    #[test]
+    fn test_tiled_tile_larger_than_matrix() {
+        let (m, n, k) = (3, 3, 3);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(64, 64, 64);
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.5).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-5);
+    }
+
+    #[test]
+    fn test_tiled_single_element_tile() {
+        let (m, n, k) = (4, 4, 4);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(1, 1, 1);
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-5);
+    }
+
+    #[test]
+    fn test_tiled_1x1() {
+        let cfg = SimdMatmulConfig::new(1, 1, 1);
+        let tiles = TileConfig::DEFAULT;
+        let mut c = vec![0.0f32; 1];
+        simd_matmul_f32_tiled(&[5.0], &[3.0], &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &[15.0], 1e-6);
+    }
+
+    #[test]
+    fn test_tile_config_small_preset() {
+        let (m, n, k) = (16, 16, 16);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::SMALL;
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-2);
+    }
+
+    #[test]
+    fn test_tile_config_large_preset() {
+        let (m, n, k) = (16, 16, 16);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::LARGE;
+        let a: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-2);
+    }
+
+    #[test]
+    fn test_tiled_identity_property() {
+        for n in [1, 3, 7, 16, 33] {
+            let cfg = SimdMatmulConfig::new(n, n, n);
+            let tiles = TileConfig::new(4, 4, 4);
+            let a: Vec<f32> = (0..n * n).map(|i| (i as f32) * 0.1 + 0.5).collect();
+            let mut eye = vec![0.0f32; n * n];
+            for i in 0..n {
+                eye[i * n + i] = 1.0;
+            }
+            let mut c = vec![0.0f32; n * n];
+            simd_matmul_f32_tiled(&a, &eye, &mut c, &cfg, &tiles).unwrap();
+            assert_close(&c, &a, 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_tiled_transpose_property() {
+        // (A*B)^T = B^T * A^T
+        let (m, n, k) = (8, 6, 10);
+        let tiles = TileConfig::new(4, 4, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| ((i as f32) * 0.13).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| ((i as f32) * 0.17).cos()).collect();
+
+        let cfg_ab = SimdMatmulConfig::new(m, n, k);
+        let mut c_ab = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c_ab, &cfg_ab, &tiles).unwrap();
+
+        let mut c_ab_t = vec![0.0f32; n * m];
+        for i in 0..m {
+            for j in 0..n {
+                c_ab_t[j * m + i] = c_ab[i * n + j];
+            }
+        }
+
+        let mut cfg_bt_at = SimdMatmulConfig::new(n, m, k);
+        cfg_bt_at.transpose_a = true;
+        cfg_bt_at.transpose_b = true;
+        let mut c_bt_at = vec![0.0f32; n * m];
+        simd_matmul_f32_tiled(&b, &a, &mut c_bt_at, &cfg_bt_at, &tiles).unwrap();
+
+        assert_close(&c_bt_at, &c_ab_t, 1e-3);
+    }
+
+    #[test]
+    fn test_tiled_distributive_property() {
+        // A * (B + C) = A*B + A*C
+        let (m, n, k) = (8, 8, 8);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(4, 4, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.2).collect();
+        let cv: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.05).collect();
+
+        let b_plus_c: Vec<f32> = b.iter().zip(cv.iter()).map(|(&x, &y)| x + y).collect();
+
+        let mut lhs = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b_plus_c, &mut lhs, &cfg, &tiles).unwrap();
+
+        let mut ab = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut ab, &cfg, &tiles).unwrap();
+        let mut ac = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &cv, &mut ac, &cfg, &tiles).unwrap();
+        let rhs: Vec<f32> = ab.iter().zip(ac.iter()).map(|(&x, &y)| x + y).collect();
+
+        assert_close(&lhs, &rhs, 1e-2);
+    }
+
+    #[test]
+    fn test_tiled_zero_tile_rejected() {
+        let cfg = SimdMatmulConfig::new(2, 2, 2);
+        let tiles = TileConfig::new(0, 4, 4);
+        let mut c = vec![0.0f32; 4];
+        assert!(simd_matmul_f32_tiled(&[1.0; 4], &[1.0; 4], &mut c, &cfg, &tiles).is_err());
+    }
+
+    #[test]
+    fn test_tiled_zero_dim_rejected() {
+        let cfg = SimdMatmulConfig::new(0, 2, 2);
+        let tiles = TileConfig::DEFAULT;
+        let mut c = vec![0.0f32; 4];
+        assert!(simd_matmul_f32_tiled(&[1.0; 4], &[1.0; 4], &mut c, &cfg, &tiles).is_err());
+    }
+
+    #[test]
+    fn test_tiled_asymmetric_tiles() {
+        let (m, n, k) = (20, 12, 24);
+        let cfg = SimdMatmulConfig::new(m, n, k);
+        let tiles = TileConfig::new(3, 5, 7);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.01).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.02).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let mut c = vec![0.0f32; m * n];
+        simd_matmul_f32_tiled(&a, &b, &mut c, &cfg, &tiles).unwrap();
+        assert_close(&c, &expected, 1e-2);
     }
 }
