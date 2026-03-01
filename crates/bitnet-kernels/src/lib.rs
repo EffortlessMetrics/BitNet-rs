@@ -16,20 +16,14 @@ pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
-// OpenCL kernel sources (always compiled — just embedded string constants)
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
-#[path = "gpu/kernels/mod.rs"]
 pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
-pub mod opencl_attention;
+pub mod opencl_cache;
 pub mod opencl_context;
 pub mod opencl_embedding;
-pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
-pub mod opencl_memory;
 pub mod opencl_pipeline;
-pub mod opencl_quantized;
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
