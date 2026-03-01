@@ -164,3 +164,11 @@ path = "tests/proptest_wave10.rs"
 [[test]]
 name = "integration_wave10"
 path = "tests/integration_wave10.rs"
+
+[[test]]
+name = "kernel_pipeline_integration"
+path = "tests/kernel_pipeline_integration.rs"
+
+[[test]]
+name = "kernel_numerical_tests"
+path = "tests/kernel_numerical_tests.rs"
