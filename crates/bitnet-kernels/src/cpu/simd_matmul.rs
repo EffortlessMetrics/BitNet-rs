@@ -18,6 +18,7 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
 use bitnet_common::{BitNetError, KernelError, Result};
+use bitnet_i2s_codec::decode_i2s;
 #[cfg(target_arch = "x86_64")]
 #[allow(unused_imports)]
 use std::arch::x86_64::*;
@@ -58,16 +59,6 @@ impl SimdMatmulConfig {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-
-/// Decode a 2-bit I2_S code to its signed value.
-#[inline(always)]
-fn decode_i2s(bits: u8) -> i8 {
-    match bits & 0x03 {
-        0b01 => 1,
-        0b11 => -1,
-        _ => 0, // 0b00 → 0, 0b10 (unused) → 0
-    }
-}
 
 /// Read element `(row, col)` from a possibly-transposed matrix.
 #[inline(always)]

@@ -11,34 +11,9 @@
 //! Encoding: bits `0b00` → 0, `0b01` → +1, `0b10` → unused, `0b11` → -1.
 
 use bitnet_common::{BitNetError, KernelError, Result};
+use bitnet_i2s_codec::decode_i2s;
 
 // ── Encoding helpers ───────────────────────────────────────────────────
-
-/// Decode a 2-bit I2_S code to its signed integer value.
-#[inline(always)]
-fn decode_i2s(bits: u8) -> i8 {
-    match bits & 0x03 {
-        0b00 => 0,
-        0b01 => 1,
-        0b11 => -1,
-        // 0b10 is unused in the I2_S spec; treat as 0.
-        _ => 0,
-    }
-}
-
-/// Pack four ternary values ({-1, 0, +1}) into one byte, LSB-first.
-pub fn pack_i2s(vals: [i8; 4]) -> u8 {
-    let mut byte = 0u8;
-    for (i, &v) in vals.iter().enumerate() {
-        let code: u8 = match v {
-            1 => 0b01,
-            -1 => 0b11,
-            _ => 0b00,
-        };
-        byte |= code << (i * 2);
-    }
-    byte
-}
 
 // ── Scalar reference implementation ────────────────────────────────────
 
@@ -260,6 +235,7 @@ fn validate_matmul_args(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bitnet_i2s_codec::pack_i2s;
 
     // ── helpers ────────────────────────────────────────────────────────
 
