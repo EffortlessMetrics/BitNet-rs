@@ -326,8 +326,7 @@ impl WorkSizeOptimizer {
         let total_items = global_x * global_y;
         let total_groups = rows; // exactly one group per row
         let useful = rows * cols;
-        let efficiency =
-            useful as f64 / (total_items.max(1) * cols.div_ceil(local).max(1)) as f64;
+        let efficiency = useful as f64 / (total_items.max(1) * cols.div_ceil(local).max(1)) as f64;
         // Clamp to (0, 1].
         let efficiency = efficiency.clamp(f64::MIN_POSITIVE, 1.0);
 
