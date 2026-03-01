@@ -12,8 +12,7 @@ use bitnet_kernels::reduction::{self, ReductionOp};
 
 /// Format an f32 slice to 6 decimal places for stable snapshots.
 fn fmt_f32(v: &[f32]) -> String {
-    let items: Vec<String> =
-        v.iter().map(|x| format!("{x:.6}")).collect();
+    let items: Vec<String> = v.iter().map(|x| format!("{x:.6}")).collect();
     format!("[{}]", items.join(", "))
 }
 
@@ -64,8 +63,7 @@ fn conv1d_simple_no_padding() {
     };
     let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // [1, 5]
     let weight = vec![1.0, 0.0, -1.0]; // [1, 1, 3]
-    let out = conv1d::conv1d_forward(&input, &weight, None, &config)
-        .unwrap();
+    let out = conv1d::conv1d_forward(&input, &weight, None, &config).unwrap();
     insta::assert_snapshot!(fmt_f32(&out));
 }
 
@@ -84,13 +82,7 @@ fn conv1d_with_bias_and_padding() {
     let input = vec![1.0, 2.0, 3.0, 4.0];
     let weight = vec![0.5, 0.5, 0.5];
     let bias = vec![0.1];
-    let out = conv1d::conv1d_forward(
-        &input,
-        &weight,
-        Some(&bias),
-        &config,
-    )
-    .unwrap();
+    let out = conv1d::conv1d_forward(&input, &weight, Some(&bias), &config).unwrap();
     insta::assert_snapshot!(fmt_f32(&out));
 }
 
@@ -121,10 +113,7 @@ fn embedding_accumulate_weighted() {
     ];
     let indices = vec![0, 1, 2];
     let weights = vec![0.5, 0.3, 0.2];
-    let out = embedding::embedding_accumulate(
-        &table, &indices, &weights, 2,
-    )
-    .unwrap();
+    let out = embedding::embedding_accumulate(&table, &indices, &weights, 2).unwrap();
     insta::assert_snapshot!(fmt_f32(&out));
 }
 
@@ -169,14 +158,8 @@ fn i2s_matmul_identity_weights() {
     ];
     let scales = vec![1.0, 1.0]; // one scale per col × 1 block
     let mut out = vec![0.0f32; 2];
-    quantized_matmul::i2s_matmul_f32(
-        &activations,
-        &weights_packed,
-        &scales,
-        &mut out,
-        1, 2, 4, 4,
-    )
-    .unwrap();
+    quantized_matmul::i2s_matmul_f32(&activations, &weights_packed, &scales, &mut out, 1, 2, 4, 4)
+        .unwrap();
     insta::assert_snapshot!(fmt_f32(&out));
 }
 
@@ -184,18 +167,11 @@ fn i2s_matmul_identity_weights() {
 fn i2s_matmul_mixed_ternary() {
     // 1×4 activations, 4×1 weight col [+1, -1, 0, +1], scale=2.0
     let activations = vec![1.0, 2.0, 3.0, 4.0];
-    let weights_packed =
-        vec![quantized_matmul::pack_i2s([1, -1, 0, 1])];
+    let weights_packed = vec![quantized_matmul::pack_i2s([1, -1, 0, 1])];
     let scales = vec![2.0];
     let mut out = vec![0.0f32; 1];
-    quantized_matmul::i2s_matmul_f32(
-        &activations,
-        &weights_packed,
-        &scales,
-        &mut out,
-        1, 1, 4, 4,
-    )
-    .unwrap();
+    quantized_matmul::i2s_matmul_f32(&activations, &weights_packed, &scales, &mut out, 1, 1, 4, 4)
+        .unwrap();
     // (1*1 + 2*(-1) + 3*0 + 4*1) * 2.0 = (1-2+0+4)*2 = 6.0
     insta::assert_snapshot!(fmt_f32(&out));
 }
@@ -205,15 +181,7 @@ fn i2s_matmul_mixed_ternary() {
 #[test]
 fn reduction_row_wise_sum_and_max() {
     let matrix = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3
-    let sums =
-        reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Sum)
-            .unwrap();
-    let maxes =
-        reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Max)
-            .unwrap();
-    insta::assert_snapshot!(format!(
-        "sums={} maxes={}",
-        fmt_f32(&sums),
-        fmt_f32(&maxes),
-    ));
+    let sums = reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Sum).unwrap();
+    let maxes = reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Max).unwrap();
+    insta::assert_snapshot!(format!("sums={} maxes={}", fmt_f32(&sums), fmt_f32(&maxes),));
 }
