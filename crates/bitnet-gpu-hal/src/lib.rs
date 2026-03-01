@@ -133,6 +133,7 @@ pub mod token_streaming;
 pub mod arch_registry;
 pub mod logging;
 pub mod migration_tool;
+pub mod observability;
 pub mod thread_pool;
 
 // === Distributed ===
