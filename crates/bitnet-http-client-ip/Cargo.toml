@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-http-client-ip"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "SRP helpers for extracting client IP addresses from HTTP headers"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+http = "1.3.1"
+
+[lints]
+workspace = true

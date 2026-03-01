@@ -794,6 +794,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-http-client-ip"
+version = "0.2.1-dev"
+dependencies = [
+ "http",
+]
+
+[[package]]
 name = "bitnet-http-retry"
 version = "0.2.1-dev"
 dependencies = [
@@ -1241,7 +1248,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bitnet-common",
- "bitnet-eval-core",
+ "bitnet-http-client-ip",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",

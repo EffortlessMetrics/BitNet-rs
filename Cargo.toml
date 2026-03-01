@@ -83,6 +83,7 @@ members = [
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
+  "crates/bitnet-http-client-ip", # SRP: HTTP proxy header client-IP extraction helpers
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
   "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
@@ -155,6 +156,7 @@ default-members = [
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download",      # SRP: download mechanics primitives
+  "crates/bitnet-http-client-ip", # SRP: HTTP proxy header client-IP extraction helpers
 ]
 
 [package]
