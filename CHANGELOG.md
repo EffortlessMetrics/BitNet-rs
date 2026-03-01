@@ -41,6 +41,15 @@ All notable changes to bitnet-rs will be documented in this file.
 
 - **Fuzz Proptest Targets**: Randomized property testing for OpenCL CPU reference implementations, 30+ tests (#2096)
 
+### Added — A770 OpenCL Engine & Optimization (Waves 110–111)
+
+- **CHANGELOG Waves 108–109**: Documentation of waves 108–109 OpenCL infrastructure PRs (#2098)
+- **Kernel Auto-Tuning**: Search-space generation with 4 strategies (exhaustive, random, simulated annealing, Bayesian), A770 workgroup optimization, 51 tests (#2111)
+- **Streaming Token Decoder**: Temperature/top-k/top-p/repetition penalty sampling with backpressure-aware streaming, 58 tests (#2112)
+- **Weight Preprocessing Pipeline**: Ternary/INT8 packing, tiling, alignment, and scale factor extraction for OpenCL buffer upload, 54 tests (#2113)
+- **Continuous Batching Engine**: vLLM-style dynamic batch management with preemption and priority scheduling, 56 tests (#2114)
+- **Memory Allocation Planner**: Lifetime-based buffer reuse with first-fit/best-fit strategies for reduced GPU memory pressure, 50 tests (#2130)
+
 ### Added — A770 OpenCL Inference Pipeline (Waves 105–107)
 
 - **Batch Inference**: Padding, scheduling, and batched operations for OpenCL inference pipeline, 51 tests (#1985)
