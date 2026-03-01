@@ -63,6 +63,7 @@ temp-env.workspace = true
 bitnet-test-support.workspace = true
 insta.workspace = true
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
+bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
