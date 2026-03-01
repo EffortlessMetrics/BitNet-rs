@@ -63,9 +63,7 @@ pub use crate::reduction::{
 };
 pub use softmax::{SoftmaxConfig, launch_softmax, softmax_cpu, softmax_forward};
 
-pub use quantized_matmul::{
-    I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s,
-};
+pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
