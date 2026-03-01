@@ -276,6 +276,10 @@ name = "e2e_golden_path"
 path = "integration/e2e_golden_path.rs"
 required-features = ["inference"]
 
+[[test]]
+name = "integration_wave8"
+path = "integration_wave8.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"
