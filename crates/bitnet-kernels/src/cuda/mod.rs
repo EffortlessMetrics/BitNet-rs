@@ -117,7 +117,8 @@ pub use softmax::{
 pub use softmax::SOFTMAX_KERNEL_SRC;
 
 pub use matmul::{
-    MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward, matmul_forward,
+    GemmConfig, MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward,
+    matmul_forward, matmul_tiled_cpu,
 };
 pub use quantize::{
     QuantMethod, QuantizeConfig, calibrate_scales, dequantize_i2s_cpu, dequantize_ternary_cpu,

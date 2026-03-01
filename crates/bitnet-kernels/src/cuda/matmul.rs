@@ -120,6 +120,39 @@ impl MatmulConfig {
         Ok(Self { m, n, k, tile_m, tile_n, tile_k, shared_mem_bytes: shared, ..Self::default() })
     }
 
+    /// Create a config with a specific tile size (e.g. 16 for smaller
+    /// shared-memory footprint or 32 for higher throughput).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any dimension or tile size is zero.
+    pub fn for_shape_tiled(m: usize, n: usize, k: usize, tile_size: u32) -> Result<Self> {
+        if m == 0 || n == 0 || k == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("matmul dimensions must be non-zero: m={m}, n={n}, k={k}"),
+            }
+            .into());
+        }
+        if tile_size == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: "tile_size must be non-zero".into(),
+            }
+            .into());
+        }
+        let shared = (tile_size * tile_size + tile_size * tile_size) * 4;
+        Ok(Self {
+            m,
+            n,
+            k,
+            tile_m: tile_size,
+            tile_n: tile_size,
+            tile_k: tile_size,
+            threads_per_block: tile_size * tile_size,
+            shared_mem_bytes: shared,
+            ..Self::default()
+        })
+    }
+
     /// Set batch size for batched matmul.
     pub fn with_batch_size(mut self, batch_size: usize) -> Result<Self> {
         if batch_size == 0 {
@@ -162,6 +195,148 @@ impl MatmulConfig {
     pub fn block_dim(&self) -> (u32, u32, u32) {
         (self.threads_per_block, 1, 1)
     }
+}
+
+// ── GemmConfig convenience builder ────────────────────────────────────
+
+/// High-level GEMM configuration: C = α·op(A)·op(B) + β·C.
+///
+/// This is a convenience builder that produces a [`MatmulConfig`].
+#[derive(Debug, Clone)]
+pub struct GemmConfig {
+    /// Output rows.
+    pub m: usize,
+    /// Output columns.
+    pub n: usize,
+    /// Reduction dimension.
+    pub k: usize,
+    /// Scalar multiplier for the product.
+    pub alpha: f32,
+    /// Scalar multiplier for the existing output.
+    pub beta: f32,
+    /// Transpose A before multiplication.
+    pub trans_a: bool,
+    /// Transpose B before multiplication.
+    pub trans_b: bool,
+}
+
+impl GemmConfig {
+    /// Create a new GEMM config for the given dimensions.
+    pub fn new(m: usize, n: usize, k: usize) -> Self {
+        Self { m, n, k, alpha: 1.0, beta: 0.0, trans_a: false, trans_b: false }
+    }
+
+    /// Set scalar multipliers.
+    pub fn with_scalars(mut self, alpha: f32, beta: f32) -> Self {
+        self.alpha = alpha;
+        self.beta = beta;
+        self
+    }
+
+    /// Set transpose flags.
+    pub fn with_transpose(mut self, trans_a: bool, trans_b: bool) -> Self {
+        self.trans_a = trans_a;
+        self.trans_b = trans_b;
+        self
+    }
+
+    /// Convert to a [`MatmulConfig`] with default tile parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any dimension is zero.
+    pub fn to_matmul_config(&self) -> Result<MatmulConfig> {
+        MatmulConfig::for_shape(self.m, self.n, self.k).map(|cfg| {
+            cfg.with_transpose(self.trans_a, self.trans_b).with_alpha_beta(self.alpha, self.beta)
+        })
+    }
+
+    /// Convert to a [`MatmulConfig`] with a specific tile size.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any dimension or tile size is zero.
+    pub fn to_matmul_config_tiled(&self, tile_size: u32) -> Result<MatmulConfig> {
+        MatmulConfig::for_shape_tiled(self.m, self.n, self.k, tile_size).map(|cfg| {
+            cfg.with_transpose(self.trans_a, self.trans_b).with_alpha_beta(self.alpha, self.beta)
+        })
+    }
+}
+
+// ── Tiled CPU matmul ─────────────────────────────────────────────────
+
+/// Cache-friendly tiled matrix multiplication (CPU).
+///
+/// Uses tile blocking to improve data locality. Each tile of the output
+/// is computed by streaming `TILE`-wide slices of A and B through the
+/// innermost loops, mimicking the shared-memory tiling strategy used by
+/// the CUDA kernel.
+///
+/// Falls back to [`matmul_cpu`] for transpose or batched cases.
+///
+/// # Errors
+///
+/// Returns an error if buffer sizes are inconsistent with the config.
+pub fn matmul_tiled_cpu(
+    a: &[f32],
+    b: &[f32],
+    out: &mut [f32],
+    config: &MatmulConfig,
+) -> Result<()> {
+    // Delegate transpose/batched variants to the general implementation
+    // since tiling with transpose complicates index math for negligible
+    // benefit at the CPU level.
+    if config.transpose_a || config.transpose_b || config.batch_size > 1 {
+        return matmul_cpu(a, b, out, config);
+    }
+
+    validate_matmul_buffers(a, b, out, config)?;
+
+    let m = config.m;
+    let n = config.n;
+    let k = config.k;
+    let alpha = config.alpha;
+    let beta = config.beta;
+    let tile = config.tile_m as usize;
+
+    // Apply beta to the entire output first.
+    if beta == 0.0 {
+        for v in out.iter_mut().take(m * n) {
+            *v = 0.0;
+        }
+    } else if (beta - 1.0).abs() > f32::EPSILON {
+        for v in out.iter_mut().take(m * n) {
+            *v *= beta;
+        }
+    }
+
+    // Tiled accumulation: iterate over tiles of (i, j, l).
+    let mut i0 = 0;
+    while i0 < m {
+        let i_end = (i0 + tile).min(m);
+        let mut j0 = 0;
+        while j0 < n {
+            let j_end = (j0 + tile).min(n);
+            let mut l0 = 0;
+            while l0 < k {
+                let l_end = (l0 + tile).min(k);
+                for i in i0..i_end {
+                    for j in j0..j_end {
+                        let mut acc = 0.0f32;
+                        for l in l0..l_end {
+                            acc += a[i * k + l] * b[l * n + j];
+                        }
+                        out[i * n + j] += alpha * acc;
+                    }
+                }
+                l0 += tile;
+            }
+            j0 += tile;
+        }
+        i0 += tile;
+    }
+
+    Ok(())
 }
 
 // ── Validation ────────────────────────────────────────────────────────
@@ -989,5 +1164,355 @@ mod tests {
         let mut out = vec![0.0f32; 4 * 32 * 32];
         let result = matmul_forward(&a, &b, &mut out, &cfg);
         assert!(result.is_ok(), "CUDA batched matmul launch failed: {result:?}");
+    }
+
+    // ── GemmConfig tests ──────────────────────────────────────────
+
+    #[test]
+    fn test_gemm_config_basic() {
+        let gc = GemmConfig::new(16, 32, 64);
+        let cfg = gc.to_matmul_config().unwrap();
+        assert_eq!(cfg.m, 16);
+        assert_eq!(cfg.n, 32);
+        assert_eq!(cfg.k, 64);
+        assert_eq!(cfg.alpha, 1.0);
+        assert_eq!(cfg.beta, 0.0);
+        assert!(!cfg.transpose_a);
+        assert!(!cfg.transpose_b);
+    }
+
+    #[test]
+    fn test_gemm_config_with_scalars() {
+        let gc = GemmConfig::new(4, 4, 4).with_scalars(2.0, 0.5);
+        let cfg = gc.to_matmul_config().unwrap();
+        assert_eq!(cfg.alpha, 2.0);
+        assert_eq!(cfg.beta, 0.5);
+    }
+
+    #[test]
+    fn test_gemm_config_with_transpose() {
+        let gc = GemmConfig::new(4, 4, 4).with_transpose(true, false);
+        let cfg = gc.to_matmul_config().unwrap();
+        assert!(cfg.transpose_a);
+        assert!(!cfg.transpose_b);
+    }
+
+    #[test]
+    fn test_gemm_config_tiled_16() {
+        let gc = GemmConfig::new(64, 64, 64);
+        let cfg = gc.to_matmul_config_tiled(16).unwrap();
+        assert_eq!(cfg.tile_m, 16);
+        assert_eq!(cfg.tile_n, 16);
+        assert_eq!(cfg.tile_k, 16);
+        assert_eq!(cfg.threads_per_block, 256);
+    }
+
+    #[test]
+    fn test_gemm_config_zero_dim_error() {
+        let gc = GemmConfig::new(0, 4, 4);
+        assert!(gc.to_matmul_config().is_err());
+    }
+
+    #[test]
+    fn test_gemm_config_zero_tile_error() {
+        let gc = GemmConfig::new(4, 4, 4);
+        assert!(gc.to_matmul_config_tiled(0).is_err());
+    }
+
+    // ── for_shape_tiled tests ─────────────────────────────────────
+
+    #[test]
+    fn test_for_shape_tiled_16() {
+        let cfg = MatmulConfig::for_shape_tiled(128, 128, 128, 16).unwrap();
+        assert_eq!(cfg.tile_m, 16);
+        assert_eq!(cfg.tile_n, 16);
+        assert_eq!(cfg.tile_k, 16);
+        let (gx, gy, _) = cfg.grid_dim();
+        assert_eq!(gx, 8); // 128/16
+        assert_eq!(gy, 8);
+    }
+
+    #[test]
+    fn test_for_shape_tiled_zero_tile_error() {
+        assert!(MatmulConfig::for_shape_tiled(4, 4, 4, 0).is_err());
+    }
+
+    #[test]
+    fn test_for_shape_tiled_zero_dim_error() {
+        assert!(MatmulConfig::for_shape_tiled(0, 4, 4, 16).is_err());
+    }
+
+    // ── tiled CPU matmul tests ────────────────────────────────────
+
+    #[test]
+    fn test_tiled_identity_4x4() {
+        let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        #[rustfmt::skip]
+        let b = vec![
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ];
+        let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
+        let mut out = vec![0.0f32; 16];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &a, 1e-6);
+    }
+
+    #[test]
+    fn test_tiled_matches_naive() {
+        let (m, n, k) = (17, 13, 23);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.05).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out = vec![0.0f32; m * n];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &expected, 1e-3);
+    }
+
+    #[test]
+    fn test_tiled_matches_naive_tile16() {
+        let (m, n, k) = (33, 17, 45);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.07).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32 * 0.03).cos()).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let cfg = MatmulConfig::for_shape_tiled(m, n, k, 16).unwrap();
+        let mut out = vec![0.0f32; m * n];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &expected, 1e-3);
+    }
+
+    #[test]
+    fn test_tiled_alpha_scaling() {
+        let a = vec![1.0, 2.0, 3.0, 4.0];
+        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(3.0, 0.0);
+        let mut out = vec![0.0f32; 4];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &[3.0, 6.0, 9.0, 12.0], 1e-6);
+    }
+
+    #[test]
+    fn test_tiled_beta_accumulate() {
+        let a = vec![1.0, 0.0, 0.0, 1.0];
+        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(1.0, 2.0);
+        let mut out = vec![5.0, 10.0, 15.0, 20.0];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        // C = 1*I + 2*old = I + [10,20,30,40]
+        assert_close(&out, &[11.0, 20.0, 30.0, 41.0], 1e-6);
+    }
+
+    #[test]
+    fn test_tiled_delegates_transpose() {
+        #[rustfmt::skip]
+        let a = vec![
+            1.0, 4.0,
+            2.0, 5.0,
+            3.0, 6.0,
+        ];
+        #[rustfmt::skip]
+        let b = vec![
+            7.0, 8.0,
+            9.0, 10.0,
+            11.0, 12.0,
+        ];
+        let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap().with_transpose(true, false);
+        let mut out_tiled = vec![0.0f32; 4];
+        let mut out_cpu = vec![0.0f32; 4];
+        matmul_tiled_cpu(&a, &b, &mut out_tiled, &cfg).unwrap();
+        matmul_cpu(&a, &b, &mut out_cpu, &cfg).unwrap();
+        assert_close(&out_tiled, &out_cpu, 1e-6);
+    }
+
+    #[test]
+    fn test_tiled_delegates_batch() {
+        let (m, n, k) = (2, 2, 2);
+        let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap().with_batch_size(2).unwrap();
+        let mut out_tiled = vec![0.0f32; 8];
+        let mut out_cpu = vec![0.0f32; 8];
+        matmul_tiled_cpu(&a, &b, &mut out_tiled, &cfg).unwrap();
+        matmul_cpu(&a, &b, &mut out_cpu, &cfg).unwrap();
+        assert_close(&out_tiled, &out_cpu, 1e-6);
+    }
+
+    #[test]
+    fn test_tiled_1x1() {
+        let cfg = MatmulConfig::for_shape(1, 1, 1).unwrap();
+        let a = vec![7.0f32];
+        let b = vec![3.0f32];
+        let mut out = vec![0.0f32; 1];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &[21.0], 1e-6);
+    }
+
+    // ── non-square matrices ───────────────────────────────────────
+
+    #[test]
+    fn test_very_tall_matrix() {
+        let (m, n, k) = (128, 2, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| (i % 7) as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i % 5) as f32).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out = vec![0.0f32; m * n];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &expected, 1e-4);
+    }
+
+    #[test]
+    fn test_very_wide_matrix() {
+        let (m, n, k) = (2, 128, 4);
+        let a: Vec<f32> = (0..m * k).map(|i| (i % 7) as f32).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i % 5) as f32).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out = vec![0.0f32; m * n];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &expected, 1e-4);
+    }
+
+    // ── large matrix ──────────────────────────────────────────────
+
+    #[test]
+    fn test_large_matrix_64x64() {
+        let (m, n, k) = (64, 64, 64);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.001).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32 * 0.002).cos()).collect();
+        let expected = naive_matmul(&a, &b, m, n, k);
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out = vec![0.0f32; m * n];
+        matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out, &expected, 1e-2);
+    }
+
+    // ── numerical precision ───────────────────────────────────────
+
+    #[test]
+    fn test_tiled_vs_cpu_precision() {
+        let (m, n, k) = (31, 29, 37);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.13).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32 * 0.07).cos()).collect();
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out_cpu = vec![0.0f32; m * n];
+        let mut out_tiled = vec![0.0f32; m * n];
+        matmul_cpu(&a, &b, &mut out_cpu, &cfg).unwrap();
+        matmul_tiled_cpu(&a, &b, &mut out_tiled, &cfg).unwrap();
+        assert_close(&out_tiled, &out_cpu, 1e-4);
+    }
+
+    // ── property tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_property_identity_is_neutral() {
+        for sz in [1, 3, 7, 16, 33] {
+            let a: Vec<f32> = (0..sz * sz).map(|i| (i as f32) * 0.1).collect();
+            let mut eye = vec![0.0f32; sz * sz];
+            for i in 0..sz {
+                eye[i * sz + i] = 1.0;
+            }
+            let cfg = MatmulConfig::for_shape(sz, sz, sz).unwrap();
+            let mut out = vec![0.0f32; sz * sz];
+            matmul_tiled_cpu(&a, &eye, &mut out, &cfg).unwrap();
+            assert_close(&out, &a, 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_property_zero_annihilates() {
+        for sz in [1, 5, 16, 31] {
+            let a: Vec<f32> = (0..sz * sz).map(|i| (i as f32) * 0.1).collect();
+            let zero = vec![0.0f32; sz * sz];
+            let cfg = MatmulConfig::for_shape(sz, sz, sz).unwrap();
+            let mut out = vec![0.0f32; sz * sz];
+            matmul_tiled_cpu(&a, &zero, &mut out, &cfg).unwrap();
+            assert_close(&out, &zero, 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_property_transpose_commutes() {
+        // (A * B)^T == B^T * A^T
+        let (m, n, k) = (5, 7, 6);
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.1).sin()).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32 * 0.2).cos()).collect();
+
+        let cfg = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut c = vec![0.0f32; m * n];
+        matmul_cpu(&a, &b, &mut c, &cfg).unwrap();
+
+        // Transpose C → (A*B)^T [n×m]
+        let mut c_t = vec![0.0f32; n * m];
+        for i in 0..m {
+            for j in 0..n {
+                c_t[j * m + i] = c[i * n + j];
+            }
+        }
+
+        // B^T * A^T: A-operand = B [k,n], B-operand = A [m,k]
+        let cfg2 = MatmulConfig::for_shape(n, m, k).unwrap().with_transpose(true, true);
+        let mut c2 = vec![0.0f32; n * m];
+        matmul_cpu(&b, &a, &mut c2, &cfg2).unwrap();
+        assert_close(&c_t, &c2, 1e-3);
+    }
+
+    #[test]
+    fn test_property_scalar_distributive() {
+        // alpha * (A * B) == (alpha * A) * B
+        let (m, n, k) = (4, 5, 6);
+        let alpha = 2.5f32;
+        let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+        let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.05).collect();
+
+        let cfg1 = MatmulConfig::for_shape(m, n, k).unwrap().with_alpha_beta(alpha, 0.0);
+        let mut out1 = vec![0.0f32; m * n];
+        matmul_cpu(&a, &b, &mut out1, &cfg1).unwrap();
+
+        let a_scaled: Vec<f32> = a.iter().map(|&v| v * alpha).collect();
+        let cfg2 = MatmulConfig::for_shape(m, n, k).unwrap();
+        let mut out2 = vec![0.0f32; m * n];
+        matmul_cpu(&a_scaled, &b, &mut out2, &cfg2).unwrap();
+
+        assert_close(&out1, &out2, 1e-3);
+    }
+
+    // ── f16 additional tests ──────────────────────────────────────
+
+    #[test]
+    fn test_f16_batch_matmul() {
+        let a_f32 = vec![1.0f32, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
+        let b_f32 = vec![3.0f32, 4.0, 5.0, 6.0, 3.0, 4.0, 5.0, 6.0];
+        let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
+        let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
+        let cfg = MatmulConfig::for_shape(2, 2, 2)
+            .unwrap()
+            .with_dtype(MatmulDtype::F16)
+            .with_batch_size(2)
+            .unwrap();
+        let mut out = vec![0.0f32; 8];
+        matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
+        assert_close(&out[0..4], &[3.0, 4.0, 5.0, 6.0], 0.5);
+        assert_close(&out[4..8], &[6.0, 8.0, 10.0, 12.0], 0.5);
+    }
+
+    #[test]
+    fn test_f16_transpose_a() {
+        // A stored as [k=2, m=2] (transposed)
+        let a_f32 = vec![1.0f32, 3.0, 2.0, 4.0];
+        let b_f32 = vec![1.0f32, 0.0, 0.0, 1.0];
+        let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
+        let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
+        let cfg = MatmulConfig::for_shape(2, 2, 2)
+            .unwrap()
+            .with_dtype(MatmulDtype::F16)
+            .with_transpose(true, false);
+        let mut out = vec![0.0f32; 4];
+        matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
+        // A^T = [[1,2],[3,4]], I → [[1,2],[3,4]]
+        assert_close(&out, &[1.0, 2.0, 3.0, 4.0], 0.5);
     }
 }
