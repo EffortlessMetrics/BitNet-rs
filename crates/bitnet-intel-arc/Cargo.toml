@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-intel-arc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Intel Arc GPU tier and capability detection primitives"
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

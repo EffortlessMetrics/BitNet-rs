@@ -585,6 +585,7 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
+ "bitnet-intel-arc",
  "insta",
  "log",
  "opencl3",
@@ -807,6 +808,10 @@ dependencies = [
  "tracing",
  "wasm-bindgen-futures",
 ]
+
+[[package]]
+name = "bitnet-intel-arc"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-kernels"

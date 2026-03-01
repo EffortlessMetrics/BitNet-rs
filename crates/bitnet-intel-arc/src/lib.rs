@@ -204,7 +204,7 @@ pub fn is_arc_alchemist(device_name: &str) -> bool {
 /// # Examples
 ///
 /// ```
-/// use bitnet_device_probe::intel_arc::detect_intel_arc;
+/// use bitnet_intel_arc::detect_intel_arc;
 ///
 /// let caps = detect_intel_arc("Intel(R) Arc(TM) A770 Graphics");
 /// assert!(caps.is_some());

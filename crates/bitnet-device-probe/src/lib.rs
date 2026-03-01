@@ -5,7 +5,10 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
-pub mod intel_arc;
+pub mod intel_arc {
+    pub use bitnet_intel_arc::*;
+}
+
 pub use intel_arc::{
     IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
     is_arc_alchemist,
