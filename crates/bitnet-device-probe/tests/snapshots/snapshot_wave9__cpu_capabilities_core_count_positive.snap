@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
+expression: "format!(\"core_count_positive={}\", caps.core_count >= 1)"
+---
+core_count_positive=true

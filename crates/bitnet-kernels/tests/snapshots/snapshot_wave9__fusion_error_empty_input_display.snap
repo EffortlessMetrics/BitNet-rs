@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave9.rs
+expression: "format!(\"{}\", FusionError::EmptyInput)"
+---
+empty input

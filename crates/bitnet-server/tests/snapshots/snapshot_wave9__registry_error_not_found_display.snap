@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave9.rs
+expression: "format!(\"{err}\")"
+---
+model 'bitnet-2b' not found on 'gpu:1'
