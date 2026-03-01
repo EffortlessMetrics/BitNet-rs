@@ -542,3 +542,113 @@ mod tests {
         assert!(approx(loss_none, loss_sum));
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn mse_non_negative(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128),
+            ys in prop::collection::vec(-1e3f32..1e3, 1..128),
+        ) {
+            let n = xs.len().min(ys.len());
+            let loss =
+                mse_loss(&xs[..n], &ys[..n], LossReduction::Mean).unwrap();
+            prop_assert!(loss >= 0.0, "mse_loss = {loss} < 0");
+        }
+
+        #[test]
+        fn mse_zero_for_identical(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128)
+        ) {
+            let loss = mse_loss(&xs, &xs, LossReduction::Mean).unwrap();
+            prop_assert!(
+                loss.abs() < 1e-6,
+                "mse_loss(x, x) = {loss}, expected 0"
+            );
+        }
+
+        #[test]
+        fn l1_non_negative(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128),
+            ys in prop::collection::vec(-1e3f32..1e3, 1..128),
+        ) {
+            let n = xs.len().min(ys.len());
+            let loss =
+                l1_loss(&xs[..n], &ys[..n], LossReduction::Mean).unwrap();
+            prop_assert!(loss >= 0.0, "l1_loss = {loss} < 0");
+        }
+
+        #[test]
+        fn l1_zero_for_identical(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128)
+        ) {
+            let loss = l1_loss(&xs, &xs, LossReduction::Mean).unwrap();
+            prop_assert!(
+                loss.abs() < 1e-6,
+                "l1_loss(x, x) = {loss}, expected 0"
+            );
+        }
+
+        #[test]
+        fn cosine_similarity_loss_in_range(
+            xs in prop::collection::vec(-10.0f32..10.0, 2..64),
+            ys in prop::collection::vec(-10.0f32..10.0, 2..64),
+        ) {
+            let n = xs.len().min(ys.len());
+            let loss =
+                cosine_similarity_loss(&xs[..n], &ys[..n]).unwrap();
+            prop_assert!(
+                loss >= -0.01 && loss <= 2.01,
+                "cosine_similarity_loss = {loss}, expected in [0, 2]"
+            );
+        }
+
+        #[test]
+        fn cosine_similarity_loss_self_near_zero(
+            xs in prop::collection::vec(0.1f32..10.0, 2..64)
+        ) {
+            let loss = cosine_similarity_loss(&xs, &xs).unwrap();
+            prop_assert!(
+                loss.abs() < 1e-4,
+                "cosine_similarity_loss(x, x) = {loss}, expected ~0"
+            );
+        }
+
+        #[test]
+        fn smooth_l1_non_negative(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128),
+            ys in prop::collection::vec(-1e3f32..1e3, 1..128),
+            beta in 0.01f32..10.0,
+        ) {
+            let n = xs.len().min(ys.len());
+            let loss = smooth_l1_loss(
+                &xs[..n],
+                &ys[..n],
+                beta,
+                LossReduction::Mean,
+            )
+            .unwrap();
+            prop_assert!(loss >= 0.0, "smooth_l1 = {loss} < 0");
+        }
+
+        #[test]
+        fn mse_sum_geq_mean(
+            xs in prop::collection::vec(-100.0f32..100.0, 2..64),
+            ys in prop::collection::vec(-100.0f32..100.0, 2..64),
+        ) {
+            let n = xs.len().min(ys.len());
+            let mean =
+                mse_loss(&xs[..n], &ys[..n], LossReduction::Mean).unwrap();
+            let sum =
+                mse_loss(&xs[..n], &ys[..n], LossReduction::Sum).unwrap();
+            prop_assert!(
+                sum >= mean - 1e-5,
+                "mse sum={sum} < mean={mean}"
+            );
+        }
+    }
+}

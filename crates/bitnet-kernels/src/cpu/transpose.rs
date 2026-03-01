@@ -519,3 +519,90 @@ mod tests {
         assert!(TransposeKernel::is_contiguous(&[], &[]));
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn transpose_2d_involutory(
+            rows in 1usize..16,
+            cols in 1usize..16,
+        ) {
+            let data: Vec<f32> =
+                (0..rows * cols).map(|i| i as f32).collect();
+            let transposed =
+                TransposeKernel::transpose_2d(&data, rows, cols).unwrap();
+            let restored =
+                TransposeKernel::transpose_2d(&transposed, cols, rows)
+                    .unwrap();
+            prop_assert_eq!(&data, &restored);
+        }
+
+        #[test]
+        fn transpose_2d_preserves_length(
+            rows in 1usize..32,
+            cols in 1usize..32,
+        ) {
+            let data: Vec<f32> =
+                (0..rows * cols).map(|i| i as f32).collect();
+            let transposed =
+                TransposeKernel::transpose_2d(&data, rows, cols).unwrap();
+            prop_assert_eq!(transposed.len(), data.len());
+        }
+
+        #[test]
+        fn transpose_2d_diagonal_preserved(n in 1usize..16) {
+            let data: Vec<f32> =
+                (0..n * n).map(|i| i as f32).collect();
+            let transposed =
+                TransposeKernel::transpose_2d(&data, n, n).unwrap();
+            for i in 0..n {
+                prop_assert_eq!(
+                    data[i * n + i],
+                    transposed[i * n + i]
+                );
+            }
+        }
+
+        #[test]
+        fn reshape_preserves_elements(
+            rows in 1usize..16,
+            cols in 1usize..16,
+        ) {
+            let n = rows * cols;
+            let data: Vec<f32> = (0..n).map(|i| i as f32).collect();
+            let reshaped = TransposeKernel::reshape(
+                &data,
+                &[rows, cols],
+                &[cols, rows],
+            )
+            .unwrap();
+            prop_assert_eq!(&data, &reshaped);
+        }
+
+        #[test]
+        fn squeeze_removes_ones(
+            dims in prop::collection::vec(2usize..8, 1..4)
+        ) {
+            let mut shape = dims.clone();
+            shape.insert(0, 1);
+            shape.push(1);
+            let squeezed = TransposeKernel::squeeze(&shape);
+            for &d in &squeezed {
+                prop_assert_ne!(d, 1);
+            }
+        }
+
+        #[test]
+        fn contiguous_strides_correct(
+            shape in prop::collection::vec(1usize..8, 1..5)
+        ) {
+            let strides = TransposeKernel::contiguous_strides(&shape);
+            prop_assert_eq!(strides.len(), shape.len());
+            prop_assert!(TransposeKernel::is_contiguous(&shape, &strides));
+        }
+    }
+}

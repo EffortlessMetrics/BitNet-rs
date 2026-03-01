@@ -916,5 +916,70 @@ mod proptests {
                 prop_assert!(means[r] >= mins[r].value - 1e-5);
             }
         }
+
+        // sum of single element equals that element
+        #[test]
+        fn sum_of_single_element(x in -1e6f32..1e6) {
+            let result = ReductionKernel::sum(&[x]).unwrap();
+            prop_assert!(
+                (result - x).abs() < 1e-6,
+                "sum([{x}]) = {result}, expected {x}"
+            );
+        }
+
+        // mean is bounded by min and max of input
+        #[test]
+        fn mean_between_min_and_max(
+            xs in prop::collection::vec(-1e4f32..1e4, 2..256)
+        ) {
+            let mean = ReductionKernel::mean(&xs).unwrap();
+            let min_val = xs.iter().cloned().fold(f32::INFINITY, f32::min);
+            let max_val =
+                xs.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+            prop_assert!(
+                mean >= min_val && mean <= max_val,
+                "mean={mean} not in [{min_val}, {max_val}]"
+            );
+        }
+
+        // max is >= every element
+        #[test]
+        fn max_geq_all_elements(
+            xs in prop::collection::vec(-1e6f32..1e6, 1..256)
+        ) {
+            let result = ReductionKernel::max(&xs).unwrap();
+            for (i, &x) in xs.iter().enumerate() {
+                prop_assert!(
+                    result.value >= x,
+                    "max={} < xs[{i}]={x}",
+                    result.value
+                );
+            }
+        }
+
+        // min is <= every element
+        #[test]
+        fn min_leq_all_elements(
+            xs in prop::collection::vec(-1e6f32..1e6, 1..256)
+        ) {
+            let result = ReductionKernel::min(&xs).unwrap();
+            for (i, &x) in xs.iter().enumerate() {
+                prop_assert!(
+                    result.value <= x,
+                    "min={} > xs[{i}]={x}",
+                    result.value
+                );
+            }
+        }
+
+        // L2 norm >= L_inf norm
+        #[test]
+        fn l2_norm_geq_l_inf(
+            xs in prop::collection::vec(-1e3f32..1e3, 1..128)
+        ) {
+            let l2 = ReductionKernel::l2_norm(&xs).unwrap();
+            let l_inf = xs.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+            prop_assert!(l2 >= l_inf - 1e-5, "l2={l2} < l_inf={l_inf}");
+        }
     }
 }
