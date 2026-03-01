@@ -286,7 +286,8 @@ pub fn read_kv_pairs(
     let header = parse_header(&header_buf)?;
 
     let mut kvs = Vec::new();
-    let n_kv = limit.map(|l| l.min(header.n_kv as usize)).unwrap_or(header.n_kv as usize);
+    #[allow(clippy::cast_possible_truncation)] // n_kv is a metadata count, won't exceed usize
+    let n_kv = limit.map_or(header.n_kv as usize, |l| l.min(header.n_kv as usize));
 
     for _ in 0..n_kv {
         // key
