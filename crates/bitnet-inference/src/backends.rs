@@ -423,6 +423,7 @@ pub fn select_backend(
             }
         }
         Device::OpenCL(_) => {
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => {
             if bitnet_kernels::device_features::oneapi_available_runtime() {
                 info!(
                     "OpenCL selected; compute kernels dispatched via KernelManager, tensor ops on CPU"

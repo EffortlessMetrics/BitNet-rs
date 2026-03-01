@@ -174,6 +174,10 @@ impl BitNetTensor {
                 }
             }
             Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => {
+                // OpenCL uses its own buffer management; fall back to CPU for Candle
+                Ok(candle_core::Device::Cpu)
+            }
         }
     }
 

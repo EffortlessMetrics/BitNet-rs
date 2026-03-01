@@ -218,7 +218,7 @@ fn load_gguf_enhanced(
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
-        Device::OpenCL(_) => {
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => {
             tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
             CDevice::Cpu
         }
@@ -571,6 +571,7 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
             CDevice::Cpu
         }
         Device::OpenCL(_) => {
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => {
             tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
             CDevice::Cpu
         }
@@ -1685,6 +1686,7 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
             CDevice::Cpu
         }
         Device::OpenCL(_) => {
+        Device::OpenCL(_) | Device::Hip(_) | Device::Npu => {
             tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
             CDevice::Cpu
         }

@@ -19,6 +19,13 @@ thiserror.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 opencl3 = { version = "0.9", optional = true }
+log.workspace = true
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 
 [dev-dependencies]
 env_logger = "0.11.8"
