@@ -77,6 +77,7 @@ members = [
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
   "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
   "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
+  "crates/bitnet-qualcomm",          # SRP: Qualcomm NPU backend/env controls
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -114,6 +115,7 @@ default-members = [
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-qualcomm",      # SRP: Qualcomm NPU backend/env controls
 ]
 
 [package]
@@ -160,6 +162,7 @@ version = "0.2.1-dev"
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-qualcomm = { path = "crates/bitnet-qualcomm", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
@@ -321,6 +324,7 @@ required-features = ["cpu"]
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-qualcomm = { path = "crates/bitnet-qualcomm", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

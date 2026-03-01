@@ -1,0 +1,20 @@
+[package]
+name = "bitnet-qualcomm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Qualcomm NPU runtime selection and environment controls"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+
+[dev-dependencies]
+temp-env.workspace = true
