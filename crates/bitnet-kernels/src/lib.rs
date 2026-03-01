@@ -42,6 +42,7 @@ pub mod opencl_async_executor;
 pub mod opencl_attention;
 pub mod opencl_autotuner;
 pub mod opencl_buffer;
+pub mod opencl_health_check;
 pub mod opencl_cache;
 pub mod opencl_cmd_queue;
 pub mod opencl_context;
