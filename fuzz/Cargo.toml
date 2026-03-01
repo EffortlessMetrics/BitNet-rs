@@ -276,8 +276,20 @@ test = false
 doc = false
 
 [[bin]]
+name = "softmax_stability"
+path = "fuzz_targets/softmax_stability.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "device_opencl_construct"
 path = "fuzz_targets/device_opencl_construct.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "embedding_lookup"
+path = "fuzz_targets/embedding_lookup.rs"
 test = false
 doc = false
 
@@ -308,5 +320,11 @@ doc = false
 [[bin]]
 name = "memory_pool_alloc"
 path = "fuzz_targets/memory_pool_alloc.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "memory_layout"
+path = "fuzz_targets/memory_layout.rs"
 test = false
 doc = false
