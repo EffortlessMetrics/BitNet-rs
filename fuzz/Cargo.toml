@@ -421,13 +421,43 @@ test = false
 doc = false
 
 [[bin]]
+name = "fuzz_cpu_attention"
+path = "fuzz_targets/fuzz_cpu_attention.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "fuzz_gguf_header_parse"
 path = "fuzz_targets/fuzz_gguf_header_parse.rs"
 test = false
 doc = false
 
 [[bin]]
+name = "fuzz_layernorm_stability"
+path = "fuzz_targets/fuzz_layernorm_stability.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "fuzz_tokenizer_decode_arbitrary"
 path = "fuzz_targets/fuzz_tokenizer_decode_arbitrary.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_batch_norm"
+path = "fuzz_targets/fuzz_batch_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_activation_chain"
+path = "fuzz_targets/fuzz_activation_chain.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantize_dequantize"
+path = "fuzz_targets/fuzz_quantize_dequantize.rs"
 test = false
 doc = false
