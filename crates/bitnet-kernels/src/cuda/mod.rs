@@ -18,6 +18,7 @@
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
+//! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
 //!
