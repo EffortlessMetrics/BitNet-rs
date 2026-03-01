@@ -108,7 +108,7 @@ proptest! {
             prop_assert_eq!(
                 a.to_bits(),
                 b.to_bits(),
-                "non-deterministic at [{i}]: {a} vs {b}"
+                "non-deterministic at [{}]: {} vs {}", i, a, b
             );
         }
     }
@@ -124,7 +124,7 @@ proptest! {
 
         // Scalar reference.
         let config = LayerNormConfig::new(vec![n]);
-        let scalar_out = cpu_layer_norm(&input, &gamma, &beta, &config).unwrap();
+        let scalar_out = cpu_layer_norm(&input, &gamma, Some(&beta[..]), &config).unwrap();
 
         // NEON path.
         let mut neon_out = vec![0.0f32; n];
@@ -471,7 +471,7 @@ proptest! {
             prop_assert_eq!(
                 batch_row,
                 single.as_slice(),
-                "batch/single mismatch at index {j}"
+                "batch/single mismatch at index {}", j
             );
         }
     }
@@ -619,7 +619,7 @@ proptest! {
         let beta = vec![0.0f32; n];
 
         let config = LayerNormConfig::new(vec![n]);
-        let scalar_out = cpu_layer_norm(&input, &gamma, &beta, &config).unwrap();
+        let scalar_out = cpu_layer_norm(&input, &gamma, Some(&beta[..]), &config).unwrap();
 
         let mut neon_out = vec![0.0f32; n];
         unsafe { layernorm_neon(&input, &mut neon_out, &gamma, &beta, EPS) };
