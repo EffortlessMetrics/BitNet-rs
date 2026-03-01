@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quantization.rs
+expression: all
+---
+[
+  "I2S",
+  "TL1",
+  "TL2"
+]

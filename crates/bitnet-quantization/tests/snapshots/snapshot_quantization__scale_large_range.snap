@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_quantization.rs
+expression: "format!(\"{scale:.6}\")"
+---
+100.000000

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_model_config.rs
+expression: "format!(\"{:?}\", ModelFormat::Gguf)"
+---
+Gguf
