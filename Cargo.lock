@@ -599,6 +599,7 @@ dependencies = [
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-http-retry",
  "httpdate",
  "reqwest",
  "thiserror 2.0.18",
@@ -755,6 +756,13 @@ version = "0.2.1-dev"
 dependencies = [
  "insta",
  "proptest",
+]
+
+[[package]]
+name = "bitnet-http-retry"
+version = "0.2.1-dev"
+dependencies = [
+ "httpdate",
 ]
 
 [[package]]
