@@ -19,6 +19,7 @@ members = [
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
+  "crates/bitnet-token-stream-core",
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
@@ -36,6 +37,7 @@ members = [
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-generation-events-core", # SRP: reusable generation stream event/stat contracts
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
+  "crates/bitnet-token-stream-core", # SRP: reusable token-to-text stream core
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
@@ -122,6 +124,7 @@ default-members = [
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
+  "crates/bitnet-token-stream-core",
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-receipts",
