@@ -205,5 +205,19 @@ pub mod memory_layout;
 // OpenAI-compatible API server with SSE streaming, auth, health checks,
 // and Prometheus metrics for GPU-accelerated inference.
 pub mod api_server;
+<<<<<<< HEAD
 pub mod ffi_safety;
 pub mod weight_loader;
+=======
+
+// === Workspace Integration v9 (Waves 56-58) ===
+pub mod function_calling;
+pub mod logging_observability;
+pub mod model_ensemble;
+pub mod multi_model;
+pub mod prompt_cache;
+pub mod quantization_benchmarks;
+pub mod request_queue;
+pub mod structured_output;
+pub mod vision_model;
+>>>>>>> b43250ed (feat(gpu-hal): workspace integration v9 — waves 56-58 modules)

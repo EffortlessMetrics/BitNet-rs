@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! Structured output generation with schema validation and grammar constraints.
 //!
 //! This module provides tools for constraining LLM output to valid structured
@@ -1887,3 +1888,6 @@ mod tests {
         }
     }
 }
+=======
+//! Structured output generation (JSON, schema-constrained decoding).
+>>>>>>> b43250ed (feat(gpu-hal): workspace integration v9 — waves 56-58 modules)

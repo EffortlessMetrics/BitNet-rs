@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! Prompt prefix caching for faster GPU inference.
 //!
 //! Caches KV states for common prompt prefixes using a trie
@@ -1379,3 +1380,6 @@ mod property_tests {
         }
     }
 }
+=======
+//! Prompt caching and optimization for repeated prefix reuse.
+>>>>>>> b43250ed (feat(gpu-hal): workspace integration v9 — waves 56-58 modules)

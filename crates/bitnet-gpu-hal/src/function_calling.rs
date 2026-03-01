@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! Function calling framework for structured tool use in LLM inference.
 //!
 //! Provides registration, parsing, validation, execution, and chaining
@@ -1255,3 +1256,6 @@ mod tests {
         );
     }
 }
+=======
+//! Function calling support for tool-use inference patterns.
+>>>>>>> b43250ed (feat(gpu-hal): workspace integration v9 — waves 56-58 modules)
