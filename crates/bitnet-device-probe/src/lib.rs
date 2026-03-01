@@ -231,11 +231,7 @@ fn cuda_available_runtime() -> bool {
 
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 fn rocm_available_runtime() -> bool {
-    if let Some(fake) = fake_gpu_backends() {
-        return fake.contains("rocm") || fake.contains("gpu");
-    }
-
-    command_ok("rocm-smi", &["--showid"])
+    bitnet_rocm_probe::rocm_available_runtime()
 }
 
 #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]

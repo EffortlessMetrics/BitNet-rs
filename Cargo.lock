@@ -620,9 +620,8 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
- "bitnet-intel-gpu-id",
+ "bitnet-rocm-probe",
  "insta",
- "libloading 0.8.9",
  "log",
  "opencl3",
  "pollster",
@@ -1173,6 +1172,14 @@ name = "bitnet-rocm"
 version = "0.2.1-dev"
 dependencies = [
  "insta",
+]
+
+[[package]]
+name = "bitnet-rocm-probe"
+version = "0.2.1-dev"
+dependencies = [
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]
