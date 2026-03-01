@@ -38,6 +38,113 @@
 use bitnet_common::{KernelError, Result};
 
 // ---------------------------------------------------------------------------
+// CUDA kernel source
+// ---------------------------------------------------------------------------
+
+/// CUDA source for `softmax_f32` and `log_softmax_f32` kernels.
+///
+/// Each thread-block processes one row.  Shared-memory parallel reductions
+/// compute the row max and the sum of exponentials.  The `temperature`
+/// parameter is applied as `(x - row_max) / temperature` before `expf`.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const SOFTMAX_KERNEL_SRC: &str = r#"
+extern "C" __global__ void softmax_f32(
+    const float* __restrict__ input,
+    float* __restrict__ output,
+    int n_cols,
+    float temperature)
+{
+    extern __shared__ float sdata[];
+    int row = blockIdx.x;
+    int tid = threadIdx.x;
+    const float* row_in  = input  + row * n_cols;
+    float*       row_out = output + row * n_cols;
+
+    // Pass 1: find row max
+    float local_max = -1e30f;
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        float v = row_in[i];
+        if (v > local_max) local_max = v;
+    }
+    sdata[tid] = local_max;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s && sdata[tid + s] > sdata[tid])
+            sdata[tid] = sdata[tid + s];
+        __syncthreads();
+    }
+    float row_max = sdata[0];
+
+    // Pass 2: shifted exp + sum
+    float local_sum = 0.0f;
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        float e = expf((row_in[i] - row_max) / temperature);
+        row_out[i] = e;
+        local_sum += e;
+    }
+    sdata[tid] = local_sum;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) sdata[tid] += sdata[tid + s];
+        __syncthreads();
+    }
+    float total = sdata[0];
+
+    // Pass 3: normalise
+    float inv = 1.0f / total;
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        row_out[i] *= inv;
+    }
+}
+
+extern "C" __global__ void log_softmax_f32(
+    const float* __restrict__ input,
+    float* __restrict__ output,
+    int n_cols,
+    float temperature)
+{
+    extern __shared__ float sdata[];
+    int row = blockIdx.x;
+    int tid = threadIdx.x;
+    const float* row_in  = input  + row * n_cols;
+    float*       row_out = output + row * n_cols;
+
+    // Pass 1: row max
+    float local_max = -1e30f;
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        float v = row_in[i];
+        if (v > local_max) local_max = v;
+    }
+    sdata[tid] = local_max;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s && sdata[tid + s] > sdata[tid])
+            sdata[tid] = sdata[tid + s];
+        __syncthreads();
+    }
+    float row_max = sdata[0];
+
+    // Pass 2: sum of exp
+    float local_sum = 0.0f;
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        local_sum += expf((row_in[i] - row_max) / temperature);
+    }
+    sdata[tid] = local_sum;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) sdata[tid] += sdata[tid + s];
+        __syncthreads();
+    }
+    float log_sum = logf(sdata[0]);
+
+    // Pass 3: log_softmax = (x - row_max) / T - log(sum)
+    for (int i = tid; i < n_cols; i += blockDim.x) {
+        row_out[i] = (row_in[i] - row_max) / temperature - log_sum;
+    }
+}
+"#;
+
+// ---------------------------------------------------------------------------
 // Softmax mode
 // ---------------------------------------------------------------------------
 
@@ -379,6 +486,32 @@ pub fn softmax_cpu(input: &[f32], output: &mut [f32], config: &SoftmaxConfig) ->
 }
 
 // ---------------------------------------------------------------------------
+// CPU fallback — log-softmax
+// ---------------------------------------------------------------------------
+
+/// Numerically stable row-wise log-softmax on the CPU.
+///
+/// Thin wrapper over [`softmax_cpu`] with `mode` forced to
+/// [`SoftmaxMode::LogSoftmax`].
+pub fn log_softmax_cpu(input: &[f32], output: &mut [f32], config: &SoftmaxConfig) -> Result<()> {
+    let mut cfg = config.clone();
+    cfg.mode = SoftmaxMode::LogSoftmax;
+    softmax_cpu(input, output, &cfg)
+}
+
+/// Convenience wrapper returning an allocated `Vec<f32>`.
+pub fn log_softmax_cpu_fallback(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    config: &SoftmaxConfig,
+) -> Vec<f32> {
+    let mut cfg = config.clone();
+    cfg.mode = SoftmaxMode::LogSoftmax;
+    softmax_cpu_fallback(input, rows, cols, &cfg)
+}
+
+// ---------------------------------------------------------------------------
 // CPU fallback — in-place convenience wrapper
 // ---------------------------------------------------------------------------
 
@@ -516,6 +649,39 @@ pub fn softmax_forward(input: &[f32], output: &mut [f32], config: &SoftmaxConfig
         // GPU launch failed — fall through to CPU path
     }
     softmax_cpu(input, output, config)
+}
+
+/// Apply log-softmax with automatic dispatch: GPU if available, else CPU
+/// fallback.
+pub fn log_softmax_forward(
+    input: &[f32],
+    output: &mut [f32],
+    config: &SoftmaxConfig,
+) -> Result<()> {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    {
+        if crate::device_features::gpu_available_runtime()
+            && let Ok(()) = launch_log_softmax(input, output, config)
+        {
+            return Ok(());
+        }
+    }
+    log_softmax_cpu(input, output, config)
+}
+
+/// In-place softmax: overwrites `data` with its softmax probabilities.
+pub fn softmax_inplace(
+    data: &mut [f32],
+    rows: usize,
+    cols: usize,
+    config: &SoftmaxConfig,
+) -> Result<()> {
+    // Copy input so we can read original values while writing.
+    let input = data.to_vec();
+    softmax_forward(&input, data, config).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("softmax_inplace failed for shape [{rows}, {cols}]"),
+    })?;
+    Ok(())
 }
 
 #[cfg(test)]

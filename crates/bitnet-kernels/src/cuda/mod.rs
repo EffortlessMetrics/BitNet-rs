@@ -126,12 +126,12 @@ pub use layernorm::LAYERNORM_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SRC};
+pub use softmax::SOFTMAX_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::launch_i2s_matmul;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use fusion::{
     FUSION_KERNEL_SRC, launch_fused_add_rmsnorm_cuda, launch_fused_gelu_linear_cuda,
     launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
 };
