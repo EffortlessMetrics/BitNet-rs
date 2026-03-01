@@ -18,6 +18,7 @@ pub mod gpu_utils;
 pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
 pub mod reduction;
 #[cfg(feature = "rocm")]
