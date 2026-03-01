@@ -5,6 +5,7 @@ use serial_test::serial;
 
 mod oneapi_detection {
     #[allow(unused_imports)]
+    #[cfg(feature = "oneapi")]
     use super::*;
 
     #[test]

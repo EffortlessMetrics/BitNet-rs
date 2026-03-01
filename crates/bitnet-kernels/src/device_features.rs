@@ -14,6 +14,8 @@
 //!
 //! Tests specification: docs/explanation/issue-439-spec.md#device-feature-detection-api
 
+/// Check if OneAPI/OpenCL support was compiled into this binary
+///
 /// Check if GPU support was compiled into this binary
 ///
 /// Returns `true` if either `feature="gpu"` or `feature="cuda"` was enabled
@@ -118,6 +120,7 @@ pub fn gpu_available_runtime() -> bool {
 }
 
 /// Check if Intel oneAPI GPU runtime is available.
+/// Check if an Intel GPU is available at runtime via `OpenCL`.
 ///
 /// Detection is best-effort via `sycl-ls`. Tests can force deterministic
 /// outcomes with `BITNET_GPU_FAKE=oneapi` / `BITNET_GPU_FAKE=none` unless
