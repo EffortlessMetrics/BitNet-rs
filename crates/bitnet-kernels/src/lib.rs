@@ -45,6 +45,7 @@ pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
 pub mod opencl_registry;
+pub mod opencl_test_harness;
 pub mod opencl_token_gen;
 pub mod opencl_transformer;
 pub mod opencl_work_size;
