@@ -142,6 +142,7 @@ pub mod streaming_aggregator;
 // topologies, double-buffered comm, and profiling.
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
+pub mod error_recovery;
 pub mod generation;
 // GPU hardware abstraction layer for `BitNet` inference.
 // GPU hardware abstraction layer for `BitNet` inference.
