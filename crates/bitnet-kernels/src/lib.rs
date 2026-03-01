@@ -18,7 +18,7 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi", feature = "opencl"))]
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
@@ -33,6 +33,7 @@ pub mod opencl_context;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
 pub mod opencl_embedding;
+<<<<<<< HEAD
 pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
@@ -43,6 +44,17 @@ pub mod opencl_quantized;
 pub mod opencl_registry;
 pub mod opencl_token_gen;
 pub mod opencl_transformer;
+=======
+pub mod opencl_flash_attention;
+pub mod opencl_kernel_sources;
+pub mod opencl_kv_cache;
+pub mod opencl_layer_compose;
+pub mod opencl_model_loader;
+pub mod opencl_pipeline;
+pub mod opencl_profiling;
+pub mod opencl_registry;
+pub mod opencl_rope_cache;
+>>>>>>> 6412b8ee (style: fix formatting in opencl_model_loader and rebase onto main)
 pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
