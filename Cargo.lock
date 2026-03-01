@@ -895,6 +895,19 @@ dependencies = [
 name = "bitnet-prompt-templates"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-common",
+ "bitnet-prompt-templates-core",
+ "criterion 0.5.1",
+ "insta",
+ "proptest",
+ "tracing-subscriber",
+ "tracing-test",
+]
+
+[[package]]
+name = "bitnet-prompt-templates-core"
+version = "0.2.1-dev"
+dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-tokenizers",
