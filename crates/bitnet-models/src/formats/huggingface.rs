@@ -3,6 +3,7 @@
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::{BitNetModel, Model};
 use bitnet_common::{BitNetConfig, BitNetError, Device, ModelError, ModelMetadata, Result};
+use bitnet_npu_support::model_loading_unsupported_message;
 use candle_core::Tensor;
 use safetensors::{Dtype as SafeDtype, SafeTensors};
 use serde_json::Value;
@@ -278,7 +279,9 @@ impl HuggingFaceLoader {
                     .to_string(),
             )),
             Device::Hip(_) | Device::Npu => Err(BitNetError::Validation(
-                "HIP/NPU devices are not yet supported for model loading".to_string(),
+                model_loading_unsupported_message(device)
+                    .unwrap_or("HIP/NPU devices are not yet supported for model loading")
+                    .to_string(),
             )),
             Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
         }

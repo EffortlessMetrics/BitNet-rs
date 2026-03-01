@@ -1,0 +1,14 @@
+[package]
+name = "bitnet-npu-support"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SRP helpers for NPU/HIP support policy and fallback behavior"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+
+[lints]
+workspace = true

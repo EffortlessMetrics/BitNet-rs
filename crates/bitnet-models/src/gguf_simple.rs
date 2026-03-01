@@ -3,6 +3,7 @@ use crate::loader::MmapFile;
 use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
 use crate::quant::i2s_qk256::I2SQk256NoScale;
 use bitnet_common::{BitNetError, Device, QuantizationType, Result};
+use bitnet_npu_support::fallback_warning_message;
 use bitnet_quantization::{QuantizerTrait, TL1Quantizer, TL2Quantizer, qk256_tolerance_bytes};
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 use std::collections::HashMap;
@@ -223,7 +224,11 @@ fn load_gguf_enhanced(
             CDevice::Cpu
         }
         Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+            tracing::warn!(
+                "{}",
+                fallback_warning_message(&device)
+                    .unwrap_or("HIP/NPU device requested but not supported, falling back to CPU")
+            );
             CDevice::Cpu
         }
     };
@@ -567,7 +572,11 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
             CDevice::Cpu
         }
         Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+            tracing::warn!(
+                "{}",
+                fallback_warning_message(&device)
+                    .unwrap_or("HIP/NPU device requested but not supported, falling back to CPU")
+            );
             CDevice::Cpu
         }
         Device::OpenCL(_) => {
@@ -1681,7 +1690,11 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
             CDevice::Cpu
         }
         Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, fallback to CPU");
+            tracing::warn!(
+                "{}",
+                fallback_warning_message(&device)
+                    .unwrap_or("HIP/NPU device requested but not supported, falling back to CPU")
+            );
             CDevice::Cpu
         }
         Device::OpenCL(_) => {

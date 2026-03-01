@@ -8,6 +8,7 @@ use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
 };
+use bitnet_npu_support::model_loading_unsupported_message;
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
@@ -285,7 +286,9 @@ impl GgufLoader {
                     .to_string(),
             )),
             Device::Hip(_) | Device::Npu => Err(BitNetError::Validation(
-                "HIP/NPU devices are not yet supported for model loading".to_string(),
+                model_loading_unsupported_message(device)
+                    .unwrap_or("HIP/NPU devices are not yet supported for model loading")
+                    .to_string(),
             )),
             Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
         }
