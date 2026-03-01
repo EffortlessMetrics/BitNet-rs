@@ -312,7 +312,7 @@ impl F16Converter {
         }
 
         // Normal
-        let f32_exp = ((exponent + 127 - 15) as u32) << 23;
+        let f32_exp = (exponent + 127 - 15) << 23;
         let f32_man = mantissa << 13;
         f32::from_bits(sign | f32_exp | f32_man)
     }
