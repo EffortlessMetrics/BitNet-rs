@@ -51,6 +51,9 @@ pub mod arm;
 pub mod neon_elementwise;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_kv_cache;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
 
 #[cfg(target_arch = "aarch64")]
