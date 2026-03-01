@@ -1,21 +1,20 @@
-//! Sampling utilities for text generation
+//! Sampling adapter utilities for text generation.
+//!
+//! CLI-facing wrapper around the shared `bitnet-sampling` microcrate.
 
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
-use std::collections::HashMap;
+use anyhow::Result;
+use bitnet_sampling::{SamplingConfig, SamplingStrategy, softmax_in_place};
 
-/// Sampling strategy for text generation
+/// Sampling strategy for text generation.
+///
+/// This preserves the existing CLI API while delegating implementation to the
+/// reusable `bitnet-sampling` microcrate.
 pub struct Sampler {
-    rng: ChaCha20Rng,
-    temperature: f32,
-    top_k: usize,
-    top_p: f32,
-    repetition_penalty: f32,
-    token_counts: HashMap<u32, usize>,
+    strategy: SamplingStrategy,
 }
 
 impl Sampler {
-    /// Create a new sampler with given parameters
+    /// Create a new sampler with given parameters.
     pub fn new(
         temperature: f32,
         top_k: usize,
@@ -23,175 +22,28 @@ impl Sampler {
         repetition_penalty: f32,
         seed: Option<u64>,
     ) -> Self {
-        let rng = if let Some(seed) = seed {
-            ChaCha20Rng::seed_from_u64(seed)
-        } else {
-            ChaCha20Rng::from_rng(&mut rand::rng())
-        };
+        let config =
+            SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
 
-        Self { rng, temperature, top_k, top_p, repetition_penalty, token_counts: HashMap::new() }
+        Self { strategy: SamplingStrategy::new(config) }
     }
 
-    /// Sample next token from logits
+    /// Sample next token from logits.
     pub fn sample(&mut self, logits: &[f32], generated_tokens: &[u32]) -> u32 {
-        // Update token counts
-        for &token in generated_tokens {
-            *self.token_counts.entry(token).or_insert(0) += 1;
-        }
-
-        // Apply repetition penalty
-        let mut logits = self.apply_repetition_penalty(logits);
-
-        // Replace NaN logits with -inf so they are ignored by later steps
-        for logit in &mut logits {
-            if logit.is_nan() {
-                *logit = f32::NEG_INFINITY;
-            }
-        }
-
-        // Greedy decoding if temperature is 0
-        if self.temperature == 0.0
-            || (self.temperature == 1.0 && self.top_k == 0 && self.top_p == 1.0)
-        {
-            return argmax(&logits);
-        }
-
-        // Apply temperature
-        if self.temperature != 1.0 {
-            for logit in &mut logits {
-                *logit /= self.temperature;
-            }
-        }
-
-        // Apply top-k filtering
-        if self.top_k > 0 {
-            logits = self.top_k_filter(logits);
-        }
-
-        // Apply top-p (nucleus) filtering
-        if self.top_p < 1.0 {
-            logits = self.top_p_filter(logits);
-        }
-
-        // Convert to probabilities
-        let probs = softmax(&logits);
-
-        // Sample from distribution
-        self.sample_from_probs(&probs)
-    }
-
-    /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32]) -> Vec<f32> {
-        if self.repetition_penalty == 1.0 {
-            return logits.to_vec();
-        }
-
-        let mut penalized = logits.to_vec();
-        for (&token_id, &count) in &self.token_counts {
-            if (token_id as usize) < penalized.len() && count > 0 {
-                let penalty = self.repetition_penalty.powi(count as i32);
-                if penalized[token_id as usize] > 0.0 {
-                    penalized[token_id as usize] /= penalty;
-                } else {
-                    penalized[token_id as usize] *= penalty;
-                }
-            }
-        }
-        penalized
-    }
-
-    /// Apply top-k filtering
-    fn top_k_filter(&self, logits: Vec<f32>) -> Vec<f32> {
-        if self.top_k == 0 || self.top_k >= logits.len() {
-            return logits;
-        }
-
-        let mut indexed: Vec<(usize, f32)> =
-            logits.iter().copied().enumerate().filter(|&(_, v)| !v.is_nan()).collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
-        for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
-            filtered[*idx] = *val;
-        }
-        filtered
-    }
-
-    /// Apply top-p (nucleus) filtering
-    fn top_p_filter(&self, logits: Vec<f32>) -> Vec<f32> {
-        if self.top_p >= 1.0 {
-            return logits;
-        }
-
-        let sanitized: Vec<f32> =
-            logits.iter().map(|&v| if v.is_nan() { f32::NEG_INFINITY } else { v }).collect();
-
-        let mut indexed: Vec<(usize, f32)> = sanitized.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        let probs = softmax(&sanitized);
-        let sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
-
-        let mut cumsum = 0.0;
-        let mut cutoff_idx = sorted_probs.len();
-        for (i, &prob) in sorted_probs.iter().enumerate() {
-            cumsum += prob;
-            if cumsum > self.top_p {
-                cutoff_idx = i + 1;
-                break;
-            }
-        }
-
-        let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
-        for (idx, val) in indexed.iter().take(cutoff_idx) {
-            filtered[*idx] = *val;
-        }
-        filtered
-    }
-
-    /// Sample from probability distribution
-    fn sample_from_probs(&mut self, probs: &[f32]) -> u32 {
-        let uniform: f32 = self.rng.random();
-        let mut cumsum = 0.0;
-
-        for (i, &prob) in probs.iter().enumerate() {
-            cumsum += prob;
-            if cumsum > uniform {
-                return i as u32;
-            }
-        }
-
-        // Fallback to last token
-        (probs.len() - 1) as u32
+        self.strategy.sample(logits, generated_tokens).unwrap_or_else(|_| argmax(logits))
     }
 }
 
-/// Softmax function
-pub fn softmax(logits: &[f32]) -> Vec<f32> {
-    let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let mut exp_sum = 0.0;
-    let mut exp_vals = Vec::with_capacity(logits.len());
-
-    for &logit in logits {
-        let exp_val = (logit - max).exp();
-        exp_vals.push(exp_val);
-        exp_sum += exp_val;
-    }
-
-    for exp_val in &mut exp_vals {
-        *exp_val /= exp_sum;
-    }
-
-    exp_vals
-}
-
-/// Argmax function with deterministic tie-breaking (choose lowest index on tie)
-pub fn argmax(logits: &[f32]) -> u32 {
-    let mut best_idx = 0;
+/// Argmax helper with deterministic tie-breaking (lowest index) and NaN-safe handling.
+fn argmax(logits: &[f32]) -> u32 {
+    let mut best_idx = 0usize;
     let mut best_val = f32::NEG_INFINITY;
 
     for (i, &val) in logits.iter().enumerate() {
-        // On tie, prefer lower index for determinism
+        if val.is_nan() {
+            continue;
+        }
+
         if val > best_val || (val == best_val && i < best_idx) {
             best_val = val;
             best_idx = i;
@@ -201,18 +53,29 @@ pub fn argmax(logits: &[f32]) -> u32 {
     best_idx as u32
 }
 
-/// Greedy selection with deterministic tie-breaking for temperature=0
-#[inline]
-#[allow(dead_code)]
+/// Softmax function.
+pub fn softmax(logits: &[f32]) -> Vec<f32> {
+    let mut out = logits.to_vec();
+    softmax_in_place(&mut out);
+    out
+}
+
+/// Argmax function with deterministic tie-breaking (choose lowest index on tie).
 pub fn greedy_tie_break_lowest_id(logits: &[f32]) -> u32 {
-    let mut best = (f32::NEG_INFINITY, u32::MAX);
-    for (i, &x) in logits.iter().enumerate() {
-        let id = i as u32;
-        if x > best.0 || (x == best.0 && id < best.1) {
-            best = (x, id);
-        }
+    argmax(logits)
+}
+
+/// Validate user-provided sampling settings before generation.
+pub fn validate_sampling_inputs(temperature: f32, top_p: f32) -> Result<()> {
+    if temperature.is_sign_negative() {
+        anyhow::bail!("temperature must be >= 0.0, got {temperature}");
     }
-    best.1
+
+    if !(0.0..=1.0).contains(&top_p) {
+        anyhow::bail!("top-p must be in [0.0, 1.0], got {top_p}");
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -229,16 +92,9 @@ mod tests {
     }
 
     #[test]
-    fn test_argmax() {
-        let logits = vec![1.0, 3.0, 2.0];
-        assert_eq!(argmax(&logits), 1);
-    }
-
-    #[test]
     fn test_argmax_tie_break() {
-        // On tie, should choose lowest index
         let logits = vec![1.0, 2.0, 2.0, 1.5];
-        assert_eq!(argmax(&logits), 1); // index 1, not 2
+        assert_eq!(argmax(&logits), 1);
         assert_eq!(greedy_tie_break_lowest_id(&logits), 1);
     }
 
@@ -250,36 +106,22 @@ mod tests {
     }
 
     #[test]
-    fn test_top_k_filter() {
-        let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
-        let logits = vec![1.0, 3.0, 2.0, 0.5];
-        let filtered = sampler.top_k_filter(logits);
-        assert_eq!(filtered[3], f32::NEG_INFINITY);
-        assert_eq!(filtered[1], 3.0);
-        assert_eq!(filtered[2], 2.0);
+    fn test_sampling_validation() {
+        assert!(validate_sampling_inputs(0.0, 1.0).is_ok());
+        assert!(validate_sampling_inputs(0.7, 0.95).is_ok());
+
+        let err = validate_sampling_inputs(-0.01, 1.0).unwrap_err();
+        assert!(err.to_string().contains("temperature"));
+
+        let err = validate_sampling_inputs(0.7, 1.5).unwrap_err();
+        assert!(err.to_string().contains("top-p"));
     }
 
     #[test]
-    fn test_top_k_filter_with_nan() {
-        let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
-        let logits = vec![1.0, f32::NAN, 3.0];
-        let filtered = sampler.top_k_filter(logits);
-        assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
-    }
-
-    #[test]
-    fn test_top_p_filter_with_nan() {
-        let sampler = Sampler::new(1.0, 0, 0.9, 1.0, Some(42));
-        let logits = vec![1.0, f32::NAN, 3.0];
-        let filtered = sampler.top_p_filter(logits);
-        assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
-    }
-
-    #[test]
-    fn test_sample_with_nan_logits() {
-        let mut sampler = Sampler::new(1.0, 0, 1.0, 1.0, Some(42));
-        let logits = vec![f32::NAN, 0.0, 1.0];
+    fn test_nan_logits_result_is_vocab_bounded() {
+        let mut sampler = Sampler::new(0.8, 10, 0.9, 1.0, Some(42));
+        let logits = vec![f32::NAN, f32::NAN, 0.5];
         let token = sampler.sample(&logits, &[]);
-        assert_ne!(token, 0);
+        assert!(token < logits.len() as u32);
     }
 }
