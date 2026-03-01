@@ -22,6 +22,7 @@ pub mod onnx_export;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
+pub mod speculative;
 pub mod tensor_parallel;
 
 // Re-export GGUF types for easy access
