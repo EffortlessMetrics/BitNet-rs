@@ -73,6 +73,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-test-env",
+  "crates/bitnet-test-fixtures-core",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
@@ -108,6 +109,7 @@ default-members = [
   "crates/bitnet-transformer",
   "crates/bitnet-test-support",
   "crates/bitnet-test-env",
+  "crates/bitnet-test-fixtures-core",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
