@@ -93,6 +93,7 @@ pub mod model_debugger;
 pub mod compatibility_checker;
 pub mod e2e_integration;
 pub mod model_validator;
+pub mod gpu_topology;
 pub mod test_harness;
 
 // === Infrastructure ===
