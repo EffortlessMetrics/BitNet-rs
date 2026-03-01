@@ -36,9 +36,7 @@ pub use activations::{
 };
 pub use attention::{AttentionKernelConfig, launch_attention};
 pub use batch_norm::{BatchNormConfig, BatchNormKernel, BatchNormState, batch_norm_cpu};
-pub use conv1d::{
-    Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d,
-};
+pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
 pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};

@@ -73,8 +73,7 @@ impl Conv1dConfig {
             PaddingMode::Same => {
                 let ek = self.effective_kernel_size();
                 let out_w = input_width.div_ceil(self.stride);
-                let needed =
-                    out_w.saturating_sub(1) * self.stride + ek;
+                let needed = out_w.saturating_sub(1) * self.stride + ek;
                 let total = needed.saturating_sub(input_width);
                 let pad_left = total / 2;
                 (pad_left, total - pad_left)
@@ -87,23 +86,14 @@ impl Conv1dConfig {
         let (pl, pr) = self.resolve_padding(input_width);
         let ek = self.effective_kernel_size();
         let padded = input_width + pl + pr;
-        if padded < ek {
-            0
-        } else {
-            (padded - ek) / self.stride + 1
-        }
+        if padded < ek { 0 } else { (padded - ek) / self.stride + 1 }
     }
 
     /// Compute the CUDA grid dimensions for the conv1d kernel.
     ///
     /// Grid: `(ceil(out_w / threads_x), out_channels, 1)`.
-    pub fn grid_dim(
-        &self,
-        out_w: usize,
-        threads_per_block: u32,
-    ) -> (u32, u32, u32) {
-        let blocks_x =
-            (out_w as u32).div_ceil(threads_per_block);
+    pub fn grid_dim(&self, out_w: usize, threads_per_block: u32) -> (u32, u32, u32) {
+        let blocks_x = (out_w as u32).div_ceil(threads_per_block);
         (blocks_x, self.out_channels as u32, 1)
     }
 
@@ -140,20 +130,14 @@ fn validate(
         return Err(invalid("groups must be > 0"));
     }
     if !config.in_channels.is_multiple_of(config.groups) {
-        return Err(invalid(
-            "in_channels must be divisible by groups",
-        ));
+        return Err(invalid("in_channels must be divisible by groups"));
     }
     if !config.out_channels.is_multiple_of(config.groups) {
-        return Err(invalid(
-            "out_channels must be divisible by groups",
-        ));
+        return Err(invalid("out_channels must be divisible by groups"));
     }
 
     if !input.len().is_multiple_of(config.in_channels) {
-        return Err(invalid(
-            "input length must be divisible by in_channels",
-        ));
+        return Err(invalid("input length must be divisible by in_channels"));
     }
     let input_width = input.len() / config.in_channels;
     if input_width == 0 {
@@ -161,8 +145,7 @@ fn validate(
     }
 
     let ic_per_group = config.in_channels / config.groups;
-    let expected_weight =
-        config.out_channels * ic_per_group * config.kernel_size;
+    let expected_weight = config.out_channels * ic_per_group * config.kernel_size;
     if weight.len() != expected_weight {
         return Err(invalid(&format!(
             "weight length mismatch: expected {expected_weight}, \
@@ -181,9 +164,7 @@ fn validate(
                 )));
             }
             None => {
-                return Err(invalid(
-                    "config.bias is true but no bias provided",
-                ));
+                return Err(invalid("config.bias is true but no bias provided"));
             }
             _ => {}
         }
@@ -201,10 +182,7 @@ fn validate(
 }
 
 fn invalid(reason: &str) -> bitnet_common::BitNetError {
-    KernelError::InvalidArguments {
-        reason: reason.to_string(),
-    }
-    .into()
+    KernelError::InvalidArguments { reason: reason.to_string() }.into()
 }
 
 // ── CPU fallback ───────────────────────────────────────────────────
@@ -239,17 +217,11 @@ pub fn conv1d_cpu(
                 let mut sum = 0.0f32;
                 for ic_local in 0..ic_per_group {
                     let ic = g * ic_per_group + ic_local;
-                    let w_base = (oc * ic_per_group + ic_local)
-                        * config.kernel_size;
+                    let w_base = (oc * ic_per_group + ic_local) * config.kernel_size;
                     for k in 0..config.kernel_size {
-                        let iw =
-                            ow * config.stride + k * config.dilation;
-                        if iw >= pad_left
-                            && iw - pad_left < input_width
-                        {
-                            sum += input
-                                [ic * input_width + (iw - pad_left)]
-                                * weight[w_base + k];
+                        let iw = ow * config.stride + k * config.dilation;
+                        if iw >= pad_left && iw - pad_left < input_width {
+                            sum += input[ic * input_width + (iw - pad_left)] * weight[w_base + k];
                         }
                     }
                 }
@@ -294,8 +266,7 @@ pub fn launch_conv1d(
         config.grid_dim(out_w, threads),
     );
     Err(KernelError::GpuError {
-        reason: "conv1d CUDA kernel not yet compiled — scaffold only"
-            .into(),
+        reason: "conv1d CUDA kernel not yet compiled — scaffold only".into(),
     }
     .into())
 }
@@ -315,8 +286,7 @@ pub fn conv1d_forward(
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         if crate::device_features::gpu_available_runtime()
-            && let Ok(out) =
-                launch_conv1d(input, weight, bias, config, input_width)
+            && let Ok(out) = launch_conv1d(input, weight, bias, config, input_width)
         {
             return Ok(out);
         }
@@ -338,8 +308,7 @@ mod tests {
     const TOL: f32 = 1e-6;
 
     fn approx_eq(a: &[f32], b: &[f32], tol: f32) -> bool {
-        a.len() == b.len()
-            && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+        a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
     }
 
     fn cfg(
@@ -438,8 +407,7 @@ mod tests {
             7.0, 8.0, 9.0, // ch2
             10.0, 11.0, 12.0, // ch3
         ];
-        let weight =
-            vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+        let weight = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let c = cfg(4, 4, 1, 1, PaddingMode::Zero(0), 1, 2, false);
         let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
         #[rustfmt::skip]
@@ -476,8 +444,7 @@ mod tests {
         let weight = vec![1.0];
         let bias = vec![10.0];
         let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, true);
-        let out =
-            conv1d_cpu(&input, &weight, Some(&bias), &c).unwrap();
+        let out = conv1d_cpu(&input, &weight, Some(&bias), &c).unwrap();
         assert!(approx_eq(&out, &[11.0, 12.0, 13.0], TOL));
     }
 
@@ -487,13 +454,8 @@ mod tests {
         let weight = vec![1.0, 2.0];
         let bias = vec![10.0, 20.0];
         let c = cfg(1, 2, 1, 1, PaddingMode::Zero(0), 1, 1, true);
-        let out =
-            conv1d_cpu(&input, &weight, Some(&bias), &c).unwrap();
-        assert!(approx_eq(
-            &out,
-            &[11.0, 12.0, 13.0, 22.0, 24.0, 26.0],
-            TOL
-        ));
+        let out = conv1d_cpu(&input, &weight, Some(&bias), &c).unwrap();
+        assert!(approx_eq(&out, &[11.0, 12.0, 13.0, 22.0, 24.0, 26.0], TOL));
     }
 
     // ── Validation errors ─────────────────────────────────
@@ -525,31 +487,20 @@ mod tests {
     #[test]
     fn error_in_channels_not_div_groups() {
         let c = cfg(3, 2, 1, 1, PaddingMode::Zero(0), 1, 2, false);
-        assert!(
-            conv1d_cpu(&[1.0, 2.0, 3.0], &[1.0], None, &c).is_err()
-        );
+        assert!(conv1d_cpu(&[1.0, 2.0, 3.0], &[1.0], None, &c).is_err());
     }
 
     #[test]
     fn error_weight_mismatch() {
         let c = cfg(1, 1, 2, 1, PaddingMode::Zero(0), 1, 1, false);
-        assert!(conv1d_cpu(
-            &[1.0, 2.0, 3.0],
-            &[1.0, 2.0, 3.0],
-            None,
-            &c,
-        )
-        .is_err());
+        assert!(conv1d_cpu(&[1.0, 2.0, 3.0], &[1.0, 2.0, 3.0], None, &c,).is_err());
     }
 
     #[test]
     fn error_bias_mismatch() {
         let c = cfg(1, 2, 1, 1, PaddingMode::Zero(0), 1, 1, true);
         let bad_bias = vec![1.0];
-        assert!(
-            conv1d_cpu(&[1.0], &[1.0, 2.0], Some(&bad_bias), &c)
-                .is_err()
-        );
+        assert!(conv1d_cpu(&[1.0], &[1.0, 2.0], Some(&bad_bias), &c).is_err());
     }
 
     #[test]
@@ -578,13 +529,8 @@ mod tests {
         let out_fwd = conv1d_forward(&input, &weight, None, &c).unwrap();
         let out_cpu = conv1d_cpu(&input, &weight, None, &c).unwrap();
 
-        for (i, (&f, &c)) in
-            out_fwd.iter().zip(out_cpu.iter()).enumerate()
-        {
-            assert!(
-                (f - c).abs() < TOL,
-                "mismatch at {i}: fwd={f}, cpu={c}"
-            );
+        for (i, (&f, &c)) in out_fwd.iter().zip(out_cpu.iter()).enumerate() {
+            assert!((f - c).abs() < TOL, "mismatch at {i}: fwd={f}, cpu={c}");
         }
     }
 
