@@ -7,6 +7,10 @@ pub mod fallback;
 pub mod fusion;
 pub mod layer_norm;
 pub mod pooling;
+pub use pooling::{
+    PoolConfig, PoolType, PoolingConfig, PoolingKernel, adaptive_avg_pool_1d, adaptive_avg_pool_2d,
+    global_avg_pool, global_max_pool, pool_1d, pool_2d,
+};
 pub mod quantized_matmul;
 pub mod reduction;
 pub mod rope;
