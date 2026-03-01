@@ -28,6 +28,7 @@ bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
 bitnet-kv-cache-policy-core = { path = "../bitnet-kv-cache-policy-core", version = "0.2.1-dev" }
 bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-inference-metrics-core = { path = "../bitnet-inference-metrics-core", version = "0.2.1-dev" }
 bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
 bitnet-sys = { path = "../bitnet-sys", version = "0.2.1-dev", optional = true }
 anyhow.workspace = true
