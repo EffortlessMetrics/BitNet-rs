@@ -41,6 +41,7 @@ members = [
   "crates/bitnet-server",
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
+  "crates/bitnet-safetensors-ln", # SRP: shared SafeTensors LayerNorm utilities
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",

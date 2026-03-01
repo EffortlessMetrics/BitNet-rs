@@ -1158,6 +1158,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-safetensors-ln"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-validation",
+ "bytemuck",
+ "half",
+ "safetensors 0.6.2",
+]
+
+[[package]]
 name = "bitnet-sampling"
 version = "0.2.1-dev"
 dependencies = [
@@ -1233,7 +1244,7 @@ name = "bitnet-st-tools"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
- "bitnet-validation",
+ "bitnet-safetensors-ln",
  "bytemuck",
  "clap",
  "half",

@@ -1,0 +1,19 @@
+[package]
+name = "bitnet-safetensors-ln"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Shared LayerNorm utilities for SafeTensors inspection and casting"
+
+[dependencies]
+anyhow = "1.0.100"
+bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
+safetensors = "0.6.2"
+half = "2.7.1"
+bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }
+
+[lints]
+workspace = true
