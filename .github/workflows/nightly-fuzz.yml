@@ -58,6 +58,9 @@ jobs:
           - runtime_context_parse_no_panic
           - validation_no_panic
           - vocab_size_extraction
+          - batch_norm_params
+          - prefix_cache_ops
+          - broadcast_shape_fuzz
 
     steps:
       - name: Checkout

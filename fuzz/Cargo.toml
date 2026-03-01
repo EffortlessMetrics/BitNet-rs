@@ -376,3 +376,21 @@ name = "reduction_ops"
 path = "fuzz_targets/reduction_ops.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "batch_norm_params"
+path = "fuzz_targets/batch_norm_params.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "prefix_cache_ops"
+path = "fuzz_targets/prefix_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "broadcast_shape_fuzz"
+path = "fuzz_targets/broadcast_shape_fuzz.rs"
+test = false
+doc = false
