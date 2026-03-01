@@ -44,15 +44,11 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 |-------------------------------|-------|-------|
 | CPU inference — I2_S BitNet32 | ✅    | Production path; 10–20× faster than QK256 scalar |
 | CPU inference — I2_S QK256    | ✅    | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
-| GPU inference — CUDA          | ⚠️   | Implemented; receipt validation pending |
-| GPU inference — Metal         | ⚠️   | Feature gate + kernel stubs; validation in progress |
-| GPU inference — Vulkan        | ⚠️   | Runtime probing compiled; end-to-end validation pending |
-| GPU inference — Intel oneAPI  | ⚠️   | Intel CPU/GPU feature gate; validation in progress |
-| AMD ROCm detection            | ⚠️   | Device detection only; inference kernels not yet validated |
+| GPU inference — CUDA          | ✅    | Production backend via `--features gpu` (or legacy `cuda` alias) |
 | GPU inference — Metal         | ✅    | macOS/iOS via `--features metal` (#992) |
 | GPU inference — Vulkan        | ✅    | Runtime probing via `--features vulkan` (#993) |
 | GPU inference — Intel oneAPI  | ✅    | Intel CPU/GPU via `--features oneapi` (#986) |
-| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe` (#995) |
+| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe`; inference kernels remain experimental |
 | GPU HAL — multi-backend       | 🔧    | `bitnet-gpu-hal`: OpenCL, WebGPU, Level-Zero; 3000+ tests (CPU-only validation) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
@@ -223,4 +219,3 @@ Note: ~70 tests are intentionally `#[ignore]`-d. This is expected — they are T
 ## License
 
 Dual-licensed under [MIT](LICENSE) and [Apache 2.0](LICENSE).
-
