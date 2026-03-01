@@ -113,6 +113,13 @@ jobs:
           - runtime_context_parse_no_panic
           - validation_no_panic
           - vocab_size_extraction
+          # Wave 20: attention, pipeline, KV eviction, sampling, embedding, GGUF
+          - fuzz_attention_mask
+          - fuzz_pipeline_config
+          - fuzz_kv_cache_eviction
+          - fuzz_token_sampling
+          - fuzz_embedding_lookup
+          - fuzz_gguf_header
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
