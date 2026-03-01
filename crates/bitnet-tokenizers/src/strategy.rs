@@ -1341,9 +1341,10 @@ mod tests {
     }
 
     /// Test fallback chain exhaustion scenarios
-    #[tokio::test]
+    #[test]
     #[cfg(feature = "cpu")]
-    async fn test_fallback_chain_exhaustion() {
+    #[serial_test::serial(bitnet_env)]
+    fn test_fallback_chain_exhaustion() {
         // Test fallback chain when all strategies fail
         let _fallback_chain = TokenizerFallbackChain::new();
 
@@ -1355,17 +1356,15 @@ mod tests {
         };
 
         // Test strict mode fallback behavior
-        unsafe {
-            std::env::set_var("BITNET_STRICT_TOKENIZERS", "1");
-        }
-        let strict_chain = TokenizerFallbackChain::new();
-        assert!(strict_chain.strict_mode, "Should be in strict mode");
+        temp_env::with_var("BITNET_STRICT_TOKENIZERS", Some("1"), || {
+            let strict_chain = TokenizerFallbackChain::new();
+            assert!(strict_chain.strict_mode, "Should be in strict mode");
+        });
 
-        unsafe {
-            std::env::remove_var("BITNET_STRICT_TOKENIZERS");
-        }
-        let normal_chain = TokenizerFallbackChain::new();
-        assert!(!normal_chain.strict_mode, "Should not be in strict mode");
+        temp_env::with_var("BITNET_STRICT_TOKENIZERS", None::<&str>, || {
+            let normal_chain = TokenizerFallbackChain::new();
+            assert!(!normal_chain.strict_mode, "Should not be in strict mode");
+        });
 
         // Test individual fallback strategies
         let strategy_behaviors = [
