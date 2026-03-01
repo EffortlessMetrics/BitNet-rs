@@ -9,8 +9,8 @@
 //! - Device enum: construction, is_cpu, is_cuda, Debug
 
 use bitnet_common::{
-    BitNetError, Device, InferenceError, KernelError, ModelError, QuantizationError,
-    SecurityError, SecurityLimits, ValidationErrorDetails,
+    BitNetError, Device, InferenceError, KernelError, ModelError, QuantizationError, SecurityError,
+    SecurityLimits, ValidationErrorDetails,
 };
 
 // ---------------------------------------------------------------------------
@@ -26,8 +26,7 @@ fn bitnet_error_model_variant() {
 
 #[test]
 fn bitnet_error_quantization_variant() {
-    let err =
-        BitNetError::Quantization(QuantizationError::UnsupportedType { qtype: "Q99".into() });
+    let err = BitNetError::Quantization(QuantizationError::UnsupportedType { qtype: "Q99".into() });
     let msg = format!("{}", err);
     assert!(msg.contains("Q99") || msg.contains("unsupported") || msg.contains("Quantization"));
 }
@@ -45,9 +44,8 @@ fn bitnet_error_kernel_variant() {
 
 #[test]
 fn bitnet_error_inference_variant() {
-    let err = BitNetError::Inference(InferenceError::InvalidInput {
-        reason: "bad prompt".to_string(),
-    });
+    let err =
+        BitNetError::Inference(InferenceError::InvalidInput { reason: "bad prompt".to_string() });
     let msg = format!("{}", err);
     assert!(
         msg.contains("bad prompt") || msg.contains("Invalid") || msg.contains("input"),
@@ -88,11 +86,7 @@ fn bitnet_error_io_variant() {
 fn bitnet_error_config_variant() {
     let err = BitNetError::Config("bad config value".to_string());
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("bad config value") || msg.contains("Config"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("bad config value") || msg.contains("Config"), "unexpected: {}", msg);
 }
 
 #[test]
@@ -110,11 +104,7 @@ fn bitnet_error_validation_variant() {
 fn bitnet_error_strict_mode_variant() {
     let err = BitNetError::StrictMode("mock path not allowed".to_string());
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("mock path") || msg.contains("Strict"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("mock path") || msg.contains("Strict"), "unexpected: {}", msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,22 +115,14 @@ fn bitnet_error_strict_mode_variant() {
 fn model_error_loading_failed() {
     let err = ModelError::LoadingFailed { reason: "corrupt header".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("corrupt header") || msg.contains("loading"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("corrupt header") || msg.contains("loading"), "unexpected: {}", msg);
 }
 
 #[test]
 fn model_error_invalid_format() {
     let err = ModelError::InvalidFormat { format: "not GGUF".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("not GGUF") || msg.contains("format"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("not GGUF") || msg.contains("format"), "unexpected: {}", msg);
 }
 
 #[test]
@@ -158,33 +140,21 @@ fn model_error_unsupported_version() {
 fn kernel_error_execution_failed() {
     let err = KernelError::ExecutionFailed { reason: "CUDA OOM".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("CUDA OOM") || msg.contains("execution"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("CUDA OOM") || msg.contains("execution"), "unexpected: {}", msg);
 }
 
 #[test]
 fn kernel_error_matmul_failed() {
     let err = KernelError::MatmulFailed { reason: "dimension mismatch".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("dimension") || msg.contains("matmul"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("dimension") || msg.contains("matmul"), "unexpected: {}", msg);
 }
 
 #[test]
 fn kernel_error_gpu_error() {
     let err = KernelError::GpuError { reason: "out of memory".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("out of memory") || msg.contains("GPU"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("out of memory") || msg.contains("GPU"), "unexpected: {}", msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,33 +165,21 @@ fn kernel_error_gpu_error() {
 fn inference_error_generation_failed() {
     let err = InferenceError::GenerationFailed { reason: "max tokens exceeded".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("max tokens") || msg.contains("generation"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("max tokens") || msg.contains("generation"), "unexpected: {}", msg);
 }
 
 #[test]
 fn inference_error_context_length_exceeded() {
     let err = InferenceError::ContextLengthExceeded { length: 32768 };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("32768") || msg.contains("context"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("32768") || msg.contains("context"), "unexpected: {}", msg);
 }
 
 #[test]
 fn inference_error_tokenization_failed() {
     let err = InferenceError::TokenizationFailed { reason: "unknown token".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("unknown token") || msg.contains("tokenization"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("unknown token") || msg.contains("tokenization"), "unexpected: {}", msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -232,11 +190,7 @@ fn inference_error_tokenization_failed() {
 fn security_error_input_validation() {
     let err = SecurityError::InputValidation { reason: "injection attempt".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("injection") || msg.contains("validation"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("injection") || msg.contains("validation"), "unexpected: {}", msg);
 }
 
 #[test]
@@ -269,11 +223,7 @@ fn security_error_memory_bomb() {
 fn security_error_malformed_data() {
     let err = SecurityError::MalformedData { reason: "invalid UTF-8 in header".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("invalid UTF-8") || msg.contains("malformed"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("invalid UTF-8") || msg.contains("malformed"), "unexpected: {}", msg);
 }
 
 #[test]
@@ -360,11 +310,8 @@ fn from_security_error_to_bitnet_error() {
 
 #[test]
 fn validation_error_details_empty() {
-    let details = ValidationErrorDetails {
-        errors: vec![],
-        warnings: vec![],
-        recommendations: vec![],
-    };
+    let details =
+        ValidationErrorDetails { errors: vec![], warnings: vec![], recommendations: vec![] };
     assert!(details.errors.is_empty());
     assert!(details.warnings.is_empty());
     assert!(details.recommendations.is_empty());
@@ -561,9 +508,5 @@ fn quantization_error_invalid_block_size() {
 fn quantization_error_resource_limit() {
     let err = QuantizationError::ResourceLimit { reason: "out of memory".to_string() };
     let msg = format!("{}", err);
-    assert!(
-        msg.contains("out of memory") || msg.contains("resource"),
-        "unexpected: {}",
-        msg
-    );
+    assert!(msg.contains("out of memory") || msg.contains("resource"), "unexpected: {}", msg);
 }
