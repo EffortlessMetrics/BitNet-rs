@@ -97,21 +97,15 @@ impl SafeTensorsReader {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file) }?;
 
-        let shard_name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("model.safetensors")
-            .to_string();
+        let shard_name =
+            path.file_name().and_then(|n| n.to_str()).unwrap_or("model.safetensors").to_string();
 
         let tensor_metadata = Self::extract_metadata_from_bytes(&mmap, &shard_name)?;
 
         let mut shards = HashMap::new();
         shards.insert(shard_name, mmap);
 
-        Ok(Self {
-            tensor_metadata,
-            shards,
-        })
+        Ok(Self { tensor_metadata, shards })
     }
 
     /// Open a sharded SafeTensors model from its index file.
@@ -174,10 +168,7 @@ impl SafeTensorsReader {
             );
         }
 
-        Ok(Self {
-            tensor_metadata,
-            shards,
-        })
+        Ok(Self { tensor_metadata, shards })
     }
 
     /// List all tensor names in the model, sorted alphabetically.
@@ -218,9 +209,7 @@ impl SafeTensorsReader {
         let st = SafeTensors::deserialize(mmap)
             .map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
 
-        let view = st
-            .tensor(name)
-            .map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
+        let view = st.tensor(name).map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
 
         let data = view.data();
 
@@ -253,14 +242,12 @@ impl SafeTensorsReader {
         data: &[u8],
         shard_name: &str,
     ) -> Result<HashMap<String, TensorMeta>> {
-        let st =
-            SafeTensors::deserialize(data).map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
+        let st = SafeTensors::deserialize(data)
+            .map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
 
         let mut metadata = HashMap::new();
         for name in st.names() {
-            let view = st
-                .tensor(name)
-                .map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
+            let view = st.tensor(name).map_err(|e| SafeTensorsReaderError::Parse(e.to_string()))?;
             metadata.insert(
                 name.to_string(),
                 TensorMeta {
@@ -286,9 +273,7 @@ fn read_f32_le(data: &[u8]) -> Vec<f32> {
 /// Read little-endian u16 values from a byte slice, handling potential
 /// alignment issues with memory-mapped data.
 fn read_u16_le(data: &[u8]) -> Vec<u16> {
-    data.chunks_exact(2)
-        .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
-        .collect()
+    data.chunks_exact(2).map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]])).collect()
 }
 
 /// Deserialized shard index (`model.safetensors.index.json`).
@@ -305,9 +290,7 @@ mod tests {
     use tempfile::{NamedTempFile, TempDir};
 
     /// Helper: serialize tensors to a safetensors byte vector.
-    fn make_safetensors(
-        tensors: Vec<(&str, SafeDtype, Vec<usize>, &[u8])>,
-    ) -> Vec<u8> {
+    fn make_safetensors(tensors: Vec<(&str, SafeDtype, Vec<usize>, &[u8])>) -> Vec<u8> {
         let views: Vec<(String, TensorView)> = tensors
             .into_iter()
             .map(|(name, dtype, shape, data)| {
@@ -345,13 +328,10 @@ mod tests {
     #[test]
     fn bf16_to_f32_conversion() {
         let f32_values: Vec<f32> = vec![1.0, -2.5, 0.0, 42.0];
-        let bf16_bytes: Vec<u8> = f32_values
-            .iter()
-            .flat_map(|&f| half::bf16::from_f32(f).to_le_bytes())
-            .collect();
+        let bf16_bytes: Vec<u8> =
+            f32_values.iter().flat_map(|&f| half::bf16::from_f32(f).to_le_bytes()).collect();
 
-        let data =
-            make_safetensors(vec![("bias", SafeDtype::BF16, vec![4], &bf16_bytes)]);
+        let data = make_safetensors(vec![("bias", SafeDtype::BF16, vec![4], &bf16_bytes)]);
 
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(&data).unwrap();
@@ -372,10 +352,8 @@ mod tests {
     #[test]
     fn f16_to_f32_conversion() {
         let f32_values: Vec<f32> = vec![0.5, -1.0, 3.14, 0.0];
-        let f16_bytes: Vec<u8> = f32_values
-            .iter()
-            .flat_map(|&f| half::f16::from_f32(f).to_le_bytes())
-            .collect();
+        let f16_bytes: Vec<u8> =
+            f32_values.iter().flat_map(|&f| half::f16::from_f32(f).to_le_bytes()).collect();
 
         let data = make_safetensors(vec![("proj", SafeDtype::F16, vec![2, 2], &f16_bytes)]);
 
@@ -401,14 +379,12 @@ mod tests {
         // Shard 1: embedding
         let embed_vals: Vec<f32> = vec![0.1, 0.2, 0.3, 0.4];
         let embed_bytes: Vec<u8> = embed_vals.iter().flat_map(|f| f.to_le_bytes()).collect();
-        let shard1 =
-            make_safetensors(vec![("embed", SafeDtype::F32, vec![2, 2], &embed_bytes)]);
+        let shard1 = make_safetensors(vec![("embed", SafeDtype::F32, vec![2, 2], &embed_bytes)]);
 
         // Shard 2: projection
         let proj_vals: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let proj_bytes: Vec<u8> = proj_vals.iter().flat_map(|f| f.to_le_bytes()).collect();
-        let shard2 =
-            make_safetensors(vec![("proj", SafeDtype::F32, vec![3, 2], &proj_bytes)]);
+        let shard2 = make_safetensors(vec![("proj", SafeDtype::F32, vec![3, 2], &proj_bytes)]);
 
         std::fs::write(dir.path().join("shard-00001.safetensors"), &shard1).unwrap();
         std::fs::write(dir.path().join("shard-00002.safetensors"), &shard2).unwrap();
@@ -439,12 +415,8 @@ mod tests {
 
     #[test]
     fn error_missing_tensor() {
-        let data = make_safetensors(vec![(
-            "existing",
-            SafeDtype::F32,
-            vec![1],
-            &1.0f32.to_le_bytes(),
-        )]);
+        let data =
+            make_safetensors(vec![("existing", SafeDtype::F32, vec![1], &1.0f32.to_le_bytes())]);
 
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(&data).unwrap();
@@ -465,12 +437,8 @@ mod tests {
     #[test]
     fn error_unsupported_dtype() {
         // I64 is not supported for F32 conversion
-        let i64_bytes: Vec<u8> = vec![1i64, 2i64]
-            .iter()
-            .flat_map(|i| i.to_le_bytes())
-            .collect();
-        let data =
-            make_safetensors(vec![("ids", SafeDtype::I64, vec![2], &i64_bytes)]);
+        let i64_bytes: Vec<u8> = vec![1i64, 2i64].iter().flat_map(|i| i.to_le_bytes()).collect();
+        let data = make_safetensors(vec![("ids", SafeDtype::I64, vec![2], &i64_bytes)]);
 
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(&data).unwrap();
@@ -512,10 +480,7 @@ mod tests {
     #[test]
     fn multiple_tensors_single_file() {
         let w1: Vec<u8> = vec![1.0f32, 2.0].iter().flat_map(|f| f.to_le_bytes()).collect();
-        let w2: Vec<u8> = vec![3.0f32, 4.0, 5.0]
-            .iter()
-            .flat_map(|f| f.to_le_bytes())
-            .collect();
+        let w2: Vec<u8> = vec![3.0f32, 4.0, 5.0].iter().flat_map(|f| f.to_le_bytes()).collect();
 
         let data = make_safetensors(vec![
             ("layer.0.weight", SafeDtype::F32, vec![2], &w1),
@@ -529,9 +494,6 @@ mod tests {
         let reader = SafeTensorsReader::from_file(file.path()).unwrap();
         assert_eq!(reader.tensor_count(), 2);
         assert_eq!(reader.load_tensor("layer.0.weight").unwrap(), vec![1.0, 2.0]);
-        assert_eq!(
-            reader.load_tensor("layer.1.weight").unwrap(),
-            vec![3.0, 4.0, 5.0]
-        );
+        assert_eq!(reader.load_tensor("layer.1.weight").unwrap(), vec![3.0, 4.0, 5.0]);
     }
 }

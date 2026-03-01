@@ -1419,3 +1419,125 @@ mod tests {
         assert!(config.elementwise_affine);
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+    use std::hash::{DefaultHasher, Hash, Hasher};
+
+    fn deterministic_vec(n: usize, seed: u64) -> Vec<f32> {
+        let mut h = DefaultHasher::new();
+        seed.hash(&mut h);
+        let hash = h.finish();
+        (0..n)
+            .map(|i| {
+                let bits = hash.wrapping_mul(i as u64 + 1);
+                (bits % 2000) as f32 / 100.0 - 10.0
+            })
+            .collect()
+    }
+
+    proptest! {
+        #[test]
+        fn layer_norm_output_near_zero_mean(n in 4usize..64, seed in 0u64..1000) {
+            let input = deterministic_vec(n, seed);
+            let gamma = vec![1.0f32; n];
+            let beta = vec![0.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+
+            let mean: f64 =
+                output.iter().map(|&x| x as f64).sum::<f64>() / n as f64;
+            prop_assert!(
+                mean.abs() < 1e-4,
+                "layer_norm output mean = {mean}, expected ~0"
+            );
+        }
+
+        #[test]
+        fn layer_norm_output_near_unit_variance(
+            n in 4usize..64,
+            seed in 0u64..1000,
+        ) {
+            let input = deterministic_vec(n, seed);
+            let gamma = vec![1.0f32; n];
+            let beta = vec![0.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+
+            let mean: f64 =
+                output.iter().map(|&x| x as f64).sum::<f64>() / n as f64;
+            let var: f64 = output
+                .iter()
+                .map(|&x| {
+                    let d = x as f64 - mean;
+                    d * d
+                })
+                .sum::<f64>()
+                / n as f64;
+            prop_assert!(
+                (var - 1.0).abs() < 0.05,
+                "layer_norm variance = {var}, expected ~1.0"
+            );
+        }
+
+        #[test]
+        fn layer_norm_preserves_length(n in 1usize..128) {
+            let input = vec![1.0f32; n];
+            let gamma = vec![1.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output = layer_norm(&input, &gamma, None, &config).unwrap();
+            prop_assert_eq!(output.len(), n);
+        }
+
+        #[test]
+        fn rms_norm_preserves_length(n in 1usize..128) {
+            let input = vec![1.0f32; n];
+            let gamma = vec![1.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output = rms_norm(&input, &gamma, &config).unwrap();
+            prop_assert_eq!(output.len(), n);
+        }
+
+        #[test]
+        fn layer_norm_constant_input_yields_zero(
+            n in 2usize..64,
+            c in -100.0f32..100.0,
+        ) {
+            let input = vec![c; n];
+            let gamma = vec![1.0f32; n];
+            let beta = vec![0.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output =
+                layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+
+            for (i, &y) in output.iter().enumerate() {
+                prop_assert!(
+                    y.abs() < 0.01,
+                    "layer_norm constant input: output[{i}] = {y}, expected ~0"
+                );
+            }
+        }
+
+        #[test]
+        fn rms_norm_positive_scale_keeps_sign(
+            n in 2usize..64,
+            seed in 0u64..1000,
+        ) {
+            let input = deterministic_vec(n, seed);
+            let gamma = vec![1.0f32; n];
+            let config = LayerNormConfig::new(vec![n]);
+            let output = rms_norm(&input, &gamma, &config).unwrap();
+
+            for (i, (&x, &y)) in input.iter().zip(output.iter()).enumerate() {
+                if x.abs() > 1e-6 {
+                    prop_assert!(
+                        x.signum() == y.signum(),
+                        "rms_norm sign mismatch at {i}: input={x}, output={y}"
+                    );
+                }
+            }
+        }
+    }
+}
