@@ -46,9 +46,10 @@ pub use gguf_loader::{GgufTokKind, RustTokenizer};
 // BasicTokenizer is defined below in this module
 
 // New tokenizer discovery and strategy exports
+pub use bitnet_tokenizer_model_core::ModelTypeDetector;
 pub use discovery::{TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy};
 pub use download::{DownloadProgress, SmartTokenizerDownload};
-pub use error_handling::{CacheManager, ModelTypeDetector, TokenizerErrorHandler};
+pub use error_handling::{CacheManager, TokenizerErrorHandler};
 pub use fallback::TokenizerFallbackChain;
 pub use strategy::{
     BitNetTokenizerWrapper, Gpt2TokenizerWrapper, LlamaTokenizerWrapper, TokenizerStrategyResolver,

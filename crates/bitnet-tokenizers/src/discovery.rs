@@ -4,8 +4,8 @@
 //! Supports GGUF metadata parsing, smart downloading, and device-aware tokenization for production-scale models.
 
 use crate::{
-    Tokenizer,
-    error_handling::{CacheManager, ModelTypeDetector, TokenizerErrorHandler},
+    ModelTypeDetector, Tokenizer,
+    error_handling::{CacheManager, TokenizerErrorHandler},
 };
 use bitnet_common::{BitNetError, Result};
 use bitnet_models::GgufReader;
@@ -1200,7 +1200,7 @@ mod tests {
     use super::{ModelCompatibilityMatrix, TokenizerDiscovery};
     #[cfg(any(feature = "cpu", feature = "gpu"))]
     #[allow(unused_imports)]
-    use crate::error_handling::ModelTypeDetector;
+    use crate::ModelTypeDetector;
     #[cfg(feature = "cpu")]
     use crate::{BitNetError, CacheManager, TokenizerDownloadInfo, TokenizerStrategy};
     #[cfg(feature = "cpu")]

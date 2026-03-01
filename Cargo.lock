@@ -1585,6 +1585,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-tokenizer-model-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+]
+
+[[package]]
 name = "bitnet-tokenizers"
 version = "0.2.1-dev"
 dependencies = [
@@ -1597,6 +1604,7 @@ dependencies = [
  "bitnet-test-fixtures-core",
  "bitnet-test-support",
  "bitnet-tests",
+ "bitnet-tokenizer-model-core",
  "dirs",
  "futures-util",
  "insta",
