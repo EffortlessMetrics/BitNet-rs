@@ -94,7 +94,6 @@ pub mod compatibility_checker;
 pub mod e2e_integration;
 pub mod model_validator;
 pub mod test_harness;
-pub mod speculative;
 pub mod token_streaming;
 use std::fmt;
 

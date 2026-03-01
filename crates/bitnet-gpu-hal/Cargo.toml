@@ -12,6 +12,7 @@ description = "GPU hardware abstraction layer for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
+tokio = { workspace = true }
 log.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
