@@ -32,10 +32,10 @@ jobs:
           echo "OpenCL headers installed successfully"
 
       - name: Build with opencl feature
-        run: cargo check --no-default-features --features cpu -p bitnet-kernels -p bitnet-common
+        run: cargo check --locked --no-default-features --features cpu -p bitnet-kernels -p bitnet-common
 
       - name: Run CPU tests
-        run: cargo test --no-default-features --features cpu -p bitnet-kernels -p bitnet-common -- --test-threads=4
+        run: cargo test --locked --no-default-features --features cpu -p bitnet-kernels -p bitnet-common -- --test-threads=4
         timeout-minutes: 10
 
       - name: Verify OpenCL kernel sources compile (syntax check)
