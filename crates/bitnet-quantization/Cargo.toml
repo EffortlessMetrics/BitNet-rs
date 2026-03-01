@@ -33,6 +33,7 @@ serial_test = "3.1"
 rand.workspace = true
 rand_chacha = "0.9"
 insta = { workspace = true, features = ["json"] }
+serde_json.workspace = true
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
@@ -44,12 +45,9 @@ cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
+opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl"]
 inference = []
 
 [[bench]]
 name = "quantization"
-harness = false
-
-[[bench]]
-name = "i2s_dequant"
 harness = false

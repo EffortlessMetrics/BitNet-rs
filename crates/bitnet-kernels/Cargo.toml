@@ -29,6 +29,7 @@ opencl3 = { version = "0.9", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
 half = { version = "2.7.1", optional = true }
+libm = "0.2.16"
 sysinfo = "0.37.2"
 memory-stats = "1.2.0"
 
@@ -77,7 +78,9 @@ hip = ["rocm"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
 vulkan = ["bitnet-device-probe/vulkan"]
 oneapi = ["dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
+opencl = ["dep:opencl3", "bitnet-common/opencl", "bitnet-device-probe/opencl"]
 ffi = ["dep:cc", "dep:bindgen"]
+metal = []
 inference = []
 strict = []  # Strict mode for mock elimination validation
 
@@ -89,60 +92,7 @@ harness = false
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
 
-[[test]]
-name = "comprehensive_tests"
-path = "tests/comprehensive_tests.rs"
-
-[[test]]
-name = "comprehensive_unit_tests"
-path = "tests/comprehensive_unit_tests.rs"
-
-[[test]]
-name = "comprehensive_kernel_unit_tests"
-path = "tests/comprehensive_kernel_unit_tests.rs"
-
-[[test]]
-name = "kernel_bdd_tests"
-path = "tests/kernel_bdd_tests.rs"
-
-[[test]]
-name = "gpu_integration"
-path = "tests/gpu_integration.rs"
-required-features = ["gpu"]
-
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
-
-[[example]]
-name = "simple_gpu_test"
-path = "examples/simple_gpu_test.rs"
-required-features = ["gpu"]
-
-[[example]]
-name = "cuda_smoke"
-path = "examples/cuda_smoke.rs"
-required-features = ["gpu"]
-
-[[test]]
-name = "gpu_quantization"
-path = "tests/gpu_quantization.rs"
-required-features = ["gpu"]
-
-[[test]]
-name = "opencl_stub_tests"
-path = "tests/opencl_stub_tests.rs"
-required-features = ["oneapi"]
-
-[[test]]
-name = "opencl_kernel_correctness"
-path = "tests/opencl_kernel_correctness.rs"
-
-[[test]]
-name = "opencl_property_tests"
-path = "tests/opencl_property_tests.rs"
-
-[[test]]
-name = "opencl_bdd_tests"
-path = "tests/opencl_bdd_tests.rs"

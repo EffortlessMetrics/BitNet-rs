@@ -1,0 +1,73 @@
+#version 450
+// Tiled matrix multiplication compute shader
+// C = A * B where A is [M, K], B is [K, N], C is [M, N]
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    uint M; // rows of A / C
+    uint N; // cols of B / C
+    uint K; // cols of A / rows of B
+} params;
+
+layout(set = 0, binding = 0) readonly buffer InputA {
+    float data[];
+} a;
+
+layout(set = 0, binding = 1) readonly buffer InputB {
+    float data[];
+} b;
+
+layout(set = 0, binding = 2) writeonly buffer Output {
+    float data[];
+} c;
+
+const uint TILE_SIZE = 16;
+
+shared float tileA[TILE_SIZE][TILE_SIZE];
+shared float tileB[TILE_SIZE][TILE_SIZE];
+
+void main() {
+    uint row = gl_GlobalInvocationID.y;
+    uint col = gl_GlobalInvocationID.x;
+
+    uint localRow = gl_LocalInvocationID.y;
+    uint localCol = gl_LocalInvocationID.x;
+
+    float acc = 0.0;
+
+    uint numTiles = (params.K + TILE_SIZE - 1) / TILE_SIZE;
+
+    for (uint t = 0; t < numTiles; t++) {
+        // Load tile of A into shared memory
+        uint aCol = t * TILE_SIZE + localCol;
+        if (row < params.M && aCol < params.K) {
+            tileA[localRow][localCol] = a.data[row * params.K + aCol];
+        } else {
+            tileA[localRow][localCol] = 0.0;
+        }
+
+        // Load tile of B into shared memory
+        uint bRow = t * TILE_SIZE + localRow;
+        if (bRow < params.K && col < params.N) {
+            tileB[localRow][localCol] = b.data[bRow * params.N + col];
+        } else {
+            tileB[localRow][localCol] = 0.0;
+        }
+
+        barrier();
+        memoryBarrierShared();
+
+        // Accumulate dot product for this tile
+        for (uint k = 0; k < TILE_SIZE; k++) {
+            acc += tileA[localRow][k] * tileB[k][localCol];
+        }
+
+        barrier();
+    }
+
+    // Write result
+    if (row < params.M && col < params.N) {
+        c.data[row * params.N + col] = acc;
+    }
+}

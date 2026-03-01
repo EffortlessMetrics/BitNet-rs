@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: fmt6(&output)
+---
+50.000000, 20.000000, 30.000000, 60.000000
