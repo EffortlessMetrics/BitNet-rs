@@ -282,6 +282,16 @@ async fn test_security_header_content_security_policy() {
     assert!(csp.contains("default-src 'self'"), "CSP must include default-src 'self'; got: {csp}");
 }
 
+#[tokio::test]
+async fn test_security_header_strict_transport_security() {
+    let headers = get_security_headers().await;
+    assert_eq!(
+        headers.get("strict-transport-security").unwrap(),
+        "max-age=31536000; includeSubDomains",
+        "Strict-Transport-Security must be 'max-age=31536000; includeSubDomains'"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Request validation tests
 // ─────────────────────────────────────────────────────────────────────────────

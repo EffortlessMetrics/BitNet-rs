@@ -439,6 +439,10 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
         "Content-Security-Policy",
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'".parse().unwrap(),
     );
+    headers.insert(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains".parse().unwrap(),
+    );
 
     response
 }
