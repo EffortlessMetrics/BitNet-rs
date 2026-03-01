@@ -3,6 +3,7 @@
 pub mod embedding;
 pub mod fallback;
 pub mod fusion;
+pub mod pooling;
 pub mod quantized_matmul;
 pub mod simd_math;
 
