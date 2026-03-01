@@ -249,8 +249,8 @@ impl WorkSizeOptimizer {
         let local_x = self.config.simd_width;
         // Budget for Y×Z combined must not exceed max_work_group_size / local_x.
         let yz_budget = (self.config.max_work_group_size / local_x).max(1);
-        let local_y = yz_budget.min(rows).max(1);
-        let local_z = (yz_budget / local_y).min(batch).max(1);
+        let local_y = yz_budget.clamp(1, rows);
+        let local_z = (yz_budget / local_y).clamp(1, batch);
 
         let global_x = round_up(cols, local_x);
         let global_y = round_up(rows, local_y);
@@ -335,7 +335,7 @@ impl WorkSizeOptimizer {
         let efficiency =
             useful as f64 / (total_items.max(1) * ((cols + local - 1) / local).max(1)) as f64;
         // Clamp to (0, 1].
-        let efficiency = efficiency.min(1.0).max(f64::MIN_POSITIVE);
+        let efficiency = efficiency.clamp(f64::MIN_POSITIVE, 1.0);
 
         WorkSizeResult {
             global_work_size: vec![global_x, global_y],
