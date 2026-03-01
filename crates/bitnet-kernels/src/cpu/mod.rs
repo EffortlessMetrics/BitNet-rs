@@ -41,6 +41,9 @@ pub mod x86;
 pub mod arm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_elementwise;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
 
 pub use activations::ActivationType;
