@@ -813,6 +813,7 @@ dependencies = [
  "bitnet-generation",
  "bitnet-gguf",
  "bitnet-kernels",
+ "bitnet-kv-cache-policy-core",
  "bitnet-logits",
  "bitnet-models",
  "bitnet-prompt-templates",
@@ -893,6 +894,14 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "wgpu",
+]
+
+[[package]]
+name = "bitnet-kv-cache-policy-core"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+ "serde",
 ]
 
 [[package]]

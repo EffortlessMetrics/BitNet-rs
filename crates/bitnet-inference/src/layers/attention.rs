@@ -5,6 +5,7 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetTensor, Device, Tensor};
+use bitnet_kv_cache_policy_core::{KvCacheUpdateAction, decide_update_action};
 use bitnet_rope::build_tables as build_rope_tables;
 use candle_core::DType;
 use std::collections::HashMap;
@@ -63,11 +64,19 @@ impl KVCache {
             return Err(anyhow::anyhow!("Layer index {} out of bounds", layer_idx));
         }
 
-        // For now, simple implementation - in production this would be more sophisticated
-        self.k_cache[layer_idx] = k;
-        self.v_cache[layer_idx] = v;
-        self.current_len = seq_len;
+        match decide_update_action(self.current_len, seq_len) {
+            KvCacheUpdateAction::Initialize { .. }
+            | KvCacheUpdateAction::ReplaceSameLen { .. }
+            | KvCacheUpdateAction::Append { .. }
+            | KvCacheUpdateAction::Truncate { .. } => {
+                // Storage remains pre-allocated; tensors are replaced while update-policy
+                // decisions are delegated to the dedicated SRP microcrate.
+                self.k_cache[layer_idx] = k;
+                self.v_cache[layer_idx] = v;
+            }
+        }
 
+        self.current_len = seq_len;
         Ok(())
     }
 

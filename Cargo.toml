@@ -36,6 +36,7 @@ members = [
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-generation-events-core", # SRP: reusable generation stream event/stat contracts
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
+  "crates/bitnet-kv-cache-policy-core", # SRP: KV-cache sequence transition decision policy
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
@@ -146,6 +147,7 @@ default-members = [
   "crates/bitnet-generation",
   "crates/bitnet-generation-events-core",
   "crates/bitnet-generation-stop-core",
+  "crates/bitnet-kv-cache-policy-core",
   "crates/bitnet-engine-core",
   "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
