@@ -498,6 +498,12 @@ pub struct AuthMiddleware {
     enabled: bool,
 }
 
+impl Default for AuthMiddleware {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AuthMiddleware {
     /// Create an enabled middleware with no keys.
     pub fn new() -> Self {
@@ -657,16 +663,16 @@ impl RequestValidator {
             }
         }
 
-        if let Some(t) = req.temperature {
-            if !(0.0..=2.0).contains(&t) {
-                errors.push(format!("temperature {t} out of range [0.0, 2.0]"));
-            }
+        if let Some(t) = req.temperature
+            && !(0.0..=2.0).contains(&t)
+        {
+            errors.push(format!("temperature {t} out of range [0.0, 2.0]"));
         }
 
-        if let Some(p) = req.top_p {
-            if !(0.0..=1.0).contains(&p) {
-                errors.push(format!("top_p {p} out of range [0.0, 1.0]"));
-            }
+        if let Some(p) = req.top_p
+            && !(0.0..=1.0).contains(&p)
+        {
+            errors.push(format!("top_p {p} out of range [0.0, 1.0]"));
         }
 
         if !(-2.0..=2.0).contains(&req.presence_penalty) {

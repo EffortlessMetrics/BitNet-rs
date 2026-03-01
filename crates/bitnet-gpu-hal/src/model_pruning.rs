@@ -279,7 +279,7 @@ impl PruneMaskManager {
     }
 
     /// Merge another mask set (intersection — keep only if both keep).
-    pub fn intersect(&mut self, other: &PruneMaskManager) {
+    pub fn intersect(&mut self, other: &Self) {
         for (name, other_mask) in &other.masks {
             if let Some(self_mask) = self.masks.get_mut(name) {
                 for (s, &o) in self_mask.iter_mut().zip(other_mask.iter()) {

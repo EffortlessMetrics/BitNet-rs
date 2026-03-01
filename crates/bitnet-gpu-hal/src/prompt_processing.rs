@@ -138,7 +138,9 @@ impl PromptTemplate {
                 _ => format!("{content}\n\n"),
             },
             Self::Raw => content.to_string(),
-            Self::Custom { turn_template, separator: _, assistant_prefix: _ } => {
+            Self::Custom { turn_template, separator: _, assistant_prefix: _ } =>
+            {
+                #[allow(clippy::literal_string_with_formatting_args)]
                 turn_template.replace("{role}", role).replace("{content}", content)
             }
         }
@@ -337,17 +339,11 @@ impl ConversationMessage {
 }
 
 /// Manages multi-turn conversation history with context-window awareness.
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct ConversationHistory {
     messages: Vec<ConversationMessage>,
     /// Maximum number of messages to retain (0 = unlimited).
     max_turns: usize,
-}
-
-impl Default for ConversationHistory {
-    fn default() -> Self {
-        Self { messages: Vec::new(), max_turns: 0 }
-    }
 }
 
 impl ConversationHistory {

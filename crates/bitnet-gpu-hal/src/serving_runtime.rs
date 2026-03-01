@@ -1296,15 +1296,15 @@ impl ServingRuntime {
         if !self.limiter.try_acquire() {
             return None;
         }
-        let request = match self.queue.dequeue() {
-            Some(r) => r,
-            None => {
-                self.limiter.release();
-                return None;
-            }
+        let Some(request) = self.queue.dequeue() else {
+            self.limiter.release();
+            return None;
         };
-        let result =
-            self.handler.as_mut().map(|h| h.handle(&request)).unwrap_or(Err("no handler".into()));
+        let result = self
+            .handler
+            .as_mut()
+            .map(|h| h.handle(&request))
+            .unwrap_or_else(|| Err("no handler".into()));
 
         self.limiter.release();
         self.total_processed += 1;

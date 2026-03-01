@@ -542,7 +542,7 @@ impl TensorSerializer {
             dtype,
             offset: 0, // set by the caller / engine
             size_bytes: compressed.len() as u64,
-            checksum: checksum.clone(),
+            checksum,
         };
 
         let meta_bytes = serde_json::to_vec(&meta)?;
@@ -621,7 +621,7 @@ impl TensorDeserializer {
         let actual_checksum = self.checksum_validator.compute(&raw);
         if meta.checksum != actual_checksum {
             return Err(SerializationError::ChecksumMismatch {
-                expected: meta.checksum.clone(),
+                expected: meta.checksum,
                 actual: actual_checksum,
             });
         }

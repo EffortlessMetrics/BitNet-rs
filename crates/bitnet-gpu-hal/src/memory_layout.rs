@@ -335,7 +335,7 @@ impl TensorView {
 
     /// Slice along the outermost dimension, returning a view of one
     /// "row" (or batch entry, etc.).
-    pub fn slice_outer(&self, index: usize) -> LayoutResult<TensorView> {
+    pub fn slice_outer(&self, index: usize) -> LayoutResult<Self> {
         if self.layout.shape.is_empty() {
             return Err(LayoutError::InvalidLayout("cannot slice 0-d tensor".into()));
         }
@@ -356,7 +356,7 @@ impl TensorView {
             contiguous: self.layout.contiguous,
             config: self.layout.config.clone(),
         };
-        TensorView::new(inner, new_offset, self.buffer_size)
+        Self::new(inner, new_offset, self.buffer_size)
     }
 
     /// Shape of the viewed tensor.
