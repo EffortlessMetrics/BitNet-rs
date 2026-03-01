@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave5.rs
+expression: summary
+---
+Device Capabilities:
+  Compiled: CPU ✓
+  Runtime: CPU ✓

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave5.rs
+expression: "format!(\"max_new_tokens={} temperature={} top_k={} top_p={} \\\n         repetition_penalty={} skip_special_tokens={} add_bos={}\",\ncfg.max_new_tokens, cfg.temperature, cfg.top_k, cfg.top_p,\ncfg.repetition_penalty, cfg.skip_special_tokens, cfg.add_bos,)"
+---
+max_new_tokens=100 temperature=0.7 top_k=50 top_p=0.9 repetition_penalty=1 skip_special_tokens=true add_bos=false
