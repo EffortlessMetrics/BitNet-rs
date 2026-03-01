@@ -200,10 +200,7 @@ fn rmsnorm_batch_dimension() {
     let row1 = cpu_rmsnorm(&input[4..8], &weight, eps);
     for i in 0..hidden_dim {
         assert!((result[i] - row0[i]).abs() < 1e-6, "batch row 0 mismatch at {i}");
-        assert!(
-            (result[hidden_dim + i] - row1[i]).abs() < 1e-6,
-            "batch row 1 mismatch at {i}"
-        );
+        assert!((result[hidden_dim + i] - row1[i]).abs() < 1e-6, "batch row 1 mismatch at {i}");
     }
 }
 
@@ -253,11 +250,7 @@ fn layernorm_known_values() {
         "layernorm[-1,1][0] should be ~-1.0, got {}",
         result[0]
     );
-    assert!(
-        (result[1] - 1.0).abs() < 1e-3,
-        "layernorm[-1,1][1] should be ~1.0, got {}",
-        result[1]
-    );
+    assert!((result[1] - 1.0).abs() < 1e-3, "layernorm[-1,1][1] should be ~1.0, got {}", result[1]);
 }
 
 #[test]
@@ -274,10 +267,7 @@ fn layernorm_batch_dimension() {
     let row1 = cpu_layernorm(&input[4..8], &gamma, &beta, eps);
     for i in 0..hidden_dim {
         assert!((result[i] - row0[i]).abs() < 1e-6, "batch row 0 mismatch at {i}");
-        assert!(
-            (result[hidden_dim + i] - row1[i]).abs() < 1e-6,
-            "batch row 1 mismatch at {i}"
-        );
+        assert!((result[hidden_dim + i] - row1[i]).abs() < 1e-6, "batch row 1 mismatch at {i}");
     }
 }
 
@@ -293,10 +283,7 @@ fn layernorm_with_gamma_beta() {
     // With gamma=2, beta=1: output = 2*(normalized) + 1
     // Mean of result should be ~1.0 (mean of 2*0 + 1)
     let mean: f32 = result.iter().sum::<f32>() / result.len() as f32;
-    assert!(
-        (mean - 1.0).abs() < 1e-4,
-        "layernorm with beta=1 should have mean ~1.0, got {mean}"
-    );
+    assert!((mean - 1.0).abs() < 1e-4, "layernorm with beta=1 should have mean ~1.0, got {mean}");
 }
 
 // === Numerical Stability Tests ===
@@ -438,10 +425,7 @@ fn layernorm_large_hidden_dim() {
     let result = cpu_layernorm(&input, &gamma, &beta, eps);
     assert_eq!(result.len(), hidden_dim);
     let mean: f32 = result.iter().sum::<f32>() / hidden_dim as f32;
-    assert!(
-        mean.abs() < 1e-4,
-        "layernorm dim=4096 output mean should be ~0, got {mean}"
-    );
+    assert!(mean.abs() < 1e-4, "layernorm dim=4096 output mean should be ~0, got {mean}");
 }
 
 // === Property Tests ===
@@ -454,8 +438,7 @@ fn property_rmsnorm_output_scale_similar_to_input() {
     let eps = 1e-5;
 
     let result = cpu_rmsnorm(&input, &weight, eps);
-    let output_rms: f32 =
-        (result.iter().map(|x| x * x).sum::<f32>() / result.len() as f32).sqrt();
+    let output_rms: f32 = (result.iter().map(|x| x * x).sum::<f32>() / result.len() as f32).sqrt();
     assert!(
         (output_rms - 1.0).abs() < 0.1,
         "rmsnorm with unit weights should have output RMS ~1.0, got {output_rms}"
@@ -476,10 +459,7 @@ fn property_layernorm_output_zero_mean_unit_variance() {
     assert!(mean.abs() < 1e-5, "layernorm output mean should be ~0, got {mean}");
 
     let var: f32 = result.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n;
-    assert!(
-        (var - 1.0).abs() < 0.01,
-        "layernorm output variance should be ~1.0, got {var}"
-    );
+    assert!((var - 1.0).abs() < 0.01, "layernorm output variance should be ~1.0, got {var}");
 }
 
 #[test]
@@ -517,10 +497,7 @@ fn normalization_kernel_source_has_balanced_braces() {
     let src = kernels::NORMALIZATION_SRC;
     let opens = src.chars().filter(|&c| c == '{').count();
     let closes = src.chars().filter(|&c| c == '}').count();
-    assert_eq!(
-        opens, closes,
-        "normalization.cl has unbalanced braces: {opens} {{ vs {closes} }}"
-    );
+    assert_eq!(opens, closes, "normalization.cl has unbalanced braces: {opens} {{ vs {closes} }}");
 }
 
 #[test]
@@ -528,8 +505,5 @@ fn normalization_kernel_source_has_balanced_parens() {
     let src = kernels::NORMALIZATION_SRC;
     let opens = src.chars().filter(|&c| c == '(').count();
     let closes = src.chars().filter(|&c| c == ')').count();
-    assert_eq!(
-        opens, closes,
-        "normalization.cl has unbalanced parens: {opens} ( vs {closes} )"
-    );
+    assert_eq!(opens, closes, "normalization.cl has unbalanced parens: {opens} ( vs {closes} )");
 }

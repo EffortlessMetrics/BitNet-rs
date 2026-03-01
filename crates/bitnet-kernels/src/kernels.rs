@@ -106,20 +106,6 @@ __kernel void quantize_i2s(
 }
 "#;
 
-/// OpenCL kernel source for RMSNorm and LayerNorm normalization.
-///
-/// Two kernels optimized for Intel Arc A770 (Xe-HPG) with tree reductions:
-/// - `rmsnorm`: RMSNorm(x) = x * rsqrt(mean(x²) + eps) * weight
-/// - `layernorm`: LayerNorm(x) = (x - mean) / sqrt(var + eps) * gamma + beta
-pub const NORMALIZATION_SRC: &str = include_str!("gpu/kernels/normalization.cl");
-
-/// OpenCL kernel source for tiled GEMM and quantized GEMV optimized for Intel Arc A770 Xe-HPG.
-///
-/// Two kernels:
-/// - `tiled_matmul_f32`: 16x16 tiled GEMM using shared local memory
-/// - `quantized_gemv_i2s`: I2_S 2-bit packed weight GEMV with per-row scales
-pub const TILED_MATMUL_SRC: &str = include_str!("gpu/kernels/tiled_matmul.cl");
-
 /// OpenCL kernel sources for elementwise operations (vec_add, silu, rms_norm, softmax).
 pub const ELEMENTWISE_SRC: &str = r#"
 __kernel void vec_add(
