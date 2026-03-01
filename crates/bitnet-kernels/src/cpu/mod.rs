@@ -7,6 +7,7 @@ pub mod fusion;
 pub mod layer_norm;
 pub mod pooling;
 pub mod quantized_matmul;
+pub mod reduction;
 pub mod rope;
 pub mod simd_math;
 
