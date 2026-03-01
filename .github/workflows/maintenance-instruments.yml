@@ -1,0 +1,92 @@
+name: Maintenance Instruments
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'docs/api/rust/**'
+      - 'scripts/generate_maintenance_artifacts.py'
+      - '.github/workflows/maintenance-instruments.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'docs/api/rust/**'
+      - 'scripts/generate_maintenance_artifacts.py'
+      - '.github/workflows/maintenance-instruments.yml'
+  schedule:
+    - cron: '30 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-maintenance-artifacts:
+    name: Dependency + API + Churn + Invariants
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: '1.92.0'
+
+      - name: Generate maintenance artifacts
+        run: python3 scripts/generate_maintenance_artifacts.py
+
+      - name: Upload maintenance artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: maintenance-artifacts
+          path: |
+            docs/status/dependency-graph.md
+            docs/status/dependency-graph.mmd
+            docs/status/public-api-summary.md
+            docs/status/churn.md
+            docs/status/invariants.md
+
+  sbom-and-policy:
+    name: SBOM + dependency/license policy
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: '1.92.0'
+
+      - name: Install supply-chain tools
+        run: |
+          cargo install --locked cargo-cyclonedx --version 0.5.7
+          cargo install --locked cargo-deny --version 0.18.4
+          cargo install --locked cargo-audit --version 0.22.0
+
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          mkdir -p docs/status
+          cargo cyclonedx --format json --output-file docs/status/sbom.cyclonedx.json
+
+      - name: Enforce dependency + license policy
+        run: |
+          cargo deny check advisories licenses bans sources
+          cargo audit
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sbom-cyclonedx
+          path: docs/status/sbom.cyclonedx.json
