@@ -46,18 +46,11 @@ impl fmt::Display for RoPECacheError {
             Self::InvalidConfig(msg) => {
                 write!(f, "invalid RoPE config: {msg}")
             }
-            Self::PositionOutOfRange {
-                requested,
-                max_cached,
-            } => write!(
-                f,
-                "position {requested} out of range (max cached: {max_cached})"
-            ),
+            Self::PositionOutOfRange { requested, max_cached } => {
+                write!(f, "position {requested} out of range (max cached: {max_cached})")
+            }
             Self::DimensionMismatch { expected, actual } => {
-                write!(
-                    f,
-                    "dimension mismatch: expected {expected}, got {actual}"
-                )
+                write!(f, "dimension mismatch: expected {expected}, got {actual}")
             }
         }
     }
@@ -79,12 +72,7 @@ pub enum RoPEScaling {
     /// NTK-aware scaling for extended context windows.
     NTK(f32),
     /// YaRN: Yet another RoPE extensioN method.
-    YaRN {
-        factor: f32,
-        max_position: usize,
-        beta_fast: f32,
-        beta_slow: f32,
-    },
+    YaRN { factor: f32, max_position: usize, beta_fast: f32, beta_slow: f32 },
 }
 
 /// Configuration for RoPE frequency computation.
@@ -110,9 +98,7 @@ impl RoPEConfig {
             )));
         }
         if self.max_position == 0 {
-            return Err(RoPECacheError::InvalidConfig(
-                "max_position must be > 0".into(),
-            ));
+            return Err(RoPECacheError::InvalidConfig("max_position must be > 0".into()));
         }
         if self.base_freq <= 0.0 {
             return Err(RoPECacheError::InvalidConfig(format!(
@@ -126,12 +112,7 @@ impl RoPEConfig {
 
 impl Default for RoPEConfig {
     fn default() -> Self {
-        Self {
-            head_dim: 64,
-            max_position: 2048,
-            base_freq: 10_000.0,
-            rope_scaling: None,
-        }
+        Self { head_dim: 64, max_position: 2048, base_freq: 10_000.0, rope_scaling: None }
     }
 }
 
@@ -172,19 +153,13 @@ pub fn compute_inv_freq(head_dim: usize, base: f32) -> Vec<f32> {
 
 /// Pre-compute cos/sin frequency tables for all positions up to
 /// `config.max_position`.
-pub fn compute_freq_table(
-    config: &RoPEConfig,
-) -> Result<FreqCache, RoPECacheError> {
+pub fn compute_freq_table(config: &RoPEConfig) -> Result<FreqCache, RoPECacheError> {
     config.validate()?;
     let inv_freq = match &config.rope_scaling {
         Some(_) => return cpu_rope_with_scaling(config),
         None => compute_inv_freq(config.head_dim, config.base_freq),
     };
-    Ok(build_cache_from_inv_freq(
-        &inv_freq,
-        config.max_position,
-        config.clone(),
-    ))
+    Ok(build_cache_from_inv_freq(&inv_freq, config.max_position, config.clone()))
 }
 
 /// Build a `FreqCache` from an inverse-frequency vector.
@@ -206,12 +181,7 @@ fn build_cache_from_inv_freq(
         }
     }
 
-    FreqCache {
-        cos_cache,
-        sin_cache,
-        max_cached_position: max_position,
-        config,
-    }
+    FreqCache { cos_cache, sin_cache, max_cached_position: max_position, config }
 }
 
 /// Extend an existing cache to cover positions up to `new_max_position`.
@@ -226,19 +196,13 @@ pub fn extend_freq_cache(
     }
     let inv_freq = match &cache.config.rope_scaling {
         Some(scaling) => {
-            let base = compute_inv_freq(
-                cache.config.head_dim,
-                cache.config.base_freq,
-            );
+            let base = compute_inv_freq(cache.config.head_dim, cache.config.base_freq);
             apply_scaling(&base, scaling)
         }
-        None => {
-            compute_inv_freq(cache.config.head_dim, cache.config.base_freq)
-        }
+        None => compute_inv_freq(cache.config.head_dim, cache.config.base_freq),
     };
     let half = inv_freq.len();
-    let additional =
-        (new_max_position - cache.max_cached_position) * half;
+    let additional = (new_max_position - cache.max_cached_position) * half;
     cache.cos_cache.reserve(additional);
     cache.sin_cache.reserve(additional);
 
@@ -288,18 +252,8 @@ pub fn cpu_apply_rope(
                     actual: q.len().min(k.len()),
                 });
             }
-            cpu_apply_rope_single(
-                &mut q[offset..offset + head_dim],
-                cos,
-                sin,
-                head_dim,
-            );
-            cpu_apply_rope_single(
-                &mut k[offset..offset + head_dim],
-                cos,
-                sin,
-                head_dim,
-            );
+            cpu_apply_rope_single(&mut q[offset..offset + head_dim], cos, sin, head_dim);
+            cpu_apply_rope_single(&mut k[offset..offset + head_dim], cos, sin, head_dim);
         }
     }
     Ok(())
@@ -312,12 +266,7 @@ pub fn cpu_apply_rope(
 /// x'[i]        = x[i] * cos[i] - x[i + half] * sin[i]
 /// x'[i + half] = x[i] * sin[i] + x[i + half] * cos[i]
 /// ```
-pub fn cpu_apply_rope_single(
-    vec: &mut [f32],
-    cos: &[f32],
-    sin: &[f32],
-    head_dim: usize,
-) {
+pub fn cpu_apply_rope_single(vec: &mut [f32], cos: &[f32], sin: &[f32], head_dim: usize) {
     let half = head_dim / 2;
     for i in 0..half {
         let x0 = vec[i];
@@ -328,37 +277,23 @@ pub fn cpu_apply_rope_single(
 }
 
 /// Compute frequencies with the configured scaling applied.
-pub fn cpu_rope_with_scaling(
-    config: &RoPEConfig,
-) -> Result<FreqCache, RoPECacheError> {
+pub fn cpu_rope_with_scaling(config: &RoPEConfig) -> Result<FreqCache, RoPECacheError> {
     config.validate()?;
     let base_inv = compute_inv_freq(config.head_dim, config.base_freq);
     let inv_freq = match &config.rope_scaling {
         Some(scaling) => apply_scaling(&base_inv, scaling),
         None => base_inv,
     };
-    Ok(build_cache_from_inv_freq(
-        &inv_freq,
-        config.max_position,
-        config.clone(),
-    ))
+    Ok(build_cache_from_inv_freq(&inv_freq, config.max_position, config.clone()))
 }
 
 /// Apply scaling to an inverse-frequency vector.
 fn apply_scaling(inv_freq: &[f32], scaling: &RoPEScaling) -> Vec<f32> {
     match scaling {
-        RoPEScaling::Linear(factor) => {
-            inv_freq.iter().map(|&f| f / factor).collect()
-        }
-        RoPEScaling::Dynamic(factor) => {
-            inv_freq.iter().map(|&f| f / factor).collect()
-        }
-        RoPEScaling::NTK(factor) => {
-            cpu_ntk_aware_scaling(inv_freq, *factor)
-        }
-        yarn @ RoPEScaling::YaRN { .. } => {
-            cpu_yarn_scaling(inv_freq, yarn)
-        }
+        RoPEScaling::Linear(factor) => inv_freq.iter().map(|&f| f / factor).collect(),
+        RoPEScaling::Dynamic(factor) => inv_freq.iter().map(|&f| f / factor).collect(),
+        RoPEScaling::NTK(factor) => cpu_ntk_aware_scaling(inv_freq, *factor),
+        yarn @ RoPEScaling::YaRN { .. } => cpu_yarn_scaling(inv_freq, yarn),
     }
 }
 
@@ -366,10 +301,7 @@ fn apply_scaling(inv_freq: &[f32], scaling: &RoPEScaling) -> Vec<f32> {
 /// components are preserved while high-frequency ones are compressed.
 ///
 /// `scaled_base = base * (factor ^ (d / (d - 2)))` then recompute.
-pub fn cpu_ntk_aware_scaling(
-    inv_freq: &[f32],
-    scaling_factor: f32,
-) -> Vec<f32> {
+pub fn cpu_ntk_aware_scaling(inv_freq: &[f32], scaling_factor: f32) -> Vec<f32> {
     let d = (inv_freq.len() * 2) as f32;
     let base_scale = scaling_factor.powf(d / (d - 2.0));
     inv_freq.iter().map(|&f| f / base_scale).collect()
@@ -379,17 +311,11 @@ pub fn cpu_ntk_aware_scaling(
 ///
 /// Frequencies below `beta_slow` are kept unchanged; above `beta_fast`
 /// are linearly scaled; in between a smooth ramp blends the two.
-pub fn cpu_yarn_scaling(
-    inv_freq: &[f32],
-    config: &RoPEScaling,
-) -> Vec<f32> {
+pub fn cpu_yarn_scaling(inv_freq: &[f32], config: &RoPEScaling) -> Vec<f32> {
     let (factor, _max_pos, beta_fast, beta_slow) = match config {
-        RoPEScaling::YaRN {
-            factor,
-            max_position,
-            beta_fast,
-            beta_slow,
-        } => (*factor, *max_position, *beta_fast, *beta_slow),
+        RoPEScaling::YaRN { factor, max_position, beta_fast, beta_slow } => {
+            (*factor, *max_position, *beta_fast, *beta_slow)
+        }
         _ => return inv_freq.to_vec(),
     };
 
@@ -451,18 +377,8 @@ pub fn cpu_incremental_rope(
                 actual: q.len().min(k.len()),
             });
         }
-        cpu_apply_rope_single(
-            &mut q[offset..offset + head_dim],
-            cos,
-            sin,
-            head_dim,
-        );
-        cpu_apply_rope_single(
-            &mut k[offset..offset + head_dim],
-            cos,
-            sin,
-            head_dim,
-        );
+        cpu_apply_rope_single(&mut q[offset..offset + head_dim], cos, sin, head_dim);
+        cpu_apply_rope_single(&mut k[offset..offset + head_dim], cos, sin, head_dim);
     }
     Ok(())
 }
@@ -592,12 +508,7 @@ mod tests {
     use super::*;
 
     fn default_config(head_dim: usize, max_pos: usize) -> RoPEConfig {
-        RoPEConfig {
-            head_dim,
-            max_position: max_pos,
-            base_freq: 10_000.0,
-            rope_scaling: None,
-        }
+        RoPEConfig { head_dim, max_position: max_pos, base_freq: 10_000.0, rope_scaling: None }
     }
 
     // -- Inverse frequency tests ------------------------------------------
@@ -670,11 +581,7 @@ mod tests {
         let cache = compute_freq_table(&cfg).unwrap();
         let half = cfg.head_dim / 2;
         for i in 0..half {
-            assert!(
-                cache.sin_cache[i].abs() < 1e-6,
-                "sin[0][{i}] = {} != 0.0",
-                cache.sin_cache[i]
-            );
+            assert!(cache.sin_cache[i].abs() < 1e-6, "sin[0][{i}] = {} != 0.0", cache.sin_cache[i]);
         }
     }
 
@@ -692,14 +599,9 @@ mod tests {
     fn freq_cache_cos2_sin2_identity() {
         let cfg = default_config(64, 128);
         let cache = compute_freq_table(&cfg).unwrap();
-        for (c, s) in
-            cache.cos_cache.iter().zip(cache.sin_cache.iter())
-        {
+        for (c, s) in cache.cos_cache.iter().zip(cache.sin_cache.iter()) {
             let sum = c * c + s * s;
-            assert!(
-                (sum - 1.0).abs() < 1e-5,
-                "cos²+sin² = {sum} at some entry"
-            );
+            assert!((sum - 1.0).abs() < 1e-5, "cos²+sin² = {sum} at some entry");
         }
     }
 
@@ -723,10 +625,7 @@ mod tests {
             }
             let c1 = cache.cos_cache[p * half + 1];
             let c2 = cache.cos_cache[p2 * half + 1];
-            assert!(
-                (c1 - c2).abs() < 0.05,
-                "cos periodicity failed at {p}: {c1} vs {c2}"
-            );
+            assert!((c1 - c2).abs() < 0.05, "cos periodicity failed at {p}: {c1} vs {c2}");
         }
     }
 
@@ -741,14 +640,8 @@ mod tests {
         let mut k = original.clone();
         cpu_apply_rope(&mut q, &mut k, &cache, &[0], 1, 4).unwrap();
         for i in 0..4 {
-            assert!(
-                (q[i] - original[i]).abs() < 1e-5,
-                "q[{i}] changed at pos 0"
-            );
-            assert!(
-                (k[i] - original[i]).abs() < 1e-5,
-                "k[{i}] changed at pos 0"
-            );
+            assert!((q[i] - original[i]).abs() < 1e-5, "q[{i}] changed at pos 0");
+            assert!((k[i] - original[i]).abs() < 1e-5, "k[{i}] changed at pos 0");
         }
     }
 
@@ -764,13 +657,9 @@ mod tests {
         // Negate sin to reverse rotation
         let half = 2;
         let pos = 5;
-        let cos =
-            cache.cos_cache[pos * half..(pos + 1) * half].to_vec();
-        let neg_sin: Vec<f32> = cache.sin_cache
-            [pos * half..(pos + 1) * half]
-            .iter()
-            .map(|s| -s)
-            .collect();
+        let cos = cache.cos_cache[pos * half..(pos + 1) * half].to_vec();
+        let neg_sin: Vec<f32> =
+            cache.sin_cache[pos * half..(pos + 1) * half].iter().map(|s| -s).collect();
         cpu_apply_rope_single(&mut q, &cos, &neg_sin, 4);
         cpu_apply_rope_single(&mut k, &cos, &neg_sin, 4);
         for i in 0..4 {
@@ -788,13 +677,11 @@ mod tests {
         let cfg = default_config(8, 32);
         let cache = compute_freq_table(&cfg).unwrap();
         let original = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let norm_before: f32 =
-            original.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_before: f32 = original.iter().map(|x| x * x).sum::<f32>().sqrt();
         let mut q = original.clone();
         let mut k = original;
         cpu_apply_rope(&mut q, &mut k, &cache, &[7], 1, 8).unwrap();
-        let norm_after: f32 =
-            q.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_after: f32 = q.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(
             (norm_before - norm_after).abs() < 1e-4,
             "norm changed: {norm_before} -> {norm_after}"
@@ -810,12 +697,7 @@ mod tests {
         let mut k = data;
         cpu_apply_rope(&mut q, &mut k, &cache, &[3], 1, 8).unwrap();
         for i in 0..8 {
-            assert!(
-                (q[i] - k[i]).abs() < 1e-6,
-                "q[{i}]={} != k[{i}]={}",
-                q[i],
-                k[i]
-            );
+            assert!((q[i] - k[i]).abs() < 1e-6, "q[{i}]={} != k[{i}]={}", q[i], k[i]);
         }
     }
 
@@ -826,8 +708,7 @@ mod tests {
         let cache = compute_freq_table(&cfg).unwrap();
         let a_orig = vec![1.0, 0.0, 1.0, 0.0];
         let b_orig = vec![0.0, 1.0, 0.0, 1.0];
-        let dot_before: f32 =
-            a_orig.iter().zip(&b_orig).map(|(a, b)| a * b).sum();
+        let dot_before: f32 = a_orig.iter().zip(&b_orig).map(|(a, b)| a * b).sum();
 
         let mut a = a_orig;
         let mut b = b_orig;
@@ -837,8 +718,7 @@ mod tests {
         let sin = &cache.sin_cache[3 * half..4 * half];
         cpu_apply_rope_single(&mut a, cos, sin, 4);
         cpu_apply_rope_single(&mut b, cos, sin, 4);
-        let dot_after: f32 =
-            a.iter().zip(&b).map(|(a, b)| a * b).sum();
+        let dot_after: f32 = a.iter().zip(&b).map(|(a, b)| a * b).sum();
 
         assert!(
             (dot_before - dot_after).abs() < 1e-4,
@@ -857,14 +737,10 @@ mod tests {
         // Two heads: [h0_d0, h0_d1, h0_d2, h0_d3, h1_d0, ...]
         let mut q = vec![1.0; num_heads * head_dim];
         let mut k = vec![1.0; num_heads * head_dim];
-        cpu_apply_rope(&mut q, &mut k, &cache, &[5], num_heads, head_dim)
-            .unwrap();
+        cpu_apply_rope(&mut q, &mut k, &cache, &[5], num_heads, head_dim).unwrap();
         // Both heads should get the same rotation at the same position
         for i in 0..head_dim {
-            assert!(
-                (q[i] - q[head_dim + i]).abs() < 1e-6,
-                "head mismatch at dim {i}"
-            );
+            assert!((q[i] - q[head_dim + i]).abs() < 1e-6, "head mismatch at dim {i}");
         }
     }
 
@@ -877,16 +753,14 @@ mod tests {
         let token_stride = num_heads * hd;
         let mut q = vec![1.0; 2 * token_stride];
         let mut k = vec![1.0; 2 * token_stride];
-        cpu_apply_rope(&mut q, &mut k, &cache, &[0, 3], num_heads, hd)
-            .unwrap();
+        cpu_apply_rope(&mut q, &mut k, &cache, &[0, 3], num_heads, hd).unwrap();
         // Token 0 at pos 0 should be unchanged
         for i in 0..hd {
             assert!((q[i] - 1.0).abs() < 1e-5);
         }
         // Token 1 at pos 3 should differ from 1.0 (except head_dim=4
         // with base 10000, changes are small for dim>0)
-        let changed = (0..hd)
-            .any(|i| (q[token_stride + i] - 1.0).abs() > 1e-6);
+        let changed = (0..hd).any(|i| (q[token_stride + i] - 1.0).abs() > 1e-6);
         assert!(changed, "token at pos 3 should differ from 1.0");
     }
 
@@ -940,39 +814,21 @@ mod tests {
         let num_heads = 2;
         let hd = 8;
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let full: Vec<f32> =
-            data.iter().cycle().take(num_heads * hd).cloned().collect();
+        let full: Vec<f32> = data.iter().cycle().take(num_heads * hd).cloned().collect();
 
         // Batch at position 10
         let mut q_batch = full.clone();
         let mut k_batch = full.clone();
-        cpu_apply_rope(
-            &mut q_batch,
-            &mut k_batch,
-            &cache,
-            &[10],
-            num_heads,
-            hd,
-        )
-        .unwrap();
+        cpu_apply_rope(&mut q_batch, &mut k_batch, &cache, &[10], num_heads, hd).unwrap();
 
         // Incremental at position 10
         let mut q_inc = full.clone();
         let mut k_inc = full;
-        cpu_incremental_rope(
-            &mut q_inc, &mut k_inc, &cache, 10, num_heads, hd,
-        )
-        .unwrap();
+        cpu_incremental_rope(&mut q_inc, &mut k_inc, &cache, 10, num_heads, hd).unwrap();
 
         for i in 0..q_batch.len() {
-            assert!(
-                (q_batch[i] - q_inc[i]).abs() < 1e-6,
-                "mismatch at q[{i}]"
-            );
-            assert!(
-                (k_batch[i] - k_inc[i]).abs() < 1e-6,
-                "mismatch at k[{i}]"
-            );
+            assert!((q_batch[i] - q_inc[i]).abs() < 1e-6, "mismatch at q[{i}]");
+            assert!((k_batch[i] - k_inc[i]).abs() < 1e-6, "mismatch at k[{i}]");
         }
     }
 
@@ -982,12 +838,8 @@ mod tests {
         let cache = compute_freq_table(&cfg).unwrap();
         let mut q = vec![0.0; 4];
         let mut k = vec![0.0; 4];
-        let result =
-            cpu_incremental_rope(&mut q, &mut k, &cache, 100, 1, 4);
-        assert!(matches!(
-            result,
-            Err(RoPECacheError::PositionOutOfRange { .. })
-        ));
+        let result = cpu_incremental_rope(&mut q, &mut k, &cache, 100, 1, 4);
+        assert!(matches!(result, Err(RoPECacheError::PositionOutOfRange { .. })));
     }
 
     // -- Scaling tests ---------------------------------------------------
@@ -997,10 +849,7 @@ mod tests {
         let base = compute_inv_freq(8, 10_000.0);
         let scaled = apply_scaling(&base, &RoPEScaling::Linear(2.0));
         for (b, s) in base.iter().zip(&scaled) {
-            assert!(
-                (s - b / 2.0).abs() < 1e-7,
-                "linear scaling: {s} != {b}/2"
-            );
+            assert!((s - b / 2.0).abs() < 1e-7, "linear scaling: {s} != {b}/2");
         }
     }
 
@@ -1031,10 +880,7 @@ mod tests {
         let base = compute_inv_freq(8, 10_000.0);
         let ntk = cpu_ntk_aware_scaling(&base, 1.0);
         for (b, n) in base.iter().zip(&ntk) {
-            assert!(
-                (b - n).abs() < 1e-6,
-                "factor=1 should not change freqs"
-            );
+            assert!((b - n).abs() < 1e-6, "factor=1 should not change freqs");
         }
     }
 
@@ -1043,20 +889,12 @@ mod tests {
         let base = compute_inv_freq(64, 10_000.0);
         let yarn = cpu_yarn_scaling(
             &base,
-            &RoPEScaling::YaRN {
-                factor: 4.0,
-                max_position: 8192,
-                beta_fast: 32.0,
-                beta_slow: 1.0,
-            },
+            &RoPEScaling::YaRN { factor: 4.0, max_position: 8192, beta_fast: 32.0, beta_slow: 1.0 },
         );
         assert_eq!(yarn.len(), base.len());
         // All frequencies should be ≤ original (scaling divides)
         for (b, y) in base.iter().zip(&yarn) {
-            assert!(
-                *y <= *b + 1e-6,
-                "YaRN freq {y} > base {b}"
-            );
+            assert!(*y <= *b + 1e-6, "YaRN freq {y} > base {b}");
         }
     }
 
@@ -1115,58 +953,29 @@ mod tests {
 
     #[test]
     fn invalid_config_zero_head_dim() {
-        let cfg = RoPEConfig {
-            head_dim: 0,
-            max_position: 8,
-            base_freq: 10_000.0,
-            rope_scaling: None,
-        };
-        assert!(matches!(
-            compute_freq_table(&cfg),
-            Err(RoPECacheError::InvalidConfig(_))
-        ));
+        let cfg =
+            RoPEConfig { head_dim: 0, max_position: 8, base_freq: 10_000.0, rope_scaling: None };
+        assert!(matches!(compute_freq_table(&cfg), Err(RoPECacheError::InvalidConfig(_))));
     }
 
     #[test]
     fn invalid_config_odd_head_dim() {
-        let cfg = RoPEConfig {
-            head_dim: 7,
-            max_position: 8,
-            base_freq: 10_000.0,
-            rope_scaling: None,
-        };
-        assert!(matches!(
-            compute_freq_table(&cfg),
-            Err(RoPECacheError::InvalidConfig(_))
-        ));
+        let cfg =
+            RoPEConfig { head_dim: 7, max_position: 8, base_freq: 10_000.0, rope_scaling: None };
+        assert!(matches!(compute_freq_table(&cfg), Err(RoPECacheError::InvalidConfig(_))));
     }
 
     #[test]
     fn invalid_config_zero_max_position() {
-        let cfg = RoPEConfig {
-            head_dim: 4,
-            max_position: 0,
-            base_freq: 10_000.0,
-            rope_scaling: None,
-        };
-        assert!(matches!(
-            compute_freq_table(&cfg),
-            Err(RoPECacheError::InvalidConfig(_))
-        ));
+        let cfg =
+            RoPEConfig { head_dim: 4, max_position: 0, base_freq: 10_000.0, rope_scaling: None };
+        assert!(matches!(compute_freq_table(&cfg), Err(RoPECacheError::InvalidConfig(_))));
     }
 
     #[test]
     fn invalid_config_negative_base_freq() {
-        let cfg = RoPEConfig {
-            head_dim: 4,
-            max_position: 8,
-            base_freq: -1.0,
-            rope_scaling: None,
-        };
-        assert!(matches!(
-            compute_freq_table(&cfg),
-            Err(RoPECacheError::InvalidConfig(_))
-        ));
+        let cfg = RoPEConfig { head_dim: 4, max_position: 8, base_freq: -1.0, rope_scaling: None };
+        assert!(matches!(compute_freq_table(&cfg), Err(RoPECacheError::InvalidConfig(_))));
     }
 
     #[test]
@@ -1175,12 +984,8 @@ mod tests {
         let cache = compute_freq_table(&cfg).unwrap();
         let mut q = vec![0.0; 4];
         let mut k = vec![0.0; 4];
-        let result =
-            cpu_apply_rope(&mut q, &mut k, &cache, &[10], 1, 4);
-        assert!(matches!(
-            result,
-            Err(RoPECacheError::PositionOutOfRange { .. })
-        ));
+        let result = cpu_apply_rope(&mut q, &mut k, &cache, &[10], 1, 4);
+        assert!(matches!(result, Err(RoPECacheError::PositionOutOfRange { .. })));
     }
 
     #[test]
@@ -1189,12 +994,8 @@ mod tests {
         let cache = compute_freq_table(&cfg).unwrap();
         let mut q = vec![0.0; 2]; // too short
         let mut k = vec![0.0; 2];
-        let result =
-            cpu_apply_rope(&mut q, &mut k, &cache, &[0], 1, 4);
-        assert!(matches!(
-            result,
-            Err(RoPECacheError::DimensionMismatch { .. })
-        ));
+        let result = cpu_apply_rope(&mut q, &mut k, &cache, &[0], 1, 4);
+        assert!(matches!(result, Err(RoPECacheError::DimensionMismatch { .. })));
     }
 
     // -- OpenCL source tests ---------------------------------------------
@@ -1217,8 +1018,7 @@ mod tests {
     #[test]
     fn opencl_source_contains_kernel_keyword() {
         assert!(ROPE_CACHE_SRC.contains("__kernel"));
-        let count =
-            ROPE_CACHE_SRC.matches("__kernel").count();
+        let count = ROPE_CACHE_SRC.matches("__kernel").count();
         assert_eq!(count, 3, "expected 3 kernels, found {count}");
     }
 
@@ -1283,16 +1083,10 @@ mod tests {
         let e1 = RoPECacheError::InvalidConfig("test".into());
         assert!(e1.to_string().contains("test"));
 
-        let e2 = RoPECacheError::PositionOutOfRange {
-            requested: 10,
-            max_cached: 5,
-        };
+        let e2 = RoPECacheError::PositionOutOfRange { requested: 10, max_cached: 5 };
         assert!(e2.to_string().contains("10"));
 
-        let e3 = RoPECacheError::DimensionMismatch {
-            expected: 8,
-            actual: 4,
-        };
+        let e3 = RoPECacheError::DimensionMismatch { expected: 8, actual: 4 };
         assert!(e3.to_string().contains("8"));
     }
 
