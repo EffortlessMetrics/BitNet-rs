@@ -694,6 +694,7 @@ mod env_precedence_tests {
 /// Tests feature spec: rpath_merge_analysis.md#5-platform-specific-considerations
 #[cfg(test)]
 mod platform_specific_tests {
+    #[allow(unused_imports)]
     use super::*;
 
     /// Test Unix colon separator

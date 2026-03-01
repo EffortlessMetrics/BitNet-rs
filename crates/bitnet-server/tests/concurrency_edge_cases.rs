@@ -4,8 +4,7 @@
 
 use bitnet_server::batch_engine::RequestPriority;
 use bitnet_server::concurrency::{
-    CircuitBreakerState, ConcurrencyConfig, ConcurrencyHealth, ConcurrencyManager,
-    ConcurrencyStats, RequestAdmission, RequestMetadata,
+    CircuitBreakerState, ConcurrencyConfig, ConcurrencyManager, RequestAdmission, RequestMetadata,
 };
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
