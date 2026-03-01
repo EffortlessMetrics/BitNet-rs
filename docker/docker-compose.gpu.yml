@@ -63,6 +63,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - RUST_LOG=warn
+      - ONEAPI_DEVICE_SELECTOR=level_zero:gpu
+      - ZE_ENABLE_VALIDATION_LAYER=1
     deploy:
       resources:
         limits:
@@ -70,6 +72,9 @@ services:
           memory: 8G
     devices:
       - /dev/dri:/dev/dri
+    group_add:
+      - render
+      - video
     volumes:
       - cargo-registry:/usr/local/cargo/registry
       - intel-target:/app/target

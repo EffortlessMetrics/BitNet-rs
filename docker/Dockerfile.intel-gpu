@@ -11,17 +11,19 @@
 # ── Stage 1: Builder with Intel compute runtime ──────────────────
 FROM rust:1.92-bookworm AS builder
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Intel compute runtime packages (Level Zero + OpenCL ICD)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake pkg-config libssl-dev ca-certificates \
-    gnupg wget clinfo \
-    && wget -qO- https://repositories.intel.com/gpu/intel-graphics.key \
+    curl gnupg clinfo \
+    && curl -fsSL https://repositories.intel.com/gpu/intel-graphics.key \
        | gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] \
        https://repositories.intel.com/gpu/ubuntu jammy unified" \
        > /etc/apt/sources.list.d/intel-gpu.list \
     && apt-get update && apt-get install -y --no-install-recommends \
-       intel-opencl-icd libze-intel-gpu1 libze1 libze-dev \
+       intel-opencl-icd libze-intel-gpu1 libze1 libze-dev level-zero \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -31,8 +33,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
 
 # Compile check with oneapi feature (validates Intel backend wiring)
-RUN cargo check --workspace --locked --no-default-features --features cpu,oneapi \
-    || echo "oneapi compile check completed (may fail without GPU headers)"
+RUN cargo check --workspace --locked --no-default-features --features cpu,oneapi
 
 # Build CPU-only for test execution (always succeeds)
 RUN cargo build --locked --no-default-features --features cpu
@@ -42,10 +43,9 @@ FROM builder AS test-runner
 
 # Run CPU tests (Intel GPU tests require real hardware)
 RUN cargo test --workspace --locked --no-default-features --features cpu \
-    -- --skip "gpu" --skip "cuda" 2>&1 | tail -30 \
-    || true
+    -- --skip "gpu" --skip "cuda"
 
 # Verify Intel runtime is visible
-RUN clinfo --list 2>&1 | head -5 || echo "No OpenCL devices (expected in CI without GPU)"
+RUN clinfo --list 2>&1 | head -20 || echo "No OpenCL devices (expected in CI without GPU)"
 
 CMD ["cargo", "test", "--workspace", "--locked", "--no-default-features", "--features", "cpu"]
