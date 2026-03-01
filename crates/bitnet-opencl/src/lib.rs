@@ -13,9 +13,9 @@ pub mod backend_dispatcher;
 pub mod backend_registry;
 pub mod context_pool;
 pub mod diagnostics;
-pub mod system_info;
 pub mod kv_cache;
 pub mod paged_attention;
+pub mod system_info;
 
 pub use backend_dispatcher::{
     BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchDecision, DispatchError,
