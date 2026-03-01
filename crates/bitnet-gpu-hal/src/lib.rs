@@ -123,6 +123,7 @@ pub mod model_debugger;
 pub mod compatibility_checker;
 pub mod cross_compile;
 pub mod e2e_integration;
+pub mod kernel_jit;
 pub mod model_validator;
 pub mod test_harness;
 pub mod token_streaming;
