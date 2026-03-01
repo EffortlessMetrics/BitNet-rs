@@ -49,7 +49,8 @@ pub use activations::{
     launch_silu_gate, silu_gate_cpu,
 };
 pub use attention::{
-    AttentionConfig, AttentionKernelConfig, attention_cpu_fallback, attention_forward,
+    AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
+    attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
     launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
 };
 
@@ -122,6 +123,7 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use layernorm::LAYERNORM_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
