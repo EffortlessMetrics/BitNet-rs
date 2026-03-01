@@ -227,11 +227,15 @@ impl NeonKernel {
                 let vals = vld1q_f32(block.as_ptr().add(i));
                 let normalized = vdivq_f32(vals, scale_vec);
 
-                // Find closest values in lookup table for each element
+                // Find closest values in lookup table for each element.
+                // vgetq_lane_f32 requires a compile-time constant lane index,
+                // so we extract all 4 lanes via vst1q_f32 instead.
+                let mut lane_vals = [0.0f32; 4];
+                vst1q_f32(lane_vals.as_mut_ptr(), normalized);
                 let mut quantized = [0u8; 4];
 
                 for j in 0..4 {
-                    let val = vgetq_lane_f32(normalized, j);
+                    let val = lane_vals[j];
                     let mut best_idx = 0;
                     let mut best_dist = (val - lut[0]).abs();
 

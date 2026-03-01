@@ -100,7 +100,7 @@ impl Device {
             #[cfg(all(feature = "metal", target_os = "macos"))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;
-                candle_core::Device::Metal(candle_core::MetalDevice::new()?)
+                candle_core::Device::Metal(candle_core::MetalDevice::new(0)?)
             }
             #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
             Device::Metal => candle_core::Device::Cpu,
@@ -112,13 +112,11 @@ impl Device {
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
         Ok(match *self {
             Device::Cpu => candle_core::Device::Cpu,
-            Device::Hip(_) | Device::Npu => candle_core::Device::Cpu,
             #[cfg(all(feature = "metal", target_os = "macos"))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;
-                candle_core::Device::Metal(candle_core::MetalDevice::new()?)
+                candle_core::Device::Metal(candle_core::MetalDevice::new(0)?)
             }
-            #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
             _ => candle_core::Device::Cpu,
         })
     }
