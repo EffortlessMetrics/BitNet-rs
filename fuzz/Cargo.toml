@@ -461,3 +461,45 @@ name = "fuzz_quantize_dequantize"
 path = "fuzz_targets/fuzz_quantize_dequantize.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_mirostat_sampler"
+path = "fuzz_targets/fuzz_mirostat_sampler.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_sampler_chain"
+path = "fuzz_targets/fuzz_sampler_chain.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_inference_config_validate"
+path = "fuzz_targets/fuzz_inference_config_validate.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_token_buffer"
+path = "fuzz_targets/fuzz_token_buffer.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_paged_kv_cache"
+path = "fuzz_targets/fuzz_paged_kv_cache.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_latency_histogram"
+path = "fuzz_targets/fuzz_latency_histogram.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_template_detect"
+path = "fuzz_targets/fuzz_template_detect.rs"
+test = false
+doc = false
