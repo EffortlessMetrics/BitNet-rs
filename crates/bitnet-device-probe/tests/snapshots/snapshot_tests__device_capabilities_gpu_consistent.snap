@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_tests.rs
+assertion_line: 46
+expression: "format!(\"cuda_compiled={} gpu_feature={}\", caps.cuda_compiled, gpu_feat)"
+---
+cuda_compiled=false gpu_feature=false

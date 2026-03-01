@@ -539,6 +539,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-cpu-probe"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-crossval"
 version = "0.2.1-dev"
 dependencies = [
@@ -576,6 +584,7 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
+ "bitnet-cpu-probe",
  "insta",
  "log",
  "opencl3",

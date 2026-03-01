@@ -23,6 +23,7 @@ members = [
   "crates/bitnet-receipts",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
+  "crates/bitnet-cpu-probe",     # SRP: CPU capability probing (Intel SIMD focused)
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
@@ -108,6 +109,7 @@ default-members = [
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-runtime-profile-core",
   # SRP microcrate extractions (phase-6)
+  "crates/bitnet-cpu-probe",
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",
   "crates/bitnet-generation",

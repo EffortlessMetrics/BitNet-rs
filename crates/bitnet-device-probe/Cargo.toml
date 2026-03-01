@@ -13,6 +13,7 @@ rust-version.workspace = true
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-cpu-probe = { path = "../bitnet-cpu-probe", version = "0.2.1-dev" }
 log.workspace = true
 ash = { version = "0.38.0", optional = true }
 opencl3 = { version = "0.9", optional = true }

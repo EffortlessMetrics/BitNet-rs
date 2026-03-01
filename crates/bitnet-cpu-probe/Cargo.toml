@@ -1,0 +1,24 @@
+[package]
+name = "bitnet-cpu-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "CPU capability probing for BitNet, including Intel SIMD detection"
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+default = []
+
+[lints]
+workspace = true
