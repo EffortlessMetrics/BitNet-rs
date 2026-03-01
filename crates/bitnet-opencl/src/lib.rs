@@ -31,13 +31,8 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! Provides asynchronous kernel execution, event-based synchronization,
+//! and double-buffered compute/transfer overlap for Intel and other
+//! OpenCL-capable GPUs.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod async_exec;
