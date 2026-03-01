@@ -630,6 +630,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-download-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-engine-core"
 version = "0.2.1-dev"
 dependencies = [
@@ -1594,6 +1598,7 @@ dependencies = [
  "anyhow",
  "base64 0.22.1",
  "bitnet-common",
+ "bitnet-download-core",
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-test-fixtures-core",
@@ -9532,7 +9537,7 @@ dependencies = [
  "bitnet-bdd-grid",
  "bitnet-common",
  "bitnet-crossval",
- "bitnet-download",
+ "bitnet-download-core",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",

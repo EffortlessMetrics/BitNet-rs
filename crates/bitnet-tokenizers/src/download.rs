@@ -8,6 +8,7 @@ use crate::{
     error_handling::{CacheManager, TokenizerErrorHandler},
 };
 use bitnet_common::{BitNetError, ModelError, Result};
+use bitnet_download_core::huggingface_resolve_main_url;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
@@ -348,7 +349,7 @@ impl SmartTokenizerDownload {
     /// Get download URL for HuggingFace Hub file
     #[allow(dead_code)]
     fn get_download_url(repo: &str, file: &str) -> String {
-        format!("https://huggingface.co/{}/resolve/main/{}", repo, file)
+        huggingface_resolve_main_url(repo, file)
     }
 
     /// Check if offline mode is enabled

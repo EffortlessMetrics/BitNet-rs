@@ -18,6 +18,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-download-core.workspace = true
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 anyhow.workspace = true
