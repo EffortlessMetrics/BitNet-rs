@@ -1,0 +1,52 @@
+name: Repo Maintenance Instruments
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'scripts/maintenance/generate_repo_instruments.py'
+      - '.github/workflows/repo-maintenance-instruments.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+        with:
+          fetch-depth: 0
+
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: Generate maintenance artifacts
+        run: python3 scripts/maintenance/generate_repo_instruments.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: repo-maintenance-artifacts
+          path: docs/maintenance/
+
+      - name: Commit generated docs (schedule only)
+        if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/maintenance
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(maintenance): refresh repo instruments [skip ci]"
+          git push

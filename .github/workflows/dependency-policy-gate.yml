@@ -1,0 +1,35 @@
+name: Dependency Policy Gate
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'deny.toml'
+      - '.github/workflows/dependency-policy-gate.yml'
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6
+        with:
+          toolchain: '1.92.0'
+
+      - name: Install cargo-deny
+        run: cargo install --locked cargo-deny --version 0.18.5
+
+      - name: Run advisory/license/ban checks
+        run: cargo deny check advisories licenses bans
