@@ -137,6 +137,7 @@ pub mod observability;
 pub mod thread_pool;
 
 // === Distributed ===
+pub mod distributed;
 pub mod distributed_inference;
 pub mod multi_device;
 pub mod parallel_communication;
