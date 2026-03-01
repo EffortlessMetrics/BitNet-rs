@@ -38,6 +38,14 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ### Wave 86: Training Support & Production Infrastructure
 
+### Wave 54: Inference Tracing & Weight Compression
+
+- **Attention mechanism variants** (#1387): 7 attention types (MHA/MQA/GQA/Flash/SlidingWindow/Linear/Sparse), RoPE, ALiBi — 82 tests
+- **Model architecture registry** (#1386): `ArchitectureRegistry` with 7 types, 7 known models, memory/compute estimation — 75 tests
+- **Inference tracing** (#1388): `InferenceTracer` with Chrome trace export, span hierarchy, trace analysis — 62 tests
+- **Weight compression** (#1389): `WeightCompressor` with GPTQ/AWQ/ternary, n-bit pack/unpack, compression analysis — 61 tests
+- **CHANGELOG waves 52-53** (#1383): 10 entries documenting PRs #1367–#1382
+
 - **Gradient checkpoint** (#1586): 89 tests for memory-efficient training with activation checkpointing
 - **Continuous profiling** (#1362): 112 tests for CPU/GPU/latency tracking and production observability
 - **Server protocol** (#1585): 112 tests for OpenAI-compatible API with streaming and tool-use support
