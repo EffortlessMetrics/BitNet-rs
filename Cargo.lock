@@ -646,6 +646,7 @@ dependencies = [
  "bitnet-generation",
  "bitnet-gguf",
  "bitnet-honest-compute",
+ "bitnet-inference",
  "bitnet-kernels",
  "bitnet-logits",
  "bitnet-models",
