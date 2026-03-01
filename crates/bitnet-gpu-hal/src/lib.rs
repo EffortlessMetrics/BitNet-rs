@@ -148,3 +148,7 @@ pub mod generation;
 // GPU hardware abstraction layer for `BitNet` inference.
 // DAG-based execution planner with memory planning, stream scheduling,
 // kernel launch configuration, pipeline parallelism, and cost modeling.
+
+// Provides memory layout computation, stride optimization,
+// tensor views, coalescing, alignment, and pinned memory management.
+pub mod memory_layout;
