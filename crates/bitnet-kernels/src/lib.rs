@@ -28,6 +28,7 @@ pub mod opencl_context;
 pub mod opencl_dispatch;
 pub mod opencl_embedding;
 pub mod opencl_kernel_sources;
+pub mod opencl_kv_cache;
 pub mod opencl_pipeline;
 pub mod opencl_registry;
 pub mod opencl_work_size;
