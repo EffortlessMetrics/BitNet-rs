@@ -47,6 +47,7 @@ members = [
   "crates/bitnet-runtime-bootstrap",
   "crates/bitnet-startup-contract",
   "crates/bitnet-wasm",
+  "crates/bitnet-wasm-utils",
   "crates/bitnet-sys",
   "crates/bitnet-feature-contract",
   "crates/bitnet-runtime-profile",

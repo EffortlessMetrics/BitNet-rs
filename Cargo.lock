@@ -1611,6 +1611,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-tokenizers",
+ "bitnet-wasm-utils",
  "console_error_panic_hook",
  "dlmalloc",
  "futures",
@@ -1626,6 +1627,16 @@ dependencies = [
  "wasm-bindgen-test",
  "wasm-logger",
  "wasm-streams",
+ "web-sys",
+]
+
+[[package]]
+name = "bitnet-wasm-utils"
+version = "0.2.1-dev"
+dependencies = [
+ "thiserror 2.0.18",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
  "web-sys",
 ]
 
