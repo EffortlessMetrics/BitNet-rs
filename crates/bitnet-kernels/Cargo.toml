@@ -91,7 +91,76 @@ harness = false
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
 
+[[test]]
+name = "comprehensive_tests"
+path = "tests/comprehensive_tests.rs"
+
+[[test]]
+name = "comprehensive_unit_tests"
+path = "tests/comprehensive_unit_tests.rs"
+
+[[test]]
+name = "comprehensive_kernel_unit_tests"
+path = "tests/comprehensive_kernel_unit_tests.rs"
+
+[[test]]
+name = "kernel_bdd_tests"
+path = "tests/kernel_bdd_tests.rs"
+
+[[test]]
+name = "gpu_integration"
+path = "tests/gpu_integration.rs"
+required-features = ["gpu"]
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
+
+[[example]]
+name = "simple_gpu_test"
+path = "examples/simple_gpu_test.rs"
+required-features = ["gpu"]
+
+[[example]]
+name = "cuda_smoke"
+path = "examples/cuda_smoke.rs"
+required-features = ["gpu"]
+
+[[test]]
+name = "gpu_quantization"
+path = "tests/gpu_quantization.rs"
+required-features = ["gpu"]
+
+[[test]]
+name = "opencl_stub_tests"
+path = "tests/opencl_stub_tests.rs"
+required-features = ["oneapi"]
+
+[[test]]
+name = "opencl_kernel_correctness"
+path = "tests/opencl_kernel_correctness.rs"
+
+[[test]]
+name = "opencl_property_tests"
+path = "tests/opencl_property_tests.rs"
+
+[[test]]
+name = "opencl_bdd_tests"
+path = "tests/opencl_bdd_tests.rs"
+
+[[test]]
+name = "rope_validation"
+path = "tests/rope_validation.rs"
+
+[[test]]
+name = "snapshot_wave6"
+path = "tests/snapshot_wave6.rs"
+
+[[test]]
+name = "proptest_wave10"
+path = "tests/proptest_wave10.rs"
+
+[[test]]
+name = "integration_wave10"
+path = "tests/integration_wave10.rs"

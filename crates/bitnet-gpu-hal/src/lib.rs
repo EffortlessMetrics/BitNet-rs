@@ -12,7 +12,6 @@ pub mod webgpu_backend;
 // === HAL Core ===
 pub mod async_runtime;
 pub mod backend_selector;
-pub mod batched_tokenization;
 pub mod bench_harness;
 pub mod config_management;
 pub mod deployment_manager;
@@ -65,6 +64,7 @@ pub mod mixed_precision;
 pub mod model_quantizer;
 pub mod quantization_toolkit;
 pub mod weight_compression;
+pub mod structured_output;
 
 // === Optimization ===
 pub mod compute_graph;
@@ -136,6 +136,7 @@ pub mod model_warmup;
 pub mod checkpoint_manager;
 // Provides batched tokenization, parallel encoding/decoding,
 // and hardware abstraction for GPU-accelerated inference pipelines.
+pub mod batched_tokenization;
 pub mod prompt_processing;
 pub mod streaming_aggregator;
 // Parallel communication primitives for distributed GPU inference:
@@ -154,4 +155,6 @@ pub mod generation;
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
 pub mod memory_layout;
-pub mod structured_output;
+// OpenAI-compatible API server with SSE streaming, auth, health checks,
+// and Prometheus metrics for GPU-accelerated inference.
+pub mod api_server;
