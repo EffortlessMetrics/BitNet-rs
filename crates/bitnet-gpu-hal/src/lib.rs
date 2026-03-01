@@ -8,6 +8,9 @@ pub mod opencl_backend;
 pub mod rocm_backend;
 pub mod vulkan_compute;
 pub mod webgpu_backend;
+pub mod quantization_toolkit;
+
+use std::fmt;
 
 // === HAL Core ===
 pub mod async_runtime;
@@ -62,7 +65,6 @@ pub mod sampling_strategies;
 // === Quantization ===
 pub mod mixed_precision;
 pub mod model_quantizer;
-pub mod quantization_toolkit;
 pub mod weight_compression;
 
 // === Optimization ===
