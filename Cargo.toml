@@ -26,6 +26,7 @@ members = [
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
+  "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-feature-matrix",
@@ -111,6 +112,7 @@ default-members = [
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",
   "crates/bitnet-generation",
+  "crates/bitnet-generation-stop-core",
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)

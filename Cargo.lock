@@ -677,11 +677,19 @@ dependencies = [
 name = "bitnet-generation"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-common",
+ "bitnet-generation-stop-core",
  "insta",
  "proptest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-generation-stop-core"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+ "serde",
 ]
 
 [[package]]
