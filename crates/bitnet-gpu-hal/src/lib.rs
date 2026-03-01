@@ -125,6 +125,7 @@ pub mod cross_compile;
 pub mod e2e_integration;
 pub mod model_validator;
 pub mod test_harness;
+pub mod token_streaming;
 
 // === Infrastructure ===
 pub mod arch_registry;
