@@ -31,13 +31,11 @@ pub use spirv::{
     SpirVError, SpirVModule, SpirVValidator,
 };
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
-pub mod model_validator;
-pub mod numerical_validator;
+//! OpenCL graph-based execution engine for BitNet inference.
+//!
+//! Provides a DAG-based computation graph that can be compiled into
+//! an optimized execution plan with barrier elimination and
+//! topological ordering.
 
-pub use model_validator::{
-    GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
-    QuickValidator, TransformerConfig, ValidationFinding, ValidationReport, ValidationSeverity,
-};
-pub use numerical_validator::{
-    ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
-};
+pub mod graph;
+pub use graph::*;

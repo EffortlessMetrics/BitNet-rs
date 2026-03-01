@@ -3,6 +3,7 @@
 
 use bitnet_kernels::KernelProvider;
 use bitnet_kernels::gpu::opencl::OpenClKernel;
+use bitnet_kernels::KernelProvider;
 
 #[test]
 fn opencl_kernel_new_does_not_panic() {
