@@ -1563,6 +1563,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-wgpu-runner"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "pollster",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "wgpu",
+]
+
+[[package]]
 name = "bitnet-wgpu-shaders-i2s"
 version = "0.1.0"
 dependencies = [
