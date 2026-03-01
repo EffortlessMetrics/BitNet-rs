@@ -1,0 +1,95 @@
+# Docker Compose for local GPU backend testing
+#
+# Usage:
+#   docker compose -f docker/docker-compose.gpu.yml up cpu-tests
+#   docker compose -f docker/docker-compose.gpu.yml up nvidia-tests   # requires NVIDIA GPU
+#   docker compose -f docker/docker-compose.gpu.yml up intel-tests    # requires Intel GPU
+#   docker compose -f docker/docker-compose.gpu.yml up matrix-tests   # full feature matrix
+
+services:
+  # ── CPU test suite ───────────────────────────────────────────────
+  cpu-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test-matrix
+      target: test-cpu
+    command: cargo test --workspace --locked --no-default-features --features cpu -- --skip gpu --skip cuda
+    environment:
+      - RUST_BACKTRACE=1
+      - RUST_LOG=warn
+      - RUST_TEST_THREADS=4
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+    volumes:
+      - cargo-registry:/usr/local/cargo/registry
+      - cpu-target:/app/target
+
+  # ── NVIDIA GPU test suite ────────────────────────────────────────
+  nvidia-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nvidia-gpu
+      target: test-runner
+    command: cargo test --workspace --locked --no-default-features --features gpu -- --nocapture
+    environment:
+      - RUST_BACKTRACE=1
+      - RUST_LOG=warn
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - cargo-registry:/usr/local/cargo/registry
+      - gpu-target:/app/target
+      - ${BITNET_MODEL_DIR:-./models}:/models:ro
+
+  # ── Intel GPU test suite ─────────────────────────────────────────
+  intel-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.intel-gpu
+      target: test-runner
+    command: cargo test --workspace --locked --no-default-features --features cpu,oneapi -- --skip cuda
+    environment:
+      - RUST_BACKTRACE=1
+      - RUST_LOG=warn
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - cargo-registry:/usr/local/cargo/registry
+      - intel-target:/app/target
+      - ${BITNET_MODEL_DIR:-./models}:/models:ro
+
+  # ── Full feature matrix ──────────────────────────────────────────
+  matrix-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test-matrix
+      target: test-all
+    command: echo "All feature matrix stages completed during build"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+
+volumes:
+  cargo-registry:
+  cpu-target:
+  gpu-target:
+  intel-target:
