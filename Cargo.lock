@@ -1229,9 +1229,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-test-env"
+version = "0.2.1-dev"
+dependencies = [
+ "serial_test",
+]
+
+[[package]]
 name = "bitnet-test-support"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-test-env",
  "insta",
  "proptest",
  "serial_test",

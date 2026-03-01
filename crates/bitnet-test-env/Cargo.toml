@@ -1,21 +1,15 @@
 [package]
-name = "bitnet-test-support"
+name = "bitnet-test-env"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "Shared test infrastructure for BitNet-rs: EnvGuard/EnvScope, model-path gating, RNG seeds"
+description = "Thread-safe test environment variable isolation primitives for BitNet-rs"
 publish = true
 
 [dependencies]
-bitnet-test-env.workspace = true
 
 [dev-dependencies]
-insta.workspace = true
-proptest.workspace = true
 serial_test.workspace = true
-
-[features]
-default = []

@@ -60,6 +60,7 @@ members = [
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
+  "crates/bitnet-test-env",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
@@ -89,6 +90,7 @@ default-members = [
   "crates/bitnet-rope",
   "crates/bitnet-transformer",
   "crates/bitnet-test-support",
+  "crates/bitnet-test-env",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
   "crates/bitnet-kernels",
@@ -399,6 +401,7 @@ temp-env = "0.3.6"
 tracing-test = "0.2.6"
 rand = "0.9.2"
 bitnet-test-support = { path = "crates/bitnet-test-support", version = "0.2.1-dev" }
+bitnet-test-env = { path = "crates/bitnet-test-env", version = "0.2.1-dev" }
 
 # HTTP client for examples
 reqwest = { version = "0.12.24", features = ["json"] }
