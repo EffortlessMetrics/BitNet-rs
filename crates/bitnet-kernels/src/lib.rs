@@ -17,6 +17,8 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
+#[cfg(feature = "metal")]
+pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_cache;
