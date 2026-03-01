@@ -449,6 +449,240 @@ pub fn cpu_scatter_nd(
     Ok(())
 }
 
+// ── Configuration ──────────────────────────────────────────────────
+
+/// Configuration for scatter/gather operations.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScatterGatherConfig {
+    /// When `true`, return an error on out-of-bounds indices.
+    /// When `false`, out-of-bounds indices are clamped silently.
+    pub bounds_check: bool,
+    /// Reduction mode for scatter operations.
+    pub reduce: ScatterReduce,
+}
+
+impl Default for ScatterGatherConfig {
+    fn default() -> Self {
+        Self { bounds_check: true, reduce: ScatterReduce::Assign }
+    }
+}
+
+impl ScatterGatherConfig {
+    /// Create a config with bounds checking and the given reduction.
+    #[must_use]
+    pub fn with_reduce(reduce: ScatterReduce) -> Self {
+        Self { bounds_check: true, reduce }
+    }
+}
+
+// ── 1-D scatter ────────────────────────────────────────────────────
+
+/// Scatter `values` into `data` at the given `indices`.
+///
+/// `indices` and `values` must have the same length.  Each
+/// `data[indices[i]]` is overwritten with `values[i]` (last write wins
+/// for duplicate indices).
+///
+/// # Errors
+///
+/// Returns an error when `indices` and `values` differ in length, or
+/// an index is out of bounds.
+pub fn scatter_1d(data: &mut [f32], indices: &[usize], values: &[f32]) -> Result<()> {
+    if indices.len() != values.len() {
+        return Err(invalid_args(format!(
+            "scatter_1d: indices len ({}) != values len ({})",
+            indices.len(),
+            values.len()
+        )));
+    }
+    for (i, &idx) in indices.iter().enumerate() {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "scatter_1d: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        data[idx] = values[i];
+    }
+    Ok(())
+}
+
+// ── 1-D gather ─────────────────────────────────────────────────────
+
+/// Gather elements from `data` at the given `indices`, returning a
+/// new vector.
+///
+/// # Errors
+///
+/// Returns an error if any index is out of bounds.
+pub fn gather_1d(data: &[f32], indices: &[usize]) -> Result<Vec<f32>> {
+    let mut out = Vec::with_capacity(indices.len());
+    for &idx in indices {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "gather_1d: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        out.push(data[idx]);
+    }
+    Ok(out)
+}
+
+// ── 2-D scatter (Vec-of-Vec) ───────────────────────────────────────
+
+/// Scatter rows from `values` into `data` at the given row `indices`.
+///
+/// `indices` and `values` must have the same length.  Each row
+/// `data[indices[i]]` is overwritten with `values[i]`.
+///
+/// # Errors
+///
+/// Returns an error when lengths mismatch, an index is out of bounds,
+/// or inner row widths differ.
+pub fn scatter_2d(data: &mut [Vec<f32>], indices: &[usize], values: &[Vec<f32>]) -> Result<()> {
+    if indices.len() != values.len() {
+        return Err(invalid_args(format!(
+            "scatter_2d: indices len ({}) != values len ({})",
+            indices.len(),
+            values.len()
+        )));
+    }
+    for (i, &idx) in indices.iter().enumerate() {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "scatter_2d: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        if data[idx].len() != values[i].len() {
+            return Err(invalid_args(format!(
+                "scatter_2d: row width mismatch at index {idx}: dst {} vs src {}",
+                data[idx].len(),
+                values[i].len()
+            )));
+        }
+        data[idx].copy_from_slice(&values[i]);
+    }
+    Ok(())
+}
+
+// ── 2-D gather (Vec-of-Vec) ───────────────────────────────────────
+
+/// Gather rows from `data` at the given row `indices`, returning
+/// cloned rows.
+///
+/// # Errors
+///
+/// Returns an error if any index is out of bounds.
+pub fn gather_2d(data: &[Vec<f32>], indices: &[usize]) -> Result<Vec<Vec<f32>>> {
+    let mut out = Vec::with_capacity(indices.len());
+    for &idx in indices {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "gather_2d: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        out.push(data[idx].clone());
+    }
+    Ok(out)
+}
+
+// ── scatter_add (1-D convenience) ──────────────────────────────────
+
+/// Scatter with addition: `data[indices[i]] += values[i]`.
+///
+/// Unlike [`scatter_1d`] this accumulates rather than overwrites.
+///
+/// # Errors
+///
+/// Returns an error when lengths mismatch or an index is out of bounds.
+pub fn scatter_add(data: &mut [f32], indices: &[usize], values: &[f32]) -> Result<()> {
+    if indices.len() != values.len() {
+        return Err(invalid_args(format!(
+            "scatter_add: indices len ({}) != values len ({})",
+            indices.len(),
+            values.len()
+        )));
+    }
+    for (i, &idx) in indices.iter().enumerate() {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "scatter_add: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        data[idx] += values[i];
+    }
+    Ok(())
+}
+
+// ── scatter_max (1-D convenience) ──────────────────────────────────
+
+/// Scatter with maximum: `data[indices[i]] = max(data[indices[i]], values[i])`.
+///
+/// # Errors
+///
+/// Returns an error when lengths mismatch or an index is out of bounds.
+pub fn scatter_max(data: &mut [f32], indices: &[usize], values: &[f32]) -> Result<()> {
+    if indices.len() != values.len() {
+        return Err(invalid_args(format!(
+            "scatter_max: indices len ({}) != values len ({})",
+            indices.len(),
+            values.len()
+        )));
+    }
+    for (i, &idx) in indices.iter().enumerate() {
+        if idx >= data.len() {
+            return Err(invalid_args(format!(
+                "scatter_max: index {idx} out of bounds for data len {}",
+                data.len()
+            )));
+        }
+        data[idx] = data[idx].max(values[i]);
+    }
+    Ok(())
+}
+
+// ── index_select ───────────────────────────────────────────────────
+
+/// Select slices along the first dimension of a flat tensor.
+///
+/// `data` is a flat buffer representing a tensor whose first dimension
+/// has `dim_size` elements; the remaining (inner) elements per slice
+/// are inferred as `data.len() / dim_size`.
+///
+/// Returns the selected slices concatenated into a new `Vec`.
+///
+/// # Errors
+///
+/// Returns an error when `dim_size` is zero, `data.len()` is not
+/// divisible by `dim_size`, or any index is out of bounds.
+pub fn index_select(data: &[f32], dim_size: usize, indices: &[usize]) -> Result<Vec<f32>> {
+    if dim_size == 0 {
+        return Err(invalid_args("index_select: dim_size must be > 0"));
+    }
+    if !data.len().is_multiple_of(dim_size) {
+        return Err(invalid_args(format!(
+            "index_select: data len ({}) not divisible by dim_size ({dim_size})",
+            data.len()
+        )));
+    }
+    let inner = data.len() / dim_size;
+    let mut out = Vec::with_capacity(indices.len() * inner);
+    for &idx in indices {
+        if idx >= dim_size {
+            return Err(invalid_args(format!(
+                "index_select: index {idx} out of bounds for dim_size {dim_size}"
+            )));
+        }
+        let start = idx * inner;
+        out.extend_from_slice(&data[start..start + inner]);
+    }
+    Ok(out)
+}
+
 // ===================================================================
 // Tests
 // ===================================================================
@@ -762,5 +996,230 @@ mod tests {
         for j in 0..cols {
             assert_eq!(out[cols + j], src[2 * cols + j]); // row 2
         }
+    }
+
+    // ── ScatterGatherConfig ────────────────────────────────────────
+
+    #[test]
+    fn config_default() {
+        let cfg = ScatterGatherConfig::default();
+        assert!(cfg.bounds_check);
+        assert_eq!(cfg.reduce, ScatterReduce::Assign);
+    }
+
+    #[test]
+    fn config_with_reduce() {
+        let cfg = ScatterGatherConfig::with_reduce(ScatterReduce::Add);
+        assert!(cfg.bounds_check);
+        assert_eq!(cfg.reduce, ScatterReduce::Add);
+    }
+
+    // ── scatter_1d ─────────────────────────────────────────────────
+
+    #[test]
+    fn scatter_1d_basic() {
+        let mut data = [0.0f32; 5];
+        scatter_1d(&mut data, &[1, 3], &[10.0, 30.0]).unwrap();
+        assert_eq!(data, [0.0, 10.0, 0.0, 30.0, 0.0]);
+    }
+
+    #[test]
+    fn scatter_1d_overwrites_duplicate_indices() {
+        let mut data = [0.0f32; 3];
+        scatter_1d(&mut data, &[1, 1], &[10.0, 20.0]).unwrap();
+        assert_eq!(data[1], 20.0); // last write wins
+    }
+
+    #[test]
+    fn scatter_1d_length_mismatch() {
+        let mut data = [0.0f32; 3];
+        assert!(scatter_1d(&mut data, &[0, 1], &[1.0]).is_err());
+    }
+
+    #[test]
+    fn scatter_1d_oob() {
+        let mut data = [0.0f32; 3];
+        assert!(scatter_1d(&mut data, &[5], &[1.0]).is_err());
+    }
+
+    // ── gather_1d ──────────────────────────────────────────────────
+
+    #[test]
+    fn gather_1d_basic() {
+        let data = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let out = gather_1d(&data, &[4, 0, 2]).unwrap();
+        assert_eq!(out, vec![50.0, 10.0, 30.0]);
+    }
+
+    #[test]
+    fn gather_1d_empty_indices() {
+        let data = [1.0, 2.0];
+        let out = gather_1d(&data, &[]).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn gather_1d_oob() {
+        let data = [1.0, 2.0];
+        assert!(gather_1d(&data, &[5]).is_err());
+    }
+
+    #[test]
+    fn gather_1d_duplicate_indices() {
+        let data = [10.0, 20.0, 30.0];
+        let out = gather_1d(&data, &[1, 1, 1]).unwrap();
+        assert_eq!(out, vec![20.0, 20.0, 20.0]);
+    }
+
+    // ── scatter_2d ─────────────────────────────────────────────────
+
+    #[test]
+    fn scatter_2d_basic() {
+        let mut data = vec![vec![0.0; 3]; 4];
+        let values = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+        scatter_2d(&mut data, &[1, 3], &values).unwrap();
+        assert_eq!(data[1], vec![1.0, 2.0, 3.0]);
+        assert_eq!(data[3], vec![4.0, 5.0, 6.0]);
+        assert_eq!(data[0], vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn scatter_2d_oob() {
+        let mut data = vec![vec![0.0; 2]; 2];
+        assert!(scatter_2d(&mut data, &[5], &[vec![1.0, 2.0]]).is_err());
+    }
+
+    #[test]
+    fn scatter_2d_width_mismatch() {
+        let mut data = vec![vec![0.0; 3]; 2];
+        assert!(scatter_2d(&mut data, &[0], &[vec![1.0, 2.0]]).is_err());
+    }
+
+    // ── gather_2d ──────────────────────────────────────────────────
+
+    #[test]
+    fn gather_2d_basic() {
+        let data = vec![vec![10.0, 11.0], vec![20.0, 21.0], vec![30.0, 31.0]];
+        let out = gather_2d(&data, &[2, 0]).unwrap();
+        assert_eq!(out, vec![vec![30.0, 31.0], vec![10.0, 11.0]]);
+    }
+
+    #[test]
+    fn gather_2d_oob() {
+        let data = vec![vec![1.0]; 2];
+        assert!(gather_2d(&data, &[3]).is_err());
+    }
+
+    #[test]
+    fn scatter_2d_then_gather_2d_roundtrip() {
+        let mut data = vec![vec![0.0; 2]; 4];
+        let values = vec![vec![7.0, 8.0], vec![9.0, 10.0]];
+        scatter_2d(&mut data, &[1, 3], &values).unwrap();
+        let recovered = gather_2d(&data, &[1, 3]).unwrap();
+        assert_eq!(recovered, values);
+    }
+
+    // ── scatter_add (1-D) ──────────────────────────────────────────
+
+    #[test]
+    fn scatter_add_1d_basic() {
+        let mut data = [0.0f32; 4];
+        scatter_add(&mut data, &[1, 1, 2], &[10.0, 5.0, 3.0]).unwrap();
+        assert_eq!(data, [0.0, 15.0, 3.0, 0.0]);
+    }
+
+    #[test]
+    fn scatter_add_1d_oob() {
+        let mut data = [0.0f32; 2];
+        assert!(scatter_add(&mut data, &[5], &[1.0]).is_err());
+    }
+
+    // ── scatter_max (1-D) ──────────────────────────────────────────
+
+    #[test]
+    fn scatter_max_1d_basic() {
+        let mut data = [0.0f32; 3];
+        scatter_max(&mut data, &[1, 1, 1], &[5.0, 3.0, 9.0]).unwrap();
+        assert_eq!(data[1], 9.0);
+    }
+
+    #[test]
+    fn scatter_max_1d_preserves_existing() {
+        let mut data = [100.0, 0.0];
+        scatter_max(&mut data, &[0], &[50.0]).unwrap();
+        assert_eq!(data[0], 100.0); // existing is larger
+    }
+
+    #[test]
+    fn scatter_max_1d_oob() {
+        let mut data = [0.0f32; 2];
+        assert!(scatter_max(&mut data, &[5], &[1.0]).is_err());
+    }
+
+    #[test]
+    fn scatter_max_1d_length_mismatch() {
+        let mut data = [0.0f32; 2];
+        assert!(scatter_max(&mut data, &[0, 1], &[1.0]).is_err());
+    }
+
+    // ── index_select ───────────────────────────────────────────────
+
+    #[test]
+    fn index_select_basic() {
+        // 3 rows of 2 elements: [[0,1],[2,3],[4,5]]
+        let data = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let out = index_select(&data, 3, &[2, 0]).unwrap();
+        assert_eq!(out, vec![4.0, 5.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn index_select_single_inner() {
+        let data = [10.0, 20.0, 30.0];
+        let out = index_select(&data, 3, &[1]).unwrap();
+        assert_eq!(out, vec![20.0]);
+    }
+
+    #[test]
+    fn index_select_oob() {
+        let data = [1.0, 2.0, 3.0, 4.0];
+        assert!(index_select(&data, 2, &[5]).is_err());
+    }
+
+    #[test]
+    fn index_select_zero_dim() {
+        let data = [1.0];
+        assert!(index_select(&data, 0, &[0]).is_err());
+    }
+
+    #[test]
+    fn index_select_indivisible() {
+        let data = [1.0, 2.0, 3.0];
+        assert!(index_select(&data, 2, &[0]).is_err()); // 3 % 2 != 0
+    }
+
+    #[test]
+    fn index_select_empty_indices() {
+        let data = [1.0, 2.0];
+        let out = index_select(&data, 2, &[]).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn index_select_duplicate_indices() {
+        let data = [10.0, 20.0, 30.0];
+        let out = index_select(&data, 3, &[1, 1, 1]).unwrap();
+        assert_eq!(out, vec![20.0, 20.0, 20.0]);
+    }
+
+    // ── 1-D scatter/gather roundtrip ───────────────────────────────
+
+    #[test]
+    fn scatter_1d_then_gather_1d_roundtrip() {
+        let mut data = [0.0f32; 5];
+        let indices = [0, 2, 4];
+        let values = [10.0, 20.0, 30.0];
+        scatter_1d(&mut data, &indices, &values).unwrap();
+        let recovered = gather_1d(&data, &indices).unwrap();
+        assert_eq!(recovered, values.to_vec());
     }
 }
