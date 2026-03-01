@@ -7,12 +7,7 @@
 
 /// Apply RoPE to a single head vector at the given position.
 /// Layout: data has `head_dim` elements, pairs (x0, x1) rotated in place.
-fn ref_rope_apply(
-    data: &mut [f32],
-    head_dim: usize,
-    position: usize,
-    theta_base: f32,
-) {
+fn ref_rope_apply(data: &mut [f32], head_dim: usize, position: usize, theta_base: f32) {
     let half_dim = head_dim / 2;
     for i in 0..half_dim {
         let freq = 1.0 / theta_base.powf(2.0 * i as f32 / head_dim as f32);
@@ -154,8 +149,7 @@ fn rope_cached_kernel_has_cache_params() {
 fn test_rope_position_zero_is_identity() {
     // At position 0, angle = 0 for all dims, so cos=1 sin=0 → identity
     for head_dim in [2, 4, 8, 16, 64, 128] {
-        let mut data: Vec<f32> =
-            (0..head_dim).map(|i| (i as f32 + 1.0) * 3.17).collect();
+        let mut data: Vec<f32> = (0..head_dim).map(|i| (i as f32 + 1.0) * 3.17).collect();
         let original = data.clone();
 
         ref_rope_apply(&mut data, head_dim, 0, 10_000.0);
@@ -194,10 +188,7 @@ fn test_rope_rotation_at_various_positions() {
         ref_rope_apply(&mut data, head_dim, pos, theta_base);
 
         for (i, (got, want)) in data.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                approx_eq(*got, *want, 1e-5),
-                "pos={pos}, dim {i}: got {got}, expected {want}"
-            );
+            assert!(approx_eq(*got, *want, 1e-5), "pos={pos}, dim {i}: got {got}, expected {want}");
         }
     }
 }
@@ -213,10 +204,7 @@ fn test_rope_different_positions_differ() {
     let mut data_pos2 = original.clone();
     ref_rope_apply(&mut data_pos2, head_dim, 2, 10_000.0);
 
-    let any_diff = data_pos1
-        .iter()
-        .zip(data_pos2.iter())
-        .any(|(a, b)| (a - b).abs() > 1e-6);
+    let any_diff = data_pos1.iter().zip(data_pos2.iter()).any(|(a, b)| (a - b).abs() > 1e-6);
     assert!(any_diff, "different positions should produce different rotations");
 }
 
@@ -240,14 +228,7 @@ fn test_rope_position_offset() {
     // Use the same original data for positions 2..5
     let start = 2 * num_heads * head_dim;
     let mut offset_data = original[start..start + offset_total].to_vec();
-    ref_rope_apply_batch(
-        &mut offset_data,
-        seq_len,
-        num_heads,
-        head_dim,
-        theta_base,
-        2,
-    );
+    ref_rope_apply_batch(&mut offset_data, seq_len, num_heads, head_dim, theta_base, 2);
 
     // Results should match for positions 2..5
     for i in 0..offset_total {
@@ -275,20 +256,10 @@ fn test_rope_position_offset_zero_equivalent() {
     ref_rope_apply_batch(&mut data_no_offset, seq_len, num_heads, head_dim, theta_base, 0);
 
     let mut data_with_offset = original.clone();
-    ref_rope_apply_batch(
-        &mut data_with_offset,
-        seq_len,
-        num_heads,
-        head_dim,
-        theta_base,
-        0,
-    );
+    ref_rope_apply_batch(&mut data_with_offset, seq_len, num_heads, head_dim, theta_base, 0);
 
     for (i, (a, b)) in data_no_offset.iter().zip(data_with_offset.iter()).enumerate() {
-        assert!(
-            approx_eq(*a, *b, 1e-6),
-            "offset=0 should match no-offset at i={i}: {a} vs {b}"
-        );
+        assert!(approx_eq(*a, *b, 1e-6), "offset=0 should match no-offset at i={i}: {a} vs {b}");
     }
 }
 
@@ -301,12 +272,7 @@ fn test_rope_multi_head_same_position_same_rotation() {
     let theta_base = 10_000.0;
 
     let pattern: Vec<f32> = (0..head_dim).map(|i| (i as f32 + 1.0) * 0.5).collect();
-    let mut data: Vec<f32> = pattern
-        .iter()
-        .copied()
-        .cycle()
-        .take(num_heads * head_dim)
-        .collect();
+    let mut data: Vec<f32> = pattern.iter().copied().cycle().take(num_heads * head_dim).collect();
 
     ref_rope_apply_batch(&mut data, 1, num_heads, head_dim, theta_base, 3);
 
@@ -329,9 +295,8 @@ fn test_rope_multi_head_different_data() {
     let num_heads = 3;
     let theta_base = 10_000.0;
 
-    let mut data: Vec<f32> = (0..num_heads * head_dim)
-        .map(|i| ((i * 7 + 3) as f32) * 0.01)
-        .collect();
+    let mut data: Vec<f32> =
+        (0..num_heads * head_dim).map(|i| ((i * 7 + 3) as f32) * 0.01).collect();
 
     ref_rope_apply_batch(&mut data, 1, num_heads, head_dim, theta_base, 5);
 
@@ -352,16 +317,8 @@ fn test_rope_head_dim_2_minimal() {
     // theta = 10000^0 = 1.0, angle = 1.0
     let expected_cos = 1.0f32.cos();
     let expected_sin = 1.0f32.sin();
-    assert!(
-        approx_eq(data[0], expected_cos, 1e-5),
-        "x0: got {}, expected {expected_cos}",
-        data[0]
-    );
-    assert!(
-        approx_eq(data[1], expected_sin, 1e-5),
-        "x1: got {}, expected {expected_sin}",
-        data[1]
-    );
+    assert!(approx_eq(data[0], expected_cos, 1e-5), "x0: got {}, expected {expected_cos}", data[0]);
+    assert!(approx_eq(data[1], expected_sin, 1e-5), "x1: got {}, expected {expected_sin}", data[1]);
 }
 
 #[test]
@@ -410,9 +367,7 @@ fn test_rope_head_dim_128_batch() {
     let theta_base = 10_000.0;
 
     let total = seq_len * num_heads * head_dim;
-    let mut data: Vec<f32> = (0..total)
-        .map(|i| ((i * 37 + 13) as f32).sin() * 0.5)
-        .collect();
+    let mut data: Vec<f32> = (0..total).map(|i| ((i * 37 + 13) as f32).sin() * 0.5).collect();
 
     ref_rope_apply_batch(&mut data, seq_len, num_heads, head_dim, theta_base, 0);
 
@@ -435,14 +390,7 @@ fn test_rope_cached_vs_computed_parity() {
 
     // Computed variant
     let mut computed = original.clone();
-    ref_rope_apply_batch(
-        &mut computed,
-        seq_len,
-        num_heads,
-        head_dim,
-        theta_base,
-        position_offset,
-    );
+    ref_rope_apply_batch(&mut computed, seq_len, num_heads, head_dim, theta_base, position_offset);
 
     // Cached variant
     let (cos_cache, sin_cache) = generate_cos_sin_cache(max_seq, head_dim, theta_base);
@@ -458,10 +406,7 @@ fn test_rope_cached_vs_computed_parity() {
     );
 
     for (i, (c, d)) in computed.iter().zip(cached.iter()).enumerate() {
-        assert!(
-            approx_eq(*c, *d, 1e-5),
-            "cached/computed mismatch at i={i}: {c} vs {d}"
-        );
+        assert!(approx_eq(*c, *d, 1e-5), "cached/computed mismatch at i={i}: {c} vs {d}");
     }
 }
 
@@ -474,24 +419,14 @@ fn test_rope_cached_vs_computed_head_dim_128() {
     let max_seq = seq_len + 1;
 
     let total = seq_len * num_heads * head_dim;
-    let original: Vec<f32> = (0..total)
-        .map(|i| ((i * 17 + 5) as f32).sin())
-        .collect();
+    let original: Vec<f32> = (0..total).map(|i| ((i * 17 + 5) as f32).sin()).collect();
 
     let mut computed = original.clone();
     ref_rope_apply_batch(&mut computed, seq_len, num_heads, head_dim, theta_base, 0);
 
     let (cos_cache, sin_cache) = generate_cos_sin_cache(max_seq, head_dim, theta_base);
     let mut cached = original.clone();
-    ref_rope_apply_cached(
-        &mut cached,
-        &cos_cache,
-        &sin_cache,
-        seq_len,
-        num_heads,
-        head_dim,
-        0,
-    );
+    ref_rope_apply_cached(&mut cached, &cos_cache, &sin_cache, seq_len, num_heads, head_dim, 0);
 
     for (i, (c, d)) in computed.iter().zip(cached.iter()).enumerate() {
         assert!(
@@ -545,14 +480,8 @@ fn test_cos_sin_cache_values_at_position_one() {
     for i in 0..half_dim {
         let freq = 1.0 / theta_base.powf(2.0 * i as f32 / head_dim as f32);
         let angle = freq;
-        assert!(
-            approx_eq(cos_cache[half_dim + i], angle.cos(), 1e-6),
-            "cos mismatch at pair {i}"
-        );
-        assert!(
-            approx_eq(sin_cache[half_dim + i], angle.sin(), 1e-6),
-            "sin mismatch at pair {i}"
-        );
+        assert!(approx_eq(cos_cache[half_dim + i], angle.cos(), 1e-6), "cos mismatch at pair {i}");
+        assert!(approx_eq(sin_cache[half_dim + i], angle.sin(), 1e-6), "sin mismatch at pair {i}");
     }
 }
 
@@ -565,10 +494,7 @@ fn test_cos_sin_cache_pythagorean_identity() {
     // cos²(x) + sin²(x) = 1
     for (i, (c, s)) in cos_cache.iter().zip(sin_cache.iter()).enumerate() {
         let sum_sq = c * c + s * s;
-        assert!(
-            approx_eq(sum_sq, 1.0, 1e-5),
-            "cos²+sin² != 1 at index {i}: {sum_sq}"
-        );
+        assert!(approx_eq(sum_sq, 1.0, 1e-5), "cos²+sin² != 1 at index {i}: {sum_sq}");
     }
 }
 
@@ -580,8 +506,7 @@ fn test_rope_preserves_norm() {
 
     for head_dim in [2, 4, 8, 16, 32, 64, 128] {
         for pos in [0, 1, 5, 42, 512] {
-            let mut data: Vec<f32> =
-                (0..head_dim).map(|i| (i as f32 + 1.0) * 0.3).collect();
+            let mut data: Vec<f32> = (0..head_dim).map(|i| (i as f32 + 1.0) * 0.3).collect();
             let norm_before = l2_norm(&data);
 
             ref_rope_apply(&mut data, head_dim, pos, theta_base);
@@ -604,9 +529,7 @@ fn test_rope_batch_norm_preservation() {
     let theta_base = 10_000.0;
 
     let total = seq_len * num_heads * head_dim;
-    let mut data: Vec<f32> = (0..total)
-        .map(|i| ((i * 37 + 13) as f32).sin() * 2.5)
-        .collect();
+    let mut data: Vec<f32> = (0..total).map(|i| ((i * 37 + 13) as f32).sin() * 2.5).collect();
 
     let norms_before: Vec<f32> = (0..seq_len * num_heads)
         .map(|chunk| {
@@ -690,10 +613,7 @@ fn test_rope_single_token_single_head() {
     ref_rope_apply(&mut reference, head_dim, 5, 10_000.0);
 
     for (i, (a, b)) in data.iter().zip(reference.iter()).enumerate() {
-        assert!(
-            approx_eq(*a, *b, 1e-6),
-            "single-token batch mismatch at {i}: {a} vs {b}"
-        );
+        assert!(approx_eq(*a, *b, 1e-6), "single-token batch mismatch at {i}: {a} vs {b}");
     }
 }
 
@@ -729,10 +649,7 @@ fn test_rope_different_theta_bases() {
     let mut data_500k = original.clone();
     ref_rope_apply(&mut data_500k, head_dim, pos, 500_000.0);
 
-    let any_diff = data_10k
-        .iter()
-        .zip(data_500k.iter())
-        .any(|(a, b)| (a - b).abs() > 1e-6);
+    let any_diff = data_10k.iter().zip(data_500k.iter()).any(|(a, b)| (a - b).abs() > 1e-6);
     assert!(any_diff, "different theta bases should produce different rotations");
 }
 
@@ -783,10 +700,7 @@ fn test_rope_known_reference_head_dim_4_pos_3() {
     ref_rope_apply(&mut data, head_dim, pos, theta_base);
 
     for (i, (got, want)) in data.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            approx_eq(*got, *want, 1e-5),
-            "dim {i}: got {got}, expected {want}"
-        );
+        assert!(approx_eq(*got, *want, 1e-5), "dim {i}: got {got}, expected {want}");
     }
 }
 
