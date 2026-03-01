@@ -1,3 +1,5 @@
+pub use bitnet_http_retry::exp_backoff_ms;
+use bitnet_http_retry::retry_after_secs_at as parse_retry_after_secs_at;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
 use std::{fs, path::Path, time::SystemTime};
 use thiserror::Error;
@@ -14,15 +16,6 @@ pub fn offline_enabled(cli_offline: bool) -> bool {
     cli_offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1")
 }
 
-/// Safe exponential backoff helper with deterministic jitter.
-#[must_use]
-pub fn exp_backoff_ms(attempt: u32) -> u64 {
-    let shift = attempt.saturating_sub(1).min(20);
-    let base = (200u64).saturating_mul(1u64 << shift).min(10_000);
-    let jitter = (attempt as u64 * 37) % 200;
-    base.saturating_add(jitter)
-}
-
 /// Parse Retry-After header (supports both seconds and HTTP-date), capping to 1 hour.
 #[must_use]
 pub fn retry_after_secs(headers: &HeaderMap) -> u64 {
@@ -32,20 +25,8 @@ pub fn retry_after_secs(headers: &HeaderMap) -> u64 {
 /// Same as [`retry_after_secs`] but allows injecting the current time for deterministic tests.
 #[must_use]
 pub fn retry_after_secs_at(headers: &HeaderMap, now: SystemTime) -> u64 {
-    let raw = match headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok()) {
-        Some(s) => s,
-        None => return 5,
-    };
-
-    if let Ok(s) = raw.parse::<u64>() {
-        return s.min(3600);
-    }
-
-    httpdate::parse_http_date(raw)
-        .ok()
-        .and_then(|when| when.duration_since(now).ok())
-        .map(|d| d.as_secs().clamp(1, 3600))
-        .unwrap_or(5)
+    let retry_after = headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok());
+    parse_retry_after_secs_at(retry_after, now)
 }
 
 /// Parses `Content-Range` total bytes from values like `bytes 0-0/1234`.

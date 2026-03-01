@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-http-retry"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "SRP HTTP retry timing primitives (Retry-After parsing + exponential backoff)"
+
+[dependencies]
+httpdate = "1.0.3"
+
+[lints]
+workspace = true
