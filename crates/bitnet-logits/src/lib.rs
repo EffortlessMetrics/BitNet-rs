@@ -339,15 +339,21 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    // Compute entropy H = -Σ p * ln(p)
-    let entropy: f32 = probs.iter().filter(|&&p| p > 0.0).map(|&p| -p * p.ln()).sum();
+    // Optimization: Filter out zero probabilities first to avoid
+    // processing the entire vocabulary.
+    let indexed: Vec<(usize, f32)> =
+        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
 
-    // For each token, compute |surprise - entropy| = |(-ln(p)) - H|
-    let mut indexed: Vec<(usize, f32, f32)> = probs
-        .iter()
-        .copied()
-        .enumerate()
-        .filter(|&(_, p)| p > 0.0)
+    if indexed.is_empty() {
+        return;
+    }
+
+    // Compute entropy H = -Σ p * ln(p)
+    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
+
+    // For each valid token, compute |surprise - entropy| = |(-ln(p)) - H|
+    let mut deviations: Vec<(usize, f32, f32)> = indexed
+        .into_iter()
         .map(|(i, p)| {
             let surprise = -p.ln();
             let deviation = (surprise - entropy).abs();
@@ -356,24 +362,21 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         .collect();
 
     // Sort by deviation ascending (most typical first)
-    indexed.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
+    deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
-    // Keep tokens until cumulative probability reaches typical_p
     let mut cumsum = 0.0f32;
-    let mut keep = std::collections::HashSet::new();
-    for &(idx, p, _) in &indexed {
-        keep.insert(idx);
+    let mut cutoff = deviations.len();
+    for (rank, &(_, p, _)) in deviations.iter().enumerate() {
         cumsum += p;
         if cumsum >= typical_p {
+            cutoff = rank + 1;
             break;
         }
     }
 
-    // Zero out tokens not in the keep set
-    for (i, p) in probs.iter_mut().enumerate() {
-        if !keep.contains(&i) {
-            *p = 0.0;
-        }
+    // Zero out tokens outside the cutoff limit
+    for &(idx, _, _) in deviations.iter().skip(cutoff) {
+        probs[idx] = 0.0;
     }
 }
 

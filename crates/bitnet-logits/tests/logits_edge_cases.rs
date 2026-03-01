@@ -34,8 +34,8 @@ fn temperature_high_flattens_distribution() {
     let mut logits = vec![1.0, 100.0, -50.0];
     apply_temperature(&mut logits, 100.0);
     // After high temperature, values should be closer together
-    let range = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max)
-        - logits.iter().cloned().fold(f32::INFINITY, f32::min);
+    let range = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max)
+        - logits.iter().copied().fold(f32::INFINITY, f32::min);
     assert!(range < 2.0, "High temperature should flatten distribution");
 }
 
@@ -43,7 +43,7 @@ fn temperature_high_flattens_distribution() {
 fn temperature_single_element() {
     let mut logits = vec![5.0];
     apply_temperature(&mut logits, 0.5);
-    assert_eq!(logits[0], 10.0); // 5.0 / 0.5
+    assert!((logits[0] - 10.0).abs() < f32::EPSILON); // 5.0 / 0.5
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn top_k_zero_returns_all() {
 fn top_k_one_keeps_max() {
     let mut logits = vec![1.0, 5.0, 3.0, 2.0];
     apply_top_k(&mut logits, 1);
-    assert_eq!(logits[1], 5.0);
+    assert!((logits[1] - 5.0).abs() < f32::EPSILON);
     assert!(logits[0] == f32::NEG_INFINITY);
     assert!(logits[2] == f32::NEG_INFINITY);
     assert!(logits[3] == f32::NEG_INFINITY);
@@ -100,7 +100,7 @@ fn top_k_single_element() {
     let mut logits = vec![42.0];
     let kept = apply_top_k(&mut logits, 1);
     assert_eq!(kept, 1);
-    assert_eq!(logits[0], 42.0);
+    assert!((logits[0] - 42.0).abs() < f32::EPSILON);
 }
 
 #[test]
@@ -216,7 +216,7 @@ fn repetition_penalty_reduces_positive_logits() {
     let mut logits = vec![1.0, 5.0, 3.0];
     apply_repetition_penalty(&mut logits, &[1], 2.0);
     assert!(logits[1] < 5.0, "Positive logit should be reduced by penalty");
-    assert_eq!(logits[0], 1.0, "Unpenalized logit should be unchanged");
+    assert!((logits[0] - 1.0).abs() < f32::EPSILON, "Unpenalized logit should be unchanged");
 }
 
 #[test]
@@ -290,8 +290,8 @@ fn min_p_one_keeps_only_max() {
     // Only the max (0.5) should remain non-zero
     assert!(probs[1] > 0.0);
     // Others below 1.0 * 0.5 = 0.5 should be zeroed
-    assert_eq!(probs[0], 0.0);
-    assert_eq!(probs[3], 0.0);
+    assert!((probs[0] - 0.0).abs() < f32::EPSILON);
+    assert!((probs[3] - 0.0).abs() < f32::EPSILON);
 }
 
 #[test]
