@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-tokenizer-discovery-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP core crate for tokenizer path auto-discovery and resolution"
+
+[dependencies]
+anyhow.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
