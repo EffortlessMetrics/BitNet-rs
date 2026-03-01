@@ -1,0 +1,158 @@
+name: A770 Nightly Hardware Validation
+
+# Nightly validation on Intel Arc A770 hardware.
+# All jobs are disabled (if: false) until a self-hosted runner is provisioned.
+#
+# To enable:
+#   1. Provision a self-hosted GitHub Actions runner with an Intel Arc A770 GPU.
+#   2. Tag the runner with labels: self-hosted, Linux, intel-gpu, a770
+#   3. Install: Intel compute-runtime, OpenCL ICD loader, clinfo, Rust 1.92.0+
+#   4. Remove the `if: false` condition from each job.
+#   5. Optionally adjust cron schedule (currently 3:00 AM UTC daily).
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Daily at 3:00 AM UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUST_LOG: info
+
+jobs:
+  opencl-device-detection:
+    name: OpenCL Device Detection
+    # Disabled until self-hosted A770 runner is provisioned (see comment at top)
+    if: false
+    runs-on: [self-hosted, Linux, intel-gpu, a770]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Verify Intel GPU present
+        run: |
+          echo "=== PCI devices ==="
+          lspci | grep -i 'vga\|display\|3d' || true
+          echo ""
+          echo "=== OpenCL platforms ==="
+          clinfo --list
+          echo ""
+          echo "=== Full clinfo ==="
+          clinfo | head -50
+
+      - name: Build device-probe
+        run: cargo build --locked --no-default-features --features oneapi -p bitnet-device-probe
+
+      - name: Run device detection
+        run: cargo test --locked --no-default-features --features oneapi -p bitnet-device-probe
+
+  kernel-correctness:
+    name: Kernel Correctness
+    # Disabled until self-hosted A770 runner is provisioned (see comment at top)
+    if: false
+    runs-on: [self-hosted, Linux, intel-gpu, a770]
+    timeout-minutes: 30
+    needs: opencl-device-detection
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Build kernels (oneapi)
+        run: cargo build --locked --no-default-features --features oneapi -p bitnet-kernels
+
+      - name: Run kernel tests
+        run: cargo test --locked --no-default-features --features oneapi -p bitnet-kernels
+        env:
+          RUST_LOG: debug
+
+      - name: Run OpenCL module tests
+        run: |
+          cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl_cache
+          cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl_context
+          cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl_kernel_sources
+          cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl_embedding
+          cargo test --locked --no-default-features --features oneapi -p bitnet-kernels -- opencl_pipeline
+
+  numerical-stability:
+    name: Numerical Stability
+    # Disabled until self-hosted A770 runner is provisioned (see comment at top)
+    if: false
+    runs-on: [self-hosted, Linux, intel-gpu, a770]
+    timeout-minutes: 30
+    needs: kernel-correctness
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Build (release, oneapi)
+        run: cargo build --locked --release --no-default-features --features oneapi,cpu -p bitnet-kernels
+
+      - name: Run numerical stability tests
+        run: |
+          cargo test --locked --release --no-default-features --features oneapi,cpu \
+            -p bitnet-kernels -- numerical
+        env:
+          RUST_LOG: debug
+
+      - name: Cross-validate CPU vs GPU outputs
+        run: |
+          echo "Running CPU-vs-GPU numerical comparison..."
+          cargo test --locked --release --no-default-features --features oneapi,cpu \
+            -p bitnet-kernels -- cross_validate
+        env:
+          RUST_LOG: info
+
+  performance-regression:
+    name: Performance Regression
+    # Disabled until self-hosted A770 runner is provisioned (see comment at top)
+    if: false
+    runs-on: [self-hosted, Linux, intel-gpu, a770]
+    timeout-minutes: 45
+    needs: kernel-correctness
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Build (release, oneapi)
+        run: cargo build --locked --release --no-default-features --features oneapi,cpu -p bitnet-kernels
+
+      - name: Run kernel benchmarks
+        run: |
+          cargo bench --locked --no-default-features --features oneapi,cpu \
+            -p bitnet-kernels 2>&1 | tee bench-results.txt
+        env:
+          RUST_LOG: warn
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a770-bench-${{ github.sha }}
+          path: bench-results.txt
+          if-no-files-found: warn
+          retention-days: 30
