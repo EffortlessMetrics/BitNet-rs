@@ -5,10 +5,9 @@ This document covers the comprehensive test suite for BitNet-rs, including runni
 ## Test Status Summary
 
 **Current Test Results**:
-- **Total Enabled Tests**: 3,520 (all pass)
-- **Passing Tests**: 3,520 (100%)
+- **Total Enabled Tests**: Run `cargo nextest run --workspace --no-default-features --features cpu` for live count. Last known: ~3,500+ (all pass)
 - **Properly Skipped Tests**: 462 (intentional: ignored, integration, fixtures)
-- **Execution Time**: ~118 seconds (with parallel execution)
+- **Execution Time**: ~118 seconds (last measured; current workspace is larger)
 
 **Test Infrastructure Status**:
 - ✅ **Receipt Verification**: 25/25 tests passing (schema v1.0.0)
@@ -16,9 +15,27 @@ This document covers the comprehensive test suite for BitNet-rs, including runni
 - ✅ **Environment Isolation**: 7/7 tests passing (EnvGuard parallel safety)
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
 - ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
-- ✅ **Property Tests**: 38 test files across all 38 proptest crates (proptest)
-- ✅ **Fuzz Targets**: 13 targets, nightly scheduled (cargo-fuzz)
+- ✅ **Property Tests**: 50 crates with 230+ property tests
+- ✅ **Fuzz Targets**: 49 targets across 9 waves (nightly scheduled)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
+
+## Fuzz Target Waves
+
+The fuzz suite has grown to 49 targets across 9 waves:
+
+| Wave | Targets | Category |
+|------|---------|----------|
+| 1 | tokenizer_encode, rope_table_gen | Core operations |
+| 2 | quantize_i2s, dequantize_blocks | Quantization |
+| 3 | gguf_parse, model_load | Model loading |
+| 4 | receipt_roundtrip, strict_mode_config | Validation |
+| 5 | kv_cache_append, attention_mask | KV cache |
+| 6 | prompt_template_apply, stop_sequence | Generation |
+| 7 | simd_matmul, tl_lut_index | SIMD kernels |
+| 8 | ffi_bridge, crossval_token_parity | FFI/Crossval |
+| 9 | softmax_stability, embedding_lookup, memory_layout | Stability |
+
+All targets run nightly with 60-second budget per target. Crash artifacts are uploaded to GitHub Actions.
 
 ## Running Tests
 
@@ -630,7 +647,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 - **Integration tests**: Cross-crate tests in `tests/`
 - **Snapshot tests**: Struct/output stability assertions (insta, 42 test files, ~160 assertions, 192 snapshot files)
 - **Property-based tests**: Randomised invariant checks (proptest, 38 test files, 230+ properties)
-- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 13 targets, nightly scheduled)
+- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 49 targets across 9 waves, nightly scheduled)
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
 - **SIMD Kernel Tests** ✅: Real quantization computation validation (Issue #260 resolved)
@@ -686,10 +703,10 @@ cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
 
 ### Fuzz Testing (cargo-fuzz)
 
-BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Two CI workflows handle fuzz testing:
+BitNet-rs has 49 fuzz targets across 9 waves covering parsers, kernels, tokenizers, and stability. Two CI workflows handle fuzz testing:
 
-- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all 13 targets).
-- **`.github/workflows/nightly-fuzz.yml`** — dedicated nightly scheduled run (02:00 UTC daily) or manual trigger via `workflow_dispatch`. Runs 7 core targets for 60 seconds each with `-rss_limit_mb=4096`, **caches the corpus** between runs (`fuzz-corpus-<target>` cache key), and uploads crash artifacts on failure.
+- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all 49 targets).
+- **`.github/workflows/nightly-fuzz.yml`** — dedicated nightly scheduled run (02:00 UTC daily) or manual trigger via `workflow_dispatch`. Runs all 49 targets for 60 seconds each with `-rss_limit_mb=4096`, **caches the corpus** between runs (`fuzz-corpus-<target>` cache key), and uploads crash artifacts on failure.
 
 **Running fuzz tests manually:**
 

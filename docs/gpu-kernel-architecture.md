@@ -13,6 +13,50 @@ This document explains the architectural decisions and design patterns used in B
 7. [FFI Bridge Design](#ffi-bridge-design)
 8. [Performance Optimization Strategies](#performance-optimization-strategies)
 
+## Current Status (Feb 2026)
+
+> **Pre-Alpha Notice**: All GPU backends are scaffolded. CUDA is the furthest along with
+> 7 kernel stubs defined. No GPU backend has been validated end-to-end. CPU inference
+> with SIMD (AVX2/AVX-512/NEON) is the only fully working compute path.
+
+### Backend Summary
+
+| Backend | Crate | Status | Notes |
+|---------|-------|--------|-------|
+| **CUDA** | `bitnet-kernels` | Kernel stubs defined; PTX not yet implemented | 7 stubs: RMSNorm, Attention, Softmax, QK256 GEMV, RoPE, BatchNorm, Activations |
+| **GPU-HAL** | `bitnet-gpu-hal` | Scaffolded (16 modules) | Unified abstraction, async runtime, checkpoint/deployment managers |
+| **Metal** | `bitnet-kernels` | Feature gate + MSL kernel stubs | macOS/iOS Apple Silicon; `feature = "metal"` |
+| **Vulkan** | `bitnet-kernels` | Runtime probing compiled | Cross-platform; dispatch pending; `feature = "vulkan"` |
+| **Intel oneAPI** | `bitnet-kernels` | Feature gate present | Intel CPU/GPU; validation pending; `feature = "oneapi"` |
+| **ROCm** | `bitnet-device-probe` | Device detection only | AMD GPU detection; inference kernels not yet implemented |
+| **OpenCL** | `bitnet-opencl` | Intel Arc A770 context pooling | Built-in kernel registry; experimental; `feature = "opencl"` |
+| **CPU (AVX2/AVX-512/NEON)** | `bitnet-kernels` | **Working** | Production path; all quantization formats supported |
+
+### Path to Working: CUDA
+
+The minimum viable CUDA implementation requires:
+
+1. **RMSNorm kernel** — Implement PTX for the root mean square layer norm; verify against CPU scalar
+2. **QK256 GEMV kernel** — Port the AVX2 dequantization + dot product to CUDA; key for performance
+3. **Attention kernel** — Scaled dot-product attention with causal mask
+4. **Softmax kernel** — Numerically stable softmax with optional temperature scaling
+5. **End-to-end receipt** — Run `cargo run -p xtask -- benchmark --model <model> --tokens 128` and verify `backend="cuda"` in receipt
+
+See `docs/reference/implementation-targets.md` for detailed acceptance criteria.
+
+### Path to Working: Metal
+
+1. Enable Metal feature gate in CI smoke
+2. Implement MSL kernel bodies (currently empty stubs) for RMSNorm, MatMul, Softmax
+3. Add Metal receipt validation (analogous to CUDA smoke lane)
+
+### Path to Working: OpenCL / Intel Arc
+
+The `bitnet-opencl` crate has the most complete non-CUDA GPU scaffold:
+- Built-in kernel registry with Intel Arc A770 work-size optimization
+- Context pooling and queue management implemented
+- Remaining: implement actual compute kernels and wire into the inference path
+
 ## Architecture Overview
 
 ### High-Level Component Structure

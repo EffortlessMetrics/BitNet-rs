@@ -11,7 +11,7 @@ BitNet-rs includes a comprehensive performance benchmarking infrastructure desig
 ./scripts/setup-perf-env.sh
 BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh
 
-# Run GPU benchmarks with strict mode (requires CUDA, realistic 50-100 tok/s)
+# Run GPU benchmarks with strict mode (requires CUDA; GPU backends scaffolded, not yet validated end-to-end)
 BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh --features gpu
 
 # Run with cross-validation against C++ implementation and strict mode
@@ -29,6 +29,40 @@ python3 scripts/detect-performance-regression.py \
   benchmark-results/performance-report.json \
   --fail-on-regression
 ```
+
+## Current Baseline Numbers (Feb 2026)
+
+> **Pre-Alpha**: These are measured values from CPU inference. GPU backends are scaffolded
+> but not yet validated end-to-end. Do not use GPU numbers for planning.
+
+### CPU Inference Baselines (Measured)
+
+| Format | Model | Hardware | Throughput | Notes |
+|--------|-------|----------|------------|-------|
+| I2_S BitNet32-F16 | 2B params | x86_64 AVX2 | ~10–20 tok/s | Recommended production format |
+| QK256 (scalar) | 2B params | x86_64 | ~0.1 tok/s | MVP; scalar kernels only |
+| QK256 (AVX2 foundation) | 2B params | x86_64 AVX2 | ~0.12 tok/s | 1.2× uplift; ≥3× planned |
+| TL1 | 2B params | ARM NEON | ~12–18 tok/s | ARM-optimized lookup |
+| TL2 | 2B params | x86_64 AVX2 | ~10–15 tok/s | x86-optimized lookup |
+
+### GPU Inference (Not Yet Validated)
+
+| Backend | Status | Notes |
+|---------|--------|-------|
+| CUDA | Stubs only | 7 kernel stubs defined; PTX not yet implemented |
+| Metal | Scaffold | MSL kernel stubs present; not tested |
+| Vulkan | Scaffold | Runtime probing compiles; dispatch pending |
+| OpenCL | Scaffold | Intel Arc A770 context pooling; kernels pending |
+
+### QK256 Roadmap Projection
+
+| Milestone | Expected Throughput | Method |
+|-----------|--------------------|----|
+| Current (scalar) | ~0.1 tok/s | Scalar kernels |
+| AVX2 foundation (merged) | ~0.12 tok/s | AVX2 dequantization |
+| Nibble-LUT + FMA tiling (planned) | ≥0.3 tok/s | ≥3× target |
+
+For verification methodology, see the sections below.
 
 ## 📊 Architecture Overview
 
@@ -536,7 +570,7 @@ cat ci/inference.json | jq '.performance_baseline'
 
 ### QK256 Performance Roadmap
 
-**Current State (v0.1.0):**
+**Current State (v0.2.1-dev):**
 - Scalar implementation: ~0.1 tok/s
 - Correctness-first approach for MVP validation
 - AVX2 foundation established with ~1.2× uplift
@@ -554,7 +588,7 @@ cat ci/inference.json | jq '.performance_baseline'
 **Long-term Target (v0.3.0+):**
 - AVX-512 support: Additional 1.5-2× over AVX2
 - Multi-threading: Linear scaling with cores
-- GPU implementation: 50-100× over scalar CPU
+- GPU implementation: 50-100× over scalar CPU (scaffolded; not yet validated)
 
 **Benchmarking QK256 Optimizations:**
 ```bash
@@ -660,7 +694,7 @@ Strict mode enforces realistic performance expectations:
 
 | Quantization | CPU Performance | GPU Performance | Accuracy Target |
 |--------------|----------------|-----------------|-----------------|
-| I2S (2-bit) | 10-20 tok/s (AVX-512 > AVX2 > NEON) | 50-100 tok/s (FP16/BF16) | ≥99.8% vs FP32 |
+| I2S (2-bit) | 10-20 tok/s (AVX-512 > AVX2 > NEON) | 50-100 tok/s (FP16/BF16) (scaffolded; not yet validated) | ≥99.8% vs FP32 |
 | TL1 (table lookup) | 12-18 tok/s (ARM NEON optimized) | N/A | ≥99.6% vs FP32 |
 | TL2 (table lookup) | 10-15 tok/s (x86 AVX optimized) | N/A | ≥99.6% vs FP32 |
 

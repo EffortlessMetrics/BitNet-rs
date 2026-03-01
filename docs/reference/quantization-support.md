@@ -52,6 +52,11 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **Use case:** MS BitNet GGUF models using GGML format
 - **Accuracy:** ≥99.8% correlation with FP32 reference
 - **Performance:** 2-bit signed quantization: [-2, -1, +1, +2] mapping
+- **AVX2 Fast Path**: Merged (v0.2 foundation); runtime dispatch to scalar if AVX2 unavailable at runtime
+- **Current uplift**: ~1.2× over scalar baseline (AVX2 dequantization only)
+- **Target uplift**: ≥3× planned (nibble-LUT unpack via `pshufb` + FMA tiling, 8-16 rows)
+- **Scalar baseline**: ~0.1 tok/s for 2B models (QK256 scalar kernels only)
+- **Correctness**: AVX2 path verified ≤1e-5 max absolute difference vs scalar on randomized shapes
 - **Automatic detection:** Loader detects QK256 format from tensor sizes
 - **Transparent dispatch:** Transformer automatically uses QK256 kernel when weights present
 - **See also:** [Dual I2_S Flavor Explanation](../explanation/i2s-dual-flavor.md)
@@ -137,12 +142,12 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index
 
 All quantizers support device-aware operations with:
 
-- **Automatic GPU acceleration**: CUDA kernels with performance monitoring (50-100 tok/s)
-- **Metal acceleration**: macOS/iOS GPU via `feature = "metal"` (#992)
-- **Vulkan compute**: Cross-platform GPU via `feature = "vulkan"` (#993)
-- **Intel oneAPI**: Intel CPU/GPU acceleration via `feature = "oneapi"` (#986)
+- **Automatic GPU acceleration**: CUDA kernel stubs present; PTX implementation pending (not yet validated end-to-end)
+- **Metal acceleration**: macOS/iOS GPU via `feature = "metal"` (scaffold; MSL kernel stubs present, not yet validated)
+- **Vulkan compute**: Cross-platform GPU via `feature = "vulkan"` (scaffold; runtime probing compiled, dispatch pending)
+- **Intel oneAPI**: Intel CPU/GPU acceleration via `feature = "oneapi"` (scaffold; validation pending)
 - **ROCm support**: AMD GPU detection via `rocm_available` field in `DeviceProbe` (#995)
-- **Transparent CPU fallback**: Graceful degradation with maintained accuracy (10-20 tok/s)
+- **Transparent CPU fallback**: Graceful degradation with maintained accuracy; I2_S BitNet32-F16: ~10-20 tok/s; QK256 scalar: ~0.1 tok/s
 - **Memory optimization**: GPU memory leak detection and efficient allocation
 - **Feature gating**: Proper `#[cfg(feature = "gpu")]` guards for CPU-only builds
 - **Strict Mode Enforcement**: `BITNET_STRICT_MODE=1` prevents mock fallbacks
