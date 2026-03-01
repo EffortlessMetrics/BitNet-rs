@@ -15,6 +15,9 @@ pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 /// Embedding lookup and output projection kernel source.
 pub const EMBEDDING_SRC: &str = include_str!("embedding.cl");
 
+/// Scaled dot-product attention kernel source (scores, softmax, weighted sum).
+pub const ATTENTION_SRC: &str = include_str!("attention.cl");
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,7 +68,10 @@ mod tests {
     fn embedding_kernels_have_expected_functions() {
         assert!(EMBEDDING_SRC.contains("embedding_lookup"), "missing embedding_lookup kernel");
         assert!(EMBEDDING_SRC.contains("output_projection"), "missing output_projection kernel");
-        assert!(EMBEDDING_SRC.contains("embedding_rms_norm"), "missing embedding_rms_norm kernel");
+        assert!(
+            EMBEDDING_SRC.contains("embedding_rms_norm"),
+            "missing embedding_rms_norm kernel"
+        );
         assert!(
             EMBEDDING_SRC.contains("add_position_embedding"),
             "missing add_position_embedding kernel"
@@ -73,6 +79,35 @@ mod tests {
         assert!(
             EMBEDDING_SRC.contains("embedding_lookup_padded"),
             "missing embedding_lookup_padded kernel"
+        );
+    }
+
+    #[test]
+    fn attention_source_is_not_empty() {
+        assert!(!ATTENTION_SRC.is_empty(), "attention.cl should not be empty");
+    }
+
+    #[test]
+    fn attention_source_contains_kernel_keyword() {
+        assert!(
+            ATTENTION_SRC.contains("__kernel"),
+            "attention.cl missing __kernel"
+        );
+    }
+
+    #[test]
+    fn attention_kernels_have_expected_functions() {
+        assert!(
+            ATTENTION_SRC.contains("attention_scores"),
+            "missing attention_scores kernel"
+        );
+        assert!(
+            ATTENTION_SRC.contains("attention_softmax"),
+            "missing attention_softmax kernel"
+        );
+        assert!(
+            ATTENTION_SRC.contains("attention_weighted_sum"),
+            "missing attention_weighted_sum kernel"
         );
     }
 }

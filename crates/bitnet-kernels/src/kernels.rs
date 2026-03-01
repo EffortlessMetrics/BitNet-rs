@@ -176,3 +176,11 @@ __kernel void softmax(
     }
 }
 "#;
+
+/// OpenCL kernel source for scaled dot-product attention.
+///
+/// Three kernels:
+/// - `attention_scores`: computes QK^T / sqrt(d_k) with optional causal masking
+/// - `attention_softmax`: numerically stable row-wise softmax with tree reduction
+/// - `attention_weighted_sum`: computes attention_weights × V
+pub const ATTENTION_SRC: &str = include_str!("gpu/kernels/attention.cl");
