@@ -209,10 +209,7 @@ impl NpuDetector {
 
     /// Create a mock detector that returns the given devices.
     pub fn mock(devices: Vec<NpuDevice>) -> Self {
-        Self {
-            methods: vec![DetectionMethod::Mock],
-            mock_devices: devices,
-        }
+        Self { methods: vec![DetectionMethod::Mock], mock_devices: devices }
     }
 
     /// Run detection and return all discovered devices.
@@ -233,11 +230,7 @@ impl NpuDetector {
             }
         }
 
-        DetectionResult {
-            devices,
-            methods_tried: self.methods.clone(),
-            methods_succeeded,
-        }
+        DetectionResult { devices, methods_tried: self.methods.clone(), methods_succeeded }
     }
 
     /// Sysfs scan: check `/sys/class/accel` for Intel NPU driver.
@@ -346,10 +339,7 @@ fn intel_npu_default_caps() -> NpuCapabilities {
             NpuOperator::Activation,
         ],
         max_batch_size: 16,
-        supported_precisions: vec![
-            Precision::Int8,
-            Precision::Fp16,
-        ],
+        supported_precisions: vec![Precision::Int8, Precision::Fp16],
         memory_bytes: 0, // shared memory
     }
 }
@@ -366,10 +356,7 @@ fn apple_ane_default_caps() -> NpuCapabilities {
             NpuOperator::LayerNorm,
         ],
         max_batch_size: 32,
-        supported_precisions: vec![
-            Precision::Fp16,
-            Precision::Int8,
-        ],
+        supported_precisions: vec![Precision::Fp16, Precision::Int8],
         memory_bytes: 0,
     }
 }
@@ -413,21 +400,15 @@ pub enum NpuOffloadPolicy {
 impl NpuOffloadPolicy {
     /// Whether a given operator should be offloaded under this policy,
     /// assuming the device supports it.
-    pub fn should_offload(
-        &self,
-        op: NpuOperator,
-        device: &NpuDevice,
-    ) -> bool {
+    pub fn should_offload(&self, op: NpuOperator, device: &NpuDevice) -> bool {
         match self {
             Self::AlwaysOffload => device.capabilities.supports_op(op),
             Self::NeverOffload => false,
             Self::OffloadIfBeneficial => {
-                device.capabilities.supports_op(op)
-                    && is_op_beneficial(op)
+                device.capabilities.supports_op(op) && is_op_beneficial(op)
             }
             Self::Custom(map) => {
-                map.get(&op).copied().unwrap_or(false)
-                    && device.capabilities.supports_op(op)
+                map.get(&op).copied().unwrap_or(false) && device.capabilities.supports_op(op)
             }
         }
     }
@@ -437,10 +418,7 @@ impl NpuOffloadPolicy {
 const fn is_op_beneficial(op: NpuOperator) -> bool {
     matches!(
         op,
-        NpuOperator::MatMul
-            | NpuOperator::Conv2D
-            | NpuOperator::Quantize
-            | NpuOperator::Attention
+        NpuOperator::MatMul | NpuOperator::Conv2D | NpuOperator::Quantize | NpuOperator::Attention
     )
 }
 
@@ -505,10 +483,7 @@ pub struct OffloadAnalyzer {
 
 impl OffloadAnalyzer {
     /// Create an analyzer.
-    pub const fn new(
-        policy: NpuOffloadPolicy,
-        gpu_available: bool,
-    ) -> Self {
+    pub const fn new(policy: NpuOffloadPolicy, gpu_available: bool) -> Self {
         Self {
             policy,
             gpu_available,
@@ -525,28 +500,14 @@ impl OffloadAnalyzer {
     }
 
     /// Analyze a sequence of ops and produce placement decisions.
-    pub fn analyze(
-        &self,
-        ops: &[OpDescriptor],
-        device: &NpuDevice,
-    ) -> Vec<PlacementDecision> {
+    pub fn analyze(&self, ops: &[OpDescriptor], device: &NpuDevice) -> Vec<PlacementDecision> {
         let mut decisions = Vec::with_capacity(ops.len());
         let mut prev_target = ComputeTarget::Cpu;
 
         for desc in ops {
-            let (target, reason) = self.decide_single(
-                desc,
-                device,
-                prev_target,
-            );
-            let transfer_cost_bytes =
-                if target == prev_target { 0 } else { desc.input_bytes };
-            decisions.push(PlacementDecision {
-                op: desc.op,
-                target,
-                transfer_cost_bytes,
-                reason,
-            });
+            let (target, reason) = self.decide_single(desc, device, prev_target);
+            let transfer_cost_bytes = if target == prev_target { 0 } else { desc.input_bytes };
+            decisions.push(PlacementDecision { op: desc.op, target, transfer_cost_bytes, reason });
             prev_target = target;
         }
         decisions
@@ -560,63 +521,32 @@ impl OffloadAnalyzer {
     ) -> (ComputeTarget, String) {
         // NeverOffload → CPU or GPU
         if self.policy == NpuOffloadPolicy::NeverOffload {
-            let target = if self.gpu_available {
-                ComputeTarget::Gpu
-            } else {
-                ComputeTarget::Cpu
-            };
-            return (
-                target,
-                "NeverOffload policy".to_string(),
-            );
+            let target = if self.gpu_available { ComputeTarget::Gpu } else { ComputeTarget::Cpu };
+            return (target, "NeverOffload policy".to_string());
         }
 
         // Check device support
         if !device.capabilities.supports_op(desc.op) {
-            let target = if self.gpu_available {
-                ComputeTarget::Gpu
-            } else {
-                ComputeTarget::Cpu
-            };
-            return (
-                target,
-                format!("{} not supported by NPU", desc.op),
-            );
+            let target = if self.gpu_available { ComputeTarget::Gpu } else { ComputeTarget::Cpu };
+            return (target, format!("{} not supported by NPU", desc.op));
         }
 
         // Check precision
         if !device.capabilities.supports_precision(desc.precision) {
-            let target = if self.gpu_available {
-                ComputeTarget::Gpu
-            } else {
-                ComputeTarget::Cpu
-            };
-            return (
-                target,
-                format!("{} precision not supported", desc.precision),
-            );
+            let target = if self.gpu_available { ComputeTarget::Gpu } else { ComputeTarget::Cpu };
+            return (target, format!("{} precision not supported", desc.precision));
         }
 
         // AlwaysOffload → NPU if supported
         if self.policy == NpuOffloadPolicy::AlwaysOffload {
-            return (
-                ComputeTarget::Npu,
-                "AlwaysOffload policy".to_string(),
-            );
+            return (ComputeTarget::Npu, "AlwaysOffload policy".to_string());
         }
 
         // OffloadIfBeneficial or Custom
         let should = self.policy.should_offload(desc.op, device);
         if !should {
-            let target = if self.gpu_available {
-                ComputeTarget::Gpu
-            } else {
-                ComputeTarget::Cpu
-            };
-            return (
-                target,
-                "policy declined offload".to_string(),
-            );
+            let target = if self.gpu_available { ComputeTarget::Gpu } else { ComputeTarget::Cpu };
+            return (target, "policy declined offload".to_string());
         }
 
         // Transfer-cost heuristic: if we must move data and the op
@@ -625,18 +555,12 @@ impl OffloadAnalyzer {
             && desc.input_bytes > 0
             && self.bus_bandwidth_bytes_sec > 0
         {
-            let transfer_time_us = desc.input_bytes * 1_000_000
-                / self.bus_bandwidth_bytes_sec;
+            let transfer_time_us = desc.input_bytes * 1_000_000 / self.bus_bandwidth_bytes_sec;
             // If transfer takes > 100 µs and the op is small,
             // keep on the current device.
             let flops_threshold = 1_000_000u64; // 1M FLOPs
-            if transfer_time_us > 100
-                && desc.estimated_flops < flops_threshold
-            {
-                return (
-                    prev_target,
-                    "transfer cost exceeds benefit".to_string(),
-                );
+            if transfer_time_us > 100 && desc.estimated_flops < flops_threshold {
+                return (prev_target, "transfer cost exceeds benefit".to_string());
             }
         }
 
@@ -668,10 +592,7 @@ pub struct HeterogeneousScheduler {
 
 impl HeterogeneousScheduler {
     /// Create a scheduler.
-    pub const fn new(
-        analyzer: OffloadAnalyzer,
-        device: Option<NpuDevice>,
-    ) -> Self {
+    pub const fn new(analyzer: OffloadAnalyzer, device: Option<NpuDevice>) -> Self {
         Self { analyzer, device }
     }
 
@@ -696,11 +617,8 @@ impl HeterogeneousScheduler {
                 })
                 .collect()
         } else {
-            let fallback = if self.analyzer.gpu_available {
-                ComputeTarget::Gpu
-            } else {
-                ComputeTarget::Cpu
-            };
+            let fallback =
+                if self.analyzer.gpu_available { ComputeTarget::Gpu } else { ComputeTarget::Cpu };
             ops.iter()
                 .enumerate()
                 .map(|(i, desc)| ScheduledWork {
@@ -714,9 +632,7 @@ impl HeterogeneousScheduler {
     }
 
     /// Compute summary statistics for a schedule.
-    pub fn summarise(
-        schedule: &[ScheduledWork],
-    ) -> ScheduleSummary {
+    pub fn summarise(schedule: &[ScheduledWork]) -> ScheduleSummary {
         let mut cpu_ops = 0usize;
         let mut gpu_ops = 0usize;
         let mut npu_ops = 0usize;
@@ -788,12 +704,7 @@ impl NpuProfiler {
     }
 
     /// Convenience: time a closure and record the result.
-    pub fn measure<F, R>(
-        &mut self,
-        op: NpuOperator,
-        target: ComputeTarget,
-        f: F,
-    ) -> R
+    pub fn measure<F, R>(&mut self, op: NpuOperator, target: ComputeTarget, f: F) -> R
     where
         F: FnOnce() -> R,
     {
@@ -815,16 +726,9 @@ impl NpuProfiler {
     }
 
     /// Average duration for a (op, target) pair.
-    pub fn average_duration(
-        &self,
-        op: NpuOperator,
-        target: ComputeTarget,
-    ) -> Option<Duration> {
-        let matching: Vec<_> = self
-            .samples
-            .iter()
-            .filter(|s| s.op == op && s.target == target)
-            .collect();
+    pub fn average_duration(&self, op: NpuOperator, target: ComputeTarget) -> Option<Duration> {
+        let matching: Vec<_> =
+            self.samples.iter().filter(|s| s.op == op && s.target == target).collect();
         if matching.is_empty() {
             return None;
         }
@@ -836,16 +740,9 @@ impl NpuProfiler {
 
     /// Compare NPU vs CPU average for a given op.
     /// Returns `Some(speedup)` where `> 1.0` means NPU is faster.
-    pub fn speedup_vs_cpu(
-        &self,
-        op: NpuOperator,
-    ) -> Option<f64> {
-        let cpu = self
-            .average_duration(op, ComputeTarget::Cpu)?
-            .as_secs_f64();
-        let npu = self
-            .average_duration(op, ComputeTarget::Npu)?
-            .as_secs_f64();
+    pub fn speedup_vs_cpu(&self, op: NpuOperator) -> Option<f64> {
+        let cpu = self.average_duration(op, ComputeTarget::Cpu)?.as_secs_f64();
+        let npu = self.average_duration(op, ComputeTarget::Npu)?.as_secs_f64();
         if npu == 0.0 {
             return None;
         }
@@ -883,26 +780,11 @@ impl MockNpu {
             capabilities: intel_npu_default_caps(),
         };
         let mut latencies = HashMap::new();
-        latencies.insert(
-            NpuOperator::MatMul,
-            Duration::from_micros(100),
-        );
-        latencies.insert(
-            NpuOperator::Softmax,
-            Duration::from_micros(20),
-        );
-        latencies.insert(
-            NpuOperator::Conv2D,
-            Duration::from_micros(80),
-        );
-        latencies.insert(
-            NpuOperator::Quantize,
-            Duration::from_micros(10),
-        );
-        latencies.insert(
-            NpuOperator::Activation,
-            Duration::from_micros(5),
-        );
+        latencies.insert(NpuOperator::MatMul, Duration::from_micros(100));
+        latencies.insert(NpuOperator::Softmax, Duration::from_micros(20));
+        latencies.insert(NpuOperator::Conv2D, Duration::from_micros(80));
+        latencies.insert(NpuOperator::Quantize, Duration::from_micros(10));
+        latencies.insert(NpuOperator::Activation, Duration::from_micros(5));
         Self { device, op_latencies: latencies }
     }
 
@@ -915,18 +797,9 @@ impl MockNpu {
             capabilities: amd_xdna_default_caps(),
         };
         let mut latencies = HashMap::new();
-        latencies.insert(
-            NpuOperator::MatMul,
-            Duration::from_micros(80),
-        );
-        latencies.insert(
-            NpuOperator::Attention,
-            Duration::from_micros(120),
-        );
-        latencies.insert(
-            NpuOperator::Softmax,
-            Duration::from_micros(15),
-        );
+        latencies.insert(NpuOperator::MatMul, Duration::from_micros(80));
+        latencies.insert(NpuOperator::Attention, Duration::from_micros(120));
+        latencies.insert(NpuOperator::Softmax, Duration::from_micros(15));
         Self { device, op_latencies: latencies }
     }
 
@@ -936,28 +809,15 @@ impl MockNpu {
     }
 
     /// Simulate running an op, returning the simulated latency.
-    pub fn simulate_op(
-        &self,
-        op: NpuOperator,
-    ) -> Result<Duration, String> {
+    pub fn simulate_op(&self, op: NpuOperator) -> Result<Duration, String> {
         if !self.device.capabilities.supports_op(op) {
-            return Err(format!(
-                "{op} not supported by {}",
-                self.device.name
-            ));
+            return Err(format!("{op} not supported by {}", self.device.name));
         }
-        Ok(self
-            .op_latencies
-            .get(&op)
-            .copied()
-            .unwrap_or(Duration::from_micros(50)))
+        Ok(self.op_latencies.get(&op).copied().unwrap_or(Duration::from_micros(50)))
     }
 
     /// Simulate a batch of ops and return total latency.
-    pub fn simulate_batch(
-        &self,
-        ops: &[NpuOperator],
-    ) -> Result<Duration, String> {
+    pub fn simulate_batch(&self, ops: &[NpuOperator]) -> Result<Duration, String> {
         let mut total = Duration::ZERO;
         for &op in ops {
             total += self.simulate_op(op)?;
@@ -1018,15 +878,9 @@ mod tests {
 
     #[test]
     fn vendor_display() {
-        assert_eq!(
-            NpuVendor::IntelMeteorLake.to_string(),
-            "Intel Meteor Lake NPU"
-        );
+        assert_eq!(NpuVendor::IntelMeteorLake.to_string(), "Intel Meteor Lake NPU");
         assert_eq!(NpuVendor::AmdXdna.to_string(), "AMD XDNA");
-        assert_eq!(
-            NpuVendor::AppleNeuralEngine.to_string(),
-            "Apple Neural Engine"
-        );
+        assert_eq!(NpuVendor::AppleNeuralEngine.to_string(), "Apple Neural Engine");
         assert_eq!(NpuVendor::Unknown.to_string(), "Unknown NPU");
         assert_eq!(NpuVendor::IntelVpu.to_string(), "Intel VPU");
     }
@@ -1106,10 +960,7 @@ mod tests {
         let result = detector.detect();
         assert_eq!(result.device_count(), 1);
         assert!(result.any_found());
-        assert_eq!(
-            result.methods_succeeded,
-            vec![DetectionMethod::Mock]
-        );
+        assert_eq!(result.methods_succeeded, vec![DetectionMethod::Mock]);
     }
 
     #[test]
@@ -1125,19 +976,13 @@ mod tests {
         let detector = NpuDetector::new();
         assert_eq!(detector.methods.len(), 3);
         assert!(detector.methods.contains(&DetectionMethod::Sysfs));
-        assert!(
-            detector.methods.contains(&DetectionMethod::OpenVino)
-        );
-        assert!(
-            detector.methods.contains(&DetectionMethod::PlatformApi)
-        );
+        assert!(detector.methods.contains(&DetectionMethod::OpenVino));
+        assert!(detector.methods.contains(&DetectionMethod::PlatformApi));
     }
 
     #[test]
     fn detector_with_methods() {
-        let detector = NpuDetector::with_methods(vec![
-            DetectionMethod::Mock,
-        ]);
+        let detector = NpuDetector::with_methods(vec![DetectionMethod::Mock]);
         assert_eq!(detector.methods.len(), 1);
     }
 
@@ -1176,9 +1021,7 @@ mod tests {
         let dev = mock_intel_device();
         let policy = NpuOffloadPolicy::AlwaysOffload;
         // Intel NPU doesn't support Attention
-        assert!(
-            !policy.should_offload(NpuOperator::Attention, &dev)
-        );
+        assert!(!policy.should_offload(NpuOperator::Attention, &dev));
     }
 
     #[test]
@@ -1186,9 +1029,7 @@ mod tests {
         let dev = mock_intel_device();
         let policy = NpuOffloadPolicy::NeverOffload;
         assert!(!policy.should_offload(NpuOperator::MatMul, &dev));
-        assert!(
-            !policy.should_offload(NpuOperator::Softmax, &dev)
-        );
+        assert!(!policy.should_offload(NpuOperator::Softmax, &dev));
     }
 
     #[test]
@@ -1204,9 +1045,7 @@ mod tests {
         let dev = mock_intel_device();
         let policy = NpuOffloadPolicy::OffloadIfBeneficial;
         // Softmax is NOT in the beneficial list
-        assert!(
-            !policy.should_offload(NpuOperator::Softmax, &dev)
-        );
+        assert!(!policy.should_offload(NpuOperator::Softmax, &dev));
     }
 
     #[test]
@@ -1224,9 +1063,7 @@ mod tests {
     fn custom_policy_missing_key() {
         let dev = mock_intel_device();
         let policy = NpuOffloadPolicy::Custom(HashMap::new());
-        assert!(
-            !policy.should_offload(NpuOperator::MatMul, &dev)
-        );
+        assert!(!policy.should_offload(NpuOperator::MatMul, &dev));
     }
 
     #[test]
@@ -1236,9 +1073,7 @@ mod tests {
         // Attention is not supported by Intel mock
         map.insert(NpuOperator::Attention, true);
         let policy = NpuOffloadPolicy::Custom(map);
-        assert!(
-            !policy.should_offload(NpuOperator::Attention, &dev)
-        );
+        assert!(!policy.should_offload(NpuOperator::Attention, &dev));
     }
 
     // ── OffloadAnalyzer ───────────────────────────────────────────────
@@ -1246,10 +1081,7 @@ mod tests {
     #[test]
     fn analyzer_never_offload() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::NeverOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::NeverOffload, false);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
         assert_eq!(decisions.len(), 1);
@@ -1259,10 +1091,7 @@ mod tests {
     #[test]
     fn analyzer_never_offload_with_gpu() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::NeverOffload,
-            true,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::NeverOffload, true);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
         assert_eq!(decisions[0].target, ComputeTarget::Gpu);
@@ -1271,10 +1100,7 @@ mod tests {
     #[test]
     fn analyzer_always_offload() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
         assert_eq!(decisions[0].target, ComputeTarget::Npu);
@@ -1283,10 +1109,7 @@ mod tests {
     #[test]
     fn analyzer_unsupported_op_fallback() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            true,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, true);
         // Embedding is not supported by Intel mock
         let ops = vec![sample_op(NpuOperator::Embedding)];
         let decisions = analyzer.analyze(&ops, &dev);
@@ -1296,10 +1119,7 @@ mod tests {
     #[test]
     fn analyzer_unsupported_precision_fallback() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let mut op = sample_op(NpuOperator::MatMul);
         op.precision = Precision::Fp32; // Intel NPU doesn't do FP32
         let decisions = analyzer.analyze(&[op], &dev);
@@ -1309,15 +1129,9 @@ mod tests {
     #[test]
     fn analyzer_transfer_cost_tracked() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         // First op on CPU → NPU transition should have transfer
-        let ops = vec![
-            sample_op(NpuOperator::MatMul),
-            sample_op(NpuOperator::Softmax),
-        ];
+        let ops = vec![sample_op(NpuOperator::MatMul), sample_op(NpuOperator::Softmax)];
         let decisions = analyzer.analyze(&ops, &dev);
         // First op moves from CPU to NPU
         assert!(decisions[0].transfer_cost_bytes > 0);
@@ -1328,10 +1142,7 @@ mod tests {
     #[test]
     fn analyzer_small_op_stays_colocated() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::OffloadIfBeneficial,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::OffloadIfBeneficial, false);
         // Small op with large input — should stay on CPU
         let ops = vec![small_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
@@ -1341,11 +1152,8 @@ mod tests {
     #[test]
     fn analyzer_bandwidth_override() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::OffloadIfBeneficial,
-            false,
-        )
-        .with_bandwidth(100_000_000_000); // 100 GB/s
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::OffloadIfBeneficial, false)
+            .with_bandwidth(100_000_000_000); // 100 GB/s
         let ops = vec![small_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
         // With high bandwidth, even small ops can offload
@@ -1355,10 +1163,7 @@ mod tests {
     #[test]
     fn analyzer_empty_ops() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let decisions = analyzer.analyze(&[], &dev);
         assert!(decisions.is_empty());
     }
@@ -1366,10 +1171,7 @@ mod tests {
     #[test]
     fn analyzer_decision_reason_populated() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::NeverOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::NeverOffload, false);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let decisions = analyzer.analyze(&ops, &dev);
         assert!(!decisions[0].reason.is_empty());
@@ -1380,16 +1182,9 @@ mod tests {
     #[test]
     fn scheduler_with_npu() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
-        let ops = vec![
-            sample_op(NpuOperator::MatMul),
-            sample_op(NpuOperator::Softmax),
-        ];
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
+        let ops = vec![sample_op(NpuOperator::MatMul), sample_op(NpuOperator::Softmax)];
         let work = sched.schedule(&ops);
         assert_eq!(work.len(), 2);
         assert_eq!(work[0].target, ComputeTarget::Npu);
@@ -1398,10 +1193,7 @@ mod tests {
 
     #[test]
     fn scheduler_without_npu_cpu_fallback() {
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let sched = HeterogeneousScheduler::new(analyzer, None);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let work = sched.schedule(&ops);
@@ -1410,10 +1202,7 @@ mod tests {
 
     #[test]
     fn scheduler_without_npu_gpu_fallback() {
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            true,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, true);
         let sched = HeterogeneousScheduler::new(analyzer, None);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let work = sched.schedule(&ops);
@@ -1423,12 +1212,8 @@ mod tests {
     #[test]
     fn scheduler_sequence_indices() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
         let ops = vec![
             sample_op(NpuOperator::MatMul),
             sample_op(NpuOperator::Softmax),
@@ -1443,16 +1228,9 @@ mod tests {
     #[test]
     fn scheduler_transfer_flags() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
-        let ops = vec![
-            sample_op(NpuOperator::MatMul),
-            sample_op(NpuOperator::Softmax),
-        ];
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
+        let ops = vec![sample_op(NpuOperator::MatMul), sample_op(NpuOperator::Softmax)];
         let work = sched.schedule(&ops);
         // First op needs transfer (CPU → NPU)
         assert!(work[0].needs_transfer);
@@ -1491,12 +1269,7 @@ mod tests {
 
     #[test]
     fn schedule_summary_display() {
-        let summary = ScheduleSummary {
-            cpu_ops: 2,
-            gpu_ops: 1,
-            npu_ops: 3,
-            transfers: 1,
-        };
+        let summary = ScheduleSummary { cpu_ops: 2, gpu_ops: 1, npu_ops: 3, transfers: 1 };
         let s = summary.to_string();
         assert!(s.contains("CPU=2"));
         assert!(s.contains("NPU=3"));
@@ -1504,10 +1277,7 @@ mod tests {
 
     #[test]
     fn scheduler_empty_ops() {
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let sched = HeterogeneousScheduler::new(analyzer, None);
         let work = sched.schedule(&[]);
         assert!(work.is_empty());
@@ -1539,23 +1309,14 @@ mod tests {
             target: ComputeTarget::Npu,
             duration: Duration::from_micros(200),
         });
-        let avg = profiler
-            .average_duration(NpuOperator::MatMul, ComputeTarget::Npu)
-            .unwrap();
+        let avg = profiler.average_duration(NpuOperator::MatMul, ComputeTarget::Npu).unwrap();
         assert_eq!(avg, Duration::from_micros(150));
     }
 
     #[test]
     fn profiler_average_no_samples() {
         let profiler = NpuProfiler::new();
-        assert!(
-            profiler
-                .average_duration(
-                    NpuOperator::MatMul,
-                    ComputeTarget::Cpu
-                )
-                .is_none()
-        );
+        assert!(profiler.average_duration(NpuOperator::MatMul, ComputeTarget::Cpu).is_none());
     }
 
     #[test]
@@ -1573,8 +1334,7 @@ mod tests {
             target: ComputeTarget::Npu,
             duration: Duration::from_micros(100),
         });
-        let speedup =
-            profiler.speedup_vs_cpu(NpuOperator::MatMul).unwrap();
+        let speedup = profiler.speedup_vs_cpu(NpuOperator::MatMul).unwrap();
         assert!((speedup - 2.0).abs() < 0.01);
     }
 
@@ -1586,25 +1346,16 @@ mod tests {
             target: ComputeTarget::Npu,
             duration: Duration::from_micros(100),
         });
-        assert!(
-            profiler.speedup_vs_cpu(NpuOperator::MatMul).is_none()
-        );
+        assert!(profiler.speedup_vs_cpu(NpuOperator::MatMul).is_none());
     }
 
     #[test]
     fn profiler_measure_closure() {
         let mut profiler = NpuProfiler::new();
-        let result = profiler.measure(
-            NpuOperator::Softmax,
-            ComputeTarget::Cpu,
-            || 42,
-        );
+        let result = profiler.measure(NpuOperator::Softmax, ComputeTarget::Cpu, || 42);
         assert_eq!(result, 42);
         assert_eq!(profiler.sample_count(), 1);
-        assert_eq!(
-            profiler.samples()[0].op,
-            NpuOperator::Softmax
-        );
+        assert_eq!(profiler.samples()[0].op, NpuOperator::Softmax);
     }
 
     #[test]
@@ -1651,32 +1402,21 @@ mod tests {
     #[test]
     fn mock_npu_batch() {
         let mock = MockNpu::intel_mock();
-        let total = mock
-            .simulate_batch(&[
-                NpuOperator::MatMul,
-                NpuOperator::Softmax,
-            ])
-            .unwrap();
+        let total = mock.simulate_batch(&[NpuOperator::MatMul, NpuOperator::Softmax]).unwrap();
         assert_eq!(total, Duration::from_micros(120));
     }
 
     #[test]
     fn mock_npu_batch_unsupported_fails() {
         let mock = MockNpu::intel_mock();
-        let result = mock.simulate_batch(&[
-            NpuOperator::MatMul,
-            NpuOperator::Attention,
-        ]);
+        let result = mock.simulate_batch(&[NpuOperator::MatMul, NpuOperator::Attention]);
         assert!(result.is_err());
     }
 
     #[test]
     fn mock_npu_device_accessor() {
         let mock = MockNpu::intel_mock();
-        assert_eq!(
-            mock.device().vendor,
-            NpuVendor::IntelMeteorLake
-        );
+        assert_eq!(mock.device().vendor, NpuVendor::IntelMeteorLake);
     }
 
     #[test]
@@ -1700,18 +1440,13 @@ mod tests {
 
     #[test]
     fn end_to_end_detect_schedule() {
-        let detector =
-            NpuDetector::mock(vec![mock_intel_device()]);
+        let detector = NpuDetector::mock(vec![mock_intel_device()]);
         let result = detector.detect();
         assert!(result.any_found());
 
         let dev = result.devices[0].clone();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
         let ops = vec![
             sample_op(NpuOperator::MatMul),
             sample_op(NpuOperator::Softmax),
@@ -1729,10 +1464,7 @@ mod tests {
         let result = detector.detect();
         assert!(!result.any_found());
 
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            false,
-        );
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, false);
         let sched = HeterogeneousScheduler::new(analyzer, None);
         let ops = vec![sample_op(NpuOperator::MatMul)];
         let work = sched.schedule(&ops);
@@ -1752,16 +1484,14 @@ mod tests {
         });
 
         // Simulate NPU
-        let npu_latency =
-            mock.simulate_op(NpuOperator::MatMul).unwrap();
+        let npu_latency = mock.simulate_op(NpuOperator::MatMul).unwrap();
         profiler.record(ProfileSample {
             op: NpuOperator::MatMul,
             target: ComputeTarget::Npu,
             duration: npu_latency,
         });
 
-        let speedup =
-            profiler.speedup_vs_cpu(NpuOperator::MatMul).unwrap();
+        let speedup = profiler.speedup_vs_cpu(NpuOperator::MatMul).unwrap();
         assert!(speedup > 1.0);
     }
 
@@ -1770,12 +1500,8 @@ mod tests {
     #[test]
     fn mixed_ops_some_offloaded() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            true,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, true);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
         let ops = vec![
             sample_op(NpuOperator::MatMul),    // supported
             sample_op(NpuOperator::Embedding), // NOT supported
@@ -1790,12 +1516,8 @@ mod tests {
     #[test]
     fn mixed_schedule_summary() {
         let dev = mock_intel_device();
-        let analyzer = OffloadAnalyzer::new(
-            NpuOffloadPolicy::AlwaysOffload,
-            true,
-        );
-        let sched =
-            HeterogeneousScheduler::new(analyzer, Some(dev));
+        let analyzer = OffloadAnalyzer::new(NpuOffloadPolicy::AlwaysOffload, true);
+        let sched = HeterogeneousScheduler::new(analyzer, Some(dev));
         let ops = vec![
             sample_op(NpuOperator::MatMul),
             sample_op(NpuOperator::Embedding),
