@@ -1,5 +1,6 @@
 // GPU hardware abstraction layer for `BitNet` inference.
 
+pub mod async_runtime;
 pub mod backend_selector;
 pub mod bench_harness;
 pub mod deployment_manager;
