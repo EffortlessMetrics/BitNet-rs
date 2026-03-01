@@ -146,3 +146,7 @@ path = "tests/opencl_property_tests.rs"
 [[test]]
 name = "opencl_bdd_tests"
 path = "tests/opencl_bdd_tests.rs"
+
+[[test]]
+name = "rope_validation"
+path = "tests/rope_validation.rs"
