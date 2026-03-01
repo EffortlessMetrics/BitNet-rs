@@ -48,11 +48,7 @@ impl Default for PromptConfig {
 impl PromptConfig {
     /// Create a new config with the given context and generation limits.
     pub fn new(max_context_tokens: usize, max_generation_tokens: usize) -> Self {
-        Self {
-            max_context_tokens,
-            max_generation_tokens,
-            ..Default::default()
-        }
+        Self { max_context_tokens, max_generation_tokens, ..Default::default() }
     }
 
     /// Set the chat template.
@@ -75,8 +71,7 @@ impl PromptConfig {
 
     /// Tokens available for the prompt after reserving generation budget.
     pub fn prompt_token_budget(&self) -> usize {
-        self.max_context_tokens
-            .saturating_sub(self.max_generation_tokens)
+        self.max_context_tokens.saturating_sub(self.max_generation_tokens)
     }
 
     /// Validate the configuration.
@@ -85,9 +80,7 @@ impl PromptConfig {
             return Err("max_context_tokens must be > 0".into());
         }
         if self.max_generation_tokens >= self.max_context_tokens {
-            return Err(
-                "max_generation_tokens must be < max_context_tokens".into(),
-            );
+            return Err("max_generation_tokens must be < max_context_tokens".into());
         }
         Ok(())
     }
@@ -145,13 +138,9 @@ impl PromptTemplate {
                 _ => format!("{content}\n\n"),
             },
             Self::Raw => content.to_string(),
-            Self::Custom {
-                turn_template,
-                separator: _,
-                assistant_prefix: _,
-            } => turn_template
-                .replace("{role}", role)
-                .replace("{content}", content),
+            Self::Custom { turn_template, separator: _, assistant_prefix: _ } => {
+                turn_template.replace("{role}", role).replace("{content}", content)
+            }
         }
     }
 
@@ -170,17 +159,12 @@ impl PromptTemplate {
             Self::Alpaca => "### Response:\n",
             Self::Instruct => "",
             Self::Raw => "",
-            Self::Custom {
-                assistant_prefix, ..
-            } => assistant_prefix,
+            Self::Custom { assistant_prefix, .. } => assistant_prefix,
         }
     }
 
     /// Format a full conversation into a single prompt string.
-    pub fn format_conversation(
-        &self,
-        messages: &[ConversationMessage],
-    ) -> String {
+    pub fn format_conversation(&self, messages: &[ConversationMessage]) -> String {
         let mut out = String::new();
         let sep = self.separator();
         for (i, msg) in messages.iter().enumerate() {
@@ -211,9 +195,7 @@ pub struct PromptTokenizer {
 
 impl Default for PromptTokenizer {
     fn default() -> Self {
-        Self {
-            chars_per_token: 4.0,
-        }
+        Self { chars_per_token: 4.0 }
     }
 }
 
@@ -270,10 +252,7 @@ pub struct SystemPromptManager {
 
 impl Default for SystemPromptManager {
     fn default() -> Self {
-        Self {
-            prompts: HashMap::new(),
-            default_key: "default".into(),
-        }
+        Self { prompts: HashMap::new(), default_key: "default".into() }
     }
 }
 
@@ -341,10 +320,7 @@ pub struct ConversationMessage {
 
 impl ConversationMessage {
     pub fn new(role: impl Into<String>, content: impl Into<String>) -> Self {
-        Self {
-            role: role.into(),
-            content: content.into(),
-        }
+        Self { role: role.into(), content: content.into() }
     }
 
     pub fn system(content: impl Into<String>) -> Self {
@@ -370,20 +346,14 @@ pub struct ConversationHistory {
 
 impl Default for ConversationHistory {
     fn default() -> Self {
-        Self {
-            messages: Vec::new(),
-            max_turns: 0,
-        }
+        Self { messages: Vec::new(), max_turns: 0 }
     }
 }
 
 impl ConversationHistory {
     /// Create a history with a maximum turn count.
     pub fn new(max_turns: usize) -> Self {
-        Self {
-            messages: Vec::new(),
-            max_turns,
-        }
+        Self { messages: Vec::new(), max_turns }
     }
 
     /// Append a message, evicting the oldest non-system messages if
@@ -462,9 +432,7 @@ impl ConversationHistory {
         }
         while self.messages.len() > self.max_turns {
             // Find the first non-system message and remove it.
-            if let Some(idx) =
-                self.messages.iter().position(|m| m.role != "system")
-            {
+            if let Some(idx) = self.messages.iter().position(|m| m.role != "system") {
                 self.messages.remove(idx);
             } else {
                 break;
@@ -498,10 +466,7 @@ pub struct PromptTruncator {
 
 impl Default for PromptTruncator {
     fn default() -> Self {
-        Self {
-            strategy: TruncationStrategy::Left,
-            headroom: 0,
-        }
+        Self { strategy: TruncationStrategy::Left, headroom: 0 }
     }
 }
 
@@ -512,11 +477,7 @@ impl PromptTruncator {
 
     /// Truncate `tokens` so that at most `budget` tokens remain (minus
     /// headroom). Returns the truncated tokens and the number removed.
-    pub fn truncate(
-        &self,
-        tokens: &[String],
-        budget: usize,
-    ) -> (Vec<String>, usize) {
+    pub fn truncate(&self, tokens: &[String], budget: usize) -> (Vec<String>, usize) {
         let effective = budget.saturating_sub(self.headroom);
         if tokens.len() <= effective {
             return (tokens.to_vec(), 0);
@@ -552,10 +513,7 @@ pub struct StopSequenceDetector {
 impl StopSequenceDetector {
     /// Create a detector with the given stop sequences.
     pub fn new(sequences: Vec<String>) -> Self {
-        Self {
-            sequences,
-            buffer: String::new(),
-        }
+        Self { sequences, buffer: String::new() }
     }
 
     /// Feed a new token/chunk of text.  Returns the first matched stop
@@ -635,10 +593,7 @@ impl std::fmt::Display for ValidationError {
                 write!(f, "prompt too long: {len} chars (max {max})")
             }
             Self::ExceedsTokenBudget { tokens, budget } => {
-                write!(
-                    f,
-                    "prompt exceeds token budget: {tokens} tokens (budget {budget})"
-                )
+                write!(f, "prompt exceeds token budget: {tokens} tokens (budget {budget})")
             }
             Self::ContentPolicy(reason) => {
                 write!(f, "content policy violation: {reason}")
@@ -669,17 +624,8 @@ impl PromptValidator {
     }
 
     /// Create a validator with explicit limits.
-    pub fn new(
-        max_chars: usize,
-        token_budget: usize,
-        content_policy_enabled: bool,
-    ) -> Self {
-        Self {
-            max_chars,
-            token_budget,
-            content_policy_enabled,
-            blocked_patterns: Vec::new(),
-        }
+    pub fn new(max_chars: usize, token_budget: usize, content_policy_enabled: bool) -> Self {
+        Self { max_chars, token_budget, content_policy_enabled, blocked_patterns: Vec::new() }
     }
 
     /// Add a blocked pattern for content-policy checking.
@@ -700,10 +646,7 @@ impl PromptValidator {
         }
 
         if self.max_chars > 0 && text.len() > self.max_chars {
-            errors.push(ValidationError::TooLong {
-                len: text.len(),
-                max: self.max_chars,
-            });
+            errors.push(ValidationError::TooLong { len: text.len(), max: self.max_chars });
         }
 
         let est = tokenizer.estimate_tokens(text);
@@ -718,18 +661,12 @@ impl PromptValidator {
             let lower = text.to_lowercase();
             for pat in &self.blocked_patterns {
                 if lower.contains(&pat.to_lowercase()) {
-                    errors.push(ValidationError::ContentPolicy(format!(
-                        "blocked pattern: {pat}"
-                    )));
+                    errors.push(ValidationError::ContentPolicy(format!("blocked pattern: {pat}")));
                 }
             }
         }
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 }
 
@@ -883,11 +820,7 @@ impl PromptEngine {
             .unwrap_or_default()
             .into_iter()
             .filter(|e| {
-                matches!(
-                    e,
-                    ValidationError::EmptyPrompt
-                        | ValidationError::ContentPolicy(_)
-                )
+                matches!(e, ValidationError::EmptyPrompt | ValidationError::ContentPolicy(_))
             })
             .collect();
         if !pre_errors.is_empty() {
@@ -898,8 +831,7 @@ impl PromptEngine {
         let estimated_before = tokens.len();
         let budget = self.config.prompt_token_budget();
 
-        let (final_tokens, truncated_count) =
-            self.truncator.truncate(&tokens, budget);
+        let (final_tokens, truncated_count) = self.truncator.truncate(&tokens, budget);
         let estimated_after = final_tokens.len();
         let text = self.tokenizer.detokenize(&final_tokens);
 
@@ -917,18 +849,12 @@ impl PromptEngine {
             estimated_tokens_after: estimated_after,
             tokens_truncated: truncated_count,
             turn_count: messages.len(),
-            has_system_prompt: messages
-                .iter()
-                .any(|m| m.role == "system"),
+            has_system_prompt: messages.iter().any(|m| m.role == "system"),
             stop_sequence_count: self.config.stop_sequences.len(),
             template_name: template_name.into(),
         };
 
-        Ok(ProcessedPrompt {
-            text,
-            tokens: final_tokens,
-            metrics,
-        })
+        Ok(ProcessedPrompt { text, tokens: final_tokens, metrics })
     }
 
     /// Create a [`StopSequenceDetector`] pre-loaded with this engine's stop
@@ -1025,10 +951,7 @@ mod tests {
 
     #[test]
     fn chatml_assistant_prefix() {
-        assert_eq!(
-            PromptTemplate::ChatML.assistant_prefix(),
-            "<|im_start|>assistant\n"
-        );
+        assert_eq!(PromptTemplate::ChatML.assistant_prefix(), "<|im_start|>assistant\n");
     }
 
     #[test]
@@ -1078,10 +1001,8 @@ mod tests {
 
     #[test]
     fn format_conversation_chatml() {
-        let msgs = vec![
-            ConversationMessage::system("Be kind."),
-            ConversationMessage::user("Hello"),
-        ];
+        let msgs =
+            vec![ConversationMessage::system("Be kind."), ConversationMessage::user("Hello")];
         let text = PromptTemplate::ChatML.format_conversation(&msgs);
         assert!(text.contains("<|im_start|>system"));
         assert!(text.contains("<|im_start|>user"));
@@ -1101,10 +1022,7 @@ mod tests {
             separator: "|".into(),
             assistant_prefix: "".into(),
         };
-        let msgs = vec![
-            ConversationMessage::user("a"),
-            ConversationMessage::user("b"),
-        ];
+        let msgs = vec![ConversationMessage::user("a"), ConversationMessage::user("b")];
         let text = t.format_conversation(&msgs);
         assert!(text.contains("|"));
     }
@@ -1148,8 +1066,7 @@ mod tests {
     fn tokenizer_formatted() {
         let t = PromptTokenizer::default();
         let msgs = vec![ConversationMessage::user("hello world")];
-        let (tokens, count) =
-            t.tokenize_formatted(&PromptTemplate::Raw, &msgs);
+        let (tokens, count) = t.tokenize_formatted(&PromptTemplate::Raw, &msgs);
         assert_eq!(count, tokens.len());
         assert!(count >= 2);
     }
@@ -1299,8 +1216,7 @@ mod tests {
     #[test]
     fn truncator_no_truncation_needed() {
         let t = PromptTruncator::default();
-        let tokens: Vec<String> =
-            vec!["a", "b", "c"].into_iter().map(Into::into).collect();
+        let tokens: Vec<String> = vec!["a", "b", "c"].into_iter().map(Into::into).collect();
         let (out, removed) = t.truncate(&tokens, 10);
         assert_eq!(out.len(), 3);
         assert_eq!(removed, 0);
@@ -1309,8 +1225,7 @@ mod tests {
     #[test]
     fn truncator_left() {
         let t = PromptTruncator::new(TruncationStrategy::Left, 0);
-        let tokens: Vec<String> =
-            vec!["a", "b", "c", "d"].into_iter().map(Into::into).collect();
+        let tokens: Vec<String> = vec!["a", "b", "c", "d"].into_iter().map(Into::into).collect();
         let (out, removed) = t.truncate(&tokens, 2);
         assert_eq!(out, vec!["c", "d"]);
         assert_eq!(removed, 2);
@@ -1319,8 +1234,7 @@ mod tests {
     #[test]
     fn truncator_right() {
         let t = PromptTruncator::new(TruncationStrategy::Right, 0);
-        let tokens: Vec<String> =
-            vec!["a", "b", "c", "d"].into_iter().map(Into::into).collect();
+        let tokens: Vec<String> = vec!["a", "b", "c", "d"].into_iter().map(Into::into).collect();
         let (out, removed) = t.truncate(&tokens, 2);
         assert_eq!(out, vec!["a", "b"]);
         assert_eq!(removed, 2);
@@ -1329,10 +1243,8 @@ mod tests {
     #[test]
     fn truncator_middle() {
         let t = PromptTruncator::new(TruncationStrategy::Middle, 0);
-        let tokens: Vec<String> = vec!["a", "b", "c", "d", "e", "f"]
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let tokens: Vec<String> =
+            vec!["a", "b", "c", "d", "e", "f"].into_iter().map(Into::into).collect();
         let (out, removed) = t.truncate(&tokens, 4);
         assert_eq!(out.len(), 4);
         assert_eq!(out[0], "a");
@@ -1344,10 +1256,8 @@ mod tests {
     #[test]
     fn truncator_headroom() {
         let t = PromptTruncator::new(TruncationStrategy::Left, 2);
-        let tokens: Vec<String> = vec!["a", "b", "c", "d", "e"]
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let tokens: Vec<String> =
+            vec!["a", "b", "c", "d", "e"].into_iter().map(Into::into).collect();
         // budget=5, headroom=2 → effective=3 → remove 2
         let (out, removed) = t.truncate(&tokens, 5);
         assert_eq!(out.len(), 3);
@@ -1365,8 +1275,7 @@ mod tests {
     #[test]
     fn truncator_zero_budget() {
         let t = PromptTruncator::default();
-        let tokens: Vec<String> =
-            vec!["a", "b"].into_iter().map(Into::into).collect();
+        let tokens: Vec<String> = vec!["a", "b"].into_iter().map(Into::into).collect();
         let (out, removed) = t.truncate(&tokens, 0);
         assert!(out.is_empty());
         assert_eq!(removed, 2);
@@ -1398,10 +1307,7 @@ mod tests {
 
     #[test]
     fn stop_detector_multiple_sequences() {
-        let mut d = StopSequenceDetector::new(vec![
-            "<|end|>".into(),
-            "\n\n".into(),
-        ]);
+        let mut d = StopSequenceDetector::new(vec!["<|end|>".into(), "\n\n".into()]);
         assert!(d.feed("text\n").is_none());
         assert!(d.feed("\n").is_some());
     }
@@ -1438,8 +1344,7 @@ mod tests {
 
     #[test]
     fn stop_detector_num_sequences() {
-        let d =
-            StopSequenceDetector::new(vec!["a".into(), "b".into(), "c".into()]);
+        let d = StopSequenceDetector::new(vec!["a".into(), "b".into(), "c".into()]);
         assert_eq!(d.num_sequences(), 3);
     }
 
@@ -1473,9 +1378,7 @@ mod tests {
         let v = PromptValidator::new(5, 1000, false);
         let t = PromptTokenizer::default();
         let errs = v.validate("abcdef", &t).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| matches!(e, ValidationError::TooLong { .. })));
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::TooLong { .. })));
     }
 
     #[test]
@@ -1483,9 +1386,7 @@ mod tests {
         let v = PromptValidator::new(0, 1, false);
         let t = PromptTokenizer::new(1.0); // 1 char = 1 token
         let errs = v.validate("ab", &t).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| matches!(e, ValidationError::ExceedsTokenBudget { .. })));
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::ExceedsTokenBudget { .. })));
     }
 
     #[test]
@@ -1494,9 +1395,7 @@ mod tests {
         v.add_blocked_pattern("BLOCKED");
         let t = PromptTokenizer::default();
         let errs = v.validate("this is BLOCKED text", &t).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| matches!(e, ValidationError::ContentPolicy(_))));
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::ContentPolicy(_))));
     }
 
     #[test]
@@ -1505,9 +1404,7 @@ mod tests {
         v.add_blocked_pattern("bad");
         let t = PromptTokenizer::default();
         let errs = v.validate("this is BAD text", &t).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| matches!(e, ValidationError::ContentPolicy(_))));
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::ContentPolicy(_))));
     }
 
     #[test]
@@ -1586,8 +1483,7 @@ mod tests {
 
     #[test]
     fn engine_process_single_raw() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
         let result = engine.process_single("Hello world").unwrap();
         assert!(result.text.contains("Hello"));
@@ -1619,8 +1515,7 @@ mod tests {
 
     #[test]
     fn engine_process_alpaca() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Alpaca);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Alpaca);
         let engine = PromptEngine::new(config);
         let result = engine.process_single("Do something").unwrap();
         assert!(result.text.contains("Instruction"));
@@ -1628,8 +1523,7 @@ mod tests {
 
     #[test]
     fn engine_process_messages() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
         let msgs = vec![
             ConversationMessage::user("one"),
@@ -1643,8 +1537,7 @@ mod tests {
     #[test]
     fn engine_truncation_applied() {
         // Config with very small budget to force truncation.
-        let config = PromptConfig::new(10, 5)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(10, 5).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
         let long_input = "a b c d e f g h i j k l m n o p";
         let result = engine.process_single(long_input).unwrap();
@@ -1666,9 +1559,8 @@ mod tests {
 
     #[test]
     fn engine_stop_detector() {
-        let config = PromptConfig::new(2048, 256)
-            .with_stop_sequence("<|end|>")
-            .with_stop_sequence("\n\n");
+        let config =
+            PromptConfig::new(2048, 256).with_stop_sequence("<|end|>").with_stop_sequence("\n\n");
         let engine = PromptEngine::new(config);
         let mut det = engine.stop_detector();
         assert_eq!(det.num_sequences(), 2);
@@ -1677,23 +1569,18 @@ mod tests {
 
     #[test]
     fn engine_with_custom_tokenizer() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Raw);
-        let engine =
-            PromptEngine::new(config).with_tokenizer(PromptTokenizer::new(2.0));
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Raw);
+        let engine = PromptEngine::new(config).with_tokenizer(PromptTokenizer::new(2.0));
         let result = engine.process_single("Hello world").unwrap();
         assert!(!result.tokens.is_empty());
     }
 
     #[test]
     fn engine_with_custom_truncator() {
-        let config = PromptConfig::new(10, 5)
-            .with_template(PromptTemplate::Raw);
-        let truncator =
-            PromptTruncator::new(TruncationStrategy::Right, 0);
+        let config = PromptConfig::new(10, 5).with_template(PromptTemplate::Raw);
+        let truncator = PromptTruncator::new(TruncationStrategy::Right, 0);
         let engine = PromptEngine::new(config).with_truncator(truncator);
-        let result =
-            engine.process_single("a b c d e f g h i j").unwrap();
+        let result = engine.process_single("a b c d e f g h i j").unwrap();
         assert!(result.tokens.len() <= 5);
         // Right truncation keeps the beginning.
         assert_eq!(result.tokens[0], "a");
@@ -1708,8 +1595,7 @@ mod tests {
 
     #[test]
     fn engine_system_prompts_accessor() {
-        let config = PromptConfig::new(2048, 256)
-            .with_system_prompt("SP");
+        let config = PromptConfig::new(2048, 256).with_system_prompt("SP");
         let engine = PromptEngine::new(config);
         assert_eq!(engine.system_prompts().default_prompt(), Some("SP"));
     }
@@ -1736,8 +1622,7 @@ mod tests {
             .with_template(PromptTemplate::ChatML)
             .with_system_prompt("You are a helpful assistant.");
         let engine = PromptEngine::new(config);
-        let result =
-            engine.process_messages(history.messages()).unwrap();
+        let result = engine.process_messages(history.messages()).unwrap();
         assert_eq!(result.metrics.turn_count, 4);
         assert!(result.metrics.has_system_prompt);
         assert!(result.text.contains("Rust"));
@@ -1753,8 +1638,7 @@ mod tests {
         let windowed = history.window(5);
         assert_eq!(windowed[0].role, "system");
 
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
         let result = engine.process_messages(&windowed).unwrap();
         assert_eq!(result.metrics.turn_count, 5);
@@ -1783,16 +1667,11 @@ mod tests {
 
     #[test]
     fn truncation_metrics_consistent() {
-        let config = PromptConfig::new(10, 5)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(10, 5).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
-        let result =
-            engine.process_single("a b c d e f g h i j").unwrap();
+        let result = engine.process_single("a b c d e f g h i j").unwrap();
         let m = &result.metrics;
-        assert_eq!(
-            m.estimated_tokens_before,
-            m.estimated_tokens_after + m.tokens_truncated
-        );
+        assert_eq!(m.estimated_tokens_before, m.estimated_tokens_after + m.tokens_truncated);
     }
 
     #[test]
@@ -1803,10 +1682,7 @@ mod tests {
         let e = ValidationError::TooLong { len: 10, max: 5 };
         assert!(format!("{e}").contains("10"));
 
-        let e = ValidationError::ExceedsTokenBudget {
-            tokens: 100,
-            budget: 50,
-        };
+        let e = ValidationError::ExceedsTokenBudget { tokens: 100, budget: 50 };
         assert!(format!("{e}").contains("100"));
 
         let e = ValidationError::ContentPolicy("test".into());
@@ -1815,8 +1691,7 @@ mod tests {
 
     #[test]
     fn instruct_template_format() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Instruct);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Instruct);
         let engine = PromptEngine::new(config);
         let result = engine.process_single("Explain X.").unwrap();
         assert!(result.text.contains("Instruction"));
@@ -1829,8 +1704,7 @@ mod tests {
             separator: "".into(),
             assistant_prefix: "<assistant>".into(),
         };
-        let config =
-            PromptConfig::new(2048, 256).with_template(template);
+        let config = PromptConfig::new(2048, 256).with_template(template);
         let engine = PromptEngine::new(config);
         let result = engine.process_single("hi").unwrap();
         assert!(result.text.contains("<user>hi</user>"));
@@ -1860,9 +1734,7 @@ mod tests {
     #[test]
     fn truncator_middle_even_split() {
         let t = PromptTruncator::new(TruncationStrategy::Middle, 0);
-        let tokens: Vec<String> = (0..10)
-            .map(|i| format!("t{i}"))
-            .collect();
+        let tokens: Vec<String> = (0..10).map(|i| format!("t{i}")).collect();
         let (out, removed) = t.truncate(&tokens, 6);
         assert_eq!(out.len(), 6);
         assert_eq!(removed, 4);
@@ -1874,8 +1746,7 @@ mod tests {
 
     #[test]
     fn engine_empty_conversation_error() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Raw);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Raw);
         let engine = PromptEngine::new(config);
         let result = engine.process_messages(&[]);
         // Empty conversation = empty prompt → validation error.
@@ -1923,8 +1794,7 @@ mod tests {
 
     #[test]
     fn engine_instruct_template_name() {
-        let config = PromptConfig::new(2048, 256)
-            .with_template(PromptTemplate::Instruct);
+        let config = PromptConfig::new(2048, 256).with_template(PromptTemplate::Instruct);
         let engine = PromptEngine::new(config);
         let result = engine.process_single("test").unwrap();
         assert_eq!(result.metrics.template_name, "Instruct");
