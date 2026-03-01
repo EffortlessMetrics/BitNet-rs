@@ -1227,6 +1227,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-runtime-bootstrap",
+ "bitnet-server-health-types-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",
@@ -1266,6 +1267,14 @@ dependencies = [
  "uuid",
  "vergen-gix",
  "walkdir",
+]
+
+[[package]]
+name = "bitnet-server-health-types-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
