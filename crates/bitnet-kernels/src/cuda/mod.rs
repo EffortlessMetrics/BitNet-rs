@@ -45,6 +45,9 @@ pub use crate::scatter_gather::{
     scatter_cpu, scatter_forward,
 };
 
+// Re-export matmul types from the crate-level module (always compiled).
+pub use crate::matmul::{GemmConfig, gemm_cpu, gemm_forward};
+
 // Re-export reduction types from the crate-level module (always compiled).
 pub use crate::reduction::{
     ReductionConfig, ReductionOp, launch_reduce_cols_f32, launch_reduce_f32,
