@@ -539,6 +539,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-cpu-activations"
+version = "0.2.1-dev"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "bitnet-crossval"
 version = "0.2.1-dev"
 dependencies = [
@@ -785,6 +792,7 @@ dependencies = [
  "anyhow",
  "bindgen",
  "bitnet-common",
+ "bitnet-cpu-activations",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
@@ -797,7 +805,6 @@ dependencies = [
  "env_logger",
  "half",
  "insta",
- "libm",
  "log",
  "memory-stats",
  "opencl3",
