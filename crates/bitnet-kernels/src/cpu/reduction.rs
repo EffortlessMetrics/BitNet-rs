@@ -580,4 +580,341 @@ mod tests {
         assert!(approx(a, b));
         assert!(approx(a, 5.0));
     }
+
+    // ── All-same values ───────────────────────────────────────
+
+    #[test]
+    fn reduce_all_same_values() {
+        let d = [5.0_f32; 8];
+        assert!(approx(ReductionKernel::sum(&d).unwrap(), 40.0));
+        assert!(approx(ReductionKernel::mean(&d).unwrap(), 5.0));
+        let mx = ReductionKernel::max(&d).unwrap();
+        assert!(approx(mx.value, 5.0));
+        assert_eq!(mx.index, 7); // max_by returns last for ties
+        let mn = ReductionKernel::min(&d).unwrap();
+        assert!(approx(mn.value, 5.0));
+        assert_eq!(mn.index, 0); // min_by returns first for ties
+    }
+
+    #[test]
+    fn reduce_all_zeros() {
+        let d = [0.0_f32; 4];
+        assert!(approx(ReductionKernel::sum(&d).unwrap(), 0.0));
+        assert!(approx(ReductionKernel::mean(&d).unwrap(), 0.0));
+        assert!(approx(ReductionKernel::product(&d).unwrap(), 0.0));
+        assert!(approx(ReductionKernel::l1_norm(&d).unwrap(), 0.0));
+        assert!(approx(ReductionKernel::l2_norm(&d).unwrap(), 0.0));
+    }
+
+    // ── NaN handling ──────────────────────────────────────────
+
+    #[test]
+    fn reduce_nan_sum_propagates() {
+        let d = [1.0, f32::NAN, 3.0];
+        assert!(ReductionKernel::sum(&d).unwrap().is_nan());
+    }
+
+    #[test]
+    fn reduce_nan_mean_propagates() {
+        let d = [1.0, f32::NAN, 3.0];
+        assert!(ReductionKernel::mean(&d).unwrap().is_nan());
+    }
+
+    #[test]
+    fn reduce_nan_max_uses_total_cmp() {
+        // total_cmp places NaN above all finite values
+        let d = [1.0, f32::NAN, 3.0];
+        let r = ReductionKernel::max(&d).unwrap();
+        assert!(r.value.is_nan());
+        assert_eq!(r.index, 1);
+    }
+
+    #[test]
+    fn reduce_nan_min_uses_total_cmp() {
+        // total_cmp: -NaN < -Inf < ... < Inf < NaN
+        let d = [1.0, f32::NAN, 3.0];
+        let r = ReductionKernel::min(&d).unwrap();
+        assert!(approx(r.value, 1.0));
+        assert_eq!(r.index, 0);
+    }
+
+    #[test]
+    fn reduce_nan_product_propagates() {
+        let d = [2.0, f32::NAN, 3.0];
+        assert!(ReductionKernel::product(&d).unwrap().is_nan());
+    }
+
+    #[test]
+    fn reduce_nan_l1_propagates() {
+        let d = [1.0, f32::NAN, 3.0];
+        assert!(ReductionKernel::l1_norm(&d).unwrap().is_nan());
+    }
+
+    #[test]
+    fn reduce_nan_l2_propagates() {
+        let d = [1.0, f32::NAN, 3.0];
+        assert!(ReductionKernel::l2_norm(&d).unwrap().is_nan());
+    }
+
+    // ── Infinity handling ─────────────────────────────────────
+
+    #[test]
+    fn reduce_inf_max() {
+        let d = [1.0, f32::INFINITY, 3.0];
+        let r = ReductionKernel::max(&d).unwrap();
+        assert_eq!(r.value, f32::INFINITY);
+        assert_eq!(r.index, 1);
+    }
+
+    #[test]
+    fn reduce_neg_inf_min() {
+        let d = [1.0, f32::NEG_INFINITY, 3.0];
+        let r = ReductionKernel::min(&d).unwrap();
+        assert_eq!(r.value, f32::NEG_INFINITY);
+        assert_eq!(r.index, 1);
+    }
+
+    // ── Empty-slice errors for all ops ────────────────────────
+
+    #[test]
+    fn reduce_empty_rejected_all_ops() {
+        let e: &[f32] = &[];
+        assert!(ReductionKernel::sum(e).is_err());
+        assert!(ReductionKernel::mean(e).is_err());
+        assert!(ReductionKernel::max(e).is_err());
+        assert!(ReductionKernel::min(e).is_err());
+        assert!(ReductionKernel::product(e).is_err());
+        assert!(ReductionKernel::l1_norm(e).is_err());
+        assert!(ReductionKernel::l2_norm(e).is_err());
+    }
+
+    // ── Single-element min/argmin ─────────────────────────────
+
+    #[test]
+    fn reduce_single_element_min() {
+        let d = [42.0_f32];
+        let r = ReductionKernel::min(&d).unwrap();
+        assert!(approx(r.value, 42.0));
+        assert_eq!(r.index, 0);
+    }
+
+    // ── Axis reduction shape invariants ───────────────────────
+
+    #[test]
+    fn reduce_axis_row_output_length() {
+        let rows = 5;
+        let cols = 3;
+        let data: Vec<f32> = (0..rows * cols).map(|i| i as f32).collect();
+        let out = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+        assert_eq!(out.len(), rows);
+        let max_out = ReductionKernel::max_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+        assert_eq!(max_out.len(), rows);
+        let min_out = ReductionKernel::min_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+        assert_eq!(min_out.len(), rows);
+    }
+
+    #[test]
+    fn reduce_axis_col_output_length() {
+        let rows = 4;
+        let cols = 7;
+        let data: Vec<f32> = (0..rows * cols).map(|i| i as f32).collect();
+        let out = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Column).unwrap();
+        assert_eq!(out.len(), cols);
+        let max_out = ReductionKernel::max_axis(&data, rows, cols, ReductionAxis::Column).unwrap();
+        assert_eq!(max_out.len(), cols);
+        let min_out = ReductionKernel::min_axis(&data, rows, cols, ReductionAxis::Column).unwrap();
+        assert_eq!(min_out.len(), cols);
+    }
+
+    #[test]
+    fn reduce_axis_1x1_matrix() {
+        let data = [99.0_f32];
+        let row_sum = ReductionKernel::sum_axis(&data, 1, 1, ReductionAxis::Row).unwrap();
+        assert!(approx_vec(&row_sum, &[99.0]));
+        let col_sum = ReductionKernel::sum_axis(&data, 1, 1, ReductionAxis::Column).unwrap();
+        assert!(approx_vec(&col_sum, &[99.0]));
+    }
+
+    #[test]
+    fn reduce_axis_mean_consistent_with_sum() {
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let (rows, cols) = (2, 3);
+        let sums = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+        let means = ReductionKernel::mean_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+        for (s, m) in sums.iter().zip(means.iter()) {
+            assert!(approx(*m, *s / cols as f32));
+        }
+    }
+
+    // ── Duplicate max/min returns first index ─────────────────
+
+    #[test]
+    fn reduce_max_tie_returns_last() {
+        // max_by returns last element for ties
+        let d = [1.0, 5.0, 5.0, 2.0];
+        let r = ReductionKernel::max(&d).unwrap();
+        assert!(approx(r.value, 5.0));
+        assert_eq!(r.index, 2);
+    }
+
+    #[test]
+    fn reduce_min_tie_returns_first() {
+        // min_by returns first element for ties
+        let d = [3.0, 1.0, 1.0, 5.0];
+        let r = ReductionKernel::min(&d).unwrap();
+        assert!(approx(r.value, 1.0));
+        assert_eq!(r.index, 1);
+    }
+}
+
+// ── Property tests ────────────────────────────────────────────────
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn finite_vec(min_len: usize, max_len: usize) -> impl Strategy<Value = Vec<f32>> {
+        proptest::collection::vec(-1e6_f32..1e6_f32, min_len..=max_len)
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(256))]
+
+        // sum >= min * len for non-negative data
+        #[test]
+        fn prop_reduce_sum_ge_min_times_len(data in finite_vec(1, 128)) {
+            let s = ReductionKernel::sum(&data).unwrap();
+            let mn = ReductionKernel::min(&data).unwrap().value;
+            let n = data.len() as f32;
+            // sum >= min * n  (with tolerance for floating point)
+            prop_assert!(s >= mn * n - 1e-3);
+        }
+
+        // max >= mean >= min
+        #[test]
+        fn prop_reduce_max_ge_mean_ge_min(data in finite_vec(1, 128)) {
+            let mx = ReductionKernel::max(&data).unwrap().value;
+            let avg = ReductionKernel::mean(&data).unwrap();
+            let mn = ReductionKernel::min(&data).unwrap().value;
+            prop_assert!(mx >= avg - 1e-5, "max={mx} < mean={avg}");
+            prop_assert!(avg >= mn - 1e-5, "mean={avg} < min={mn}");
+        }
+
+        // argmax index is valid and points to the max value
+        #[test]
+        fn prop_reduce_argmax_valid(data in finite_vec(1, 128)) {
+            let r = ReductionKernel::max(&data).unwrap();
+            prop_assert!(r.index < data.len());
+            prop_assert_eq!(data[r.index].to_bits(), r.value.to_bits());
+        }
+
+        // argmin index is valid and points to the min value
+        #[test]
+        fn prop_reduce_argmin_valid(data in finite_vec(1, 128)) {
+            let r = ReductionKernel::min(&data).unwrap();
+            prop_assert!(r.index < data.len());
+            prop_assert_eq!(data[r.index].to_bits(), r.value.to_bits());
+        }
+
+        // mean equals sum / len
+        #[test]
+        fn prop_reduce_mean_equals_sum_div_len(data in finite_vec(1, 128)) {
+            let s = ReductionKernel::sum(&data).unwrap();
+            let m = ReductionKernel::mean(&data).unwrap();
+            let expected = s / data.len() as f32;
+            prop_assert!((m - expected).abs() < 1e-4,
+                "mean={m} vs sum/n={expected}");
+        }
+
+        // L1 norm >= L2 norm is NOT always true, but L2 <= L1 for any vector
+        // Actually: L2 <= L1 (triangle inequality in component form)
+        #[test]
+        fn prop_reduce_l2_le_l1(data in finite_vec(1, 64)) {
+            let l1 = ReductionKernel::l1_norm(&data).unwrap();
+            let l2 = ReductionKernel::l2_norm(&data).unwrap();
+            prop_assert!(l2 <= l1 + 1e-4,
+                "L2={l2} > L1={l1}");
+        }
+
+        // L1 norm is non-negative
+        #[test]
+        fn prop_reduce_l1_non_negative(data in finite_vec(1, 64)) {
+            let l1 = ReductionKernel::l1_norm(&data).unwrap();
+            prop_assert!(l1 >= 0.0);
+        }
+
+        // L2 norm is non-negative
+        #[test]
+        fn prop_reduce_l2_non_negative(data in finite_vec(1, 64)) {
+            let l2 = ReductionKernel::l2_norm(&data).unwrap();
+            prop_assert!(l2 >= 0.0);
+        }
+
+        // Row-axis sum output length equals number of rows
+        #[test]
+        fn prop_reduce_axis_row_shape(
+            rows in 1_usize..=8,
+            cols in 1_usize..=8,
+        ) {
+            let data: Vec<f32> = (0..rows * cols).map(|i| i as f32).collect();
+            let out = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+            prop_assert_eq!(out.len(), rows);
+        }
+
+        // Column-axis sum output length equals number of columns
+        #[test]
+        fn prop_reduce_axis_col_shape(
+            rows in 1_usize..=8,
+            cols in 1_usize..=8,
+        ) {
+            let data: Vec<f32> = (0..rows * cols).map(|i| i as f32).collect();
+            let out = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Column).unwrap();
+            prop_assert_eq!(out.len(), cols);
+        }
+
+        // Full sum equals sum of row sums
+        #[test]
+        fn prop_reduce_row_sums_equal_total(
+            rows in 1_usize..=8,
+            cols in 1_usize..=8,
+        ) {
+            let data: Vec<f32> = (0..rows * cols).map(|i| (i as f32) * 0.1).collect();
+            let total = ReductionKernel::sum(&data).unwrap();
+            let row_sums = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+            let recomposed: f32 = row_sums.iter().sum();
+            prop_assert!((total - recomposed).abs() < 1e-3,
+                "total={total} vs row_sums.sum()={recomposed}");
+        }
+
+        // Full sum equals sum of column sums
+        #[test]
+        fn prop_reduce_col_sums_equal_total(
+            rows in 1_usize..=8,
+            cols in 1_usize..=8,
+        ) {
+            let data: Vec<f32> = (0..rows * cols).map(|i| (i as f32) * 0.1).collect();
+            let total = ReductionKernel::sum(&data).unwrap();
+            let col_sums = ReductionKernel::sum_axis(&data, rows, cols, ReductionAxis::Column).unwrap();
+            let recomposed: f32 = col_sums.iter().sum();
+            prop_assert!((total - recomposed).abs() < 1e-3,
+                "total={total} vs col_sums.sum()={recomposed}");
+        }
+
+        // Per-row max >= per-row mean >= per-row min
+        #[test]
+        fn prop_reduce_axis_row_max_ge_mean_ge_min(
+            rows in 1_usize..=6,
+            cols in 1_usize..=6,
+        ) {
+            let data: Vec<f32> = (0..rows * cols).map(|i| (i as f32) - 5.0).collect();
+            let maxes = ReductionKernel::max_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+            let means = ReductionKernel::mean_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+            let mins = ReductionKernel::min_axis(&data, rows, cols, ReductionAxis::Row).unwrap();
+            for r in 0..rows {
+                prop_assert!(maxes[r].value >= means[r] - 1e-5);
+                prop_assert!(means[r] >= mins[r].value - 1e-5);
+            }
+        }
+    }
 }
