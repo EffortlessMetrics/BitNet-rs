@@ -1,0 +1,18 @@
+[package]
+name = "bitnet-token-stream"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Incremental UTF-8 token streaming primitives for BitNet"
+rust-version.workspace = true
+
+[dependencies]
+tracing.workspace = true
+
+[lints]
+workspace = true

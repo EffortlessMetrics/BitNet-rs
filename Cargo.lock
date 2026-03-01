@@ -749,6 +749,7 @@ dependencies = [
  "bitnet-sampling",
  "bitnet-sys",
  "bitnet-test-support",
+ "bitnet-token-stream",
  "bitnet-tokenizers",
  "candle-core",
  "candle-nn",
@@ -1416,6 +1417,13 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "tokio",
+]
+
+[[package]]
+name = "bitnet-token-stream"
+version = "0.2.1-dev"
+dependencies = [
+ "tracing",
 ]
 
 [[package]]
