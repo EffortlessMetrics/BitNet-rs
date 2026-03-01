@@ -75,6 +75,7 @@ pub mod attention_mechanism;
 pub mod attention_patterns;
 pub mod cross_attention;
 pub mod ffn_block;
+pub mod mqa_gqa;
 pub mod rope_kernels;
 pub mod transformer_block;
 
