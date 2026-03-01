@@ -257,19 +257,18 @@ pub fn probe_intel_gpu() -> IntelGpuInfo {
     // Check fake GPU environment first (unless strict mode)
     if std::env::var("BITNET_STRICT_MODE").unwrap_or_default() != "1"
         && let Ok(val) = std::env::var("BITNET_GPU_FAKE")
+        && (val.contains("opencl") || val.contains("intel"))
     {
-        if val.contains("opencl") || val.contains("intel") {
-            return IntelGpuInfo {
-                detected: true,
-                device_name: "Intel Arc A770 (simulated)".to_string(),
-                driver_version: "simulated".to_string(),
-                opencl_version: "OpenCL 3.0".to_string(),
-                memory_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
-                compute_units: 32,
-                max_work_group_size: 1024,
-                level_zero_available: true,
-            };
-        }
+        return IntelGpuInfo {
+            detected: true,
+            device_name: "Intel Arc A770 (simulated)".to_string(),
+            driver_version: "simulated".to_string(),
+            opencl_version: "OpenCL 3.0".to_string(),
+            memory_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
+            compute_units: 32,
+            max_work_group_size: 1024,
+            level_zero_available: true,
+        };
     }
 
     probe_intel_gpu_real()
