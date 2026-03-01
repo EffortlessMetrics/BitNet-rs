@@ -288,6 +288,12 @@ test = false
 doc = false
 
 [[bin]]
+name = "tensor_validation"
+path = "fuzz_targets/tensor_validation.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "config_validation"
 path = "fuzz_targets/config_validation.rs"
 test = false
@@ -296,5 +302,11 @@ doc = false
 [[bin]]
 name = "scatter_indices"
 path = "fuzz_targets/scatter_indices.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "memory_pool_alloc"
+path = "fuzz_targets/memory_pool_alloc.rs"
 test = false
 doc = false
