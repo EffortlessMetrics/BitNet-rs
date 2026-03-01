@@ -165,6 +165,7 @@ pub mod docker_ci;
 
 // === Existing Modules (prior waves) ===
 pub mod generation;
+pub mod guided_generation;
 pub mod model_warmup;
 pub mod prompt_cache;
 
