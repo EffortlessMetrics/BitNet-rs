@@ -1,47 +1,74 @@
-//! OpenCL embedding lookup and output projection (lm_head) implementations.
+//! OpenCL embedding lookup for A770 GPU inference.
 //!
-//! Provides CPU reference implementations and OpenCL kernel sources for:
-//!
-//! - **Embedding lookup**: token ID → dense vector from a learned table
-//! - **Output projection** (lm_head): hidden state → logits via `hidden @ weight^T`
-//! - **Tied weights**: shared weight matrix for embedding and output projection
-//! - **Position embeddings**: absolute position encoding (additive)
-//! - **Embedding normalization**: optional RMS normalization after lookup
-//!
-//! The OpenCL kernel source is embedded at compile time via `include_str!`
-//! from `gpu/kernels/embedding.cl`.
+//! Provides:
+//! - [`EmbeddingConfig`]: vocabulary/dimension configuration with validation
+//! - [`EmbeddingTable`]: weight storage with single-token, batch, and zero-copy lookup
+//! - [`EmbeddingError`]: typed errors for out-of-range tokens, dimension mismatches
+//! - OpenCL kernel source for GPU-accelerated embedding lookup
+//! - [`cpu_embedding_lookup`]: CPU reference implementation for testing
 
-use bitnet_common::{KernelError, Result};
+use std::fmt;
 
-// ── OpenCL kernel source ─────────────────────────────────────────
+// ── Error type ───────────────────────────────────────────────────
 
-/// OpenCL kernel source for embedding and projection operations.
-pub const EMBEDDING_CL: &str = include_str!("gpu/kernels/embedding.cl");
+/// Errors from embedding operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EmbeddingError {
+    /// Token ID exceeds vocabulary size.
+    TokenOutOfRange { token_id: u32, vocab_size: usize },
+    /// Weight buffer length does not match config.
+    DimensionMismatch { expected: usize, got: usize },
+    /// Pre-allocated output buffer is too small.
+    OutputBufferTooSmall { needed: usize, got: usize },
+    /// Invalid configuration (zero dimensions, etc.).
+    InvalidConfig(String),
+}
+
+impl fmt::Display for EmbeddingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TokenOutOfRange { token_id, vocab_size } => {
+                write!(f, "token ID {token_id} out of range for vocab_size {vocab_size}")
+            }
+            Self::DimensionMismatch { expected, got } => {
+                write!(f, "dimension mismatch: expected {expected}, got {got}")
+            }
+            Self::OutputBufferTooSmall { needed, got } => {
+                write!(f, "output buffer too small: needed {needed}, got {got}")
+            }
+            Self::InvalidConfig(msg) => write!(f, "invalid embedding config: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for EmbeddingError {}
 
 // ── Configuration ────────────────────────────────────────────────
 
-/// Configuration for embedding operations.
-#[derive(Debug, Clone)]
+/// Configuration for embedding lookup operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EmbeddingConfig {
-    /// Number of tokens in the vocabulary.
+    /// Number of tokens in the vocabulary (e.g. 32000 for LLaMA).
     pub vocab_size: usize,
-    /// Dimensionality of each embedding vector.
-    pub embedding_dim: usize,
-    /// Optional padding index: tokens with this ID produce zero vectors.
-    pub padding_idx: Option<u32>,
+    /// Dimensionality of each embedding vector (e.g. 2048 or 2560).
+    pub embed_dim: usize,
 }
 
 impl EmbeddingConfig {
-    /// Create a new embedding configuration.
-    pub fn new(vocab_size: usize, embedding_dim: usize) -> Self {
-        Self { vocab_size, embedding_dim, padding_idx: None }
+    /// Total size of the embedding table in bytes (f32 elements).
+    pub fn table_size_bytes(&self) -> usize {
+        self.vocab_size * self.embed_dim * 4
     }
 
-    /// Set padding index.
-    #[must_use]
-    pub fn with_padding_idx(mut self, idx: u32) -> Self {
-        self.padding_idx = Some(idx);
-        self
+    /// Validate that dimensions are non-zero.
+    pub fn validate(&self) -> Result<(), EmbeddingError> {
+        if self.vocab_size == 0 {
+            return Err(EmbeddingError::InvalidConfig("vocab_size must be > 0".to_string()));
+        }
+        if self.embed_dim == 0 {
+            return Err(EmbeddingError::InvalidConfig("embed_dim must be > 0".to_string()));
+        }
+        Ok(())
     }
 }
 
@@ -49,407 +76,161 @@ impl EmbeddingConfig {
 
 /// Token embedding table: maps token IDs to dense vectors.
 ///
-/// Stores a weight matrix `[vocab_size, embedding_dim]` and performs
-/// lookup for a batch of token IDs.
+/// Stores a flattened weight matrix `[vocab_size, embed_dim]` in row-major
+/// order and provides single-token, batch, and zero-copy lookup methods.
 #[derive(Debug, Clone)]
 pub struct EmbeddingTable {
-    /// Weight matrix in row-major layout: `[vocab_size, embedding_dim]`.
-    pub weight: Vec<f32>,
+    /// Weight matrix in row-major layout: `[vocab_size, embed_dim]`.
+    pub weights: Vec<f32>,
     /// Configuration.
     pub config: EmbeddingConfig,
 }
 
 impl EmbeddingTable {
-    /// Create a new embedding table with the given weights.
+    /// Create a new embedding table.
     ///
     /// # Errors
-    /// Returns an error if `weight.len() != vocab_size * embedding_dim`.
-    pub fn new(weight: Vec<f32>, config: EmbeddingConfig) -> Result<Self> {
-        let expected = config.vocab_size * config.embedding_dim;
-        if weight.len() != expected {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "embedding weight length {} != vocab_size({}) * embedding_dim({})",
-                    weight.len(),
-                    config.vocab_size,
-                    config.embedding_dim,
-                ),
-            }
-            .into());
+    /// Returns [`EmbeddingError::InvalidConfig`] if config has zero dimensions,
+    /// or [`EmbeddingError::DimensionMismatch`] if weights length doesn't match.
+    pub fn new(config: EmbeddingConfig, weights: Vec<f32>) -> Result<Self, EmbeddingError> {
+        config.validate()?;
+        let expected = config.vocab_size * config.embed_dim;
+        if weights.len() != expected {
+            return Err(EmbeddingError::DimensionMismatch { expected, got: weights.len() });
         }
-        Ok(Self { weight, config })
+        Ok(Self { weights, config })
     }
 
-    /// Look up embeddings for a batch of token IDs.
-    pub fn lookup(&self, token_ids: &[u32], output: &mut [f32]) -> Result<()> {
-        embedding_lookup_ref(
-            token_ids,
-            &self.weight,
-            output,
-            self.config.vocab_size,
-            self.config.embedding_dim,
-            self.config.padding_idx,
-        )
-    }
-}
-
-// ── OutputProjection ─────────────────────────────────────────────
-
-/// Output projection layer (lm_head): hidden → logits.
-///
-/// Computes `logits = hidden @ weight^T` where weight is
-/// `[vocab_size, hidden_size]`.
-#[derive(Debug, Clone)]
-pub struct OutputProjection {
-    /// Weight matrix: `[vocab_size, hidden_size]`.
-    pub weight: Vec<f32>,
-    /// Vocabulary size.
-    pub vocab_size: usize,
-    /// Hidden size (must equal embedding_dim for tied weights).
-    pub hidden_size: usize,
-}
-
-impl OutputProjection {
-    /// Create a new output projection layer.
-    pub fn new(weight: Vec<f32>, vocab_size: usize, hidden_size: usize) -> Result<Self> {
-        let expected = vocab_size * hidden_size;
-        if weight.len() != expected {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "projection weight length {} != vocab_size({}) * hidden_size({})",
-                    weight.len(),
-                    vocab_size,
-                    hidden_size,
-                ),
-            }
-            .into());
-        }
-        Ok(Self { weight, vocab_size, hidden_size })
-    }
-
-    /// Project hidden states to logits.
-    pub fn forward(&self, hidden: &[f32], output: &mut [f32], seq_len: usize) -> Result<()> {
-        output_projection_ref(
-            hidden,
-            &self.weight,
-            output,
-            seq_len,
-            self.hidden_size,
-            self.vocab_size,
-        )
-    }
-}
-
-// ── TiedEmbedding ────────────────────────────────────────────────
-
-/// Tied embedding: shares the same weight for lookup and output projection.
-///
-/// Many LLMs share the embedding weight matrix with the final lm_head
-/// projection to reduce parameter count.
-#[derive(Debug, Clone)]
-pub struct TiedEmbedding {
-    /// Shared weight matrix: `[vocab_size, embedding_dim]`.
-    pub weight: Vec<f32>,
-    /// Configuration for the embedding.
-    pub config: EmbeddingConfig,
-}
-
-impl TiedEmbedding {
-    /// Create a tied embedding with shared weights.
-    pub fn new(weight: Vec<f32>, config: EmbeddingConfig) -> Result<Self> {
-        let expected = config.vocab_size * config.embedding_dim;
-        if weight.len() != expected {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "tied weight length {} != vocab_size({}) * embedding_dim({})",
-                    weight.len(),
-                    config.vocab_size,
-                    config.embedding_dim,
-                ),
-            }
-            .into());
-        }
-        Ok(Self { weight, config })
-    }
-
-    /// Look up embeddings (forward direction).
-    pub fn lookup(&self, token_ids: &[u32], output: &mut [f32]) -> Result<()> {
-        embedding_lookup_ref(
-            token_ids,
-            &self.weight,
-            output,
-            self.config.vocab_size,
-            self.config.embedding_dim,
-            self.config.padding_idx,
-        )
-    }
-
-    /// Project hidden states to logits (reverse direction, lm_head).
-    pub fn project(&self, hidden: &[f32], output: &mut [f32], seq_len: usize) -> Result<()> {
-        output_projection_ref(
-            hidden,
-            &self.weight,
-            output,
-            seq_len,
-            self.config.embedding_dim,
-            self.config.vocab_size,
-        )
-    }
-
-    /// Get a reference to the shared weight.
-    pub fn weight(&self) -> &[f32] {
-        &self.weight
-    }
-}
-
-// ── PositionEmbedding ────────────────────────────────────────────
-
-/// Absolute position embedding table.
-///
-/// Stores learned position vectors `[max_seq_len, embedding_dim]` and
-/// adds them element-wise to token embeddings.
-#[derive(Debug, Clone)]
-pub struct PositionEmbedding {
-    /// Position weight matrix: `[max_seq_len, embedding_dim]`.
-    pub weight: Vec<f32>,
-    /// Maximum sequence length.
-    pub max_seq_len: usize,
-    /// Embedding dimension.
-    pub embedding_dim: usize,
-}
-
-impl PositionEmbedding {
-    /// Create a new position embedding table.
-    pub fn new(weight: Vec<f32>, max_seq_len: usize, embedding_dim: usize) -> Result<Self> {
-        let expected = max_seq_len * embedding_dim;
-        if weight.len() != expected {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "position weight length {} != max_seq_len({}) * embedding_dim({})",
-                    weight.len(),
-                    max_seq_len,
-                    embedding_dim,
-                ),
-            }
-            .into());
-        }
-        Ok(Self { weight, max_seq_len, embedding_dim })
-    }
-
-    /// Add position embeddings to token embeddings in-place.
+    /// Look up the embedding vector for a single token ID.
     ///
-    /// `embeddings` has shape `[seq_len, embedding_dim]`.
-    /// Position offset is the starting position index.
-    pub fn add_to(
+    /// Returns a slice of `embed_dim` elements.
+    pub fn lookup(&self, token_id: u32) -> Result<&[f32], EmbeddingError> {
+        let tid = token_id as usize;
+        if tid >= self.config.vocab_size {
+            return Err(EmbeddingError::TokenOutOfRange {
+                token_id,
+                vocab_size: self.config.vocab_size,
+            });
+        }
+        let start = tid * self.config.embed_dim;
+        Ok(&self.weights[start..start + self.config.embed_dim])
+    }
+
+    /// Batch lookup: returns a flattened `[batch_size, embed_dim]` vector.
+    pub fn lookup_batch(&self, token_ids: &[u32]) -> Result<Vec<f32>, EmbeddingError> {
+        let mut output = vec![0.0f32; token_ids.len() * self.config.embed_dim];
+        self.lookup_batch_into(token_ids, &mut output)?;
+        Ok(output)
+    }
+
+    /// Zero-copy batch lookup into a pre-allocated buffer.
+    ///
+    /// `output` must have at least `token_ids.len() * embed_dim` elements.
+    pub fn lookup_batch_into(
         &self,
-        embeddings: &mut [f32],
-        seq_len: usize,
-        position_offset: usize,
-    ) -> Result<()> {
-        let d = self.embedding_dim;
-        if position_offset + seq_len > self.max_seq_len {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "position_offset({}) + seq_len({}) exceeds max_seq_len({})",
-                    position_offset, seq_len, self.max_seq_len,
-                ),
-            }
-            .into());
+        token_ids: &[u32],
+        output: &mut [f32],
+    ) -> Result<(), EmbeddingError> {
+        let needed = token_ids.len() * self.config.embed_dim;
+        if output.len() < needed {
+            return Err(EmbeddingError::OutputBufferTooSmall { needed, got: output.len() });
         }
-        if embeddings.len() < seq_len * d {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "embeddings length {} < seq_len({}) * embedding_dim({})",
-                    embeddings.len(),
-                    seq_len,
-                    d,
-                ),
-            }
-            .into());
-        }
-
-        for t in 0..seq_len {
-            let pos = position_offset + t;
-            let emb_start = t * d;
-            let pos_start = pos * d;
-            for i in 0..d {
-                embeddings[emb_start + i] += self.weight[pos_start + i];
-            }
+        let d = self.config.embed_dim;
+        for (i, &tok) in token_ids.iter().enumerate() {
+            let row = self.lookup(tok)?;
+            output[i * d..(i + 1) * d].copy_from_slice(row);
         }
         Ok(())
     }
 }
 
-// ── EmbeddingNorm ────────────────────────────────────────────────
+// ── OpenCL kernel source ─────────────────────────────────────────
 
-/// Optional RMS normalization applied after embedding lookup.
+/// OpenCL kernel source for embedding lookup on GPU.
 ///
-/// Normalizes each token's embedding vector independently:
-/// `output[i] = input[i] / sqrt(mean(input^2) + eps)`
-#[derive(Debug, Clone, Copy)]
-pub struct EmbeddingNorm {
-    /// Embedding dimension.
-    pub embedding_dim: usize,
-    /// Small constant for numerical stability.
-    pub eps: f32,
-}
+/// Contains two kernels:
+/// - `embedding_lookup`: single-batch parallel lookup (1D dispatch over embed_dim)
+/// - `embedding_lookup_batch`: batch lookup (2D dispatch: batch × embed_dim)
+pub const OPENCL_EMBEDDING_SOURCE: &str = r#"
+// Embedding lookup kernel for A770 GPU inference.
+//
+// Memory access pattern: each work-item reads one element from the embedding
+// weight table. For a given token ID, consecutive work-items read consecutive
+// float values from the same row — this produces coalesced global memory reads
+// on GPU architectures (including Intel Xe), maximizing memory bandwidth.
 
-impl EmbeddingNorm {
-    /// Create a new embedding normalization layer.
-    pub fn new(embedding_dim: usize, eps: f32) -> Self {
-        Self { embedding_dim, eps }
-    }
+/// Single-token embedding lookup.
+/// Global work size: [embed_dim] (one work-item per element).
+/// Each work-item copies weight[token_id * embed_dim + gid] to output[gid].
+__kernel void embedding_lookup(
+    __global const float* weights,   // [vocab_size, embed_dim]
+    __global float* output,          // [embed_dim]
+    const uint token_id,
+    const uint embed_dim,
+    const uint vocab_size
+) {
+    const uint gid = get_global_id(0);
+    if (gid >= embed_dim) return;
 
-    /// Normalize embeddings in-place. `data` has shape `[n_tokens, embedding_dim]`.
-    pub fn normalize(&self, data: &mut [f32], n_tokens: usize) -> Result<()> {
-        let d = self.embedding_dim;
-        if data.len() < n_tokens * d {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "data length {} < n_tokens({}) * embedding_dim({})",
-                    data.len(),
-                    n_tokens,
-                    d,
-                ),
-            }
-            .into());
-        }
-
-        for t in 0..n_tokens {
-            let start = t * d;
-            let slice = &mut data[start..start + d];
-            let sum_sq: f32 = slice.iter().map(|&v| v * v).sum();
-            let scale = 1.0 / (sum_sq / d as f32 + self.eps).sqrt();
-            for v in slice.iter_mut() {
-                *v *= scale;
-            }
-        }
-        Ok(())
+    if (token_id < vocab_size) {
+        // Coalesced read: adjacent work-items read adjacent floats
+        output[gid] = weights[token_id * embed_dim + gid];
+    } else {
+        output[gid] = 0.0f;
     }
 }
 
-// ── CPU reference: embedding lookup ──────────────────────────────
+/// Batch embedding lookup.
+/// Global work size: [batch_size, embed_dim] (2D dispatch).
+/// dim 0 = batch index, dim 1 = element within embedding vector.
+/// Each work-item copies one element of one token's embedding.
+__kernel void embedding_lookup_batch(
+    __global const float* weights,      // [vocab_size, embed_dim]
+    __global const uint* token_ids,     // [batch_size]
+    __global float* output,             // [batch_size, embed_dim]
+    const uint embed_dim,
+    const uint vocab_size
+) {
+    const uint batch_idx = get_global_id(0);
+    const uint dim_idx = get_global_id(1);
+    if (dim_idx >= embed_dim) return;
 
-/// Look up embeddings for token IDs (CPU reference).
+    const uint token_id = token_ids[batch_idx];
+    const uint out_offset = batch_idx * embed_dim + dim_idx;
+
+    if (token_id < vocab_size) {
+        // Coalesced read: work-items in the same batch row read consecutive
+        // floats from the weight table row for token_id.
+        output[out_offset] = weights[token_id * embed_dim + dim_idx];
+    } else {
+        output[out_offset] = 0.0f;
+    }
+}
+"#;
+
+// ── CPU reference implementation ─────────────────────────────────
+
+/// CPU reference implementation of embedding lookup for testing.
 ///
-/// For each token ID, copies the corresponding row from `weight` into
-/// `output`. Out-of-vocabulary IDs (`>= vocab_size`) produce a zero
-/// vector. Tokens matching `padding_idx` also produce zeros.
-///
-/// # Layout
-///
-/// * `weight`: `[vocab_size, embedding_dim]` row-major
-/// * `output`: `[seq_len, embedding_dim]` row-major (written)
-pub fn embedding_lookup_ref(
+/// Looks up each token ID in the flat weight table and returns a flattened
+/// `[batch_size, embed_dim]` result vector. Out-of-range tokens produce zero
+/// vectors.
+pub fn cpu_embedding_lookup(
+    weights: &[f32],
+    vocab_size: usize,
+    embed_dim: usize,
     token_ids: &[u32],
-    weight: &[f32],
-    output: &mut [f32],
-    vocab_size: usize,
-    embedding_dim: usize,
-    padding_idx: Option<u32>,
-) -> Result<()> {
-    let seq_len = token_ids.len();
-    if weight.len() < vocab_size * embedding_dim {
-        return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "weight length {} < vocab_size({}) * embedding_dim({})",
-                weight.len(),
-                vocab_size,
-                embedding_dim,
-            ),
-        }
-        .into());
-    }
-    if output.len() < seq_len * embedding_dim {
-        return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "output length {} < seq_len({}) * embedding_dim({})",
-                output.len(),
-                seq_len,
-                embedding_dim,
-            ),
-        }
-        .into());
-    }
-
-    for (t, &tok) in token_ids.iter().enumerate() {
+) -> Vec<f32> {
+    let mut output = vec![0.0f32; token_ids.len() * embed_dim];
+    for (i, &tok) in token_ids.iter().enumerate() {
         let tid = tok as usize;
-        let out_start = t * embedding_dim;
-        let is_padding = padding_idx.is_some_and(|p| tok == p);
-
-        if tid < vocab_size && !is_padding {
-            let src_start = tid * embedding_dim;
-            output[out_start..out_start + embedding_dim]
-                .copy_from_slice(&weight[src_start..src_start + embedding_dim]);
-        } else {
-            output[out_start..out_start + embedding_dim].fill(0.0);
+        if tid < vocab_size {
+            let src = &weights[tid * embed_dim..(tid + 1) * embed_dim];
+            output[i * embed_dim..(i + 1) * embed_dim].copy_from_slice(src);
         }
+        // out-of-range tokens remain zero (already initialized)
     }
-    Ok(())
-}
-
-// ── CPU reference: output projection ─────────────────────────────
-
-/// Output projection: hidden → logits (CPU reference).
-///
-/// Computes `output = hidden @ weight^T` where:
-/// * `hidden`: `[seq_len, hidden_size]`
-/// * `weight`: `[vocab_size, hidden_size]`
-/// * `output`: `[seq_len, vocab_size]`
-pub fn output_projection_ref(
-    hidden: &[f32],
-    weight: &[f32],
-    output: &mut [f32],
-    seq_len: usize,
-    hidden_size: usize,
-    vocab_size: usize,
-) -> Result<()> {
-    if hidden.len() < seq_len * hidden_size {
-        return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "hidden length {} < seq_len({}) * hidden_size({})",
-                hidden.len(),
-                seq_len,
-                hidden_size,
-            ),
-        }
-        .into());
-    }
-    if weight.len() < vocab_size * hidden_size {
-        return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "weight length {} < vocab_size({}) * hidden_size({})",
-                weight.len(),
-                vocab_size,
-                hidden_size,
-            ),
-        }
-        .into());
-    }
-    if output.len() < seq_len * vocab_size {
-        return Err(KernelError::InvalidArguments {
-            reason: format!(
-                "output length {} < seq_len({}) * vocab_size({})",
-                output.len(),
-                seq_len,
-                vocab_size,
-            ),
-        }
-        .into());
-    }
-
-    for s in 0..seq_len {
-        for v in 0..vocab_size {
-            let mut acc = 0.0f32;
-            let h_off = s * hidden_size;
-            let w_off = v * hidden_size;
-            for k in 0..hidden_size {
-                acc += hidden[h_off + k] * weight[w_off + k];
-            }
-            output[s * vocab_size + v] = acc;
-        }
-    }
-    Ok(())
+    output
 }
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -458,610 +239,352 @@ pub fn output_projection_ref(
 mod tests {
     use super::*;
 
+    // Helper: build a simple embedding table with sequential weights
+    fn make_table(vocab_size: usize, embed_dim: usize) -> EmbeddingTable {
+        let weights: Vec<f32> = (0..vocab_size * embed_dim).map(|i| (i + 1) as f32).collect();
+        let config = EmbeddingConfig { vocab_size, embed_dim };
+        EmbeddingTable::new(config, weights).unwrap()
+    }
+
+    // ── EmbeddingConfig tests ────────────────────────────────
+
+    #[test]
+    fn config_table_size_bytes() {
+        let cfg = EmbeddingConfig { vocab_size: 32000, embed_dim: 2048 };
+        assert_eq!(cfg.table_size_bytes(), 32000 * 2048 * 4);
+    }
+
+    #[test]
+    fn config_table_size_bytes_small() {
+        let cfg = EmbeddingConfig { vocab_size: 4, embed_dim: 3 };
+        assert_eq!(cfg.table_size_bytes(), 48);
+    }
+
+    #[test]
+    fn config_validate_ok() {
+        let cfg = EmbeddingConfig { vocab_size: 100, embed_dim: 64 };
+        assert!(cfg.validate().is_ok());
+    }
+
+    #[test]
+    fn config_validate_zero_vocab() {
+        let cfg = EmbeddingConfig { vocab_size: 0, embed_dim: 64 };
+        let err = cfg.validate().unwrap_err();
+        assert!(matches!(err, EmbeddingError::InvalidConfig(_)));
+        assert!(err.to_string().contains("vocab_size"));
+    }
+
+    #[test]
+    fn config_validate_zero_embed_dim() {
+        let cfg = EmbeddingConfig { vocab_size: 100, embed_dim: 0 };
+        let err = cfg.validate().unwrap_err();
+        assert!(matches!(err, EmbeddingError::InvalidConfig(_)));
+        assert!(err.to_string().contains("embed_dim"));
+    }
+
+    #[test]
+    fn config_validate_both_zero() {
+        let cfg = EmbeddingConfig { vocab_size: 0, embed_dim: 0 };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn config_clone_eq() {
+        let cfg = EmbeddingConfig { vocab_size: 10, embed_dim: 5 };
+        assert_eq!(cfg, cfg);
+    }
+
+    // ── EmbeddingError tests ─────────────────────────────────
+
+    #[test]
+    fn error_display_token_out_of_range() {
+        let e = EmbeddingError::TokenOutOfRange { token_id: 50000, vocab_size: 32000 };
+        let s = e.to_string();
+        assert!(s.contains("50000"));
+        assert!(s.contains("32000"));
+    }
+
+    #[test]
+    fn error_display_dimension_mismatch() {
+        let e = EmbeddingError::DimensionMismatch { expected: 100, got: 99 };
+        let s = e.to_string();
+        assert!(s.contains("100"));
+        assert!(s.contains("99"));
+    }
+
+    #[test]
+    fn error_display_buffer_too_small() {
+        let e = EmbeddingError::OutputBufferTooSmall { needed: 256, got: 128 };
+        let s = e.to_string();
+        assert!(s.contains("256"));
+        assert!(s.contains("128"));
+    }
+
+    #[test]
+    fn error_display_invalid_config() {
+        let e = EmbeddingError::InvalidConfig("bad".to_string());
+        assert!(e.to_string().contains("bad"));
+    }
+
+    #[test]
+    fn error_is_std_error() {
+        let e: Box<dyn std::error::Error> =
+            Box::new(EmbeddingError::InvalidConfig("test".to_string()));
+        assert!(!e.to_string().is_empty());
+    }
+
+    // ── EmbeddingTable construction ──────────────────────────
+
+    #[test]
+    fn table_new_ok() {
+        let config = EmbeddingConfig { vocab_size: 4, embed_dim: 3 };
+        let weights = vec![0.0f32; 12];
+        assert!(EmbeddingTable::new(config, weights).is_ok());
+    }
+
+    #[test]
+    fn table_new_dimension_mismatch() {
+        let config = EmbeddingConfig { vocab_size: 4, embed_dim: 3 };
+        let err = EmbeddingTable::new(config, vec![0.0; 10]).unwrap_err();
+        assert!(matches!(err, EmbeddingError::DimensionMismatch { expected: 12, got: 10 }));
+    }
+
+    #[test]
+    fn table_new_invalid_config_zero_vocab() {
+        let config = EmbeddingConfig { vocab_size: 0, embed_dim: 3 };
+        assert!(EmbeddingTable::new(config, vec![]).is_err());
+    }
+
+    #[test]
+    fn table_new_invalid_config_zero_dim() {
+        let config = EmbeddingConfig { vocab_size: 4, embed_dim: 0 };
+        assert!(EmbeddingTable::new(config, vec![]).is_err());
+    }
+
+    // ── Single token lookup ──────────────────────────────────
+
+    #[test]
+    fn lookup_first_token() {
+        let table = make_table(4, 3);
+        let row = table.lookup(0).unwrap();
+        assert_eq!(row, &[1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn lookup_last_token() {
+        let table = make_table(4, 3);
+        let row = table.lookup(3).unwrap();
+        assert_eq!(row, &[10.0, 11.0, 12.0]);
+    }
+
+    #[test]
+    fn lookup_middle_token() {
+        let table = make_table(4, 3);
+        let row = table.lookup(2).unwrap();
+        assert_eq!(row, &[7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn lookup_out_of_range() {
+        let table = make_table(4, 3);
+        let err = table.lookup(4).unwrap_err();
+        assert!(matches!(err, EmbeddingError::TokenOutOfRange { token_id: 4, vocab_size: 4 }));
+    }
+
+    #[test]
+    fn lookup_u32_max_out_of_range() {
+        let table = make_table(4, 3);
+        assert!(table.lookup(u32::MAX).is_err());
+    }
+
+    #[test]
+    fn lookup_boundary_token_zero() {
+        let table = make_table(4, 3);
+        assert!(table.lookup(0).is_ok());
+    }
+
+    #[test]
+    fn lookup_boundary_token_last() {
+        let table = make_table(4, 3);
+        assert!(table.lookup(3).is_ok());
+        assert!(table.lookup(4).is_err());
+    }
+
+    #[test]
+    fn lookup_embed_dim_one() {
+        let config = EmbeddingConfig { vocab_size: 3, embed_dim: 1 };
+        let weights = vec![10.0, 20.0, 30.0];
+        let table = EmbeddingTable::new(config, weights).unwrap();
+        assert_eq!(table.lookup(0).unwrap(), &[10.0]);
+        assert_eq!(table.lookup(1).unwrap(), &[20.0]);
+        assert_eq!(table.lookup(2).unwrap(), &[30.0]);
+    }
+
+    // ── Batch lookup ─────────────────────────────────────────
+
+    #[test]
+    fn batch_lookup_single_token() {
+        let table = make_table(4, 3);
+        let result = table.lookup_batch(&[1]).unwrap();
+        assert_eq!(result, vec![4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn batch_lookup_multiple_tokens() {
+        let table = make_table(4, 3);
+        let result = table.lookup_batch(&[0, 2]).unwrap();
+        assert_eq!(result, vec![1.0, 2.0, 3.0, 7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn batch_lookup_repeated_tokens() {
+        let table = make_table(4, 3);
+        let result = table.lookup_batch(&[1, 1, 1]).unwrap();
+        assert_eq!(&result[0..3], &result[3..6]);
+        assert_eq!(&result[0..3], &result[6..9]);
+    }
+
+    #[test]
+    fn batch_lookup_all_tokens() {
+        let table = make_table(4, 3);
+        let result = table.lookup_batch(&[0, 1, 2, 3]).unwrap();
+        assert_eq!(result, table.weights);
+    }
+
+    #[test]
+    fn batch_lookup_empty() {
+        let table = make_table(4, 3);
+        let result = table.lookup_batch(&[]).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn batch_lookup_out_of_range() {
+        let table = make_table(4, 3);
+        let err = table.lookup_batch(&[0, 100]).unwrap_err();
+        assert!(matches!(err, EmbeddingError::TokenOutOfRange { token_id: 100, .. }));
+    }
+
+    // ── Pre-allocated buffer lookup ──────────────────────────
+
+    #[test]
+    fn batch_into_correct_size() {
+        let table = make_table(4, 3);
+        let mut buf = vec![0.0f32; 6];
+        table.lookup_batch_into(&[0, 3], &mut buf).unwrap();
+        assert_eq!(buf, vec![1.0, 2.0, 3.0, 10.0, 11.0, 12.0]);
+    }
+
+    #[test]
+    fn batch_into_oversized_buffer() {
+        let table = make_table(4, 3);
+        let mut buf = vec![99.0f32; 10];
+        table.lookup_batch_into(&[1], &mut buf).unwrap();
+        assert_eq!(&buf[0..3], &[4.0, 5.0, 6.0]);
+        // Trailing elements unchanged
+        assert_eq!(buf[3], 99.0);
+    }
+
+    #[test]
+    fn batch_into_too_small() {
+        let table = make_table(4, 3);
+        let mut buf = vec![0.0f32; 2]; // need 3
+        let err = table.lookup_batch_into(&[0], &mut buf).unwrap_err();
+        assert!(matches!(err, EmbeddingError::OutputBufferTooSmall { needed: 3, got: 2 }));
+    }
+
+    #[test]
+    fn batch_into_empty() {
+        let table = make_table(4, 3);
+        let mut buf = vec![];
+        table.lookup_batch_into(&[], &mut buf).unwrap();
+    }
+
+    // ── Large batch ──────────────────────────────────────────
+
+    #[test]
+    fn large_batch_correctness() {
+        let vocab = 1000;
+        let dim = 64;
+        let table = make_table(vocab, dim);
+        let ids: Vec<u32> = (0..vocab as u32).collect();
+        let result = table.lookup_batch(&ids).unwrap();
+        assert_eq!(result.len(), vocab * dim);
+        // Spot-check first and last
+        assert_eq!(result[0], 1.0);
+        assert_eq!(result[vocab * dim - 1], (vocab * dim) as f32);
+    }
+
     // ── OpenCL kernel source validation ──────────────────────
 
     #[test]
-    fn opencl_source_is_not_empty() {
-        assert!(!EMBEDDING_CL.is_empty(), "embedding.cl should not be empty");
+    fn opencl_source_not_empty() {
+        assert!(!OPENCL_EMBEDDING_SOURCE.is_empty());
     }
 
     #[test]
-    fn opencl_source_contains_kernel_keyword() {
-        assert!(EMBEDDING_CL.contains("__kernel"), "embedding.cl missing __kernel");
+    fn opencl_source_has_kernel_keyword() {
+        assert!(OPENCL_EMBEDDING_SOURCE.contains("__kernel"));
     }
 
     #[test]
-    fn opencl_source_has_embedding_lookup_kernel() {
-        assert!(EMBEDDING_CL.contains("embedding_lookup"), "missing embedding_lookup kernel");
+    fn opencl_source_has_embedding_lookup() {
+        assert!(OPENCL_EMBEDDING_SOURCE.contains("embedding_lookup"));
     }
 
     #[test]
-    fn opencl_source_has_output_projection_kernel() {
-        assert!(EMBEDDING_CL.contains("output_projection"), "missing output_projection kernel");
+    fn opencl_source_has_batch_kernel() {
+        assert!(OPENCL_EMBEDDING_SOURCE.contains("embedding_lookup_batch"));
     }
 
     #[test]
-    fn opencl_source_has_embedding_rms_norm_kernel() {
-        assert!(EMBEDDING_CL.contains("embedding_rms_norm"), "missing embedding_rms_norm kernel");
+    fn opencl_source_has_coalesced_comment() {
+        assert!(OPENCL_EMBEDDING_SOURCE.contains("coalesced"));
     }
 
     #[test]
-    fn opencl_source_has_add_position_embedding_kernel() {
-        assert!(
-            EMBEDDING_CL.contains("add_position_embedding"),
-            "missing add_position_embedding kernel"
-        );
+    fn opencl_source_has_get_global_id() {
+        assert!(OPENCL_EMBEDDING_SOURCE.contains("get_global_id"));
+    }
+
+    // ── CPU reference ────────────────────────────────────────
+
+    #[test]
+    fn cpu_ref_matches_table_lookup() {
+        let table = make_table(4, 3);
+        let ids = [0u32, 1, 2, 3];
+        let structured = table.lookup_batch(&ids).unwrap();
+        let reference = cpu_embedding_lookup(&table.weights, 4, 3, &ids);
+        assert_eq!(structured, reference);
     }
 
     #[test]
-    fn opencl_source_has_padded_lookup_kernel() {
-        assert!(
-            EMBEDDING_CL.contains("embedding_lookup_padded"),
-            "missing embedding_lookup_padded kernel"
-        );
-    }
-
-    // ── EmbeddingConfig ──────────────────────────────────────
-
-    #[test]
-    fn config_basic() {
-        let cfg = EmbeddingConfig::new(32000, 2048);
-        assert_eq!(cfg.vocab_size, 32000);
-        assert_eq!(cfg.embedding_dim, 2048);
-        assert!(cfg.padding_idx.is_none());
+    fn cpu_ref_oov_produces_zeros() {
+        let weights = vec![1.0, 2.0, 3.0, 4.0]; // vocab=2, dim=2
+        let result = cpu_embedding_lookup(&weights, 2, 2, &[5]);
+        assert_eq!(result, vec![0.0, 0.0]);
     }
 
     #[test]
-    fn config_with_padding() {
-        let cfg = EmbeddingConfig::new(100, 64).with_padding_idx(0);
-        assert_eq!(cfg.padding_idx, Some(0));
-    }
-
-    // ── EmbeddingTable ───────────────────────────────────────
-
-    #[test]
-    fn table_rejects_wrong_weight_size() {
-        let cfg = EmbeddingConfig::new(4, 3);
-        assert!(EmbeddingTable::new(vec![0.0; 10], cfg).is_err());
+    fn cpu_ref_empty_batch() {
+        let weights = vec![1.0; 4];
+        let result = cpu_embedding_lookup(&weights, 2, 2, &[]);
+        assert!(result.is_empty());
     }
 
     #[test]
-    fn table_lookup_basic() {
-        let cfg = EmbeddingConfig::new(4, 3);
-        let weight = vec![
-            1.0, 2.0, 3.0, // 0
-            4.0, 5.0, 6.0, // 1
-            7.0, 8.0, 9.0, // 2
-            10.0, 11.0, 12.0, // 3
-        ];
-        let table = EmbeddingTable::new(weight, cfg).unwrap();
-        let mut out = vec![0.0; 6];
-        table.lookup(&[2, 0], &mut out).unwrap();
-        assert_eq!(&out[0..3], &[7.0, 8.0, 9.0]);
-        assert_eq!(&out[3..6], &[1.0, 2.0, 3.0]);
+    fn cpu_ref_single_element_embedding() {
+        let weights = vec![42.0, 99.0];
+        let result = cpu_embedding_lookup(&weights, 2, 1, &[0, 1]);
+        assert_eq!(result, vec![42.0, 99.0]);
     }
 
     #[test]
-    fn table_lookup_with_padding() {
-        let cfg = EmbeddingConfig::new(3, 2).with_padding_idx(1);
-        let weight = vec![
-            1.0, 2.0, // 0
-            3.0, 4.0, // 1 (padding)
-            5.0, 6.0, // 2
-        ];
-        let table = EmbeddingTable::new(weight, cfg).unwrap();
-        let mut out = vec![99.0; 6];
-        table.lookup(&[0, 1, 2], &mut out).unwrap();
-        assert_eq!(&out[0..2], &[1.0, 2.0]);
-        assert_eq!(&out[2..4], &[0.0, 0.0]); // padding → zero
-        assert_eq!(&out[4..6], &[5.0, 6.0]);
-    }
-
-    // ── embedding_lookup_ref ─────────────────────────────────
-
-    #[test]
-    fn lookup_ref_known_token_known_vector() {
-        let weight = vec![
-            0.1, 0.2, // token 0
-            0.3, 0.4, // token 1
-            0.5, 0.6, // token 2
-        ];
-        let mut out = vec![0.0; 2];
-        embedding_lookup_ref(&[1], &weight, &mut out, 3, 2, None).unwrap();
-        assert_eq!(out, vec![0.3, 0.4]);
-    }
-
-    #[test]
-    fn lookup_ref_oov_returns_zero() {
-        let weight = vec![1.0; 6]; // vocab=3, dim=2
-        let mut out = vec![99.0; 2];
-        embedding_lookup_ref(&[5], &weight, &mut out, 3, 2, None).unwrap();
-        assert_eq!(out, vec![0.0, 0.0]);
-    }
-
-    #[test]
-    fn lookup_ref_oov_u32_max() {
-        let weight = vec![1.0; 4]; // vocab=2, dim=2
-        let mut out = vec![99.0; 2];
-        embedding_lookup_ref(&[u32::MAX], &weight, &mut out, 2, 2, None).unwrap();
-        assert_eq!(out, vec![0.0, 0.0]);
-    }
-
-    #[test]
-    fn lookup_ref_padding_idx_zeroes() {
-        let weight = vec![
-            1.0, 2.0, // 0 (padding)
-            3.0, 4.0, // 1
-        ];
-        let mut out = vec![99.0; 4];
-        embedding_lookup_ref(&[0, 1], &weight, &mut out, 2, 2, Some(0)).unwrap();
-        assert_eq!(&out[0..2], &[0.0, 0.0]);
-        assert_eq!(&out[2..4], &[3.0, 4.0]);
-    }
-
-    #[test]
-    fn lookup_ref_single_token() {
-        let weight = vec![42.0];
-        let mut out = vec![0.0];
-        embedding_lookup_ref(&[0], &weight, &mut out, 1, 1, None).unwrap();
-        assert_eq!(out, vec![42.0]);
-    }
-
-    #[test]
-    fn lookup_ref_vocab_size_one() {
-        let weight = vec![1.0, 2.0, 3.0];
-        let mut out = vec![0.0; 3];
-        embedding_lookup_ref(&[0], &weight, &mut out, 1, 3, None).unwrap();
-        assert_eq!(out, vec![1.0, 2.0, 3.0]);
-    }
-
-    #[test]
-    fn lookup_ref_embedding_dim_one() {
-        let weight = vec![10.0, 20.0, 30.0];
-        let mut out = vec![0.0; 3];
-        embedding_lookup_ref(&[2, 0, 1], &weight, &mut out, 3, 1, None).unwrap();
-        assert_eq!(out, vec![30.0, 10.0, 20.0]);
-    }
-
-    #[test]
-    fn lookup_ref_repeated_tokens() {
-        let weight = vec![
-            1.0, 2.0, // 0
-            3.0, 4.0, // 1
-        ];
-        let mut out = vec![0.0; 8];
-        embedding_lookup_ref(&[1, 1, 0, 1], &weight, &mut out, 2, 2, None).unwrap();
-        assert_eq!(&out[0..2], &[3.0, 4.0]);
-        assert_eq!(&out[2..4], &[3.0, 4.0]);
-        assert_eq!(&out[4..6], &[1.0, 2.0]);
-        assert_eq!(&out[6..8], &[3.0, 4.0]);
-    }
-
-    #[test]
-    fn lookup_ref_same_token_same_vector() {
-        let weight: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let mut out = vec![0.0; 12];
-        embedding_lookup_ref(&[3, 1, 3], &weight, &mut out, 5, 4, None).unwrap();
-        assert_eq!(&out[0..4], &out[8..12]); // token 3 == token 3
-    }
-
-    #[test]
-    fn lookup_ref_all_oov_zeroed() {
-        let weight = vec![99.0; 12]; // vocab=3, dim=4
-        let mut out = vec![1.0; 12];
-        embedding_lookup_ref(&[100, u32::MAX, 3], &weight, &mut out, 3, 4, None).unwrap();
-        assert!(out.iter().all(|&v| v == 0.0));
-    }
-
-    #[test]
-    fn lookup_ref_mixed_valid_and_oov() {
-        let weight = vec![
-            1.0, 2.0, // 0
-            3.0, 4.0, // 1
-        ];
-        let mut out = vec![0.0; 6];
-        embedding_lookup_ref(&[0, 999, 1], &weight, &mut out, 2, 2, None).unwrap();
-        assert_eq!(&out[0..2], &[1.0, 2.0]);
-        assert_eq!(&out[2..4], &[0.0, 0.0]);
-        assert_eq!(&out[4..6], &[3.0, 4.0]);
-    }
-
-    #[test]
-    fn lookup_ref_rejects_short_weight() {
-        let mut out = vec![0.0; 2];
-        assert!(embedding_lookup_ref(&[0], &[1.0], &mut out, 2, 2, None).is_err());
-    }
-
-    #[test]
-    fn lookup_ref_rejects_short_output() {
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 1]; // too small
-        assert!(embedding_lookup_ref(&[0], &weight, &mut out, 2, 2, None).is_err());
-    }
-
-    #[test]
-    fn lookup_ref_empty_tokens() {
-        let weight = vec![1.0; 4];
-        let mut out = vec![];
-        embedding_lookup_ref(&[], &weight, &mut out, 2, 2, None).unwrap();
-    }
-
-    #[test]
-    fn lookup_ref_large_batch() {
-        let vocab = 100;
-        let dim = 64;
-        let weight: Vec<f32> = (0..vocab * dim).map(|i| i as f32).collect();
-        let ids: Vec<u32> = (0..vocab as u32).collect();
-        let mut out = vec![0.0; vocab * dim];
-        embedding_lookup_ref(&ids, &weight, &mut out, vocab, dim, None).unwrap();
-        assert_eq!(out, weight);
-    }
-
-    // ── output_projection_ref ────────────────────────────────
-
-    #[test]
-    fn projection_ref_identity_like() {
-        // hidden=[1,2], weight=identity-like → logits = hidden @ I^T
-        let hidden = vec![1.0, 0.0]; // seq=1, hidden=2
-        let weight = vec![
-            1.0, 0.0, // vocab 0
-            0.0, 1.0, // vocab 1
-        ];
-        let mut out = vec![0.0; 2];
-        output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).unwrap();
-        assert_eq!(out, vec![1.0, 0.0]);
-    }
-
-    #[test]
-    fn projection_ref_matmul_correctness() {
-        // hidden: [[1,2,3]] (1×3), weight: [[1,0,0],[0,1,0],[0,0,1],[1,1,1]] (4×3)
-        // logits: [[1, 2, 3, 6]]
-        let hidden = vec![1.0, 2.0, 3.0];
-        let weight = vec![
-            1.0, 0.0, 0.0, // vocab 0
-            0.0, 1.0, 0.0, // vocab 1
-            0.0, 0.0, 1.0, // vocab 2
-            1.0, 1.0, 1.0, // vocab 3
-        ];
-        let mut out = vec![0.0; 4];
-        output_projection_ref(&hidden, &weight, &mut out, 1, 3, 4).unwrap();
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 6.0]);
-    }
-
-    #[test]
-    fn projection_ref_multi_seq() {
-        // hidden: [[1,0],[0,1]] (2×2), weight: [[1,1],[1,-1]] (2×2)
-        // logits: [[1,1],[1,-1]]
-        let hidden = vec![1.0, 0.0, 0.0, 1.0];
-        let weight = vec![1.0, 1.0, 1.0, -1.0];
-        let mut out = vec![0.0; 4];
-        output_projection_ref(&hidden, &weight, &mut out, 2, 2, 2).unwrap();
-        assert!((out[0] - 1.0).abs() < 1e-6);
-        assert!((out[1] - 1.0).abs() < 1e-6);
-        assert!((out[2] - 1.0).abs() < 1e-6);
-        assert!((out[3] + 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn projection_ref_single_element() {
-        let hidden = vec![3.0]; // seq=1, hidden=1
-        let weight = vec![2.0]; // vocab=1, hidden=1
-        let mut out = vec![0.0; 1];
-        output_projection_ref(&hidden, &weight, &mut out, 1, 1, 1).unwrap();
-        assert_eq!(out, vec![6.0]);
-    }
-
-    #[test]
-    fn projection_ref_rejects_short_hidden() {
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 2];
-        assert!(output_projection_ref(&[1.0], &weight, &mut out, 1, 2, 2).is_err());
-    }
-
-    #[test]
-    fn projection_ref_rejects_short_weight() {
-        let hidden = vec![1.0; 2];
-        let mut out = vec![0.0; 2];
-        assert!(output_projection_ref(&hidden, &[1.0], &mut out, 1, 2, 2).is_err());
-    }
-
-    #[test]
-    fn projection_ref_rejects_short_output() {
-        let hidden = vec![1.0; 2];
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 1]; // too small
-        assert!(output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).is_err());
-    }
-
-    #[test]
-    fn projection_ref_zero_hidden() {
-        let hidden = vec![0.0; 4]; // seq=2, hidden=2
-        let weight = vec![1.0; 6]; // vocab=3, hidden=2
-        let mut out = vec![99.0; 6];
-        output_projection_ref(&hidden, &weight, &mut out, 2, 2, 3).unwrap();
-        assert!(out.iter().all(|&v| v == 0.0));
-    }
-
-    // ── OutputProjection struct ──────────────────────────────
-
-    #[test]
-    fn output_projection_struct_rejects_wrong_size() {
-        assert!(OutputProjection::new(vec![0.0; 5], 2, 3).is_err());
-    }
-
-    #[test]
-    fn output_projection_struct_forward() {
-        let weight = vec![1.0, 0.0, 0.0, 1.0]; // 2×2 identity
-        let proj = OutputProjection::new(weight, 2, 2).unwrap();
-        let mut out = vec![0.0; 2];
-        proj.forward(&[3.0, 7.0], &mut out, 1).unwrap();
-        assert_eq!(out, vec![3.0, 7.0]);
-    }
-
-    // ── TiedEmbedding ────────────────────────────────────────
-
-    #[test]
-    fn tied_rejects_wrong_size() {
-        let cfg = EmbeddingConfig::new(2, 3);
-        assert!(TiedEmbedding::new(vec![0.0; 5], cfg).is_err());
-    }
-
-    #[test]
-    fn tied_lookup_matches_standalone() {
-        let weight = vec![
-            1.0, 2.0, // 0
-            3.0, 4.0, // 1
-        ];
-        let cfg = EmbeddingConfig::new(2, 2);
-        let tied = TiedEmbedding::new(weight.clone(), cfg.clone()).unwrap();
-        let table = EmbeddingTable::new(weight, cfg).unwrap();
-
-        let mut out_tied = vec![0.0; 4];
-        let mut out_table = vec![0.0; 4];
-        tied.lookup(&[0, 1], &mut out_tied).unwrap();
-        table.lookup(&[0, 1], &mut out_table).unwrap();
-        assert_eq!(out_tied, out_table);
-    }
-
-    #[test]
-    fn tied_projection_uses_same_weight() {
-        let weight = vec![
-            1.0, 0.0, // vocab 0
-            0.0, 1.0, // vocab 1
-        ];
-        let cfg = EmbeddingConfig::new(2, 2);
-        let tied = TiedEmbedding::new(weight.clone(), cfg).unwrap();
-
-        // Lookup token 0 → [1, 0]
-        let mut emb = vec![0.0; 2];
-        tied.lookup(&[0], &mut emb).unwrap();
-        assert_eq!(emb, vec![1.0, 0.0]);
-
-        // Project [1, 0] back → logits should be [1, 0]
-        let mut logits = vec![0.0; 2];
-        tied.project(&emb, &mut logits, 1).unwrap();
-        assert_eq!(logits, vec![1.0, 0.0]);
-    }
-
-    #[test]
-    fn tied_weight_accessor() {
-        let weight = vec![1.0, 2.0, 3.0, 4.0];
-        let cfg = EmbeddingConfig::new(2, 2);
-        let tied = TiedEmbedding::new(weight.clone(), cfg).unwrap();
-        assert_eq!(tied.weight(), &weight[..]);
-    }
-
-    #[test]
-    fn tied_roundtrip_embedding_projection() {
-        // Weight = [[1,0,0],[0,1,0],[0,0,1]] (identity 3×3)
-        // Lookup token 1 → [0,1,0], project → logits = [0,1,0]
-        let weight = vec![
-            1.0, 0.0, 0.0, // vocab 0
-            0.0, 1.0, 0.0, // vocab 1
-            0.0, 0.0, 1.0, // vocab 2
-        ];
-        let cfg = EmbeddingConfig::new(3, 3);
-        let tied = TiedEmbedding::new(weight, cfg).unwrap();
-
-        let mut emb = vec![0.0; 3];
-        tied.lookup(&[1], &mut emb).unwrap();
-        assert_eq!(emb, vec![0.0, 1.0, 0.0]);
-
-        let mut logits = vec![0.0; 3];
-        tied.project(&emb, &mut logits, 1).unwrap();
-        assert_eq!(logits, vec![0.0, 1.0, 0.0]);
-    }
-
-    // ── PositionEmbedding ────────────────────────────────────
-
-    #[test]
-    fn position_embedding_rejects_wrong_size() {
-        assert!(PositionEmbedding::new(vec![0.0; 5], 2, 3).is_err());
-    }
-
-    #[test]
-    fn position_embedding_basic() {
-        let pos_weight = vec![
-            0.1, 0.2, // pos 0
-            0.3, 0.4, // pos 1
-        ];
-        let pos = PositionEmbedding::new(pos_weight, 2, 2).unwrap();
-        let mut emb = vec![1.0, 2.0, 3.0, 4.0]; // 2 tokens
-        pos.add_to(&mut emb, 2, 0).unwrap();
-        assert!((emb[0] - 1.1).abs() < 1e-6);
-        assert!((emb[1] - 2.2).abs() < 1e-6);
-        assert!((emb[2] - 3.3).abs() < 1e-6);
-        assert!((emb[3] - 4.4).abs() < 1e-6);
-    }
-
-    #[test]
-    fn position_embedding_with_offset() {
-        let pos_weight = vec![
-            0.1, 0.2, // pos 0
-            0.3, 0.4, // pos 1
-            0.5, 0.6, // pos 2
-        ];
-        let pos = PositionEmbedding::new(pos_weight, 3, 2).unwrap();
-        let mut emb = vec![1.0, 2.0]; // 1 token, starting at position 2
-        pos.add_to(&mut emb, 1, 2).unwrap();
-        assert!((emb[0] - 1.5).abs() < 1e-6);
-        assert!((emb[1] - 2.6).abs() < 1e-6);
-    }
-
-    #[test]
-    fn position_embedding_rejects_overflow() {
-        let pos_weight = vec![0.0; 4];
-        let pos = PositionEmbedding::new(pos_weight, 2, 2).unwrap();
-        let mut emb = vec![0.0; 4];
-        assert!(pos.add_to(&mut emb, 2, 1).is_err()); // 1+2 > 2
-    }
-
-    #[test]
-    fn position_embedding_rejects_short_embeddings() {
-        let pos_weight = vec![0.0; 4];
-        let pos = PositionEmbedding::new(pos_weight, 2, 2).unwrap();
-        let mut emb = vec![0.0; 2]; // too small for 2 tokens
-        assert!(pos.add_to(&mut emb, 2, 0).is_err());
-    }
-
-    #[test]
-    fn position_embedding_correct_positions() {
-        // Each position adds a distinct value
-        let pos_weight = vec![
-            10.0, 20.0, // pos 0
-            30.0, 40.0, // pos 1
-            50.0, 60.0, // pos 2
-        ];
-        let pos = PositionEmbedding::new(pos_weight, 3, 2).unwrap();
-        let mut emb = vec![0.0; 6]; // 3 tokens, zero base
-        pos.add_to(&mut emb, 3, 0).unwrap();
-        assert_eq!(&emb[0..2], &[10.0, 20.0]);
-        assert_eq!(&emb[2..4], &[30.0, 40.0]);
-        assert_eq!(&emb[4..6], &[50.0, 60.0]);
-    }
-
-    // ── EmbeddingNorm ────────────────────────────────────────
-
-    #[test]
-    fn norm_unit_vector_unchanged() {
-        // [1, 0] is already RMS-normalized (rms = sqrt(0.5))
-        // Actually rms_norm of [1,0] = [1,0] / sqrt((1+0)/2 + eps) ≈ [1.414, 0]
-        let norm = EmbeddingNorm::new(2, 1e-6);
-        let mut data = vec![1.0, 0.0];
-        norm.normalize(&mut data, 1).unwrap();
-        let expected_scale = 1.0 / (0.5f32 + 1e-6).sqrt();
-        assert!((data[0] - expected_scale).abs() < 1e-4);
-        assert!(data[1].abs() < 1e-6);
-    }
-
-    #[test]
-    fn norm_scales_to_unit_rms() {
-        let norm = EmbeddingNorm::new(4, 1e-6);
-        let mut data = vec![2.0, 2.0, 2.0, 2.0];
-        norm.normalize(&mut data, 1).unwrap();
-        // After normalization, RMS should ≈ 1.0
-        let rms: f32 = (data.iter().map(|v| v * v).sum::<f32>() / 4.0).sqrt();
-        assert!((rms - 1.0).abs() < 1e-4);
-    }
-
-    #[test]
-    fn norm_multi_token() {
-        let norm = EmbeddingNorm::new(2, 1e-6);
-        let mut data = vec![3.0, 4.0, 0.0, 5.0]; // 2 tokens
-        norm.normalize(&mut data, 2).unwrap();
-        // Each token normalized independently
-        let rms0: f32 = (data[0..2].iter().map(|v| v * v).sum::<f32>() / 2.0).sqrt();
-        let rms1: f32 = (data[2..4].iter().map(|v| v * v).sum::<f32>() / 2.0).sqrt();
-        assert!((rms0 - 1.0).abs() < 1e-4);
-        assert!((rms1 - 1.0).abs() < 1e-4);
-    }
-
-    #[test]
-    fn norm_rejects_short_data() {
-        let norm = EmbeddingNorm::new(4, 1e-6);
-        let mut data = vec![1.0; 3];
-        assert!(norm.normalize(&mut data, 1).is_err());
-    }
-
-    #[test]
-    fn norm_preserves_direction() {
-        let norm = EmbeddingNorm::new(3, 1e-6);
-        let mut data = vec![1.0, 2.0, 3.0];
-        let orig = data.clone();
-        norm.normalize(&mut data, 1).unwrap();
-        // Ratios should be preserved
-        let ratio01_orig = orig[0] / orig[1];
-        let ratio01_norm = data[0] / data[1];
-        assert!((ratio01_orig - ratio01_norm).abs() < 1e-6);
-        let ratio12_orig = orig[1] / orig[2];
-        let ratio12_norm = data[1] / data[2];
-        assert!((ratio12_orig - ratio12_norm).abs() < 1e-6);
-    }
-
-    // ── Integration / property tests ─────────────────────────
-
-    #[test]
-    fn full_pipeline_lookup_norm_project() {
-        // Embedding → Norm → Output projection
-        let weight = vec![
-            1.0, 0.0, // vocab 0
-            0.0, 1.0, // vocab 1
-        ];
-        let cfg = EmbeddingConfig::new(2, 2);
-        let table = EmbeddingTable::new(weight.clone(), cfg).unwrap();
-        let norm = EmbeddingNorm::new(2, 1e-6);
-        let proj = OutputProjection::new(weight, 2, 2).unwrap();
-
-        let mut emb = vec![0.0; 2];
-        table.lookup(&[1], &mut emb).unwrap(); // [0, 1]
-        norm.normalize(&mut emb, 1).unwrap();
-        let mut logits = vec![0.0; 2];
-        proj.forward(&emb, &mut logits, 1).unwrap();
-        // Token 1 should get highest logit at index 1
-        assert!(logits[1] > logits[0]);
-    }
-
-    #[test]
-    fn embedding_output_finite() {
-        let weight: Vec<f32> = (0..500).map(|i| (i as f32) * 0.01).collect();
-        let cfg = EmbeddingConfig::new(10, 50);
-        let table = EmbeddingTable::new(weight, cfg).unwrap();
-        let ids: Vec<u32> = (0..10).collect();
-        let mut out = vec![f32::NAN; 500];
-        table.lookup(&ids, &mut out).unwrap();
-        assert!(out.iter().all(|v| v.is_finite()));
-    }
-
-    #[test]
-    fn projection_output_finite() {
-        let hidden: Vec<f32> = (0..64).map(|i| (i as f32) * 0.01).collect();
-        let weight: Vec<f32> = (0..640).map(|i| (i as f32) * 0.001).collect();
-        let mut out = vec![f32::NAN; 10];
-        output_projection_ref(&hidden, &weight, &mut out, 1, 64, 10).unwrap();
-        assert!(out.iter().all(|v| v.is_finite()));
-    }
-
-    #[test]
-    fn tied_embedding_symmetry() {
-        // For identity weight: lookup(t) then project should peak at t
-        let weight = vec![
-            1.0, 0.0, 0.0, 0.0, // vocab 0
-            0.0, 1.0, 0.0, 0.0, // vocab 1
-            0.0, 0.0, 1.0, 0.0, // vocab 2
-            0.0, 0.0, 0.0, 1.0, // vocab 3
-        ];
-        let cfg = EmbeddingConfig::new(4, 4);
-        let tied = TiedEmbedding::new(weight, cfg).unwrap();
-
-        for token_id in 0..4u32 {
-            let mut emb = vec![0.0; 4];
-            tied.lookup(&[token_id], &mut emb).unwrap();
-            let mut logits = vec![0.0; 4];
-            tied.project(&emb, &mut logits, 1).unwrap();
-            // Argmax of logits should be token_id
-            let argmax =
-                logits.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
-            assert_eq!(argmax, token_id as usize);
-        }
+    fn cpu_ref_mixed_valid_and_oov() {
+        let weights = vec![1.0, 2.0, 3.0, 4.0]; // vocab=2, dim=2
+        let result = cpu_embedding_lookup(&weights, 2, 2, &[0, 999, 1]);
+        assert_eq!(&result[0..2], &[1.0, 2.0]);
+        assert_eq!(&result[2..4], &[0.0, 0.0]);
+        assert_eq!(&result[4..6], &[3.0, 4.0]);
     }
 }
