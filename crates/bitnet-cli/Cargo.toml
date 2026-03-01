@@ -35,6 +35,7 @@ bitnet-repl-core = { path = "../bitnet-repl-core", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }
 bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
+bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
 bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.2.1-dev" }
 bitnet-scoring-core = { path = "../bitnet-scoring-core", version = "0.2.1-dev" }
