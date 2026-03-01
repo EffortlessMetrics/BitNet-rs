@@ -444,10 +444,7 @@ pub fn batch_layer_norm_cpu(
         }
         .into());
     }
-    inputs
-        .iter()
-        .map(|inp| layer_norm_cpu_fallback(inp, gamma, beta, ns, config))
-        .collect()
+    inputs.iter().map(|inp| layer_norm_cpu_fallback(inp, gamma, beta, ns, config)).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -1083,9 +1080,7 @@ mod tests {
 
     #[test]
     fn test_batch_layer_norm_single_input() {
-        let cfg = LayerNormConfig::new(1e-5, false)
-            .unwrap()
-            .with_normalized_shape(vec![4]);
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
         let input = [1.0_f32, 2.0, 3.0, 4.0];
         let gamma = [1.0; 4];
         let beta = [0.0; 4];
@@ -1097,9 +1092,7 @@ mod tests {
 
     #[test]
     fn test_batch_layer_norm_multiple_inputs() {
-        let cfg = LayerNormConfig::new(1e-5, false)
-            .unwrap()
-            .with_normalized_shape(vec![3]);
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![3]);
         let a = [1.0_f32, 2.0, 3.0];
         let b = [10.0_f32, 20.0, 30.0];
         let gamma = [1.0; 3];
@@ -1144,9 +1137,7 @@ mod tests {
 
     #[test]
     fn test_batch_layer_norm_all_zeros() {
-        let cfg = LayerNormConfig::new(1e-5, false)
-            .unwrap()
-            .with_normalized_shape(vec![4]);
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
         let input = [0.0_f32; 4];
         let gamma = [1.0; 4];
         let beta = [0.0; 4];
@@ -1156,9 +1147,7 @@ mod tests {
 
     #[test]
     fn test_batch_layer_norm_large_values() {
-        let cfg = LayerNormConfig::new(1e-5, false)
-            .unwrap()
-            .with_normalized_shape(vec![4]);
+        let cfg = LayerNormConfig::new(1e-5, false).unwrap().with_normalized_shape(vec![4]);
         let input = [1e7_f32, 1e7 + 1.0, 1e7 + 2.0, 1e7 + 3.0];
         let gamma = [1.0; 4];
         let beta = [0.0; 4];
