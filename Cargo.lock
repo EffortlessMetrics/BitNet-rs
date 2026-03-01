@@ -390,6 +390,7 @@ dependencies = [
  "bitnet-logits",
  "bitnet-math",
  "bitnet-models",
+ "bitnet-performance-metrics-core",
  "bitnet-quantization",
  "bitnet-rope",
  "bitnet-tests",
@@ -501,6 +502,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-math",
+ "bitnet-performance-metrics-core",
  "bitnet-test-support",
  "bitnet-warn-once",
  "bytemuck",
@@ -889,6 +891,14 @@ dependencies = [
  "temp-env",
  "tempfile",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bitnet-performance-metrics-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
