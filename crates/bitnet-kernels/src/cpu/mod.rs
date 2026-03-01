@@ -60,6 +60,9 @@ pub mod neon_layernorm;
 pub mod neon_batch_norm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_matmul;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_reductions;
 
 #[cfg(target_arch = "aarch64")]
