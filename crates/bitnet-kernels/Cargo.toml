@@ -130,6 +130,10 @@ name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
 
+[[test]]
+name = "metal_embedding_shader_tests"
+path = "tests/metal_embedding_shader_tests.rs"
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
