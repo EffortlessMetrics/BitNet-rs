@@ -112,7 +112,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
-pub use loss::LossReduction;
+pub use loss::*;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
