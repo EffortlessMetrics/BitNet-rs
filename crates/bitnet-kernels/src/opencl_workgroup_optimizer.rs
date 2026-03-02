@@ -82,10 +82,7 @@ impl fmt::Display for OptimizerError {
                 write!(f, "exceeds hardware limits: {msg}")
             }
             Self::InsufficientLocalMemory { required, available } => {
-                write!(
-                    f,
-                    "insufficient local memory: need {required} B, have {available} B"
-                )
+                write!(f, "insufficient local memory: need {required} B, have {available} B")
             }
         }
     }
@@ -142,9 +139,7 @@ pub fn cpu_compute_optimal_1d(
         }
     }
 
-    let local = best.map(|(_, s)| s).unwrap_or_else(|| {
-        vec![hw.warp_size.min(global_size.max(1))]
-    });
+    let local = best.map(|(_, s)| s).unwrap_or_else(|| vec![hw.warp_size.min(global_size.max(1))]);
 
     let local = cpu_adjust_for_access_pattern(&local, &kernel.memory_access_pattern, hw);
 
@@ -327,16 +322,8 @@ pub fn cpu_enumerate_valid_sizes(
         }
         2 => {
             let mut out = Vec::new();
-            let max_x = hardware
-                .max_workgroup_dims
-                .first()
-                .copied()
-                .unwrap_or(max_wg);
-            let max_y = hardware
-                .max_workgroup_dims
-                .get(1)
-                .copied()
-                .unwrap_or(max_wg);
+            let max_x = hardware.max_workgroup_dims.first().copied().unwrap_or(max_wg);
+            let max_y = hardware.max_workgroup_dims.get(1).copied().unwrap_or(max_wg);
 
             let mut x = 1;
             while x <= max_x && x <= max_wg {
@@ -360,21 +347,9 @@ pub fn cpu_enumerate_valid_sizes(
         }
         3 => {
             let mut out = Vec::new();
-            let max_x = hardware
-                .max_workgroup_dims
-                .first()
-                .copied()
-                .unwrap_or(max_wg);
-            let max_y = hardware
-                .max_workgroup_dims
-                .get(1)
-                .copied()
-                .unwrap_or(max_wg);
-            let max_z = hardware
-                .max_workgroup_dims
-                .get(2)
-                .copied()
-                .unwrap_or(64);
+            let max_x = hardware.max_workgroup_dims.first().copied().unwrap_or(max_wg);
+            let max_y = hardware.max_workgroup_dims.get(1).copied().unwrap_or(max_wg);
+            let max_z = hardware.max_workgroup_dims.get(2).copied().unwrap_or(64);
 
             let mut x = 1;
             while x <= max_x.min(max_wg) {
@@ -444,13 +419,7 @@ pub fn cpu_recommend_for_matmul(
         memory_access_pattern: AccessPattern::Coalesced,
     };
 
-    cpu_compute_optimal_2d(
-        optimizer,
-        &kernel,
-        n,
-        m,
-        OptimizationGoal::MaxThroughput,
-    )
+    cpu_compute_optimal_2d(optimizer, &kernel, n, m, OptimizationGoal::MaxThroughput)
 }
 
 /// Recommend a workgroup size for a reduction of `n` elements.
@@ -467,12 +436,7 @@ pub fn cpu_recommend_for_reduction(
         memory_access_pattern: AccessPattern::Sequential,
     };
 
-    cpu_compute_optimal_1d(
-        optimizer,
-        &kernel,
-        n,
-        OptimizationGoal::MaxOccupancy,
-    )
+    cpu_compute_optimal_1d(optimizer, &kernel, n, OptimizationGoal::MaxOccupancy)
 }
 
 /// Format a recommendation as a human-readable string.
@@ -570,16 +534,24 @@ mod tests {
     #[test]
     fn optimal_1d_within_hardware_limits() {
         let opt = a770();
-        let rec =
-            cpu_compute_optimal_1d(&opt, &default_kernel_1d(), 4096, OptimizationGoal::MaxOccupancy);
+        let rec = cpu_compute_optimal_1d(
+            &opt,
+            &default_kernel_1d(),
+            4096,
+            OptimizationGoal::MaxOccupancy,
+        );
         assert!(rec.local_size[0] <= opt.hardware.max_workgroup_size);
     }
 
     #[test]
     fn optimal_1d_is_power_of_two() {
         let opt = a770();
-        let rec =
-            cpu_compute_optimal_1d(&opt, &default_kernel_1d(), 4096, OptimizationGoal::MaxOccupancy);
+        let rec = cpu_compute_optimal_1d(
+            &opt,
+            &default_kernel_1d(),
+            4096,
+            OptimizationGoal::MaxOccupancy,
+        );
         assert!(rec.local_size[0].is_power_of_two());
     }
 
@@ -598,12 +570,8 @@ mod tests {
     #[test]
     fn optimal_1d_min_latency() {
         let opt = a770();
-        let rec = cpu_compute_optimal_1d(
-            &opt,
-            &default_kernel_1d(),
-            4096,
-            OptimizationGoal::MinLatency,
-        );
+        let rec =
+            cpu_compute_optimal_1d(&opt, &default_kernel_1d(), 4096, OptimizationGoal::MinLatency);
         assert!(rec.local_size[0] <= opt.hardware.max_workgroup_size);
     }
 
@@ -712,10 +680,8 @@ mod tests {
             memory_access_pattern: AccessPattern::Coalesced,
             ..default_kernel_1d()
         };
-        let k_rand = KernelProfile {
-            memory_access_pattern: AccessPattern::Random,
-            ..default_kernel_1d()
-        };
+        let k_rand =
+            KernelProfile { memory_access_pattern: AccessPattern::Random, ..default_kernel_1d() };
         let tp_coal = cpu_estimate_throughput(&[256], &hw, &k_coal);
         let tp_rand = cpu_estimate_throughput(&[256], &hw, &k_rand);
         assert!(tp_coal > tp_rand, "coal={tp_coal}, rand={tp_rand}");
@@ -726,11 +692,7 @@ mod tests {
     #[test]
     fn coalesced_prefers_wide_x() {
         let hw = create_a770_profile();
-        let adj = cpu_adjust_for_access_pattern(
-            &[16, 16],
-            &AccessPattern::Coalesced,
-            &hw,
-        );
+        let adj = cpu_adjust_for_access_pattern(&[16, 16], &AccessPattern::Coalesced, &hw);
         assert!(adj[0] >= 16);
         assert_eq!(adj.len(), 2);
     }
@@ -738,22 +700,14 @@ mod tests {
     #[test]
     fn broadcast_row_collapses_y() {
         let hw = create_a770_profile();
-        let adj = cpu_adjust_for_access_pattern(
-            &[32, 32],
-            &AccessPattern::BroadcastRow,
-            &hw,
-        );
+        let adj = cpu_adjust_for_access_pattern(&[32, 32], &AccessPattern::BroadcastRow, &hw);
         assert_eq!(adj[1], 1);
     }
 
     #[test]
     fn broadcast_col_collapses_x() {
         let hw = create_a770_profile();
-        let adj = cpu_adjust_for_access_pattern(
-            &[32, 32],
-            &AccessPattern::BroadcastCol,
-            &hw,
-        );
+        let adj = cpu_adjust_for_access_pattern(&[32, 32], &AccessPattern::BroadcastCol, &hw);
         assert_eq!(adj[0], 1);
     }
 
@@ -761,11 +715,7 @@ mod tests {
     fn sequential_unchanged() {
         let hw = create_a770_profile();
         let base = vec![64, 4];
-        let adj = cpu_adjust_for_access_pattern(
-            &base,
-            &AccessPattern::Sequential,
-            &hw,
-        );
+        let adj = cpu_adjust_for_access_pattern(&base, &AccessPattern::Sequential, &hw);
         assert_eq!(adj, base);
     }
 
@@ -797,10 +747,7 @@ mod tests {
     #[test]
     fn enumerate_3d_within_limits() {
         let hw = create_a770_profile();
-        let k = KernelProfile {
-            dimensions: 3,
-            ..default_kernel_1d()
-        };
+        let k = KernelProfile { dimensions: 3, ..default_kernel_1d() };
         let sizes = cpu_enumerate_valid_sizes(&hw, &k, 3);
         assert!(!sizes.is_empty());
         for s in &sizes {
@@ -828,18 +775,8 @@ mod tests {
     fn score_higher_for_better_config() {
         let hw = create_a770_profile();
         let k = default_kernel_1d();
-        let s256 = cpu_score_workgroup_size(
-            &[256],
-            &hw,
-            &k,
-            &OptimizationGoal::MaxOccupancy,
-        );
-        let s16 = cpu_score_workgroup_size(
-            &[16],
-            &hw,
-            &k,
-            &OptimizationGoal::MaxOccupancy,
-        );
+        let s256 = cpu_score_workgroup_size(&[256], &hw, &k, &OptimizationGoal::MaxOccupancy);
+        let s16 = cpu_score_workgroup_size(&[16], &hw, &k, &OptimizationGoal::MaxOccupancy);
         assert!(s256 > s16, "s256={s256}, s16={s16}");
     }
 
@@ -847,12 +784,7 @@ mod tests {
     fn score_throughput_positive() {
         let hw = create_a770_profile();
         let k = default_kernel_1d();
-        let s = cpu_score_workgroup_size(
-            &[128],
-            &hw,
-            &k,
-            &OptimizationGoal::MaxThroughput,
-        );
+        let s = cpu_score_workgroup_size(&[128], &hw, &k, &OptimizationGoal::MaxThroughput);
         assert!(s > 0.0);
     }
 
@@ -916,12 +848,8 @@ mod tests {
     #[test]
     fn edge_global_size_one() {
         let opt = a770();
-        let rec = cpu_compute_optimal_1d(
-            &opt,
-            &default_kernel_1d(),
-            1,
-            OptimizationGoal::MaxOccupancy,
-        );
+        let rec =
+            cpu_compute_optimal_1d(&opt, &default_kernel_1d(), 1, OptimizationGoal::MaxOccupancy);
         // Should still produce a valid recommendation.
         assert!(!rec.local_size.is_empty());
         assert!(rec.local_size[0] >= 1);
@@ -930,22 +858,15 @@ mod tests {
     #[test]
     fn edge_global_size_smaller_than_warp() {
         let opt = a770();
-        let rec = cpu_compute_optimal_1d(
-            &opt,
-            &default_kernel_1d(),
-            4,
-            OptimizationGoal::MaxOccupancy,
-        );
+        let rec =
+            cpu_compute_optimal_1d(&opt, &default_kernel_1d(), 4, OptimizationGoal::MaxOccupancy);
         assert!(rec.local_size[0] >= 1);
     }
 
     #[test]
     fn edge_3d_dispatch_limits() {
         let hw = create_a770_profile();
-        let k = KernelProfile {
-            dimensions: 3,
-            ..default_kernel_1d()
-        };
+        let k = KernelProfile { dimensions: 3, ..default_kernel_1d() };
         let sizes = cpu_enumerate_valid_sizes(&hw, &k, 3);
         for s in &sizes {
             assert!(s[0] <= hw.max_workgroup_dims[0]);
@@ -980,10 +901,7 @@ mod tests {
         let k = default_kernel_1d();
         for size in [1, 7, 16, 33, 64, 255, 512, 1024] {
             let occ = cpu_compute_occupancy(&[size], &hw, &k);
-            assert!(
-                (0.0..=1.0).contains(&occ),
-                "occ={occ} for size={size}"
-            );
+            assert!((0.0..=1.0).contains(&occ), "occ={occ} for size={size}");
         }
     }
 
@@ -1001,10 +919,7 @@ mod tests {
                 OptimizationGoal::MaxOccupancy,
             );
             let product: usize = rec.local_size.iter().product();
-            assert!(
-                product <= opt.hardware.max_workgroup_size,
-                "product={product} for {gx}x{gy}"
-            );
+            assert!(product <= opt.hardware.max_workgroup_size, "product={product} for {gx}x{gy}");
         }
     }
 
@@ -1048,10 +963,7 @@ mod tests {
 
     #[test]
     fn error_display_insufficient_memory() {
-        let e = OptimizerError::InsufficientLocalMemory {
-            required: 128_000,
-            available: 65_536,
-        };
+        let e = OptimizerError::InsufficientLocalMemory { required: 128_000, available: 65_536 };
         let s = e.to_string();
         assert!(s.contains("128000"));
         assert!(s.contains("65536"));
