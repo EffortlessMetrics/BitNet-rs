@@ -77,7 +77,9 @@ pub fn rmsnorm(
         let base = row * dim;
         let slice = &input[base..base + dim];
 
-        let mean_sq: f32 = slice.iter().map(|&v| v * v).sum::<f32>() / dim as f32;
+        // Use f64 accumulation for numerical stability with large/small values.
+        let mean_sq =
+            (slice.iter().map(|&v| (v as f64) * (v as f64)).sum::<f64>() / dim as f64) as f32;
         let rms = (mean_sq + eps).sqrt();
 
         for d in 0..dim {
@@ -722,5 +724,220 @@ mod tests {
         for variant in &variants {
             apply_norm(*variant, &input, &weight, &bias, &mut output, 1, dim, 1e-5).unwrap();
         }
+    }
+
+    // -- SiLU: comprehensive coverage -------------------------------------
+
+    /// SiLU at extremes: large positive ≈ x, large negative ≈ 0.
+    #[test]
+    fn test_silu_numerical_stability_extremes() {
+        let out = silu(&[100.0, -100.0]);
+        assert!(
+            (out[0] - 100.0).abs() < 1e-3,
+            "silu(100) should ≈ 100, got {}",
+            out[0]
+        );
+        assert!(
+            out[1].abs() < 1e-10,
+            "silu(-100) should ≈ 0, got {}",
+            out[1]
+        );
+        // No NaN or Inf
+        for &v in &out {
+            assert!(v.is_finite(), "silu output must be finite, got {v}");
+        }
+    }
+
+    /// SiLU vs f64 reference: x / (1 + exp(-x)) computed in f64.
+    #[test]
+    fn test_silu_vs_f64_reference() {
+        let inputs = [0.0f32, 0.5, -0.5, 1.0, -1.0, 3.0, -3.0, 10.0, -10.0];
+        let out = silu(&inputs);
+        for (i, (&x, &got)) in inputs.iter().zip(out.iter()).enumerate() {
+            let xd = x as f64;
+            let expected = (xd / (1.0 + (-xd).exp())) as f32;
+            assert!(
+                (got - expected).abs() < 1e-5,
+                "silu reference mismatch at index {i}: input={x}, got={got}, expected={expected}"
+            );
+        }
+    }
+
+    /// SiLU known reference values (verified against PyTorch).
+    #[test]
+    fn test_silu_known_reference_values() {
+        let inputs = [0.0f32, 1.0, -1.0, 2.0, -2.0];
+        let expected = [
+            0.0,      // silu(0) = 0
+            0.7311,   // silu(1) ≈ 0.7311
+            -0.2689,  // silu(-1) ≈ -0.2689
+            1.7616,   // silu(2) ≈ 1.7616
+            -0.2384,  // silu(-2) ≈ -0.2384
+        ];
+        let out = silu(&inputs);
+        for (i, (&got, &want)) in out.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (got - want).abs() < 0.01,
+                "silu mismatch at index {i}: got {got}, expected {want}"
+            );
+        }
+    }
+
+    /// SiLU in-place matches allocating at extremes.
+    #[test]
+    fn test_silu_in_place_extremes() {
+        let input = vec![50.0f32, -50.0, 0.0];
+        let expected = silu(&input);
+        let mut data = input;
+        silu_in_place(&mut data);
+        for (a, b) in data.iter().zip(expected.iter()) {
+            assert!((a - b).abs() < 1e-6, "inplace={a} vs alloc={b}");
+        }
+    }
+
+    /// SiLU on empty input returns empty.
+    #[test]
+    fn test_silu_empty() {
+        assert!(silu(&[]).is_empty());
+        let mut empty: Vec<f32> = vec![];
+        silu_in_place(&mut empty);
+        assert!(empty.is_empty());
+    }
+
+    // -- RMSNorm: comprehensive coverage ----------------------------------
+
+    /// RMSNorm with all-ones input and unit weight → output ≈ weight.
+    #[test]
+    fn test_rmsnorm_all_ones_gives_weight() {
+        let dim = 4;
+        let input = vec![1.0f32; dim];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+        rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
+        // rms(1,1,1,1) = sqrt(1 + eps) ≈ 1.0, so output ≈ weight
+        for (i, &v) in output.iter().enumerate() {
+            assert!(
+                (v - 1.0).abs() < 0.01,
+                "all-ones: output[{i}] = {v}, expected ≈ 1.0"
+            );
+        }
+    }
+
+    /// RMSNorm: hand-computed known vector.
+    #[test]
+    fn test_rmsnorm_known_vector() {
+        let dim = 4;
+        let input = vec![1.0f32, 2.0, 3.0, 4.0];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+        let eps = 1e-5f32;
+
+        rmsnorm(&input, &weight, &mut output, 1, dim, eps).unwrap();
+
+        // mean(x²) = (1+4+9+16)/4 = 7.5,  rms = sqrt(7.5 + eps)
+        let rms = (7.5f64 + eps as f64).sqrt() as f32;
+        for (i, &v) in output.iter().enumerate() {
+            let expected = input[i] / rms;
+            assert!(
+                (v - expected).abs() < 1e-4,
+                "known vector: output[{i}] = {v}, expected {expected}"
+            );
+        }
+    }
+
+    /// RMSNorm numerical stability with very small values.
+    #[test]
+    fn test_rmsnorm_very_small_values() {
+        let dim = 4;
+        let input = vec![1e-20f32; dim];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+        rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
+        for &v in &output {
+            assert!(v.is_finite(), "small values: output must be finite, got {v}");
+        }
+    }
+
+    /// RMSNorm numerical stability with very large values (f64 accumulation).
+    #[test]
+    fn test_rmsnorm_very_large_values() {
+        let dim = 4;
+        let input = vec![1e18f32; dim];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+        rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
+        for &v in &output {
+            assert!(v.is_finite(), "large values: output must be finite, got {v}");
+            assert!(
+                (v - 1.0).abs() < 0.01,
+                "uniform large values should normalize to ≈ 1.0, got {v}"
+            );
+        }
+    }
+
+    /// RMSNorm: eps parameter affects the result.
+    #[test]
+    fn test_rmsnorm_eps_parameter_effect() {
+        let dim = 3;
+        let input = vec![0.001f32, 0.001, 0.001]; // very small → eps dominates
+        let weight = vec![1.0f32; dim];
+        let mut out_small_eps = vec![0.0f32; dim];
+        let mut out_large_eps = vec![0.0f32; dim];
+
+        rmsnorm(&input, &weight, &mut out_small_eps, 1, dim, 1e-8).unwrap();
+        rmsnorm(&input, &weight, &mut out_large_eps, 1, dim, 1.0).unwrap();
+
+        // Larger eps → smaller output (denominator is larger)
+        assert!(
+            out_small_eps[0].abs() > out_large_eps[0].abs(),
+            "small eps ({}) should give larger output than large eps ({})",
+            out_small_eps[0],
+            out_large_eps[0],
+        );
+    }
+
+    /// RMSNorm vs LayerNorm produce different results on asymmetric input.
+    #[test]
+    fn test_rmsnorm_vs_layernorm_differ() {
+        let dim = 4;
+        let input = vec![1.0f32, 2.0, 3.0, 4.0]; // non-zero-mean
+        let weight = vec![1.0f32; dim];
+        let bias = vec![0.0f32; dim];
+        let mut rms_out = vec![0.0f32; dim];
+        let mut ln_out = vec![0.0f32; dim];
+
+        rmsnorm(&input, &weight, &mut rms_out, 1, dim, 1e-5).unwrap();
+        layernorm(&input, &weight, &bias, &mut ln_out, 1, dim, 1e-5).unwrap();
+
+        let differs = rms_out.iter().zip(ln_out.iter()).any(|(a, b)| (a - b).abs() > 1e-4);
+        assert!(differs, "RMSNorm and LayerNorm should produce different results");
+    }
+
+    /// RMSNorm multi-row: each row normalized independently.
+    #[test]
+    fn test_rmsnorm_multi_row() {
+        let dim = 2;
+        let rows = 2;
+        let input = vec![3.0f32, 4.0, 0.6, 0.8];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; rows * dim];
+
+        rmsnorm(&input, &weight, &mut output, rows, dim, 1e-5).unwrap();
+
+        // Row 0: rms = sqrt((9+16)/2 + eps) ≈ sqrt(12.5) ≈ 3.536
+        // Row 1: rms = sqrt((0.36+0.64)/2 + eps) ≈ sqrt(0.5) ≈ 0.707
+        // Rows should normalize independently
+        let rms0 = (12.5f64 + 1e-5).sqrt() as f32;
+        let rms1 = (0.5f64 + 1e-5).sqrt() as f32;
+        assert!((output[0] - 3.0 / rms0).abs() < 1e-4);
+        assert!((output[2] - 0.6 / rms1).abs() < 1e-4);
+    }
+
+    /// RMSNorm weight mismatch returns error.
+    #[test]
+    fn test_rmsnorm_weight_mismatch() {
+        let weight = vec![1.0f32; 3]; // dim=4 but weight is 3
+        let mut output = vec![0.0f32; 4];
+        assert!(rmsnorm(&[1.0; 4], &weight, &mut output, 1, 4, 1e-5).is_err());
     }
 }
