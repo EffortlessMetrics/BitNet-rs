@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+RmsNormConfig {
+    hidden_dim: 768,
+    n_rows: 4,
+    threads_per_block: 768,
+    eps: 1e-8,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+ElementwiseConfig {
+    n: 8192,
+    threads_per_block: 256,
+    op: Add,
+    clamp_lo: -inf,
+    clamp_hi: inf,
+}

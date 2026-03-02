@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: variants
+---
+[
+    SwiGLU,
+    GeGLU,
+    ReGLU,
+]

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+KvCacheConfig {
+    num_layers: 24,
+    num_heads: 16,
+    head_dim: 128,
+    max_seq_len: 4096,
+    dtype: F16,
+}

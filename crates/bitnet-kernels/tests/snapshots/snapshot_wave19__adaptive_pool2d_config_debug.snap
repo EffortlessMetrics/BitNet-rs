@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+AdaptivePool2dConfig {
+    batch: 1,
+    channels: 512,
+    in_h: 14,
+    in_w: 14,
+    out_h: 7,
+    out_w: 7,
+}

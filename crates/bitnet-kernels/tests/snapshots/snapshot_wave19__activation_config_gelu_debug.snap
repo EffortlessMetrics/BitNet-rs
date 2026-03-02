@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+ActivationConfig {
+    n: 1024,
+    threads_per_block: 256,
+    activation: GELU,
+}

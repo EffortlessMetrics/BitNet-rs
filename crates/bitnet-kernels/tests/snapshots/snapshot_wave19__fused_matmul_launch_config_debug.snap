@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+FusedMatmulLaunchConfig {
+    n: 1024,
+    out_dim: 256,
+    threads_per_block: 256,
+}

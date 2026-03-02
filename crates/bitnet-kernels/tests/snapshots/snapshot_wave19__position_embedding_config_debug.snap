@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+PositionEmbeddingConfig {
+    max_seq_len: 2048,
+    embedding_dim: 768,
+    seq_len: 128,
+    position_offset: 0,
+}

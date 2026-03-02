@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+GemmConfig {
+    m: 64,
+    n: 64,
+    k: 64,
+    alpha: 2.0,
+    beta: 0.5,
+    trans_a: true,
+    trans_b: true,
+}

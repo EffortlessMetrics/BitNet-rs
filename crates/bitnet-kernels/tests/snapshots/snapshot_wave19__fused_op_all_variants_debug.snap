@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: variants
+---
+[
+    RmsNormLinear,
+    GeluLinear,
+    SoftmaxMask,
+    AddNormalize,
+    ScaleAndAdd,
+]

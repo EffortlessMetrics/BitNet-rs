@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+EmbeddingKernelConfig {
+    vocab_size: 32000,
+    embedding_dim: 2048,
+    seq_len: 128,
+    threads_per_block: 1024,
+    padding_idx: None,
+}
