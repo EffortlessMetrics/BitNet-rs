@@ -235,3 +235,6 @@ clippy_report.txt
 # Benchmark outputs
 benchmarks-new/
 tests/tests/cache/
+
+# Claude worktrees (local only)
+.claude/worktrees/
