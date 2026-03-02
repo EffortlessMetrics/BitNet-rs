@@ -36,7 +36,6 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -52,6 +51,7 @@ pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
 pub mod transpose;
+pub mod weight_compression;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
@@ -188,3 +188,14 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use weight_compression::{
+    CompressionFormat, CompressionHeader, Run, adaptive_compress, bitpack_ternary,
+    compress_weights, compression_ratio, decompress_weights, delta_decode, delta_encode,
+    run_length_decode, run_length_encode, unpack_ternary,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use weight_compression::{
+    BITPACK_TERNARY_KERNEL_SRC, DELTA_DECODE_KERNEL_SRC, UNPACK_TERNARY_KERNEL_SRC,
+};
