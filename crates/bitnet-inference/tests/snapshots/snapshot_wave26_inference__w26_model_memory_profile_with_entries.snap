@@ -1,0 +1,32 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: profile
+---
+ModelMemoryProfile {
+    model_name: "bitnet-2b-4t",
+    architecture: "bitnet",
+    known_profiles: [
+        (
+            512,
+            MemoryEstimation {
+                model_params_bytes: 500000000,
+                kv_cache_bytes: 16777216,
+                activation_bytes: 8388608,
+                total_bytes: 525165824,
+                recommended_gpu_vram_gb: 0.59,
+                recommended_system_ram_gb: 0.73,
+            },
+        ),
+        (
+            2048,
+            MemoryEstimation {
+                model_params_bytes: 500000000,
+                kv_cache_bytes: 67108864,
+                activation_bytes: 33554432,
+                total_bytes: 600663296,
+                recommended_gpu_vram_gb: 0.67,
+                recommended_system_ram_gb: 0.84,
+            },
+        ),
+    ],
+}

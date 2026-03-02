@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: formats
+---
+[
+    Gguf,
+    SafeTensors,
+    HuggingFace,
+]

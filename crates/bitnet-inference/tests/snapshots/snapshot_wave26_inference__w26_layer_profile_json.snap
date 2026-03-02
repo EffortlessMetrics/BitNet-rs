@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: json
+---
+{
+  "layer_name": "layer_0.attention",
+  "layer_type": "attention",
+  "forward_time_us": 1250.5,
+  "backward_time_us": 0.0,
+  "memory_bytes": 8388608,
+  "flops_estimate": 2147483648
+}

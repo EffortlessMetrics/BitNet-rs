@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: lp
+---
+LayerProfile {
+    layer_name: "layer_3.ffn",
+    layer_type: "ffn",
+    forward_time_us: 890.2,
+    backward_time_us: 0.0,
+    memory_bytes: 16777216,
+    flops_estimate: 4294967296,
+}

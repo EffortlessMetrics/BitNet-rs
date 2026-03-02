@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+total elements 2000000000 exceeds maximum 1000000000

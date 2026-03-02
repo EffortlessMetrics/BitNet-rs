@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: errors
+---
+[
+    ZeroDimension {
+        axis: 0,
+        shape: [
+            0,
+        ],
+    },
+    NanDetected {
+        index: 0,
+    },
+    AlignmentViolation {
+        required: 32,
+        actual: 1,
+    },
+]

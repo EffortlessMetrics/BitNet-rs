@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: lp
+---
+LayerProfile {
+    layer_name: "layer_7.norm",
+    layer_type: "norm",
+    forward_time_us: 12.3,
+    backward_time_us: 0.0,
+    memory_bytes: 16384,
+    flops_estimate: 8192,
+}

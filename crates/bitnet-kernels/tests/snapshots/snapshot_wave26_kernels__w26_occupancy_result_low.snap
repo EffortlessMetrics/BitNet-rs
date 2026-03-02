@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: result
+---
+OccupancyResult {
+    theoretical: 0.25,
+    active_warps: 8,
+    max_warps: 64,
+    limiter: SharedMemory,
+}

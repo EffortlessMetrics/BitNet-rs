@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: cfg
+---
+SparseFfnConfig {
+    base: FfnConfig {
+        batch_size: 1,
+        hidden_dim: 4096,
+        intermediate_dim: 11008,
+        activation: SiLU,
+        threads_per_block: 256,
+    },
+    top_k: 2,
+}

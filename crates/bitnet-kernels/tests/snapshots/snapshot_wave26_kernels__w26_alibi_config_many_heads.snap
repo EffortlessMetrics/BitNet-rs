@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: cfg
+---
+AlibiConfig {
+    seq_len: 2048,
+    n_heads: 32,
+    threads_per_block: 256,
+}

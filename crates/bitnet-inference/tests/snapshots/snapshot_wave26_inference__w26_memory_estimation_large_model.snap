@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: est
+---
+MemoryEstimation {
+    model_params_bytes: 4294967296,
+    kv_cache_bytes: 1073741824,
+    activation_bytes: 536870912,
+    total_bytes: 5905580032,
+    recommended_gpu_vram_gb: 6.6,
+    recommended_system_ram_gb: 8.25,
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: "format!(\"remaining={}\", tracker.tokens_remaining())"
+---
+remaining=32

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: profile
+---
+ModelMemoryProfile {
+    model_name: "bitnet-2b",
+    architecture: "bitnet",
+    known_profiles: [],
+}

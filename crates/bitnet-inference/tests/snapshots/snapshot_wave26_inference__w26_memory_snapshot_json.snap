@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: json
+---
+{
+  "label": "after_layer_0",
+  "timestamp_us": 1250.5,
+  "memory_bytes": 67108864
+}

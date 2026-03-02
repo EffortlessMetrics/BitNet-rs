@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: snap
+---
+MemorySnapshot {
+    label: "model_loaded",
+    timestamp_us: 0.0,
+    memory_bytes: 536870912,
+}

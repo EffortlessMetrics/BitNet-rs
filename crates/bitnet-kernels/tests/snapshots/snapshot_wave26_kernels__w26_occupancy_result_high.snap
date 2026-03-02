@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: result
+---
+OccupancyResult {
+    theoretical: 0.95,
+    active_warps: 48,
+    max_warps: 64,
+    limiter: Registers,
+}

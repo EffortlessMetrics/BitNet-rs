@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+stride mismatch at axis 1: expected 128 (C-contiguous), got 64

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+matmul shape mismatch: a has 512 columns but b has 768 rows

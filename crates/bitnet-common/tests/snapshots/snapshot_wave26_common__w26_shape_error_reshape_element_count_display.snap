@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+reshape element count mismatch: source has 1024 elements but target shape [32, 33] requires 1056

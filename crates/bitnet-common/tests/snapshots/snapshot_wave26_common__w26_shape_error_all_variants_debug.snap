@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: errors
+---
+[
+    MatmulMismatch {
+        a_inner: 64,
+        b_inner: 128,
+    },
+    MatmulRank {
+        a_ndim: 0,
+        b_ndim: 1,
+    },
+    BroadcastIncompatible {
+        dim: 0,
+        a: 1,
+        b: 7,
+    },
+    EmptyShape,
+]

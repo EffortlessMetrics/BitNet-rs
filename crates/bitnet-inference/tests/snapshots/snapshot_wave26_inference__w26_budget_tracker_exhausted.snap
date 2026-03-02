@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: "format!(\"exhausted={} remaining={}\", !tracker.can_continue(),\ntracker.tokens_remaining())"
+---
+exhausted=true remaining=0

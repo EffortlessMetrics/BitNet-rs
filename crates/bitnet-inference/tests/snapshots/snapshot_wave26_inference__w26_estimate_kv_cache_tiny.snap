@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave26_inference.rs
+expression: est
+---
+KvCacheEstimation {
+    per_layer_bytes: 524288,
+    total_bytes: 2097152,
+    num_layers: 4,
+    num_kv_heads: 2,
+    head_dim: 64,
+    max_seq_len: 512,
+    dtype_bytes: 4,
+}

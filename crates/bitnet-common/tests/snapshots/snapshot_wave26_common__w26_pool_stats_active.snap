@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: stats
+---
+PoolStats {
+    hits: 950,
+    misses: 50,
+    pooled_bytes: 8388608,
+    active_bytes: 2097152,
+}

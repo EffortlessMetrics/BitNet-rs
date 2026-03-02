@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: t
+---
+KernelTiming {
+    kernel_name: "gemm_i2s",
+    duration: 350µs,
+    input_elements: 1048576,
+    flops: None,
+}

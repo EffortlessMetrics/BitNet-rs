@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+matmul batch dimensions incompatible: a batch [2, 4] vs b batch [3, 4]

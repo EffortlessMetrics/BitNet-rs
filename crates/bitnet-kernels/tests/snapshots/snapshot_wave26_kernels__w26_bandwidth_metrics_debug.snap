@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: m
+---
+BandwidthMetrics {
+    bytes_read: 1048576,
+    bytes_written: 524288,
+    duration: 100µs,
+    peak_bandwidth_bytes_per_sec: 900000000000.0,
+}

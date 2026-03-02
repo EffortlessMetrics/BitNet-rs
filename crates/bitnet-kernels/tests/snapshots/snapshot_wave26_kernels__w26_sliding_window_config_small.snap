@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: cfg
+---
+SlidingWindowConfig {
+    seq_len: 32,
+    window_size: 8,
+    threads_per_block: 256,
+}

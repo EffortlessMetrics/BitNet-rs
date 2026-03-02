@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave26_common.rs
+expression: e.to_string()
+---
+matmul requires at least 1-D tensors, got a=0-D and b=2-D

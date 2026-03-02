@@ -1,0 +1,28 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: tracker
+---
+PerfTracker {
+    timings: [
+        KernelTiming {
+            kernel_name: "softmax",
+            duration: 50µs,
+            input_elements: 32768,
+            flops: None,
+        },
+        KernelTiming {
+            kernel_name: "rope",
+            duration: 30µs,
+            input_elements: 8192,
+            flops: None,
+        },
+        KernelTiming {
+            kernel_name: "gemm_i2s",
+            duration: 800µs,
+            input_elements: 1048576,
+            flops: Some(
+                2147483648,
+            ),
+        },
+    ],
+}

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave26_kernels.rs
+expression: t
+---
+KernelTiming {
+    kernel_name: "matmul_f32",
+    duration: 5ms,
+    input_elements: 16777216,
+    flops: Some(
+        137438953472,
+    ),
+}
