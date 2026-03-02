@@ -190,8 +190,7 @@ pub fn cpu_route_request(
     let any_available =
         router.backends.iter().any(|b| b.available && b.load_pct < BUSY_LOAD_THRESHOLD);
     if !any_available {
-        let has_cpu =
-            router.backends.iter().any(|b| matches!(b.backend, Backend::CpuSimd));
+        let has_cpu = router.backends.iter().any(|b| matches!(b.backend, Backend::CpuSimd));
         if !(router.config.fallback_to_cpu && has_cpu) {
             return Err(RouterError::AllBackendsBusy);
         }
@@ -200,10 +199,8 @@ pub fn cpu_route_request(
     // Determine ideal backend: if GPU is preferred, try GPU first.
     let mut fell_back = false;
     let backend = if router.config.prefer_gpu {
-        if let Some(gpu) = router
-            .backends
-            .iter()
-            .find(|b| matches!(b.backend, Backend::OpenClGpu { .. }))
+        if let Some(gpu) =
+            router.backends.iter().find(|b| matches!(b.backend, Backend::OpenClGpu { .. }))
         {
             if gpu.available && gpu.load_pct < BUSY_LOAD_THRESHOLD {
                 gpu.backend.clone()
@@ -371,7 +368,10 @@ pub fn cpu_get_stats(router: &RequestRouter) -> RouterStats {
 pub fn format_routing_decision(decision: &RoutingDecision) -> String {
     format!(
         "Routed to {} — latency ~{:.1} ms, throughput ~{:.1} tok/s ({})",
-        decision.backend, decision.estimated_latency_ms, decision.estimated_throughput_tps, decision.reason,
+        decision.backend,
+        decision.estimated_latency_ms,
+        decision.estimated_throughput_tps,
+        decision.reason,
     )
 }
 
@@ -525,10 +525,8 @@ mod tests {
 
     #[test]
     fn test_route_small_request_to_cpu_when_no_gpu_preference() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 50.0));
         cpu_register_backend(&mut router, cpu_status(true, 5.0));
         let req = small_request();
@@ -583,18 +581,13 @@ mod tests {
 
     #[test]
     fn test_route_realtime_prefers_lower_load() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 80.0));
         cpu_register_backend(&mut router, cpu_status(true, 5.0));
         // Use a small model so CPU and GPU raw latencies are close,
         // letting the load penalty on GPU tip the balance to CPU.
-        let req = RequestCharacteristics {
-            priority: RequestPriority::Realtime,
-            ..small_request()
-        };
+        let req = RequestCharacteristics { priority: RequestPriority::Realtime, ..small_request() };
         let decision = cpu_route_request(&mut router, &req).unwrap();
         // CPU has much lower load; load adjustment should tip the scales.
         assert!(matches!(decision.backend, Backend::CpuSimd));
@@ -646,10 +639,8 @@ mod tests {
 
     #[test]
     fn test_select_best_picks_lowest_latency() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 10.0));
         cpu_register_backend(&mut router, cpu_status(true, 10.0));
         let req = large_batch_request();
@@ -659,10 +650,8 @@ mod tests {
 
     #[test]
     fn test_select_best_cpu_when_gpu_loaded() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 90.0));
         cpu_register_backend(&mut router, cpu_status(true, 10.0));
         let req = small_request();
@@ -694,10 +683,8 @@ mod tests {
 
     #[test]
     fn test_no_fallback_when_disabled() {
-        let router = create_request_router(RouterConfig {
-            fallback_to_cpu: false,
-            ..default_config()
-        });
+        let router =
+            create_request_router(RouterConfig { fallback_to_cpu: false, ..default_config() });
         let primary = Backend::OpenClGpu { device_id: 0 };
         assert!(!cpu_should_fallback(&router, &primary));
     }
@@ -733,10 +720,8 @@ mod tests {
 
     #[test]
     fn test_load_balance_spreads_across_backends() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 10.0));
         cpu_register_backend(&mut router, cpu_status(true, 10.0));
         // Route several requests to populate stats.
@@ -755,10 +740,8 @@ mod tests {
 
     #[test]
     fn test_hybrid_routing_splits_layers() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, hybrid_status(20, 12, 10.0));
         let req = large_batch_request();
         let decision = cpu_route_request(&mut router, &req).unwrap();
@@ -795,10 +778,8 @@ mod tests {
 
     #[test]
     fn test_all_backends_busy_error() {
-        let mut router = create_request_router(RouterConfig {
-            fallback_to_cpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { fallback_to_cpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 99.0));
         let req = small_request();
         let err = cpu_route_request(&mut router, &req).unwrap_err();
@@ -807,10 +788,8 @@ mod tests {
 
     #[test]
     fn test_all_backends_unavailable_error() {
-        let mut router = create_request_router(RouterConfig {
-            fallback_to_cpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { fallback_to_cpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, false, 0.0));
         let req = small_request();
         let err = cpu_route_request(&mut router, &req).unwrap_err();
@@ -823,10 +802,7 @@ mod tests {
     fn test_request_too_large() {
         let mut router = create_request_router(default_config());
         cpu_register_backend(&mut router, cpu_status(true, 5.0));
-        let req = RequestCharacteristics {
-            model_size_mb: 100_000,
-            ..small_request()
-        };
+        let req = RequestCharacteristics { model_size_mb: 100_000, ..small_request() };
         let err = cpu_route_request(&mut router, &req).unwrap_err();
         assert!(matches!(err, RouterError::RequestTooLarge { .. }));
     }
@@ -890,18 +866,13 @@ mod tests {
             let _ = cpu_route_request(&mut router, &small_request());
         }
         let stats = cpu_get_stats(&router);
-        assert_eq!(
-            stats.total_routed,
-            stats.gpu_routed + stats.cpu_routed + stats.hybrid_routed
-        );
+        assert_eq!(stats.total_routed, stats.gpu_routed + stats.cpu_routed + stats.hybrid_routed);
     }
 
     #[test]
     fn test_property_total_equals_sum_with_hybrid() {
-        let mut router = create_request_router(RouterConfig {
-            prefer_gpu: false,
-            ..default_config()
-        });
+        let mut router =
+            create_request_router(RouterConfig { prefer_gpu: false, ..default_config() });
         cpu_register_backend(&mut router, gpu_status(0, true, 10.0));
         cpu_register_backend(&mut router, cpu_status(true, 10.0));
         cpu_register_backend(&mut router, hybrid_status(20, 12, 5.0));
@@ -910,10 +881,7 @@ mod tests {
             let _ = cpu_route_request(&mut router, &small_request());
         }
         let stats = cpu_get_stats(&router);
-        assert_eq!(
-            stats.total_routed,
-            stats.gpu_routed + stats.cpu_routed + stats.hybrid_routed
-        );
+        assert_eq!(stats.total_routed, stats.gpu_routed + stats.cpu_routed + stats.hybrid_routed);
     }
 
     // -- property: latency estimates > 0 ----------------------------------
