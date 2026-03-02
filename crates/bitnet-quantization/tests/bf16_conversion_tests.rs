@@ -41,7 +41,15 @@ fn bf16_neg_one_representation() {
 fn bf16_f32_roundtrip_preserves_representable_values() {
     // Values exactly representable in BF16 must survive the round-trip
     let representable: &[f32] = &[
-        0.0, 1.0, -1.0, 2.0, 0.5, 0.25, 128.0, -256.0, 0.00390625, // 2^-8
+        0.0,
+        1.0,
+        -1.0,
+        2.0,
+        0.5,
+        0.25,
+        128.0,
+        -256.0,
+        0.00390625,         // 2^-8
         bf16::MAX.to_f32(), // exact BF16 max
     ];
     for &v in representable {
@@ -134,10 +142,7 @@ fn bf16_bit_pattern_is_f32_upper_16() {
             // Only check for values that don't require rounding
             let reconstructed = f32::from_bits((bf.to_bits() as u32) << 16);
             let direct = bf.to_f32();
-            assert_eq!(
-                reconstructed, direct,
-                "BF16→F32 should zero-extend lower 16 bits for {v}"
-            );
+            assert_eq!(reconstructed, direct, "BF16→F32 should zero-extend lower 16 bits for {v}");
         }
         // Always verify that BF16 bits are related to F32 upper bits
         let diff = (bf.to_bits() as i32 - f32_upper as i32).unsigned_abs();
@@ -216,11 +221,7 @@ fn bf16_to_f16_subnormal_conversion() {
     let f32_val = bf16_subnormal.to_f32();
     let f16_val = f16::from_f32(f32_val);
     // BF16 subnormals are much smaller than F16 can represent, expect zero
-    assert_eq!(
-        f16_val.to_f32(),
-        0.0,
-        "BF16 subnormal ({f32_val:e}) should flush to zero in F16"
-    );
+    assert_eq!(f16_val.to_f32(), 0.0, "BF16 subnormal ({f32_val:e}) should flush to zero in F16");
 }
 
 #[test]
@@ -254,7 +255,8 @@ fn bf16_f16_f32_roundtrip_error_bound() {
 
 #[test]
 fn batch_bf16_to_f32_conversion() {
-    let bf16_weights: Vec<bf16> = (0..1024).map(|i| bf16::from_f32(i as f32 * 0.01 - 5.0)).collect();
+    let bf16_weights: Vec<bf16> =
+        (0..1024).map(|i| bf16::from_f32(i as f32 * 0.01 - 5.0)).collect();
     let f32_weights: Vec<f32> = bf16_weights.iter().map(|b| b.to_f32()).collect();
 
     assert_eq!(f32_weights.len(), 1024);
@@ -273,10 +275,7 @@ fn batch_conversion_10m_elements_perf() {
     let elapsed = start.elapsed();
 
     assert_eq!(f32_data.len(), n);
-    assert!(
-        elapsed.as_secs_f64() < 1.0,
-        "10M BF16→F32 conversions took {elapsed:?}, expected <1s"
-    );
+    assert!(elapsed.as_secs_f64() < 1.0, "10M BF16→F32 conversions took {elapsed:?}, expected <1s");
 }
 
 #[test]
@@ -318,35 +317,25 @@ fn batch_conversion_single_element() {
 #[test]
 fn model_layernorm_weight_range() {
     // LayerNorm weights are typically ~0.9–1.1
-    let weights: Vec<f32> = (0..1000)
-        .map(|i| 0.9 + (i as f32 / 1000.0) * 0.2)
-        .collect();
+    let weights: Vec<f32> = (0..1000).map(|i| 0.9 + (i as f32 / 1000.0) * 0.2).collect();
 
     for &w in &weights {
         let rt = bf16::from_f32(w).to_f32();
         let err = (rt - w).abs();
-        assert!(
-            err < 1e-2,
-            "LayerNorm weight {w} has BF16 error {err} >= 1e-2"
-        );
+        assert!(err < 1e-2, "LayerNorm weight {w} has BF16 error {err} >= 1e-2");
     }
 }
 
 #[test]
 fn model_attention_weight_range() {
     // Attention weights are typically small: ~-0.01 to 0.01
-    let weights: Vec<f32> = (0..1000)
-        .map(|i| -0.01 + (i as f32 / 1000.0) * 0.02)
-        .collect();
+    let weights: Vec<f32> = (0..1000).map(|i| -0.01 + (i as f32 / 1000.0) * 0.02).collect();
 
     for &w in &weights {
         let rt = bf16::from_f32(w).to_f32();
         let err = (rt - w).abs();
         // Near zero, absolute error for BF16 is very small
-        assert!(
-            err < 1e-4,
-            "attention weight {w} has BF16 error {err} >= 1e-4"
-        );
+        assert!(err < 1e-4, "attention weight {w} has BF16 error {err} >= 1e-4");
     }
 }
 
@@ -381,9 +370,8 @@ fn model_large_embedding_matrix_conversion() {
 
 #[test]
 fn model_mixed_sign_preserves_sign() {
-    let values: &[f32] = &[
-        1.0, -1.0, 0.5, -0.5, 100.0, -100.0, 0.001, -0.001, 1e-10, -1e-10, 1e30, -1e30,
-    ];
+    let values: &[f32] =
+        &[1.0, -1.0, 0.5, -0.5, 100.0, -100.0, 0.001, -0.001, 1e-10, -1e-10, 1e30, -1e30];
 
     for &v in values {
         let bf = bf16::from_f32(v);
@@ -391,11 +379,7 @@ fn model_mixed_sign_preserves_sign() {
         if v == 0.0 {
             continue;
         }
-        assert_eq!(
-            v.is_sign_positive(),
-            rt.is_sign_positive(),
-            "sign flipped for {v} → {rt}"
-        );
+        assert_eq!(v.is_sign_positive(), rt.is_sign_positive(), "sign flipped for {v} → {rt}");
     }
 }
 
@@ -419,22 +403,10 @@ fn model_conversion_error_histogram() {
     let p100 = errors[n - 1];
 
     // BF16 ULP for values in [-1,1]: ~2^-8 = 0.00390625
-    assert!(
-        p50 < 0.004,
-        "p50 error {p50} too large (expected <0.004 for BF16)"
-    );
-    assert!(
-        p90 < 0.004,
-        "p90 error {p90} too large (expected <0.004 for BF16)"
-    );
-    assert!(
-        p99 < 0.004,
-        "p99 error {p99} too large (expected <0.004 for BF16)"
-    );
-    assert!(
-        p100 < 0.005,
-        "max error {p100} too large (expected <0.005 for BF16)"
-    );
+    assert!(p50 < 0.004, "p50 error {p50} too large (expected <0.004 for BF16)");
+    assert!(p90 < 0.004, "p90 error {p90} too large (expected <0.004 for BF16)");
+    assert!(p99 < 0.004, "p99 error {p99} too large (expected <0.004 for BF16)");
+    assert!(p100 < 0.005, "max error {p100} too large (expected <0.005 for BF16)");
 
     // Print percentiles for visibility in test output
     eprintln!("BF16 conversion error percentiles (n={n}):");
