@@ -4,6 +4,35 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Intel Arc A770 OpenCL Support — Waves 118–121
+
+#### Wave 118: Dashboard & Tooling
+- **opencl_benchmark_dashboard** — Performance tracking with statistics, trend analysis, and Markdown/JSON reports (53 tests)
+- **opencl_server_integration** — Server backend with session pool, load balancer, graceful CPU fallback (71 tests)
+- **opencl_operator_graph** — DAG-based operator graph with 4 optimization passes (53 tests)
+- **opencl_debug_trace** — Multi-level kernel trace capture with Chrome trace format export (64 tests)
+- **opencl_activation_lib** — 10 activation functions with derivatives and fused patterns (88 tests)
+
+#### Wave 119: Infrastructure
+- **opencl_compile_cache** — Persistent kernel compilation cache with LRU eviction (52 tests)
+- **opencl_batch_encoder** — Multi-sequence batch encoding with 3 padding strategies (49 tests)
+- **opencl_memory_defrag** — GPU memory defragmentation with buddy allocator (63 tests)
+- **opencl_config_reload** — Runtime configuration hot-reload with rollback (60 tests)
+
+#### Wave 120: Advanced Compute
+- **opencl_sparse_attention** — 6 sparse attention patterns for long-context inference (54 tests)
+- **opencl_tensor_parallel** — 4 parallel strategies with all-reduce algorithms (51 tests)
+- **opencl_quant_calibrate** — 5 quantization schemes with 5 calibration methods (51 tests)
+- **opencl_stop_criteria** — 7 token stopping criteria with composite AND/OR logic (64 tests)
+- **opencl_dispatch_planner** — A770-optimized NDRange computation with occupancy analysis (64 tests)
+
+#### Wave 121: Core Operations
+- **opencl_weight_quantizer** — 7 weight formats with ternary BitNet quantization (48+ tests)
+- **opencl_prefill_decode** — Prefill/decode phase optimization (42+ tests)
+- **opencl_logits_processor** — 5 logits processors with chain composition (44+ tests)
+- **opencl_embed_lookup** — Coalesced embedding gather with quantized tables (40+ tests)
+- **opencl_output_head** — Vocabulary projection with tied weights (38+ tests)
+
 ### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
 
 - **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
