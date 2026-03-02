@@ -18,7 +18,7 @@ log.workspace = true
 thiserror.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
-opencl3 = { version = "0.9", optional = true }
+opencl3 = { version = "0.12", optional = true }
 
 [dev-dependencies]
 env_logger = "0.11.8"
