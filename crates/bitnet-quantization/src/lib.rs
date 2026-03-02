@@ -19,6 +19,7 @@ pub mod device_aware_quantizer;
 pub mod i2s;
 pub mod i2s_qk256; // GGML I2_S (QK=256) scalar reference kernels
 pub mod i2s_qk256_avx2; // GGML I2_S (QK=256) AVX2 SIMD kernels
+pub mod int8_quant;
 pub mod property_based_tests;
 #[cfg(feature = "cpu")]
 pub mod qk256_dispatch;
