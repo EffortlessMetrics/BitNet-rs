@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 651
+expression: key
+---
+TuningCacheKey {
+    kernel_name: "gemm_f32",
+    device_name: "Intel Arc A770",
+    shape: [
+        1024,
+        1024,
+        1024,
+    ],
+}

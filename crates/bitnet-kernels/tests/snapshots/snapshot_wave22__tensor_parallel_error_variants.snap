@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 481
+expression: errors
+---
+[
+    InvalidConfig(
+        "num_ranks must be > 0",
+    ),
+    UnevenSharding {
+        tensor_len: 100,
+        num_shards: 3,
+    },
+    ShardIndexOutOfBounds {
+        index: 5,
+        total: 4,
+    },
+]

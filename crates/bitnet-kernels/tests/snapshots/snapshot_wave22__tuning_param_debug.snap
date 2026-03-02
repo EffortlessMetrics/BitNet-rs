@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 619
+expression: p
+---
+TuningParam {
+    name: "workgroup_size",
+    min: 32,
+    max: 512,
+    step: 32,
+    current: 256,
+}

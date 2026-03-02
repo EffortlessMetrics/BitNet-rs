@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 64
+expression: op
+---
+StreamOp {
+    label: "matmul_kernel",
+    cost: 1000,
+    depends_on: None,
+}

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 110
+expression: cfg
+---
+SparseConfig {
+    format: CSR,
+    block_size: 32,
+    threshold: 0.0,
+    rows: 1024,
+    cols: 512,
+}

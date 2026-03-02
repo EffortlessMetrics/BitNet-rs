@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 267
+expression: cfg
+---
+DequantConfig {
+    bit_width: Int2,
+    precision: F32,
+    block_size: 256,
+    scale_mode: PerBlock,
+}

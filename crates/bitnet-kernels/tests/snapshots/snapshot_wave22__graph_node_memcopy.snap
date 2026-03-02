@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 167
+expression: node
+---
+GraphNode {
+    id: NodeId(
+        2,
+    ),
+    kind: MemCopy {
+        bytes: 65536,
+    },
+    params: {},
+    stream: 1,
+    enabled: true,
+}

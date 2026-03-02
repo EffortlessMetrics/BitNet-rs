@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 299
+expression: cfg
+---
+LossConfig {
+    n: 64,
+    n_classes: 32000,
+    threads_per_block: 256,
+    reduction: Mean,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 34
+expression: cfg
+---
+StreamConfig {
+    num_streams: 8,
+    priority: High,
+    default_stream_behavior: Legacy,
+    enable_profiling: true,
+}

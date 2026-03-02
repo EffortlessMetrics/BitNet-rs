@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 499
+expression: cfg
+---
+CacheConfig {
+    l1_size: 32768,
+    l2_size: 262144,
+    l3_size: 8388608,
+    cache_line_size: 64,
+}

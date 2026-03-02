@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 397
+expression: variants
+---
+[
+    MemoryBound,
+    ComputeBound,
+    LatencyBound,
+    Unknown,
+]

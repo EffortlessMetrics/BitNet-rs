@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 70
+expression: op
+---
+StreamOp {
+    label: "softmax_kernel",
+    cost: 500,
+    depends_on: Some(
+        42,
+    ),
+}

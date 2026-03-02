@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 337
+expression: g
+---
+ThreadBlockGroup {
+    num_threads: 256,
+    block_idx: 0,
+}

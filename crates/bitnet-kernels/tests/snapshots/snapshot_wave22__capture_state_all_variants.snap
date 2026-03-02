@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 174
+expression: states
+---
+[
+    Idle,
+    Capturing,
+    Complete,
+]

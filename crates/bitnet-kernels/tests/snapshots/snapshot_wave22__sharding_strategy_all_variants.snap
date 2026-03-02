@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 471
+expression: variants
+---
+[
+    ColumnParallel,
+    RowParallel,
+    Custom {
+        splits: [
+            128,
+            256,
+            128,
+        ],
+    },
+]

@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 716
+expression: ops
+---
+[
+    MatMul,
+    MatVec,
+    Softmax,
+    RmsNorm,
+    LayerNorm,
+    RoPE,
+    Attention,
+    SiLU,
+    GELU,
+    ReLU,
+    ElementwiseAdd,
+    ElementwiseMul,
+    Scale,
+    Embedding,
+    Dequantize,
+    KvCacheAppend,
+]

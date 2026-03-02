@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 634
+expression: variants
+---
+[
+    Exhaustive,
+    RandomSample(
+        100,
+    ),
+    SimulatedAnnealing {
+        initial_temp: 1.0,
+        cooling_rate: 0.95,
+        iterations: 500,
+    },
+    BayesianOpt {
+        evaluations: 50,
+    },
+]

@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 681
+expression: m
+---
+KernelMetrics {
+    kernel_name: "gemm_i2s",
+    dispatch_count: 0,
+    total_time: 0ns,
+    min_time: 18446744073709551615.999999999s,
+    max_time: 0ns,
+    total_flops: 0,
+}

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 206
+expression: cfg
+---
+FusedAttentionConfig {
+    head_dim: 64,
+    num_heads: 8,
+    num_kv_heads: 8,
+    max_seq_len: 2048,
+    causal: false,
+    flash_attention: false,
+    use_alibi: false,
+}

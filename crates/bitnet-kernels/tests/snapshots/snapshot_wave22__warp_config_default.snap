@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 361
+expression: cfg
+---
+WarpConfig {
+    warp_size: 32,
+    active_mask: 4294967295,
+}

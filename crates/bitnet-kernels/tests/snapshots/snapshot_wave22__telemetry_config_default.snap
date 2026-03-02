@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 687
+expression: cfg
+---
+TelemetryConfig {
+    export_interval: 15s,
+    retention: 3600s,
+    enabled_kinds: [
+        Counter,
+        Gauge,
+        Histogram,
+        Timer,
+    ],
+    max_metrics: 10000,
+    prometheus_enabled: true,
+    metric_prefix: "bitnet_opencl",
+}

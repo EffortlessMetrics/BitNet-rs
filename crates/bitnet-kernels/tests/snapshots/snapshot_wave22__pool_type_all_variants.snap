@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 531
+expression: types
+---
+[
+    Max,
+    Average,
+    GlobalMax,
+    GlobalAverage,
+    AvgPoolCountIncludePad,
+    Lp(
+        2.0,
+    ),
+    Adaptive,
+]

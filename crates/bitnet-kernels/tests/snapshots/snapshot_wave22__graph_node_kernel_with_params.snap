@@ -1,0 +1,28 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 161
+expression: node
+---
+GraphNode {
+    id: NodeId(
+        1,
+    ),
+    kind: Kernel {
+        name: "rmsnorm_fwd",
+        grid: [
+            64,
+            1,
+            1,
+        ],
+        block: [
+            256,
+            1,
+            1,
+        ],
+    },
+    params: {
+        "eps": 1e-6,
+    },
+    stream: 0,
+    enabled: true,
+}

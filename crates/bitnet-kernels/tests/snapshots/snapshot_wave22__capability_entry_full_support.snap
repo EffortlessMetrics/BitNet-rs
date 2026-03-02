@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 605
+expression: entry
+---
+CapabilityEntry {
+    operation: MatrixOps,
+    precision: FP32,
+    support: Full(
+        1.0,
+    ),
+}

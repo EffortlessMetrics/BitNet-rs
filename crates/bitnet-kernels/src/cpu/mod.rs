@@ -141,3 +141,5 @@ pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
 pub mod pipeline_parallel;
 pub use pipeline_parallel::*;
+pub mod cache_matmul;
+pub mod tensor_parallel;

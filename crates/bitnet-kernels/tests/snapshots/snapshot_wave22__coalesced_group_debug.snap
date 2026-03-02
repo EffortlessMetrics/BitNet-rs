@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 349
+expression: g
+---
+CoalescedGroup {
+    active_mask: 4294967295,
+}

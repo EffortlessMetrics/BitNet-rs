@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 511
+expression: ts
+---
+TilingStrategy {
+    block_m: 64,
+    block_n: 128,
+    block_k: 32,
+}

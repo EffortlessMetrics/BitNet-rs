@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 249
+expression: m
+---
+AttentionMetrics {
+    flops: 33554432,
+    memory_bytes: 1048576,
+    arithmetic_intensity: 32.0,
+}

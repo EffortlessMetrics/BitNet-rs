@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 561
+expression: cfg
+---
+LinearConfig {
+    in_features: 2048,
+    out_features: 5504,
+    batch_size: 4,
+    has_bias: true,
+    tile_m: 32,
+    tile_n: 32,
+    tile_k: 32,
+    threads_per_block: 256,
+    shared_mem_bytes: 8192,
+}

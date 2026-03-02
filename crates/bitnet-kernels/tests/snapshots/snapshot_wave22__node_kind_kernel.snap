@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 141
+expression: kind
+---
+Kernel {
+    name: "gemm_i2s",
+    grid: [
+        128,
+        1,
+        1,
+    ],
+    block: [
+        256,
+        1,
+        1,
+    ],
+}

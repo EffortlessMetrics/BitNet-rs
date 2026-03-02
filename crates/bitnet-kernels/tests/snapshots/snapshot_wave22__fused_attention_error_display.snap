@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 243
+expression: errors
+---
+[
+    "InvalidConfig(\"head_dim must be > 0\")",
+    "ShapeMismatch { expected: \"[1,8,64,64]\", actual: \"[1,8,64,32]\" }",
+    "SequenceTooLong { seq_len: 8192, max_seq_len: 4096 }",
+    "InvalidGqaRatio { num_heads: 8, num_kv_heads: 3 }",
+]

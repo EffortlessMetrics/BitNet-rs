@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 781
+expression: stats
+---
+CacheStats {
+    hits: 0,
+    misses: 0,
+    evictions: 0,
+    stores: 0,
+    total_binary_size: 0,
+    entry_count: 0,
+}

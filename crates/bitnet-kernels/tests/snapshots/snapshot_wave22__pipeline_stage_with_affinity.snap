@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 426
+expression: stage
+---
+PipelineStage {
+    start_layer: 0,
+    end_layer: 8,
+    thread_affinity: Some(
+        2,
+    ),
+}

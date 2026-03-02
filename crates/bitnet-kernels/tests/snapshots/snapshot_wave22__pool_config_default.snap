@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 537
+expression: cfg
+---
+PoolConfig {
+    pool_type: Max,
+    kernel_size: 1,
+    stride: 1,
+    padding: 0,
+    dilation: 1,
+    ceil_mode: false,
+}

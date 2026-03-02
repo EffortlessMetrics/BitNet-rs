@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 186
+expression: cfg
+---
+MultiStreamConfig {
+    num_streams: 2,
+    sync_barriers: true,
+}

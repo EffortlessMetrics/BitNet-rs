@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 645
+expression: r
+---
+BenchmarkResult {
+    params: ParamSet(
+        [
+            (
+                "wg_size",
+                256,
+            ),
+            (
+                "tile_m",
+                16,
+            ),
+        ],
+    ),
+    elapsed_us: 42.5,
+    gflops: 120.0,
+    bandwidth_gb_s: 800.0,
+}

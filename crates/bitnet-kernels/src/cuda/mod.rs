@@ -34,24 +34,33 @@ pub mod activations;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod cooperative_groups;
+pub mod dequant;
 pub mod elementwise;
 pub mod embedding;
 pub mod ffn;
+pub mod fused_attention;
 pub mod fusion;
 pub mod gating;
+pub mod graph_exec;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
+pub mod loss;
 pub mod matmul;
 pub mod memory_pool;
 pub mod pooling;
+pub mod profiling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod sparse;
+pub mod stream_mgmt;
 pub mod transpose;
+pub mod warp_ops;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,

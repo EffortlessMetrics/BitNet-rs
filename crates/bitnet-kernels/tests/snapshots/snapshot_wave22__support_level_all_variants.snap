@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 595
+expression: levels
+---
+[
+    Full(
+        0.95,
+    ),
+    Partial(
+        "requires fallback for large matrices",
+    ),
+    Emulated,
+    Unsupported,
+]

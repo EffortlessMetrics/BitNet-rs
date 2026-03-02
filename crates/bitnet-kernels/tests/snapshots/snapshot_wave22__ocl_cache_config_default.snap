@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 774
+expression: cfg
+---
+CacheConfig {
+    max_entries: 256,
+    max_total_size: 268435456,
+    cache_dir: "[CACHE_DIR]",
+    ttl: None,
+    policy: MemoryOnly,
+    eviction_strategy: Lru,
+}

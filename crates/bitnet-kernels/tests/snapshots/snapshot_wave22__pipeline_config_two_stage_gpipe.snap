@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 436
+expression: cfg
+---
+PipelineConfig {
+    stages: [
+        PipelineStage {
+            start_layer: 0,
+            end_layer: 16,
+            thread_affinity: None,
+        },
+        PipelineStage {
+            start_layer: 16,
+            end_layer: 32,
+            thread_affinity: None,
+        },
+    ],
+    micro_batch_size: 4,
+    schedule: GPipe,
+}

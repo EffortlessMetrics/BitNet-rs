@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave22.rs
+assertion_line: 403
+expression: analyzer
+---
+BottleneckAnalyzer {
+    latency_threshold_us: 5.0,
+    memory_util_threshold: 0.6,
+    compute_util_threshold: 0.6,
+}
