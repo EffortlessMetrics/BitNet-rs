@@ -16,6 +16,7 @@ pub mod gguf_tokenizer;
 pub mod hf_tokenizer;
 pub mod loader;
 mod mock;
+pub mod preprocessor;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
 pub mod token_validation;
