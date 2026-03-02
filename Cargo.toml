@@ -14,6 +14,7 @@ members = [
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
   "crates/bitnet-runtime-feature-flags",
   "crates/bitnet-runtime-feature-flags-core",
+  "crates/bitnet-system-info-core", # SRP: reusable host/system info collection
   "crates/bitnet-models",
   "crates/bitnet-quantization",
   "crates/bitnet-quantization-bits",
@@ -220,6 +221,7 @@ version = "0.2.1-dev"
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-system-info-core = { path = "crates/bitnet-system-info-core", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
@@ -388,6 +390,7 @@ required-features = ["cpu"]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-system-info-core = { path = "crates/bitnet-system-info-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

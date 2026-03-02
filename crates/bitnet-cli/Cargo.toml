@@ -39,6 +39,7 @@ bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
 bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.2.1-dev" }
 bitnet-scoring-core = { path = "../bitnet-scoring-core", version = "0.2.1-dev" }
+bitnet-system-info-core = { workspace = true }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true

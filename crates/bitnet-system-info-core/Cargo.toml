@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-system-info-core"
+version = "0.2.1-dev"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "SRP core host/system information primitives"
+repository = "https://github.com/microsoft/BitNet"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true

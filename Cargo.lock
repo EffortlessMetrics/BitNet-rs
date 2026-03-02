@@ -393,6 +393,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-quantization-bits",
  "bitnet-rope",
+ "bitnet-system-info-core",
  "bitnet-tests",
  "bitnet-tokenizers",
  "bitnet-transformer",
@@ -476,6 +477,7 @@ dependencies = [
  "bitnet-sampling",
  "bitnet-scoring-core",
  "bitnet-startup-contract-guard",
+ "bitnet-system-info-core",
  "bitnet-tokenizer-discovery-core",
  "bitnet-tokenizers",
  "bitnet-validation",
@@ -1021,6 +1023,7 @@ version = "0.2.1-dev"
 dependencies = [
  "bitnet-common",
  "bitnet-spirv",
+ "bitnet-system-info-core",
  "env_logger",
  "insta",
  "log",
@@ -1467,6 +1470,13 @@ dependencies = [
  "proptest",
  "thiserror 2.0.18",
  "xtask-build-helper",
+]
+
+[[package]]
+name = "bitnet-system-info-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

@@ -13,6 +13,7 @@ use tracing::{debug, info, warn};
 
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
+use bitnet_system_info_core::{SystemInfo, collect_system_info_with_version};
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
@@ -84,15 +85,6 @@ pub struct BenchmarkResults {
     pub benchmark_config: BenchmarkConfig,
     pub results: Vec<BenchmarkResult>,
     pub summary: BenchmarkSummary,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SystemInfo {
-    pub os: String,
-    pub arch: String,
-    pub cpu_cores: usize,
-    pub memory_gb: f64,
-    pub rust_version: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -513,13 +505,7 @@ impl BenchmarkCommand {
 
     /// Get system information
     fn get_system_info(&self) -> SystemInfo {
-        SystemInfo {
-            os: std::env::consts::OS.to_string(),
-            arch: std::env::consts::ARCH.to_string(),
-            cpu_cores: num_cpus::get(),
-            memory_gb: 16.0, // Placeholder
-            rust_version: env!("CARGO_PKG_VERSION").to_string(),
-        }
+        collect_system_info_with_version(env!("CARGO_PKG_VERSION"))
     }
 
     /// Generate flamegraph
@@ -587,7 +573,7 @@ impl BenchmarkCommand {
         writeln!(output, "{}", style("System Information:").bold())?;
         writeln!(output, "  Model: {}", results.model_path)?;
         writeln!(output, "  Device: {}", results.device)?;
-        writeln!(output, "  OS: {} ({})", results.system_info.os, results.system_info.arch)?;
+        writeln!(output, "  OS: {} ({})", results.system_info.os_name, results.system_info.arch)?;
         writeln!(output, "  CPU Cores: {}", results.system_info.cpu_cores)?;
         writeln!(output, "  Timestamp: {}", results.timestamp)?;
         writeln!(output)?;
