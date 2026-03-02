@@ -13,6 +13,7 @@ pub mod benchmarks;
 pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
+pub mod cpu_rope_simd;
 pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
