@@ -93,12 +93,11 @@ pub fn inspect_layers(tensor_names: &[String]) -> ModelStructure {
 /// Extract layer index from a tensor name.
 fn extract_layer_index(name: &str) -> Option<usize> {
     for prefix in &["model.layers.", "blk.", "layers.", "encoder.layer.", "decoder.layer."] {
-        if let Some(rest) = name.strip_prefix(prefix) {
-            if let Some(idx_str) = rest.split('.').next() {
-                if let Ok(idx) = idx_str.parse::<usize>() {
-                    return Some(idx);
-                }
-            }
+        if let Some(rest) = name.strip_prefix(prefix)
+            && let Some(idx_str) = rest.split('.').next()
+            && let Ok(idx) = idx_str.parse::<usize>()
+        {
+            return Some(idx);
         }
     }
     None
