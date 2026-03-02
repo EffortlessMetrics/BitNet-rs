@@ -31,6 +31,7 @@ pub mod layers;
 pub mod memory_estimation;
 pub mod memory_pool;
 pub mod metrics;
+pub mod model_profiler;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
