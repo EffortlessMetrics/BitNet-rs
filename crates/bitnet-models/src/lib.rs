@@ -40,6 +40,7 @@ pub mod transformer;
 pub mod validation;
 pub mod validation_suite;
 pub mod validator;
+pub mod weight_format;
 pub mod weight_loader;
 pub mod weight_mapper;
 pub mod weight_stats;
