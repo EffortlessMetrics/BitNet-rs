@@ -41,6 +41,7 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
+mod model_info;
 mod model_registry;
 mod tokenizers;
 mod trace_diff;
