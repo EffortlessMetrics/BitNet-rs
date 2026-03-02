@@ -133,8 +133,7 @@ fn perf_smoke_attention_seq512() {
     let v = ones(n);
 
     let start = Instant::now();
-    let _out =
-        scaled_dot_product_attention(&q, &k, &v, seq_len, seq_len, head_dim, true).unwrap();
+    let _out = scaled_dot_product_attention(&q, &k, &v, seq_len, seq_len, head_dim, true).unwrap();
     assert_fast("attention(seq=512, head_dim=128, causal)", start.elapsed());
 }
 
@@ -159,15 +158,8 @@ fn perf_smoke_matmul_512() {
     let a = ones(m * k);
     let b = ones(k * n);
     let mut c = vec![0.0f32; m * n];
-    let cfg = SimdMatmulConfig {
-        m,
-        n,
-        k,
-        alpha: 1.0,
-        beta: 0.0,
-        transpose_a: false,
-        transpose_b: false,
-    };
+    let cfg =
+        SimdMatmulConfig { m, n, k, alpha: 1.0, beta: 0.0, transpose_a: false, transpose_b: false };
 
     let start = Instant::now();
     simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
