@@ -1,18 +1,21 @@
 //! CPU kernel implementations
 
 pub mod activations;
+pub mod elementwise_ops;
+pub use elementwise_ops::*;
 pub mod batch;
 pub use batch::{batched_add, batched_layer_norm, batched_matmul, batched_softmax};
 pub mod attention;
 pub mod attention_mask;
 pub use attention::{
-    AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig,
-    apply_rotary_embedding, attention_with_kv_cache, causal_attention, causal_mask,
-    masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
+    AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig, alibi_slopes,
+    apply_alibi_bias, apply_rope_to_qk, apply_rotary_embedding, attention_forward,
+    attention_score_computation, attention_with_kv_cache, causal_attention, causal_mask,
+    causal_mask_apply, compute_qkv, flash_attention_cpu, grouped_query_attention,
+    kv_cache_incremental_attention, masked_attention, multi_head_attention_cpu,
+    scaled_dot_product_attention, softmax_attention,
 };
 pub mod batch_norm;
-pub mod batch_normalization;
-pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
@@ -39,13 +42,18 @@ pub use pooling::{
 };
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod quantized_pipeline;
+pub use quantized_pipeline::*;
 pub mod reduction;
 pub mod residual;
 pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
+pub mod matrix_ops;
 pub mod rope;
 pub mod scatter_gather;
 pub mod simd_math;
 pub mod simd_matmul;
+pub mod softmax;
+pub use softmax::*;
 pub mod transpose;
 
 #[cfg(target_arch = "x86_64")]
@@ -68,6 +76,9 @@ pub mod neon_kv_cache;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_multi_head_linear;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_pooling;
@@ -94,7 +105,13 @@ pub mod neon_transpose;
 pub mod neon_convolution;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_online_softmax;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_gemm;
 
 pub use activations::ActivationType;
 pub use activations::{
@@ -114,7 +131,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
-pub use loss::*;
+pub use loss::LossReduction;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
@@ -135,4 +152,5 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
-pub mod tensor_parallel;
+pub mod layer_fusion;
+pub use layer_fusion::*;

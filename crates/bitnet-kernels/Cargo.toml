@@ -112,8 +112,16 @@ name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
 
 [[test]]
+name = "metal_matmul_shader_tests"
+path = "tests/metal_matmul_shader_tests.rs"
+
+[[test]]
 name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
+
+[[test]]
+name = "metal_normalization_shader_tests"
+path = "tests/metal_normalization_shader_tests.rs"
 
 [[test]]
 name = "cpu_scalar_parity"
@@ -129,6 +137,10 @@ required-features = ["cpu"]
 name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
+
+[[test]]
+name = "metal_embedding_shader_tests"
+path = "tests/metal_embedding_shader_tests.rs"
 
 [[example]]
 name = "gpu_validation"

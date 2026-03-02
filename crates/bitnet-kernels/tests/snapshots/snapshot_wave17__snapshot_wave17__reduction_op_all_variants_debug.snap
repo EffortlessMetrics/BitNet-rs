@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: ops
+---
+[
+    Sum,
+    Max,
+    Min,
+    Mean,
+    L2Norm,
+]

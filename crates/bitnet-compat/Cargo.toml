@@ -10,6 +10,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-compat-core = { path = "../bitnet-compat-core", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev", optional = true }
 anyhow = "1.0.100"
 tracing = "0.1.41"
