@@ -92,6 +92,9 @@ pub mod neon_transpose;
 pub mod neon_convolution;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_batch_norm_v2;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
 
 pub use activations::ActivationType;
