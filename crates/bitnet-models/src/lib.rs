@@ -21,6 +21,7 @@ pub mod gguf_writer;
 pub mod hf_loader;
 pub mod layer_inspector;
 pub mod loader;
+pub mod loading_progress;
 pub mod minimal;
 pub mod model_fingerprint;
 pub mod names;
