@@ -38,6 +38,7 @@ pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
 pub mod opencl_graph_compiler;
 pub mod opencl_kernel_sources;
+pub mod opencl_model_profile;
 pub mod opencl_kv_cache;
 pub mod opencl_memory;
 pub mod opencl_model_converter;
