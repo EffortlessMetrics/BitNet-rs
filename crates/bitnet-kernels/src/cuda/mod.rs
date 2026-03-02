@@ -36,7 +36,6 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -44,6 +43,7 @@ pub mod layernorm;
 pub mod linear;
 pub mod matmul;
 pub mod memory_pool;
+pub mod mixed_precision;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
@@ -128,6 +128,13 @@ pub use matmul::{
     GemmConfig, MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward,
     matmul_forward, matmul_tiled_cpu,
 };
+pub use mixed_precision::{
+    MixedPrecisionMatmulConfig, PrecisionMode, PrecisionRecommendation, QuantizedMatmulConfig,
+    accumulate_in_fp32, auto_precision_select, bf16_to_f32, cast_bf16_to_fp32, cast_fp16_to_fp32,
+    cast_fp32_to_bf16, cast_fp32_to_fp16, f32_to_bf16, f32_to_fp16, fp16_to_f32,
+    fused_cast_and_compute, mixed_precision_matmul, mixed_precision_matmul_forward,
+    precision_loss_check, quantized_matmul_with_dequant, scale_for_precision,
+};
 pub use quantize::{
     QuantMethod, QuantizeConfig, calibrate_scales, dequantize_i2s_cpu, dequantize_ternary_cpu,
     quantize_i2s_cpu, quantize_ternary_cpu,
@@ -171,6 +178,8 @@ pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SR
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use matmul::{launch_matmul, launch_matmul_f16};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use mixed_precision::{MIXED_PRECISION_MATMUL_KERNEL_SRC, launch_mixed_precision_matmul};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::{I2S_MATMUL_KERNEL_SRC, launch_i2s_matmul};
 
