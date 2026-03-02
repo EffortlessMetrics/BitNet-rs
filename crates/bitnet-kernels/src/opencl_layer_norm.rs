@@ -288,12 +288,7 @@ pub struct LayerNorm {
 impl LayerNorm {
     /// Create a new LayerNorm with ones for gamma, zeros for beta.
     pub fn new(norm_size: usize, config: NormConfig) -> Self {
-        Self {
-            gamma: vec![1.0; norm_size],
-            beta: vec![0.0; norm_size],
-            config,
-            norm_size,
-        }
+        Self { gamma: vec![1.0; norm_size], beta: vec![0.0; norm_size], config, norm_size }
     }
 
     /// Create with explicit gamma and beta.
@@ -378,18 +373,13 @@ impl RmsNorm {
             let x = &input[row * self.norm_size..(row + 1) * self.norm_size];
             let y = &mut output[row * self.norm_size..(row + 1) * self.norm_size];
 
-            let mean_sq =
-                x.iter().map(|&v| v * v).sum::<f32>() / self.norm_size as f32;
+            let mean_sq = x.iter().map(|&v| v * v).sum::<f32>() / self.norm_size as f32;
             let rms = mean_sq.sqrt();
             let inv_rms = 1.0 / (mean_sq + self.config.eps).sqrt();
 
             for i in 0..self.norm_size {
                 let val = x[i] * inv_rms;
-                y[i] = if self.config.elementwise_affine {
-                    val * self.gamma[i]
-                } else {
-                    val
-                };
+                y[i] = if self.config.elementwise_affine { val * self.gamma[i] } else { val };
             }
 
             stats.rms.push(rms);
@@ -421,12 +411,7 @@ pub struct GroupNorm {
 impl GroupNorm {
     /// Create a new GroupNorm.
     pub fn new(channels: usize, config: NormConfig) -> Self {
-        Self {
-            gamma: vec![1.0; channels],
-            beta: vec![0.0; channels],
-            config,
-            channels,
-        }
+        Self { gamma: vec![1.0; channels], beta: vec![0.0; channels], config, channels }
     }
 
     /// Create with explicit gamma and beta.
@@ -451,8 +436,8 @@ impl GroupNorm {
                 let group = &x[start_ch..start_ch + group_size];
 
                 let mean = group.iter().sum::<f32>() / group_size as f32;
-                let var = group.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>()
-                    / group_size as f32;
+                let var =
+                    group.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>() / group_size as f32;
                 let inv_std = 1.0 / (var + self.config.eps).sqrt();
 
                 for i in 0..group_size {
@@ -519,8 +504,7 @@ pub fn instance_norm_forward(
             let slice = &input[offset..offset + spatial];
 
             let mean = slice.iter().sum::<f32>() / spatial as f32;
-            let var = slice.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>()
-                / spatial as f32;
+            let var = slice.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>() / spatial as f32;
             let inv_std = 1.0 / (var + eps).sqrt();
 
             for s in 0..spatial {
@@ -599,8 +583,7 @@ impl FusedNormLinear {
             // Compute norm stats inline
             let (inv_scale, mean) = match self.norm_type {
                 NormType::RMSNorm => {
-                    let mean_sq =
-                        x.iter().map(|&v| v * v).sum::<f32>() / self.norm_size as f32;
+                    let mean_sq = x.iter().map(|&v| v * v).sum::<f32>() / self.norm_size as f32;
                     (1.0 / (mean_sq + self.eps).sqrt(), 0.0)
                 }
                 _ => {
@@ -614,7 +597,8 @@ impl FusedNormLinear {
             // Fused: normalize then project
             for o in 0..self.out_features {
                 let mut acc = 0.0_f32;
-                for (i, (&xi, (&gi, &bi))) in x.iter()
+                for (i, (&xi, (&gi, &bi))) in x
+                    .iter()
                     .zip(self.gamma.iter().zip(self.beta.iter()))
                     .enumerate()
                     .take(self.norm_size)
@@ -699,8 +683,7 @@ pub fn layer_norm_ref(
         let y = &mut output[row * norm_size..(row + 1) * norm_size];
 
         let mean = x.iter().sum::<f32>() / norm_size as f32;
-        let var =
-            x.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>() / norm_size as f32;
+        let var = x.iter().map(|&v| (v - mean) * (v - mean)).sum::<f32>() / norm_size as f32;
         let inv_std = 1.0 / (var + eps).sqrt();
 
         for i in 0..norm_size {
@@ -752,10 +735,7 @@ mod tests {
     fn assert_slices_near(a: &[f32], b: &[f32], tol: f32, msg: &str) {
         assert_eq!(a.len(), b.len(), "{msg}: length mismatch {} vs {}", a.len(), b.len());
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() < tol,
-                "{msg} [index {i}]: {x} vs {y} (tol={tol})"
-            );
+            assert!((x - y).abs() < tol, "{msg} [index {i}]: {x} vs {y} (tol={tol})");
         }
     }
 
@@ -939,8 +919,7 @@ mod tests {
         let ln = LayerNorm::new(4096, NormConfig::new(NormType::LayerNorm));
         ln.forward(&input, &mut output);
         let mean: f32 = output.iter().sum::<f32>() / 4096.0;
-        let var: f32 =
-            output.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / 4096.0;
+        let var: f32 = output.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / 4096.0;
         assert_near(mean, 0.0, 1e-3, "dim4096 mean");
         assert_near(var, 1.0, 0.05, "dim4096 var");
     }
@@ -1037,8 +1016,7 @@ mod tests {
         let rms = RmsNorm::new(64, NormConfig::new(NormType::RMSNorm));
         rms.forward(&input, &mut output);
         // After RMSNorm (no centering), RMS of output ≈ 1
-        let out_rms =
-            (output.iter().map(|v| v * v).sum::<f32>() / 64.0).sqrt();
+        let out_rms = (output.iter().map(|v| v * v).sum::<f32>() / 64.0).sqrt();
         assert_near(out_rms, 1.0, 0.05, "rms dim64 output rms");
     }
 
@@ -1048,8 +1026,7 @@ mod tests {
         let mut output = vec![0.0; 4096];
         let rms = RmsNorm::new(4096, NormConfig::new(NormType::RMSNorm));
         rms.forward(&input, &mut output);
-        let out_rms =
-            (output.iter().map(|v| v * v).sum::<f32>() / 4096.0).sqrt();
+        let out_rms = (output.iter().map(|v| v * v).sum::<f32>() / 4096.0).sqrt();
         assert_near(out_rms, 1.0, 0.05, "rms dim4096 output rms");
     }
 
@@ -1136,9 +1113,8 @@ mod tests {
     fn test_group_norm_no_affine() {
         let input = [1.0_f32, 2.0, 3.0, 4.0];
         let mut output = vec![0.0; 4];
-        let cfg = NormConfig::new(NormType::GroupNorm)
-            .with_num_groups(2)
-            .with_elementwise_affine(false);
+        let cfg =
+            NormConfig::new(NormType::GroupNorm).with_num_groups(2).with_elementwise_affine(false);
         let gn = GroupNorm::new(4, cfg);
         gn.forward(&input, &mut output);
 
@@ -1171,7 +1147,15 @@ mod tests {
         let beta = [0.0, 0.0, 0.0];
 
         batch_norm_forward(
-            &input, &mut output, &running_mean, &running_var, &gamma, &beta, 3, EPS, true,
+            &input,
+            &mut output,
+            &running_mean,
+            &running_var,
+            &gamma,
+            &beta,
+            3,
+            EPS,
+            true,
         );
 
         // Row 0: (1-3)/sqrt(1+eps), (2-4)/sqrt(1+eps), (3-5)/sqrt(1+eps)
@@ -1191,7 +1175,15 @@ mod tests {
         let beta = [1.0, 1.0, 1.0, 1.0];
 
         batch_norm_forward(
-            &input, &mut output, &running_mean, &running_var, &gamma, &beta, 4, EPS, true,
+            &input,
+            &mut output,
+            &running_mean,
+            &running_var,
+            &gamma,
+            &beta,
+            4,
+            EPS,
+            true,
         );
 
         // (0 - 0) / sqrt(1+eps) * 2 + 1 = 1
@@ -1210,7 +1202,15 @@ mod tests {
         let beta = [0.0, 0.0];
 
         batch_norm_forward(
-            &input, &mut output, &running_mean, &running_var, &gamma, &beta, 2, EPS, false,
+            &input,
+            &mut output,
+            &running_mean,
+            &running_var,
+            &gamma,
+            &beta,
+            2,
+            EPS,
+            false,
         );
 
         for i in 0..2 {
@@ -1350,8 +1350,8 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let weight = vec![1.0; out_features * norm_size];
 
-        let fused = FusedNormLinear::new(NormType::LayerNorm, norm_size, out_features)
-            .with_weight(weight);
+        let fused =
+            FusedNormLinear::new(NormType::LayerNorm, norm_size, out_features).with_weight(weight);
 
         let mut output = vec![0.0; 2 * out_features];
         fused.forward(&input, &mut output);
@@ -1642,12 +1642,8 @@ mod tests {
         ln.forward(&input, &mut output);
 
         let mean: f32 = output.iter().sum::<f32>() / dim as f32;
-        let var: f32 =
-            output.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / dim as f32;
-        assert!(
-            (var - 1.0).abs() < 0.05,
-            "dim={dim}: expected var≈1.0, got {var}"
-        );
+        let var: f32 = output.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / dim as f32;
+        assert!((var - 1.0).abs() < 0.05, "dim={dim}: expected var≈1.0, got {var}");
     }
 
     // ===============================================================
@@ -1675,12 +1671,8 @@ mod tests {
         let rms = RmsNorm::new(dim, NormConfig::new(NormType::RMSNorm));
         rms.forward(&input, &mut output);
 
-        let out_rms =
-            (output.iter().map(|v| v * v).sum::<f32>() / dim as f32).sqrt();
-        assert!(
-            (out_rms - 1.0).abs() < 0.05,
-            "dim={dim}: expected RMS≈1.0, got {out_rms}"
-        );
+        let out_rms = (output.iter().map(|v| v * v).sum::<f32>() / dim as f32).sqrt();
+        assert!((out_rms - 1.0).abs() < 0.05, "dim={dim}: expected RMS≈1.0, got {out_rms}");
     }
 
     // ===============================================================
