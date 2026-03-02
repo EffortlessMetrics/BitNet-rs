@@ -11,6 +11,7 @@ pub mod config;
 pub mod config_detection;
 pub mod config_serde;
 pub mod conversion;
+pub mod conversion_pipeline;
 pub mod correction_policy;
 pub mod dense_crossval;
 pub mod download_manager;
