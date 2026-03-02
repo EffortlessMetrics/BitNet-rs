@@ -414,7 +414,9 @@ impl fmt::Display for NumericalProfile {
 /// Compares GPU (or candidate) results against a CPU reference using combined
 /// absolute and relative tolerance:
 ///
+/// ```text
 ///     |a − b| ≤ atol + rtol × |b|
+/// ```
 #[derive(Debug)]
 pub struct ComparisonValidator {
     config: StabilityConfig,

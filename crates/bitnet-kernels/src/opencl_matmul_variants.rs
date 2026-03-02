@@ -62,7 +62,7 @@ pub struct MatmulConfig {
 }
 
 impl MatmulConfig {
-    /// Create a config for C = A[m,k] × B[k,n] with default tiles.
+    /// Create a config for C = A\[m,k\] × B\[k,n\] with default tiles.
     pub fn new(m: usize, n: usize, k: usize) -> Self {
         Self { m, n, k, tile_m: 16, tile_n: 16, tile_k: 16, transpose_a: false, transpose_b: false }
     }
