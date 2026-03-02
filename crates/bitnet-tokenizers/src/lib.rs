@@ -9,6 +9,7 @@ compile_error!(
 );
 
 pub mod auto;
+pub mod compat_matrix;
 pub mod gguf_loader;
 pub mod gguf_tokenizer;
 pub mod hf_tokenizer;
