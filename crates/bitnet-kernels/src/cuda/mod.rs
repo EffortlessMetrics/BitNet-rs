@@ -44,6 +44,7 @@ pub mod layernorm;
 pub mod linear;
 pub mod matmul;
 pub mod memory_pool;
+pub mod pipeline_parallel;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
@@ -188,3 +189,13 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use pipeline_parallel::{
+    GpuPipelineConfig, GpuPipelineSchedule, GpuPipelineStage, GradAccumulator, InterStageBuffer,
+    PipelineMetrics, ScheduleAction, StageResources, generate_1f1b_schedule, gpu_micro_batch_merge,
+    gpu_micro_batch_split, gpu_optimal_micro_batch_count, gpu_pipeline_bubble_fraction,
+    gpu_pipeline_forward, gpu_stage_forward,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use pipeline_parallel::PIPELINE_SYNC_KERNEL_SRC;
