@@ -1481,10 +1481,19 @@ name = "bitnet-test-fixtures-core"
 version = "0.2.1-dev"
 
 [[package]]
+name = "bitnet-test-gating-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-test-env",
+ "serial_test",
+]
+
+[[package]]
 name = "bitnet-test-support"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-test-env",
+ "bitnet-test-gating-core",
  "insta",
  "proptest",
  "serial_test",

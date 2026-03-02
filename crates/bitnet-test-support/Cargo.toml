@@ -11,6 +11,7 @@ publish = true
 
 [dependencies]
 bitnet-test-env.workspace = true
+bitnet-test-gating-core.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

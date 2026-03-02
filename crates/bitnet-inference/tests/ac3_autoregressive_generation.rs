@@ -12,6 +12,7 @@ use bitnet_common::Device;
 use bitnet_inference::GenerationConfig;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::{BitNetModel, Model};
+use bitnet_test_support::run_slow_tests;
 use bitnet_tokenizers::Tokenizer;
 use bitnet_tokenizers::UniversalTokenizer;
 use candle_core::Tensor as CandleTensor;
@@ -167,7 +168,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac3_temperature_sampling_validation() -> Result<()> {
-    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+    if !run_slow_tests() {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
         return Ok(());
     }
@@ -237,7 +238,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac3_top_k_sampling_validation() -> Result<()> {
-    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+    if !run_slow_tests() {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
         return Ok(());
     }
@@ -304,7 +305,7 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
-    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+    if !run_slow_tests() {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
         return Ok(());
     }

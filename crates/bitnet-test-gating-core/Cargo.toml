@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-test-gating-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Test gating primitives for model-path and opt-in slow/e2e checks"
+publish = true
+
+[dependencies]
+
+[dev-dependencies]
+bitnet-test-env.workspace = true
+serial_test.workspace = true
