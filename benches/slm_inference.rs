@@ -5,7 +5,7 @@
 use bitnet_cpu_activations::{silu_inplace, silu_vec};
 use bitnet_kernels::cpu::attention::{AttentionConfig, AttentionKernel, GqaConfig};
 use bitnet_kernels::cpu::layer_norm::{LayerNormConfig, rms_norm};
-use bitnet_kernels::cpu::rope::{apply_rope, compute_frequencies, RopeConfig};
+use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, compute_frequencies};
 use bitnet_kernels::cuda::matmul::{MatmulConfig, matmul_tiled_cpu};
 use bitnet_kernels::cuda::softmax::{SoftmaxConfig, softmax_cpu};
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
@@ -78,13 +78,7 @@ fn bench_matmul(c: &mut Criterion) {
             b.iter_batched(
                 || vec![0.0f32; d * d],
                 |mut out| {
-                    matmul_tiled_cpu(
-                        black_box(&a),
-                        black_box(&b_mat),
-                        &mut out,
-                        &config,
-                    )
-                    .unwrap();
+                    matmul_tiled_cpu(black_box(&a), black_box(&b_mat), &mut out, &config).unwrap();
                     black_box(out)
                 },
                 BatchSize::LargeInput,
@@ -107,8 +101,7 @@ fn bench_attention_single_head(c: &mut Criterion) {
     let k = rand_vec(total);
     let v = rand_vec(total);
 
-    let config =
-        AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
+    let config = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
 
     c.bench_function("attention_single_head_128", |b| {
         b.iter(|| {
@@ -135,14 +128,8 @@ fn bench_attention_gqa_40_10(c: &mut Criterion) {
     let k = rand_vec(seq_len * num_kv_heads * head_dim);
     let v = rand_vec(seq_len * num_kv_heads * head_dim);
 
-    let config = GqaConfig {
-        num_q_heads,
-        num_kv_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        scale: None,
-    };
+    let config =
+        GqaConfig { num_q_heads, num_kv_heads, head_dim, seq_len, causal: true, scale: None };
 
     let mut group = c.benchmark_group("attention_gqa");
     group.sample_size(10);
@@ -216,8 +203,7 @@ fn dense_block_forward(hidden: &[f32], hidden_size: usize) -> Vec<f32> {
     let attn_out = normed.clone();
 
     // Residual connection
-    let mut residual: Vec<f32> =
-        hidden.iter().zip(attn_out.iter()).map(|(a, b)| a + b).collect();
+    let mut residual: Vec<f32> = hidden.iter().zip(attn_out.iter()).map(|(a, b)| a + b).collect();
 
     // Pre-FFN RMSNorm
     let normed2 = rms_norm(&residual, &gamma, &norm_cfg).unwrap();

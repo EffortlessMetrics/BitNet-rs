@@ -42,10 +42,7 @@ impl fmt::Display for ValidationIssue {
                 write!(f, "missing tensor '{name}' (expected shape {expected_shape:?})")
             }
             Self::ShapeMismatch { name, expected, actual } => {
-                write!(
-                    f,
-                    "shape mismatch for '{name}': expected {expected:?}, got {actual:?}"
-                )
+                write!(f, "shape mismatch for '{name}': expected {expected:?}, got {actual:?}")
             }
             Self::NanWeights { tensor_name, nan_count } => {
                 write!(f, "tensor '{tensor_name}' contains {nan_count} NaN value(s)")
@@ -145,10 +142,7 @@ pub fn validate_tensor_shapes(model: &ModelInfo) -> Vec<ValidationIssue> {
 
     for t in &model.tensors {
         // Embedding: dim-0 should be vocab_size
-        if t.name.contains("token_embd")
-            && !t.shape.is_empty()
-            && t.shape[0] != model.vocab_size
-        {
+        if t.name.contains("token_embd") && !t.shape.is_empty() && t.shape[0] != model.vocab_size {
             issues.push(ValidationIssue::ShapeMismatch {
                 name: t.name.clone(),
                 expected: vec![model.vocab_size],
@@ -157,10 +151,7 @@ pub fn validate_tensor_shapes(model: &ModelInfo) -> Vec<ValidationIssue> {
         }
 
         // Final output projection (not attn_output): dim-0 should be vocab_size
-        if t.name == "output.weight"
-            && !t.shape.is_empty()
-            && t.shape[0] != model.vocab_size
-        {
+        if t.name == "output.weight" && !t.shape.is_empty() && t.shape[0] != model.vocab_size {
             issues.push(ValidationIssue::ShapeMismatch {
                 name: t.name.clone(),
                 expected: vec![model.vocab_size],
@@ -219,10 +210,8 @@ pub fn validate_tensor_values(model: &ModelInfo) -> Vec<ValidationIssue> {
             }
 
             // Inf detection.
-            let inf_signals = [s.mean, s.std_dev, s.min, s.max]
-                .iter()
-                .filter(|v| v.is_infinite())
-                .count();
+            let inf_signals =
+                [s.mean, s.std_dev, s.min, s.max].iter().filter(|v| v.is_infinite()).count();
             if inf_signals > 0 {
                 issues.push(ValidationIssue::InfWeights {
                     tensor_name: t.name.clone(),
@@ -255,11 +244,8 @@ pub fn validate_layer_completeness(model: &ModelInfo) -> Vec<ValidationIssue> {
     let names: HashSet<&str> = model.tensors.iter().map(|t| t.name.as_str()).collect();
 
     // Count distinct block indices to check overall layer count.
-    let layer_indices: HashSet<usize> = model
-        .tensors
-        .iter()
-        .filter_map(|t| parse_block_index(&t.name))
-        .collect();
+    let layer_indices: HashSet<usize> =
+        model.tensors.iter().filter_map(|t| parse_block_index(&t.name)).collect();
 
     if !layer_indices.is_empty() && layer_indices.len() != model.num_layers {
         issues.push(ValidationIssue::InconsistentLayerCount {
@@ -274,10 +260,7 @@ pub fn validate_layer_completeness(model: &ModelInfo) -> Vec<ValidationIssue> {
             let expected_name = format!("blk.{layer}.{suffix}");
             if !names.contains(expected_name.as_str()) {
                 let expected_shape = expected_shape_for_suffix(suffix, model);
-                issues.push(ValidationIssue::MissingTensor {
-                    name: expected_name,
-                    expected_shape,
-                });
+                issues.push(ValidationIssue::MissingTensor { name: expected_name, expected_shape });
             }
         }
     }
@@ -297,9 +280,8 @@ pub fn validate_norm_weights(model: &ModelInfo) -> Vec<ValidationIssue> {
 
     // Check per-layer norm presence.
     for layer in 0..model.num_layers {
-        let has_norm = BLOCK_NORM_SUFFIXES
-            .iter()
-            .any(|s| names.contains(format!("blk.{layer}.{s}").as_str()));
+        let has_norm =
+            BLOCK_NORM_SUFFIXES.iter().any(|s| names.contains(format!("blk.{layer}.{s}").as_str()));
         if !has_norm {
             issues.push(ValidationIssue::MissingLayerNormWeights { layer });
         }
@@ -333,11 +315,8 @@ pub fn full_validation(model: &ModelInfo) -> ValidationReport {
     issues.extend(validate_layer_completeness(model));
     issues.extend(validate_norm_weights(model));
 
-    let total_parameters: u64 = model
-        .tensors
-        .iter()
-        .map(|t| t.shape.iter().copied().product::<usize>() as u64)
-        .sum();
+    let total_parameters: u64 =
+        model.tensors.iter().map(|t| t.shape.iter().copied().product::<usize>() as u64).sum();
 
     let passed = issues.is_empty();
 
@@ -443,32 +422,28 @@ mod tests {
         m.tensors[0] = tensor("token_embd.weight", vec![9999, 256], None);
         let issues = validate_tensor_shapes(&m);
         assert_eq!(issues.len(), 1);
-        assert!(matches!(&issues[0], ValidationIssue::ShapeMismatch { name, .. } if name == "token_embd.weight"));
+        assert!(
+            matches!(&issues[0], ValidationIssue::ShapeMismatch { name, .. } if name == "token_embd.weight")
+        );
     }
 
     #[test]
     fn tensor_shapes_detect_bad_attn_hidden_size() {
         let mut m = good_model();
         // Replace attn_q with wrong hidden dim.
-        let idx = m
-            .tensors
-            .iter()
-            .position(|t| t.name == "blk.0.attn_q.weight")
-            .unwrap();
+        let idx = m.tensors.iter().position(|t| t.name == "blk.0.attn_q.weight").unwrap();
         m.tensors[idx] = tensor("blk.0.attn_q.weight", vec![128, 128], None);
         let issues = validate_tensor_shapes(&m);
         assert!(!issues.is_empty());
-        assert!(matches!(&issues[0], ValidationIssue::ShapeMismatch { name, .. } if name == "blk.0.attn_q.weight"));
+        assert!(
+            matches!(&issues[0], ValidationIssue::ShapeMismatch { name, .. } if name == "blk.0.attn_q.weight")
+        );
     }
 
     #[test]
     fn tensor_shapes_detect_bad_ffn_intermediate() {
         let mut m = good_model();
-        let idx = m
-            .tensors
-            .iter()
-            .position(|t| t.name == "blk.0.ffn_gate.weight")
-            .unwrap();
+        let idx = m.tensors.iter().position(|t| t.name == "blk.0.ffn_gate.weight").unwrap();
         m.tensors[idx] = tensor("blk.0.ffn_gate.weight", vec![999, 256], None);
         let issues = validate_tensor_shapes(&m);
         assert!(!issues.is_empty());
@@ -534,10 +509,7 @@ mod tests {
 
     #[test]
     fn tensor_values_skip_without_stats() {
-        let m = ModelInfo {
-            tensors: vec![tensor("no_stats", vec![10], None)],
-            ..good_model()
-        };
+        let m = ModelInfo { tensors: vec![tensor("no_stats", vec![10], None)], ..good_model() };
         let issues = validate_tensor_values(&m);
         assert!(issues.is_empty());
     }
@@ -592,11 +564,7 @@ mod tests {
     #[test]
     fn norm_weights_detect_suspicious_mean() {
         let mut m = good_model();
-        let idx = m
-            .tensors
-            .iter()
-            .position(|t| t.name == "blk.0.attn_norm.weight")
-            .unwrap();
+        let idx = m.tensors.iter().position(|t| t.name == "blk.0.attn_norm.weight").unwrap();
         m.tensors[idx] = tensor(
             "blk.0.attn_norm.weight",
             vec![256],
@@ -615,10 +583,11 @@ mod tests {
         // Remove all norm tensors for layer 1.
         m.tensors.retain(|t| !(t.name.starts_with("blk.1.") && t.name.contains("norm")));
         let issues = validate_norm_weights(&m);
-        assert!(issues.iter().any(|i| matches!(
-            i,
-            ValidationIssue::MissingLayerNormWeights { layer: 1 }
-        )));
+        assert!(
+            issues
+                .iter()
+                .any(|i| matches!(i, ValidationIssue::MissingLayerNormWeights { layer: 1 }))
+        );
     }
 
     #[test]
