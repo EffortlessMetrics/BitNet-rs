@@ -180,7 +180,8 @@ pub fn cpu_alloc_tensor(
     allocator.stats.cache_misses += 1;
 
     let size = cpu_tensor_size_bytes(&desc);
-    let alignment = if desc.alignment == 0 { allocator.config.default_alignment } else { desc.alignment };
+    let alignment =
+        if desc.alignment == 0 { allocator.config.default_alignment } else { desc.alignment };
 
     // Try existing slabs.
     for slab_idx in 0..allocator.slabs.len() {
@@ -195,19 +196,14 @@ pub fn cpu_alloc_tensor(
     let min_size = size.max(allocator.config.initial_slab_size);
     let slab_idx = cpu_create_slab(allocator, min_size)?;
 
-    let (free_idx, offset) =
-        cpu_find_free_block(&allocator.slabs[slab_idx], size, alignment).expect(
-            "freshly created slab must have space",
-        );
+    let (free_idx, offset) = cpu_find_free_block(&allocator.slabs[slab_idx], size, alignment)
+        .expect("freshly created slab must have space");
 
     Ok(place_tensor(allocator, slab_idx, free_idx, offset, size, desc))
 }
 
 /// Free a tensor and optionally cache it.
-pub fn cpu_free_tensor(
-    allocator: &mut TensorAllocator,
-    tensor_id: u64,
-) -> Result<(), AllocError> {
+pub fn cpu_free_tensor(allocator: &mut TensorAllocator, tensor_id: u64) -> Result<(), AllocError> {
     let tensor =
         allocator.tensor_map.remove(&tensor_id).ok_or(AllocError::InvalidTensor(tensor_id))?;
 
@@ -231,10 +227,10 @@ pub fn cpu_alloc_from_cache(
     allocator: &mut TensorAllocator,
     desc: &TensorDescriptor,
 ) -> Option<u64> {
-    let pos = allocator.cache.iter().position(|(cached, _, _)| {
-        cached.dtype == desc.dtype
-            && cached.shape == desc.shape
-    })?;
+    let pos = allocator
+        .cache
+        .iter()
+        .position(|(cached, _, _)| cached.dtype == desc.dtype && cached.shape == desc.shape)?;
 
     let (cached_desc, slab_id, offset) = allocator.cache.remove(pos);
     let size = cpu_tensor_size_bytes(&cached_desc);
@@ -255,13 +251,7 @@ pub fn cpu_alloc_from_cache(
 
     allocator.tensor_map.insert(
         id,
-        AllocatedTensor {
-            id,
-            descriptor: desc.clone(),
-            offset,
-            size_bytes: size,
-            slab_id,
-        },
+        AllocatedTensor { id, descriptor: desc.clone(), offset, size_bytes: size, slab_id },
     );
 
     Some(id)
@@ -301,11 +291,7 @@ pub fn cpu_create_slab(
 /// First-fit search in a slab's free list, respecting alignment.
 ///
 /// Returns `(free_list_index, aligned_offset)`.
-pub fn cpu_find_free_block(
-    slab: &Slab,
-    size: usize,
-    alignment: usize,
-) -> Option<(usize, usize)> {
+pub fn cpu_find_free_block(slab: &Slab, size: usize, alignment: usize) -> Option<(usize, usize)> {
     let align = if alignment == 0 { 1 } else { alignment };
     for (idx, &(offset, length)) in slab.free_list.iter().enumerate() {
         let aligned = (offset + align - 1) & !(align - 1);
@@ -558,12 +544,8 @@ mod tests {
 
     #[test]
     fn test_tensor_size_empty_shape() {
-        let d = TensorDescriptor {
-            shape: vec![0],
-            dtype: TensorDType::F32,
-            alignment: 64,
-            name: None,
-        };
+        let d =
+            TensorDescriptor { shape: vec![0], dtype: TensorDType::F32, alignment: 64, name: None };
         assert_eq!(cpu_tensor_size_bytes(&d), 0);
     }
 
@@ -783,13 +765,8 @@ mod tests {
 
     #[test]
     fn test_find_free_block_none() {
-        let slab = Slab {
-            id: 0,
-            total_size: 64,
-            used_size: 64,
-            free_list: vec![],
-            tensors: vec![],
-        };
+        let slab =
+            Slab { id: 0, total_size: 64, used_size: 64, free_list: vec![], tensors: vec![] };
         assert!(cpu_find_free_block(&slab, 64, 1).is_none());
     }
 
@@ -838,13 +815,8 @@ mod tests {
 
     #[test]
     fn test_coalesce_empty() {
-        let mut slab = Slab {
-            id: 0,
-            total_size: 1024,
-            used_size: 0,
-            free_list: vec![],
-            tensors: vec![],
-        };
+        let mut slab =
+            Slab { id: 0, total_size: 1024, used_size: 0, free_list: vec![], tensors: vec![] };
         assert_eq!(cpu_coalesce_free_blocks(&mut slab), 0);
     }
 
