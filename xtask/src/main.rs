@@ -41,6 +41,7 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
+mod model_registry;
 mod tokenizers;
 mod trace_diff;
 
@@ -239,6 +240,10 @@ enum Cmd {
         /// Skip network and only use local cache (or fail if missing)
         #[arg(long)]
         offline: bool,
+
+        /// List known models (or show detail for --id)
+        #[arg(long)]
+        list: bool,
     },
 
     /// Download LLaMA-3 tokenizer.json from HuggingFace
@@ -1066,21 +1071,41 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
             offline,
-        } => download_model_cmd(DownloadConfig {
-            id: &id,
-            file: &file,
-            out_dir: &out,
-            sha256_hex: sha256.as_deref(),
-            force,
-            rev: rev.as_deref(),
-            no_progress,
-            verbose,
-            base_url: &base_url,
-            json,
-            retries,
-            timeout,
-            offline: offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
-        }),
+            list,
+        } => {
+            if list {
+                if id != DEFAULT_MODEL_ID {
+                    // --list --id <specific> → show detail
+                    if let Some(entry) = model_registry::lookup(&id) {
+                        print!("{}", model_registry::format_detail(entry));
+                    } else {
+                        bail!(
+                            "Unknown model: {}\n\nRun `cargo xtask download-model --list` to see known models.\n\
+                             You can still download any HF repo with --id <owner/repo> --file <name>.",
+                            id
+                        );
+                    }
+                } else {
+                    print!("{}", model_registry::format_table());
+                }
+                return Ok(());
+            }
+            download_model_cmd(DownloadConfig {
+                id: &id,
+                file: &file,
+                out_dir: &out,
+                sha256_hex: sha256.as_deref(),
+                force,
+                rev: rev.as_deref(),
+                no_progress,
+                verbose,
+                base_url: &base_url,
+                json,
+                retries,
+                timeout,
+                offline: offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1"),
+            })
+        }
         Cmd::Tokenizer { into, source, force, verbose } => {
             // AC:ID llama3-tokenizer-api-contracts.md#xtask-tokenizer-v1
             let tokenizer_source = source.parse::<tokenizers::TokenizerSource>()?;
