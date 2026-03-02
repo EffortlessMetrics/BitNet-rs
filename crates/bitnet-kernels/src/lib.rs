@@ -37,6 +37,7 @@ pub mod opencl_ffn;
 pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
 pub mod opencl_memory;
+pub mod opencl_multi_model;
 pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
