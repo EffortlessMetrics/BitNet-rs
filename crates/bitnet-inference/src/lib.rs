@@ -45,6 +45,7 @@ pub mod profiler;
 pub mod rt;
 pub mod runtime_utils;
 pub mod sampling;
+pub mod sampling_presets;
 pub mod simple_forward;
 pub mod streaming;
 pub mod streaming_render;
