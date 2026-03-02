@@ -1332,7 +1332,7 @@ mod tests {
     fn test_inference_arena_alloc_u8() {
         let arena = InferenceArena::new(4096).unwrap();
         let p = arena.alloc_u8(128).unwrap();
-        assert!(!p.as_ptr().is_null());
+        let _ = p; // NonNull is guaranteed non-null
     }
 
     #[test]
@@ -1414,7 +1414,7 @@ mod tests {
     #[test]
     fn test_numa_aware_alloc_prefer_node() {
         let ptr = numa_aware_alloc(512, 64, NumaPolicy::PreferNode(0)).unwrap();
-        assert!(!ptr.as_ptr().is_null());
+        let _ = &ptr; // NonNull is guaranteed non-null
         unsafe { numa_aware_dealloc(ptr, 512, 64) };
     }
 
@@ -1558,9 +1558,8 @@ mod tests {
     fn test_arena_alloc_slice_u8() {
         let arena = ArenaAllocator::with_capacity(4096).unwrap();
         let ptr = arena.alloc_slice::<u8>(512).unwrap();
-        assert!(!ptr.as_ptr().is_null());
+        let _ = &ptr; // NonNull is guaranteed non-null
     }
-
     #[test]
     fn test_constants() {
         assert_eq!(ALIGN_AVX2, 32);
