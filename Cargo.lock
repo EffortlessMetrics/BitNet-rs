@@ -1115,6 +1115,7 @@ dependencies = [
  "bytemuck",
  "candle-core",
  "criterion 0.7.0",
+ "half",
  "insta",
  "proptest",
  "rand 0.9.2",
