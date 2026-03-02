@@ -30,6 +30,7 @@ pub mod loading_progress;
 pub mod metadata_extractor;
 pub mod minimal;
 pub mod model_fingerprint;
+pub mod model_validator;
 pub mod names;
 pub mod production_loader;
 pub mod qk256_utils;
