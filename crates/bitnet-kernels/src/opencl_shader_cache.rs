@@ -152,7 +152,8 @@ pub fn cpu_cache_lookup<'a>(
     cache: &'a mut ShaderCache,
     key: &CacheKey,
 ) -> Option<&'a CachedProgram> {
-    let hash = cpu_hash_source(&format!("{}{}", key.source_hash, key.device_name), &key.build_options);
+    let hash =
+        cpu_hash_source(&format!("{}{}", key.source_hash, key.device_name), &key.build_options);
     if cache.entries.contains_key(&hash) {
         cache.stats.hits += 1;
         cache.access_counter += 1;
@@ -192,10 +193,8 @@ pub fn cpu_cache_store(
 
     cache.seq_counter += 1;
     cache.access_counter += 1;
-    let hash = cpu_hash_source(
-        &format!("{}{}", key.source_hash, key.device_name),
-        &key.build_options,
-    );
+    let hash =
+        cpu_hash_source(&format!("{}{}", key.source_hash, key.device_name), &key.build_options);
     let program = CachedProgram {
         key,
         binary,
@@ -235,11 +234,7 @@ fn evict_one(cache: &mut ShaderCache) {
 
 /// Evict the least-recently-used entry.
 pub fn cpu_evict_lru(cache: &mut ShaderCache) -> Option<CachedProgram> {
-    let victim = cache
-        .entries
-        .iter()
-        .min_by_key(|(_, p)| p.last_access_seq)
-        .map(|(&k, _)| k);
+    let victim = cache.entries.iter().min_by_key(|(_, p)| p.last_access_seq).map(|(&k, _)| k);
     if let Some(k) = victim {
         let evicted = cache.entries.remove(&k).unwrap();
         cache.total_bytes = cache.total_bytes.saturating_sub(evicted.size_bytes);
@@ -253,11 +248,7 @@ pub fn cpu_evict_lru(cache: &mut ShaderCache) -> Option<CachedProgram> {
 
 /// Evict the least-frequently-used entry.
 pub fn cpu_evict_lfu(cache: &mut ShaderCache) -> Option<CachedProgram> {
-    let victim = cache
-        .entries
-        .iter()
-        .min_by_key(|(_, p)| p.hit_count)
-        .map(|(&k, _)| k);
+    let victim = cache.entries.iter().min_by_key(|(_, p)| p.hit_count).map(|(&k, _)| k);
     if let Some(k) = victim {
         let evicted = cache.entries.remove(&k).unwrap();
         cache.total_bytes = cache.total_bytes.saturating_sub(evicted.size_bytes);
@@ -271,11 +262,7 @@ pub fn cpu_evict_lfu(cache: &mut ShaderCache) -> Option<CachedProgram> {
 
 /// Evict the oldest (first inserted) entry.
 pub fn cpu_evict_fifo(cache: &mut ShaderCache) -> Option<CachedProgram> {
-    let victim = cache
-        .entries
-        .iter()
-        .min_by_key(|(_, p)| p.insert_seq)
-        .map(|(&k, _)| k);
+    let victim = cache.entries.iter().min_by_key(|(_, p)| p.insert_seq).map(|(&k, _)| k);
     if let Some(k) = victim {
         let evicted = cache.entries.remove(&k).unwrap();
         cache.total_bytes = cache.total_bytes.saturating_sub(evicted.size_bytes);
@@ -289,11 +276,7 @@ pub fn cpu_evict_fifo(cache: &mut ShaderCache) -> Option<CachedProgram> {
 
 /// Evict the entry with the largest binary (size-weighted policy).
 fn cpu_evict_size_weighted(cache: &mut ShaderCache) -> Option<CachedProgram> {
-    let victim = cache
-        .entries
-        .iter()
-        .max_by_key(|(_, p)| p.size_bytes)
-        .map(|(&k, _)| k);
+    let victim = cache.entries.iter().max_by_key(|(_, p)| p.size_bytes).map(|(&k, _)| k);
     if let Some(k) = victim {
         let evicted = cache.entries.remove(&k).unwrap();
         cache.total_bytes = cache.total_bytes.saturating_sub(evicted.size_bytes);
@@ -311,10 +294,8 @@ fn cpu_evict_size_weighted(cache: &mut ShaderCache) -> Option<CachedProgram> {
 
 /// Remove a specific entry. Returns `true` if it existed.
 pub fn cpu_invalidate(cache: &mut ShaderCache, key: &CacheKey) -> bool {
-    let hash = cpu_hash_source(
-        &format!("{}{}", key.source_hash, key.device_name),
-        &key.build_options,
-    );
+    let hash =
+        cpu_hash_source(&format!("{}{}", key.source_hash, key.device_name), &key.build_options);
     if let Some(evicted) = cache.entries.remove(&hash) {
         cache.total_bytes = cache.total_bytes.saturating_sub(evicted.size_bytes);
         cache.stats.current_entries = cache.entries.len();
@@ -455,8 +436,8 @@ pub fn cpu_deserialize_cache(data: &[u8], config: CacheConfig) -> Result<ShaderC
 
         let dev_len = read_u32(&mut pos, data)? as usize;
         let dev_bytes = read_bytes(&mut pos, data, dev_len)?;
-        let device_name =
-            String::from_utf8(dev_bytes).map_err(|e| CacheError::SerializationError(e.to_string()))?;
+        let device_name = String::from_utf8(dev_bytes)
+            .map_err(|e| CacheError::SerializationError(e.to_string()))?;
 
         let bin_len = read_u64(&mut pos, data)? as usize;
         let binary = read_bytes(&mut pos, data, bin_len)?;
@@ -905,10 +886,8 @@ mod tests {
         cpu_cache_store(&mut cache, key.clone(), bin.clone()).unwrap();
         let data = cpu_serialize_cache(&cache);
         let restored = cpu_deserialize_cache(&data, default_config()).unwrap();
-        let hash = cpu_hash_source(
-            &format!("{}{}", key.source_hash, key.device_name),
-            &key.build_options,
-        );
+        let hash =
+            cpu_hash_source(&format!("{}{}", key.source_hash, key.device_name), &key.build_options);
         assert_eq!(restored.entries[&hash].binary, bin);
     }
 
@@ -995,16 +974,8 @@ mod tests {
     #[test]
     fn different_device_names_produce_different_entries() {
         let mut cache = create_shader_cache(default_config());
-        let k1 = CacheKey {
-            source_hash: 1,
-            build_options: "".into(),
-            device_name: "A770".into(),
-        };
-        let k2 = CacheKey {
-            source_hash: 1,
-            build_options: "".into(),
-            device_name: "A750".into(),
-        };
+        let k1 = CacheKey { source_hash: 1, build_options: "".into(), device_name: "A770".into() };
+        let k2 = CacheKey { source_hash: 1, build_options: "".into(), device_name: "A750".into() };
         cpu_cache_store(&mut cache, k1.clone(), vec![1]).unwrap();
         cpu_cache_store(&mut cache, k2.clone(), vec![2]).unwrap();
         assert_eq!(cache.entries.len(), 2);
