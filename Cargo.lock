@@ -1849,6 +1849,7 @@ name = "bitnet-wgpu"
 version = "0.1.0"
 dependencies = [
  "bitnet-dispatch-core",
+ "bitnet-nvidia",
  "bytemuck",
  "pollster",
  "proptest",
