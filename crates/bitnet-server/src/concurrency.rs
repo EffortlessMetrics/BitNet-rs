@@ -64,13 +64,15 @@ impl RateLimitBucket {
     async fn try_consume(&self, tokens: u64) -> bool {
         self.refill().await;
 
-        let current_tokens = self.tokens.load(Ordering::Relaxed);
-        if current_tokens >= tokens {
-            self.tokens.fetch_sub(tokens, Ordering::Relaxed);
-            true
-        } else {
-            false
-        }
+        self.tokens
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                if current >= tokens {
+                    Some(current - tokens)
+                } else {
+                    None
+                }
+            })
+            .is_ok()
     }
 
     async fn refill(&self) {
@@ -80,10 +82,9 @@ impl RateLimitBucket {
 
         if elapsed.as_secs() > 0 {
             let tokens_to_add = elapsed.as_secs() * self.refill_rate;
-            let current_tokens = self.tokens.load(Ordering::Relaxed);
-            let new_tokens = (current_tokens + tokens_to_add).min(self.capacity);
-
-            self.tokens.store(new_tokens, Ordering::Relaxed);
+            let _ = self.tokens.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                Some(current.saturating_add(tokens_to_add).min(self.capacity))
+            });
             *last_refill = now;
         }
     }
