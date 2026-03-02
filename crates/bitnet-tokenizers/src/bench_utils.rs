@@ -102,11 +102,7 @@ where
 }
 
 /// Run a complete benchmark with encode+decode, returning results.
-pub fn run_benchmark<E, D>(
-    corpus: &BenchCorpus,
-    mut encode_fn: E,
-    mut decode_fn: D,
-) -> BenchResult
+pub fn run_benchmark<E, D>(corpus: &BenchCorpus, mut encode_fn: E, mut decode_fn: D) -> BenchResult
 where
     E: FnMut(&str) -> Vec<u32>,
     D: FnMut(&[u32]) -> String,
@@ -114,11 +110,7 @@ where
     let (enc_us, tokens) = time_encode(&corpus.text, &mut encode_fn);
     let (dec_us, _decoded) = time_decode(&tokens, &mut decode_fn);
 
-    let tps = if enc_us > 0 {
-        tokens.len() as f64 / (enc_us as f64 / 1_000_000.0)
-    } else {
-        0.0
-    };
+    let tps = if enc_us > 0 { tokens.len() as f64 / (enc_us as f64 / 1_000_000.0) } else { 0.0 };
 
     BenchResult {
         corpus_name: corpus.name.clone(),
@@ -163,11 +155,7 @@ pub fn summarize(results: &[BenchResult]) -> BenchSummary {
     let total_encode_us: u64 = results.iter().map(|r| r.encode_us).sum();
     let total_decode_us: u64 = results.iter().map(|r| r.decode_us).sum();
 
-    let avg_bpt = if total_tokens > 0 {
-        total_bytes as f32 / total_tokens as f32
-    } else {
-        0.0
-    };
+    let avg_bpt = if total_tokens > 0 { total_bytes as f32 / total_tokens as f32 } else { 0.0 };
     let avg_tps = if total_encode_us > 0 {
         total_tokens as f64 / (total_encode_us as f64 / 1_000_000.0)
     } else {
@@ -203,37 +191,25 @@ mod tests {
 
     #[test]
     fn test_time_encode() {
-        let (us, tokens) = time_encode("hello", |s| {
-            s.bytes().map(|b| b as u32).collect()
-        });
+        let (us, tokens) = time_encode("hello", |s| s.bytes().map(|b| b as u32).collect());
         assert_eq!(tokens.len(), 5);
         assert!(us < 1_000_000); // < 1 second
     }
 
     #[test]
     fn test_time_decode() {
-        let (us, text) = time_decode(&[104, 105], |t| {
-            t.iter().map(|&b| b as u8 as char).collect()
-        });
+        let (us, text) = time_decode(&[104, 105], |t| t.iter().map(|&b| b as u8 as char).collect());
         assert_eq!(text, "hi");
         assert!(us < 1_000_000);
     }
 
     #[test]
     fn test_run_benchmark() {
-        let corpus = BenchCorpus {
-            name: "test".into(),
-            text: "hello world".into(),
-            expected_min_tokens: 2,
-        };
+        let corpus =
+            BenchCorpus { name: "test".into(), text: "hello world".into(), expected_min_tokens: 2 };
         let result = run_benchmark(
             &corpus,
-            |s| {
-                s.split_whitespace()
-                    .enumerate()
-                    .map(|(i, _)| i as u32)
-                    .collect()
-            },
+            |s| s.split_whitespace().enumerate().map(|(i, _)| i as u32).collect(),
             |_t| "hello world".into(),
         );
         assert_eq!(result.token_count, 2);
@@ -313,11 +289,7 @@ mod tests {
 
     #[test]
     fn test_bench_result_fields() {
-        let corpus = BenchCorpus {
-            name: "x".into(),
-            text: "abc".into(),
-            expected_min_tokens: 1,
-        };
+        let corpus = BenchCorpus { name: "x".into(), text: "abc".into(), expected_min_tokens: 1 };
         let r = run_benchmark(&corpus, |_| vec![1, 2, 3], |_| "abc".into());
         assert_eq!(r.corpus_name, "x");
         assert_eq!(r.token_count, 3);

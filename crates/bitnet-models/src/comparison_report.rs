@@ -64,41 +64,13 @@ pub fn compare_specs(a: &ModelSpec, b: &ModelSpec) -> Vec<SpecDiff> {
     };
 
     check("family", &a.family, &b.family);
-    check(
-        "params_millions",
-        &a.params_millions.to_string(),
-        &b.params_millions.to_string(),
-    );
-    check(
-        "hidden_size",
-        &a.hidden_size.to_string(),
-        &b.hidden_size.to_string(),
-    );
-    check(
-        "num_layers",
-        &a.num_layers.to_string(),
-        &b.num_layers.to_string(),
-    );
-    check(
-        "num_heads",
-        &a.num_heads.to_string(),
-        &b.num_heads.to_string(),
-    );
-    check(
-        "num_kv_heads",
-        &a.num_kv_heads.to_string(),
-        &b.num_kv_heads.to_string(),
-    );
-    check(
-        "vocab_size",
-        &a.vocab_size.to_string(),
-        &b.vocab_size.to_string(),
-    );
-    check(
-        "max_context",
-        &a.max_context.to_string(),
-        &b.max_context.to_string(),
-    );
+    check("params_millions", &a.params_millions.to_string(), &b.params_millions.to_string());
+    check("hidden_size", &a.hidden_size.to_string(), &b.hidden_size.to_string());
+    check("num_layers", &a.num_layers.to_string(), &b.num_layers.to_string());
+    check("num_heads", &a.num_heads.to_string(), &b.num_heads.to_string());
+    check("num_kv_heads", &a.num_kv_heads.to_string(), &b.num_kv_heads.to_string());
+    check("vocab_size", &a.vocab_size.to_string(), &b.vocab_size.to_string());
+    check("max_context", &a.max_context.to_string(), &b.max_context.to_string());
     check("activation", &a.activation, &b.activation);
     check("norm_type", &a.norm_type, &b.norm_type);
     check("weight_dtype", &a.weight_dtype, &b.weight_dtype);
@@ -315,11 +287,7 @@ mod tests {
 
     #[test]
     fn test_three_model_report() {
-        let r = ComparisonReport::build(vec![
-            phi4_spec(),
-            llama3_8b_spec(),
-            bitnet_2b_spec(),
-        ]);
+        let r = ComparisonReport::build(vec![phi4_spec(), llama3_8b_spec(), bitnet_2b_spec()]);
         assert_eq!(r.model_count(), 3);
         let diff = r.differing_fields();
         assert!(diff.len() > 3); // many fields differ
