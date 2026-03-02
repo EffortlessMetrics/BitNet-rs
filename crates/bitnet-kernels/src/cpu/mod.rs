@@ -42,8 +42,10 @@ pub mod residual;
 pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
 pub mod rope;
 pub mod scatter_gather;
+pub mod simd_attention_mask;
 pub mod simd_math;
 pub mod simd_matmul;
+pub use simd_attention_mask::*;
 pub mod transpose;
 
 #[cfg(target_arch = "x86_64")]
