@@ -108,6 +108,7 @@ fn kernel_backend_all_distinct() {
 // --- KernelCapabilities ---
 
 #[test]
+#[cfg(feature = "cpu")]
 fn capabilities_from_compile_time_has_cpu_rust() {
     let caps = KernelCapabilities::from_compile_time();
     assert!(caps.cpu_rust, "CPU Rust should always be available");
@@ -129,6 +130,7 @@ fn capabilities_from_compile_time_simd_is_valid() {
 }
 
 #[test]
+#[cfg(feature = "cpu")]
 fn capabilities_compiled_backends_includes_cpu() {
     let caps = KernelCapabilities::from_compile_time();
     let backends = caps.compiled_backends();
@@ -139,6 +141,7 @@ fn capabilities_compiled_backends_includes_cpu() {
 }
 
 #[test]
+#[cfg(feature = "cpu")]
 fn capabilities_best_available_is_not_none() {
     let caps = KernelCapabilities::from_compile_time();
     let best = caps.best_available();
@@ -147,6 +150,7 @@ fn capabilities_best_available_is_not_none() {
 }
 
 #[test]
+#[cfg(feature = "cpu")]
 fn capabilities_best_available_is_cpu_without_gpu() {
     let caps = KernelCapabilities::from_compile_time();
     if !caps.cuda_runtime && !caps.hip_runtime && !caps.oneapi_runtime {
@@ -166,6 +170,7 @@ fn capabilities_summary_non_empty() {
 }
 
 #[test]
+#[cfg(feature = "cpu")]
 fn capabilities_summary_contains_cpu() {
     let caps = KernelCapabilities::from_compile_time();
     let summary = caps.summary();
@@ -238,6 +243,7 @@ fn capabilities_debug_non_empty() {
 // --- is_compiled tests ---
 
 #[test]
+#[cfg(feature = "cpu")]
 fn kernel_backend_is_compiled_cpu_always_true() {
     assert!(KernelBackend::CpuRust.is_compiled());
 }

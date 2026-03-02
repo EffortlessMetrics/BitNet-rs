@@ -279,6 +279,7 @@ proptest! {
 proptest! {
     /// compiled_backends always includes CpuRust when cpu_rust is true.
     #[test]
+    #[cfg(feature = "cpu")]
     fn capabilities_cpu_rust_in_backends(_dummy in 0u8..1) {
         let caps = KernelCapabilities::from_compile_time();
         let backends = caps.compiled_backends();

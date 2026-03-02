@@ -485,6 +485,7 @@ fn kernel_backend_requires_gpu_classification() {
 }
 
 #[test]
+#[cfg(feature = "cpu")]
 fn kernel_backend_is_compiled_cpu_feature() {
     // With --features cpu, CpuRust should be compiled
     assert!(KernelBackend::CpuRust.is_compiled());

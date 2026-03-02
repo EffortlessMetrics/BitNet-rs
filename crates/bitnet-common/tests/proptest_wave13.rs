@@ -242,6 +242,7 @@ proptest! {
 
     /// CpuRust backend is always in compiled backends.
     #[test]
+    #[cfg(feature = "cpu")]
     fn prop_kernel_caps_always_has_cpu_rust(_dummy in 0..1i32) {
         let caps = KernelCapabilities::from_compile_time();
         let backends = caps.compiled_backends();
@@ -259,6 +260,7 @@ proptest! {
 
     /// KernelBackend::is_compiled returns true for CpuRust.
     #[test]
+    #[cfg(feature = "cpu")]
     fn prop_cpu_rust_is_compiled(_dummy in 0..1i32) {
         prop_assert!(KernelBackend::CpuRust.is_compiled());
     }
