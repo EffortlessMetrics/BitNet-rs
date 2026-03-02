@@ -175,9 +175,17 @@ enum Commands {
     ///     --prompt "2+2=" --max-tokens 16
     #[command(alias = "generate")]
     Run {
-        /// Model file path
+        /// Model file or directory path (.gguf file or HuggingFace model directory)
         #[arg(short, long)]
         model: std::path::PathBuf,
+
+        /// Model format: auto (detect from path), gguf, safetensors
+        #[arg(long, value_name = "FORMAT", default_value = "auto")]
+        model_format: String,
+
+        /// Model architecture override (e.g. bitnet, llama, phi3); auto-detected if omitted
+        #[arg(long, value_name = "ARCH")]
+        architecture: Option<String>,
 
         /// Tokenizer file path (optional, will look for sibling file if not provided)
         #[arg(long)]
@@ -501,6 +509,8 @@ async fn main() -> Result<()> {
     let result = match cli.command {
         Some(Commands::Run {
             model,
+            model_format,
+            architecture,
             tokenizer,
             prompt,
             max_new_tokens,
@@ -530,6 +540,8 @@ async fn main() -> Result<()> {
         }) => {
             run_simple_generation(
                 model,
+                model_format,
+                architecture,
                 tokenizer,
                 prompt,
                 max_new_tokens,
@@ -939,6 +951,8 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
     model_path: std::path::PathBuf,
+    model_format: String,
+    _architecture: Option<String>,
     tokenizer_path: Option<std::path::PathBuf>,
     prompt: String,
     max_new_tokens: usize,
@@ -971,6 +985,24 @@ async fn run_simple_generation(
     use bitnet_sampling::{SamplingConfig, SamplingStrategy};
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
+
+    // Validate --model-format
+    match model_format.as_str() {
+        "auto" | "gguf" | "safetensors" => {}
+        other => {
+            anyhow::bail!(
+                "Invalid --model-format '{}'. Supported values: auto, gguf, safetensors",
+                other
+            );
+        }
+    }
+
+    // Resolve model format: auto-detect from path when format is "auto"
+    let is_hf_directory = match model_format.as_str() {
+        "gguf" => false,
+        "safetensors" => true,
+        _ => model_path.is_dir(),
+    };
 
     // Simple logit step for dumping
     #[derive(Debug, serde::Serialize)]
@@ -1017,10 +1049,14 @@ async fn run_simple_generation(
         })?
     };
 
-    println!("Loading model from: {}", model_path.display());
+    if is_hf_directory {
+        println!("Loading HuggingFace model from directory: {}", model_path.display());
+    } else {
+        println!("Loading model from: {}", model_path.display());
+    }
 
-    // Check for QK256 scalar kernel usage and emit performance warnings
-    if !no_warnings {
+    // Check for QK256 scalar kernel usage and emit performance warnings (GGUF only)
+    if !no_warnings && !is_hf_directory {
         check_and_warn_qk256_performance(&model_path, max_new_tokens)?;
     }
 
@@ -1131,6 +1167,46 @@ async fn run_simple_generation(
                 }
             }
             Err(_discovery_err) => {
+                if is_hf_directory {
+                    // For HF directories, check for tokenizer.json inside the model dir
+                    let hf_tok_path = model_path.join("tokenizer.json");
+                    if hf_tok_path.exists() {
+                        println!("Loading tokenizer from HuggingFace directory...");
+                        external_tokenizer = true;
+                        match bitnet_tokenizers::load_tokenizer(&hf_tok_path) {
+                            Ok(tok) => tok,
+                            Err(e) => {
+                                if strict_tokenizer {
+                                    eprintln!("Strict tokenizer failed: {e}");
+                                    std::process::exit(EXIT_STRICT_TOKENIZER);
+                                }
+                                if !allow_mock {
+                                    anyhow::bail!(
+                                        "Failed to load tokenizer from {}: {e}",
+                                        hf_tok_path.display()
+                                    );
+                                }
+                                println!("Warning: Using mock tokenizer due to: {e}");
+                                std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+                            }
+                        }
+                    } else if strict_tokenizer {
+                        eprintln!(
+                            "Strict tokenizer failed: no tokenizer.json in {}",
+                            model_path.display()
+                        );
+                        std::process::exit(EXIT_STRICT_TOKENIZER);
+                    } else if !allow_mock {
+                        anyhow::bail!(
+                            "No tokenizer.json found in HuggingFace model directory: {}\n\
+                             Provide --tokenizer or use --allow-mock",
+                            model_path.display()
+                        );
+                    } else {
+                        println!("Warning: Using mock tokenizer (no tokenizer.json in HF dir)");
+                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+                    }
+                } else {
                 // Discovery failed, try GGUF embedded as fallback
                 println!("No external tokenizer found, attempting to load from GGUF model...");
 
@@ -1178,6 +1254,7 @@ async fn run_simple_generation(
                         std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 }
+                } // end GGUF else branch
             }
         }
     };
