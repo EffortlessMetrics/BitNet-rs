@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 340
+expression: modes
+---
+[
+    NearestEven,
+    Truncate,
+    Stochastic,
+]

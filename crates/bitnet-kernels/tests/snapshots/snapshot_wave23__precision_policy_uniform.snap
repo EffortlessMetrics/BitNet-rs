@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 352
+expression: policy
+---
+PrecisionPolicy {
+    default_precision: F16,
+    overrides: [],
+}

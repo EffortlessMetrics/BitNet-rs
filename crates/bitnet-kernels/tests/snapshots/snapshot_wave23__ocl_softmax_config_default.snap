@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 646
+expression: cfg
+---
+SoftmaxConfig {
+    axis: 0,
+    numerical_eps: 1e-8,
+    temperature: 1.0,
+    top_k: None,
+}

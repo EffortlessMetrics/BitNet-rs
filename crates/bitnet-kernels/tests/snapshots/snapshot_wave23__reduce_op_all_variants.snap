@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 492
+expression: ops
+---
+[
+    Sum,
+    Max,
+    Min,
+    Mean,
+    Variance,
+    ArgMax,
+    ArgMin,
+    Prod,
+    LogSumExp,
+]

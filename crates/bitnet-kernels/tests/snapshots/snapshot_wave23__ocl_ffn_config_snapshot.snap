@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 634
+expression: cfg
+---
+Ok(
+    FfnConfig {
+        hidden_size: 2048,
+        intermediate_size: 5632,
+        activation: SiLU,
+    },
+)

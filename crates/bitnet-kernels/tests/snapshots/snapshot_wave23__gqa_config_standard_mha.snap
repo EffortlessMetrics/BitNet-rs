@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 25
+expression: cfg
+---
+GqaConfig {
+    num_q_heads: 32,
+    num_kv_heads: 32,
+    head_dim: 128,
+    max_seq_len: 4096,
+    attention_type: Mha,
+}

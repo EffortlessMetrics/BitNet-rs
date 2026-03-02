@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 253
+expression: pin
+---
+SystemPromptPin {
+    tokens: [
+        1,
+        2,
+        3,
+        128000,
+    ],
+    entry_id: 0,
+}

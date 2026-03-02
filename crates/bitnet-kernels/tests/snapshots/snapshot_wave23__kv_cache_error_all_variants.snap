@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 598
+expression: errors
+---
+[
+    LayerOutOfBounds {
+        requested: 24,
+        available: 12,
+    },
+    CacheFull {
+        max_len: 4096,
+    },
+    DimensionMismatch {
+        expected: 2048,
+        got: 1024,
+    },
+]

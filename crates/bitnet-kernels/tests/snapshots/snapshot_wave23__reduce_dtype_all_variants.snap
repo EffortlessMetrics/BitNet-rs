@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 498
+expression: dtypes
+---
+[
+    F32,
+    F16,
+    I32,
+]

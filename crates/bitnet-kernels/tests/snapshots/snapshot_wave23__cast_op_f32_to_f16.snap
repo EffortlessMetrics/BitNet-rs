@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 358
+expression: op
+---
+CastOp {
+    from: F32,
+    to: F16,
+    rounding: NearestEven,
+}

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 378
+expression: cfg
+---
+GenerationConfig {
+    max_tokens: 128,
+    temperature: 1.0,
+    top_k: None,
+    top_p: None,
+    repetition_penalty: 1.0,
+    stop_tokens: [],
+    seed: None,
+}

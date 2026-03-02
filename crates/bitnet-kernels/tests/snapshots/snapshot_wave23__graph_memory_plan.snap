@@ -1,0 +1,28 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 139
+expression: "(&plan.buffer_sizes, sorted, plan.peak_memory, plan.reuse_count)"
+---
+(
+    [
+        4096,
+        8192,
+        2048,
+    ],
+    [
+        (
+            0,
+            0,
+        ),
+        (
+            1,
+            1,
+        ),
+        (
+            2,
+            0,
+        ),
+    ],
+    12288,
+    1,
+)

@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 187
+expression: errors
+---
+[
+    BatchFull,
+    SlotNotFound(
+        3,
+    ),
+    RequestNotFound(
+        42,
+    ),
+    PreemptionFailed,
+    ConfigError(
+        "max_tokens must be > 0",
+    ),
+]

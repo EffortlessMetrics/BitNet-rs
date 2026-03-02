@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 260
+expression: tree.stats()
+---
+PrefixStats {
+    hits: 0,
+    lookups: 0,
+    tokens_saved: 0,
+    memory_used: 0,
+    pinned_entries: 0,
+}

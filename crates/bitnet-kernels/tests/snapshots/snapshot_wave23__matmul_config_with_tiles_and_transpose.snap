@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 546
+expression: cfg
+---
+MatmulConfig {
+    m: 512,
+    n: 512,
+    k: 256,
+    tile_m: 32,
+    tile_n: 32,
+    tile_k: 16,
+    transpose_a: false,
+    transpose_b: true,
+}

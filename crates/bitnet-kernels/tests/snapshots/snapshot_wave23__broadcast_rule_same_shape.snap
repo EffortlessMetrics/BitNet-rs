@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 470
+expression: rule
+---
+BroadcastRule {
+    output_shape: [
+        2,
+        3,
+    ],
+    strides_a: [
+        1,
+        1,
+    ],
+    strides_b: [
+        1,
+        1,
+    ],
+}

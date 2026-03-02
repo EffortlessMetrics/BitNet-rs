@@ -1,0 +1,43 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 113
+expression: patterns
+---
+[
+    FusionPattern {
+        pattern_name: "MatMulBias",
+        ops: [
+            MatMul,
+            Add,
+        ],
+        fused_op_name: "FusedMatMulBias",
+        speedup_estimate: 1.3,
+    },
+    FusionPattern {
+        pattern_name: "RmsNormScale",
+        ops: [
+            RmsNorm,
+            Mul,
+        ],
+        fused_op_name: "FusedRmsNormScale",
+        speedup_estimate: 1.4,
+    },
+    FusionPattern {
+        pattern_name: "SwiGLU",
+        ops: [
+            SiLU,
+            Mul,
+        ],
+        fused_op_name: "FusedSwiGLU",
+        speedup_estimate: 1.5,
+    },
+    FusionPattern {
+        pattern_name: "Attention",
+        ops: [
+            Softmax,
+            MatMul,
+        ],
+        fused_op_name: "FusedAttention",
+        speedup_estimate: 1.6,
+    },
+]

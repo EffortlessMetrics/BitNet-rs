@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 167
+expression: cfg
+---
+ContinuousBatchConfig {
+    max_batch_size: 8,
+    max_seq_len: 4096,
+    iteration_timeout_ms: 500,
+}

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 419
+expression: state
+---
+GenerationState {
+    generated_tokens: [],
+    kv_cache_positions: [],
+    current_position: 0,
+    total_time_us: 0,
+    token_times_us: [],
+}

@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 557
+expression: errors
+---
+[
+    DimensionMismatch {
+        expected: 1024,
+        got: 512,
+        dim: "k",
+    },
+    InvalidTileSize {
+        tile: 64,
+        dim: 32,
+        name: "m",
+    },
+    EmptyMatrix,
+    BatchSizeMismatch {
+        expected: 8,
+        got: 4,
+    },
+]

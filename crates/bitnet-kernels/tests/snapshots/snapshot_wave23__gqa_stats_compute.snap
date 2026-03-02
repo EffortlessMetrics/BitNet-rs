@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 63
+expression: stats
+---
+GqaStats {
+    kv_memory_savings: 0.75,
+    effective_bandwidth_ratio: 0.25,
+    attention_flops: 4294967296,
+}

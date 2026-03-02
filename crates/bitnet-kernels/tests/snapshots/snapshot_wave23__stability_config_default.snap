@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 272
+expression: cfg
+---
+StabilityConfig {
+    max_value: 65504.0,
+    min_value: -65504.0,
+    nan_replacement: 0.0,
+    inf_replacement: 0.0,
+    atol: 1e-5,
+    rtol: 0.001,
+}

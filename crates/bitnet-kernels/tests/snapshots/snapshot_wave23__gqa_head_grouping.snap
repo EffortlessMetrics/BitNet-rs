@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 56
+expression: grouping
+---
+HeadGrouping {
+    mapping: [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+    ],
+    group_size: 4,
+}

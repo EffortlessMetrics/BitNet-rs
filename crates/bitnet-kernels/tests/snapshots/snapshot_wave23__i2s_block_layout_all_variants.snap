@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 582
+expression: layouts
+---
+[
+    BitNet32F16,
+    Qk256,
+    Custom(
+        128,
+    ),
+]

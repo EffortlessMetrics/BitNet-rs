@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 223
+expression: cfg
+---
+PrefixCacheConfig {
+    max_entries: 256,
+    max_prefix_len: 4096,
+    eviction_policy: Lru,
+    enable_system_prompt_pin: true,
+}

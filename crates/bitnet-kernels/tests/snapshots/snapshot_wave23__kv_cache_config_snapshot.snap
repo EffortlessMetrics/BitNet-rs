@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 610
+expression: cfg
+---
+KvCacheConfig {
+    max_seq_len: 4096,
+    num_heads: 32,
+    head_dim: 128,
+    num_layers: 24,
+    dtype_bytes: 4,
+}

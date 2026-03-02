@@ -1,0 +1,27 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 151
+expression: errors
+---
+[
+    CyclicGraph,
+    ShapeMismatch {
+        node_id: 5,
+        expected: [
+            1,
+            32,
+            128,
+        ],
+        got: [
+            1,
+            32,
+            64,
+        ],
+    },
+    UnsupportedFusion(
+        "triple softmax",
+    ),
+    InvalidGraph(
+        "disconnected subgraph",
+    ),
+]

@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 513
+expression: cfg
+---
+ReduceConfig {
+    op: Mean,
+    axis: Some(
+        1,
+    ),
+    keepdims: true,
+    dtype: F16,
+}

@@ -1,0 +1,41 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 107
+expression: graph
+---
+ComputeGraph {
+    nodes: [
+        GraphNode {
+            id: 0,
+            op: MatMul,
+            inputs: [],
+            output_shape: [
+                1,
+                32,
+                2048,
+            ],
+            dtype: F32,
+        },
+        GraphNode {
+            id: 1,
+            op: RmsNorm,
+            inputs: [
+                0,
+            ],
+            output_shape: [
+                1,
+                32,
+                2048,
+            ],
+            dtype: F32,
+        },
+    ],
+    edges: [
+        (
+            0,
+            1,
+        ),
+    ],
+    name: "test_graph",
+    next_id: 2,
+}

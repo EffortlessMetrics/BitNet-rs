@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 504
+expression: cfg
+---
+ReduceConfig {
+    op: Sum,
+    axis: None,
+    keepdims: false,
+    dtype: F32,
+}

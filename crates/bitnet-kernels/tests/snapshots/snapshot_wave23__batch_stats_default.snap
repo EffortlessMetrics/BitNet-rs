@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 209
+expression: stats
+---
+ContinuousBatchStats {
+    slot_utilization: 0.0,
+    preemption_count: 0,
+    avg_generation_length: 0.0,
+    total_completed: 0,
+    total_tokens_generated: 0,
+}

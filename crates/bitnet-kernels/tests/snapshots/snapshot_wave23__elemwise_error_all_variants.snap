@@ -1,0 +1,27 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 464
+expression: errors
+---
+[
+    ShapeMismatch {
+        a: [
+            2,
+            3,
+        ],
+        b: [
+            4,
+            5,
+        ],
+    },
+    ZeroDimension,
+    DivisionByZero,
+    InvalidClampBounds {
+        min: 1.0,
+        max: 0.5,
+    },
+    DataShapeMismatch {
+        expected: 100,
+        actual: 50,
+    },
+]

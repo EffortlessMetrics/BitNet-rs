@@ -1,0 +1,54 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 175
+expression: mgr
+---
+SlotManager {
+    slots: [
+        GenerationSlot {
+            slot_id: 0,
+            request: None,
+            current_position: 0,
+            max_tokens: 0,
+            is_active: false,
+            generated_tokens: [],
+        },
+        GenerationSlot {
+            slot_id: 1,
+            request: None,
+            current_position: 0,
+            max_tokens: 0,
+            is_active: false,
+            generated_tokens: [],
+        },
+        GenerationSlot {
+            slot_id: 2,
+            request: None,
+            current_position: 0,
+            max_tokens: 0,
+            is_active: false,
+            generated_tokens: [],
+        },
+        GenerationSlot {
+            slot_id: 3,
+            request: None,
+            current_position: 0,
+            max_tokens: 0,
+            is_active: false,
+            generated_tokens: [],
+        },
+    ],
+    config: ContinuousBatchConfig {
+        max_batch_size: 4,
+        max_seq_len: 2048,
+        iteration_timeout_ms: 100,
+    },
+    next_request_id: 1,
+    stats: ContinuousBatchStats {
+        slot_utilization: 0.0,
+        preemption_count: 0,
+        avg_generation_length: 0.0,
+        total_completed: 0,
+        total_tokens_generated: 0,
+    },
+}

@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 300
+expression: "format!(\"{:?}\", detector)"
+---
+InfDetector { locations: [AnomalyLocation { index: 0, value: inf }, AnomalyLocation { index: 2, value: -inf }] }

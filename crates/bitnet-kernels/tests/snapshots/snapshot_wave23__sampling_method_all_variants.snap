@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 390
+expression: methods
+---
+[
+    Greedy,
+    Temperature(
+        0.7,
+    ),
+    TopK(
+        50,
+    ),
+    TopP(
+        0.95,
+    ),
+    TopKP(
+        50,
+        0.95,
+    ),
+]

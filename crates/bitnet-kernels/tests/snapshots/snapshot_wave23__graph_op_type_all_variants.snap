@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 93
+expression: ops
+---
+[
+    MatMul,
+    Add,
+    Softmax,
+    RmsNorm,
+    RoPE,
+    SiLU,
+    Mul,
+    Transpose,
+    Reshape,
+    Concat,
+    Split,
+    Quantize,
+    Dequantize,
+]

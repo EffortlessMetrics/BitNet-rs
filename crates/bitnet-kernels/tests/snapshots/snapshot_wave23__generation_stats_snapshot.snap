@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 430
+expression: stats
+---
+GenerationStats {
+    total_tokens: 64,
+    prefill_time_us: 12000,
+    decode_time_us: 48000,
+    tokens_per_second: 1333.3,
+}

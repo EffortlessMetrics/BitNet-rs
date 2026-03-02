@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 413
+expression: errors
+---
+[
+    InvalidConfig(
+        "temperature must be > 0",
+    ),
+    EmptyPrompt,
+    VocabTooSmall,
+    NumericalError(
+        "logits contain NaN",
+    ),
+    MaxTokensExceeded,
+]

@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 401
+expression: reasons
+---
+[
+    MaxTokens,
+    StopToken(
+        128009,
+    ),
+    EndOfSequence,
+    Error(
+        "numerical overflow",
+    ),
+]

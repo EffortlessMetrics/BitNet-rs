@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave23.rs
+assertion_line: 235
+expression: errors
+---
+[
+    CacheFull {
+        max_entries: 1024,
+    },
+    PrefixTooLong {
+        len: 10000,
+        max: 4096,
+    },
+    RefcountNonZero {
+        entry_id: 3,
+    },
+    EntryNotFound {
+        entry_id: 99,
+    },
+    DuplicatePin,
+]
