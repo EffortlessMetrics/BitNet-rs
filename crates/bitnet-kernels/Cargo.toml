@@ -57,6 +57,7 @@ insta.workspace = true
 rand_chacha = "0.9.0"
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
+libm = "0.2.16"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
 wgpu = { version = "24", features = ["metal"] }
@@ -114,7 +115,13 @@ path = "tests/metal_device_integration_tests.rs"
 name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
 
+[[test]]
+name = "cpu_scalar_parity"
+path = "tests/cpu_scalar_parity.rs"
+required-features = ["cpu"]
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
+
