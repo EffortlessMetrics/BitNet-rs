@@ -1,0 +1,10 @@
+[package]
+name = "bitnet-bench-regression-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92.0"
+description = "Core regression detection primitives for benchmark receipts"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bitnet-bench-receipts = { path = "../bitnet-bench-receipts" }
