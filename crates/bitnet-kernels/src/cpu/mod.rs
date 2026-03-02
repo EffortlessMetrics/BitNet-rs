@@ -74,6 +74,9 @@ pub mod neon_pooling;
 pub mod neon_batch_norm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_attention;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_quantized_matmul;
 
 #[cfg(target_arch = "aarch64")]
