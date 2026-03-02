@@ -11,8 +11,6 @@ pub use attention::{
     masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
 };
 pub mod batch_norm;
-pub mod batch_normalization;
-pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
@@ -114,7 +112,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
-pub use loss::*;
+pub use loss::LossReduction;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
@@ -135,4 +133,5 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
-pub mod tensor_parallel;
+pub mod layer_fusion;
+pub use layer_fusion::*;
