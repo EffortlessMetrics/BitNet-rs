@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: mask
+---
+AttentionMask {
+    mask: [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+    ],
+    seq_len: 3,
+    kv_len: 5,
+}

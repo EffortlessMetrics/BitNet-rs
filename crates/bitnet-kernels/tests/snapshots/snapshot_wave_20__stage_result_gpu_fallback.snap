@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: result
+---
+StageResult {
+    stage: FeedForward,
+    output_shape: [
+        1,
+        128,
+        3072,
+    ],
+    execution_time_ns: 2000000,
+    used_gpu: false,
+    fallback_triggered: true,
+}

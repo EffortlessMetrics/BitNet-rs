@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: cfg
+---
+FlashAttentionConfig {
+    tile_q: 64,
+    tile_kv: 64,
+    causal: false,
+}

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: report.to_table()
+---
+OpenCL Kernel Profiling Report
+==============================
+Total kernels : 10
+Total GPU time: 0.500 ms
+Avg kernel    : 50.000 µs
+
+Kernel                          Count    Total(µs)      Min(µs)      Max(µs)      Avg(µs)   StdDev(µs)
+-----------------------------------------------------------------------------------------------------------
+gemm_i2s                           10        500.0         30.0         80.0         50.0         12.5
+-----------------------------------------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: cfg
+---
+Conv1dConfig {
+    in_channels: 128,
+    out_channels: 128,
+    kernel_size: 5,
+    stride: 2,
+    padding: Same,
+    dilation: 1,
+    groups: 128,
+    bias: false,
+}
