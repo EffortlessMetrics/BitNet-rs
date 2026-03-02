@@ -133,3 +133,9 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
+pub mod tokenizer_helpers;
+pub use tokenizer_helpers::{
+    PaddingStrategy, TokenizerHelperError, TruncationStrategy, batch_encode_positions,
+    combine_masks, create_causal_mask, create_padding_mask, create_position_ids, left_pad_sequence,
+    one_hot_encode, right_pad_sequence, token_ids_to_embeddings, truncate_sequence,
+};
