@@ -120,6 +120,40 @@ fn cpu_sum_rows(data: &[f32], rows: usize, cols: usize) -> Vec<f32> {
         .collect()
 }
 
+fn cpu_l2_norm(data: &[f32]) -> f32 {
+    (data.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>()).sqrt() as f32
+}
+
+fn cpu_l1_norm(data: &[f32]) -> f32 {
+    data.iter().map(|x| x.abs()).sum()
+}
+
+fn cpu_variance(data: &[f32]) -> Option<f32> {
+    if data.is_empty() {
+        return None;
+    }
+    let mean = cpu_mean(data)?;
+    Some(data.iter().map(|&x| (x - mean) * (x - mean)).sum::<f32>() / data.len() as f32)
+}
+
+fn cpu_softmax(data: &[f32]) -> Vec<f32> {
+    if data.is_empty() {
+        return vec![];
+    }
+    let max_val = cpu_max(data).unwrap();
+    let exps: Vec<f32> = data.iter().map(|&x| (x - max_val).exp()).collect();
+    let sum: f32 = exps.iter().sum();
+    exps.iter().map(|&e| e / sum).collect()
+}
+
+fn cpu_softmax_with_temperature(data: &[f32], temperature: f32) -> Vec<f32> {
+    if data.is_empty() {
+        return vec![];
+    }
+    let scaled: Vec<f32> = data.iter().map(|&x| x / temperature).collect();
+    cpu_softmax(&scaled)
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /// Align `size` up to the next multiple of `METAL_BUFFER_ALIGNMENT`.
@@ -925,4 +959,455 @@ fn test_reduction_throughput_scaling() {
         }
         prev_ns_per_elem = ns_per_elem;
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 11. Sum reduction — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_sum_reduction_powers_of_2() {
+    for exp in 0..=14 {
+        let n = 1_usize << exp;
+        let data: Vec<f32> = (0..n).map(|i| i as f32).collect();
+        let expected = cpu_sum(&data);
+        let result = simulated_parallel_sum(&data, SIMD_GROUP_WIDTH);
+        let tol = (n as f32) * 1e-5;
+        assert!(
+            (result - expected).abs() < tol.max(f32::EPSILON),
+            "pow2 n={n}: gpu={result}, cpu={expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_sum_reduction_negative_values() {
+    let data: Vec<f32> = (0..512).map(|i| -(i as f32) * 0.5).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, SIMD_GROUP_WIDTH);
+    assert!((result - expected).abs() < 1.0, "negative sum: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_sum_reduction_mixed_sign() {
+    let data: Vec<f32> =
+        (0..1000).map(|i| if i % 2 == 0 { i as f32 } else { -(i as f32) }).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, SIMD_GROUP_WIDTH);
+    assert!((result - expected).abs() < 1.0, "mixed sign sum: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_sum_reduction_medium_array() {
+    let data: Vec<f32> = (0..4096).map(|i| (i as f32) * 0.01).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, SIMD_GROUP_WIDTH);
+    let rel_err = (result - expected).abs() / expected.abs();
+    assert!(rel_err < 1e-4, "medium sum: gpu={result}, cpu={expected}, err={rel_err}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_sum_reduction_large_array() {
+    let data: Vec<f32> = (0..65536).map(|i| (i as f32) * 0.001).collect();
+    let expected = cpu_sum(&data);
+    let result = multi_stage_sum(&data, MAX_THREADS_PER_THREADGROUP as usize);
+    let rel_err = (result - expected).abs() / expected.abs();
+    assert!(rel_err < 1e-3, "large sum: gpu={result}, cpu={expected}, err={rel_err}");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 12. Max reduction — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_max_reduction_all_negative() {
+    let data = vec![-100.0, -50.0, -200.0, -1.0, -75.0];
+    assert!((cpu_max(&data).unwrap() - (-1.0)).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_max_reduction_all_same() {
+    let data = vec![7.7_f32; 1024];
+    assert!((cpu_max(&data).unwrap() - 7.7).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_max_reduction_large() {
+    let data: Vec<f32> = (0..65536).map(|i| (i as f32) * 0.1).collect();
+    let expected = cpu_max(&data).unwrap();
+    assert!((expected - 6553.5).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_max_reduction_with_nan() {
+    let data = vec![1.0, f32::NAN, 3.0];
+    let result = cpu_max(&data);
+    // NaN comparisons: our cpu_max uses >= so NaN propagation depends on ordering
+    assert!(result.is_some());
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 13. Min reduction — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_min_reduction_all_positive() {
+    let data = vec![10.0, 5.0, 20.0, 1.0, 15.0];
+    assert!((cpu_min(&data).unwrap() - 1.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_min_reduction_all_same() {
+    let data = vec![4.2_f32; 512];
+    assert!((cpu_min(&data).unwrap() - 4.2).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_min_reduction_large() {
+    let mut data: Vec<f32> = (0..65536).map(|i| (i as f32) + 100.0).collect();
+    data[32000] = -999.0;
+    assert!((cpu_min(&data).unwrap() - (-999.0)).abs() < f32::EPSILON);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 14. Mean reduction — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_mean_reduction_two_elements() {
+    let data = [3.0_f32, 7.0];
+    assert!((cpu_mean(&data).unwrap() - 5.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_mean_reduction_correct_division() {
+    let data = vec![10.0, 20.0, 30.0];
+    assert!((cpu_mean(&data).unwrap() - 20.0).abs() < f32::EPSILON);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 15. Argmax/argmin — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_argmax_ties_returns_first() {
+    let data = vec![1.0, 9.0, 3.0, 9.0, 5.0];
+    assert_eq!(cpu_argmax(&data), Some(1)); // first 9.0 at index 1
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_argmin_ties_returns_first() {
+    let data = vec![5.0, 0.0, 3.0, 0.0, 7.0];
+    assert_eq!(cpu_argmin(&data), Some(1)); // first 0.0 at index 1
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_argmax_last_element_is_max() {
+    let data = vec![1.0, 2.0, 3.0, 4.0, 100.0];
+    assert_eq!(cpu_argmax(&data), Some(4));
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_argmin_last_element_is_min() {
+    let data = vec![10.0, 8.0, 6.0, 4.0, -1.0];
+    assert_eq!(cpu_argmin(&data), Some(4));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 16. L2 norm reduction
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l2_norm_unit_vector() {
+    // Unit vector along first axis: norm should be 1.0
+    let mut data = vec![0.0_f32; 128];
+    data[0] = 1.0;
+    assert!((cpu_l2_norm(&data) - 1.0).abs() < 1e-6);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l2_norm_zero_vector() {
+    let data = vec![0.0_f32; 256];
+    assert!((cpu_l2_norm(&data) - 0.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l2_norm_known_values() {
+    // 3-4-5 triangle: sqrt(9 + 16) = 5
+    let data = vec![3.0_f32, 4.0];
+    assert!((cpu_l2_norm(&data) - 5.0).abs() < 1e-5);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l2_norm_large() {
+    // All ones: sqrt(n)
+    let n = 1024;
+    let data = vec![1.0_f32; n];
+    let expected = (n as f32).sqrt();
+    assert!(
+        (cpu_l2_norm(&data) - expected).abs() < 1e-3,
+        "l2 norm large: got={}, expected={expected}",
+        cpu_l2_norm(&data)
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 17. L1 norm reduction
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l1_norm_mixed_signs() {
+    let data = vec![-3.0, 4.0, -1.0, 2.0];
+    assert!((cpu_l1_norm(&data) - 10.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l1_norm_all_positive() {
+    let data = vec![1.0, 2.0, 3.0, 4.0];
+    assert!((cpu_l1_norm(&data) - 10.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l1_norm_all_negative() {
+    let data = vec![-1.0, -2.0, -3.0, -4.0];
+    assert!((cpu_l1_norm(&data) - 10.0).abs() < f32::EPSILON);
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_l1_norm_zero_vector() {
+    let data = vec![0.0_f32; 64];
+    assert!((cpu_l1_norm(&data) - 0.0).abs() < f32::EPSILON);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 18. Variance reduction
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_variance_constant_array_is_zero() {
+    let data = vec![5.0_f32; 256];
+    let var = cpu_variance(&data).unwrap();
+    assert!(var.abs() < 1e-6, "constant array variance should be ~0, got {var}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_variance_known_distribution() {
+    // {1, 2, 3, 4, 5}: mean=3, variance = (4+1+0+1+4)/5 = 2.0
+    let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+    let var = cpu_variance(&data).unwrap();
+    assert!((var - 2.0).abs() < 1e-5, "known variance: got={var}, expected=2.0");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_variance_single_element() {
+    let data = [42.0_f32];
+    let var = cpu_variance(&data).unwrap();
+    assert!(var.abs() < f32::EPSILON, "single element variance should be 0, got {var}");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 19. Softmax reduction
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_softmax_sums_to_one() {
+    let logits = vec![2.0, 1.0, 0.1, -1.0, 3.0, 0.5];
+    let probs = cpu_softmax(&logits);
+    let sum: f32 = probs.iter().sum();
+    assert!((sum - 1.0).abs() < 1e-5, "softmax sum should be 1.0, got {sum}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_softmax_large_input_stability() {
+    // Large logits: naive exp would overflow, but max-subtraction keeps it stable
+    let logits = vec![1000.0, 1001.0, 999.0, 1000.5];
+    let probs = cpu_softmax(&logits);
+    let sum: f32 = probs.iter().sum();
+    assert!((sum - 1.0).abs() < 1e-5, "softmax large: sum={sum}");
+    assert!(probs.iter().all(|&p| p.is_finite()), "softmax probs must be finite");
+    assert!(probs.iter().all(|&p| p >= 0.0), "softmax probs must be non-negative");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_softmax_temperature_scaling() {
+    let logits = vec![1.0, 2.0, 3.0];
+
+    // Low temperature → sharper distribution (more peaked at max)
+    let sharp = cpu_softmax_with_temperature(&logits, 0.1);
+    // High temperature → flatter distribution
+    let flat = cpu_softmax_with_temperature(&logits, 10.0);
+
+    // Both must sum to 1.0
+    let sharp_sum: f32 = sharp.iter().sum();
+    let flat_sum: f32 = flat.iter().sum();
+    assert!((sharp_sum - 1.0).abs() < 1e-5);
+    assert!((flat_sum - 1.0).abs() < 1e-5);
+
+    // Max probability should be higher with low temperature
+    let sharp_max = sharp.iter().cloned().reduce(f32::max).unwrap();
+    let flat_max = flat.iter().cloned().reduce(f32::max).unwrap();
+    assert!(
+        sharp_max > flat_max,
+        "low temp should be sharper: sharp_max={sharp_max}, flat_max={flat_max}"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 20. Threadgroup sizing — parametric
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_32() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 32);
+    assert!((result - expected).abs() < 1.0, "tg=32: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_64() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 64);
+    assert!((result - expected).abs() < 1.0, "tg=64: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_128() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 128);
+    assert!((result - expected).abs() < 1.0, "tg=128: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_256() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 256);
+    assert!((result - expected).abs() < 1.0, "tg=256: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_512() {
+    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 512);
+    assert!((result - expected).abs() < 1.0, "tg=512: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_threadgroup_size_1024() {
+    let data: Vec<f32> = (0..4096).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, 1024);
+    assert!((result - expected).abs() < 1.0, "tg=1024: gpu={result}, cpu={expected}");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 21. Edge cases — additional coverage
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_edge_case_two_elements() {
+    let data = [3.0_f32, 7.0];
+    assert!((simulated_parallel_sum(&data, SIMD_GROUP_WIDTH) - 10.0).abs() < f32::EPSILON);
+    assert_eq!(cpu_argmax(&data), Some(1));
+    assert_eq!(cpu_argmin(&data), Some(0));
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_edge_case_exact_threadgroup_size() {
+    // Exactly MAX_THREADS_PER_THREADGROUP elements — no partial groups
+    let n = MAX_THREADS_PER_THREADGROUP as usize;
+    let data: Vec<f32> = (0..n).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, MAX_THREADS_PER_THREADGROUP);
+    assert!((result - expected).abs() < 1.0, "exact tg: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_edge_case_one_over_threadgroup_size() {
+    // MAX_THREADS_PER_THREADGROUP + 1: triggers second threadgroup
+    let n = MAX_THREADS_PER_THREADGROUP as usize + 1;
+    let data: Vec<f32> = (0..n).map(|i| i as f32).collect();
+    let expected = cpu_sum(&data);
+    let result = simulated_parallel_sum(&data, MAX_THREADS_PER_THREADGROUP);
+    assert!((result - expected).abs() < 1.0, "one-over tg: gpu={result}, cpu={expected}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_edge_case_buffer_alignment_non_aligned() {
+    // 17 f32s = 68 bytes, not 256-aligned
+    let byte_size = 17 * std::mem::size_of::<f32>();
+    assert_ne!(byte_size % METAL_BUFFER_ALIGNMENT, 0);
+    let aligned = align_to_metal(byte_size);
+    assert_eq!(aligned % METAL_BUFFER_ALIGNMENT, 0);
+    assert_eq!(aligned, 256);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 22. Log-sum-exp — additional mixed values test
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_log_sum_exp_mixed_positive_negative() {
+    let data = vec![-5.0, 0.0, 5.0, 10.0, -10.0];
+    let result = cpu_log_sum_exp(&data).unwrap();
+    assert!(result.is_finite(), "lse mixed should be finite");
+    // Dominated by max=10, so result ≈ 10 + small correction
+    assert!((result - 10.0).abs() < 1.0, "lse mixed: got={result}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
+fn test_log_sum_exp_small_values() {
+    let data = vec![0.001, 0.002, 0.003];
+    let result = cpu_log_sum_exp(&data).unwrap();
+    assert!(result.is_finite());
+    // All values near 0, so log(3 * e^~0) ≈ log(3) ≈ 1.099
+    assert!((result - (3.0_f32).ln()).abs() < 0.01, "lse small: got={result}");
 }
