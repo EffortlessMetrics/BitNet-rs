@@ -1461,10 +1461,18 @@ dependencies = [
 name = "bitnet-startup-contract-diagnostics"
 version = "0.2.1-dev"
 dependencies = [
- "anyhow",
  "bitnet-runtime-bootstrap",
+ "bitnet-startup-contract-diagnostics-core",
  "insta",
  "proptest",
+]
+
+[[package]]
+name = "bitnet-startup-contract-diagnostics-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-runtime-bootstrap",
 ]
 
 [[package]]
