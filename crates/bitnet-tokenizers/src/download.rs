@@ -414,6 +414,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "llama2-32k".to_string(),
             expected_vocab: Some(32000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let downloader_result = SmartTokenizerDownload::new();
@@ -465,6 +467,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "llama3-128k".to_string(),
             expected_vocab: Some(128256),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let downloader_result = SmartTokenizerDownload::new();
@@ -495,6 +499,8 @@ mod tests {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "llama2-32k".to_string(),
                 expected_vocab: Some(32000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
             // GPT-2 tokenizer validation
             TokenizerDownloadInfo {
@@ -502,6 +508,8 @@ mod tests {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "gpt2-50k".to_string(),
                 expected_vocab: Some(50257),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
             // LLaMA-3 large vocabulary validation
             TokenizerDownloadInfo {
@@ -509,6 +517,8 @@ mod tests {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "llama3-128k".to_string(),
                 expected_vocab: Some(128256),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
         ];
 
@@ -544,6 +554,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "llama2-32k".to_string(),
             expected_vocab: Some(32000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let downloader_result = SmartTokenizerDownload::new();
@@ -580,6 +592,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "invalid".to_string(),
             expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let downloader_result = SmartTokenizerDownload::new();
@@ -613,6 +627,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string(), "tokenizer.model".to_string()],
             cache_key: "bitnet-custom".to_string(),
             expected_vocab: None,
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let downloader_result = SmartTokenizerDownload::new();
@@ -675,6 +691,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "test-tokenizer".to_string(),
             expected_vocab: Some(50257),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         }
     }
 
@@ -698,6 +716,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "timeout-test".to_string(),
             expected_vocab: Some(32000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         // Test that timeout scenarios are handled gracefully
@@ -760,6 +780,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "large-download".to_string(),
             expected_vocab: Some(128256),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         // In production, this would test actual disk space limits
@@ -790,6 +812,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "concurrent-test".to_string(),
             expected_vocab: Some(50257),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         });
 
         // Spawn multiple concurrent download tasks
@@ -867,6 +891,8 @@ mod tests {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "invalid-format".to_string(),
                 expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
             // Non-existent repository
             TokenizerDownloadInfo {
@@ -874,6 +900,8 @@ mod tests {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "nonexistent".to_string(),
                 expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
             // Invalid file names
             TokenizerDownloadInfo {
@@ -881,6 +909,8 @@ mod tests {
                 files: vec!["nonexistent-file.json".to_string(), "../../../etc/passwd".to_string()],
                 cache_key: "invalid-files".to_string(),
                 expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
             // Empty files list
             TokenizerDownloadInfo {
@@ -888,6 +918,8 @@ mod tests {
                 files: vec![], // Empty files list
                 cache_key: "empty-files".to_string(),
                 expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
             },
         ];
 
@@ -930,6 +962,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "malformed-test".to_string(),
             expected_vocab: Some(1000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         // Simulate malformed downloaded content
@@ -1143,6 +1177,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "offline-test".to_string(),
             expected_vocab: Some(32000),
+                tokenizer_type: crate::discovery::TokenizerType::Unknown,
+                special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         // Test 1: Verify offline mode is set

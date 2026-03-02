@@ -125,7 +125,7 @@ fn detect_from_vocab_size_known_models() {
 
 #[test]
 fn detect_from_vocab_size_unknown() {
-    assert_eq!(ModelTypeDetector::detect_from_vocab_size(100352), "unknown");
+    assert_eq!(ModelTypeDetector::detect_from_vocab_size(100352), "phi4");
     assert_eq!(ModelTypeDetector::detect_from_vocab_size(1), "unknown");
     assert_eq!(ModelTypeDetector::detect_from_vocab_size(999999), "unknown");
 }
@@ -180,6 +180,8 @@ fn strategy_needs_download_properties() {
         files: vec!["tokenizer.json".into()],
         cache_key: "llama3".into(),
         expected_vocab: Some(128256),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     let s = TokenizerStrategy::NeedsDownload(info);
     assert!(s.requires_network());
@@ -213,6 +215,8 @@ fn download_info_construction_and_clone() {
         files: vec!["a.json".into(), "b.model".into()],
         cache_key: "test-key".into(),
         expected_vocab: Some(50257),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     let cloned = info.clone();
     assert_eq!(cloned.repo, "org/repo");
@@ -228,6 +232,8 @@ fn download_info_none_vocab() {
         files: vec![],
         cache_key: "k".into(),
         expected_vocab: None,
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     assert!(info.expected_vocab.is_none());
     assert!(info.files.is_empty());

@@ -12,6 +12,15 @@ impl ModelTypeDetector {
             128256 => "llama3".to_string(),
             32016 => "codellama".to_string(),
             50257 => "gpt2".to_string(),
+            100352 => "phi4".to_string(),
+            51200 => "phi2".to_string(),
+            32064 => "phi3".to_string(),
+            152064 => "qwen2.5".to_string(),
+            151936 => "qwen2".to_string(),
+            256000 => "gemma".to_string(),
+            32768 => "mistral-v03".to_string(),
+            131072 => "mistral-nemo".to_string(),
+            49152 => "smollm".to_string(),
             _ => "unknown".to_string(),
         }
     }
@@ -46,6 +55,16 @@ impl ModelTypeDetector {
             "llama3" => Some(128256),
             "codellama" => Some(32016),
             "gpt2" => Some(50257),
+            "phi4" => Some(100352),
+            "phi3" => Some(32064),
+            "phi2" => Some(51200),
+            "qwen2.5" => Some(152064),
+            "qwen2" => Some(151936),
+            "gemma" | "gemma2" => Some(256000),
+            "mistral" => Some(32000),
+            "mistral-v03" => Some(32768),
+            "mistral-nemo" => Some(131072),
+            "smollm" | "smollm2" => Some(49152),
             _ => None,
         }
     }
@@ -61,7 +80,29 @@ mod tests {
         assert_eq!(ModelTypeDetector::detect_from_vocab_size(128256), "llama3");
         assert_eq!(ModelTypeDetector::detect_from_vocab_size(32016), "codellama");
         assert_eq!(ModelTypeDetector::detect_from_vocab_size(50257), "gpt2");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(100352), "phi4");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(51200), "phi2");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(32064), "phi3");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(152064), "qwen2.5");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(151936), "qwen2");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(256000), "gemma");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(32768), "mistral-v03");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(131072), "mistral-nemo");
+        assert_eq!(ModelTypeDetector::detect_from_vocab_size(49152), "smollm");
         assert_eq!(ModelTypeDetector::detect_from_vocab_size(42), "unknown");
+    }
+
+    #[test]
+    fn expected_vocab_for_slm_families() {
+        assert_eq!(ModelTypeDetector::expected_vocab_size("phi4"), Some(100352));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("qwen2.5"), Some(152064));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("gemma"), Some(256000));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("gemma2"), Some(256000));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("mistral-v03"), Some(32768));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("mistral-nemo"), Some(131072));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("smollm"), Some(49152));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("smollm2"), Some(49152));
+        assert_eq!(ModelTypeDetector::expected_vocab_size("nonexistent"), None);
     }
 
     #[test]

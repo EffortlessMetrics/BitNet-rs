@@ -476,6 +476,8 @@ fn test_tokenizer_strategy_error_conditions() {
                 files: vec![],
                 cache_key: "invalid".to_string(),
                 expected_vocab: None,
+                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
             }),
             "empty repo",
         ),
