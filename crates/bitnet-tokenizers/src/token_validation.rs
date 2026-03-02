@@ -75,14 +75,14 @@ pub fn validate_tokens(tokens: &[u32], config: &ValidationConfig) -> Result<(), 
         }
     }
 
-    if config.require_bos {
-        if let Some(bos) = config.bos_token_id {
-            let bos_count = tokens.iter().filter(|&&t| t == bos).count();
-            if bos_count == 0 {
-                errors.push(TokenError::MissingBos);
-            } else if bos_count > 1 {
-                errors.push(TokenError::DuplicateBos { count: bos_count });
-            }
+    if config.require_bos
+        && let Some(bos) = config.bos_token_id
+    {
+        let bos_count = tokens.iter().filter(|&&t| t == bos).count();
+        if bos_count == 0 {
+            errors.push(TokenError::MissingBos);
+        } else if bos_count > 1 {
+            errors.push(TokenError::DuplicateBos { count: bos_count });
         }
     }
 
@@ -120,13 +120,15 @@ pub fn truncate(tokens: &[u32], max_length: usize, bos_id: Option<u32>) -> Vec<u
     }
 
     // If first token is BOS, keep it
-    if let Some(bos) = bos_id {
-        if !tokens.is_empty() && tokens[0] == bos && max_length >= 2 {
-            let mut result = vec![bos];
-            let skip = tokens.len() - (max_length - 1);
-            result.extend_from_slice(&tokens[skip..]);
-            return result;
-        }
+    if let Some(bos) = bos_id
+        && !tokens.is_empty()
+        && tokens[0] == bos
+        && max_length >= 2
+    {
+        let mut result = vec![bos];
+        let skip = tokens.len() - (max_length - 1);
+        result.extend_from_slice(&tokens[skip..]);
+        return result;
     }
 
     tokens[tokens.len() - max_length..].to_vec()
