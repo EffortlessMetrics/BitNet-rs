@@ -12,6 +12,7 @@
 //! `#[cfg(any(feature = "gpu", ...))]`.
 
 #[allow(unused_imports)]
+use serial_test::serial;
 use bitnet_device_probe::{
     DeviceCapabilities, gpu_available_runtime, gpu_compiled, oneapi_available_runtime,
     oneapi_compiled, probe_device, probe_gpu, vulkan_available_runtime, vulkan_compiled,
