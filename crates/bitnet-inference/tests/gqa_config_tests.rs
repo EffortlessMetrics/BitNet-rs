@@ -34,7 +34,8 @@ struct GqaGeometry {
 
 fn gqa_geometry(cfg: &ModelConfig) -> GqaGeometry {
     let head_dim = cfg.hidden_size / cfg.num_heads;
-    let effective_kv = if cfg.num_key_value_heads == 0 { cfg.num_heads } else { cfg.num_key_value_heads };
+    let effective_kv =
+        if cfg.num_key_value_heads == 0 { cfg.num_heads } else { cfg.num_key_value_heads };
     let group_size = cfg.num_heads / effective_kv;
     GqaGeometry {
         head_dim,
@@ -151,7 +152,8 @@ fn head_dim_calculation_various_sizes() {
 /// Compute per-layer KV cache size in bytes (f32) for a given config.
 fn kv_cache_bytes_per_layer(cfg: &ModelConfig, max_seq_len: usize) -> usize {
     let g = gqa_geometry(cfg);
-    let effective_kv = if cfg.num_key_value_heads == 0 { cfg.num_heads } else { cfg.num_key_value_heads };
+    let effective_kv =
+        if cfg.num_key_value_heads == 0 { cfg.num_heads } else { cfg.num_key_value_heads };
     // K + V, each: [kv_heads, max_seq_len, head_dim] × sizeof(f32)
     2 * effective_kv * max_seq_len * g.head_dim * std::mem::size_of::<f32>()
 }
@@ -261,11 +263,7 @@ fn kv_broadcast_shape_all_ratios() {
             "{name}: expanded KV must match Q head count"
         );
         // Verify the repeat factor
-        assert_eq!(
-            kv_shape[1] * group_size,
-            heads,
-            "{name}: kv_heads × group_size == num_heads"
-        );
+        assert_eq!(kv_shape[1] * group_size, heads, "{name}: kv_heads × group_size == num_heads");
     }
 }
 
@@ -425,16 +423,10 @@ fn parametric_sweep_real_architectures() {
     ];
 
     for &(name, hidden, heads, kv_heads, intermediate) in architectures {
-        assert_eq!(
-            hidden % heads, 0,
-            "{name}: hidden_size must be divisible by num_heads"
-        );
+        assert_eq!(hidden % heads, 0, "{name}: hidden_size must be divisible by num_heads");
         assert!(kv_heads > 0, "{name}: kv_heads must be > 0");
         assert!(kv_heads <= heads, "{name}: kv_heads <= heads");
-        assert_eq!(
-            heads % kv_heads, 0,
-            "{name}: heads must be divisible by kv_heads"
-        );
+        assert_eq!(heads % kv_heads, 0, "{name}: heads must be divisible by kv_heads");
 
         let cfg = model_config(hidden, heads, kv_heads, intermediate);
         let g = gqa_geometry(&cfg);
@@ -455,14 +447,14 @@ fn parametric_sweep_real_architectures() {
 fn transformer_mha_validation_logic() {
     let test_cases: &[(usize, usize, usize, bool)] = &[
         // (hidden, heads, kv_heads, should_pass)
-        (4096, 32, 32, true),   // MHA
-        (4096, 32, 8, true),    // GQA 4:1
-        (2560, 40, 10, true),   // GQA Phi-4
-        (4096, 32, 4, true),    // GQA 8:1
-        (4096, 32, 1, true),    // MQA
-        (4096, 32, 0, true),    // 0 → defaults to MHA
-        (4096, 32, 7, false),   // not divisible
-        (4097, 32, 8, false),   // hidden not divisible by heads
+        (4096, 32, 32, true), // MHA
+        (4096, 32, 8, true),  // GQA 4:1
+        (2560, 40, 10, true), // GQA Phi-4
+        (4096, 32, 4, true),  // GQA 8:1
+        (4096, 32, 1, true),  // MQA
+        (4096, 32, 0, true),  // 0 → defaults to MHA
+        (4096, 32, 7, false), // not divisible
+        (4097, 32, 8, false), // hidden not divisible by heads
     ];
 
     for &(hidden, heads, kv_heads, should_pass) in test_cases {

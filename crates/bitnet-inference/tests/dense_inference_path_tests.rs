@@ -18,10 +18,7 @@ use bitnet_inference::simple_forward::{Weights, logits_for_token};
 fn assert_close(actual: &[f32], expected: &[f32], tol: f32, label: &str) {
     assert_eq!(actual.len(), expected.len(), "{label}: length mismatch");
     for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            (a - e).abs() < tol,
-            "{label}[{i}]: expected {e:.6}, got {a:.6} (tol={tol})",
-        );
+        assert!((a - e).abs() < tol, "{label}[{i}]: expected {e:.6}, got {a:.6} (tol={tol})",);
     }
 }
 
@@ -190,10 +187,7 @@ fn rmsnorm_normalises_dense_weights() {
 
     // Output RMS should be approximately 1.0 when weights are all-ones.
     let out_rms: f32 = (output.iter().map(|x| x * x).sum::<f32>() / dim as f32).sqrt();
-    assert!(
-        (out_rms - 1.0).abs() < 0.01,
-        "rmsnorm output RMS should be ~1.0, got {out_rms}"
-    );
+    assert!((out_rms - 1.0).abs() < 0.01, "rmsnorm output RMS should be ~1.0, got {out_rms}");
 }
 
 #[test]
@@ -331,9 +325,7 @@ fn forward_pass_seq512_works() {
     let w1 = synthetic_weights(dim, inter);
     let w2 = synthetic_weights(inter, dim);
     let norm_w = vec![1.0f32; dim];
-    let input: Vec<f32> = (0..seq_len * dim)
-        .map(|i| ((i as f32) * 0.001).sin())
-        .collect();
+    let input: Vec<f32> = (0..seq_len * dim).map(|i| ((i as f32) * 0.001).sin()).collect();
 
     let output =
         dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
@@ -378,10 +370,8 @@ fn f32_forward_pass_is_deterministic() {
     let norm_w = vec![1.0f32; dim];
     let input: Vec<f32> = (0..dim).map(|i| (i as f32 + 1.0) * 0.1).collect();
 
-    let out1 =
-        dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
-    let out2 =
-        dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
+    let out1 = dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
+    let out2 = dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
 
     // Bit-exact: same input, same weights → identical output
     assert_eq!(out1, out2, "f32 forward pass must be deterministic");
@@ -405,10 +395,24 @@ fn f16_forward_pass_matches_f32_within_tolerance() {
     let w1_f16: Vec<f32> = w1_f32.iter().map(|&v| to_f16(v)).collect();
     let w2_f16: Vec<f32> = w2_f32.iter().map(|&v| to_f16(v)).collect();
 
-    let out_f32 =
-        dense_transformer_block(&input, &w1_f32, &w2_f32, &norm_w, dim, inter, ActivationType::Silu);
-    let out_f16 =
-        dense_transformer_block(&input, &w1_f16, &w2_f16, &norm_w, dim, inter, ActivationType::Silu);
+    let out_f32 = dense_transformer_block(
+        &input,
+        &w1_f32,
+        &w2_f32,
+        &norm_w,
+        dim,
+        inter,
+        ActivationType::Silu,
+    );
+    let out_f16 = dense_transformer_block(
+        &input,
+        &w1_f16,
+        &w2_f16,
+        &norm_w,
+        dim,
+        inter,
+        ActivationType::Silu,
+    );
 
     assert_close(&out_f16, &out_f32, 1e-3, "f16 vs f32");
 }
@@ -431,10 +435,23 @@ fn bf16_loaded_weights_match_f32_within_tolerance() {
     let w1_bf16: Vec<f32> = w1_f32.iter().map(|&v| to_bf16(v)).collect();
     let w2_bf16: Vec<f32> = w2_f32.iter().map(|&v| to_bf16(v)).collect();
 
-    let out_f32 =
-        dense_transformer_block(&input, &w1_f32, &w2_f32, &norm_w, dim, inter, ActivationType::Silu);
+    let out_f32 = dense_transformer_block(
+        &input,
+        &w1_f32,
+        &w2_f32,
+        &norm_w,
+        dim,
+        inter,
+        ActivationType::Silu,
+    );
     let out_bf16 = dense_transformer_block(
-        &input, &w1_bf16, &w2_bf16, &norm_w, dim, inter, ActivationType::Silu,
+        &input,
+        &w1_bf16,
+        &w2_bf16,
+        &norm_w,
+        dim,
+        inter,
+        ActivationType::Silu,
     );
 
     // BF16 has lower precision than F16, so use a wider tolerance.
@@ -474,13 +491,7 @@ fn numerical_stability_large_activations() {
         dense_transformer_block(&input, &w1, &w2, &norm_w, dim, inter, ActivationType::Silu);
 
     // RMSNorm should tame the large values; output must remain finite
-    assert!(
-        output.iter().all(|v| v.is_finite()),
-        "large-activation output must be finite"
-    );
+    assert!(output.iter().all(|v| v.is_finite()), "large-activation output must be finite");
     // No NaN/Inf propagation
-    assert!(
-        !output.iter().any(|v| v.is_nan()),
-        "no NaN in large-activation forward pass"
-    );
+    assert!(!output.iter().any(|v| v.is_nan()), "no NaN in large-activation forward pass");
 }

@@ -991,8 +991,8 @@ mod tests {
             files: vec!["tokenizer.json".to_string()],
             cache_key: "invalid".to_string(),
             expected_vocab: Some(1000),
-                tokenizer_type: crate::discovery::TokenizerType::Unknown,
-                special_tokens: crate::discovery::SpecialTokenConfig::default(),
+            tokenizer_type: crate::discovery::TokenizerType::Unknown,
+            special_tokens: crate::discovery::SpecialTokenConfig::default(),
         };
 
         let download_strategy = TokenizerStrategy::NeedsDownload(download_info);
