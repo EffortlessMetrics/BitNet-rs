@@ -14,6 +14,7 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
 - **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
+- **SLM model support** — load and run Phi-4, Qwen, Gemma, Mistral, LLaMA, and SmolLM2 via SafeTensors ([quickstart guide](docs/slm-quickstart.md))
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
 
 > **v0.2.1-dev (pre-alpha):** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned. Significant correctness, performance, and validation work remains.
@@ -142,7 +143,7 @@ Organised by [Diátaxis](https://diataxis.fr/):
 | [**Explanation**](docs/explanation/) | Architecture, quantization formats, dual-backend cross-val, feature flags |
 | [**Reference**](docs/reference/) | CLI flags, environment variables, API, quantization support |
 
-Key guides: [Quickstart](docs/quickstart.md) · [Environment variables](docs/environment-variables.md) · [GPU setup](docs/GPU_SETUP.md) · [Intel GPU setup](docs/INTEL_GPU_SETUP.md) · [C++ cross-validation](docs/howto/cpp-setup.md) · [Quantization support](docs/reference/quantization-support.md) · [Validation gates](docs/reference/validation-gates.md) · [Honest-compute receipts](docs/howto/receipt-verification.md) · [QK256 usage](docs/howto/use-qk256-models.md) · [macOS 26 Apple Silicon roadmap](docs/reference/macos-26-apple-silicon-roadmap.md)
+Key guides: [Quickstart](docs/quickstart.md) · [SLM models](docs/slm-quickstart.md) · [Environment variables](docs/environment-variables.md) · [GPU setup](docs/GPU_SETUP.md) · [Intel GPU setup](docs/INTEL_GPU_SETUP.md) · [C++ cross-validation](docs/howto/cpp-setup.md) · [Quantization support](docs/reference/quantization-support.md) · [Validation gates](docs/reference/validation-gates.md) · [Honest-compute receipts](docs/howto/receipt-verification.md) · [QK256 usage](docs/howto/use-qk256-models.md) · [macOS 26 Apple Silicon roadmap](docs/reference/macos-26-apple-silicon-roadmap.md)
 
 ## Building
 
