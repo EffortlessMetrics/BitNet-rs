@@ -24,6 +24,7 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
+pub mod norm_registry;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
