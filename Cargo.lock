@@ -457,6 +457,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-circuit-breaker-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "bitnet-cli"
 version = "0.2.1-dev"
 dependencies = [
@@ -1308,6 +1317,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-circuit-breaker-core",
  "bitnet-common",
  "bitnet-device-config-core",
  "bitnet-eval-core",

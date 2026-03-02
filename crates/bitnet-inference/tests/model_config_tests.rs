@@ -5,10 +5,8 @@
 //! head-count validation, context-length configs, hidden-dimension validation,
 //! SLM family configs (BitNet, Phi-4, LLaMA, Qwen), and edge cases.
 
-use bitnet_common::config::{
-    ActivationType, ModelConfig, NormType,
-};
 use bitnet_common::ArchitectureRegistry;
+use bitnet_common::config::{ActivationType, ModelConfig, NormType};
 use bitnet_inference::config::{GenerationConfig, InferenceConfig};
 use bitnet_models::config::{GgufModelConfig, GgufQuantizationConfig};
 
@@ -255,15 +253,10 @@ fn inference_config_reject_zero_batch_size() {
 
 #[test]
 fn architecture_detection_core_families() {
-    let core = [
-        "bitnet", "llama", "mistral", "phi", "qwen", "gemma",
-        "deepseek", "falcon", "gpt", "bert",
-    ];
+    let core =
+        ["bitnet", "llama", "mistral", "phi", "qwen", "gemma", "deepseek", "falcon", "gpt", "bert"];
     for name in &core {
-        assert!(
-            ArchitectureRegistry::is_known(name),
-            "core family '{name}' must be recognised"
-        );
+        assert!(ArchitectureRegistry::is_known(name), "core family '{name}' must be recognised");
     }
 }
 

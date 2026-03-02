@@ -42,6 +42,7 @@ members = [
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
   "crates/bitnet-kv-cache-policy-core", # SRP: KV-cache sequence transition decision policy
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
+  "crates/bitnet-circuit-breaker-core", # SRP: reusable async circuit breaker primitive
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-probability",  # SRP: probability normalization and categorical sampling primitives
@@ -169,6 +170,7 @@ default-members = [
   "crates/bitnet-generation-stop-core",
   "crates/bitnet-kv-cache-policy-core",
   "crates/bitnet-engine-core",
+  "crates/bitnet-circuit-breaker-core",
   "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
