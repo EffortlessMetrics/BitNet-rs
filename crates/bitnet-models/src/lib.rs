@@ -40,6 +40,7 @@ pub use formats::gguf::GgufReader;
 
 // Export weight mapper utilities for crossval tests
 pub use weight_mapper::dry_run_remap_names;
+pub use weight_mapper::WeightMapper;
 
 // AC2: Re-export QK256 tolerance constants from bitnet-quantization (Issue #469)
 pub use bitnet_quantization::{QK256_SIZE_TOLERANCE_PERCENT, qk256_tolerance_bytes};
