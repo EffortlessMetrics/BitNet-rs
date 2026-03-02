@@ -1,6 +1,8 @@
 //! CPU kernel implementations
 
 pub mod activations;
+pub mod elementwise_ops;
+pub use elementwise_ops::*;
 pub mod batch;
 pub use batch::{batched_add, batched_layer_norm, batched_matmul, batched_softmax};
 pub mod attention;
