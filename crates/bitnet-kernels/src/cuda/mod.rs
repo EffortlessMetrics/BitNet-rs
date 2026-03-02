@@ -56,13 +56,16 @@ pub use activations::{
     launch_silu_gate, silu_gate_cpu,
 };
 pub use attention::{
-    AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
-    attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
-    launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
+    AttentionConfig, AttentionError, AttentionKernelConfig, CudaAttentionConfig,
+    apply_attention_mask, attention_cpu_fallback, attention_forward, attention_forward_cpu,
+    attention_softmax, batch_attention_cpu, chunked_attention_cpu, compute_attention_output,
+    compute_attention_scores, flash_attention_forward, grouped_query_attention, launch_attention,
+    masked_attention_cpu_fallback, multi_head_attention, multi_head_attention_cpu_fallback,
+    scaled_dot_product_attention,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use attention::ATTENTION_KERNEL_SRC;
+pub use attention::{ATTENTION_KERNEL_SOURCE, ATTENTION_KERNEL_SRC};
 pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
