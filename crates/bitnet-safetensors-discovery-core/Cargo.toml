@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-safetensors-discovery-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "SRP core helpers for discovering SafeTensors files from file or directory inputs"
+
+[dependencies]
+thiserror.workspace = true
+walkdir = "2.5.0"
+
+[dev-dependencies]
+tempfile.workspace = true

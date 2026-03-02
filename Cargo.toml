@@ -54,6 +54,7 @@ members = [
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-safetensors-ln", # SRP: shared SafeTensors LayerNorm utilities
+  "crates/bitnet-safetensors-discovery-core", # SRP: shared SafeTensors file discovery helpers
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",
@@ -387,6 +388,7 @@ required-features = ["cpu"]
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
+bitnet-safetensors-discovery-core = { path = "crates/bitnet-safetensors-discovery-core", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"

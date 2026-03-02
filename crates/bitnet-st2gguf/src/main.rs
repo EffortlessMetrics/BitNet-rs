@@ -41,6 +41,7 @@ mod layernorm;
 mod writer;
 
 use anyhow::{Context, Result, bail, ensure};
+use bitnet_safetensors_discovery_core::resolve_first_safetensors_file;
 use clap::Parser;
 use half::f16;
 use safetensors::SafeTensors;
@@ -183,21 +184,7 @@ fn resolve_input(input: &Path) -> Result<(PathBuf, Option<PathBuf>)> {
 
 /// Find the first *.safetensors file in a directory
 fn find_safetensors(dir: &Path) -> Result<PathBuf> {
-    let entries = fs::read_dir(dir)
-        .with_context(|| format!("Failed to read directory: {}", dir.display()))?;
-
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file()
-            && let Some(ext) = path.extension()
-            && ext == "safetensors"
-        {
-            return Ok(path);
-        }
-    }
-
-    bail!("No *.safetensors file found in directory: {}", dir.display())
+    resolve_first_safetensors_file(dir).map_err(Into::into)
 }
 
 /// Load config.json if it exists

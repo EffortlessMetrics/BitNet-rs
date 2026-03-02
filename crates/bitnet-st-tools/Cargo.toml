@@ -12,7 +12,7 @@ description = "SafeTensors utilities for BitNet: LN inspection and LN-preserving
 anyhow = "1.0.100"
 clap = { workspace = true, features = ["derive"] }
 bitnet-safetensors-ln = { path = "../bitnet-safetensors-ln", version = "0.2.1-dev" }
-walkdir = "2.5.0"
+bitnet-safetensors-discovery-core = { path = "../bitnet-safetensors-discovery-core", version = "0.2.1-dev" }
 safetensors = "0.6.2"
 half = "2.7.1"
 bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }

@@ -7,10 +7,10 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use walkdir::WalkDir;
 
 #[path = "../common.rs"]
 mod common;
+use bitnet_safetensors_discovery_core::collect_safetensors_files;
 use common::{cast_ln_to_f16, is_ln_gamma, read_safetensors_bytes};
 
 #[derive(Parser, Debug)]
@@ -30,29 +30,7 @@ struct Cli {
 }
 
 fn collect_files(input: &Path) -> Result<Vec<PathBuf>> {
-    let mut out = vec![];
-    if input.is_file() {
-        if input.extension().and_then(|s| s.to_str()) == Some("safetensors") {
-            out.push(input.to_path_buf());
-        } else {
-            return Err(anyhow!("input file is not .safetensors"));
-        }
-    } else {
-        for e in WalkDir::new(input).min_depth(1).max_depth(1) {
-            let e = e?;
-            if e.file_type().is_file() {
-                let p = e.path();
-                if p.extension().and_then(|s| s.to_str()) == Some("safetensors") {
-                    out.push(p.to_path_buf());
-                }
-            }
-        }
-    }
-    if out.is_empty() {
-        return Err(anyhow!("no .safetensors files found in {}", input.display()));
-    }
-    out.sort();
-    Ok(out)
+    Ok(collect_safetensors_files(input)?)
 }
 
 fn main() -> Result<()> {

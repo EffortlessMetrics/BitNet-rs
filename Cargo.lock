@@ -1268,6 +1268,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-safetensors-discovery-core"
+version = "0.2.1-dev"
+dependencies = [
+ "tempfile",
+ "thiserror 2.0.18",
+ "walkdir",
+]
+
+[[package]]
 name = "bitnet-safetensors-ln"
 version = "0.2.1-dev"
 dependencies = [
@@ -1381,6 +1390,7 @@ name = "bitnet-st-tools"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-safetensors-discovery-core",
  "bitnet-safetensors-ln",
  "bytemuck",
  "clap",
@@ -1389,7 +1399,6 @@ dependencies = [
  "safetensors 0.6.2",
  "serde_json",
  "tempfile",
- "walkdir",
 ]
 
 [[package]]
@@ -1399,6 +1408,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-models",
+ "bitnet-safetensors-discovery-core",
  "bytemuck",
  "clap",
  "console 0.16.2",

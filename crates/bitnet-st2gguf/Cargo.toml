@@ -22,6 +22,7 @@ path = "src/main.rs"
 # BitNet-rs internal crates
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-safetensors-discovery-core = { path = "../bitnet-safetensors-discovery-core", version = "0.2.1-dev" }
 
 # Core dependencies
 anyhow.workspace = true
