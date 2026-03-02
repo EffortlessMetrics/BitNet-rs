@@ -1315,6 +1315,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-runtime-bootstrap",
  "bitnet-server-health-types-core",
+ "bitnet-shutdown-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",
@@ -1362,6 +1363,13 @@ version = "0.2.1-dev"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-shutdown-core"
+version = "0.2.1-dev"
+dependencies = [
+ "tracing",
 ]
 
 [[package]]

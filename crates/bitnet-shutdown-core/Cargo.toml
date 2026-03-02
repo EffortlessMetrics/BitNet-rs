@@ -1,0 +1,14 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "SRP core primitive for process shutdown signaling"
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "bitnet-shutdown-core"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+tracing.workspace = true

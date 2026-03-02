@@ -48,6 +48,7 @@ members = [
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
+  "crates/bitnet-shutdown-core", # SRP: shared shutdown signaling primitive
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
@@ -156,6 +157,7 @@ default-members = [
   "crates/bitnet-feature-contract",
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core",
+  "crates/bitnet-shutdown-core",
   "crates/bitnet-testing-policy-core",
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-runtime-profile-core",

@@ -10,35 +10,35 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use bitnet_shutdown_core::ShutdownSignal;
 use tracing::{debug, info, warn};
 
 use crate::concurrency::ConcurrencyManager;
 
 /// Shutdown coordinator for graceful server termination
 pub struct ShutdownCoordinator {
-    shutdown_flag: Arc<AtomicBool>,
+    signal: ShutdownSignal,
 }
 
 impl ShutdownCoordinator {
     /// Create a new shutdown coordinator
     pub fn new() -> Self {
-        Self { shutdown_flag: Arc::new(AtomicBool::new(false)) }
+        Self { signal: ShutdownSignal::new() }
     }
 
     /// Get the shutdown flag for middleware
     pub fn flag(&self) -> Arc<AtomicBool> {
-        Arc::clone(&self.shutdown_flag)
+        self.signal.flag()
     }
 
     /// Check if shutdown has been initiated
     pub fn is_shutting_down(&self) -> bool {
-        self.shutdown_flag.load(AtomicOrdering::SeqCst)
+        self.signal.is_shutting_down()
     }
 
     /// Initiate graceful shutdown
     pub fn initiate_shutdown(&self) {
-        self.shutdown_flag.store(true, AtomicOrdering::SeqCst);
-        info!("Shutdown flag set - new requests will be rejected");
+        self.signal.initiate_shutdown();
     }
 
     /// Wait for active requests to drain
