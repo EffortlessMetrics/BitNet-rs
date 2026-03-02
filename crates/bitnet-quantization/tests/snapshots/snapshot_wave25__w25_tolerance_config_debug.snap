@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: cfg
+---
+ToleranceConfig {
+    i2s_tolerance: 0.05,
+    tl_tolerance: 0.1,
+    perplexity_tolerance: 0.5,
+    strict_validation: true,
+}

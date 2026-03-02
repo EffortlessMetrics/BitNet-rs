@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: err.to_string()
+---
+Quantization error: Invalid input dimensions: error_threshold must be positive

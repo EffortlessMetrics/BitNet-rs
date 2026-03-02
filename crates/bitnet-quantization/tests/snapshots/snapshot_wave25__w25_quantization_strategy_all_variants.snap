@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: strategies
+---
+[
+    Scalar,
+    SSE4_1,
+    AVX2,
+    AVX512,
+    NEON,
+]

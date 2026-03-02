@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: snap
+---
+MemorySnapshot {
+    label: "post_attention_layer_5",
+    timestamp_us: 15432.7,
+    memory_bytes: 67108864,
+}

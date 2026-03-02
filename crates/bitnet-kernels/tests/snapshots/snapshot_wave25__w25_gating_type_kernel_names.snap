@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: names
+---
+[
+    "swiglu_f32",
+    "geglu_f32",
+    "reglu_f32",
+]

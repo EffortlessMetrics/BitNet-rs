@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: profile.to_string()
+---
+Profile(n=100, min=-1.0000, max=0.9800, mean=-0.0100, std=0.5773, nan=0, inf=0)

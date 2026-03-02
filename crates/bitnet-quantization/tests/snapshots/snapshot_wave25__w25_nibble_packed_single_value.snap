@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "format!(\"len={} data_bytes={} value={}\", packed.len, packed.data.len(),\npacked.get(0))"
+---
+len=1 data_bytes=1 value=5

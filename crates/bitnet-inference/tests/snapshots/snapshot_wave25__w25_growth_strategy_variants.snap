@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: strategies
+---
+[
+    Fixed,
+    Double,
+]

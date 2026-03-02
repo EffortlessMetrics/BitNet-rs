@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "format!(\"num_groups={} group_size={} symmetric={} scale_0={:.6} len={}\",\nparams.num_groups, params.group_size, params.symmetric, params.scales[0],\npacked.len)"
+---
+num_groups=1 group_size=32 symmetric=true scale_0=0.142857 len=32

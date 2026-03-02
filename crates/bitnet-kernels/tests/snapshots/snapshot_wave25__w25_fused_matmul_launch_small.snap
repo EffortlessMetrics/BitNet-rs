@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: "format!(\"n={} out_dim={} tpb={} grid={:?} block={:?} shmem={}\", cfg.n,\ncfg.out_dim, cfg.threads_per_block, cfg.grid_dim(), cfg.block_dim(),\ncfg.shared_mem_bytes())"
+---
+n=64 out_dim=32 tpb=64 grid=(32, 1, 1) block=(64, 1, 1) shmem=256

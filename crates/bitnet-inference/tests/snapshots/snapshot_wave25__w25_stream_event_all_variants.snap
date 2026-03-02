@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: events
+---
+[
+    Token(
+        100,
+    ),
+    Text(
+        "hello",
+    ),
+    EndOfStream,
+    Error(
+        "invalid UTF-8 sequence",
+    ),
+]

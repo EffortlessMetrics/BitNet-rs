@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: profile
+---
+LayerProfile {
+    layer_name: "layer_0.attention",
+    layer_type: "attention",
+    forward_time_us: 1250.5,
+    backward_time_us: 0.0,
+    memory_bytes: 4194304,
+    flops_estimate: 805306368,
+}

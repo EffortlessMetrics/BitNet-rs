@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+PoolConfig {
+    initial_size: 4194304,
+    growth_strategy: Fixed,
+    max_pool_size: 134217728,
+    max_allocation_size: 16777216,
+}

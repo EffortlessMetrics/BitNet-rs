@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: "format!(\"nan_count={} inf_count={} is_clean={}\", profile.nan_count,\nprofile.inf_count, profile.is_clean())"
+---
+nan_count=2 inf_count=0 is_clean=false

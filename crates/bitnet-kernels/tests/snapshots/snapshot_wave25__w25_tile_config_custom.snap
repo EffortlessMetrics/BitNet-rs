@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: cfg
+---
+TileConfig {
+    tile_m: 64,
+    tile_n: 128,
+    tile_k: 16,
+}

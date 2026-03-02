@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: profile
+---
+LayerProfile {
+    layer_name: "layer_0.ffn",
+    layer_type: "ffn",
+    forward_time_us: 850.3,
+    backward_time_us: 0.0,
+    memory_bytes: 8388608,
+    flops_estimate: 1610612736,
+}

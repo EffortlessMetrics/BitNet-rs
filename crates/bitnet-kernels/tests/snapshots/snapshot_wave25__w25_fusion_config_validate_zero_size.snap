@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: err.to_string()
+---
+invalid config: min_fusion_size must be > 0

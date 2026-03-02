@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: dtypes
+---
+[
+    F32,
+    F16,
+]

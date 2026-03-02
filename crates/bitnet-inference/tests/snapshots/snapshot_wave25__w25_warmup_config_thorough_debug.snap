@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+WarmupConfig {
+    iterations: 5,
+    seq_len: 128,
+    warmup_kv_cache: true,
+    warmup_kernels: true,
+    timeout: 60s,
+}

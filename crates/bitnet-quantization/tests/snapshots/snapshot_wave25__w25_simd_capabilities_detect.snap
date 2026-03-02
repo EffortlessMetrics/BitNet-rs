@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "format!(\"avx512={} avx2={} neon={} sse4_1={}\", caps.has_avx512, caps.has_avx2,\ncaps.has_neon, caps.has_sse4_1)"
+---
+avx512=true avx2=true neon=false sse4_1=true

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: stats
+---
+GenerationStats {
+    tokens_generated: 0,
+    errors_encountered: 0,
+    retries_attempted: 0,
+    cancelled: false,
+}

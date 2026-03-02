@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+StreamingConfig {
+    buffer_size: 10,
+    flush_interval_ms: 50,
+    max_retries: 3,
+    token_timeout_ms: 5000,
+    cancellable: true,
+}

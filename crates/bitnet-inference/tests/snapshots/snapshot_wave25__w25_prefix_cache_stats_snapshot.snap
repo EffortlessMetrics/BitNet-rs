@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: stats
+---
+PrefixCacheStats {
+    hit_rate: 0.85,
+    miss_rate: 0.15,
+    eviction_count: 42,
+    memory_usage: 67108864,
+    avg_prefix_match_length: 12.5,
+}

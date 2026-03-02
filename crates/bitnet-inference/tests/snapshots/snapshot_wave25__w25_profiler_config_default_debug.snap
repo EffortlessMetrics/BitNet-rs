@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+ProfilerConfig {
+    enabled: true,
+    record_memory: false,
+    warmup_iterations: 0,
+    sample_size: 1,
+}

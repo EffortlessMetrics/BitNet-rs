@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: cfg
+---
+SimdMatmulConfig {
+    m: 512,
+    n: 512,
+    k: 512,
+    alpha: 1.0,
+    beta: 0.0,
+    transpose_a: false,
+    transpose_b: false,
+}

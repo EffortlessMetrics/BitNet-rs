@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "labeled.join(\", \")"
+---
+Calibration=0, Quantization=1, Verification=2, PackingOptimization=3

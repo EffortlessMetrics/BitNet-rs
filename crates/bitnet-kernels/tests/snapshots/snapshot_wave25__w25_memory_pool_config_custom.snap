@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: cfg
+---
+MemoryPoolConfig {
+    initial_size: 134217728,
+    max_size: 2147483648,
+    block_size: 512,
+    alignment: 512,
+}

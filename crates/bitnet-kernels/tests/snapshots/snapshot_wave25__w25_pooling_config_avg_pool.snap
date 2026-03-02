@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: cfg
+---
+PoolingConfig {
+    pool_type: Average,
+    input_len: 512,
+    kernel_size: 4,
+    stride: 4,
+    padding: 0,
+    threads_per_block: 128,
+}

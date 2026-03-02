@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "format!(\"strategy={strategy:?} block_size={block_size}\")"
+---
+strategy=AVX512 block_size=256

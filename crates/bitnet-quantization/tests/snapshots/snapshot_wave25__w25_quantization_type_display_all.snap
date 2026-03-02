@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: displays
+---
+[
+    "I2_S",
+    "TL1",
+    "TL2",
+]

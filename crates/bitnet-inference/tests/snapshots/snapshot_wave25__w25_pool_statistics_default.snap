@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: stats
+---
+PoolStatistics {
+    bytes_allocated: 0,
+    bytes_freed: 0,
+    peak_usage: 0,
+    allocation_count: 0,
+    reset_count: 0,
+    slab_checkouts: 0,
+    slab_returns: 0,
+    total_pool_bytes: 0,
+}

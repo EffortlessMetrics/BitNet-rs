@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: "format!(\"n={} tpb={} gating={:?} grid={:?} block={:?}\", cfg.n,\ncfg.threads_per_block, cfg.gating, cfg.grid_dim(), cfg.block_dim())"
+---
+n=4096 tpb=256 gating=SwiGLU grid=(16, 1, 1) block=(256, 1, 1)

@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: result
+---
+WarmupResult {
+    iterations_completed: 1,
+    total_time: 30s,
+    iteration_times: [
+        30s,
+    ],
+    timed_out: true,
+    status: TimedOut,
+}

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: unpacked
+---
+[
+    -8,
+    -4,
+    -1,
+    0,
+    1,
+    4,
+    7,
+    3,
+]

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+PrefixCacheConfig {
+    max_entries: 256,
+    max_memory_bytes: 134217728,
+    eviction_policy: LFU,
+    min_prefix_length: 8,
+    ttl_seconds: 7200,
+}

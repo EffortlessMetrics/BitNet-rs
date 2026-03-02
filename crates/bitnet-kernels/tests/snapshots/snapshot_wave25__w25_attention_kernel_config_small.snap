@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave25.rs
+expression: cfg
+---
+AttentionKernelConfig {
+    tile_q: 32,
+    tile_kv: 64,
+    n_heads: 12,
+    head_dim: 64,
+    seq_len_q: 128,
+    seq_len_kv: 128,
+    threads_per_block: 256,
+    shared_mem_bytes: 24832,
+    causal: true,
+    scale: 0.125,
+}

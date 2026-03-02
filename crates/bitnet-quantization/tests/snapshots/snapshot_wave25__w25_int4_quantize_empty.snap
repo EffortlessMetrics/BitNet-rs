@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: "format!(\"num_groups={} len={}\", params.num_groups, packed.len)"
+---
+num_groups=0 len=0

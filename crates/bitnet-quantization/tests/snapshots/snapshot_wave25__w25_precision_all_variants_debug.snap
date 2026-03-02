@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave25.rs
+expression: variants
+---
+[
+    F32,
+    I2S,
+    TL1,
+    TL2,
+]

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave25.rs
+expression: cfg
+---
+EvictionConfig {
+    policy: SlidingWindow,
+    max_pages: 512,
+    window_size: 32,
+}
