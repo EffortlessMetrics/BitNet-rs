@@ -179,6 +179,41 @@ pub fn format_lib_name(stem: &str) -> String {
 /// let updated = append_to_loader_path("/opt/libs");
 /// // All platforms: "/opt/libs"
 /// ```
+/// Returns platform-specific path separator for dynamic loader paths
+///
+/// # Returns
+/// - `":"` on Unix (Linux/macOS)
+/// - `";"` on Windows
+pub fn path_separator() -> &'static str {
+    if cfg!(target_os = "windows") { ";" } else { ":" }
+}
+
+/// Splits a loader path string into individual path components
+///
+/// Uses the platform-specific separator returned by [`path_separator`].
+///
+/// # Arguments
+/// - `path_string`: A loader path string (e.g., "/usr/lib:/opt/lib")
+///
+/// # Returns
+/// A `Vec<String>` of individual path components. Empty components are filtered out.
+pub fn split_loader_path(path_string: &str) -> Vec<String> {
+    let sep = path_separator();
+    path_string.split(sep).filter(|s| !s.is_empty()).map(String::from).collect()
+}
+
+/// Joins path components into a loader path string using the platform separator
+///
+/// # Arguments
+/// - `paths`: Slice of path strings to join
+///
+/// # Returns
+/// A single string with paths joined by the platform-specific separator.
+pub fn join_loader_path(paths: &[&str]) -> String {
+    let sep = path_separator();
+    paths.iter().filter(|s| !s.is_empty()).copied().collect::<Vec<_>>().join(sep)
+}
+
 pub fn append_to_loader_path(new_path: &str) -> String {
     let loader_var = get_loader_path_var();
     let separator = if cfg!(target_os = "windows") { ";" } else { ":" };

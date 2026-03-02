@@ -165,22 +165,23 @@ fn test_qk256_tolerance_logging_strict() {
 /// - Rationale: accounts for alignment padding, rejects corrupted tensors
 /// - Example: 0.1% tolerance for various tensor sizes
 #[test]
-#[ignore = "Documentation test - requires manual verification"]
 fn test_qk256_tolerance_documentation() {
-    // AC2: Verify documentation in docs/reference/quantization-support.md
-    // FIXTURE NEEDED: docs/reference/quantization-support.md with QK256 tolerance section
-    //
-    // Expected documentation:
-    //   ### QK256 Tolerance Policy
-    //   **Constant:** `QK256_SIZE_TOLERANCE_PERCENT = 0.001` (0.1%)
-    //   **Rationale:**
-    //   - Accounts for GGUF metadata padding and alignment requirements
-    //   - Rejects tensors with structural issues (wrong block size, corrupted data)
-    //   - Typical padding: 0-128 bytes for tensors in 128KB-10MB range
+    // AC2: Verify documentation in docs/reference/quantization-support.md mentions QK256.
+    // CARGO_MANIFEST_DIR = crates/bitnet-quantization → workspace root is two levels up
+    let doc_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("docs/reference/quantization-support.md");
 
-    panic!(
-        "AC2: QK256 tolerance documentation not yet implemented. \
-         Expected: Documentation section in docs/reference/quantization-support.md with rationale and examples."
+    assert!(doc_path.exists(), "AC2: quantization-support.md must exist");
+
+    let content = std::fs::read_to_string(&doc_path).expect("read doc file");
+    assert!(content.contains("QK256"), "AC2: quantization-support.md must document QK256 format");
+    assert!(
+        content.contains("I2S") || content.contains("I2_S"),
+        "AC2: quantization-support.md must document I2S quantization"
     );
 }
 
