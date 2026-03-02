@@ -64,6 +64,7 @@ members = [
   "crates/bitnet-wasm-utils",
   "crates/bitnet-sys",
   "crates/bitnet-feature-contract",
+  "crates/bitnet-feature-contract-core", # SRP: policy/runtime feature contract snapshot + drift core
   "crates/bitnet-runtime-profile",
   "crates/bitnet-runtime-profile-core",
   "crates/bitnet-runtime-profile-contract",

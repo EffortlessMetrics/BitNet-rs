@@ -675,11 +675,15 @@ version = "0.2.1-dev"
 name = "bitnet-feature-contract"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-bdd-grid",
+ "bitnet-feature-contract-core",
  "bitnet-feature-matrix",
  "insta",
  "proptest",
 ]
+
+[[package]]
+name = "bitnet-feature-contract-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-feature-matrix"
