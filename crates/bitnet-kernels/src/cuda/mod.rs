@@ -115,12 +115,15 @@ pub use pooling::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use pooling::{ADAPTIVE_AVG_POOL2D_KERNEL_SRC, AVG_POOL2D_KERNEL_SRC, MAX_POOL2D_KERNEL_SRC};
 pub use softmax::{
-    SoftmaxConfig, launch_softmax, online_softmax_cpu, softmax_backward_cpu, softmax_cpu,
-    softmax_forward,
+    SoftmaxConfig, SoftmaxError, flash_softmax, launch_softmax, log_softmax, online_softmax_cpu,
+    softmax_backward_cpu, softmax_cpu, softmax_forward, softmax_with_temperature,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use softmax::SOFTMAX_KERNEL_SRC;
+pub use softmax::{
+    FLASH_SOFTMAX_KERNEL_SRC, SOFTMAX_KERNEL_SRC, SOFTMAX_WARP_REDUCE_KERNEL_SRC,
+    launch_flash_softmax, launch_warp_reduce_softmax,
+};
 
 pub use matmul::{
     GemmConfig, MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward,

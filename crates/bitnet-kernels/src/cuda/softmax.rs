@@ -55,7 +55,58 @@
 //! [`softmax_cpu`] provides an equivalent pure-Rust implementation for
 //! correctness testing and non-GPU environments.
 
+use std::fmt;
+
 use bitnet_common::{KernelError, Result};
+
+// ---------------------------------------------------------------------------
+// SoftmaxError — domain-specific errors
+// ---------------------------------------------------------------------------
+
+/// Errors specific to softmax kernel operations.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SoftmaxError {
+    /// Input slice is empty (zero elements).
+    EmptyInput,
+    /// Temperature parameter is zero or negative.
+    InvalidTemperature(f32),
+    /// Input contains NaN values.
+    NanDetected {
+        /// Index of the first NaN element.
+        position: usize,
+    },
+    /// Dimension mismatch between input and output slices.
+    DimensionMismatch {
+        /// Expected number of elements.
+        expected: usize,
+        /// Actual number of elements.
+        got: usize,
+    },
+    /// Tile size is invalid for flash softmax (must be > 0).
+    InvalidTileSize(usize),
+}
+
+impl fmt::Display for SoftmaxError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyInput => write!(f, "softmax input is empty"),
+            Self::InvalidTemperature(t) => {
+                write!(f, "invalid softmax temperature: {t} (must be > 0)")
+            }
+            Self::NanDetected { position } => {
+                write!(f, "NaN detected in softmax input at position {position}")
+            }
+            Self::DimensionMismatch { expected, got } => {
+                write!(f, "softmax dimension mismatch: expected {expected}, got {got}")
+            }
+            Self::InvalidTileSize(s) => {
+                write!(f, "invalid tile size for flash softmax: {s}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for SoftmaxError {}
 
 // ---------------------------------------------------------------------------
 // CUDA kernel source — warp-level online softmax
@@ -171,6 +222,164 @@ extern "C" __global__ void softmax_online(
                 output[row_off + col] = expf(shifted) / row_sum;
             }
         }
+    }
+}
+"#;
+
+/// CUDA C kernel implementing shared-memory warp-reduce softmax.
+///
+/// Uses a two-pass approach with shared memory for cross-warp communication:
+/// 1. Each warp reduces its local max via `__shfl_xor_sync`.
+/// 2. Warp leaders write to shared memory; a barrier synchronises.
+/// 3. First warp reduces the per-warp maxima in shared memory.
+/// 4. Second pass computes `exp(x - global_max)` and repeats the same
+///    warp → shared-memory → global-reduce pattern for the sum.
+/// 5. Each element is normalised by `1/sum`.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const SOFTMAX_WARP_REDUCE_KERNEL_SRC: &str = r#"
+// Shared-memory warp-reduce softmax.
+// Grid: (n_rows, 1, 1)   Block: (blockDim.x, 1, 1)
+
+extern "C" __global__ void softmax_warp_reduce(
+    const float* __restrict__ input,
+    float*       __restrict__ output,
+    int   n_cols,
+    float inv_temp)
+{
+    extern __shared__ float smem[];
+
+    const int row     = blockIdx.x;
+    const int tid     = threadIdx.x;
+    const int warp_id = tid / 32;
+    const int lane    = tid % 32;
+    const int n_warps = blockDim.x / 32;
+    const int row_off = row * n_cols;
+
+    // Phase 1: thread-local max
+    float local_max = -1e38f;
+    for (int c = tid; c < n_cols; c += blockDim.x) {
+        float v = input[row_off + c] * inv_temp;
+        if (v > local_max) local_max = v;
+    }
+
+    // Warp reduction for max
+    const unsigned FULL_MASK = 0xFFFFFFFFu;
+    for (int off = 16; off >= 1; off >>= 1) {
+        float other = __shfl_xor_sync(FULL_MASK, local_max, off);
+        if (other > local_max) local_max = other;
+    }
+
+    if (lane == 0) smem[warp_id] = local_max;
+    __syncthreads();
+
+    // First warp reduces across warps
+    float row_max = -1e38f;
+    if (tid < n_warps) row_max = smem[tid];
+    for (int off = 16; off >= 1; off >>= 1) {
+        float other = __shfl_xor_sync(FULL_MASK, row_max, off);
+        if (other > row_max) row_max = other;
+    }
+    if (tid == 0) smem[0] = row_max;
+    __syncthreads();
+    row_max = smem[0];
+
+    // Phase 2: exp-sum
+    float local_sum = 0.0f;
+    for (int c = tid; c < n_cols; c += blockDim.x) {
+        local_sum += expf(input[row_off + c] * inv_temp - row_max);
+    }
+    for (int off = 16; off >= 1; off >>= 1) {
+        local_sum += __shfl_xor_sync(FULL_MASK, local_sum, off);
+    }
+    if (lane == 0) smem[warp_id] = local_sum;
+    __syncthreads();
+
+    float row_sum = 0.0f;
+    if (tid < n_warps) row_sum = smem[tid];
+    for (int off = 16; off >= 1; off >>= 1) {
+        row_sum += __shfl_xor_sync(FULL_MASK, row_sum, off);
+    }
+    if (tid == 0) smem[0] = row_sum;
+    __syncthreads();
+    row_sum = smem[0];
+
+    // Phase 3: normalise
+    float inv_sum = 1.0f / row_sum;
+    for (int c = tid; c < n_cols; c += blockDim.x) {
+        output[row_off + c] = expf(input[row_off + c] * inv_temp - row_max) * inv_sum;
+    }
+}
+"#;
+
+/// CUDA C kernel implementing tiled (flash-style) softmax.
+///
+/// Processes each row in tiles of `TILE_SIZE` elements, maintaining a running
+/// `(max, exp_sum)` pair across tiles. After the final tile the per-tile
+/// results are combined and a second write pass normalises the output.
+/// This reduces global memory traffic by keeping intermediate values in
+/// registers and shared memory.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const FLASH_SOFTMAX_KERNEL_SRC: &str = r#"
+// Flash-style tiled softmax.
+// Grid: (n_rows, 1, 1)   Block: (TILE_SIZE, 1, 1)
+
+#ifndef TILE_SIZE
+#define TILE_SIZE 256
+#endif
+
+extern "C" __global__ void flash_softmax(
+    const float* __restrict__ input,
+    float*       __restrict__ output,
+    int   n_cols,
+    float inv_temp)
+{
+    const int row     = blockIdx.x;
+    const int tid     = threadIdx.x;
+    const int row_off = row * n_cols;
+
+    extern __shared__ float tile[];
+
+    float global_max = -1e38f;
+    float global_sum = 0.0f;
+
+    // Tile-wise online accumulation
+    for (int t = 0; t < n_cols; t += TILE_SIZE) {
+        int idx = t + tid;
+        float val = (idx < n_cols) ? input[row_off + idx] * inv_temp : -1e38f;
+        tile[tid] = val;
+        __syncthreads();
+
+        // Tile max
+        float tile_max = -1e38f;
+        int tile_len = min(TILE_SIZE, n_cols - t);
+        for (int i = tid; i < tile_len; i += blockDim.x) {
+            if (tile[i] > tile_max) tile_max = tile[i];
+        }
+        // Warp reduction for tile max
+        const unsigned FULL = 0xFFFFFFFFu;
+        for (int off = 16; off >= 1; off >>= 1) {
+            float o = __shfl_xor_sync(FULL, tile_max, off);
+            if (o > tile_max) tile_max = o;
+        }
+
+        // Combine with global state
+        float new_max = fmaxf(global_max, tile_max);
+        global_sum = global_sum * expf(global_max - new_max);
+        for (int i = tid; i < tile_len; i += blockDim.x) {
+            global_sum += expf(tile[i] - new_max);
+        }
+        // Warp reduction for partial sum
+        for (int off = 16; off >= 1; off >>= 1) {
+            global_sum += __shfl_xor_sync(FULL, global_sum, off);
+        }
+        global_max = new_max;
+        __syncthreads();
+    }
+
+    // Normalise
+    float inv_sum = 1.0f / global_sum;
+    for (int c = tid; c < n_cols; c += blockDim.x) {
+        output[row_off + c] = expf(input[row_off + c] * inv_temp - global_max) * inv_sum;
     }
 }
 "#;
@@ -829,7 +1038,210 @@ pub fn softmax_forward(input: &[f32], output: &mut [f32], config: &SoftmaxConfig
     softmax_cpu(input, output, config)
 }
 
+// ---------------------------------------------------------------------------
+// Convenience standalone functions
+// ---------------------------------------------------------------------------
+
+/// Compute log-softmax over a single row (1-D input).
+///
+/// Returns a newly allocated `Vec<f32>` containing `log(softmax(input))`.
+/// This is numerically more stable than computing `softmax` followed by
+/// `log` in separate passes.
+///
+/// # Errors
+///
+/// Returns [`SoftmaxError::EmptyInput`] for zero-length input or
+/// [`KernelError::InvalidArguments`] on internal shape mismatches.
+pub fn log_softmax(input: &[f32]) -> std::result::Result<Vec<f32>, SoftmaxError> {
+    if input.is_empty() {
+        return Err(SoftmaxError::EmptyInput);
+    }
+    let n = input.len();
+    let cfg =
+        SoftmaxConfig::for_shape(n, 1).map_err(|_| SoftmaxError::EmptyInput)?.with_log_softmax();
+    let mut output = vec![0.0_f32; n];
+    softmax_cpu(input, &mut output, &cfg).map_err(|_| SoftmaxError::EmptyInput)?;
+    Ok(output)
+}
+
+/// Compute softmax with an explicit temperature parameter.
+///
+/// Temperature `T > 1.0` produces a softer (more uniform) distribution;
+/// `T ∈ (0, 1)` produces a sharper distribution that approaches argmax
+/// as `T → 0⁺`.
+///
+/// # Errors
+///
+/// Returns [`SoftmaxError::InvalidTemperature`] when `temperature <= 0`
+/// or [`SoftmaxError::EmptyInput`] for zero-length input.
+pub fn softmax_with_temperature(
+    input: &[f32],
+    temperature: f32,
+) -> std::result::Result<Vec<f32>, SoftmaxError> {
+    if input.is_empty() {
+        return Err(SoftmaxError::EmptyInput);
+    }
+    if temperature <= 0.0 || !temperature.is_finite() {
+        return Err(SoftmaxError::InvalidTemperature(temperature));
+    }
+    let n = input.len();
+    let cfg = SoftmaxConfig::for_shape(n, 1)
+        .map_err(|_| SoftmaxError::EmptyInput)?
+        .with_temperature(temperature)
+        .map_err(|_| SoftmaxError::InvalidTemperature(temperature))?;
+    let mut output = vec![0.0_f32; n];
+    softmax_cpu(input, &mut output, &cfg).map_err(|_| SoftmaxError::EmptyInput)?;
+    Ok(output)
+}
+
+// ---------------------------------------------------------------------------
+// Flash (tiled/blocked) softmax — CPU reference
+// ---------------------------------------------------------------------------
+
+/// Tiled (flash-style) softmax — CPU reference implementation.
+///
+/// Processes each row in tiles of `tile_size` elements, maintaining a
+/// running `(max, exp_sum)` pair across tiles.  After the last tile, a
+/// second write pass normalises the output.  This mirrors the GPU
+/// [`FLASH_SOFTMAX_KERNEL_SRC`] algorithm and serves as a correctness
+/// reference.
+///
+/// # Errors
+///
+/// Returns [`SoftmaxError::EmptyInput`] if the input is empty,
+/// [`SoftmaxError::InvalidTileSize`] if `tile_size == 0`, or
+/// [`SoftmaxError::DimensionMismatch`] if `output` is too small.
+pub fn flash_softmax(
+    input: &[f32],
+    output: &mut [f32],
+    config: &SoftmaxConfig,
+    tile_size: usize,
+) -> std::result::Result<(), SoftmaxError> {
+    let total = config.n_rows * config.n_cols;
+    if total == 0 {
+        return Err(SoftmaxError::EmptyInput);
+    }
+    if tile_size == 0 {
+        return Err(SoftmaxError::InvalidTileSize(0));
+    }
+    if input.len() < total {
+        return Err(SoftmaxError::DimensionMismatch { expected: total, got: input.len() });
+    }
+    if output.len() < total {
+        return Err(SoftmaxError::DimensionMismatch { expected: total, got: output.len() });
+    }
+
+    let inv_temp = 1.0_f32 / config.temperature;
+
+    for row in 0..config.n_rows {
+        let start = row * config.n_cols;
+        let row_in = &input[start..start + config.n_cols];
+        let row_out = &mut output[start..start + config.n_cols];
+
+        let mut global_max = f32::NEG_INFINITY;
+        let mut global_sum = 0.0_f32;
+
+        // Tile-wise online accumulation
+        for tile_start in (0..config.n_cols).step_by(tile_size) {
+            let tile_end = (tile_start + tile_size).min(config.n_cols);
+            let tile = &row_in[tile_start..tile_end];
+
+            // Find tile max (with optional causal masking)
+            let tile_max = tile
+                .iter()
+                .enumerate()
+                .map(|(i, &x)| {
+                    let col = tile_start + i;
+                    if config.causal_mask && col > row { f32::NEG_INFINITY } else { x * inv_temp }
+                })
+                .fold(f32::NEG_INFINITY, f32::max);
+
+            // Combine with global state: rescale previous sum
+            let new_max = global_max.max(tile_max);
+            global_sum *= (global_max - new_max).exp();
+
+            for (i, &x) in tile.iter().enumerate() {
+                let col = tile_start + i;
+                let v =
+                    if config.causal_mask && col > row { f32::NEG_INFINITY } else { x * inv_temp };
+                global_sum += (v - new_max).exp();
+            }
+            global_max = new_max;
+        }
+
+        // Normalisation pass
+        let log_sum = global_sum.ln();
+        for (col, (&x, out)) in row_in.iter().zip(row_out.iter_mut()).enumerate() {
+            if config.causal_mask && col > row {
+                *out = match config.mode {
+                    SoftmaxMode::Standard => 0.0,
+                    SoftmaxMode::LogSoftmax => f32::NEG_INFINITY,
+                };
+            } else {
+                let u = x * inv_temp;
+                *out = match config.mode {
+                    SoftmaxMode::Standard => (u - global_max).exp() / global_sum,
+                    SoftmaxMode::LogSoftmax => (u - global_max) - log_sum,
+                };
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// GPU launch stubs — flash / warp-reduce softmax
+// ---------------------------------------------------------------------------
+
+/// Launch stub for the shared-memory warp-reduce CUDA softmax kernel.
+///
+/// # Errors
+///
+/// Returns `KernelError::GpuError` — this is a scaffold stub.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_warp_reduce_softmax(
+    _input: &[f32],
+    _output: &mut [f32],
+    config: &SoftmaxConfig,
+) -> Result<()> {
+    log::debug!(
+        "warp_reduce_softmax stub: {}×{}, temp={}",
+        config.n_rows,
+        config.n_cols,
+        config.temperature,
+    );
+    Err(KernelError::GpuError {
+        reason: "warp-reduce softmax CUDA kernel not yet compiled — scaffold only".into(),
+    }
+    .into())
+}
+
+/// Launch stub for the flash (tiled) CUDA softmax kernel.
+///
+/// # Errors
+///
+/// Returns `KernelError::GpuError` — this is a scaffold stub.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_flash_softmax(
+    _input: &[f32],
+    _output: &mut [f32],
+    config: &SoftmaxConfig,
+) -> Result<()> {
+    log::debug!(
+        "flash_softmax stub: {}×{}, temp={}",
+        config.n_rows,
+        config.n_cols,
+        config.temperature,
+    );
+    Err(KernelError::GpuError {
+        reason: "flash softmax CUDA kernel not yet compiled — scaffold only".into(),
+    }
+    .into())
+}
+
 #[cfg(test)]
+#[allow(clippy::float_cmp, clippy::too_many_lines)]
 mod tests {
     use super::*;
 
@@ -1700,11 +2112,560 @@ mod tests {
         assert!(SOFTMAX_KERNEL_SRC.contains("__shfl_xor_sync"));
         assert!(SOFTMAX_KERNEL_SRC.contains("__shared__"));
     }
-}
 
-// ---------------------------------------------------------------------------
-// Property tests (proptest)
-// ---------------------------------------------------------------------------
+    // == SoftmaxError tests ==============================================
+
+    #[test]
+    fn test_softmax_error_display_empty_input() {
+        let e = SoftmaxError::EmptyInput;
+        assert_eq!(e.to_string(), "softmax input is empty");
+    }
+
+    #[test]
+    fn test_softmax_error_display_invalid_temperature() {
+        let e = SoftmaxError::InvalidTemperature(0.0);
+        assert!(e.to_string().contains("invalid softmax temperature"));
+        assert!(e.to_string().contains("0"));
+    }
+
+    #[test]
+    fn test_softmax_error_display_nan_detected() {
+        let e = SoftmaxError::NanDetected { position: 42 };
+        assert!(e.to_string().contains("NaN"));
+        assert!(e.to_string().contains("42"));
+    }
+
+    #[test]
+    fn test_softmax_error_display_dimension_mismatch() {
+        let e = SoftmaxError::DimensionMismatch { expected: 10, got: 5 };
+        assert!(e.to_string().contains("10"));
+        assert!(e.to_string().contains("5"));
+    }
+
+    #[test]
+    fn test_softmax_error_display_invalid_tile_size() {
+        let e = SoftmaxError::InvalidTileSize(0);
+        assert!(e.to_string().contains("tile size"));
+    }
+
+    #[test]
+    fn test_softmax_error_is_std_error() {
+        let e: Box<dyn std::error::Error> = Box::new(SoftmaxError::EmptyInput);
+        assert!(!e.to_string().is_empty());
+    }
+
+    #[test]
+    fn test_softmax_error_clone_eq() {
+        let e1 = SoftmaxError::EmptyInput;
+        let e2 = e1.clone();
+        assert_eq!(e1, e2);
+    }
+
+    // == log_softmax standalone tests ====================================
+
+    #[test]
+    fn test_log_softmax_known_values() {
+        let input = vec![1.0, 2.0, 3.0];
+        let result = log_softmax(&input).unwrap();
+        assert_eq!(result.len(), 3);
+        // exp(log_softmax) should sum to ~1
+        let sum: f32 = result.iter().map(|v| v.exp()).sum();
+        assert!((sum - 1.0).abs() < 1e-5, "exp(log_softmax) sum={sum}");
+    }
+
+    #[test]
+    fn test_log_softmax_single_element() {
+        let input = vec![5.0];
+        let result = log_softmax(&input).unwrap();
+        assert!((result[0] - 0.0).abs() < 1e-6, "single-element log_softmax should be 0");
+    }
+
+    #[test]
+    fn test_log_softmax_empty_input() {
+        let err = log_softmax(&[]).unwrap_err();
+        assert_eq!(err, SoftmaxError::EmptyInput);
+    }
+
+    #[test]
+    fn test_log_softmax_consistency_with_softmax() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let log_out = log_softmax(&input).unwrap();
+        let softmax_out = softmax_with_temperature(&input, 1.0).unwrap();
+
+        for (i, (&ls, &s)) in log_out.iter().zip(softmax_out.iter()).enumerate() {
+            let expected_log = s.ln();
+            assert!(
+                (ls - expected_log).abs() < 1e-5,
+                "mismatch at {i}: log_softmax={ls}, ln(softmax)={expected_log}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_log_softmax_numerical_stability_large_values() {
+        let input = vec![1000.0, 1001.0, 1002.0];
+        let result = log_softmax(&input).unwrap();
+        // Should not overflow — all values should be finite
+        for (i, &v) in result.iter().enumerate() {
+            assert!(v.is_finite(), "log_softmax[{i}] = {v} is not finite");
+        }
+        let sum: f32 = result.iter().map(|v| v.exp()).sum();
+        assert!((sum - 1.0).abs() < 1e-4, "sum={sum}");
+    }
+
+    #[test]
+    fn test_log_softmax_all_negative() {
+        let input = vec![-100.0, -200.0, -300.0];
+        let result = log_softmax(&input).unwrap();
+        // The most likely element (first) should be finite and close to 0
+        assert!(result[0].is_finite());
+        assert!(result[0] <= 0.0);
+        // Less likely elements may be -inf due to extreme differences
+        for &v in &result {
+            assert!(v <= 0.0);
+        }
+    }
+
+    // == softmax_with_temperature tests ==================================
+
+    #[test]
+    fn test_with_temperature_one_is_standard() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let t1 = softmax_with_temperature(&input, 1.0).unwrap();
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let mut standard = vec![0.0_f32; 4];
+        softmax_cpu(&input, &mut standard, &cfg).unwrap();
+
+        for (i, (&a, &b)) in t1.iter().zip(standard.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-6, "mismatch at {i}: {a} vs {b}");
+        }
+    }
+
+    #[test]
+    fn test_with_temperature_approaching_zero_is_argmax() {
+        let input = vec![1.0, 5.0, 3.0, 2.0];
+        let result = softmax_with_temperature(&input, 0.01).unwrap();
+        // With very low temperature, the argmax element should dominate
+        let max_idx =
+            result.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
+        assert_eq!(max_idx, 1, "argmax should be index 1 (value=5.0)");
+        assert!(result[1] > 0.99, "max prob={}, should be >0.99", result[1]);
+    }
+
+    #[test]
+    fn test_with_temperature_high_approaches_uniform() {
+        let input = vec![1.0, 5.0, 3.0, 2.0];
+        let result = softmax_with_temperature(&input, 100.0).unwrap();
+        let uniform = 1.0 / 4.0;
+        for (i, &v) in result.iter().enumerate() {
+            assert!((v - uniform).abs() < 0.05, "temp=100 elem[{i}]={v}, expected ~{uniform}");
+        }
+    }
+
+    #[test]
+    fn test_with_temperature_zero_errors() {
+        let err = softmax_with_temperature(&[1.0, 2.0], 0.0).unwrap_err();
+        assert_eq!(err, SoftmaxError::InvalidTemperature(0.0));
+    }
+
+    #[test]
+    fn test_with_temperature_negative_errors() {
+        let err = softmax_with_temperature(&[1.0, 2.0], -1.0).unwrap_err();
+        assert_eq!(err, SoftmaxError::InvalidTemperature(-1.0));
+    }
+
+    #[test]
+    fn test_with_temperature_nan_errors() {
+        let err = softmax_with_temperature(&[1.0], f32::NAN).unwrap_err();
+        matches!(err, SoftmaxError::InvalidTemperature(_));
+    }
+
+    #[test]
+    fn test_with_temperature_inf_errors() {
+        let err = softmax_with_temperature(&[1.0], f32::INFINITY).unwrap_err();
+        matches!(err, SoftmaxError::InvalidTemperature(_));
+    }
+
+    #[test]
+    fn test_with_temperature_empty_input() {
+        let err = softmax_with_temperature(&[], 1.0).unwrap_err();
+        assert_eq!(err, SoftmaxError::EmptyInput);
+    }
+
+    #[test]
+    fn test_with_temperature_probabilities_sum_to_one() {
+        let input = vec![0.5, 1.5, -0.5, 2.5, -1.0];
+        for &temp in &[0.1, 0.5, 1.0, 2.0, 10.0] {
+            let result = softmax_with_temperature(&input, temp).unwrap();
+            let sum: f32 = result.iter().sum();
+            assert!((sum - 1.0).abs() < 1e-5, "temp={temp} sum={sum}");
+        }
+    }
+
+    #[test]
+    fn test_with_temperature_monotonic_sharpening() {
+        let input = vec![1.0, 3.0, 2.0];
+        let soft = softmax_with_temperature(&input, 10.0).unwrap();
+        let sharp = softmax_with_temperature(&input, 0.1).unwrap();
+        // Lower temperature → higher max probability
+        let soft_max: f32 = soft.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        let sharp_max: f32 = sharp.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        assert!(sharp_max > soft_max, "sharp_max={sharp_max} should > soft_max={soft_max}");
+    }
+
+    // == flash_softmax tests =============================================
+
+    #[test]
+    fn test_flash_softmax_matches_standard() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let n = input.len();
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let mut std_out = vec![0.0_f32; n];
+        let mut flash_out = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 4).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_tile_size_one() {
+        let input = vec![1.0, 2.0, 3.0];
+        let cfg = SoftmaxConfig::for_shape(3, 1).unwrap();
+        let mut std_out = vec![0.0_f32; 3];
+        let mut flash_out = vec![0.0_f32; 3];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 1).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "tile=1 mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_tile_larger_than_input() {
+        let input = vec![1.0, 2.0, 3.0];
+        let cfg = SoftmaxConfig::for_shape(3, 1).unwrap();
+        let mut std_out = vec![0.0_f32; 3];
+        let mut flash_out = vec![0.0_f32; 3];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 1024).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "big tile mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_multi_row() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
+        let cfg = SoftmaxConfig::for_shape(4, 2).unwrap();
+        let mut std_out = vec![0.0_f32; 8];
+        let mut flash_out = vec![0.0_f32; 8];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 2).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "multi-row mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_with_temperature() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap().with_temperature(0.5).unwrap();
+        let mut std_out = vec![0.0_f32; 4];
+        let mut flash_out = vec![0.0_f32; 4];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 2).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "temp mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_empty_input() {
+        let cfg = SoftmaxConfig {
+            n_cols: 0,
+            n_rows: 0,
+            threads_per_block: 256,
+            temperature: 1.0,
+            causal_mask: false,
+            mode: SoftmaxMode::Standard,
+            in_place: false,
+        };
+        let err = flash_softmax(&[], &mut [], &cfg, 4).unwrap_err();
+        assert_eq!(err, SoftmaxError::EmptyInput);
+    }
+
+    #[test]
+    fn test_flash_softmax_zero_tile_size() {
+        let input = vec![1.0, 2.0];
+        let cfg = SoftmaxConfig::for_shape(2, 1).unwrap();
+        let mut output = vec![0.0_f32; 2];
+        let err = flash_softmax(&input, &mut output, &cfg, 0).unwrap_err();
+        assert_eq!(err, SoftmaxError::InvalidTileSize(0));
+    }
+
+    #[test]
+    fn test_flash_softmax_output_too_small() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let mut output = vec![0.0_f32; 2]; // too small
+        let err = flash_softmax(&input, &mut output, &cfg, 2).unwrap_err();
+        assert_eq!(err, SoftmaxError::DimensionMismatch { expected: 4, got: 2 });
+    }
+
+    #[test]
+    fn test_flash_softmax_with_causal_mask() {
+        let n = 4;
+        let cfg = SoftmaxConfig::for_shape(n, n).unwrap().with_causal_mask();
+        let input: Vec<f32> = (0..16).map(|i| i as f32 * 0.1).collect();
+        let mut std_out = vec![0.0_f32; 16];
+        let mut flash_out = vec![0.0_f32; 16];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 2).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "causal mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_log_mode() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap().with_log_softmax();
+        let mut std_out = vec![0.0_f32; 4];
+        let mut flash_out = vec![0.0_f32; 4];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 2).unwrap();
+
+        for (i, (&a, &b)) in std_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "log mode mismatch at {i}: std={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_numerical_stability_large() {
+        let input = vec![1000.0, 1001.0, 1002.0, 1003.0];
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap();
+        let mut output = vec![0.0_f32; 4];
+        flash_softmax(&input, &mut output, &cfg, 2).unwrap();
+        let sum: f32 = output.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-4, "large values sum={sum}");
+        for &v in &output {
+            assert!(v.is_finite());
+            assert!(v >= 0.0);
+        }
+    }
+
+    // == online_softmax equivalence tests ================================
+
+    #[test]
+    fn test_online_softmax_matches_flash() {
+        let input = vec![0.1, 0.5, -0.3, 1.2, 0.8, -1.0, 0.3, 0.7];
+        let n = input.len();
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let mut online_out = vec![0.0_f32; n];
+        let mut flash_out = vec![0.0_f32; n];
+        online_softmax_cpu(&input, &mut online_out, &cfg).unwrap();
+        flash_softmax(&input, &mut flash_out, &cfg, 3).unwrap();
+
+        for (i, (&a, &b)) in online_out.iter().zip(flash_out.iter()).enumerate() {
+            assert!((a - b).abs() < 1e-5, "online vs flash mismatch at {i}: online={a}, flash={b}");
+        }
+    }
+
+    #[test]
+    fn test_online_softmax_large_row() {
+        let n = 1024;
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.01).sin()).collect();
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let mut std_out = vec![0.0_f32; n];
+        let mut online_out = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut std_out, &cfg).unwrap();
+        online_softmax_cpu(&input, &mut online_out, &cfg).unwrap();
+
+        let max_diff: f32 = std_out
+            .iter()
+            .zip(online_out.iter())
+            .map(|(&a, &b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        assert!(max_diff < 1e-5, "large row max_diff={max_diff}");
+    }
+
+    // == backward gradient verification ==================================
+
+    #[test]
+    fn test_backward_numerical_gradient() {
+        let input = vec![1.0, 2.0, 3.0];
+        let n = input.len();
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let mut y = vec![0.0_f32; n];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        // Upstream gradient: identity for element 0
+        let grad_out = vec![1.0, 0.0, 0.0];
+        let mut grad_in = vec![0.0_f32; n];
+        softmax_backward_cpu(&y, &grad_out, &mut grad_in, 1, n).unwrap();
+
+        // Numerical gradient check with finite differences
+        let eps = 1e-4_f32;
+        for j in 0..n {
+            let mut perturbed = input.clone();
+            perturbed[j] += eps;
+            let mut y_plus = vec![0.0_f32; n];
+            softmax_cpu(&perturbed, &mut y_plus, &cfg).unwrap();
+
+            perturbed[j] = input[j] - eps;
+            let mut y_minus = vec![0.0_f32; n];
+            softmax_cpu(&perturbed, &mut y_minus, &cfg).unwrap();
+
+            // Numerical gradient for output[0] w.r.t. input[j]
+            let num_grad = (y_plus[0] - y_minus[0]) / (2.0 * eps);
+            assert!(
+                (grad_in[j] - num_grad).abs() < 1e-3,
+                "grad mismatch at j={j}: analytic={}, numerical={num_grad}",
+                grad_in[j]
+            );
+        }
+    }
+
+    #[test]
+    fn test_backward_multi_row() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let cfg = SoftmaxConfig::for_shape(3, 2).unwrap();
+        let mut y = vec![0.0_f32; 6];
+        softmax_cpu(&input, &mut y, &cfg).unwrap();
+
+        let grad_out = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+        let mut grad_in = vec![0.0_f32; 6];
+        softmax_backward_cpu(&y, &grad_out, &mut grad_in, 2, 3).unwrap();
+
+        // Each row's gradients should sum to ~0
+        let sum_row0: f32 = grad_in[0..3].iter().sum();
+        let sum_row1: f32 = grad_in[3..6].iter().sum();
+        assert!(sum_row0.abs() < 1e-5, "row0 grad sum={sum_row0}");
+        assert!(sum_row1.abs() < 1e-5, "row1 grad sum={sum_row1}");
+    }
+
+    // == GPU kernel source tests (feature-gated) =========================
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_warp_reduce_kernel_src_nonempty() {
+        assert!(!SOFTMAX_WARP_REDUCE_KERNEL_SRC.is_empty());
+        assert!(SOFTMAX_WARP_REDUCE_KERNEL_SRC.contains("softmax_warp_reduce"));
+        assert!(SOFTMAX_WARP_REDUCE_KERNEL_SRC.contains("__shared__"));
+        assert!(SOFTMAX_WARP_REDUCE_KERNEL_SRC.contains("__shfl_xor_sync"));
+    }
+
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_flash_kernel_src_nonempty() {
+        assert!(!FLASH_SOFTMAX_KERNEL_SRC.is_empty());
+        assert!(FLASH_SOFTMAX_KERNEL_SRC.contains("flash_softmax"));
+        assert!(FLASH_SOFTMAX_KERNEL_SRC.contains("TILE_SIZE"));
+    }
+
+    #[test]
+    #[ignore = "requires CUDA runtime — run with --features gpu"]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_cuda_launch_warp_reduce_softmax() {
+        let cfg = SoftmaxConfig::for_shape(256, 1).unwrap();
+        let input = vec![0.0_f32; 256];
+        let mut output = vec![0.0_f32; 256];
+        let _ = launch_warp_reduce_softmax(&input, &mut output, &cfg);
+    }
+
+    #[test]
+    #[ignore = "requires CUDA runtime — run with --features gpu"]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn test_cuda_launch_flash_softmax() {
+        let cfg = SoftmaxConfig::for_shape(256, 1).unwrap();
+        let input = vec![0.0_f32; 256];
+        let mut output = vec![0.0_f32; 256];
+        let _ = launch_flash_softmax(&input, &mut output, &cfg);
+    }
+
+    // == Edge / error case tests =========================================
+
+    #[test]
+    fn test_log_softmax_two_elements() {
+        let input = vec![0.0, 0.0];
+        let result = log_softmax(&input).unwrap();
+        let expected = (0.5_f32).ln(); // ln(1/2) ≈ -0.693
+        // Both elements equal → both log-probs should be ln(0.5)
+        for (i, &v) in result.iter().enumerate() {
+            assert!((v - expected).abs() < 1e-6, "elem[{i}]={v}, expected={expected}");
+        }
+    }
+
+    #[test]
+    fn test_softmax_with_temperature_preserves_order() {
+        let input = vec![3.0, 1.0, 4.0, 1.0, 5.0];
+        for &temp in &[0.1, 0.5, 1.0, 5.0] {
+            let result = softmax_with_temperature(&input, temp).unwrap();
+            // Index 4 (value=5.0) should always have highest probability
+            let max_idx =
+                result.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0;
+            assert_eq!(max_idx, 4, "temp={temp}: max should be at index 4");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_various_tile_sizes() {
+        let input: Vec<f32> = (0..32).map(|i| i as f32 * 0.1 - 1.5).collect();
+        let cfg = SoftmaxConfig::for_shape(32, 1).unwrap();
+        let mut reference = vec![0.0_f32; 32];
+        softmax_cpu(&input, &mut reference, &cfg).unwrap();
+
+        for tile in [1, 2, 3, 5, 7, 16, 32, 64, 256] {
+            let mut output = vec![0.0_f32; 32];
+            flash_softmax(&input, &mut output, &cfg, tile).unwrap();
+            let max_diff: f32 = reference
+                .iter()
+                .zip(output.iter())
+                .map(|(&a, &b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            assert!(max_diff < 1e-5, "tile={tile} max_diff={max_diff}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_single_element() {
+        let input = vec![42.0];
+        let cfg = SoftmaxConfig::for_shape(1, 1).unwrap();
+        let mut output = vec![0.0_f32; 1];
+        flash_softmax(&input, &mut output, &cfg, 1).unwrap();
+        assert!((output[0] - 1.0).abs() < 1e-6, "single elem should be 1.0");
+    }
+
+    #[test]
+    fn test_flash_softmax_all_equal() {
+        let n = 16;
+        let input = vec![3.0_f32; n];
+        let cfg = SoftmaxConfig::for_shape(n, 1).unwrap();
+        let mut output = vec![0.0_f32; n];
+        flash_softmax(&input, &mut output, &cfg, 4).unwrap();
+        let expected = 1.0 / n as f32;
+        for (i, &v) in output.iter().enumerate() {
+            assert!((v - expected).abs() < 1e-6, "elem[{i}]={v}, expected={expected}");
+        }
+    }
+
+    #[test]
+    fn test_flash_softmax_input_too_small() {
+        let input = vec![1.0, 2.0]; // only 2 elements
+        let cfg = SoftmaxConfig::for_shape(4, 1).unwrap(); // expects 4
+        let mut output = vec![0.0_f32; 4];
+        let err = flash_softmax(&input, &mut output, &cfg, 2).unwrap_err();
+        assert_eq!(err, SoftmaxError::DimensionMismatch { expected: 4, got: 2 });
+    }
+}
 
 #[cfg(test)]
 mod proptests {
