@@ -36,7 +36,6 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -44,6 +43,7 @@ pub mod layernorm;
 pub mod linear;
 pub mod matmul;
 pub mod memory_pool;
+pub mod multi_gpu;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
@@ -188,3 +188,10 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use multi_gpu::{
+    CommunicationBackend, DeviceLoad, DeviceManager, GpuDevice, MultiGpuConfig, NcclCommunicator,
+    ParallelismStrategy, PipelineStage, all_reduce, device_count, device_info, load_balance,
+    multi_gpu_matmul, peer_to_peer_copy, pipeline_partition, tensor_parallel_gather,
+    tensor_parallel_split,
+};
