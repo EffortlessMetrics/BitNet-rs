@@ -13,6 +13,7 @@ pub mod config;
 pub mod config_builder;
 pub mod context_window;
 pub mod cpu_opt;
+pub mod decode_strategy;
 pub mod dense_forward;
 pub mod dense_generation;
 pub mod dense_integration_tests;
