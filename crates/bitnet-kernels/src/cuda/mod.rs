@@ -24,6 +24,7 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`half_precision`]: FP16/BF16 conversion, mixed-precision accumulation, loss scaling, and AMP policy
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -39,6 +40,7 @@ pub mod embedding;
 pub mod ffn;
 pub mod fusion;
 pub mod gating;
+pub mod half_precision;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
@@ -151,6 +153,20 @@ pub use embedding::{
 };
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
+pub use half_precision::{
+    AmpPolicy, HalfFormat, HalfPrecisionConfig, LossScaler, OpType, PrecisionClass,
+    bf16_bits_to_f32, bf16_full, bf16_linspace, bf16_ones, bf16_to_f32_batch, bf16_zeros, f16_add,
+    f16_approx_eq, f16_bits_to_f32, f16_fma, f16_full, f16_linspace, f16_ones, f16_scale,
+    f16_to_f32_batch, f16_ulp_distance, f16_zeros, f32_approx_eq, f32_to_bf16_batch,
+    f32_to_bf16_bits, f32_to_f16_batch, f32_to_f16_bits, kahan_accumulate_f16, mixed_precision_dot,
+    mixed_precision_matvec,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use half_precision::{
+    HALF_PRECISION_KERNEL_SRC, launch_f16_add, launch_f16_fma, launch_f16_to_f32,
+    launch_f32_to_f16, launch_mixed_precision_dot,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
