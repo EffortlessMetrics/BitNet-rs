@@ -1,21 +1,18 @@
 use anyhow::{Context, Result, anyhow, bail};
 use bitnet_common::Device;
-use bitnet_download::{
-    atomic_write, exp_backoff_ms, offline_enabled as bitnet_offline_enabled,
-    parse_content_range_total, retry_after_secs, validate_downloaded_len,
-};
 use bitnet_kernels::gpu_utils::get_gpu_info;
 use clap::{Parser, Subcommand, ValueEnum};
 use console::style;
 use fs2::FileExt;
 use fs2::available_space;
+use httpdate::parse_http_date;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use regex::Regex;
 use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::{
     ACCEPT_ENCODING, ACCEPT_RANGES, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, ETAG,
-    IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE,
+    IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE, RETRY_AFTER,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -32,7 +29,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use walkdir::WalkDir;
 
@@ -132,6 +129,72 @@ const EXIT_VERIFICATION_FAILED: i32 = 15;
 const EXIT_INFERENCE_FAILED: i32 = 16;
 const EXIT_BENCHMARK_FAILED: i32 = 17;
 const EXIT_INTERRUPTED: i32 = 130;
+
+// Safe exponential backoff helper with jitter
+#[inline]
+fn exp_backoff_ms(attempt: u32) -> u64 {
+    // 200ms, 400ms, 800ms… capped at 10s
+    let shift = attempt.saturating_sub(1).min(20);
+    let base = (200u64).saturating_mul(1u64 << shift).min(10_000);
+    // Add deterministic jitter: +0..199ms based on attempt
+    let jitter = (attempt as u64 * 37) % 200;
+    base.saturating_add(jitter)
+}
+
+// Parse Retry-After header (supports both seconds and HTTP-date)
+fn bitnet_offline_enabled(cli_offline: bool) -> bool {
+    cli_offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1")
+}
+
+fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
+    let raw = match headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok()) {
+        Some(s) => s,
+        None => return 5, // Default to 5 seconds
+    };
+
+    // Try parsing as integer seconds first
+    if let Ok(s) = raw.parse::<u64>() {
+        return s.min(3600); // Cap at 1 hour
+    }
+
+    // Try parsing as HTTP-date
+    parse_http_date(raw)
+        .ok()
+        .and_then(|when| when.duration_since(SystemTime::now()).ok())
+        .map(|d| d.as_secs().clamp(1, 3600))
+        .unwrap_or(5) // Default to 5 seconds if parsing fails
+}
+
+fn validate_downloaded_len(downloaded: u64, expected_total: Option<u64>) -> Result<()> {
+    if let Some(total) = expected_total
+        && downloaded != total
+    {
+        bail!("download truncated: got {} bytes, expected {}", downloaded, total);
+    }
+    Ok(())
+}
+
+// Atomic write helper for metadata files
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+    #[cfg(unix)]
+    {
+        if let Ok(f) = std::fs::File::open(&tmp) {
+            f.sync_all()?;
+        }
+    }
+    fs::rename(&tmp, path)?;
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
+        }
+    }
+    Ok(())
+}
 
 // Centralized defaults to avoid drift
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
@@ -1583,7 +1646,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                         .headers()
                         .get(CONTENT_RANGE)
                         .and_then(|h| h.to_str().ok())
-                        .and_then(parse_content_range_total)?;
+                        .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())?;
                     Some(sz)
                 })
                 .map(|sz| (Some(sz), true))
@@ -6562,7 +6625,6 @@ fn run_inference_internal(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reqwest::header::RETRY_AFTER;
     use std::net::TcpListener;
     use std::sync::{Arc, Mutex};
     use std::thread;

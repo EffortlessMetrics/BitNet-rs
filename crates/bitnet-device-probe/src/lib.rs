@@ -5,28 +5,6 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
-pub mod intel_arc;
-pub use intel_arc::{
-    IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
-    is_arc_alchemist,
-};
-
-#[cfg(feature = "opencl")]
-pub mod opencl;
-#[cfg(feature = "opencl")]
-pub use opencl::{
-    IntelArcDetector, OpenClDeviceInfo, OpenClDeviceType, OpenClPlatformInfo, OpenClProbeResult,
-    ProbeResult, is_intel_arc_available, list_opencl_devices, probe_opencl,
-};
-
-#[cfg(feature = "wgpu-probe")]
-pub mod wgpu_probe;
-#[cfg(feature = "wgpu-probe")]
-pub use wgpu_probe::{
-    WgpuBackend, WgpuDeviceInfo, WgpuDeviceType, WgpuLimits, is_nvidia, is_vulkan_backend,
-    probe_best_wgpu_device, probe_wgpu_devices, supports_f16,
-};
-
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
 /// CPU capabilities detected at runtime.
@@ -381,28 +359,25 @@ pub const fn vulkan_available_runtime() -> bool {
 /// println!("SIMD level: {level:?}");
 /// // level is one of: Scalar, Sse42, Avx2, Avx512, Neon
 /// ```
-#[allow(clippy::missing_const_for_fn)] // not const on x86_64 (runtime CPUID)
 pub fn detect_simd_level() -> SimdLevel {
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx512f") {
-            SimdLevel::Avx512
-        } else if is_x86_feature_detected!("avx2") {
-            SimdLevel::Avx2
-        } else if is_x86_feature_detected!("sse4.2") {
-            SimdLevel::Sse42
-        } else {
-            SimdLevel::Scalar
+            return SimdLevel::Avx512;
+        }
+        if is_x86_feature_detected!("avx2") {
+            return SimdLevel::Avx2;
+        }
+        if is_x86_feature_detected!("sse4.2") {
+            return SimdLevel::Sse42;
         }
     }
     #[cfg(target_arch = "aarch64")]
     {
-        SimdLevel::Neon
+        // NEON is mandatory on AArch64.
+        return SimdLevel::Neon;
     }
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-    {
-        SimdLevel::Scalar
-    }
+    SimdLevel::Scalar
 }
 
 /// Snapshot of compile-time and runtime device capabilities.
@@ -692,3 +667,5 @@ mod property_tests {
         );
     }
 }
+
+// retrigger-ci-placeholder: remove if needed

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave9.rs
-expression: "format!(\"{err}\")"
----
-invalid config: min_fusion_size must be > 0

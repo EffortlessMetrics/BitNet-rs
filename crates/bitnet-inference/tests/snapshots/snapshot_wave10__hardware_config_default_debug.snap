@@ -1,8 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave10.rs
-expression: cfg
----
-HardwareConfig {
-    num_threads: 0,
-    memory_limit_mb: 0,
-}

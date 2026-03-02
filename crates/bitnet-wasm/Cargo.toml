@@ -24,7 +24,6 @@ bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", features =
 # Keep inference optional to avoid pulling tokio/mio on wasm by default.
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev", optional = true, default-features = false }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
-bitnet-wasm-utils = { path = "../bitnet-wasm-utils", version = "0.2.1-dev" }
 
 # WebAssembly specific dependencies
 wasm-bindgen = { workspace = true, features = ["serde-serialize"] }

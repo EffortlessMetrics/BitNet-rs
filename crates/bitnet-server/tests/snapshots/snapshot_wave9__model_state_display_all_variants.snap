@@ -1,8 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave9.rs
-expression: "output.join(\"\\n\")"
----
-loading
-ready
-serving
-unloading

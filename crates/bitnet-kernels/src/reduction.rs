@@ -47,7 +47,7 @@ pub enum ReductionOp {
 
 impl ReductionOp {
     /// Identity element for this reduction (used to initialise accumulators).
-    pub(crate) fn identity(self) -> f32 {
+    fn identity(self) -> f32 {
         match self {
             Self::Sum | Self::Mean | Self::L2Norm => 0.0,
             Self::Max => f32::NEG_INFINITY,
@@ -56,7 +56,7 @@ impl ReductionOp {
     }
 
     /// Combine two partial results.
-    pub(crate) fn combine(self, a: f32, b: f32) -> f32 {
+    fn combine(self, a: f32, b: f32) -> f32 {
         match self {
             Self::Sum | Self::Mean => a + b,
             Self::Max => a.max(b),
@@ -66,7 +66,7 @@ impl ReductionOp {
     }
 
     /// Pre-process an element before accumulation.
-    pub(crate) fn map_element(self, x: f32) -> f32 {
+    fn map_element(self, x: f32) -> f32 {
         match self {
             Self::L2Norm => x * x,
             _ => x,
@@ -74,7 +74,7 @@ impl ReductionOp {
     }
 
     /// Post-process the accumulated result.
-    pub(crate) fn finalise(self, acc: f32, count: usize) -> f32 {
+    fn finalise(self, acc: f32, count: usize) -> f32 {
         match self {
             Self::Mean => {
                 if count == 0 {

@@ -72,11 +72,11 @@ echo ""
 run_check "Format check" \
     cargo fmt --all -- --check
 
-# 2) Clippy (core packages, lib only - matches CI)
-run_check "Clippy (core packages, lib only)" \
+# 2) Clippy (core packages only, matches CI)
+run_check "Clippy (core packages)" \
     cargo clippy --locked \
         $PKG_FLAGS \
-        --lib --no-default-features --features cpu -- -D warnings
+        --all-targets --no-default-features --features cpu -- -D warnings
 
 # 3) Build (core packages only, matches CI)
 run_check "Build (core packages)" \

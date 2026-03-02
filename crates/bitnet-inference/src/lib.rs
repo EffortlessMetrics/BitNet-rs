@@ -7,16 +7,13 @@ pub mod backends;
 pub mod batch;
 pub mod cache;
 pub mod config;
-pub mod config_builder;
 pub mod cpu_opt;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
-pub mod gpu_streaming;
 pub mod kernel_recorder;
 pub mod kv_cache_optimized;
 pub mod layers;
-pub mod memory_pool;
 pub mod metrics;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
@@ -82,7 +79,6 @@ pub use receipts::{
 };
 // Re-export CorrectionRecord from bitnet-common for convenience
 pub use bitnet_common::CorrectionRecord;
-pub use gpu_streaming::{GpuGenerationStream, GpuStreamingConfig, GpuTokenEvent};
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 pub use thread_pool::{InferenceThreadPool, ThreadPoolConfig, ThreadPoolMetrics};

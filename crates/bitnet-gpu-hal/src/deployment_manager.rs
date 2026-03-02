@@ -498,7 +498,7 @@ impl DeploymentManager {
             return Err("deployment already in progress".into());
         }
 
-        let plan = self.plan_deployment(target, strategy)?;
+        let plan = self.plan_deployment(target.clone(), strategy)?;
 
         // Snapshot the current active version for rollback.
         if let Some(active) = self.get_active_slot().and_then(|s| s.model_version.clone()) {
@@ -527,7 +527,7 @@ impl DeploymentManager {
         self.apply_step(&step, &target)?;
 
         if remaining == 0 {
-            self.finalize_deployment();
+            self.finalize_deployment()?;
         }
 
         Ok(Some(step))
@@ -597,9 +597,10 @@ impl DeploymentManager {
         Ok(())
     }
 
-    fn finalize_deployment(&mut self) {
+    fn finalize_deployment(&mut self) -> Result<(), String> {
         self.metrics.record_deployment(100.0, true);
         self.active_plan = None;
+        Ok(())
     }
 
     // -- Rollback -----------------------------------------------------------

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: "format!(\"{:?}\", quantizer.quantization_type())"
----
-I2S

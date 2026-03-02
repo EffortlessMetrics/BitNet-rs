@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
-expression: "format!(\"available={} cuda={} rocm={} oneapi={}\", caps.available,\ncaps.cuda_available, caps.rocm_available, caps.oneapi_available)"
----
-available=false cuda=false rocm=false oneapi=false

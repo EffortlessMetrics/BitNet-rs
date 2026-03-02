@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Buffer size must be greater than 0

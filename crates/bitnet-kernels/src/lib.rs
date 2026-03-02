@@ -3,10 +3,9 @@
 use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
-pub mod benchmarks;
-pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
@@ -16,26 +15,11 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
-#[cfg(feature = "metal")]
-pub mod metal_compute;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
-pub mod opencl_buffer;
-pub mod opencl_cache;
-pub mod opencl_context;
-#[path = "gpu/opencl_dispatch.rs"]
-pub mod opencl_dispatch;
-pub mod opencl_embedding;
-pub mod opencl_kernel_sources;
-pub mod opencl_kv_cache;
-pub mod opencl_pipeline;
-pub mod opencl_registry;
-pub mod opencl_work_size;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
-pub mod scatter_gather;
-pub mod shaped_reduction;
 mod stubs;
 pub mod tl_lut;
 

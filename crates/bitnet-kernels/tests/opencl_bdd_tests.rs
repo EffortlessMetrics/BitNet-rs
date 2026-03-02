@@ -118,8 +118,6 @@ mod backend_priority {
             hip_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-            opencl_compiled: false,
-            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -143,8 +141,6 @@ mod backend_priority {
             hip_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-            opencl_compiled: false,
-            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -164,8 +160,6 @@ mod backend_priority {
             hip_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: true,
-            opencl_compiled: false,
-            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -183,8 +177,6 @@ mod backend_priority {
             hip_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: true,
-            opencl_compiled: false,
-            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -206,8 +198,6 @@ mod backend_priority {
             hip_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-            opencl_compiled: false,
-            opencl_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };

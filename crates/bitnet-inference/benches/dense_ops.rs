@@ -1,3 +1,4 @@
+#![cfg(feature = "bench")]
 //! Criterion benchmarks for dense model inference ops (cpu_opt).
 //!
 //! Benchmarks SiLU, RMSNorm, parallel_matmul, and parallel_attention

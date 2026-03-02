@@ -1,5 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave9.rs
-expression: "format!(\"{:.6}\", compute_divergence(&a, &b))"
----
-1.000000

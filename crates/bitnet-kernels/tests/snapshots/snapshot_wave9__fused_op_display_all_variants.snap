@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave9.rs
-expression: "output.join(\"\\n\")"
----
-RmsNormLinear
-GeluLinear
-SoftmaxMask
-AddNormalize
-ScaleAndAdd

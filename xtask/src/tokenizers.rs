@@ -219,8 +219,6 @@ fn download_once(source: TokenizerSource, dest: &Path, verbose: bool) -> Result<
             // Sync file data to disk
             f.sync_all().context("Failed to sync file to disk")?;
         }
-        #[cfg(not(unix))]
-        let _ = f;
         Ok(())
     };
 

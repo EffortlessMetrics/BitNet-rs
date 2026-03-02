@@ -3,14 +3,12 @@
 //! Provides a streaming chat interface with conversation history.
 
 use anyhow::{Context, Result};
-use bitnet_repl_core::{
-    BoundedHistory, ChatMetrics, ReplInput, copy_receipt_if_present, parse_repl_input,
-};
 use console::style;
 use futures::StreamExt;
 use humantime::format_duration;
 use std::io::{self, IsTerminal, Write};
-use std::time::Instant;
+use std::path::{Path, PathBuf};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
 
 use bitnet_inference::prompt_template::{ChatRole, ChatTurn};
@@ -20,6 +18,45 @@ use tracing::info;
 use super::inference::InferenceCommand;
 use super::template_util::looks_like_llama3_chat;
 use crate::config::CliConfig;
+
+/// Performance metrics for chat session
+#[derive(Debug, Default)]
+struct ChatMetrics {
+    total_tokens_generated: usize,
+    total_time_ms: u64,
+    num_exchanges: usize,
+}
+
+/// Copy receipt from effective receipt path to timestamped file in the specified directory
+fn copy_receipt_if_present(src: &Path, dir: &Path) -> Result<Option<PathBuf>> {
+    use std::fs;
+
+    if !src.exists() {
+        return Ok(None);
+    }
+
+    fs::create_dir_all(dir)?;
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+    let dst = dir.join(format!("chat-{}.json", ts));
+    fs::copy(src, &dst)?;
+    Ok(Some(dst))
+}
+
+impl ChatMetrics {
+    fn add_exchange(&mut self, tokens: usize, elapsed_ms: u64) {
+        self.total_tokens_generated += tokens;
+        self.total_time_ms += elapsed_ms;
+        self.num_exchanges += 1;
+    }
+
+    fn average_tps(&self) -> f64 {
+        if self.total_time_ms > 0 {
+            (self.total_tokens_generated as f64) / (self.total_time_ms as f64 / 1000.0)
+        } else {
+            0.0
+        }
+    }
+}
 
 impl InferenceCommand {
     /// Run interactive chat mode with REPL
@@ -68,8 +105,7 @@ impl InferenceCommand {
         println!();
 
         // Conversation history: typed chat turns
-        let mut conversation_history: BoundedHistory<ChatTurn> =
-            BoundedHistory::new(self.chat_history_limit);
+        let mut conversation_history: Vec<ChatTurn> = Vec::new();
         let mut metrics = ChatMetrics::default();
 
         // Create generation config
@@ -98,113 +134,122 @@ impl InferenceCommand {
             match io::stdin().read_line(&mut input) {
                 Ok(0) => break, // EOF (Ctrl+D)
                 Ok(_) => {
-                    let Some(parsed) = parse_repl_input(&input) else {
-                        continue;
-                    };
+                    let line = input.trim();
 
-                    match parsed {
-                        ReplInput::Exit => break,
-                        ReplInput::Help => {
+                    if line.is_empty() {
+                        continue;
+                    }
+
+                    // Handle commands
+                    match line {
+                        "/exit" | "/quit" => break,
+                        "/help" => {
                             self.show_chat_help();
                             continue;
                         }
-                        ReplInput::Clear => {
+                        "/clear" => {
                             conversation_history.clear();
                             metrics = ChatMetrics::default();
                             println!("{}", style("Conversation cleared.").dim());
                             continue;
                         }
-                        ReplInput::Metrics => {
+                        "/metrics" => {
                             self.show_chat_metrics(&metrics);
                             continue;
                         }
-                        ReplInput::Message(line) => {
-                            // Format prompt with conversation history using library render_chat()
-                            // Build current turn history (all previous + current user input)
-                            let mut current_history = conversation_history.to_vec();
-                            current_history.push(ChatTurn::new(ChatRole::User, &line));
+                        _ => {}
+                    }
 
-                            let formatted_prompt = template_type
-                                .render_chat(&current_history, self.system_prompt.as_deref())?;
+                    // Format prompt with conversation history using library render_chat()
+                    // Build current turn history (all previous + current user input)
+                    let mut current_history = conversation_history.clone();
+                    current_history.push(ChatTurn::new(ChatRole::User, line));
 
-                            if self.verbose {
-                                debug!("Formatted prompt:\n{}", formatted_prompt);
-                            }
+                    let formatted_prompt = template_type
+                        .render_chat(&current_history, self.system_prompt.as_deref())?;
 
-                            // Run streaming inference
-                            let start_time = Instant::now();
-                            if is_tty {
-                                print!("{} ", style("assistant>").blue().bold());
-                            } else {
-                                print!("assistant> ");
-                            }
+                    if self.verbose {
+                        debug!("Formatted prompt:\n{}", formatted_prompt);
+                    }
 
-                            // Handle BrokenPipe gracefully
-                            if let Err(e) = io::stdout().flush() {
-                                if e.kind() == io::ErrorKind::BrokenPipe {
-                                    return Ok(());
-                                }
-                                return Err(e.into());
-                            }
+                    // Run streaming inference
+                    let start_time = Instant::now();
+                    if is_tty {
+                        print!("{} ", style("assistant>").blue().bold());
+                    } else {
+                        print!("assistant> ");
+                    }
 
-                            match self
-                                .run_chat_inference(&mut engine, &formatted_prompt, &gen_config)
-                                .await
+                    // Handle BrokenPipe gracefully
+                    if let Err(e) = io::stdout().flush() {
+                        if e.kind() == io::ErrorKind::BrokenPipe {
+                            return Ok(());
+                        }
+                        return Err(e.into());
+                    }
+
+                    match self.run_chat_inference(&mut engine, &formatted_prompt, &gen_config).await
+                    {
+                        Ok((response_text, token_count)) => {
+                            println!(); // Newline after streaming
+
+                            let elapsed = start_time.elapsed();
+                            let elapsed_ms = elapsed.as_millis() as u64;
+
+                            // Update metrics
+                            metrics.add_exchange(token_count, elapsed_ms);
+
+                            // Add to conversation history: user turn and assistant turn
+                            conversation_history.push(ChatTurn::new(ChatRole::User, line));
+                            conversation_history
+                                .push(ChatTurn::new(ChatRole::Assistant, &response_text));
+
+                            // Enforce chat_history_limit if specified
+                            if let Some(limit) = self.chat_history_limit
+                                && conversation_history.len() > limit
                             {
-                                Ok((response_text, token_count)) => {
-                                    println!(); // Newline after streaming
+                                let excess = conversation_history.len() - limit;
+                                conversation_history.drain(0..excess);
+                            }
 
-                                    let elapsed = start_time.elapsed();
-                                    let elapsed_ms = elapsed.as_millis() as u64;
-
-                                    // Update metrics
-                                    metrics.add_exchange(token_count, elapsed_ms);
-
-                                    // Add to conversation history: user turn and assistant turn
-                                    conversation_history.push(ChatTurn::new(ChatRole::User, &line));
-                                    conversation_history
-                                        .push(ChatTurn::new(ChatRole::Assistant, &response_text));
-
-                                    // Copy receipt if directory specified
-                                    if let Some(dir) = &self.emit_receipt_dir {
-                                        let receipt_src = self.effective_receipt_path();
-                                        match copy_receipt_if_present(receipt_src, dir) {
-                                            Ok(Some(path)) => {
-                                                debug!("Receipt saved: {}", path.display());
-                                            }
-                                            Ok(None) => {
-                                                debug!("No receipt found to copy");
-                                            }
-                                            Err(e) => {
-                                                debug!("Failed to copy receipt: {}", e);
-                                            }
-                                        }
+                            // Copy receipt if directory specified
+                            if let Some(dir) = &self.emit_receipt_dir {
+                                let receipt_src = self.effective_receipt_path();
+                                match copy_receipt_if_present(receipt_src, dir) {
+                                    Ok(Some(path)) => {
+                                        debug!("Receipt saved: {}", path.display());
                                     }
-
-                                    // Show timing if metrics enabled
-                                    if self.metrics {
-                                        let tps = if elapsed.as_secs_f64() > 0.0 {
-                                            token_count as f64 / elapsed.as_secs_f64()
-                                        } else {
-                                            0.0
-                                        };
-                                        println!(
-                                            "  {} {} ({:.2} tok/s)",
-                                            style("Time:").dim(),
-                                            style(format_duration(elapsed)).dim(),
-                                            tps
-                                        );
+                                    Ok(None) => {
+                                        debug!("No receipt found to copy");
                                     }
-
-                                    println!(); // Extra line for readability
-                                }
-                                Err(e) => {
-                                    println!();
-                                    error!("Inference failed: {}", e);
-                                    println!("{}", style(format!("Error: {}", e)).red());
-                                    println!();
+                                    Err(e) => {
+                                        debug!("Failed to copy receipt: {}", e);
+                                    }
                                 }
                             }
+
+                            // Show timing if metrics enabled
+                            if self.metrics {
+                                let tps = if elapsed.as_secs_f64() > 0.0 {
+                                    token_count as f64 / elapsed.as_secs_f64()
+                                } else {
+                                    0.0
+                                };
+                                println!(
+                                    "  {} {} ({:.2} tok/s)",
+                                    style("Time:").dim(),
+                                    style(format_duration(elapsed)).dim(),
+                                    tps
+                                );
+                            }
+
+                            println!(); // Extra line for readability
+                        }
+                        Err(e) => {
+                            println!();
+                            error!("Inference failed: {}", e);
+                            println!("{}", style(format!("Error: {}", e)).red());
+                            println!();
                         }
                     }
                 }

@@ -15,12 +15,11 @@ rust-version.workspace = true
 log.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
-toml = { workspace = true }
 
 [dev-dependencies]
-proptest.workspace = true
 serde = { workspace = true }
 serde_json.workspace = true
+
 tempfile.workspace = true
 
 [features]

@@ -6,7 +6,6 @@
 use anyhow::Result;
 use bitnet_models::quant::backend::Iq2sBackend;
 use half::f16;
-#[allow(unused_imports)]
 use rand::{Rng, SeedableRng};
 
 /// Test that IQ2_S dequantization produces identical results between Rust and FFI backends

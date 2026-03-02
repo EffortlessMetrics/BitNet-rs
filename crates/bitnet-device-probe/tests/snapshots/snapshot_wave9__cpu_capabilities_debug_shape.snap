@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
-expression: debug
----
-CpuCapabilities { core_count: [N], has_avx2: [ARCH], has_avx512: [ARCH], has_neon: [ARCH] }

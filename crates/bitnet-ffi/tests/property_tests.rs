@@ -99,16 +99,16 @@ proptest! {
 
     /// `memory_limit=0` maps to `None` (no limit); any non-zero value round-trips.
     #[test]
-    fn prop_memory_limit_roundtrip(mem_limit in 1u32..=(1024 * 1024u32)) {
+    fn prop_memory_limit_roundtrip(mem_limit in 1u64..=(4 * 1024 * 1024 * 1024u64)) {
         let c_cfg = BitNetCConfig {
-            memory_limit: std::ffi::c_ulong::from(mem_limit),
+            memory_limit: mem_limit,
             ..BitNetCConfig::default()
         };
         let rust_cfg = c_cfg.to_bitnet_config().unwrap();
-        prop_assert_eq!(rust_cfg.performance.memory_limit, Some(c_cfg.memory_limit as usize));
+        prop_assert_eq!(rust_cfg.performance.memory_limit, Some(mem_limit as usize));
         // round-trip back
         let c_cfg2 = BitNetCConfig::from_bitnet_config(&rust_cfg);
-        prop_assert_eq!(c_cfg2.memory_limit, c_cfg.memory_limit);
+        prop_assert_eq!(c_cfg2.memory_limit, mem_limit);
     }
 }
 

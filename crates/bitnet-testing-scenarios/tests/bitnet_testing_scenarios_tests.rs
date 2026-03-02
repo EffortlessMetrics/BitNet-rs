@@ -5,7 +5,7 @@
 //! resolution APIs maintain expected invariants.
 
 use bitnet_testing_scenarios::{
-    EnvironmentType, ReportFormat, ScenarioConfigManager, TestingScenario,
+    ConfigurationContext, EnvironmentType, ReportFormat, ScenarioConfigManager, TestingScenario,
 };
 use proptest::prelude::*;
 

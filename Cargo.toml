@@ -2,9 +2,6 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
-  "crates/bitnet-math",
-  "crates/bitnet-simd",
-  "crates/bitnet-warn-once",
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",
@@ -15,27 +12,20 @@ members = [
   "crates/bitnet-runtime-feature-flags-core",
   "crates/bitnet-models",
   "crates/bitnet-quantization",
-  "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
   "crates/bitnet-prompt-templates",
-  "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
   "crates/bitnet-receipts",
-  "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
   "crates/bitnet-logits",        # SRP: pure logits transform functions
-  "crates/bitnet-logits-filters", # SRP: reusable logits/probability filtering transforms
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
-  "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
-  "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
-  "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
   "crates/bitnet-batch-engine",
@@ -48,7 +38,6 @@ members = [
   "crates/bitnet-runtime-bootstrap",
   "crates/bitnet-startup-contract",
   "crates/bitnet-wasm",
-  "crates/bitnet-wasm-utils",
   "crates/bitnet-sys",
   "crates/bitnet-feature-contract",
   "crates/bitnet-runtime-profile",
@@ -70,50 +59,31 @@ members = [
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
-  "crates/bitnet-test-env",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference
-  "crates/bitnet-metal",         # MSL compute kernels for Apple Silicon
-    "crates/bitnet-rocm",          # HIP compute kernels for AMD ROCm backend",
-  "crates/bitnet-vulkan",        # Vulkan GLSL compute shaders for GPU inference
-  "crates/bitnet-vulkan-shaders",# SRP: embedded Vulkan GLSL shader source catalog
-  "crates/bitnet-wgpu",          # WebGPU compute backend for cross-platform GPU inference
-  "crates/bitnet-wgpu-bench",    # Benchmarking and profiling harness for wgpu compute kernels
-  "crates/bitnet-wgpu-runner",   # WebGPU kernel runner for GPU compute dispatch
   "crossval",
   "tests",
-  "tests-new",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-  "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
-  "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
 default-members = [
   "crates/bitnet-common",
-  "crates/bitnet-math",
-  "crates/bitnet-simd",
-  "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
   "crates/bitnet-rope",
   "crates/bitnet-transformer",
   "crates/bitnet-test-support",
-  "crates/bitnet-test-env",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
-  "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-prompt-templates",
-  "crates/bitnet-prompt-templates-core",
   "crates/bitnet-receipts",
-  "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
   "crates/bitnet-cli",
   "crates/bitnet-server",
@@ -130,14 +100,10 @@ default-members = [
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
   "crates/bitnet-logits",
-  "crates/bitnet-logits-filters",
   "crates/bitnet-generation",
-  "crates/bitnet-generation-stop-core",
   "crates/bitnet-engine-core",
-  "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-download",      # SRP: download mechanics primitives
 ]
 
 [package]
@@ -182,8 +148,6 @@ version = "0.2.1-dev"
 [dependencies]
 # Core crates - always included
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
-bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
-bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
@@ -253,7 +217,6 @@ gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-infer
 rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inference/rocm", "bitnet-quantization/rocm"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
-opencl = ["kernels", "inference", "tokenizers", "bitnet-kernels/opencl", "bitnet-inference/opencl", "bitnet-quantization/opencl"]
 npu = ["dep:bitnet-device-probe", "bitnet-device-probe/npu"]
 
 # Component features
@@ -337,14 +300,7 @@ name = "kernel_ops"
 harness = false
 required-features = ["cpu", "bench"]
 
-[[bench]]
-name = "neon_simd"
-harness = false
-required-features = ["cpu"]
-
 [workspace.dependencies]
-bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
-bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"
@@ -423,7 +379,6 @@ temp-env = "0.3.6"
 tracing-test = "0.2.6"
 rand = "0.9.2"
 bitnet-test-support = { path = "crates/bitnet-test-support", version = "0.2.1-dev" }
-bitnet-test-env = { path = "crates/bitnet-test-env", version = "0.2.1-dev" }
 
 # HTTP client for examples
 reqwest = { version = "0.12.24", features = ["json"] }

@@ -20,8 +20,6 @@ fn cpu_only_caps() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Scalar,
     }
@@ -36,8 +34,6 @@ fn cpu_avx2_caps() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }

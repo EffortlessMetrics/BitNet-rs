@@ -482,20 +482,20 @@ mod tests {
 
     #[test]
     fn test_has_any_library() {
-        let _temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().unwrap();
 
         #[cfg(target_os = "linux")]
         {
-            fs::write(_temp_dir.path().join("libbitnet.so"), b"mock").unwrap();
-            assert!(has_any_library(_temp_dir.path(), &["libbitnet"]));
-            assert!(!has_any_library(_temp_dir.path(), &["libllama"]));
+            fs::write(temp_dir.path().join("libbitnet.so"), b"mock").unwrap();
+            assert!(has_any_library(temp_dir.path(), &["libbitnet"]));
+            assert!(!has_any_library(temp_dir.path(), &["libllama"]));
         }
 
         #[cfg(target_os = "macos")]
         {
-            fs::write(_temp_dir.path().join("libbitnet.dylib"), b"mock").unwrap();
-            assert!(has_any_library(_temp_dir.path(), &["libbitnet"]));
-            assert!(!has_any_library(_temp_dir.path(), &["libllama"]));
+            fs::write(temp_dir.path().join("libbitnet.dylib"), b"mock").unwrap();
+            assert!(has_any_library(temp_dir.path(), &["libbitnet"]));
+            assert!(!has_any_library(temp_dir.path(), &["libllama"]));
         }
     }
 

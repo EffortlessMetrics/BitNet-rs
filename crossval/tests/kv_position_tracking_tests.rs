@@ -19,9 +19,7 @@
 //!
 //! **Feature Gates**: `#[cfg(feature = "crossval")]` for FFI-dependent tests
 
-#[allow(unused_imports)]
 use anyhow::{Context, Result};
-#[allow(unused_imports)]
 use serial_test::serial;
 
 // ============================================================================

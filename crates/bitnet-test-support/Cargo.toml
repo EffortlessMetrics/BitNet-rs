@@ -10,7 +10,7 @@ description = "Shared test infrastructure for BitNet-rs: EnvGuard/EnvScope, mode
 publish = true
 
 [dependencies]
-bitnet-test-env.workspace = true
+# No runtime deps — this crate is intentionally minimal
 
 [dev-dependencies]
 insta.workspace = true

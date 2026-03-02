@@ -19,9 +19,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-cpu-activations = { path = "../bitnet-cpu-activations", version = "0.2.1-dev" }
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
-bitnet-simd = { path = "../bitnet-simd", version = "0.2.1-dev" }
 thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
@@ -79,9 +77,7 @@ hip = ["rocm"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
 vulkan = ["bitnet-device-probe/vulkan"]
 oneapi = ["dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
-opencl = ["dep:opencl3", "bitnet-common/opencl", "bitnet-device-probe/opencl"]
 ffi = ["dep:cc", "dep:bindgen"]
-metal = []
 inference = []
 strict = []  # Strict mode for mock elimination validation
 
@@ -94,14 +90,59 @@ name = "kernel_tests"
 path = "tests/kernel_tests.rs"
 
 [[test]]
-name = "apple_silicon_benchmarks"
-path = "tests/apple_silicon_benchmarks.rs"
+name = "comprehensive_tests"
+path = "tests/comprehensive_tests.rs"
 
 [[test]]
-name = "neon_correctness_exhaustive"
-path = "tests/neon_correctness_exhaustive.rs"
+name = "comprehensive_unit_tests"
+path = "tests/comprehensive_unit_tests.rs"
+
+[[test]]
+name = "comprehensive_kernel_unit_tests"
+path = "tests/comprehensive_kernel_unit_tests.rs"
+
+[[test]]
+name = "kernel_bdd_tests"
+path = "tests/kernel_bdd_tests.rs"
+
+[[test]]
+name = "gpu_integration"
+path = "tests/gpu_integration.rs"
+required-features = ["gpu"]
 
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
+
+[[example]]
+name = "simple_gpu_test"
+path = "examples/simple_gpu_test.rs"
+required-features = ["gpu"]
+
+[[example]]
+name = "cuda_smoke"
+path = "examples/cuda_smoke.rs"
+required-features = ["gpu"]
+
+[[test]]
+name = "gpu_quantization"
+path = "tests/gpu_quantization.rs"
+required-features = ["gpu"]
+
+[[test]]
+name = "opencl_stub_tests"
+path = "tests/opencl_stub_tests.rs"
+required-features = ["oneapi"]
+
+[[test]]
+name = "opencl_kernel_correctness"
+path = "tests/opencl_kernel_correctness.rs"
+
+[[test]]
+name = "opencl_property_tests"
+path = "tests/opencl_property_tests.rs"
+
+[[test]]
+name = "opencl_bdd_tests"
+path = "tests/opencl_bdd_tests.rs"

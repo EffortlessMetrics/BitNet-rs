@@ -299,7 +299,6 @@ fn create_test_model() -> Result<BitNetModel> {
         rope_scaling: None,
         rms_norm_eps: None,
         tokenizer: bitnet_common::config::TokenizerConfig::default(),
-        ..Default::default()
     };
     let config = BitNetConfig { model: model_config, ..Default::default() };
     Ok(BitNetModel::new(config, Device::Cpu))

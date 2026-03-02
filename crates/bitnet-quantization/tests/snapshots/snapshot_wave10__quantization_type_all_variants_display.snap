@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: "displays.join(\", \")"
----
-I2_S, TL1, TL2

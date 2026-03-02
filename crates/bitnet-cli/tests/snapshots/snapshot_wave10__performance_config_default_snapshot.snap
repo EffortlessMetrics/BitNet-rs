@@ -1,5 +1,0 @@
----
-source: crates/bitnet-cli/tests/snapshot_wave10.rs
-expression: "format!(\"cpu_threads={:?} batch_size={} memory_optimization={}\",\ncfg.cpu_threads, cfg.batch_size, cfg.memory_optimization)"
----
-cpu_threads=None batch_size=1 memory_optimization=true

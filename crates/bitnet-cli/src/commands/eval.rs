@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
-use bitnet_eval_core::{log_softmax_stable, topk_stable_indices};
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 
@@ -184,6 +183,46 @@ pub struct EvalTiming {
     pub total: f64,
     pub per_line: f64,
     pub per_token: f64,
+}
+
+/// Small helper for deterministic, robust top-k on possibly quantized logits
+#[inline]
+fn topk_stable_indices(logits: &[f32], k: usize) -> Vec<usize> {
+    use core::cmp::Ordering;
+    if k == 0 {
+        return Vec::new();
+    }
+
+    let mut idx: Vec<usize> = (0..logits.len()).collect();
+
+    // Sort by logit descending, then by index ascending for ties
+    idx.sort_by(|&a, &b| {
+        match logits[b].partial_cmp(&logits[a]) {
+            Some(Ordering::Less) => Ordering::Less,
+            Some(Ordering::Greater) => Ordering::Greater,
+            _ => a.cmp(&b), // Deterministic tie-breaking
+        }
+    });
+
+    idx.truncate(k);
+    idx
+}
+
+/// Stable log-softmax computation
+#[inline]
+fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
+    let mut m = f32::NEG_INFINITY;
+    for &v in xs {
+        if v > m {
+            m = v;
+        }
+    }
+    let mut sum = 0.0f32;
+    for &v in xs {
+        sum += (v - m).exp();
+    }
+    let lse = m + sum.ln();
+    xs.iter().map(|&v| v - lse).collect()
 }
 
 impl EvalCommand {

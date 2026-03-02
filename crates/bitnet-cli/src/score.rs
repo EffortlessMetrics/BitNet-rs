@@ -4,7 +4,6 @@ use serde_json::json;
 use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 
 use bitnet_common::Device as BNDevice;
-use bitnet_eval_core::log_softmax_stable;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::{GgufReader, ModelLoader};
 use candle_core::Device;
@@ -155,4 +154,20 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&out)?);
     }
     Ok(())
+}
+
+#[inline]
+fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
+    let mut m = f32::NEG_INFINITY;
+    for &v in xs {
+        if v > m {
+            m = v;
+        }
+    }
+    let mut sum = 0.0f32;
+    for &v in xs {
+        sum += (v - m).exp();
+    }
+    let lse = m + sum.ln();
+    xs.iter().map(|&v| v - lse).collect()
 }

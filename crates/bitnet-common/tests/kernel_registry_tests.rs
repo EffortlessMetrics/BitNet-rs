@@ -22,8 +22,6 @@ fn cpu_only_avx2() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -38,8 +36,6 @@ fn cuda_with_runtime() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -54,8 +50,6 @@ fn all_backends() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Avx512,
     }
@@ -70,8 +64,6 @@ fn empty_caps() -> KernelCapabilities {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Scalar,
     }
@@ -287,8 +279,6 @@ fn with_cuda_runtime_true_sets_flag() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };
@@ -306,8 +296,6 @@ fn with_cuda_runtime_false_clears_flag() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -367,8 +355,6 @@ fn compiled_backends_only_ffi() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Scalar,
     };
@@ -405,8 +391,6 @@ fn compiled_backends_cuda_not_listed_when_only_runtime_missing() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };
@@ -442,8 +426,6 @@ fn best_available_is_cpu_when_cuda_compiled_but_no_runtime() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };
@@ -460,8 +442,6 @@ fn best_available_is_ffi_when_no_cuda_runtime_but_ffi_present() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Scalar,
     };
@@ -483,8 +463,6 @@ fn best_available_prefers_ffi_over_cpu_when_no_cuda() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Avx2,
     };
@@ -535,8 +513,6 @@ fn summary_reflects_simd_level_for_neon() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Neon,
     };
@@ -573,8 +549,6 @@ fn kernel_capabilities_clone_is_independent() {
         hip_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
-        opencl_compiled: false,
-        opencl_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };

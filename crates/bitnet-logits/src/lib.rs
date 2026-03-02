@@ -21,8 +21,6 @@
 
 use std::cmp::Ordering;
 
-pub use bitnet_logits_filters::{apply_min_p, apply_top_k, apply_top_p, apply_typical};
-
 /// Scale logits by `1 / temperature`.
 ///
 /// * `temperature == 0.0` → no-op (handled externally via greedy path).
@@ -64,6 +62,98 @@ pub fn apply_temperature(logits: &mut [f32], temperature: f32) {
     let inv = 1.0 / temperature;
     for l in logits.iter_mut() {
         *l *= inv;
+    }
+}
+
+/// Zero out all but the top-`top_k` logits (by value).
+///
+/// Entries outside the top-k are set to `f32::NEG_INFINITY` so that a
+/// subsequent [`softmax_in_place`] maps them to probability `0.0`.
+///
+/// Returns the number of non-`NEG_INFINITY` entries remaining.
+/// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::{apply_top_k, softmax_in_place};
+///
+/// let mut logits = vec![1.0f32, 5.0, 3.0, 2.0, 4.0];
+/// let kept = apply_top_k(&mut logits, 2);
+/// assert_eq!(kept, 2);
+/// // Only the two highest values (5.0 at idx 1, 4.0 at idx 4) survive.
+/// assert!(logits[1].is_finite());
+/// assert!(logits[4].is_finite());
+/// assert!(logits[0].is_infinite());
+///
+/// // After softmax, NEG_INFINITY entries become probability 0.
+/// softmax_in_place(&mut logits);
+/// assert_eq!(logits[0], 0.0);
+/// ```
+pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
+    if top_k == 0 || top_k >= logits.len() {
+        return logits.len();
+    }
+    // Use O(N) selection to find the k-th largest threshold.
+    let mut vals: Vec<f32> = logits.to_vec();
+    // select_nth_unstable_by puts the (len - top_k)-th smallest at index (len-top_k),
+    // with all smaller values before it and larger values after it.
+    let partition_idx = vals.len() - top_k;
+    vals.select_nth_unstable_by(partition_idx, |a, b| f32_ascending(*a, *b));
+    let threshold = vals[partition_idx];
+    let mut kept = 0usize;
+    for l in logits.iter_mut() {
+        if *l >= threshold && kept < top_k {
+            kept += 1;
+        } else {
+            *l = f32::NEG_INFINITY;
+        }
+    }
+    kept
+}
+
+/// Nucleus (top-p) filtering on a **probability** slice (post-softmax).
+///
+/// Tokens are ranked by probability (descending). The smallest set whose
+/// cumulative probability ≥ `top_p` is kept; all others are zeroed.
+///
+/// Call [`softmax_in_place`] before this function; call [`apply_top_k`] before
+/// softmax if both filters are desired.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_top_p;
+///
+/// // Probs already sum to 1.0 (post-softmax).
+/// let mut probs = vec![0.5f32, 0.3, 0.2];
+/// apply_top_p(&mut probs, 0.8);
+/// // 0.5 + 0.3 = 0.8 ≥ top_p, so only the third token is zeroed.
+/// assert!(probs[0] > 0.0);
+/// assert!(probs[1] > 0.0);
+/// assert_eq!(probs[2], 0.0);
+/// ```
+pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
+    if top_p >= 1.0 || probs.is_empty() {
+        return;
+    }
+    // Optimization: Filter out zero probabilities (e.g. from prior top-k)
+    // to avoid sorting the entire vocabulary.
+    let mut indexed: Vec<(usize, f32)> =
+        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
+
+    let mut cumsum = 0.0f32;
+    let mut cutoff = indexed.len();
+    for (rank, (_, p)) in indexed.iter().enumerate() {
+        cumsum += p;
+        if cumsum >= top_p {
+            cutoff = rank + 1;
+            break;
+        }
+    }
+    for (_, (idx, _)) in indexed.iter().enumerate().skip(cutoff) {
+        probs[*idx] = 0.0;
     }
 }
 
@@ -184,7 +274,115 @@ pub fn argmax(logits: &[f32]) -> usize {
     logits.iter().enumerate().max_by(|(_, a), (_, b)| f32_ascending(**a, **b)).map_or(0, |(i, _)| i)
 }
 
+/// Min-p filtering on a **probability** slice (post-softmax).
+///
+/// Zeroes out all tokens whose probability is below `min_p * max_probability`.
+/// This adapts the threshold dynamically based on the most likely token,
+/// keeping more tokens when the model is uncertain and fewer when confident.
+///
+/// `min_p` should be in `[0.0, 1.0]`. Values ≤ 0.0 are no-ops.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_min_p;
+///
+/// let mut probs = vec![0.5f32, 0.3, 0.1, 0.05, 0.05];
+/// apply_min_p(&mut probs, 0.2);
+/// // Threshold = 0.2 * 0.5 = 0.1. Tokens with prob < 0.1 are zeroed.
+/// assert!(probs[0] > 0.0); // 0.5 >= 0.1
+/// assert!(probs[1] > 0.0); // 0.3 >= 0.1
+/// assert!(probs[2] > 0.0); // 0.1 >= 0.1
+/// assert_eq!(probs[3], 0.0); // 0.05 < 0.1
+/// assert_eq!(probs[4], 0.0); // 0.05 < 0.1
+/// ```
+pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
+    if min_p <= 0.0 || probs.is_empty() {
+        return;
+    }
+    let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
+    let threshold = min_p * max_prob;
+    for p in probs.iter_mut() {
+        if *p < threshold {
+            *p = 0.0;
+        }
+    }
+}
+
+/// Locally typical sampling filter on a **probability** slice (post-softmax).
+///
+/// Keeps tokens whose "surprise" (negative log probability) is closest to
+/// the expected surprise (entropy), until the cumulative probability of
+/// kept tokens reaches `typical_p`. This prefers tokens that are
+/// information-theoretically "typical" of the distribution.
+///
+/// `typical_p` should be in `(0.0, 1.0]`. Values ≥ 1.0 are no-ops.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::{softmax_in_place, apply_typical};
+///
+/// let mut probs = vec![0.0f32; 5];
+/// probs[0] = 0.5;
+/// probs[1] = 0.25;
+/// probs[2] = 0.15;
+/// probs[3] = 0.07;
+/// probs[4] = 0.03;
+/// apply_typical(&mut probs, 0.8);
+/// // Tokens closest to the entropy are kept first.
+/// let non_zero = probs.iter().filter(|&&p| p > 0.0).count();
+/// assert!(non_zero >= 1);
+/// ```
+pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
+    if typical_p >= 1.0 || probs.is_empty() {
+        return;
+    }
+
+    // Compute entropy H = -Σ p * ln(p)
+    let entropy: f32 = probs.iter().filter(|&&p| p > 0.0).map(|&p| -p * p.ln()).sum();
+
+    // For each token, compute |surprise - entropy| = |(-ln(p)) - H|
+    let mut indexed: Vec<(usize, f32, f32)> = probs
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|&(_, p)| p > 0.0)
+        .map(|(i, p)| {
+            let surprise = -p.ln();
+            let deviation = (surprise - entropy).abs();
+            (i, p, deviation)
+        })
+        .collect();
+
+    // Sort by deviation ascending (most typical first)
+    indexed.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
+
+    // Keep tokens until cumulative probability reaches typical_p
+    let mut cumsum = 0.0f32;
+    let mut keep = std::collections::HashSet::new();
+    for &(idx, p, _) in &indexed {
+        keep.insert(idx);
+        cumsum += p;
+        if cumsum >= typical_p {
+            break;
+        }
+    }
+
+    // Zero out tokens not in the keep set
+    for (i, p) in probs.iter_mut().enumerate() {
+        if !keep.contains(&i) {
+            *p = 0.0;
+        }
+    }
+}
+
 // --- helpers ---------------------------------------------------------------
+
+#[inline]
+fn f32_descending(a: f32, b: f32) -> Ordering {
+    b.partial_cmp(&a).unwrap_or(Ordering::Equal)
+}
 
 #[inline]
 fn f32_ascending(a: f32, b: f32) -> Ordering {

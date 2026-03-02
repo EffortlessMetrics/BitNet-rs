@@ -12,7 +12,7 @@ description = "Pure logits transform functions for BitNet LLM inference"
 rust-version.workspace = true
 
 [dependencies]
-bitnet-logits-filters = { path = "../bitnet-logits-filters", version = "0.2.1-dev" }
+# Pure-Rust math – no external deps required.
 
 [dev-dependencies]
 proptest.workspace = true
