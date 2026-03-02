@@ -10,6 +10,7 @@ pub mod config;
 pub mod config_builder;
 pub mod cpu_opt;
 pub mod dense_forward;
+pub mod dense_generation;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
