@@ -40,6 +40,7 @@ pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod launch_optimizer;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
@@ -148,6 +149,13 @@ pub use embedding::{
     EmbeddingKernelConfig, PositionEmbeddingConfig, embedding_forward, embedding_lookup_cpu,
     embedding_with_position_cpu, launch_embedding_lookup, launch_position_embedding,
     position_embedding_forward,
+};
+
+pub use launch_optimizer::{
+    BatchBuilder, BatchEntry, BatchId, BatchResult, GpuArchFamily, GpuArchitecture, KernelBatch,
+    KernelResourceUsage, LaunchConfig, LaunchOptimizer, LaunchValidationError, LaunchValidator,
+    OccupancyInfo, OccupancyLimiter, PersistentKernelConfig, ReductionLaunchPlanner, ReductionPass,
+    SharedMemStrategy, SharedMemoryPlanner,
 };
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
