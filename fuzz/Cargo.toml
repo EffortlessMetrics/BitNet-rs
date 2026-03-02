@@ -541,74 +541,38 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_softmax_stability"
-path = "fuzz_targets/fuzz_cuda_softmax_stability.rs"
+name = "fuzz_residual_ops"
+path = "fuzz_targets/fuzz_residual_ops.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_layernorm_numerical"
-path = "fuzz_targets/fuzz_cuda_layernorm_numerical.rs"
+name = "fuzz_ffn_forward"
+path = "fuzz_targets/fuzz_ffn_forward.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_attention_score"
-path = "fuzz_targets/fuzz_cuda_attention_score.rs"
+name = "fuzz_concat_split"
+path = "fuzz_targets/fuzz_concat_split.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_matmul_shapes"
-path = "fuzz_targets/fuzz_cuda_matmul_shapes.rs"
+name = "fuzz_gather_scatter"
+path = "fuzz_targets/fuzz_gather_scatter.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_rope_positions"
-path = "fuzz_targets/fuzz_cuda_rope_positions.rs"
+name = "fuzz_linear_forward"
+path = "fuzz_targets/fuzz_linear_forward.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_quantize_roundtrip"
-path = "fuzz_targets/fuzz_cuda_quantize_roundtrip.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_batch_norm_numerical"
-path = "fuzz_targets/fuzz_batch_norm_numerical.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_profiling_timing"
-path = "fuzz_targets/fuzz_profiling_timing.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_thread_pool_scheduling"
-path = "fuzz_targets/fuzz_thread_pool_scheduling.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_element_wise_chains"
-path = "fuzz_targets/fuzz_element_wise_chains.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_softmax_large_values"
-path = "fuzz_targets/fuzz_softmax_large_values.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_pipeline_parallel_stages"
-path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
+name = "fuzz_rope_encoding"
+path = "fuzz_targets/fuzz_rope_encoding.rs"
 test = false
 doc = false
 
