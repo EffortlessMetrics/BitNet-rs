@@ -29,6 +29,7 @@ pub mod npu;
 pub mod opencl_attention;
 pub mod opencl_buffer;
 pub mod opencl_cache;
+pub mod opencl_config_reload;
 pub mod opencl_context;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
