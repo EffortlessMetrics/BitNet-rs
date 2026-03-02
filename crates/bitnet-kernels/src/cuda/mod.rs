@@ -38,6 +38,7 @@ pub mod attention;
 pub mod attention_mask;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod dequant;
 pub mod elementwise;
 pub mod embedding;
 pub mod fused_attention;
@@ -168,6 +169,13 @@ pub use softmax::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use softmax::SOFTMAX_KERNEL_SRC;
 
+pub use dequant::{
+    DequantConfig, DequantPrecision, QK256_BLOCK_SIZE, QuantBitWidth, ScaleMode,
+    batch_dequantize_int2_to_f32, dequantize_int2_per_channel_f32, dequantize_int2_to_f16,
+    dequantize_int2_to_f32, dequantize_int2_uniform_f32, dequantize_int4_to_f16,
+    dequantize_int4_to_f32, dequantize_int8_to_f16, dequantize_int8_to_f32,
+    dequantize_int8_uniform_f32, dequantize_qk256_to_f16, dequantize_qk256_to_f32,
+};
 pub use matmul::{
     GemmConfig, MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward,
     matmul_forward, matmul_tiled_cpu,
@@ -239,6 +247,12 @@ pub use quantized_matmul::{I2S_MATMUL_KERNEL_SRC, launch_i2s_matmul};
 pub use quantize::{
     DEQUANTIZE_I2S_KERNEL_SRC, DEQUANTIZE_TERNARY_KERNEL_SRC, QUANTIZE_I2S_KERNEL_SRC,
     QUANTIZE_TERNARY_KERNEL_SRC,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use dequant::{
+    DEQUANT_INT2_F32_KERNEL_SRC, DEQUANT_INT4_F32_KERNEL_SRC, DEQUANT_INT8_F32_KERNEL_SRC,
+    DEQUANT_QK256_F32_KERNEL_SRC,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
