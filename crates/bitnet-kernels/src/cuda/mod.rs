@@ -45,6 +45,7 @@ pub mod kv_cache;
 pub mod kv_cache_gpu;
 pub mod layernorm;
 pub mod linear;
+pub mod loss;
 pub mod matmul;
 pub mod memory_pool;
 pub mod multi_head_attention;
@@ -179,6 +180,15 @@ pub use embedding::{
 };
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
+pub use loss::{
+    LossConfig, LossReduction, binary_cross_entropy, contrastive_loss, cross_entropy_loss,
+    cross_entropy_loss_forward, cross_entropy_with_logits, focal_loss, huber_loss,
+    huber_loss_forward, kl_divergence, label_smoothing_ce, mse_loss, mse_loss_forward,
+    perplexity_from_logits, triplet_loss,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use loss::{LOSS_KERNEL_SRC, launch_cross_entropy_loss, launch_huber_loss, launch_mse_loss};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use warp_ops::WARP_OPS_KERNEL_SRC;
