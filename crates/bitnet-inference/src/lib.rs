@@ -26,6 +26,7 @@ pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
 pub mod thread_pool;
+pub mod tool_templates; // Tool-use / function-calling prompt templates
 
 // Re-export GGUF types for easy access
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
