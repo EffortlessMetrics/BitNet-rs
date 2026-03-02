@@ -29,6 +29,7 @@ pub mod npu;
 pub mod opencl_attention;
 pub mod opencl_buffer;
 pub mod opencl_cache;
+pub mod opencl_cmd_queue;
 pub mod opencl_context;
 pub mod opencl_continuous_batch;
 pub mod opencl_device_caps;
