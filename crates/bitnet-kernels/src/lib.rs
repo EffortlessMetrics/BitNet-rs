@@ -48,6 +48,7 @@ pub mod opencl_layer_norm;
 pub mod opencl_matmul_variants;
 pub mod opencl_memory;
 pub mod opencl_model_converter;
+pub mod opencl_numerical_stability;
 pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
