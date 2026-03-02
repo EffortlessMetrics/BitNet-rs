@@ -4,6 +4,6 @@
 //! `bitnet-server-health-types-core` to keep existing import paths stable.
 
 pub use bitnet_server_health_types_core::{
-    Ac05HealthResponse, LivenessResponse, PerformanceIndicators, ReadinessChecks,
-    ReadinessResponse, SystemMetrics,
+    Ac05HealthResponse, ComponentHealth, HealthStatus, LivenessResponse, PerformanceIndicators,
+    ReadinessChecks, ReadinessResponse, SystemMetrics,
 };

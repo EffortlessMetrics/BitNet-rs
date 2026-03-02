@@ -17,24 +17,7 @@ use tokio::sync::RwLock;
 use super::ac05_types::LivenessResponse;
 use super::metrics::MetricsCollector;
 use crate::health::PerformanceMetrics;
-
-/// Health check status
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum HealthStatus {
-    Healthy,
-    Degraded,
-    Unhealthy,
-}
-
-/// Individual component health
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComponentHealth {
-    pub status: HealthStatus,
-    pub message: String,
-    pub last_check: String,
-    pub response_time_ms: Option<u64>,
-}
+use bitnet_server_health_types_core::{ComponentHealth, HealthStatus};
 
 /// Build metadata included in health response
 #[derive(Debug, Clone, Serialize, Deserialize)]

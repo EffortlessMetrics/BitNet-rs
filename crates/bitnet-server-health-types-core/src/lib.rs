@@ -3,6 +3,24 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Generic health status used by server health endpoints.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+}
+
+/// Individual component health state and diagnostics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComponentHealth {
+    pub status: HealthStatus,
+    pub message: String,
+    pub last_check: String,
+    pub response_time_ms: Option<u64>,
+}
+
 /// Liveness probe response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LivenessResponse {
@@ -53,7 +71,7 @@ pub struct ReadinessResponse {
 pub struct Ac05HealthResponse {
     pub status: String,
     pub timestamp: String,
-    pub components: HashMap<String, String>,
+    pub components: HashMap<String, ComponentHealth>,
     pub system_metrics: SystemMetrics,
     pub performance_indicators: PerformanceIndicators,
 }
@@ -69,11 +87,24 @@ mod tests {
             status: "healthy".to_string(),
             timestamp: "2023-12-01T10:30:00Z".to_string(),
             components: [
-                ("model_manager".to_string(), "healthy".to_string()),
-                ("execution_router".to_string(), "healthy".to_string()),
-                ("batch_engine".to_string(), "healthy".to_string()),
-                ("device_monitor".to_string(), "healthy".to_string()),
-                ("quantization_engine".to_string(), "healthy".to_string()),
+                (
+                    "model_manager".to_string(),
+                    ComponentHealth {
+                        status: HealthStatus::Healthy,
+                        message: "ok".to_string(),
+                        last_check: "2023-12-01T10:30:00Z".to_string(),
+                        response_time_ms: Some(4),
+                    },
+                ),
+                (
+                    "execution_router".to_string(),
+                    ComponentHealth {
+                        status: HealthStatus::Healthy,
+                        message: "ok".to_string(),
+                        last_check: "2023-12-01T10:30:00Z".to_string(),
+                        response_time_ms: Some(3),
+                    },
+                ),
             ]
             .into_iter()
             .collect(),
@@ -97,9 +128,14 @@ mod tests {
 
         assert_eq!(serialized["status"], "healthy");
         assert_eq!(serialized["timestamp"], "2023-12-01T10:30:00Z");
-        assert_eq!(serialized["components"]["model_manager"], "healthy");
+        assert_eq!(serialized["components"]["model_manager"]["status"], "healthy");
         assert_eq!(serialized["system_metrics"]["cpu_utilization"], 0.65);
         assert_eq!(serialized["performance_indicators"]["sla_compliance"], 0.995);
+    }
+
+    #[test]
+    fn health_status_serializes_as_lowercase() {
+        assert_eq!(serde_json::to_string(&HealthStatus::Degraded).unwrap(), "\"degraded\"");
     }
 
     #[test]
