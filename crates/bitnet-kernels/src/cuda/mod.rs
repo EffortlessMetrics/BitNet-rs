@@ -8,6 +8,8 @@
 //! - [`fusion`]: Fused operation pairs (RMSNorm+Linear, GELU+Linear, etc.)
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
+//! - [`attention_mask`]: Attention mask generation (causal, padding, sliding window,
+//!   block-sparse, ALiBi, prefix LM) and application (additive, multiplicative)
 //! - [`batch_norm`]: Batch normalization with training/eval mode support
 //! - [`conv1d`]: 1-D convolution with stride, padding, dilation, groups
 //! - [`layernorm`]: Full LayerNorm and RMSNorm with CPU fallback and GPU dispatch
@@ -32,6 +34,7 @@
 
 pub mod activations;
 pub mod attention;
+pub mod attention_mask;
 pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
@@ -62,8 +65,20 @@ pub use attention::{
     launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
 };
 
+pub use attention_mask::{
+    AlibiConfig, AttentionMaskConfig, BlockSparseConfig, NEG_INF, PrefixMaskConfig,
+    SlidingWindowConfig, alibi_mask, apply_mask_additive, apply_mask_multiplicative,
+    apply_mask_to_scores, block_sparse_mask, causal_mask, combined_mask, compute_alibi_slopes,
+    create_prefix_mask, padding_mask, sliding_window_mask,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use attention::ATTENTION_KERNEL_SRC;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use attention_mask::{
+    ATTENTION_MASK_KERNEL_SRC, launch_alibi_mask, launch_apply_mask_additive,
+    launch_apply_mask_multiplicative, launch_causal_mask, launch_sliding_window_mask,
+};
 pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
