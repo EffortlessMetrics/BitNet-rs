@@ -32,6 +32,7 @@ pub mod validation_suite;
 pub mod validator;
 pub mod weight_loader;
 pub mod weight_mapper;
+pub mod weight_stats;
 
 #[cfg(test)]
 mod transformer_tests;
