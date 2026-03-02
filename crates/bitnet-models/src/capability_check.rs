@@ -115,7 +115,7 @@ pub fn check_requirements(hidden_size: usize, num_layers: usize, vocab_size: usi
     if vocab_size < 100 {
         issues.push(format!("vocab_size {vocab_size} is very small (min recommended: 100)"));
     }
-    if hidden_size % 2 != 0 {
+    if !hidden_size.is_multiple_of(2) {
         issues.push(format!("hidden_size {hidden_size} is odd (should be even for attention)"));
     }
 

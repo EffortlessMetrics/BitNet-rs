@@ -196,17 +196,12 @@ pub fn supported_conversions() -> HashMap<SourceFormat, Vec<TargetFormat>> {
             TargetFormat::GgufQ8,
         ],
     );
-    map.insert(
-        SourceFormat::PyTorch,
-        vec![TargetFormat::GgufF16, TargetFormat::GgufF32],
-    );
+    map.insert(SourceFormat::PyTorch, vec![TargetFormat::GgufF16, TargetFormat::GgufF32]);
     map
 }
 
 pub fn is_supported(source: SourceFormat, target: TargetFormat) -> bool {
-    supported_conversions()
-        .get(&source)
-        .is_some_and(|targets| targets.contains(&target))
+    supported_conversions().get(&source).is_some_and(|targets| targets.contains(&target))
 }
 
 #[cfg(test)]
@@ -215,18 +210,9 @@ mod tests {
 
     #[test]
     fn test_source_from_ext() {
-        assert_eq!(
-            SourceFormat::from_extension("safetensors"),
-            Some(SourceFormat::SafeTensors)
-        );
-        assert_eq!(
-            SourceFormat::from_extension("gguf"),
-            Some(SourceFormat::Gguf)
-        );
-        assert_eq!(
-            SourceFormat::from_extension("pt"),
-            Some(SourceFormat::PyTorch)
-        );
+        assert_eq!(SourceFormat::from_extension("safetensors"), Some(SourceFormat::SafeTensors));
+        assert_eq!(SourceFormat::from_extension("gguf"), Some(SourceFormat::Gguf));
+        assert_eq!(SourceFormat::from_extension("pt"), Some(SourceFormat::PyTorch));
         assert!(SourceFormat::from_extension("txt").is_none());
     }
 
@@ -239,12 +225,8 @@ mod tests {
 
     #[test]
     fn test_plan_safetensors_f16() {
-        let plan = plan_conversion(
-            SourceFormat::SafeTensors,
-            TargetFormat::GgufF16,
-            1_000_000_000,
-            200,
-        );
+        let plan =
+            plan_conversion(SourceFormat::SafeTensors, TargetFormat::GgufF16, 1_000_000_000, 200);
         assert_eq!(plan.source, SourceFormat::SafeTensors);
         assert!(!plan.requires_quantization);
         assert!(plan.step_count() >= 3);
@@ -252,49 +234,29 @@ mod tests {
 
     #[test]
     fn test_plan_with_quantization() {
-        let plan = plan_conversion(
-            SourceFormat::SafeTensors,
-            TargetFormat::GgufQ4,
-            1_000_000_000,
-            200,
-        );
+        let plan =
+            plan_conversion(SourceFormat::SafeTensors, TargetFormat::GgufQ4, 1_000_000_000, 200);
         assert!(plan.requires_quantization);
         assert!(plan.steps.iter().any(|s| s.name == "quantize"));
     }
 
     #[test]
     fn test_plan_gguf_to_gguf() {
-        let plan = plan_conversion(
-            SourceFormat::Gguf,
-            TargetFormat::GgufF16,
-            500_000_000,
-            100,
-        );
+        let plan = plan_conversion(SourceFormat::Gguf, TargetFormat::GgufF16, 500_000_000, 100);
         // No convert_types step for GGUF→GGUF
         assert!(!plan.steps.iter().any(|s| s.name == "convert_types"));
     }
 
     #[test]
     fn test_memory_estimate() {
-        let plan = plan_conversion(
-            SourceFormat::SafeTensors,
-            TargetFormat::GgufF16,
-            1_000_000,
-            10,
-        );
+        let plan = plan_conversion(SourceFormat::SafeTensors, TargetFormat::GgufF16, 1_000_000, 10);
         assert_eq!(plan.memory_estimate_bytes, 2_000_000);
     }
 
     #[test]
     fn test_supported() {
-        assert!(is_supported(
-            SourceFormat::SafeTensors,
-            TargetFormat::GgufF16
-        ));
-        assert!(is_supported(
-            SourceFormat::SafeTensors,
-            TargetFormat::GgufI2S
-        ));
+        assert!(is_supported(SourceFormat::SafeTensors, TargetFormat::GgufF16));
+        assert!(is_supported(SourceFormat::SafeTensors, TargetFormat::GgufI2S));
         assert!(!is_supported(SourceFormat::Onnx, TargetFormat::GgufF16));
     }
 

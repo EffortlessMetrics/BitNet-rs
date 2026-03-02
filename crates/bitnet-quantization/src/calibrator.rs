@@ -61,8 +61,7 @@ impl TensorStats {
         }
         if self.count > 0 {
             self.mean = self.sum / self.count as f64;
-            self.variance =
-                (self.sum_sq / self.count as f64) - self.mean * self.mean;
+            self.variance = (self.sum_sq / self.count as f64) - self.mean * self.mean;
         }
     }
 
@@ -112,18 +111,12 @@ pub fn compute_params(
 
     if symmetric {
         let absmax = max_val.abs().max(min_val.abs());
-        let scale =
-            if absmax == 0.0 { 1.0 } else { absmax / qmax as f64 };
+        let scale = if absmax == 0.0 { 1.0 } else { absmax / qmax as f64 };
         CalibrationResult { scale, zero_point: 0, bits, symmetric: true }
     } else {
         let range = max_val - min_val;
-        let scale = if range == 0.0 {
-            1.0
-        } else {
-            range / (qmax - qmin) as f64
-        };
-        let zero_point =
-            (qmin as f64 - min_val / scale).round() as i64;
+        let scale = if range == 0.0 { 1.0 } else { range / (qmax - qmin) as f64 };
+        let zero_point = (qmin as f64 - min_val / scale).round() as i64;
         CalibrationResult { scale, zero_point, bits, symmetric: false }
     }
 }
@@ -138,11 +131,7 @@ pub struct Calibrator {
 }
 
 impl Calibrator {
-    pub fn new(
-        method: CalibrationMethod,
-        bits: u32,
-        symmetric: bool,
-    ) -> Self {
+    pub fn new(method: CalibrationMethod, bits: u32, symmetric: bool) -> Self {
         Self { method, bits, symmetric, stats: Vec::new() }
     }
 
@@ -155,9 +144,7 @@ impl Calibrator {
     }
 
     pub fn observe(&mut self, name: &str, values: &[f32]) {
-        if let Some(s) =
-            self.stats.iter_mut().find(|s| s.name == name)
-        {
+        if let Some(s) = self.stats.iter_mut().find(|s| s.name == name) {
             s.update(values);
         } else {
             let mut s = TensorStats::new(name);
@@ -173,17 +160,7 @@ impl Calibrator {
     pub fn calibrate(&self) -> Vec<(String, CalibrationResult)> {
         self.stats
             .iter()
-            .map(|s| {
-                (
-                    s.name.clone(),
-                    compute_params(
-                        s,
-                        self.bits,
-                        self.symmetric,
-                        self.method,
-                    ),
-                )
-            })
+            .map(|s| (s.name.clone(), compute_params(s, self.bits, self.symmetric, self.method)))
             .collect()
     }
 
@@ -231,8 +208,7 @@ mod tests {
     fn test_symmetric_int8() {
         let mut s = TensorStats::new("test");
         s.update(&[-1.0, 0.5, 1.0]);
-        let result =
-            compute_params(&s, 8, true, CalibrationMethod::MinMax);
+        let result = compute_params(&s, 8, true, CalibrationMethod::MinMax);
         assert!(result.symmetric);
         assert_eq!(result.zero_point, 0);
         assert_eq!(result.bits, 8);
@@ -243,8 +219,7 @@ mod tests {
     fn test_asymmetric_int8() {
         let mut s = TensorStats::new("test");
         s.update(&[0.0, 1.0, 2.0]);
-        let result =
-            compute_params(&s, 8, false, CalibrationMethod::MinMax);
+        let result = compute_params(&s, 8, false, CalibrationMethod::MinMax);
         assert!(!result.symmetric);
     }
 
@@ -252,8 +227,7 @@ mod tests {
     fn test_int4_params() {
         let mut s = TensorStats::new("test");
         s.update(&[-8.0, 7.0]);
-        let result =
-            compute_params(&s, 4, true, CalibrationMethod::MinMax);
+        let result = compute_params(&s, 4, true, CalibrationMethod::MinMax);
         assert_eq!(result.bits, 4);
     }
 
@@ -288,12 +262,7 @@ mod tests {
     fn test_percentile_method() {
         let mut s = TensorStats::new("test");
         s.update(&[-10.0, -1.0, 0.0, 1.0, 10.0]);
-        let result = compute_params(
-            &s,
-            8,
-            true,
-            CalibrationMethod::Percentile,
-        );
+        let result = compute_params(&s, 8, true, CalibrationMethod::Percentile);
         assert!(result.scale > 0.0);
     }
 
@@ -307,8 +276,7 @@ mod tests {
     fn test_zero_range() {
         let mut s = TensorStats::new("test");
         s.update(&[5.0, 5.0, 5.0]);
-        let result =
-            compute_params(&s, 8, true, CalibrationMethod::MinMax);
+        let result = compute_params(&s, 8, true, CalibrationMethod::MinMax);
         assert!(result.scale > 0.0); // should not be zero
     }
 }
