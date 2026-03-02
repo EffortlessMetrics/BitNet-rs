@@ -39,6 +39,7 @@ pub mod opencl_device_caps;
 pub mod opencl_dispatch;
 pub mod opencl_elementwise;
 pub mod opencl_embedding;
+pub mod opencl_gqa;
 pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
 pub mod opencl_graph_compiler;
