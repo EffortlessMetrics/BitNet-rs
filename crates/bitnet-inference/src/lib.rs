@@ -18,6 +18,7 @@ pub mod gpu_streaming;
 pub mod kernel_recorder;
 pub mod kv_cache_optimized;
 pub mod layers;
+pub mod memory_estimation;
 pub mod memory_pool;
 pub mod metrics;
 pub mod npu;
