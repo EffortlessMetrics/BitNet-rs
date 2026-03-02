@@ -262,7 +262,7 @@ For detailed deployment guides, see:
 
 ## Key Design Patterns
 
-1. **Feature-Gated Architecture**: Default features are **empty** - always specify features explicitly
+1. **Feature-Gated Architecture**: CPU is the ergonomic default; use explicit features for alternate backends and `--no-default-features` for boundary verification
 2. **Production GGUF Loading**: Comprehensive tensor parsing replacing mock initialization with real model weights
 3. **Zero-Copy Operations**: Memory-mapped models, careful lifetime management with enhanced tensor loading
 4. **Device-Aware Quantization**: Automatic GPU acceleration with CPU fallback for all quantization formats

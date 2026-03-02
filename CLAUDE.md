@@ -89,9 +89,9 @@ nix flake check .#bitnet-server-receipts # Receipts validation
 ### Essential Commands
 
 ```bash
-# Build (default features are EMPTY - always specify features)
-cargo build --no-default-features --features cpu     # CPU inference
-cargo build --no-default-features --features gpu     # GPU inference
+# Build (CPU is default for day-to-day development)
+cargo build                                      # CPU inference (default)
+cargo build --features gpu                        # GPU inference
 
 # Build with CPU optimization (recommended for production performance)
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \

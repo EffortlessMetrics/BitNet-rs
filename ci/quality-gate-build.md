@@ -48,7 +48,7 @@ Build Time: 1m 25s
 ## Build Configuration
 
 - **Profile:** `release` (optimized)
-- **Feature Flags:** Explicit `--no-default-features --features cpu|gpu`
+- **Feature Flags:** CPU default for standard builds; explicit features for alternate backends
 - **Workspace:** All crates compiled successfully
 - **Target:** linux-x86_64
 
@@ -69,7 +69,7 @@ Build Time: 1m 25s
 - ✅ No linker errors
 - ✅ Optimized release builds
 - ✅ CPU and GPU backend support validated
-- ✅ Feature flag discipline enforced (default features are empty)
+- ✅ Feature flag discipline enforced (CPU default + boundary checks with `--no-default-features`)
 
 ## Conclusion
 

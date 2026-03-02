@@ -288,24 +288,23 @@ mod comprehensive_docs_audit {
         }
     }
 
-    /// AC:7 - Workspace Cargo.toml documents default = []
+    /// AC:7 - Workspace Cargo.toml documents default feature policy
     ///
-    /// Tests that root Cargo.toml clarifies that default features are empty
-    /// and explicit feature selection is required.
+    /// Tests that root Cargo.toml clarifies CPU default baseline and that
+    /// `--no-default-features` remains available for boundary validation.
     #[test]
-    fn ac7_cargo_toml_documents_empty_defaults() {
+    fn ac7_cargo_toml_documents_default_feature_policy() {
         let cargo_toml = workspace_root().join("Cargo.toml");
 
         let contents = std::fs::read_to_string(&cargo_toml).expect("Failed to read Cargo.toml");
 
-        // Check for default = [] or default = [ ] (empty)
-        let has_empty_defaults =
-            contents.contains("default = []") || contents.contains("default = [ ]");
+        let has_cpu_default = contents.contains("default = [\"cpu\"]")
+            || contents.contains("default = ['cpu']");
 
-        if has_empty_defaults {
-            println!("AC:7 PASS - Cargo.toml uses empty default features");
+        if has_cpu_default {
+            println!("AC:7 PASS - Cargo.toml sets CPU as default baseline");
         } else {
-            println!("AC:7 INFO - Cargo.toml default features status unclear");
+            println!("AC:7 INFO - Cargo.toml default feature baseline unclear");
         }
     }
 }
