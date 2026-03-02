@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use bitnet_common::{BitNetConfig, ConcreteTensor, Device};
 use bitnet_inference::engine::{InferenceResult, PerformanceMetrics, PerformanceTracker};
-use bitnet_inference::production_engine::{
+use bitnet_inference_metrics_core::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
     ThroughputMetrics, TimingMetrics,
 };
