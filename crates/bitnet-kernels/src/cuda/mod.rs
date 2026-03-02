@@ -39,6 +39,7 @@ pub mod embedding;
 pub mod ffn;
 pub mod fusion;
 pub mod gating;
+pub mod kernel_profiler;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
@@ -188,3 +189,9 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use kernel_profiler::{
+    ArithmeticIntensity, BaselineEntry, GpuEvent, KernelExecStats, KernelProfiler,
+    KernelStatsSummary, MemoryBandwidth, OccupancyRecord, OccupancyTracker, ProfilingReport,
+    ProfilingScope, RegressionDetector, RegressionResult, ReportFormat, ScopeBuilder,
+};
