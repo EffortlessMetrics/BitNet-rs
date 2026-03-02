@@ -44,7 +44,7 @@ nvidia-smi
 
 ## 2) Build with GPU support
 
-Use explicit feature selection (default features are intentionally empty):
+Use explicit feature selection for GPU paths (root defaults to CPU):
 
 ```bash
 cargo build --no-default-features --features gpu

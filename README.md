@@ -24,19 +24,19 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 # 1. Download a model
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
-# 2. Run inference  (always specify --no-default-features --features cpu|gpu)
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+# 2. Run inference (CPU defaults are enabled out of the box)
+RUST_LOG=warn cargo run -p bitnet-cli -- run \
   --model  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" --max-tokens 8
 
 # 3. Interactive chat
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+RUST_LOG=warn cargo run -p bitnet-cli -- chat \
   --model  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
-> Default features are **empty** by design — always pass `--no-default-features --features cpu` (or `gpu`).
+> Root `bitnet` now defaults to `cpu`; use `--no-default-features` for explicit feature-boundary checks and `--features gpu` (or another backend) when needed.
 
 ## Status
 
@@ -203,6 +203,17 @@ cargo fmt --all && cargo clippy --all-targets --no-default-features --features c
 The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (49 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d — TDD scaffolding for tracked issues. See justification strings.
 
 See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
+
+
+### Feature-boundary checks
+
+```bash
+# Ensure minimal root crate build remains valid
+cargo check -p bitnet --no-default-features
+
+# Ensure explicit CPU feature path remains valid
+cargo check -p bitnet --no-default-features --features cpu
+```
 
 ## Contributing
 

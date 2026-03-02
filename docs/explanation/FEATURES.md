@@ -4,12 +4,15 @@ This document provides comprehensive documentation for all feature flags availab
 
 ## Overview
 
-BitNet-rs uses Cargo feature flags to control compilation of optional functionality. **Default features are intentionally empty** to prevent unwanted dependencies and allow precise control over the build.
+BitNet-rs uses Cargo feature flags to control optional functionality. The root `bitnet` crate defaults to `cpu` for an ergonomic baseline, while `--no-default-features` remains available for strict feature-boundary validation.
 
 ## Quick Reference
 
 ```bash
-# CPU-only build (most common)
+# CPU-only build (most common, defaults)
+cargo build
+
+# CPU-only build (explicit boundary mode)
 cargo build --no-default-features --features cpu
 
 # GPU-enabled build
