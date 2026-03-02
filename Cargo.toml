@@ -238,6 +238,7 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 
 [dev-dependencies]
 async-trait = "0.1.89"
+bitnet-cpu-activations = { path = "crates/bitnet-cpu-activations", version = "0.2.1-dev" }
 bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.1-dev" }
 bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
@@ -381,6 +382,11 @@ required-features = ["cpu"]
 
 [[bench]]
 name = "neon_ops"
+harness = false
+required-features = ["cpu"]
+
+[[bench]]
+name = "slm_inference"
 harness = false
 required-features = ["cpu"]
 
