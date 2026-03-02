@@ -143,9 +143,11 @@ pub use elementwise::{
 };
 
 pub use embedding::{
-    EmbeddingKernelConfig, PositionEmbeddingConfig, embedding_forward, embedding_lookup_cpu,
+    EmbeddingBagMode, EmbeddingConfig, EmbeddingError, EmbeddingKernelConfig,
+    PositionEmbeddingConfig, embedding_bag, embedding_forward, embedding_lookup,
+    embedding_lookup_cpu, embedding_lookup_with_padding, embedding_norm_renormalize,
     embedding_with_position_cpu, launch_embedding_lookup, launch_position_embedding,
-    position_embedding_forward,
+    position_embedding_forward, positional_embedding_add, rotary_embedding_apply,
 };
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
@@ -155,6 +157,12 @@ pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use embedding::{EMBEDDING_LOOKUP_KERNEL_SRC, EMBEDDING_WITH_POSITION_KERNEL_SRC};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use embedding::{
+    EMBEDDING_BAG_KERNEL_SRC, EMBEDDING_RENORM_KERNEL_SRC, EMBEDDING_ROPE_KERNEL_SRC,
+    launch_embedding_bag, launch_embedding_renorm, launch_embedding_rope,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
