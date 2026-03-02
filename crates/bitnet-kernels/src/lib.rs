@@ -39,6 +39,7 @@ pub mod opencl_kv_cache;
 pub mod opencl_memory;
 pub mod opencl_pipeline;
 pub mod opencl_profiling;
+pub mod opencl_quant_calibrate;
 pub mod opencl_quantized;
 pub mod opencl_registry;
 pub mod opencl_token_gen;
