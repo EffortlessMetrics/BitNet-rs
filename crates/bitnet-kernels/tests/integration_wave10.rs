@@ -415,8 +415,14 @@ fn batch_norm_conv2d_pool_reduction_pipeline() {
     assert_eq!(conv_out.len(), out_ch * h * w);
 
     // Average pooling
-    let pool_cfg =
-        PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
+    let pool_cfg = PoolConfig {
+        pool_type: PoolType::Average,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let pooled = PoolingKernel::apply(&conv_out, &pool_cfg).unwrap();
     assert!(pooled.len() < conv_out.len());
 
@@ -448,6 +454,8 @@ fn batch_norm_inference_silu_pool_pipeline() {
         kernel_size: features,
         stride: features,
         padding: 0,
+        dilation: 1,
+        ceil_mode: false,
     };
     let pooled = PoolingKernel::apply(&activated, &pool_cfg).unwrap();
     assert!(pooled.iter().all(|v: &f32| v.is_finite()));

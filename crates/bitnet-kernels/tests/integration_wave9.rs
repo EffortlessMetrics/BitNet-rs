@@ -201,7 +201,14 @@ fn conv2d_silu_maxpool_pipeline() {
     let activated = activate(&conv_out, ActivationType::SiLU);
     assert_eq!(activated.len(), conv_out.len());
 
-    let pool_cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
+    let pool_cfg = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let pooled = PoolingKernel::apply(&activated, &pool_cfg).unwrap();
     assert!(!pooled.is_empty());
     assert!(pooled.iter().all(|v| v.is_finite()));
@@ -499,8 +506,14 @@ fn shaped_reduction_axis0_sum() {
 fn pooling_activation_reduction_pipeline() {
     let data: Vec<f32> = (0..16).map(|i| i as f32 - 8.0).collect();
 
-    let pool_cfg =
-        PoolConfig { pool_type: PoolType::Average, kernel_size: 4, stride: 4, padding: 0 };
+    let pool_cfg = PoolConfig {
+        pool_type: PoolType::Average,
+        kernel_size: 4,
+        stride: 4,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let pooled = PoolingKernel::apply(&data, &pool_cfg).unwrap();
     assert_eq!(pooled.len(), 4);
 

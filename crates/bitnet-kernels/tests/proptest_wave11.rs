@@ -350,6 +350,8 @@ proptest! {
             kernel_size,
             stride: 1,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         let output = pool_1d(&input, &config).unwrap();
         let input_max = input.iter().copied().fold(f32::NEG_INFINITY, f32::max);
@@ -370,6 +372,8 @@ proptest! {
             kernel_size: 1,
             stride: 1,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         let output = pool_1d(&input, &config).unwrap();
         prop_assert_eq!(input.len(), output.len());
@@ -405,6 +409,8 @@ proptest! {
             kernel_size: 0,
             stride: 0,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         let output = pool_1d(&input, &config).unwrap();
         prop_assert_eq!(output.len(), 1);
@@ -428,6 +434,8 @@ proptest! {
             kernel_size,
             stride: 1,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         let output = pool_1d(&input, &config).unwrap();
         for (i, &v) in output.iter().enumerate() {
