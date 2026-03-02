@@ -7,6 +7,7 @@ pub mod backends;
 pub mod batch;
 pub mod batch_engine;
 pub mod cache;
+pub mod compute_cost;
 pub mod config;
 pub mod config_builder;
 pub mod cpu_opt;
