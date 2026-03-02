@@ -450,9 +450,16 @@ dependencies = [
 name = "bitnet-bench-receipts"
 version = "0.1.0"
 dependencies = [
+ "bitnet-bench-receipts-core",
+ "tempfile",
+]
+
+[[package]]
+name = "bitnet-bench-receipts-core"
+version = "0.1.0"
+dependencies = [
  "serde",
  "serde_json",
- "tempfile",
  "thiserror 2.0.18",
 ]
 

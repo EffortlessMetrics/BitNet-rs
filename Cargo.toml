@@ -102,6 +102,7 @@ members = [
   "crates/bitnet-vulkan-shaders",# SRP: embedded Vulkan GLSL shader source catalog
   "crates/bitnet-wgpu",          # WebGPU compute backend for cross-platform GPU inference
   "crates/bitnet-dispatch-core", # SRP: backend-agnostic compute dispatch sizing/contracts
+  "crates/bitnet-bench-receipts-core", # SRP: benchmark receipt contract DTOs + serde
   "crates/bitnet-bench-receipts", # SRP: benchmark receipt model + JSONL persistence
   "crates/bitnet-wgpu-bench",    # Benchmarking and profiling harness for wgpu compute kernels
   "crates/bitnet-wgpu-runner",   # WebGPU kernel runner for GPU compute dispatch

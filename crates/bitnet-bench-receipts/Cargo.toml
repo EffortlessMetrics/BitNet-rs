@@ -7,9 +7,7 @@ description = "Receipt model and JSONL store for benchmark result tracking"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "2"
+bitnet-bench-receipts-core = { path = "../bitnet-bench-receipts-core" }
 
 [dev-dependencies]
 tempfile = "3"

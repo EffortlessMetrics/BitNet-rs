@@ -1,0 +1,12 @@
+[package]
+name = "bitnet-bench-receipts-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92.0"
+description = "Core benchmark receipt contracts and JSON serialization"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
