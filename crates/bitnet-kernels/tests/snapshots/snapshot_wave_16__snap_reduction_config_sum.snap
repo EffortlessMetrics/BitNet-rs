@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: config
+---
+ReductionConfig {
+    reduce_dim: 256,
+    n_reductions: 4,
+    threads_per_block: 256,
+    op: Sum,
+}

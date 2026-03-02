@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: config
+---
+EmbeddingConfig {
+    vocab_size: 32000,
+    embedding_dim: 768,
+    padding_idx: Some(
+        0,
+    ),
+}

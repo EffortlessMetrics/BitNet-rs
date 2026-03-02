@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: config
+---
+PoolConfig {
+    pool_type: Max,
+    kernel_size: 3,
+    stride: 2,
+    padding: 1,
+}

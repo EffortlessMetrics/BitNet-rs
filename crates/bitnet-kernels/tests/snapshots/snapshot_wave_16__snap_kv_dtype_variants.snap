@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: variants
+---
+[
+    F32,
+    F16,
+    Bf16,
+]

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: output
+---
+[
+    -0.045500264,
+    -0.15865526,
+    0.0,
+    0.8413448,
+    1.9544997,
+]

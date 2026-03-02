@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: display
+---
+[
+    "RmsNormLinear",
+    "GeluLinear",
+    "SoftmaxMask",
+    "AddNormalize",
+    "ScaleAndAdd",
+]

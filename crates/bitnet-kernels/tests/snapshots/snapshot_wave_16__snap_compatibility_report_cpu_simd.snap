@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: report.summary()
+---
+CPU SIMD (AVX2) (CPU SIMD): READY — 3/3 required ops supported
