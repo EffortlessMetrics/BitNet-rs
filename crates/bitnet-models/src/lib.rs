@@ -11,6 +11,7 @@ pub mod conversion;
 pub mod correction_policy;
 pub mod dense_crossval;
 pub mod fingerprint;
+pub mod format_detector;
 pub mod formats;
 pub mod gguf_min;
 pub mod gguf_parity;
