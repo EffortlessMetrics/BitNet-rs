@@ -12,6 +12,7 @@ pub mod dtype_convert;
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
 pub mod kernel_registry;
+pub mod memory_estimator;
 pub mod memory_pool;
 pub mod shape_validator;
 pub mod strict_mode;
