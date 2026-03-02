@@ -1,3 +1,4 @@
+use std::{fs, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -31,9 +32,36 @@ pub fn validate_downloaded_len(
     Ok(())
 }
 
+/// Atomic write helper for small metadata files (etag/last-modified).
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+
+    #[cfg(unix)]
+    {
+        if let Ok(f) = std::fs::File::open(&tmp) {
+            f.sync_all()?;
+        }
+    }
+
+    fs::rename(&tmp, path)?;
+
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn parses_content_range_total() {
@@ -49,5 +77,22 @@ mod tests {
             validate_downloaded_len(1, Some(2)),
             Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
+    }
+
+    #[test]
+    fn atomic_write_persists_file_contents() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos();
+        let temp_path = std::env::temp_dir().join(format!("bitnet-download-core-{unique}.txt"));
+
+        atomic_write(&temp_path, b"v1").expect("first write should succeed");
+        assert_eq!(std::fs::read(&temp_path).expect("file should be readable"), b"v1");
+
+        atomic_write(&temp_path, b"v2").expect("second write should succeed");
+        assert_eq!(std::fs::read(&temp_path).expect("file should be readable"), b"v2");
+
+        std::fs::remove_file(&temp_path).expect("temp file cleanup should succeed");
     }
 }
