@@ -20,14 +20,14 @@ pub fn parse_content_range_total(content_range: &str) -> Option<u64> {
 }
 
 /// Ensure downloaded bytes match expected total when available.
-pub fn validate_downloaded_len(
+pub const fn validate_downloaded_len(
     downloaded: u64,
     expected_total: Option<u64>,
 ) -> Result<(), DownloadValidationError> {
-    if let Some(expected) = expected_total
-        && downloaded != expected
-    {
-        return Err(DownloadValidationError::Truncated { downloaded, expected });
+    if let Some(expected) = expected_total {
+        if downloaded != expected {
+            return Err(DownloadValidationError::Truncated { downloaded, expected });
+        }
     }
     Ok(())
 }
