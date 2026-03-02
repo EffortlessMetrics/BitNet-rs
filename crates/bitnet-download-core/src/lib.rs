@@ -1,3 +1,4 @@
+use std::{fs, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -31,9 +32,36 @@ pub fn validate_downloaded_len(
     Ok(())
 }
 
+/// Atomically write bytes to `path` via a temporary sibling file.
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+
+    #[cfg(unix)]
+    {
+        if let Ok(f) = std::fs::File::open(&tmp) {
+            f.sync_all()?;
+        }
+    }
+
+    fs::rename(&tmp, path)?;
+
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn parses_content_range_total() {
@@ -49,5 +77,21 @@ mod tests {
             validate_downloaded_len(1, Some(2)),
             Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
+    }
+
+    #[test]
+    fn atomic_write_persists_contents() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        let path =
+            std::env::temp_dir().join(format!("bitnet_download_core_atomic_write_{suffix}.txt"));
+
+        atomic_write(&path, b"hello").expect("atomic write should succeed");
+        let contents = fs::read(&path).expect("file should be readable");
+        assert_eq!(contents, b"hello");
+
+        let _ = fs::remove_file(path);
     }
 }
