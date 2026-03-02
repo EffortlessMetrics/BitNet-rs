@@ -69,11 +69,7 @@ pub fn inspect_layers(tensor_names: &[String]) -> ModelStructure {
         .into_iter()
         .map(|(index, components)| {
             let tensor_count = components.len();
-            LayerInfo {
-                index,
-                components,
-                tensor_count,
-            }
+            LayerInfo { index, components, tensor_count }
         })
         .collect();
 
@@ -96,13 +92,7 @@ pub fn inspect_layers(tensor_names: &[String]) -> ModelStructure {
 
 /// Extract layer index from a tensor name.
 fn extract_layer_index(name: &str) -> Option<usize> {
-    for prefix in &[
-        "model.layers.",
-        "blk.",
-        "layers.",
-        "encoder.layer.",
-        "decoder.layer.",
-    ] {
+    for prefix in &["model.layers.", "blk.", "layers.", "encoder.layer.", "decoder.layer."] {
         if let Some(rest) = name.strip_prefix(prefix) {
             if let Some(idx_str) = rest.split('.').next() {
                 if let Ok(idx) = idx_str.parse::<usize>() {
@@ -213,10 +203,7 @@ mod tests {
 
     #[test]
     fn test_extract_index_hf() {
-        assert_eq!(
-            extract_layer_index("model.layers.5.self_attn.q_proj.weight"),
-            Some(5)
-        );
+        assert_eq!(extract_layer_index("model.layers.5.self_attn.q_proj.weight"), Some(5));
     }
 
     #[test]
