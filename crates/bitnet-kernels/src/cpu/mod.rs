@@ -44,6 +44,8 @@ pub use pooling::{
 };
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod quantized_pipeline;
+pub use quantized_pipeline::*;
 pub mod reduction;
 pub mod residual;
 pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
