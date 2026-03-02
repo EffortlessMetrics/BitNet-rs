@@ -187,17 +187,10 @@ pub fn cpu_calibrate_layer(
 }
 
 /// Choose an appropriate quantization level given sensitivity and a memory budget.
-pub fn cpu_select_quant_level(
-    sensitivity: &SensitivityScore,
-    memory_budget_mb: f64,
-) -> QuantLevel {
+pub fn cpu_select_quant_level(sensitivity: &SensitivityScore, memory_budget_mb: f64) -> QuantLevel {
     if memory_budget_mb < 100.0 {
         // Tight budget: only allow low-precision.
-        if sensitivity.score > 0.5 {
-            QuantLevel::Int4
-        } else {
-            QuantLevel::Ternary
-        }
+        if sensitivity.score > 0.5 { QuantLevel::Int4 } else { QuantLevel::Ternary }
     } else {
         sensitivity.recommended_level
     }
@@ -244,15 +237,11 @@ pub fn cpu_create_mixed_plan(
         })
         .collect();
 
-    let estimated_memory_mb: f64 = configs
-        .iter()
-        .map(|c| cpu_bits_per_element(&c.weight_quant) as f64 / 8.0)
-        .sum();
-    let estimated_accuracy_loss: f64 = configs
-        .iter()
-        .map(|c| accuracy_loss_for_level(&c.weight_quant))
-        .sum::<f64>()
-        / configs.len().max(1) as f64;
+    let estimated_memory_mb: f64 =
+        configs.iter().map(|c| cpu_bits_per_element(&c.weight_quant) as f64 / 8.0).sum();
+    let estimated_accuracy_loss: f64 =
+        configs.iter().map(|c| accuracy_loss_for_level(&c.weight_quant)).sum::<f64>()
+            / configs.len().max(1) as f64;
 
     QuantPlan {
         strategy: QuantStrategy::MixedSensitivity(configs.clone()),
@@ -283,8 +272,7 @@ pub fn cpu_create_progressive_plan(
     let configs: Vec<LayerQuantConfig> = (0..num_layers)
         .map(|i| {
             let t = if num_layers <= 1 { 0.0 } else { i as f64 / (num_layers - 1) as f64 };
-            let idx = (start_idx as f64 + t * (end_idx as f64 - start_idx as f64)).round()
-                as usize;
+            let idx = (start_idx as f64 + t * (end_idx as f64 - start_idx as f64)).round() as usize;
             let level = ordered[idx.min(ordered.len() - 1)];
             LayerQuantConfig {
                 layer_name: format!("layer_{i}"),
@@ -295,15 +283,11 @@ pub fn cpu_create_progressive_plan(
         })
         .collect();
 
-    let estimated_memory_mb: f64 = configs
-        .iter()
-        .map(|c| cpu_bits_per_element(&c.weight_quant) as f64 / 8.0)
-        .sum();
-    let estimated_accuracy_loss: f64 = configs
-        .iter()
-        .map(|c| accuracy_loss_for_level(&c.weight_quant))
-        .sum::<f64>()
-        / configs.len().max(1) as f64;
+    let estimated_memory_mb: f64 =
+        configs.iter().map(|c| cpu_bits_per_element(&c.weight_quant) as f64 / 8.0).sum();
+    let estimated_accuracy_loss: f64 =
+        configs.iter().map(|c| accuracy_loss_for_level(&c.weight_quant)).sum::<f64>()
+            / configs.len().max(1) as f64;
 
     QuantPlan {
         strategy: QuantStrategy::Progressive { start, end },
@@ -333,10 +317,7 @@ pub fn cpu_estimate_accuracy_loss(plan: &QuantPlan) -> f64 {
     if plan.layer_configs.is_empty() {
         return 0.0;
     }
-    plan.layer_configs
-        .iter()
-        .map(|c| accuracy_loss_for_level(&c.weight_quant))
-        .sum::<f64>()
+    plan.layer_configs.iter().map(|c| accuracy_loss_for_level(&c.weight_quant)).sum::<f64>()
         / plan.layer_configs.len() as f64
 }
 
@@ -391,7 +372,13 @@ fn variance(data: &[f32]) -> f64 {
     }
     let n = data.len() as f64;
     let mean = data.iter().map(|&x| x as f64).sum::<f64>() / n;
-    data.iter().map(|&x| { let d = x as f64 - mean; d * d }).sum::<f64>() / n
+    data.iter()
+        .map(|&x| {
+            let d = x as f64 - mean;
+            d * d
+        })
+        .sum::<f64>()
+        / n
 }
 
 fn min_max(data: &[f32]) -> (f32, f32) {
@@ -409,13 +396,19 @@ fn compute_outlier_ratio(data: &[f32]) -> f32 {
     }
     let n = data.len() as f64;
     let mean = data.iter().map(|&x| x as f64).sum::<f64>() / n;
-    let std_dev = (data.iter().map(|&x| { let d = x as f64 - mean; d * d }).sum::<f64>() / n)
+    let std_dev = (data
+        .iter()
+        .map(|&x| {
+            let d = x as f64 - mean;
+            d * d
+        })
+        .sum::<f64>()
+        / n)
         .sqrt();
     if std_dev < f64::EPSILON {
         return 0.0;
     }
-    let outliers =
-        data.iter().filter(|&&x| (x as f64 - mean).abs() > 3.0 * std_dev).count() as f64;
+    let outliers = data.iter().filter(|&&x| (x as f64 - mean).abs() > 3.0 * std_dev).count() as f64;
     (outliers / n) as f32
 }
 
@@ -505,9 +498,7 @@ mod tests {
         let activations = vec![0.0; 4];
         let s = cpu_compute_sensitivity(&weights, &activations, "ffn");
         assert!(s.score > 0.1);
-        assert!(
-            s.recommended_level == QuantLevel::Int4 || s.recommended_level == QuantLevel::Int8
-        );
+        assert!(s.recommended_level == QuantLevel::Int4 || s.recommended_level == QuantLevel::Int8);
     }
 
     #[test]
@@ -574,15 +565,21 @@ mod tests {
 
     #[test]
     fn select_level_sensitive_high_budget() {
-        let s =
-            SensitivityScore { layer_name: "a".into(), score: 2.0, recommended_level: QuantLevel::Float16 };
+        let s = SensitivityScore {
+            layer_name: "a".into(),
+            score: 2.0,
+            recommended_level: QuantLevel::Float16,
+        };
         assert_eq!(cpu_select_quant_level(&s, 1000.0), QuantLevel::Float16);
     }
 
     #[test]
     fn select_level_sensitive_low_budget() {
-        let s =
-            SensitivityScore { layer_name: "a".into(), score: 2.0, recommended_level: QuantLevel::Float16 };
+        let s = SensitivityScore {
+            layer_name: "a".into(),
+            score: 2.0,
+            recommended_level: QuantLevel::Float16,
+        };
         assert_eq!(cpu_select_quant_level(&s, 50.0), QuantLevel::Int4);
     }
 
@@ -651,8 +648,7 @@ mod tests {
 
     #[test]
     fn progressive_plan_gradual_transition() {
-        let plan =
-            cpu_create_progressive_plan(QuantLevel::Binary, QuantLevel::Float32, 6);
+        let plan = cpu_create_progressive_plan(QuantLevel::Binary, QuantLevel::Float32, 6);
         assert_eq!(plan.layer_configs.len(), 6);
         // First layer should be Binary, last should be Float32
         assert_eq!(plan.layer_configs[0].weight_quant, QuantLevel::Binary);
@@ -815,7 +811,9 @@ mod tests {
 
     #[test]
     fn property_bits_binary_less_than_float32() {
-        assert!(cpu_bits_per_element(&QuantLevel::Binary) < cpu_bits_per_element(&QuantLevel::Float32));
+        assert!(
+            cpu_bits_per_element(&QuantLevel::Binary) < cpu_bits_per_element(&QuantLevel::Float32)
+        );
     }
 
     #[test]
