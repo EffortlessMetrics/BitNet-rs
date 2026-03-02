@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave28.rs
+expression: cfg
+---
+QuantizationConfig {
+    quantization_type: TL2,
+    block_size: 128,
+    precision: 0.001,
+}

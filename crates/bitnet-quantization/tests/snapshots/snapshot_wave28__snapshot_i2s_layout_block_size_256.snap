@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave28.rs
+expression: desc
+---
+block_size=256 bytes_per_block=66 data_bytes=64 scale_bytes=2
