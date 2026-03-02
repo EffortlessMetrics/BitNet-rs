@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: err
----
-QuantizationError {
-    mse: 0.00042,
-    max_abs_error: 0.031,
-    snr: 33.8,
-}

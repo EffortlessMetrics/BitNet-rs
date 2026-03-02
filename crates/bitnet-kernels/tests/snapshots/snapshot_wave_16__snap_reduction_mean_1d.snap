@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: "format!(\"{result:.1}\")"
----
-3.0

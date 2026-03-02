@@ -24,6 +24,7 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`warp_ops`]: Warp-level primitives (reduce, shuffle, ballot, scan, cooperative softmax)
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -36,22 +37,26 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
+pub mod graph_exec;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
 pub mod memory_pool;
+pub mod multi_head_attention;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
+pub mod quantized_gemm;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod stream_mgmt;
 pub mod transpose;
+pub mod warp_ops;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
@@ -153,6 +158,14 @@ pub use embedding::{
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use warp_ops::WARP_OPS_KERNEL_SRC;
+pub use warp_ops::{
+    DEFAULT_WARP_SIZE, WarpConfig, block_reduce_max, block_reduce_sum, cooperative_softmax,
+    warp_all, warp_any, warp_ballot, warp_broadcast, warp_exclusive_scan, warp_match,
+    warp_prefix_sum, warp_reduce_max, warp_reduce_min, warp_reduce_sum, warp_shuffle,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
@@ -188,3 +201,12 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use stream_mgmt::{
+    DefaultStreamBehavior, DepNode, DispatchResult, PipelineSchedule, PipelineStage,
+    PipelineStageKind, ProfileRecord, ScheduleStrategy, ScheduledTask, StreamAssignment,
+    StreamConfig, StreamEvent, StreamHandle, StreamOp, StreamPool, StreamPriority,
+    StreamPriorityManager, StreamProfiler, StreamScheduler, StreamUtilization,
+    dependency_graph_to_streams, event_record, event_wait, multi_stream_dispatch, pipeline_stages,
+    stream_sync,
+};

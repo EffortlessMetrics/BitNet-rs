@@ -1080,10 +1080,8 @@ mod tests {
                         .map(|x| (x - ch_mean).powi(2))
                         .sum::<f32>()
                         / batch as f32;
-                    // eps=1e-5 in batch_norm shifts inv_std slightly,
-                    // causing output variance to be fractionally < 1.0.
                     prop_assert!(
-                        (ch_var - 1.0).abs() < 0.1,
+                        (ch_var - 1.0).abs() < 0.05,
                         "ch {}: var={} (batch={}, features={})",
                         ch, ch_var, batch, features
                     );

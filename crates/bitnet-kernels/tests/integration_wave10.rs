@@ -94,14 +94,7 @@ fn e2e_embedding_rope_attention_output() {
     apply_rope_batch(&mut k, 0, seq_len, num_heads, head_dim, &freqs);
 
     // Multi-head attention
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
     let out = AttentionKernel::multi_head_attention(&q, &k, &emb, &attn_cfg).unwrap();
     assert_eq!(out.len(), seq_len * dim);
     assert!(out.iter().all(|v| v.is_finite()), "attention output must be finite");
@@ -132,14 +125,7 @@ fn e2e_embedding_rope_causal_attention_preserves_causality() {
     apply_rope_batch(&mut k, 0, seq_len, num_heads, head_dim, &freqs);
 
     // Causal attention
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
     let out = causal_attention(&q, &k, &emb, &attn_cfg).unwrap();
     assert_eq!(out.len(), seq_len * dim);
 
@@ -415,14 +401,8 @@ fn batch_norm_conv2d_pool_reduction_pipeline() {
     assert_eq!(conv_out.len(), out_ch * h * w);
 
     // Average pooling
-    let pool_cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let pool_cfg =
+        PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
     let pooled = PoolingKernel::apply(&conv_out, &pool_cfg).unwrap();
     assert!(pooled.len() < conv_out.len());
 
@@ -454,8 +434,6 @@ fn batch_norm_inference_silu_pool_pipeline() {
         kernel_size: features,
         stride: features,
         padding: 0,
-        dilation: 1,
-        ceil_mode: false,
     };
     let pooled = PoolingKernel::apply(&activated, &pool_cfg).unwrap();
     assert!(pooled.iter().all(|v: &f32| v.is_finite()));
@@ -737,14 +715,7 @@ fn full_transformer_block_pipeline() {
     let normed = layer_norm(&input, &gamma, None, &ln_cfg).unwrap();
 
     // Self-attention
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len: seq,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len: seq, causal: true, scale: None };
     let attn_out =
         AttentionKernel::multi_head_attention(&normed, &normed, &normed, &attn_cfg).unwrap();
 
@@ -804,14 +775,8 @@ fn reduction_after_attention_computes_sequence_summary() {
     let num_heads = 1;
 
     let input: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.2).collect();
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim: dim,
-        seq_len: seq,
-        causal: false,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg =
+        AttentionConfig { num_heads, head_dim: dim, seq_len: seq, causal: false, scale: None };
     let attn_out =
         AttentionKernel::multi_head_attention(&input, &input, &input, &attn_cfg).unwrap();
 

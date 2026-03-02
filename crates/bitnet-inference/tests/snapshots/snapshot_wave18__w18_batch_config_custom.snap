@@ -1,9 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave18.rs
-expression: cfg
----
-BatchConfig {
-    max_batch_size: 16,
-    timeout: 500ms,
-    max_total_tokens: 16384,
-}
