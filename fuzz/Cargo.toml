@@ -541,13 +541,37 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_quantize_round_trip"
-path = "fuzz_targets/fuzz_quantize_round_trip.rs"
+name = "fuzz_cuda_softmax_stability"
+path = "fuzz_targets/fuzz_cuda_softmax_stability.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_embedding_bounds"
-path = "fuzz_targets/fuzz_embedding_bounds.rs"
+name = "fuzz_cuda_layernorm_numerical"
+path = "fuzz_targets/fuzz_cuda_layernorm_numerical.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_attention_score"
+path = "fuzz_targets/fuzz_cuda_attention_score.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_matmul_shapes"
+path = "fuzz_targets/fuzz_cuda_matmul_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_rope_positions"
+path = "fuzz_targets/fuzz_cuda_rope_positions.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_quantize_roundtrip"
+path = "fuzz_targets/fuzz_cuda_quantize_roundtrip.rs"
 test = false
 doc = false
