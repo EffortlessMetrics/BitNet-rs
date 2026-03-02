@@ -1,6 +1,6 @@
 //! Kernel dispatch table for operation routing.
 //!
-//! Maps operations to their best available kernel implementations.
+//! Maps [`KernelOp`] operations to their best available kernel implementations.
 
 use std::collections::HashMap;
 
