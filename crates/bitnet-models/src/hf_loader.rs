@@ -26,7 +26,9 @@ use serde::Deserialize;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::architecture::{detect_architecture, get_defaults, ArchitectureConfig, ModelArchitecture};
+use crate::architecture::{
+    ArchitectureConfig, ModelArchitecture, detect_architecture, get_defaults,
+};
 use crate::safetensors_reader::SafeTensorsReader;
 
 // ---------------------------------------------------------------------------
@@ -355,11 +357,7 @@ impl HfModelLoader {
             }
         }
 
-        if missing.is_empty() {
-            Ok(())
-        } else {
-            Err(HfLoaderError::IncompleteTensors(missing))
-        }
+        if missing.is_empty() { Ok(()) } else { Err(HfLoaderError::IncompleteTensors(missing)) }
     }
 
     /// Open a [`SafeTensorsReader`] from a model directory.
@@ -385,9 +383,7 @@ impl HfModelLoader {
         // Any .safetensors file?
         let entries: Vec<_> = std::fs::read_dir(dir)?
             .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path().extension().and_then(|ext| ext.to_str()) == Some("safetensors")
-            })
+            .filter(|e| e.path().extension().and_then(|ext| ext.to_str()) == Some("safetensors"))
             .collect();
 
         if let Some(entry) = entries.first() {
@@ -454,60 +450,15 @@ mod tests {
             ("model.embed_tokens.weight", SafeDtype::F32, vec![16, 4], &embed_data),
             ("model.norm.weight", SafeDtype::F32, vec![4], &norm_data),
             ("lm_head.weight", SafeDtype::F32, vec![16, 4], &embed_data),
-            (
-                "model.layers.0.self_attn.q_proj.weight",
-                SafeDtype::F32,
-                vec![4, 4],
-                &attn_proj,
-            ),
-            (
-                "model.layers.0.self_attn.k_proj.weight",
-                SafeDtype::F32,
-                vec![4, 4],
-                &attn_proj,
-            ),
-            (
-                "model.layers.0.self_attn.v_proj.weight",
-                SafeDtype::F32,
-                vec![4, 4],
-                &attn_proj,
-            ),
-            (
-                "model.layers.0.self_attn.o_proj.weight",
-                SafeDtype::F32,
-                vec![4, 4],
-                &attn_proj,
-            ),
-            (
-                "model.layers.0.input_layernorm.weight",
-                SafeDtype::F32,
-                vec![4],
-                &norm_data,
-            ),
-            (
-                "model.layers.0.post_attention_layernorm.weight",
-                SafeDtype::F32,
-                vec![4],
-                &norm_data,
-            ),
-            (
-                "model.layers.0.mlp.gate_proj.weight",
-                SafeDtype::F32,
-                vec![8, 4],
-                &ffn_gate,
-            ),
-            (
-                "model.layers.0.mlp.up_proj.weight",
-                SafeDtype::F32,
-                vec![8, 4],
-                &ffn_gate,
-            ),
-            (
-                "model.layers.0.mlp.down_proj.weight",
-                SafeDtype::F32,
-                vec![4, 8],
-                &ffn_down,
-            ),
+            ("model.layers.0.self_attn.q_proj.weight", SafeDtype::F32, vec![4, 4], &attn_proj),
+            ("model.layers.0.self_attn.k_proj.weight", SafeDtype::F32, vec![4, 4], &attn_proj),
+            ("model.layers.0.self_attn.v_proj.weight", SafeDtype::F32, vec![4, 4], &attn_proj),
+            ("model.layers.0.self_attn.o_proj.weight", SafeDtype::F32, vec![4, 4], &attn_proj),
+            ("model.layers.0.input_layernorm.weight", SafeDtype::F32, vec![4], &norm_data),
+            ("model.layers.0.post_attention_layernorm.weight", SafeDtype::F32, vec![4], &norm_data),
+            ("model.layers.0.mlp.gate_proj.weight", SafeDtype::F32, vec![8, 4], &ffn_gate),
+            ("model.layers.0.mlp.up_proj.weight", SafeDtype::F32, vec![8, 4], &ffn_gate),
+            ("model.layers.0.mlp.down_proj.weight", SafeDtype::F32, vec![4, 8], &ffn_down),
         ]);
         std::fs::write(dir.join("model.safetensors"), data).unwrap();
     }
@@ -717,11 +668,8 @@ mod tests {
             "intermediate_size": 8,
             "vocab_size": 16
         });
-        std::fs::write(
-            dir.path().join("config.json"),
-            serde_json::to_string(&config).unwrap(),
-        )
-        .unwrap();
+        std::fs::write(dir.path().join("config.json"), serde_json::to_string(&config).unwrap())
+            .unwrap();
 
         let embed_data = f32_bytes(&vec![0.1; 64]);
         let data = make_safetensors(vec![(
@@ -748,12 +696,8 @@ mod tests {
         let dir = TempDir::new().unwrap();
 
         // Safetensors but no config.json
-        let data = make_safetensors(vec![(
-            "weight",
-            SafeDtype::F32,
-            vec![1],
-            &1.0f32.to_le_bytes(),
-        )]);
+        let data =
+            make_safetensors(vec![("weight", SafeDtype::F32, vec![1], &1.0f32.to_le_bytes())]);
         std::fs::write(dir.path().join("model.safetensors"), data).unwrap();
 
         let err = HfModelLoader::from_directory(dir.path()).unwrap_err();
@@ -766,11 +710,8 @@ mod tests {
 
         // Config but no safetensors
         let config = serde_json::json!({ "model_type": "llama" });
-        std::fs::write(
-            dir.path().join("config.json"),
-            serde_json::to_string(&config).unwrap(),
-        )
-        .unwrap();
+        std::fs::write(dir.path().join("config.json"), serde_json::to_string(&config).unwrap())
+            .unwrap();
 
         let err = HfModelLoader::from_directory(dir.path()).unwrap_err();
         assert!(matches!(err, HfLoaderError::NoSafetensors(_)));
@@ -831,11 +772,8 @@ mod tests {
             "num_attention_heads": 2,
             "vocab_size": 16
         });
-        std::fs::write(
-            dir.path().join("config.json"),
-            serde_json::to_string(&config).unwrap(),
-        )
-        .unwrap();
+        std::fs::write(dir.path().join("config.json"), serde_json::to_string(&config).unwrap())
+            .unwrap();
 
         // Two shards
         let embed_data = f32_bytes(&vec![0.1; 64]);
@@ -846,12 +784,8 @@ mod tests {
             vec![16, 4],
             &embed_data,
         )]);
-        let shard2 = make_safetensors(vec![(
-            "lm_head.weight",
-            SafeDtype::F32,
-            vec![16, 4],
-            &embed_data,
-        )]);
+        let shard2 =
+            make_safetensors(vec![("lm_head.weight", SafeDtype::F32, vec![16, 4], &embed_data)]);
 
         std::fs::write(dir.path().join("model-00001-of-00002.safetensors"), &shard1).unwrap();
         std::fs::write(dir.path().join("model-00002-of-00002.safetensors"), &shard2).unwrap();
