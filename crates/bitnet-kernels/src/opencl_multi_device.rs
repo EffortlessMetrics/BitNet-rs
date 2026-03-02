@@ -179,7 +179,7 @@ pub fn mock_enumerate_platforms() -> Vec<PlatformInfo> {
         vendor: "Intel(R) Corporation".into(),
         device_type: DeviceType::DiscreteGpu,
         global_mem_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
-        local_mem_bytes: 64 * 1024,                 // 64 KB
+        local_mem_bytes: 64 * 1024,                // 64 KB
         max_compute_units: 512,
         max_workgroup_size: 1024,
         max_clock_mhz: 2100,
@@ -226,10 +226,7 @@ pub fn mock_enumerate_platforms() -> Vec<PlatformInfo> {
         max_clock_mhz: 5400,
         driver_version: "2024.18.7.0.11".into(),
         opencl_version: "OpenCL 3.0".into(),
-        extensions: vec![
-            "cl_khr_fp64".into(),
-            "cl_khr_global_int32_base_atomics".into(),
-        ],
+        extensions: vec!["cl_khr_fp64".into(), "cl_khr_global_int32_base_atomics".into()],
         pci_bus_id: None,
     };
 
@@ -282,14 +279,8 @@ pub fn build_topology(platforms: Vec<PlatformInfo>) -> DeviceTopology {
 /// * `memory_score`  = `global_mem / 1 GB * (1.5 if > 8 GB)`
 /// * `overall_score` = `0.6 * compute_score + 0.4 * memory_score`
 pub fn score_device(info: &DeviceInfo) -> DeviceScore {
-    let discrete_mult = if info.device_type == DeviceType::DiscreteGpu {
-        2.0
-    } else {
-        1.0
-    };
-    let compute_score = info.max_compute_units as f64
-        * info.max_clock_mhz as f64
-        * discrete_mult;
+    let discrete_mult = if info.device_type == DeviceType::DiscreteGpu { 2.0 } else { 1.0 };
+    let compute_score = info.max_compute_units as f64 * info.max_clock_mhz as f64 * discrete_mult;
 
     let mem_gb = info.global_mem_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let mem_mult = if mem_gb > 8.0 { 1.5 } else { 1.0 };
@@ -363,8 +354,7 @@ pub fn recommend_workgroup_size(info: &DeviceInfo) -> u32 {
 /// Check whether a device passes the selector filters (memory + extensions).
 fn device_passes_filter(info: &DeviceInfo, selector: &DeviceSelector) -> bool {
     if let Some(min_gb) = selector.min_memory_gb {
-        let mem_gb =
-            info.global_mem_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        let mem_gb = info.global_mem_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         if mem_gb < min_gb as f64 {
             return false;
         }
@@ -413,9 +403,7 @@ pub fn select_best_device(
     if let SelectionPreference::Specific(ref name) = selector.preference {
         for (pi, platform) in topology.platforms.iter().enumerate() {
             for (di, device) in platform.devices.iter().enumerate() {
-                if device.name.contains(name.as_str())
-                    && device_passes_filter(device, selector)
-                {
+                if device.name.contains(name.as_str()) && device_passes_filter(device, selector) {
                     return Ok((pi, di));
                 }
             }
@@ -429,20 +417,12 @@ pub fn select_best_device(
     }
 
     let best = match selector.preference {
-        SelectionPreference::HighestCompute => candidates
-            .iter()
-            .max_by(|a, b| {
-                a.2.compute_score
-                    .partial_cmp(&b.2.compute_score)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }),
-        SelectionPreference::LargestMemory => candidates
-            .iter()
-            .max_by(|a, b| {
-                a.2.memory_score
-                    .partial_cmp(&b.2.memory_score)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }),
+        SelectionPreference::HighestCompute => candidates.iter().max_by(|a, b| {
+            a.2.compute_score.partial_cmp(&b.2.compute_score).unwrap_or(std::cmp::Ordering::Equal)
+        }),
+        SelectionPreference::LargestMemory => candidates.iter().max_by(|a, b| {
+            a.2.memory_score.partial_cmp(&b.2.memory_score).unwrap_or(std::cmp::Ordering::Equal)
+        }),
         SelectionPreference::LowestLatency => {
             // Prefer discrete GPUs for lowest latency; fall back to
             // overall score.
@@ -454,14 +434,11 @@ pub fn select_best_device(
         }
         // Auto + Specific (handled above)
         _ => candidates.iter().max_by(|a, b| {
-            a.2.overall_score
-                .partial_cmp(&b.2.overall_score)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            a.2.overall_score.partial_cmp(&b.2.overall_score).unwrap_or(std::cmp::Ordering::Equal)
         }),
     };
 
-    best.map(|(pi, di, _)| (*pi, *di))
-        .ok_or(MultiDeviceError::NoMatchingDevice)
+    best.map(|(pi, di, _)| (*pi, *di)).ok_or(MultiDeviceError::NoMatchingDevice)
 }
 
 /// Produce a human-readable report of all platforms and devices.
@@ -478,13 +455,9 @@ pub fn format_device_report(topology: &DeviceTopology) -> String {
     ));
 
     for (pi, platform) in topology.platforms.iter().enumerate() {
-        out.push_str(&format!(
-            "Platform {}: {} ({})\n",
-            pi, platform.name, platform.version,
-        ));
+        out.push_str(&format!("Platform {}: {} ({})\n", pi, platform.name, platform.version,));
         for (di, dev) in platform.devices.iter().enumerate() {
-            let mem_gb = dev.global_mem_bytes as f64
-                / (1024.0 * 1024.0 * 1024.0);
+            let mem_gb = dev.global_mem_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
             let score = score_device(dev);
             out.push_str(&format!(
                 "  [{},{}] {:40} {:?}  {:.1} GB  CU={:<4} \
@@ -649,10 +622,7 @@ mod tests {
         let topo = mock_topology();
         let sel = default_selector();
         let (pi, di) = select_best_device(&topo, &sel).unwrap();
-        assert_eq!(
-            topo.platforms[pi].devices[di].name,
-            "Intel(R) Arc(TM) A770 Graphics"
-        );
+        assert_eq!(topo.platforms[pi].devices[di].name, "Intel(R) Arc(TM) A770 Graphics");
     }
 
     // -- HighestCompute preference ----------------------------------------
@@ -665,10 +635,7 @@ mod tests {
             ..default_selector()
         };
         let (pi, di) = select_best_device(&topo, &sel).unwrap();
-        assert_eq!(
-            topo.platforms[pi].devices[di].name,
-            "Intel(R) Arc(TM) A770 Graphics"
-        );
+        assert_eq!(topo.platforms[pi].devices[di].name, "Intel(R) Arc(TM) A770 Graphics");
     }
 
     // -- LargestMemory preference -----------------------------------------
@@ -676,10 +643,8 @@ mod tests {
     #[test]
     fn largest_memory_picks_highest_mem_device() {
         let topo = mock_topology();
-        let sel = DeviceSelector {
-            preference: SelectionPreference::LargestMemory,
-            ..default_selector()
-        };
+        let sel =
+            DeviceSelector { preference: SelectionPreference::LargestMemory, ..default_selector() };
         let (pi, di) = select_best_device(&topo, &sel).unwrap();
         // CPU has 32 GB, largest memory_score (32 * 1.5 = 48).
         let chosen = &topo.platforms[pi].devices[di];
@@ -703,15 +668,10 @@ mod tests {
     fn specific_not_found_returns_error() {
         let topo = mock_topology();
         let sel = DeviceSelector {
-            preference: SelectionPreference::Specific(
-                "NonexistentCard".into(),
-            ),
+            preference: SelectionPreference::Specific("NonexistentCard".into()),
             ..default_selector()
         };
-        assert_eq!(
-            select_best_device(&topo, &sel),
-            Err(MultiDeviceError::NoMatchingDevice)
-        );
+        assert_eq!(select_best_device(&topo, &sel), Err(MultiDeviceError::NoMatchingDevice));
     }
 
     // -- Required extensions filter ---------------------------------------
@@ -734,9 +694,7 @@ mod tests {
         let topo = mock_topology();
         let sel = DeviceSelector {
             preference: SelectionPreference::Auto,
-            required_extensions: vec![
-                "cl_intel_dot_accumulate".into(),
-            ],
+            required_extensions: vec!["cl_intel_dot_accumulate".into()],
             ..default_selector()
         };
         let candidates = filter_devices(&topo, &sel);
@@ -767,10 +725,7 @@ mod tests {
     fn no_platforms_returns_error() {
         let topo = build_topology(vec![]);
         let sel = default_selector();
-        assert_eq!(
-            select_best_device(&topo, &sel),
-            Err(MultiDeviceError::NoPlatformsFound)
-        );
+        assert_eq!(select_best_device(&topo, &sel), Err(MultiDeviceError::NoPlatformsFound));
     }
 
     #[test]
@@ -795,10 +750,7 @@ mod tests {
             min_memory_gb: Some(1024.0),
             ..default_selector()
         };
-        assert_eq!(
-            select_best_device(&topo, &sel),
-            Err(MultiDeviceError::NoMatchingDevice)
-        );
+        assert_eq!(select_best_device(&topo, &sel), Err(MultiDeviceError::NoMatchingDevice));
     }
 
     // -- Intel Arc detection ----------------------------------------------
@@ -907,13 +859,9 @@ mod tests {
 
     #[test]
     fn error_display_messages() {
+        assert_eq!(MultiDeviceError::NoPlatformsFound.to_string(), "no OpenCL platforms found");
         assert_eq!(
-            MultiDeviceError::NoPlatformsFound.to_string(),
-            "no OpenCL platforms found"
-        );
-        assert_eq!(
-            MultiDeviceError::IncompatibleDevice("bad".into())
-                .to_string(),
+            MultiDeviceError::IncompatibleDevice("bad".into()).to_string(),
             "incompatible device: bad"
         );
     }
