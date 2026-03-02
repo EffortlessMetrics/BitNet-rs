@@ -1,0 +1,74 @@
+name: Apple Silicon CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "crates/bitnet-kernels/src/cpu/**"
+      - "crates/bitnet-kernels/tests/**"
+      - ".github/workflows/apple-silicon.yml"
+
+concurrency:
+  group: apple-silicon-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BITNET_SKIP_SLOW_TESTS: "1"
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  build-test-macos:
+    name: Build & Test (macOS ARM64)
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.92.0"
+          components: clippy, rustfmt
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-apple-silicon
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build bitnet-kernels (CPU)
+        run: cargo build --no-default-features --features cpu -p bitnet-kernels
+
+      - name: Clippy bitnet-kernels
+        run: cargo clippy -p bitnet-kernels --lib --no-default-features --features cpu -- -D warnings
+
+      - name: Test NEON kernels (lib)
+        run: cargo test -p bitnet-kernels --no-default-features --features cpu --lib -- neon
+
+      - name: Test NEON integration
+        run: cargo test -p bitnet-kernels --no-default-features --features cpu -- neon
+
+  metal-tests:
+    name: Metal Tests (macOS ARM64)
+    needs: build-test-macos
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.92.0"
+          components: clippy, rustfmt
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-apple-silicon
+
+      - name: Run Metal tests
+        run: cargo test -p bitnet-kernels --no-default-features --features cpu -- metal
