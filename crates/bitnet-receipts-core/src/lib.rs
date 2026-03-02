@@ -14,6 +14,7 @@
 //! - `performance_baseline`: Performance metrics
 
 use anyhow::{Result, anyhow};
+use bitnet_atomic_file_core::atomic_write;
 use bitnet_common::CorrectionRecord;
 use bitnet_honest_compute::{
     classify_compute_path, validate_compute_path as validate_honest_compute_path,
@@ -380,10 +381,8 @@ impl InferenceReceipt {
         // Serialize to pretty JSON
         let json = serde_json::to_string_pretty(self)?;
 
-        // Atomic write: write to temp file, then rename
-        let temp_path = path.with_extension("tmp");
-        std::fs::write(&temp_path, json)?;
-        std::fs::rename(&temp_path, path)?;
+        // Atomic write: write to temp file, fsync where available, then rename
+        atomic_write(path, json.as_bytes())?;
 
         Ok(())
     }

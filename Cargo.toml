@@ -88,7 +88,8 @@ members = [
   "crates/bitnet-test-env",
   "crates/bitnet-test-fixtures-core",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-download-core", # SRP: core download validation and atomic file helpers
+  "crates/bitnet-download-core", # SRP: core download validation helpers
+  "crates/bitnet-atomic-file-core", # SRP: atomic file-write persistence helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-download-core", # SRP: pure download utility helpers
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
@@ -388,6 +389,7 @@ required-features = ["cpu"]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

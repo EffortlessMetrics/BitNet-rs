@@ -1,10 +1,11 @@
+pub use bitnet_atomic_file_core::atomic_write;
 pub use bitnet_download_core::{
     DownloadValidationError, offline_enabled, parse_content_range_total, validate_downloaded_len,
 };
 pub use bitnet_http_retry::exp_backoff_ms;
 use bitnet_http_retry::retry_after_secs_at as parse_retry_after_secs_at;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
-use std::{fs, path::Path, time::SystemTime};
+use std::time::SystemTime;
 /// Parse Retry-After header (supports both seconds and HTTP-date), capping to 1 hour.
 #[must_use]
 pub fn retry_after_secs(headers: &HeaderMap) -> u64 {
@@ -16,32 +17,6 @@ pub fn retry_after_secs(headers: &HeaderMap) -> u64 {
 pub fn retry_after_secs_at(headers: &HeaderMap, now: SystemTime) -> u64 {
     let retry_after = headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok());
     parse_retry_after_secs_at(retry_after, now)
-}
-
-/// Atomic write helper for small metadata files (etag/last-modified).
-pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, bytes)?;
-
-    #[cfg(unix)]
-    {
-        if let Ok(f) = std::fs::File::open(&tmp) {
-            f.sync_all()?;
-        }
-    }
-
-    fs::rename(&tmp, path)?;
-
-    #[cfg(unix)]
-    {
-        if let Some(parent) = path.parent()
-            && let Ok(dir) = std::fs::File::open(parent)
-        {
-            let _ = dir.sync_all();
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
