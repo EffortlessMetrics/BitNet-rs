@@ -34,6 +34,7 @@ pub mod activations;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod cooperative_launch;
 pub mod elementwise;
 pub mod embedding;
 pub mod ffn;
