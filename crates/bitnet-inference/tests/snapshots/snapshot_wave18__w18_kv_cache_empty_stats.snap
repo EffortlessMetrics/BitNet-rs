@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: cache.stats()
+---
+CacheStats {
+    total_entries: 0,
+    compressed_entries: 0,
+    current_size_bytes: 0,
+    max_size_bytes: 1073741824,
+    hit_rate: 0.0,
+    memory_efficiency: 0.0,
+    cache_size: 0,
+}

@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: cfg
+---
+GenerationConfig {
+    max_new_tokens: 512,
+    temperature: 1.0,
+    top_k: Some(
+        50,
+    ),
+    top_p: Some(
+        0.9,
+    ),
+    repetition_penalty: 1.1,
+    do_sample: true,
+    seed: None,
+    eos_token_id: 2,
+    pad_token_id: 0,
+    min_length: 1,
+    max_length: 2048,
+}

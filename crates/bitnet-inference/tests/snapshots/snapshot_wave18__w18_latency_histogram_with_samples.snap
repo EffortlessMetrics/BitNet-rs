@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: "format!(\"count={} mean={:.1} min={:.1} max={:.1} p50={:.1} p95={:.1} p99={:.1}\",\nh.count(), h.mean().unwrap(), h.min().unwrap(), h.max().unwrap(),\nh.p50().unwrap(), h.p95().unwrap(), h.p99().unwrap(),)"
+---
+count=20 mean=52.5 min=5.0 max=100.0 p50=55.0 p95=95.0 p99=100.0

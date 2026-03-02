@@ -11,6 +11,8 @@ pub use attention::{
     masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
 };
 pub mod batch_norm;
+pub mod batch_normalization;
+pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
@@ -94,6 +96,9 @@ pub mod neon_convolution;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_gemm;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
@@ -112,7 +117,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
-pub use loss::LossReduction;
+pub use loss::*;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
@@ -133,3 +138,4 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
+pub mod tensor_parallel;
