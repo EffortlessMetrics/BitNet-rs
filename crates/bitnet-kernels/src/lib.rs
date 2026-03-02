@@ -16,6 +16,7 @@ pub mod cpu;
 pub mod cuda;
 pub mod device_aware;
 pub mod device_features;
+pub mod dispatch_table;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
