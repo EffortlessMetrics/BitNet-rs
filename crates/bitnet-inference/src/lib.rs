@@ -18,6 +18,7 @@ pub mod kv_cache_optimized;
 pub mod layers;
 pub mod memory_pool;
 pub mod metrics;
+pub mod multi_device;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
