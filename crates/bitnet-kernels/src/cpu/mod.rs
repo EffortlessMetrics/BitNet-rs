@@ -16,8 +16,14 @@ pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
+pub mod convolution;
 pub mod dequant;
 pub use conv2d::{Conv2dConfig, compute_output_size, conv2d, depthwise_conv2d, im2col};
+pub use convolution::{
+    Conv1dConfig, PaddingMode, apply_padding, col2im as col2im_1d, compute_output_length, conv1d,
+    conv1d_avx2, conv1d_depthwise, conv1d_f32, conv1d_grouped, conv1d_pointwise, conv1d_transposed,
+    im2col as im2col_1d,
+};
 pub mod embedding;
 pub mod fallback;
 pub mod ffn;
