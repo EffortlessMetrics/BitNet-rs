@@ -12,6 +12,7 @@ pub use attention::{
 };
 pub mod batch_norm;
 pub mod concat;
+pub mod multi_head_attention;
 pub use concat::ConcatKernel;
 pub mod conv2d;
 pub mod dequant;
