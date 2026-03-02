@@ -9,6 +9,7 @@ use bitnet_cpu_detect::avx512_available;
 use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
+pub mod attention_patterns;
 pub mod activation_registry;
 pub mod bench_harness;
 pub mod benchmarks;
