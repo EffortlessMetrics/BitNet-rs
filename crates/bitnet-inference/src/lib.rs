@@ -7,6 +7,7 @@ pub mod attention_mask;
 pub mod backends;
 pub mod batch;
 pub mod batch_engine;
+pub mod batch_scheduler;
 pub mod cache;
 pub mod compute_cost;
 pub mod config;
