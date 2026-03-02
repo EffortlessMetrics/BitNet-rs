@@ -26,7 +26,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
 - **Nightly Fuzz Workflow** — 84 fuzz targets (45 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
-- **Criterion Benchmarks** — 5 active bench targets: `srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops` (#787)
+- **Criterion Benchmarks** — 6 active bench targets: `srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops`, `slm_inference` (#787)
 - **KV Cache Optimization** — incremental inference module with paged cache and eviction policies (LRU, SlidingWindow, AttentionBased) in `kv_cache_optimized` (#1685)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 - **GPU HAL** — `bitnet-gpu-hal` unified hardware abstraction layer with backend selector, async runtime, checkpoint manager, and deployment manager (scaffold; backends not yet validated end-to-end)
@@ -276,7 +276,7 @@ bitnet-rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - **Runtime dispatch**: Scalar fallback if `avx2` is unavailable at runtime
 - **Correctness parity**: ≤ 1e-5 max absolute difference vs scalar on randomized shapes
 - **Initial uplift**: ~1.2× observed; target ≥3× with nibble-LUT + FMA tiling and prefetch
-- **Benchmarks**: Run `cargo bench --bench kernel_ops --features cpu`
+- **Benchmarks**: Run `cargo bench -p bitnet-kernels --bench kernel_benchmarks --no-default-features --features cpu,avx2`
 - **Tests**: Property-based tests validate numerical correctness across random inputs
 
 **Planned optimizations for ≥3× uplift:**
