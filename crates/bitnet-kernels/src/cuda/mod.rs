@@ -37,6 +37,7 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
+pub mod fused_attention;
 pub mod fusion;
 pub mod gating;
 pub mod graph_exec;
@@ -119,6 +120,14 @@ pub use crate::reduction::{
 // Re-export shaped reduction from the crate-level module.
 pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
 pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
+pub use fused_attention::{
+    AttentionMetrics, AttentionPattern, FusedAttentionConfig, FusedAttentionError,
+    apply_alibi_bias, apply_attention_mask, compute_attention_scores, flash_attention_forward,
+    fused_attention_forward, grouped_query_attention, multi_head_attention,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use fused_attention::{FUSED_ATTENTION_KERNEL_SRC, launch_fused_attention};
 pub use fusion::{
     FusedElementwiseLaunchConfig, FusedMatmulLaunchConfig, FusedOp, FusionConfig, FusionError,
     fused_add_rmsnorm, fused_add_rmsnorm_cpu, fused_gelu_linear, fused_gelu_linear_cpu,
