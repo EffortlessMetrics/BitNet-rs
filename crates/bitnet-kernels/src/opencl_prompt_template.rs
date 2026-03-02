@@ -146,16 +146,10 @@ pub fn create_template_engine(config: PromptConfig) -> TemplateEngine {
 }
 
 /// Format messages using the ChatML template.
-pub fn cpu_format_chatml(
-    messages: &[ChatMessage],
-    add_gen_prompt: bool,
-) -> String {
+pub fn cpu_format_chatml(messages: &[ChatMessage], add_gen_prompt: bool) -> String {
     let mut out = String::new();
     for msg in messages {
-        out.push_str(&format!(
-            "<|im_start|>{}\n{}<|im_end|>\n",
-            msg.role, msg.content
-        ));
+        out.push_str(&format!("<|im_start|>{}\n{}<|im_end|>\n", msg.role, msg.content));
     }
     if add_gen_prompt {
         out.push_str("<|im_start|>assistant\n");
@@ -187,17 +181,11 @@ pub fn cpu_format_llama2(messages: &[ChatMessage]) -> String {
                             msg.content
                         ));
                     } else {
-                        out.push_str(&format!(
-                            "<s>[INST] {} [/INST]",
-                            msg.content
-                        ));
+                        out.push_str(&format!("<s>[INST] {} [/INST]", msg.content));
                     }
                     first_user = false;
                 } else {
-                    out.push_str(&format!(
-                        "<s>[INST] {} [/INST]",
-                        msg.content
-                    ));
+                    out.push_str(&format!("<s>[INST] {} [/INST]", msg.content));
                 }
             }
             Role::Assistant => {
@@ -214,16 +202,10 @@ pub fn cpu_format_alpaca(messages: &[ChatMessage]) -> String {
     for msg in messages {
         match msg.role {
             Role::System => {
-                out.push_str(&format!(
-                    "### System:\n{}\n\n",
-                    msg.content
-                ));
+                out.push_str(&format!("### System:\n{}\n\n", msg.content));
             }
             Role::User => {
-                out.push_str(&format!(
-                    "### Instruction:\n{}\n\n### Response:\n",
-                    msg.content
-                ));
+                out.push_str(&format!("### Instruction:\n{}\n\n### Response:\n", msg.content));
             }
             Role::Assistant => {
                 out.push_str(&format!("{}\n\n", msg.content));
@@ -276,8 +258,7 @@ pub fn cpu_format_prompt(
         return Err(TemplateError::EmptyPrompt);
     }
 
-    let truncated_msgs =
-        cpu_truncate_context(messages, engine.config.max_context_tokens);
+    let truncated_msgs = cpu_truncate_context(messages, engine.config.max_context_tokens);
     let truncated = truncated_msgs.len() < messages.len();
 
     let text = match engine.config.template_type {
@@ -298,8 +279,7 @@ pub fn cpu_format_prompt(
 
     engine.stats.prompts_formatted += 1;
     if truncated {
-        engine.stats.messages_truncated +=
-            (messages.len() - truncated_msgs.len()) as u64;
+        engine.stats.messages_truncated += (messages.len() - truncated_msgs.len()) as u64;
     }
     engine.stats.total_tokens_processed += token_estimate as u64;
 
@@ -314,10 +294,7 @@ pub fn cpu_estimate_tokens(text: &str) -> usize {
 /// Truncate conversation to fit within a token budget.
 ///
 /// Keeps the system message (if present) plus the most recent messages.
-pub fn cpu_truncate_context(
-    messages: &[ChatMessage],
-    max_tokens: usize,
-) -> Vec<ChatMessage> {
+pub fn cpu_truncate_context(messages: &[ChatMessage], max_tokens: usize) -> Vec<ChatMessage> {
     if messages.is_empty() {
         return Vec::new();
     }
@@ -371,8 +348,7 @@ pub fn cpu_create_conversation(config: PromptConfig) -> ConversationContext {
     if let Some(ref sys) = config.system_prompt {
         messages.push(ChatMessage::new(Role::System, sys.clone()));
     }
-    let total_tokens_estimate =
-        messages.iter().map(|m| cpu_estimate_tokens(&m.content)).sum();
+    let total_tokens_estimate = messages.iter().map(|m| cpu_estimate_tokens(&m.content)).sum();
     ConversationContext { messages, config, total_tokens_estimate }
 }
 
@@ -383,15 +359,12 @@ pub fn cpu_add_message(ctx: &mut ConversationContext, msg: ChatMessage) {
 }
 
 /// Format the current conversation context into a prompt.
-pub fn cpu_get_formatted(
-    ctx: &ConversationContext,
-) -> Result<FormattedPrompt, TemplateError> {
+pub fn cpu_get_formatted(ctx: &ConversationContext) -> Result<FormattedPrompt, TemplateError> {
     if ctx.messages.is_empty() {
         return Err(TemplateError::EmptyPrompt);
     }
 
-    let truncated_msgs =
-        cpu_truncate_context(&ctx.messages, ctx.config.max_context_tokens);
+    let truncated_msgs = cpu_truncate_context(&ctx.messages, ctx.config.max_context_tokens);
     let truncated = truncated_msgs.len() < ctx.messages.len();
 
     let text = match ctx.config.template_type {
@@ -417,9 +390,7 @@ pub fn cpu_get_formatted(
 pub fn format_template_stats(stats: &TemplateStats) -> String {
     format!(
         "prompts_formatted={}, messages_truncated={}, total_tokens_processed={}",
-        stats.prompts_formatted,
-        stats.messages_truncated,
-        stats.total_tokens_processed,
+        stats.prompts_formatted, stats.messages_truncated, stats.total_tokens_processed,
     )
 }
 
@@ -497,11 +468,7 @@ mod tests {
 
     #[test]
     fn llama2_multi_turn() {
-        let msgs = vec![
-            user("Hi"),
-            assistant("Hello!"),
-            user("More"),
-        ];
+        let msgs = vec![user("Hi"), assistant("Hello!"), user("More")];
         let out = cpu_format_llama2(&msgs);
         assert_eq!(out.matches("[INST]").count(), 2);
         assert!(out.contains("Hello!"));
@@ -528,8 +495,7 @@ mod tests {
 
     #[test]
     fn alpaca_multi_turn() {
-        let msgs =
-            vec![user("Q1"), assistant("A1"), user("Q2")];
+        let msgs = vec![user("Q1"), assistant("A1"), user("Q2")];
         let out = cpu_format_alpaca(&msgs);
         assert_eq!(out.matches("### Instruction:").count(), 2);
     }
@@ -553,11 +519,7 @@ mod tests {
 
     #[test]
     fn vicuna_multi_turn() {
-        let msgs = vec![
-            user("Hi"),
-            assistant("Hey"),
-            user("Bye"),
-        ];
+        let msgs = vec![user("Hi"), assistant("Hey"), user("Bye")];
         let out = cpu_format_vicuna(&msgs);
         assert!(out.contains("USER: Hi"));
         assert!(out.contains("ASSISTANT: Hey"));
@@ -616,12 +578,7 @@ mod tests {
 
     #[test]
     fn truncate_keeps_system_and_recent() {
-        let msgs = vec![
-            system("Sys"),
-            user("Old"),
-            assistant("Old reply"),
-            user("Recent"),
-        ];
+        let msgs = vec![system("Sys"), user("Old"), assistant("Old reply"), user("Recent")];
         // Budget that fits system + recent but not old messages
         let result = cpu_truncate_context(&msgs, 6);
         assert!(result.iter().any(|m| m.role == Role::System));
@@ -643,13 +600,7 @@ mod tests {
 
     #[test]
     fn truncate_drops_oldest_non_system() {
-        let msgs = vec![
-            system("S"),
-            user("M1"),
-            user("M2"),
-            user("M3"),
-            user("M4"),
-        ];
+        let msgs = vec![system("S"), user("M1"), user("M2"), user("M3"), user("M4")];
         let result = cpu_truncate_context(&msgs, 3);
         // System "S" (1 tok) + most recent "M4" (1 tok) = 2, fits in 3
         assert!(result.iter().any(|m| m.content == "S"));
@@ -702,10 +653,7 @@ mod tests {
 
     #[test]
     fn conversation_no_system() {
-        let config = PromptConfig {
-            system_prompt: None,
-            ..PromptConfig::default()
-        };
+        let config = PromptConfig { system_prompt: None, ..PromptConfig::default() };
         let mut ctx = cpu_create_conversation(config);
         assert!(ctx.messages.is_empty());
 
@@ -760,10 +708,7 @@ mod tests {
     fn edge_very_long_message_truncated() {
         let long_msg = "x".repeat(50_000);
         let msgs = vec![user(&long_msg)];
-        let config = PromptConfig {
-            max_context_tokens: 100,
-            ..PromptConfig::default()
-        };
+        let config = PromptConfig { max_context_tokens: 100, ..PromptConfig::default() };
         let mut engine = create_template_engine(config);
         let result = cpu_format_prompt(&mut engine, &msgs);
         // Single message can't be split, but truncation logic is at
@@ -789,11 +734,7 @@ mod tests {
 
     #[test]
     fn property_formatted_contains_all_content() {
-        let msgs = vec![
-            system("Sys"),
-            user("UserMsg"),
-            assistant("AssistMsg"),
-        ];
+        let msgs = vec![system("Sys"), user("UserMsg"), assistant("AssistMsg")];
         let out = cpu_format_chatml(&msgs, false);
         for msg in &msgs {
             assert!(
@@ -806,17 +747,12 @@ mod tests {
 
     #[test]
     fn property_truncated_fits_budget() {
-        let msgs: Vec<ChatMessage> = (0..100)
-            .map(|i| user(&format!("Message number {i}")))
-            .collect();
+        let msgs: Vec<ChatMessage> =
+            (0..100).map(|i| user(&format!("Message number {i}"))).collect();
         let max_tokens = 50;
         let truncated = cpu_truncate_context(&msgs, max_tokens);
-        let total: usize =
-            truncated.iter().map(|m| cpu_estimate_tokens(&m.content)).sum();
-        assert!(
-            total <= max_tokens,
-            "truncated context {total} exceeds budget {max_tokens}"
-        );
+        let total: usize = truncated.iter().map(|m| cpu_estimate_tokens(&m.content)).sum();
+        assert!(total <= max_tokens, "truncated context {total} exceeds budget {max_tokens}");
     }
 
     // ── Stats ──────────────────────────────────────────────────────
@@ -848,10 +784,7 @@ mod tests {
     #[test]
     fn raw_format_joins_content() {
         let msgs = vec![user("Hello"), assistant("World")];
-        let config = PromptConfig {
-            template_type: TemplateType::Raw,
-            ..PromptConfig::default()
-        };
+        let config = PromptConfig { template_type: TemplateType::Raw, ..PromptConfig::default() };
         let mut engine = create_template_engine(config);
         let result = cpu_format_prompt(&mut engine, &msgs).unwrap();
         assert_eq!(result.text, "Hello\nWorld");
