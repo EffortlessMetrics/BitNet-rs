@@ -149,13 +149,16 @@ async function generateText() {
         return;
     }
 
-    try {
-        const prompt = document.getElementById('prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
+    const prompt = document.getElementById('prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
 
+    const generateBtn = document.getElementById('generate');
+    generateBtn.disabled = true;
+
+    try {
         updateStatus('Generating text...', 'loading');
         const startTime = performance.now();
 
@@ -192,6 +195,8 @@ async function generateText() {
     } catch (error) {
         updateStatus(`Generation failed: ${error.message}`, 'error');
         Logger.error(`Generation error: ${error}`);
+    } finally {
+        generateBtn.disabled = false;
     }
 }
 
@@ -202,17 +207,17 @@ async function startStreaming() {
         return;
     }
 
+    const prompt = document.getElementById('streaming-prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
+
+    streamingActive = true;
+    document.getElementById('start-streaming').disabled = true;
+    document.getElementById('stop-streaming').disabled = false;
+
     try {
-        const prompt = document.getElementById('streaming-prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
-
-        streamingActive = true;
-        document.getElementById('start-streaming').disabled = true;
-        document.getElementById('stop-streaming').disabled = false;
-
         const outputEl = document.getElementById('streaming-output');
         outputEl.textContent = '';
 
@@ -252,19 +257,16 @@ async function startStreaming() {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
 
-        streamingActive = false;
-        document.getElementById('start-streaming').disabled = false;
-        document.getElementById('stop-streaming').disabled = true;
-
         updateStatus('Streaming completed!', 'success');
         Logger.info(`Streaming completed: ${tokenCount} tokens generated`);
 
     } catch (error) {
+        updateStatus(`Streaming failed: ${error.message}`, 'error');
+        Logger.error(`Streaming error: ${error}`);
+    } finally {
         streamingActive = false;
         document.getElementById('start-streaming').disabled = false;
         document.getElementById('stop-streaming').disabled = true;
-        updateStatus(`Streaming failed: ${error.message}`, 'error');
-        Logger.error(`Streaming error: ${error}`);
     }
 }
 
