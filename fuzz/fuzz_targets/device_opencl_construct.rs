@@ -22,10 +22,10 @@ fuzz_target!(|input: DeviceInput| {
     let _ = device.to_candle();
 
     // Serialization round-trip should not panic
-    if input.serialize {
-        if let Ok(json) = serde_json::to_string(&device) {
-            let _ = serde_json::from_str::<Device>(&json);
-        }
+    if input.serialize
+        && let Ok(json) = serde_json::to_string(&device)
+    {
+        let _ = serde_json::from_str::<Device>(&json);
     }
 
     // Debug formatting should not panic

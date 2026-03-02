@@ -1,7 +1,7 @@
-//! Shared LayerNorm helpers for SafeTensors-based tools.
+//! Shared `LayerNorm` helpers for SafeTensors-based tools.
 //!
 //! This microcrate centralizes tensor-name filtering (`is_ln_gamma`),
-//! LayerNorm tensor iteration, RMS computation, and casting LN gamma tensors
+//! `LayerNorm` tensor iteration, RMS computation, and casting LN gamma tensors
 //! to f16.
 
 use anyhow::{Result, anyhow};
@@ -11,12 +11,12 @@ use std::path::Path;
 
 pub use bitnet_validation::is_ln_gamma;
 
-/// Read a SafeTensors file fully into memory.
+/// Read a `SafeTensors` file fully into memory.
 pub fn read_safetensors_bytes(path: &Path) -> Result<Vec<u8>> {
     Ok(std::fs::read(path)?)
 }
 
-/// Iterate LN tensors (name, tensor) from a loaded SafeTensors buffer.
+/// Iterate LN tensors (name, tensor) from a loaded `SafeTensors` buffer.
 pub fn iter_ln_tensors(
     buf: &[u8],
 ) -> Result<impl Iterator<Item = (String, safetensors::tensor::TensorView<'_>)>> {
@@ -41,7 +41,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
                 bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad f16 buffer size"))?;
             let mut acc = 0.0f64;
             for &bits in halves.iter().take(n) {
-                let v = f16::from_bits(bits).to_f32() as f64;
+                let v = f64::from(f16::from_bits(bits).to_f32());
                 acc += v * v;
             }
             (acc / (n as f64)).sqrt()
@@ -51,7 +51,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
                 bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad bf16 buffer size"))?;
             let mut acc = 0.0f64;
             for &bits in halves.iter().take(n) {
-                let v = bf16::from_bits(bits).to_f32() as f64;
+                let v = f64::from(bf16::from_bits(bits).to_f32());
                 acc += v * v;
             }
             (acc / (n as f64)).sqrt()
@@ -61,7 +61,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
                 bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad f32 buffer size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -79,7 +79,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[i8] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i8 size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -88,7 +88,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[u8] = data;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -97,7 +97,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[i16] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i16 size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -106,7 +106,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[u16] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad u16 size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -115,7 +115,7 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[i32] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i32 size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
@@ -124,12 +124,12 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             let xs: &[u32] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad u32 size"))?;
             let mut acc = 0.0f64;
             for &v in xs.iter().take(n) {
-                let d = v as f64;
+                let d = f64::from(v);
                 acc += d * d;
             }
             (acc / (n as f64)).sqrt()
         }
-        _ => return Err(anyhow!("unsupported dtype for RMS: {:?}", dtype)),
+        _ => return Err(anyhow!("unsupported dtype for RMS: {dtype:?}")),
     };
 
     Ok(rms)
@@ -164,19 +164,19 @@ pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>
         }
         Dtype::I8 => {
             let xs: &[i8] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i8"))?;
-            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
+            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(f32::from(v)).to_bits()));
         }
         Dtype::U8 => {
             let xs = data;
-            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
+            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(f32::from(v)).to_bits()));
         }
         Dtype::I16 => {
             let xs: &[i16] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i16"))?;
-            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
+            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(f32::from(v)).to_bits()));
         }
         Dtype::U16 => {
             let xs: &[u16] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad u16"))?;
-            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
+            out.extend(xs.iter().take(n).map(|&v| f16::from_f32(f32::from(v)).to_bits()));
         }
         Dtype::I32 => {
             let xs: &[i32] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad i32"))?;
@@ -186,7 +186,7 @@ pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>
             let xs: &[u32] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad u32"))?;
             out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
         }
-        _ => return Err(anyhow!("unsupported dtype for LN cast: {:?}", dtype)),
+        _ => return Err(anyhow!("unsupported dtype for LN cast: {dtype:?}")),
     }
 
     Ok(bytemuck::cast_vec(out))

@@ -14,6 +14,7 @@ impl NllStats {
     #[must_use]
     #[inline]
     pub fn mean(self) -> f64 {
+        #[allow(clippy::cast_precision_loss)]
         if self.tokens > 0 { self.sum / self.tokens as f64 } else { 0.0 }
     }
 
@@ -26,7 +27,7 @@ impl NllStats {
 
     /// Accumulate another stats sample.
     #[inline]
-    pub fn add(&mut self, other: NllStats) {
+    pub fn add(&mut self, other: Self) {
         self.sum += other.sum;
         self.tokens += other.tokens;
     }
@@ -34,7 +35,7 @@ impl NllStats {
     /// Add one observed log-probability for a target token.
     #[inline]
     pub fn observe_logprob(&mut self, log_prob: f32) {
-        self.sum -= log_prob as f64;
+        self.sum -= f64::from(log_prob);
         self.tokens += 1;
     }
 }

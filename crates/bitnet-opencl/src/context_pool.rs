@@ -1,6 +1,6 @@
-//! GPU context pool for rapid OpenCL context switching.
+//! GPU context pool for rapid `OpenCL` context switching.
 //!
-//! Manages multiple OpenCL contexts to enable fast model switching
+//! Manages multiple `OpenCL` contexts to enable fast model switching
 //! without recompilation overhead. Supports lazy creation, per-model
 //! caching, and memory-pressure eviction.
 
@@ -59,7 +59,7 @@ impl Default for ContextPoolConfig {
     }
 }
 
-/// Metadata about a cached OpenCL context.
+/// Metadata about a cached `OpenCL` context.
 #[derive(Debug, Clone)]
 pub struct ContextEntry {
     /// Unique identifier (usually model path or hash).
@@ -97,7 +97,7 @@ impl ContextEntry {
     }
 }
 
-/// Trait for context factories that create real OpenCL contexts.
+/// Trait for context factories that create real `OpenCL` contexts.
 ///
 /// Abstracted to allow testing without actual GPU hardware.
 pub trait ContextFactory: Send + Sync {
@@ -115,7 +115,7 @@ pub trait ContextFactory: Send + Sync {
     fn total_gpu_memory_used(&self) -> MemoryBytes;
 }
 
-/// A pool of OpenCL contexts that supports rapid switching between models.
+/// A pool of `OpenCL` contexts that supports rapid switching between models.
 ///
 /// # Design
 ///
@@ -209,7 +209,7 @@ impl ContextPool {
             entries.get_mut(id).ok_or_else(|| ContextPoolError::NotFound { id: id.to_string() })?;
 
         entry.in_use = false;
-        debug!("Released context '{}'", id);
+        debug!("Released context '{id}'");
         Ok(())
     }
 
@@ -220,7 +220,7 @@ impl ContextPool {
 
         if entries.remove(id).is_some() {
             self.factory.release_context(id)?;
-            info!("Evicted context '{}'", id);
+            info!("Evicted context '{id}'");
             Ok(())
         } else {
             Err(ContextPoolError::NotFound { id: id.to_string() })
@@ -263,11 +263,11 @@ impl ContextPool {
         for id in &expired {
             entries.remove(id);
             let _ = self.factory.release_context(id);
-            debug!("Evicted expired context '{}'", id);
+            debug!("Evicted expired context '{id}'");
         }
 
         if count > 0 {
-            info!("Evicted {} expired context(s)", count);
+            info!("Evicted {count} expired context(s)");
         }
         Ok(count)
     }
@@ -304,7 +304,7 @@ impl ContextPool {
         if let Some(id) = lru_id {
             entries.remove(&id);
             factory.release_context(&id)?;
-            info!("LRU-evicted context '{}'", id);
+            info!("LRU-evicted context '{id}'");
             Ok(true)
         } else {
             Ok(false)

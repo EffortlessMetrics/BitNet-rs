@@ -599,10 +599,7 @@ async fn main() -> Result<()> {
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&archs).unwrap());
             } else {
-                println!(
-                    "{:<30} {:<12} {:<12} {}",
-                    "Architecture", "Norm", "Activation", "Context"
-                );
+                println!("{:<30} {:<12} {:<12} Context", "Architecture", "Norm", "Activation");
                 println!("{}", "-".repeat(70));
                 for arch in ArchitectureRegistry::known_architectures() {
                     if let Some(defaults) = ArchitectureRegistry::lookup(arch) {
@@ -638,7 +635,7 @@ async fn main() -> Result<()> {
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&templates).unwrap());
             } else {
-                println!("{:<30} {:<6} {:<8} {}", "Template", "BOS", "Special", "Stop Sequences");
+                println!("{:<30} {:<6} {:<8} Stop Sequences", "Template", "BOS", "Special");
                 println!("{}", "-".repeat(80));
                 for t in TemplateType::all_variants() {
                     let info = t.info();

@@ -23,11 +23,8 @@ impl Sampler {
         repetition_penalty: f32,
         seed: Option<u64>,
     ) -> Self {
-        let rng = if let Some(seed) = seed {
-            ChaCha20Rng::seed_from_u64(seed)
-        } else {
-            ChaCha20Rng::from_rng(&mut rand::rng())
-        };
+        let rng = seed
+            .map_or_else(|| ChaCha20Rng::from_rng(&mut rand::rng()), ChaCha20Rng::seed_from_u64);
 
         Self { rng, temperature, top_k, top_p, repetition_penalty, token_counts: HashMap::new() }
     }
@@ -50,6 +47,7 @@ impl Sampler {
         }
 
         // Greedy decoding if temperature is 0
+        #[allow(clippy::float_cmp)]
         if self.temperature == 0.0
             || (self.temperature == 1.0 && self.top_k == 0 && self.top_p == 1.0)
         {
@@ -57,6 +55,7 @@ impl Sampler {
         }
 
         // Apply temperature
+        #[allow(clippy::float_cmp)]
         if self.temperature != 1.0 {
             for logit in &mut logits {
                 *logit /= self.temperature;
@@ -82,18 +81,21 @@ impl Sampler {
 
     /// Apply repetition penalty to logits
     fn apply_repetition_penalty(&self, logits: &[f32]) -> Vec<f32> {
+        #[allow(clippy::float_cmp)]
         if self.repetition_penalty == 1.0 {
             return logits.to_vec();
         }
 
         let mut penalized = logits.to_vec();
         for (&token_id, &count) in &self.token_counts {
-            if (token_id as usize) < penalized.len() && count > 0 {
+            let idx = token_id as usize;
+            if idx < penalized.len() && count > 0 {
+                #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
                 let penalty = self.repetition_penalty.powi(count as i32);
-                if penalized[token_id as usize] > 0.0 {
-                    penalized[token_id as usize] /= penalty;
+                if penalized[idx] > 0.0 {
+                    penalized[idx] /= penalty;
                 } else {
-                    penalized[token_id as usize] *= penalty;
+                    penalized[idx] *= penalty;
                 }
             }
         }
@@ -157,12 +159,16 @@ impl Sampler {
         for (i, &prob) in probs.iter().enumerate() {
             cumsum += prob;
             if cumsum > uniform {
+                #[allow(clippy::cast_possible_truncation)]
                 return i as u32;
             }
         }
 
         // Fallback to last token
-        (probs.len() - 1) as u32
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            (probs.len() - 1) as u32
+        }
     }
 }
 
@@ -192,13 +198,17 @@ pub fn argmax(logits: &[f32]) -> u32 {
 
     for (i, &val) in logits.iter().enumerate() {
         // On tie, prefer lower index for determinism
+        #[allow(clippy::float_cmp)]
         if val > best_val || (val == best_val && i < best_idx) {
             best_val = val;
             best_idx = i;
         }
     }
 
-    best_idx as u32
+    #[allow(clippy::cast_possible_truncation)]
+    {
+        best_idx as u32
+    }
 }
 
 /// Greedy selection with deterministic tie-breaking for temperature=0
@@ -207,7 +217,9 @@ pub fn argmax(logits: &[f32]) -> u32 {
 pub fn greedy_tie_break_lowest_id(logits: &[f32]) -> u32 {
     let mut best = (f32::NEG_INFINITY, u32::MAX);
     for (i, &x) in logits.iter().enumerate() {
+        #[allow(clippy::cast_possible_truncation)]
         let id = i as u32;
+        #[allow(clippy::float_cmp)]
         if x > best.0 || (x == best.0 && id < best.1) {
             best = (x, id);
         }

@@ -21,7 +21,7 @@ pub enum KvCacheUpdateAction {
 
 /// Decide cache update action from sequence-length transition.
 #[must_use]
-pub fn decide_update_action(current_len: usize, seq_len: usize) -> KvCacheUpdateAction {
+pub const fn decide_update_action(current_len: usize, seq_len: usize) -> KvCacheUpdateAction {
     match (current_len, seq_len) {
         (0, target) => KvCacheUpdateAction::Initialize { seq_len: target },
         (curr, next) if next > curr => {

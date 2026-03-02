@@ -100,8 +100,7 @@ fn total_memory_mb() -> u64 {
                     .find(|l| l.starts_with("MemTotal"))
                     .and_then(|l| l.split_whitespace().nth(1).and_then(|v| v.parse::<u64>().ok()))
             })
-            .map(|kb| kb / 1024)
-            .unwrap_or(0)
+            .map_or(0, |kb| kb / 1024)
     }
     #[cfg(not(target_os = "linux"))]
     {

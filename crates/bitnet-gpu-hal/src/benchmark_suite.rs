@@ -446,11 +446,11 @@ fn simulate_softmax(sizes: &[usize]) -> u64 {
     let start = Instant::now();
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
     let mut sum = 0.0_f32;
-    for v in logits.iter_mut() {
+    for v in &mut logits {
         *v = (*v - max).exp();
         sum += *v;
     }
-    for v in logits.iter_mut() {
+    for v in &mut logits {
         *v /= sum;
     }
     start.elapsed().as_nanos() as u64
