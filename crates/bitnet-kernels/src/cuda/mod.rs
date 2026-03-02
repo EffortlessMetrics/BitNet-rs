@@ -36,7 +36,6 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -48,8 +47,10 @@ pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod reduction;
 pub mod rmsnorm;
 pub mod rope;
+pub mod scatter_gather;
 pub mod softmax;
 pub mod transpose;
 
