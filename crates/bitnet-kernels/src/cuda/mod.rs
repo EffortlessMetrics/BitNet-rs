@@ -20,6 +20,7 @@
 //!   transpose support
 //! - [`linear`]: Linear projection (y = xW^T + bias) CUDA kernel and launch stub
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
+//! - [`quantized_ops`]: I2_S and TL1 quantize/dequantize with fused dequant+matmul
 //! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
@@ -46,6 +47,7 @@ pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod quantized_ops;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
@@ -131,6 +133,11 @@ pub use quantize::{
     quantize_i2s_cpu, quantize_ternary_cpu,
 };
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
+pub use quantized_ops::{
+    QuantizedOpsConfig, QuantizedOpsError, ZeroPointType, dequantize_tensor_i2s,
+    dequantize_tensor_tl1, fused_dequant_matmul, quantize_tensor_i2s, quantize_tensor_tl1,
+    quantized_matmul,
+};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
     transpose_nd_cpu_fallback,
@@ -171,6 +178,11 @@ pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SR
 pub use matmul::{launch_matmul, launch_matmul_f16};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::{I2S_MATMUL_KERNEL_SRC, launch_i2s_matmul};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use quantized_ops::{
+    QUANTIZED_OPS_KERNEL_SRC, launch_fused_dequant_matmul, launch_quantized_ops_i2s,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantize::{
