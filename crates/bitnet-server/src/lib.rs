@@ -30,6 +30,7 @@ use axum::{
     response::{Json, Response},
     routing::{get, post},
 };
+use bitnet_client_ip_core::extract_client_ip_from_headers;
 use bitnet_common::Device;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
@@ -759,14 +760,10 @@ fn parse_device(device: &str) -> Result<Device> {
     }
 }
 
-/// Extract client IP from headers using security module's implementation
-fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
-    security::extract_client_ip_from_headers(headers)
-}
-
 #[cfg(test)]
 mod tests {
     use super::parse_device;
+    use bitnet_client_ip_core::extract_client_ip_from_headers;
     use bitnet_common::Device;
 
     #[test]
