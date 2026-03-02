@@ -48,6 +48,7 @@ pub mod quantize;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
+pub mod rope_v2;
 pub mod softmax;
 pub mod transpose;
 
@@ -84,6 +85,16 @@ pub use rope::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use rope::{ROPE_BACKWARD_KERNEL_SRC, ROPE_FORWARD_KERNEL_SRC};
+
+pub use rope_v2::{
+    RoPEConfig as RoPEV2Config, RoPEV2Error, RoPEV2LaunchConfig, ScalingType,
+    apply_rope_batched as apply_rope_v2_batched, apply_rope_neox_v2, apply_rope_v2,
+    apply_rope_yarn, compute_rope_frequencies_v2, launch_rope_v2, launch_rope_v2_batched,
+    rope_context_extension,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use rope_v2::{ROPE_V2_BATCHED_KERNEL_SRC, ROPE_V2_FORWARD_KERNEL_SRC};
 
 // Re-export scatter/gather types from the crate-level module (always compiled).
 pub use crate::scatter_gather::{
