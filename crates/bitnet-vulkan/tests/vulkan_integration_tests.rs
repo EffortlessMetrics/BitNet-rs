@@ -1,8 +1,8 @@
-use bitnet_vulkan::{VulkanShaderSource, kernels};
+use bitnet_vulkan::VulkanShaderSource;
 
 #[test]
 fn shader_reexport_matches_kernels_module() {
-    assert_eq!(VulkanShaderSource::ALL, kernels::VulkanShaderSource::ALL);
+    // The kernels module was emptied and VulkanShaderSource is re-exported at the crate root.
     assert_eq!(VulkanShaderSource::Matmul.name(), "matmul");
 }
 
