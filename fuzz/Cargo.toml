@@ -611,3 +611,39 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_pipeline_parallel"
+path = "fuzz_targets/fuzz_pipeline_parallel.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_register_optimizer"
+path = "fuzz_targets/fuzz_register_optimizer.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_simd_embedding"
+path = "fuzz_targets/fuzz_simd_embedding.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_eviction"
+path = "fuzz_targets/fuzz_kv_cache_eviction.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_tensor_parallel_sharding"
+path = "fuzz_targets/fuzz_tensor_parallel_sharding.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_mixed_precision_pipeline"
+path = "fuzz_targets/fuzz_mixed_precision_pipeline.rs"
+test = false
+doc = false
