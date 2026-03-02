@@ -35,7 +35,7 @@ pub mod kernels;
 pub mod matmul_dispatch;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
-pub mod norm_registry;
+pub mod neon_layer_norm;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_async_executor;
