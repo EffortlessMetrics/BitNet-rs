@@ -676,7 +676,7 @@ fn make_test_weights(config: &QuantizedPipelineConfig) -> QuantizedLayerWeights 
 
     let make_w = |rows: usize, cols: usize| {
         // Deterministic pseudo-random weights.
-        let vals: Vec<f32> = (0..rows * cols).map(|i| ((i as f32 * 0.1).sin() * 0.5)).collect();
+        let vals: Vec<f32> = (0..rows * cols).map(|i| (i as f32 * 0.1).sin() * 0.5).collect();
         QuantizedTensor::from_f32(&vals, rows, cols, bs, config.quant_type).unwrap()
     };
 
@@ -1290,7 +1290,7 @@ mod tests {
     fn test_quantized_matmul_accuracy_vs_fp32_int4() {
         let rows = 8;
         let cols = 8;
-        let w_vals: Vec<f32> = (0..rows * cols).map(|i| ((i as f32) * 0.13).sin() * 2.0).collect();
+        let w_vals: Vec<f32> = (0..rows * cols).map(|i| (i as f32 * 0.13).sin() * 2.0).collect();
         let x_vals: Vec<f32> = (0..cols).map(|i| ((i as f32) * 0.37).cos()).collect();
 
         let fp32_result = fp32_matmul_vec(&w_vals, &x_vals, rows, cols);
