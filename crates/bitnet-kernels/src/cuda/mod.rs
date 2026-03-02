@@ -47,6 +47,7 @@ pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod residual;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
