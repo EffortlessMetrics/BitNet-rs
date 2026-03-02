@@ -22,6 +22,7 @@ pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod kv_cache_ops;
 pub mod layer_norm;
 pub use layer_norm::{
     GroupNormConfig, LayerNormConfig, batch_group_norm, batch_instance_norm, batch_layer_norm,
@@ -119,6 +120,9 @@ pub use kv_cache::{
     KvCache, KvCacheBlock, KvCacheConfig, KvDtype, kv_cache_append, kv_cache_clear,
     kv_cache_memory_usage, kv_cache_slice, paged_kv_cache_alloc,
 };
+
+// Re-export advanced KV cache operations.
+pub use kv_cache_ops::*;
 
 // Re-export new embedding operations.
 pub use embedding::{
