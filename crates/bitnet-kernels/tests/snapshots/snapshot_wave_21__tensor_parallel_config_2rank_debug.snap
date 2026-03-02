@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 342
+expression: cfg
+---
+TensorParallelConfig {
+    num_ranks: 2,
+    rank_id: 0,
+    comm_backend: InProcess,
+    overlap_compute_comm: false,
+}

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 225
+expression: gg
+---
+GridGroup {
+    block_size: 256,
+    num_blocks: 128,
+}

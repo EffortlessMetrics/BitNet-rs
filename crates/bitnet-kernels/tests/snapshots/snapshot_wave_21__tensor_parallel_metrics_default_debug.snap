@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 394
+expression: m
+---
+TensorParallelMetrics {
+    comm_time_ms: 0.0,
+    compute_time_ms: 0.0,
+    overlap_efficiency: 0.0,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 22
+expression: calc
+---
+OccupancyCalculator {
+    max_threads_per_sm: 2048,
+    max_blocks_per_sm: 32,
+    max_shared_mem_per_sm: 163840,
+    max_registers_per_sm: 65536,
+}

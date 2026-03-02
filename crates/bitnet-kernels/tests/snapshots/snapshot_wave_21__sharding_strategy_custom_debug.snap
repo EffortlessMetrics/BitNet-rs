@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 377
+expression: s
+---
+Custom {
+    splits: [
+        128,
+        256,
+        128,
+    ],
+}

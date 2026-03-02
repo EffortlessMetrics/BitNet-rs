@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 267
+expression: cfg
+---
+ScatterGatherConfig {
+    bounds_check: true,
+    reduce: Add,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 29
+expression: result
+---
+OccupancyResult {
+    theoretical: 1.0,
+    active_warps: 64,
+    max_warps: 64,
+    limiter: Threads,
+}

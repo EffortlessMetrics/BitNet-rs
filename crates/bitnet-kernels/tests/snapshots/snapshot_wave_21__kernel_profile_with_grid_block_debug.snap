@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 62
+expression: p
+---
+KernelProfile {
+    name: "rmsnorm",
+    duration: 8µs,
+    bandwidth: None,
+    compute: None,
+    occupancy: None,
+    grid_dim: [
+        128,
+        1,
+        1,
+    ],
+    block_dim: [
+        256,
+        1,
+        1,
+    ],
+}

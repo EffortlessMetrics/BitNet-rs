@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 406
+expression: e
+---
+ShardIndexOutOfBounds {
+    index: 5,
+    total: 4,
+}

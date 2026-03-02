@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 196
+expression: cfg
+---
+CooperativeGroupConfig {
+    group_size: 512,
+    grid_sync: true,
+    thread_block_cluster: false,
+    cluster_size: 1,
+    shared_mem_bytes: 0,
+}

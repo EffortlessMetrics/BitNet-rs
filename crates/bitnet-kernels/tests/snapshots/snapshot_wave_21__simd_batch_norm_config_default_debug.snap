@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 304
+expression: cfg
+---
+SimdBatchNormConfig {
+    epsilon: 1e-5,
+    momentum: 0.1,
+    affine: true,
+    track_running_stats: true,
+}

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 400
+expression: e
+---
+UnevenSharding {
+    tensor_len: 100,
+    num_shards: 3,
+}

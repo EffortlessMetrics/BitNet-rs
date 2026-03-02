@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 54
+expression: p
+---
+KernelProfile {
+    name: "matmul_f32",
+    duration: 42µs,
+    bandwidth: None,
+    compute: None,
+    occupancy: None,
+    grid_dim: [
+        1,
+        1,
+        1,
+    ],
+    block_dim: [
+        1,
+        1,
+        1,
+    ],
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 116
+expression: cfg
+---
+StreamConfig {
+    num_streams: 4,
+    priority: Normal,
+    default_stream_behavior: PerThread,
+    enable_profiling: false,
+}

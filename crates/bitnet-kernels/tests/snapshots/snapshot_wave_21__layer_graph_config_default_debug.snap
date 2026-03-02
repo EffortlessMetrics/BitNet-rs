@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 164
+expression: cfg
+---
+LayerGraphConfig {
+    hidden_dim: 2048,
+    num_heads: 16,
+    seq_len: 128,
+    include_mlp: true,
+    include_attention: true,
+    attention_stream: 0,
+    mlp_stream: 0,
+}

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 279
+expression: variants
+---
+[
+    Assign,
+    Add,
+    Max,
+    Min,
+    Mul,
+]

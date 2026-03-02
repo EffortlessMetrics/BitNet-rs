@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 48
+expression: cm
+---
+ComputeMetrics {
+    flops: 1000000000,
+    duration: 1ms,
+    peak_flops: 312000000000000.0,
+}

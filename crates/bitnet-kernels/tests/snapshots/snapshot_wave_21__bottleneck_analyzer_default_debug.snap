@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 68
+expression: ba
+---
+BottleneckAnalyzer {
+    latency_threshold_us: 5.0,
+    memory_util_threshold: 0.6,
+    compute_util_threshold: 0.6,
+}

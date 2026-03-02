@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 176
+expression: stats
+---
+OptimizeStats {
+    nodes_removed: 0,
+    edges_removed: 0,
+    nodes_merged: 0,
+}

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 140
+expression: stage
+---
+PipelineStage {
+    kind: Compute,
+    label: "matmul_kernel",
+    cost: 65536,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_21.rs
+assertion_line: 213
+expression: variants
+---
+[
+    Sum,
+    Max,
+    Min,
+    Product,
+]
