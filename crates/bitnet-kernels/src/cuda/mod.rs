@@ -24,6 +24,7 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`mixed_precision`]: Mixed-precision (F16/BF16) kernels with tensor-core GEMM and attention
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -42,6 +43,7 @@ pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
+pub mod mixed_precision;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
@@ -186,3 +188,18 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use mixed_precision::{
+    DynamicLossScaler, MixedPrecisionConfig, MixedPrecisionError, MixedPrecisionMatmulConfig,
+    MixedReduceOp, PrecisionType, bf16_to_f32, bf16_to_f32_batch, dynamic_loss_scaling, f16_to_f32,
+    f16_to_f32_batch, f32_to_bf16, f32_to_bf16_batch, f32_to_f16, f32_to_f16_batch,
+    mixed_precision_matmul, mixed_precision_reduce,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use mixed_precision::{
+    MIXED_PRECISION_ATTENTION_KERNEL_SRC, MIXED_PRECISION_BF16_MATMUL_KERNEL_SRC,
+    MIXED_PRECISION_F16_MATMUL_KERNEL_SRC, MixedPrecisionLaunchConfig,
+    launch_mixed_precision_attention, launch_mixed_precision_bf16_matmul,
+    launch_mixed_precision_f16_matmul,
+};
