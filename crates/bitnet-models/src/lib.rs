@@ -18,6 +18,7 @@ pub mod gguf_min;
 pub mod gguf_parity;
 pub mod gguf_simple;
 pub mod gguf_writer;
+pub mod health_check;
 pub mod hf_loader;
 pub mod layer_inspector;
 pub mod loader;
