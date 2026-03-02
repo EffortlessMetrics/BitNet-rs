@@ -26,8 +26,9 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
-//! - [`sparse`]: Sparse tensor operations (CSR/CSC/COO/BSR) with SpMV, SpMM, and block-sparse
-//!   matmul for efficient 1-bit model inference
+//! - [`warp_ops`]: Warp-level primitives (reduce, shuffle, ballot, scan, cooperative softmax)
+//! - [`cooperative_groups`]: Block/grid-level cooperative group primitives (reduce, scan,
+//!   broadcast, bitonic sort, histogram, tiled matmul)
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -39,12 +40,14 @@ pub mod attention;
 pub mod attention_mask;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod cooperative_groups;
 pub mod dequant;
 pub mod elementwise;
 pub mod embedding;
 pub mod fused_attention;
 pub mod fusion;
 pub mod gating;
+pub mod graph_exec;
 pub mod kv_cache;
 pub mod kv_cache_gpu;
 pub mod layernorm;
@@ -52,16 +55,20 @@ pub mod linear;
 pub mod loss;
 pub mod matmul;
 pub mod memory_pool;
+pub mod multi_head_attention;
 pub mod pooling;
+pub mod profiling;
 pub mod qk256_gemv;
 pub mod quantize;
+pub mod quantized_gemm;
 pub mod quantized_matmul;
 pub mod residual;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
-pub mod sparse;
+pub mod stream_mgmt;
 pub mod transpose;
+pub mod warp_ops;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
@@ -210,6 +217,14 @@ pub use loss::{
 pub use loss::{LOSS_KERNEL_SRC, launch_cross_entropy_loss, launch_huber_loss, launch_mse_loss};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use warp_ops::WARP_OPS_KERNEL_SRC;
+pub use warp_ops::{
+    DEFAULT_WARP_SIZE, WarpConfig, block_reduce_max, block_reduce_sum, cooperative_softmax,
+    warp_all, warp_any, warp_ballot, warp_broadcast, warp_exclusive_scan, warp_match,
+    warp_prefix_sum, warp_reduce_max, warp_reduce_min, warp_reduce_sum, warp_shuffle,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
@@ -252,14 +267,19 @@ pub use fusion::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
 
-pub use sparse::{
-    ElementwiseSpOp, SparseConfig, SparseFormat, SparseTensor, block_sparse_matmul,
-    dense_to_sparse, nnz, prune_below_threshold, sparse_add, sparse_elementwise, sparse_matmul,
-    sparse_matmul_forward, sparse_matvec, sparse_matvec_forward, sparse_sub, sparse_to_dense,
-    sparsity_ratio,
+pub use stream_mgmt::{
+    DefaultStreamBehavior, DepNode, DispatchResult, PipelineSchedule, PipelineStage,
+    PipelineStageKind, ProfileRecord, ScheduleStrategy, ScheduledTask, StreamAssignment,
+    StreamConfig, StreamEvent, StreamHandle, StreamOp, StreamPool, StreamPriority,
+    StreamPriorityManager, StreamProfiler, StreamScheduler, StreamUtilization,
+    dependency_graph_to_streams, event_record, event_wait, multi_stream_dispatch, pipeline_stages,
+    stream_sync,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub use sparse::{
-    SPARSE_SPMM_CSR_KERNEL_SRC, SPARSE_SPMV_CSR_KERNEL_SRC, launch_sparse_spmm, launch_sparse_spmv,
+pub use cooperative_groups::COOPERATIVE_GROUPS_KERNEL_SRC;
+pub use cooperative_groups::{
+    CoalescedGroup, CooperativeGroupConfig, CooperativeReduceOp, GridGroup, ThreadBlockGroup,
+    cooperative_broadcast, cooperative_histogram, cooperative_matmul, cooperative_reduce,
+    cooperative_scan, cooperative_sort,
 };
