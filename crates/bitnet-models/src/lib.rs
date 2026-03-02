@@ -1,5 +1,6 @@
 //! Model definitions and loading for BitNet inference
 
+pub mod architecture;
 pub mod bitnet;
 pub mod checkpoint;
 pub mod config;
