@@ -17,6 +17,7 @@ pub mod benchmarks;
 pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
+pub mod cpu_gather_scatter;
 pub mod cuda;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod cuda_graph_capture;
