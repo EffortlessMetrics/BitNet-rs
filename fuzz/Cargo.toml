@@ -611,3 +611,33 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_operations"
+path = "fuzz_targets/fuzz_kv_cache_operations.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_layer_norm_stability"
+path = "fuzz_targets/fuzz_layer_norm_stability.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_rope_encoding"
+path = "fuzz_targets/fuzz_rope_encoding.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_token_sampling"
+path = "fuzz_targets/fuzz_token_sampling.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_weight_loading"
+path = "fuzz_targets/fuzz_weight_loading.rs"
+test = false
+doc = false

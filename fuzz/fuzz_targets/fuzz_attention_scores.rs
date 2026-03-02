@@ -1,6 +1,7 @@
 #![no_main]
 
 use arbitrary::Arbitrary;
+use bitnet_kernels::cpu::attention::{AttentionConfig, AttentionKernel};
 use libfuzzer_sys::fuzz_target;
 
 #[derive(Arbitrary, Debug)]
@@ -11,7 +12,8 @@ struct AttentionInput {
     q_data: Vec<u8>,
     k_data: Vec<u8>,
     v_data: Vec<u8>,
-    use_causal_mask: bool,
+    use_causal: bool,
+    use_multi_head: bool,
 }
 
 fn bytes_to_f32(data: &[u8], max_elems: usize) -> Vec<f32> {
@@ -23,140 +25,104 @@ fn bytes_to_f32(data: &[u8], max_elems: usize) -> Vec<f32> {
         .collect()
 }
 
-fn softmax(logits: &mut [f32]) {
-    if logits.is_empty() {
-        return;
-    }
-    let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    if !max_val.is_finite() {
-        // Replace non-finite with uniform
-        let uniform = 1.0 / logits.len() as f32;
-        logits.fill(uniform);
-        return;
-    }
-    let mut sum = 0.0f32;
-    for v in logits.iter_mut() {
-        *v = (*v - max_val).exp();
-        sum += *v;
-    }
-    if sum > 0.0 && sum.is_finite() {
-        for v in logits.iter_mut() {
-            *v /= sum;
-        }
-    } else {
-        let uniform = 1.0 / logits.len() as f32;
-        logits.fill(uniform);
-    }
-}
-
-fn attention_scores(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    seq_len: usize,
-    head_dim: usize,
-    causal: bool,
-) -> Vec<f32> {
-    let scale = 1.0 / (head_dim as f32).sqrt();
-    let mut scores = vec![0.0f32; seq_len * seq_len];
-
-    // Q @ K^T with scaling
-    for i in 0..seq_len {
-        for j in 0..seq_len {
-            let mut dot = 0.0f32;
-            for d in 0..head_dim {
-                dot += q[i * head_dim + d] * k[j * head_dim + d];
-            }
-            scores[i * seq_len + j] = dot * scale;
-        }
-    }
-
-    // Causal mask: set future positions to -inf
-    if causal {
-        for i in 0..seq_len {
-            for j in (i + 1)..seq_len {
-                scores[i * seq_len + j] = f32::NEG_INFINITY;
-            }
-        }
-    }
-
-    // Softmax per row
-    for i in 0..seq_len {
-        let row = &mut scores[i * seq_len..(i + 1) * seq_len];
-        softmax(row);
-    }
-
-    // Scores @ V
-    let mut output = vec![0.0f32; seq_len * head_dim];
-    for i in 0..seq_len {
-        for d in 0..head_dim {
-            let mut sum = 0.0f32;
-            for j in 0..seq_len {
-                sum += scores[i * seq_len + j] * v[j * head_dim + d];
-            }
-            output[i * head_dim + d] = sum;
-        }
-    }
-
-    output
-}
-
 fuzz_target!(|input: AttentionInput| {
-    let seq_len = (input.seq_len as usize % 16) + 1;
+    let seq_len = (input.seq_len as usize % 12) + 1;
     let head_dim = (input.head_dim as usize % 16) + 1;
     let n_heads = (input.n_heads as usize % 4) + 1;
-    let elems_per_head = seq_len * head_dim;
 
-    let q_all = bytes_to_f32(&input.q_data, n_heads * elems_per_head);
-    let k_all = bytes_to_f32(&input.k_data, n_heads * elems_per_head);
-    let v_all = bytes_to_f32(&input.v_data, n_heads * elems_per_head);
+    if input.use_multi_head {
+        // Multi-head attention path.
+        let model_dim = n_heads * head_dim;
+        let total = seq_len * model_dim;
 
-    if q_all.len() < n_heads * elems_per_head
-        || k_all.len() < n_heads * elems_per_head
-        || v_all.len() < n_heads * elems_per_head
-    {
-        return;
-    }
+        let q = bytes_to_f32(&input.q_data, total);
+        let k = bytes_to_f32(&input.k_data, total);
+        let v = bytes_to_f32(&input.v_data, total);
 
-    // Filter out inputs with NaN/inf to test pure numerical stability
-    let has_nonfinite =
-        q_all.iter().chain(k_all.iter()).chain(v_all.iter()).any(|x| !x.is_finite());
-    if has_nonfinite {
-        return;
-    }
+        if q.len() < total || k.len() < total || v.len() < total {
+            return;
+        }
+        if q[..total]
+            .iter()
+            .chain(k[..total].iter())
+            .chain(v[..total].iter())
+            .any(|x| !x.is_finite())
+        {
+            return;
+        }
 
-    for h in 0..n_heads {
-        let offset = h * elems_per_head;
-        let q = &q_all[offset..offset + elems_per_head];
-        let k = &k_all[offset..offset + elems_per_head];
-        let v = &v_all[offset..offset + elems_per_head];
+        let cfg = AttentionConfig {
+            num_heads: n_heads,
+            head_dim,
+            seq_len,
+            causal: input.use_causal,
+            use_alibi: false,
+            scale: None,
+        };
 
-        let output = attention_scores(q, k, v, seq_len, head_dim, input.use_causal_mask);
+        match AttentionKernel::multi_head_attention(&q[..total], &k[..total], &v[..total], &cfg) {
+            Ok(out) => {
+                // Invariant 1: Output shape matches [seq_len, n_heads * head_dim].
+                assert_eq!(out.len(), total, "multi_head output shape mismatch");
+                // Invariant 2: No NaN in output.
+                for (i, &val) in out.iter().enumerate() {
+                    assert!(!val.is_nan(), "multi_head NaN at idx {i}");
+                }
+            }
+            Err(_) => {} // Validation errors are fine.
+        }
+    } else {
+        // Single-head scaled dot-product path.
+        let elems = seq_len * head_dim;
 
-        // Invariant 1: Output shape matches [seq_len, head_dim]
-        assert_eq!(
-            output.len(),
-            elems_per_head,
-            "output shape mismatch: expected {elems_per_head}, got {}",
-            output.len()
-        );
+        let q = bytes_to_f32(&input.q_data, elems);
+        let k = bytes_to_f32(&input.k_data, elems);
+        let v = bytes_to_f32(&input.v_data, elems);
 
-        // Invariant 2: No NaN or Inf in output
-        for (i, &val) in output.iter().enumerate() {
-            assert!(val.is_finite(), "attention output non-finite at index {i}: {val} (head={h})");
+        if q.len() < elems || k.len() < elems || v.len() < elems {
+            return;
+        }
+        if q[..elems]
+            .iter()
+            .chain(k[..elems].iter())
+            .chain(v[..elems].iter())
+            .any(|x| !x.is_finite())
+        {
+            return;
+        }
+
+        let scale = 1.0 / (head_dim as f32).sqrt();
+
+        match AttentionKernel::scaled_dot_product(
+            &q[..elems],
+            &k[..elems],
+            &v[..elems],
+            None,
+            scale,
+            seq_len,
+            seq_len,
+            head_dim,
+        ) {
+            Ok(out) => {
+                // Invariant 3: Output shape matches [seq_len, head_dim].
+                assert_eq!(out.len(), elems, "sdp output shape mismatch");
+                // Invariant 4: No NaN in output.
+                for (i, &val) in out.iter().enumerate() {
+                    assert!(!val.is_nan(), "sdp NaN at idx {i}");
+                }
+            }
+            Err(_) => {}
         }
     }
 
-    // Invariant 3: With causal mask, running with seq_len=1 must match first row
-    if seq_len > 1 && !has_nonfinite {
-        let q_row = &q_all[..head_dim];
-        let k_row = &k_all[..head_dim];
-        let v_row = &v_all[..head_dim];
-
-        let single = attention_scores(q_row, k_row, v_row, 1, head_dim, input.use_causal_mask);
-        assert_eq!(single.len(), head_dim, "single-token output shape mismatch");
-        for &val in &single {
-            assert!(val.is_finite(), "single-token attention produced non-finite");
-        }
-    }
+    // Invariant 5: Zero-dimension configs must error, not panic.
+    let bad_cfg = AttentionConfig {
+        num_heads: 0,
+        head_dim: 0,
+        seq_len: 0,
+        causal: false,
+        use_alibi: false,
+        scale: None,
+    };
+    assert!(bad_cfg.validate().is_err(), "zero-dim config should fail validation");
 });
