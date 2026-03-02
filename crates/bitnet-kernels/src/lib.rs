@@ -33,6 +33,7 @@ pub mod opencl_context;
 pub mod opencl_continuous_batch;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
+pub mod opencl_dispatch_planner;
 pub mod opencl_embedding;
 pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
