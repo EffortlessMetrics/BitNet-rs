@@ -34,6 +34,7 @@ pub mod opencl_continuous_batch;
 pub mod opencl_device_caps;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
+pub mod opencl_elementwise;
 pub mod opencl_embedding;
 pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
