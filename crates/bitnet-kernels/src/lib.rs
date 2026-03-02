@@ -42,6 +42,7 @@ pub mod opencl_kv_cache;
 pub mod opencl_memory;
 pub mod opencl_model_converter;
 pub mod opencl_pipeline;
+pub mod opencl_request_router;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
 pub mod opencl_registry;
