@@ -243,6 +243,7 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 async-trait = "0.1.89"
 bitnet-cpu-activations = { path = "crates/bitnet-cpu-activations", version = "0.2.1-dev" }
 bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
 bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
@@ -392,6 +393,10 @@ required-features = ["cpu"]
 name = "slm_inference"
 harness = false
 required-features = ["cpu"]
+
+[[bench]]
+name = "tokenizer_ops"
+harness = false
 
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
