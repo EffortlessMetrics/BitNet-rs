@@ -104,3 +104,7 @@ trace = ["bitnet-models/trace"]  # Enable tensor activation tracing
 name = "comprehensive_tests"
 path = "tests/comprehensive_tests.rs"
 required-features = ["full-engine"]
+
+[[test]]
+name = "proptest_wave29"
+path = "tests/proptest_wave29.rs"
