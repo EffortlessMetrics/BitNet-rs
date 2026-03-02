@@ -84,6 +84,8 @@ async fn test_complete_pipeline_failure_recovery() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "integration-test".to_string(),
         expected_vocab: Some(32000),
+                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader = SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
@@ -741,6 +743,8 @@ async fn test_error_recovery_graceful_degradation() {
                         files: vec!["tokenizer.json".to_string()],
                         cache_key: "test".to_string(),
                         expected_vocab: Some(1000),
+                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
                     };
 
                     let validation =

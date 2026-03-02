@@ -47,7 +47,10 @@ pub use gguf_loader::{GgufTokKind, RustTokenizer};
 
 // New tokenizer discovery and strategy exports
 pub use bitnet_tokenizer_model_core::ModelTypeDetector;
-pub use discovery::{TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy};
+pub use discovery::{
+    SpecialTokenConfig, TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy,
+    TokenizerType,
+};
 pub use download::{DownloadProgress, SmartTokenizerDownload};
 pub use error_handling::{CacheManager, TokenizerErrorHandler};
 pub use fallback::TokenizerFallbackChain;
