@@ -140,6 +140,10 @@ name = "bdd_wave_7"
 path = "tests/bdd_wave_7.rs"
 required-features = ["cpu"]
 
+[[test]]
+name = "metal_layernorm_shader_tests"
+path = "tests/metal_layernorm_shader_tests.rs"
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
