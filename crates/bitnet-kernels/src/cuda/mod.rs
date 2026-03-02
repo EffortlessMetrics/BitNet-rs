@@ -46,6 +46,7 @@ pub mod memory_pool;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
+pub mod quantized_gemm;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
