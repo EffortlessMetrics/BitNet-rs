@@ -539,3 +539,39 @@ name = "fuzz_activation_elementwise"
 path = "fuzz_targets/fuzz_activation_elementwise.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_append_slice"
+path = "fuzz_targets/fuzz_kv_cache_append_slice.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_gradient_ops"
+path = "fuzz_targets/fuzz_gradient_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_positional_encoding"
+path = "fuzz_targets/fuzz_positional_encoding.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_loss_computation"
+path = "fuzz_targets/fuzz_loss_computation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_tensor_reshape"
+path = "fuzz_targets/fuzz_tensor_reshape.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantize_roundtrip"
+path = "fuzz_targets/fuzz_quantize_roundtrip.rs"
+test = false
+doc = false
