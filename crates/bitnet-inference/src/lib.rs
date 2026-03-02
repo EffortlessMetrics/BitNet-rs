@@ -10,6 +10,7 @@ pub mod cache;
 pub mod compute_cost;
 pub mod config;
 pub mod config_builder;
+pub mod context_window;
 pub mod cpu_opt;
 pub mod dense_forward;
 pub mod dense_generation;
