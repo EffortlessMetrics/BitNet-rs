@@ -465,6 +465,7 @@ dependencies = [
  "bitnet-cli-sampling-core",
  "bitnet-common",
  "bitnet-eval-core",
+ "bitnet-exit-codes-core",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-kernels",
@@ -669,6 +670,10 @@ dependencies = [
 
 [[package]]
 name = "bitnet-eval-core"
+version = "0.2.1-dev"
+
+[[package]]
+name = "bitnet-exit-codes-core"
 version = "0.2.1-dev"
 
 [[package]]

@@ -1,0 +1,15 @@
+[package]
+name = "bitnet-exit-codes-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP core crate for BitNet CLI/validation exit codes"
+
+[lib]
+name = "bitnet_exit_codes_core"
+path = "src/lib.rs"

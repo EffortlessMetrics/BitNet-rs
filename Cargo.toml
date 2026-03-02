@@ -50,6 +50,7 @@ members = [
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
+  "crates/bitnet-exit-codes-core", # SRP: shared process exit code contract for CLI/validation tooling
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
