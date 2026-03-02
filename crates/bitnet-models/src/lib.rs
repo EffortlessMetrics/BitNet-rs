@@ -35,6 +35,7 @@ pub mod names;
 pub mod production_loader;
 pub mod qk256_utils;
 pub mod quant;
+pub mod registry_persist;
 pub mod registry_query;
 pub mod safetensors_reader;
 pub mod security;
