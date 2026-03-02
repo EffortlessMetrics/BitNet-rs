@@ -14,6 +14,8 @@ struct KvCacheInput {
 #[derive(Arbitrary, Debug)]
 enum CacheOp {
     Append { layer: u8, data: Vec<u8> },
+    Evict { layer: u8, count: u8 },
+    Compact { layer: u8 },
     ReadLayer { layer: u8 },
     ReadAll,
     Reset,
@@ -27,6 +29,7 @@ struct KvCache {
     keys: Vec<Vec<f32>>,
     values: Vec<Vec<f32>>,
     seq_lens: Vec<usize>,
+    tombstones: Vec<Vec<bool>>,
 }
 
 impl KvCache {
@@ -38,21 +41,76 @@ impl KvCache {
             keys: vec![Vec::new(); n_layers],
             values: vec![Vec::new(); n_layers],
             seq_lens: vec![0; n_layers],
+            tombstones: vec![Vec::new(); n_layers],
         }
+    }
+
+    fn step_size(&self) -> usize {
+        self.n_heads * self.head_dim
     }
 
     fn append(&mut self, layer: usize, k: &[f32], v: &[f32]) -> bool {
         if layer >= self.n_layers {
             return false;
         }
-        let step_size = self.n_heads * self.head_dim;
-        if k.len() != step_size || v.len() != step_size {
+        let step = self.step_size();
+        if k.len() != step || v.len() != step {
             return false;
         }
         self.keys[layer].extend_from_slice(k);
         self.values[layer].extend_from_slice(v);
+        self.tombstones[layer].push(false);
         self.seq_lens[layer] += 1;
         true
+    }
+
+    fn evict(&mut self, layer: usize, count: usize) {
+        if layer >= self.n_layers {
+            return;
+        }
+        let mut evicted = 0;
+        for i in 0..self.tombstones[layer].len() {
+            if evicted >= count {
+                break;
+            }
+            if !self.tombstones[layer][i] {
+                self.tombstones[layer][i] = true;
+                evicted += 1;
+            }
+        }
+    }
+
+    fn compact(&mut self, layer: usize) {
+        if layer >= self.n_layers {
+            return;
+        }
+        let step = self.step_size();
+        let mut new_keys = Vec::new();
+        let mut new_values = Vec::new();
+        let mut new_tombstones = Vec::new();
+        for (i, &dead) in self.tombstones[layer].iter().enumerate() {
+            if !dead {
+                let start = i * step;
+                let end = start + step;
+                if end <= self.keys[layer].len() {
+                    new_keys.extend_from_slice(&self.keys[layer][start..end]);
+                    new_values.extend_from_slice(&self.values[layer][start..end]);
+                    new_tombstones.push(false);
+                }
+            }
+        }
+        let live_count = new_tombstones.len();
+        self.keys[layer] = new_keys;
+        self.values[layer] = new_values;
+        self.tombstones[layer] = new_tombstones;
+        self.seq_lens[layer] = live_count;
+    }
+
+    fn live_count(&self, layer: usize) -> usize {
+        if layer >= self.n_layers {
+            return 0;
+        }
+        self.tombstones[layer].iter().filter(|&&t| !t).count()
     }
 
     fn read_layer(&self, layer: usize) -> Option<(&[f32], &[f32], usize)> {
@@ -74,16 +132,18 @@ impl KvCache {
             self.keys[layer].clear();
             self.values[layer].clear();
             self.seq_lens[layer] = 0;
+            self.tombstones[layer].clear();
         }
     }
 
     fn trim_to(&mut self, max_seq: usize) {
-        let step_size = self.n_heads * self.head_dim;
+        let step = self.step_size();
         for layer in 0..self.n_layers {
             if self.seq_lens[layer] > max_seq {
-                let keep = max_seq * step_size;
+                let keep = max_seq * step;
                 self.keys[layer].truncate(keep);
                 self.values[layer].truncate(keep);
+                self.tombstones[layer].truncate(max_seq);
                 self.seq_lens[layer] = max_seq;
             }
         }
@@ -107,7 +167,6 @@ fuzz_target!(|input: KvCacheInput| {
 
     let mut cache = KvCache::new(n_layers, n_heads, head_dim);
 
-    // Invariant 1: Fresh cache has zero seq_len for all layers
     for l in 0..n_layers {
         assert_eq!(cache.seq_len(l), 0, "fresh cache layer {l} should have seq_len=0");
     }
@@ -123,24 +182,53 @@ fuzz_target!(|input: KvCacheInput| {
                     let prev_len = cache.seq_len(layer_idx);
                     let ok = cache.append(layer_idx, k, v);
                     if ok {
-                        // Invariant 2: seq_len increments by 1 on successful append
                         assert_eq!(
                             cache.seq_len(layer_idx),
                             prev_len + 1,
                             "seq_len should increment by 1"
                         );
-
-                        // Invariant 3: Key/value buffer size matches seq_len * step_size
                         let (keys, values, seq) = cache.read_layer(layer_idx).unwrap();
                         assert_eq!(keys.len(), seq * step_size, "key buffer size mismatch");
                         assert_eq!(values.len(), seq * step_size, "value buffer size mismatch");
                     }
                 }
             }
+            CacheOp::Evict { layer, count } => {
+                let layer_idx = layer as usize % n_layers;
+                let evict_n = (count as usize % 8) + 1;
+                let live_before = cache.live_count(layer_idx);
+                cache.evict(layer_idx, evict_n);
+                let live_after = cache.live_count(layer_idx);
+                // Eviction can only decrease or maintain live count
+                assert!(
+                    live_after <= live_before,
+                    "evict must not increase live count: {live_before} -> {live_after}"
+                );
+                let evicted = live_before - live_after;
+                assert!(evicted <= evict_n, "evicted more than requested: {evicted} > {evict_n}");
+            }
+            CacheOp::Compact { layer } => {
+                let layer_idx = layer as usize % n_layers;
+                let live_before = cache.live_count(layer_idx);
+                cache.compact(layer_idx);
+                // After compact: no tombstones, seq_len == live count
+                assert_eq!(
+                    cache.seq_len(layer_idx),
+                    live_before,
+                    "compact should preserve live entries"
+                );
+                assert_eq!(
+                    cache.live_count(layer_idx),
+                    live_before,
+                    "compact should not lose live entries"
+                );
+                let (keys, values, seq) = cache.read_layer(layer_idx).unwrap();
+                assert_eq!(keys.len(), seq * step_size, "compact key size mismatch");
+                assert_eq!(values.len(), seq * step_size, "compact value size mismatch");
+            }
             CacheOp::ReadLayer { layer } => {
                 let layer_idx = layer as usize % n_layers;
                 let result = cache.read_layer(layer_idx);
-                // Invariant 4: Valid layer read always succeeds
                 assert!(result.is_some(), "valid layer {layer_idx} read should succeed");
                 let (keys, values, seq) = result.unwrap();
                 assert_eq!(keys.len(), values.len(), "k/v lengths should match");
@@ -155,9 +243,9 @@ fuzz_target!(|input: KvCacheInput| {
             }
             CacheOp::Reset => {
                 cache.reset();
-                // Invariant 5: After reset, all layers have seq_len=0
                 for l in 0..n_layers {
                     assert_eq!(cache.seq_len(l), 0, "after reset, layer {l} should have seq_len=0");
+                    assert_eq!(cache.live_count(l), 0, "after reset, layer {l} should have 0 live");
                     let (keys, values, _) = cache.read_layer(l).unwrap();
                     assert!(keys.is_empty(), "keys should be empty after reset");
                     assert!(values.is_empty(), "values should be empty after reset");
@@ -166,7 +254,6 @@ fuzz_target!(|input: KvCacheInput| {
             CacheOp::TrimTo { max_seq } => {
                 let max = (max_seq as usize % 32) + 1;
                 cache.trim_to(max);
-                // Invariant 6: After trim, all seq_lens <= max
                 for l in 0..n_layers {
                     assert!(
                         cache.seq_len(l) <= max,
@@ -178,11 +265,11 @@ fuzz_target!(|input: KvCacheInput| {
         }
     }
 
-    // Invariant 7: Out-of-bounds layer reads return None
+    // Out-of-bounds layer reads return None
     assert!(cache.read_layer(n_layers).is_none(), "OOB layer read should return None");
     assert_eq!(cache.seq_len(n_layers), 0, "OOB layer seq_len should be 0");
 
-    // Invariant 8: Layers are independent — appending to one doesn't affect others
+    // Layers are independent
     cache.reset();
     let dummy_k = vec![1.0f32; step_size];
     let dummy_v = vec![2.0f32; step_size];
@@ -190,4 +277,15 @@ fuzz_target!(|input: KvCacheInput| {
     for l in 1..n_layers {
         assert_eq!(cache.seq_len(l), 0, "layer {l} should be unaffected by append to layer 0");
     }
+
+    // Evict-then-compact preserves data integrity
+    cache.reset();
+    for _ in 0..4 {
+        cache.append(0, &dummy_k, &dummy_v);
+    }
+    cache.evict(0, 2);
+    assert_eq!(cache.live_count(0), 2);
+    cache.compact(0);
+    assert_eq!(cache.seq_len(0), 2, "compact after evict should leave 2 entries");
+    assert_eq!(cache.live_count(0), 2);
 });

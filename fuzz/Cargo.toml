@@ -611,3 +611,33 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_conv1d_shapes"
+path = "fuzz_targets/fuzz_conv1d_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_flash_decoding"
+path = "fuzz_targets/fuzz_flash_decoding.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_dequantize_roundtrip"
+path = "fuzz_targets/fuzz_dequantize_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_weight_compression"
+path = "fuzz_targets/fuzz_weight_compression.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_autotuning_configs"
+path = "fuzz_targets/fuzz_autotuning_configs.rs"
+test = false
+doc = false
