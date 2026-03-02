@@ -41,6 +41,7 @@ pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
 pub mod opencl_memory;
 pub mod opencl_model_converter;
+pub mod opencl_numerical_stability;
 pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
