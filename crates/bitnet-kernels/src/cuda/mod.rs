@@ -32,11 +32,12 @@
 
 pub mod activations;
 pub mod attention;
+pub mod batch;
 pub mod batch_norm;
+pub mod concat;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -65,9 +66,20 @@ pub use attention::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use attention::ATTENTION_KERNEL_SRC;
+pub use batch::{
+    BatchNormInferenceConfig, BatchedMatmulConfig, DynamicBatchResult, batch_norm_inference,
+    batch_norm_inference_forward, batched_add, batched_add_forward, batched_matmul,
+    batched_matmul_forward, batched_scale, batched_scale_forward, dynamic_batching, pad_to_batch,
+    unbatch,
+};
 pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
+};
+pub use concat::{
+    chunk, concat_along_axis, concat_along_axis_forward, interleave, interleave_forward, narrow,
+    narrow_forward, split_along_axis, split_along_axis_forward, stack, stack_forward, unstack,
+    unstack_forward,
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
@@ -167,7 +179,18 @@ pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SR
 pub use layernorm::LAYERNORM_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use batch::{
+    BATCHED_ADD_KERNEL_SRC, BATCHED_MATMUL_KERNEL_SRC, BATCHED_SCALE_KERNEL_SRC,
+    launch_batch_norm_inference, launch_batched_add, launch_batched_matmul, launch_batched_scale,
+};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SRC};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use concat::{
+    CONCAT_KERNEL_SRC, INTERLEAVE_KERNEL_SRC, launch_concat_along_axis, launch_interleave,
+    launch_narrow, launch_split_along_axis, launch_stack, launch_unstack,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use matmul::{launch_matmul, launch_matmul_f16};
