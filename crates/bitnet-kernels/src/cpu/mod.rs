@@ -22,6 +22,7 @@ pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod kv_cache_simd;
 pub mod layer_norm;
 pub use layer_norm::{
     GroupNormConfig, LayerNormConfig, batch_group_norm, batch_instance_norm, batch_layer_norm,
@@ -142,6 +143,13 @@ pub use loss::LossReduction;
 pub use kv_cache::{
     KvCache, KvCacheBlock, KvCacheConfig, KvDtype, kv_cache_append, kv_cache_clear,
     kv_cache_memory_usage, kv_cache_slice, paged_kv_cache_alloc,
+};
+
+// Re-export SIMD-optimized paged KV cache types and operations.
+pub use kv_cache_simd::{
+    CacheStats, EvictionPolicy, KVCacheConfig, PagedKVCache, append_kv, batch_append_kv,
+    cache_stats, clear_cache, compact_cache, create_kv_cache, evict_oldest, gather_kv, lookup_kv,
+    scalar_dot_f32, scatter_kv, simd_dot_f32, simd_scale_f32,
 };
 
 // Re-export new embedding operations.
