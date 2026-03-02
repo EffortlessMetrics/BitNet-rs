@@ -1128,9 +1128,17 @@ name = "bitnet-qk256-dispatch"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-common",
+ "bitnet-qk256-layout-core",
  "bitnet-quantization",
  "bitnet-test-support",
  "candle-core",
+]
+
+[[package]]
+name = "bitnet-qk256-layout-core"
+version = "0.2.1-dev"
+dependencies = [
+ "thiserror 2.0.18",
 ]
 
 [[package]]
