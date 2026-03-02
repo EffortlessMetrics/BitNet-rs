@@ -294,40 +294,22 @@ pub fn create_sampler(config: SamplingConfig) -> Sampler {
 
 /// Greedy (argmax) sampling.
 pub fn cpu_sample_greedy(logits: &[f32]) -> SampledToken {
-    let (idx, _) =
-        logits.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap();
+    let (idx, _) = logits.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap();
     let mut probs = logits.to_vec();
     softmax_inplace(&mut probs);
-    SampledToken {
-        token_id: idx as u32,
-        probability: probs[idx],
-        log_prob: probs[idx].ln(),
-    }
+    SampledToken { token_id: idx as u32, probability: probs[idx], log_prob: probs[idx].ln() }
 }
 
 /// Temperature sampling.
-pub fn cpu_sample_temperature(
-    logits: &[f32],
-    temperature: f32,
-    rng: &mut u64,
-) -> SampledToken {
+pub fn cpu_sample_temperature(logits: &[f32], temperature: f32, rng: &mut u64) -> SampledToken {
     let mut scaled: Vec<f32> = logits.iter().map(|&l| l / temperature).collect();
     softmax_inplace(&mut scaled);
     let idx = sample_from_probs(&scaled, rng);
-    SampledToken {
-        token_id: idx as u32,
-        probability: scaled[idx],
-        log_prob: scaled[idx].ln(),
-    }
+    SampledToken { token_id: idx as u32, probability: scaled[idx], log_prob: scaled[idx].ln() }
 }
 
 /// Top-k sampling: keep only the k highest-probability tokens.
-pub fn cpu_sample_top_k(
-    logits: &[f32],
-    k: usize,
-    temperature: f32,
-    rng: &mut u64,
-) -> SampledToken {
+pub fn cpu_sample_top_k(logits: &[f32], k: usize, temperature: f32, rng: &mut u64) -> SampledToken {
     let mut indexed: Vec<(usize, f32)> =
         logits.iter().enumerate().map(|(i, &v)| (i, v / temperature)).collect();
     indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -340,12 +322,7 @@ pub fn cpu_sample_top_k(
 }
 
 /// Top-p (nucleus) sampling: keep smallest set whose cumulative prob ≥ p.
-pub fn cpu_sample_top_p(
-    logits: &[f32],
-    p: f32,
-    temperature: f32,
-    rng: &mut u64,
-) -> SampledToken {
+pub fn cpu_sample_top_p(logits: &[f32], p: f32, temperature: f32, rng: &mut u64) -> SampledToken {
     let indexed: Vec<(usize, f32)> =
         logits.iter().enumerate().map(|(i, &v)| (i, v / temperature)).collect();
     let mut probs: Vec<f32> = indexed.iter().map(|&(_, v)| v).collect();
@@ -371,20 +348,11 @@ pub fn cpu_sample_top_p(
     let renorm: Vec<f32> = kept.iter().map(|&(_, pr)| pr * inv).collect();
     let local_idx = sample_from_probs(&renorm, rng);
     let token_id = kept[local_idx].0 as u32;
-    SampledToken {
-        token_id,
-        probability: renorm[local_idx],
-        log_prob: renorm[local_idx].ln(),
-    }
+    SampledToken { token_id, probability: renorm[local_idx], log_prob: renorm[local_idx].ln() }
 }
 
 /// Min-p sampling: keep tokens with prob ≥ p × max_prob.
-pub fn cpu_sample_min_p(
-    logits: &[f32],
-    p: f32,
-    temperature: f32,
-    rng: &mut u64,
-) -> SampledToken {
+pub fn cpu_sample_min_p(logits: &[f32], p: f32, temperature: f32, rng: &mut u64) -> SampledToken {
     let mut scaled: Vec<f32> = logits.iter().map(|&l| l / temperature).collect();
     softmax_inplace(&mut scaled);
     let max_prob = scaled.iter().cloned().fold(0.0f32, f32::max);
@@ -407,11 +375,7 @@ pub fn cpu_sample_min_p(
     let renorm: Vec<f32> = kept.iter().map(|&(_, pr)| pr * inv).collect();
     let local_idx = sample_from_probs(&renorm, rng);
     let token_id = kept[local_idx].0 as u32;
-    SampledToken {
-        token_id,
-        probability: renorm[local_idx],
-        log_prob: renorm[local_idx].ln(),
-    }
+    SampledToken { token_id, probability: renorm[local_idx], log_prob: renorm[local_idx].ln() }
 }
 
 /// Typical decoding: select tokens whose information content is close to
@@ -451,11 +415,7 @@ pub fn cpu_sample_typical(logits: &[f32], p: f32, rng: &mut u64) -> SampledToken
     let renorm: Vec<f32> = kept.iter().map(|&(_, pr)| pr * inv).collect();
     let local_idx = sample_from_probs(&renorm, rng);
     let token_id = kept[local_idx].0 as u32;
-    SampledToken {
-        token_id,
-        probability: renorm[local_idx],
-        log_prob: renorm[local_idx].ln(),
-    }
+    SampledToken { token_id, probability: renorm[local_idx], log_prob: renorm[local_idx].ln() }
 }
 
 /// Mirostat adaptive sampling (v2 style).
@@ -467,8 +427,7 @@ pub fn cpu_sample_mirostat(
     let mut probs = logits.to_vec();
     softmax_inplace(&mut probs);
 
-    let mut sorted: Vec<(usize, f32)> =
-        probs.iter().enumerate().map(|(i, &p)| (i, p)).collect();
+    let mut sorted: Vec<(usize, f32)> = probs.iter().enumerate().map(|(i, &p)| (i, p)).collect();
     sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     // Truncate based on surprise threshold: keep tokens with −log2(p) ≤ mu
@@ -490,11 +449,7 @@ pub fn cpu_sample_mirostat(
     let surprise = -chosen_prob.log2();
     state.mu += state.eta * (state.tau - surprise);
 
-    SampledToken {
-        token_id,
-        probability: renorm[local_idx],
-        log_prob: renorm[local_idx].ln(),
-    }
+    SampledToken { token_id, probability: renorm[local_idx], log_prob: renorm[local_idx].ln() }
 }
 
 /// Apply multiplicative repetition penalty to previously-seen tokens.
@@ -526,11 +481,7 @@ pub fn cpu_apply_frequency_penalty(
 }
 
 /// Apply a flat presence penalty for every token that has appeared.
-pub fn cpu_apply_presence_penalty(
-    logits: &mut [f32],
-    token_set: &HashSet<u32>,
-    penalty: f32,
-) {
+pub fn cpu_apply_presence_penalty(logits: &mut [f32], token_set: &HashSet<u32>, penalty: f32) {
     for &tok in token_set {
         let idx = tok as usize;
         if idx < logits.len() {
@@ -551,10 +502,7 @@ pub fn cpu_compute_entropy(probs: &[f32]) -> f64 {
 }
 
 /// Unified sampling entry-point that dispatches on the configured method.
-pub fn cpu_sample(
-    sampler: &mut Sampler,
-    logits: &[f32],
-) -> Result<SampledToken, SamplingError> {
+pub fn cpu_sample(sampler: &mut Sampler, logits: &[f32]) -> Result<SampledToken, SamplingError> {
     if logits.is_empty() {
         return Err(SamplingError::EmptyLogits);
     }
@@ -629,8 +577,7 @@ pub fn cpu_sample(
     softmax_inplace(&mut probs);
     let h = cpu_compute_entropy(&probs);
     let n = sampler.stats.total_samples as f64;
-    sampler.stats.avg_entropy =
-        sampler.stats.avg_entropy * ((n - 1.0) / n) + h / n;
+    sampler.stats.avg_entropy = sampler.stats.avg_entropy * ((n - 1.0) / n) + h / n;
 
     Ok(token)
 }
@@ -1136,10 +1083,8 @@ mod tests {
 
     #[test]
     fn invalid_temperature_zero() {
-        let config = SamplingConfig {
-            method: SamplingMethod::Temperature(0.0),
-            ..Default::default()
-        };
+        let config =
+            SamplingConfig { method: SamplingMethod::Temperature(0.0), ..Default::default() };
         let mut sampler = create_sampler(config);
         let result = cpu_sample(&mut sampler, &[1.0, 2.0]);
         assert!(matches!(result, Err(SamplingError::InvalidTemperature(_))));
@@ -1147,10 +1092,8 @@ mod tests {
 
     #[test]
     fn invalid_temperature_negative() {
-        let config = SamplingConfig {
-            method: SamplingMethod::Temperature(-1.0),
-            ..Default::default()
-        };
+        let config =
+            SamplingConfig { method: SamplingMethod::Temperature(-1.0), ..Default::default() };
         let mut sampler = create_sampler(config);
         let result = cpu_sample(&mut sampler, &[1.0, 2.0]);
         assert!(matches!(result, Err(SamplingError::InvalidTemperature(_))));
@@ -1252,10 +1195,8 @@ mod tests {
 
     #[test]
     fn stats_track_beam_count() {
-        let config = SamplingConfig {
-            method: SamplingMethod::Beam { width: 4 },
-            ..Default::default()
-        };
+        let config =
+            SamplingConfig { method: SamplingMethod::Beam { width: 4 }, ..Default::default() };
         let mut sampler = create_sampler(config);
         let logits = make_logits(&[1.0, 2.0, 3.0]);
         cpu_sample(&mut sampler, &logits).unwrap();
@@ -1288,10 +1229,8 @@ mod tests {
 
     #[test]
     fn format_temperature_config() {
-        let config = SamplingConfig {
-            method: SamplingMethod::Temperature(0.7),
-            ..Default::default()
-        };
+        let config =
+            SamplingConfig { method: SamplingMethod::Temperature(0.7), ..Default::default() };
         let s = format_sampling_config(&config);
         assert!(s.contains("temperature"));
         assert!(s.contains("0.7"));
@@ -1324,10 +1263,8 @@ mod tests {
 
     #[test]
     fn beam_sampling_via_unified_api() {
-        let config = SamplingConfig {
-            method: SamplingMethod::Beam { width: 5 },
-            ..Default::default()
-        };
+        let config =
+            SamplingConfig { method: SamplingMethod::Beam { width: 5 }, ..Default::default() };
         let mut sampler = create_sampler(config);
         let logits = make_logits(&[1.0, 3.0, 2.0]);
         let tok = cpu_sample(&mut sampler, &logits).unwrap();
