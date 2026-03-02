@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: stages
+---
+[
+    Embedding,
+    RmsNorm,
+    Attention,
+    FeedForward,
+    FinalNorm,
+    LogitProjection,
+]

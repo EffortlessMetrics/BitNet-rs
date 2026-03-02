@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: cfg
+---
+QuantizeConfig {
+    block_size: 128,
+    method: Percentile(
+        99,
+    ),
+}

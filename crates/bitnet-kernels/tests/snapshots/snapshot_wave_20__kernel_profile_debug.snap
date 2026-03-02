@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: profile
+---
+KernelProfile {
+    kernel_name: "rope_forward",
+    global_work_size: [
+        256,
+        8,
+    ],
+    local_work_size: [
+        32,
+        1,
+    ],
+    queued_ns: 100,
+    submit_ns: 200,
+    start_ns: 500,
+    end_ns: 1500,
+}

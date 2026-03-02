@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_20.rs
+expression: stats
+---
+CacheStats {
+    entries_per_layer: [
+        128,
+        128,
+        127,
+        128,
+        126,
+        128,
+    ],
+    memory_bytes: 25165824,
+    hit_rate: 0.985,
+    avg_access_time_us: 0.42,
+}
