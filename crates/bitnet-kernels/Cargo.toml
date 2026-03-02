@@ -140,6 +140,11 @@ path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
 
 [[test]]
+name = "bdd_wave_13_integration"
+path = "tests/bdd_wave_13_integration.rs"
+required-features = ["cpu"]
+
+[[test]]
 name = "metal_compute_pipeline_tests"
 path = "tests/metal_compute_pipeline_tests.rs"
 
