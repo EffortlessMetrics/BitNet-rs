@@ -57,12 +57,7 @@ pub fn estimate_flops_per_token(dims: &ModelDims) -> FlopsEstimate {
     let lm_head_flops = 2 * h * v;
     let total = attention_flops + ffn_flops + lm_head_flops;
 
-    FlopsEstimate {
-        attention_flops,
-        ffn_flops,
-        lm_head_flops,
-        total_flops: total,
-    }
+    FlopsEstimate { attention_flops, ffn_flops, lm_head_flops, total_flops: total }
 }
 
 /// Memory bandwidth estimate (bytes/token).
@@ -88,22 +83,12 @@ pub fn estimate_bandwidth(
 
     let attn_w = h * h + 2 * h * nkv * hd + h * h;
     let ffn_w = 3 * h * i;
-    let weight_bytes =
-        (attn_w + ffn_w) * l * bytes_per_weight + h * v * bytes_per_weight;
+    let weight_bytes = (attn_w + ffn_w) * l * bytes_per_weight + h * v * bytes_per_weight;
     let kv_cache_bytes = 2 * nkv * hd * s * 2 * l;
-    BandwidthEstimate {
-        weight_bytes,
-        kv_cache_bytes,
-        total_bytes: weight_bytes + kv_cache_bytes,
-    }
+    BandwidthEstimate { weight_bytes, kv_cache_bytes, total_bytes: weight_bytes + kv_cache_bytes }
 }
 
-pub fn estimate_tps(
-    dims: &ModelDims,
-    seq_len: usize,
-    bytes_per_weight: u64,
-    bw_gb_s: f64,
-) -> f64 {
+pub fn estimate_tps(dims: &ModelDims, seq_len: usize, bytes_per_weight: u64, bw_gb_s: f64) -> f64 {
     let bw = estimate_bandwidth(dims, seq_len, bytes_per_weight);
     if bw.total_bytes == 0 {
         return 0.0;

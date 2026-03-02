@@ -41,6 +41,7 @@ pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_k
 #[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub mod ffi_session; // FFI session wrapper for validation-only parity checking
 pub mod parity;
+pub mod pipeline_builder;
 pub mod prefix_cache;
 pub mod profiler;
 pub mod rt;
