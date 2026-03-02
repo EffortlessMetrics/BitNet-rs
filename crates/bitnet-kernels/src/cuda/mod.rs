@@ -51,6 +51,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod tensor_core_ext;
 pub mod transpose;
 
 pub use activations::{
@@ -188,3 +189,17 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use tensor_core_ext::{
+    TcAccumulation, TcBatchedGemm, TcConvolution, TcGroupedGemm, TcPrecision, TcPrecisionPolicy,
+    TcQuantBits, TcQuantizedGemm, TcSplitK, TcStreamK, tc_batched_gemm, tc_batched_gemm_cpu,
+    tc_convolution, tc_convolution_cpu, tc_grouped_gemm, tc_grouped_gemm_cpu, tc_quantized_gemm,
+    tc_quantized_gemm_cpu, tc_split_k_gemm, tc_split_k_gemm_cpu, tc_stream_k_gemm,
+    tc_stream_k_gemm_cpu,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use tensor_core_ext::{
+    TC_BATCHED_GEMM_KERNEL_SRC, TC_QUANTIZED_GEMM_KERNEL_SRC, TC_STREAM_K_KERNEL_SRC,
+    launch_tc_batched_gemm, launch_tc_quantized_gemm, launch_tc_stream_k_gemm,
+};
