@@ -66,11 +66,7 @@ impl RateLimitBucket {
 
         self.tokens
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
-                if current >= tokens {
-                    Some(current - tokens)
-                } else {
-                    None
-                }
+                if current >= tokens { Some(current - tokens) } else { None }
             })
             .is_ok()
     }
