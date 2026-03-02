@@ -1207,7 +1207,7 @@ mod tests {
             rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
             let pos = (rng_state >> 32) as usize % 1024;
             let data: Vec<f32> = (0..dim)
-                .map(|i| {
+                .map(|_i| {
                     rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
                     ((rng_state >> 16) as i32 as f32) / (i32::MAX as f32) * 10.0
                 })
@@ -1515,7 +1515,7 @@ mod tests {
         let ft = build_frequency_table(&RoPEConfig::new(dim, 100));
         let positions = vec![0, 50, 99];
         let total = positions.len() * dim;
-        let mut data: Vec<f32> = (0..total).map(|i| (i as f32 + 1.0)).collect();
+        let mut data: Vec<f32> = (0..total).map(|i| i as f32 + 1.0).collect();
         apply_rope_batch(&mut data, &ft, &positions, dim, 1);
         assert!(data.iter().all(|v| v.is_finite()));
     }

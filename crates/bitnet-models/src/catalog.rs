@@ -71,9 +71,7 @@ pub struct ModelCatalog {
 impl ModelCatalog {
     /// Create a new catalog populated with built-in model entries.
     pub fn new() -> Self {
-        Self {
-            entries: builtin_entries(),
-        }
+        Self { entries: builtin_entries() }
     }
 
     /// Look up a catalog entry by its unique ID.
@@ -98,18 +96,12 @@ impl ModelCatalog {
 
     /// Return all entries that support the given task.
     pub fn filter_by_task(&self, task: &ModelTask) -> Vec<&ModelCatalogEntry> {
-        self.entries
-            .iter()
-            .filter(|e| e.supported_tasks.contains(task))
-            .collect()
+        self.entries.iter().filter(|e| e.supported_tasks.contains(task)).collect()
     }
 
     /// Return entries whose parameter count is at most `max_params`.
     pub fn filter_by_max_params(&self, max_params: u64) -> Vec<&ModelCatalogEntry> {
-        self.entries
-            .iter()
-            .filter(|e| e.parameter_count <= max_params)
-            .collect()
+        self.entries.iter().filter(|e| e.parameter_count <= max_params).collect()
     }
 
     /// Return a slice of all catalog entries.
@@ -172,12 +164,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Microsoft Phi-4 14B reasoning model with \
                           strong math and code performance"
                 .into(),
-            tags: vec![
-                "reasoning".into(),
-                "math".into(),
-                "code".into(),
-                "slm".into(),
-            ],
+            tags: vec!["reasoning".into(), "math".into(), "code".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::CodeGeneration,
@@ -207,11 +194,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Compact Phi-4 variant optimized for \
                           instruction following and chat"
                 .into(),
-            tags: vec![
-                "instruct".into(),
-                "compact".into(),
-                "slm".into(),
-            ],
+            tags: vec!["instruct".into(), "compact".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Chat,
@@ -240,11 +223,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Meta LLaMA 3.2 1B lightweight model for \
                           on-device and edge deployment"
                 .into(),
-            tags: vec![
-                "edge".into(),
-                "lightweight".into(),
-                "slm".into(),
-            ],
+            tags: vec!["edge".into(), "lightweight".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Summarization,
@@ -272,11 +251,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Meta LLaMA 3.2 3B balanced model for \
                           general-purpose text tasks"
                 .into(),
-            tags: vec![
-                "general-purpose".into(),
-                "multilingual".into(),
-                "slm".into(),
-            ],
+            tags: vec!["general-purpose".into(), "multilingual".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Chat,
@@ -306,11 +281,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Alibaba Qwen2.5 7B with strong multilingual \
                           and coding capabilities"
                 .into(),
-            tags: vec![
-                "multilingual".into(),
-                "code".into(),
-                "slm".into(),
-            ],
+            tags: vec!["multilingual".into(), "code".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::CodeGeneration,
@@ -341,12 +312,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Alibaba Qwen2.5 1.5B compact model suitable \
                           for edge and mobile deployment"
                 .into(),
-            tags: vec![
-                "edge".into(),
-                "compact".into(),
-                "multilingual".into(),
-                "slm".into(),
-            ],
+            tags: vec!["edge".into(), "compact".into(), "multilingual".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Chat,
@@ -375,11 +341,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Google Gemma 2 2B lightweight model with \
                           strong benchmark performance for its size"
                 .into(),
-            tags: vec![
-                "lightweight".into(),
-                "efficient".into(),
-                "slm".into(),
-            ],
+            tags: vec!["lightweight".into(), "efficient".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Chat,
@@ -407,11 +369,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "Mistral 7B v0.3 with extended vocabulary and \
                           function-calling support"
                 .into(),
-            tags: vec![
-                "general-purpose".into(),
-                "function-calling".into(),
-                "slm".into(),
-            ],
+            tags: vec!["general-purpose".into(), "function-calling".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::CodeGeneration,
@@ -441,12 +399,7 @@ fn builtin_entries() -> Vec<ModelCatalogEntry> {
             description: "HuggingFace SmolLM2 1.7B efficient model \
                           designed for on-device inference"
                 .into(),
-            tags: vec![
-                "edge".into(),
-                "on-device".into(),
-                "efficient".into(),
-                "slm".into(),
-            ],
+            tags: vec!["edge".into(), "on-device".into(), "efficient".into(), "slm".into()],
             supported_tasks: vec![
                 ModelTask::TextGeneration,
                 ModelTask::Chat,
@@ -579,20 +532,14 @@ mod tests {
     fn test_filter_by_task_text_generation() {
         let catalog = ModelCatalog::new();
         let results = catalog.filter_by_task(&ModelTask::TextGeneration);
-        assert!(
-            results.len() >= 5,
-            "most models should support TextGeneration"
-        );
+        assert!(results.len() >= 5, "most models should support TextGeneration");
     }
 
     #[test]
     fn test_filter_by_task_code_generation() {
         let catalog = ModelCatalog::new();
         let results = catalog.filter_by_task(&ModelTask::CodeGeneration);
-        assert!(
-            !results.is_empty(),
-            "at least one model should support CodeGeneration"
-        );
+        assert!(!results.is_empty(), "at least one model should support CodeGeneration");
         assert!(
             results.iter().any(|e| e.id == "phi-4-14b"),
             "Phi-4 should support code generation"
@@ -623,10 +570,7 @@ mod tests {
     fn test_filter_by_max_params_2b() {
         let catalog = ModelCatalog::new();
         let results = catalog.filter_by_max_params(2_000_000_000);
-        assert!(
-            !results.is_empty(),
-            "should have models with <= 2B params"
-        );
+        assert!(!results.is_empty(), "should have models with <= 2B params");
         for entry in &results {
             assert!(entry.parameter_count <= 2_000_000_000);
         }
@@ -695,16 +639,10 @@ mod tests {
         assert_eq!(ModelTask::TextGeneration.to_string(), "Text Generation");
         assert_eq!(ModelTask::CodeGeneration.to_string(), "Code Generation");
         assert_eq!(ModelTask::Chat.to_string(), "Chat");
-        assert_eq!(
-            ModelTask::InstructionFollowing.to_string(),
-            "Instruction Following"
-        );
+        assert_eq!(ModelTask::InstructionFollowing.to_string(), "Instruction Following");
         assert_eq!(ModelTask::Summarization.to_string(), "Summarization");
         assert_eq!(ModelTask::Translation.to_string(), "Translation");
-        assert_eq!(
-            ModelTask::QuestionAnswering.to_string(),
-            "Question Answering"
-        );
+        assert_eq!(ModelTask::QuestionAnswering.to_string(), "Question Answering");
         assert_eq!(ModelTask::FunctionCalling.to_string(), "Function Calling");
     }
 
@@ -734,10 +672,7 @@ mod tests {
             recommended_quantization: Some("Q4_K_M".into()),
         };
         assert_eq!(hw.min_vram_gb, Some(12.0));
-        assert_eq!(
-            hw.recommended_quantization.as_deref(),
-            Some("Q4_K_M")
-        );
+        assert_eq!(hw.recommended_quantization.as_deref(), Some("Q4_K_M"));
     }
 
     #[test]
@@ -745,10 +680,7 @@ mod tests {
         let catalog = ModelCatalog::new();
         let output = format_catalog(&catalog);
         assert!(output.contains("ID"), "table should have ID header");
-        assert!(
-            output.contains("Publisher"),
-            "table should have Publisher header"
-        );
+        assert!(output.contains("Publisher"), "table should have Publisher header");
     }
 
     #[test]
@@ -763,11 +695,7 @@ mod tests {
     fn test_catalog_ids_are_unique() {
         let catalog = ModelCatalog::new();
         let ids: HashSet<&str> = catalog.list_all().iter().map(|e| e.id.as_str()).collect();
-        assert_eq!(
-            ids.len(),
-            catalog.list_all().len(),
-            "all catalog entry IDs must be unique"
-        );
+        assert_eq!(ids.len(), catalog.list_all().len(), "all catalog entry IDs must be unique");
     }
 
     #[test]
@@ -798,9 +726,7 @@ mod tests {
     #[test]
     fn test_bitnet_entry_has_no_vram_requirement() {
         let catalog = ModelCatalog::new();
-        let entry = catalog
-            .get("bitnet-b1.58-2b")
-            .expect("bitnet entry should exist");
+        let entry = catalog.get("bitnet-b1.58-2b").expect("bitnet entry should exist");
         assert!(
             entry.recommended_hardware.min_vram_gb.is_none(),
             "BitNet model is CPU-optimised; no VRAM requirement"

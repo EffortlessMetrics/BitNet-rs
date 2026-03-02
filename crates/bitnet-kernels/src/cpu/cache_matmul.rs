@@ -1273,7 +1273,7 @@ mod tests {
 
     #[test]
     fn test_microkernel_accumulates() {
-        let k = 4;
+        let _k = 4;
         let a = [1.0f32; 4]; // 1 row
         let b = [1.0f32; 4]; // 1 col
         let mut c = [10.0f32]; // pre-loaded
