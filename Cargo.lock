@@ -556,6 +556,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-compat-core",
  "bitnet-models",
  "bitnet-tokenizers",
  "chrono",
@@ -565,6 +566,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "bitnet-compat-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-models",
  "tempfile",
  "tracing",
 ]
