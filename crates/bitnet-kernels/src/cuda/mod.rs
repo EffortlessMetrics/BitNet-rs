@@ -39,6 +39,7 @@ pub mod embedding;
 pub mod ffn;
 pub mod fusion;
 pub mod gating;
+pub mod kernel_cache;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
