@@ -6,6 +6,7 @@ pub mod checkpoint;
 pub mod config;
 pub mod config_detection;
 pub mod correction_policy;
+pub mod dense_crossval;
 pub mod fingerprint;
 pub mod formats;
 pub mod gguf_min;
