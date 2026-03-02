@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave29.rs
+assertion_line: 100
+expression: output
+---
+block_size=256
+packed_bytes=64
+bits_per_element=2
+elements_per_byte=4
+lut=[code0=-2.0, code1=-1.0, code2=1.0, code3=2.0]
+first_8_codes=[0, 1, 2, 3, 3, 2, 1, 0]
+first_8_floats=["-2.0", "-1.0", "1.0", "2.0", "2.0", "1.0", "-1.0", "-2.0"]

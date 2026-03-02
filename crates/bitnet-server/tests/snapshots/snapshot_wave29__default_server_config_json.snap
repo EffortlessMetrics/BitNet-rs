@@ -1,0 +1,104 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave29.rs
+assertion_line: 19
+expression: json
+---
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "workers": null,
+    "keep_alive": {
+      "secs": 60,
+      "nanos": 0
+    },
+    "request_timeout": {
+      "secs": 300,
+      "nanos": 0
+    },
+    "graceful_shutdown_timeout": {
+      "secs": 30,
+      "nanos": 0
+    },
+    "default_model_path": null,
+    "default_tokenizer_path": null,
+    "default_device": "Auto"
+  },
+  "model_manager": {
+    "max_concurrent_loads": 2,
+    "model_cache_size": 3,
+    "load_timeout": {
+      "secs": 300,
+      "nanos": 0
+    },
+    "validation_enabled": true,
+    "memory_limit_gb": 16.0
+  },
+  "execution_router": {
+    "strategy": "PerformanceBased",
+    "fallback_enabled": true,
+    "health_check_interval": {
+      "secs": 30,
+      "nanos": 0
+    },
+    "performance_threshold_tps": 10.0,
+    "memory_threshold_percent": 0.8,
+    "benchmark_on_startup": true
+  },
+  "batch_engine": {
+    "max_batch_size": 16,
+    "batch_timeout": {
+      "secs": 0,
+      "nanos": 100000000
+    },
+    "max_concurrent_batches": 4,
+    "priority_queue_enabled": true,
+    "adaptive_batching": true,
+    "quantization_aware": true,
+    "simd_optimization": true
+  },
+  "concurrency": {
+    "max_concurrent_requests": 100,
+    "max_requests_per_second": 50,
+    "max_requests_per_minute": 1000,
+    "rate_limit_window": {
+      "secs": 60,
+      "nanos": 0
+    },
+    "backpressure_threshold": 0.8,
+    "circuit_breaker_enabled": true,
+    "circuit_breaker_failure_threshold": 10,
+    "circuit_breaker_timeout": {
+      "secs": 30,
+      "nanos": 0
+    },
+    "per_ip_rate_limit": 10,
+    "global_rate_limit": 100
+  },
+  "security": {
+    "jwt_secret": null,
+    "require_authentication": false,
+    "max_prompt_length": 8192,
+    "max_tokens_per_request": 2048,
+    "allowed_origins": [
+      "*"
+    ],
+    "allowed_model_directories": [],
+    "blocked_ips": [],
+    "rate_limit_by_ip": true,
+    "input_sanitization": true,
+    "content_filtering": true
+  },
+  "monitoring": {
+    "prometheus_enabled": true,
+    "prometheus_path": "/metrics",
+    "opentelemetry_enabled": false,
+    "opentelemetry_endpoint": null,
+    "otlp_endpoint": null,
+    "health_path": "/health",
+    "metrics_interval": 10,
+    "structured_logging": true,
+    "log_level": "info",
+    "log_format": "json"
+  }
+}

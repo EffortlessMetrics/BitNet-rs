@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave29.rs
+assertion_line: 42
+expression: info
+---
+qtype=I2S
+block_size=32
+shape=[32]
+data_len=8
+scales_len=1
+scales=[1.0000]
+compression_ratio=10.67

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave29.rs
+assertion_line: 65
+expression: info
+---
+config_block_size=64
+config_table_size=256
+config_asymmetric=false
+config_bits=2
+forward_sample=[1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
+reverse_sample=[0.0000, 0.0000, -2.0000, -1.0000, 0.0000]

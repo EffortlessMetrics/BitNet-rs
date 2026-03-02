@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave29.rs
+assertion_line: 25
+expression: info
+---
+provider_count=3
+available=["avx512", "avx2", "fallback"]
+selected_name=avx512
+is_available=true

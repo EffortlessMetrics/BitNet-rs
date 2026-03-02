@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave29.rs
+assertion_line: 140
+expression: info
+---
+shape=[32]
+total_elements=32
+first_8=["-1.0000", "-0.5000", "0.0000", "0.5000", "-1.0000", "-0.5000", "0.0000", "0.5000"]
+min=-1.0000
+max=0.5000

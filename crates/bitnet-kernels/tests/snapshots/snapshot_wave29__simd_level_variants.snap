@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave29.rs
+assertion_line: 43
+expression: "(&debug, &display)"
+---
+(
+    [
+        "Scalar",
+        "Sse2",
+        "Sse42",
+        "Neon",
+        "Avx",
+        "Avx2",
+        "Avx512",
+    ],
+    [
+        "Scalar",
+        "SSE2",
+        "SSE4.2",
+        "NEON",
+        "AVX",
+        "AVX2",
+        "AVX-512",
+    ],
+)

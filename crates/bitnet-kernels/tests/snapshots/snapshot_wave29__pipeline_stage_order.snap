@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave29.rs
+assertion_line: 81
+expression: stage_names
+---
+[
+    "Embedding",
+    "RmsNorm",
+    "Attention",
+    "RmsNorm",
+    "FeedForward",
+    "RmsNorm",
+    "Attention",
+    "RmsNorm",
+    "FeedForward",
+    "FinalNorm",
+    "LogitProjection",
+]

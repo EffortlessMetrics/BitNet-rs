@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave29.rs
+assertion_line: 85
+expression: json
+---
+{
+  "error": "Invalid model path",
+  "error_code": "INVALID_REQUEST",
+  "request_id": "req-12345",
+  "details": {
+    "field": "model_path",
+    "reason": "File not found"
+  }
+}
