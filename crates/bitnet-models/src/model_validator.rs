@@ -105,12 +105,12 @@ pub fn validate_config(config: &ModelConfig) -> ValidationReport {
     }
 
     // Head dimension check
-    if config.num_heads > 0 && config.hidden_size % config.num_heads != 0 {
+    if config.num_heads > 0 && !config.hidden_size.is_multiple_of(config.num_heads) {
         report.add(Severity::Error, "shape", "hidden_size must be divisible by num_heads");
     }
 
     // KV heads must divide num_heads
-    if config.num_kv_heads > 0 && config.num_heads % config.num_kv_heads != 0 {
+    if config.num_kv_heads > 0 && !config.num_heads.is_multiple_of(config.num_kv_heads) {
         report.add(Severity::Error, "gqa", "num_heads must be divisible by num_kv_heads");
     }
 
@@ -157,22 +157,23 @@ pub fn validate_tensor_shape(
     }
 
     // Check for zero dimensions
-    if shape.iter().any(|&d| d == 0) {
+    if shape.contains(&0) {
         report.add(Severity::Error, "tensor", &format!("{name}: shape has zero dimension"));
     }
 
     // Embedding matrix check
-    if name.contains("embed") || name.contains("wte") {
-        if shape.len() == 2 && shape[0] != config.vocab_size {
-            report.add(
-                Severity::Warning,
-                "tensor",
-                &format!(
-                    "{name}: expected vocab_size={} in dim 0, got {}",
-                    config.vocab_size, shape[0]
-                ),
-            );
-        }
+    if (name.contains("embed") || name.contains("wte"))
+        && shape.len() == 2
+        && shape[0] != config.vocab_size
+    {
+        report.add(
+            Severity::Warning,
+            "tensor",
+            &format!(
+                "{name}: expected vocab_size={} in dim 0, got {}",
+                config.vocab_size, shape[0]
+            ),
+        );
     }
 
     report
