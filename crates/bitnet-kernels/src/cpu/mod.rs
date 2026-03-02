@@ -97,6 +97,9 @@ pub mod neon_batch_norm_v2;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_inference_bridge;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
