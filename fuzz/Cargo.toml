@@ -539,3 +539,15 @@ name = "fuzz_activation_elementwise"
 path = "fuzz_targets/fuzz_activation_elementwise.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_quantize_round_trip"
+path = "fuzz_targets/fuzz_quantize_round_trip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_embedding_bounds"
+path = "fuzz_targets/fuzz_embedding_bounds.rs"
+test = false
+doc = false
