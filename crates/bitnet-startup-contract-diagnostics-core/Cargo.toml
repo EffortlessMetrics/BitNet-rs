@@ -1,5 +1,5 @@
 [package]
-name = "bitnet-startup-contract-diagnostics"
+name = "bitnet-startup-contract-diagnostics-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,13 +9,9 @@ repository.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Compatibility facade for bitnet-startup-contract-diagnostics-core"
+description = "Core startup contract diagnostics and profile reporting model"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-startup-contract-diagnostics-core = { path = "../bitnet-startup-contract-diagnostics-core", version = "0.2.1-dev" }
-
-[dev-dependencies]
+anyhow.workspace = true
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
-proptest.workspace = true
-insta.workspace = true
