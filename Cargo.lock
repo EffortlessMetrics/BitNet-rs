@@ -427,6 +427,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-atomic-file-core"
+version = "0.2.1-dev"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [
@@ -640,6 +647,7 @@ version = "0.1.0"
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-atomic-file-core",
  "bitnet-download-core",
  "bitnet-http-retry",
  "httpdate",
