@@ -31,6 +31,7 @@
 //! module via `cudarc`.
 
 pub mod activations;
+pub mod async_execution;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
