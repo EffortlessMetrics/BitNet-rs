@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: cfg
+---
+AttentionConfig {
+    num_heads: 8,
+    head_dim: 64,
+    seq_len: 256,
+    causal: false,
+    scale: Some(
+        0.1,
+    ),
+}

@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: cfg
+---
+InferenceConfig {
+    max_length: 2048,
+    max_new_tokens: 512,
+    temperature: 1.0,
+    top_k: Some(
+        50,
+    ),
+    top_p: Some(
+        0.9,
+    ),
+    repetition_penalty: 1.1,
+    seed: None,
+    add_bos: true,
+    append_eos: false,
+    mask_pad: true,
+}

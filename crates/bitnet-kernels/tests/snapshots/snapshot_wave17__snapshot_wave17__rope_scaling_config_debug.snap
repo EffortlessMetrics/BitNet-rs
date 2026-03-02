@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: scaling
+---
+RopeScaling {
+    scaling_type: "linear",
+    factor: 4.0,
+}

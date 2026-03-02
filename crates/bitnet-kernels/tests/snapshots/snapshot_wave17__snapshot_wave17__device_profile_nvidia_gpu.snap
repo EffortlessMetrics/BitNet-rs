@@ -1,0 +1,26 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: profile
+---
+DeviceProfile {
+    device_class: NvidiaCuda,
+    name: "NVIDIA RTX 4090",
+    compute_units: 128,
+    memory_gb: 24,
+    capabilities: [
+        CapabilityEntry {
+            operation: MatrixOps,
+            precision: FP16,
+            support: Full(
+                0.98,
+            ),
+        },
+        CapabilityEntry {
+            operation: AttentionOps,
+            precision: FP16,
+            support: Full(
+                0.96,
+            ),
+        },
+    ],
+}

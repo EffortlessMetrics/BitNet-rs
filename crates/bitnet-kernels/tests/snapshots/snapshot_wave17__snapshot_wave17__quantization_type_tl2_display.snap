@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: "format!(\"{}\", QuantizationType::TL2)"
+---
+TL2

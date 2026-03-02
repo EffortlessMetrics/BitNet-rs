@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: cfg
+---
+PoolConfig {
+    pool_type: Average,
+    kernel_size: 2,
+    stride: 2,
+    padding: 0,
+}
