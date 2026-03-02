@@ -732,16 +732,8 @@ mod tests {
     #[test]
     fn test_silu_numerical_stability_extremes() {
         let out = silu(&[100.0, -100.0]);
-        assert!(
-            (out[0] - 100.0).abs() < 1e-3,
-            "silu(100) should ≈ 100, got {}",
-            out[0]
-        );
-        assert!(
-            out[1].abs() < 1e-10,
-            "silu(-100) should ≈ 0, got {}",
-            out[1]
-        );
+        assert!((out[0] - 100.0).abs() < 1e-3, "silu(100) should ≈ 100, got {}", out[0]);
+        assert!(out[1].abs() < 1e-10, "silu(-100) should ≈ 0, got {}", out[1]);
         // No NaN or Inf
         for &v in &out {
             assert!(v.is_finite(), "silu output must be finite, got {v}");
@@ -768,11 +760,11 @@ mod tests {
     fn test_silu_known_reference_values() {
         let inputs = [0.0f32, 1.0, -1.0, 2.0, -2.0];
         let expected = [
-            0.0,      // silu(0) = 0
-            0.7311,   // silu(1) ≈ 0.7311
-            -0.2689,  // silu(-1) ≈ -0.2689
-            1.7616,   // silu(2) ≈ 1.7616
-            -0.2384,  // silu(-2) ≈ -0.2384
+            0.0,     // silu(0) = 0
+            0.7311,  // silu(1) ≈ 0.7311
+            -0.2689, // silu(-1) ≈ -0.2689
+            1.7616,  // silu(2) ≈ 1.7616
+            -0.2384, // silu(-2) ≈ -0.2384
         ];
         let out = silu(&inputs);
         for (i, (&got, &want)) in out.iter().zip(expected.iter()).enumerate() {
@@ -816,10 +808,7 @@ mod tests {
         rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
         // rms(1,1,1,1) = sqrt(1 + eps) ≈ 1.0, so output ≈ weight
         for (i, &v) in output.iter().enumerate() {
-            assert!(
-                (v - 1.0).abs() < 0.01,
-                "all-ones: output[{i}] = {v}, expected ≈ 1.0"
-            );
+            assert!((v - 1.0).abs() < 0.01, "all-ones: output[{i}] = {v}, expected ≈ 1.0");
         }
     }
 
