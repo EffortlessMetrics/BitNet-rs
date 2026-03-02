@@ -24,19 +24,19 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 # 1. Download a model
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
-# 2. Run inference  (always specify --no-default-features --features cpu|gpu)
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+# 2. Run inference (CPU baseline defaults are enabled)
+RUST_LOG=warn cargo run -p bitnet-cli -- run \
   --model  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" --max-tokens 8
 
 # 3. Interactive chat
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+RUST_LOG=warn cargo run -p bitnet-cli -- chat \
   --model  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
-> Default features are **empty** by design — always pass `--no-default-features --features cpu` (or `gpu`).
+> Default features include **CPU baseline**. Use `--no-default-features` for feature-boundary checks, or explicitly select alternatives such as `--features gpu`.
 
 ## Status
 
