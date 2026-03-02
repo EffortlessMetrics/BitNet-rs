@@ -262,6 +262,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 tempfile = "3.23.0"
 thiserror = "2.0.17"
+bitnet-gguf = { path = "crates/bitnet-gguf", version = "0.2.1-dev" }
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
 toml = "0.9.8"
 # API snapshot testing
@@ -346,6 +347,11 @@ all-features = true
 cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 rustdoc-args = ["--cfg", "docsrs", "-Zunstable-options", "--generate-link-to-compiler-builtins"]
 targets = ["x86_64-unknown-linux-gnu"]
+
+[[test]]
+name = "bdd_wave14"
+path = "tests/bdd_wave14.rs"
+required-features = ["cpu"]
 
 [[example]]
 name = "basic_inference"
