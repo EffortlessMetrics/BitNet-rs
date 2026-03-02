@@ -5,6 +5,7 @@ pub mod bitnet;
 pub mod catalog;
 pub mod checkpoint;
 pub mod comparison;
+pub mod comparison_report;
 pub mod config;
 pub mod config_detection;
 pub mod config_serde;
