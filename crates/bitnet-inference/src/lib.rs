@@ -9,6 +9,7 @@ pub mod cache;
 pub mod config;
 pub mod config_builder;
 pub mod cpu_opt;
+pub mod dense_forward;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
@@ -59,6 +60,10 @@ pub use kv_cache_optimized::{
     CacheEvictionPolicy, CacheMetrics, EvictionConfig, Page, PageId, PagedKvCache,
 };
 pub use layers::{BitNetAttention, LookupTable, QuantizedLinear};
+pub use dense_forward::{
+    DenseAttention, DenseAttentionConfig, DenseFFN, DenseLinear, DenseModel,
+    DenseTransformerBlock, dense_block_forward_tensor, rms_norm, silu,
+};
 pub use metrics::{
     InferenceMetrics, LatencyHistogram, MemoryProfiler, MetricsCollector, MetricsReport,
     ThroughputTracker,
