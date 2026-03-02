@@ -11,6 +11,7 @@ compile_error!(
 pub mod auto;
 pub mod gguf_loader;
 pub mod gguf_tokenizer;
+pub mod gpu;
 pub mod hf_tokenizer;
 pub mod loader;
 mod mock;
