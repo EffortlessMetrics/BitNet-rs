@@ -1207,38 +1207,39 @@ async fn run_simple_generation(
                         std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 } else {
-                // Discovery failed, try GGUF embedded as fallback
-                println!("No external tokenizer found, attempting to load from GGUF model...");
+                    // Discovery failed, try GGUF embedded as fallback
+                    println!("No external tokenizer found, attempting to load from GGUF model...");
 
-                // Read the GGUF file to get tokenizer metadata
-                let gguf_data = std::fs::read(&model_path)
-                    .context("Failed to read GGUF file for tokenizer extraction")?;
-                let reader = bitnet_models::GgufReader::new(&gguf_data)
-                    .context("Failed to parse GGUF for tokenizer extraction")?;
+                    // Read the GGUF file to get tokenizer metadata
+                    let gguf_data = std::fs::read(&model_path)
+                        .context("Failed to read GGUF file for tokenizer extraction")?;
+                    let reader = bitnet_models::GgufReader::new(&gguf_data)
+                        .context("Failed to parse GGUF for tokenizer extraction")?;
 
-                // Capture metadata counts
-                let n_tensors = reader.tensor_count() as usize;
-                let n_kv = reader.metadata_keys().len();
-                gguf_metadata = Some((n_kv, n_tensors));
+                    // Capture metadata counts
+                    let n_tensors = reader.tensor_count() as usize;
+                    let n_kv = reader.metadata_keys().len();
+                    gguf_metadata = Some((n_kv, n_tensors));
 
-                match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-                    Ok(tok) => {
-                        println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                        tok
-                    }
-                    Err(e) => {
-                        if strict_tokenizer {
-                            eprintln!(
-                                "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
-                            );
-                            std::process::exit(EXIT_STRICT_TOKENIZER);
+                    match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
+                        Ok(tok) => {
+                            println!("Successfully loaded SentencePiece tokenizer from GGUF");
+                            tok
                         }
-                        if !allow_mock {
-                            // Provide actionable error message
-                            let model_dir =
-                                model_path.parent().unwrap_or_else(|| std::path::Path::new("."));
-                            anyhow::bail!(
-                                "Failed to load tokenizer from GGUF: {e}\n\
+                        Err(e) => {
+                            if strict_tokenizer {
+                                eprintln!(
+                                    "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
+                                );
+                                std::process::exit(EXIT_STRICT_TOKENIZER);
+                            }
+                            if !allow_mock {
+                                // Provide actionable error message
+                                let model_dir = model_path
+                                    .parent()
+                                    .unwrap_or_else(|| std::path::Path::new("."));
+                                anyhow::bail!(
+                                    "Failed to load tokenizer from GGUF: {e}\n\
                                  \n\
                                  No tokenizer found. Solutions:\n\
                                  1. Download tokenizer:\n\
@@ -1247,13 +1248,13 @@ async fn run_simple_generation(
                                     --tokenizer /path/to/tokenizer.json\n\
                                  3. Use mock tokenizer for testing:\n\
                                     --allow-mock",
-                                model_dir.display()
-                            );
+                                    model_dir.display()
+                                );
+                            }
+                            println!("Warning: Using mock tokenizer due to: {e}");
+                            std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                         }
-                        println!("Warning: Using mock tokenizer due to: {e}");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
-                }
                 } // end GGUF else branch
             }
         }

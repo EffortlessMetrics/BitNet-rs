@@ -68,19 +68,14 @@ impl DenseLinear {
     /// `x` shape: `[..., in_features]` (flattened to 2-D internally).
     /// Returns shape: `[..., out_features]`.
     pub fn forward(&self, x: &[f32]) -> Vec<f32> {
-        assert_eq!(
-            x.len() % self.in_features,
-            0,
-            "input length must be a multiple of in_features"
-        );
+        assert_eq!(x.len() % self.in_features, 0, "input length must be a multiple of in_features");
         let batch = x.len() / self.in_features;
         let mut out = vec![0.0f32; batch * self.out_features];
 
         for b in 0..batch {
             let x_row = &x[b * self.in_features..(b + 1) * self.in_features];
             for o in 0..self.out_features {
-                let w_row =
-                    &self.weight[o * self.in_features..(o + 1) * self.in_features];
+                let w_row = &self.weight[o * self.in_features..(o + 1) * self.in_features];
                 let mut acc = 0.0f32;
                 for (xi, wi) in x_row.iter().zip(w_row.iter()) {
                     acc += xi * wi;
@@ -115,8 +110,7 @@ impl DenseFFN {
         let gate = self.gate_proj.forward(x);
         let up = self.up_proj.forward(x);
         // element-wise silu(gate) * up
-        let hidden: Vec<f32> =
-            gate.iter().zip(up.iter()).map(|(&g, &u)| silu(g) * u).collect();
+        let hidden: Vec<f32> = gate.iter().zip(up.iter()).map(|(&g, &u)| silu(g) * u).collect();
         self.down_proj.forward(&hidden)
     }
 }
@@ -187,10 +181,7 @@ impl DenseAttention {
                 }
 
                 // Numerically-stable softmax over [0..=i]
-                let max_score = scores[..=i]
-                    .iter()
-                    .copied()
-                    .fold(f32::NEG_INFINITY, f32::max);
+                let max_score = scores[..=i].iter().copied().fold(f32::NEG_INFINITY, f32::max);
                 let mut sum_exp = 0.0f32;
                 let mut weights = vec![0.0f32; i + 1];
                 for j in 0..=i {
@@ -206,8 +197,7 @@ impl DenseAttention {
                 for d in 0..head_dim {
                     let mut val = 0.0f32;
                     for j in 0..=i {
-                        let vj =
-                            v_flat[j * num_kv_heads * head_dim + kv_h * head_dim + d];
+                        let vj = v_flat[j * num_kv_heads * head_dim + kv_h * head_dim + d];
                         val += weights[j] * vj;
                     }
                     attn_out[i * num_heads * head_dim + h * head_dim + d] = val;
@@ -341,7 +331,12 @@ pub fn dense_block_forward_tensor(
     anyhow::ensure!(shape.len() == 2, "expected 2-D input [seq_len, hidden_size], got {:?}", shape);
     let seq_len = shape[0];
     let hidden = shape[1];
-    anyhow::ensure!(hidden == block.hidden_size, "hidden dim mismatch: {} vs {}", hidden, block.hidden_size);
+    anyhow::ensure!(
+        hidden == block.hidden_size,
+        "hidden dim mismatch: {} vs {}",
+        hidden,
+        block.hidden_size
+    );
 
     let x_candle = input.to_candle().context("to_candle")?;
     let x_flat = x_candle.flatten_all()?.to_vec1::<f32>().context("flatten")?;
@@ -393,12 +388,7 @@ mod tests {
         let num_kv_heads = num_heads; // MHA for simplicity
         let head_dim = dim / num_heads;
 
-        let attn_cfg = DenseAttentionConfig {
-            hidden_size: dim,
-            num_heads,
-            num_kv_heads,
-            head_dim,
-        };
+        let attn_cfg = DenseAttentionConfig { hidden_size: dim, num_heads, num_kv_heads, head_dim };
 
         let attention = DenseAttention {
             config: attn_cfg,
@@ -409,15 +399,12 @@ mod tests {
         };
 
         // FFN with small deterministic weights
-        let gate_w: Vec<f32> = (0..intermediate * dim)
-            .map(|i| ((i % 7) as f32 - 3.0) * 0.1)
-            .collect();
-        let up_w: Vec<f32> = (0..intermediate * dim)
-            .map(|i| ((i % 5) as f32 - 2.0) * 0.1)
-            .collect();
-        let down_w: Vec<f32> = (0..dim * intermediate)
-            .map(|i| ((i % 11) as f32 - 5.0) * 0.05)
-            .collect();
+        let gate_w: Vec<f32> =
+            (0..intermediate * dim).map(|i| ((i % 7) as f32 - 3.0) * 0.1).collect();
+        let up_w: Vec<f32> =
+            (0..intermediate * dim).map(|i| ((i % 5) as f32 - 2.0) * 0.1).collect();
+        let down_w: Vec<f32> =
+            (0..dim * intermediate).map(|i| ((i % 11) as f32 - 5.0) * 0.05).collect();
 
         let ffn = DenseFFN::new(
             DenseLinear::new(gate_w, None, dim, intermediate),
@@ -547,12 +534,8 @@ mod tests {
         let dim = 4;
         let num_heads = 2;
         let head_dim = 2;
-        let cfg = DenseAttentionConfig {
-            hidden_size: dim,
-            num_heads,
-            num_kv_heads: num_heads,
-            head_dim,
-        };
+        let cfg =
+            DenseAttentionConfig { hidden_size: dim, num_heads, num_kv_heads: num_heads, head_dim };
         let attn = DenseAttention {
             config: cfg,
             q_proj: identity_linear(dim),
@@ -574,29 +557,16 @@ mod tests {
         let num_heads = 4;
         let num_kv_heads = 2;
         let head_dim = 1;
-        let cfg = DenseAttentionConfig {
-            hidden_size: dim,
-            num_heads,
-            num_kv_heads,
-            head_dim,
-        };
+        let cfg = DenseAttentionConfig { hidden_size: dim, num_heads, num_kv_heads, head_dim };
         // Use identity projections (dim=4 for Q, dim=2 for K/V)
         let q_proj = identity_linear(dim);
-        let k_w: Vec<f32> = vec![
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-        ]; // 2×4
+        let k_w: Vec<f32> = vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]; // 2×4
         let v_w = k_w.clone();
         let k_proj = DenseLinear::new(k_w, None, dim, num_kv_heads * head_dim);
         let v_proj = DenseLinear::new(v_w, None, dim, num_kv_heads * head_dim);
 
-        let attn = DenseAttention {
-            config: cfg,
-            q_proj,
-            k_proj,
-            v_proj,
-            o_proj: identity_linear(dim),
-        };
+        let attn =
+            DenseAttention { config: cfg, q_proj, k_proj, v_proj, o_proj: identity_linear(dim) };
 
         // Single token — should not panic and produce valid output
         let x = vec![1.0, 2.0, 3.0, 4.0];
@@ -618,12 +588,8 @@ mod tests {
         let num_heads = 2;
         let head_dim = dim / num_heads;
 
-        let attn_cfg = DenseAttentionConfig {
-            hidden_size: dim,
-            num_heads,
-            num_kv_heads: num_heads,
-            head_dim,
-        };
+        let attn_cfg =
+            DenseAttentionConfig { hidden_size: dim, num_heads, num_kv_heads: num_heads, head_dim };
         let attention = DenseAttention {
             config: attn_cfg,
             q_proj: identity_linear(dim),
