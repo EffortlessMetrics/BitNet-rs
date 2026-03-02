@@ -30,6 +30,41 @@ python3 scripts/detect-performance-regression.py \
   --fail-on-regression
 ```
 
+## 🧪 Latest local benchmark snapshot (container)
+
+The following numbers were collected from this repository in a constrained container environment, using:
+
+```bash
+cargo bench -p bitnet --bench srp_ops --no-default-features --features cpu -- --noplot
+cargo bench -p bitnet --bench kernel_ops --no-default-features --features "cpu bench" -- --noplot
+```
+
+### Environment
+
+- OS: Linux 6.12.47 x86_64
+- CPU: Intel Xeon Platinum 8370C (3 vCPUs visible)
+- Rust: rustc 1.92.0, cargo 1.92.0
+
+### `srp_ops` highlights
+
+- `logits_pipeline/temperature_softmax_top_p`: **10.35 µs**
+- `top_k/apply_top_k/5`: **2.76 µs**
+- `top_k/apply_top_k/50`: **2.82 µs**
+- `argmax_1000`: **1.61 µs**
+- `build_rope_tables_128_512`: **422.51 µs**
+- `kv_cache_append_single_token`: **311.84 µs**
+
+### `kernel_ops` highlights
+
+- `matmul_i2s_sizes/avx512/16x16x16`: **7.62 µs** (~1.08 Gelem/s)
+- `matmul_i2s_sizes/avx512/64x64x64`: **359.98 µs** (~1.46 Gelem/s)
+- `matmul_i2s_sizes/avx512/256x256x256`: **21.64 ms** (~1.55 Gelem/s)
+- `kernel_quantize_i2s/quantize/4096`: **14.30 µs** (~286.49 Melem/s)
+- `attention_scores/qk_matmul/h4_s512_d64`: **2.97 ms** (~44.20 Melem/s)
+- `rmsnorm/forward/4096`: **8.45 µs** (~484.77 Melem/s)
+
+> Note: treat these as **reference snapshot values** only. Because the run is from a shared/containerized environment with 3 visible CPUs, absolute numbers are not directly comparable with dedicated bare-metal baselines.
+
 ## 📊 Architecture Overview
 
 The benchmarking infrastructure consists of several integrated components:
