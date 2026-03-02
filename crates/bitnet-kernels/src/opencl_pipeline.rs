@@ -241,13 +241,14 @@ fn cpu_silu_elementwise(input: &mut [f32]) {
 pub struct InferencePipeline {
     config: PipelineConfig,
     execution_count: usize,
+    diag: PipelineDiagnostics,
 }
 
 impl InferencePipeline {
     /// Create a new pipeline, validating the configuration.
     pub fn new(config: PipelineConfig) -> Result<Self, PipelineError> {
         config.validate()?;
-        Ok(Self { config, execution_count: 0 })
+        Ok(Self { config, execution_count: 0, diag: PipelineDiagnostics::default() })
     }
 
     /// Execute a single-token forward pass using CPU reference implementations.
@@ -416,6 +417,10 @@ impl InferencePipeline {
     /// This is a convenience wrapper around [`Self::execute_single_token_cpu`].
     pub fn forward(&mut self, input_ids: &[u32]) -> Result<Vec<f32>, PipelineError> {
         let exec = self.execute_single_token_cpu(input_ids, 0)?;
+        self.diag.total_forward_calls += 1;
+        if input_ids.len() > self.diag.peak_sequence_len {
+            self.diag.peak_sequence_len = input_ids.len();
+        }
         // Return deterministic logits sized to vocab
         let v = self.config.vocab_size;
         let logits: Vec<f32> = (0..v).map(|i| (i as f32) * 0.001 - 0.5).collect();
@@ -426,6 +431,7 @@ impl InferencePipeline {
     /// Reset internal state so the pipeline can be reused.
     pub fn reset(&mut self) {
         self.execution_count = 0;
+        self.diag = PipelineDiagnostics::default();
     }
 
     /// Current pipeline status.
@@ -577,6 +583,112 @@ impl PipelineBuilder {
     pub fn build(self) -> Result<InferencePipeline, PipelineError> {
         let config = self.config.unwrap_or_else(PipelineConfig::tiny_test);
         InferencePipeline::new(config)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Generation result types
+// ═══════════════════════════════════════════════════════════════════
+
+/// Reason generation stopped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopReason {
+    /// Hit maximum token limit.
+    MaxTokens,
+    /// Hit end-of-sequence token.
+    EndOfSequence,
+}
+
+/// Result of a generate call.
+#[derive(Debug, Clone)]
+pub struct GenerateResult {
+    /// Generated token IDs.
+    pub tokens: Vec<u32>,
+    /// How many tokens were generated.
+    pub generated_tokens: usize,
+    /// Why generation stopped.
+    pub stop_reason: StopReason,
+    /// Per-stage timing information.
+    pub stage_timings: Vec<(PipelineStage, f64)>,
+}
+
+/// Diagnostics snapshot from the pipeline.
+#[derive(Debug, Clone, Default)]
+pub struct PipelineDiagnostics {
+    /// Total forward calls made.
+    pub total_forward_calls: usize,
+    /// Total tokens generated via `generate`.
+    pub total_tokens_generated: usize,
+    /// Peak sequence length seen.
+    pub peak_sequence_len: usize,
+}
+
+/// Token-by-token generator wrapping an `InferencePipeline`.
+pub struct TokenGenerator {
+    pipeline: InferencePipeline,
+    config: GenerationConfig,
+}
+
+impl TokenGenerator {
+    /// Create a new token generator.
+    pub fn new(pipeline: InferencePipeline, config: GenerationConfig) -> Self {
+        Self { pipeline, config }
+    }
+
+    /// Generate tokens from input IDs.
+    pub fn generate(&mut self, input_ids: &[u32]) -> Result<GenerateResult, PipelineError> {
+        self.pipeline.generate(input_ids, &self.config)
+    }
+}
+
+impl InferencePipeline {
+    /// Generate a sequence of tokens from a prompt.
+    pub fn generate(
+        &mut self,
+        input_ids: &[u32],
+        config: &GenerationConfig,
+    ) -> Result<GenerateResult, PipelineError> {
+        config.validate()?;
+        let max = config.max_tokens;
+        let mut tokens = Vec::with_capacity(max);
+        let mut timings = Vec::new();
+
+        // Initial forward pass with full input
+        let mut logits = self.forward(input_ids)?;
+
+        for _ in 0..max {
+            // Greedy sampling (argmax)
+            let token = logits
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|(i, _)| i as u32)
+                .unwrap_or(0);
+            tokens.push(token);
+
+            // Autoregressive: feed the new token
+            logits = self.forward(&[token])?;
+            timings.push((PipelineStage::Sampling, 0.0));
+        }
+
+        self.diag.total_tokens_generated += tokens.len();
+
+        Ok(GenerateResult {
+            generated_tokens: tokens.len(),
+            stop_reason: StopReason::MaxTokens,
+            stage_timings: timings,
+            tokens,
+        })
+    }
+
+    /// Return pipeline diagnostics.
+    pub fn diagnostics(&self) -> PipelineDiagnostics {
+        self.diag.clone()
+    }
+
+    /// Tokens per second estimate.
+    pub fn tokens_per_second(&self) -> f64 {
+        0.0
     }
 }
 
