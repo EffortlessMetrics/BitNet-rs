@@ -94,8 +94,8 @@ pub enum BackendRequest {
 ### How to Build
 
 ```bash
-# CPU-only (no GPU hardware required)
-cargo build --no-default-features --features cpu
+# CPU-only (no GPU hardware required; default root behavior)
+cargo build
 
 # GPU (CUDA)
 cargo build --no-default-features --features gpu
@@ -107,13 +107,13 @@ cargo build --no-default-features --features rocm
 cargo build --no-default-features --features vulkan
 ```
 
-> **Important**: Default features are empty. Always specify `--no-default-features --features <target>`.
+> **Important**: Root `bitnet` defaults to `cpu`; `bitnet-cli` defaults to `cpu,full-cli`. For non-default backend validation, use `--no-default-features --features <target>`.
 
 ### How to Test
 
 ```bash
 # CPU tests (always works, no hardware needed)
-cargo nextest run --workspace --no-default-features --features cpu
+cargo nextest run --workspace --features cpu
 
 # GPU tests (requires CUDA hardware + toolkit)
 cargo nextest run --workspace --no-default-features --features gpu
@@ -123,6 +123,10 @@ cargo test -p bitnet-kernels --no-default-features --features cpu
 
 # CI profile (4 threads, 5-min timeout)
 cargo nextest run --profile ci
+
+# Boundary check (feature gating hygiene)
+cargo check -p bitnet --no-default-features
+cargo check -p bitnet --features cpu
 ```
 
 ---

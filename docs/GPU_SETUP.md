@@ -44,10 +44,17 @@ nvidia-smi
 
 ## 2) Build with GPU support
 
-Use explicit feature selection (default features are intentionally empty):
+CPU is the default baseline. Use explicit feature selection when targeting non-default backends:
 
 ```bash
 cargo build --no-default-features --features gpu
+```
+
+For feature-boundary validation, also run:
+
+```bash
+cargo check -p bitnet --no-default-features
+cargo check -p bitnet --features cpu
 ```
 
 Run GPU tests where hardware is available:

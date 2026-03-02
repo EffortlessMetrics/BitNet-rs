@@ -273,7 +273,7 @@ rayon = "1.11.0"
 tracing = "0.1.41"
 
 [features]
-default = [] # Empty default features - must be explicitly enabled
+default = ["cpu"] # CPU is the ergonomic baseline; use --no-default-features for boundary checks
 
 # Test and development features (off by default)
 bench = []
