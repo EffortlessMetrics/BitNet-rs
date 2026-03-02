@@ -571,14 +571,26 @@ jobs:
             echo "- ⏭️  **Lane A (BitNet.cpp)**: Skipped" >> crossval-summary.md
           fi
 
-          cat >> crossval-summary.md << 'EOF'
+          cat >> crossval-summary.md << EOF
 
           ## Key Findings
 
-          - 🎯 **Accuracy**: Rust implementation within tolerance threshold
-          - 🚀 **Performance**: Competitive with C++ reference
           - 🛡️ **Memory Safety**: Zero undefined behavior (Rust guarantees)
           - 🔄 **Compatibility**: API parity maintained
+          EOF
+
+          if [[ "${{ needs.check-trigger.outputs.should_run_lane_a }}" == "true" ]] || [[ "${{ needs.check-trigger.outputs.should_run_lane_b }}" == "true" ]]; then
+            cat >> crossval-summary.md << EOF
+          - 🎯 **Accuracy**: Rust implementation within tolerance threshold
+          - 🚀 **Performance**: Competitive with C++ reference
+            EOF
+          else
+            cat >> crossval-summary.md << EOF
+          - ℹ️ **Accuracy/Performance**: Not evaluated in this run because both cross-validation lanes were skipped
+            EOF
+          fi
+
+          cat >> crossval-summary.md << 'EOF'
 
           ## Artifacts
 
