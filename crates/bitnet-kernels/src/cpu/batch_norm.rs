@@ -1052,10 +1052,12 @@ mod tests {
                             proptest::collection::vec(-100.0_f32..100.0, len),
                         )
                     })
-                    .prop_filter("need non-constant channels", |(batch, features, input)| {
+                    .prop_filter("need sufficient per-channel spread vs eps", |(batch, features, input)| {
+                        // Require |x_i - x_0| > 0.1 so channel variance >> eps (1e-5),
+                        // ensuring var/(var+eps) ≈ 1 within the 0.05 tolerance.
                         (0..*features).all(|ch| {
                             let first = input[ch];
-                            (1..*batch).any(|b| (input[b * features + ch] - first).abs() > 1e-6)
+                            (1..*batch).any(|b| (input[b * features + ch] - first).abs() > 0.1)
                         })
                     })
             ) {
