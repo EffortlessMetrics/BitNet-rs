@@ -457,11 +457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-chat-template-detection-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-cli"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "bitnet-chat-template-detection-core",
  "bitnet-cli-sampling-core",
  "bitnet-common",
  "bitnet-eval-core",

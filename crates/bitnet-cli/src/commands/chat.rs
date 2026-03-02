@@ -18,8 +18,8 @@ use bitnet_inference::{InferenceEngine, TemplateType};
 use tracing::info;
 
 use super::inference::InferenceCommand;
-use super::template_util::looks_like_llama3_chat;
 use crate::config::CliConfig;
+use bitnet_chat_template_detection_core::looks_like_llama3_chat;
 
 impl InferenceCommand {
     /// Run interactive chat mode with REPL
