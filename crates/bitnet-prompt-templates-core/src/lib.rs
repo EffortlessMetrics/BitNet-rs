@@ -5747,4 +5747,336 @@ mod detect_logging_tests {
         assert!(s.contains("<|start_header_id|>assistant<|end_header_id|>\n\nHi!<|eot_id|>"));
         assert!(s.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
     }
+
+    // —— Mistral Chat ————————————————————————————————————————
+
+    #[test]
+    fn test_mistral_chat_template() {
+        let t = TemplateType::MistralChat;
+
+        // Without system prompt
+        let result = t.apply("Hello!", None);
+        assert!(result.starts_with("<s>[INST] "));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with(" [/INST]"));
+
+        // With system prompt
+        let result = t.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(result.contains("Hello!"));
+        assert!(result.starts_with("<s>[INST] "));
+        assert!(result.ends_with(" [/INST]"));
+    }
+
+    #[test]
+    fn test_detect_mistral_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("[INST] {{ message }} [/INST]"),
+        );
+        assert_eq!(t, TemplateType::MistralChat);
+    }
+
+    #[test]
+    fn test_detect_mistral_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("mistral-7b-instruct"), None),
+            TemplateType::MistralChat,
+        );
+    }
+
+    #[test]
+    fn test_render_chat_mistral() {
+        let t = TemplateType::MistralChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.starts_with("<s>"));
+        assert!(s.contains("[INST] Hello [/INST]"));
+        assert!(s.contains("Hi!</s>"));
+        assert!(s.contains("[INST] Be helpful."));
+    }
+
+    #[test]
+    fn test_mistral_roundtrip_format_contains_tokens() {
+        let t = TemplateType::MistralChat;
+        let result = t.apply("What is 2+2?", None);
+        assert!(result.contains("[INST]"));
+        assert!(result.contains("[/INST]"));
+        assert!(result.contains("What is 2+2?"));
+    }
+
+    // —— Qwen 2.5 Chat ——————————————————————————————————————
+
+    #[test]
+    fn test_qwen25_chat_template() {
+        let t = TemplateType::Qwen25Chat;
+
+        // Without system prompt (default Qwen system prompt)
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are Qwen, created by Alibaba Cloud."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\nHello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        // With custom system prompt
+        let result = t.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(!result.contains("Alibaba Cloud"));
+    }
+
+    #[test]
+    fn test_detect_qwen25_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("qwen2.5-7b-instruct"), None),
+            TemplateType::Qwen25Chat,
+        );
+        assert_eq!(
+            TemplateType::detect(Some("Qwen-2.5-Coder"), None),
+            TemplateType::Qwen25Chat,
+        );
+    }
+
+    #[test]
+    fn test_render_chat_qwen25() {
+        let t = TemplateType::Qwen25Chat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
+        assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
+        assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn test_qwen25_roundtrip_format_contains_tokens() {
+        let t = TemplateType::Qwen25Chat;
+        let result = t.apply("What is 2+2?", None);
+        assert!(result.contains("<|im_start|>"));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("What is 2+2?"));
+    }
+
+    #[test]
+    fn test_qwen25_fromstr_roundtrip() {
+        assert_eq!(
+            "qwen25-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Qwen25Chat,
+        );
+        assert_eq!(
+            "qwen2.5-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Qwen25Chat,
+        );
+        assert_eq!(
+            "qwen2.5".parse::<TemplateType>().unwrap(),
+            TemplateType::Qwen25Chat,
+        );
+        assert_eq!(TemplateType::Qwen25Chat.to_string(), "qwen25-chat");
+    }
+
+    // —— Gemma 2 Chat ———————————————————————————————————————
+
+    #[test]
+    fn test_gemma2_chat_template() {
+        let t = TemplateType::Gemma2Chat;
+
+        // Without system prompt
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<start_of_turn>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.contains("<end_of_turn>"));
+        assert!(result.ends_with("<start_of_turn>model\n"));
+
+        // With system prompt (prepended to user turn)
+        let result = t.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(result.contains("Hello!"));
+    }
+
+    #[test]
+    fn test_detect_gemma2_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("gemma-2-9b-it"), None),
+            TemplateType::Gemma2Chat,
+        );
+        assert_eq!(
+            TemplateType::detect(Some("gemma2-2b"), None),
+            TemplateType::Gemma2Chat,
+        );
+    }
+
+    #[test]
+    fn test_render_chat_gemma2() {
+        let t = TemplateType::Gemma2Chat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<start_of_turn>user\n"));
+        assert!(s.contains("Be helpful."));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<start_of_turn>model\n"));
+        assert!(s.contains("Hi!"));
+        assert!(s.contains("Bye"));
+        assert!(s.contains("<end_of_turn>"));
+        assert!(s.ends_with("<start_of_turn>model\n"));
+    }
+
+    #[test]
+    fn test_gemma2_fromstr_roundtrip() {
+        assert_eq!(
+            "gemma2-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Gemma2Chat,
+        );
+        assert_eq!(
+            "gemma-2-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Gemma2Chat,
+        );
+        assert_eq!(
+            "gemma2".parse::<TemplateType>().unwrap(),
+            TemplateType::Gemma2Chat,
+        );
+        assert_eq!(TemplateType::Gemma2Chat.to_string(), "gemma2-chat");
+    }
+
+    // —— LLaMA 3.1 Chat —————————————————————————————————————
+
+    #[test]
+    fn test_llama31_chat_template() {
+        let t = TemplateType::Llama31Chat;
+
+        // Without system prompt (uses default)
+        let result = t.apply("Hello!", None);
+        assert!(result.contains("<|begin_of_text|>"));
+        assert!(result.contains("<|start_header_id|>system<|end_header_id|>"));
+        assert!(result.contains("You are a helpful, harmless, and honest AI assistant."));
+        assert!(result.contains("<|start_header_id|>user<|end_header_id|>"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
+
+        // With custom system prompt
+        let result = t.apply("Hello!", Some("Custom system."));
+        assert!(result.contains("Custom system."));
+        assert!(!result.contains("helpful, harmless"));
+    }
+
+    #[test]
+    fn test_detect_llama31_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("llama-3.1-8b-instruct"), None),
+            TemplateType::Llama31Chat,
+        );
+        assert_eq!(
+            TemplateType::detect(Some("meta-llama/llama3.1-70b"), None),
+            TemplateType::Llama31Chat,
+        );
+    }
+
+    #[test]
+    fn test_render_chat_llama31() {
+        let t = TemplateType::Llama31Chat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.contains("<|begin_of_text|>"));
+        assert!(
+            s.contains("<|start_header_id|>system<|end_header_id|>\n\nBe helpful.<|eot_id|>")
+        );
+        assert!(s.contains("<|start_header_id|>user<|end_header_id|>\n\nHello<|eot_id|>"));
+        assert!(
+            s.contains("<|start_header_id|>assistant<|end_header_id|>\n\nHi!<|eot_id|>")
+        );
+        assert!(s.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
+    }
+
+    #[test]
+    fn test_llama31_fromstr_roundtrip() {
+        assert_eq!(
+            "llama31-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Llama31Chat,
+        );
+        assert_eq!(
+            "llama-3.1-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::Llama31Chat,
+        );
+        assert_eq!(
+            "llama3.1".parse::<TemplateType>().unwrap(),
+            TemplateType::Llama31Chat,
+        );
+        assert_eq!(TemplateType::Llama31Chat.to_string(), "llama31-chat");
+    }
+
+    // —— Mistral Nemo Chat ——————————————————————————————————
+
+    #[test]
+    fn test_mistral_nemo_chat_template() {
+        let t = TemplateType::MistralNemoChat;
+
+        // Without system prompt
+        let result = t.apply("Hello!", None);
+        assert!(result.starts_with("[INST] "));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with(" [/INST] "));
+
+        // With system prompt
+        let result = t.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(result.contains("Hello!"));
+    }
+
+    #[test]
+    fn test_detect_mistral_nemo_from_name() {
+        assert_eq!(
+            TemplateType::detect(Some("mistral-nemo-12b"), None),
+            TemplateType::MistralNemoChat,
+        );
+    }
+
+    #[test]
+    fn test_render_chat_mistral_nemo() {
+        let t = TemplateType::MistralNemoChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "Bye"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+        assert!(s.starts_with("<s>"));
+        assert!(s.contains("[INST] Hello [/INST]"));
+        assert!(s.contains("Hi!</s>"));
+        assert!(s.contains("[INST] Be helpful."));
+    }
+
+    #[test]
+    fn test_mistral_nemo_fromstr_roundtrip() {
+        assert_eq!(
+            "mistral-nemo-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::MistralNemoChat,
+        );
+        assert_eq!(
+            "mistral-nemo".parse::<TemplateType>().unwrap(),
+            TemplateType::MistralNemoChat,
+        );
+        assert_eq!(
+            "nemo".parse::<TemplateType>().unwrap(),
+            TemplateType::MistralNemoChat,
+        );
+        assert_eq!(
+            TemplateType::MistralNemoChat.to_string(),
+            "mistral-nemo-chat",
+        );
+    }
 }
