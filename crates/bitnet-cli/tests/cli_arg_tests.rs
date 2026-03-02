@@ -59,9 +59,7 @@ fn run_no_args_shows_usage() {
         .arg("run")
         .assert()
         .failure()
-        .stderr(
-            predicate::str::contains("Usage").or(predicate::str::contains("--model")),
-        );
+        .stderr(predicate::str::contains("Usage").or(predicate::str::contains("--model")));
 }
 
 // ============================================================================
@@ -71,14 +69,9 @@ fn run_no_args_shows_usage() {
 /// `run --help` documents default max-new-tokens of 32.
 #[test]
 fn run_help_shows_default_max_new_tokens() {
-    bitnet()
-        .args(["run", "--help"])
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("max-new-tokens")
-                .or(predicate::str::contains("max-tokens")),
-        );
+    bitnet().args(["run", "--help"]).assert().success().stdout(
+        predicate::str::contains("max-new-tokens").or(predicate::str::contains("max-tokens")),
+    );
 }
 
 /// `run --help` documents the --temperature option.
@@ -94,31 +87,19 @@ fn run_help_documents_temperature() {
 /// `run --help` documents the --top-k option.
 #[test]
 fn run_help_documents_top_k() {
-    bitnet()
-        .args(["run", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("--top-k"));
+    bitnet().args(["run", "--help"]).assert().success().stdout(predicate::str::contains("--top-k"));
 }
 
 /// `run --help` documents the --top-p option.
 #[test]
 fn run_help_documents_top_p() {
-    bitnet()
-        .args(["run", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("--top-p"));
+    bitnet().args(["run", "--help"]).assert().success().stdout(predicate::str::contains("--top-p"));
 }
 
 /// `run --help` documents the --seed option.
 #[test]
 fn run_help_documents_seed() {
-    bitnet()
-        .args(["run", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("--seed"));
+    bitnet().args(["run", "--help"]).assert().success().stdout(predicate::str::contains("--seed"));
 }
 
 /// `run --help` documents the --greedy flag.
@@ -219,15 +200,7 @@ fn run_rejects_non_integer_seed() {
 #[test]
 fn run_rejects_non_numeric_repetition_penalty() {
     bitnet()
-        .args([
-            "run",
-            "--model",
-            "m.gguf",
-            "--prompt",
-            "hi",
-            "--repetition-penalty",
-            "heavy",
-        ])
+        .args(["run", "--model", "m.gguf", "--prompt", "hi", "--repetition-penalty", "heavy"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
@@ -274,34 +247,24 @@ fn list_architectures_help() {
 /// `list-templates --help` is recognized and succeeds.
 #[test]
 fn list_templates_help() {
-    bitnet()
-        .args(["list-templates", "--help"])
-        .assert()
-        .success();
+    bitnet().args(["list-templates", "--help"]).assert().success();
 }
 
 /// `info --help` is recognized and succeeds.
 #[test]
 fn info_subcommand_help() {
-    bitnet()
-        .args(["info", "--help"])
-        .assert()
-        .success();
+    bitnet().args(["info", "--help"]).assert().success();
 }
 
 /// `config --help` is recognized and lists sub-actions (show, set, reset, path).
 #[test]
 fn config_subcommand_help() {
-    bitnet()
-        .args(["config", "--help"])
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("show")
-                .and(predicate::str::contains("set"))
-                .and(predicate::str::contains("reset"))
-                .and(predicate::str::contains("path")),
-        );
+    bitnet().args(["config", "--help"]).assert().success().stdout(
+        predicate::str::contains("show")
+            .and(predicate::str::contains("set"))
+            .and(predicate::str::contains("reset"))
+            .and(predicate::str::contains("path")),
+    );
 }
 
 /// `compat-check --help` is recognized and succeeds.
@@ -379,20 +342,14 @@ fn infer_alias_accepted() {
 #[cfg(feature = "full-cli")]
 #[test]
 fn convert_subcommand_help() {
-    bitnet()
-        .args(["convert", "--help"])
-        .assert()
-        .success();
+    bitnet().args(["convert", "--help"]).assert().success();
 }
 
 /// `inspect --help` is recognized (requires full-cli).
 #[cfg(feature = "full-cli")]
 #[test]
 fn inspect_subcommand_help() {
-    bitnet()
-        .args(["inspect", "--help"])
-        .assert()
-        .success();
+    bitnet().args(["inspect", "--help"]).assert().success();
 }
 
 // ============================================================================
@@ -546,8 +503,7 @@ mod inference_parsing {
     /// `--model` and `--prompt` can be provided together.
     #[test]
     fn model_and_prompt_together() {
-        let cmd = parse(&["test", "--model", "m.gguf", "--prompt", "hello"])
-            .expect("must parse");
+        let cmd = parse(&["test", "--model", "m.gguf", "--prompt", "hello"]).expect("must parse");
         assert_eq!(cmd.model.as_ref().unwrap().to_str().unwrap(), "m.gguf");
         assert_eq!(cmd.prompt.as_deref(), Some("hello"));
     }
