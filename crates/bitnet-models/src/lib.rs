@@ -8,6 +8,7 @@ pub mod correction_policy;
 pub mod fingerprint;
 pub mod formats;
 pub mod gguf_min;
+pub mod hf_loader;
 pub mod gguf_parity;
 pub mod gguf_simple;
 pub mod gguf_writer;
