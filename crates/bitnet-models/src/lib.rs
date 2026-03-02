@@ -33,6 +33,7 @@ pub mod quant;
 pub mod registry_query;
 pub mod safetensors_reader;
 pub mod security;
+pub mod shard_index;
 pub mod transformer;
 pub mod validation;
 pub mod validation_suite;
