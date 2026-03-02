@@ -154,6 +154,50 @@ pub fn create_mock_backend_libs(dir: &Path, backend: CppBackend) -> anyhow::Resu
     Ok(())
 }
 
+/// Returns the platform-specific path separator for dynamic loader paths.
+///
+/// - Unix (Linux, macOS): `":"`
+/// - Windows: `";"`
+pub fn path_separator() -> &'static str {
+    #[cfg(unix)]
+    return ":";
+    #[cfg(windows)]
+    return ";";
+}
+
+/// Splits a loader path string into its individual components.
+///
+/// Uses the platform-specific separator (`:` on Unix, `;` on Windows).
+pub fn split_loader_path(path: &str) -> Vec<String> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    path.split(path_separator()).map(|s| s.to_string()).collect()
+}
+
+/// Joins path components into a loader path string using the platform separator.
+pub fn join_loader_path(components: &[&str]) -> String {
+    components.join(path_separator())
+}
+
+/// Appends a path to the dynamic loader path environment variable.
+///
+/// If the variable is unset or empty, sets it to just `new_path`.
+/// Otherwise appends with the platform separator.
+pub fn append_to_loader_path(new_path: &str) {
+    let var = get_loader_path_var();
+    let current = std::env::var(var).unwrap_or_default();
+    if current.is_empty() {
+        // SAFETY: caller must ensure no other threads read this env var concurrently.
+        // Tests using this function should use #[serial(bitnet_env)].
+        unsafe { std::env::set_var(var, new_path) };
+    } else {
+        unsafe {
+            std::env::set_var(var, format!("{}{}{}", current, path_separator(), new_path));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

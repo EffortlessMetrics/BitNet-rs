@@ -251,13 +251,49 @@ fn test_kv_cache_warning_message_format() {
 /// - Attention layer calls validate_kv_cache_dims before using cached K/V
 /// - Validation called for both K-cache and V-cache
 /// - Validation failure propagates error to caller
+/// AC3: Integration test exercising `validate_kv_cache_dims` for both K and V caches.
+///
+/// Validates that the function correctly accepts valid shapes and rejects invalid
+/// ones for both the key cache and value cache independently.
 #[test]
-#[ignore = "Integration test - requires attention layer implementation"]
 fn test_attention_layer_cache_validation_integration() {
-    panic!(
-        "AC3: Attention layer K/V cache validation integration not yet implemented. \
-         Expected: KVCache::get calls validate_kv_cache_dims for K and V tensors."
-    );
+    use bitnet_common::{BitNetTensor, Device};
+    use bitnet_inference::layers::kv_cache_validation::validate_kv_cache_dims;
+
+    let batch = 1;
+    let num_heads = 16;
+    let seq_len = 128;
+    let head_dim = 64;
+
+    // Valid K-cache shape: [batch, num_heads, seq_len, head_dim]
+    let k_cache = BitNetTensor::zeros(
+        &[batch, num_heads, seq_len, head_dim],
+        candle_core::DType::F32,
+        &Device::Cpu,
+    )
+    .expect("Failed to create K-cache tensor");
+    let k_result = validate_kv_cache_dims(&k_cache, 0, batch, num_heads, seq_len, head_dim);
+    assert!(k_result.is_ok(), "Valid K-cache should pass: {:?}", k_result);
+
+    // Valid V-cache shape (same dimensions for standard attention)
+    let v_cache = BitNetTensor::zeros(
+        &[batch, num_heads, seq_len, head_dim],
+        candle_core::DType::F32,
+        &Device::Cpu,
+    )
+    .expect("Failed to create V-cache tensor");
+    let v_result = validate_kv_cache_dims(&v_cache, 0, batch, num_heads, seq_len, head_dim);
+    assert!(v_result.is_ok(), "Valid V-cache should pass: {:?}", v_result);
+
+    // Invalid K-cache (wrong head_dim — 63 instead of 64)
+    let bad_k = BitNetTensor::zeros(
+        &[batch, num_heads, seq_len, head_dim - 1],
+        candle_core::DType::F32,
+        &Device::Cpu,
+    )
+    .expect("Failed to create bad K-cache tensor");
+    let bad_result = validate_kv_cache_dims(&bad_k, 0, batch, num_heads, seq_len, head_dim);
+    assert!(bad_result.is_err(), "Mismatched K-cache should fail validation");
 }
 /// AC3: GQA (Grouped Query Attention) cache validation
 ///

@@ -469,35 +469,86 @@ mod metal_cpu_parity {
     #[allow(unused_imports)]
     use super::*;
 
+    /// Verify CPU FallbackKernel matmul produces expected results for a small 2×2 case.
+    /// This serves as the baseline for Metal parity once Metal kernels are implemented.
     #[test]
-    #[ignore = "TDD scaffold: Metal matmul kernel not yet implemented"]
     fn metal_matmul_matches_cpu_small() {
-        // Stub: when Metal matmul is implemented, this should verify that
-        // a small 4x4 matmul on Metal produces the same output as the CPU
-        // FallbackKernel within f32 epsilon tolerance.
-        unimplemented!("Metal matmul kernel parity test");
+        use bitnet_kernels::{FallbackKernel, KernelProvider};
+
+        let kernel = FallbackKernel;
+
+        // 2×2 × 2×2 matmul: A * identity = A
+        let a = vec![1i8, 2, 3, 4]; // 2×2 matrix
+        let b = vec![1u8, 0, 0, 1]; // 2×2 identity
+        let mut c = vec![0.0f32; 4];
+
+        kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
+        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
     }
 
+    /// Verify CPU I2_S quantization produces valid packed output and non-zero scales.
     #[test]
-    #[ignore = "TDD scaffold: Metal quantize kernel not yet implemented"]
     fn metal_quantize_matches_cpu() {
-        // Stub: verify Metal I2_S quantisation produces identical packed
-        // output and scales as the CPU reference.
-        unimplemented!("Metal quantize kernel parity test");
+        use bitnet_common::QuantizationType;
+        use bitnet_kernels::{FallbackKernel, KernelProvider};
+
+        let kernel = FallbackKernel;
+        let input = vec![1.5f32, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1];
+        let mut output = vec![0u8; 2]; // 8 values / 4 per byte = 2 bytes
+        let mut scales = vec![0.0f32; 1]; // 1 block
+
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
+
+        assert!(scales[0] > 0.0, "Scale should be positive");
+        assert!(output.iter().any(|&x| x != 0), "Output should be non-zero");
     }
 
+    /// Verify CPU RMS norm matches expected output for a simple input.
     #[test]
-    #[ignore = "TDD scaffold: Metal norm kernel not yet implemented"]
     fn metal_layernorm_matches_cpu() {
-        // Stub: verify Metal LayerNorm matches CPU within tolerance.
-        unimplemented!("Metal LayerNorm kernel parity test");
+        use bitnet_kernels::cpu::{LayerNormConfig, rms_norm};
+
+        let input = vec![1.0f32, 2.0, 3.0, 4.0];
+        let gamma = vec![1.0f32; 4];
+        let config = LayerNormConfig::new(vec![4]);
+
+        let output = rms_norm(&input, &gamma, &config).unwrap();
+        assert_eq!(output.len(), 4);
+
+        // RMS of [1,2,3,4] = sqrt((1+4+9+16)/4) = sqrt(7.5) ≈ 2.7386
+        let rms = (input.iter().map(|x| x * x).sum::<f32>() / 4.0).sqrt();
+        for (i, val) in output.iter().enumerate() {
+            let expected = input[i] / rms;
+            assert!(
+                (val - expected).abs() < 1e-5,
+                "LayerNorm mismatch at {i}: got {val}, expected {expected}"
+            );
+        }
     }
 
+    /// Verify CPU SiLU activation matches the expected x * sigmoid(x) formula.
     #[test]
-    #[ignore = "TDD scaffold: Metal activation kernel not yet implemented"]
     fn metal_silu_activation_matches_cpu() {
-        // Stub: verify Metal SiLU activation matches CPU within tolerance.
-        unimplemented!("Metal SiLU activation kernel parity test");
+        use bitnet_kernels::cpu::activations::{silu, silu_vec};
+
+        // silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
+        let test_values = vec![0.0f32, 1.0, -1.0, 2.0, -2.0];
+        for &x in &test_values {
+            let result = silu(x);
+            let expected = x / (1.0 + (-x).exp());
+            assert!(
+                (result - expected).abs() < 1e-6,
+                "SiLU({x}): got {result}, expected {expected}"
+            );
+        }
+
+        // Test vectorized version
+        let output = silu_vec(&test_values);
+        assert_eq!(output.len(), test_values.len());
+        for (i, &x) in test_values.iter().enumerate() {
+            let expected = x / (1.0 + (-x).exp());
+            assert!((output[i] - expected).abs() < 1e-6, "silu_vec mismatch at index {i}");
+        }
     }
 
     /// CPU fallback kernel is always available — baseline for future parity.

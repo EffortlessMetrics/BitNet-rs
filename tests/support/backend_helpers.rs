@@ -48,6 +48,110 @@
 use bitnet_crossval::backend::CppBackend;
 
 // ============================================================================
+// Repair Error Classification (AC9)
+// ============================================================================
+
+/// Maximum number of repair retries for transient errors.
+pub const MAX_REPAIR_RETRIES: usize = 2;
+
+/// Classified repair error for test infrastructure diagnostics.
+///
+/// Mirrors the semantic categories from `xtask::crossval::preflight::RepairError`
+/// but without the `thiserror` dependency, for use in the test support crate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RepairError {
+    /// Network failure (retryable): git clone timeout, DNS, connection refused
+    NetworkError(String),
+    /// Build failure (not retryable): cmake error, compiler failure
+    BuildError(String),
+    /// Missing prerequisites (not retryable): cmake not found, no compiler
+    MissingPrerequisites(String),
+    /// Permission denied (not retryable): EACCES, cannot write directory
+    PermissionDenied(String),
+    /// Recursion detected (not retryable): repair-in-progress guard
+    RecursionDetected,
+    /// Unknown / unclassified error
+    Unknown(String),
+}
+
+impl RepairError {
+    /// Whether this error type is eligible for retry.
+    pub fn is_retryable(&self) -> bool {
+        matches!(self, RepairError::NetworkError(_))
+    }
+}
+
+impl std::fmt::Display for RepairError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RepairError::NetworkError(e) => write!(f, "Network error: {e}"),
+            RepairError::BuildError(e) => write!(f, "Build error: {e}"),
+            RepairError::MissingPrerequisites(e) => write!(f, "Missing prerequisites: {e}"),
+            RepairError::PermissionDenied(e) => write!(f, "Permission denied: {e}"),
+            RepairError::RecursionDetected => write!(f, "Recursion detected"),
+            RepairError::Unknown(e) => write!(f, "Unknown error: {e}"),
+        }
+    }
+}
+
+/// Classify a repair error from stderr output.
+///
+/// Uses the same heuristics as `xtask::crossval::preflight::RepairError::classify`.
+pub fn classify_repair_error(stderr: &str) -> RepairError {
+    let lower = stderr.to_lowercase();
+
+    if lower.contains("connection timeout")
+        || lower.contains("failed to clone")
+        || lower.contains("could not resolve host")
+        || lower.contains("network unreachable")
+        || lower.contains("connection refused")
+        || lower.contains("timed out")
+    {
+        return RepairError::NetworkError(stderr.to_string());
+    }
+
+    if lower.contains("cmake error")
+        || lower.contains("cmake build failed")
+        || lower.contains("ninja: build stopped")
+        || lower.contains("undefined reference")
+        || lower.contains("compilation failed")
+    {
+        return RepairError::BuildError(stderr.to_string());
+    }
+
+    if lower.contains("command not found")
+        || lower.contains("no such file or directory")
+        || lower.contains("not found")
+    {
+        return RepairError::MissingPrerequisites(stderr.to_string());
+    }
+
+    if lower.contains("permission denied") || lower.contains("eacces") {
+        return RepairError::PermissionDenied(stderr.to_string());
+    }
+
+    RepairError::Unknown(stderr.to_string())
+}
+
+/// Attempt a repair operation with bounded retries for transient errors.
+///
+/// Returns `(attempts, result)` where `attempts` is the number of times `f` was called.
+pub fn attempt_repair_with_retry<F>(mut f: F) -> (usize, Result<(), RepairError>)
+where
+    F: FnMut() -> Result<(), RepairError>,
+{
+    let max_attempts = 1 + MAX_REPAIR_RETRIES; // initial + retries
+    for attempt in 1..=max_attempts {
+        match f() {
+            Ok(()) => return (attempt, Ok(())),
+            Err(e) if e.is_retryable() && attempt < max_attempts => continue,
+            Err(e) => return (attempt, Err(e)),
+        }
+    }
+    unreachable!()
+}
+
+// ============================================================================
 // Stale Build Warning Functions (AC1-AC7)
 // ============================================================================
 
