@@ -55,9 +55,7 @@ impl StreamingRenderer {
             let mut chunks = vec![];
             // Flush any buffered text before the marker
             if !self.buffer.is_empty() {
-                chunks.push(StreamChunk::Text(
-                    self.buffer.drain(..).collect(),
-                ));
+                chunks.push(StreamChunk::Text(self.buffer.drain(..).collect()));
             }
             chunks.push(StreamChunk::SpecialToken(marker));
             chunks.push(StreamChunk::EndOfSequence);
@@ -74,20 +72,14 @@ impl StreamingRenderer {
 
         // No partial match — flush buffer as text
         let text: String = self.buffer.drain(..).collect();
-        if text.is_empty() {
-            vec![]
-        } else {
-            vec![StreamChunk::Text(text)]
-        }
+        if text.is_empty() { vec![] } else { vec![StreamChunk::Text(text)] }
     }
 
     /// Signal end of generation.
     pub fn finish(&mut self) -> Vec<StreamChunk> {
         let mut chunks = vec![];
         if !self.buffer.is_empty() {
-            chunks.push(StreamChunk::Text(
-                self.buffer.drain(..).collect(),
-            ));
+            chunks.push(StreamChunk::Text(self.buffer.drain(..).collect()));
         }
         if self.state != RenderState::Complete {
             chunks.push(StreamChunk::EndOfSequence);
@@ -132,9 +124,7 @@ pub struct EotDetector {
 
 impl EotDetector {
     pub fn new() -> Self {
-        Self {
-            patterns: known_eot_patterns(),
-        }
+        Self { patterns: known_eot_patterns() }
     }
 
     /// Check if a token exactly matches an EoT pattern.
@@ -256,8 +246,7 @@ mod tests {
     fn test_feed_eot_token() {
         let mut r = StreamingRenderer::new();
         let chunks = r.feed_token("<|im_end|>");
-        assert!(chunks
-            .contains(&StreamChunk::SpecialToken("<|im_end|>".to_string())));
+        assert!(chunks.contains(&StreamChunk::SpecialToken("<|im_end|>".to_string())));
         assert!(chunks.contains(&StreamChunk::EndOfSequence));
         assert_eq!(r.state(), RenderState::Complete);
     }
@@ -285,9 +274,7 @@ mod tests {
         renderer.feed_token("world");
         renderer.buffer = "leftover".to_string();
         let chunks = renderer.finish();
-        assert!(chunks
-            .iter()
-            .any(|c| matches!(c, StreamChunk::Text(t) if t == "leftover")));
+        assert!(chunks.iter().any(|c| matches!(c, StreamChunk::Text(t) if t == "leftover")));
     }
 
     #[test]
@@ -322,25 +309,21 @@ mod tests {
     fn test_eot_eos_token() {
         let mut r = StreamingRenderer::new();
         let chunks = r.feed_token("</s>");
-        assert!(chunks
-            .contains(&StreamChunk::SpecialToken("</s>".to_string())));
+        assert!(chunks.contains(&StreamChunk::SpecialToken("</s>".to_string())));
     }
 
     #[test]
     fn test_eot_endoftext() {
         let mut r = StreamingRenderer::new();
         let chunks = r.feed_token("<|endoftext|>");
-        assert!(chunks.contains(
-            &StreamChunk::SpecialToken("<|endoftext|>".to_string())
-        ));
+        assert!(chunks.contains(&StreamChunk::SpecialToken("<|endoftext|>".to_string())));
     }
 
     #[test]
     fn test_eot_eot_id() {
         let mut r = StreamingRenderer::new();
         let chunks = r.feed_token("<|eot_id|>");
-        assert!(chunks
-            .contains(&StreamChunk::SpecialToken("<|eot_id|>".to_string())));
+        assert!(chunks.contains(&StreamChunk::SpecialToken("<|eot_id|>".to_string())));
     }
 
     #[test]
@@ -352,10 +335,7 @@ mod tests {
     #[test]
     fn test_detector_check_hit() {
         let d = EotDetector::new();
-        assert_eq!(
-            d.check("<|im_end|>"),
-            Some("<|im_end|>".to_string())
-        );
+        assert_eq!(d.check("<|im_end|>"), Some("<|im_end|>".to_string()));
     }
 
     #[test]
