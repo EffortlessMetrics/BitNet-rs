@@ -33,6 +33,7 @@
 pub mod activations;
 pub mod attention;
 pub mod batch_norm;
+pub mod constant_memory;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
@@ -57,11 +58,20 @@ pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
     launch_silu_gate, silu_gate_cpu,
 };
+pub use constant_memory::{
+    BroadcastBinding, ConfigParameterStore, ConfigValue, ConstantMemoryConfig, ConstantMemoryPool,
+    ConstantMemoryProfiler, ConstantMemoryStats, ConstantSlot, ConstantSlotId,
+    InvalidationStrategy, LutEntry, LutKind, ReadOnlyCacheHint, build_dequant_i2s_map,
+    precompute_rope_tables,
+};
+
 pub use attention::{
     AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
     attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
     launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
 };
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use constant_memory::CONSTANT_MEMORY_KERNEL_SRC;
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use attention::ATTENTION_KERNEL_SRC;
