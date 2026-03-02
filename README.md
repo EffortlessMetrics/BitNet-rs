@@ -82,7 +82,7 @@ sudo apt install intel-opencl-icd clinfo
 cargo build --release --no-default-features --features opencl,full-cli
 
 # Run inference
-cargo run -p bitnet-cli --no-default-features --features opencl,full-cli -- run \
+cargo run --release --no-default-features --features opencl,full-cli -- run \
   --model models/model.gguf --device opencl --prompt "Hello" --max-tokens 32
 ```
 
