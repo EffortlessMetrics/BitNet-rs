@@ -427,6 +427,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-backend-core"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [
@@ -523,6 +531,7 @@ name = "bitnet-common"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-backend-core",
  "bitnet-math",
  "bitnet-test-support",
  "bitnet-warn-once",

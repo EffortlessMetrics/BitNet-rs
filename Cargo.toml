@@ -2,6 +2,7 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-backend-core", # SRP: backend capability + selection contracts
   "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
@@ -121,6 +122,7 @@ resolver = "2"
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
 default-members = [
   "crates/bitnet-common",
+  "crates/bitnet-backend-core", # SRP: backend capability + selection contracts
   "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
@@ -385,6 +387,7 @@ harness = false
 required-features = ["cpu"]
 
 [workspace.dependencies]
+bitnet-backend-core = { path = "crates/bitnet-backend-core", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }

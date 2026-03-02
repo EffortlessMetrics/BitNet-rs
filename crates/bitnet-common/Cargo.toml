@@ -16,6 +16,7 @@ include = [
 ]
 
 [dependencies]
+bitnet-backend-core.workspace = true
 bitnet-math.workspace = true
 bitnet-warn-once.workspace = true
 anyhow.workspace = true
@@ -41,15 +42,15 @@ bitnet-test-support.workspace = true
 [features]
 integration-tests = []
 default = []
-cpu = []
-cuda = ["candle-core/cuda"]
-rocm = []
+cpu = ["bitnet-backend-core/cpu"]
+cuda = ["candle-core/cuda", "bitnet-backend-core/cuda"]
+rocm = ["bitnet-backend-core/rocm"]
 gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
-hip = []
+hip = ["bitnet-backend-core/hip"]
 npu = []
 metal = []
-oneapi = []
-opencl = []
+oneapi = ["bitnet-backend-core/oneapi"]
+opencl = ["bitnet-backend-core/opencl"]
 # Do NOT enable Candle's Metal feature on non-Apple hosts.
 # We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
 # only on macOS via a target-specific dependency (see below).

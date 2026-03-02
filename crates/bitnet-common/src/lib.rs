@@ -5,12 +5,18 @@
 //! abstractions.
 
 pub mod arch_registry;
-pub mod backend_selection;
 pub mod config;
+
+pub mod backend_selection {
+    pub use bitnet_backend_core::backend_selection::*;
+}
+
+pub mod kernel_registry {
+    pub use bitnet_backend_core::kernel_registry::*;
+}
 
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
-pub mod kernel_registry;
 pub mod memory_pool;
 pub mod strict_mode;
 pub mod tensor;
@@ -25,16 +31,16 @@ pub mod warn_once {
     pub use bitnet_warn_once::*;
 }
 
-pub use backend_selection::{
+pub use bitnet_backend_core::{
     BackendRequest, BackendSelectionError, BackendSelectionResult, BackendStartupSummary,
     select_backend,
 };
+pub use bitnet_backend_core::{KernelBackend, KernelCapabilities, SimdLevel};
 pub use bitnet_math::ceil_div;
 pub use bitnet_warn_once::warn_once;
 pub use bitnet_warn_once::warn_once_fn;
 pub use config::*;
 pub use error::*;
-pub use kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 pub use strict_mode::{
     ComputationType, MissingKernelScenario, MockInferencePath, PerformanceMetrics,
     StrictModeConfig, StrictModeEnforcer,

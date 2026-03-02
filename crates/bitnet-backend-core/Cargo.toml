@@ -1,0 +1,26 @@
+[package]
+name = "bitnet-backend-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP core backend capability and selection contracts"
+
+[dependencies]
+serde.workspace = true
+
+[features]
+default = []
+cpu = []
+cuda = []
+rocm = []
+hip = []
+oneapi = []
+opencl = []
+
+[dev-dependencies]
+proptest.workspace = true
