@@ -441,12 +441,16 @@ proptest! {
             kernel_size,
             stride: kernel_size,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         let max_cfg = PoolConfig {
             pool_type: PoolType::Max,
             kernel_size,
             stride: kernel_size,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
 
         if let (Ok(avg), Ok(max_out)) = (pool_1d(&data, &avg_cfg), pool_1d(&data, &max_cfg)) {

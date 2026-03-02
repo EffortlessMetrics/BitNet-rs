@@ -38,7 +38,8 @@ pub mod loss;
 pub mod pooling;
 pub use pooling::{
     PoolConfig, PoolType, PoolingConfig, PoolingKernel, adaptive_avg_pool_1d, adaptive_avg_pool_2d,
-    global_avg_pool, global_max_pool, pool_1d, pool_2d,
+    adaptive_max_pool1d, avg_pool1d, avg_pool1d_avx2, global_avg_pool, global_max_pool, lp_pool1d,
+    max_pool1d, max_pool1d_avx2, max_unpool1d, pool_1d, pool_2d,
 };
 pub mod quantize;
 pub mod quantized_matmul;

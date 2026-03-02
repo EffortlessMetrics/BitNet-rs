@@ -14,7 +14,14 @@ use bitnet_kernels::cpu::pooling::{
 
 #[test]
 fn pool_1d_max_basic() {
-    let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![1.0, 3.0, 2.0, 5.0, 4.0, 6.0];
     let result = pool_1d(&input, &config).unwrap();
     assert_eq!(result, vec![3.0, 5.0, 6.0]);
@@ -22,7 +29,14 @@ fn pool_1d_max_basic() {
 
 #[test]
 fn pool_1d_avg_basic() {
-    let config = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Average,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![2.0, 4.0, 6.0, 8.0];
     let result = pool_1d(&input, &config).unwrap();
     assert!((result[0] - 3.0).abs() < 1e-6);
@@ -31,7 +45,14 @@ fn pool_1d_avg_basic() {
 
 #[test]
 fn pool_1d_stride_1() {
-    let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 3,
+        stride: 1,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![1.0, 3.0, 2.0, 5.0, 4.0];
     let result = pool_1d(&input, &config).unwrap();
     // Windows: [1,3,2]→3, [3,2,5]→5, [2,5,4]→5
@@ -40,7 +61,14 @@ fn pool_1d_stride_1() {
 
 #[test]
 fn pool_1d_single_element_window() {
-    let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 1, stride: 1, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 1,
+        stride: 1,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![1.0, 2.0, 3.0];
     let result = pool_1d(&input, &config).unwrap();
     assert_eq!(result, vec![1.0, 2.0, 3.0]);
@@ -50,7 +78,14 @@ fn pool_1d_single_element_window() {
 
 #[test]
 fn pool_2d_max_basic() {
-    let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     // 4x4 input
     let input =
         vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
@@ -62,7 +97,14 @@ fn pool_2d_max_basic() {
 
 #[test]
 fn pool_2d_avg_basic() {
-    let config = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Average,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![1.0, 3.0, 5.0, 7.0]; // 2x2
     let (result, out_h, out_w) = pool_2d(&input, 2, 2, &config).unwrap();
     assert_eq!(out_h, 1);
@@ -127,7 +169,14 @@ fn global_avg_pool_negative() {
 
 #[test]
 fn pooling_kernel_apply_max() {
-    let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
+    let config = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        dilation: 1,
+        ceil_mode: false,
+    };
     let input = vec![1.0, 5.0, 3.0, 7.0];
     let result = PoolingKernel::apply(&input, &config).unwrap();
     assert_eq!(result, vec![5.0, 7.0]);
