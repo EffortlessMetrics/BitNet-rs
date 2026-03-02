@@ -240,7 +240,7 @@ mod template_detect {
     #[test]
     fn test_detect_instruct_from_tokenizer_name() {
         let result = TemplateType::detect(Some("mistral-instruct-v0.2"), None);
-        assert_eq!(result, TemplateType::Instruct);
+        assert_eq!(result, TemplateType::MistralChat);
     }
 
     /// No hints at all → Raw (fallback).

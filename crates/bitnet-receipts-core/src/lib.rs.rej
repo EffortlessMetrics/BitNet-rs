@@ -1,0 +1,20 @@
+--- lib.rs
++++ lib.rs
+@@ -194,7 +194,7 @@
+     /// Execution latency summary: "T_ms {throughput}tok/s"
+     pub timing_summary: String,
+
+-    /// Backend selection summary: "requested=X detected=[Y] selected=Z"
++    /// Backend selection summary: "requested=X detected=\[Y\] selected=Z"
+     pub backend_summary: String,
+
+     /// Inference engine component status/errors
+@@ -278,7 +278,7 @@
+         }
+     }
+
+-    /// Backward-compatible alias for [`generate`] with no backend summary.
++    /// Backward-compatible alias for `generate` with no backend summary.
+     pub fn produce(
+         req: &ValidationRequest,
+         config: &VerificationConfig,

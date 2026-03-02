@@ -5,7 +5,7 @@
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
-use bitnet_prompt_templates::{ChatRole, ChatTurn, TemplateType};
+use bitnet_prompt_templates_core::{ChatRole, ChatTurn, TemplateType};
 
 fn bench_detect(c: &mut Criterion) {
     let mut group = c.benchmark_group("template_detect");
@@ -54,7 +54,7 @@ fn bench_apply(c: &mut Criterion) {
         TemplateType::VicunaChat,
     ] {
         group.bench_function(format!("{template}"), |b| {
-            b.iter(|| template.apply(black_box(user_text), black_box(system)))
+            b.iter(|| template.apply(black_box(user_text), black_box(system.clone())))
         });
     }
 
@@ -83,11 +83,11 @@ fn bench_render_chat(c: &mut Criterion) {
 
     for template in &[TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::MistralChat] {
         group.bench_function(format!("{template}/3_turns"), |b| {
-            b.iter(|| template.render_chat(black_box(&history_3), black_box(system)))
+            b.iter(|| template.render_chat(black_box(&history_3), black_box(system.clone())))
         });
 
         group.bench_function(format!("{template}/20_turns"), |b| {
-            b.iter(|| template.render_chat(black_box(&history_10), black_box(system)))
+            b.iter(|| template.render_chat(black_box(&history_10), black_box(system.clone())))
         });
     }
 
