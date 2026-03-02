@@ -43,6 +43,7 @@ pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
+pub mod memory_coalescing;
 pub mod memory_pool;
 pub mod pooling;
 pub mod qk256_gemv;
