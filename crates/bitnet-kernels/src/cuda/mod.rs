@@ -51,6 +51,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod stream_mgmt;
 pub mod transpose;
 pub mod warp_ops;
 
@@ -197,3 +198,12 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use stream_mgmt::{
+    DefaultStreamBehavior, DepNode, DispatchResult, PipelineSchedule, PipelineStage,
+    PipelineStageKind, ProfileRecord, ScheduleStrategy, ScheduledTask, StreamAssignment,
+    StreamConfig, StreamEvent, StreamHandle, StreamOp, StreamPool, StreamPriority,
+    StreamPriorityManager, StreamProfiler, StreamScheduler, StreamUtilization,
+    dependency_graph_to_streams, event_record, event_wait, multi_stream_dispatch, pipeline_stages,
+    stream_sync,
+};
