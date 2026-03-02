@@ -11,6 +11,7 @@ mod caching;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
+pub mod fleet;
 pub mod gpu_streaming;
 pub mod health;
 pub mod model_manager;
