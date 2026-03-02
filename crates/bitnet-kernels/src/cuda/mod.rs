@@ -44,6 +44,7 @@ pub mod cooperative_groups;
 pub mod dequant;
 pub mod elementwise;
 pub mod embedding;
+pub mod embedding_ops;
 pub mod fused_attention;
 pub mod fusion;
 pub mod gating;
@@ -230,6 +231,21 @@ pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use embedding::{EMBEDDING_LOOKUP_KERNEL_SRC, EMBEDDING_WITH_POSITION_KERNEL_SRC};
+
+pub use embedding_ops::{
+    EmbeddingBagMode, EmbeddingConfig, EmbeddingTable, embedding_bag, embedding_gradient,
+    embedding_lookup, embedding_lookup_sparse, embedding_norm, fused_embedding_layernorm,
+    launch_embedding_bag, launch_embedding_gradient, launch_embedding_norm,
+    launch_embedding_ops_lookup, launch_fused_embedding_layernorm, launch_sinusoidal_position,
+    learned_position_embedding, position_embedding, sinusoidal_position_embedding,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use embedding_ops::{
+    EMBEDDING_BAG_SUM_KERNEL_SRC, EMBEDDING_GRADIENT_KERNEL_SRC, EMBEDDING_NORM_KERNEL_SRC,
+    EMBEDDING_OPS_LOOKUP_KERNEL_SRC, FUSED_EMBEDDING_LAYERNORM_KERNEL_SRC,
+    SINUSOIDAL_POSITION_KERNEL_SRC,
+};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
