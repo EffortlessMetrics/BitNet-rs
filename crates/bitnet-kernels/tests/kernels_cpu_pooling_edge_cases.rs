@@ -23,40 +23,19 @@ const TOL: f32 = 1e-5;
 
 #[test]
 fn pool_config_valid_max() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 0 };
     assert!(cfg.validate().is_ok());
 }
 
 #[test]
 fn pool_config_zero_kernel_error() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 0,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 0, stride: 1, padding: 0 };
     assert!(cfg.validate().is_err());
 }
 
 #[test]
 fn pool_config_zero_stride_error() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 0, padding: 0 };
     assert!(cfg.validate().is_err());
 }
 
@@ -67,22 +46,14 @@ fn pool_config_global_max_skips_validation() {
         kernel_size: 0, // would fail for non-global
         stride: 0,
         padding: 0,
-        dilation: 1,
-        ceil_mode: false,
     };
     assert!(cfg.validate().is_ok());
 }
 
 #[test]
 fn pool_config_global_avg_skips_validation() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalAverage,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg =
+        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
     assert!(cfg.validate().is_ok());
 }
 
@@ -93,14 +64,7 @@ fn pool_config_global_avg_skips_validation() {
 #[test]
 fn max_pool_1d_basic() {
     let input = vec![1.0, 3.0, 2.0, 5.0, 4.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     // Windows: [1,3,2]=3, [3,2,5]=5, [2,5,4]=5
     assert_eq!(out.len(), 3);
@@ -112,14 +76,7 @@ fn max_pool_1d_basic() {
 #[test]
 fn max_pool_1d_stride_2() {
     let input = vec![1.0, 5.0, 2.0, 8.0, 3.0, 7.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     // Windows: [1,5]=5, [2,8]=8, [3,7]=7
     assert_eq!(out.len(), 3);
@@ -131,14 +88,7 @@ fn max_pool_1d_stride_2() {
 #[test]
 fn max_pool_1d_with_padding() {
     let input = vec![3.0, 1.0, 4.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 1,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 1 };
     let out = pool_1d(&input, &cfg).unwrap();
     // Padded: [-inf, 3, 1, 4, -inf]
     // Windows: [-inf,3,1]=3, [3,1,4]=4, [1,4,-inf]=4
@@ -151,14 +101,7 @@ fn max_pool_1d_with_padding() {
 #[test]
 fn max_pool_1d_kernel_equals_input() {
     let input = vec![2.0, 5.0, 1.0, 8.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 4,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 4, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 1);
     assert!((out[0] - 8.0).abs() < TOL);
@@ -167,14 +110,7 @@ fn max_pool_1d_kernel_equals_input() {
 #[test]
 fn max_pool_1d_single_element() {
     let input = vec![42.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 1,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 1, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 1);
     assert!((out[0] - 42.0).abs() < TOL);
@@ -183,14 +119,7 @@ fn max_pool_1d_single_element() {
 #[test]
 fn max_pool_1d_negative_values() {
     let input = vec![-5.0, -3.0, -8.0, -1.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 3);
     assert!((out[0] - (-3.0)).abs() < TOL);
@@ -205,14 +134,7 @@ fn max_pool_1d_negative_values() {
 #[test]
 fn avg_pool_1d_basic() {
     let input = vec![2.0, 4.0, 6.0, 8.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 2);
     assert!((out[0] - 3.0).abs() < TOL);
@@ -222,21 +144,13 @@ fn avg_pool_1d_basic() {
 #[test]
 fn avg_pool_count_include_pad_same_as_avg() {
     let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-    let cfg_avg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 3,
-        stride: 1,
-        padding: 1,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg_avg =
+        PoolConfig { pool_type: PoolType::Average, kernel_size: 3, stride: 1, padding: 1 };
     let cfg_cip = PoolConfig {
         pool_type: PoolType::AvgPoolCountIncludePad,
         kernel_size: 3,
         stride: 1,
         padding: 1,
-        dilation: 1,
-        ceil_mode: false,
     };
     let out_avg = pool_1d(&input, &cfg_avg).unwrap();
     let out_cip = pool_1d(&input, &cfg_cip).unwrap();
@@ -253,14 +167,7 @@ fn avg_pool_count_include_pad_same_as_avg() {
 #[test]
 fn global_max_basic() {
     let input = vec![1.0, 5.0, 3.0, 2.0, 4.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalMax,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 1);
     assert!((out[0] - 5.0).abs() < TOL);
@@ -269,14 +176,8 @@ fn global_max_basic() {
 #[test]
 fn global_avg_basic() {
     let input = vec![2.0, 4.0, 6.0, 8.0, 10.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalAverage,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg =
+        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert_eq!(out.len(), 1);
     assert!((out[0] - 6.0).abs() < TOL);
@@ -284,28 +185,14 @@ fn global_avg_basic() {
 
 #[test]
 fn global_max_single_element() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalMax,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
     let out = pool_1d(&[7.0], &cfg).unwrap();
     assert!((out[0] - 7.0).abs() < TOL);
 }
 
 #[test]
 fn global_pool_empty_error() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalMax,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
     assert!(pool_1d(&[], &cfg).is_err());
 }
 
@@ -361,14 +248,7 @@ fn pool_2d_max_basic() {
         4.0, 5.0, 6.0,
         7.0, 8.0, 9.0,
     ];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 1, padding: 0 };
     let (out, oh, ow) = pool_2d(&input, 3, 3, &cfg).unwrap();
     assert_eq!(oh, 2);
     assert_eq!(ow, 2);
@@ -385,14 +265,7 @@ fn pool_2d_avg_basic() {
         1.0, 3.0,
         5.0, 7.0,
     ];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 2,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 1, padding: 0 };
     let (out, oh, ow) = pool_2d(&input, 2, 2, &cfg).unwrap();
     assert_eq!(oh, 1);
     assert_eq!(ow, 1);
@@ -402,14 +275,7 @@ fn pool_2d_avg_basic() {
 #[test]
 fn pool_2d_global_max() {
     let input = vec![1.0, 5.0, 3.0, 9.0];
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalMax,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
     let (out, oh, ow) = pool_2d(&input, 2, 2, &cfg).unwrap();
     assert_eq!(oh, 1);
     assert_eq!(ow, 1);
@@ -418,14 +284,7 @@ fn pool_2d_global_max() {
 
 #[test]
 fn pool_2d_input_size_mismatch_error() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 1, padding: 0 };
     assert!(pool_2d(&[1.0, 2.0, 3.0], 2, 2, &cfg).is_err());
 }
 
@@ -571,14 +430,7 @@ fn global_max_pool_not_divisible_error() {
 #[test]
 fn max_pool_all_same_values() {
     let input = vec![5.0; 10];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     for &v in &out {
         assert!((v - 5.0).abs() < TOL);
@@ -588,14 +440,7 @@ fn max_pool_all_same_values() {
 #[test]
 fn avg_pool_large_values() {
     let input = vec![1e8, 1e8, 1e8, 1e8];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     for &v in &out {
         assert!((v - 1e8).abs() < 1.0);
@@ -605,14 +450,7 @@ fn avg_pool_large_values() {
 #[test]
 fn max_pool_with_neg_infinity() {
     let input = vec![f32::NEG_INFINITY, 1.0, f32::NEG_INFINITY];
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 0 };
     let out = pool_1d(&input, &cfg).unwrap();
     assert!((out[0] - 1.0).abs() < TOL);
 }

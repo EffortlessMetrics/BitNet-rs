@@ -222,14 +222,7 @@ fn rope_apply_known_vector() {
 
 #[test]
 fn pool_avg_known_input() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 3,
-        stride: 1,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 3, stride: 1, padding: 0 };
     let input = [1.0_f32, 2.0, 3.0, 4.0, 5.0];
     let output = PoolingKernel::apply(&input, &cfg).unwrap();
     insta::assert_snapshot!(fmt6(&output));
@@ -237,14 +230,7 @@ fn pool_avg_known_input() {
 
 #[test]
 fn pool_max_known_input() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
     let input = [1.0_f32, 3.0, 2.0, 5.0, 4.0, 6.0];
     let output = PoolingKernel::apply(&input, &cfg).unwrap();
     insta::assert_snapshot!(fmt6(&output));
@@ -252,14 +238,8 @@ fn pool_max_known_input() {
 
 #[test]
 fn pool_global_average() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalAverage,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg =
+        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
     let input = [2.0_f32, 4.0, 6.0, 8.0];
     let output = PoolingKernel::apply(&input, &cfg).unwrap();
     insta::assert_snapshot!(fmt6(&output));

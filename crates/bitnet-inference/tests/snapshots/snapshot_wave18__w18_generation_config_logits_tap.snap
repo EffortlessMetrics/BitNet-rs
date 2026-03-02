@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave18.rs
-expression: "format!(\"logits_tap_steps={} logits_topk={}\", cfg.logits_tap_steps,\ncfg.logits_topk)"
----
-logits_tap_steps=5 logits_topk=20

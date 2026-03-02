@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave17.rs
-expression: activations
----
-[
-    GeLU,
-    SiLU,
-    ReLU,
-]

@@ -286,13 +286,7 @@ fn query_device_string(func: ClGetDeviceInfo, handle: usize, param: u32) -> Stri
 fn query_device_u32(func: ClGetDeviceInfo, handle: usize, param: u32) -> u32 {
     let mut val: u32 = 0;
     let rc = unsafe {
-        func(
-            handle,
-            param,
-            std::mem::size_of::<u32>(),
-            (&raw mut val).cast(),
-            std::ptr::null_mut(),
-        )
+        func(handle, param, std::mem::size_of::<u32>(), (&raw mut val).cast(), std::ptr::null_mut())
     };
     if rc == CL_SUCCESS { val } else { 0 }
 }
@@ -300,13 +294,7 @@ fn query_device_u32(func: ClGetDeviceInfo, handle: usize, param: u32) -> u32 {
 fn query_device_u64(func: ClGetDeviceInfo, handle: usize, param: u32) -> u64 {
     let mut val: u64 = 0;
     let rc = unsafe {
-        func(
-            handle,
-            param,
-            std::mem::size_of::<u64>(),
-            (&raw mut val).cast(),
-            std::ptr::null_mut(),
-        )
+        func(handle, param, std::mem::size_of::<u64>(), (&raw mut val).cast(), std::ptr::null_mut())
     };
     if rc == CL_SUCCESS { val } else { 0 }
 }
