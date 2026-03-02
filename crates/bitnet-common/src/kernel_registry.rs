@@ -123,7 +123,7 @@ pub struct KernelCapabilities {
 impl KernelCapabilities {
     /// Build from compile-time feature flags (no runtime probing).
     ///
-    /// `cuda_runtime` will be `false`; use [`with_cuda_runtime`] to fill it in.
+    /// `cuda_runtime` will be `false`; use [`Self::with_cuda_runtime`] to fill it in.
     pub fn from_compile_time() -> Self {
         KernelCapabilities {
             cpu_rust: cfg!(feature = "cpu"),
