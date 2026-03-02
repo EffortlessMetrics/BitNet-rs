@@ -632,6 +632,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-dispatch-core"
+version = "0.1.0"
+
+[[package]]
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
@@ -1843,7 +1847,7 @@ dependencies = [
 name = "bitnet-wgpu"
 version = "0.1.0"
 dependencies = [
- "bitnet-nvidia",
+ "bitnet-dispatch-core",
  "bytemuck",
  "pollster",
  "proptest",
