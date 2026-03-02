@@ -78,6 +78,9 @@ pub mod neon_transpose;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_convolution;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_padding_clipping;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
