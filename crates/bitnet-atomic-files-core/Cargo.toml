@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-atomic-files-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "SRP atomic file write primitives for small metadata/config artifacts"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }

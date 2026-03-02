@@ -1,3 +1,4 @@
+pub use bitnet_atomic_files_core::atomic_write;
 pub use bitnet_download_core::{
     DownloadValidationError, atomic_write, offline_enabled, parse_content_range_total,
     validate_downloaded_len,
