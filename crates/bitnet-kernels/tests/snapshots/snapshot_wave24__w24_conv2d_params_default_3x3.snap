@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: params
+---
+Conv2DParams {
+    stride: (
+        1,
+        1,
+    ),
+    padding: (
+        1,
+        1,
+    ),
+    dilation: (
+        1,
+        1,
+    ),
+}

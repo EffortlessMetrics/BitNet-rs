@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: t
+---
+QuantizedTensor {
+    data: [
+        171,
+        205,
+        239,
+        1,
+    ],
+    qtype: I2S,
+    shape: [
+        2,
+        16,
+    ],
+    scales: [
+        0.5,
+        0.25,
+    ],
+    zero_points: None,
+    block_size: 32,
+}

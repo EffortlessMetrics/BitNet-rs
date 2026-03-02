@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: err
+---
+QuantError {
+    max_abs_error: 0.032,
+    mean_abs_error: 0.008,
+    rmse: 0.012,
+    snr_db: 38.5,
+}

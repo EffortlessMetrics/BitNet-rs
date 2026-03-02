@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: cfg
+---
+ThreadPoolConfig {
+    num_threads: 8,
+    affinity: true,
+    priority: 2,
+    name_prefix: "bitnet-w24",
+}

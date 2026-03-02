@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: methods
+---
+[
+    MinMax,
+    Percentile(
+        99.0,
+    ),
+    Percentile(
+        99.9,
+    ),
+    MSE,
+]

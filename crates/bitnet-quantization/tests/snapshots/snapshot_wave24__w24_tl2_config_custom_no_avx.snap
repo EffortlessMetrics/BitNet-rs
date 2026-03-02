@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: cfg
+---
+TL2Config {
+    block_size: 64,
+    lookup_table_size: 128,
+    use_avx512: false,
+    use_avx2: false,
+    precision_bits: 2,
+    vectorized_tables: false,
+}

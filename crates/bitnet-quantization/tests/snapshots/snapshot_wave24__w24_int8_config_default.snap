@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: cfg
+---
+Int8QuantConfig {
+    per_channel: true,
+    symmetric: true,
+    calibration_method: MinMax,
+}

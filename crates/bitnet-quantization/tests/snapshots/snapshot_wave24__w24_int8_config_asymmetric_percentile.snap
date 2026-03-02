@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: cfg
+---
+Int8QuantConfig {
+    per_channel: false,
+    symmetric: false,
+    calibration_method: Percentile(
+        99.9,
+    ),
+}

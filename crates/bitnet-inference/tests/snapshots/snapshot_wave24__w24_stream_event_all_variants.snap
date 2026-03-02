@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: events
+---
+[
+    Token(
+        42,
+    ),
+    Text(
+        "hello",
+    ),
+    EndOfStream,
+    Error(
+        "invalid utf8",
+    ),
+]

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: q
+---
+CPUQuantizer {
+    tolerance_config: ToleranceConfig {
+        i2s_tolerance: 0.001,
+        tl_tolerance: 0.01,
+        perplexity_tolerance: 0.001,
+        strict_validation: true,
+    },
+}

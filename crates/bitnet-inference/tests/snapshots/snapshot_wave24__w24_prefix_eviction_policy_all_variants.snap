@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: policies
+---
+[
+    LRU,
+    LFU,
+    FIFO,
+    TTL,
+]

@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: cfg
+---
+Conv2dConfig {
+    in_channels: 64,
+    out_channels: 128,
+    kernel_h: 3,
+    kernel_w: 3,
+    stride_h: 1,
+    stride_w: 1,
+    padding_h: 1,
+    padding_w: 1,
+    dilation_h: 1,
+    dilation_w: 1,
+    groups: 1,
+}

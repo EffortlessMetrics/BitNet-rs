@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: cfg
+---
+RopeConfig {
+    head_dim: 8,
+    max_seq_len: 64,
+    base: 10000.0,
+    scaling_factor: 1.0,
+}

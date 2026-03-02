@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: result
+---
+Ok(
+    ValueWithIndex {
+        value: 6.0,
+        index: 5,
+    },
+)
