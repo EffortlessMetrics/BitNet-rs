@@ -179,12 +179,13 @@ pub fn opencl_available_runtime() -> bool {
         .map(|v| v == "1" || v.to_lowercase() == "true")
         .unwrap_or(false);
 
+    #[allow(clippy::collapsible_if)]
     if !strict_mode {
         if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
             if fake.eq_ignore_ascii_case("opencl") {
                 return true;
             }
-            if fake.eq_ignore_ascii_case("none") {
+            if fake.eq_ignore_ascii_case("none") || fake.eq_ignore_ascii_case("cpu") {
                 return false;
             }
         }

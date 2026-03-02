@@ -1,7 +1,7 @@
-//! Shared LayerNorm helpers for SafeTensors-based tools.
+//! Shared `LayerNorm` helpers for SafeTensors-based tools.
 //!
 //! This microcrate centralizes tensor-name filtering (`is_ln_gamma`),
-//! LayerNorm tensor iteration, RMS computation, and casting LN gamma tensors
+//! `LayerNorm` tensor iteration, RMS computation, and casting LN gamma tensors
 //! to f16.
 
 use anyhow::{Result, anyhow};
@@ -11,12 +11,12 @@ use std::path::Path;
 
 pub use bitnet_validation::is_ln_gamma;
 
-/// Read a SafeTensors file fully into memory.
+/// Read a `SafeTensors` file fully into memory.
 pub fn read_safetensors_bytes(path: &Path) -> Result<Vec<u8>> {
     Ok(std::fs::read(path)?)
 }
 
-/// Iterate LN tensors (name, tensor) from a loaded SafeTensors buffer.
+/// Iterate LN tensors (name, tensor) from a loaded `SafeTensors` buffer.
 pub fn iter_ln_tensors(
     buf: &[u8],
 ) -> Result<impl Iterator<Item = (String, safetensors::tensor::TensorView<'_>)>> {
@@ -25,6 +25,7 @@ pub fn iter_ln_tensors(
 }
 
 /// Compute RMS for the given raw tensor view (sqrt(mean(x^2))).
+#[allow(clippy::too_many_lines, clippy::cast_precision_loss, clippy::cast_lossless)]
 pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
     let dtype = t.dtype();
     let shape = t.shape();
@@ -129,13 +130,14 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
             }
             (acc / (n as f64)).sqrt()
         }
-        _ => return Err(anyhow!("unsupported dtype for RMS: {:?}", dtype)),
+        _ => return Err(anyhow!("unsupported dtype for RMS: {dtype:?}")),
     };
 
     Ok(rms)
 }
 
 /// Cast LN gamma bytes to f16 (returns owned `Vec<u8>` with f16 encoding).
+#[allow(clippy::cast_lossless, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>> {
     let dtype = t.dtype();
     let shape = t.shape();
@@ -186,7 +188,7 @@ pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>
             let xs: &[u32] = bytemuck::try_cast_slice(data).map_err(|_| anyhow!("bad u32"))?;
             out.extend(xs.iter().take(n).map(|&v| f16::from_f32(v as f32).to_bits()));
         }
-        _ => return Err(anyhow!("unsupported dtype for LN cast: {:?}", dtype)),
+        _ => return Err(anyhow!("unsupported dtype for LN cast: {dtype:?}")),
     }
 
     Ok(bytemuck::cast_vec(out))

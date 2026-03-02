@@ -194,7 +194,7 @@ pub struct InferenceReceipt {
     /// Backend used: "cpu" | "cuda" | "metal"
     pub backend: String,
 
-    /// Backend selection summary: "requested=X detected=[Y] selected=Z"
+    /// Backend selection summary: "requested=X detected=\[Y\] selected=Z"
     /// Populated from BackendSelectionResult::summary() at receipt generation time.
     #[serde(default)]
     pub backend_summary: String,
@@ -278,7 +278,7 @@ impl InferenceReceipt {
         })
     }
 
-    /// Backward-compatible alias for [`generate`] with no backend summary.
+    /// Backward-compatible alias for `generate` with no backend summary.
     ///
     /// Equivalent to `generate(backend, kernels, None)`. Prefer `generate()` for new code.
     #[deprecated(since = "0.1.1", note = "use generate(backend, kernels, None) instead")]

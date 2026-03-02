@@ -389,10 +389,10 @@ pub fn compute_alibi_slopes(n_heads: usize) -> Vec<f32> {
 ///
 /// # Errors
 ///
-/// Returns [`KernelError::LaunchFailed`] if the kernel launch fails.
+/// Returns [`KernelError::ExecutionFailed`] if the kernel launch fails.
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_causal_mask(_config: &AttentionMaskConfig, _output: &mut [f32]) -> Result<()> {
-    Err(KernelError::LaunchFailed {
+    Err(KernelError::ExecutionFailed {
         kernel: "causal_mask_f32".into(),
         reason: "CUDA runtime not available — use causal_mask CPU fallback".into(),
     }
@@ -405,7 +405,7 @@ pub fn launch_sliding_window_mask(
     _config: &SlidingWindowConfig,
     _output: &mut [f32],
 ) -> Result<()> {
-    Err(KernelError::LaunchFailed {
+    Err(KernelError::ExecutionFailed {
         kernel: "sliding_window_mask_f32".into(),
         reason: "CUDA runtime not available — use sliding_window_mask CPU fallback".into(),
     }
@@ -419,7 +419,7 @@ pub fn launch_alibi_mask(
     _slopes: &[f32],
     _output: &mut [f32],
 ) -> Result<()> {
-    Err(KernelError::LaunchFailed {
+    Err(KernelError::ExecutionFailed {
         kernel: "alibi_mask_f32".into(),
         reason: "CUDA runtime not available — use alibi_mask CPU fallback".into(),
     }
@@ -429,7 +429,7 @@ pub fn launch_alibi_mask(
 /// Launch the CUDA additive mask application kernel.
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_apply_mask_additive(_scores: &mut [f32], _mask: &[f32]) -> Result<()> {
-    Err(KernelError::LaunchFailed {
+    Err(KernelError::ExecutionFailed {
         kernel: "apply_mask_additive_f32".into(),
         reason: "CUDA runtime not available — use apply_mask_additive CPU fallback".into(),
     }
@@ -439,7 +439,7 @@ pub fn launch_apply_mask_additive(_scores: &mut [f32], _mask: &[f32]) -> Result<
 /// Launch the CUDA multiplicative mask application kernel.
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_apply_mask_multiplicative(_scores: &mut [f32], _mask: &[f32]) -> Result<()> {
-    Err(KernelError::LaunchFailed {
+    Err(KernelError::ExecutionFailed {
         kernel: "apply_mask_multiplicative_f32".into(),
         reason: "CUDA runtime not available — use apply_mask_multiplicative CPU fallback".into(),
     }
