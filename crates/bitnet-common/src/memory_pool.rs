@@ -3,6 +3,9 @@
 //! Provides a thread-safe, size-bucketed pool that recycles byte buffers.
 //! Allocations are rounded up to the nearest power-of-two *size class*,
 //! which limits internal fragmentation while maximising reuse.
+//!
+//! Also provides [`BufferPool`], a lightweight f32 buffer pool with
+//! pre-defined size tiers for reducing allocation overhead during inference.
 
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -188,6 +191,138 @@ impl Drop for PooledBuffer {
             }
             // else: drop `buf`, freeing the memory
         }
+    }
+}
+
+// ── BufferPool (f32 tiered pool) ────────────────────────────────────
+
+/// Buffer pool for reusable f32 allocations.
+#[derive(Debug)]
+pub struct BufferPool {
+    pools: Vec<SizedPool>,
+}
+
+#[derive(Debug)]
+struct SizedPool {
+    buf_size: usize,
+    free: Vec<Vec<f32>>,
+    max_free: usize,
+    allocated: usize,
+    returned: usize,
+}
+
+impl SizedPool {
+    fn new(buf_size: usize, max_free: usize) -> Self {
+        Self { buf_size, free: Vec::new(), max_free, allocated: 0, returned: 0 }
+    }
+}
+
+impl Default for BufferPool {
+    fn default() -> Self {
+        Self::standard()
+    }
+}
+
+impl BufferPool {
+    /// Create pool with given size tiers.
+    pub fn new(sizes: &[(usize, usize)]) -> Self {
+        let pools =
+            sizes.iter().map(|&(buf_size, max_free)| SizedPool::new(buf_size, max_free)).collect();
+        Self { pools }
+    }
+
+    /// Standard pool for inference (256 to 1M elements).
+    pub fn standard() -> Self {
+        Self::new(&[
+            (256, 16),
+            (1024, 16),
+            (4096, 8),
+            (16384, 4),
+            (65536, 4),
+            (262144, 2),
+            (1048576, 2),
+        ])
+    }
+
+    /// Acquire a buffer of at least `min_size` elements.
+    pub fn acquire(&mut self, min_size: usize) -> Vec<f32> {
+        for pool in &mut self.pools {
+            if pool.buf_size >= min_size {
+                pool.allocated += 1;
+                return pool.free.pop().unwrap_or_else(|| vec![0.0f32; pool.buf_size]);
+            }
+        }
+        vec![0.0f32; min_size]
+    }
+
+    /// Return a buffer to the pool.
+    pub fn release(&mut self, mut buf: Vec<f32>) {
+        let size = buf.len();
+        for pool in &mut self.pools {
+            if pool.buf_size == size && pool.free.len() < pool.max_free {
+                buf.iter_mut().for_each(|v| *v = 0.0);
+                pool.free.push(buf);
+                pool.returned += 1;
+                return;
+            }
+        }
+    }
+
+    /// Pre-warm the pool by allocating buffers.
+    pub fn prewarm(&mut self, size: usize, count: usize) {
+        for pool in &mut self.pools {
+            if pool.buf_size == size {
+                while pool.free.len() < count.min(pool.max_free) {
+                    pool.free.push(vec![0.0f32; pool.buf_size]);
+                }
+                return;
+            }
+        }
+    }
+
+    /// Get pool statistics.
+    pub fn buffer_pool_stats(&self) -> BufferPoolStats {
+        let mut total_free = 0;
+        let mut total_allocated = 0;
+        let mut total_returned = 0;
+        let mut total_bytes = 0;
+
+        for pool in &self.pools {
+            total_free += pool.free.len();
+            total_allocated += pool.allocated;
+            total_returned += pool.returned;
+            total_bytes += pool.free.len() * pool.buf_size * 4;
+        }
+
+        BufferPoolStats {
+            free_buffers: total_free,
+            total_allocated,
+            total_returned,
+            memory_bytes: total_bytes,
+        }
+    }
+
+    /// Number of size tiers.
+    pub fn tier_count(&self) -> usize {
+        self.pools.len()
+    }
+}
+
+/// Buffer pool statistics.
+#[derive(Debug, Clone)]
+pub struct BufferPoolStats {
+    pub free_buffers: usize,
+    pub total_allocated: usize,
+    pub total_returned: usize,
+    pub memory_bytes: usize,
+}
+
+impl BufferPoolStats {
+    pub fn hit_rate(&self) -> f64 {
+        if self.total_allocated == 0 {
+            return 0.0;
+        }
+        self.total_returned as f64 / self.total_allocated as f64
     }
 }
 
@@ -418,5 +553,99 @@ mod tests {
         // Reuse from cloned handle.
         let _buf2 = pool2.allocate(128);
         assert_eq!(pool.stats().hits, 1);
+    }
+
+    // ── BufferPool tests ────────────────────────────────────────────
+
+    #[test]
+    fn bp_standard_pool() {
+        let pool = BufferPool::standard();
+        assert!(pool.tier_count() >= 5);
+    }
+
+    #[test]
+    fn bp_acquire_release() {
+        let mut pool = BufferPool::standard();
+        let buf = pool.acquire(100);
+        assert!(buf.len() >= 100);
+        pool.release(buf);
+        let stats = pool.buffer_pool_stats();
+        assert_eq!(stats.free_buffers, 1);
+    }
+
+    #[test]
+    fn bp_acquire_reuse() {
+        let mut pool = BufferPool::standard();
+        let buf = pool.acquire(256);
+        assert_eq!(buf.len(), 256);
+        pool.release(buf);
+        let buf2 = pool.acquire(256);
+        assert_eq!(buf2.len(), 256);
+    }
+
+    #[test]
+    fn bp_large_allocation() {
+        let mut pool = BufferPool::standard();
+        let buf = pool.acquire(2_000_000);
+        assert_eq!(buf.len(), 2_000_000);
+    }
+
+    #[test]
+    fn bp_prewarm() {
+        let mut pool = BufferPool::standard();
+        pool.prewarm(4096, 3);
+        let stats = pool.buffer_pool_stats();
+        assert!(stats.free_buffers >= 3);
+    }
+
+    #[test]
+    fn bp_stats_initial() {
+        let pool = BufferPool::standard();
+        let stats = pool.buffer_pool_stats();
+        assert_eq!(stats.free_buffers, 0);
+        assert_eq!(stats.total_allocated, 0);
+    }
+
+    #[test]
+    fn bp_hit_rate() {
+        let mut pool = BufferPool::standard();
+        let b1 = pool.acquire(256);
+        pool.release(b1);
+        let _b2 = pool.acquire(256);
+        let stats = pool.buffer_pool_stats();
+        assert!(stats.hit_rate() > 0.0);
+    }
+
+    #[test]
+    fn bp_zero_hit_rate() {
+        let stats = BufferPoolStats {
+            free_buffers: 0,
+            total_allocated: 0,
+            total_returned: 0,
+            memory_bytes: 0,
+        };
+        assert_eq!(stats.hit_rate(), 0.0);
+    }
+
+    #[test]
+    fn bp_custom_pool() {
+        let pool = BufferPool::new(&[(64, 4), (128, 4)]);
+        assert_eq!(pool.tier_count(), 2);
+    }
+
+    #[test]
+    fn bp_default() {
+        let pool = BufferPool::default();
+        assert!(pool.tier_count() > 0);
+    }
+
+    #[test]
+    fn bp_release_zeroed() {
+        let mut pool = BufferPool::standard();
+        let mut buf = pool.acquire(256);
+        buf[0] = 42.0;
+        pool.release(buf);
+        let buf2 = pool.acquire(256);
+        assert_eq!(buf2[0], 0.0);
     }
 }
