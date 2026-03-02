@@ -133,3 +133,9 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
+pub mod positional_encoding;
+pub use positional_encoding::{
+    PositionalEncodingError, apply_alibi_bias, apply_rope_neox, apply_rope_pe,
+    build_sin_cos_tables, compute_alibi_slopes, learnable_pe_lookup, relative_position_bias,
+    sinusoidal_pe,
+};
