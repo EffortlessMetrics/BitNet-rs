@@ -18,6 +18,8 @@
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
 //! - [`matmul`]: Dense f32/f16 matrix multiplication (tiled GEMM) with batched and
 //!   transpose support
+//! - [`tensor_core_gemm`]: Tensor Core GEMM via WMMA with INT1-FP16 inputs,
+//!   mixed-precision accumulation, batched, split-K, and multi-warp support
 //! - [`linear`]: Linear projection (y = xW^T + bias) CUDA kernel and launch stub
 //! - [`quantized_matmul`]: I2_S quantized matrix multiplication with CPU fallback
 //! - [`transpose`]: 2D/ND transpose and reshape with tiled shared-memory CUDA kernels
@@ -51,6 +53,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod tensor_core_gemm;
 pub mod transpose;
 
 pub use activations::{
@@ -133,6 +136,13 @@ pub use quantize::{
     quantize_i2s_cpu, quantize_ternary_cpu,
 };
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
+pub use tensor_core_gemm::{
+    AccumulatorFragment, AccumulatorType, FragmentLayout, TensorCoreGemmConfig, TileWorkItem,
+    WmmaFragment, WmmaInputType, WmmaTileShape, batched_tensor_core_gemm_cpu,
+    benchmark_tensor_core_gemm, load_fragment_a, load_fragment_b, mixed_input_gemm_cpu,
+    multi_warp_gemm_cpu, schedule_tiles, split_k_tensor_core_gemm_cpu, store_accumulator,
+    tensor_core_gemm, tensor_core_gemm_cpu, tensor_core_gemm_f16_cpu, wmma_mma,
+};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
     transpose_nd_cpu_fallback,
@@ -188,3 +198,6 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use tensor_core_gemm::{TENSOR_CORE_GEMM_KERNEL_SRC, launch_tensor_core_gemm};
