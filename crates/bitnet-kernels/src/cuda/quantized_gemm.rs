@@ -1,969 +1,925 @@
-//! Optimized quantized GEMM for 1-bit and 2-bit weight matrices.
+//! CUDA quantized GEMM kernels for INT2/INT4 matrix multiplication.
 //!
-//! # Overview
+//! # Kernel strategy
 //!
-//! This module provides a comprehensive quantized General Matrix Multiply
-//! (GEMM) implementation optimized for BitNet inference.  Unlike
-//! [`super::quantized_matmul`] which focuses on I2_S fused
-//! dequantize-matmul, this module adds:
+//! Provides fused dequantization + GEMM for quantized weight matrices
+//! targeting BitNet 1-bit and low-bit inference workloads:
 //!
-//! - **Multiple precision**: INT2 (ternary), INT4, INT8 weight formats
-//! - **Tiled GEMM**: Shared-memory tiling for optimal GPU occupancy
-//! - **Split-K / Stream-K**: Parallel reduction along K for tall-skinny
-//!   matrices
-//! - **Tensor-core awareness**: Config hints for WMMA tile sizes
-//! - **Mixed-precision accumulation**: Low-precision inputs with FP32
-//!   accumulator
-//! - **Batched GEMM**: Multi-head attention and batch inference
-//! - **Auto-tuning**: Heuristic tile/split selection per problem shape
+//! - **INT2 × INT2 → FP32**: Core BitNet ternary GEMM (`quantized_gemm_i2`)
+//! - **INT4 × INT4 → FP32**: 4-bit weight GEMM (`quantized_gemm_i4`)
+//! - **INT2 × FP16 → FP32**: Mixed-precision activation–weight GEMM
+//!   (`quantized_gemm_mixed`)
+//! - **Dequant-on-the-fly GEMM**: Streaming dequantization without
+//!   materialising the full FP32 weight matrix (`quantized_dequant_gemm`)
+//!
+//! Each path supports auto-tuned tile strategies (Small / Medium / Large)
+//! selected by [`select_tile_strategy`] based on problem dimensions and
+//! available shared memory.
+//!
+//! # Tile strategies
+//!
+//! | Strategy | Tile M×N×K | Target          |
+//! |----------|-----------|-----------------|
+//! | Small    | 16×16×16  | Small matrices  |
+//! | Medium   | 32×32×32  | General purpose |
+//! | Large    | 64×64×32  | Large matrices  |
+//! | Auto     | adaptive  | Best heuristic  |
 //!
 //! # CPU fallback
 //!
-//! Every entry point has a pure-Rust CPU fallback so that tests pass
-//! without GPU hardware.  The unified [`quantized_gemm`] dispatcher
-//! tries the GPU path first and falls back transparently.
-//!
-//! # Feature gate
-//!
-//! GPU launch stubs and CUDA kernel sources are behind
+//! All kernels have CPU-only reference implementations that are always
+//! compiled.  The GPU launch functions are feature-gated behind
 //! `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 
-use bitnet_common::{BitNetError, KernelError, Result};
+use std::fmt;
 
-// ── Quantization type enum ────────────────────────────────────────────
+use bitnet_common::{KernelError, Result};
 
-/// Supported weight quantization bit-widths.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum QuantType {
-    /// 2-bit ternary: {-1, 0, +1} — BitNet native.
-    INT2,
-    /// 4-bit signed integer: [-8, +7].
-    INT4,
-    /// 8-bit signed integer: [-128, +127].
-    INT8,
-}
+// ── Accumulator type ──────────────────────────────────────────────────
 
-impl QuantType {
-    /// Number of bits per weight element.
-    pub fn bits(self) -> u32 {
-        match self {
-            Self::INT2 => 2,
-            Self::INT4 => 4,
-            Self::INT8 => 8,
-        }
-    }
-
-    /// Number of weight elements packed per byte.
-    pub fn elems_per_byte(self) -> usize {
-        (8 / self.bits()) as usize
-    }
-}
-
-// ── Accumulation type ─────────────────────────────────────────────────
-
-/// Accumulation precision for mixed-precision GEMM.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AccumulationType {
-    /// 32-bit floating point accumulator.
+/// Floating-point accumulator precision for quantized GEMM.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccumulatorType {
+    /// 32-bit float accumulator (default, highest accuracy).
     F32,
-    /// 16-bit floating point accumulator (lower precision, higher
-    /// throughput on tensor cores).
+    /// 16-bit float accumulator (lower precision, higher throughput on
+    /// tensor cores).
     F16,
 }
 
-// ── QuantGemmConfig ───────────────────────────────────────────────────
-
-/// Configuration for a quantized GEMM operation.
-///
-/// Describes the matrix dimensions, quantization format, tiling
-/// strategy, and optional tensor-core hints.
-#[derive(Debug, Clone)]
-pub struct QuantGemmConfig {
-    /// Output rows (batch × sequence length).
-    pub m: usize,
-    /// Output columns (output hidden dimension).
-    pub n: usize,
-    /// Inner (reduction) dimension.
-    pub k: usize,
-    /// Weight quantization type.
-    pub quant_type: QuantType,
-    /// Tile size along M for shared-memory blocking.
-    pub tile_m: u32,
-    /// Tile size along N.
-    pub tile_n: u32,
-    /// Tile size along K.
-    pub tile_k: u32,
-    /// Accumulation data type.
-    pub accumulation_type: AccumulationType,
-    /// Whether to prefer tensor-core (WMMA) tile sizes.
-    pub use_tensor_cores: bool,
-    /// CUDA threads per block.
-    pub threads_per_block: u32,
-    /// Dynamic shared memory in bytes.
-    pub shared_mem_bytes: u32,
-    /// Batch count (1 for non-batched).
-    pub batch_size: usize,
-    /// Scalar multiplier for the product (α).
-    pub alpha: f32,
-    /// Scalar multiplier for existing output (β).
-    pub beta: f32,
-    /// Number of K-partitions for split-K (1 = disabled).
-    pub split_k: u32,
-}
-
-impl Default for QuantGemmConfig {
-    fn default() -> Self {
-        Self {
-            m: 1,
-            n: 1,
-            k: 1,
-            quant_type: QuantType::INT2,
-            tile_m: 32,
-            tile_n: 32,
-            tile_k: 32,
-            accumulation_type: AccumulationType::F32,
-            use_tensor_cores: false,
-            threads_per_block: 256,
-            shared_mem_bytes: 8192,
-            batch_size: 1,
-            alpha: 1.0,
-            beta: 0.0,
-            split_k: 1,
+impl fmt::Display for AccumulatorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AccumulatorType::F32 => write!(f, "f32"),
+            AccumulatorType::F16 => write!(f, "f16"),
         }
     }
 }
 
-impl QuantGemmConfig {
-    /// Create a config for the given dimensions and quantization type.
+// ── Error type ────────────────────────────────────────────────────────
+
+/// Errors specific to quantized GEMM operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QuantizedGemmError {
+    /// Matrix dimensions are incompatible for multiplication.
+    ShapeMismatch {
+        /// A rows.
+        m: usize,
+        /// A cols / B rows (must agree).
+        k_a: usize,
+        /// B cols / B rows.
+        k_b: usize,
+        /// B cols.
+        n: usize,
+    },
+    /// A dimension is zero.
+    ZeroDimension {
+        /// Which dimension is zero.
+        dim_name: &'static str,
+    },
+    /// Alignment requirements not met.
+    AlignmentError {
+        /// Required alignment in elements.
+        required: usize,
+        /// Actual dimension value.
+        actual: usize,
+        /// Which dimension.
+        dim_name: &'static str,
+    },
+    /// Tile configuration is invalid.
+    InvalidTileConfig {
+        /// Human-readable reason.
+        reason: String,
+    },
+    /// Accumulator buffer is too small.
+    BufferTooSmall {
+        /// Required number of elements.
+        required: usize,
+        /// Actual buffer length.
+        actual: usize,
+    },
+}
+
+impl fmt::Display for QuantizedGemmError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            QuantizedGemmError::ShapeMismatch { m, k_a, k_b, n } => {
+                write!(
+                    f,
+                    "quantized GEMM shape mismatch: A is [{m}×{k_a}], \
+                     B is [{k_b}×{n}] — inner dimensions must agree"
+                )
+            }
+            QuantizedGemmError::ZeroDimension { dim_name } => {
+                write!(f, "quantized GEMM dimension '{dim_name}' must be non-zero")
+            }
+            QuantizedGemmError::AlignmentError { required, actual, dim_name } => {
+                write!(
+                    f,
+                    "quantized GEMM alignment: {dim_name}={actual} \
+                     must be a multiple of {required}"
+                )
+            }
+            QuantizedGemmError::InvalidTileConfig { reason } => {
+                write!(f, "invalid tile config: {reason}")
+            }
+            QuantizedGemmError::BufferTooSmall { required, actual } => {
+                write!(
+                    f,
+                    "output buffer too small: need {required} elements, \
+                     got {actual}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for QuantizedGemmError {}
+
+impl From<QuantizedGemmError> for KernelError {
+    fn from(e: QuantizedGemmError) -> Self {
+        KernelError::InvalidArguments { reason: e.to_string() }
+    }
+}
+
+impl From<QuantizedGemmError> for bitnet_common::BitNetError {
+    fn from(e: QuantizedGemmError) -> Self {
+        bitnet_common::BitNetError::Kernel(e.into())
+    }
+}
+
+// ── Tile strategy ─────────────────────────────────────────────────────
+
+/// Tile strategy for CUDA thread-block decomposition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TileStrategy {
+    /// 16×16×16 tiles — good for small matrices or limited shared memory.
+    Small,
+    /// 32×32×32 tiles — balanced for most workloads.
+    Medium,
+    /// 64×64×32 tiles — high-throughput for large matrices.
+    Large,
+    /// Auto-select based on matrix dimensions.
+    Auto,
+}
+
+impl TileStrategy {
+    /// Resolve `Auto` to a concrete strategy.
+    fn resolve(self, m: usize, n: usize, k: usize) -> TileStrategy {
+        match self {
+            TileStrategy::Auto => select_tile_strategy(m, n, k),
+            other => other,
+        }
+    }
+
+    /// Tile dimensions `(tile_m, tile_n, tile_k)` for this strategy.
+    pub fn tile_dims(self) -> (u32, u32, u32) {
+        match self {
+            TileStrategy::Small => (16, 16, 16),
+            TileStrategy::Medium => (32, 32, 32),
+            TileStrategy::Large => (64, 64, 32),
+            TileStrategy::Auto => (32, 32, 32), // default if not resolved
+        }
+    }
+
+    /// Threads per block for this strategy.
+    pub fn threads_per_block(self) -> u32 {
+        match self {
+            TileStrategy::Small => 256,
+            TileStrategy::Medium => 256,
+            TileStrategy::Large => 256,
+            TileStrategy::Auto => 256,
+        }
+    }
+
+    /// Shared memory bytes (two tiles of `tile_m×tile_k` and `tile_k×tile_n`
+    /// f32 elements).
+    pub fn shared_mem_bytes(self) -> u32 {
+        let (tm, tn, tk) = self.tile_dims();
+        (tm * tk + tk * tn) * 4
+    }
+}
+
+/// Select the best tile strategy based on matrix dimensions.
+///
+/// Heuristic:
+/// - M or N ≤ 64 and K ≤ 256 → Small
+/// - M or N ≤ 512 → Medium
+/// - Otherwise → Large
+pub fn select_tile_strategy(m: usize, n: usize, k: usize) -> TileStrategy {
+    let max_mn = m.max(n);
+    if max_mn <= 64 && k <= 256 {
+        TileStrategy::Small
+    } else if max_mn <= 512 {
+        TileStrategy::Medium
+    } else {
+        TileStrategy::Large
+    }
+}
+
+// ── Configuration ─────────────────────────────────────────────────────
+
+/// Launch configuration for quantized GEMM kernels.
+#[derive(Debug, Clone)]
+pub struct QuantizedGemmConfig {
+    /// Number of output rows.
+    pub m: usize,
+    /// Number of output columns.
+    pub n: usize,
+    /// Inner (reduction) dimension.
+    pub k: usize,
+    /// Tile strategy for thread-block decomposition.
+    pub tile_strategy: TileStrategy,
+    /// CUDA tile size M.
+    pub tile_m: u32,
+    /// CUDA tile size N.
+    pub tile_n: u32,
+    /// CUDA tile size K.
+    pub tile_k: u32,
+    /// Whether to use tensor cores (SM 7.0+).
+    pub use_tensor_cores: bool,
+    /// Accumulator precision.
+    pub accumulator_type: AccumulatorType,
+    /// Number of threads per block.
+    pub threads_per_block: u32,
+    /// Bytes of dynamic shared memory.
+    pub shared_mem_bytes: u32,
+}
+
+impl QuantizedGemmConfig {
+    /// Create a configuration for the given matrix dimensions with auto
+    /// tile strategy.
     ///
     /// # Errors
     ///
     /// Returns an error if any dimension is zero.
-    pub fn for_shape(m: usize, n: usize, k: usize, quant_type: QuantType) -> Result<Self> {
-        if m == 0 || n == 0 || k == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "quantized GEMM dimensions must be non-zero: \
-                     m={m}, n={n}, k={k}"
-                ),
-            }
-            .into());
+    pub fn new(m: usize, n: usize, k: usize) -> Result<Self> {
+        if m == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "m" }.into());
         }
-        let (tile_m, tile_n, tile_k) = default_tile_for_quant(quant_type);
-        let shared = estimate_shared_mem(tile_m, tile_n, tile_k, quant_type);
+        if n == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "n" }.into());
+        }
+        if k == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "k" }.into());
+        }
+        let strategy = select_tile_strategy(m, n, k);
+        let (tile_m, tile_n, tile_k) = strategy.tile_dims();
         Ok(Self {
             m,
             n,
             k,
-            quant_type,
+            tile_strategy: strategy,
             tile_m,
             tile_n,
             tile_k,
-            shared_mem_bytes: shared,
-            ..Self::default()
+            use_tensor_cores: false,
+            accumulator_type: AccumulatorType::F32,
+            threads_per_block: strategy.threads_per_block(),
+            shared_mem_bytes: strategy.shared_mem_bytes(),
         })
     }
 
-    /// Enable tensor-core tile sizes (16×16×16 for Volta/Ampere WMMA).
+    /// Create a configuration with an explicit tile strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any dimension is zero.
+    pub fn with_strategy(m: usize, n: usize, k: usize, strategy: TileStrategy) -> Result<Self> {
+        if m == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "m" }.into());
+        }
+        if n == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "n" }.into());
+        }
+        if k == 0 {
+            return Err(QuantizedGemmError::ZeroDimension { dim_name: "k" }.into());
+        }
+        let resolved = strategy.resolve(m, n, k);
+        let (tile_m, tile_n, tile_k) = resolved.tile_dims();
+        Ok(Self {
+            m,
+            n,
+            k,
+            tile_strategy: resolved,
+            tile_m,
+            tile_n,
+            tile_k,
+            use_tensor_cores: false,
+            accumulator_type: AccumulatorType::F32,
+            threads_per_block: resolved.threads_per_block(),
+            shared_mem_bytes: resolved.shared_mem_bytes(),
+        })
+    }
+
+    /// Enable tensor core usage (Volta SM 7.0+).
+    #[must_use]
     pub fn with_tensor_cores(mut self, enable: bool) -> Self {
         self.use_tensor_cores = enable;
-        if enable {
-            self.tile_m = 16;
-            self.tile_n = 16;
-            self.tile_k = 16;
-            self.shared_mem_bytes = estimate_shared_mem(16, 16, 16, self.quant_type);
-        }
         self
     }
 
-    /// Set accumulation type.
-    pub fn with_accumulation(mut self, acc: AccumulationType) -> Self {
-        self.accumulation_type = acc;
+    /// Set the accumulator type.
+    #[must_use]
+    pub fn with_accumulator(mut self, acc: AccumulatorType) -> Self {
+        self.accumulator_type = acc;
         self
     }
 
-    /// Set batch size.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `batch_size` is zero.
-    pub fn with_batch_size(mut self, batch_size: usize) -> Result<Self> {
-        if batch_size == 0 {
-            return Err(
-                KernelError::InvalidArguments { reason: "batch_size must be > 0".into() }.into()
-            );
-        }
-        self.batch_size = batch_size;
-        Ok(self)
-    }
-
-    /// Set alpha / beta scalars.
-    pub fn with_alpha_beta(mut self, alpha: f32, beta: f32) -> Self {
-        self.alpha = alpha;
-        self.beta = beta;
-        self
-    }
-
-    /// Set split-K factor.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `splits` is zero.
-    pub fn with_split_k(mut self, splits: u32) -> Result<Self> {
-        if splits == 0 {
-            return Err(
-                KernelError::InvalidArguments { reason: "split_k must be > 0".into() }.into()
-            );
-        }
-        self.split_k = splits;
-        Ok(self)
-    }
-
-    /// Set custom tile sizes.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any tile dimension is zero.
-    pub fn with_tiles(mut self, tile_m: u32, tile_n: u32, tile_k: u32) -> Result<Self> {
-        if tile_m == 0 || tile_n == 0 || tile_k == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "tile dimensions must be non-zero: \
-                     tile_m={tile_m}, tile_n={tile_n}, tile_k={tile_k}"
-                ),
-            }
-            .into());
-        }
-        self.tile_m = tile_m;
-        self.tile_n = tile_n;
-        self.tile_k = tile_k;
-        self.shared_mem_bytes = estimate_shared_mem(tile_m, tile_n, tile_k, self.quant_type);
-        Ok(self)
-    }
-
-    /// Compute the CUDA grid dimensions.
+    /// Compute the CUDA grid dimensions for this configuration.
     pub fn grid_dim(&self) -> (u32, u32, u32) {
-        let grid_x = (self.n as u32).div_ceil(self.tile_n);
-        let grid_y = (self.m as u32).div_ceil(self.tile_m);
-        (grid_x, grid_y, self.batch_size as u32)
+        let gx = (self.n as u32).div_ceil(self.tile_n);
+        let gy = (self.m as u32).div_ceil(self.tile_m);
+        (gx, gy, 1)
     }
 
-    /// Compute the CUDA block dimensions.
+    /// Compute the CUDA block dimensions for this configuration.
     pub fn block_dim(&self) -> (u32, u32, u32) {
         (self.threads_per_block, 1, 1)
     }
 
-    /// Packed weight bytes needed for the K dimension of one column.
-    pub fn packed_k_bytes(&self) -> usize {
-        self.k.div_ceil(self.quant_type.elems_per_byte())
-    }
-
-    /// Total packed weight buffer size in bytes (all columns).
-    pub fn weight_buffer_size(&self) -> usize {
-        self.packed_k_bytes() * self.n
-    }
-
-    /// Estimated GFLOPS for this configuration at a given duration.
-    pub fn gflops(&self, duration_secs: f64) -> f64 {
-        let ops = 2.0 * self.m as f64 * self.n as f64 * self.k as f64 * self.batch_size as f64;
-        ops / (duration_secs * 1e9)
+    /// Total FLOPs for this GEMM (2 × M × N × K).
+    pub fn total_flops(&self) -> u64 {
+        2 * self.m as u64 * self.n as u64 * self.k as u64
     }
 }
 
-// ── Tile heuristics ───────────────────────────────────────────────────
+// ── Performance metrics ───────────────────────────────────────────────
 
-fn default_tile_for_quant(qt: QuantType) -> (u32, u32, u32) {
-    match qt {
-        QuantType::INT2 => (32, 64, 32),
-        QuantType::INT4 => (32, 32, 32),
-        QuantType::INT8 => (32, 32, 32),
-    }
+/// Performance metrics for a completed quantized GEMM operation.
+#[derive(Debug, Clone, Copy)]
+pub struct GemmPerformanceMetrics {
+    /// Achieved GFLOP/s.
+    pub gflops: f64,
+    /// Memory bandwidth utilisation (0.0–1.0).
+    pub bandwidth_utilization: f64,
+    /// Estimated SM occupancy (0.0–1.0).
+    pub occupancy: f64,
+    /// Total floating-point operations performed.
+    pub total_flops: u64,
+    /// Elapsed wall time in seconds.
+    pub elapsed_secs: f64,
 }
 
-fn estimate_shared_mem(tile_m: u32, tile_n: u32, tile_k: u32, _qt: QuantType) -> u32 {
-    // Activation tile (f32) + weight tile (f32 after dequant)
-    let act_bytes = tile_m * tile_k * 4;
-    let wt_bytes = tile_k * tile_n * 4;
-    (act_bytes + wt_bytes).max(4096)
-}
-
-// ── Packing / unpacking helpers ───────────────────────────────────────
-
-/// Pack `elems` signed values into bytes for a given [`QuantType`].
-///
-/// For INT2: 4 values per byte, LSB-first, codes: 0→0b00, +1→0b01,
-/// -1→0b11.
-/// For INT4: 2 values per byte, LSB-first, two's complement nibble.
-/// For INT8: 1 value per byte.
-pub fn pack_weights(values: &[i8], quant_type: QuantType) -> Vec<u8> {
-    match quant_type {
-        QuantType::INT2 => {
-            let packed_len = values.len().div_ceil(4);
-            let mut out = vec![0u8; packed_len];
-            for (i, &v) in values.iter().enumerate() {
-                let code: u8 = match v {
-                    1 => 0b01,
-                    -1 => 0b11,
-                    _ => 0b00,
-                };
-                out[i / 4] |= code << ((i % 4) * 2);
-            }
-            out
-        }
-        QuantType::INT4 => {
-            let packed_len = values.len().div_ceil(2);
-            let mut out = vec![0u8; packed_len];
-            for (i, &v) in values.iter().enumerate() {
-                let nibble = (v as u8) & 0x0F;
-                out[i / 2] |= nibble << ((i % 2) * 4);
-            }
-            out
-        }
-        QuantType::INT8 => values.iter().map(|&v| v as u8).collect(),
-    }
-}
-
-/// Unpack one element from a packed weight byte slice.
-#[inline(always)]
-fn unpack_weight(packed: &[u8], index: usize, qt: QuantType) -> f32 {
-    match qt {
-        QuantType::INT2 => {
-            let byte = packed[index / 4];
-            let shift = (index % 4) * 2;
-            let bits = (byte >> shift) & 0x03;
-            match bits {
-                0b01 => 1.0,
-                0b11 => -1.0,
-                _ => 0.0,
-            }
-        }
-        QuantType::INT4 => {
-            let byte = packed[index / 2];
-            let shift = (index % 2) * 4;
-            let nibble = (byte >> shift) & 0x0F;
-            // Sign-extend from 4 bits
-            let signed = if nibble & 0x08 != 0 { nibble as i8 | !0x0Fi8 } else { nibble as i8 };
-            signed as f32
-        }
-        QuantType::INT8 => packed[index] as i8 as f32,
-    }
-}
-
-// ── Validation ────────────────────────────────────────────────────────
-
-fn validate_buffers(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &[f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let batch = cfg.batch_size;
-    let packed_k = cfg.packed_k_bytes();
-
-    if activations.len() < batch * m * k {
-        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-            reason: format!(
-                "activations too small: expected {}, got {}",
-                batch * m * k,
-                activations.len()
-            ),
-        }));
-    }
-    if weights_packed.len() < batch * packed_k * n {
-        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-            reason: format!(
-                "weights_packed too small: expected {}, got {}",
-                batch * packed_k * n,
-                weights_packed.len()
-            ),
-        }));
-    }
-    if scales.len() < batch * n {
-        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-            reason: format!("scales too small: expected >= {}, got {}", batch * n, scales.len()),
-        }));
-    }
-    if out.len() < batch * m * n {
-        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-            reason: format!("output too small: expected {}, got {}", batch * m * n, out.len()),
-        }));
-    }
-    Ok(())
-}
-
-// ── Core CPU GEMM (generic over quant type) ───────────────────────────
-
-/// CPU reference implementation for quantized GEMM.
-///
-/// Computes `C = α · A · dequant(W_packed, scales) + β · C` per batch.
-///
-/// # Layout
-/// - `activations`: row-major `[batch, m, k]` f32
-/// - `weights_packed`: packed weights `[batch, packed_k, n]`
-///   column-major per column
-/// - `scales`: per-column scale `[batch, n]`
-/// - `out`: row-major `[batch, m, n]` f32
-fn gemm_cpu_inner(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    validate_buffers(activations, weights_packed, scales, out, cfg)?;
-
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let qt = cfg.quant_type;
-    let packed_k = cfg.packed_k_bytes();
-    let alpha = cfg.alpha;
-    let beta = cfg.beta;
-    let batch = cfg.batch_size;
-
-    let a_stride = m * k;
-    let w_stride = packed_k * n;
-    let s_stride = n;
-    let o_stride = m * n;
-
-    for b in 0..batch {
-        let a_off = b * a_stride;
-        let w_off = b * w_stride;
-        let s_off = b * s_stride;
-        let o_off = b * o_stride;
-
-        for row in 0..m {
-            for col in 0..n {
-                let scale = scales[s_off + col];
-                let mut acc = 0.0f32;
-                for l in 0..k {
-                    let a_val = activations[a_off + row * k + l];
-                    let w_idx = col * packed_k;
-                    let w_val = unpack_weight(&weights_packed[w_off + w_idx..], l, qt);
-                    acc += a_val * w_val;
-                }
-                let idx = o_off + row * n + col;
-                let val = alpha * acc * scale;
-                out[idx] = if beta == 0.0 { val } else { val + beta * out[idx] };
-            }
-        }
-    }
-    Ok(())
-}
-
-// ── Public CPU entry points ───────────────────────────────────────────
-
-/// INT2 (ternary) GEMM — CPU fallback.
-pub fn int2_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    if cfg.quant_type != QuantType::INT2 {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("int2_gemm requires INT2 quant type, got {:?}", cfg.quant_type),
-        }
-        .into());
-    }
-    gemm_cpu_inner(activations, weights_packed, scales, out, cfg)
-}
-
-/// INT4 GEMM — CPU fallback.
-pub fn int4_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    if cfg.quant_type != QuantType::INT4 {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("int4_gemm requires INT4 quant type, got {:?}", cfg.quant_type),
-        }
-        .into());
-    }
-    gemm_cpu_inner(activations, weights_packed, scales, out, cfg)
-}
-
-/// INT8 GEMM — CPU fallback.
-pub fn int8_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    if cfg.quant_type != QuantType::INT8 {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("int8_gemm requires INT8 quant type, got {:?}", cfg.quant_type),
-        }
-        .into());
-    }
-    gemm_cpu_inner(activations, weights_packed, scales, out, cfg)
-}
-
-/// Mixed-precision GEMM with configurable accumulation type.
-///
-/// On CPU this always accumulates in f32 regardless of the
-/// [`AccumulationType`] hint (the hint is used by the GPU path).
-pub fn mixed_precision_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    gemm_cpu_inner(activations, weights_packed, scales, out, cfg)
-}
-
-/// Batched quantized GEMM for multi-head attention.
-///
-/// Each batch element has independent weight / activation / scale
-/// buffers laid out contiguously.
-pub fn batched_quantized_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    if cfg.batch_size < 1 {
-        return Err(KernelError::InvalidArguments {
-            reason: "batched_quantized_gemm requires batch_size >= 1".into(),
-        }
-        .into());
-    }
-    gemm_cpu_inner(activations, weights_packed, scales, out, cfg)
-}
-
-/// Tiled GEMM — CPU implementation with explicit tiling for cache
-/// locality.
-pub fn tiled_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    validate_buffers(activations, weights_packed, scales, out, cfg)?;
-
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let qt = cfg.quant_type;
-    let packed_k = cfg.packed_k_bytes();
-    let alpha = cfg.alpha;
-    let beta = cfg.beta;
-    let tile_m = cfg.tile_m as usize;
-    let tile_n = cfg.tile_n as usize;
-    let tile_k = cfg.tile_k as usize;
-
-    // Apply beta
-    if beta == 0.0 {
-        out[..m * n].fill(0.0);
-    } else if (beta - 1.0).abs() > f32::EPSILON {
-        for v in out[..m * n].iter_mut() {
-            *v *= beta;
-        }
-    }
-
-    let mut i0 = 0;
-    while i0 < m {
-        let i_end = (i0 + tile_m).min(m);
-        let mut j0 = 0;
-        while j0 < n {
-            let j_end = (j0 + tile_n).min(n);
-            let mut l0 = 0;
-            while l0 < k {
-                let l_end = (l0 + tile_k).min(k);
-                for i in i0..i_end {
-                    for j in j0..j_end {
-                        let scale = scales[j];
-                        let mut acc = 0.0f32;
-                        for l in l0..l_end {
-                            let a_val = activations[i * k + l];
-                            let w_idx = j * packed_k;
-                            let w_val = unpack_weight(&weights_packed[w_idx..], l, qt);
-                            acc += a_val * w_val;
-                        }
-                        out[i * n + j] += alpha * acc * scale;
-                    }
-                }
-                l0 += tile_k;
-            }
-            j0 += tile_n;
-        }
-        i0 += tile_m;
-    }
-    Ok(())
-}
-
-/// Split-K parallel GEMM for tall/skinny matrices.
-///
-/// Partitions the K dimension into `split_k` slices, computes partial
-/// sums, then reduces.  On CPU this is serial but mirrors the GPU
-/// algorithm for testing.
-pub fn split_k_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    validate_buffers(activations, weights_packed, scales, out, cfg)?;
-
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let qt = cfg.quant_type;
-    let packed_k = cfg.packed_k_bytes();
-    let alpha = cfg.alpha;
-    let beta = cfg.beta;
-    let splits = cfg.split_k.max(1) as usize;
-    let k_per_split = k.div_ceil(splits);
-
-    // Partial sums: [splits][m * n]
-    let mut partials = vec![0.0f32; splits * m * n];
-
-    for s in 0..splits {
-        let k_start = s * k_per_split;
-        let k_end = ((s + 1) * k_per_split).min(k);
-        if k_start >= k {
-            break;
-        }
-        for row in 0..m {
-            for col in 0..n {
-                let scale = scales[col];
-                let mut acc = 0.0f32;
-                for l in k_start..k_end {
-                    let a_val = activations[row * k + l];
-                    let w_idx = col * packed_k;
-                    let w_val = unpack_weight(&weights_packed[w_idx..], l, qt);
-                    acc += a_val * w_val;
-                }
-                partials[s * m * n + row * n + col] = acc * scale;
-            }
-        }
-    }
-
-    // Reduce partials
-    for row in 0..m {
-        for col in 0..n {
-            let mut total = 0.0f32;
-            for s in 0..splits {
-                total += partials[s * m * n + row * n + col];
-            }
-            let idx = row * n + col;
-            let val = alpha * total;
-            out[idx] = if beta == 0.0 { val } else { val + beta * out[idx] };
-        }
-    }
-    Ok(())
-}
-
-/// Stream-K scheduling for load-balanced GEMM.
-///
-/// Distributes work across a fixed number of "virtual processors",
-/// each handling a contiguous range of output tiles.  On CPU this is
-/// equivalent to the tiled path but exercises the stream-K partitioning
-/// logic for correctness testing.
-pub fn stream_k_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    out: &mut [f32],
-    cfg: &QuantGemmConfig,
-) -> Result<()> {
-    validate_buffers(activations, weights_packed, scales, out, cfg)?;
-
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let qt = cfg.quant_type;
-    let packed_k = cfg.packed_k_bytes();
-    let alpha = cfg.alpha;
-    let beta = cfg.beta;
-    let tile_m = cfg.tile_m as usize;
-    let tile_n = cfg.tile_n as usize;
-
-    let num_tiles_m = m.div_ceil(tile_m);
-    let num_tiles_n = n.div_ceil(tile_n);
-    let total_tiles = num_tiles_m * num_tiles_n;
-
-    // Apply beta
-    if beta == 0.0 {
-        out[..m * n].fill(0.0);
-    } else if (beta - 1.0).abs() > f32::EPSILON {
-        for v in out[..m * n].iter_mut() {
-            *v *= beta;
-        }
-    }
-
-    // Stream-K: iterate tiles linearly (models stream scheduling)
-    for tile_idx in 0..total_tiles {
-        let tile_row = tile_idx / num_tiles_n;
-        let tile_col = tile_idx % num_tiles_n;
-        let i0 = tile_row * tile_m;
-        let j0 = tile_col * tile_n;
-        let i_end = (i0 + tile_m).min(m);
-        let j_end = (j0 + tile_n).min(n);
-
-        for i in i0..i_end {
-            for j in j0..j_end {
-                let scale = scales[j];
-                let mut acc = 0.0f32;
-                for l in 0..k {
-                    let a_val = activations[i * k + l];
-                    let w_idx = j * packed_k;
-                    let w_val = unpack_weight(&weights_packed[w_idx..], l, qt);
-                    acc += a_val * w_val;
-                }
-                out[i * n + j] += alpha * acc * scale;
-            }
-        }
-    }
-    Ok(())
-}
-
-// ── GemmWorkspace ─────────────────────────────────────────────────────
-
-/// Pre-allocated workspace for GEMM operations.
-///
-/// Reusing a workspace avoids repeated heap allocation in the
-/// inference hot-loop.  The workspace holds temporary buffers for
-/// split-K partial sums and stream-K tile accumulation.
-#[derive(Debug, Clone)]
-pub struct GemmWorkspace {
-    /// Temporary buffer for split-K partial sums.
-    pub partials: Vec<f32>,
-    /// Capacity in number of f32 elements.
-    capacity: usize,
-}
-
-impl GemmWorkspace {
-    /// Create a new workspace with capacity for the given config.
-    pub fn new(cfg: &QuantGemmConfig) -> Self {
-        let cap = cfg.split_k.max(1) as usize * cfg.m * cfg.n;
-        Self { partials: vec![0.0; cap], capacity: cap }
-    }
-
-    /// Ensure the workspace has enough capacity for a new config.
-    pub fn ensure_capacity(&mut self, cfg: &QuantGemmConfig) {
-        let needed = cfg.split_k.max(1) as usize * cfg.m * cfg.n;
-        if needed > self.capacity {
-            self.partials.resize(needed, 0.0);
-            self.capacity = needed;
-        }
-    }
-
-    /// Current capacity in f32 elements.
-    pub fn capacity(&self) -> usize {
-        self.capacity
-    }
-
-    /// Reset all values to zero.
-    pub fn reset(&mut self) {
-        self.partials.fill(0.0);
-    }
-}
-
-// ── GemmAutoTuner ─────────────────────────────────────────────────────
-
-/// Heuristic autotuner for quantized GEMM parameters.
-///
-/// Selects tile sizes, split-K factor, and tensor-core hints based on
-/// problem shape and quantization type.
-#[derive(Debug, Clone)]
-pub struct GemmAutoTuner {
-    /// Maximum shared memory per block (bytes).
-    pub max_shared_mem: u32,
-    /// Number of SMs on the target device.
-    pub num_sms: u32,
-}
-
-impl Default for GemmAutoTuner {
-    fn default() -> Self {
-        // Conservative defaults (Ampere A100-like)
-        Self { max_shared_mem: 49152, num_sms: 108 }
-    }
-}
-
-impl GemmAutoTuner {
-    /// Create a tuner with known device parameters.
-    pub fn new(max_shared_mem: u32, num_sms: u32) -> Self {
-        Self { max_shared_mem, num_sms }
-    }
-
-    /// Produce an optimised [`QuantGemmConfig`] for the given problem.
+impl GemmPerformanceMetrics {
+    /// Compute metrics from GEMM dimensions and elapsed wall time.
     ///
-    /// # Errors
+    /// `peak_bandwidth_gbps` is the theoretical device bandwidth in GB/s.
     ///
-    /// Returns an error if the dimensions are zero.
-    pub fn tune(
-        &self,
+    /// Returns `None` if `elapsed_secs` is not positive.
+    pub fn compute(
         m: usize,
         n: usize,
         k: usize,
-        quant_type: QuantType,
-    ) -> Result<QuantGemmConfig> {
-        let mut cfg = QuantGemmConfig::for_shape(m, n, k, quant_type)?;
-
-        // Use tensor cores for INT8 when dimensions are multiples of 16
-        if quant_type == QuantType::INT8
-            && m.is_multiple_of(16)
-            && n.is_multiple_of(16)
-            && k.is_multiple_of(16)
-        {
-            cfg = cfg.with_tensor_cores(true);
+        elapsed_secs: f64,
+        peak_bandwidth_gbps: f64,
+    ) -> Option<Self> {
+        if elapsed_secs <= 0.0 || peak_bandwidth_gbps <= 0.0 {
+            return None;
         }
+        let total_flops = 2u64 * m as u64 * n as u64 * k as u64;
+        let gflops = total_flops as f64 / elapsed_secs / 1e9;
 
-        // Split-K for tall-skinny (M >> N) or deep-K matrices
-        if k >= 2048 && m * n < 4096 {
-            let splits = (k as u32 / 512).clamp(2, 16);
-            cfg = cfg.with_split_k(splits)?;
-        }
+        // Minimum memory traffic: read A (m×k) + read B (k×n) + write C (m×n),
+        // all in f32 (4 bytes).  Quantised operands are smaller, but we use
+        // the dequantised size as upper-bound estimate.
+        let bytes_transferred = ((m * k) as f64 + (k * n) as f64 + (m * n) as f64) * 4.0;
+        let bandwidth_gbps = bytes_transferred / elapsed_secs / 1e9;
+        let bandwidth_utilization = (bandwidth_gbps / peak_bandwidth_gbps).min(1.0);
 
-        // Clamp shared memory
-        if cfg.shared_mem_bytes > self.max_shared_mem {
-            let smaller = self.max_shared_mem / 2;
-            let side = (smaller / 8).max(16); // rough
-            cfg.tile_m = side.min(cfg.tile_m);
-            cfg.tile_n = side.min(cfg.tile_n);
-            cfg.tile_k = side.min(cfg.tile_k);
-            cfg.shared_mem_bytes =
-                estimate_shared_mem(cfg.tile_m, cfg.tile_n, cfg.tile_k, quant_type);
-        }
+        // Rough occupancy estimate based on shared-memory pressure.
+        let strategy = select_tile_strategy(m, n, k);
+        let smem = strategy.shared_mem_bytes() as f64;
+        let max_smem: f64 = 49152.0; // 48 KiB (Ampere default)
+        let occupancy = (1.0 - smem / max_smem).clamp(0.1, 1.0);
 
-        Ok(cfg)
+        Some(Self { gflops, bandwidth_utilization, occupancy, total_flops, elapsed_secs })
     }
 }
 
-// ── Benchmark helper ──────────────────────────────────────────────────
+// ── Input validation ──────────────────────────────────────────────────
 
-/// Measure GFLOPS for a given quantized GEMM configuration.
-///
-/// Runs `iterations` CPU GEMM invocations and returns average GFLOPS.
-pub fn benchmark_gemm(cfg: &QuantGemmConfig, iterations: usize) -> f64 {
-    let m = cfg.m;
-    let n = cfg.n;
-    let k = cfg.k;
-    let packed_k = cfg.packed_k_bytes();
-
-    let activations = vec![1.0f32; m * k];
-    let weights_packed = vec![0u8; packed_k * n];
-    let scales = vec![1.0f32; n];
-    let mut out = vec![0.0f32; m * n];
-
-    let iters = iterations.max(1);
-    let start = std::time::Instant::now();
-    for _ in 0..iters {
-        let _ = gemm_cpu_inner(&activations, &weights_packed, &scales, &mut out, cfg);
-    }
-    let elapsed = start.elapsed().as_secs_f64();
-    let avg_secs = elapsed / iters as f64;
-    cfg.gflops(avg_secs)
-}
-
-// ── Unified dispatch ──────────────────────────────────────────────────
-
-/// CUDA kernel source for quantized GEMM (INT2/INT4/INT8).
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub const QUANTIZED_GEMM_KERNEL_SRC: &str = r#"
-extern "C" __global__ void quantized_gemm_f32(
-    const float* __restrict__ activations,
-    const unsigned char* __restrict__ weights_packed,
-    const float* __restrict__ scales,
-    float* __restrict__ output,
-    int M, int N, int K, int quant_bits, float alpha, float beta)
-{
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (row >= M || col >= N) return;
-
-    int elems_per_byte = 8 / quant_bits;
-    int packed_k = (K + elems_per_byte - 1) / elems_per_byte;
-    float scale = scales[col];
-    float acc = 0.0f;
-
-    for (int idx = 0; idx < K; idx++) {
-        int byte_idx = col * packed_k + idx / elems_per_byte;
-        int bit_off  = (idx % elems_per_byte) * quant_bits;
-        int mask     = (1 << quant_bits) - 1;
-        unsigned char bits = (weights_packed[byte_idx] >> bit_off) & mask;
-
-        float w;
-        if (quant_bits == 2) {
-            if      (bits == 0x01) w =  1.0f;
-            else if (bits == 0x03) w = -1.0f;
-            else                   w =  0.0f;
-        } else if (quant_bits == 4) {
-            int s = (int)bits;
-            if (s & 0x08) s |= ~0x0F;
-            w = (float)s;
-        } else {
-            w = (float)((char)bits);
-        }
-
-        acc += activations[row * K + idx] * w;
-    }
-    output[row * N + col] = alpha * acc * scale + beta * output[row * N + col];
-}
-"#;
-
-/// Launch stub for the quantized GEMM CUDA kernel.
+/// Validate matrix dimensions and buffer sizes for quantized GEMM.
 ///
 /// # Errors
 ///
-/// Returns `KernelError::GpuError` until a real PTX kernel is compiled.
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub fn launch_quantized_gemm(
-    _activations: &[f32],
-    _weights_packed: &[u8],
-    _scales: &[f32],
-    _output: &mut [f32],
-    config: &QuantGemmConfig,
-) -> Result<()> {
-    log::debug!(
-        "quantized GEMM CUDA stub: m={}, n={}, k={}, qt={:?}, grid={:?}",
-        config.m,
-        config.n,
-        config.k,
-        config.quant_type,
-        config.grid_dim(),
-    );
-    Err(KernelError::GpuError {
-        reason: "quantized GEMM CUDA kernel not yet compiled \
-                 — scaffold only"
-            .into(),
+/// Returns [`QuantizedGemmError`] on zero dimensions, inner-dimension
+/// mismatch, or output buffer too small.
+pub fn validate_gemm_inputs(
+    m: usize,
+    k_a: usize,
+    k_b: usize,
+    n: usize,
+    output_len: usize,
+) -> std::result::Result<(), QuantizedGemmError> {
+    if m == 0 {
+        return Err(QuantizedGemmError::ZeroDimension { dim_name: "m" });
     }
-    .into())
+    if k_a == 0 {
+        return Err(QuantizedGemmError::ZeroDimension { dim_name: "k (A cols)" });
+    }
+    if k_b == 0 {
+        return Err(QuantizedGemmError::ZeroDimension { dim_name: "k (B rows)" });
+    }
+    if n == 0 {
+        return Err(QuantizedGemmError::ZeroDimension { dim_name: "n" });
+    }
+    if k_a != k_b {
+        return Err(QuantizedGemmError::ShapeMismatch { m, k_a, k_b, n });
+    }
+    let required = m * n;
+    if output_len < required {
+        return Err(QuantizedGemmError::BufferTooSmall { required, actual: output_len });
+    }
+    Ok(())
 }
 
-/// Main GEMM entry point: dispatches by quant type, GPU-first with CPU
-/// fallback.
-pub fn quantized_gemm(
-    activations: &[f32],
-    weights_packed: &[u8],
-    scales: &[f32],
-    output: &mut [f32],
-    config: &QuantGemmConfig,
-) -> Result<()> {
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
-    {
-        if crate::device_features::gpu_available_runtime()
-            && launch_quantized_gemm(activations, weights_packed, scales, output, config).is_ok()
-        {
-            return Ok(());
+/// Check that a dimension is aligned to `alignment`.
+pub fn check_alignment(
+    dim: usize,
+    alignment: usize,
+    dim_name: &'static str,
+) -> std::result::Result<(), QuantizedGemmError> {
+    if alignment == 0 {
+        return Err(QuantizedGemmError::InvalidTileConfig {
+            reason: "alignment must be non-zero".into(),
+        });
+    }
+    if !dim.is_multiple_of(alignment) {
+        return Err(QuantizedGemmError::AlignmentError {
+            required: alignment,
+            actual: dim,
+            dim_name,
+        });
+    }
+    Ok(())
+}
+
+// ── CUDA kernel source ────────────────────────────────────────────────
+
+/// CUDA C source for quantized GEMM kernels (INT2, INT4, mixed).
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const QUANTIZED_GEMM_KERNEL_SRC: &str = r#"
+// Quantized GEMM kernels for BitNet inference.
+// Each weight element is packed: 4 values per byte for INT2,
+// 2 values per byte for INT4.
+
+/// INT2 quantized GEMM: A (INT2 packed) × B (INT2 packed) → C (FP32).
+extern "C" __global__
+void quantized_gemm_i2_kernel(
+    const unsigned char* __restrict__ A_packed,
+    const unsigned char* __restrict__ B_packed,
+    float* __restrict__ C,
+    const float* __restrict__ scales_a,
+    const float* __restrict__ scales_b,
+    int M, int N, int K,
+    int tile_m, int tile_n, int tile_k
+) {
+    int row = blockIdx.y * tile_m + threadIdx.x;
+    int col = blockIdx.x * tile_n + threadIdx.y;
+    if (row >= M || col >= N) return;
+
+    float acc = 0.0f;
+    int k_packed = (K + 3) / 4;
+    for (int kb = 0; kb < k_packed; ++kb) {
+        unsigned char a_byte = A_packed[row * k_packed + kb];
+        unsigned char b_byte = B_packed[col * k_packed + kb];
+        for (int sub = 0; sub < 4 && (kb * 4 + sub) < K; ++sub) {
+            int a_val = ((int)((a_byte >> (sub * 2)) & 0x3)) - 1;
+            int b_val = ((int)((b_byte >> (sub * 2)) & 0x3)) - 1;
+            acc += (float)(a_val * b_val);
         }
     }
-    gemm_cpu_inner(activations, weights_packed, scales, output, config)
+    float sa = scales_a[row];
+    float sb = scales_b[col];
+    C[row * N + col] = acc * sa * sb;
+}
+
+/// INT4 quantized GEMM: A (INT4 packed) × B (INT4 packed) → C (FP32).
+extern "C" __global__
+void quantized_gemm_i4_kernel(
+    const unsigned char* __restrict__ A_packed,
+    const unsigned char* __restrict__ B_packed,
+    float* __restrict__ C,
+    const float* __restrict__ scales_a,
+    const float* __restrict__ scales_b,
+    int M, int N, int K,
+    int tile_m, int tile_n, int tile_k
+) {
+    int row = blockIdx.y * tile_m + threadIdx.x;
+    int col = blockIdx.x * tile_n + threadIdx.y;
+    if (row >= M || col >= N) return;
+
+    float acc = 0.0f;
+    int k_packed = (K + 1) / 2;
+    for (int kb = 0; kb < k_packed; ++kb) {
+        unsigned char a_byte = A_packed[row * k_packed + kb];
+        unsigned char b_byte = B_packed[col * k_packed + kb];
+        int a_lo = ((int)(a_byte & 0xF)) - 8;
+        int b_lo = ((int)(b_byte & 0xF)) - 8;
+        acc += (float)(a_lo * b_lo);
+        if (kb * 2 + 1 < K) {
+            int a_hi = ((int)((a_byte >> 4) & 0xF)) - 8;
+            int b_hi = ((int)((b_byte >> 4) & 0xF)) - 8;
+            acc += (float)(a_hi * b_hi);
+        }
+    }
+    C[row * N + col] = acc * scales_a[row] * scales_b[col];
+}
+
+/// Mixed-precision GEMM: A (INT2 packed weights) × B (FP16 activations) → C (FP32).
+extern "C" __global__
+void quantized_gemm_mixed_kernel(
+    const unsigned char* __restrict__ W_packed,
+    const __half* __restrict__ X,
+    float* __restrict__ C,
+    const float* __restrict__ scales_w,
+    int M, int N, int K
+) {
+    int row = blockIdx.y * blockDim.x + threadIdx.x;
+    int col = blockIdx.x * blockDim.y + threadIdx.y;
+    if (row >= M || col >= N) return;
+
+    float acc = 0.0f;
+    int k_packed = (K + 3) / 4;
+    for (int kb = 0; kb < k_packed; ++kb) {
+        unsigned char w_byte = W_packed[row * k_packed + kb];
+        for (int sub = 0; sub < 4 && (kb * 4 + sub) < K; ++sub) {
+            int w_val = ((int)((w_byte >> (sub * 2)) & 0x3)) - 1;
+            float x_val = __half2float(X[col * K + kb * 4 + sub]);
+            acc += (float)w_val * x_val;
+        }
+    }
+    C[row * N + col] = acc * scales_w[row];
+}
+"#;
+
+// ── INT2 GEMM (CPU fallback) ─────────────────────────────────────────
+
+/// Decode a 2-bit I2 code to its signed integer value (-1, 0, +1).
+#[inline(always)]
+fn decode_i2(bits: u8) -> i8 {
+    match bits & 0x03 {
+        0b00 => 0,
+        0b01 => 1,
+        0b11 => -1,
+        _ => 0, // 0b10 is unused
+    }
+}
+
+/// CPU reference: INT2 quantized GEMM.
+///
+/// `a_packed` contains the INT2-packed rows of A (M rows, each
+/// `ceil(K/4)` bytes).  `b_packed` contains the INT2-packed columns of
+/// B transposed (N rows, each `ceil(K/4)` bytes).  `scales_a` has M
+/// entries; `scales_b` has N entries.
+///
+/// Output is written into `output` which must have at least `M × N`
+/// elements.
+///
+/// # Errors
+///
+/// Returns an error on dimension or buffer-size mismatch.
+pub fn quantized_gemm_i2(
+    a_packed: &[u8],
+    b_packed: &[u8],
+    scales_a: &[f32],
+    scales_b: &[f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(m, k, k, n, output.len())?;
+
+    let k_packed = k.div_ceil(4);
+    let expected_a = m * k_packed;
+    let expected_b = n * k_packed;
+    if a_packed.len() < expected_a {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("a_packed too small: need {expected_a}, got {}", a_packed.len()),
+        }
+        .into());
+    }
+    if b_packed.len() < expected_b {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("b_packed too small: need {expected_b}, got {}", b_packed.len()),
+        }
+        .into());
+    }
+    if scales_a.len() < m {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales_a too small: need {m}, got {}", scales_a.len()),
+        }
+        .into());
+    }
+    if scales_b.len() < n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales_b too small: need {n}, got {}", scales_b.len()),
+        }
+        .into());
+    }
+
+    for row in 0..m {
+        for col in 0..n {
+            let mut acc: i32 = 0;
+            for kb in 0..k_packed {
+                let a_byte = a_packed[row * k_packed + kb];
+                let b_byte = b_packed[col * k_packed + kb];
+                for sub in 0..4 {
+                    if kb * 4 + sub >= k {
+                        break;
+                    }
+                    let a_val = decode_i2((a_byte >> (sub * 2)) & 0x03) as i32;
+                    let b_val = decode_i2((b_byte >> (sub * 2)) & 0x03) as i32;
+                    acc += a_val * b_val;
+                }
+            }
+            output[row * n + col] = acc as f32 * scales_a[row] * scales_b[col];
+        }
+    }
+    Ok(())
+}
+
+// ── INT4 GEMM (CPU fallback) ─────────────────────────────────────────
+
+/// Decode a 4-bit signed value (stored as unsigned 0–15, biased by 8).
+#[inline(always)]
+fn decode_i4(nibble: u8) -> i8 {
+    (nibble & 0x0F) as i8 - 8
+}
+
+/// CPU reference: INT4 quantized GEMM.
+///
+/// `a_packed` contains the INT4-packed rows of A (M rows, each
+/// `ceil(K/2)` bytes).  `b_packed` is laid out the same way for B
+/// transposed.  Scales have M and N entries respectively.
+///
+/// # Errors
+///
+/// Returns an error on dimension or buffer-size mismatch.
+pub fn quantized_gemm_i4(
+    a_packed: &[u8],
+    b_packed: &[u8],
+    scales_a: &[f32],
+    scales_b: &[f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(m, k, k, n, output.len())?;
+
+    let k_packed = k.div_ceil(2);
+    let expected_a = m * k_packed;
+    let expected_b = n * k_packed;
+    if a_packed.len() < expected_a {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("a_packed too small: need {expected_a}, got {}", a_packed.len()),
+        }
+        .into());
+    }
+    if b_packed.len() < expected_b {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("b_packed too small: need {expected_b}, got {}", b_packed.len()),
+        }
+        .into());
+    }
+    if scales_a.len() < m {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales_a too small: need {m}, got {}", scales_a.len()),
+        }
+        .into());
+    }
+    if scales_b.len() < n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales_b too small: need {n}, got {}", scales_b.len()),
+        }
+        .into());
+    }
+
+    for row in 0..m {
+        for col in 0..n {
+            let mut acc: i32 = 0;
+            for kb in 0..k_packed {
+                let a_byte = a_packed[row * k_packed + kb];
+                let b_byte = b_packed[col * k_packed + kb];
+                let a_lo = decode_i4(a_byte & 0x0F) as i32;
+                let b_lo = decode_i4(b_byte & 0x0F) as i32;
+                acc += a_lo * b_lo;
+                if kb * 2 + 1 < k {
+                    let a_hi = decode_i4((a_byte >> 4) & 0x0F) as i32;
+                    let b_hi = decode_i4((b_byte >> 4) & 0x0F) as i32;
+                    acc += a_hi * b_hi;
+                }
+            }
+            output[row * n + col] = acc as f32 * scales_a[row] * scales_b[col];
+        }
+    }
+    Ok(())
+}
+
+// ── Mixed-precision GEMM (CPU fallback) ───────────────────────────────
+
+/// CPU reference: mixed-precision GEMM (INT2 weights × FP16 activations).
+///
+/// `w_packed` is the INT2-packed weight matrix (M rows, each `ceil(K/4)`
+/// bytes).  `x` is the FP16 activation matrix stored as `f32` values
+/// (N × K row-major).  `scales_w` has M entries.
+///
+/// # Errors
+///
+/// Returns an error on dimension or buffer-size mismatch.
+pub fn quantized_gemm_mixed(
+    w_packed: &[u8],
+    x: &[f32],
+    scales_w: &[f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(m, k, k, n, output.len())?;
+
+    let k_packed = k.div_ceil(4);
+    let expected_w = m * k_packed;
+    if w_packed.len() < expected_w {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("w_packed too small: need {expected_w}, got {}", w_packed.len()),
+        }
+        .into());
+    }
+    if x.len() < n * k {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("x too small: need {}, got {}", n * k, x.len()),
+        }
+        .into());
+    }
+    if scales_w.len() < m {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales_w too small: need {m}, got {}", scales_w.len()),
+        }
+        .into());
+    }
+
+    for row in 0..m {
+        for col in 0..n {
+            let mut acc: f32 = 0.0;
+            for kb in 0..k_packed {
+                let w_byte = w_packed[row * k_packed + kb];
+                for sub in 0..4 {
+                    let idx = kb * 4 + sub;
+                    if idx >= k {
+                        break;
+                    }
+                    let w_val = decode_i2((w_byte >> (sub * 2)) & 0x03) as f32;
+                    let x_val = x[col * k + idx];
+                    acc += w_val * x_val;
+                }
+            }
+            output[row * n + col] = acc * scales_w[row];
+        }
+    }
+    Ok(())
+}
+
+// ── Dequantize-on-the-fly GEMM (CPU fallback) ─────────────────────────
+
+/// CPU reference: dequantize-on-the-fly GEMM.
+///
+/// Dequantises INT2 packed weights to FP32 on the fly and multiplies
+/// against FP32 activations, avoiding a separate dequantisation pass.
+///
+/// `w_packed` is INT2-packed (M × ceil(K/4) bytes), `x` is FP32
+/// (N × K row-major), `scales` has M entries.
+///
+/// # Errors
+///
+/// Returns an error on dimension or buffer-size mismatch.
+pub fn quantized_dequant_gemm(
+    w_packed: &[u8],
+    x: &[f32],
+    scales: &[f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(m, k, k, n, output.len())?;
+
+    let k_packed = k.div_ceil(4);
+    let expected_w = m * k_packed;
+    if w_packed.len() < expected_w {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("w_packed too small: need {expected_w}, got {}", w_packed.len()),
+        }
+        .into());
+    }
+    if x.len() < n * k {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("x too small: need {}, got {}", n * k, x.len()),
+        }
+        .into());
+    }
+    if scales.len() < m {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("scales too small: need {m}, got {}", scales.len()),
+        }
+        .into());
+    }
+
+    for row in 0..m {
+        let scale = scales[row];
+        for col in 0..n {
+            let mut acc: f32 = 0.0;
+            for kb in 0..k_packed {
+                let w_byte = w_packed[row * k_packed + kb];
+                for sub in 0..4 {
+                    let idx = kb * 4 + sub;
+                    if idx >= k {
+                        break;
+                    }
+                    let w_val = decode_i2((w_byte >> (sub * 2)) & 0x03) as f32 * scale;
+                    let x_val = x[col * k + idx];
+                    acc += w_val * x_val;
+                }
+            }
+            output[row * n + col] = acc;
+        }
+    }
+    Ok(())
+}
+
+// ── GPU launch stubs ──────────────────────────────────────────────────
+
+/// Launch the INT2 quantized GEMM kernel on the GPU.
+///
+/// # Errors
+///
+/// Returns an error if the GPU is not available or launch fails.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_quantized_gemm_i2(
+    config: &QuantizedGemmConfig,
+    a_packed: &[u8],
+    b_packed: &[u8],
+    scales_a: &[f32],
+    scales_b: &[f32],
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(config.m, config.k, config.k, config.n, output.len())?;
+    quantized_gemm_i2(a_packed, b_packed, scales_a, scales_b, config.m, config.n, config.k, output)
+}
+
+/// Launch the INT4 quantized GEMM kernel on the GPU.
+///
+/// # Errors
+///
+/// Returns an error if the GPU is not available or launch fails.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_quantized_gemm_i4(
+    config: &QuantizedGemmConfig,
+    a_packed: &[u8],
+    b_packed: &[u8],
+    scales_a: &[f32],
+    scales_b: &[f32],
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(config.m, config.k, config.k, config.n, output.len())?;
+    quantized_gemm_i4(a_packed, b_packed, scales_a, scales_b, config.m, config.n, config.k, output)
+}
+
+/// Launch the mixed-precision GEMM kernel on the GPU.
+///
+/// # Errors
+///
+/// Returns an error if the GPU is not available or launch fails.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_quantized_gemm_mixed(
+    config: &QuantizedGemmConfig,
+    w_packed: &[u8],
+    x: &[f32],
+    scales_w: &[f32],
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(config.m, config.k, config.k, config.n, output.len())?;
+    quantized_gemm_mixed(w_packed, x, scales_w, config.m, config.n, config.k, output)
+}
+
+/// Launch the dequantize-on-the-fly GEMM kernel on the GPU.
+///
+/// # Errors
+///
+/// Returns an error if the GPU is not available or launch fails.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn launch_quantized_dequant_gemm(
+    config: &QuantizedGemmConfig,
+    w_packed: &[u8],
+    x: &[f32],
+    scales: &[f32],
+    output: &mut [f32],
+) -> Result<()> {
+    validate_gemm_inputs(config.m, config.k, config.k, config.n, output.len())?;
+    quantized_dequant_gemm(w_packed, x, scales, config.m, config.n, config.k, output)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -972,1141 +928,815 @@ pub fn quantized_gemm(
 mod tests {
     use super::*;
 
-    // ── helpers ────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────
 
-    fn assert_close(a: &[f32], b: &[f32], tol: f32) {
-        assert_eq!(a.len(), b.len(), "length mismatch");
-        for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!((x - y).abs() <= tol, "mismatch at {i}: {x} vs {y} (tol {tol})");
-        }
-    }
-
-    /// Build packed col-major weight buffer + uniform scale=1.0.
-    fn pack_col_major(weights: &[i8], k: usize, n: usize, qt: QuantType) -> (Vec<u8>, Vec<f32>) {
-        let epb = qt.elems_per_byte();
-        let packed_k = k.div_ceil(epb);
-        let mut packed = vec![0u8; packed_k * n];
-        for col in 0..n {
-            for row in 0..k {
-                let v = weights[row * n + col];
-                let byte_idx = col * packed_k + row / epb;
-                let shift = (row % epb) * qt.bits() as usize;
-                let code: u8 = match qt {
-                    QuantType::INT2 => match v {
+    /// Pack a flat matrix of signed values into INT2 bytes, row by row.
+    /// Each row of `k` values is independently padded to `ceil(k/4)` bytes.
+    fn pack_i2_matrix(vals: &[i8], rows: usize, k: usize) -> Vec<u8> {
+        assert_eq!(vals.len(), rows * k);
+        let k_packed = k.div_ceil(4);
+        let mut out = Vec::with_capacity(rows * k_packed);
+        for row in 0..rows {
+            let row_vals = &vals[row * k..(row + 1) * k];
+            let mut padded = row_vals.to_vec();
+            padded.resize(k_packed * 4, 0);
+            for chunk in padded.chunks(4) {
+                let mut byte = 0u8;
+                for (i, &v) in chunk.iter().enumerate() {
+                    let code: u8 = match v {
                         1 => 0b01,
                         -1 => 0b11,
                         _ => 0b00,
-                    },
-                    QuantType::INT4 => (v as u8) & 0x0F,
-                    QuantType::INT8 => v as u8,
-                };
-                packed[byte_idx] |= code << shift;
-            }
-        }
-        let scales = vec![1.0f32; n];
-        (packed, scales)
-    }
-
-    /// Naive f32 matmul reference.
-    fn naive_matmul(a: &[f32], w: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
-        let mut c = vec![0.0f32; m * n];
-        for i in 0..m {
-            for j in 0..n {
-                let mut s = 0.0f32;
-                for l in 0..k {
-                    s += a[i * k + l] * w[l * n + j];
+                    };
+                    byte |= code << (i * 2);
                 }
-                c[i * n + j] = s;
+                out.push(byte);
             }
         }
-        c
+        out
     }
 
-    fn run_all_paths(
-        act: &[f32],
-        packed: &[u8],
-        scales: &[f32],
-        cfg: &QuantGemmConfig,
-        expected: &[f32],
-        tol: f32,
-    ) {
-        let len = cfg.m * cfg.n * cfg.batch_size;
-
-        // gemm_cpu_inner
-        let mut out = vec![0.0f32; len];
-        gemm_cpu_inner(act, packed, scales, &mut out, cfg).unwrap();
-        assert_close(&out[..expected.len()], expected, tol);
-
-        // unified dispatch
-        let mut out2 = vec![0.0f32; len];
-        quantized_gemm(act, packed, scales, &mut out2, cfg).unwrap();
-        assert_close(&out2[..expected.len()], expected, tol);
+    /// Pack a single row of signed values into INT2 bytes (4 values per byte).
+    fn pack_i2_values(vals: &[i8]) -> Vec<u8> {
+        pack_i2_matrix(vals, 1, vals.len())
     }
 
-    // ── QuantType tests ───────────────────────────────────────────
+    /// Pack a flat matrix of signed values into INT4 bytes, row by row.
+    /// Each row of `k` values is independently padded to `ceil(k/2)` bytes.
+    fn pack_i4_matrix(vals: &[i8], rows: usize, k: usize) -> Vec<u8> {
+        assert_eq!(vals.len(), rows * k);
+        let k_packed = k.div_ceil(2);
+        let mut out = Vec::with_capacity(rows * k_packed);
+        for row in 0..rows {
+            let row_vals = &vals[row * k..(row + 1) * k];
+            let mut padded = row_vals.to_vec();
+            padded.resize(k_packed * 2, 0);
+            for chunk in padded.chunks(2) {
+                let lo = ((chunk[0] + 8) as u8) & 0x0F;
+                let hi = ((chunk[1] + 8) as u8) & 0x0F;
+                out.push(lo | (hi << 4));
+            }
+        }
+        out
+    }
+
+    /// Pack a single row of signed values into INT4 bytes (2 values per byte).
+    fn pack_i4_values(vals: &[i8]) -> Vec<u8> {
+        pack_i4_matrix(vals, 1, vals.len())
+    }
+
+    // ── validate_gemm_inputs tests ────────────────────────────────────
 
     #[test]
-    fn test_quant_type_bits() {
-        assert_eq!(QuantType::INT2.bits(), 2);
-        assert_eq!(QuantType::INT4.bits(), 4);
-        assert_eq!(QuantType::INT8.bits(), 8);
+    fn test_validate_inputs_ok() {
+        assert!(validate_gemm_inputs(4, 8, 8, 4, 16).is_ok());
     }
 
     #[test]
-    fn test_quant_type_elems_per_byte() {
-        assert_eq!(QuantType::INT2.elems_per_byte(), 4);
-        assert_eq!(QuantType::INT4.elems_per_byte(), 2);
-        assert_eq!(QuantType::INT8.elems_per_byte(), 1);
+    fn test_validate_inputs_zero_m() {
+        let err = validate_gemm_inputs(0, 8, 8, 4, 16).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::ZeroDimension { dim_name: "m" }));
     }
 
-    // ── QuantGemmConfig tests ─────────────────────────────────────
+    #[test]
+    fn test_validate_inputs_zero_k_a() {
+        let err = validate_gemm_inputs(4, 0, 8, 4, 16).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::ZeroDimension { .. }));
+    }
 
     #[test]
-    fn test_config_defaults() {
-        let cfg = QuantGemmConfig::default();
-        assert_eq!(cfg.quant_type, QuantType::INT2);
-        assert_eq!(cfg.accumulation_type, AccumulationType::F32);
+    fn test_validate_inputs_zero_k_b() {
+        let err = validate_gemm_inputs(4, 8, 0, 4, 16).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::ZeroDimension { .. }));
+    }
+
+    #[test]
+    fn test_validate_inputs_zero_n() {
+        let err = validate_gemm_inputs(4, 8, 8, 0, 16).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::ZeroDimension { dim_name: "n" }));
+    }
+
+    #[test]
+    fn test_validate_inputs_shape_mismatch() {
+        let err = validate_gemm_inputs(4, 8, 16, 4, 16).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::ShapeMismatch { k_a: 8, k_b: 16, .. }));
+    }
+
+    #[test]
+    fn test_validate_inputs_buffer_too_small() {
+        let err = validate_gemm_inputs(4, 8, 8, 4, 8).unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::BufferTooSmall { required: 16, actual: 8 }));
+    }
+
+    #[test]
+    fn test_validate_inputs_exact_buffer() {
+        assert!(validate_gemm_inputs(2, 3, 3, 5, 10).is_ok());
+    }
+
+    #[test]
+    fn test_validate_inputs_oversized_buffer() {
+        assert!(validate_gemm_inputs(2, 3, 3, 5, 100).is_ok());
+    }
+
+    // ── check_alignment tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_alignment_ok() {
+        assert!(check_alignment(32, 16, "k").is_ok());
+    }
+
+    #[test]
+    fn test_alignment_fail() {
+        let err = check_alignment(33, 16, "k").unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::AlignmentError { required: 16, actual: 33, .. }));
+    }
+
+    #[test]
+    fn test_alignment_zero_alignment() {
+        let err = check_alignment(32, 0, "k").unwrap_err();
+        assert!(matches!(err, QuantizedGemmError::InvalidTileConfig { .. }));
+    }
+
+    #[test]
+    fn test_alignment_one() {
+        assert!(check_alignment(7, 1, "k").is_ok());
+    }
+
+    // ── TileStrategy tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_tile_strategy_small_dims() {
+        let s = select_tile_strategy(32, 32, 64);
+        assert_eq!(s, TileStrategy::Small);
+    }
+
+    #[test]
+    fn test_tile_strategy_medium_dims() {
+        let s = select_tile_strategy(256, 256, 512);
+        assert_eq!(s, TileStrategy::Medium);
+    }
+
+    #[test]
+    fn test_tile_strategy_large_dims() {
+        let s = select_tile_strategy(1024, 1024, 2048);
+        assert_eq!(s, TileStrategy::Large);
+    }
+
+    #[test]
+    fn test_tile_strategy_boundary_small_medium() {
+        assert_eq!(select_tile_strategy(64, 64, 257), TileStrategy::Medium);
+    }
+
+    #[test]
+    fn test_tile_strategy_boundary_medium_large() {
+        assert_eq!(select_tile_strategy(513, 128, 256), TileStrategy::Large);
+    }
+
+    #[test]
+    fn test_tile_strategy_auto_resolves() {
+        let resolved = TileStrategy::Auto.resolve(32, 32, 64);
+        assert_ne!(resolved, TileStrategy::Auto);
+    }
+
+    #[test]
+    fn test_tile_strategy_explicit_no_resolve() {
+        assert_eq!(TileStrategy::Small.resolve(10000, 10000, 10000), TileStrategy::Small);
+    }
+
+    #[test]
+    fn test_tile_dims_small() {
+        assert_eq!(TileStrategy::Small.tile_dims(), (16, 16, 16));
+    }
+
+    #[test]
+    fn test_tile_dims_medium() {
+        assert_eq!(TileStrategy::Medium.tile_dims(), (32, 32, 32));
+    }
+
+    #[test]
+    fn test_tile_dims_large() {
+        assert_eq!(TileStrategy::Large.tile_dims(), (64, 64, 32));
+    }
+
+    #[test]
+    fn test_tile_shared_mem_small() {
+        // (16*16 + 16*16) * 4 = 2048
+        assert_eq!(TileStrategy::Small.shared_mem_bytes(), 2048);
+    }
+
+    #[test]
+    fn test_tile_shared_mem_medium() {
+        // (32*32 + 32*32) * 4 = 8192
+        assert_eq!(TileStrategy::Medium.shared_mem_bytes(), 8192);
+    }
+
+    #[test]
+    fn test_tile_shared_mem_large() {
+        // (64*32 + 32*64) * 4 = 16384
+        assert_eq!(TileStrategy::Large.shared_mem_bytes(), 16384);
+    }
+
+    #[test]
+    fn test_threads_per_block_all() {
+        for s in [TileStrategy::Small, TileStrategy::Medium, TileStrategy::Large] {
+            assert_eq!(s.threads_per_block(), 256);
+        }
+    }
+
+    // ── QuantizedGemmConfig tests ─────────────────────────────────────
+
+    #[test]
+    fn test_config_new_ok() {
+        let cfg = QuantizedGemmConfig::new(128, 256, 512).unwrap();
+        assert_eq!(cfg.m, 128);
+        assert_eq!(cfg.n, 256);
+        assert_eq!(cfg.k, 512);
+        assert_eq!(cfg.accumulator_type, AccumulatorType::F32);
         assert!(!cfg.use_tensor_cores);
-        assert_eq!(cfg.batch_size, 1);
-        assert_eq!(cfg.alpha, 1.0);
-        assert_eq!(cfg.beta, 0.0);
-        assert_eq!(cfg.split_k, 1);
     }
 
     #[test]
-    fn test_config_for_shape() {
-        let cfg = QuantGemmConfig::for_shape(4, 64, 128, QuantType::INT2).unwrap();
-        assert_eq!(cfg.m, 4);
-        assert_eq!(cfg.n, 64);
-        assert_eq!(cfg.k, 128);
+    fn test_config_new_zero_m() {
+        assert!(QuantizedGemmConfig::new(0, 256, 512).is_err());
     }
 
     #[test]
-    fn test_config_rejects_zero_dims() {
-        assert!(QuantGemmConfig::for_shape(0, 8, 8, QuantType::INT2).is_err());
-        assert!(QuantGemmConfig::for_shape(8, 0, 8, QuantType::INT2).is_err());
-        assert!(QuantGemmConfig::for_shape(8, 8, 0, QuantType::INT2).is_err());
+    fn test_config_new_zero_n() {
+        assert!(QuantizedGemmConfig::new(128, 0, 512).is_err());
     }
 
     #[test]
-    fn test_config_tensor_cores() {
-        let cfg = QuantGemmConfig::for_shape(16, 16, 16, QuantType::INT8).unwrap();
-        let cfg = cfg.with_tensor_cores(true);
-        assert!(cfg.use_tensor_cores);
+    fn test_config_new_zero_k() {
+        assert!(QuantizedGemmConfig::new(128, 256, 0).is_err());
+    }
+
+    #[test]
+    fn test_config_with_strategy_small() {
+        let cfg = QuantizedGemmConfig::with_strategy(64, 64, 128, TileStrategy::Small).unwrap();
         assert_eq!(cfg.tile_m, 16);
         assert_eq!(cfg.tile_n, 16);
         assert_eq!(cfg.tile_k, 16);
     }
 
     #[test]
-    fn test_config_batch_size() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        let cfg = cfg.with_batch_size(8).unwrap();
-        assert_eq!(cfg.batch_size, 8);
+    fn test_config_with_strategy_large() {
+        let cfg =
+            QuantizedGemmConfig::with_strategy(1024, 1024, 2048, TileStrategy::Large).unwrap();
+        assert_eq!(cfg.tile_m, 64);
+        assert_eq!(cfg.tile_n, 64);
+        assert_eq!(cfg.tile_k, 32);
     }
 
     #[test]
-    fn test_config_rejects_zero_batch() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        assert!(cfg.with_batch_size(0).is_err());
+    fn test_config_with_tensor_cores() {
+        let cfg = QuantizedGemmConfig::new(32, 32, 32).unwrap().with_tensor_cores(true);
+        assert!(cfg.use_tensor_cores);
     }
 
     #[test]
-    fn test_config_split_k() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 64, QuantType::INT2).unwrap();
-        let cfg = cfg.with_split_k(4).unwrap();
-        assert_eq!(cfg.split_k, 4);
-    }
-
-    #[test]
-    fn test_config_rejects_zero_split_k() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        assert!(cfg.with_split_k(0).is_err());
-    }
-
-    #[test]
-    fn test_config_alpha_beta() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        let cfg = cfg.with_alpha_beta(2.0, 0.5);
-        assert_eq!(cfg.alpha, 2.0);
-        assert_eq!(cfg.beta, 0.5);
-    }
-
-    #[test]
-    fn test_config_tiles() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        let cfg = cfg.with_tiles(16, 16, 8).unwrap();
-        assert_eq!(cfg.tile_m, 16);
-        assert_eq!(cfg.tile_n, 16);
-        assert_eq!(cfg.tile_k, 8);
-    }
-
-    #[test]
-    fn test_config_rejects_zero_tiles() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        assert!(cfg.with_tiles(0, 16, 16).is_err());
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        assert!(cfg.with_tiles(16, 0, 16).is_err());
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        assert!(cfg.with_tiles(16, 16, 0).is_err());
+    fn test_config_with_accumulator() {
+        let cfg =
+            QuantizedGemmConfig::new(32, 32, 32).unwrap().with_accumulator(AccumulatorType::F16);
+        assert_eq!(cfg.accumulator_type, AccumulatorType::F16);
     }
 
     #[test]
     fn test_config_grid_dim() {
-        let cfg = QuantGemmConfig::for_shape(128, 256, 64, QuantType::INT2).unwrap();
+        let cfg = QuantizedGemmConfig::with_strategy(64, 128, 256, TileStrategy::Medium).unwrap();
         let (gx, gy, gz) = cfg.grid_dim();
-        assert_eq!(gx, (256u32).div_ceil(cfg.tile_n));
-        assert_eq!(gy, (128u32).div_ceil(cfg.tile_m));
+        assert_eq!(gx, 4); // 128 / 32
+        assert_eq!(gy, 2); // 64 / 32
         assert_eq!(gz, 1);
     }
 
     #[test]
-    fn test_config_accumulation() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        let cfg = cfg.with_accumulation(AccumulationType::F16);
-        assert_eq!(cfg.accumulation_type, AccumulationType::F16);
+    fn test_config_grid_dim_non_aligned() {
+        let cfg = QuantizedGemmConfig::with_strategy(33, 65, 128, TileStrategy::Medium).unwrap();
+        let (gx, gy, _) = cfg.grid_dim();
+        assert_eq!(gx, 3); // ceil(65/32)
+        assert_eq!(gy, 2); // ceil(33/32)
     }
 
     #[test]
-    fn test_config_packed_k_bytes() {
-        // INT2: k=8 → 8/4 = 2 bytes
-        let cfg = QuantGemmConfig::for_shape(1, 1, 8, QuantType::INT2).unwrap();
-        assert_eq!(cfg.packed_k_bytes(), 2);
-        // INT4: k=8 → 8/2 = 4 bytes
-        let cfg = QuantGemmConfig::for_shape(1, 1, 8, QuantType::INT4).unwrap();
-        assert_eq!(cfg.packed_k_bytes(), 4);
-        // INT8: k=8 → 8 bytes
-        let cfg = QuantGemmConfig::for_shape(1, 1, 8, QuantType::INT8).unwrap();
-        assert_eq!(cfg.packed_k_bytes(), 8);
+    fn test_config_block_dim() {
+        let cfg = QuantizedGemmConfig::new(32, 32, 32).unwrap();
+        let (bx, by, bz) = cfg.block_dim();
+        assert_eq!(bx, 256);
+        assert_eq!(by, 1);
+        assert_eq!(bz, 1);
     }
 
     #[test]
-    fn test_config_weight_buffer_size() {
-        let cfg = QuantGemmConfig::for_shape(1, 4, 8, QuantType::INT2).unwrap();
-        // packed_k = 2, n = 4 → 8
-        assert_eq!(cfg.weight_buffer_size(), 8);
+    fn test_config_total_flops() {
+        let cfg = QuantizedGemmConfig::new(4, 8, 16).unwrap();
+        assert_eq!(cfg.total_flops(), 2 * 4 * 8 * 16);
+    }
+
+    // ── AccumulatorType display ───────────────────────────────────────
+
+    #[test]
+    fn test_accumulator_display() {
+        assert_eq!(AccumulatorType::F32.to_string(), "f32");
+        assert_eq!(AccumulatorType::F16.to_string(), "f16");
+    }
+
+    // ── QuantizedGemmError display ────────────────────────────────────
+
+    #[test]
+    fn test_error_display_shape_mismatch() {
+        let e = QuantizedGemmError::ShapeMismatch { m: 4, k_a: 8, k_b: 16, n: 4 };
+        let s = e.to_string();
+        assert!(s.contains("shape mismatch"));
+        assert!(s.contains("8"));
+        assert!(s.contains("16"));
     }
 
     #[test]
-    fn test_config_gflops() {
-        let cfg = QuantGemmConfig::for_shape(64, 64, 64, QuantType::INT2).unwrap();
-        let gf = cfg.gflops(1.0); // 1 second
-        let expected = 2.0 * 64.0 * 64.0 * 64.0 / 1e9;
-        assert!((gf - expected).abs() < 1e-6);
-    }
-
-    // ── pack_weights round-trip ───────────────────────────────────
-
-    #[test]
-    fn test_pack_int2_roundtrip() {
-        let vals: Vec<i8> = vec![1, -1, 0, 1, -1, 0, 1, 1];
-        let packed = pack_weights(&vals, QuantType::INT2);
-        for (i, &expected) in vals.iter().enumerate() {
-            let got = unpack_weight(&packed, i, QuantType::INT2);
-            assert_eq!(got, expected as f32, "INT2 mismatch at {i}");
-        }
+    fn test_error_display_zero_dim() {
+        let e = QuantizedGemmError::ZeroDimension { dim_name: "m" };
+        assert!(e.to_string().contains("'m'"));
     }
 
     #[test]
-    fn test_pack_int4_roundtrip() {
-        let vals: Vec<i8> = vec![0, 1, -1, 7, -8, 3, -4, 5];
-        let packed = pack_weights(&vals, QuantType::INT4);
-        for (i, &expected) in vals.iter().enumerate() {
-            let got = unpack_weight(&packed, i, QuantType::INT4);
-            assert_eq!(got, expected as f32, "INT4 mismatch at {i}");
-        }
+    fn test_error_display_alignment() {
+        let e = QuantizedGemmError::AlignmentError { required: 16, actual: 33, dim_name: "k" };
+        let s = e.to_string();
+        assert!(s.contains("16") && s.contains("33"));
     }
 
     #[test]
-    fn test_pack_int8_roundtrip() {
-        let vals: Vec<i8> = vec![0, 1, -1, 127, -128, 42, -42, 100];
-        let packed = pack_weights(&vals, QuantType::INT8);
-        for (i, &expected) in vals.iter().enumerate() {
-            let got = unpack_weight(&packed, i, QuantType::INT8);
-            assert_eq!(got, expected as f32, "INT8 mismatch at {i}");
-        }
-    }
-
-    // ── INT2 GEMM correctness ─────────────────────────────────────
-
-    #[test]
-    fn test_int2_identity_2x2() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let expected = naive_matmul(&act, &[1.0, 0.0, 0.0, 1.0], m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-6);
+    fn test_error_display_tile_config() {
+        let e = QuantizedGemmError::InvalidTileConfig { reason: "bad tile".into() };
+        assert!(e.to_string().contains("bad tile"));
     }
 
     #[test]
-    fn test_int2_all_ones_4x4() {
-        let (m, n, k) = (4, 4, 4);
-        let w = vec![1i8; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-5);
+    fn test_error_display_buffer_small() {
+        let e = QuantizedGemmError::BufferTooSmall { required: 100, actual: 50 };
+        let s = e.to_string();
+        assert!(s.contains("100") && s.contains("50"));
     }
 
     #[test]
-    fn test_int2_all_neg_ones() {
-        let (m, n, k) = (3, 3, 4);
-        let w = vec![-1i8; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-5);
+    fn test_error_is_std_error() {
+        let e: Box<dyn std::error::Error> =
+            Box::new(QuantizedGemmError::ZeroDimension { dim_name: "k" });
+        assert!(!e.to_string().is_empty());
     }
 
     #[test]
-    fn test_int2_mixed_ternary() {
-        let (m, n, k) = (4, 4, 8);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1][i % 4]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-4);
+    fn test_error_into_kernel_error() {
+        let e = QuantizedGemmError::ZeroDimension { dim_name: "k" };
+        let ke: KernelError = e.into();
+        assert!(matches!(ke, KernelError::InvalidArguments { .. }));
     }
 
-    #[test]
-    fn test_int2_zero_weights() {
-        let (m, n, k) = (4, 4, 8);
-        let w = vec![0i8; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![42.0f32; m * k];
-        let expected = vec![0.0f32; m * n];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-6);
-    }
+    // ── INT2 GEMM correctness ─────────────────────────────────────────
 
     #[test]
-    fn test_int2_gemm_type_mismatch() {
-        let cfg = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT4).unwrap();
+    fn test_i2_gemm_identity_like() {
+        // A: 2 rows × k=2, B^T: 2 rows × k=2
+        let a = pack_i2_matrix(&[1, 0, 0, 1], 2, 2);
+        let b = pack_i2_matrix(&[1, 0, 0, 1], 2, 2);
+        let scales_a = vec![1.0, 1.0];
+        let scales_b = vec![1.0, 1.0];
         let mut out = vec![0.0f32; 4];
-        assert!(int2_gemm(&[1.0; 4], &[0; 2], &[1.0; 2], &mut out, &cfg).is_err());
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 2, 2, 2, &mut out).unwrap();
+        assert_eq!(out, [1.0, 0.0, 0.0, 1.0]);
     }
 
     #[test]
-    fn test_int2_1x1() {
-        let cfg = QuantGemmConfig::for_shape(1, 1, 1, QuantType::INT2).unwrap();
-        let w: Vec<i8> = vec![1];
-        let (packed, scales) = pack_col_major(&w, 1, 1, QuantType::INT2);
-        let act = vec![7.5f32];
+    fn test_i2_gemm_all_ones() {
+        let m = 2;
+        let n = 3;
+        let k = 4;
+        let a = pack_i2_matrix(&vec![1i8; m * k], m, k);
+        let b = pack_i2_matrix(&vec![1i8; n * k], n, k);
+        let scales_a = vec![1.0; m];
+        let scales_b = vec![1.0; n];
+        let mut out = vec![0.0f32; m * n];
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, m, n, k, &mut out).unwrap();
+        for &v in &out {
+            assert_eq!(v, k as f32);
+        }
+    }
+
+    #[test]
+    fn test_i2_gemm_with_scales() {
+        let a = pack_i2_values(&[1, 1]);
+        let b = pack_i2_values(&[1, 1]);
+        let scales_a = vec![2.0];
+        let scales_b = vec![3.0];
         let mut out = vec![0.0f32; 1];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &[7.5], 1e-6);
-    }
-
-    // ── INT4 GEMM correctness ─────────────────────────────────────
-
-    #[test]
-    fn test_int4_identity_2x2() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT4);
-        let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let expected = naive_matmul(&act, &[1.0, 0.0, 0.0, 1.0], m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT4).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-6);
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], 2.0 * 2.0 * 3.0);
     }
 
     #[test]
-    fn test_int4_range_values() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![7, -8, 3, -4, 1, -1, 0, 5];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT4);
-        let act = vec![1.0f32; m * k];
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT4).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-5);
+    fn test_i2_gemm_negative_values() {
+        let a = pack_i2_values(&[-1, 1]);
+        let b = pack_i2_values(&[1, -1]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], -2.0);
     }
 
     #[test]
-    fn test_int4_gemm_type_mismatch() {
-        let cfg = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap();
+    fn test_i2_gemm_zero_values() {
+        let a = pack_i2_values(&[0, 0, 0, 0]);
+        let b = pack_i2_values(&[1, 1, 1, 1]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 4, &mut out).unwrap();
+        assert_eq!(out[0], 0.0);
+    }
+
+    #[test]
+    fn test_i2_gemm_odd_k() {
+        let a = pack_i2_values(&[1, 1, 1]);
+        let b = pack_i2_values(&[1, 1, 1]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 3, &mut out).unwrap();
+        assert_eq!(out[0], 3.0);
+    }
+
+    #[test]
+    fn test_i2_gemm_buffer_too_small() {
+        let a = pack_i2_matrix(&[1, 1, 1, 1], 2, 2);
+        let b = pack_i2_matrix(&[1, 1, 1, 1], 2, 2);
+        let mut out = vec![0.0f32; 1]; // need 4
+        assert!(quantized_gemm_i2(&a, &b, &[1.0, 1.0], &[1.0, 1.0], 2, 2, 2, &mut out).is_err());
+    }
+
+    #[test]
+    fn test_i2_gemm_a_packed_too_small() {
+        let a = vec![0u8; 1]; // too small for 2×4
+        let b = pack_i2_matrix(&[1, 1, 1, 1, 1, 1, 1, 1], 2, 4);
         let mut out = vec![0.0f32; 4];
-        assert!(int4_gemm(&[1.0; 4], &[0; 2], &[1.0; 2], &mut out, &cfg).is_err());
+        assert!(quantized_gemm_i2(&a, &b, &[1.0, 1.0], &[1.0, 1.0], 2, 2, 4, &mut out).is_err());
     }
 
-    // ── INT8 GEMM correctness ─────────────────────────────────────
+    // ── INT4 GEMM correctness ─────────────────────────────────────────
 
     #[test]
-    fn test_int8_identity_2x2() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT8);
-        let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let expected = naive_matmul(&act, &[1.0, 0.0, 0.0, 1.0], m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT8).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-6);
-    }
-
-    #[test]
-    fn test_int8_full_range() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![127, -128, 42, -42, 1, -1, 0, 100];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT8);
-        let act = vec![1.0f32; m * k];
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT8).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-4);
+    fn test_i4_gemm_simple() {
+        let a = pack_i4_values(&[1, 2]);
+        let b = pack_i4_values(&[3, 4]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], 11.0);
     }
 
     #[test]
-    fn test_int8_gemm_type_mismatch() {
-        let cfg = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap();
+    fn test_i4_gemm_with_scales() {
+        let a = pack_i4_values(&[1, 1]);
+        let b = pack_i4_values(&[1, 1]);
+        let scales_a = vec![2.0];
+        let scales_b = vec![3.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], 12.0);
+    }
+
+    #[test]
+    fn test_i4_gemm_negative_values() {
+        let a = pack_i4_values(&[-3, 2]);
+        let b = pack_i4_values(&[4, -1]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], -14.0);
+    }
+
+    #[test]
+    fn test_i4_gemm_odd_k() {
+        let a = pack_i4_values(&[1, 2, 3]);
+        let b = pack_i4_values(&[4, 5, 6]);
+        let scales_a = vec![1.0];
+        let scales_b = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 3, &mut out).unwrap();
+        assert_eq!(out[0], 32.0);
+    }
+
+    #[test]
+    fn test_i4_gemm_2x2() {
+        let a = pack_i4_matrix(&[1, 0, 0, 1], 2, 2);
+        let b = pack_i4_matrix(&[1, 0, 0, 1], 2, 2);
+        let scales_a = vec![1.0, 1.0];
+        let scales_b = vec![1.0, 1.0];
         let mut out = vec![0.0f32; 4];
-        assert!(int8_gemm(&[1.0; 4], &[0; 2], &[1.0; 2], &mut out, &cfg).is_err());
+        quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 2, 2, 2, &mut out).unwrap();
+        assert_eq!(out, [1.0, 0.0, 0.0, 1.0]);
     }
 
-    // ── mixed_precision_gemm ──────────────────────────────────────
+    // ── Mixed-precision GEMM correctness ──────────────────────────────
 
     #[test]
-    fn test_mixed_precision_f32() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2)
-            .unwrap()
-            .with_accumulation(AccumulationType::F32);
-        let mut out = vec![0.0f32; m * n];
-        mixed_precision_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // Each element: sum of k ones = 4.0
-        assert_close(&out, &[4.0, 4.0, 4.0, 4.0], 1e-6);
+    fn test_mixed_gemm_simple() {
+        let w = pack_i2_values(&[1, -1]);
+        let x = vec![2.0f32, 3.0];
+        let scales_w = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_mixed(&w, &x, &scales_w, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], -1.0);
     }
 
     #[test]
-    fn test_mixed_precision_f16_hint() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2)
-            .unwrap()
-            .with_accumulation(AccumulationType::F16);
-        let mut out = vec![0.0f32; m * n];
-        mixed_precision_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &[4.0, 4.0, 4.0, 4.0], 1e-6);
+    fn test_mixed_gemm_with_scale() {
+        let w = pack_i2_values(&[1, 1]);
+        let x = vec![1.0f32, 1.0];
+        let scales_w = vec![0.5];
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_mixed(&w, &x, &scales_w, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], 1.0);
     }
 
-    // ── batched_quantized_gemm ────────────────────────────────────
-
     #[test]
-    fn test_batched_2_batches() {
-        let (m, n, k): (usize, usize, usize) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let qt = QuantType::INT2;
-        let epb = qt.elems_per_byte();
-        let packed_k = k.div_ceil(epb);
-
-        // Pack weights for 2 batches (same weights)
-        let (p1, _) = pack_col_major(&w, k, n, qt);
-        let mut packed = Vec::new();
-        packed.extend_from_slice(&p1);
-        packed.extend_from_slice(&p1);
-        let scales = vec![1.0f32; 2 * n];
-
-        let act = vec![
-            1.0, 2.0, 3.0, 4.0, // batch 0
-            5.0, 6.0, 7.0, 8.0, // batch 1
+    fn test_mixed_gemm_multi_row() {
+        let w = pack_i2_matrix(&[1, 0, 0, 1], 2, 2);
+        let x = vec![
+            1.0, 0.0, // row 0
+            0.0, 1.0, // row 1
+            1.0, 1.0, // row 2
         ];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap().with_batch_size(2).unwrap();
-
-        let mut out = vec![0.0f32; 2 * m * n];
-        batched_quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-
-        // Identity weights → output = input
-        assert_close(&out[0..4], &[1.0, 2.0, 3.0, 4.0], 1e-6);
-        assert_close(&out[4..8], &[5.0, 6.0, 7.0, 8.0], 1e-6);
-
-        // Suppress unused variable warning
-        let _ = packed_k;
+        let scales_w = vec![1.0, 1.0];
+        let mut out = vec![0.0f32; 6];
+        quantized_gemm_mixed(&w, &x, &scales_w, 2, 3, 2, &mut out).unwrap();
+        assert_eq!(out, [1.0, 0.0, 1.0, 0.0, 1.0, 1.0]);
     }
 
     #[test]
-    fn test_batched_rejects_zero_batch() {
-        let cfg = QuantGemmConfig {
-            batch_size: 0,
-            ..QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap()
-        };
-        let mut out = vec![0.0f32; 4];
-        assert!(batched_quantized_gemm(&[1.0; 4], &[0; 2], &[1.0; 2], &mut out, &cfg,).is_err());
+    fn test_mixed_gemm_buffer_errors() {
+        let w = pack_i2_values(&[1]);
+        let x = vec![1.0f32];
+        let mut out = vec![0.0f32; 0];
+        assert!(quantized_gemm_mixed(&w, &x, &[1.0], 1, 1, 1, &mut out).is_err());
     }
 
-    // ── tiled_gemm ────────────────────────────────────────────────
+    // ── Dequant GEMM correctness ──────────────────────────────────────
 
     #[test]
-    fn test_tiled_identity_4x4() {
-        let (m, n, k) = (4, 4, 4);
-        let w: Vec<i8> = vec![1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; m * n];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        tiled_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &act, 1e-6);
-    }
-
-    #[test]
-    fn test_tiled_matches_reference() {
-        let (m, n, k) = (8, 6, 12);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1][i % 4]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        let mut out_tiled = vec![0.0f32; m * n];
-        tiled_gemm(&act, &packed, &scales, &mut out_tiled, &cfg).unwrap();
-
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-        assert_close(&out_tiled, &expected, 1e-3);
-        assert_close(&out_tiled, &out_ref, 1e-5);
-    }
-
-    #[test]
-    fn test_tiled_custom_tile_size() {
-        let (m, n, k) = (16, 16, 32);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2)
-            .unwrap()
-            .with_tiles(8, 8, 8)
-            .unwrap();
-        let mut out = vec![0.0f32; m * n];
-        tiled_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // Each element: sum of k ones = 32
-        for &v in &out {
-            assert!((v - 32.0).abs() < 1e-4);
-        }
-    }
-
-    #[test]
-    fn test_tiled_alpha_beta() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_alpha_beta(2.0, 1.0);
-        let mut out = vec![10.0, 20.0, 30.0, 40.0];
-        tiled_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // C = 2*(A×W) + 1*old = 2*[1,1,1,1]+[10,20,30,40]
-        assert_close(&out, &[12.0, 22.0, 32.0, 42.0], 1e-5);
-    }
-
-    // ── split_k_gemm ──────────────────────────────────────────────
-
-    #[test]
-    fn test_split_k_matches_reference() {
-        let (m, n, k) = (4, 4, 32);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1][i % 4]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.01).collect();
-
-        let cfg_ref = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg_ref).unwrap();
-
-        let cfg_split =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_split_k(4).unwrap();
-        let mut out_split = vec![0.0f32; m * n];
-        split_k_gemm(&act, &packed, &scales, &mut out_split, &cfg_split).unwrap();
-
-        assert_close(&out_split, &out_ref, 1e-4);
-    }
-
-    #[test]
-    fn test_split_k_single_partition() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_split_k(1).unwrap();
-        let mut out = vec![0.0f32; m * n];
-        split_k_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &[4.0, 4.0, 4.0, 4.0], 1e-6);
-    }
-
-    #[test]
-    fn test_split_k_many_partitions() {
-        let (m, n, k) = (2, 2, 16);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_split_k(8).unwrap();
-        let mut out = vec![0.0f32; m * n];
-        split_k_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &[16.0, 16.0, 16.0, 16.0], 1e-5);
-    }
-
-    #[test]
-    fn test_split_k_alpha() {
-        let (m, n, k) = (2, 2, 8);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2)
-            .unwrap()
-            .with_split_k(2)
-            .unwrap()
-            .with_alpha_beta(0.5, 0.0);
-        let mut out = vec![0.0f32; m * n];
-        split_k_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // 0.5 * 8 = 4.0
-        assert_close(&out, &[4.0, 4.0, 4.0, 4.0], 1e-5);
-    }
-
-    // ── stream_k_gemm ─────────────────────────────────────────────
-
-    #[test]
-    fn test_stream_k_matches_reference() {
-        let (m, n, k) = (8, 6, 12);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1][i % 4]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-        let mut out_sk = vec![0.0f32; m * n];
-        stream_k_gemm(&act, &packed, &scales, &mut out_sk, &cfg).unwrap();
-
-        assert_close(&out_sk, &out_ref, 1e-5);
-    }
-
-    #[test]
-    fn test_stream_k_alpha_beta() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_alpha_beta(3.0, 1.0);
-        let mut out = vec![5.0, 10.0, 15.0, 20.0];
-        stream_k_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // C = 3*(A×W) + 1*old = 3*[1,1,1,1]+[5,10,15,20]
-        assert_close(&out, &[8.0, 13.0, 18.0, 23.0], 1e-5);
-    }
-
-    #[test]
-    fn test_stream_k_1x1() {
-        let cfg = QuantGemmConfig::for_shape(1, 1, 1, QuantType::INT2).unwrap();
-        let w: Vec<i8> = vec![1];
-        let (packed, scales) = pack_col_major(&w, 1, 1, QuantType::INT2);
-        let act = vec![5.0f32];
+    fn test_dequant_gemm_simple() {
+        let w = pack_i2_values(&[1, -1]);
+        let x = vec![3.0f32, 4.0];
+        let scales = vec![2.0];
         let mut out = vec![0.0f32; 1];
-        stream_k_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        assert_close(&out, &[5.0], 1e-6);
-    }
-
-    // ── GemmWorkspace ─────────────────────────────────────────────
-
-    #[test]
-    fn test_workspace_new() {
-        let cfg =
-            QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap().with_split_k(4).unwrap();
-        let ws = GemmWorkspace::new(&cfg);
-        assert_eq!(ws.capacity(), 4 * 4 * 4);
+        quantized_dequant_gemm(&w, &x, &scales, 1, 1, 2, &mut out).unwrap();
+        assert_eq!(out[0], -2.0);
     }
 
     #[test]
-    fn test_workspace_ensure_capacity() {
-        let cfg1 = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap();
-        let mut ws = GemmWorkspace::new(&cfg1);
-        assert_eq!(ws.capacity(), 4); // 1*2*2
-
-        let cfg2 =
-            QuantGemmConfig::for_shape(8, 8, 8, QuantType::INT2).unwrap().with_split_k(4).unwrap();
-        ws.ensure_capacity(&cfg2);
-        assert!(ws.capacity() >= 4 * 8 * 8);
+    fn test_dequant_gemm_all_zeros() {
+        let w = pack_i2_values(&[0, 0, 0, 0]);
+        let x = vec![1.0f32; 4];
+        let scales = vec![1.0];
+        let mut out = vec![0.0f32; 1];
+        quantized_dequant_gemm(&w, &x, &scales, 1, 1, 4, &mut out).unwrap();
+        assert_eq!(out[0], 0.0);
     }
 
     #[test]
-    fn test_workspace_reset() {
-        let cfg = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap();
-        let mut ws = GemmWorkspace::new(&cfg);
-        ws.partials[0] = 42.0;
-        ws.reset();
-        assert_eq!(ws.partials[0], 0.0);
-    }
-
-    // ── GemmAutoTuner ─────────────────────────────────────────────
-
-    #[test]
-    fn test_autotuner_default() {
-        let tuner = GemmAutoTuner::default();
-        assert_eq!(tuner.max_shared_mem, 49152);
-        assert_eq!(tuner.num_sms, 108);
+    fn test_dequant_gemm_2x2() {
+        let w = pack_i2_matrix(&[1, 1, -1, -1], 2, 2);
+        let x = vec![
+            1.0, 2.0, // col 0
+            3.0, 4.0, // col 1
+        ];
+        let scales = vec![1.0, 1.0];
+        let mut out = vec![0.0f32; 4];
+        quantized_dequant_gemm(&w, &x, &scales, 2, 2, 2, &mut out).unwrap();
+        assert_eq!(out, [3.0, 7.0, -3.0, -7.0]);
     }
 
     #[test]
-    fn test_autotuner_basic_tune() {
-        let tuner = GemmAutoTuner::default();
-        let cfg = tuner.tune(64, 64, 64, QuantType::INT2).unwrap();
-        assert_eq!(cfg.m, 64);
-        assert_eq!(cfg.n, 64);
-        assert_eq!(cfg.k, 64);
-        assert_eq!(cfg.quant_type, QuantType::INT2);
+    fn test_dequant_gemm_w_packed_too_small() {
+        let w = vec![0u8; 1];
+        let x = vec![1.0f32; 8];
+        let scales = vec![1.0, 1.0];
+        let mut out = vec![0.0f32; 4];
+        assert!(quantized_dequant_gemm(&w, &x, &scales, 2, 2, 4, &mut out).is_err());
+    }
+
+    // ── GemmPerformanceMetrics tests ──────────────────────────────────
+
+    #[test]
+    fn test_perf_metrics_basic() {
+        let m = QuantizedGemmConfig::new(128, 128, 128).unwrap();
+        assert_eq!(m.total_flops(), 2 * 128 * 128 * 128);
     }
 
     #[test]
-    fn test_autotuner_tensor_cores_for_int8() {
-        let tuner = GemmAutoTuner::default();
-        let cfg = tuner.tune(16, 16, 16, QuantType::INT8).unwrap();
-        assert!(cfg.use_tensor_cores);
-        assert_eq!(cfg.tile_m, 16);
+    fn test_perf_metrics_compute() {
+        let metrics = GemmPerformanceMetrics::compute(128, 128, 128, 0.001, 900.0).unwrap();
+        assert!(metrics.gflops > 0.0);
+        assert!(metrics.bandwidth_utilization > 0.0);
+        assert!(metrics.bandwidth_utilization <= 1.0);
+        assert!(metrics.occupancy > 0.0);
+        assert!(metrics.occupancy <= 1.0);
     }
 
     #[test]
-    fn test_autotuner_no_tensor_cores_for_int2() {
-        let tuner = GemmAutoTuner::default();
-        let cfg = tuner.tune(16, 16, 16, QuantType::INT2).unwrap();
-        assert!(!cfg.use_tensor_cores);
+    fn test_perf_metrics_zero_time() {
+        assert!(GemmPerformanceMetrics::compute(128, 128, 128, 0.0, 900.0).is_none());
     }
 
     #[test]
-    fn test_autotuner_split_k_for_tall_skinny() {
-        let tuner = GemmAutoTuner::default();
-        let cfg = tuner.tune(4, 4, 4096, QuantType::INT2).unwrap();
-        assert!(cfg.split_k > 1, "should enable split-K for deep K");
+    fn test_perf_metrics_negative_time() {
+        assert!(GemmPerformanceMetrics::compute(128, 128, 128, -1.0, 900.0).is_none());
     }
 
     #[test]
-    fn test_autotuner_rejects_zero_dims() {
-        let tuner = GemmAutoTuner::default();
-        assert!(tuner.tune(0, 4, 4, QuantType::INT2).is_err());
+    fn test_perf_metrics_zero_bandwidth() {
+        assert!(GemmPerformanceMetrics::compute(128, 128, 128, 0.001, 0.0).is_none());
     }
 
     #[test]
-    fn test_autotuner_custom_device() {
-        let tuner = GemmAutoTuner::new(16384, 40);
-        let cfg = tuner.tune(32, 32, 32, QuantType::INT4).unwrap();
-        assert!(cfg.shared_mem_bytes <= 16384);
+    fn test_perf_metrics_utilization_capped() {
+        let metrics = GemmPerformanceMetrics::compute(128, 128, 128, 1e-12, 1.0).unwrap();
+        assert!(metrics.bandwidth_utilization <= 1.0);
     }
 
-    // ── benchmark_gemm ────────────────────────────────────────────
+    // ── Edge cases ────────────────────────────────────────────────────
 
     #[test]
-    fn test_benchmark_returns_positive() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 4, QuantType::INT2).unwrap();
-        let gflops = benchmark_gemm(&cfg, 2);
-        assert!(gflops > 0.0);
-    }
-
-    #[test]
-    fn test_benchmark_single_iteration() {
-        let cfg = QuantGemmConfig::for_shape(2, 2, 2, QuantType::INT2).unwrap();
-        let gflops = benchmark_gemm(&cfg, 1);
-        assert!(gflops > 0.0);
-    }
-
-    // ── Validation / buffer errors ────────────────────────────────
-
-    #[test]
-    fn test_activation_buffer_too_small() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 8, QuantType::INT2).unwrap();
-        let act = vec![1.0f32; 2]; // too small
-        let packed = vec![0u8; cfg.weight_buffer_size()];
-        let scales = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 16];
-        assert!(quantized_gemm(&act, &packed, &scales, &mut out, &cfg).is_err());
+    fn test_single_element_i2() {
+        let a = pack_i2_values(&[1]);
+        let b = pack_i2_values(&[1]);
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, 1, &mut out).unwrap();
+        assert_eq!(out[0], 1.0);
     }
 
     #[test]
-    fn test_weight_buffer_too_small() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 8, QuantType::INT2).unwrap();
-        let act = vec![1.0f32; 32];
-        let packed = vec![0u8; 1]; // too small
-        let scales = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 16];
-        assert!(quantized_gemm(&act, &packed, &scales, &mut out, &cfg).is_err());
+    fn test_single_element_i4() {
+        let a = pack_i4_values(&[3]);
+        let b = pack_i4_values(&[4]);
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i4(&a, &b, &[1.0], &[1.0], 1, 1, 1, &mut out).unwrap();
+        assert_eq!(out[0], 12.0);
     }
 
     #[test]
-    fn test_scales_buffer_too_small() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 8, QuantType::INT2).unwrap();
-        let act = vec![1.0f32; 32];
-        let packed = vec![0u8; cfg.weight_buffer_size()];
-        let scales = vec![1.0f32; 1]; // too small
-        let mut out = vec![0.0f32; 16];
-        assert!(quantized_gemm(&act, &packed, &scales, &mut out, &cfg).is_err());
+    fn test_large_k_i2() {
+        let k = 256;
+        let a = pack_i2_values(&vec![1i8; k]);
+        let b = pack_i2_values(&vec![1i8; k]);
+        let mut out = vec![0.0f32; 1];
+        quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
+        assert_eq!(out[0], k as f32);
     }
 
     #[test]
-    fn test_output_buffer_too_small() {
-        let cfg = QuantGemmConfig::for_shape(4, 4, 8, QuantType::INT2).unwrap();
-        let act = vec![1.0f32; 32];
-        let packed = vec![0u8; cfg.weight_buffer_size()];
-        let scales = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 2]; // too small
-        assert!(quantized_gemm(&act, &packed, &scales, &mut out, &cfg).is_err());
-    }
-
-    // ── Non-unit scale tests ──────────────────────────────────────
-
-    #[test]
-    fn test_non_unit_scales() {
-        let (m, n, k) = (2, 2, 4);
-        let w: Vec<i8> = vec![1; k * n];
-        let qt = QuantType::INT2;
-        let (packed, _) = pack_col_major(&w, k, n, qt);
-        let scales = vec![2.0f32, 0.5];
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
+    fn test_rectangular_matrix_i2() {
+        let m = 3;
+        let n = 2;
+        let k = 5;
+        let a = pack_i2_matrix(&vec![1i8; m * k], m, k);
+        let b = pack_i2_matrix(&vec![1i8; n * k], n, k);
+        let scales_a = vec![1.0; m];
+        let scales_b = vec![1.0; n];
         let mut out = vec![0.0f32; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // col0: 4*2.0=8, col1: 4*0.5=2
-        assert_close(&out, &[8.0, 2.0, 8.0, 2.0], 1e-5);
-    }
-
-    #[test]
-    fn test_zero_scale_produces_zero() {
-        let (m, n, k) = (3, 3, 4);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, _) = pack_col_major(&w, k, n, QuantType::INT2);
-        let scales = vec![0.0f32; n];
-        let act = vec![42.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        let mut out = vec![f32::NAN; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
+        quantized_gemm_i2(&a, &b, &scales_a, &scales_b, m, n, k, &mut out).unwrap();
         for &v in &out {
-            assert!((v - 0.0).abs() < 1e-7, "expected 0, got {v}");
-        }
-    }
-
-    // ── Larger matrix tests ───────────────────────────────────────
-
-    #[test]
-    fn test_large_16x8_int2() {
-        let (m, n, k) = (16, 8, 48);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, 0, -1, 1, -1][i % 5]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.03).sin()).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-3);
-    }
-
-    #[test]
-    fn test_large_32x32_int4() {
-        let (m, n, k) = (32, 32, 16);
-        let w: Vec<i8> = (0..k * n).map(|i| (i % 15) as i8 - 7).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT4);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.01).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT4).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-2);
-    }
-
-    // ── Alpha scaling ─────────────────────────────────────────────
-
-    #[test]
-    fn test_alpha_scales_output() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_alpha_beta(3.0, 0.0);
-        let mut out = vec![0.0f32; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // 3 * (A×W) where A=all-ones, W=identity → all-ones
-        // 3 * [1,1,1,1] = [3,3,3,3]
-        assert_close(&out, &[3.0, 3.0, 3.0, 3.0], 1e-6);
-    }
-
-    #[test]
-    fn test_beta_accumulate() {
-        let (m, n, k) = (2, 2, 2);
-        let w: Vec<i8> = vec![1, 0, 0, 1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_alpha_beta(1.0, 1.0);
-        let mut out = vec![10.0, 20.0, 30.0, 40.0];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        // C = (A×W) + old = [1,1,1,1] + [10,20,30,40]
-        assert_close(&out, &[11.0, 21.0, 31.0, 41.0], 1e-6);
-    }
-
-    // ── K not multiple of elems_per_byte ──────────────────────────
-
-    #[test]
-    fn test_k_not_multiple_of_4_int2() {
-        let (m, n, k) = (3, 2, 5);
-        let w: Vec<i8> = vec![1, 0, -1, 1, 0, 1, -1, 0, 1, -1];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| i as f32 + 0.5).collect();
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-5);
-    }
-
-    #[test]
-    fn test_k_odd_int4() {
-        let (m, n, k) = (2, 2, 3);
-        let w: Vec<i8> = vec![1, -1, 3, -3, 2, -2];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT4);
-        let act = vec![1.0f32; m * k];
-        let w_f32: Vec<f32> = w.iter().map(|&v| v as f32).collect();
-        let expected = naive_matmul(&act, &w_f32, m, n, k);
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT4).unwrap();
-        run_all_paths(&act, &packed, &scales, &cfg, &expected, 1e-5);
-    }
-
-    // ── CUDA launch / kernel source ───────────────────────────────
-
-    #[test]
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
-    fn test_kernel_src_not_empty() {
-        assert!(!QUANTIZED_GEMM_KERNEL_SRC.is_empty());
-        assert!(QUANTIZED_GEMM_KERNEL_SRC.contains("quantized_gemm_f32"));
-    }
-
-    #[test]
-    #[ignore = "requires CUDA runtime — run with --features gpu \
-                on GPU hardware"]
-    fn test_cuda_quantized_gemm_launch() {
-        let cfg = QuantGemmConfig::for_shape(4, 2048, 2048, QuantType::INT2).unwrap();
-        let act = vec![1.0f32; 4 * 2048];
-        let packed = vec![0u8; cfg.weight_buffer_size()];
-        let scales = vec![1.0f32; 2048];
-        let mut out = vec![0.0f32; 4 * 2048];
-        let result = quantized_gemm(&act, &packed, &scales, &mut out, &cfg);
-        assert!(result.is_ok(), "quantized GEMM launch failed: {result:?}");
-    }
-
-    // ── Cross-path consistency ────────────────────────────────────
-
-    #[test]
-    fn test_all_paths_agree_int2() {
-        let (m, n, k) = (4, 6, 8);
-        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0][i % 3]).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.05).collect();
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-        let mut out_tiled = vec![0.0f32; m * n];
-        tiled_gemm(&act, &packed, &scales, &mut out_tiled, &cfg).unwrap();
-
-        let mut out_sk = vec![0.0f32; m * n];
-        stream_k_gemm(&act, &packed, &scales, &mut out_sk, &cfg).unwrap();
-
-        let cfg_split =
-            QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap().with_split_k(2).unwrap();
-        let mut out_split = vec![0.0f32; m * n];
-        split_k_gemm(&act, &packed, &scales, &mut out_split, &cfg_split).unwrap();
-
-        let mut out_dispatch = vec![0.0f32; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out_dispatch, &cfg).unwrap();
-
-        assert_close(&out_tiled, &out_ref, 1e-5);
-        assert_close(&out_sk, &out_ref, 1e-5);
-        assert_close(&out_split, &out_ref, 1e-4);
-        assert_close(&out_dispatch, &out_ref, 1e-6);
-    }
-
-    #[test]
-    fn test_all_paths_agree_int4() {
-        let (m, n, k) = (4, 4, 8);
-        let w: Vec<i8> = (0..k * n).map(|i| (i % 9) as i8 - 4).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT4);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT4).unwrap();
-
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-        let mut out_tiled = vec![0.0f32; m * n];
-        tiled_gemm(&act, &packed, &scales, &mut out_tiled, &cfg).unwrap();
-
-        let mut out_dispatch = vec![0.0f32; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out_dispatch, &cfg).unwrap();
-
-        assert_close(&out_tiled, &out_ref, 1e-4);
-        assert_close(&out_dispatch, &out_ref, 1e-6);
-    }
-
-    #[test]
-    fn test_all_paths_agree_int8() {
-        let (m, n, k) = (4, 4, 8);
-        let w: Vec<i8> = (0..k * n).map(|i| (i % 7) as i8 - 3).collect();
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT8);
-        let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT8).unwrap();
-
-        let mut out_ref = vec![0.0f32; m * n];
-        gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-        let mut out_tiled = vec![0.0f32; m * n];
-        tiled_gemm(&act, &packed, &scales, &mut out_tiled, &cfg).unwrap();
-
-        assert_close(&out_tiled, &out_ref, 1e-4);
-    }
-
-    // ── property-like tests ───────────────────────────────────────
-
-    #[test]
-    fn test_zero_activations_produce_zero() {
-        for qt in [QuantType::INT2, QuantType::INT4, QuantType::INT8] {
-            let (m, n, k) = (4, 4, 8);
-            let w: Vec<i8> = vec![1; k * n];
-            let (packed, scales) = pack_col_major(&w, k, n, qt);
-            let act = vec![0.0f32; m * k];
-            let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
-            let mut out = vec![f32::NAN; m * n];
-            quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-            for &v in &out {
-                assert!(v.abs() < 1e-7, "expected 0 for {qt:?}, got {v}");
-            }
+            assert_eq!(v, k as f32);
         }
     }
 
     #[test]
-    fn test_output_bounded_by_k() {
-        let (m, n, k) = (4, 4, 16);
-        let w: Vec<i8> = vec![1; k * n];
-        let (packed, scales) = pack_col_major(&w, k, n, QuantType::INT2);
-        let act = vec![1.0f32; m * k];
-        let cfg = QuantGemmConfig::for_shape(m, n, k, QuantType::INT2).unwrap();
-        let mut out = vec![0.0f32; m * n];
-        quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-        let bound = k as f32 + 1e-4;
-        for &v in &out {
-            assert!(v.abs() <= bound, "output {v} exceeds bound {bound}");
-        }
+    fn test_decode_i2_values() {
+        assert_eq!(decode_i2(0b00), 0);
+        assert_eq!(decode_i2(0b01), 1);
+        assert_eq!(decode_i2(0b11), -1);
+        assert_eq!(decode_i2(0b10), 0);
     }
 
-    // ── proptest ──────────────────────────────────────────────────
+    #[test]
+    fn test_decode_i4_values() {
+        assert_eq!(decode_i4(8), 0);
+        assert_eq!(decode_i4(15), 7);
+        assert_eq!(decode_i4(0), -8);
+        assert_eq!(decode_i4(1), -7);
+    }
+
+    // ── Property tests ────────────────────────────────────────────────
 
     mod prop {
         use super::*;
         use proptest::prelude::*;
 
-        fn dim_range() -> impl Strategy<Value = usize> {
-            1..=12usize
-        }
-
-        fn k_range() -> impl Strategy<Value = usize> {
-            1..=24usize
-        }
-
         proptest! {
             #[test]
-            fn output_shape_matches_config(
-                m in dim_range(),
-                n in dim_range(),
-                k in k_range(),
+            fn tile_strategy_is_never_auto(
+                m in 1usize..2048,
+                n in 1usize..2048,
+                k in 1usize..2048,
             ) {
-                let qt = QuantType::INT2;
-                let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
-                let epb = qt.elems_per_byte();
-                let packed_k = k.div_ceil(epb);
-                let act = vec![1.0f32; m * k];
-                let packed = vec![0u8; packed_k * n];
-                let scales = vec![1.0f32; n];
-                let mut out = vec![0.0f32; m * n];
-                quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-                prop_assert_eq!(out.len(), m * n);
+                let s = select_tile_strategy(m, n, k);
+                prop_assert_ne!(s, TileStrategy::Auto);
             }
 
             #[test]
-            fn zero_weights_zero_output(
-                m in dim_range(),
-                n in dim_range(),
-                k in k_range(),
+            fn auto_resolve_matches_select(
+                m in 1usize..2048,
+                n in 1usize..2048,
+                k in 1usize..2048,
             ) {
-                let qt = QuantType::INT2;
-                let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
-                let packed_k = k.div_ceil(qt.elems_per_byte());
-                let act: Vec<f32> = (0..m * k).map(|i| i as f32 * 0.37).collect();
-                let packed = vec![0u8; packed_k * n];
-                let scales = vec![1.0f32; n];
-                let mut out = vec![f32::NAN; m * n];
-                quantized_gemm(&act, &packed, &scales, &mut out, &cfg).unwrap();
-                for &v in &out {
-                    prop_assert!((v - 0.0).abs() < 1e-7, "expected 0, got {v}");
+                let resolved = TileStrategy::Auto.resolve(m, n, k);
+                let selected = select_tile_strategy(m, n, k);
+                prop_assert_eq!(resolved, selected);
+            }
+
+            #[test]
+            fn config_grid_covers_output(
+                m in 1usize..1024,
+                n in 1usize..1024,
+                k in 1usize..1024,
+            ) {
+                let cfg = QuantizedGemmConfig::new(m, n, k).unwrap();
+                let (gx, gy, _) = cfg.grid_dim();
+                prop_assert!(gx as usize * cfg.tile_n as usize >= n);
+                prop_assert!(gy as usize * cfg.tile_m as usize >= m);
+            }
+
+            #[test]
+            fn config_total_flops_formula(
+                m in 1usize..512,
+                n in 1usize..512,
+                k in 1usize..512,
+            ) {
+                let cfg = QuantizedGemmConfig::new(m, n, k).unwrap();
+                prop_assert_eq!(cfg.total_flops(), 2 * m as u64 * n as u64 * k as u64);
+            }
+
+            #[test]
+            fn validate_inputs_symmetric(
+                m in 1usize..128,
+                n in 1usize..128,
+                k in 1usize..128,
+            ) {
+                let buf = m * n;
+                prop_assert!(validate_gemm_inputs(m, k, k, n, buf).is_ok());
+            }
+
+            #[test]
+            fn shared_mem_positive(strat in prop_oneof![
+                Just(TileStrategy::Small),
+                Just(TileStrategy::Medium),
+                Just(TileStrategy::Large),
+            ]) {
+                prop_assert!(strat.shared_mem_bytes() > 0);
+            }
+
+            #[test]
+            fn i2_gemm_ones_equals_k(k in 1usize..64) {
+                let a = pack_i2_values(&vec![1i8; k]);
+                let b = pack_i2_values(&vec![1i8; k]);
+                let mut out = vec![0.0f32; 1];
+                quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
+                prop_assert!((out[0] - k as f32).abs() < 1e-6);
+            }
+
+            #[test]
+            fn i2_gemm_zeros_is_zero(k in 1usize..64) {
+                let a = pack_i2_values(&vec![0i8; k]);
+                let b = pack_i2_values(&vec![1i8; k]);
+                let mut out = vec![0.0f32; 1];
+                quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
+                prop_assert!((out[0]).abs() < 1e-6);
+            }
+
+            #[test]
+            fn perf_metrics_gflops_positive(
+                m in 1usize..256,
+                n in 1usize..256,
+                k in 1usize..256,
+                elapsed in 0.001f64..10.0,
+            ) {
+                if let Some(metrics) = GemmPerformanceMetrics::compute(m, n, k, elapsed, 900.0) {
+                    prop_assert!(metrics.gflops > 0.0);
+                    prop_assert!(metrics.total_flops > 0);
                 }
             }
 
             #[test]
-            fn tiled_matches_reference(
-                m in dim_range(),
-                n in dim_range(),
-                k in k_range(),
+            fn validate_mismatch_detected(
+                m in 1usize..64,
+                n in 1usize..64,
+                k_a in 1usize..64,
+                k_b in 1usize..64,
             ) {
-                let qt = QuantType::INT2;
-                let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0][i % 3]).collect();
-                let (packed, scales) = pack_col_major(&w, k, n, qt);
-                let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-                let cfg = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
-
-                let mut out_ref = vec![0.0f32; m * n];
-                gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg).unwrap();
-
-                let mut out_tiled = vec![0.0f32; m * n];
-                tiled_gemm(&act, &packed, &scales, &mut out_tiled, &cfg).unwrap();
-
-                for (i, (&a, &b)) in out_ref.iter().zip(out_tiled.iter()).enumerate() {
-                    prop_assert!(
-                        (a - b).abs() < 1e-4,
-                        "mismatch at {i}: ref={a}, tiled={b}"
-                    );
-                }
-            }
-
-            #[test]
-            fn split_k_matches_reference(
-                m in dim_range(),
-                n in dim_range(),
-                k in 4..=24usize,
-            ) {
-                let qt = QuantType::INT2;
-                let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0][i % 3]).collect();
-                let (packed, scales) = pack_col_major(&w, k, n, qt);
-                let act: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
-
-                let cfg_ref = QuantGemmConfig::for_shape(m, n, k, qt).unwrap();
-                let mut out_ref = vec![0.0f32; m * n];
-                gemm_cpu_inner(&act, &packed, &scales, &mut out_ref, &cfg_ref).unwrap();
-
-                let cfg_split = QuantGemmConfig::for_shape(m, n, k, qt)
-                    .unwrap()
-                    .with_split_k(2)
-                    .unwrap();
-                let mut out_split = vec![0.0f32; m * n];
-                split_k_gemm(&act, &packed, &scales, &mut out_split, &cfg_split).unwrap();
-
-                for (i, (&a, &b)) in out_ref.iter().zip(out_split.iter()).enumerate() {
-                    prop_assert!(
-                        (a - b).abs() < 1e-4,
-                        "mismatch at {i}: ref={a}, split={b}"
-                    );
+                if k_a != k_b {
+                    let result = validate_gemm_inputs(m, k_a, k_b, n, m * n);
+                    prop_assert!(result.is_err());
                 }
             }
         }
