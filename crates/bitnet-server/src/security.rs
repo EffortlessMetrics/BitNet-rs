@@ -351,27 +351,7 @@ fn extract_client_ip(request: &Request) -> Option<IpAddr> {
 }
 
 /// Extract client IP from headers (shared utility)
-pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
-    // Try X-Forwarded-For header first (for reverse proxies)
-    if let Some(forwarded) = headers.get("x-forwarded-for")
-        && let Ok(forwarded_str) = forwarded.to_str()
-        && let Some(first_ip) = forwarded_str.split(',').next()
-        && let Ok(ip) = first_ip.trim().parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
-
-    // Try X-Real-IP header
-    if let Some(real_ip) = headers.get("x-real-ip")
-        && let Ok(ip_str) = real_ip.to_str()
-        && let Ok(ip) = ip_str.parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
-
-    // Fall back to connection info (would need to be passed from the server)
-    None
-}
+pub use bitnet_client_ip_core::extract_client_ip_from_headers;
 
 /// CORS middleware configuration
 pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
