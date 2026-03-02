@@ -261,10 +261,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::InvalidWorkGroupSize,
             severity: ErrorSeverity::Recoverable,
             message: "Work-group size exceeds device limits".into(),
-            recovery: vec![
-                RecoveryAction::ReduceWorkgroupSize,
-                RecoveryAction::RetryWithFallback,
-            ],
+            recovery: vec![RecoveryAction::ReduceWorkgroupSize, RecoveryAction::RetryWithFallback],
             a770_specific: true,
             documentation: "The A770 supports max 1024 work-items per \
                 work-group. Reduce local dimensions to fit."
@@ -274,10 +271,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::InvalidBufferSize,
             severity: ErrorSeverity::Recoverable,
             message: "Buffer size is invalid or exceeds limits".into(),
-            recovery: vec![
-                RecoveryAction::AllocateSmaller,
-                RecoveryAction::ReduceBatchSize,
-            ],
+            recovery: vec![RecoveryAction::AllocateSmaller, RecoveryAction::ReduceBatchSize],
             a770_specific: false,
             documentation: "The requested buffer exceeds \
                 CL_DEVICE_MAX_MEM_ALLOC_SIZE. Split into smaller buffers."
@@ -306,12 +300,8 @@ pub fn build_error_catalog() -> ErrorCatalog {
         ErrorEntry {
             code: OpenClErrorCode::NumericalPrecisionLoss,
             severity: ErrorSeverity::Warning,
-            message: "Numerical precision loss detected in kernel output"
-                .into(),
-            recovery: vec![
-                RecoveryAction::FallbackToCPU,
-                RecoveryAction::RetryWithFallback,
-            ],
+            message: "Numerical precision loss detected in kernel output".into(),
+            recovery: vec![RecoveryAction::FallbackToCPU, RecoveryAction::RetryWithFallback],
             a770_specific: true,
             documentation: "FP16 intermediate values may lose precision \
                 on the A770. Consider FP32 accumulation."
@@ -321,10 +311,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::NaNDetected,
             severity: ErrorSeverity::Warning,
             message: "NaN value detected in kernel output".into(),
-            recovery: vec![
-                RecoveryAction::FallbackToCPU,
-                RecoveryAction::RetryWithFallback,
-            ],
+            recovery: vec![RecoveryAction::FallbackToCPU, RecoveryAction::RetryWithFallback],
             a770_specific: false,
             documentation: "NaN propagation indicates a numerical bug. \
                 Check input data and kernel arithmetic."
@@ -334,10 +321,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::InfDetected,
             severity: ErrorSeverity::Warning,
             message: "Infinity value detected in kernel output".into(),
-            recovery: vec![
-                RecoveryAction::FallbackToCPU,
-                RecoveryAction::RetryWithFallback,
-            ],
+            recovery: vec![RecoveryAction::FallbackToCPU, RecoveryAction::RetryWithFallback],
             a770_specific: false,
             documentation: "Overflow to ±Inf suggests accumulator width \
                 is too narrow or inputs are un-normalised."
@@ -361,10 +345,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::DeviceLost,
             severity: ErrorSeverity::Fatal,
             message: "GPU device was lost (TDR or hardware reset)".into(),
-            recovery: vec![
-                RecoveryAction::FallbackToCPU,
-                RecoveryAction::Abort,
-            ],
+            recovery: vec![RecoveryAction::FallbackToCPU, RecoveryAction::Abort],
             a770_specific: true,
             documentation: "The A770 triggered a TDR reset. Reduce kernel \
                 duration or increase the TDR timeout in the driver."
@@ -384,10 +365,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
             code: OpenClErrorCode::UnsupportedExtension(String::new()),
             severity: ErrorSeverity::Recoverable,
             message: "Required OpenCL extension is not supported".into(),
-            recovery: vec![
-                RecoveryAction::RetryWithFallback,
-                RecoveryAction::FallbackToCPU,
-            ],
+            recovery: vec![RecoveryAction::RetryWithFallback, RecoveryAction::FallbackToCPU],
             a770_specific: false,
             documentation: "The kernel requires an extension (e.g. \
                 cl_intel_subgroups) not present on this device."
@@ -396,8 +374,7 @@ pub fn build_error_catalog() -> ErrorCatalog {
         ErrorEntry {
             code: OpenClErrorCode::IncompatibleDevice,
             severity: ErrorSeverity::Fatal,
-            message: "Device is incompatible with required capabilities"
-                .into(),
+            message: "Device is incompatible with required capabilities".into(),
             recovery: vec![RecoveryAction::FallbackToCPU, RecoveryAction::Abort],
             a770_specific: false,
             documentation: "The device does not meet minimum compute \
@@ -428,13 +405,8 @@ pub fn lookup_error<'a>(
 }
 
 /// Get recovery actions for a given error code.
-pub fn suggest_recovery(
-    catalog: &ErrorCatalog,
-    code: &OpenClErrorCode,
-) -> Vec<RecoveryAction> {
-    lookup_error(catalog, code)
-        .map(|e| e.recovery.clone())
-        .unwrap_or_default()
+pub fn suggest_recovery(catalog: &ErrorCatalog, code: &OpenClErrorCode) -> Vec<RecoveryAction> {
+    lookup_error(catalog, code).map(|e| e.recovery.clone()).unwrap_or_default()
 }
 
 /// Whether this error is known to be Intel Arc A770-specific.
@@ -446,16 +418,11 @@ pub fn is_a770_specific(code: &OpenClErrorCode) -> bool {
 /// Classify the severity of an error code.
 pub fn classify_severity(code: &OpenClErrorCode) -> ErrorSeverity {
     let catalog = build_error_catalog();
-    lookup_error(&catalog, code)
-        .map(|e| e.severity)
-        .unwrap_or(ErrorSeverity::Fatal)
+    lookup_error(&catalog, code).map(|e| e.severity).unwrap_or(ErrorSeverity::Fatal)
 }
 
 /// Produce a human-readable error report with optional diagnostic context.
-pub fn format_error_report(
-    entry: &ErrorEntry,
-    diag: Option<&DiagnosticInfo>,
-) -> String {
+pub fn format_error_report(entry: &ErrorEntry, diag: Option<&DiagnosticInfo>) -> String {
     let mut report = format!(
         "[{}] {}\n  Error: {}\n  Message: {}\n  A770-specific: {}\n  \
          Documentation: {}\n  Recovery actions:\n",
@@ -488,24 +455,16 @@ pub fn format_error_report(
 /// Simulate whether the given recovery actions would succeed for a code.
 /// Recoverable/Warning/Info errors succeed; Fatal errors only succeed if
 /// `FallbackToCPU` is among the actions.
-pub fn cpu_simulate_recovery(
-    code: &OpenClErrorCode,
-    actions: &[RecoveryAction],
-) -> bool {
+pub fn cpu_simulate_recovery(code: &OpenClErrorCode, actions: &[RecoveryAction]) -> bool {
     let severity = classify_severity(code);
     match severity {
-        ErrorSeverity::Fatal => {
-            actions.contains(&RecoveryAction::FallbackToCPU)
-        }
+        ErrorSeverity::Fatal => actions.contains(&RecoveryAction::FallbackToCPU),
         _ => !actions.is_empty(),
     }
 }
 
 /// Filter the catalog to entries matching a specific severity.
-pub fn filter_by_severity(
-    catalog: &ErrorCatalog,
-    severity: ErrorSeverity,
-) -> Vec<&ErrorEntry> {
+pub fn filter_by_severity(catalog: &ErrorCatalog, severity: ErrorSeverity) -> Vec<&ErrorEntry> {
     catalog.entries.iter().filter(|e| e.severity == severity).collect()
 }
 
@@ -570,17 +529,14 @@ mod tests {
     #[test]
     fn test_lookup_kernel_compilation_ignores_payload() {
         let cat = build_error_catalog();
-        let code = OpenClErrorCode::KernelCompilationFailed(
-            "some specific error".into(),
-        );
+        let code = OpenClErrorCode::KernelCompilationFailed("some specific error".into());
         assert!(lookup_error(&cat, &code).is_some());
     }
 
     #[test]
     fn test_lookup_unsupported_extension_ignores_payload() {
         let cat = build_error_catalog();
-        let code =
-            OpenClErrorCode::UnsupportedExtension("cl_khr_fp64".into());
+        let code = OpenClErrorCode::UnsupportedExtension("cl_khr_fp64".into());
         assert!(lookup_error(&cat, &code).is_some());
     }
 
@@ -598,11 +554,7 @@ mod tests {
         let cat = build_error_catalog();
         for entry in &cat.entries {
             let actions = suggest_recovery(&cat, &entry.code);
-            assert!(
-                !actions.is_empty(),
-                "no recovery for {:?}",
-                entry.code
-            );
+            assert!(!actions.is_empty(), "no recovery for {:?}", entry.code);
         }
     }
 
@@ -612,16 +564,14 @@ mod tests {
         // Create a code that doesn't exist by using InternalError then
         // removing it from the catalog. Instead, just use an empty catalog.
         let empty = ErrorCatalog { entries: vec![] };
-        let actions =
-            suggest_recovery(&empty, &OpenClErrorCode::DeviceNotFound);
+        let actions = suggest_recovery(&empty, &OpenClErrorCode::DeviceNotFound);
         assert!(actions.is_empty());
     }
 
     #[test]
     fn test_out_of_resources_suggests_reduce() {
         let cat = build_error_catalog();
-        let actions =
-            suggest_recovery(&cat, &OpenClErrorCode::OutOfResources);
+        let actions = suggest_recovery(&cat, &OpenClErrorCode::OutOfResources);
         assert!(actions.contains(&RecoveryAction::ReduceBatchSize));
     }
 
@@ -663,26 +613,17 @@ mod tests {
 
     #[test]
     fn test_severity_fatal_for_device_not_found() {
-        assert_eq!(
-            classify_severity(&OpenClErrorCode::DeviceNotFound),
-            ErrorSeverity::Fatal,
-        );
+        assert_eq!(classify_severity(&OpenClErrorCode::DeviceNotFound), ErrorSeverity::Fatal,);
     }
 
     #[test]
     fn test_severity_recoverable_for_timeout() {
-        assert_eq!(
-            classify_severity(&OpenClErrorCode::Timeout),
-            ErrorSeverity::Recoverable,
-        );
+        assert_eq!(classify_severity(&OpenClErrorCode::Timeout), ErrorSeverity::Recoverable,);
     }
 
     #[test]
     fn test_severity_warning_for_nan() {
-        assert_eq!(
-            classify_severity(&OpenClErrorCode::NaNDetected),
-            ErrorSeverity::Warning,
-        );
+        assert_eq!(classify_severity(&OpenClErrorCode::NaNDetected), ErrorSeverity::Warning,);
     }
 
     #[test]
@@ -697,8 +638,7 @@ mod tests {
     #[test]
     fn test_format_report_contains_code() {
         let cat = build_error_catalog();
-        let entry =
-            lookup_error(&cat, &OpenClErrorCode::DeviceNotFound).unwrap();
+        let entry = lookup_error(&cat, &OpenClErrorCode::DeviceNotFound).unwrap();
         let report = format_error_report(entry, None);
         assert!(report.contains("CL_DEVICE_NOT_FOUND"));
     }
@@ -706,8 +646,7 @@ mod tests {
     #[test]
     fn test_format_report_contains_message() {
         let cat = build_error_catalog();
-        let entry =
-            lookup_error(&cat, &OpenClErrorCode::DeviceNotFound).unwrap();
+        let entry = lookup_error(&cat, &OpenClErrorCode::DeviceNotFound).unwrap();
         let report = format_error_report(entry, None);
         assert!(report.contains(&entry.message));
     }
@@ -715,8 +654,7 @@ mod tests {
     #[test]
     fn test_format_report_contains_recovery_actions() {
         let cat = build_error_catalog();
-        let entry =
-            lookup_error(&cat, &OpenClErrorCode::OutOfResources).unwrap();
+        let entry = lookup_error(&cat, &OpenClErrorCode::OutOfResources).unwrap();
         let report = format_error_report(entry, None);
         assert!(report.contains("Reduce batch size"));
     }
@@ -724,8 +662,7 @@ mod tests {
     #[test]
     fn test_format_report_with_diagnostics() {
         let cat = build_error_catalog();
-        let entry =
-            lookup_error(&cat, &OpenClErrorCode::DeviceLost).unwrap();
+        let entry = lookup_error(&cat, &OpenClErrorCode::DeviceLost).unwrap();
         let diag = DiagnosticInfo {
             device_name: "Intel Arc A770".into(),
             driver_version: "23.17.26241".into(),
@@ -745,10 +682,8 @@ mod tests {
     fn test_all_fatal_errors_suggest_abort_or_fallback() {
         let cat = build_error_catalog();
         for entry in filter_by_severity(&cat, ErrorSeverity::Fatal) {
-            let has_abort =
-                entry.recovery.contains(&RecoveryAction::Abort);
-            let has_cpu =
-                entry.recovery.contains(&RecoveryAction::FallbackToCPU);
+            let has_abort = entry.recovery.contains(&RecoveryAction::Abort);
+            let has_cpu = entry.recovery.contains(&RecoveryAction::FallbackToCPU);
             assert!(
                 has_abort || has_cpu,
                 "fatal error {:?} needs Abort or FallbackToCPU",
@@ -763,11 +698,7 @@ mod tests {
     fn test_all_recoverable_non_empty_recovery() {
         let cat = build_error_catalog();
         for entry in filter_by_severity(&cat, ErrorSeverity::Recoverable) {
-            assert!(
-                !entry.recovery.is_empty(),
-                "recoverable {:?} has no recovery",
-                entry.code
-            );
+            assert!(!entry.recovery.is_empty(), "recoverable {:?} has no recovery", entry.code);
         }
     }
 
@@ -775,19 +706,14 @@ mod tests {
 
     #[test]
     fn test_simulation_recoverable_succeeds() {
-        let ok = cpu_simulate_recovery(
-            &OpenClErrorCode::Timeout,
-            &[RecoveryAction::RetryAfterDelay],
-        );
+        let ok =
+            cpu_simulate_recovery(&OpenClErrorCode::Timeout, &[RecoveryAction::RetryAfterDelay]);
         assert!(ok);
     }
 
     #[test]
     fn test_simulation_fatal_fails_without_cpu_fallback() {
-        let ok = cpu_simulate_recovery(
-            &OpenClErrorCode::DeviceNotFound,
-            &[RecoveryAction::Abort],
-        );
+        let ok = cpu_simulate_recovery(&OpenClErrorCode::DeviceNotFound, &[RecoveryAction::Abort]);
         assert!(!ok);
     }
 
@@ -802,10 +728,8 @@ mod tests {
 
     #[test]
     fn test_simulation_warning_succeeds() {
-        let ok = cpu_simulate_recovery(
-            &OpenClErrorCode::NaNDetected,
-            &[RecoveryAction::FallbackToCPU],
-        );
+        let ok =
+            cpu_simulate_recovery(&OpenClErrorCode::NaNDetected, &[RecoveryAction::FallbackToCPU]);
         assert!(ok);
     }
 
@@ -852,11 +776,7 @@ mod tests {
     fn test_every_entry_has_documentation() {
         let cat = build_error_catalog();
         for entry in &cat.entries {
-            assert!(
-                !entry.documentation.is_empty(),
-                "missing docs for {:?}",
-                entry.code
-            );
+            assert!(!entry.documentation.is_empty(), "missing docs for {:?}", entry.code);
         }
     }
 
@@ -866,11 +786,7 @@ mod tests {
     fn test_every_entry_has_recovery_action() {
         let cat = build_error_catalog();
         for entry in &cat.entries {
-            assert!(
-                !entry.recovery.is_empty(),
-                "no recovery for {:?}",
-                entry.code
-            );
+            assert!(!entry.recovery.is_empty(), "no recovery for {:?}", entry.code);
         }
     }
 
@@ -879,8 +795,7 @@ mod tests {
     #[test]
     fn test_format_report_empty_diagnostics() {
         let cat = build_error_catalog();
-        let entry =
-            lookup_error(&cat, &OpenClErrorCode::Timeout).unwrap();
+        let entry = lookup_error(&cat, &OpenClErrorCode::Timeout).unwrap();
         let report = format_error_report(entry, None);
         assert!(!report.contains("Diagnostics:"));
     }
@@ -888,9 +803,7 @@ mod tests {
     #[test]
     fn test_lookup_in_empty_catalog() {
         let empty = ErrorCatalog { entries: vec![] };
-        assert!(
-            lookup_error(&empty, &OpenClErrorCode::Timeout).is_none()
-        );
+        assert!(lookup_error(&empty, &OpenClErrorCode::Timeout).is_none());
     }
 
     #[test]
@@ -906,9 +819,6 @@ mod tests {
 
     #[test]
     fn test_display_recovery_action() {
-        assert_eq!(
-            format!("{}", RecoveryAction::FallbackToCPU),
-            "Fall back to CPU kernels",
-        );
+        assert_eq!(format!("{}", RecoveryAction::FallbackToCPU), "Fall back to CPU kernels",);
     }
 }
