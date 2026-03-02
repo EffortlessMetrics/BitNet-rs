@@ -96,9 +96,11 @@ pub mod neon_padding_clipping;
 
 pub use activations::ActivationType;
 pub use activations::{
-    apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
-    hard_swish_vec, leaky_relu_vec, mish_vec, relu_inplace, silu_inplace, silu_vec, softplus_beta,
-    softplus_vec,
+    ActivationError, apply_activation, apply_activation_inplace, apply_activation_to, elu_vec,
+    gelu_approx_vec, gelu_fast_to, gelu_inplace, gelu_to, gelu_vec, hard_sigmoid_vec,
+    hard_swish_vec, leaky_relu_vec, mish_to, mish_vec, quick_gelu_to, relu_inplace, relu_to,
+    sigmoid_to, silu_inplace, silu_to, silu_vec, softplus_beta, softplus_to, softplus_vec,
+    tanh_activation_to,
 };
 pub use batch_norm::BatchNormConfig;
 pub use fallback::*;
