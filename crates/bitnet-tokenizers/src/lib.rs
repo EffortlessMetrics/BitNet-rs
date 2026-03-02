@@ -27,6 +27,7 @@ pub mod error_handling;
 pub mod fallback;
 pub mod strategy;
 pub mod utils;
+pub mod vocab_analyzer;
 pub mod vocabulary;
 
 use bitnet_common::{BitNetError, ModelError, Result};
