@@ -47,6 +47,7 @@ pub mod matmul;
 pub mod memory_pool;
 pub mod multi_head_attention;
 pub mod pooling;
+pub mod profiling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_gemm;
