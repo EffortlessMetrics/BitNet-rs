@@ -2,6 +2,7 @@
 
 pub mod activations;
 pub mod batch;
+pub mod cache_aware_matmul;
 pub use batch::{batched_add, batched_layer_norm, batched_matmul, batched_softmax};
 pub mod attention;
 pub mod attention_mask;
