@@ -4,6 +4,19 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — OpenCL Compute Operations (Waves 127–128)
+
+- **OpenCL continuous batching**: Iteration-level continuous batching for OpenCL inference pipeline, 66 tests (#2450)
+- **OpenCL weight dequantization kernels**: 7 quantization format dequantization kernels for OpenCL, 82 tests (#2447)
+- **OpenCL numerical stability suite**: Numerical stability validation and tolerance testing for OpenCL kernels, 69 tests (#2443)
+- **OpenCL GPU memory allocator**: Buddy-system GPU memory allocator for OpenCL device memory management, 66 tests (#2441)
+- **OpenCL cross-backend verification**: Cross-backend numerical verification framework for OpenCL vs CPU results, 77 tests (#2457)
+- **OpenCL SwiGLU FFN with MoE router**: SwiGLU feed-forward network with mixture-of-experts routing for OpenCL, 79 tests (#2459)
+- **OpenCL layer normalization variants**: LayerNorm, RMSNorm, and GroupNorm implementations for OpenCL, 70 tests (#2460)
+- **OpenCL tensor reshape operations**: Transpose, permute, concat, and split tensor operations for OpenCL, 86 tests (#2456)
+- **OpenCL reduction operations**: 9 reduction operations with tree-reduction strategy for OpenCL, 106 tests (#2461)
+- **CHANGELOG waves 125–126**: Documentation of waves 125–126 OpenCL PRs (#2444)
+
 ### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
 
 - **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
