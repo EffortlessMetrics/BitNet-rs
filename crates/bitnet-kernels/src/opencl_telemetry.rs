@@ -318,8 +318,11 @@ impl MetricsRegistry {
             }
             return Ok(());
         }
-        let histogram =
-            if kind == MetricKind::Histogram { Some(HistogramBucket::latency_defaults()) } else { None };
+        let histogram = if kind == MetricKind::Histogram {
+            Some(HistogramBucket::latency_defaults())
+        } else {
+            None
+        };
         map.insert(
             name.to_string(),
             RegisteredMetric { kind, value: 0.0, labels: BTreeMap::new(), histogram },
@@ -402,11 +405,7 @@ impl MetricsRegistry {
     }
 
     /// Set labels on a metric.
-    pub fn set_labels(
-        &self,
-        name: &str,
-        labels: &[(&str, &str)],
-    ) -> Result<(), String> {
+    pub fn set_labels(&self, name: &str, labels: &[(&str, &str)]) -> Result<(), String> {
         let mut map = self.inner.lock().unwrap();
         let m = map.get_mut(name).ok_or_else(|| format!("metric '{}' not registered", name))?;
         m.labels.clear();
@@ -526,29 +525,19 @@ impl MetricsExporter {
                                 ));
                             } else {
                                 // Strip outer braces from label_str, merge
-                                let inner =
-                                    &label_str[1..label_str.len() - 1];
+                                let inner = &label_str[1..label_str.len() - 1];
                                 output.push_str(&format!(
                                     "{}_bucket{{{},le=\"{}\"}} {}\n",
                                     name, inner, le, cumulative
                                 ));
                             }
                         }
-                        output.push_str(&format!(
-                            "{}_sum{} {}\n",
-                            name, label_str, h.sum()
-                        ));
-                        output.push_str(&format!(
-                            "{}_count{} {}\n",
-                            name, label_str, h.count()
-                        ));
+                        output.push_str(&format!("{}_sum{} {}\n", name, label_str, h.sum()));
+                        output.push_str(&format!("{}_count{} {}\n", name, label_str, h.count()));
                     }
                 }
                 _ => {
-                    output.push_str(&format!(
-                        "{}{} {}\n",
-                        name, label_str, rm.value
-                    ));
+                    output.push_str(&format!("{}{} {}\n", name, label_str, rm.value));
                 }
             }
         }
@@ -802,11 +791,7 @@ impl KernelMetricsAggregator {
     }
 
     /// Publish all kernels into a registry.
-    pub fn publish_all(
-        &self,
-        registry: &MetricsRegistry,
-        prefix: &str,
-    ) -> Result<(), String> {
+    pub fn publish_all(&self, registry: &MetricsRegistry, prefix: &str) -> Result<(), String> {
         for km in self.kernels.values() {
             km.publish(registry, prefix)?;
         }
@@ -1339,8 +1324,7 @@ mod tests {
     fn registry_set_labels() {
         let reg = MetricsRegistry::new();
         reg.register("g", MetricKind::Gauge).unwrap();
-        reg.set_labels("g", &[("device", "A770"), ("backend", "opencl")])
-            .unwrap();
+        reg.set_labels("g", &[("device", "A770"), ("backend", "opencl")]).unwrap();
         let snap = reg.snapshot();
         let m = snap.iter().find(|m| m.name == "g").unwrap();
         assert_eq!(m.labels["device"], "A770");
@@ -1767,10 +1751,8 @@ mod tests {
 
     #[test]
     fn config_custom_prefix() {
-        let cfg = TelemetryConfig {
-            metric_prefix: "custom".to_string(),
-            ..TelemetryConfig::default()
-        };
+        let cfg =
+            TelemetryConfig { metric_prefix: "custom".to_string(), ..TelemetryConfig::default() };
         assert_eq!(cfg.metric_prefix, "custom");
     }
 

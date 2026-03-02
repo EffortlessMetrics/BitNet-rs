@@ -491,11 +491,7 @@ impl FusedSoftmax {
         validate_dims(input.len(), output.len(), rows, cols)?;
         if mask.len() != rows * cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!(
-                    "mask length {} != rows*cols {}",
-                    mask.len(),
-                    rows * cols
-                ),
+                reason: format!("mask length {} != rows*cols {}", mask.len(), rows * cols),
             }
             .into());
         }
@@ -504,8 +500,7 @@ impl FusedSoftmax {
             // Scale + mask.
             for c in 0..cols {
                 let idx = start + c;
-                output[idx] =
-                    if mask[idx] { input[idx] * scale } else { f32::NEG_INFINITY };
+                output[idx] = if mask[idx] { input[idx] * scale } else { f32::NEG_INFINITY };
             }
             // Softmax the row.
             Softmax::row_inplace(&mut output[start..start + cols]);
@@ -555,10 +550,7 @@ impl SparseTopKSoftmax {
     ) -> Result<()> {
         validate_dims(input.len(), output.len(), rows, cols)?;
         if k == 0 {
-            return Err(KernelError::InvalidArguments {
-                reason: "top_k must be > 0".into(),
-            }
-            .into());
+            return Err(KernelError::InvalidArguments { reason: "top_k must be > 0".into() }.into());
         }
         let k = k.min(cols);
         for r in 0..rows {
@@ -636,12 +628,7 @@ impl TemperatureSoftmax {
 // ---------------------------------------------------------------------------
 
 /// Validate that input/output lengths match the expected `rows * cols`.
-fn validate_dims(
-    input_len: usize,
-    output_len: usize,
-    rows: usize,
-    cols: usize,
-) -> Result<()> {
+fn validate_dims(input_len: usize, output_len: usize, rows: usize, cols: usize) -> Result<()> {
     let expected = rows * cols;
     if input_len != expected {
         return Err(KernelError::InvalidArguments {
@@ -669,11 +656,7 @@ mod tests {
     const ATOL: f32 = 1e-5;
 
     fn assert_close(a: f32, b: f32, tol: f32) {
-        assert!(
-            (a - b).abs() <= tol,
-            "values not close: {a} vs {b} (diff={})",
-            (a - b).abs()
-        );
+        assert!((a - b).abs() <= tol, "values not close: {a} vs {b} (diff={})", (a - b).abs());
     }
 
     fn assert_slices_close(a: &[f32], b: &[f32], tol: f32) {
@@ -1357,7 +1340,8 @@ mod tests {
 
     #[test]
     fn test_config_builder() {
-        let cfg = SoftmaxConfig::new().with_axis(1).with_temperature(0.7).with_top_k(10).with_eps(1e-6);
+        let cfg =
+            SoftmaxConfig::new().with_axis(1).with_temperature(0.7).with_top_k(10).with_eps(1e-6);
         assert_eq!(cfg.axis, 1);
         assert_close(cfg.temperature, 0.7, ATOL);
         assert_eq!(cfg.top_k, Some(10));

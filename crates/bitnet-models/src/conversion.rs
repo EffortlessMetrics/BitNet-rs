@@ -305,9 +305,7 @@ fn quant_bits(dtype: &DType) -> u8 {
 
 /// Build an output path from the source path and target format.
 fn derive_target_path(source_path: &str, target_format: &ModelFormat) -> String {
-    let stem = source_path
-        .rsplit_once('.')
-        .map_or(source_path, |(s, _)| s);
+    let stem = source_path.rsplit_once('.').map_or(source_path, |(s, _)| s);
     format!("{}.{}", stem, target_format.extension())
 }
 
@@ -319,35 +317,23 @@ pub fn plan_conversion(source_path: &str, config: &ConversionConfig) -> Conversi
     let mut steps = Vec::new();
 
     // Step 1: Load weights from source format.
-    steps.push(ConversionStep::LoadWeights {
-        source_format: config.source_format,
-    });
+    steps.push(ConversionStep::LoadWeights { source_format: config.source_format });
 
     let source_dtype = default_source_dtype(&config.source_format);
 
     if config.target_dtype.is_quantized() {
         // Quantization path: quantize then pack.
-        let method = config
-            .quantization_config
-            .as_ref()
-            .map_or(QuantMethod::Symmetric, |q| q.method);
-        steps.push(ConversionStep::Quantize {
-            method,
-            bits: quant_bits(&config.target_dtype),
-        });
+        let method =
+            config.quantization_config.as_ref().map_or(QuantMethod::Symmetric, |q| q.method);
+        steps.push(ConversionStep::Quantize { method, bits: quant_bits(&config.target_dtype) });
     } else if source_dtype != config.target_dtype {
         // Float-to-float dtype conversion.
-        steps.push(ConversionStep::ConvertDtype {
-            from: source_dtype,
-            to: config.target_dtype,
-        });
+        steps.push(ConversionStep::ConvertDtype { from: source_dtype, to: config.target_dtype });
     }
 
     // If target format differs from source, pack into the new format.
     if config.source_format != config.target_format {
-        steps.push(ConversionStep::PackTensors {
-            target_format: config.target_format,
-        });
+        steps.push(ConversionStep::PackTensors { target_format: config.target_format });
     }
 
     // Always validate.
@@ -360,8 +346,7 @@ pub fn plan_conversion(source_path: &str, config: &ConversionConfig) -> Conversi
 
     // Assume 7B parameters as a reasonable default when we don't know the model.
     let estimated_params: u64 = 7_000_000_000;
-    let estimated_output_size_bytes =
-        estimate_output_size(estimated_params, &config.target_dtype);
+    let estimated_output_size_bytes = estimate_output_size(estimated_params, &config.target_dtype);
 
     ConversionPlan {
         source_path: source_path.to_string(),
@@ -723,10 +708,7 @@ mod tests {
         // Int4 estimate should be smaller than F32
         let f32_plan = plan_conversion(
             "model.safetensors",
-            &ConversionConfig {
-                target_dtype: DType::F32,
-                ..config
-            },
+            &ConversionConfig { target_dtype: DType::F32, ..config },
         );
         assert!(plan.estimated_output_size_bytes < f32_plan.estimated_output_size_bytes);
     }
