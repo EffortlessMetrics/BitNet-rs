@@ -457,6 +457,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-bench-regression-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-bench-receipts",
+]
+
+[[package]]
 name = "bitnet-cli"
 version = "0.2.1-dev"
 dependencies = [
@@ -1863,11 +1870,9 @@ name = "bitnet-wgpu-bench"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+ "bitnet-bench-regression-core",
  "bitnet-nvidia",
  "proptest",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
 ]
 
 [[package]]
