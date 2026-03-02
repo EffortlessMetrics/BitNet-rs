@@ -193,7 +193,8 @@ pub fn cpu_write_buffer(
     id: u64,
     data: &[f32],
 ) -> Result<(), ZeroCopyError> {
-    let buf = mgr.buffers.iter_mut().find(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
+    let buf =
+        mgr.buffers.iter_mut().find(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
 
     if buf.access_mode == AccessMode::ReadOnly {
         return Err(ZeroCopyError::MapFailed("buffer is read-only".into()));
@@ -253,14 +254,16 @@ pub fn cpu_mark_dirty(mgr: &mut ZeroCopyManager, id: u64) {
 
 /// Flush a dirty buffer (simulate device synchronisation).
 pub fn cpu_sync_buffer(mgr: &mut ZeroCopyManager, id: u64) -> Result<(), ZeroCopyError> {
-    let buf = mgr.buffers.iter_mut().find(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
+    let buf =
+        mgr.buffers.iter_mut().find(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
     buf.is_dirty = false;
     Ok(())
 }
 
 /// Release a buffer and free its tracked memory.
 pub fn cpu_release_buffer(mgr: &mut ZeroCopyManager, id: u64) -> Result<(), ZeroCopyError> {
-    let pos = mgr.buffers.iter().position(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
+    let pos =
+        mgr.buffers.iter().position(|b| b.id == id).ok_or(ZeroCopyError::BufferNotFound(id))?;
     let buf = mgr.buffers.remove(pos);
     mgr.stats.current_mapped_bytes = mgr.stats.current_mapped_bytes.saturating_sub(buf.size_bytes);
 
@@ -402,10 +405,7 @@ mod tests {
     #[test]
     fn test_write_buffer_not_found() {
         let mut mgr = default_mgr();
-        assert_eq!(
-            cpu_write_buffer(&mut mgr, 42, &[1.0]),
-            Err(ZeroCopyError::BufferNotFound(42))
-        );
+        assert_eq!(cpu_write_buffer(&mut mgr, 42, &[1.0]), Err(ZeroCopyError::BufferNotFound(42)));
     }
 
     // ---- map / unmap ------------------------------------------------------
