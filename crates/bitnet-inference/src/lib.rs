@@ -24,6 +24,7 @@ pub mod generation_output;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod kernel_recorder;
+pub mod kv_cache_manager;
 pub mod kv_cache_optimized;
 pub mod layers;
 pub mod memory_estimation;
