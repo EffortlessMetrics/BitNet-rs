@@ -416,8 +416,8 @@ fn qk256_tolerance_large() {
 
 #[test]
 fn qk256_size_tolerance_constant() {
-    assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT > 0.0);
-    assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT < 1.0);
+    const { assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT > 0.0) };
+    const { assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT < 1.0) };
 }
 
 // ===========================================================================

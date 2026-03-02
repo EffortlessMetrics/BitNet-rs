@@ -50,6 +50,11 @@ oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
 opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl"]
 inference = []
 
+[[test]]
+name = "proptest_wave28"
+path = "tests/proptest_wave28.rs"
+required-features = ["cpu"]
+
 [[bench]]
 name = "quantization"
 harness = false
