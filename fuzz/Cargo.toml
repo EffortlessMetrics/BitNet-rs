@@ -611,3 +611,39 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_quantization_pipeline"
+path = "fuzz_targets/fuzz_quantization_pipeline.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kernel_dispatch"
+path = "fuzz_targets/fuzz_kernel_dispatch.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_dense_matmul_shapes"
+path = "fuzz_targets/fuzz_dense_matmul_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_layernorm_degenerate"
+path = "fuzz_targets/fuzz_layernorm_degenerate.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_kv_cache_operations"
+path = "fuzz_targets/fuzz_kv_cache_operations.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_token_sampling"
+path = "fuzz_targets/fuzz_token_sampling.rs"
+test = false
+doc = false
