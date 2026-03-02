@@ -30,6 +30,7 @@ pub mod fallback;
 pub mod strategy;
 pub mod utils;
 pub mod vocab_analyzer;
+pub mod vocab_index;
 pub mod vocabulary;
 
 use bitnet_common::{BitNetError, ModelError, Result};
