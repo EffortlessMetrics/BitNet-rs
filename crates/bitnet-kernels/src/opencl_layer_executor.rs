@@ -152,10 +152,7 @@ pub fn cpu_apply_activation(x: &[f32], activation: &ActivationType) -> Vec<f32> 
             let half = x.len() / 2;
             let gate = &x[..half];
             let up = &x[half..];
-            gate.iter()
-                .zip(up.iter())
-                .map(|(&g, &u)| (g * sigmoid(g)) * u)
-                .collect()
+            gate.iter().zip(up.iter()).map(|(&g, &u)| (g * sigmoid(g)) * u).collect()
         }
     }
 }
@@ -181,19 +178,14 @@ pub fn cpu_linear(
     in_features: usize,
     out_features: usize,
 ) -> Vec<f32> {
-    assert_eq!(
-        weight.len(),
-        in_features * out_features,
-        "linear: weight size mismatch"
-    );
+    assert_eq!(weight.len(), in_features * out_features, "linear: weight size mismatch");
     let seq_len = input.len() / in_features;
     let mut output = vec![0.0f32; seq_len * out_features];
     for s in 0..seq_len {
         let inp = &input[s * in_features..(s + 1) * in_features];
         for o in 0..out_features {
             let w_row = &weight[o * in_features..(o + 1) * in_features];
-            output[s * out_features + o] =
-                inp.iter().zip(w_row.iter()).map(|(a, b)| a * b).sum();
+            output[s * out_features + o] = inp.iter().zip(w_row.iter()).map(|(a, b)| a * b).sum();
         }
     }
     output
@@ -281,11 +273,8 @@ pub fn cpu_ffn_sublayer(
             let gate = cpu_linear(hidden, &weights.gate_weight, h, inter);
             let up = cpu_linear(hidden, &weights.up_weight, h, inter);
             // SiLU(gate) * up
-            let activated: Vec<f32> = gate
-                .iter()
-                .zip(up.iter())
-                .map(|(&g, &u)| (g * sigmoid(g)) * u)
-                .collect();
+            let activated: Vec<f32> =
+                gate.iter().zip(up.iter()).map(|(&g, &u)| (g * sigmoid(g)) * u).collect();
             cpu_linear(&activated, &weights.down_weight, inter, h)
         }
         _ => {
@@ -360,9 +349,7 @@ pub fn cpu_execute_layer(
 
     // Check for NaN/Inf
     if final_hidden.iter().any(|v| v.is_nan() || v.is_infinite()) {
-        return Err(ExecutorError::NumericalError(
-            "NaN or Inf in layer output".to_string(),
-        ));
+        return Err(ExecutorError::NumericalError("NaN or Inf in layer output".to_string()));
     }
 
     // Update stats
@@ -938,10 +925,7 @@ mod tests {
 
     #[test]
     fn test_error_display_shape_mismatch() {
-        let e = ExecutorError::ShapeMismatch {
-            expected: vec![2, 8],
-            got: vec![17],
-        };
+        let e = ExecutorError::ShapeMismatch { expected: vec![2, 8], got: vec![17] };
         let msg = format!("{e}");
         assert!(msg.contains("shape mismatch"));
     }
