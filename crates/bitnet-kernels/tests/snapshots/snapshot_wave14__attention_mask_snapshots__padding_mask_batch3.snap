@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 221
+expression: "mask_display(&mask, 4)"
+---
+  0.0   0.0  -inf  -inf
+  0.0   0.0   0.0   0.0
+ -inf  -inf  -inf  -inf

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 18
+expression: output
+---
+[
+    1.5,
+    1.5,
+    4.0,
+    3.0,
+]

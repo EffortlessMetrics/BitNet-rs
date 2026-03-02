@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 180
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: dequant_i2s_row: block_size must be > 0

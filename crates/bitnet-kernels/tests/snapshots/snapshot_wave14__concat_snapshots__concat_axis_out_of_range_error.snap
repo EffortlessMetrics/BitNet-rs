@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 105
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: axis 5 out of range for 2-dimensional tensor

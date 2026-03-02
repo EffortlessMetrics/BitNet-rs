@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 301
+expression: results
+---
+[
+    "SwiGLU: 1.4621",
+    "GeGLU: 1.6824",
+    "ReGLU: 2.0000",
+]

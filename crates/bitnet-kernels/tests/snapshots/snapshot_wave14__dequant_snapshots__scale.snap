@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 167
+expression: "format!(\"{scale:.6}\")"
+---
+0.975000

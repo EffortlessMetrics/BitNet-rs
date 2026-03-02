@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 259
+expression: types
+---
+[
+    SwiGLU,
+    GeGLU,
+    ReGLU,
+]

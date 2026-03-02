@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 186
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: dequant_i2s_row: need 4 scales for 16 elements (block_size=4), got 2

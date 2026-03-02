@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 49
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: output length (1) must equal residual length (2)
