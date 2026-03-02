@@ -1,6 +1,5 @@
 pub use bitnet_download_core::{
-    DownloadValidationError, atomic_write, offline_enabled, parse_content_range_total,
-    validate_downloaded_len,
+    DownloadValidationError, offline_enabled, parse_content_range_total, validate_downloaded_len,
 };
 pub use bitnet_http_retry::exp_backoff_ms;
 use bitnet_http_retry::retry_after_secs_at as parse_retry_after_secs_at;
@@ -18,6 +17,8 @@ pub fn retry_after_secs_at(headers: &HeaderMap, now: SystemTime) -> u64 {
     let retry_after = headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok());
     parse_retry_after_secs_at(retry_after, now)
 }
+
+pub use bitnet_atomic_file_core::atomic_write;
 
 #[cfg(test)]
 mod tests {
