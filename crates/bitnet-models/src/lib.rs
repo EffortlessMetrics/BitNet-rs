@@ -3,6 +3,7 @@
 pub mod architecture;
 pub mod bitnet;
 pub mod checkpoint;
+pub mod comparison;
 pub mod config;
 pub mod config_detection;
 pub mod conversion;
