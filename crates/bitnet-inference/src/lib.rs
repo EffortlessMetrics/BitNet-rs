@@ -41,6 +41,7 @@ pub mod runtime_utils;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
+pub mod streaming_render;
 pub mod tensor_parallel;
 pub mod token_stream;
 // Only compile the shim when tests or a GPU feature need it
