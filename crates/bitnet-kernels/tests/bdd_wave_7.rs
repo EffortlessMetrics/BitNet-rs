@@ -1114,8 +1114,14 @@ fn given_kv_cache_when_incremental_attention_then_output_correct() {
 #[test]
 fn given_attention_config_when_validating_then_catches_invalid_params() {
     // Given
-    let bad_config =
-        AttentionConfig { num_heads: 0, head_dim: 4, seq_len: 2, causal: false, scale: None };
+    let bad_config = AttentionConfig {
+        num_heads: 0,
+        head_dim: 4,
+        seq_len: 2,
+        causal: false,
+        scale: None,
+        use_alibi: false,
+    };
 
     // When
     let result = bad_config.validate();

@@ -88,14 +88,14 @@ impl KvCacheManager {
     /// Append tokens to cache.
     pub fn append(&mut self, num_tokens: usize) -> AppendResult {
         // For sliding window, enforce the window constraint proactively.
-        if let EvictionStrategy::SlidingWindow { window_size } = self.eviction {
-            if self.current_len + num_tokens > window_size {
-                let target_len = window_size.saturating_sub(num_tokens);
-                let evicted = self.current_len.saturating_sub(target_len);
-                self.current_len = target_len + num_tokens;
-                self.eviction_count += evicted;
-                return AppendResult::Evicted { evicted, new_len: self.current_len };
-            }
+        if let EvictionStrategy::SlidingWindow { window_size } = self.eviction
+            && self.current_len + num_tokens > window_size
+        {
+            let target_len = window_size.saturating_sub(num_tokens);
+            let evicted = self.current_len.saturating_sub(target_len);
+            self.current_len = target_len + num_tokens;
+            self.eviction_count += evicted;
+            return AppendResult::Evicted { evicted, new_len: self.current_len };
         }
 
         let available = self.remaining();
