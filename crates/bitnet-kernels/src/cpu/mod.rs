@@ -30,6 +30,12 @@ pub use layer_norm::{
 pub mod linear;
 pub use linear::{LinearConfig, linear_cpu, linear_forward};
 pub mod loss;
+pub mod loss_functions;
+pub use loss_functions::{
+    LossError, ReductionMode, binary_cross_entropy as bce_loss_ext, cosine_embedding_loss,
+    cross_entropy_loss as cross_entropy_loss_ext, focal_loss, huber_loss,
+    kl_divergence as kl_divergence_ext, mae_loss, mse_loss as mse_loss_ext, perplexity,
+};
 pub mod pooling;
 pub use pooling::{
     PoolConfig, PoolType, PoolingConfig, PoolingKernel, adaptive_avg_pool_1d, adaptive_avg_pool_2d,
