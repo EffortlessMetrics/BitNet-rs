@@ -140,10 +140,10 @@ impl DispatchTable {
     /// Resolve the best backend for an operation.
     pub fn resolve(&self, op: KernelOp) -> Option<DispatchBackend> {
         // Check overrides first
-        if let Some(&backend) = self.overrides.get(&op) {
-            if self.entries.iter().any(|e| e.op == op && e.backend == backend && e.available) {
-                return Some(backend);
-            }
+        if let Some(&backend) = self.overrides.get(&op)
+            && self.entries.iter().any(|e| e.op == op && e.backend == backend && e.available)
+        {
+            return Some(backend);
         }
 
         // Find highest-priority available entry
