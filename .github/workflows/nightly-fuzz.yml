@@ -61,6 +61,13 @@ jobs:
           - batch_norm_params
           - prefix_cache_ops
           - broadcast_shape_fuzz
+          # Wave 21: CPU kernel modules
+          - fuzz_cpu_residual
+          - fuzz_cpu_concat
+          - fuzz_cpu_attention_mask
+          - fuzz_cpu_dequant
+          - fuzz_cpu_gating
+          - fuzz_cpu_fusion
 
     steps:
       - name: Checkout

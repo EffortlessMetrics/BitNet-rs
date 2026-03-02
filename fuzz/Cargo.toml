@@ -539,3 +539,39 @@ name = "fuzz_activation_elementwise"
 path = "fuzz_targets/fuzz_activation_elementwise.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_cpu_residual"
+path = "fuzz_targets/fuzz_cpu_residual.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_concat"
+path = "fuzz_targets/fuzz_cpu_concat.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_attention_mask"
+path = "fuzz_targets/fuzz_cpu_attention_mask.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_dequant"
+path = "fuzz_targets/fuzz_cpu_dequant.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_gating"
+path = "fuzz_targets/fuzz_cpu_gating.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_fusion"
+path = "fuzz_targets/fuzz_cpu_fusion.rs"
+test = false
+doc = false
