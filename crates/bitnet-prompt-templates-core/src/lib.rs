@@ -5770,10 +5770,7 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_mistral_from_jinja() {
-        let t = TemplateType::detect(
-            None,
-            Some("[INST] {{ message }} [/INST]"),
-        );
+        let t = TemplateType::detect(None, Some("[INST] {{ message }} [/INST]"));
         assert_eq!(t, TemplateType::MistralChat);
     }
 
@@ -5835,10 +5832,7 @@ mod detect_logging_tests {
             TemplateType::detect(Some("qwen2.5-7b-instruct"), None),
             TemplateType::Qwen25Chat,
         );
-        assert_eq!(
-            TemplateType::detect(Some("Qwen-2.5-Coder"), None),
-            TemplateType::Qwen25Chat,
-        );
+        assert_eq!(TemplateType::detect(Some("Qwen-2.5-Coder"), None), TemplateType::Qwen25Chat,);
     }
 
     #[test]
@@ -5867,18 +5861,9 @@ mod detect_logging_tests {
 
     #[test]
     fn test_qwen25_fromstr_roundtrip() {
-        assert_eq!(
-            "qwen25-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Qwen25Chat,
-        );
-        assert_eq!(
-            "qwen2.5-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Qwen25Chat,
-        );
-        assert_eq!(
-            "qwen2.5".parse::<TemplateType>().unwrap(),
-            TemplateType::Qwen25Chat,
-        );
+        assert_eq!("qwen25-chat".parse::<TemplateType>().unwrap(), TemplateType::Qwen25Chat,);
+        assert_eq!("qwen2.5-chat".parse::<TemplateType>().unwrap(), TemplateType::Qwen25Chat,);
+        assert_eq!("qwen2.5".parse::<TemplateType>().unwrap(), TemplateType::Qwen25Chat,);
         assert_eq!(TemplateType::Qwen25Chat.to_string(), "qwen25-chat");
     }
 
@@ -5903,14 +5888,8 @@ mod detect_logging_tests {
 
     #[test]
     fn test_detect_gemma2_from_name() {
-        assert_eq!(
-            TemplateType::detect(Some("gemma-2-9b-it"), None),
-            TemplateType::Gemma2Chat,
-        );
-        assert_eq!(
-            TemplateType::detect(Some("gemma2-2b"), None),
-            TemplateType::Gemma2Chat,
-        );
+        assert_eq!(TemplateType::detect(Some("gemma-2-9b-it"), None), TemplateType::Gemma2Chat,);
+        assert_eq!(TemplateType::detect(Some("gemma2-2b"), None), TemplateType::Gemma2Chat,);
     }
 
     #[test]
@@ -5934,18 +5913,9 @@ mod detect_logging_tests {
 
     #[test]
     fn test_gemma2_fromstr_roundtrip() {
-        assert_eq!(
-            "gemma2-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Gemma2Chat,
-        );
-        assert_eq!(
-            "gemma-2-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Gemma2Chat,
-        );
-        assert_eq!(
-            "gemma2".parse::<TemplateType>().unwrap(),
-            TemplateType::Gemma2Chat,
-        );
+        assert_eq!("gemma2-chat".parse::<TemplateType>().unwrap(), TemplateType::Gemma2Chat,);
+        assert_eq!("gemma-2-chat".parse::<TemplateType>().unwrap(), TemplateType::Gemma2Chat,);
+        assert_eq!("gemma2".parse::<TemplateType>().unwrap(), TemplateType::Gemma2Chat,);
         assert_eq!(TemplateType::Gemma2Chat.to_string(), "gemma2-chat");
     }
 
@@ -5992,30 +5962,17 @@ mod detect_logging_tests {
         ];
         let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
         assert!(s.contains("<|begin_of_text|>"));
-        assert!(
-            s.contains("<|start_header_id|>system<|end_header_id|>\n\nBe helpful.<|eot_id|>")
-        );
+        assert!(s.contains("<|start_header_id|>system<|end_header_id|>\n\nBe helpful.<|eot_id|>"));
         assert!(s.contains("<|start_header_id|>user<|end_header_id|>\n\nHello<|eot_id|>"));
-        assert!(
-            s.contains("<|start_header_id|>assistant<|end_header_id|>\n\nHi!<|eot_id|>")
-        );
+        assert!(s.contains("<|start_header_id|>assistant<|end_header_id|>\n\nHi!<|eot_id|>"));
         assert!(s.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
     }
 
     #[test]
     fn test_llama31_fromstr_roundtrip() {
-        assert_eq!(
-            "llama31-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Llama31Chat,
-        );
-        assert_eq!(
-            "llama-3.1-chat".parse::<TemplateType>().unwrap(),
-            TemplateType::Llama31Chat,
-        );
-        assert_eq!(
-            "llama3.1".parse::<TemplateType>().unwrap(),
-            TemplateType::Llama31Chat,
-        );
+        assert_eq!("llama31-chat".parse::<TemplateType>().unwrap(), TemplateType::Llama31Chat,);
+        assert_eq!("llama-3.1-chat".parse::<TemplateType>().unwrap(), TemplateType::Llama31Chat,);
+        assert_eq!("llama3.1".parse::<TemplateType>().unwrap(), TemplateType::Llama31Chat,);
         assert_eq!(TemplateType::Llama31Chat.to_string(), "llama31-chat");
     }
 
@@ -6066,17 +6023,8 @@ mod detect_logging_tests {
             "mistral-nemo-chat".parse::<TemplateType>().unwrap(),
             TemplateType::MistralNemoChat,
         );
-        assert_eq!(
-            "mistral-nemo".parse::<TemplateType>().unwrap(),
-            TemplateType::MistralNemoChat,
-        );
-        assert_eq!(
-            "nemo".parse::<TemplateType>().unwrap(),
-            TemplateType::MistralNemoChat,
-        );
-        assert_eq!(
-            TemplateType::MistralNemoChat.to_string(),
-            "mistral-nemo-chat",
-        );
+        assert_eq!("mistral-nemo".parse::<TemplateType>().unwrap(), TemplateType::MistralNemoChat,);
+        assert_eq!("nemo".parse::<TemplateType>().unwrap(), TemplateType::MistralNemoChat,);
+        assert_eq!(TemplateType::MistralNemoChat.to_string(), "mistral-nemo-chat",);
     }
 }

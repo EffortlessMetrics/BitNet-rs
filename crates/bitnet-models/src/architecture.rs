@@ -126,8 +126,7 @@ pub fn detect_architecture(model_name: &str) -> ModelArchitecture {
     if lower.contains("tinyllama") {
         return ModelArchitecture::TinyLlama;
     }
-    if lower.contains("codellama") || lower.contains("code-llama") || lower.contains("code_llama")
-    {
+    if lower.contains("codellama") || lower.contains("code-llama") || lower.contains("code_llama") {
         return ModelArchitecture::CodeLlama;
     }
     if lower.contains("starcoder") {
@@ -419,10 +418,7 @@ mod tests {
         assert_eq!(detect_architecture("google/gemma-2-9b"), ModelArchitecture::Gemma);
         assert_eq!(detect_architecture("mistralai/Mistral-7B-v0.1"), ModelArchitecture::Mistral);
         assert_eq!(detect_architecture("meta-llama/Llama-3-8B"), ModelArchitecture::Llama);
-        assert_eq!(
-            detect_architecture("microsoft/BitNet-b1.58-2B-4T"),
-            ModelArchitecture::BitNet,
-        );
+        assert_eq!(detect_architecture("microsoft/BitNet-b1.58-2B-4T"), ModelArchitecture::BitNet,);
     }
 
     #[test]
