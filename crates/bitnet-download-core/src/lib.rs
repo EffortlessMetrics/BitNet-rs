@@ -1,5 +1,5 @@
-use thiserror::Error;
 use std::{fs, path::Path};
+use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DownloadValidationError {
