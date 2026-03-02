@@ -101,7 +101,7 @@ pub mod neon_padding_clipping;
 pub mod neon_inference_bridge;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_sliding_window_attention;
+pub mod neon_tensor_ops;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_batch_scheduler;
