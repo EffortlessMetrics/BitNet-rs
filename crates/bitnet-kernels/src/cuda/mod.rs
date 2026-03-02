@@ -65,6 +65,7 @@ pub mod quantized_matmul;
 pub mod residual;
 pub mod rmsnorm;
 pub mod rope;
+pub mod shader_cache;
 pub mod softmax;
 pub mod stream_mgmt;
 pub mod transpose;
@@ -282,4 +283,11 @@ pub use cooperative_groups::{
     CoalescedGroup, CooperativeGroupConfig, CooperativeReduceOp, GridGroup, ThreadBlockGroup,
     cooperative_broadcast, cooperative_histogram, cooperative_matmul, cooperative_reduce,
     cooperative_scan, cooperative_sort,
+};
+
+pub use shader_cache::CacheStats as ShaderCacheStats;
+pub use shader_cache::{
+    CachedShader, HashAlgorithm, ShaderCache, ShaderCacheConfig, ShaderMetadata, ShaderSource,
+    cache_stats, compile_shader, invalidate_shader, lookup_shader, precompile_common_shaders,
+    save_cache_to_disk, warm_cache_from_disk,
 };
