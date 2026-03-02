@@ -18,6 +18,7 @@ pub mod loader;
 mod mock;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
+pub mod token_validation;
 pub mod universal;
 
 // New tokenizer discovery and auto-download modules
