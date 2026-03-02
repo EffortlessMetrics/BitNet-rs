@@ -6,6 +6,8 @@
 pub use bitnet_vulkan_shaders::VulkanShaderSource;
 
 /// Backward-compatible kernel module re-export.
-pub mod kernels {}
+pub mod kernels {
+    pub use bitnet_vulkan_shaders::VulkanShaderSource;
+}
 
 pub mod runtime;
