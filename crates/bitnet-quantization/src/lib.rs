@@ -15,6 +15,7 @@ use bitnet_common::{BitNetTensor, QuantizationType, Result};
 pub mod accuracy_validation_tests;
 pub mod calibrator;
 pub mod device_aware_quantizer;
+pub mod error_analysis;
 // pub mod edge_case_tests; // Temporarily disabled - needs API fixes
 // pub mod error_handling_tests; // Temporarily disabled - needs API fixes
 pub mod i2s;
