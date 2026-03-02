@@ -11,11 +11,19 @@ pub use attention::{
     masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
 };
 pub mod batch_norm;
+pub mod batch_normalization;
+pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
+pub mod convolution;
 pub mod dequant;
 pub use conv2d::{Conv2dConfig, compute_output_size, conv2d, depthwise_conv2d, im2col};
+pub use convolution::{
+    Conv1dConfig, PaddingMode, apply_padding, col2im as col2im_1d, compute_output_length, conv1d,
+    conv1d_avx2, conv1d_depthwise, conv1d_f32, conv1d_grouped, conv1d_pointwise, conv1d_transposed,
+    im2col as im2col_1d,
+};
 pub mod embedding;
 pub mod fallback;
 pub mod ffn;
@@ -33,14 +41,18 @@ pub mod loss;
 pub mod pooling;
 pub use pooling::{
     PoolConfig, PoolType, PoolingConfig, PoolingKernel, adaptive_avg_pool_1d, adaptive_avg_pool_2d,
-    global_avg_pool, global_max_pool, pool_1d, pool_2d,
+    adaptive_max_pool1d, avg_pool1d, avg_pool1d_avx2, global_avg_pool, global_max_pool, lp_pool1d,
+    max_pool1d, max_pool1d_avx2, max_unpool1d, pool_1d, pool_2d,
 };
 pub mod quantize;
 pub mod quantized_matmul;
 pub mod reduction;
 pub mod residual;
 pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
+pub mod cache_matmul;
 pub mod rope;
+pub mod rope_simd;
+pub use rope_simd::*;
 pub mod scatter_gather;
 pub mod simd_math;
 pub mod simd_matmul;
@@ -63,9 +75,6 @@ pub mod neon_rope;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_elementwise;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_kv_cache;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
@@ -98,13 +107,10 @@ pub mod neon_transpose;
 pub mod neon_convolution;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_batch_norm_v2;
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_inference_bridge;
+pub mod neon_tensor_parallel;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_weight_packing;
@@ -113,11 +119,25 @@ pub mod neon_weight_packing;
 pub mod neon_batch_scheduler;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_quant_calibration;
+pub mod neon_graph_executor;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_batch_norm_v2;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_fused_mlp;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_gather_scatter;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_inference_bridge;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_kv_cache;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quant_calibration;
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
@@ -136,7 +156,7 @@ pub use simd_math::*;
 
 // Re-export position-encoding embedding types.
 pub use embedding::{CpuEmbeddingConfig, PackedEmbeddingTable};
-pub use loss::LossReduction;
+pub use loss::*;
 
 // Re-export KV cache types and operations.
 pub use kv_cache::{
@@ -157,6 +177,4 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
-pub mod pipeline_parallel;
-pub use pipeline_parallel::*;
-pub mod neon_gather_scatter;
+pub mod tensor_parallel;
