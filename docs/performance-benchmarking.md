@@ -30,6 +30,34 @@ python3 scripts/detect-performance-regression.py \
   --fail-on-regression
 ```
 
+## 🧪 What we can benchmark in a clean/dev container
+
+In a fresh checkout (without downloaded GGUF artifacts), benchmark commands can execute but will not produce throughput numbers until a model is available.
+
+### Minimal validation run
+
+```bash
+python3 scripts/benchmark_comparison.py --skip-cpp --iterations 1 --tokens 8
+```
+
+Expected behavior in an unprovisioned container:
+
+- Script runs end-to-end and writes a JSON result file.
+- `rust`/`cpp` sections are `null` with a clear message that `models/bitnet/ggml-model-i2_s.gguf` is missing.
+
+### To obtain real performance numbers
+
+Provision a model first, then rerun:
+
+```bash
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+python3 scripts/benchmark_comparison.py \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --skip-cpp --iterations 3 --tokens 32
+```
+
+This is the highest-signal benchmark path available in this repository when C++ cross-validation is optional.
+
 ## 📊 Architecture Overview
 
 The benchmarking infrastructure consists of several integrated components:
