@@ -611,3 +611,33 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_cuda_memory_pool"
+path = "fuzz_targets/fuzz_cuda_memory_pool.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_stream_schedule"
+path = "fuzz_targets/fuzz_cuda_stream_schedule.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_attention_mask"
+path = "fuzz_targets/fuzz_cpu_attention_mask.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cpu_layer_norm"
+path = "fuzz_targets/fuzz_cpu_layer_norm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantize_roundtrip"
+path = "fuzz_targets/fuzz_quantize_roundtrip.rs"
+test = false
+doc = false

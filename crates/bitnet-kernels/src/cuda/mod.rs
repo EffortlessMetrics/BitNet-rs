@@ -51,6 +51,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod stream_mgmt;
 pub mod transpose;
 
 pub use activations::{
