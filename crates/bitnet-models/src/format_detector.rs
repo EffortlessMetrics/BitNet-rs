@@ -25,7 +25,7 @@ impl ModelFormat {
                 if path
                     .file_name()
                     .and_then(|n| n.to_str())
-                    .map_or(false, |n| n.contains("model.safetensors.index"))
+                    .is_some_and(|n| n.contains("model.safetensors.index"))
                 {
                     Self::SafeTensorsIndex
                 } else {
@@ -49,10 +49,9 @@ impl ModelFormat {
                     bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
                 ]);
                 // Reasonable header size for SafeTensors (< 100MB)
-                if header_len > 0 && header_len < 100_000_000 && bytes.len() > 8 {
-                    if bytes[8] == b'{' {
-                        return Self::SafeTensors;
-                    }
+                if header_len > 0 && header_len < 100_000_000 && bytes.len() > 8 && bytes[8] == b'{'
+                {
+                    return Self::SafeTensors;
                 }
             }
             // ONNX protobuf (typically starts with \x08)
@@ -111,7 +110,7 @@ impl DetectedModel {
     }
 
     pub fn is_sharded(&self) -> bool {
-        self.total_shards.map_or(false, |t| t > 1)
+        self.total_shards.is_some_and(|t| t > 1)
     }
 
     pub fn size_mb(&self) -> f64 {
