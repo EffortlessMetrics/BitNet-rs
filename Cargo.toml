@@ -24,6 +24,7 @@ members = [
   "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
   "crates/bitnet-tokenizer-model-core", # SRP: tokenizer model/vocabulary detection helpers
+  "crates/bitnet-vocabulary-core", # SRP: shared vocabulary and special-token primitives
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
@@ -135,6 +136,7 @@ default-members = [
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
   "crates/bitnet-tokenizer-model-core",
+  "crates/bitnet-vocabulary-core",
   "crates/bitnet-tokenizer-discovery-core",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",

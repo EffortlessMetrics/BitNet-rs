@@ -26,7 +26,7 @@ pub mod error_handling;
 pub mod fallback;
 pub mod strategy;
 pub mod utils;
-pub mod vocabulary;
+pub use bitnet_vocabulary_core as vocabulary;
 
 use bitnet_common::{BitNetError, ModelError, Result};
 use std::path::Path;

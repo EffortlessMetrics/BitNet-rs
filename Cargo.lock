@@ -1717,6 +1717,7 @@ dependencies = [
  "bitnet-test-support",
  "bitnet-tests",
  "bitnet-tokenizer-model-core",
+ "bitnet-vocabulary-core",
  "dirs",
  "futures-util",
  "insta",
@@ -1781,6 +1782,15 @@ dependencies = [
  "serde",
  "serde_yaml_ng",
  "tempfile",
+]
+
+[[package]]
+name = "bitnet-vocabulary-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
