@@ -111,16 +111,9 @@ pub fn cpu_sqrt_plan(num_layers: usize) -> Vec<usize> {
 }
 
 /// Checkpoint layers that exceed a memory budget. Returns *checkpointed* ids.
-pub fn cpu_memory_budget_plan(
-    num_layers: usize,
-    per_layer_mb: f64,
-    budget_mb: f64,
-) -> Vec<usize> {
-    let max_stored = if per_layer_mb <= 0.0 {
-        num_layers
-    } else {
-        (budget_mb / per_layer_mb).floor() as usize
-    };
+pub fn cpu_memory_budget_plan(num_layers: usize, per_layer_mb: f64, budget_mb: f64) -> Vec<usize> {
+    let max_stored =
+        if per_layer_mb <= 0.0 { num_layers } else { (budget_mb / per_layer_mb).floor() as usize };
     let max_stored = max_stored.min(num_layers);
     if max_stored >= num_layers {
         return Vec::new(); // everything fits
@@ -128,11 +121,8 @@ pub fn cpu_memory_budget_plan(
     // Keep first `max_stored` layers stored, checkpoint the rest.
     // Spread stored layers evenly.
     let step = if max_stored == 0 { 0 } else { num_layers / max_stored };
-    let stored: Vec<usize> = if max_stored == 0 {
-        Vec::new()
-    } else {
-        (0..max_stored).map(|i| i * step).collect()
-    };
+    let stored: Vec<usize> =
+        if max_stored == 0 { Vec::new() } else { (0..max_stored).map(|i| i * step).collect() };
     (0..num_layers).filter(|l| !stored.contains(l)).collect()
 }
 
@@ -140,26 +130,17 @@ pub fn cpu_memory_budget_plan(
 pub fn cpu_compute_plan(config: &CheckpointConfig) -> CheckpointPlan {
     let checkpointed = match &config.strategy {
         CheckpointStrategy::None => Vec::new(),
-        CheckpointStrategy::EveryN { n } => {
-            cpu_every_n_plan(config.num_layers, *n)
-        }
+        CheckpointStrategy::EveryN { n } => cpu_every_n_plan(config.num_layers, *n),
         CheckpointStrategy::SelectiveLayers(layers) => layers.clone(),
         CheckpointStrategy::MemoryBudget { max_mb } => {
-            cpu_memory_budget_plan(
-                config.num_layers,
-                config.activation_size_per_layer_mb,
-                *max_mb,
-            )
+            cpu_memory_budget_plan(config.num_layers, config.activation_size_per_layer_mb, *max_mb)
         }
         CheckpointStrategy::Sqrt => cpu_sqrt_plan(config.num_layers),
     };
 
-    let stored: Vec<usize> = (0..config.num_layers)
-        .filter(|l| !checkpointed.contains(l))
-        .collect();
+    let stored: Vec<usize> = (0..config.num_layers).filter(|l| !checkpointed.contains(l)).collect();
 
-    let peak_memory_mb =
-        stored.len() as f64 * config.activation_size_per_layer_mb;
+    let peak_memory_mb = stored.len() as f64 * config.activation_size_per_layer_mb;
     let recompute_cost_ratio = if config.num_layers == 0 {
         0.0
     } else {
@@ -179,8 +160,7 @@ pub fn cpu_compute_plan(config: &CheckpointConfig) -> CheckpointPlan {
 /// Create a new `ActivationStore` from a config.
 pub fn create_activation_store(config: CheckpointConfig) -> ActivationStore {
     let plan = cpu_compute_plan(&config);
-    let no_checkpoint_mb =
-        config.num_layers as f64 * config.activation_size_per_layer_mb;
+    let no_checkpoint_mb = config.num_layers as f64 * config.activation_size_per_layer_mb;
     let saved = no_checkpoint_mb - plan.peak_memory_mb;
     ActivationStore {
         activations: HashMap::new(),
@@ -245,18 +225,12 @@ pub fn cpu_recompute_activation(
 // ── Estimation helpers ──────────────────────────────────────────────
 
 /// Estimate peak memory in MB for a given plan.
-pub fn cpu_estimate_peak_memory(
-    plan: &CheckpointPlan,
-    per_layer_mb: f64,
-) -> f64 {
+pub fn cpu_estimate_peak_memory(plan: &CheckpointPlan, per_layer_mb: f64) -> f64 {
     plan.stored_layers.len() as f64 * per_layer_mb
 }
 
 /// Estimate the fraction of extra compute due to recomputation.
-pub fn cpu_estimate_recompute_overhead(
-    plan: &CheckpointPlan,
-    num_layers: usize,
-) -> f64 {
+pub fn cpu_estimate_recompute_overhead(plan: &CheckpointPlan, num_layers: usize) -> f64 {
     if num_layers == 0 {
         return 0.0;
     }
@@ -265,13 +239,9 @@ pub fn cpu_estimate_recompute_overhead(
 
 /// Snapshot the current stats from a store.
 pub fn cpu_get_stats(store: &ActivationStore) -> CheckpointStats {
-    let total =
-        store.stats.total_stored + store.stats.total_recomputed;
-    let overhead = if total == 0 {
-        0.0
-    } else {
-        store.stats.total_recomputed as f64 / total as f64 * 100.0
-    };
+    let total = store.stats.total_stored + store.stats.total_recomputed;
+    let overhead =
+        if total == 0 { 0.0 } else { store.stats.total_recomputed as f64 / total as f64 * 100.0 };
     CheckpointStats {
         total_stored: store.stats.total_stored,
         total_recomputed: store.stats.total_recomputed,
@@ -404,10 +374,7 @@ mod tests {
         let mut store = create_activation_store(cfg);
         let data = vec![1.0, 2.0, 3.0];
         cpu_store_activation(&mut store, 0, data.clone()).unwrap();
-        assert_eq!(
-            cpu_retrieve_activation(&store, 0).unwrap(),
-            data.as_slice()
-        );
+        assert_eq!(cpu_retrieve_activation(&store, 0).unwrap(), data.as_slice());
     }
 
     #[test]
@@ -420,14 +387,8 @@ mod tests {
         let mut store = create_activation_store(cfg);
         cpu_store_activation(&mut store, 1, vec![10.0, 20.0]).unwrap();
         cpu_store_activation(&mut store, 2, vec![30.0, 40.0]).unwrap();
-        assert_eq!(
-            cpu_retrieve_activation(&store, 1).unwrap(),
-            &[10.0, 20.0]
-        );
-        assert_eq!(
-            cpu_retrieve_activation(&store, 2).unwrap(),
-            &[30.0, 40.0]
-        );
+        assert_eq!(cpu_retrieve_activation(&store, 1).unwrap(), &[10.0, 20.0]);
+        assert_eq!(cpu_retrieve_activation(&store, 2).unwrap(), &[30.0, 40.0]);
     }
 
     #[test]
@@ -578,9 +539,7 @@ mod tests {
             activation_size_per_layer_mb: 1.0,
         };
         let plan = cpu_compute_plan(&cfg);
-        assert!(
-            cpu_estimate_recompute_overhead(&plan, 10).abs() < 1e-9
-        );
+        assert!(cpu_estimate_recompute_overhead(&plan, 10).abs() < 1e-9);
     }
 
     // ── edge cases ──────────────────────────────────────────────────
@@ -601,9 +560,7 @@ mod tests {
     #[test]
     fn edge_all_layers_checkpointed() {
         let cfg = CheckpointConfig {
-            strategy: CheckpointStrategy::SelectiveLayers(
-                (0..5).collect(),
-            ),
+            strategy: CheckpointStrategy::SelectiveLayers((0..5).collect()),
             num_layers: 5,
             activation_size_per_layer_mb: 10.0,
         };
@@ -654,8 +611,7 @@ mod tests {
             };
             let plan = cpu_compute_plan(&cfg);
             assert_eq!(
-                plan.stored_layers.len()
-                    + plan.checkpointed_layers.len(),
+                plan.stored_layers.len() + plan.checkpointed_layers.len(),
                 20,
                 "failed for n={n}"
             );
@@ -670,12 +626,8 @@ mod tests {
             activation_size_per_layer_mb: 2.0,
         };
         let plan = cpu_compute_plan(&cfg);
-        let mut all: Vec<usize> = plan
-            .stored_layers
-            .iter()
-            .chain(plan.checkpointed_layers.iter())
-            .copied()
-            .collect();
+        let mut all: Vec<usize> =
+            plan.stored_layers.iter().chain(plan.checkpointed_layers.iter()).copied().collect();
         all.sort();
         all.dedup();
         assert_eq!(all.len(), 50);
@@ -683,10 +635,7 @@ mod tests {
 
     #[test]
     fn property_memory_savings_positive_when_checkpointing() {
-        for strat in [
-            CheckpointStrategy::EveryN { n: 2 },
-            CheckpointStrategy::Sqrt,
-        ] {
+        for strat in [CheckpointStrategy::EveryN { n: 2 }, CheckpointStrategy::Sqrt] {
             let cfg = CheckpointConfig {
                 strategy: strat.clone(),
                 num_layers: 20,
@@ -694,10 +643,7 @@ mod tests {
             };
             let plan = cpu_compute_plan(&cfg);
             let full = 20.0 * 10.0;
-            assert!(
-                plan.peak_memory_mb < full,
-                "strategy {strat:?} did not save memory"
-            );
+            assert!(plan.peak_memory_mb < full, "strategy {strat:?} did not save memory");
         }
     }
 
@@ -725,18 +671,13 @@ mod tests {
         // → ~16 MB per layer activation.
         let per_layer_mb = 16.0;
         let cfg = CheckpointConfig {
-            strategy: CheckpointStrategy::MemoryBudget {
-                max_mb: 16_000.0,
-            },
+            strategy: CheckpointStrategy::MemoryBudget { max_mb: 16_000.0 },
             num_layers: 32,
             activation_size_per_layer_mb: per_layer_mb,
         };
         let plan = cpu_compute_plan(&cfg);
         assert!(plan.peak_memory_mb <= 16_000.0);
-        assert_eq!(
-            plan.stored_layers.len() + plan.checkpointed_layers.len(),
-            32
-        );
+        assert_eq!(plan.stored_layers.len() + plan.checkpointed_layers.len(), 32);
     }
 
     #[test]
@@ -873,10 +814,7 @@ mod tests {
         let mut store = create_activation_store(cfg);
         cpu_store_activation(&mut store, 0, vec![1.0]).unwrap();
         cpu_store_activation(&mut store, 0, vec![2.0]).unwrap();
-        assert_eq!(
-            cpu_retrieve_activation(&store, 0).unwrap(),
-            &[2.0]
-        );
+        assert_eq!(cpu_retrieve_activation(&store, 0).unwrap(), &[2.0]);
     }
 
     // ── CheckpointedLayer ───────────────────────────────────────────
