@@ -32,6 +32,7 @@ bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev" 
 bitnet-honest-compute = { path = "../crates/bitnet-honest-compute", version = "0.2.1-dev" }
 bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core", version = "0.2.1-dev" }
 bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core", version = "0.2.1-dev" }
+bitnet-inference-metrics-core = { path = "../crates/bitnet-inference-metrics-core", version = "0.2.1-dev" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -609,5 +610,41 @@ doc = false
 [[bin]]
 name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_shape_validator"
+path = "fuzz_targets/fuzz_shape_validator.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_generation_budget"
+path = "fuzz_targets/fuzz_generation_budget.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_perf_tracker"
+path = "fuzz_targets/fuzz_perf_tracker.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_model_fingerprint"
+path = "fuzz_targets/fuzz_model_fingerprint.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_weight_stats"
+path = "fuzz_targets/fuzz_weight_stats.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_format_detector"
+path = "fuzz_targets/fuzz_format_detector.rs"
 test = false
 doc = false
