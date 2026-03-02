@@ -11,6 +11,8 @@ pub use attention::{
     masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
 };
 pub mod batch_norm;
+pub mod batch_normalization;
+pub use batch_normalization::*;
 pub mod concat;
 pub use concat::ConcatKernel;
 pub mod conv2d;
