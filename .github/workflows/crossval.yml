@@ -575,8 +575,23 @@ jobs:
 
           ## Key Findings
 
+          EOF
+
+          if [[ "${{ needs.check-trigger.outputs.should_run_lane_a }}" == "true" || "${{ needs.check-trigger.outputs.should_run_lane_b }}" == "true" ]]; then
+            cat >> crossval-summary.md << 'EOF'
+
           - 🎯 **Accuracy**: Rust implementation within tolerance threshold
           - 🚀 **Performance**: Competitive with C++ reference
+          EOF
+          else
+            cat >> crossval-summary.md << 'EOF'
+
+          - ℹ️ **Accuracy & Performance**: Not evaluated in this run (both cross-validation lanes were skipped)
+          EOF
+          fi
+
+          cat >> crossval-summary.md << 'EOF'
+
           - 🛡️ **Memory Safety**: Zero undefined behavior (Rust guarantees)
           - 🔄 **Compatibility**: API parity maintained
 
