@@ -133,3 +133,7 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
+pub mod memory_pool;
+pub use memory_pool::{
+    AlignedBuffer, CacheStats, MemoryPool, MemoryPoolError, ScratchAllocator, TensorBufferCache,
+};
