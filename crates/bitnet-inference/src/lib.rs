@@ -32,6 +32,7 @@ pub mod metrics;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
+pub mod request_types;
 pub mod receipts; // AC4: Inference receipt generation
 pub mod run_metrics;
 pub mod thread_pool;
