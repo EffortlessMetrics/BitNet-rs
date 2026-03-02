@@ -12,6 +12,10 @@
 //! - **attention** — scaled dot-product attention with causal mask
 //! - **elementwise** — `SiLU`, GELU, add, mul, `silu_mul`, `scalar_mul`
 
+pub mod command;
+pub mod error;
 pub mod kernels;
+pub mod pipeline;
+pub mod shader;
 
 pub use kernels::{MetalKernelSource, kernel_function_names, kernel_source};
