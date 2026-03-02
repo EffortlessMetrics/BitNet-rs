@@ -440,6 +440,7 @@ dependencies = [
 name = "bitnet-bdd-grid-core"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-testing-axis-core",
  "insta",
  "proptest",
  "serde",
@@ -1489,6 +1490,10 @@ dependencies = [
  "proptest",
  "serial_test",
 ]
+
+[[package]]
+name = "bitnet-testing-axis-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-testing-policy"

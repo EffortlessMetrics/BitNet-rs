@@ -10,6 +10,7 @@ members = [
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",
   "crates/bitnet-bdd-grid-core",
+  "crates/bitnet-testing-axis-core", # SRP: shared testing scenario/environment axis types
   "crates/bitnet-compat",
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
   "crates/bitnet-runtime-feature-flags",
@@ -153,6 +154,7 @@ default-members = [
   # Testing infrastructure crates (always built/tested by default)
   "crates/bitnet-bdd-grid",
   "crates/bitnet-bdd-grid-core",
+  "crates/bitnet-testing-axis-core", # SRP: shared testing scenario/environment axis types
   "crates/bitnet-feature-contract",
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core",
@@ -388,6 +390,7 @@ required-features = ["cpu"]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
+bitnet-testing-axis-core = { path = "crates/bitnet-testing-axis-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"
