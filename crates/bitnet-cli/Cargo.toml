@@ -23,6 +23,7 @@ name = "bitnet"
 path = "src/main.rs"
 
 [dependencies]
+bitnet-atomic-file-core = { workspace = true }
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }

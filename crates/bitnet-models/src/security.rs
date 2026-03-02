@@ -1,5 +1,6 @@
 // Security utilities for model loading and verification
 use anyhow::{Result, anyhow};
+use bitnet_atomic_file_core::atomic_rename;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -200,7 +201,7 @@ impl SecureModelDownloader {
         self.verifier.verify_model(&temp_path, expected_hash)?;
 
         // Move to final destination
-        std::fs::rename(&temp_path, destination)?;
+        atomic_rename(&temp_path, destination)?;
 
         tracing::info!("Successfully downloaded and verified model: {}", destination.display());
         Ok(())

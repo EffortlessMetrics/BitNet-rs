@@ -57,6 +57,7 @@ use std::{
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
+use bitnet_atomic_file_core::atomic_write_json_pretty;
 use bitnet_inference::{InferenceEngine, KernelRecorder, SamplingConfig, TemplateType};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
@@ -1039,10 +1040,8 @@ impl InferenceCommand {
             fs::create_dir_all(parent)?;
         }
 
-        // Atomic write: tmp → rename to prevent partial copies during chat
-        let tmp_path = receipt_path.with_extension("json.tmp");
-        fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)?;
-        fs::rename(&tmp_path, receipt_path)?;
+        // Atomic write to prevent partial copies during chat.
+        atomic_write_json_pretty(receipt_path, &receipt)?;
 
         debug!("Receipt written to {} ({} tokens)", receipt_path.display(), tokens_generated);
         Ok(())
