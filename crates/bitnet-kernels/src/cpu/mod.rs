@@ -36,6 +36,7 @@ pub use pooling::{
     global_avg_pool, global_max_pool, pool_1d, pool_2d,
 };
 pub mod quantize;
+pub mod quantized_layer_norm;
 pub mod quantized_matmul;
 pub mod reduction;
 pub mod residual;
