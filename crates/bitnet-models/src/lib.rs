@@ -19,6 +19,7 @@ pub mod gguf_parity;
 pub mod gguf_simple;
 pub mod gguf_writer;
 pub mod hf_loader;
+pub mod layer_inspector;
 pub mod loader;
 pub mod minimal;
 pub mod model_fingerprint;
