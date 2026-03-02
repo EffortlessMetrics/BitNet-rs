@@ -476,6 +476,7 @@ dependencies = [
  "bitnet-sampling",
  "bitnet-scoring-core",
  "bitnet-startup-contract-guard",
+ "bitnet-template-detect-core",
  "bitnet-tokenizer-discovery-core",
  "bitnet-tokenizers",
  "bitnet-validation",
@@ -1467,6 +1468,13 @@ dependencies = [
  "proptest",
  "thiserror 2.0.18",
  "xtask-build-helper",
+]
+
+[[package]]
+name = "bitnet-template-detect-core"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
 ]
 
 [[package]]

@@ -1,0 +1,16 @@
+[package]
+name = "bitnet-template-detect-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SRP prompt-template family detection helpers"
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+proptest = { workspace = true }
