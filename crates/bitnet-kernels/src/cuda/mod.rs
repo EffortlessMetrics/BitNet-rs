@@ -50,6 +50,7 @@ pub mod quantize;
 pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
+pub mod shared_memory;
 pub mod softmax;
 pub mod transpose;
 
@@ -86,6 +87,7 @@ pub use rope::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use rope::{ROPE_BACKWARD_KERNEL_SRC, ROPE_FORWARD_KERNEL_SRC};
+pub use shared_memory::*;
 
 // Re-export scatter/gather types from the crate-level module (always compiled).
 pub use crate::scatter_gather::{
