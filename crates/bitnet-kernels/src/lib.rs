@@ -28,10 +28,10 @@ pub mod metal_compute;
 pub mod npu;
 pub mod opencl_attention;
 pub mod opencl_buffer;
-pub mod opencl_crossval;
 pub mod opencl_cache;
 pub mod opencl_context;
 pub mod opencl_continuous_batch;
+pub mod opencl_crossval;
 #[path = "gpu/opencl_dispatch.rs"]
 pub mod opencl_dispatch;
 pub mod opencl_embedding;

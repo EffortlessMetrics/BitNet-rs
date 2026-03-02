@@ -133,11 +133,7 @@ impl std::error::Error for CrossValError {}
 
 /// Maximum absolute element-wise error between two equal-length slices.
 pub fn compute_max_error(actual: &[f32], expected: &[f32]) -> f32 {
-    actual
-        .iter()
-        .zip(expected.iter())
-        .map(|(a, e)| (a - e).abs())
-        .fold(0.0_f32, f32::max)
+    actual.iter().zip(expected.iter()).map(|(a, e)| (a - e).abs()).fold(0.0_f32, f32::max)
 }
 
 /// Mean absolute element-wise error.
@@ -145,8 +141,7 @@ pub fn compute_mean_error(actual: &[f32], expected: &[f32]) -> f32 {
     if actual.is_empty() {
         return 0.0;
     }
-    let sum: f32 =
-        actual.iter().zip(expected.iter()).map(|(a, e)| (a - e).abs()).sum();
+    let sum: f32 = actual.iter().zip(expected.iter()).map(|(a, e)| (a - e).abs()).sum();
     sum / actual.len() as f32
 }
 
@@ -155,8 +150,7 @@ pub fn compute_rms_error(actual: &[f32], expected: &[f32]) -> f32 {
     if actual.is_empty() {
         return 0.0;
     }
-    let sum_sq: f32 =
-        actual.iter().zip(expected.iter()).map(|(a, e)| (a - e).powi(2)).sum();
+    let sum_sq: f32 = actual.iter().zip(expected.iter()).map(|(a, e)| (a - e).powi(2)).sum();
     (sum_sq / actual.len() as f32).sqrt()
 }
 
@@ -177,11 +171,7 @@ pub fn compute_ulp_error(actual: f32, expected: f32) -> u32 {
 }
 
 /// Indices where the absolute error exceeds `tolerance`.
-pub fn find_outliers(
-    actual: &[f32],
-    expected: &[f32],
-    tolerance: f32,
-) -> Vec<usize> {
+pub fn find_outliers(actual: &[f32], expected: &[f32], tolerance: f32) -> Vec<usize> {
     actual
         .iter()
         .zip(expected.iter())
@@ -266,20 +256,13 @@ fn cpu_rmsnorm(input: &[f32]) -> Vec<f32> {
     if input.is_empty() {
         return Vec::new();
     }
-    let mean_sq: f32 =
-        input.iter().map(|v| v * v).sum::<f32>() / input.len() as f32;
+    let mean_sq: f32 = input.iter().map(|v| v * v).sum::<f32>() / input.len() as f32;
     let rms = (mean_sq + 1e-6).sqrt();
     input.iter().map(|&v| v / rms).collect()
 }
 
 /// Simplified single-head attention: softmax(Q·Kᵀ / √d) · V.
-fn cpu_attention(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    seq_len: usize,
-    head_dim: usize,
-) -> Vec<f32> {
+fn cpu_attention(q: &[f32], k: &[f32], v: &[f32], seq_len: usize, head_dim: usize) -> Vec<f32> {
     let scale = 1.0 / (head_dim as f32).sqrt();
     // scores = Q · Kᵀ  (seq_len × seq_len)
     let mut scores = vec![0.0_f32; seq_len * seq_len];
@@ -303,12 +286,7 @@ fn cpu_attention(
 }
 
 /// Generate a deterministic golden vector for matrix multiplication.
-pub fn generate_golden_matmul(
-    m: usize,
-    n: usize,
-    k: usize,
-    seed: u64,
-) -> GoldenVector {
+pub fn generate_golden_matmul(m: usize, n: usize, k: usize, seed: u64) -> GoldenVector {
     let mut a = vec![0.0_f32; m * k];
     let mut b = vec![0.0_f32; k * n];
     fill_deterministic(&mut a, seed);
@@ -373,11 +351,7 @@ pub fn generate_golden_rmsnorm(len: usize, seed: u64) -> GoldenVector {
 }
 
 /// Generate a deterministic golden vector for single-head attention.
-pub fn generate_golden_attention(
-    seq_len: usize,
-    head_dim: usize,
-    seed: u64,
-) -> GoldenVector {
+pub fn generate_golden_attention(seq_len: usize, head_dim: usize, seed: u64) -> GoldenVector {
     let elem = seq_len * head_dim;
     let mut q = vec![0.0_f32; elem];
     let mut k = vec![0.0_f32; elem];
@@ -451,8 +425,7 @@ pub fn format_crossval_report(suite: &CrossValSuite) -> String {
         report.push_str(&format!(
             "[{status}] {}\n  max_error={:.2e}  mean_error={:.2e}  \
              rms_error={:.2e}  outliers={}\n",
-            r.test_name, r.max_error, r.mean_error, r.rms_error,
-            r.outlier_count,
+            r.test_name, r.max_error, r.mean_error, r.rms_error, r.outlier_count,
         ));
     }
     report
@@ -658,12 +631,8 @@ mod tests {
     #[test]
     fn test_golden_rmsnorm_rms_approx_one() {
         let g = generate_golden_rmsnorm(16, 42);
-        let mean_sq: f32 = g
-            .expected_output
-            .iter()
-            .map(|v| v * v)
-            .sum::<f32>()
-            / g.expected_output.len() as f32;
+        let mean_sq: f32 =
+            g.expected_output.iter().map(|v| v * v).sum::<f32>() / g.expected_output.len() as f32;
         // Should be close to 1.0 (epsilon causes tiny deviation)
         assert!((mean_sq - 1.0).abs() < 0.01);
     }
