@@ -107,6 +107,39 @@ Creates `benchmark-results/benchmark-config.json` with:
 
 ## Running Benchmarks
 
+## Latest Container Benchmark Attempt (2026-03-02)
+
+We attempted to run the benchmark flow in the project container to validate that the
+documented commands still execute end-to-end.
+
+### What worked
+
+- `xtask bench-compare` runs successfully when invoked with explicit thresholds:
+
+```bash
+cargo run -p xtask --no-default-features -- bench-compare \
+  --baseline baselines/cpu-main.json \
+  --current baselines/cpu-main.json \
+  --thresholds benchmarks/thresholds/default.toml
+```
+
+This produced a pass report (`No performance regressions`) and confirms the comparison
+pipeline is functional in this environment.
+
+### What failed in this container (and why)
+
+1. **`xtask benchmark` with default feature resolution** failed at link time due missing CUDA
+   shared libraries (`-lcuda`, `-lnvrtc`, `-lcurand`, `-lcublas`, `-lcublasLt`).
+2. **`xtask benchmark` with `--no-default-features`** launched but failed at runtime on
+   `tests/models/mini.gguf` with an out-of-memory allocation request.
+
+### Practical guidance
+
+- Use `--no-default-features` for `xtask` benchmarking in CPU-only environments.
+- Prefer a real benchmark model fixture (not `tests/models/mini.gguf`) for throughput runs.
+- Keep using `bench-compare` in CI for regression checks when full decode benchmarking is not
+  available.
+
 After setup, you'll have several benchmark options:
 
 ### 1. Python Comparison Benchmark (Recommended)
