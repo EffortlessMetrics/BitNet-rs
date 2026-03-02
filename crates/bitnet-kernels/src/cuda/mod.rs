@@ -24,6 +24,8 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`warp_shuffle_ops`]: Warp shuffle primitives (XOR/down/up), butterfly and halving
+//!   reductions, scans, matrix fragment MMA, shuffle transpose, and warp specialization
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -52,6 +54,7 @@ pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
 pub mod transpose;
+pub mod warp_shuffle_ops;
 
 pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
@@ -188,3 +191,17 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use warp_shuffle_ops::{
+    MatrixFragment, MatrixLayout, ShuffleConfig, WarpRole, WarpSpecConfig, active_lane_count,
+    butterfly_exchange, butterfly_reduce_max, butterfly_reduce_min, butterfly_reduce_sum,
+    cross_warp_reduce_max, cross_warp_reduce_sum, divergence_ballot, first_active_lane,
+    fragment_fill, fragment_load, fragment_mma, fragment_store, halving_reduce_max,
+    halving_reduce_sum, popc, segmented_inclusive_scan, shuffle_down, shuffle_exclusive_scan,
+    shuffle_idx, shuffle_inclusive_scan, shuffle_transpose_4x8, shuffle_transpose_8x4, shuffle_up,
+    shuffle_xor, uniform_branch_check, warp_allgather, warp_pipeline_stages, warp_scatter,
+    warp_specialize_map, warp_sync_reduce_sum,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use warp_shuffle_ops::WARP_SHUFFLE_OPS_KERNEL_SRC;
