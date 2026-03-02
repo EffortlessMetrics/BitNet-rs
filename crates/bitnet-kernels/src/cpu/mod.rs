@@ -53,6 +53,9 @@ pub mod x86;
 pub mod arm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_activation_functions;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_activations;
 
 #[cfg(target_arch = "aarch64")]
