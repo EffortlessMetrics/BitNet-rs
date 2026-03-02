@@ -170,12 +170,7 @@ pub fn cpu_submit_work(
     }
     let id = pool.next_id;
     pool.next_id += 1;
-    pool.pending.push(WorkItem {
-        id,
-        task_type: work_type,
-        priority,
-        submitted_ns: now_ns(),
-    });
+    pool.pending.push(WorkItem { id, task_type: work_type, priority, submitted_ns: now_ns() });
     pool.stats.total_submitted += 1;
     if pool.pending.len() > pool.stats.queue_high_watermark {
         pool.stats.queue_high_watermark = pool.pending.len();
@@ -434,8 +429,10 @@ mod tests {
     #[test]
     fn test_submit_work_increments_id() {
         let mut pool = default_pool();
-        let id1 = cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
-        let id2 = cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
+        let id1 =
+            cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
+        let id2 =
+            cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
         assert_eq!(id2, id1 + 1);
     }
 
@@ -634,7 +631,8 @@ mod tests {
     #[test]
     fn test_cancel_work_valid_id() {
         let mut pool = default_pool();
-        let id = cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
+        let id =
+            cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
         assert!(cpu_cancel_work(&mut pool, id));
         assert_eq!(cpu_get_queue_depth(&pool), 0);
     }
@@ -704,11 +702,15 @@ mod tests {
     #[test]
     fn test_priority_ordering_all_levels() {
         let mut pool = default_pool();
-        let bg = cpu_submit_work(&mut pool, simple_compute(vec![0.0]), TaskPriority::Background).unwrap();
+        let bg = cpu_submit_work(&mut pool, simple_compute(vec![0.0]), TaskPriority::Background)
+            .unwrap();
         let low = cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Low).unwrap();
-        let norm = cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
-        let high = cpu_submit_work(&mut pool, simple_compute(vec![3.0]), TaskPriority::High).unwrap();
-        let crit = cpu_submit_work(&mut pool, simple_compute(vec![4.0]), TaskPriority::Critical).unwrap();
+        let norm =
+            cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
+        let high =
+            cpu_submit_work(&mut pool, simple_compute(vec![3.0]), TaskPriority::High).unwrap();
+        let crit =
+            cpu_submit_work(&mut pool, simple_compute(vec![4.0]), TaskPriority::Critical).unwrap();
 
         let results = cpu_process_all(&mut pool);
         let ids: Vec<u64> = results.iter().map(|r| r.id).collect();
@@ -718,9 +720,12 @@ mod tests {
     #[test]
     fn test_priority_fifo_within_same_level() {
         let mut pool = default_pool();
-        let id1 = cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
-        let id2 = cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
-        let id3 = cpu_submit_work(&mut pool, simple_compute(vec![3.0]), TaskPriority::Normal).unwrap();
+        let id1 =
+            cpu_submit_work(&mut pool, simple_compute(vec![1.0]), TaskPriority::Normal).unwrap();
+        let id2 =
+            cpu_submit_work(&mut pool, simple_compute(vec![2.0]), TaskPriority::Normal).unwrap();
+        let id3 =
+            cpu_submit_work(&mut pool, simple_compute(vec![3.0]), TaskPriority::Normal).unwrap();
 
         let results = cpu_process_all(&mut pool);
         let ids: Vec<u64> = results.iter().map(|r| r.id).collect();
