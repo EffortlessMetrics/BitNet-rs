@@ -12,13 +12,13 @@
 use std::sync::Arc;
 
 use bitnet_common::config::ModelConfig;
-use bitnet_common::{ActivationType, ArchitectureRegistry, BitNetConfig, ConcreteTensor, Device, NormType};
-use bitnet_inference::config::GenerationConfig;
-use bitnet_inference::sampling::{
-    apply_temperature, greedy_sample, softmax_in_place,
+use bitnet_common::{
+    ActivationType, ArchitectureRegistry, BitNetConfig, ConcreteTensor, Device, NormType,
 };
-use bitnet_inference::simple_forward::{Weights, logits_for_token};
 use bitnet_inference::InferenceEngine;
+use bitnet_inference::config::GenerationConfig;
+use bitnet_inference::sampling::{apply_temperature, greedy_sample, softmax_in_place};
+use bitnet_inference::simple_forward::{Weights, logits_for_token};
 use bitnet_models::Model;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -312,10 +312,7 @@ fn e2e_rmsnorm_config_produces_valid_output() {
     let mut logits = vec![1.0_f32, 2.0, 3.0, 4.0];
     softmax_in_place(&mut logits);
     let sum: f32 = logits.iter().sum();
-    assert!(
-        (sum - 1.0).abs() < 1e-5,
-        "RMSNorm config: softmax must sum to ~1.0, got {sum}"
-    );
+    assert!((sum - 1.0).abs() < 1e-5, "RMSNorm config: softmax must sum to ~1.0, got {sum}");
 }
 
 #[test]
@@ -397,9 +394,7 @@ async fn e2e_stop_token_terminates() {
     let input: Vec<u32> = vec![1, 2, 3];
     // Set stop token to 0 — the mock model produces uniform logits, greedy
     // picks token 0, which should immediately trigger stop.
-    let config = GenerationConfig::greedy()
-        .with_max_tokens(10)
-        .with_stop_token_ids(vec![0]);
+    let config = GenerationConfig::greedy().with_max_tokens(10).with_stop_token_ids(vec![0]);
     let tokens = engine.generate_tokens(&input, &config).await.unwrap();
     // Generation should stop after at most 1 token (token 0 is the stop token).
     assert!(
@@ -434,10 +429,7 @@ fn regression_logits_are_finite() {
     let w = Weights { tok_embeddings: &tok_embeddings, lm_head: &lm_head, vocab, dim };
 
     let logits = logits_for_token(&w, 0);
-    assert!(
-        logits.iter().all(|v| v.is_finite()),
-        "all logits must be finite (no NaN/Inf)"
-    );
+    assert!(logits.iter().all(|v| v.is_finite()), "all logits must be finite (no NaN/Inf)");
 }
 
 #[test]
@@ -445,10 +437,7 @@ fn regression_softmax_sums_to_one() {
     let mut logits = vec![1.0_f32, 2.0, 3.0, 4.0, 5.0];
     softmax_in_place(&mut logits);
     let sum: f32 = logits.iter().sum();
-    assert!(
-        (sum - 1.0).abs() < 1e-5,
-        "softmax of logits must sum to ~1.0, got {sum}"
-    );
+    assert!((sum - 1.0).abs() < 1e-5, "softmax of logits must sum to ~1.0, got {sum}");
 }
 
 #[test]
@@ -465,10 +454,7 @@ fn regression_token_within_vocab() {
 
     let logits = logits_for_token(&w, 0);
     let token = greedy_sample(&logits).unwrap();
-    assert!(
-        (token as usize) < vocab,
-        "generated token {token} must be < vocab_size {vocab}"
-    );
+    assert!((token as usize) < vocab, "generated token {token} must be < vocab_size {vocab}");
 }
 
 #[test]
@@ -481,8 +467,7 @@ fn regression_memory_bounded() {
 
     let tok_embeddings = vec![0.1_f32; vocab * dim];
     let lm_head = vec![0.1_f32; dim * vocab];
-    let actual_bytes =
-        (tok_embeddings.len() + lm_head.len()) * std::mem::size_of::<f32>();
+    let actual_bytes = (tok_embeddings.len() + lm_head.len()) * std::mem::size_of::<f32>();
 
     assert!(
         actual_bytes <= expected_bytes * 2,

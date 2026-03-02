@@ -39,11 +39,7 @@ fn run_help_shows_architecture_flag() {
 /// `--model-format` defaults to "auto" (visible in help).
 #[test]
 fn model_format_default_is_auto() {
-    bitnet()
-        .args(["run", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("auto"));
+    bitnet().args(["run", "--help"]).assert().success().stdout(predicate::str::contains("auto"));
 }
 
 /// Invalid --model-format value produces a meaningful error at runtime.
@@ -51,15 +47,7 @@ fn model_format_default_is_auto() {
 #[test]
 fn invalid_model_format_rejected() {
     bitnet()
-        .args([
-            "run",
-            "--model",
-            "fake.gguf",
-            "--prompt",
-            "hello",
-            "--model-format",
-            "pytorch",
-        ])
+        .args(["run", "--model", "fake.gguf", "--prompt", "hello", "--model-format", "pytorch"])
         .assert()
         .failure()
         .stderr(
@@ -118,14 +106,7 @@ fn directory_model_path_triggers_hf_loader() {
     fs::create_dir(&model_dir).unwrap();
     // No config.json — the loader will fail, but we should see the HF path message
     bitnet()
-        .args([
-            "run",
-            "--model",
-            model_dir.to_str().unwrap(),
-            "--prompt",
-            "hello",
-            "--allow-mock",
-        ])
+        .args(["run", "--model", model_dir.to_str().unwrap(), "--prompt", "hello", "--allow-mock"])
         .assert()
         .failure()
         .stdout(predicate::str::contains("HuggingFace model from directory"));
@@ -185,10 +166,7 @@ fn list_architectures_shows_table() {
 /// `list-architectures --json` outputs valid JSON.
 #[test]
 fn list_architectures_json_output() {
-    let output = bitnet()
-        .args(["list-architectures", "--json"])
-        .assert()
-        .success();
+    let output = bitnet().args(["list-architectures", "--json"]).assert().success();
 
     let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");

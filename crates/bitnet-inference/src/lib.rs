@@ -51,6 +51,10 @@ pub use batch::{BatchConfig, BatchRequest, BatchResult, BatchScheduler, SingleRe
 pub use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
+pub use dense_forward::{
+    DenseAttention, DenseAttentionConfig, DenseFFN, DenseLinear, DenseModel, DenseTransformerBlock,
+    dense_block_forward_tensor, rms_norm, silu,
+};
 pub use engine::{InferenceEngine, InferenceResult};
 pub use generation::{
     AutoregressiveGenerator, GenConfig, SampleConfig, SamplingStrategy as GenSamplingStrategy,
@@ -60,10 +64,6 @@ pub use kv_cache_optimized::{
     CacheEvictionPolicy, CacheMetrics, EvictionConfig, Page, PageId, PagedKvCache,
 };
 pub use layers::{BitNetAttention, LookupTable, QuantizedLinear};
-pub use dense_forward::{
-    DenseAttention, DenseAttentionConfig, DenseFFN, DenseLinear, DenseModel,
-    DenseTransformerBlock, dense_block_forward_tensor, rms_norm, silu,
-};
 pub use metrics::{
     InferenceMetrics, LatencyHistogram, MemoryProfiler, MetricsCollector, MetricsReport,
     ThroughputTracker,

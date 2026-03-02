@@ -108,12 +108,7 @@ pub static KNOWN_MODELS: &[ModelEntry] = &[
         format: ModelFormat::SafeTensors,
         approx_size: "~3 GB",
         auth_required: false,
-        files: &[
-            "model.safetensors",
-            "config.json",
-            "tokenizer.json",
-            "tokenizer_config.json",
-        ],
+        files: &["model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json"],
     },
     // ── Google Gemma ─────────────────────────────────────────────────
     ModelEntry {
@@ -155,12 +150,7 @@ pub static KNOWN_MODELS: &[ModelEntry] = &[
         format: ModelFormat::SafeTensors,
         approx_size: "~2.5 GB",
         auth_required: true,
-        files: &[
-            "model.safetensors",
-            "config.json",
-            "tokenizer.json",
-            "tokenizer_config.json",
-        ],
+        files: &["model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json"],
     },
     // ── HuggingFace SmolLM2 ─────────────────────────────────────────
     ModelEntry {
@@ -169,12 +159,7 @@ pub static KNOWN_MODELS: &[ModelEntry] = &[
         format: ModelFormat::SafeTensors,
         approx_size: "~3.4 GB",
         auth_required: false,
-        files: &[
-            "model.safetensors",
-            "config.json",
-            "tokenizer.json",
-            "tokenizer_config.json",
-        ],
+        files: &["model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json"],
     },
 ];
 
@@ -186,10 +171,7 @@ pub fn lookup(repo_id: &str) -> Option<&'static ModelEntry> {
 /// Format the registry as a human-readable table for `--list`.
 pub fn format_table() -> String {
     let mut out = String::from("Known models:\n\n");
-    out.push_str(&format!(
-        "  {:<50} {:<14} {:<10} {}\n",
-        "REPO ID", "FORMAT", "SIZE", "AUTH"
-    ));
+    out.push_str(&format!("  {:<50} {:<14} {:<10} {}\n", "REPO ID", "FORMAT", "SIZE", "AUTH"));
     out.push_str(&format!("  {}\n", "-".repeat(90)));
     for m in KNOWN_MODELS {
         out.push_str(&format!(
@@ -310,11 +292,7 @@ mod tests {
         for m in KNOWN_MODELS {
             match m.format {
                 ModelFormat::SafeTensors => {
-                    assert!(
-                        m.files.contains(&"config.json"),
-                        "{} missing config.json",
-                        m.repo_id
-                    );
+                    assert!(m.files.contains(&"config.json"), "{} missing config.json", m.repo_id);
                     assert!(
                         m.files.contains(&"tokenizer.json"),
                         "{} missing tokenizer.json",
