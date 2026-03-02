@@ -32,11 +32,11 @@
 
 pub mod activations;
 pub mod attention;
+pub mod autotuning;
 pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
