@@ -126,7 +126,7 @@ pub fn validate_download(
             Some(&actual) => {
                 if let Some(expected) = file.expected_bytes {
                     let ratio = actual as f64 / expected as f64;
-                    if ratio < 0.9 || ratio > 1.1 {
+                    if !(0.9..=1.1).contains(&ratio) {
                         issues.push(format!(
                             "{}: size {actual} differs from expected \
                              {expected} (ratio: {ratio:.2})",
