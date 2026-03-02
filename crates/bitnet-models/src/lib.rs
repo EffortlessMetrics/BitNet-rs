@@ -2,6 +2,7 @@
 
 pub mod architecture;
 pub mod bitnet;
+pub mod capability_check;
 pub mod catalog;
 pub mod checkpoint;
 pub mod comparison;

@@ -142,9 +142,7 @@ pub fn from_kv_pairs(pairs: &HashMap<String, String>) -> ModelMetadata {
             k if k.contains("max_position") || k.contains("context_length") => {
                 m.max_position = v.parse().ok();
             }
-            k if k.contains("intermediate_size")
-                || k.contains("feed_forward_length") =>
-            {
+            k if k.contains("intermediate_size") || k.contains("feed_forward_length") => {
                 m.intermediate_size = v.parse().ok();
             }
             k if k.contains("model_type") || k.contains("architecture") => {
@@ -185,10 +183,7 @@ mod tests {
 
     #[test]
     fn test_missing_fields() {
-        let m = ModelMetadata {
-            hidden_size: Some(4096),
-            ..Default::default()
-        };
+        let m = ModelMetadata { hidden_size: Some(4096), ..Default::default() };
         let missing = m.missing_fields();
         assert!(missing.contains(&"num_layers"));
         assert!(!missing.contains(&"hidden_size"));
@@ -196,34 +191,21 @@ mod tests {
 
     #[test]
     fn test_head_dim() {
-        let m = ModelMetadata {
-            hidden_size: Some(4096),
-            num_heads: Some(32),
-            ..Default::default()
-        };
+        let m =
+            ModelMetadata { hidden_size: Some(4096), num_heads: Some(32), ..Default::default() };
         assert_eq!(m.head_dim(), Some(128));
     }
 
     #[test]
     fn test_gqa_groups() {
-        let m = ModelMetadata {
-            num_heads: Some(40),
-            num_kv_heads: Some(10),
-            ..Default::default()
-        };
+        let m = ModelMetadata { num_heads: Some(40), num_kv_heads: Some(10), ..Default::default() };
         assert_eq!(m.gqa_groups(), Some(4));
     }
 
     #[test]
     fn test_merge() {
-        let mut a = ModelMetadata {
-            hidden_size: Some(4096),
-            ..Default::default()
-        };
-        let b = ModelMetadata {
-            num_layers: Some(32),
-            ..Default::default()
-        };
+        let mut a = ModelMetadata { hidden_size: Some(4096), ..Default::default() };
+        let b = ModelMetadata { num_layers: Some(32), ..Default::default() };
         a.merge(&b);
         assert_eq!(a.hidden_size, Some(4096));
         assert_eq!(a.num_layers, Some(32));
@@ -231,14 +213,8 @@ mod tests {
 
     #[test]
     fn test_merge_overwrite() {
-        let mut a = ModelMetadata {
-            hidden_size: Some(4096),
-            ..Default::default()
-        };
-        let b = ModelMetadata {
-            hidden_size: Some(5120),
-            ..Default::default()
-        };
+        let mut a = ModelMetadata { hidden_size: Some(4096), ..Default::default() };
+        let b = ModelMetadata { hidden_size: Some(5120), ..Default::default() };
         a.merge(&b);
         assert_eq!(a.hidden_size, Some(5120));
     }
@@ -287,20 +263,13 @@ mod tests {
 
     #[test]
     fn test_head_dim_zero_heads() {
-        let m = ModelMetadata {
-            hidden_size: Some(4096),
-            num_heads: Some(0),
-            ..Default::default()
-        };
+        let m = ModelMetadata { hidden_size: Some(4096), num_heads: Some(0), ..Default::default() };
         assert_eq!(m.head_dim(), None);
     }
 
     #[test]
     fn test_gqa_no_kv_heads() {
-        let m = ModelMetadata {
-            num_heads: Some(32),
-            ..Default::default()
-        };
+        let m = ModelMetadata { num_heads: Some(32), ..Default::default() };
         assert_eq!(m.gqa_groups(), None);
     }
 
