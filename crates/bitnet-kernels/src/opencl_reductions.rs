@@ -189,11 +189,7 @@ impl ReduceStats {
     fn compute(elements: usize, bytes_per_element: usize, elapsed: f64) -> Self {
         let total_bytes = (elements * bytes_per_element) as f64;
         let bw = if elapsed > 0.0 { total_bytes / elapsed } else { 0.0 };
-        Self {
-            compute_time: elapsed,
-            bandwidth_utilization: bw,
-            elements_processed: elements,
-        }
+        Self { compute_time: elapsed, bandwidth_utilization: bw, elements_processed: elements }
     }
 }
 
@@ -214,11 +210,7 @@ impl fmt::Display for ReduceStats {
 // ---------------------------------------------------------------------------
 
 /// Compute the output shape after reducing along an axis.
-fn output_shape(
-    input_shape: &[usize],
-    axis: Option<usize>,
-    keepdims: bool,
-) -> Vec<usize> {
+fn output_shape(input_shape: &[usize], axis: Option<usize>, keepdims: bool) -> Vec<usize> {
     match axis {
         None => {
             if keepdims {
@@ -233,12 +225,7 @@ fn output_shape(
                 s[ax] = 1;
                 s
             } else {
-                input_shape
-                    .iter()
-                    .enumerate()
-                    .filter(|&(i, _)| i != ax)
-                    .map(|(_, &d)| d)
-                    .collect()
+                input_shape.iter().enumerate().filter(|&(i, _)| i != ax).map(|(_, &d)| d).collect()
             }
         }
     }
@@ -279,15 +266,11 @@ pub struct TreeReducer {
 
 impl TreeReducer {
     pub fn new() -> Self {
-        Self {
-            workgroup_size: A770ReduceConstants::WORKGROUP_SIZE,
-        }
+        Self { workgroup_size: A770ReduceConstants::WORKGROUP_SIZE }
     }
 
     pub fn with_workgroup_size(workgroup_size: usize) -> Self {
-        Self {
-            workgroup_size: workgroup_size.max(1),
-        }
+        Self { workgroup_size: workgroup_size.max(1) }
     }
 
     /// Whether two-pass reduction is needed for the given element count.
@@ -332,7 +315,11 @@ impl TreeReducer {
         // Finalise mean: divide by count
         let result = match op {
             ReduceOp::Mean => {
-                if n > 0 { result / n as f32 } else { 0.0 }
+                if n > 0 {
+                    result / n as f32
+                } else {
+                    0.0
+                }
             }
             ReduceOp::Variance => {
                 // result is sum-of-squares; need mean first
@@ -348,13 +335,7 @@ impl TreeReducer {
     }
 
     /// Reduce a contiguous chunk [start..end) with workgroup-style tree.
-    fn reduce_chunk(
-        &self,
-        data: &[f32],
-        start: usize,
-        end: usize,
-        op: ReduceOp,
-    ) -> f32 {
+    fn reduce_chunk(&self, data: &[f32], start: usize, end: usize, op: ReduceOp) -> f32 {
         let mut acc = op.identity();
         for &val in &data[start..end] {
             acc = op.combine(acc, val);
@@ -391,17 +372,11 @@ impl AxisReducer {
             return Err(ReduceError::EmptyShape);
         }
         if axis >= shape.len() {
-            return Err(ReduceError::InvalidAxis {
-                axis,
-                ndim: shape.len(),
-            });
+            return Err(ReduceError::InvalidAxis { axis, ndim: shape.len() });
         }
         let total = shape_numel(shape);
         if data.len() != total {
-            return Err(ReduceError::ShapeMismatch {
-                expected: total,
-                actual: data.len(),
-            });
+            return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
         }
 
         let out_shape = output_shape(shape, Some(axis), keepdims);
@@ -434,7 +409,11 @@ impl AxisReducer {
     fn finalise_op(acc: f32, count: usize, op: ReduceOp) -> f32 {
         match op {
             ReduceOp::Mean => {
-                if count > 0 { acc / count as f32 } else { 0.0 }
+                if count > 0 {
+                    acc / count as f32
+                } else {
+                    0.0
+                }
             }
             _ => acc,
         }
@@ -468,10 +447,7 @@ impl MultiAxisReducer {
         }
         let total = shape_numel(shape);
         if data.len() != total {
-            return Err(ReduceError::ShapeMismatch {
-                expected: total,
-                actual: data.len(),
-            });
+            return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
         }
         if axes.is_empty() {
             return Ok((data.to_vec(), shape.to_vec()));
@@ -572,17 +548,11 @@ impl ArgReducer {
             return Err(ReduceError::EmptyShape);
         }
         if axis >= shape.len() {
-            return Err(ReduceError::InvalidAxis {
-                axis,
-                ndim: shape.len(),
-            });
+            return Err(ReduceError::InvalidAxis { axis, ndim: shape.len() });
         }
         let total = shape_numel(shape);
         if data.len() != total {
-            return Err(ReduceError::ShapeMismatch {
-                expected: total,
-                actual: data.len(),
-            });
+            return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
         }
 
         let out_shape = output_shape(shape, Some(axis), keepdims);
@@ -593,11 +563,7 @@ impl ArgReducer {
         let out_numel = (outer * inner).max(1);
         let mut indices = vec![0usize; out_numel];
 
-        let identity = if is_max {
-            f32::NEG_INFINITY
-        } else {
-            f32::INFINITY
-        };
+        let identity = if is_max { f32::NEG_INFINITY } else { f32::INFINITY };
 
         for o in 0..outer {
             for i in 0..inner {
@@ -655,17 +621,11 @@ impl LogSumExpReducer {
             return Err(ReduceError::EmptyShape);
         }
         if axis >= shape.len() {
-            return Err(ReduceError::InvalidAxis {
-                axis,
-                ndim: shape.len(),
-            });
+            return Err(ReduceError::InvalidAxis { axis, ndim: shape.len() });
         }
         let total = shape_numel(shape);
         if data.len() != total {
-            return Err(ReduceError::ShapeMismatch {
-                expected: total,
-                actual: data.len(),
-            });
+            return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
         }
 
         let out_shape = output_shape(shape, Some(axis), keepdims);
@@ -713,17 +673,11 @@ pub fn variance_axis(
         return Err(ReduceError::EmptyShape);
     }
     if axis >= shape.len() {
-        return Err(ReduceError::InvalidAxis {
-            axis,
-            ndim: shape.len(),
-        });
+        return Err(ReduceError::InvalidAxis { axis, ndim: shape.len() });
     }
     let total = shape_numel(shape);
     if data.len() != total {
-        return Err(ReduceError::ShapeMismatch {
-            expected: total,
-            actual: data.len(),
-        });
+        return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
     }
 
     let out_shape = output_shape(shape, Some(axis), keepdims);
@@ -741,11 +695,7 @@ pub fn variance_axis(
                 let idx = o * reduce_dim * inner + r * inner + i;
                 sum += data[idx];
             }
-            let mean = if reduce_dim > 0 {
-                sum / reduce_dim as f32
-            } else {
-                0.0
-            };
+            let mean = if reduce_dim > 0 { sum / reduce_dim as f32 } else { 0.0 };
             // Pass 2: sum of squared deviations
             let mut var_sum = 0.0f32;
             for r in 0..reduce_dim {
@@ -753,11 +703,7 @@ pub fn variance_axis(
                 let diff = data[idx] - mean;
                 var_sum += diff * diff;
             }
-            output[o * inner + i] = if reduce_dim > 0 {
-                var_sum / reduce_dim as f32
-            } else {
-                0.0
-            };
+            output[o * inner + i] = if reduce_dim > 0 { var_sum / reduce_dim as f32 } else { 0.0 };
         }
     }
 
@@ -1046,10 +992,7 @@ pub fn execute_reduce(
 ) -> Result<ReduceResult, ReduceError> {
     let total = shape_numel(shape);
     if data.len() != total {
-        return Err(ReduceError::ShapeMismatch {
-            expected: total,
-            actual: data.len(),
-        });
+        return Err(ReduceError::ShapeMismatch { expected: total, actual: data.len() });
     }
     if data.is_empty() {
         return Err(ReduceError::EmptyInput);
@@ -1066,40 +1009,32 @@ pub fn execute_reduce(
                 (vec![v], s)
             }
         },
-        ReduceOp::ArgMax => {
-            match config.axis {
-                Some(ax) => {
-                    let (idx, s) =
-                        ArgReducer::argmax(data, shape, ax, config.keepdims)?;
-                    let vals: Vec<f32> = idx.iter().map(|&i| i as f32).collect();
-                    (vals, s)
-                }
-                None => {
-                    let idx = ArgReducer::argmax_flat(data).unwrap_or(0);
-                    let s = output_shape(shape, None, config.keepdims);
-                    (vec![idx as f32], s)
-                }
-            }
-        }
-        ReduceOp::ArgMin => {
-            match config.axis {
-                Some(ax) => {
-                    let (idx, s) =
-                        ArgReducer::argmin(data, shape, ax, config.keepdims)?;
-                    let vals: Vec<f32> = idx.iter().map(|&i| i as f32).collect();
-                    (vals, s)
-                }
-                None => {
-                    let idx = ArgReducer::argmin_flat(data).unwrap_or(0);
-                    let s = output_shape(shape, None, config.keepdims);
-                    (vec![idx as f32], s)
-                }
-            }
-        }
-        ReduceOp::LogSumExp => match config.axis {
+        ReduceOp::ArgMax => match config.axis {
             Some(ax) => {
-                LogSumExpReducer::reduce_axis(data, shape, ax, config.keepdims)?
+                let (idx, s) = ArgReducer::argmax(data, shape, ax, config.keepdims)?;
+                let vals: Vec<f32> = idx.iter().map(|&i| i as f32).collect();
+                (vals, s)
             }
+            None => {
+                let idx = ArgReducer::argmax_flat(data).unwrap_or(0);
+                let s = output_shape(shape, None, config.keepdims);
+                (vec![idx as f32], s)
+            }
+        },
+        ReduceOp::ArgMin => match config.axis {
+            Some(ax) => {
+                let (idx, s) = ArgReducer::argmin(data, shape, ax, config.keepdims)?;
+                let vals: Vec<f32> = idx.iter().map(|&i| i as f32).collect();
+                (vals, s)
+            }
+            None => {
+                let idx = ArgReducer::argmin_flat(data).unwrap_or(0);
+                let s = output_shape(shape, None, config.keepdims);
+                (vec![idx as f32], s)
+            }
+        },
+        ReduceOp::LogSumExp => match config.axis {
+            Some(ax) => LogSumExpReducer::reduce_axis(data, shape, ax, config.keepdims)?,
             None => {
                 let v = LogSumExpReducer::reduce_flat(data);
                 let s = output_shape(shape, None, config.keepdims);
@@ -1137,19 +1072,13 @@ mod tests {
     }
 
     fn assert_approx(a: f32, b: f32, eps: f32) {
-        assert!(
-            approx_eq(a, b, eps),
-            "expected ≈ {b}, got {a} (eps={eps})"
-        );
+        assert!(approx_eq(a, b, eps), "expected ≈ {b}, got {a} (eps={eps})");
     }
 
     fn assert_vec_approx(a: &[f32], b: &[f32], eps: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                approx_eq(x, y, eps),
-                "element [{i}]: expected ≈ {y}, got {x} (eps={eps})"
-            );
+            assert!(approx_eq(x, y, eps), "element [{i}]: expected ≈ {y}, got {x} (eps={eps})");
         }
     }
 
@@ -1289,10 +1218,7 @@ mod tests {
         let (val, _) = reducer.reduce(&data, ReduceOp::Sum);
         let expected = (n * (n + 1) / 2) as f32;
         // Loose tolerance for large floating-point sums
-        assert!(
-            (val - expected).abs() / expected < 1e-3,
-            "sum={val}, expected={expected}"
-        );
+        assert!((val - expected).abs() / expected < 1e-3, "sum={val}, expected={expected}");
     }
 
     #[test]
@@ -1336,8 +1262,7 @@ mod tests {
         // [[1,2,3],[4,5,6]] → [5,7,9]
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
         assert_vec_approx(&vals, &[5.0, 7.0, 9.0], 1e-5);
         assert_eq!(s, vec![3]);
     }
@@ -1346,8 +1271,7 @@ mod tests {
     fn test_axis_sum_2d_axis1() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false).unwrap();
         assert_vec_approx(&vals, &[6.0, 15.0], 1e-5);
         assert_eq!(s, vec![2]);
     }
@@ -1356,8 +1280,7 @@ mod tests {
     fn test_axis_max_2d_axis0() {
         let data = vec![1.0, 5.0, 3.0, 4.0, 2.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Max, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Max, false).unwrap();
         assert_vec_approx(&vals, &[4.0, 5.0, 6.0], 1e-5);
     }
 
@@ -1365,8 +1288,7 @@ mod tests {
     fn test_axis_max_2d_axis1() {
         let data = vec![1.0, 5.0, 3.0, 4.0, 2.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Max, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Max, false).unwrap();
         assert_vec_approx(&vals, &[5.0, 6.0], 1e-5);
     }
 
@@ -1374,8 +1296,7 @@ mod tests {
     fn test_axis_min_2d_axis0() {
         let data = vec![1.0, 5.0, 3.0, 4.0, 2.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Min, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Min, false).unwrap();
         assert_vec_approx(&vals, &[1.0, 2.0, 3.0], 1e-5);
     }
 
@@ -1383,8 +1304,7 @@ mod tests {
     fn test_axis_min_2d_axis1() {
         let data = vec![1.0, 5.0, 3.0, 4.0, 2.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Min, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Min, false).unwrap();
         assert_vec_approx(&vals, &[1.0, 2.0], 1e-5);
     }
 
@@ -1392,8 +1312,7 @@ mod tests {
     fn test_axis_mean_2d_axis0() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Mean, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Mean, false).unwrap();
         assert_vec_approx(&vals, &[2.5, 3.5, 4.5], 1e-5);
     }
 
@@ -1401,8 +1320,7 @@ mod tests {
     fn test_axis_mean_2d_axis1() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Mean, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Mean, false).unwrap();
         assert_vec_approx(&vals, &[2.0, 5.0], 1e-5);
     }
 
@@ -1411,8 +1329,7 @@ mod tests {
         // shape [2,2,3]: reduce axis 0 → shape [2,3]
         let data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         let shape = vec![2, 2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
         // [1+7, 2+8, 3+9, 4+10, 5+11, 6+12] = [8,10,12,14,16,18]
         assert_vec_approx(&vals, &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0], 1e-5);
         assert_eq!(s, vec![2, 3]);
@@ -1422,8 +1339,7 @@ mod tests {
     fn test_axis_sum_3d_axis1() {
         let data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         let shape = vec![2, 2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false).unwrap();
         // row0: [1+4, 2+5, 3+6]=[5,7,9], row1: [7+10, 8+11, 9+12]=[17,19,21]
         assert_vec_approx(&vals, &[5.0, 7.0, 9.0, 17.0, 19.0, 21.0], 1e-5);
         assert_eq!(s, vec![2, 3]);
@@ -1433,8 +1349,7 @@ mod tests {
     fn test_axis_sum_3d_axis2() {
         let data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         let shape = vec![2, 2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 2, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 2, ReduceOp::Sum, false).unwrap();
         // [1+2+3, 4+5+6, 7+8+9, 10+11+12] = [6, 15, 24, 33]
         assert_vec_approx(&vals, &[6.0, 15.0, 24.0, 33.0], 1e-5);
         assert_eq!(s, vec![2, 2]);
@@ -1446,8 +1361,7 @@ mod tests {
     fn test_axis_keepdims_true() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, true).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, true).unwrap();
         assert_vec_approx(&vals, &[6.0, 15.0], 1e-5);
         assert_eq!(s, vec![2, 1]);
     }
@@ -1456,8 +1370,7 @@ mod tests {
     fn test_axis_keepdims_false() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (_, s) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
+        let (_, s) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
         assert_eq!(s, vec![3]);
     }
 
@@ -1564,8 +1477,7 @@ mod tests {
         let data = vec![1000.0, 1001.0, 1002.0];
         let result = LogSumExpReducer::reduce_flat(&data);
         // max=1002, log(exp(-2)+exp(-1)+exp(0))=log(exp(-2)+exp(-1)+1)
-        let expected =
-            1002.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln();
+        let expected = 1002.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln();
         assert_approx(result, expected, 1e-3);
     }
 
@@ -1573,8 +1485,7 @@ mod tests {
     fn test_log_sum_exp_flat_negative_values() {
         let data = vec![-1000.0, -999.0, -998.0];
         let result = LogSumExpReducer::reduce_flat(&data);
-        let expected =
-            -998.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln();
+        let expected = -998.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln();
         assert_approx(result, expected, 1e-3);
     }
 
@@ -1593,8 +1504,7 @@ mod tests {
     fn test_log_sum_exp_axis() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, s) =
-            LogSumExpReducer::reduce_axis(&data, &shape, 1, false).unwrap();
+        let (vals, s) = LogSumExpReducer::reduce_axis(&data, &shape, 1, false).unwrap();
         let e0 = (1.0f32.exp() + 2.0f32.exp() + 3.0f32.exp()).ln();
         let e1 = (4.0f32.exp() + 5.0f32.exp() + 6.0f32.exp()).ln();
         assert_vec_approx(&vals, &[e0, e1], 1e-4);
@@ -1654,8 +1564,7 @@ mod tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
         let (vals, s) =
-            MultiAxisReducer::reduce(&data, &shape, &[1], ReduceOp::Sum, false)
-                .unwrap();
+            MultiAxisReducer::reduce(&data, &shape, &[1], ReduceOp::Sum, false).unwrap();
         assert_vec_approx(&vals, &[6.0, 15.0], 1e-5);
         assert_eq!(s, vec![2]);
     }
@@ -1665,8 +1574,7 @@ mod tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
         let (vals, s) =
-            MultiAxisReducer::reduce(&data, &shape, &[0, 1], ReduceOp::Sum, false)
-                .unwrap();
+            MultiAxisReducer::reduce(&data, &shape, &[0, 1], ReduceOp::Sum, false).unwrap();
         assert_approx(vals[0], 21.0, 1e-5);
         assert!(s.is_empty());
     }
@@ -1675,9 +1583,7 @@ mod tests {
     fn test_multi_axis_reduce_empty_axes() {
         let data = vec![1.0, 2.0, 3.0];
         let shape = vec![3];
-        let (vals, s) =
-            MultiAxisReducer::reduce(&data, &shape, &[], ReduceOp::Sum, false)
-                .unwrap();
+        let (vals, s) = MultiAxisReducer::reduce(&data, &shape, &[], ReduceOp::Sum, false).unwrap();
         assert_eq!(vals, data);
         assert_eq!(s, shape);
     }
@@ -1686,9 +1592,7 @@ mod tests {
     fn test_multi_axis_reduce_keepdims() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, s) =
-            MultiAxisReducer::reduce(&data, &shape, &[1], ReduceOp::Sum, true)
-                .unwrap();
+        let (vals, s) = MultiAxisReducer::reduce(&data, &shape, &[1], ReduceOp::Sum, true).unwrap();
         assert_vec_approx(&vals, &[6.0, 15.0], 1e-5);
         assert_eq!(s, vec![2, 1]);
     }
@@ -1820,18 +1724,13 @@ mod tests {
     fn test_axis_invalid_axis() {
         let data = vec![1.0, 2.0, 3.0];
         let shape = vec![3];
-        let result =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false);
-        assert!(matches!(
-            result,
-            Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })
-        ));
+        let result = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Sum, false);
+        assert!(matches!(result, Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })));
     }
 
     #[test]
     fn test_axis_empty_shape() {
-        let result =
-            AxisReducer::reduce(&[], &[], 0, ReduceOp::Sum, false);
+        let result = AxisReducer::reduce(&[], &[], 0, ReduceOp::Sum, false);
         assert!(matches!(result, Err(ReduceError::EmptyShape)));
     }
 
@@ -1839,8 +1738,7 @@ mod tests {
     fn test_axis_shape_mismatch() {
         let data = vec![1.0, 2.0, 3.0];
         let shape = vec![2, 3];
-        let result =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false);
+        let result = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false);
         assert!(matches!(result, Err(ReduceError::ShapeMismatch { .. })));
     }
 
@@ -1862,10 +1760,7 @@ mod tests {
         let data = vec![1.0, 2.0];
         let shape = vec![2];
         let result = LogSumExpReducer::reduce_axis(&data, &shape, 1, false);
-        assert!(matches!(
-            result,
-            Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })
-        ));
+        assert!(matches!(result, Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })));
     }
 
     #[test]
@@ -1873,10 +1768,7 @@ mod tests {
         let data = vec![1.0, 2.0];
         let shape = vec![2];
         let result = variance_axis(&data, &shape, 1, false);
-        assert!(matches!(
-            result,
-            Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })
-        ));
+        assert!(matches!(result, Err(ReduceError::InvalidAxis { axis: 1, ndim: 1 })));
     }
 
     // ── Edge cases ─────────────────────────────────────────────────────
@@ -2049,8 +1941,7 @@ mod tests {
     fn test_1d_sum() {
         let data = vec![10.0, 20.0, 30.0];
         let shape = vec![3];
-        let (vals, s) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
+        let (vals, s) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Sum, false).unwrap();
         assert_approx(vals[0], 60.0, 1e-5);
         assert!(s.is_empty());
     }
@@ -2059,8 +1950,7 @@ mod tests {
     fn test_1d_max() {
         let data = vec![10.0, 30.0, 20.0];
         let shape = vec![3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Max, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Max, false).unwrap();
         assert_approx(vals[0], 30.0, 1e-5);
     }
 
@@ -2068,8 +1958,7 @@ mod tests {
     fn test_1d_mean() {
         let data = vec![10.0, 20.0, 30.0];
         let shape = vec![3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 0, ReduceOp::Mean, false).unwrap();
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 0, ReduceOp::Mean, false).unwrap();
         assert_approx(vals[0], 20.0, 1e-5);
     }
 
@@ -2081,8 +1970,7 @@ mod tests {
         let data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         let shape = vec![2, 3, 2];
         let (vals, s) =
-            MultiAxisReducer::reduce(&data, &shape, &[0, 2], ReduceOp::Sum, false)
-                .unwrap();
+            MultiAxisReducer::reduce(&data, &shape, &[0, 2], ReduceOp::Sum, false).unwrap();
         // After reducing axis 2: shape [2,3] → [3,12,21, 10,26,42] wrong...
         // Let me compute: axis 2 first → [1+2, 3+4, 5+6, 7+8, 9+10, 11+12]
         //   = [3,7,11,15,19,23] shape [2,3]
@@ -2097,9 +1985,8 @@ mod tests {
     fn test_axis_prod() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let shape = vec![2, 3];
-        let (vals, _) =
-            AxisReducer::reduce(&data, &shape, 1, ReduceOp::Prod, false).unwrap();
-        assert_approx(vals[0], 6.0, 1e-5);   // 1*2*3
-        assert_approx(vals[1], 120.0, 1e-3);  // 4*5*6
+        let (vals, _) = AxisReducer::reduce(&data, &shape, 1, ReduceOp::Prod, false).unwrap();
+        assert_approx(vals[0], 6.0, 1e-5); // 1*2*3
+        assert_approx(vals[1], 120.0, 1e-3); // 4*5*6
     }
 }
