@@ -838,7 +838,7 @@ mod tests {
         let cols = im2col(&input, &config, 4, 4, 0).unwrap();
         let out_h = compute_output_size(4, 3, 1, 0, 1);
         let out_w = compute_output_size(4, 3, 1, 0, 1);
-        let col_h = 1 * 3 * 3; // ic_per_group * kh * kw
+        let col_h = 3 * 3; // ic_per_group * kh * kw
         let col_w = out_h * out_w;
         // weight is [oc, col_h], cols is [col_h, col_w]
         // output = weight * cols → [oc, col_w]

@@ -1442,7 +1442,7 @@ mod tests {
             let mut output = vec![0.0; size];
             Softmax::forward(&input, &mut output, 1, size).unwrap();
             for &v in &output {
-                assert!(v >= 0.0 && v <= 1.0, "out of [0,1]: {v}");
+                assert!((0.0..=1.0).contains(&v), "out of [0,1]: {v}");
             }
         }
     }

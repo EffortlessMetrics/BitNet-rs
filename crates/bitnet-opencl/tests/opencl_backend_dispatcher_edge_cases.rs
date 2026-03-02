@@ -1,4 +1,4 @@
-//! Edge-case tests for OpenCL backend dispatcher, registry, and dispatch strategies.
+//! Edge-case tests for `OpenCL` backend dispatcher, registry, and dispatch strategies.
 //!
 //! Tests cover mock backends, all dispatch strategies (priority, round-robin,
 //! load-based, specific backend), error paths, capability matrix queries,

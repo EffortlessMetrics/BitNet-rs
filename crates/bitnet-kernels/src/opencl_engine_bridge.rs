@@ -769,7 +769,7 @@ mod tests {
     fn test_attention_single_token() {
         let num_heads = 2;
         let head_dim = 4;
-        let total = 1 * num_heads * head_dim;
+        let total = num_heads * head_dim;
         let q = vec![1.0; total];
         let k = vec![1.0; total];
         let v = vec![1.0; total];

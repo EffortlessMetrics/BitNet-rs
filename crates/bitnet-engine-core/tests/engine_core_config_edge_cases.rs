@@ -1,8 +1,8 @@
 //! Edge-case tests for `bitnet-engine-core` config and session management.
 //!
 //! Focuses on boundary values, corner cases, and behaviours NOT covered by
-//! existing test suites (engine_core_edge_cases, session_management_edge_cases,
-//! validation_and_state_tests, engine_core_tests).
+//! existing test suites (`engine_core_edge_cases`, `session_management_edge_cases`,
+//! `validation_and_state_tests`, `engine_core_tests`).
 
 use bitnet_engine_core::{
     BackendInfo, ConcurrencyConfig, ConfigError, EngineState, EngineStateError, EngineStateTracker,
@@ -207,7 +207,7 @@ fn backend_info_with_many_kernel_ids() {
     let ids: Vec<String> = (0..1000).map(|i| format!("kernel_{i}")).collect();
     let info = BackendInfo {
         backend_name: "stress-test".into(),
-        kernel_ids: ids.clone(),
+        kernel_ids: ids,
         backend_summary: "1000 kernels".into(),
     };
     assert_eq!(info.kernel_ids.len(), 1000);
@@ -308,7 +308,7 @@ fn error_message_from_running_contains_running() {
     let mut t = EngineStateTracker::new();
     t.start().unwrap();
     let err = t.start().unwrap_err();
-    assert!(err.to_string().contains("Running"), "error should mention current state: {}", err);
+    assert!(err.to_string().contains("Running"), "error should mention current state: {err}");
 }
 
 #[test]

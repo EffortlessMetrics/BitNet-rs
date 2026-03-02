@@ -6,8 +6,7 @@
 //! On non-aarch64 targets the benchmark group is empty so the file still
 //! compiles without errors.
 
-use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use std::hint::black_box;
+use criterion::{Criterion, criterion_group, criterion_main};
 
 // ---------------------------------------------------------------------------
 // Helper: deterministic mock data

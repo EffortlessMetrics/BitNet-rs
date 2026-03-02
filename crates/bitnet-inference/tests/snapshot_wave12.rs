@@ -230,6 +230,6 @@ fn inference_config_default_json() {
         generation: GenerationConfig::default(),
         hardware: HardwareConfig::default(),
     };
-    #[allow(clippy::needless_borrows_for_generic_args)]
+
     insta::assert_json_snapshot!(&c);
 }

@@ -1118,8 +1118,8 @@ mod tests {
         let cfg = GqaConfig::new(8, 1, 4, 256).unwrap();
         let seq_len = 2;
         let q = make_tensor(8 * seq_len * 4, 0);
-        let k = make_tensor(1 * seq_len * 4, 50);
-        let v = make_tensor(1 * seq_len * 4, 100);
+        let k = make_tensor(seq_len * 4, 50);
+        let v = make_tensor(seq_len * 4, 100);
         let out = GqaAttention::compute(&q, &k, &v, &cfg, seq_len, false).unwrap();
         assert_eq!(out.len(), 8 * seq_len * 4);
     }
@@ -1131,8 +1131,8 @@ mod tests {
         let seq_len = 2;
         let pattern: Vec<f32> = vec![1.0, 0.5, 0.3, 0.8];
         let q: Vec<f32> = pattern.iter().copied().cycle().take(4 * seq_len * 2).collect();
-        let k = make_tensor(1 * seq_len * 2, 10);
-        let v = make_tensor(1 * seq_len * 2, 20);
+        let k = make_tensor(seq_len * 2, 10);
+        let v = make_tensor(seq_len * 2, 20);
         let out = GqaAttention::compute(&q, &k, &v, &cfg, seq_len, false).unwrap();
         let stride = seq_len * 2;
         let h0 = &out[0..stride];
@@ -1146,8 +1146,8 @@ mod tests {
         let cfg = GqaConfig::new(4, 1, 2, 256).unwrap();
         let seq_len = 4;
         let q = make_tensor(4 * seq_len * 2, 0);
-        let k = make_tensor(1 * seq_len * 2, 50);
-        let v = make_tensor(1 * seq_len * 2, 100);
+        let k = make_tensor(seq_len * 2, 50);
+        let v = make_tensor(seq_len * 2, 100);
         let out = GqaAttention::compute(&q, &k, &v, &cfg, seq_len, true).unwrap();
         assert!(out.iter().all(|x| x.is_finite()));
     }
@@ -1209,11 +1209,11 @@ mod tests {
     #[test]
     fn test_seq_len_1_gqa() {
         let cfg = GqaConfig::new(8, 2, 4, 256).unwrap();
-        let q = make_tensor(8 * 1 * 4, 0);
-        let k = make_tensor(2 * 1 * 4, 50);
-        let v = make_tensor(2 * 1 * 4, 100);
+        let q = make_tensor(8 * 4, 0);
+        let k = make_tensor(2 * 4, 50);
+        let v = make_tensor(2 * 4, 100);
         let out = GqaAttention::compute(&q, &k, &v, &cfg, 1, true).unwrap();
-        assert_eq!(out.len(), 8 * 1 * 4);
+        assert_eq!(out.len(), 8 * 4);
     }
 
     #[test]
@@ -1282,8 +1282,8 @@ mod tests {
             let cfg = GqaConfig::new(16, 1, 8, 256).unwrap();
             let sl = 4;
             let q = make_tensor(16 * sl * 8, seed * 1000);
-            let k = make_tensor(1 * sl * 8, seed * 1000 + 100);
-            let v = make_tensor(1 * sl * 8, seed * 1000 + 200);
+            let k = make_tensor(sl * 8, seed * 1000 + 100);
+            let v = make_tensor(sl * 8, seed * 1000 + 200);
             let out = GqaAttention::compute(&q, &k, &v, &cfg, sl, false).unwrap();
             assert!(out.iter().all(|x| x.is_finite()), "seed={seed}");
         }

@@ -118,10 +118,10 @@ fn all_kernels_have_sequential_buffer_bindings() {
             // Collect buffer indices
             let mut indices: Vec<u32> = Vec::new();
             for part in signature.split("[[buffer(") {
-                if let Some(end) = part.find(")]]") {
-                    if let Ok(idx) = part[..end].parse::<u32>() {
-                        indices.push(idx);
-                    }
+                if let Some(end) = part.find(")]]")
+                    && let Ok(idx) = part[..end].parse::<u32>()
+                {
+                    indices.push(idx);
                 }
             }
 
@@ -133,7 +133,7 @@ fn all_kernels_have_sequential_buffer_bindings() {
             // Verify sequential starting from 0
             for (i, idx) in indices.iter().enumerate() {
                 assert_eq!(
-                    *idx, i as u32,
+                    *idx as usize, i,
                     "Buffer binding {i} in {name} ({kernel:?}) should be \
                      {i}, got {idx}"
                 );

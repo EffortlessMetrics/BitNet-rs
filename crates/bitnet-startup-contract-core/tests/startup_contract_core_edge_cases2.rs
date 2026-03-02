@@ -52,7 +52,7 @@ fn component_clone_copy() {
     let c = RuntimeComponent::Server;
     let c2 = c; // Copy
     assert_eq!(c.label(), c2.label());
-    let c3 = c.clone();
+    let c3 = c;
     assert_eq!(c.label(), c3.label());
 }
 

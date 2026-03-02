@@ -13,7 +13,7 @@ use bitnet_generation::*;
 fn criteria(stop_ids: &[u32], stop_strings: &[&str], max: usize, eos: Option<u32>) -> StopCriteria {
     StopCriteria {
         stop_token_ids: stop_ids.to_vec(),
-        stop_strings: stop_strings.iter().map(|s| s.to_string()).collect(),
+        stop_strings: stop_strings.iter().map(std::string::ToString::to_string).collect(),
         max_tokens: max,
         eos_token_id: eos,
     }

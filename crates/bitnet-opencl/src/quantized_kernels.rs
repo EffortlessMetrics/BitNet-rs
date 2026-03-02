@@ -202,7 +202,7 @@ mod tests {
     fn ternary_matmul_mem_estimate() {
         // 128×64 matrix
         let mem = ternary_matmul_mem_bytes(128, 64);
-        let cols_packed = (64 + 3) / 4; // 16
+        let cols_packed = 64_usize.div_ceil(4); // 16
         let expected = 128 * cols_packed + 64 * 4 + 128 * 4;
         assert_eq!(mem, expected);
     }

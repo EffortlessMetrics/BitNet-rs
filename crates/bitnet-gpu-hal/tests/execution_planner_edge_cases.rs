@@ -1,6 +1,6 @@
-//! Edge-case tests for execution planner: OpKind, OptimizationLevel, PlanConfig,
-//! ExecutionNode, ExecutionGraph, MemoryPlanner, StreamScheduler, LaunchPlanner,
-//! PipelinePartitioner, CostModel, PlanOptimizer, ExecutionPlannerEngine.
+//! Edge-case tests for execution planner: `OpKind`, `OptimizationLevel`, `PlanConfig`,
+//! `ExecutionNode`, `ExecutionGraph`, `MemoryPlanner`, `StreamScheduler`, `LaunchPlanner`,
+//! `PipelinePartitioner`, `CostModel`, `PlanOptimizer`, `ExecutionPlannerEngine`.
 
 use bitnet_gpu_hal::execution_planner::{
     CostModel, ExecutionGraph, ExecutionNode, ExecutionPlannerEngine, LaunchConfig, LaunchPlanner,
@@ -338,7 +338,7 @@ fn cost_model_estimate() {
 #[test]
 fn cost_model_total_cost() {
     let cm = CostModel::default();
-    let nodes = vec![
+    let nodes = [
         ExecutionNode::new(0, "a", OpKind::MatMul).with_flops(100),
         ExecutionNode::new(1, "b", OpKind::Activation).with_flops(50),
     ];

@@ -20,25 +20,25 @@ struct TransformerConfigInput {
 
 fuzz_target!(|input: TransformerConfigInput| {
     // --- Pass 1: parse arbitrary bytes as GGUF and extract transformer config fields ---
-    if input.data.len() >= 16 {
-        if let Ok(reader) = GgufReader::new(&input.data) {
-            // These must never panic on any well-formed parse result.
-            let _ = reader.get_string_metadata("general.architecture");
-            let _ = reader.get_u32_metadata("llm.embedding_length");
-            let _ = reader.get_u32_metadata("llm.attention.head_count");
-            let _ = reader.get_u32_metadata("llm.attention.head_count_kv");
-            let _ = reader.get_u32_metadata("llm.block_count");
-            let _ = reader.get_u32_metadata("llm.context_length");
-            let _ = reader.get_u32_metadata("llm.feed_forward_length");
-            let _ = reader.get_u32_metadata("llm.vocab_size");
-            let _ = reader.get_f32_metadata("llm.attention.layer_norm_rms_eps");
-            let _ = reader.get_f32_metadata("llm.rope.freq_base");
-            let _ = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
-            let _ = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
-            let _ = reader.get_u32_metadata("tokenizer.ggml.padding_token_id");
-            let _ = reader.get_string_array_metadata("tokenizer.ggml.tokens");
-            let _ = reader.validate();
-        }
+    if input.data.len() >= 16
+        && let Ok(reader) = GgufReader::new(&input.data)
+    {
+        // These must never panic on any well-formed parse result.
+        let _ = reader.get_string_metadata("general.architecture");
+        let _ = reader.get_u32_metadata("llm.embedding_length");
+        let _ = reader.get_u32_metadata("llm.attention.head_count");
+        let _ = reader.get_u32_metadata("llm.attention.head_count_kv");
+        let _ = reader.get_u32_metadata("llm.block_count");
+        let _ = reader.get_u32_metadata("llm.context_length");
+        let _ = reader.get_u32_metadata("llm.feed_forward_length");
+        let _ = reader.get_u32_metadata("llm.vocab_size");
+        let _ = reader.get_f32_metadata("llm.attention.layer_norm_rms_eps");
+        let _ = reader.get_f32_metadata("llm.rope.freq_base");
+        let _ = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+        let _ = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let _ = reader.get_u32_metadata("tokenizer.ggml.padding_token_id");
+        let _ = reader.get_string_array_metadata("tokenizer.ggml.tokens");
+        let _ = reader.validate();
     }
 
     // --- Pass 2: construct a GGUF stream with known transformer config KVs ---

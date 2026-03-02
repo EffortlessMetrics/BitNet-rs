@@ -1,11 +1,16 @@
-//! OpenCL backend for BitNet GPU inference.
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::significant_drop_tightening
+)]
+//! `OpenCL` backend for `BitNet` GPU inference.
 //!
-//! Provides optimized OpenCL primitives for Intel Arc GPU inference,
+//! Provides optimized `OpenCL` primitives for Intel Arc GPU inference,
 //! including context pooling, local memory optimizations, prefetch
 //! pipelines, KV cache, paged attention, and multi-backend GPU dispatch
 //! with automatic selection.
 //! pipelines, KV cache, paged attention, and CPU reference implementations
-//! with OpenCL kernel sources for I2_S dequantization, QK256 block
+//! with `OpenCL` kernel sources for `I2_S` dequantization, QK256 block
 //! dequantization, and ternary matrix multiply.
 //! pipelines, KV cache, paged attention, SPIR-V compilation, and kernel registry.
 

@@ -28,7 +28,7 @@ fn good_weights() -> ModelWeights {
     }
 }
 
-fn good_config() -> TransformerConfig {
+const fn good_config() -> TransformerConfig {
     TransformerConfig {
         hidden_size: 2048,
         num_heads: 32,
@@ -39,7 +39,7 @@ fn good_config() -> TransformerConfig {
     }
 }
 
-fn small_model_meta() -> ModelMetadata {
+const fn small_model_meta() -> ModelMetadata {
     ModelMetadata {
         model_size_bytes: 500 * 1024 * 1024, // 500 MB
         requires_fp16: true,

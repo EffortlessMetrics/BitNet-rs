@@ -1,8 +1,8 @@
-//! Edge-case tests for dynamic_shapes module.
+//! Edge-case tests for `dynamic_shapes` module.
 //!
-//! Covers: DynamicDim, ShapeSpec, ShapeError, ShapeConstraint,
-//! ShapeInference, PaddingStrategy, BucketAllocator, ShapeValidator,
-//! ShapeOptimizer, SequencePacker, PackedSequences, DynamicShapeEngine.
+//! Covers: `DynamicDim`, `ShapeSpec`, `ShapeError`, `ShapeConstraint`,
+//! `ShapeInference`, `PaddingStrategy`, `BucketAllocator`, `ShapeValidator`,
+//! `ShapeOptimizer`, `SequencePacker`, `PackedSequences`, `DynamicShapeEngine`.
 
 use bitnet_gpu_hal::dynamic_shapes::*;
 use std::collections::HashMap;
@@ -52,7 +52,7 @@ fn dynamic_dim_static_resolve() {
 #[test]
 fn dynamic_dim_display() {
     let d = DynamicDim::fixed(5);
-    let s = format!("{}", d);
+    let s = format!("{d}");
     assert!(!s.is_empty());
 }
 
@@ -136,14 +136,14 @@ fn shape_spec_dims_accessor() {
 #[test]
 fn shape_error_display() {
     let e = ShapeError::UnresolvedDimension("x".to_string());
-    let s = format!("{}", e);
-    assert!(s.contains("x"));
+    let s = format!("{e}");
+    assert!(s.contains('x'));
 }
 
 #[test]
 fn shape_error_rank_mismatch() {
     let e = ShapeError::RankMismatch { expected: 3, got: 2 };
-    let s = format!("{}", e);
+    let s = format!("{e}");
     assert!(!s.is_empty());
 }
 
@@ -209,7 +209,7 @@ fn constraint_bounded_exceed() {
 #[test]
 fn shape_inference_default() {
     let si = ShapeInference::new();
-    let _ = format!("{:?}", si);
+    let _ = format!("{si:?}");
 }
 
 #[test]
@@ -487,7 +487,7 @@ fn packed_sequences_fields() {
 #[test]
 fn engine_default_for_llm() {
     let eng = DynamicShapeEngine::default_for_llm(2048, 512);
-    let _ = format!("{:?}", eng);
+    let _ = format!("{eng:?}");
 }
 
 #[test]

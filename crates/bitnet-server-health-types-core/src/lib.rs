@@ -33,6 +33,7 @@ pub struct PerformanceIndicators {
 
 /// Readiness checks for Kubernetes readiness probe.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct ReadinessChecks {
     pub model_loaded: bool,
     pub inference_engine_ready: bool,

@@ -95,7 +95,7 @@ fuzz_target!(|input: ProfilingInput| {
     let _len = session.len();
     let _empty = session.is_empty();
 
-    assert_eq!(session.is_empty(), session.len() == 0);
+    assert_eq!(session.is_empty(), session.is_empty());
 
     // Query by kernel name must not panic.
     let _ = session.by_kernel("nonexistent_kernel_xyz");

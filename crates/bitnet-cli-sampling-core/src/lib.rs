@@ -1,4 +1,10 @@
 //! Sampling utilities for text generation
+#![allow(
+    clippy::float_cmp,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::option_if_let_else
+)]
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;

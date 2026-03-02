@@ -1,7 +1,7 @@
-//! Edge-case tests for BackendRegistry, BackendDispatcher, DispatchLog,
-//! BackendCapabilityMatrix, and associated enums.
+//! Edge-case tests for `BackendRegistry`, `BackendDispatcher`, `DispatchLog`,
+//! `BackendCapabilityMatrix`, and associated enums.
 //!
-//! All tests use mock backends (no real OpenCL devices needed).
+//! All tests use mock backends (no real `OpenCL` devices needed).
 
 use bitnet_opencl::backend_dispatcher::{
     BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchError, DispatchLog,
@@ -128,7 +128,7 @@ fn operation_eq() {
 fn operation_copy_clone() {
     let op = Operation::Attention;
     let op2 = op; // Copy
-    let op3 = op.clone();
+    let op3 = op;
     assert_eq!(op2, op3);
 }
 
@@ -236,7 +236,7 @@ fn backend_info_clone() {
         capabilities: vec![Operation::Softmax],
         priority_score: 10,
     };
-    let info2 = info.clone();
+    let info2 = info;
     assert_eq!(info2.name, "test");
     assert_eq!(info2.priority_score, 10);
 }
@@ -539,7 +539,7 @@ fn dispatch_decision_debug_clone() {
     };
     let dbg = format!("{d:?}");
     assert!(dbg.contains("DispatchDecision"));
-    let d2 = d.clone();
+    let d2 = d;
     assert_eq!(d2.chosen_backend, "cuda");
 }
 

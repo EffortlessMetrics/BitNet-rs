@@ -143,7 +143,7 @@ fn stop_string_substring_match() {
 fn stop_string_empty_string_always_matches() {
     let criteria = StopCriteria {
         stop_token_ids: vec![],
-        stop_strings: vec!["".to_string()],
+        stop_strings: vec![String::new()],
         max_tokens: 100,
         eos_token_id: None,
     };

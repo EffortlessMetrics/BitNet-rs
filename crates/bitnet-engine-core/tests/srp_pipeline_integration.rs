@@ -73,7 +73,7 @@ fn repetition_penalty_changes_selection() {
     assert_eq!(argmax(&base), 1);
 
     // With penalty on token 1 (already generated), another token should win
-    let mut penalized = base.clone();
+    let mut penalized = base;
     apply_repetition_penalty(&mut penalized, &[1], 5.0);
     let new_selection = argmax(&penalized);
     assert_ne!(new_selection, 1, "Repetition penalty should steer away from token 1");
@@ -140,7 +140,7 @@ fn session_config_valid() {
 #[test]
 fn session_config_empty_model_path() {
     let config = SessionConfig {
-        model_path: "".to_string(),
+        model_path: String::new(),
         tokenizer_path: "tokenizer.json".to_string(),
         backend: "cpu".to_string(),
         max_context: 4096,
@@ -153,7 +153,7 @@ fn session_config_empty_model_path() {
 fn session_config_empty_tokenizer_path() {
     let config = SessionConfig {
         model_path: "model.gguf".to_string(),
-        tokenizer_path: "".to_string(),
+        tokenizer_path: String::new(),
         backend: "cpu".to_string(),
         max_context: 4096,
         seed: None,

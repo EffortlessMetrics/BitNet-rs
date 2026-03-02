@@ -464,9 +464,8 @@ impl HNSWIndex {
         if query.len() != self.dim {
             return Err(SearchError::DimensionMismatch { expected: self.dim, got: query.len() });
         }
-        let entry = match self.entry_point {
-            Some(e) => e,
-            None => return Ok(Vec::new()),
+        let Some(entry) = self.entry_point else {
+            return Ok(Vec::new());
         };
 
         let mut current = entry;

@@ -71,7 +71,7 @@ fn all_ops() -> Vec<Operation> {
     ]
 }
 
-/// Build a registry with the standard CUDA > OpenCL > Vulkan > CPU
+/// Build a registry with the standard CUDA > `OpenCL` > Vulkan > CPU
 /// hierarchy.
 fn standard_registry() -> BackendRegistry {
     let mut reg = BackendRegistry::new();

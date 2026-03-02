@@ -186,7 +186,7 @@ mod tests {
     fn test_f16_subnormal() {
         let f16 = f32_to_f16(5.96e-8); // smallest f16 subnormal
         let back = f16_to_f32(f16);
-        assert!(back >= 0.0 && back < 1e-6);
+        assert!((0.0..1e-6).contains(&back));
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_f16_slice() {
-        let src = vec![1.0f32, -1.0, 0.5];
+        let src = [1.0f32, -1.0, 0.5];
         let mut f16 = vec![0u16; 3];
         let mut dst = vec![0.0f32; 3];
         for (i, &v) in src.iter().enumerate() {

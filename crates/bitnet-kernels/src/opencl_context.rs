@@ -743,6 +743,6 @@ mod tests {
     fn num_cpus_fallback_reasonable() {
         let n = num_cpus_fallback();
         // Should be between 1 and 1024 for any reasonable machine
-        assert!(n >= 1 && n <= 1024);
+        assert!((1..=1024).contains(&n));
     }
 }

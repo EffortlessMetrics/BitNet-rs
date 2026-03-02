@@ -819,7 +819,7 @@ mod tests {
         let buf = KvCacheBuffer::new(cfg);
         let stats = buf.stats();
         // 1 * 2 * 64 * 32 * 2 (k+v) * 2 bytes (f16)
-        let expected = 1 * 2 * 64 * 32 * 2 * 2;
+        let expected = 2 * 64 * 32 * 2 * 2;
         assert_eq!(stats.memory_bytes, expected);
     }
 

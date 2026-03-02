@@ -1,8 +1,8 @@
 //! Edge-case tests for GPU HAL backend selector.
 //!
-//! Tests BackendType, BackendPriority, BackendCapability, DType,
-//! BackendScorer, WorkloadRequirements, BackendFallback, BackendConfig,
-//! and BackendSelector — all without GPU hardware.
+//! Tests `BackendType`, `BackendPriority`, `BackendCapability`, `DType`,
+//! `BackendScorer`, `WorkloadRequirements`, `BackendFallback`, `BackendConfig`,
+//! and `BackendSelector` — all without GPU hardware.
 
 use bitnet_gpu_hal::backend_selector::*;
 use std::time::Duration;

@@ -955,7 +955,7 @@ mod tests {
     fn temp_cache(max_entries: usize, max_size: usize) -> BinaryCache {
         let dir = std::env::temp_dir().join("bitnet-rs-test-progcache").join(format!(
             "{:x}",
-            hash_bytes(&std::thread::current().name().unwrap_or("t").as_bytes(),)
+            hash_bytes(std::thread::current().name().unwrap_or("t").as_bytes(),)
         ));
         let _ = std::fs::remove_dir_all(&dir);
         let config = CacheConfig {
@@ -972,7 +972,7 @@ mod tests {
     fn temp_cache_with_ttl(ttl_days: u32) -> BinaryCache {
         let dir = std::env::temp_dir().join("bitnet-rs-test-progcache-ttl").join(format!(
             "{:x}",
-            hash_bytes(&std::thread::current().name().unwrap_or("t").as_bytes(),)
+            hash_bytes(std::thread::current().name().unwrap_or("t").as_bytes(),)
         ));
         let _ = std::fs::remove_dir_all(&dir);
         let config = CacheConfig {

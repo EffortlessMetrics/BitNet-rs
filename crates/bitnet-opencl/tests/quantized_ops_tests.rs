@@ -1,6 +1,6 @@
 //! Tests for quantized inference operations.
 //!
-//! Covers I2_S/QK256 dequantization, ternary matmul/matvec, packing,
+//! Covers `I2_S/QK256` dequantization, ternary matmul/matvec, packing,
 //! scale factors, round-trips, and edge cases.
 
 use bitnet_opencl::quantized_kernels;

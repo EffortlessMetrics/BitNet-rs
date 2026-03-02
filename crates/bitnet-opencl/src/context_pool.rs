@@ -1,6 +1,6 @@
-//! GPU context pool for rapid OpenCL context switching.
+//! GPU context pool for rapid `OpenCL` context switching.
 //!
-//! Manages multiple OpenCL contexts to enable fast model switching
+//! Manages multiple `OpenCL` contexts to enable fast model switching
 //! without recompilation overhead. Supports lazy creation, per-model
 //! caching, and memory-pressure eviction.
 
@@ -59,7 +59,7 @@ impl Default for ContextPoolConfig {
     }
 }
 
-/// Metadata about a cached OpenCL context.
+/// Metadata about a cached `OpenCL` context.
 #[derive(Debug, Clone)]
 pub struct ContextEntry {
     /// Unique identifier (usually model path or hash).
@@ -97,7 +97,7 @@ impl ContextEntry {
     }
 }
 
-/// Trait for context factories that create real OpenCL contexts.
+/// Trait for context factories that create real `OpenCL` contexts.
 ///
 /// Abstracted to allow testing without actual GPU hardware.
 pub trait ContextFactory: Send + Sync {
@@ -115,7 +115,7 @@ pub trait ContextFactory: Send + Sync {
     fn total_gpu_memory_used(&self) -> MemoryBytes;
 }
 
-/// A pool of OpenCL contexts that supports rapid switching between models.
+/// A pool of `OpenCL` contexts that supports rapid switching between models.
 ///
 /// # Design
 ///
@@ -209,7 +209,7 @@ impl ContextPool {
             entries.get_mut(id).ok_or_else(|| ContextPoolError::NotFound { id: id.to_string() })?;
 
         entry.in_use = false;
-        debug!("Released context '{}'", id);
+        debug!("Released context '{id}'");
         Ok(())
     }
 
@@ -220,7 +220,7 @@ impl ContextPool {
 
         if entries.remove(id).is_some() {
             self.factory.release_context(id)?;
-            info!("Evicted context '{}'", id);
+            info!("Evicted context '{id}'");
             Ok(())
         } else {
             Err(ContextPoolError::NotFound { id: id.to_string() })
@@ -263,11 +263,11 @@ impl ContextPool {
         for id in &expired {
             entries.remove(id);
             let _ = self.factory.release_context(id);
-            debug!("Evicted expired context '{}'", id);
+            debug!("Evicted expired context '{id}'");
         }
 
         if count > 0 {
-            info!("Evicted {} expired context(s)", count);
+            info!("Evicted {count} expired context(s)");
         }
         Ok(count)
     }
@@ -304,7 +304,7 @@ impl ContextPool {
         if let Some(id) = lru_id {
             entries.remove(&id);
             factory.release_context(&id)?;
-            info!("LRU-evicted context '{}'", id);
+            info!("LRU-evicted context '{id}'");
             Ok(true)
         } else {
             Ok(false)
@@ -321,7 +321,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
 
-    /// Mock factory that tracks creation/release without real OpenCL.
+    /// Mock factory that tracks creation/release without real `OpenCL`.
     struct MockFactory {
         create_count: AtomicU64,
         release_count: AtomicU64,
@@ -361,13 +361,13 @@ mod tests {
     impl ContextFactory for MockFactory {
         fn create_context(&self, id: &str) -> Result<MemoryBytes, ContextPoolError> {
             let fail = self.fail_on_create.lock().unwrap();
-            if let Some(ref fail_id) = *fail {
-                if fail_id == id {
-                    return Err(ContextPoolError::CreationFailed {
-                        id: id.to_string(),
-                        reason: "mock failure".into(),
-                    });
-                }
+            if let Some(ref fail_id) = *fail
+                && fail_id == id
+            {
+                return Err(ContextPoolError::CreationFailed {
+                    id: id.to_string(),
+                    reason: "mock failure".into(),
+                });
             }
             self.create_count.fetch_add(1, Ordering::SeqCst);
             Ok(self.memory_per_context)
@@ -434,7 +434,7 @@ mod tests {
     fn test_capacity_exhausted_without_idle() {
         let factory = Arc::new(MockFactory::new(1024));
         let config = ContextPoolConfig { max_contexts: 2, ..Default::default() };
-        let pool = ContextPool::new(config, factory.clone());
+        let pool = ContextPool::new(config, factory);
 
         pool.acquire("m1").unwrap();
         pool.acquire("m2").unwrap();
@@ -492,7 +492,7 @@ mod tests {
             memory_limit: 1024 * 1024 * 1024, // 1 GiB limit
             ..Default::default()
         };
-        let pool = ContextPool::new(config, factory.clone());
+        let pool = ContextPool::new(config, factory);
 
         pool.acquire("m1").unwrap();
         pool.release("m1").unwrap();
@@ -511,7 +511,7 @@ mod tests {
             idle_timeout: Duration::from_millis(0), // expire immediately
             ..Default::default()
         };
-        let pool = ContextPool::new(config, factory.clone());
+        let pool = ContextPool::new(config, factory);
 
         pool.acquire("m1").unwrap();
         pool.release("m1").unwrap();

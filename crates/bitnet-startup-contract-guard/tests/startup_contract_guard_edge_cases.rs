@@ -138,12 +138,9 @@ fn guard_profile_violations_is_option() {
     let guard =
         StartupContractGuard::evaluate(RuntimeComponent::Cli, ContractPolicy::Observe).unwrap();
     // May be Some or None; just verify accessible
-    match &guard.profile_violations {
-        Some((missing, forbidden)) => {
-            let _ = missing.len();
-            let _ = forbidden.len();
-        }
-        None => {}
+    if let Some((missing, forbidden)) = &guard.profile_violations {
+        let _ = missing.len();
+        let _ = forbidden.len();
     }
 }
 

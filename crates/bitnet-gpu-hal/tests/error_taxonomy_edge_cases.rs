@@ -20,7 +20,7 @@ fn device_error_not_found_display() {
 fn device_error_unavailable_display() {
     let e = DeviceError::Unavailable { device_id: 0, reason: "busy".into() };
     let s = e.to_string();
-    assert!(s.contains("0"));
+    assert!(s.contains('0'));
     assert!(s.contains("busy"));
 }
 
@@ -47,7 +47,7 @@ fn device_error_init_failed_display() {
 #[test]
 fn device_error_device_lost_display() {
     let e = DeviceError::DeviceLost { device_id: 3 };
-    assert!(e.to_string().contains("3"));
+    assert!(e.to_string().contains('3'));
     assert!(e.to_string().contains("lost"));
 }
 
@@ -116,7 +116,7 @@ fn memory_error_alignment_display() {
     let e = MemoryError::AlignmentError { required: 16, actual: 8 };
     let s = e.to_string();
     assert!(s.contains("16"));
-    assert!(s.contains("8"));
+    assert!(s.contains('8'));
 }
 
 // ── KernelError Display ─────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ fn kernel_error_invalid_argument() {
         index: 3,
         reason: "null pointer".into(),
     };
-    assert!(e.to_string().contains("3"));
+    assert!(e.to_string().contains('3'));
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn transfer_error_size_mismatch() {
 #[test]
 fn transfer_error_dma() {
     let e = TransferError::DmaError { channel: 2, message: "underrun".into() };
-    assert!(e.to_string().contains("2"));
+    assert!(e.to_string().contains('2'));
     assert!(e.to_string().contains("underrun"));
 }
 
@@ -289,7 +289,7 @@ fn backend_error_display_without_api_call() {
     let e = BackendError::new(BackendKind::Vulkan, 0, "ok");
     let s = e.to_string();
     assert!(s.contains("[Vulkan]"));
-    assert!(!s.contains(":"));
+    assert!(!s.contains(':'));
 }
 
 // ── GpuHalError ─────────────────────────────────────────────────────────────
@@ -371,7 +371,7 @@ fn gpu_hal_error_not_transient_device_lost() {
 fn gpu_hal_error_not_transient_compilation() {
     let e = GpuHalError::Kernel(KernelError::CompilationFailed {
         kernel_name: "k".into(),
-        log: "".into(),
+        log: String::new(),
     });
     assert!(!e.is_transient());
 }

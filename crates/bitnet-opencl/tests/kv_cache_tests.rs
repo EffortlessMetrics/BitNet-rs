@@ -9,7 +9,7 @@ use bitnet_opencl::paged_attention::{
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn small_config() -> KvCacheConfig {
+const fn small_config() -> KvCacheConfig {
     KvCacheConfig { num_layers: 2, num_heads: 4, head_dim: 8, max_seq_len: 16, page_size: 4 }
 }
 
@@ -359,7 +359,7 @@ fn page_allocator_defragment_already_compact() {
 // PagedAttentionEngine — basic attention
 // ---------------------------------------------------------------------------
 
-fn simple_gqa() -> GqaConfig {
+const fn simple_gqa() -> GqaConfig {
     GqaConfig { num_q_heads: 4, num_kv_heads: 4, head_dim: 8 }
 }
 
@@ -455,7 +455,7 @@ fn attention_scores_sum_to_one() {
     }
 
     let q = vec![0.5; gqa.num_q_heads * head_dim];
-    let engine = PagedAttentionEngine::new(gqa.clone());
+    let engine = PagedAttentionEngine::new(gqa);
     let out = engine.compute_attention(&q, &cache, 0, &[]);
 
     // If all values are 1.0, output should be ~1.0 per dim (weighted average of 1s).

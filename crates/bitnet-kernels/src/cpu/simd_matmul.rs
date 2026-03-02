@@ -971,7 +971,7 @@ mod tests {
         let b = vec![0.0f32; 9];
         let mut c = vec![0.0f32; 9];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
-        assert_close(&c, &vec![0.0; 9], 1e-6);
+        assert_close(&c, &[0.0; 9], 1e-6);
     }
 
     #[test]

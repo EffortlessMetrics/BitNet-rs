@@ -48,7 +48,7 @@ fuzz_target!(|input: ScatterInput| {
                 };
                 if let Ok(parts) = partition_tensor(&shape, nd, strat) {
                     let balance = compute_load_balance(&parts);
-                    assert!(balance >= 0.0 && balance <= 1.0);
+                    assert!((0.0..=1.0).contains(&balance));
                 }
             }
             ScatterOp::AllReduce { num_partitions, partition_len, op } => {

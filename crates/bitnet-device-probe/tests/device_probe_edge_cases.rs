@@ -41,7 +41,7 @@ fn probe_cpu_eq_and_clone() {
 #[test]
 fn probe_cpu_debug() {
     let cpu = probe_cpu();
-    let d = format!("{:?}", cpu);
+    let d = format!("{cpu:?}");
     assert!(d.contains("CpuCapabilities"));
 }
 
@@ -70,7 +70,7 @@ fn probe_gpu_eq_and_clone() {
 #[test]
 fn probe_gpu_debug() {
     let gpu = probe_gpu();
-    let d = format!("{:?}", gpu);
+    let d = format!("{gpu:?}");
     assert!(d.contains("GpuCapabilities"));
 }
 
@@ -108,7 +108,7 @@ fn detect_simd_level_deterministic() {
 #[test]
 fn detect_simd_level_debug() {
     let level = detect_simd_level();
-    let d = format!("{:?}", level);
+    let d = format!("{level:?}");
     assert!(!d.is_empty());
 }
 
@@ -228,7 +228,7 @@ fn device_capabilities_eq_and_clone() {
 #[test]
 fn device_capabilities_debug() {
     let caps = DeviceCapabilities::detect();
-    let d = format!("{:?}", caps);
+    let d = format!("{caps:?}");
     assert!(d.contains("DeviceCapabilities"));
 }
 
@@ -265,7 +265,7 @@ fn probe_device_eq_and_clone() {
 #[test]
 fn probe_device_debug() {
     let probe = probe_device();
-    let d = format!("{:?}", probe);
+    let d = format!("{probe:?}");
     assert!(d.contains("DeviceProbe"));
 }
 

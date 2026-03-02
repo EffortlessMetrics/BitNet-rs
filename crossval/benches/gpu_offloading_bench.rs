@@ -20,7 +20,6 @@
 // **TDD Status**: Benchmark compiles but fails due to missing GPU layer configuration
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use std::path::Path;
 
 #[allow(unused_imports)] // TDD scaffolding - used in commented implementation
 use std::hint::black_box;

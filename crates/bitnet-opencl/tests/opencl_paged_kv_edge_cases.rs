@@ -1,4 +1,4 @@
-//! Edge-case tests for OpenCL paged attention, page allocator, KV cache,
+//! Edge-case tests for `OpenCL` paged attention, page allocator, KV cache,
 //! and GQA configuration.
 
 use bitnet_opencl::kv_cache::{CacheMemoryStats, GpuKvCache, KvCacheConfig};
@@ -165,7 +165,7 @@ fn kv_config_for_gqa_populates_fields() {
 
 // ── GpuKvCache tests ─────────────────────────────────────────────────────────
 
-fn small_cache_config() -> KvCacheConfig {
+const fn small_cache_config() -> KvCacheConfig {
     KvCacheConfig { num_layers: 2, num_heads: 4, head_dim: 8, max_seq_len: 16, page_size: 4 }
 }
 
@@ -223,7 +223,7 @@ fn kv_cache_multiple_appends() {
 
     for i in 0..5 {
         let k = vec![i as f32; stride];
-        let v = vec![(i as f32) * -1.0; stride];
+        let v = vec![-(i as f32); stride];
         cache.append(0, &k, &v);
     }
     assert_eq!(cache.seq_len(0), 5);
@@ -368,18 +368,18 @@ fn kv_cache_page_table_after_append() {
 #[test]
 fn kv_cache_config_accessor() {
     let cfg = small_cache_config();
-    let cache = GpuKvCache::new(cfg.clone());
+    let cache = GpuKvCache::new(cfg);
     assert_eq!(cache.config().num_layers, 2);
     assert_eq!(cache.config().head_dim, 8);
 }
 
 // ── PagedAttentionEngine tests ───────────────────────────────────────────────
 
-fn simple_gqa() -> GqaConfig {
+const fn simple_gqa() -> GqaConfig {
     GqaConfig { num_q_heads: 2, num_kv_heads: 1, head_dim: 4 }
 }
 
-fn simple_kv_config() -> KvCacheConfig {
+const fn simple_kv_config() -> KvCacheConfig {
     let gqa = simple_gqa();
     kv_config_for_gqa(&gqa, 1, 16, 4)
 }
@@ -397,7 +397,7 @@ fn paged_attention_empty_cache_returns_zeros() {
 #[test]
 fn paged_attention_single_position() {
     let gqa = simple_gqa();
-    let engine = PagedAttentionEngine::new(gqa.clone());
+    let engine = PagedAttentionEngine::new(gqa);
     let kv_cfg = simple_kv_config();
     let mut cache = GpuKvCache::new(kv_cfg);
 

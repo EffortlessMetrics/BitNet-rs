@@ -1,5 +1,5 @@
-//! Edge-case tests for SpirVValidator, SpirVCache, SpirVModule, SpirVCompiler,
-//! CompileOptions, OptimizationLevel, CompilerBackend, and build_test_spirv helper.
+//! Edge-case tests for `SpirVValidator`, `SpirVCache`, `SpirVModule`, `SpirVCompiler`,
+//! `CompileOptions`, `OptimizationLevel`, `CompilerBackend`, and `build_test_spirv` helper.
 //!
 //! All tests are pure-CPU — no GPU device or SPIR-V compiler needed.
 
@@ -30,7 +30,7 @@ fn optimization_level_eq() {
 fn optimization_level_copy_clone() {
     let level = OptimizationLevel::Basic;
     let level2 = level;
-    let level3 = level.clone();
+    let level3 = level;
     assert_eq!(level2, level3);
 }
 
@@ -142,7 +142,7 @@ fn validator_bad_magic() {
 fn validator_bad_version() {
     let mut bytes = build_test_spirv(1, 0);
     // Set version to 2.0 (unsupported)
-    let bad_version: u32 = (2 << 16) | (0 << 8);
+    let bad_version: u32 = 2 << 16;
     bytes[4..8].copy_from_slice(&bad_version.to_le_bytes());
     assert!(SpirVValidator::check_version(&bytes).is_err());
 }

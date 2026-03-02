@@ -2,10 +2,10 @@
 //!
 //! Targets gaps not covered by the existing test suite:
 //! - Duplicate stop IDs/strings, case sensitivity, overlapping patterns
-//! - GenerationConfig clone independence, zero max_new_tokens
-//! - GenerationStats edge values (NaN, infinity, f64 extremes)
+//! - `GenerationConfig` clone independence, zero `max_new_tokens`
+//! - `GenerationStats` edge values (NaN, infinity, f64 extremes)
 //! - Full stream-sequence invariants
-//! - Serde with every StopReason variant inside StreamEvent::Done
+//! - Serde with every `StopReason` variant inside `StreamEvent::Done`
 //! - Whitespace-only and very-long stop strings/token text
 
 use bitnet_generation::{
@@ -25,7 +25,7 @@ fn make_criteria(
 ) -> StopCriteria {
     StopCriteria {
         stop_token_ids: stop_ids.to_vec(),
-        stop_strings: stop_strings.iter().map(|s| s.to_string()).collect(),
+        stop_strings: stop_strings.iter().map(std::string::ToString::to_string).collect(),
         max_tokens: max,
         eos_token_id: eos,
     }
@@ -448,7 +448,7 @@ fn stop_tokens_and_eos_and_strings_and_max_all_set() {
     assert_eq!(check_stop(&c, 50, &[1, 2], "hello"), Some(StopReason::EosToken));
 
     // Max tokens (no token/EOS match)
-    assert_eq!(check_stop(&c, 1, &vec![0u32; 10], "hello"), Some(StopReason::MaxTokens));
+    assert_eq!(check_stop(&c, 1, &[0u32; 10], "hello"), Some(StopReason::MaxTokens));
 
     // String match (no token/EOS/max match)
     assert_eq!(

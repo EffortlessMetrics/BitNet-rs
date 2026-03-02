@@ -143,7 +143,7 @@ fn attention_weights_sum_to_one_varying_scores() {
 
     // Output must be in convex hull: each dim in [0, 10]
     for &val in &result {
-        assert!(val >= -EPS && val <= 10.0 + EPS, "out of convex hull: {val}");
+        assert!((-EPS..=10.0 + EPS).contains(&val), "out of convex hull: {val}");
     }
 }
 

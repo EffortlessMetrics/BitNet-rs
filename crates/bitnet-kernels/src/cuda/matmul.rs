@@ -825,7 +825,7 @@ mod tests {
         let cfg = MatmulConfig::for_shape(3, 4, 3).unwrap();
         let mut out = vec![0.0f32; 12];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
-        assert_close(&out, &vec![0.0f32; 12], 1e-6);
+        assert_close(&out, &[0.0f32; 12], 1e-6);
     }
 
     #[test]
@@ -835,7 +835,7 @@ mod tests {
         let cfg = MatmulConfig::for_shape(3, 4, 3).unwrap();
         let mut out = vec![0.0f32; 12];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
-        assert_close(&out, &vec![0.0f32; 12], 1e-6);
+        assert_close(&out, &[0.0f32; 12], 1e-6);
     }
 
     // ── known product ─────────────────────────────────────────────
@@ -1084,8 +1084,8 @@ mod tests {
 
     #[test]
     fn test_f16_matmul_known() {
-        let a_f32 = vec![1.0f32, 2.0, 3.0, 4.0];
-        let b_f32 = vec![5.0f32, 6.0, 7.0, 8.0];
+        let a_f32 = [1.0f32, 2.0, 3.0, 4.0];
+        let b_f32 = [5.0f32, 6.0, 7.0, 8.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_dtype(MatmulDtype::F16);
@@ -1484,8 +1484,8 @@ mod tests {
 
     #[test]
     fn test_f16_batch_matmul() {
-        let a_f32 = vec![1.0f32, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
-        let b_f32 = vec![3.0f32, 4.0, 5.0, 6.0, 3.0, 4.0, 5.0, 6.0];
+        let a_f32 = [1.0f32, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
+        let b_f32 = [3.0f32, 4.0, 5.0, 6.0, 3.0, 4.0, 5.0, 6.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2)
@@ -1502,8 +1502,8 @@ mod tests {
     #[test]
     fn test_f16_transpose_a() {
         // A stored as [k=2, m=2] (transposed)
-        let a_f32 = vec![1.0f32, 3.0, 2.0, 4.0];
-        let b_f32 = vec![1.0f32, 0.0, 0.0, 1.0];
+        let a_f32 = [1.0f32, 3.0, 2.0, 4.0];
+        let b_f32 = [1.0f32, 0.0, 0.0, 1.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2)

@@ -299,7 +299,7 @@ fn memory_alignment_impact() {
     let aligned: Vec<f32> = (0..n).map(|i| i as f32).collect();
     // Misaligned: shift by 1 byte inside a u8 buffer
     let raw = vec![0u8; n * 4 + 1];
-    let offset = if raw.as_ptr() as usize % 4 == 0 { 1 } else { 0 };
+    let offset = if (raw.as_ptr() as usize).is_multiple_of(4) { 1 } else { 0 };
     // Build an f32 slice that is *not* 4-byte aligned by copying into aligned buf
     // (Rust forbids truly misaligned f32 reads, so we simulate with an extra copy)
     let misaligned: Vec<f32> = {

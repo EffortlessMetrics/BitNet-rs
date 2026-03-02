@@ -3,7 +3,6 @@
 //! These tests validate config types, request/response serialization, and
 //! handler logic in isolation — no actual server is started.
 
-use std::collections::HashSet;
 use std::net::IpAddr;
 use std::time::Duration;
 

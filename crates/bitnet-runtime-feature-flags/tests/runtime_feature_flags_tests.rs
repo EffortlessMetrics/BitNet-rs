@@ -364,7 +364,7 @@ fn feature_activation_copied_produces_same_labels() {
 #[test]
 fn feature_activation_cloned_produces_same_labels() {
     let original = FeatureActivation { quantization: true, fixtures: true, ..Default::default() };
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(
         feature_labels_from_activation(original),
         feature_labels_from_activation(cloned),

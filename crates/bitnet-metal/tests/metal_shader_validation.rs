@@ -60,10 +60,10 @@ fn extract_kernel_body<'a>(source: &'a str, fn_name: &str) -> &'a str {
 fn collect_buffer_indices(signature: &str) -> Vec<u32> {
     let mut indices = Vec::new();
     for part in signature.split("[[buffer(") {
-        if let Some(end) = part.find(")]]") {
-            if let Ok(idx) = part[..end].parse::<u32>() {
-                indices.push(idx);
-            }
+        if let Some(end) = part.find(")]]")
+            && let Ok(idx) = part[..end].parse::<u32>()
+        {
+            indices.push(idx);
         }
     }
     indices
@@ -183,7 +183,7 @@ fn bindings_sequential_from_zero_all_kernels() {
             assert!(!indices.is_empty(), "{kernel:?}/{name}: no buffer bindings");
             for (i, idx) in indices.iter().enumerate() {
                 assert_eq!(
-                    *idx, i as u32,
+                    *idx as usize, i,
                     "{kernel:?}/{name}: buffer({i}) expected, got buffer({idx})"
                 );
             }
@@ -451,12 +451,11 @@ fn precision_float_literals_use_f_suffix() {
         }
         // Kernels that have numeric literals should use the f suffix.
         // Elementwise uses constants, so every kernel should have at least one.
-        if src.contains("= 0.0;") || src.contains("= 1.0;") {
-            panic!(
-                "{kernel:?}: float literals should use `f` suffix (e.g. `0.0f`) \
-                 to avoid implicit double promotion"
-            );
-        }
+        assert!(
+            !(src.contains("= 0.0;") || src.contains("= 1.0;")),
+            "{kernel:?}: float literals should use `f` suffix (e.g. `0.0f`) \
+             to avoid implicit double promotion"
+        );
     }
 }
 
@@ -602,30 +601,30 @@ fn alignment_threadgroup_shared_memory_sizes_are_aligned() {
         let src = kernel_source(*kernel);
         for segment in src.split("threadgroup float") {
             // Look for array declarations like `name[256]` or `name[16 * 16]`.
-            if let Some(bracket_start) = segment.find('[') {
-                if let Some(bracket_end) = segment[bracket_start..].find(']') {
-                    let inner = &segment[bracket_start + 1..bracket_start + bracket_end];
-                    // Evaluate simple expressions: plain number or N * N.
-                    let value = if inner.contains('*') {
-                        let parts: Vec<&str> = inner.split('*').collect();
-                        if parts.len() == 2 {
-                            let a = parts[0].trim().parse::<u32>().unwrap_or(0);
-                            let b = parts[1].trim().parse::<u32>().unwrap_or(0);
-                            a * b
-                        } else {
-                            0
-                        }
+            if let Some(bracket_start) = segment.find('[')
+                && let Some(bracket_end) = segment[bracket_start..].find(']')
+            {
+                let inner = &segment[bracket_start + 1..bracket_start + bracket_end];
+                // Evaluate simple expressions: plain number or N * N.
+                let value = if inner.contains('*') {
+                    let parts: Vec<&str> = inner.split('*').collect();
+                    if parts.len() == 2 {
+                        let a = parts[0].trim().parse::<u32>().unwrap_or(0);
+                        let b = parts[1].trim().parse::<u32>().unwrap_or(0);
+                        a * b
                     } else {
-                        inner.trim().parse::<u32>().unwrap_or(0)
-                    };
-                    if value > 0 {
-                        let byte_size = value as usize * std::mem::size_of::<f32>();
-                        assert!(
-                            byte_size % 16 == 0,
-                            "{kernel:?}: threadgroup array of {value} floats ({byte_size} bytes) \
-                             should be 16-byte aligned"
-                        );
+                        0
                     }
+                } else {
+                    inner.trim().parse::<u32>().unwrap_or(0)
+                };
+                if value > 0 {
+                    let byte_size = value as usize * std::mem::size_of::<f32>();
+                    assert!(
+                        byte_size.is_multiple_of(16),
+                        "{kernel:?}: threadgroup array of {value} floats ({byte_size} bytes) \
+                             should be 16-byte aligned"
+                    );
                 }
             }
         }
@@ -640,8 +639,8 @@ fn alignment_tiled_matmul_tile_buffers_match_tile_size() {
     // The tiled matmul should declare shared arrays of TILE_SIZE * TILE_SIZE.
     let body = extract_kernel_body(src, "matmul_tiled");
     let expected_size = tile_size * tile_size;
-    let pattern = format!("[{} * {}]", tile_size, tile_size);
-    let alt_pattern = format!("[{}]", expected_size);
+    let pattern = format!("[{tile_size} * {tile_size}]");
+    let alt_pattern = format!("[{expected_size}]");
     assert!(
         body.contains(&pattern) || body.contains(&alt_pattern),
         "matmul_tiled: threadgroup arrays should be [{tile_size} * {tile_size}] = [{expected_size}]"

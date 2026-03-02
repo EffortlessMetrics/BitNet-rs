@@ -1429,7 +1429,7 @@ mod tests {
         for r in 0..seq_len {
             let row = &out[r * head_dim..(r + 1) * head_dim];
             for &val in row {
-                assert!(val >= 1.0 && val <= 4.0, "out of convex range: {val}");
+                assert!((1.0..=4.0).contains(&val), "out of convex range: {val}");
             }
         }
     }

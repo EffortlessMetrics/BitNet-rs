@@ -1,5 +1,5 @@
-//! Edge-case tests for PageAllocator, GpuKvCache, PagedAttentionEngine,
-//! GqaConfig, KvCacheConfig, PageTable, and CacheMemoryStats.
+//! Edge-case tests for `PageAllocator`, `GpuKvCache`, `PagedAttentionEngine`,
+//! `GqaConfig`, `KvCacheConfig`, `PageTable`, and `CacheMemoryStats`.
 //!
 //! All tests are pure-CPU math — no GPU device needed.
 

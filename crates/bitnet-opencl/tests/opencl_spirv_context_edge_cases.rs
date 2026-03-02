@@ -1,4 +1,4 @@
-//! Edge-case tests for OpenCL SPIR-V kernel registry, SPIR-V types,
+//! Edge-case tests for `OpenCL` SPIR-V kernel registry, SPIR-V types,
 //! and context pool with mock factory.
 
 use std::sync::Arc;
@@ -76,7 +76,7 @@ fn names_iterator() {
     reg.register("alpha", KernelSource::ClSource("a".into()));
     reg.register("beta", KernelSource::SpirV(vec![]));
     let mut names: Vec<&str> = reg.names().collect();
-    names.sort();
+    names.sort_unstable();
     assert_eq!(names, vec!["alpha", "beta"]);
 }
 
@@ -228,11 +228,11 @@ struct MockFactory {
 }
 
 impl MockFactory {
-    fn new(memory_per_context: MemoryBytes) -> Self {
+    const fn new(memory_per_context: MemoryBytes) -> Self {
         Self { memory_per_context, total_used: AtomicU64::new(0), fail_on_create: false }
     }
 
-    fn failing() -> Self {
+    const fn failing() -> Self {
         Self { memory_per_context: 0, total_used: AtomicU64::new(0), fail_on_create: true }
     }
 }
@@ -389,7 +389,7 @@ fn context_pool_config_default() {
 #[test]
 fn context_pool_error_capacity_display() {
     let err = ContextPoolError::CapacityExhausted { max: 4 };
-    assert!(format!("{err}").contains("4"));
+    assert!(format!("{err}").contains('4'));
 }
 
 #[test]
