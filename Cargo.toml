@@ -37,6 +37,7 @@ members = [
   "crates/bitnet-intel-gpu-id",  # SRP: Intel GPU/Arc identification heuristics
   "crates/bitnet-logits",        # SRP: pure logits transform functions
   "crates/bitnet-logits-filters", # SRP: reusable logits/probability filtering transforms
+  "crates/bitnet-sse-core",      # SRP: shared SSE envelope + event formatting primitives
   "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
   "crates/bitnet-generation-events-core", # SRP: reusable generation stream event/stat contracts
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
@@ -148,6 +149,7 @@ default-members = [
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli",
   "crates/bitnet-scoring-core",
+  "crates/bitnet-sse-core",
   "crates/bitnet-server",
   "crates/bitnet-st2gguf",
   # Testing infrastructure crates (always built/tested by default)

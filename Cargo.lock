@@ -1316,6 +1316,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-runtime-bootstrap",
  "bitnet-server-health-types-core",
+ "bitnet-sse-core",
  "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",
@@ -1375,6 +1376,13 @@ version = "0.2.1-dev"
 dependencies = [
  "tempfile",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bitnet-sse-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

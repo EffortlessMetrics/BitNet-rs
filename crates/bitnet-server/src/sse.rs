@@ -3,34 +3,12 @@
 //! When a client does not support WebSocket, the server can fall back
 //! to SSE for token-by-token delivery.
 
+pub use bitnet_sse_core::{SseConfig, SseToken};
+use bitnet_sse_core::{
+    build_sse_token as build_sse_token_core, format_sse_event as format_sse_event_core,
+};
+
 use crate::websocket::WsMessage;
-
-/// SSE event for token streaming.
-#[derive(Debug, Clone)]
-pub struct SseToken {
-    /// Optional event id for resumable streams.
-    pub id: Option<String>,
-    /// SSE event type (e.g. `"token"`, `"metadata"`, `"error"`).
-    pub event: String,
-    /// JSON-encoded event payload.
-    pub data: String,
-    /// Retry interval hint for the client (milliseconds).
-    pub retry: Option<u64>,
-}
-
-/// SSE stream configuration.
-pub struct SseConfig {
-    /// Default retry interval hint sent to clients (milliseconds).
-    pub retry_ms: u64,
-    /// Interval for SSE keep-alive comments (seconds).
-    pub keep_alive_secs: u64,
-}
-
-impl Default for SseConfig {
-    fn default() -> Self {
-        Self { retry_ms: 3000, keep_alive_secs: 15 }
-    }
-}
 
 /// Format a [`WsMessage`] as a standards-compliant SSE event string.
 ///
@@ -40,23 +18,23 @@ pub fn format_sse_event(msg: &WsMessage) -> String {
     match msg {
         WsMessage::Token { .. } => {
             let data = serde_json::to_string(msg).unwrap_or_default();
-            format!("event: token\ndata: {data}\n\n")
+            format_sse_event_core("token", &data)
         }
         WsMessage::Metadata { .. } => {
             let data = serde_json::to_string(msg).unwrap_or_default();
-            format!("event: metadata\ndata: {data}\n\n")
+            format_sse_event_core("metadata", &data)
         }
         WsMessage::Error { .. } => {
             let data = serde_json::to_string(msg).unwrap_or_default();
-            format!("event: error\ndata: {data}\n\n")
+            format_sse_event_core("error", &data)
         }
-        WsMessage::Ping => "event: ping\ndata: \n\n".to_string(),
-        WsMessage::Pong => "event: pong\ndata: \n\n".to_string(),
+        WsMessage::Ping => format_sse_event_core("ping", ""),
+        WsMessage::Pong => format_sse_event_core("pong", ""),
         WsMessage::Request { .. } => {
             // Requests are client→server; formatting as SSE is
             // atypical but supported for debugging.
             let data = serde_json::to_string(msg).unwrap_or_default();
-            format!("event: request\ndata: {data}\n\n")
+            format_sse_event_core("request", &data)
         }
     }
 }
@@ -64,23 +42,15 @@ pub fn format_sse_event(msg: &WsMessage) -> String {
 /// Build an [`SseToken`] from a [`WsMessage`] with optional id and
 /// retry hint.
 pub fn build_sse_token(msg: &WsMessage, id: Option<String>, retry: Option<u64>) -> SseToken {
-    let (event, data) = match msg {
-        WsMessage::Token { .. } => {
-            ("token".to_string(), serde_json::to_string(msg).unwrap_or_default())
-        }
-        WsMessage::Metadata { .. } => {
-            ("metadata".to_string(), serde_json::to_string(msg).unwrap_or_default())
-        }
-        WsMessage::Error { .. } => {
-            ("error".to_string(), serde_json::to_string(msg).unwrap_or_default())
-        }
-        WsMessage::Ping => ("ping".to_string(), String::new()),
-        WsMessage::Pong => ("pong".to_string(), String::new()),
-        WsMessage::Request { .. } => {
-            ("request".to_string(), serde_json::to_string(msg).unwrap_or_default())
-        }
+    let (event, data): (&str, String) = match msg {
+        WsMessage::Token { .. } => ("token", serde_json::to_string(msg).unwrap_or_default()),
+        WsMessage::Metadata { .. } => ("metadata", serde_json::to_string(msg).unwrap_or_default()),
+        WsMessage::Error { .. } => ("error", serde_json::to_string(msg).unwrap_or_default()),
+        WsMessage::Ping => ("ping", String::new()),
+        WsMessage::Pong => ("pong", String::new()),
+        WsMessage::Request { .. } => ("request", serde_json::to_string(msg).unwrap_or_default()),
     };
-    SseToken { id, event, data, retry }
+    build_sse_token_core(event, data, id, retry)
 }
 
 #[cfg(test)]

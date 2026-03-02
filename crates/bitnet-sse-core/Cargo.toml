@@ -1,0 +1,14 @@
+[package]
+name = "bitnet-sse-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SRP microcrate for SSE token envelopes and event formatting"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true
