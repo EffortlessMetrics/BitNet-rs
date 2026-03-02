@@ -342,6 +342,259 @@ impl ModelProfiler {
     }
 }
 
+// === Inference Profiler: Token-level performance tracking ===
+
+/// Per-layer timing breakdown during inference.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LayerTiming {
+    pub layer_name: String,
+    pub layer_index: usize,
+    pub attention_ms: u64,
+    pub ffn_ms: u64,
+    pub norm_ms: u64,
+    pub total_ms: u64,
+}
+
+/// Comprehensive timing data for a single inference run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceProfile {
+    pub model_name: String,
+    pub total_tokens: usize,
+    pub total_time_ms: u64,
+    pub tokens_per_second: f64,
+    pub time_to_first_token_ms: u64,
+    pub per_token_latency_ms: Vec<u64>,
+    pub peak_memory_bytes: u64,
+    pub layer_timings: Vec<LayerTiming>,
+}
+
+/// Configuration for [`InferenceProfiler`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceProfilerConfig {
+    pub enabled: bool,
+    pub track_per_token: bool,
+    pub track_per_layer: bool,
+    pub warmup_tokens: usize,
+}
+
+impl Default for InferenceProfilerConfig {
+    fn default() -> Self {
+        Self { enabled: false, track_per_token: true, track_per_layer: false, warmup_tokens: 1 }
+    }
+}
+
+/// Lifecycle-managed profiler for tracking token generation performance.
+pub struct InferenceProfiler {
+    config: InferenceProfilerConfig,
+    start_time: Option<Instant>,
+    token_times: Vec<u64>,
+    layer_timings_buf: Vec<LayerTiming>,
+}
+
+impl InferenceProfiler {
+    pub fn new(config: InferenceProfilerConfig) -> Self {
+        Self { config, start_time: None, token_times: Vec::new(), layer_timings_buf: Vec::new() }
+    }
+
+    /// Start profiling. Resets any previously recorded data.
+    pub fn start(&mut self) {
+        if self.config.enabled {
+            self.start_time = Some(Instant::now());
+            self.token_times.clear();
+            self.layer_timings_buf.clear();
+        }
+    }
+
+    /// Record a token generation time in milliseconds.
+    pub fn record_token(&mut self, token_time_ms: u64) {
+        if self.config.enabled && self.config.track_per_token {
+            self.token_times.push(token_time_ms);
+        }
+    }
+
+    /// Record a layer timing.
+    pub fn record_layer(&mut self, timing: LayerTiming) {
+        if self.config.enabled && self.config.track_per_layer {
+            self.layer_timings_buf.push(timing);
+        }
+    }
+
+    /// Finish profiling and produce an [`InferenceProfile`].
+    pub fn finish(&mut self) -> InferenceProfile {
+        let total_time_ms = self
+            .start_time
+            .map(|s| s.elapsed().as_millis() as u64)
+            .unwrap_or_else(|| self.token_times.iter().sum());
+
+        let time_to_first_token_ms = self.token_times.first().copied().unwrap_or(0);
+
+        let warmup = self.config.warmup_tokens.min(self.token_times.len());
+        let effective_tokens: Vec<u64> = self.token_times[warmup..].to_vec();
+        let total_tokens = effective_tokens.len();
+
+        let tokens_per_second = if total_time_ms > 0 {
+            total_tokens as f64 / (total_time_ms as f64 / 1000.0)
+        } else {
+            0.0
+        };
+
+        self.start_time = None;
+
+        InferenceProfile {
+            model_name: String::new(),
+            total_tokens,
+            total_time_ms,
+            tokens_per_second,
+            time_to_first_token_ms,
+            per_token_latency_ms: effective_tokens,
+            peak_memory_bytes: 0,
+            layer_timings: self.layer_timings_buf.clone(),
+        }
+    }
+
+    /// Whether the profiler is currently active (started and not yet finished).
+    pub fn is_active(&self) -> bool {
+        self.config.enabled && self.start_time.is_some()
+    }
+}
+
+/// Human-readable formatting for inference profiles.
+pub struct ProfileSummary;
+
+impl ProfileSummary {
+    /// Format a human-readable summary of the inference profile.
+    #[must_use]
+    pub fn format_summary(profile: &InferenceProfile) -> String {
+        format!(
+            "=== Inference Profile ===\n\
+             Model: {}\n\
+             Total tokens: {}\n\
+             Total time: {}ms\n\
+             Tokens/sec: {:.2}\n\
+             Time to first token: {}ms\n\
+             Peak memory: {} bytes\n",
+            profile.model_name,
+            profile.total_tokens,
+            profile.total_time_ms,
+            profile.tokens_per_second,
+            profile.time_to_first_token_ms,
+            profile.peak_memory_bytes,
+        )
+    }
+
+    /// Format a text-based latency histogram.
+    #[must_use]
+    pub fn format_latency_histogram(profile: &InferenceProfile) -> String {
+        if profile.per_token_latency_ms.is_empty() {
+            return String::from("No latency data available.\n");
+        }
+
+        let min = *profile.per_token_latency_ms.iter().min().unwrap();
+        let max = *profile.per_token_latency_ms.iter().max().unwrap();
+
+        if min == max {
+            return format!("All tokens: {}ms (1 bucket)\n", min);
+        }
+
+        let bucket_count = 5usize;
+        let range = max - min + 1;
+        let bucket_size = (range as f64 / bucket_count as f64).ceil() as u64;
+        let mut buckets = vec![0usize; bucket_count];
+
+        for &t in &profile.per_token_latency_ms {
+            let idx = ((t - min) / bucket_size.max(1)) as usize;
+            buckets[idx.min(bucket_count - 1)] += 1;
+        }
+
+        let max_count = *buckets.iter().max().unwrap_or(&1);
+        let bar_width = 20;
+
+        let mut out = String::from("Latency Histogram:\n");
+        for (i, &count) in buckets.iter().enumerate() {
+            let lo = min + i as u64 * bucket_size;
+            let hi = lo + bucket_size - 1;
+            let bar_len = if max_count > 0 { (count * bar_width) / max_count } else { 0 };
+            let bar: String = "#".repeat(bar_len);
+            out.push_str(&format!("  {:>4}-{:<4}ms | {:<20} {}\n", lo, hi, bar, count));
+        }
+        out
+    }
+
+    /// Format a per-layer breakdown table.
+    #[must_use]
+    pub fn format_layer_breakdown(profile: &InferenceProfile) -> String {
+        if profile.layer_timings.is_empty() {
+            return String::from("No layer timing data available.\n");
+        }
+
+        let mut out = String::from("Layer Breakdown:\n");
+        out.push_str(&format!(
+            "  {:<20} {:>5} {:>8} {:>8} {:>8} {:>8}\n",
+            "Layer", "Index", "Attn(ms)", "FFN(ms)", "Norm(ms)", "Total(ms)"
+        ));
+        out.push_str(&format!("  {}\n", "-".repeat(62)));
+
+        for lt in &profile.layer_timings {
+            out.push_str(&format!(
+                "  {:<20} {:>5} {:>8} {:>8} {:>8} {:>8}\n",
+                lt.layer_name, lt.layer_index, lt.attention_ms, lt.ffn_ms, lt.norm_ms, lt.total_ms,
+            ));
+        }
+        out
+    }
+}
+
+/// Computed latency statistics from an inference profile.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub mean_latency_ms: f64,
+    pub p50_latency_ms: u64,
+    pub p95_latency_ms: u64,
+    pub p99_latency_ms: u64,
+    pub min_latency_ms: u64,
+    pub max_latency_ms: u64,
+}
+
+impl PerformanceMetrics {
+    /// Compute performance metrics from an inference profile.
+    #[must_use]
+    pub fn compute_from_profile(profile: &InferenceProfile) -> Self {
+        if profile.per_token_latency_ms.is_empty() {
+            return Self {
+                mean_latency_ms: 0.0,
+                p50_latency_ms: 0,
+                p95_latency_ms: 0,
+                p99_latency_ms: 0,
+                min_latency_ms: 0,
+                max_latency_ms: 0,
+            };
+        }
+
+        let mut sorted = profile.per_token_latency_ms.clone();
+        sorted.sort_unstable();
+
+        let sum: u64 = sorted.iter().sum();
+        let mean = sum as f64 / sorted.len() as f64;
+
+        Self {
+            mean_latency_ms: mean,
+            p50_latency_ms: percentile_at(&sorted, 50.0),
+            p95_latency_ms: percentile_at(&sorted, 95.0),
+            p99_latency_ms: percentile_at(&sorted, 99.0),
+            min_latency_ms: sorted[0],
+            max_latency_ms: sorted[sorted.len() - 1],
+        }
+    }
+}
+
+fn percentile_at(sorted: &[u64], p: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let idx = ((p / 100.0) * (sorted.len() - 1) as f64).round() as usize;
+    sorted[idx.min(sorted.len() - 1)]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -610,5 +863,368 @@ mod tests {
         assert!(!session.is_warmup());
         assert!(!session.next_iteration()); // iteration 2 (sample 1)
         assert!(session.next_iteration()); // iteration 3 → complete
+    }
+
+    // === InferenceProfiler tests ===
+
+    #[test]
+    fn test_inference_profiler_config_defaults() {
+        let config = InferenceProfilerConfig::default();
+        assert!(!config.enabled);
+        assert!(config.track_per_token);
+        assert!(!config.track_per_layer);
+        assert_eq!(config.warmup_tokens, 1);
+    }
+
+    #[test]
+    fn test_inference_profiler_lifecycle() {
+        let config = InferenceProfilerConfig { enabled: true, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        assert!(profiler.is_active());
+        profiler.record_token(10);
+        profiler.record_token(12);
+        profiler.record_token(11);
+        let profile = profiler.finish();
+        assert!(!profiler.is_active());
+        // warmup_tokens=1, so first token excluded
+        assert_eq!(profile.total_tokens, 2);
+    }
+
+    #[test]
+    fn test_inference_profile_tokens_per_second() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 100,
+            total_time_ms: 1000,
+            tokens_per_second: 100.0,
+            time_to_first_token_ms: 10,
+            per_token_latency_ms: vec![10; 100],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        assert!((profile.tokens_per_second - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_perf_metrics_from_profile() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 5,
+            total_time_ms: 500,
+            tokens_per_second: 10.0,
+            time_to_first_token_ms: 10,
+            per_token_latency_ms: vec![10, 20, 30, 40, 50],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert!((metrics.mean_latency_ms - 30.0).abs() < f64::EPSILON);
+        assert_eq!(metrics.min_latency_ms, 10);
+        assert_eq!(metrics.max_latency_ms, 50);
+    }
+
+    #[test]
+    fn test_perf_metrics_p50() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 5,
+            total_time_ms: 500,
+            tokens_per_second: 10.0,
+            time_to_first_token_ms: 10,
+            per_token_latency_ms: vec![10, 20, 30, 40, 50],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert_eq!(metrics.p50_latency_ms, 30);
+    }
+
+    #[test]
+    fn test_perf_metrics_p95_p99() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 100,
+            total_time_ms: 1000,
+            tokens_per_second: 100.0,
+            time_to_first_token_ms: 1,
+            per_token_latency_ms: (1..=100).collect(),
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert_eq!(metrics.p95_latency_ms, 95);
+        assert_eq!(metrics.p99_latency_ms, 99);
+    }
+
+    #[test]
+    fn test_format_summary_non_empty() {
+        let profile = InferenceProfile {
+            model_name: "test-model".into(),
+            total_tokens: 10,
+            total_time_ms: 100,
+            tokens_per_second: 100.0,
+            time_to_first_token_ms: 5,
+            per_token_latency_ms: vec![10; 10],
+            peak_memory_bytes: 1024,
+            layer_timings: vec![],
+        };
+        let summary = ProfileSummary::format_summary(&profile);
+        assert!(!summary.is_empty());
+        assert!(summary.contains("test-model"));
+        assert!(summary.contains("10"));
+    }
+
+    #[test]
+    fn test_format_latency_histogram_output() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 5,
+            total_time_ms: 500,
+            tokens_per_second: 10.0,
+            time_to_first_token_ms: 10,
+            per_token_latency_ms: vec![10, 20, 30, 40, 50],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let histogram = ProfileSummary::format_latency_histogram(&profile);
+        assert!(!histogram.is_empty());
+        assert!(histogram.contains("Histogram"));
+    }
+
+    #[test]
+    fn test_layer_timing_construction() {
+        let timing = LayerTiming {
+            layer_name: "layer_0".into(),
+            layer_index: 0,
+            attention_ms: 10,
+            ffn_ms: 20,
+            norm_ms: 5,
+            total_ms: 35,
+        };
+        assert_eq!(timing.layer_name, "layer_0");
+        assert_eq!(timing.total_ms, 35);
+    }
+
+    #[test]
+    fn test_record_multiple_tokens() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        for i in 0..10 {
+            profiler.record_token(i * 5);
+        }
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 10);
+        assert_eq!(profile.per_token_latency_ms.len(), 10);
+    }
+
+    #[test]
+    fn test_warmup_token_exclusion() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 2, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        profiler.record_token(100); // warmup
+        profiler.record_token(90); // warmup
+        profiler.record_token(10); // effective
+        profiler.record_token(12); // effective
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 2);
+        assert_eq!(profile.per_token_latency_ms, vec![10, 12]);
+    }
+
+    #[test]
+    fn test_inference_profiler_disabled_mode() {
+        let config = InferenceProfilerConfig { enabled: false, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        assert!(!profiler.is_active());
+        profiler.record_token(10);
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 0);
+        assert!(profile.per_token_latency_ms.is_empty());
+    }
+
+    #[test]
+    fn test_zero_tokens() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 0);
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert_eq!(metrics.min_latency_ms, 0);
+        assert_eq!(metrics.max_latency_ms, 0);
+    }
+
+    #[test]
+    fn test_single_token() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        profiler.record_token(42);
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 1);
+        assert_eq!(profile.per_token_latency_ms, vec![42]);
+        assert_eq!(profile.time_to_first_token_ms, 42);
+    }
+
+    #[test]
+    fn test_many_tokens() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        for _ in 0..1000 {
+            profiler.record_token(10);
+        }
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 1000);
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert!((metrics.mean_latency_ms - 10.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_time_to_first_token() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        profiler.record_token(50);
+        profiler.record_token(10);
+        profiler.record_token(10);
+        let profile = profiler.finish();
+        assert_eq!(profile.time_to_first_token_ms, 50);
+    }
+
+    #[test]
+    fn test_layer_breakdown_formatting() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 1,
+            total_time_ms: 100,
+            tokens_per_second: 10.0,
+            time_to_first_token_ms: 10,
+            per_token_latency_ms: vec![10],
+            peak_memory_bytes: 0,
+            layer_timings: vec![LayerTiming {
+                layer_name: "layer_0".into(),
+                layer_index: 0,
+                attention_ms: 10,
+                ffn_ms: 20,
+                norm_ms: 5,
+                total_ms: 35,
+            }],
+        };
+        let breakdown = ProfileSummary::format_layer_breakdown(&profile);
+        assert!(!breakdown.is_empty());
+        assert!(breakdown.contains("layer_0"));
+        assert!(breakdown.contains("35"));
+    }
+
+    #[test]
+    fn test_inference_profiler_is_active() {
+        let config = InferenceProfilerConfig { enabled: true, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        assert!(!profiler.is_active());
+        profiler.start();
+        assert!(profiler.is_active());
+        profiler.finish();
+        assert!(!profiler.is_active());
+    }
+
+    #[test]
+    fn test_profiler_not_active_before_start() {
+        let config = InferenceProfilerConfig { enabled: true, ..Default::default() };
+        let profiler = InferenceProfiler::new(config);
+        assert!(!profiler.is_active());
+    }
+
+    #[test]
+    fn test_perf_metrics_min_max() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 4,
+            total_time_ms: 400,
+            tokens_per_second: 10.0,
+            time_to_first_token_ms: 5,
+            per_token_latency_ms: vec![5, 15, 25, 100],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let metrics = PerformanceMetrics::compute_from_profile(&profile);
+        assert_eq!(metrics.min_latency_ms, 5);
+        assert_eq!(metrics.max_latency_ms, 100);
+    }
+
+    #[test]
+    fn test_profiler_start_clears_state() {
+        let config =
+            InferenceProfilerConfig { enabled: true, warmup_tokens: 0, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        profiler.record_token(10);
+        profiler.record_token(20);
+        // Start again - should clear
+        profiler.start();
+        profiler.record_token(30);
+        let profile = profiler.finish();
+        assert_eq!(profile.total_tokens, 1);
+        assert_eq!(profile.per_token_latency_ms, vec![30]);
+    }
+
+    #[test]
+    fn test_record_layer_timing() {
+        let config =
+            InferenceProfilerConfig { enabled: true, track_per_layer: true, ..Default::default() };
+        let mut profiler = InferenceProfiler::new(config);
+        profiler.start();
+        profiler.record_layer(LayerTiming {
+            layer_name: "attn_0".into(),
+            layer_index: 0,
+            attention_ms: 10,
+            ffn_ms: 0,
+            norm_ms: 2,
+            total_ms: 12,
+        });
+        let profile = profiler.finish();
+        assert_eq!(profile.layer_timings.len(), 1);
+        assert_eq!(profile.layer_timings[0].attention_ms, 10);
+    }
+
+    #[test]
+    fn test_format_latency_histogram_empty() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 0,
+            total_time_ms: 0,
+            tokens_per_second: 0.0,
+            time_to_first_token_ms: 0,
+            per_token_latency_ms: vec![],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let histogram = ProfileSummary::format_latency_histogram(&profile);
+        assert!(histogram.contains("No latency data"));
+    }
+
+    #[test]
+    fn test_layer_breakdown_empty() {
+        let profile = InferenceProfile {
+            model_name: "test".into(),
+            total_tokens: 0,
+            total_time_ms: 0,
+            tokens_per_second: 0.0,
+            time_to_first_token_ms: 0,
+            per_token_latency_ms: vec![],
+            peak_memory_bytes: 0,
+            layer_timings: vec![],
+        };
+        let breakdown = ProfileSummary::format_layer_breakdown(&profile);
+        assert!(breakdown.contains("No layer timing"));
     }
 }

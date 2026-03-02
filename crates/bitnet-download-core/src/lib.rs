@@ -1,3 +1,4 @@
+use std::{fs, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -31,9 +32,36 @@ pub fn validate_downloaded_len(
     Ok(())
 }
 
+/// Atomic write helper for small metadata files (etag/last-modified).
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+
+    #[cfg(unix)]
+    {
+        if let Ok(f) = std::fs::File::open(&tmp) {
+            f.sync_all()?;
+        }
+    }
+
+    fs::rename(&tmp, path)?;
+
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn parses_content_range_total() {
@@ -49,5 +77,22 @@ mod tests {
             validate_downloaded_len(1, Some(2)),
             Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
+    }
+
+    #[test]
+    fn atomic_write_creates_file() {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("etag.txt");
+        atomic_write(&path, b"abc").expect("atomic write should succeed");
+        assert_eq!(std::fs::read(&path).expect("file should exist"), b"abc");
+    }
+
+    #[test]
+    fn atomic_write_overwrites_file() {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("etag.txt");
+        atomic_write(&path, b"first").expect("first write should succeed");
+        atomic_write(&path, b"second").expect("second write should succeed");
+        assert_eq!(std::fs::read(&path).expect("file should exist"), b"second");
     }
 }

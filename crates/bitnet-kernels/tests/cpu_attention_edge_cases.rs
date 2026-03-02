@@ -129,8 +129,14 @@ fn masked_attention_single() {
 
 #[test]
 fn attention_config_scale() {
-    let config =
-        AttentionConfig { num_heads: 8, head_dim: 64, seq_len: 128, scale: None, causal: true };
+    let config = AttentionConfig {
+        num_heads: 8,
+        head_dim: 64,
+        seq_len: 128,
+        scale: None,
+        causal: true,
+        use_alibi: false,
+    };
     let scale = config.resolved_scale();
     let expected = 1.0 / (64.0f32).sqrt();
     assert!((scale - expected).abs() < 1e-6);
@@ -144,14 +150,21 @@ fn attention_config_custom_scale() {
         seq_len: 64,
         scale: Some(0.1),
         causal: false,
+        use_alibi: false,
     };
     assert!((config.resolved_scale() - 0.1).abs() < 1e-6);
 }
 
 #[test]
 fn attention_config_validate() {
-    let config =
-        AttentionConfig { num_heads: 4, head_dim: 32, seq_len: 64, scale: None, causal: true };
+    let config = AttentionConfig {
+        num_heads: 4,
+        head_dim: 32,
+        seq_len: 64,
+        scale: None,
+        causal: true,
+        use_alibi: false,
+    };
     assert!(config.validate().is_ok());
 }
 

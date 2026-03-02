@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: cfg
+---
+CpuAttentionConfig {
+    batch_size: 4,
+    num_heads: 16,
+    seq_len: 512,
+    head_dim: 64,
+    scale: None,
+    causal_mask: true,
+}

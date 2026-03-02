@@ -4,6 +4,41 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — SLM (Small Language Model) Support
+
+- **SafeTensors Reader** (`bitnet-models`): Direct loading of HuggingFace SafeTensors files with memory-mapped I/O, multi-shard support, and automatic BF16/F16→F32 conversion (#2317)
+- **Architecture Registry**: 19 model architecture variants (Phi-4, LLaMA-3, Qwen2.5, Gemma-2, Mistral, DeepSeek, StarCoder, Falcon, and more) with automatic detection from GGUF metadata and HF config.json (#2325, #2389)
+- **Weight Name Mapper**: Pattern-based HuggingFace↔GGUF weight name translation for 5 architectures (#2384)
+- **HuggingFace Model Loader**: Unified loader integrating SafeTensors + config detection + weight mapping for seamless HF model loading (#2395)
+- **Model Format Conversion Pipeline**: Convert between SafeTensors, GGUF, ONNX, and PyTorch formats with quantization support (F32/F16/BF16/Int8/Int4) (#2528)
+- **Dense Forward Pass** (`bitnet-inference`): Non-quantized inference path with DenseLinear, DenseFFN, DenseAttention, DenseTransformerBlock, DenseModel (#2413)
+- **Dense Generation Pipeline**: Token sampling with temperature, top-k/p, repetition penalty, and stop token detection (#2488)
+- **Int8 Quantization** (`bitnet-quantization`): Symmetric/asymmetric int8 with per-tensor/per-channel modes and 3 calibration methods (#2516)
+- **Int4 Quantization**: Group-wise int4 with NibblePacked storage (2 values per byte) for 4× compression (#2530)
+- **Memory Estimation**: KV cache and model memory planning with precomputed profiles for Phi-4, LLaMA, Qwen (#2515)
+- **Dense Cross-Validation Framework**: Token/logit comparison with configurable tolerances and golden fixtures (#2514)
+- **Model Validation Suite**: 8 issue types, 5 validation functions for weight shape/dtype/NaN/range checking (#2432)
+- **Tokenizer Discovery Expansion**: 15 SLM model entries covering Phi-4, Qwen, Gemma, Mistral, LLaMA families (#2351)
+- **HF Model Service** (`bitnet-server`): Server-side HF model loading state machine with typed API (#2485)
+- **Download-Model Expansion**: 9 known HF model registry entries with download manifests (#2396)
+- **CLI SLM Integration**: `--model-format` and `--architecture` flags for HF model loading (#2408)
+- **SLM Quickstart Guide**: Comprehensive documentation for getting started with SLM models (#2411)
+- **SLM Inference Benchmarks**: 13 Criterion benchmarks for SiLU, RMSNorm, matmul, attention, RoPE, softmax (#2433)
+
+### Added — GPU / Hardware Support
+
+- **CUDA GPU Memory Pool**: Best-fit, buddy, and slab allocators for GPU memory management (#2455)
+- **OpenCL Layer Normalization**: LayerNorm, RMSNorm, GroupNorm, FusedNormLinear variants for Intel Arc A770 (#2460)
+
+### Fixed — SLM
+
+- **RMSNorm Precision**: Fixed f32→f64 accumulation in inference crate's RMSNorm for improved numerical stability (#2315)
+- **Formatting Regression**: Fixed cargo fmt check failures from GPU PR merges (#2483)
+
+### Testing — SLM
+
+- 900+ new tests across 30+ PRs covering CPU scalar parity, quantization round-trips, RoPE, attention, memory safety, tokenizer, GGUF loader, server handlers, model config, CLI parsing, BF16 conversion, GQA, 16K context, prompt templates, dense inference, E2E smoke tests
+
 ### Added — OpenCL Compute Operations (Waves 127–128)
 
 - **OpenCL continuous batching**: Iteration-level continuous batching for OpenCL inference pipeline, 66 tests (#2450)

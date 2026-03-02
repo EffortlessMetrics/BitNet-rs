@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: "output.join(\"\\n\")"
+---
+scalar
+neon
+sse4.2
+avx2
+avx512

@@ -288,7 +288,14 @@ fn attention_single_head() {
 #[test]
 fn attention_multi_head() {
     // seq_len=2, num_heads=2, head_dim=2
-    let cfg = AttentionConfig { num_heads: 2, head_dim: 2, seq_len: 2, causal: false, scale: None };
+    let cfg = AttentionConfig {
+        num_heads: 2,
+        head_dim: 2,
+        seq_len: 2,
+        causal: false,
+        use_alibi: false,
+        scale: None,
+    };
     // q, k, v: [seq_len=2, num_heads*head_dim=4]
     let q = vec![1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0];
     let k = vec![1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0];
@@ -301,7 +308,14 @@ fn attention_multi_head() {
 #[test]
 fn attention_causal_mask() {
     // seq_len=3, head_dim=2, single head with causal masking
-    let cfg = AttentionConfig { num_heads: 1, head_dim: 2, seq_len: 3, causal: true, scale: None };
+    let cfg = AttentionConfig {
+        num_heads: 1,
+        head_dim: 2,
+        seq_len: 3,
+        causal: true,
+        use_alibi: false,
+        scale: None,
+    };
     // Uniform q/k so attention is determined purely by the causal mask
     let q = vec![1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
     let k = vec![1.0, 0.0, 1.0, 0.0, 1.0, 0.0];

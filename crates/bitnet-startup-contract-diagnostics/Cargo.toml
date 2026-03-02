@@ -9,13 +9,13 @@ repository.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Reusable startup contract diagnostics and profile reporting"
+description = "Compatibility facade for bitnet-startup-contract-diagnostics-core"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-anyhow.workspace = true
-bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
+bitnet-startup-contract-diagnostics-core = { path = "../bitnet-startup-contract-diagnostics-core", version = "0.2.1-dev" }
 
 [dev-dependencies]
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 proptest.workspace = true
 insta.workspace = true

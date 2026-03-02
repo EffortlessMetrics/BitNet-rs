@@ -458,6 +458,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-bench-regression-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bench-receipts",
+]
+
+[[package]]
 name = "bitnet-cli"
 version = "0.2.1-dev"
 dependencies = [
@@ -549,6 +556,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-compat-core",
  "bitnet-models",
  "bitnet-tokenizers",
  "chrono",
@@ -558,6 +566,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "bitnet-compat-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-models",
  "tempfile",
  "tracing",
 ]
@@ -651,6 +669,7 @@ dependencies = [
 name = "bitnet-download-core"
 version = "0.2.1-dev"
 dependencies = [
+ "tempfile",
  "thiserror 2.0.18",
 ]
 
@@ -1443,10 +1462,18 @@ dependencies = [
 name = "bitnet-startup-contract-diagnostics"
 version = "0.2.1-dev"
 dependencies = [
- "anyhow",
  "bitnet-runtime-bootstrap",
+ "bitnet-startup-contract-diagnostics-core",
  "insta",
  "proptest",
+]
+
+[[package]]
+name = "bitnet-startup-contract-diagnostics-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-runtime-bootstrap",
 ]
 
 [[package]]
@@ -1867,6 +1894,7 @@ name = "bitnet-wgpu-bench"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+ "bitnet-bench-regression-core",
  "bitnet-nvidia",
  "proptest",
  "serde",
