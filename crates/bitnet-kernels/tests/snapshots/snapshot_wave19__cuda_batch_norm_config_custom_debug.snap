@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+BatchNormConfig {
+    num_features: 128,
+    eps: 0.001,
+    momentum: 0.2,
+    affine: true,
+    track_running_stats: true,
+}

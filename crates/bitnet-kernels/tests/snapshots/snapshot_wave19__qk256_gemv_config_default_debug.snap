@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+Qk256GemvConfig {
+    block_m: 1,
+    block_n: 256,
+    threads_per_block: 256,
+    shared_mem_bytes: 4096,
+    seq_len: 1,
+    n_out: 1,
+    k: 256,
+}

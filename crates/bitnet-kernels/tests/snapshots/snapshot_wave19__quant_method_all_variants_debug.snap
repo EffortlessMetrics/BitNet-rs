@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: variants
+---
+[
+    AbsMax,
+    MinMax,
+    Symmetric,
+    Percentile(
+        95,
+    ),
+]

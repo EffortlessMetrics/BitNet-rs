@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+I2sMatmulConfig {
+    m: 1,
+    n: 1,
+    k: 32,
+    block_size: 32,
+    tile_m: 4,
+    tile_n: 64,
+    threads_per_block: 256,
+    shared_mem_bytes: 4096,
+}

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+CudaBatchNormConfig {
+    num_features: 256,
+    eps: 1e-5,
+    momentum: 0.1,
+}

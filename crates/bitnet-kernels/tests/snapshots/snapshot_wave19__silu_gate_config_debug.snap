@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+SiluGateConfig {
+    n: 2048,
+    threads_per_block: 256,
+}

@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+MatmulConfig {
+    m: 1,
+    n: 1,
+    k: 1,
+    batch_size: 4,
+    transpose_a: true,
+    transpose_b: false,
+    alpha: 1.0,
+    beta: 0.0,
+    dtype: F16,
+    tile_m: 32,
+    tile_n: 32,
+    tile_k: 32,
+    threads_per_block: 256,
+    shared_mem_bytes: 8192,
+}

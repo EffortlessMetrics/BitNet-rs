@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+LayerNormConfig {
+    eps: 1e-5,
+    normalized_shape: [
+        768,
+    ],
+    elementwise_affine: true,
+}

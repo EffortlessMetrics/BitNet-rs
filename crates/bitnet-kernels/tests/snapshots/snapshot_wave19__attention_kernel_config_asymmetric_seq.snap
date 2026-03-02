@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+AttentionKernelConfig {
+    tile_q: 16,
+    tile_kv: 64,
+    n_heads: 4,
+    head_dim: 128,
+    seq_len_q: 16,
+    seq_len_kv: 64,
+    threads_per_block: 256,
+    shared_mem_bytes: 41088,
+    causal: false,
+    scale: 0.088388346,
+}

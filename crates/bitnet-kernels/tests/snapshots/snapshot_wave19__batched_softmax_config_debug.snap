@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+BatchedSoftmaxConfig {
+    batch_size: 2,
+    n_heads: 8,
+    seq_len: 64,
+    temperature: 1.0,
+    causal_mask: false,
+    mode: Standard,
+}

@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+RopeConfig {
+    head_dim: 64,
+    n_heads: 8,
+    seq_len: 128,
+    position_offset: 0,
+    base: 10000.0,
+    scaling_factor: 1.0,
+    max_seq_len: 128,
+    threads_per_block: 32,
+    interleaved: false,
+}

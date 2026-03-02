@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave19.rs
+expression: cfg
+---
+Pool2dConfig {
+    batch: 2,
+    channels: 64,
+    in_h: 28,
+    in_w: 28,
+    kernel_h: 3,
+    kernel_w: 3,
+    stride_h: 1,
+    stride_w: 1,
+    pad_h: 1,
+    pad_w: 1,
+    dilation_h: 1,
+    dilation_w: 1,
+}
