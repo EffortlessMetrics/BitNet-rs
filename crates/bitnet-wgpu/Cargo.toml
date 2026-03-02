@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 bitnet-dispatch-core = { path = "../bitnet-dispatch-core" }
+bitnet-nvidia = { path = "../bitnet-nvidia" }
 wgpu = { version = "24", features = ["vulkan-portability"] }
 bytemuck = { version = "1", features = ["derive"] }
 pollster = "0.4"

@@ -66,7 +66,9 @@ pub fn run(cpu_only: bool, verbose: bool, dry_run: bool) -> Result<()> {
         cargo_features.sort();
         cargo_features.dedup();
 
-        let has_gpu = cargo_features.iter().any(|f| f == "gpu" || f == "cuda");
+        let has_gpu = cargo_features
+            .iter()
+            .any(|f| matches!(f.as_str(), "gpu" | "cuda" | "metal" | "vulkan" | "oneapi"));
         if cpu_only && has_gpu {
             results.push(CellResult {
                 label,
