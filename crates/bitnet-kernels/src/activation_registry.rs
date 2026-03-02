@@ -101,10 +101,10 @@ fn softplus(x: f32) -> f32 {
 
 fn erf(x: f32) -> f32 {
     // Abramowitz and Stegun approximation
-    let t = 1.0 / (1.0 + 0.3275911 * x.abs());
+    let t = 1.0 / (1.0 + 0.327_591_1 * x.abs());
     let poly = t
-        * (0.254829592
-            + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+        * (0.254_829_6
+            + t * (-0.284_496_74 + t * (1.421_413_7 + t * (-1.453_152 + t * 1.061_405_4))));
     let result = 1.0 - poly * (-x * x).exp();
     if x >= 0.0 { result } else { -result }
 }

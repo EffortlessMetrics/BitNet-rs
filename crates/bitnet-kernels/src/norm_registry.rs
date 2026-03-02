@@ -80,9 +80,9 @@ pub fn layer_norm(data: &mut [f32], weight: &[f32], bias: Option<&[f32]>, eps: f
         / n as f64;
     let inv_std = 1.0 / (var + eps).sqrt();
 
-    for i in 0..n {
-        let normed = ((data[i] as f64 - mean) * inv_std) as f32;
-        data[i] = normed * weight.get(i).copied().unwrap_or(1.0)
+    for (i, item) in data.iter_mut().enumerate().take(n) {
+        let normed = ((*item as f64 - mean) * inv_std) as f32;
+        *item = normed * weight.get(i).copied().unwrap_or(1.0)
             + bias.and_then(|b| b.get(i)).copied().unwrap_or(0.0);
     }
 }
@@ -98,8 +98,8 @@ pub fn rms_norm(data: &mut [f32], weight: &[f32], eps: f64) {
         (data.iter().map(|&v| (v as f64) * (v as f64)).sum::<f64>() / n as f64 + eps).sqrt();
     let inv_rms = 1.0 / rms;
 
-    for i in 0..n {
-        data[i] = ((data[i] as f64 * inv_rms) as f32) * weight.get(i).copied().unwrap_or(1.0);
+    for (i, item) in data.iter_mut().enumerate().take(n) {
+        *item = ((*item as f64 * inv_rms) as f32) * weight.get(i).copied().unwrap_or(1.0);
     }
 }
 

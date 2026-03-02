@@ -97,17 +97,17 @@ impl BudgetTracker {
             self.stop_reason = Some(StopReason::MaxTokens);
             return false;
         }
-        if let Some(limit) = self.budget.max_time {
-            if self.start_time.elapsed() >= limit {
-                self.stop_reason = Some(StopReason::TimeLimit);
-                return false;
-            }
+        if let Some(limit) = self.budget.max_time
+            && self.start_time.elapsed() >= limit
+        {
+            self.stop_reason = Some(StopReason::TimeLimit);
+            return false;
         }
-        if let Some(limit) = self.budget.max_memory_bytes {
-            if self.current_memory > limit {
-                self.stop_reason = Some(StopReason::MemoryLimit);
-                return false;
-            }
+        if let Some(limit) = self.budget.max_memory_bytes
+            && self.current_memory > limit
+        {
+            self.stop_reason = Some(StopReason::MemoryLimit);
+            return false;
         }
         true
     }
