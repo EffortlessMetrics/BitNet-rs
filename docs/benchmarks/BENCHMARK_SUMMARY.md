@@ -142,3 +142,31 @@ cargo bench --bench kernel_benchmarks --no-default-features --features cpu,avx2 
 - **Scalar reference**: `crates/bitnet-models/src/quant/i2s.rs`
 - **Documentation**: `docs/benchmarks/qk256-dequant-benchmark.md`
 - **CLAUDE.md**: Project documentation
+
+
+## 2026-03-02 Quantization Ops Snapshot (CPU-only VM)
+
+Command executed:
+
+```bash
+cargo bench -p bitnet --no-default-features --features cpu,bench --bench quantization_ops -- --sample-size 10
+```
+
+Representative results from this run:
+
+| Benchmark | Time Range | Throughput Range |
+|---|---:|---:|
+| `i2s_roundtrip/quantize/4096` | 90.690–99.721 µs | 41.075–45.165 Melem/s |
+| `qk256_unpack/blocks/16` | 1.3990–1.4298 µs | 2.8647–2.9277 Gelem/s |
+| `qk256_gemv/full/16x4096` | 35.366–40.326 µs | 1.6252–1.8531 Gelem/s |
+| `tl1_lookup/roundtrip/4096` | 54.871–57.783 µs | 70.886–74.648 Melem/s |
+| `tl2_lookup/roundtrip/4096` | 41.458–49.130 µs | 83.371–98.800 Melem/s |
+
+Environment summary:
+- Linux 6.12.47 x86_64 (KVM VM)
+- Intel Xeon Platinum 8370C (3 vCPUs)
+- rustc 1.92.0 / cargo 1.92.0
+
+Interpretation:
+- Treat this as a "can run + baseline capture" pass in constrained CI-like hardware.
+- Outliers were reported by Criterion in several groups; focus on trend comparisons across repeated runs and same hardware class.

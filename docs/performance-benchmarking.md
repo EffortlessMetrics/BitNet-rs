@@ -30,6 +30,31 @@ python3 scripts/detect-performance-regression.py \
   --fail-on-regression
 ```
 
+
+## 🧪 Latest Local Benchmark Snapshot (2026-03-02)
+
+We ran the `bitnet` quantization micro-bench suite in this environment:
+
+```bash
+cargo bench -p bitnet --no-default-features --features cpu,bench --bench quantization_ops -- --sample-size 10
+```
+
+**Environment:**
+- OS: Linux 6.12.47 x86_64 (KVM VM)
+- CPU: Intel Xeon Platinum 8370C (3 vCPUs)
+- Toolchain: rustc 1.92.0 / cargo 1.92.0
+
+**Selected results (Criterion):**
+- `i2s_roundtrip/quantize/4096`: 90.690–99.721 µs (41.075–45.165 Melem/s)
+- `qk256_unpack/blocks/16`: 1.3990–1.4298 µs (2.8647–2.9277 Gelem/s)
+- `qk256_gemv/full/16x4096`: 35.366–40.326 µs (1.6252–1.8531 Gelem/s)
+- `tl1_lookup/roundtrip/4096`: 54.871–57.783 µs (70.886–74.648 Melem/s)
+- `tl2_lookup/roundtrip/4096`: 41.458–49.130 µs (83.371–98.800 Melem/s)
+
+> Notes:
+> - This is a VM-based, CPU-only run and should be treated as a reproducible smoke/perf baseline, not a hardware max-throughput claim.
+> - Criterion reported some outliers in multiple groups; compare deltas across runs rather than relying on single-point values.
+
 ## 📊 Architecture Overview
 
 The benchmarking infrastructure consists of several integrated components:
