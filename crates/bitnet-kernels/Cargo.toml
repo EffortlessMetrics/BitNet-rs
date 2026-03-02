@@ -143,6 +143,10 @@ required-features = ["cpu"]
 name = "metal_compute_pipeline_tests"
 path = "tests/metal_compute_pipeline_tests.rs"
 
+[[test]]
+name = "metal_layernorm_shader_tests"
+path = "tests/metal_layernorm_shader_tests.rs"
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
