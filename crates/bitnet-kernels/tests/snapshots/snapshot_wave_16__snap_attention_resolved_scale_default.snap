@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: "format!(\"{:.6}\", config.resolved_scale())"
+---
+0.125000

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: report.to_string()
+---
+CPU Scalar (CPU Scalar): READY — 2/2 required ops supported

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: config
+---
+GqaConfig {
+    num_q_heads: 32,
+    num_kv_heads: 8,
+    head_dim: 64,
+    seq_len: 512,
+    causal: true,
+    scale: None,
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: config
+---
+KvCacheConfig {
+    num_layers: 24,
+    num_heads: 8,
+    head_dim: 64,
+    max_seq_len: 2048,
+    dtype: F32,
+}

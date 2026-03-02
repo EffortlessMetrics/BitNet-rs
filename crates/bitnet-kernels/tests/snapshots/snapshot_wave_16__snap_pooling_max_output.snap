@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+expression: output
+---
+[
+    3.0,
+    5.0,
+    5.0,
+    5.0,
+    4.0,
+    3.0,
+]
