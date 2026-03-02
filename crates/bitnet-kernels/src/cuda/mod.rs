@@ -8,6 +8,8 @@
 //! - [`fusion`]: Fused operation pairs (RMSNorm+Linear, GELU+Linear, etc.)
 //! - [`qk256_gemv`]: QK256 2-bit dequantization fused with GEMV
 //! - [`attention`]: Scaled dot-product attention with causal masking
+//! - [`attention_mask`]: Attention mask generation (causal, padding, sliding window,
+//!   block-sparse, ALiBi, prefix LM) and application (additive, multiplicative)
 //! - [`batch_norm`]: Batch normalization with training/eval mode support
 //! - [`conv1d`]: 1-D convolution with stride, padding, dilation, groups
 //! - [`layernorm`]: Full LayerNorm and RMSNorm with CPU fallback and GPU dispatch
@@ -24,6 +26,8 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`sparse`]: Sparse tensor operations (CSR/CSC/COO/BSR) with SpMV, SpMM, and block-sparse
+//!   matmul for efficient 1-bit model inference
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -32,25 +36,32 @@
 
 pub mod activations;
 pub mod attention;
+pub mod attention_mask;
 pub mod batch_norm;
 pub mod conv1d;
+pub mod dequant;
+pub mod dynamic_parallelism;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
+pub mod fused_attention;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod kv_cache_gpu;
 pub mod layernorm;
 pub mod linear;
+pub mod loss;
 pub mod matmul;
 pub mod memory_pool;
 pub mod pooling;
 pub mod qk256_gemv;
 pub mod quantize;
 pub mod quantized_matmul;
+pub mod residual;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod sparse;
 pub mod transpose;
 
 pub use activations::{
@@ -63,14 +74,37 @@ pub use attention::{
     launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
 };
 
+pub use attention_mask::{
+    AlibiConfig, AttentionMaskConfig, BlockSparseConfig, NEG_INF, PrefixMaskConfig,
+    SlidingWindowConfig, alibi_mask, apply_mask_additive, apply_mask_multiplicative,
+    apply_mask_to_scores, block_sparse_mask, causal_mask, combined_mask, compute_alibi_slopes,
+    create_prefix_mask, padding_mask, sliding_window_mask,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use attention::ATTENTION_KERNEL_SRC;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use attention_mask::{
+    ATTENTION_MASK_KERNEL_SRC, launch_alibi_mask, launch_apply_mask_additive,
+    launch_apply_mask_multiplicative, launch_causal_mask, launch_sliding_window_mask,
+};
 pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
+pub use kv_cache_gpu::{
+    KvCacheGpuConfig, KvCacheGpuError, KvCacheGpuMetrics, KvCacheGpuState, PageTable,
+    QuantizedKvResult, kv_cache_append, kv_cache_copy_on_write, kv_cache_cow_materialize,
+    kv_cache_defrag, kv_cache_dequantize, kv_cache_evict, kv_cache_gpu_metrics,
+    kv_cache_paged_lookup, kv_cache_prefetch, kv_cache_quantize, kv_cache_rotate,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use kv_cache_gpu::{
+    KV_CACHE_GPU_KERNEL_SRC, launch_kv_cache_append_gpu, launch_kv_cache_gather_gpu,
+};
 pub use layernorm::{
     LayerNormConfig, batch_layer_norm_cpu, layer_norm_cpu_fallback, layer_norm_forward,
     rms_norm_cpu_fallback, rms_norm_forward,
@@ -101,6 +135,14 @@ pub use crate::reduction::{
 // Re-export shaped reduction from the crate-level module.
 pub use crate::shaped_reduction::reduce_f32 as shaped_reduce_f32;
 pub use crate::shaped_reduction::{ShapedReductionConfig, reduction_output_shape};
+pub use fused_attention::{
+    AttentionMetrics, AttentionPattern, FusedAttentionConfig, FusedAttentionError,
+    apply_alibi_bias, apply_attention_mask, compute_attention_scores, flash_attention_forward,
+    fused_attention_forward, grouped_query_attention, multi_head_attention,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use fused_attention::{FUSED_ATTENTION_KERNEL_SRC, launch_fused_attention};
 pub use fusion::{
     FusedElementwiseLaunchConfig, FusedMatmulLaunchConfig, FusedOp, FusionConfig, FusionError,
     fused_add_rmsnorm, fused_add_rmsnorm_cpu, fused_gelu_linear, fused_gelu_linear_cpu,
@@ -124,6 +166,13 @@ pub use softmax::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use softmax::SOFTMAX_KERNEL_SRC;
 
+pub use dequant::{
+    DequantConfig, DequantPrecision, QK256_BLOCK_SIZE, QuantBitWidth, ScaleMode,
+    batch_dequantize_int2_to_f32, dequantize_int2_per_channel_f32, dequantize_int2_to_f16,
+    dequantize_int2_to_f32, dequantize_int2_uniform_f32, dequantize_int4_to_f16,
+    dequantize_int4_to_f32, dequantize_int8_to_f16, dequantize_int8_to_f32,
+    dequantize_int8_uniform_f32, dequantize_qk256_to_f16, dequantize_qk256_to_f32,
+};
 pub use matmul::{
     GemmConfig, MatmulConfig, MatmulDtype, matmul_cpu, matmul_f16_cpu, matmul_f16_forward,
     matmul_forward, matmul_tiled_cpu,
@@ -151,6 +200,15 @@ pub use embedding::{
 };
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
+pub use loss::{
+    LossConfig, LossReduction, binary_cross_entropy, contrastive_loss, cross_entropy_loss,
+    cross_entropy_loss_forward, cross_entropy_with_logits, focal_loss, huber_loss,
+    huber_loss_forward, kl_divergence, label_smoothing_ce, mse_loss, mse_loss_forward,
+    perplexity_from_logits, triplet_loss,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use loss::{LOSS_KERNEL_SRC, launch_cross_entropy_loss, launch_huber_loss, launch_mse_loss};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
@@ -181,6 +239,12 @@ pub use quantize::{
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use dequant::{
+    DEQUANT_INT2_F32_KERNEL_SRC, DEQUANT_INT4_F32_KERNEL_SRC, DEQUANT_INT8_F32_KERNEL_SRC,
+    DEQUANT_QK256_F32_KERNEL_SRC,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use fusion::{
     FUSION_KERNEL_SRC, launch_fused_add_rmsnorm_cuda, launch_fused_gelu_linear_cuda,
     launch_fused_rmsnorm_linear_cuda, launch_fused_scale_add_cuda, launch_fused_softmax_mask_cuda,
@@ -188,3 +252,30 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use sparse::{
+    ElementwiseSpOp, SparseConfig, SparseFormat, SparseTensor, block_sparse_matmul,
+    dense_to_sparse, nnz, prune_below_threshold, sparse_add, sparse_elementwise, sparse_matmul,
+    sparse_matmul_forward, sparse_matvec, sparse_matvec_forward, sparse_sub, sparse_to_dense,
+    sparsity_ratio,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use sparse::{
+    SPARSE_SPMM_CSR_KERNEL_SRC, SPARSE_SPMV_CSR_KERNEL_SRC, launch_sparse_spmm, launch_sparse_spmv,
+};
+
+pub use dynamic_parallelism::{
+    ChildKernelDescriptor, DEFAULT_SHARED_MEM_PER_BLOCK, DEFAULT_STREAM_PRIORITY, DescriptorId,
+    DynamicLaunchConfig, DynamicParallelismManager, MAX_NESTING_DEPTH, SEQUENTIAL_THRESHOLD,
+    SyncPolicy, adaptive_grid_launch, adaptive_grid_launch_forward, dynamic_reduce,
+    dynamic_reduce_forward, dynamic_scan, dynamic_scan_forward, launch_child_kernel, nested_matmul,
+    nested_matmul_forward, recursive_merge_sort, recursive_merge_sort_forward,
+    synchronize_children,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use dynamic_parallelism::{
+    DYNAMIC_PARALLELISM_KERNEL_SRC, launch_adaptive_grid, launch_dynamic_reduce,
+    launch_dynamic_scan, launch_nested_matmul, launch_recursive_merge_sort,
+};
