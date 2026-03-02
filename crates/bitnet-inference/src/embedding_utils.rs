@@ -12,7 +12,7 @@ pub fn lookup_embeddings(weight: &[f32], token_ids: &[u32], hidden_size: usize) 
             out.extend_from_slice(&weight[start..end]);
         } else {
             // OOV: zero embedding
-            out.extend(std::iter::repeat(0.0f32).take(hidden_size));
+            out.extend(std::iter::repeat_n(0.0f32, hidden_size));
         }
     }
     out

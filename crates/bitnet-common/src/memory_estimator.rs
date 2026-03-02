@@ -29,7 +29,7 @@ impl DType {
 
     /// Bytes needed for `n` elements (rounded up).
     pub fn bytes_for(&self, n: usize) -> usize {
-        (n * self.bits() + 7) / 8
+        (n * self.bits()).div_ceil(8)
     }
 }
 
