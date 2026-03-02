@@ -18,6 +18,7 @@ pub mod download_manager;
 pub mod fingerprint;
 pub mod format_detector;
 pub mod formats;
+pub mod gguf_metadata;
 pub mod gguf_min;
 pub mod gguf_parity;
 pub mod gguf_simple;
