@@ -1100,10 +1100,7 @@ fn llama_family_rules() -> Vec<MappingRule> {
         rule("model.layers.{n}.mlp.up_proj.weight", "blk.{n}.ffn_up.weight"),
         rule("model.layers.{n}.mlp.down_proj.weight", "blk.{n}.ffn_down.weight"),
         rule("model.layers.{n}.input_layernorm.weight", "blk.{n}.attn_norm.weight"),
-        rule(
-            "model.layers.{n}.post_attention_layernorm.weight",
-            "blk.{n}.ffn_norm.weight",
-        ),
+        rule("model.layers.{n}.post_attention_layernorm.weight", "blk.{n}.ffn_norm.weight"),
         rule("model.norm.weight", "output_norm.weight"),
         rule("lm_head.weight", "output.weight"),
     ]
@@ -1113,14 +1110,8 @@ fn llama_family_rules() -> Vec<MappingRule> {
 fn gemma_rules() -> Vec<MappingRule> {
     let mut rules = llama_family_rules();
     rules.extend([
-        rule(
-            "model.layers.{n}.pre_feedforward_layernorm.weight",
-            "blk.{n}.ffn_pre_norm.weight",
-        ),
-        rule(
-            "model.layers.{n}.post_feedforward_layernorm.weight",
-            "blk.{n}.ffn_post_norm.weight",
-        ),
+        rule("model.layers.{n}.pre_feedforward_layernorm.weight", "blk.{n}.ffn_pre_norm.weight"),
+        rule("model.layers.{n}.post_feedforward_layernorm.weight", "blk.{n}.ffn_post_norm.weight"),
     ]);
     rules
 }
@@ -1565,10 +1556,7 @@ mod tests {
     #[test]
     fn reverse_mapping_works() {
         let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
-        assert_eq!(
-            m.reverse_map("token_embd.weight"),
-            Some("model.embed_tokens.weight".into()),
-        );
+        assert_eq!(m.reverse_map("token_embd.weight"), Some("model.embed_tokens.weight".into()),);
         assert_eq!(
             m.reverse_map("blk.7.attn_q.weight"),
             Some("model.layers.7.self_attn.q_proj.weight".into()),
@@ -1577,14 +1565,8 @@ mod tests {
             m.reverse_map("blk.0.ffn_gate.weight"),
             Some("model.layers.0.mlp.gate_proj.weight".into()),
         );
-        assert_eq!(
-            m.reverse_map("output_norm.weight"),
-            Some("model.norm.weight".into()),
-        );
-        assert_eq!(
-            m.reverse_map("output.weight"),
-            Some("lm_head.weight".into()),
-        );
+        assert_eq!(m.reverse_map("output_norm.weight"), Some("model.norm.weight".into()),);
+        assert_eq!(m.reverse_map("output.weight"), Some("lm_head.weight".into()),);
     }
 
     #[test]
@@ -1597,17 +1579,14 @@ mod tests {
     #[test]
     fn layer_number_extraction() {
         assert_eq!(
-            extract_layer_number("model.layers.42.self_attn.q_proj.weight", "model.layers.{n}.self_attn.q_proj.weight"),
+            extract_layer_number(
+                "model.layers.42.self_attn.q_proj.weight",
+                "model.layers.{n}.self_attn.q_proj.weight"
+            ),
             Some(42),
         );
-        assert_eq!(
-            extract_layer_number("blk.0.attn_q.weight", "blk.{n}.attn_q.weight"),
-            Some(0),
-        );
-        assert_eq!(
-            extract_layer_number("no_match", "blk.{n}.attn_q.weight"),
-            None,
-        );
+        assert_eq!(extract_layer_number("blk.0.attn_q.weight", "blk.{n}.attn_q.weight"), Some(0),);
+        assert_eq!(extract_layer_number("no_match", "blk.{n}.attn_q.weight"), None,);
     }
 
     #[test]
@@ -1630,7 +1609,11 @@ mod tests {
             assert!(m.map_name(hf).is_some(), "HF name '{}' should map", hf);
         }
         for internal in &internal_names {
-            assert!(m.reverse_map(internal).is_some(), "internal '{}' should reverse-map", internal);
+            assert!(
+                m.reverse_map(internal).is_some(),
+                "internal '{}' should reverse-map",
+                internal
+            );
         }
     }
 
@@ -1644,9 +1627,6 @@ mod tests {
     fn gemma_has_more_rules_than_llama() {
         let llama = WeightMapper::for_architecture(ModelArchitecture::Llama);
         let gemma = WeightMapper::for_architecture(ModelArchitecture::Gemma);
-        assert!(
-            gemma.rule_count() > llama.rule_count(),
-            "Gemma should have extra norm rules",
-        );
+        assert!(gemma.rule_count() > llama.rule_count(), "Gemma should have extra norm rules",);
     }
 }
