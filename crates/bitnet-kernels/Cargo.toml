@@ -136,9 +136,8 @@ path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "bdd_wave_7"
-path = "tests/bdd_wave_7.rs"
-required-features = ["cpu"]
+name = "metal_compute_pipeline_tests"
+path = "tests/metal_compute_pipeline_tests.rs"
 
 [[example]]
 name = "gpu_validation"
