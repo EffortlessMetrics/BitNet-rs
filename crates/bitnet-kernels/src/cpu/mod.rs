@@ -29,6 +29,7 @@ pub use layer_norm::{
 };
 pub mod linear;
 pub use linear::{LinearConfig, linear_cpu, linear_forward};
+pub mod gradient;
 pub mod loss;
 pub mod pooling;
 pub use pooling::{
