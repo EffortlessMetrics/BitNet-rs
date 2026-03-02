@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use std::{fs, path::Path};
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DownloadValidationError {
     #[error("download truncated: got {downloaded} bytes, expected {expected} bytes")]
@@ -31,6 +33,32 @@ pub fn validate_downloaded_len(
     Ok(())
 }
 
+/// Atomic write helper for small metadata files (etag/last-modified).
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+
+    #[cfg(unix)]
+    {
+        if let Ok(file) = fs::File::open(&tmp) {
+            file.sync_all()?;
+        }
+    }
+
+    fs::rename(&tmp, path)?;
+
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,5 +77,16 @@ mod tests {
             validate_downloaded_len(1, Some(2)),
             Err(DownloadValidationError::Truncated { downloaded: 1, expected: 2 })
         ));
+    }
+
+    #[test]
+    fn atomic_write_persists_bytes() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let path = dir.path().join("etag.txt");
+
+        atomic_write(&path, b"etag-v1").expect("write metadata atomically");
+
+        let bytes = fs::read(path).expect("read metadata");
+        assert_eq!(bytes, b"etag-v1");
     }
 }

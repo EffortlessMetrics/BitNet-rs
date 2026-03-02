@@ -7,10 +7,13 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
-description = "SRP core download helpers for offline mode and content-length validation"
+description = "SRP core download helpers for offline mode, content-length validation, and atomic metadata writes"
 
 [dependencies]
 thiserror.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
