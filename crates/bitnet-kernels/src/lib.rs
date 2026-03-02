@@ -24,9 +24,9 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kernels;
-pub mod norm_registry;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
+pub mod norm_registry;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_async_executor;
