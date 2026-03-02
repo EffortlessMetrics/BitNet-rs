@@ -9,11 +9,11 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 
 ## Features
 
-- **SIMD/CUDA/Metal/Vulkan kernels** — AVX2/AVX-512/NEON on CPU; CUDA (`gpu`), Metal (`metal`, macOS), Vulkan (`vulkan`), Intel oneAPI (`oneapi`) GPU backends
+- **SIMD/CUDA/Metal/Vulkan kernels** — AVX2/AVX-512/NEON on CPU; CUDA (`gpu`), Metal (`metal`, macOS), Vulkan (`vulkan`), Intel Arc OpenCL (`opencl`) GPU backends
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
+- **Chat templates** — 59+ template variants (LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, and more); auto-detected from GGUF metadata or tokenizer path
 - **SLM model support** — load and run Phi-4, Qwen, Gemma, Mistral, LLaMA, and SmolLM2 via SafeTensors ([quickstart guide](docs/slm-quickstart.md))
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
 
@@ -50,7 +50,7 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | GPU inference — Vulkan        | ⚠️    | Runtime probing compiled; end-to-end validation pending |
 | GPU inference — Intel oneAPI  | ⚠️    | Intel CPU/GPU feature gate; validation in progress |
 | AMD ROCm detection            | ⚠️    | Device detection only; inference kernels not yet validated |
-| GPU HAL — multi-backend       | 🔧    | `bitnet-gpu-hal`: OpenCL, WebGPU, Level-Zero; 3000+ tests (CPU-only validation) |
+| GPU HAL — multi-backend       | 🔧    | `bitnet-gpu-hal`: OpenCL, Vulkan, Metal, ROCm backends; 10,000+ tests (scaffold; CPU-only validation) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
 | Honest-compute receipts       | ✅    | Schema v1.0.0, 8 validation gates |
@@ -65,11 +65,11 @@ BitNet-rs supports inference on multiple GPU platforms:
 | Backend | Feature Flag | Status | Hardware |
 |---------|-------------|--------|----------|
 | NVIDIA CUDA | `--features gpu` | ✅ Production | GeForce/Tesla/A100+ |
-| Intel Arc (OpenCL) | `--features oneapi` | 🔶 Alpha | Arc A770/A750 |
+| Intel Arc (OpenCL) | `--features opencl` | 🔶 Alpha | Arc A770/A750 |
 | AMD ROCm | `--features rocm` | 🧪 Experimental | Unvalidated target: RDNA3-class AMD GPUs |
 | Vulkan | `--features vulkan` | 🧪 Experimental | Any Vulkan 1.3 GPU |
 | Apple Metal | `--features metal` | 🧪 Experimental | M1/M2/M3+ |
-| WebGPU | `--features webgpu` | 🧪 Experimental | Browser/wgpu |
+| WebGPU | N/A (sub-crate only) | 🧪 Experimental | Browser/wgpu (`bitnet-wgpu`) |
 | CPU (SIMD) | `--features cpu` | ✅ Production | x86-64/ARM64 |
 
 ### Quick Start (Intel Arc)
@@ -79,10 +79,10 @@ BitNet-rs supports inference on multiple GPU platforms:
 sudo apt install intel-opencl-icd clinfo
 
 # Build with Intel GPU support
-cargo build --release --no-default-features --features oneapi,full-cli
+cargo build --release --no-default-features --features opencl,full-cli
 
 # Run inference
-cargo run -p bitnet-cli --no-default-features --features oneapi,full-cli -- run \
+cargo run -p bitnet-cli --no-default-features --features opencl,full-cli -- run \
   --model models/model.gguf --device opencl --prompt "Hello" --max-tokens 32
 ```
 
@@ -113,7 +113,7 @@ bitnet-models  (GGUF loader, dual I2_S flavor detection) │
                           ├── bitnet-logits       (temperature / top-k / top-p)
                           ├── bitnet-sampling     (greedy, nucleus, repetition penalty)
                           ├── bitnet-generation   (decode loop, stop criteria)
-                          ├── bitnet-prompt-templates  (raw / instruct / llama3-chat)
+                          ├── bitnet-prompt-templates  (59+ template variants; auto-detection)
                           └── bitnet-receipts     (honest-compute receipt schema)
                                                          │
                                           ┌──────────────┴──────────────┐
@@ -126,11 +126,10 @@ bitnet-models  (GGUF loader, dual I2_S flavor detection) │
 
 - `bitnet-opencl` — Intel GPU compute via OpenCL 3.0
 - `bitnet-vulkan` — Cross-vendor Vulkan compute
-- `bitnet-level-zero` — Intel Level Zero (low-level)
-- `bitnet-webgpu` — WebGPU/WGSL compute shaders
+- `bitnet-wgpu` / `bitnet-wgpu-runner` — WebGPU/WGSL compute shaders
 - `bitnet-rocm` — AMD ROCm/HIP backend
 - `bitnet-metal` — Apple Metal compute
-- `bitnet-gpu-hal` — Unified Hardware Abstraction Layer
+- `bitnet-gpu-hal` — Unified Hardware Abstraction Layer (includes Level Zero backend module)
 
 ## Documentation
 
@@ -166,7 +165,7 @@ nix develop && nix build .#bitnet-cli && nix flake check
 | `cuda` | CUDA acceleration (preferred; requires CUDA 12.x); backward-compat alias for `gpu` |
 | `metal` | Metal GPU backend (macOS/iOS Apple Silicon) |
 | `vulkan` | Vulkan compute backend (cross-platform) |
-| `oneapi` | Intel oneAPI backend (Intel CPU/GPU) |
+| `oneapi` | Intel oneAPI (sub-crate feature in `bitnet-kernels`; use `opencl` for root-level Intel GPU) |
 | `ffi` | C++ FFI bridge for cross-validation |
 | `fixtures` | GGUF fixture-based integration tests (test-only) |
 | `full-cli` | Enable all CLI subcommands |
@@ -201,7 +200,7 @@ cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 ```
 
-The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (49 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d — TDD scaffolding for tracked issues. See justification strings.
+The suite has tens of thousands of tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (84 targets; 45 in nightly CI matrix), and BDD grid categories. ~1,050+ tests are intentionally `#[ignore]`-d — TDD scaffolds, resource-gated tests, slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
 
 See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
 
@@ -215,7 +214,7 @@ cargo fmt --all && cargo clippy --all-targets --no-default-features --features c
 cargo nextest run --workspace --no-default-features --features cpu
 ```
 
-Note: ~70 tests are intentionally `#[ignore]`-d. This is expected — they are TDD scaffolds for tracked issues. See `#[ignore = "..."]` justification strings.
+Note: ~1,050+ tests are intentionally `#[ignore]`-d. This is expected — they are TDD scaffolds, resource-gated tests (model files, GPU hardware), slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
 
 ## License
 

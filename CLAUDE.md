@@ -17,22 +17,27 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - Cross-validation framework against C++ reference
 - **GGUF Fixtures & Dual-Flavor Tests** - Complete test infrastructure (12/12 passing)
 - **EnvGuard Environment Isolation** - Robust parallel test execution with `#[serial(bitnet_env)]`
-- **Receipt Verification** - Schema v1.0.0 with 8 validation gates (25/25 tests passing)
+- **Receipt Verification** - Schema v1.0.0 with 8 validation gates (160+ tests across receipt crates)
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 - **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
 - **CPU Golden Path E2E Tests** - 7 deterministic end-to-end tests always running in PR CI (no model download); includes reproducibility (seed=42 identical tokens) and pinned-output regression guard [140,459,459,459] (#790)
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
-- **Nightly Fuzz Workflow** — 49 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
+- **Nightly Fuzz Workflow** — 84 fuzz targets (45 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
-- **Criterion Benchmarks** — `benches/srp_ops.rs` with 6 functions: logits pipeline, top-k (k=5/k=50), repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
+- **Criterion Benchmarks** — 5 active bench targets: `srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops` (#787)
 - **KV Cache Optimization** — incremental inference module with paged cache and eviction policies (LRU, SlidingWindow, AttentionBased) in `kv_cache_optimized` (#1685)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 - **GPU HAL** — `bitnet-gpu-hal` unified hardware abstraction layer with backend selector, async runtime, checkpoint manager, and deployment manager (scaffold; backends not yet validated end-to-end)
 - **OpenCL / Intel Arc** — `bitnet-opencl` crate with built-in kernel registry and Intel Arc A770 work-size optimization (experimental; feature `opencl`)
 - **Production Tensor Validation** — runtime shape/dtype validation in `bitnet-common`
-- **Wave 9 Fuzz** — softmax stability, embedding lookup, memory layout targets (49 targets total)
+- **Wave 9 Fuzz** — softmax stability, embedding lookup, memory layout targets (84 fuzz target files total)
+- **Multi-Architecture Support** — 20 families in `ModelArchitecture` enum, 99+ `ArchitectureRegistry` entries
+- **GQA/MQA/MHA Attention** — `AttentionVariant` in CPU attention kernel
+- **SafeTensors Sharded Loading** — `SafeTensorsReader` in `bitnet-models`
+- **Extended OpenCL Modules** — continuous batching, engine bridge, model converter, graph compiler in `bitnet-opencl`
+- **59+ Prompt Template Variants** — LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, and more
 
 ### Current Limitations
 
@@ -45,13 +50,13 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
   - **Roadmap**: ≥3× improvement planned with AVX2 nibble-LUT + FMA tiling
   - **Alternative**: Use I2_S BitNet32-F16 format for 10-20× faster performance
 
-- **GPU Backends (All Scaffolded, Not Yet Validated)**: Metal, Vulkan, oneAPI, ROCm, and OpenCL backends have feature gates and kernel stubs but are not validated end-to-end. CUDA is the furthest along but receipt validation is still pending.
+- **GPU Backends (All Scaffolded, Not Yet Validated)**: Metal, Vulkan, OpenCL (Intel Arc/oneAPI via `--features opencl`), ROCm backends have feature gates and kernel stubs but are not validated end-to-end. CUDA is the furthest along but receipt validation is still pending.
 
 - **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~466 tests skipped in full `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding), all with justification
+- **Test Scaffolding**: ~1,050+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
 
 ## Quick Reference
 
@@ -191,7 +196,7 @@ cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 
 **SRP Microcrates** (wired into CI): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core`, `bitnet-validation`, `bitnet-prompt-templates`
 
-Note: The workspace has ~92 total crates; the above lists user-facing and architecture-critical ones.
+Note: The workspace has 107+ total crates; the above lists user-facing and architecture-critical ones.
 
 ## Key Configurations
 
@@ -209,7 +214,7 @@ Note: The workspace has ~92 total crates; the above lists user-facing and archit
 - `fixtures`: Enable GGUF fixture-based integration tests (test-only feature)
 - `metal`: Metal GPU backend (macOS/iOS Apple Silicon; kernel stubs present, validation ongoing)
 - `vulkan`: Vulkan compute backend (cross-platform; scaffolded, validation pending)
-- `oneapi`: Intel oneAPI backend (Intel CPU/GPU; scaffolded, validation pending)
+- `oneapi`: Intel oneAPI (sub-crate feature in `bitnet-kernels`; use `opencl` for root-level Intel GPU support)
 - `rocm`: AMD ROCm detection; device probe only, inference kernels not yet validated
 - `npu`: NPU detection via `bitnet-device-probe`
 - `opencl`: Intel Arc OpenCL backend (experimental; `bitnet-opencl` crate)
@@ -271,7 +276,7 @@ bitnet-rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - **Runtime dispatch**: Scalar fallback if `avx2` is unavailable at runtime
 - **Correctness parity**: ≤ 1e-5 max absolute difference vs scalar on randomized shapes
 - **Initial uplift**: ~1.2× observed; target ≥3× with nibble-LUT + FMA tiling and prefetch
-- **Benchmarks**: Run `cargo bench --bench kernel_benchmarks --features cpu,avx2`
+- **Benchmarks**: Run `cargo bench --bench kernel_ops --features cpu`
 - **Tests**: Property-based tests validate numerical correctness across random inputs
 
 **Planned optimizations for ≥3× uplift:**
@@ -852,7 +857,7 @@ Both backends available. Dual-backend cross-validation supported.
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]`
   pattern
 - Template auto-detection: If the wrong template is detected, override with
-  `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with
+  `--prompt-template` (59+ variants including raw, instruct, llama3-chat, phi-4, qwen, gemma, mistral, deepseek, and more). Check GGUF metadata with
   `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
   priority issues.
 - Backend selection: Use `--cpp-backend bitnet|llama` to explicitly select C++ reference implementation
@@ -896,7 +901,7 @@ bitnet-rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current counts.
-- **~462 tests skipped** at last count — all with `#[ignore = "reason"]` justification
+- **~1,050+ tests skipped** at last count — all with `#[ignore = "reason"]` justification
 - All enabled tests pass in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
@@ -986,17 +991,17 @@ These test suites pass reliably (run `cargo nextest run --workspace --no-default
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
-- **snapshot tests**: Struct/output stability via insta (42 files, ~160 assertions, 192 snapshot files)
+- **snapshot tests**: Struct/output stability via insta (900+ snapshot files)
 - **property tests**: Randomised invariants via proptest (50 crates, 230+ properties)
 - **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
 - **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
-- **receipt verification tests**: Schema v1.0.0 with 8 gates (25/25 passing)
+- **receipt verification tests**: Schema v1.0.0 with 8 gates (160+ tests passing)
 - **strict mode tests**: Runtime guards and enforcement (12/12 passing)
 - **environment isolation tests**: EnvGuard parallel safety (serial + temp_env)
-- **CPU golden path E2E tests**: Deterministic inference with receipt invariants (5/5 passing)
-- **SRP microcrate tests**: bitnet-logits (15), bitnet-gguf (8), bitnet-generation (11), bitnet-device-probe (5), bitnet-engine-core (4)
+- **CPU golden path E2E tests**: Deterministic inference with receipt invariants (7 tests passing)
+- **SRP microcrate tests**: bitnet-logits (280+), bitnet-gguf (370+), bitnet-generation (210+), bitnet-device-probe (400+), bitnet-engine-core (240+)
 - **KVCache property tests**: 5 new shape-invariant properties (after N appends, layer independence, layer count, head divisibility, seq_len monotonicity) (#784)
 - **tokenizer property tests**: 5 new encode/decode properties (BOS/EOS prepend, decode never panics, word preservation, config serde round-trip, EOS ID bounds) (#785)
 
@@ -1174,8 +1179,8 @@ cargo test -p bitnet-models --no-default-features --features cpu
 **Current State**:
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current pass counts
-- ~462 tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
-- Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds
+- ~1,050+ tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
+- Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds, network-dependent tests
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation, snapshot tests, property tests, fuzz
 
 **CI Status**: Only non-ignored tests run in PR CI. Ignored tests are opt-in via `--run-ignored`.
@@ -1208,7 +1213,7 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding for unimplemented features**: ~466 tests skipped across the workspace (87 in core, ~379 in xtask/crossval scaffolding); all have justification strings
+- **Expect test scaffolding for unimplemented features**: ~1,050+ tests skipped across the workspace (TDD scaffolds, resource-gated, slow, CUDA, crossval, network-dependent); all have justification strings
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
 - **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
 - **Check `#[ignore = "..."]` justification before investigating**: The reason tells you exactly what's needed to unblock
