@@ -5,7 +5,7 @@ use std::time::SystemTime;
 pub fn exp_backoff_ms(attempt: u32) -> u64 {
     let shift = attempt.saturating_sub(1).min(20);
     let base = (200u64).saturating_mul(1u64 << shift).min(10_000);
-    let jitter = (attempt as u64 * 37) % 200;
+    let jitter = (u64::from(attempt) * 37) % 200;
     base.saturating_add(jitter)
 }
 
@@ -32,8 +32,7 @@ pub fn retry_after_secs_at(value: Option<&str>, now: SystemTime) -> u64 {
     httpdate::parse_http_date(raw)
         .ok()
         .and_then(|when| when.duration_since(now).ok())
-        .map(|d| d.as_secs().clamp(1, 3600))
-        .unwrap_or(5)
+        .map_or(5, |d| d.as_secs().clamp(1, 3600))
 }
 
 #[cfg(test)]

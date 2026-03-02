@@ -46,14 +46,11 @@ fuzz_target!(|input: ChainInput| {
         .typical(input.typical_p)
         .build(input.seed);
 
-    match chain.sample(&logits) {
-        Ok(token_id) => {
-            assert!(
-                (token_id as usize) < vocab_size,
-                "chain returned OOB token {token_id} for vocab size {vocab_size}",
-            );
-        }
-        Err(_) => {}
+    if let Ok(token_id) = chain.sample(&logits) {
+        assert!(
+            (token_id as usize) < vocab_size,
+            "chain returned OOB token {token_id} for vocab size {vocab_size}",
+        );
     }
 
     // Verify stages are queryable without panic

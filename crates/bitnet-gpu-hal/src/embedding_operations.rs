@@ -264,8 +264,8 @@ impl RotaryEmbedding {
         for i in 0..half {
             let cos_val = self.cos_table[base + i];
             let sin_val = self.sin_table[base + i];
-            out[2 * i] = x[2 * i] * cos_val - x[2 * i + 1] * sin_val;
-            out[2 * i + 1] = x[2 * i] * sin_val + x[2 * i + 1] * cos_val;
+            out[2 * i] = x[2 * i].mul_add(cos_val, -(x[2 * i + 1] * sin_val));
+            out[2 * i + 1] = x[2 * i].mul_add(sin_val, x[2 * i + 1] * cos_val);
         }
         Some(out)
     }
@@ -290,8 +290,8 @@ impl RotaryEmbedding {
                 let sin_val = self.sin_table[tbl + i];
                 let x0 = data[row + 2 * i];
                 let x1 = data[row + 2 * i + 1];
-                data[row + 2 * i] = x0 * cos_val - x1 * sin_val;
-                data[row + 2 * i + 1] = x0 * sin_val + x1 * cos_val;
+                data[row + 2 * i] = x0.mul_add(cos_val, -(x1 * sin_val));
+                data[row + 2 * i + 1] = x0.mul_add(sin_val, x1 * cos_val);
             }
         }
         true
@@ -380,8 +380,8 @@ impl ALiBiEmbedding {
     /// Standard ALiBi slope schedule: geometric series `2^(-8/n), 2^(-16/n), …`.
     fn compute_slopes(num_heads: usize) -> Vec<f32> {
         // Closest power-of-two ≤ num_heads for the geometric series.
-        let closest_pow2 = 1_usize << (usize::BITS - 1 - num_heads.leading_zeros() as u32);
-        let base = 2.0_f32.powf(-(8.0 / closest_pow2 as f32));
+        let closest_pow2 = 1_usize << (usize::BITS - 1 - num_heads.leading_zeros());
+        let base = (-(8.0 / closest_pow2 as f32)).exp2();
         let mut slopes = Vec::with_capacity(num_heads);
         if num_heads == closest_pow2 {
             for i in 1..=num_heads {
@@ -389,7 +389,7 @@ impl ALiBiEmbedding {
             }
         } else {
             // First half: closest_pow2 slopes with base exponent.
-            let extra_base = 2.0_f32.powf(-(8.0 / (2 * closest_pow2) as f32));
+            let extra_base = (-(8.0 / (2 * closest_pow2) as f32)).exp2();
             for i in 1..=closest_pow2 {
                 slopes.push(base.powi(i as i32));
             }
@@ -883,10 +883,10 @@ impl EmbeddingEngine {
             output.extend(self.token_embedding.lookup(tid)?);
         }
         // Add sinusoidal positions if configured.
-        if let Some(ref pe) = self.positional {
-            if !pe.add_to(&mut output, seq_len, position_offset) {
-                return None;
-            }
+        if let Some(ref pe) = self.positional
+            && !pe.add_to(&mut output, seq_len, position_offset)
+        {
+            return None;
         }
         // Normalize each vector.
         if let Some(ref norm) = self.normalizer {

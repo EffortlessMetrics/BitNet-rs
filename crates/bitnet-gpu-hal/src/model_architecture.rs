@@ -259,10 +259,10 @@ impl ArchitectureDetector {
         for key in
             &["llama.block_count", "gpt2.block_count", "bert.block_count", "general.block_count"]
         {
-            if let Some(v) = metadata.get(*key) {
-                if let Ok(n) = v.parse::<usize>() {
-                    return Some(n);
-                }
+            if let Some(v) = metadata.get(*key)
+                && let Ok(n) = v.parse::<usize>()
+            {
+                return Some(n);
             }
         }
         None

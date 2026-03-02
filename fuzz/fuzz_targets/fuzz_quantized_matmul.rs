@@ -47,9 +47,9 @@ fuzz_target!(|input: QuantMatmulInput| {
     let n = (input.n_byte as usize % 4) + 1;
     // k must be divisible by 4 for i2s packing
     let k_raw = (input.k_byte as usize % 8) + 1;
-    let k = ((k_raw + 3) / 4) * 4;
+    let k = k_raw.div_ceil(4) * 4;
     let block_size_raw = (input.block_size_byte as usize % 8) + 1;
-    let block_size = ((block_size_raw + 3) / 4) * 4;
+    let block_size = block_size_raw.div_ceil(4) * 4;
 
     let act_count = m * k;
     let packed_k = k.div_ceil(4);

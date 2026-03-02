@@ -390,7 +390,7 @@ impl MetricsExporter for PrometheusExporter {
         buf
     }
 
-    fn format_name(&self) -> &str {
+    fn format_name(&self) -> &'static str {
         "prometheus"
     }
 }
@@ -403,7 +403,7 @@ impl MetricsExporter for JsonExporter {
         serde_json::to_string_pretty(points).unwrap_or_default()
     }
 
-    fn format_name(&self) -> &str {
+    fn format_name(&self) -> &'static str {
         "json"
     }
 }

@@ -88,7 +88,7 @@ fuzz_target!(|input: Conv2dInput| {
                 groups: ch,
             };
             let input_size = batch * ch * in_h * in_w;
-            let weight_size = ch * 1 * kh * kw;
+            let weight_size = ch * kh * kw;
             let inp = bytes_to_f32(&input.data, input_size);
             let wt = bytes_to_f32(&input.data, weight_size);
             let _ = depthwise_conv2d(&inp, &wt, None, &config, batch, in_h, in_w);

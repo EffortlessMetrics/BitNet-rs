@@ -15,10 +15,11 @@ fuzz_target!(|data: &[u8]| {
     // that slice as JSON.  This mirrors the exact code path in the loader.
     if data.len() >= 8 {
         let header_len = u64::from_le_bytes(data[0..8].try_into().unwrap()) as usize;
-        if header_len > 0 && header_len < 1024 * 1024 {
-            if let Some(header_data) = data.get(8..8 + header_len) {
-                let _ = serde_json::from_slice::<serde_json::Value>(header_data);
-            }
+        if header_len > 0
+            && header_len < 1024 * 1024
+            && let Some(header_data) = data.get(8..8 + header_len)
+        {
+            let _ = serde_json::from_slice::<serde_json::Value>(header_data);
         }
     }
 });

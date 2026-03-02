@@ -40,15 +40,12 @@ fuzz_target!(|input: MirostatInput| {
     let mut sampler = MirostatSampler::new(tau, eta, input.seed);
 
     for _ in 0..num_samples {
-        match sampler.sample(&logits) {
-            Ok(token_id) => {
-                assert!(
-                    (token_id as usize) < logits.len(),
-                    "mirostat returned OOB token {token_id} for vocab size {}",
-                    logits.len(),
-                );
-            }
-            Err(_) => {}
+        if let Ok(token_id) = sampler.sample(&logits) {
+            assert!(
+                (token_id as usize) < logits.len(),
+                "mirostat returned OOB token {token_id} for vocab size {}",
+                logits.len(),
+            );
         }
     }
 
