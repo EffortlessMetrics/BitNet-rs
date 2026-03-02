@@ -188,9 +188,8 @@ pub fn cpu_apply_rope(x: &[f32], position: usize, table: &RoPETable) -> Vec<f32>
 
 /// Build ALiBi slopes as a geometric series: slope_h = 2^(-8h/H).
 pub fn cpu_build_alibi_slopes(num_heads: usize) -> ALiBiSlope {
-    let slopes: Vec<f32> = (0..num_heads)
-        .map(|h| 2.0_f32.powf(-8.0 * (h + 1) as f32 / num_heads as f32))
-        .collect();
+    let slopes: Vec<f32> =
+        (0..num_heads).map(|h| 2.0_f32.powf(-8.0 * (h + 1) as f32 / num_heads as f32)).collect();
     ALiBiSlope { slopes, num_heads }
 }
 
@@ -216,12 +215,7 @@ pub fn cpu_apply_alibi(attention_scores: &mut [f32], slopes: &ALiBiSlope, seq_le
 // ---------------------------------------------------------------------------
 
 /// Build NTK-aware RoPE table with base scaling: base' = base * alpha^(dim/(dim-2)).
-pub fn cpu_ntk_rope_table(
-    base: f32,
-    alpha: f32,
-    dim: usize,
-    max_pos: usize,
-) -> RoPETable {
+pub fn cpu_ntk_rope_table(base: f32, alpha: f32, dim: usize, max_pos: usize) -> RoPETable {
     let scaled_base = base * alpha.powf(dim as f32 / (dim as f32 - 2.0));
     cpu_build_rope_table(scaled_base, dim, max_pos)
 }
@@ -259,7 +253,8 @@ pub fn cpu_generate_positions(
             PositionMethod::RoPE { .. } | PositionMethod::NTKRoPE { .. } => {
                 let table =
                     generator.rope_table.as_ref().ok_or(PositionError::UnsupportedMethod)?;
-                let identity: Vec<f32> = (0..dim).map(|i| if i % 2 == 0 { 1.0 } else { 0.0 }).collect();
+                let identity: Vec<f32> =
+                    (0..dim).map(|i| if i % 2 == 0 { 1.0 } else { 0.0 }).collect();
                 let data = cpu_apply_rope(&identity, pos, table);
                 PositionEmbedding {
                     data,
@@ -278,7 +273,10 @@ pub fn cpu_generate_positions(
             }
             PositionMethod::Learned { max_positions } => {
                 if pos >= *max_positions {
-                    return Err(PositionError::ExceedsMaxLength { position: pos, max: *max_positions });
+                    return Err(PositionError::ExceedsMaxLength {
+                        position: pos,
+                        max: *max_positions,
+                    });
                 }
                 // Deterministic pseudo-random learned embedding (hash-based).
                 let data = (0..dim)
@@ -388,11 +386,7 @@ mod tests {
     // -- helpers ------------------------------------------------------------
 
     fn default_sinusoidal(dim: usize) -> PositionConfig {
-        PositionConfig {
-            method: PositionMethod::Sinusoidal,
-            max_seq_len: 4096,
-            hidden_dim: dim,
-        }
+        PositionConfig { method: PositionMethod::Sinusoidal, max_seq_len: 4096, hidden_dim: dim }
     }
 
     fn default_rope(dim: usize) -> PositionConfig {
@@ -406,10 +400,7 @@ mod tests {
     fn assert_close(a: &[f32], b: &[f32], tol: f32, msg: &str) {
         assert_eq!(a.len(), b.len(), "{msg}: length mismatch");
         for (i, (va, vb)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (va - vb).abs() < tol,
-                "{msg}: index {i}: {va} vs {vb} (tol={tol})"
-            );
+            assert!((va - vb).abs() < tol, "{msg}: index {i}: {va} vs {vb} (tol={tol})");
         }
     }
 
@@ -469,10 +460,7 @@ mod tests {
         let b = cpu_sinusoidal_encoding(100, dim);
         let self_dot: f32 = a.iter().map(|x| x * x).sum();
         let cross_dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-        assert!(
-            cross_dot.abs() < self_dot * 0.5,
-            "cross_dot={cross_dot}, self_dot={self_dot}"
-        );
+        assert!(cross_dot.abs() < self_dot * 0.5, "cross_dot={cross_dot}, self_dot={self_dot}");
     }
 
     #[test]
@@ -576,10 +564,7 @@ mod tests {
         let orig_norm = vec_norm(&x);
         for pos in [0, 1, 10, 63, 127] {
             let r = cpu_apply_rope(&x, pos, &table);
-            assert!(
-                (vec_norm(&r) - orig_norm).abs() < 1e-4,
-                "norm differs at pos {pos}"
-            );
+            assert!((vec_norm(&r) - orig_norm).abs() < 1e-4, "norm differs at pos {pos}");
         }
     }
 
@@ -714,11 +699,8 @@ mod tests {
 
     #[test]
     fn generate_exceeds_max_length() {
-        let config = PositionConfig {
-            method: PositionMethod::Sinusoidal,
-            max_seq_len: 10,
-            hidden_dim: 4,
-        };
+        let config =
+            PositionConfig { method: PositionMethod::Sinusoidal, max_seq_len: 10, hidden_dim: 4 };
         let mut generator = create_position_generator(config);
         let result = cpu_generate_positions(&mut generator, &[10]);
         assert!(matches!(result, Err(PositionError::ExceedsMaxLength { position: 10, max: 10 })));
