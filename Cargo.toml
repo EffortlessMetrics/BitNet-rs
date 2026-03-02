@@ -51,6 +51,7 @@ members = [
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
+  "crates/bitnet-cli-tensor-core", # SRP: reusable CLI tensor extraction/diagnostic primitives
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-safetensors-ln", # SRP: shared SafeTensors LayerNorm utilities
@@ -146,6 +147,7 @@ default-members = [
   "crates/bitnet-receipts-core",
   "crates/bitnet-sampling",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
+  "crates/bitnet-cli-tensor-core", # SRP: reusable CLI tensor extraction/diagnostic primitives
   "crates/bitnet-cli",
   "crates/bitnet-scoring-core",
   "crates/bitnet-server",
