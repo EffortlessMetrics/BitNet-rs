@@ -120,6 +120,11 @@ name = "cpu_scalar_parity"
 path = "tests/cpu_scalar_parity.rs"
 required-features = ["cpu"]
 
+[[test]]
+name = "kernel_perf_smoke"
+path = "tests/kernel_perf_smoke.rs"
+required-features = ["cpu"]
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
