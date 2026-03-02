@@ -57,8 +57,8 @@ type Result<T> = std::result::Result<T, ConfigDetectionError>;
 /// `{arch}.embedding_length`, etc.) and falls back to architecture defaults
 /// from the registry when a key is absent.
 pub fn detect_from_gguf(metadata: &HashMap<String, GgufValue>) -> Result<ModelConfig> {
-    let arch_str = gguf_string(metadata, "general.architecture")
-        .unwrap_or_else(|| "llama".to_string());
+    let arch_str =
+        gguf_string(metadata, "general.architecture").unwrap_or_else(|| "llama".to_string());
     let arch = detect_architecture(&arch_str);
     let defaults = get_defaults(&arch);
 
@@ -67,35 +67,31 @@ pub fn detect_from_gguf(metadata: &HashMap<String, GgufValue>) -> Result<ModelCo
     // Architecture-prefixed key helper
     let ak = |field: &str| -> String { format!("{arch_str}.{field}") };
 
-    cfg.hidden_size = gguf_usize(metadata, &ak("embedding_length"))
-        .unwrap_or(defaults.typical_hidden_size);
+    cfg.hidden_size =
+        gguf_usize(metadata, &ak("embedding_length")).unwrap_or(defaults.typical_hidden_size);
 
-    cfg.num_layers = gguf_usize(metadata, &ak("block_count"))
-        .unwrap_or(32);
+    cfg.num_layers = gguf_usize(metadata, &ak("block_count")).unwrap_or(32);
 
-    cfg.num_heads = gguf_usize(metadata, &ak("attention.head_count"))
-        .unwrap_or(32);
+    cfg.num_heads = gguf_usize(metadata, &ak("attention.head_count")).unwrap_or(32);
 
-    cfg.num_key_value_heads = gguf_usize(metadata, &ak("attention.head_count_kv"))
-        .unwrap_or(cfg.num_heads);
+    cfg.num_key_value_heads =
+        gguf_usize(metadata, &ak("attention.head_count_kv")).unwrap_or(cfg.num_heads);
 
-    cfg.intermediate_size = gguf_usize(metadata, &ak("feed_forward_length"))
-        .unwrap_or(cfg.hidden_size * 4);
+    cfg.intermediate_size =
+        gguf_usize(metadata, &ak("feed_forward_length")).unwrap_or(cfg.hidden_size * 4);
 
     cfg.vocab_size = gguf_usize(metadata, &ak("vocab_size"))
         .or_else(|| gguf_usize(metadata, "tokenizer.ggml.vocab_size"))
         .unwrap_or(defaults.vocab_size);
 
-    cfg.max_position_embeddings = gguf_usize(metadata, &ak("context_length"))
-        .unwrap_or(defaults.max_context);
+    cfg.max_position_embeddings =
+        gguf_usize(metadata, &ak("context_length")).unwrap_or(defaults.max_context);
 
-    cfg.rope_theta = gguf_f32(metadata, &ak("rope.freq_base"))
-        .or(Some(defaults.rope_base));
+    cfg.rope_theta = gguf_f32(metadata, &ak("rope.freq_base")).or(Some(defaults.rope_base));
 
     // Rope scaling (optional)
     if let Some(st) = gguf_string(metadata, &ak("rope.scaling.type")) {
-        let factor = gguf_f32(metadata, &ak("rope.scaling.factor"))
-            .unwrap_or(1.0);
+        let factor = gguf_f32(metadata, &ak("rope.scaling.factor")).unwrap_or(1.0);
         if st != "none" {
             cfg.rope_scaling = Some(RopeScaling { scaling_type: st, factor });
         }
@@ -125,38 +121,28 @@ pub fn detect_from_hf_config(config_json: &str) -> Result<ModelConfig> {
     let raw: serde_json::Value = serde_json::from_str(config_json)
         .map_err(|e| ConfigDetectionError::InvalidJson(e.to_string()))?;
 
-    let model_type = raw
-        .get("model_type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown");
+    let model_type = raw.get("model_type").and_then(|v| v.as_str()).unwrap_or("unknown");
     let arch = detect_architecture(model_type);
     let defaults = get_defaults(&arch);
 
     let mut cfg = ModelConfig { format: ModelFormat::SafeTensors, ..Default::default() };
 
-    cfg.hidden_size = json_usize(&raw, "hidden_size")
-        .unwrap_or(defaults.typical_hidden_size);
+    cfg.hidden_size = json_usize(&raw, "hidden_size").unwrap_or(defaults.typical_hidden_size);
 
-    cfg.num_layers = json_usize(&raw, "num_hidden_layers")
-        .unwrap_or(32);
+    cfg.num_layers = json_usize(&raw, "num_hidden_layers").unwrap_or(32);
 
-    cfg.num_heads = json_usize(&raw, "num_attention_heads")
-        .unwrap_or(32);
+    cfg.num_heads = json_usize(&raw, "num_attention_heads").unwrap_or(32);
 
-    cfg.num_key_value_heads = json_usize(&raw, "num_key_value_heads")
-        .unwrap_or(cfg.num_heads);
+    cfg.num_key_value_heads = json_usize(&raw, "num_key_value_heads").unwrap_or(cfg.num_heads);
 
-    cfg.intermediate_size = json_usize(&raw, "intermediate_size")
-        .unwrap_or(cfg.hidden_size * 4);
+    cfg.intermediate_size = json_usize(&raw, "intermediate_size").unwrap_or(cfg.hidden_size * 4);
 
-    cfg.vocab_size = json_usize(&raw, "vocab_size")
-        .unwrap_or(defaults.vocab_size);
+    cfg.vocab_size = json_usize(&raw, "vocab_size").unwrap_or(defaults.vocab_size);
 
-    cfg.max_position_embeddings = json_usize(&raw, "max_position_embeddings")
-        .unwrap_or(defaults.max_context);
+    cfg.max_position_embeddings =
+        json_usize(&raw, "max_position_embeddings").unwrap_or(defaults.max_context);
 
-    cfg.rope_theta = json_f32(&raw, "rope_theta")
-        .or(Some(defaults.rope_base));
+    cfg.rope_theta = json_f32(&raw, "rope_theta").or(Some(defaults.rope_base));
 
     // Rope scaling (optional JSON object)
     if let Some(rs) = raw.get("rope_scaling").and_then(|v| v.as_object()) {
@@ -166,10 +152,7 @@ pub fn detect_from_hf_config(config_json: &str) -> Result<ModelConfig> {
             .and_then(|v| v.as_str())
             .unwrap_or("none")
             .to_string();
-        let factor = rs
-            .get("factor")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(1.0) as f32;
+        let factor = rs.get("factor").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
         if st != "none" {
             cfg.rope_scaling = Some(RopeScaling { scaling_type: st, factor });
         }
@@ -186,9 +169,7 @@ pub fn detect_from_hf_config(config_json: &str) -> Result<ModelConfig> {
     if let Some(act) = raw.get("hidden_act").and_then(|v| v.as_str()) {
         cfg.activation_type = match act.to_lowercase().as_str() {
             "silu" | "swish" => ActivationType::Silu,
-            "gelu" | "gelu_new" | "gelu_fast" | "gelu_pytorch_tanh" => {
-                ActivationType::Gelu
-            }
+            "gelu" | "gelu_new" | "gelu_fast" | "gelu_pytorch_tanh" => ActivationType::Gelu,
             "relu2" | "squared_relu" => ActivationType::Relu2,
             _ => defaults.activation,
         };
@@ -212,11 +193,7 @@ pub fn detect_from_hf_config(config_json: &str) -> Result<ModelConfig> {
 ///
 /// Architecture-specific defaults are applied automatically.
 pub fn auto_detect_config(model_path: &Path) -> Result<ModelConfig> {
-    let ext = model_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = model_path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
 
     match ext.as_str() {
         "gguf" => {
@@ -240,9 +217,7 @@ pub fn auto_detect_config(model_path: &Path) -> Result<ModelConfig> {
             let json = std::fs::read_to_string(model_path)?;
             detect_from_hf_config(&json)
         }
-        other => Err(ConfigDetectionError::UnrecognisedExtension(
-            other.to_string(),
-        )),
+        other => Err(ConfigDetectionError::UnrecognisedExtension(other.to_string())),
     }
 }
 
@@ -264,11 +239,8 @@ fn read_gguf_metadata(
 
     let file = File::open(path)?;
     let mmap = unsafe { Mmap::map(&file) }?;
-    let reader = GgufReader::new(&mmap).map_err(|e| {
-        ConfigDetectionError::Io(std::io::Error::other(
-            e.to_string(),
-        ))
-    })?;
+    let reader = GgufReader::new(&mmap)
+        .map_err(|e| ConfigDetectionError::Io(std::io::Error::other(e.to_string())))?;
 
     // Build a HashMap from the reader's metadata keys and typed getters.
     let mut map = HashMap::new();
@@ -628,14 +600,8 @@ mod tests {
     #[test]
     fn gguf_rope_scaling() {
         let mut metadata = llama_gguf_metadata();
-        metadata.insert(
-            "llama.rope.scaling.type".into(),
-            GgufValue::String("yarn".into()),
-        );
-        metadata.insert(
-            "llama.rope.scaling.factor".into(),
-            GgufValue::F32(4.0),
-        );
+        metadata.insert("llama.rope.scaling.type".into(), GgufValue::String("yarn".into()));
+        metadata.insert("llama.rope.scaling.factor".into(), GgufValue::F32(4.0));
         let cfg = detect_from_gguf(&metadata).unwrap();
         let rs = cfg.rope_scaling.as_ref().unwrap();
         assert_eq!(rs.scaling_type, "yarn");
@@ -649,9 +615,8 @@ mod tests {
     #[test]
     fn gguf_missing_fields_uses_defaults() {
         // Only architecture set — everything else falls back to defaults
-        let metadata = HashMap::from([
-            ("general.architecture".into(), GgufValue::String("llama".into())),
-        ]);
+        let metadata =
+            HashMap::from([("general.architecture".into(), GgufValue::String("llama".into()))]);
         let cfg = detect_from_gguf(&metadata).unwrap();
         // Should get llama defaults from the architecture registry
         assert_eq!(cfg.hidden_size, 4096); // llama typical_hidden_size
@@ -783,10 +748,7 @@ mod tests {
     fn auto_detect_unknown_extension() {
         let result = auto_detect_config(Path::new("model.bin"));
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            ConfigDetectionError::UnrecognisedExtension(_)
-        ));
+        assert!(matches!(result.unwrap_err(), ConfigDetectionError::UnrecognisedExtension(_)));
     }
 
     // ===================================================================
