@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 98
+expression: shapes
+---
+[
+    [
+        2,
+        4,
+    ],
+    [
+        2,
+        4,
+    ],
+    [
+        2,
+        4,
+    ],
+]

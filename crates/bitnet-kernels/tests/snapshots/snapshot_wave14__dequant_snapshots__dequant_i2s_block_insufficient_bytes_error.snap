@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 174
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: dequant_i2s_block: need 2 bytes for block_size=8, got 1

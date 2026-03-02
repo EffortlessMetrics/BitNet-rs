@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 315
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: gating gate length 2 != up length 1

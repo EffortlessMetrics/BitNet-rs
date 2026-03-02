@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 269
+expression: rounded
+---
+[
+    "0.0000",
+    "0.7311",
+    "-0.2689",
+    "0.8808",
+]

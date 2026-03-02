@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 80
+expression: shape
+---
+[
+    2,
+    8,
+]

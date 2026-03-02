@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 322
+expression: err.to_string()
+---
+Kernel error: Invalid arguments: gating output length 1 < input length 2

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave14.rs
+assertion_line: 166
+expression: "&packed"
+---
+[
+    77,
+    3,
+]
