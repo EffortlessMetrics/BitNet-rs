@@ -4,6 +4,35 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Intel Arc A770 OpenCL Support — Waves 114–117
+
+#### Wave 114: Inference Pipeline Components
+- **opencl_kernel_fusion** — Kernel fusion engine with 6 fusion patterns for A770 (50 tests)
+- **opencl_attention_mask** — Attention mask generator (causal/bidirectional/sliding window) (48 tests)
+- **opencl_tokenizer_bridge** — Tokenizer-to-GPU bridge with batch encoding (52 tests)
+- **opencl_sampling** — 8 sampling strategies (Greedy/Temperature/TopK/TopP/MinP/TypicalP/Mirostat/Beam) (65 tests)
+- **opencl_kv_compression** — KV cache compression with 5 methods (50 tests)
+
+#### Wave 115: Compute Optimization
+- **opencl_position_embed** — Position embeddings (RoPE/ALiBi/Sinusoidal/NTK-RoPE) (42+ tests)
+- **opencl_activation_checkpoint** — Activation checkpointing for memory-efficient inference (40+ tests)
+- **opencl_exec_profiler** — Execution profiler with flame graph support (40+ tests)
+- **opencl_workgroup_optimizer** — Workgroup size optimizer tuned for A770 Xe-HPG (40+ tests)
+
+#### Wave 116: Serving Infrastructure
+- **opencl_vocab_manager** — Vocabulary manager with embedding/projection tables (36+ tests)
+- **opencl_layer_executor** — Full transformer layer executor (42+ tests)
+- **opencl_prompt_template** — Prompt template engine (ChatML/Llama2/Alpaca/Vicuna/Zephyr) (38+ tests)
+- **opencl_model_config** — Model configuration manager with validation (38+ tests)
+- **opencl_request_router** — Inference request router with multi-backend dispatch (38+ tests)
+
+#### Wave 117: Quality & Integration
+- **opencl_multi_model** — Multi-model serving with memory partitioning (40+ tests)
+- **opencl_async_pipeline** — Async inference pipeline with compute/transfer overlap (42+ tests)
+- **opencl_gguf_loader** — GGUF weight loading for OpenCL (38+ tests)
+- **opencl_numerical_verify** — Cross-backend numerical verification framework (45+ tests)
+- **opencl_model_profile** — Model-specific A770 optimization profiles (40+ tests)
+
 ### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
 
 - **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
