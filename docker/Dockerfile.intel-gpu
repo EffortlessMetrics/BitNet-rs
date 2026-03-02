@@ -27,7 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy workspace
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY src/ ./src/
 COPY crates/ ./crates/
 
 # Compile check with oneapi feature (validates Intel backend wiring)

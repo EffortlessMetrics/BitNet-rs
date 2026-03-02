@@ -17,7 +17,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /app
 
 # Copy workspace files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY src/ ./src/
 COPY crates/ ./crates/
 
 # Build release binary with GPU support

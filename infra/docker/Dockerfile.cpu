@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy workspace files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY src/ ./src/
 COPY crates/ ./crates/
 
 # Build release binary with CPU optimizations
