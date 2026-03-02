@@ -6,9 +6,12 @@ pub use batch::{batched_add, batched_layer_norm, batched_matmul, batched_softmax
 pub mod attention;
 pub mod attention_mask;
 pub use attention::{
-    AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig,
-    apply_rotary_embedding, attention_with_kv_cache, causal_attention, causal_mask,
-    masked_attention, multi_head_attention_cpu, scaled_dot_product_attention,
+    AttentionConfig, AttentionKernel, CpuAttention, CpuAttentionConfig, GqaConfig, alibi_slopes,
+    apply_alibi_bias, apply_rope_to_qk, apply_rotary_embedding, attention_forward,
+    attention_score_computation, attention_with_kv_cache, causal_attention, causal_mask,
+    causal_mask_apply, compute_qkv, flash_attention_cpu, grouped_query_attention,
+    kv_cache_incremental_attention, masked_attention, multi_head_attention_cpu,
+    scaled_dot_product_attention, softmax_attention,
 };
 pub mod batch_norm;
 pub mod concat;
