@@ -48,8 +48,7 @@ mod rope_scaling {
         // Position 0 is always cos=1,sin=0 for both bases
         // Position 1+ should differ
         let pos1_offset = 128; // head_dim elements per position
-        let any_diff =
-            (0..128).any(|i| (f1[pos1_offset + i] - f2[pos1_offset + i]).abs() > 1e-7);
+        let any_diff = (0..128).any(|i| (f1[pos1_offset + i] - f2[pos1_offset + i]).abs() > 1e-7);
         assert!(any_diff, "base=10000 vs base=500000 must produce different frequencies");
     }
 
@@ -66,11 +65,8 @@ mod rope_scaling {
 
     #[test]
     fn rope_table_memory_reasonable() {
-        let sizes = [
-            (4096, 128, "4K default"),
-            (16384, 128, "16K Phi-4"),
-            (131072, 128, "128K Qwen2.5"),
-        ];
+        let sizes =
+            [(4096, 128, "4K default"), (16384, 128, "16K Phi-4"), (131072, 128, "128K Qwen2.5")];
         for (seq_len, head_dim, label) in sizes {
             let cfg = RopeConfig::new(head_dim, seq_len);
             let freqs = rope::compute_frequencies(&cfg);
@@ -126,12 +122,7 @@ mod kv_cache_sizing {
     use bitnet_inference::layers::attention::KVCache;
 
     /// Helper: compute expected KV cache memory for given parameters.
-    fn expected_kv_bytes(
-        seq_len: usize,
-        layers: usize,
-        kv_heads: usize,
-        head_dim: usize,
-    ) -> usize {
+    fn expected_kv_bytes(seq_len: usize, layers: usize, kv_heads: usize, head_dim: usize) -> usize {
         // Each layer has K + V tensors, each of shape [seq_len, kv_heads, head_dim]
         seq_len * kv_heads * head_dim * std::mem::size_of::<f32>() * 2 * layers
     }
@@ -225,10 +216,7 @@ mod kv_cache_sizing {
             "GQA ({gqa_mem} bytes) must use less memory than MHA ({mha_mem} bytes)"
         );
         let ratio = mha_mem as f64 / gqa_mem as f64;
-        assert!(
-            (ratio - 4.0).abs() < 0.1,
-            "GQA should be ~4× smaller: ratio={ratio:.2}"
-        );
+        assert!((ratio - 4.0).abs() < 0.1, "GQA should be ~4× smaller: ratio={ratio:.2}");
 
         // Also verify the formula scales to Phi-4 sizes
         let mha_16k = expected_kv_bytes(16384, 40, 32, 128);
@@ -298,10 +286,7 @@ mod context_boundaries {
         });
         assert!(result.is_err(), "seq_len > max_context should error");
         let err = result.unwrap_err().to_string();
-        assert!(
-            err.contains("exceeds"),
-            "error should mention exceeding: {err}"
-        );
+        assert!(err.contains("exceeds"), "error should mention exceeding: {err}");
     }
 
     #[test]
@@ -310,8 +295,7 @@ mod context_boundaries {
 
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         let result = rt.block_on(async {
-            let tensor =
-                BitNetTensor::zeros(&[1, 1, 4, 64], DType::F32, &Device::Cpu).unwrap();
+            let tensor = BitNetTensor::zeros(&[1, 1, 4, 64], DType::F32, &Device::Cpu).unwrap();
             rope.apply(&tensor, 1).await
         });
         assert!(result.is_ok(), "single token should work: {:?}", result.err());
@@ -323,8 +307,7 @@ mod context_boundaries {
 
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         let result = rt.block_on(async {
-            let tensor =
-                BitNetTensor::zeros(&[1, 0, 4, 64], DType::F32, &Device::Cpu).unwrap();
+            let tensor = BitNetTensor::zeros(&[1, 0, 4, 64], DType::F32, &Device::Cpu).unwrap();
             rope.apply(&tensor, 0).await
         });
         // seq_len=0 returns Ok(clone) per the implementation
