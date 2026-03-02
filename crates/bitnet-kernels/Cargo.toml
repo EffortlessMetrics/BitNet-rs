@@ -19,10 +19,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-cpu-activations = { path = "../bitnet-cpu-activations", version = "0.2.1-dev" }
-bitnet-cpu-detect = { path = "../bitnet-cpu-detect", version = "0.2.1-dev", default-features = false }
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
-bitnet-simd = { path = "../bitnet-simd", version = "0.2.1-dev" }
 thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
@@ -31,7 +28,8 @@ cudarc = { version = "0.17.8", optional = true, features = ["cuda-12000"] }
 opencl3 = { version = "0.9", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
-half = { version = "2.7.1", optional = true }
+half = "2.7.1"
+libm = "0.2.16"
 sysinfo = "0.37.2"
 memory-stats = "1.2.0"
 
@@ -57,11 +55,6 @@ insta.workspace = true
 rand_chacha = "0.9.0"
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
-libm = "0.2.16"
-
-[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
-wgpu = { version = "24", features = ["metal"] }
-pollster = "0.4"
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # x86-specific dependencies
@@ -76,10 +69,10 @@ npu-backend = []
 cpu = ["cpu-fallback"]
 cpu-fallback = []
 cpu-optimized = ["avx512", "avx2", "neon"]
-avx2 = ["bitnet-cpu-detect/avx2"]
-avx512 = ["bitnet-cpu-detect/avx512"]
-neon = ["bitnet-cpu-detect/neon"]
-cuda = ["dep:cudarc", "dep:half", "bitnet-device-probe/cuda"]
+avx2 = []
+avx512 = []
+neon = []
+cuda = ["dep:cudarc", "bitnet-device-probe/cuda"]
 rocm = ["bitnet-device-probe/rocm"]
 hip = ["rocm"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
@@ -99,49 +92,7 @@ harness = false
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
 
-[[test]]
-name = "apple_silicon_benchmarks"
-path = "tests/apple_silicon_benchmarks.rs"
-
-[[test]]
-name = "neon_correctness_exhaustive"
-path = "tests/neon_correctness_exhaustive.rs"
-
-[[test]]
-name = "metal_device_integration_tests"
-path = "tests/metal_device_integration_tests.rs"
-
-[[test]]
-name = "opencl_fuzz_targets"
-path = "tests/opencl_fuzz_targets.rs"
-
-[[test]]
-name = "cpu_scalar_parity"
-path = "tests/cpu_scalar_parity.rs"
-required-features = ["cpu"]
-
-[[test]]
-name = "proptest_wave23"
-path = "tests/proptest_wave23.rs"
-required-features = ["cpu"]
-
-[[test]]
-name = "proptest_wave24"
-path = "tests/proptest_wave24.rs"
-required-features = ["cpu"]
-
-[[test]]
-name = "kernel_perf_smoke"
-path = "tests/kernel_perf_smoke.rs"
-required-features = ["cpu"]
-
-[[test]]
-name = "bdd_wave_7"
-path = "tests/bdd_wave_7.rs"
-required-features = ["cpu"]
-
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
-
