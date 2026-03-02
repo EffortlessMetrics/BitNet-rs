@@ -70,6 +70,9 @@ pub mod neon_kv_cache;
 pub mod neon_layernorm;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_multi_head_linear;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_pooling;
 
 #[cfg(target_arch = "aarch64")]
