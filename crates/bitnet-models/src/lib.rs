@@ -7,6 +7,7 @@ pub mod checkpoint;
 pub mod comparison;
 pub mod config;
 pub mod config_detection;
+pub mod config_serde;
 pub mod conversion;
 pub mod correction_policy;
 pub mod dense_crossval;
