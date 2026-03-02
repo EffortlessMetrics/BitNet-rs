@@ -440,6 +440,7 @@ dependencies = [
 name = "bitnet-bdd-grid-core"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-feature-set-core",
  "insta",
  "proptest",
  "serde",
@@ -689,6 +690,10 @@ dependencies = [
  "insta",
  "proptest",
 ]
+
+[[package]]
+name = "bitnet-feature-set-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-ffi"

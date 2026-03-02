@@ -13,6 +13,7 @@ description = "Core BDD scenario, feature, and grid primitives for BitNet"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
+bitnet-feature-set-core = { path = "../bitnet-feature-set-core", version = "0.2.1-dev" }
 
 [dev-dependencies]
 proptest.workspace = true
