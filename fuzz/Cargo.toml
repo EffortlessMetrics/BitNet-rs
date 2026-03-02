@@ -611,3 +611,39 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_kernel_config_parsing"
+path = "fuzz_targets/fuzz_kernel_config_parsing.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_cuda_launch_params"
+path = "fuzz_targets/fuzz_cuda_launch_params.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_quantization_block_decode"
+path = "fuzz_targets/fuzz_quantization_block_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_model_fingerprint"
+path = "fuzz_targets/fuzz_model_fingerprint.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_weight_statistics"
+path = "fuzz_targets/fuzz_weight_statistics.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_inference_warmup"
+path = "fuzz_targets/fuzz_inference_warmup.rs"
+test = false
+doc = false

@@ -118,10 +118,7 @@ impl Default for DispatchTable {
 
 impl DispatchTable {
     pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-            overrides: HashMap::new(),
-        }
+        Self { entries: Vec::new(), overrides: HashMap::new() }
     }
 
     /// Register a kernel implementation.
@@ -132,12 +129,7 @@ impl DispatchTable {
         priority: u32,
         available: bool,
     ) {
-        self.entries.push(DispatchEntry {
-            op,
-            backend,
-            priority,
-            available,
-        });
+        self.entries.push(DispatchEntry { op, backend, priority, available });
     }
 
     /// Force a specific backend for an operation.
@@ -148,14 +140,10 @@ impl DispatchTable {
     /// Resolve the best backend for an operation.
     pub fn resolve(&self, op: KernelOp) -> Option<DispatchBackend> {
         // Check overrides first
-        if let Some(&backend) = self.overrides.get(&op) {
-            if self
-                .entries
-                .iter()
-                .any(|e| e.op == op && e.backend == backend && e.available)
-            {
-                return Some(backend);
-            }
+        if let Some(&backend) = self.overrides.get(&op)
+            && self.entries.iter().any(|e| e.op == op && e.backend == backend && e.available)
+        {
+            return Some(backend);
         }
 
         // Find highest-priority available entry
@@ -168,11 +156,7 @@ impl DispatchTable {
 
     /// List all available backends for an operation.
     pub fn available_backends(&self, op: KernelOp) -> Vec<DispatchBackend> {
-        self.entries
-            .iter()
-            .filter(|e| e.op == op && e.available)
-            .map(|e| e.backend)
-            .collect()
+        self.entries.iter().filter(|e| e.op == op && e.available).map(|e| e.backend).collect()
     }
 
     /// Total registered entries.
@@ -182,11 +166,7 @@ impl DispatchTable {
 
     /// Operations with no available backend.
     pub fn unsupported_ops(&self) -> Vec<KernelOp> {
-        KernelOp::all()
-            .iter()
-            .filter(|&&op| self.resolve(op).is_none())
-            .copied()
-            .collect()
+        KernelOp::all().iter().filter(|&&op| self.resolve(op).is_none()).copied().collect()
     }
 
     /// Build default CPU dispatch table.
