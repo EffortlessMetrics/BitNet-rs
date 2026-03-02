@@ -112,6 +112,10 @@ name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
 
 [[test]]
+name = "metal_matmul_shader_tests"
+path = "tests/metal_matmul_shader_tests.rs"
+
+[[test]]
 name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
 
