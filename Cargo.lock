@@ -382,6 +382,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bitnet-build-info-core",
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
@@ -455,6 +456,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
 ]
+
+[[package]]
+name = "bitnet-build-info-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-cli"
@@ -1307,6 +1312,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-build-info-core",
  "bitnet-common",
  "bitnet-device-config-core",
  "bitnet-eval-core",

@@ -119,28 +119,16 @@ pub const MSRV: &str = "1.90.0";
 /// Build information
 pub mod build_info {
     /// Git commit hash at build time
-    pub const GIT_HASH: &str = match option_env!("VERGEN_GIT_SHA") {
-        Some(hash) => hash,
-        None => "unknown",
-    };
+    pub const GIT_HASH: &str = bitnet_build_info_core::GIT_SHA;
 
     /// Build timestamp
-    pub const BUILD_TIMESTAMP: &str = match option_env!("VERGEN_BUILD_TIMESTAMP") {
-        Some(timestamp) => timestamp,
-        None => "unknown",
-    };
+    pub const BUILD_TIMESTAMP: &str = bitnet_build_info_core::BUILD_TIMESTAMP;
 
     /// Target triple
-    pub const TARGET: &str = match option_env!("VERGEN_CARGO_TARGET_TRIPLE") {
-        Some(target) => target,
-        None => "unknown",
-    };
+    pub const TARGET: &str = bitnet_build_info_core::CARGO_TARGET_TRIPLE;
 
     /// Rust version used for build
-    pub const RUSTC_VERSION: &str = match option_env!("VERGEN_RUSTC_SEMVER") {
-        Some(version) => version,
-        None => "unknown",
-    };
+    pub const RUSTC_VERSION: &str = bitnet_build_info_core::RUSTC_VERSION;
 }
 
 #[cfg(test)]

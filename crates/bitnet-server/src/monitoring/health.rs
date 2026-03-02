@@ -153,18 +153,12 @@ impl HealthChecker {
             version: env!("CARGO_PKG_VERSION").to_string(),
             build: BuildInfo {
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                git_sha: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string(),
-                git_branch: option_env!("VERGEN_GIT_BRANCH").unwrap_or("unknown").to_string(),
-                build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                rustc_version: option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown").to_string(),
-                cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                cargo_profile: option_env!("VERGEN_CARGO_OPT_LEVEL")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                git_sha: bitnet_build_info_core::GIT_SHA.to_string(),
+                git_branch: bitnet_build_info_core::GIT_BRANCH.to_string(),
+                build_timestamp: bitnet_build_info_core::BUILD_TIMESTAMP.to_string(),
+                rustc_version: bitnet_build_info_core::RUSTC_VERSION.to_string(),
+                cargo_target: bitnet_build_info_core::CARGO_TARGET_TRIPLE.to_string(),
+                cargo_profile: bitnet_build_info_core::CARGO_OPT_LEVEL.to_string(),
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 cuda_version: Some(self.get_cuda_version()),
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]

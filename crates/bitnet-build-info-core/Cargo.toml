@@ -1,0 +1,13 @@
+[package]
+name = "bitnet-build-info-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "SRP: reusable build metadata constants from vergen env vars"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
