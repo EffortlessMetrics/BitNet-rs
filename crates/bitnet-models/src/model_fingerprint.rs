@@ -80,8 +80,12 @@ impl ModelFingerprint {
     pub fn compact_id(&self) -> String {
         format!(
             "{}-L{}-H{}-A{}-V{}-{}",
-            self.architecture, self.num_layers, self.hidden_size,
-            self.num_heads, self.vocab_size, self.quant_type
+            self.architecture,
+            self.num_layers,
+            self.hidden_size,
+            self.num_heads,
+            self.vocab_size,
+            self.quant_type
         )
     }
 
@@ -100,10 +104,7 @@ impl ModelFingerprint {
 
     /// Whether this is a quantized model (less than 16 bits per param).
     pub fn is_quantized(&self) -> bool {
-        matches!(
-            self.quant_type.as_str(),
-            "i2s" | "i2_s" | "i4" | "q4_0" | "q4_1" | "i8" | "q8_0"
-        )
+        matches!(self.quant_type.as_str(), "i2s" | "i2_s" | "i4" | "q4_0" | "q4_1" | "i8" | "q8_0")
     }
 
     /// Whether two fingerprints represent the same architecture.
@@ -223,10 +224,7 @@ pub fn identify_model(fp: &ModelFingerprint) -> Option<&'static str> {
         ("SmolLM2-1.7B", "smollm2", 24, 2048),
     ];
     for (name, arch, layers, hidden) in known {
-        if fp.architecture == arch
-            && fp.num_layers == layers
-            && fp.hidden_size == hidden
-        {
+        if fp.architecture == arch && fp.num_layers == layers && fp.hidden_size == hidden {
             return Some(name);
         }
     }
@@ -271,25 +269,22 @@ mod tests {
 
     #[test]
     fn test_estimated_weight_bytes_f16() {
-        let fp = ModelFingerprint::new("test")
-            .with_param_count(1_000_000_000)
-            .with_quant_type("f16");
+        let fp =
+            ModelFingerprint::new("test").with_param_count(1_000_000_000).with_quant_type("f16");
         assert_eq!(fp.estimated_weight_bytes(), 2_000_000_000);
     }
 
     #[test]
     fn test_estimated_weight_bytes_i2s() {
-        let fp = ModelFingerprint::new("test")
-            .with_param_count(2_000_000_000)
-            .with_quant_type("i2s");
+        let fp =
+            ModelFingerprint::new("test").with_param_count(2_000_000_000).with_quant_type("i2s");
         assert_eq!(fp.estimated_weight_bytes(), 500_000_000);
     }
 
     #[test]
     fn test_estimated_weight_bytes_q4() {
-        let fp = ModelFingerprint::new("test")
-            .with_param_count(7_000_000_000)
-            .with_quant_type("q4_0");
+        let fp =
+            ModelFingerprint::new("test").with_param_count(7_000_000_000).with_quant_type("q4_0");
         assert_eq!(fp.estimated_weight_bytes(), 3_500_000_000);
     }
 
@@ -303,10 +298,8 @@ mod tests {
 
     #[test]
     fn test_same_architecture() {
-        let a = ModelFingerprint::new("llama")
-            .with_layers(32)
-            .with_hidden_size(4096)
-            .with_heads(32);
+        let a =
+            ModelFingerprint::new("llama").with_layers(32).with_hidden_size(4096).with_heads(32);
         let b = ModelFingerprint::new("llama")
             .with_layers(32)
             .with_hidden_size(4096)
@@ -317,14 +310,9 @@ mod tests {
 
     #[test]
     fn test_different_architecture() {
-        let a = ModelFingerprint::new("llama")
-            .with_layers(32)
-            .with_hidden_size(4096)
-            .with_heads(32);
-        let b = ModelFingerprint::new("phi")
-            .with_layers(40)
-            .with_hidden_size(5120)
-            .with_heads(40);
+        let a =
+            ModelFingerprint::new("llama").with_layers(32).with_hidden_size(4096).with_heads(32);
+        let b = ModelFingerprint::new("phi").with_layers(40).with_hidden_size(5120).with_heads(40);
         assert!(!a.same_architecture(&b));
     }
 
@@ -386,9 +374,8 @@ mod tests {
 
     #[test]
     fn test_with_tag() {
-        let fp = ModelFingerprint::new("test")
-            .with_tag("name", "my-model")
-            .with_tag("source", "hf");
+        let fp =
+            ModelFingerprint::new("test").with_tag("name", "my-model").with_tag("source", "hf");
         assert_eq!(fp.tags["name"], "my-model");
         assert_eq!(fp.tags["source"], "hf");
     }
@@ -403,25 +390,19 @@ mod tests {
 
     #[test]
     fn test_identify_model_phi4() {
-        let fp = ModelFingerprint::new("phi")
-            .with_layers(40)
-            .with_hidden_size(5120);
+        let fp = ModelFingerprint::new("phi").with_layers(40).with_hidden_size(5120);
         assert_eq!(identify_model(&fp), Some("phi-4"));
     }
 
     #[test]
     fn test_identify_model_llama() {
-        let fp = ModelFingerprint::new("llama")
-            .with_layers(32)
-            .with_hidden_size(4096);
+        let fp = ModelFingerprint::new("llama").with_layers(32).with_hidden_size(4096);
         assert_eq!(identify_model(&fp), Some("llama-3.1-8B"));
     }
 
     #[test]
     fn test_identify_model_unknown() {
-        let fp = ModelFingerprint::new("unknown")
-            .with_layers(99)
-            .with_hidden_size(9999);
+        let fp = ModelFingerprint::new("unknown").with_layers(99).with_hidden_size(9999);
         assert_eq!(identify_model(&fp), None);
     }
 
@@ -438,9 +419,8 @@ mod tests {
 
     #[test]
     fn test_estimated_weight_bytes_f32() {
-        let fp = ModelFingerprint::new("test")
-            .with_param_count(1_000_000_000)
-            .with_quant_type("f32");
+        let fp =
+            ModelFingerprint::new("test").with_param_count(1_000_000_000).with_quant_type("f32");
         assert_eq!(fp.estimated_weight_bytes(), 4_000_000_000);
     }
 

@@ -111,7 +111,7 @@ pub fn assert_broadcastable(
         if a_dim != b_dim && a_dim != 1 && b_dim != 1 {
             return Err(ShapeError {
                 context: ctx.to_string(),
-                expected: format!("broadcastable shapes"),
+                expected: "broadcastable shapes".to_string(),
                 actual: format!("{a_shape:?} vs {b_shape:?}"),
             });
         }
@@ -146,7 +146,7 @@ pub fn assert_head_divisible(
             actual: "num_heads = 0".to_string(),
         });
     }
-    if hidden_size % num_heads != 0 {
+    if !hidden_size.is_multiple_of(num_heads) {
         return Err(ShapeError {
             context: ctx.to_string(),
             expected: format!("hidden_size ({hidden_size}) divisible by num_heads ({num_heads})"),

@@ -15,6 +15,7 @@ pub mod dense_generation;
 pub mod dense_integration_tests;
 pub mod engine;
 pub mod generation;
+pub mod generation_budget;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod kernel_recorder;
