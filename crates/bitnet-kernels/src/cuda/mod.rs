@@ -24,6 +24,8 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`flash_decoding`]: Flash decoding for efficient single-token autoregressive generation
+//!   with split-KV parallelism, ALiBi, GQA, and paged KV cache support
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -36,7 +38,7 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
+pub mod flash_decoding;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -188,3 +190,12 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use flash_decoding::{
+    FlashDecodingConfig, GqaConfig, PagedKvDescriptor, flash_decode_attention, flash_decode_gqa,
+    flash_decode_with_alibi, merge_partial_attention, paged_flash_decode, partial_softmax,
+    split_kv_across_blocks,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use flash_decoding::{FLASH_DECODE_KERNEL_SRC, launch_flash_decode};
