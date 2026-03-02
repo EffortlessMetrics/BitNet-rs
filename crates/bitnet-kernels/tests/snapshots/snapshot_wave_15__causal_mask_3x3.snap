@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"{display:?}\")"
+---
+["0", "-inf", "-inf", "0", "0", "-inf", "0", "0", "0"]

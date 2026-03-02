@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: report.summary()
+---
+CPU SIMD (AVX2) (CPU SIMD): READY — 2/2 required ops supported

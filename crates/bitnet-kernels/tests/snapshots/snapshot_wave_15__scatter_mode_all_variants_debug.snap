@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: modes
+---
+[
+    Assign,
+    Add,
+    Max,
+    Min,
+]

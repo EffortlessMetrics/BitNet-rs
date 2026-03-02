@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"quantized={quantized:?} scale={scale:.6} zp={zero_point}\")"
+---
+quantized=[0, 64, 127, 191, 255] scale=0.003922 zp=0

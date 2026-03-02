@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"supports_matrixops_fp32={supports}\")"
+---
+supports_matrixops_fp32=true

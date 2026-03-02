@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"scale={scale:.6} restored={}\", fmt6(&restored))"
+---
+scale=0.816667 restored=[0.816667, -0.816667, 0.000000, 0.816667, -0.816667, 0.000000, 0.816667, -0.816667]

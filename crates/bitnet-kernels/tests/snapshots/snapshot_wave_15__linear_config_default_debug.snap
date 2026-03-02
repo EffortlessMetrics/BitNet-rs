@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: cfg
+---
+LinearConfig {
+    in_features: 1,
+    out_features: 1,
+    batch_size: 1,
+    has_bias: false,
+    tile_m: 32,
+    tile_n: 32,
+    tile_k: 32,
+    threads_per_block: 256,
+    shared_mem_bytes: 8192,
+}
