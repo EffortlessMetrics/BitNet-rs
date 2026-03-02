@@ -136,11 +136,7 @@ pub fn cpu_load_embeddings(mgr: &mut VocabManager, weights: Vec<f32>) {
 /// # Panics
 /// Panics if `weights.len() != vocab_size * hidden_dim` or if `bias`
 /// length does not equal `vocab_size`.
-pub fn cpu_load_projection(
-    mgr: &mut VocabManager,
-    weights: Vec<f32>,
-    bias: Option<Vec<f32>>,
-) {
+pub fn cpu_load_projection(mgr: &mut VocabManager, weights: Vec<f32>, bias: Option<Vec<f32>>) {
     let expected = mgr.config.vocab_size * mgr.config.hidden_dim;
     assert_eq!(
         weights.len(),
@@ -168,17 +164,11 @@ pub fn cpu_load_projection(
 }
 
 /// Look up the embedding vector for a single token.
-pub fn cpu_lookup_embedding(
-    mgr: &VocabManager,
-    token_id: u32,
-) -> Result<Vec<f32>, VocabError> {
+pub fn cpu_lookup_embedding(mgr: &VocabManager, token_id: u32) -> Result<Vec<f32>, VocabError> {
     let emb = mgr.embedding.as_ref().ok_or(VocabError::EmbeddingNotLoaded)?;
     let tid = token_id as usize;
     if tid >= emb.vocab_size {
-        return Err(VocabError::TokenOutOfRange {
-            token: token_id,
-            vocab_size: emb.vocab_size,
-        });
+        return Err(VocabError::TokenOutOfRange { token: token_id, vocab_size: emb.vocab_size });
     }
     // Padding index returns zeros.
     if mgr.config.padding_idx == Some(token_id) {
@@ -245,10 +235,7 @@ pub fn cpu_batch_project(
 }
 
 /// L2 norm of a token's embedding vector.
-pub fn cpu_get_embedding_norm(
-    mgr: &VocabManager,
-    token_id: u32,
-) -> Result<f32, VocabError> {
+pub fn cpu_get_embedding_norm(mgr: &VocabManager, token_id: u32) -> Result<f32, VocabError> {
     let vec = cpu_lookup_embedding(mgr, token_id)?;
     Ok(vec.iter().map(|x| x * x).sum::<f32>().sqrt())
 }
@@ -301,10 +288,7 @@ pub fn cpu_find_nearest_token(
 
 /// Total memory footprint (bytes) of loaded weights in the manager.
 pub fn cpu_memory_footprint(mgr: &VocabManager) -> usize {
-    let emb_bytes = mgr
-        .embedding
-        .as_ref()
-        .map_or(0, |e| e.weights.len() * size_of::<f32>());
+    let emb_bytes = mgr.embedding.as_ref().map_or(0, |e| e.weights.len() * size_of::<f32>());
     let proj_bytes = mgr.projection.as_ref().map_or(0, |p| {
         let w = p.weights.len() * size_of::<f32>();
         let b = p.bias.as_ref().map_or(0, |b| b.len() * size_of::<f32>());
@@ -369,12 +353,7 @@ mod tests {
     // ── helpers ──────────────────────────────────────────────────
 
     fn simple_config(vocab: usize, dim: usize) -> VocabConfig {
-        VocabConfig {
-            vocab_size: vocab,
-            hidden_dim: dim,
-            padding_idx: None,
-            tie_embeddings: false,
-        }
+        VocabConfig { vocab_size: vocab, hidden_dim: dim, padding_idx: None, tie_embeddings: false }
     }
 
     fn identity_weights(vocab: usize, dim: usize) -> Vec<f32> {
@@ -450,11 +429,7 @@ mod tests {
     #[should_panic(expected = "bias length")]
     fn test_load_projection_wrong_bias() {
         let mut mgr = create_vocab_manager(simple_config(4, 3));
-        cpu_load_projection(
-            &mut mgr,
-            sequential_weights(4, 3),
-            Some(vec![1.0, 2.0]),
-        );
+        cpu_load_projection(&mut mgr, sequential_weights(4, 3), Some(vec![1.0, 2.0]));
     }
 
     // ── single lookup ───────────────────────────────────────────
@@ -477,19 +452,13 @@ mod tests {
     fn test_lookup_out_of_range() {
         let mgr = make_loaded_mgr(4, 3);
         let err = cpu_lookup_embedding(&mgr, 4).unwrap_err();
-        assert_eq!(
-            err,
-            VocabError::TokenOutOfRange { token: 4, vocab_size: 4 }
-        );
+        assert_eq!(err, VocabError::TokenOutOfRange { token: 4, vocab_size: 4 });
     }
 
     #[test]
     fn test_lookup_embedding_not_loaded() {
         let mgr = create_vocab_manager(simple_config(4, 3));
-        assert_eq!(
-            cpu_lookup_embedding(&mgr, 0).unwrap_err(),
-            VocabError::EmbeddingNotLoaded,
-        );
+        assert_eq!(cpu_lookup_embedding(&mgr, 0).unwrap_err(), VocabError::EmbeddingNotLoaded,);
     }
 
     #[test]
@@ -528,10 +497,7 @@ mod tests {
     fn test_batch_lookup_out_of_range() {
         let mut mgr = make_loaded_mgr(4, 3);
         let err = cpu_batch_lookup(&mut mgr, &[0, 5]).unwrap_err();
-        assert_eq!(
-            err,
-            VocabError::TokenOutOfRange { token: 5, vocab_size: 4 }
-        );
+        assert_eq!(err, VocabError::TokenOutOfRange { token: 5, vocab_size: 4 });
     }
 
     // ── projection ──────────────────────────────────────────────
@@ -574,8 +540,7 @@ mod tests {
     #[test]
     fn test_project_returns_vocab_size_logits() {
         let mut mgr = make_loaded_mgr(10, 4);
-        let logits =
-            cpu_project_to_vocab(&mut mgr, &[1.0, 0.0, 0.0, 0.0]).unwrap();
+        let logits = cpu_project_to_vocab(&mut mgr, &[1.0, 0.0, 0.0, 0.0]).unwrap();
         assert_eq!(logits.len(), 10);
     }
 
@@ -636,11 +601,7 @@ mod tests {
         let mut mgr = create_vocab_manager(cfg);
         cpu_load_embeddings(&mut mgr, ones_weights(3, 2));
         // Load an explicit projection with different weights.
-        cpu_load_projection(
-            &mut mgr,
-            vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0],
-            None,
-        );
+        cpu_load_projection(&mut mgr, vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0], None);
         let logits = cpu_project_to_vocab(&mut mgr, &[3.0, 7.0]).unwrap();
         // explicit: [3*1+7*0, 3*0+7*1, 3*1+7*1] = [3, 7, 10]
         assert_eq!(logits, vec![3.0, 7.0, 10.0]);
@@ -681,10 +642,7 @@ mod tests {
     #[test]
     fn test_embedding_norm_not_loaded() {
         let mgr = create_vocab_manager(simple_config(2, 3));
-        assert_eq!(
-            cpu_get_embedding_norm(&mgr, 0).unwrap_err(),
-            VocabError::EmbeddingNotLoaded,
-        );
+        assert_eq!(cpu_get_embedding_norm(&mgr, 0).unwrap_err(), VocabError::EmbeddingNotLoaded,);
     }
 
     // ── nearest token ───────────────────────────────────────────
@@ -702,12 +660,8 @@ mod tests {
     fn test_find_nearest_token_closest() {
         let mut mgr = create_vocab_manager(simple_config(3, 2));
         // token 0: [1,0], token 1: [0,1], token 2: [1,1]
-        cpu_load_embeddings(
-            &mut mgr,
-            vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0],
-        );
-        let (id, _sim) =
-            cpu_find_nearest_token(&mgr, &[0.9, 0.1]).unwrap();
+        cpu_load_embeddings(&mut mgr, vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
+        let (id, _sim) = cpu_find_nearest_token(&mgr, &[0.9, 0.1]).unwrap();
         assert_eq!(id, 0);
     }
 
@@ -737,8 +691,7 @@ mod tests {
         let mut mgr = create_vocab_manager(cfg);
         // token 0: [1,0,0], token 1: [0,1,0] (pad), token 2: [0,0,1]
         cpu_load_embeddings(&mut mgr, identity_weights(3, 3));
-        let (id, _sim) =
-            cpu_find_nearest_token(&mgr, &[0.0, 1.0, 0.0]).unwrap();
+        let (id, _sim) = cpu_find_nearest_token(&mgr, &[0.0, 1.0, 0.0]).unwrap();
         // token 1 is padding → skipped; best remaining is 0 or 2 (both 0 sim).
         assert_ne!(id, 1);
     }
@@ -747,8 +700,7 @@ mod tests {
     fn test_find_nearest_zero_vector() {
         let mut mgr = create_vocab_manager(simple_config(3, 3));
         cpu_load_embeddings(&mut mgr, identity_weights(3, 3));
-        let (id, sim) =
-            cpu_find_nearest_token(&mgr, &[0.0, 0.0, 0.0]).unwrap();
+        let (id, sim) = cpu_find_nearest_token(&mgr, &[0.0, 0.0, 0.0]).unwrap();
         assert_eq!(id, 0);
         assert_eq!(sim, 0.0);
     }
@@ -772,11 +724,7 @@ mod tests {
     fn test_memory_footprint_full() {
         let mut mgr = create_vocab_manager(simple_config(4, 3));
         cpu_load_embeddings(&mut mgr, sequential_weights(4, 3));
-        cpu_load_projection(
-            &mut mgr,
-            sequential_weights(4, 3),
-            Some(vec![0.0; 4]),
-        );
+        cpu_load_projection(&mut mgr, sequential_weights(4, 3), Some(vec![0.0; 4]));
         // emb: 4*3*4 = 48, proj weights: 48, proj bias: 4*4 = 16
         assert_eq!(cpu_memory_footprint(&mgr), 48 + 48 + 16);
     }
