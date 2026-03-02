@@ -80,19 +80,14 @@ mod tests {
     }
 
     #[test]
-    fn atomic_write_creates_file() {
+    fn atomic_write_persists_new_contents() {
         let dir = tempdir().expect("tempdir");
-        let path = dir.path().join("etag.txt");
-        atomic_write(&path, b"abc").expect("atomic write should succeed");
-        assert_eq!(std::fs::read(&path).expect("file should exist"), b"abc");
-    }
+        let path = dir.path().join("metadata.txt");
 
-    #[test]
-    fn atomic_write_overwrites_file() {
-        let dir = tempdir().expect("tempdir");
-        let path = dir.path().join("etag.txt");
-        atomic_write(&path, b"first").expect("first write should succeed");
-        atomic_write(&path, b"second").expect("second write should succeed");
-        assert_eq!(std::fs::read(&path).expect("file should exist"), b"second");
+        atomic_write(&path, b"v1").expect("first atomic write");
+        assert_eq!(std::fs::read(&path).expect("read file"), b"v1");
+
+        atomic_write(&path, b"v2").expect("second atomic write");
+        assert_eq!(std::fs::read(&path).expect("read file"), b"v2");
     }
 }
