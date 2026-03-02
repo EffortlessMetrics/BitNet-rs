@@ -30,8 +30,8 @@ async fn ac4_download_tokenizer_from_huggingface() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-llama2".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader = SmartTokenizerDownload::new().expect("Should initialize downloader");
@@ -66,8 +66,8 @@ async fn ac4_tokenizer_download_caching() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-gpt2".to_string(),
         expected_vocab: Some(50257),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader = SmartTokenizerDownload::new().expect("Should initialize downloader");
@@ -107,8 +107,8 @@ async fn ac4_download_verification() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-verification".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader = SmartTokenizerDownload::new().expect("Should initialize downloader");
@@ -137,8 +137,8 @@ async fn ac4_network_failure_handling() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-failure".to_string(),
         expected_vocab: None,
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader_result = SmartTokenizerDownload::new();
@@ -173,8 +173,8 @@ async fn ac4_download_retry_logic() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-retry".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     let downloader_result = SmartTokenizerDownload::new();
@@ -238,8 +238,8 @@ async fn ac4_download_multiple_tokenizer_files() {
         files: vec!["tokenizer.json".to_string(), "tokenizer.model".to_string()],
         cache_key: "test-bitnet-multi".to_string(),
         expected_vocab: None,
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     if let Ok(downloader) = SmartTokenizerDownload::new()
@@ -273,8 +273,8 @@ async fn ac4_download_progress_monitoring() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-progress".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     if let Ok(downloader) = SmartTokenizerDownload::new() {
@@ -312,8 +312,8 @@ async fn ac4_offline_mode_handling() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-offline".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     if let Ok(downloader) = SmartTokenizerDownload::new() {
@@ -393,8 +393,8 @@ async fn ac4_download_with_vocab_validation() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "test-vocab-validation".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
 
     if let Ok(downloader) = SmartTokenizerDownload::new()

@@ -1526,12 +1526,8 @@ mod tests {
     #[cfg(feature = "cpu")]
     fn test_tokenizer_strategy_properties() {
         // Test strategy network requirements
-        let download_info = TokenizerDownloadInfo::basic(
-            "test/repo",
-            vec!["tokenizer.json"],
-            "test",
-            Some(1000),
-        );
+        let download_info =
+            TokenizerDownloadInfo::basic("test/repo", vec!["tokenizer.json"], "test", Some(1000));
 
         let strategies = [
             (TokenizerStrategy::Exact(PathBuf::from("test.json")), false, false),
@@ -2315,13 +2311,8 @@ mod tests {
         let m = ModelCompatibilityMatrix::default();
 
         // TikToken BPE models
-        let tiktoken_entries = [
-            &m.phi4_100k,
-            &m.phi4_mini_100k,
-            &m.qwen25_152k,
-            &m.llama31_128k,
-            &m.llama32_128k,
-        ];
+        let tiktoken_entries =
+            [&m.phi4_100k, &m.phi4_mini_100k, &m.qwen25_152k, &m.llama31_128k, &m.llama32_128k];
         for entry in tiktoken_entries {
             assert_eq!(
                 entry.tokenizer_type,
@@ -2332,13 +2323,8 @@ mod tests {
         }
 
         // SentencePiece models
-        let sp_entries = [
-            &m.gemma_256k,
-            &m.gemma2_256k,
-            &m.mistral_32k,
-            &m.mistral_v03_32k,
-            &m.mixtral_32k,
-        ];
+        let sp_entries =
+            [&m.gemma_256k, &m.gemma2_256k, &m.mistral_32k, &m.mistral_v03_32k, &m.mixtral_32k];
         for entry in sp_entries {
             assert_eq!(
                 entry.tokenizer_type,
@@ -2351,12 +2337,7 @@ mod tests {
         // Standard BPE models
         let bpe_entries = [&m.smollm_49k, &m.smollm2_49k];
         for entry in bpe_entries {
-            assert_eq!(
-                entry.tokenizer_type,
-                TokenizerType::Bpe,
-                "{} should be BPE",
-                entry.repo
-            );
+            assert_eq!(entry.tokenizer_type, TokenizerType::Bpe, "{} should be BPE", entry.repo);
         }
     }
 

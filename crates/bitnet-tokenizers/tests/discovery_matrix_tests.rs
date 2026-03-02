@@ -130,8 +130,8 @@ fn download_info_construction() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "phi4".to_string(),
         expected_vocab: Some(100352),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     assert_eq!(info.repo, "microsoft/phi-4");
     assert_eq!(info.files.len(), 1);
@@ -145,8 +145,8 @@ fn download_info_no_expected_vocab() {
         files: vec!["tokenizer.json".to_string()],
         cache_key: "custom".to_string(),
         expected_vocab: None,
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     assert!(info.expected_vocab.is_none());
 }
@@ -158,8 +158,8 @@ fn download_info_clone() {
         files: vec!["a.json".to_string(), "b.json".to_string()],
         cache_key: "test".to_string(),
         expected_vocab: Some(32000),
-                tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
-                special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
+        tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+        special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     };
     let cloned = info.clone();
     assert_eq!(info.repo, cloned.repo);
