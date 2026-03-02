@@ -1,6 +1,7 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
+pub mod ab_test;
 pub mod batch_engine;
 pub mod canary;
 // Expose `caching` only when generating docs to avoid -Dwarnings dead_code in scaffolding.
