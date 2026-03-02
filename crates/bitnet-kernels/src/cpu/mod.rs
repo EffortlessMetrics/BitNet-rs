@@ -107,7 +107,7 @@ pub mod neon_padding_clipping;
 pub mod neon_inference_bridge;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_weight_packing;
+pub mod neon_pipeline_scheduler;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_batch_scheduler;
