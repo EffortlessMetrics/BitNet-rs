@@ -748,12 +748,20 @@ dependencies = [
 name = "bitnet-generation"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-generation-config-core",
  "bitnet-generation-events-core",
  "bitnet-generation-stop-core",
  "insta",
  "proptest",
- "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-generation-config-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-generation-stop-core",
+ "serde",
 ]
 
 [[package]]

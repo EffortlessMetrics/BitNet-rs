@@ -12,9 +12,9 @@ description = "Decode-loop stopping logic and generation event types for BitNet 
 rust-version.workspace = true
 
 [dependencies]
+bitnet-generation-config-core = { path = "../bitnet-generation-config-core", version = "0.2.1-dev" }
 bitnet-generation-stop-core = { path = "../bitnet-generation-stop-core", version = "0.2.1-dev" }
 bitnet-generation-events-core = { path = "../bitnet-generation-events-core", version = "0.2.1-dev" }
-serde.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
