@@ -1,0 +1,26 @@
+name: Repo diagram
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/diagram.svg"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Generate repo diagram
+        uses: githubocto/repo-visualizer@fd43c6c299627ad88e07698290fb2d32fac3305a  # 0.7.1
+        with:
+          output_file: "docs/diagram.svg"
+          excluded_paths: "target,node_modules,dist,out,build,archive,corpus,receipts,sessions,reports,planning-docs,issues,agents3,agents4"
+          excluded_globs: "**/*.{png,jpg,jpeg,webp,gif,svg,mp4,zip,7z,pdf};**/*.ipynb"
+          commit_message: "Repo visualizer: updated diagram [skip ci]"
