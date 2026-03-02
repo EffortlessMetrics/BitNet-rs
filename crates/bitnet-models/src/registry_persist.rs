@@ -134,20 +134,20 @@ impl RegistryStore {
                 current = Some(ModelEntry::new(id, "", ""));
                 continue;
             }
-            if let Some(ref mut entry) = current {
-                if let Some((key, value)) = line.split_once('=') {
-                    match key {
-                        "name" => entry.name = value.to_string(),
-                        "family" => entry.family = value.to_string(),
-                        "version" => entry.version = value.to_string(),
-                        "path" => entry.path = value.to_string(),
-                        "format" => entry.format = value.to_string(),
-                        "size" => entry.size_bytes = value.parse().unwrap_or(0),
-                        k if k.starts_with("meta.") => {
-                            entry.metadata.insert(k[5..].to_string(), value.to_string());
-                        }
-                        _ => {}
+            if let Some(ref mut entry) = current
+                && let Some((key, value)) = line.split_once('=')
+            {
+                match key {
+                    "name" => entry.name = value.to_string(),
+                    "family" => entry.family = value.to_string(),
+                    "version" => entry.version = value.to_string(),
+                    "path" => entry.path = value.to_string(),
+                    "format" => entry.format = value.to_string(),
+                    "size" => entry.size_bytes = value.parse().unwrap_or(0),
+                    k if k.starts_with("meta.") => {
+                        entry.metadata.insert(k[5..].to_string(), value.to_string());
                     }
+                    _ => {}
                 }
             }
         }

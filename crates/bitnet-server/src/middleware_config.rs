@@ -38,7 +38,11 @@ impl Default for CorsConfig {
 
 impl CorsConfig {
     pub fn restrictive(origins: Vec<String>) -> Self {
-        Self { allowed_origins: origins, allow_credentials: true, max_age: Duration::from_secs(600) }
+        Self {
+            allowed_origins: origins,
+            allow_credentials: true,
+            max_age: Duration::from_secs(600),
+        }
     }
 
     pub fn is_wildcard(&self) -> bool {
@@ -150,7 +154,9 @@ impl MiddlewareConfig {
         }
     }
 
-    pub fn has_rate_limit(&self) -> bool { self.rate_limit.is_some() }
+    pub fn has_rate_limit(&self) -> bool {
+        self.rate_limit.is_some()
+    }
 }
 
 #[cfg(test)]

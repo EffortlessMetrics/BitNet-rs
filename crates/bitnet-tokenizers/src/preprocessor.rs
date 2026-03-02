@@ -14,18 +14,12 @@ pub enum PreprocessRule {
 }
 
 /// Preprocessor configuration.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PreprocessConfig {
     pub rules: Vec<PreprocessRule>,
     pub max_length: Option<usize>,
     pub add_bos: bool,
     pub add_eos: bool,
-}
-
-impl Default for PreprocessConfig {
-    fn default() -> Self {
-        Self { rules: Vec::new(), max_length: None, add_bos: false, add_eos: false }
-    }
 }
 
 impl PreprocessConfig {
@@ -81,10 +75,10 @@ pub fn preprocess(text: &str, config: &PreprocessConfig) -> String {
     for rule in &config.rules {
         result = apply_rule(&result, *rule);
     }
-    if let Some(max_len) = config.max_length {
-        if result.len() > max_len {
-            result.truncate(max_len);
-        }
+    if let Some(max_len) = config.max_length
+        && result.len() > max_len
+    {
+        result.truncate(max_len);
     }
     result
 }
