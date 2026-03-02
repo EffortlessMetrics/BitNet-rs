@@ -155,6 +155,11 @@ path = "tests/metal_layernorm_shader_tests.rs"
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
 
+[[test]]
+name = "proptest_wave25"
+path = "tests/proptest_wave25.rs"
+required-features = ["cpu"]
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
