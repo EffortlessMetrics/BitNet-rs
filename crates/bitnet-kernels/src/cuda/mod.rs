@@ -39,6 +39,7 @@ pub mod embedding;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod layer_norm;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
@@ -161,6 +162,8 @@ pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use layer_norm::LAYER_NORM_KERNEL_SRC;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use layernorm::LAYERNORM_KERNEL_SRC;
 
