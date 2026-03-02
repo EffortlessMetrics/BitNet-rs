@@ -27,6 +27,7 @@ pub mod safetensors_reader;
 pub mod security;
 pub mod transformer;
 pub mod validation;
+pub mod validation_suite;
 pub mod validator;
 pub mod weight_loader;
 pub mod weight_mapper;
