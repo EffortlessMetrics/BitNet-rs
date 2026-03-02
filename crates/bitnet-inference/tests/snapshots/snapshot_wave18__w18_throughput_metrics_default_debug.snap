@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: m
+---
+ThroughputMetrics {
+    prefill_tokens_per_sec: None,
+    decode_tokens_per_sec: None,
+    end_to_end_tokens_per_sec: 0.0,
+    total_tokens: 0,
+}

@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: m
+---
+ThroughputMetrics {
+    prefill_tokens_per_sec: Some(
+        1200.0,
+    ),
+    decode_tokens_per_sec: Some(
+        45.5,
+    ),
+    end_to_end_tokens_per_sec: 42.0,
+    total_tokens: 128,
+}

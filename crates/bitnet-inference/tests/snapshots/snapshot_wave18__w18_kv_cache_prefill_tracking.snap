@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave18.rs
+expression: "format!(\"prefilled={} total={}\", cache.num_tokens_prefilled(),\ncache.num_tokens_total())"
+---
+prefilled=64 total=66
