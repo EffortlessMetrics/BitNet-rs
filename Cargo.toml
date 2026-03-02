@@ -44,6 +44,7 @@ members = [
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
+  "crates/bitnet-gguf-metadata-core", # SRP: GGUF metadata->shape/config extraction helpers
   "crates/bitnet-probability",  # SRP: probability normalization and categorical sampling primitives
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",

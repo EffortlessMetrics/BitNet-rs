@@ -792,6 +792,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-gguf-metadata-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "bitnet-common",
+]
+
+[[package]]
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
@@ -968,6 +976,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-gguf",
+ "bitnet-gguf-metadata-core",
  "bitnet-quantization",
  "bitnet-st2gguf",
  "bitnet-test-fixtures-core",
@@ -1305,6 +1314,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-device-config-core",
  "bitnet-eval-core",
+ "bitnet-gguf-metadata-core",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
