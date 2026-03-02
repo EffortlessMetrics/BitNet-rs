@@ -209,8 +209,7 @@ pub fn create_health_checker(device_name: &str) -> HealthChecker {
 /// Verify that the device exists (CPU stub matches on name substring).
 pub fn cpu_check_device_detection(checker: &HealthChecker) -> HealthCheck {
     let start = Instant::now();
-    let known =
-        ["Intel(R) Arc(TM) A770", "Intel(R) Arc(TM) A750", "Intel(R) Arc(TM) A580"];
+    let known = ["Intel(R) Arc(TM) A770", "Intel(R) Arc(TM) A750", "Intel(R) Arc(TM) A580"];
     let result = if known.iter().any(|d| checker.device_name.contains(d)) {
         CheckResult::Pass
     } else if checker.device_name.to_lowercase().contains("intel") {
@@ -307,8 +306,7 @@ pub fn cpu_check_compute_correctness(checker: &HealthChecker) -> HealthCheck {
         }
     }
 
-    let max_err =
-        c.iter().zip(expected.iter()).map(|(a, b)| (a - b).abs()).fold(0.0_f32, f32::max);
+    let max_err = c.iter().zip(expected.iter()).map(|(a, b)| (a - b).abs()).fold(0.0_f32, f32::max);
 
     let result = if max_err < 1e-6 {
         CheckResult::Pass
@@ -349,16 +347,13 @@ pub fn cpu_check_numerical_precision(checker: &HealthChecker) -> HealthCheck {
     let result = if rel_err < 1e-5 {
         CheckResult::Pass
     } else if rel_err < 1e-3 {
-        CheckResult::Warning(format!(
-            "Reduced float precision: relative error {rel_err:.6e}"
-        ))
+        CheckResult::Warning(format!("Reduced float precision: relative error {rel_err:.6e}"))
     } else {
-        CheckResult::Fail(format!(
-            "Numerical precision failure: relative error {rel_err:.6e}"
-        ))
+        CheckResult::Fail(format!("Numerical precision failure: relative error {rel_err:.6e}"))
     };
-    let details =
-        format!("Harmonic series sum (n={n}): f32={sum:.6}, f64_ref={reference:.6}, rel_err={rel_err:.2e}");
+    let details = format!(
+        "Harmonic series sum (n={n}): f32={sum:.6}, f64_ref={reference:.6}, rel_err={rel_err:.2e}"
+    );
     HealthCheck {
         name: "numerical_precision".into(),
         category: CheckCategory::NumericalPrecision,
@@ -432,8 +427,7 @@ pub fn cpu_compute_health_score(suite: &HealthCheckSuite) -> f32 {
         return 1.0;
     }
     // Failures count as 0, warnings as 0.5, passes as 1.0
-    let score =
-        (suite.passed as f32 + suite.warnings as f32 * 0.5) / total as f32;
+    let score = (suite.passed as f32 + suite.warnings as f32 * 0.5) / total as f32;
     score.clamp(0.0, 1.0)
 }
 
@@ -445,19 +439,29 @@ pub fn cpu_generate_recommendations(suite: &HealthCheckSuite) -> Vec<String> {
             CheckResult::Fail(msg) => {
                 let rec = match check.category {
                     CheckCategory::DeviceDetection => {
-                        format!("Device detection failed ({msg}). Verify driver installation and device visibility.")
+                        format!(
+                            "Device detection failed ({msg}). Verify driver installation and device visibility."
+                        )
                     }
                     CheckCategory::MemoryAllocation => {
-                        format!("Memory allocation failed ({msg}). Reduce model size or close other GPU applications.")
+                        format!(
+                            "Memory allocation failed ({msg}). Reduce model size or close other GPU applications."
+                        )
                     }
                     CheckCategory::KernelCompilation => {
-                        format!("Kernel compilation failed ({msg}). Check OpenCL source for syntax errors.")
+                        format!(
+                            "Kernel compilation failed ({msg}). Check OpenCL source for syntax errors."
+                        )
                     }
                     CheckCategory::ComputeCorrectness => {
-                        format!("Compute correctness failed ({msg}). Possible hardware fault or driver bug.")
+                        format!(
+                            "Compute correctness failed ({msg}). Possible hardware fault or driver bug."
+                        )
                     }
                     CheckCategory::NumericalPrecision => {
-                        format!("Numerical precision failed ({msg}). Consider enabling FP32 accumulation.")
+                        format!(
+                            "Numerical precision failed ({msg}). Consider enabling FP32 accumulation."
+                        )
                     }
                     CheckCategory::Bandwidth => {
                         format!("Bandwidth check failed ({msg}). Check PCIe link width and speed.")
@@ -481,10 +485,7 @@ pub fn cpu_generate_recommendations(suite: &HealthCheckSuite) -> Vec<String> {
 }
 
 /// Generate a full diagnostic report.
-pub fn cpu_generate_report(
-    checker: &HealthChecker,
-    suite: &HealthCheckSuite,
-) -> DiagnosticReport {
+pub fn cpu_generate_report(checker: &HealthChecker, suite: &HealthCheckSuite) -> DiagnosticReport {
     let score = cpu_compute_health_score(suite);
     let recommendations = cpu_generate_recommendations(suite);
     let timestamp_ns = std::time::SystemTime::now()
@@ -525,10 +526,7 @@ pub fn format_diagnostic_report(report: &DiagnosticReport) -> String {
     if let Some(temp) = report.device_health.temperature_c {
         out.push_str(&format!("Temperature: {temp:.1} °C\n"));
     }
-    out.push_str(&format!(
-        "Health Score: {:.1}%\n\n",
-        report.device_health.health_score * 100.0,
-    ));
+    out.push_str(&format!("Health Score: {:.1}%\n\n", report.device_health.health_score * 100.0,));
 
     out.push_str("--- Check Results ---\n");
     for check in &report.suite_results.checks {
@@ -987,8 +985,7 @@ mod tests {
         let suite = cpu_run_full_suite(&mut checker);
         let counted = suite.passed + suite.failed + suite.warnings;
         // Skipped checks don't count toward pass/fail/warn but are in checks vec
-        let non_skipped =
-            suite.checks.iter().filter(|c| !c.result.is_skip()).count();
+        let non_skipped = suite.checks.iter().filter(|c| !c.result.is_skip()).count();
         assert_eq!(counted, non_skipped);
     }
 
