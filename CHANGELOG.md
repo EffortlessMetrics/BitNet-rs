@@ -4,6 +4,22 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — A770 OpenCL Attention & Tokenization (Wave 126)
+
+- **CHANGELOG Waves 123–124**: Documentation of waves 123–124 OpenCL PRs (#2410)
+- **Sliding Window Attention**: OpenCL sliding window attention (SWA/Longformer/BigBird) for long-sequence inference, 68 tests (#2431)
+- **INT8 DP4A Compute**: OpenCL INT8 DP4A compute for 4× throughput on A770, 77 tests (#2430)
+- **BPE Tokenizer Engine**: OpenCL BPE tokenizer engine for batch encoding, 71 tests (#2428)
+- **Attention Bias Patterns**: OpenCL attention bias patterns — ALiBi/T5/causal for flexible positional encoding, 68 tests (#2439)
+
+### Added — A770 OpenCL Parallelism & Optimization (Wave 125)
+
+- **Model Parallelism**: OpenCL model parallelism — tensor/pipeline/data parallel for multi-device execution, 75 tests (#2412)
+- **RoPE Table Generator**: OpenCL RoPE table generator with NTK/YaRN/Dynamic scaling for extended context, 71 tests (#2421)
+- **Grouped-Query Attention**: OpenCL grouped-query attention (GQA/MQA) for A770, 74 tests (#2418)
+- **Layer Fusion Optimizer**: OpenCL layer fusion optimizer for A770 reduced kernel launch overhead, 84 tests (#2424)
+- **Advanced Sampling**: OpenCL advanced sampling — MinP/Typical/Mirostat/Contrastive for diverse generation strategies, 81 tests (#2423)
+
 ### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
 
 - **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
