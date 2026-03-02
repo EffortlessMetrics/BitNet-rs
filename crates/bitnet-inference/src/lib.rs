@@ -24,6 +24,7 @@ pub mod memory_estimation;
 pub mod memory_pool;
 pub mod metrics;
 pub mod npu;
+pub mod run_metrics;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
