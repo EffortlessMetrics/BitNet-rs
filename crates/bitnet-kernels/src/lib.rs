@@ -52,6 +52,7 @@ pub mod opencl_mixed_precision;
 pub mod opencl_model_converter;
 pub mod opencl_numerical_stability;
 pub mod opencl_pipeline;
+pub mod opencl_prefix_cache;
 pub mod opencl_profiling;
 pub mod opencl_program_cache;
 pub mod opencl_quantized;
