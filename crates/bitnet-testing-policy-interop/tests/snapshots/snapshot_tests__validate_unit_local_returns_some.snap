@@ -1,5 +1,0 @@
----
-source: crates/bitnet-testing-policy-interop/tests/snapshot_tests.rs
-expression: result.is_some().to_string()
----
-true

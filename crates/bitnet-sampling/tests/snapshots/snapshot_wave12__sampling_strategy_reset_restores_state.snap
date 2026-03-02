@@ -1,5 +1,0 @@
----
-source: crates/bitnet-sampling/tests/snapshot_wave12.rs
-expression: "format!(\"before={before} after={after}\")"
----
-before=29 after=29

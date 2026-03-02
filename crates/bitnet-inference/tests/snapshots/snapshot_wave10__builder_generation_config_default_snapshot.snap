@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave10.rs
-expression: "format!(\"max_tokens={} stream={} stop_sequences={} stop_token_ids={}\",\ncfg.max_tokens, cfg.stream, cfg.stop_sequences.len(),\ncfg.stop_token_ids.len())"
----
-max_tokens=128 stream=false stop_sequences=0 stop_token_ids=0

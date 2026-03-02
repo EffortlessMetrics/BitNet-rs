@@ -1,7 +1,0 @@
----
-source: crates/bitnet-sampling/tests/snapshot_wave12.rs
-expression: s
----
-Temperature(
-    0.7,
-)

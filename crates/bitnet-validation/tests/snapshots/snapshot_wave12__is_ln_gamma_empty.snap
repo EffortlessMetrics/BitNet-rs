@@ -1,5 +1,0 @@
----
-source: crates/bitnet-validation/tests/snapshot_wave12.rs
-expression: "format!(\"{}\", is_ln_gamma(\"\"))"
----
-false

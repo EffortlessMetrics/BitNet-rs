@@ -1,7 +1,0 @@
----
-source: crates/bitnet-tokenizers/tests/snapshot_wave9.rs
-expression: "output.join(\"\\n\")"
----
-Llama2: requires_gpu=false
-Llama3: requires_gpu=true
-CodeLlama: requires_gpu=false

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-opencl/tests/snapshot_wave13.rs
-expression: finding.to_string()
----
-[WARN] LayerNorm weights appear quantized (suggestion: Re-export with F16 LayerNorm)

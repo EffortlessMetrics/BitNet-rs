@@ -1,5 +1,0 @@
----
-source: crates/bitnet-validation/tests/snapshot_wave12.rs
-expression: "format!(\"proj_min={:?} proj_max={:?}\", r.proj_weight_rms_min,\nr.proj_weight_rms_max)"
----
-proj_min=Some(0.002) proj_max=Some(0.2)

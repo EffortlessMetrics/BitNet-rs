@@ -1,3 +1,0 @@
-# This file ensures the patches directory is tracked by git
-# The directory should remain empty unless absolutely necessary patches are added
-# See README.md for patch policy

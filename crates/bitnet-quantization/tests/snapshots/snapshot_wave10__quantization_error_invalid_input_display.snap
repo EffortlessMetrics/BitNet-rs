@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Invalid input dimensions: tensor must have at least 32 elements

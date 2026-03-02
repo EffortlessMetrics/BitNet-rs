@@ -1,5 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave5.rs
-expression: "format!(\"{dev:?}\")"
----
-Cpu

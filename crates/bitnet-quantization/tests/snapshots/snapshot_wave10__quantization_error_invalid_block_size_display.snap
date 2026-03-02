@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Invalid block size: 17

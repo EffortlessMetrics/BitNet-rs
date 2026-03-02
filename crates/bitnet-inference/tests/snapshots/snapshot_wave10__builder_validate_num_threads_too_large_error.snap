@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave10.rs
-expression: err
----
-num_threads must be <= 1024

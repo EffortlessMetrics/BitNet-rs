@@ -1,5 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave12.rs
-expression: "format!(\"{err}\")"
----
-Unknown device config: foobar

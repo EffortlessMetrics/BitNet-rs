@@ -4,6 +4,19 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — A770 OpenCL Inference & Caching (Waves 123–124)
+
+- **CHANGELOG Waves 121–122**: Documentation of waves 121–122 OpenCL PRs (#2363)
+- **Vocabulary Trie**: Compact GPU-layout vocabulary trie for OpenCL token lookup, 77 tests (#2393)
+- **Beam Search**: Diverse beam search with grouped candidates and early stopping for OpenCL, 69 tests (#2398)
+- **Flash Attention v2**: Online softmax Flash Attention v2 optimized for A770, 68 tests (#2400)
+- **Program Binary Cache**: OpenCL program binary persistence for fast kernel loading, 88 tests (#2402)
+- **Dynamic Batching**: Priority-queue-based dynamic batching for OpenCL inference, 70 tests (#2394)
+- **KV-Cache Paging**: PagedAttention-style KV-cache management for A770, 70 tests (#2399)
+- **Speculative Decoding v2**: Adaptive-gamma speculative decoding for OpenCL backend, 67 tests (#2392)
+- **Mixed Precision Engine**: FP16/INT8/INT4 mixed precision inference engine for A770, 72 tests (#2403)
+- **Prompt Prefix Cache**: Shared KV reuse via prompt prefix caching for OpenCL, 69 tests (#2401)
+
 ### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
 
 - **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)

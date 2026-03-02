@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Flush interval must be greater than 0

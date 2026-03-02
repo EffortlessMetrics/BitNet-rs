@@ -1,9 +1,0 @@
----
-source: crates/bitnet-logits/tests/snapshot_tests.rs
-expression: rounded
----
-[
-    4.0,
-    8.0,
-    12.0,
-]

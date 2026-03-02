@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_wave9.rs
-expression: "format!(\"available={} accel_device={}\", caps.available,\ncaps.accel_device_present)"
----
-available=false accel_device=false

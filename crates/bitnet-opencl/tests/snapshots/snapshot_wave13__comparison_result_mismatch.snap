@@ -1,5 +1,0 @@
----
-source: crates/bitnet-opencl/tests/snapshot_wave13.rs
-expression: result.to_string()
----
-MISMATCH: max_diff=0.523000, mean_diff=0.042000, outliers=17/1024

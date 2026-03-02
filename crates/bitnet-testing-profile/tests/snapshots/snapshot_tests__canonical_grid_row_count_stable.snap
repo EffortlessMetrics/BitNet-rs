@@ -1,5 +1,0 @@
----
-source: crates/bitnet-testing-profile/tests/snapshot_tests.rs
-expression: canonical_grid().rows().len().to_string()
----
-25

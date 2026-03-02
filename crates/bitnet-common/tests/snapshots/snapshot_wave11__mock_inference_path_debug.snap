@@ -1,9 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave11.rs
-expression: path
----
-MockInferencePath {
-    description: "synthetic forward pass",
-    uses_mock_computation: true,
-    fallback_reason: "no CUDA runtime",
-}

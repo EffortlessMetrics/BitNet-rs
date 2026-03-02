@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_tests.rs
-expression: gpu_compiled().to_string()
----
-false

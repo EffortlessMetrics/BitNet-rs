@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave9.rs
-expression: "names.join(\"\\n\")"
----
-Intel Arc A770
-NVIDIA RTX 4090
-Apple M1
-CPU SIMD (AVX2)
-CPU Scalar

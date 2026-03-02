@@ -1,7 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave12.rs
-expression: "DeviceConfig::Gpu(0)"
----
-Gpu(
-    0,
-)

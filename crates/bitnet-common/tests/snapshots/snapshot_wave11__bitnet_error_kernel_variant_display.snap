@@ -1,5 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave11.rs
-expression: err.to_string()
----
-Kernel error: No available kernel provider

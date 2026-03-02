@@ -1,7 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave12.rs
-expression: "DeviceHealth::Degraded { reason: \"high memory usage\".into() }"
----
-Degraded {
-    reason: "high memory usage",
-}

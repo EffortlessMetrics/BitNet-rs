@@ -1,5 +1,0 @@
----
-source: crates/bitnet-testing-policy-contract/tests/snapshot_tests.rs
-expression: "debug_str.starts_with(\"PolicyContract\").to_string()"
----
-true

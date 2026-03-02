@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Memory allocation failed: failed to allocate 4GB for quantized output

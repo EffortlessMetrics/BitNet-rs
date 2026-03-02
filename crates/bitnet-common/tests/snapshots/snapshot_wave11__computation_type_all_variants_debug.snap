@@ -1,8 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave11.rs
-expression: debugs
----
-[
-    "Real",
-    "Mock",
-]

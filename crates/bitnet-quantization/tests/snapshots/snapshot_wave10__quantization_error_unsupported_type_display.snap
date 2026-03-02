@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave10.rs
-expression: err.to_string()
----
-Unsupported quantization type: Q4_0

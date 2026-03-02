@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave9.rs
-expression: "format!(\"{report}\")"
----
-CPU SIMD (AVX2) (CPU SIMD): READY — 2/2 required ops supported

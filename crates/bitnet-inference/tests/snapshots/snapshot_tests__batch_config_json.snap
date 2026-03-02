@@ -1,9 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_tests.rs
-expression: cfg
----
-{
-  "max_batch_size": 4,
-  "timeout": 10000,
-  "max_total_tokens": 4096
-}

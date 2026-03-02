@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave11.rs
-expression: cfg
----
-EmbeddingConfig {
-    vocab_size: 50257,
-    embedding_dim: 1024,
-    padding_idx: None,
-}

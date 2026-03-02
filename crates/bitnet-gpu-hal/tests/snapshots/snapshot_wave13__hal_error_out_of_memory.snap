@@ -1,5 +1,0 @@
----
-source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
-expression: err.to_string()
----
-out of memory: requested 1073741824 B, available 536870912 B

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_wave9.rs
-expression: "format!(\"{err}\")"
----
-device 'gpu:0': need 4000000000 B, have 2000000000 B

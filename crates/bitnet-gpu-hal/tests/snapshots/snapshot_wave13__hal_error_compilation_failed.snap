@@ -1,5 +1,0 @@
----
-source: crates/bitnet-gpu-hal/tests/snapshot_wave13.rs
-expression: err.to_string()
----
-compilation failed: syntax error at line 42

@@ -1,7 +1,0 @@
----
-source: crates/bitnet-tokenizers/tests/snapshot_tests.rs
-expression: tok.eos_token_id()
----
-Some(
-    50256,
-)

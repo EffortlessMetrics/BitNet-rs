@@ -1,9 +1,0 @@
----
-source: crates/bitnet-sampling/tests/snapshot_wave12.rs
-expression: c
----
-RepetitionPenaltyConfig {
-    frequency_penalty: 0.0,
-    presence_penalty: 0.0,
-    count_penalty: 1.0,
-}

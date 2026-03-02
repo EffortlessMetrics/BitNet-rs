@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave12.rs
-expression: "format!(\"p50={:?} p90={:?}\", h.p50(), h.p90())"
----
-p50=None p90=None

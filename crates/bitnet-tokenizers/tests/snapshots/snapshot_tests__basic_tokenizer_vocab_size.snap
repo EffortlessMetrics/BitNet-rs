@@ -1,5 +1,0 @@
----
-source: crates/bitnet-tokenizers/tests/snapshot_tests.rs
-expression: tok.vocab_size().to_string()
----
-50257

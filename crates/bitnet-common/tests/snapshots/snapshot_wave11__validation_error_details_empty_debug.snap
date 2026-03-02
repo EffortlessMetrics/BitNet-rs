@@ -1,9 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave11.rs
-expression: details
----
-ValidationErrorDetails {
-    errors: [],
-    warnings: [],
-    recommendations: [],
-}

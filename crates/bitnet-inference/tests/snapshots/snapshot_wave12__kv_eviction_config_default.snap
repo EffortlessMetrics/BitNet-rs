@@ -1,9 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave12.rs
-expression: c
----
-EvictionConfig {
-    policy: LRU,
-    max_pages: 1024,
-    window_size: 64,
-}

@@ -1,9 +1,0 @@
----
-source: crates/bitnet-opencl/tests/snapshot_wave13.rs
-expression: point
----
-DivergencePoint {
-    step: 42,
-    metric: 0.987654321,
-    description: "L2 distance exceeded threshold after attention layer 12",
-}

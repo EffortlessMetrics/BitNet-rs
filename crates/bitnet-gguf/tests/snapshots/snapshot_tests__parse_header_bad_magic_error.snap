@@ -1,5 +1,0 @@
----
-source: crates/bitnet-gguf/tests/snapshot_tests.rs
-expression: msg
----
-invalid GGUF magic (expected 'GGUF')

@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave11.rs
-expression: debugs
----
-[
-    "None",
-    "Mean",
-    "Sum",
-]
