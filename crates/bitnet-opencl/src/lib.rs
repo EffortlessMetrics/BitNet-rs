@@ -13,7 +13,10 @@ pub mod backend_dispatcher;
 pub mod backend_registry;
 pub mod context_pool;
 pub mod kv_cache;
+pub mod p2p;
 pub mod paged_attention;
+pub mod usm;
+pub mod wasm_shim;
 
 pub use backend_dispatcher::{
     BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchDecision, DispatchError,
