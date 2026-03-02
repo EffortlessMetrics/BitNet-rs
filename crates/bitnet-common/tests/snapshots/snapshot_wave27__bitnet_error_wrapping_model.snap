@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: outer.to_string()
+---
+Model error: Model not found: test.gguf

@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave27.rs
+expression: constraints
+---
+DeviceConstraints {
+    max_workgroup_size: 1024,
+    max_local_memory: 65536,
+    subgroup_sizes: [
+        8,
+        16,
+        32,
+    ],
+    has_fp16: true,
+    has_int8_dot: true,
+    compute_units: 32,
+}

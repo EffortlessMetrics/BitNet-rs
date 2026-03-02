@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: errors
+---
+[
+    "No available kernel provider",
+    "Kernel execution failed: CUDA OOM",
+    "Unsupported architecture: wasm32",
+    "Unsupported hardware: required avx512, available avx2",
+]

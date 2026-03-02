@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave27.rs
+expression: cfg
+---
+{
+  "enabled": true,
+  "record_memory": true,
+  "warmup_iterations": 3,
+  "sample_size": 10
+}

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave27.rs
+expression: displays
+---
+[
+    "Full (95%)",
+    "Full (100%)",
+    "Partial (no FP16 native)",
+    "Emulated",
+    "Unsupported",
+]

@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave27.rs
+expression: displays
+---
+[
+    "MatMul",
+    "MatVec",
+    "Softmax",
+    "RmsNorm",
+    "LayerNorm",
+    "RoPE",
+    "Attention",
+    "SiLU",
+    "GELU",
+    "ReLU",
+    "ElementwiseAdd",
+    "ElementwiseMul",
+    "Scale",
+    "Embedding",
+    "Dequantize",
+    "KvCacheAppend",
+]

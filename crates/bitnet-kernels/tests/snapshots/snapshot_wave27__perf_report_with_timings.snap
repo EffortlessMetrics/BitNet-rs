@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave27.rs
+expression: report
+---
+=== Kernel Performance Report ===
+Total kernels: 4
+Total time:    2.75ms
+
+Kernel                Count        Total          Avg   Throughput
+----------------------------------------------------------------------
+matmul_fp16               2       2.30ms       1.15ms   56987826 e/s
+softmax                   1     300.00µs     300.00µs  106666667 e/s
+layer_norm                1     150.00µs     150.00µs   27306667 e/s
