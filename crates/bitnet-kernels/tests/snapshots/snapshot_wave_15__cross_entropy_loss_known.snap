@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"loss={loss:.6} per_sample={}\", fmt6(&per_sample))"
+---
+loss=0.417030 per_sample=[0.417030, 0.417030]

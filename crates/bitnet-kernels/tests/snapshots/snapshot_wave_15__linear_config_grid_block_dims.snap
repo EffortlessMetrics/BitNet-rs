@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: "format!(\"grid={grid:?} block={block:?}\")"
+---
+grid=(8, 1, 1) block=(256, 1, 1)

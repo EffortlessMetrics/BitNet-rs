@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: cfg
+---
+FfnConfig {
+    hidden_dim: 512,
+    intermediate_dim: 2048,
+    activation: SiLU,
+}

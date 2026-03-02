@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: vals
+---
+[
+    (
+        "Assign",
+        0.0,
+    ),
+    (
+        "Add",
+        0.0,
+    ),
+    (
+        "Max",
+        -inf,
+    ),
+    (
+        "Min",
+        inf,
+    ),
+]

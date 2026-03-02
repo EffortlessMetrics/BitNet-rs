@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave_15.rs
+expression: cfg
+---
+SoftmaxConfig {
+    n_cols: 4,
+    n_rows: 4,
+    threads_per_block: 4,
+    temperature: 1.0,
+    causal_mask: true,
+    mode: Standard,
+    in_place: false,
+}
