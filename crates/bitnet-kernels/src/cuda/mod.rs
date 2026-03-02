@@ -31,6 +31,7 @@
 //! module via `cudarc`.
 
 pub mod activations;
+pub mod async_copy;
 pub mod attention;
 pub mod batch_norm;
 pub mod conv1d;
@@ -57,6 +58,7 @@ pub use activations::{
     ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
     launch_silu_gate, silu_gate_cpu,
 };
+pub use async_copy::*;
 pub use attention::{
     AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
     attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
