@@ -1,6 +1,7 @@
 //! Concurrency management with backpressure and rate limiting
 
 use anyhow::Result;
+use bitnet_circuit_breaker_core::{CircuitBreaker, CircuitBreakerConfig, CircuitBreakerState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -8,7 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, RwLock, Semaphore};
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// Concurrency management configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,108 +90,6 @@ impl RateLimitBucket {
     }
 }
 
-/// Circuit breaker states
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum CircuitBreakerState {
-    Closed,   // Normal operation
-    Open,     // Blocking requests
-    HalfOpen, // Testing if service recovered
-}
-
-/// Circuit breaker for fault tolerance
-#[derive(Debug)]
-pub struct CircuitBreaker {
-    state: RwLock<CircuitBreakerState>,
-    failure_count: AtomicU64,
-    success_count: AtomicU64,
-    last_failure_time: RwLock<Option<Instant>>,
-    failure_threshold: u64,
-    timeout: Duration,
-    half_open_max_requests: u64,
-}
-
-impl CircuitBreaker {
-    fn new(failure_threshold: u64, timeout: Duration) -> Self {
-        Self {
-            state: RwLock::new(CircuitBreakerState::Closed),
-            failure_count: AtomicU64::new(0),
-            success_count: AtomicU64::new(0),
-            last_failure_time: RwLock::new(None),
-            failure_threshold,
-            timeout,
-            half_open_max_requests: 3,
-        }
-    }
-
-    async fn can_execute(&self) -> bool {
-        let state = self.state.read().await;
-
-        match *state {
-            CircuitBreakerState::Closed => true,
-            CircuitBreakerState::Open => {
-                drop(state);
-                self.check_timeout().await
-            }
-            CircuitBreakerState::HalfOpen => {
-                // Allow limited requests in half-open state
-                self.success_count.load(Ordering::Relaxed) < self.half_open_max_requests
-            }
-        }
-    }
-
-    async fn record_success(&self) {
-        self.success_count.fetch_add(1, Ordering::Relaxed);
-
-        let state = self.state.read().await;
-        if matches!(*state, CircuitBreakerState::HalfOpen)
-            && self.success_count.load(Ordering::Relaxed) >= self.half_open_max_requests
-        {
-            drop(state);
-            let mut state = self.state.write().await;
-            *state = CircuitBreakerState::Closed;
-            self.failure_count.store(0, Ordering::Relaxed);
-            self.success_count.store(0, Ordering::Relaxed);
-            info!("Circuit breaker closed - service recovered");
-        }
-    }
-
-    async fn record_failure(&self) {
-        let failures = self.failure_count.fetch_add(1, Ordering::Relaxed) + 1;
-
-        if failures >= self.failure_threshold {
-            let mut state = self.state.write().await;
-            if !matches!(*state, CircuitBreakerState::Open) {
-                *state = CircuitBreakerState::Open;
-                let mut last_failure = self.last_failure_time.write().await;
-                *last_failure = Some(Instant::now());
-                warn!(failures = failures, "Circuit breaker opened - too many failures");
-            }
-        }
-    }
-
-    async fn check_timeout(&self) -> bool {
-        let last_failure = self.last_failure_time.read().await;
-        if let Some(last_failure_time) = *last_failure {
-            if last_failure_time.elapsed() >= self.timeout {
-                drop(last_failure);
-                let mut state = self.state.write().await;
-                *state = CircuitBreakerState::HalfOpen;
-                self.success_count.store(0, Ordering::Relaxed);
-                info!("Circuit breaker half-open - testing service recovery");
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
-    async fn get_state(&self) -> CircuitBreakerState {
-        self.state.read().await.clone()
-    }
-}
-
 /// Request metadata for tracking
 #[derive(Debug, Clone)]
 pub struct RequestMetadata {
@@ -223,12 +122,13 @@ impl ConcurrencyManager {
         ));
 
         let circuit_breaker = if config.circuit_breaker_enabled {
-            Arc::new(CircuitBreaker::new(
-                config.circuit_breaker_failure_threshold,
-                config.circuit_breaker_timeout,
-            ))
+            Arc::new(CircuitBreaker::new(CircuitBreakerConfig {
+                failure_threshold: config.circuit_breaker_failure_threshold,
+                timeout: config.circuit_breaker_timeout,
+                half_open_max_requests: 3,
+            }))
         } else {
-            Arc::new(CircuitBreaker::new(u64::MAX, Duration::from_secs(0)))
+            Arc::new(CircuitBreaker::disabled())
         };
 
         Self {
@@ -399,7 +299,7 @@ impl ConcurrencyManager {
         };
 
         let current_load = self.get_current_load().await;
-        let circuit_breaker_state = self.circuit_breaker.get_state().await;
+        let circuit_breaker_state = self.circuit_breaker.state().await;
 
         ConcurrencyStats {
             active_requests,
@@ -417,7 +317,7 @@ impl ConcurrencyManager {
     /// Get health status
     pub async fn get_health(&self) -> ConcurrencyHealth {
         let stats = self.get_stats().await;
-        let circuit_breaker_state = self.circuit_breaker.get_state().await;
+        let circuit_breaker_state = self.circuit_breaker.state().await;
 
         let healthy =
             stats.current_load < 0.9 && circuit_breaker_state != CircuitBreakerState::Open;
