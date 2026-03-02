@@ -4,6 +4,7 @@ pub mod architecture;
 pub mod bitnet;
 pub mod checkpoint;
 pub mod config;
+pub mod config_detection;
 pub mod correction_policy;
 pub mod fingerprint;
 pub mod formats;
