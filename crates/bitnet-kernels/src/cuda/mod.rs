@@ -16,6 +16,8 @@
 //! - [`crate::reduction`]: Parallel reductions (sum, max, min, mean, L2 norm)
 //! - [`softmax`]: Numerically stable row-wise softmax with temperature scaling,
 //!   causal masking, log-softmax, in-place mode, and batched multi-head support
+//! - [`tensor_core`]: Tensor Core (WMMA) operations for FP16/INT8 accelerated matmul
+//!   with mixed-precision accumulation and CPU simulation fallback
 //! - [`matmul`]: Dense f32/f16 matrix multiplication (tiled GEMM) with batched and
 //!   transpose support
 //! - [`linear`]: Linear projection (y = xW^T + bias) CUDA kernel and launch stub
@@ -36,7 +38,6 @@ pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
 pub mod embedding;
-pub mod ffn;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
@@ -51,6 +52,7 @@ pub mod quantized_matmul;
 pub mod rmsnorm;
 pub mod rope;
 pub mod softmax;
+pub mod tensor_core;
 pub mod transpose;
 
 pub use activations::{
@@ -152,6 +154,13 @@ pub use embedding::{
 
 pub use gating::{GatingConfig, GatingType, gating_cpu, launch_gating};
 
+pub use tensor_core::{
+    AccumulationType, FragmentLayout, FragmentType, TensorCoreConfig, TensorCorePrecision,
+    TensorCoreScheduler, WmmaFragment, batched_tc_matmul, int8_tc_matmul, int8_tc_matmul_forward,
+    mixed_precision_tc_matmul, tc_matmul_forward, tc_occupancy, tensor_core_matmul, wmma_fill,
+    wmma_load, wmma_mma, wmma_store,
+};
+
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gating::{GATING_KERNEL_SRC, launch_gating_cuda};
 
@@ -160,6 +169,9 @@ pub use embedding::{EMBEDDING_LOOKUP_KERNEL_SRC, EMBEDDING_WITH_POSITION_KERNEL_
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use activations::{ACTIVATION_KERNEL_SRC, launch_activation_cuda, launch_silu_gate_cuda};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use tensor_core::{TENSOR_CORE_MATMUL_KERNEL_SRC, launch_int8_tc_matmul, launch_tc_matmul};
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use elementwise::{ELEMENTWISE_BINARY_KERNEL_SRC, ELEMENTWISE_UNARY_KERNEL_SRC};
