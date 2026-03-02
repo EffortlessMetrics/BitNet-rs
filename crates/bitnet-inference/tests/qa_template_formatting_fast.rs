@@ -360,13 +360,13 @@ mod qa_template_detection_fast {
         );
         assert_eq!(
             TemplateType::detect(Some("mistral-instruct"), None),
-            TemplateType::Instruct,
-            "Should detect Instruct from 'mistral' family name"
+            TemplateType::MistralChat,
+            "Should detect MistralChat from 'mistral' family name"
         );
         assert_eq!(
             TemplateType::detect(Some("phi-2-instruct"), None),
-            TemplateType::Instruct,
-            "Should detect Instruct from 'instruct' family name"
+            TemplateType::Phi2Instruct,
+            "Should detect Phi2Instruct from 'phi-2-instruct' family name"
         );
     }
     /// Tests feature spec: cli-ux-improvements-spec.md#AC4-detection-fallback
