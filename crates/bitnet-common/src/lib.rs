@@ -17,6 +17,7 @@ pub mod memory_pool;
 pub mod shape_validator;
 pub mod strict_mode;
 pub mod tensor;
+pub mod tensor_serde;
 pub mod tensor_validation;
 pub mod types;
 
