@@ -1063,6 +1063,180 @@ pub fn normalize_model_tensors(
     Ok((vocab_size, hidden_size))
 }
 
+// ---------------------------------------------------------------------------
+// WeightMapper: HuggingFace ↔ Internal (GGUF-style) name translation
+// ---------------------------------------------------------------------------
+
+use crate::architecture::ModelArchitecture;
+
+/// A single mapping rule using `{n}` as a layer-number placeholder.
+#[derive(Debug, Clone)]
+struct MappingRule {
+    hf: String,
+    internal: String,
+}
+
+fn rule(hf: &str, internal: &str) -> MappingRule {
+    MappingRule { hf: hf.to_string(), internal: internal.to_string() }
+}
+
+/// Extract the layer number from a concrete name given a pattern containing `{n}`.
+fn extract_layer_number(name: &str, pattern: &str) -> Option<usize> {
+    let (prefix, suffix) = pattern.split_once("{n}")?;
+    let rest = name.strip_prefix(prefix)?;
+    let num_str = rest.strip_suffix(suffix)?;
+    num_str.parse().ok()
+}
+
+/// Common LLaMA-family rules shared by Phi-4, LLaMA-3, Qwen2.5, Mistral, etc.
+fn llama_family_rules() -> Vec<MappingRule> {
+    vec![
+        rule("model.embed_tokens.weight", "token_embd.weight"),
+        rule("model.layers.{n}.self_attn.q_proj.weight", "blk.{n}.attn_q.weight"),
+        rule("model.layers.{n}.self_attn.k_proj.weight", "blk.{n}.attn_k.weight"),
+        rule("model.layers.{n}.self_attn.v_proj.weight", "blk.{n}.attn_v.weight"),
+        rule("model.layers.{n}.self_attn.o_proj.weight", "blk.{n}.attn_output.weight"),
+        rule("model.layers.{n}.mlp.gate_proj.weight", "blk.{n}.ffn_gate.weight"),
+        rule("model.layers.{n}.mlp.up_proj.weight", "blk.{n}.ffn_up.weight"),
+        rule("model.layers.{n}.mlp.down_proj.weight", "blk.{n}.ffn_down.weight"),
+        rule("model.layers.{n}.input_layernorm.weight", "blk.{n}.attn_norm.weight"),
+        rule(
+            "model.layers.{n}.post_attention_layernorm.weight",
+            "blk.{n}.ffn_norm.weight",
+        ),
+        rule("model.norm.weight", "output_norm.weight"),
+        rule("lm_head.weight", "output.weight"),
+    ]
+}
+
+/// Gemma-2 extends the LLaMA pattern with extra norm layers.
+fn gemma_rules() -> Vec<MappingRule> {
+    let mut rules = llama_family_rules();
+    rules.extend([
+        rule(
+            "model.layers.{n}.pre_feedforward_layernorm.weight",
+            "blk.{n}.ffn_pre_norm.weight",
+        ),
+        rule(
+            "model.layers.{n}.post_feedforward_layernorm.weight",
+            "blk.{n}.ffn_post_norm.weight",
+        ),
+    ]);
+    rules
+}
+
+/// Select the mapping rules for a given architecture.
+fn build_rules(arch: &ModelArchitecture) -> Vec<MappingRule> {
+    match arch {
+        ModelArchitecture::Gemma => gemma_rules(),
+        // All other known architectures follow the LLaMA-family pattern.
+        _ => llama_family_rules(),
+    }
+}
+
+/// Maps HuggingFace model weight names to internal GGUF-style tensor names.
+///
+/// Supports pattern-based translation with `{n}` layer-number placeholders,
+/// forward mapping (HF → internal), and reverse mapping (internal → HF).
+///
+/// # Example
+///
+/// ```
+/// use bitnet_models::weight_mapper::WeightMapper;
+/// use bitnet_models::architecture::ModelArchitecture;
+///
+/// let mapper = WeightMapper::for_architecture(ModelArchitecture::Phi);
+/// assert_eq!(
+///     mapper.map_name("model.layers.0.self_attn.q_proj.weight"),
+///     Some("blk.0.attn_q.weight".to_string()),
+/// );
+/// assert_eq!(
+///     mapper.reverse_map("blk.0.attn_q.weight"),
+///     Some("model.layers.0.self_attn.q_proj.weight".to_string()),
+/// );
+/// ```
+pub struct WeightMapper {
+    architecture: ModelArchitecture,
+    rules: Vec<MappingRule>,
+}
+
+impl WeightMapper {
+    /// Build a mapper for the given model architecture.
+    pub fn for_architecture(arch: ModelArchitecture) -> Self {
+        let rules = build_rules(&arch);
+        Self { architecture: arch, rules }
+    }
+
+    /// Translate a HuggingFace weight name to the internal GGUF-style name.
+    ///
+    /// Returns `None` if the name does not match any known mapping rule.
+    pub fn map_name(&self, hf_name: &str) -> Option<String> {
+        for r in &self.rules {
+            if r.hf.contains("{n}") {
+                if let Some(n) = extract_layer_number(hf_name, &r.hf) {
+                    return Some(r.internal.replace("{n}", &n.to_string()));
+                }
+            } else if hf_name == r.hf {
+                return Some(r.internal.clone());
+            }
+        }
+        None
+    }
+
+    /// Translate an internal GGUF-style name back to the HuggingFace name.
+    ///
+    /// Returns `None` if the name does not match any known mapping rule.
+    pub fn reverse_map(&self, internal_name: &str) -> Option<String> {
+        for r in &self.rules {
+            if r.internal.contains("{n}") {
+                if let Some(n) = extract_layer_number(internal_name, &r.internal) {
+                    return Some(r.hf.replace("{n}", &n.to_string()));
+                }
+            } else if internal_name == r.internal {
+                return Some(r.hf.clone());
+            }
+        }
+        None
+    }
+
+    /// The architecture this mapper was built for.
+    pub fn architecture(&self) -> &ModelArchitecture {
+        &self.architecture
+    }
+
+    /// The number of mapping rules (useful for weight-count validation).
+    pub fn rule_count(&self) -> usize {
+        self.rules.len()
+    }
+
+    /// Return an iterator over (hf_pattern, internal_pattern) pairs.
+    pub fn rules(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.rules.iter().map(|r| (r.hf.as_str(), r.internal.as_str()))
+    }
+
+    /// Generate all concrete weight names for a model with `num_layers` layers.
+    ///
+    /// Returns `(hf_names, internal_names)` — both sorted for stable comparison.
+    pub fn all_names(&self, num_layers: usize) -> (Vec<String>, Vec<String>) {
+        let mut hf = Vec::new();
+        let mut internal = Vec::new();
+        for r in &self.rules {
+            if r.hf.contains("{n}") {
+                for n in 0..num_layers {
+                    hf.push(r.hf.replace("{n}", &n.to_string()));
+                    internal.push(r.internal.replace("{n}", &n.to_string()));
+                }
+            } else {
+                hf.push(r.hf.clone());
+                internal.push(r.internal.clone());
+            }
+        }
+        hf.sort();
+        internal.sort();
+        (hf, internal)
+    }
+}
+
 /// Create a VarBuilder from mapped tensors
 pub fn create_var_builder(
     tensors: HashMap<String, Tensor>,
@@ -1276,6 +1450,203 @@ mod tests {
             mapped.contains_key("layers.0.attention.q_proj.weight"),
             "Expected remapped key without suffix, got keys: {:?}",
             mapped.keys().collect::<Vec<_>>()
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // WeightMapper tests
+    // -----------------------------------------------------------------------
+
+    use crate::architecture::ModelArchitecture;
+
+    #[test]
+    fn phi4_maps_all_weight_names() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
+        assert_eq!(m.map_name("model.embed_tokens.weight"), Some("token_embd.weight".into()));
+        assert_eq!(
+            m.map_name("model.layers.0.self_attn.q_proj.weight"),
+            Some("blk.0.attn_q.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.5.self_attn.k_proj.weight"),
+            Some("blk.5.attn_k.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.31.self_attn.v_proj.weight"),
+            Some("blk.31.attn_v.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.self_attn.o_proj.weight"),
+            Some("blk.0.attn_output.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.mlp.gate_proj.weight"),
+            Some("blk.0.ffn_gate.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.mlp.up_proj.weight"),
+            Some("blk.0.ffn_up.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.mlp.down_proj.weight"),
+            Some("blk.0.ffn_down.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.input_layernorm.weight"),
+            Some("blk.0.attn_norm.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.0.post_attention_layernorm.weight"),
+            Some("blk.0.ffn_norm.weight".into()),
+        );
+        assert_eq!(m.map_name("model.norm.weight"), Some("output_norm.weight".into()));
+        assert_eq!(m.map_name("lm_head.weight"), Some("output.weight".into()));
+    }
+
+    #[test]
+    fn llama3_maps_all_weight_names() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Llama);
+        assert_eq!(m.map_name("model.embed_tokens.weight"), Some("token_embd.weight".into()));
+        assert_eq!(
+            m.map_name("model.layers.12.self_attn.q_proj.weight"),
+            Some("blk.12.attn_q.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.12.self_attn.o_proj.weight"),
+            Some("blk.12.attn_output.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.12.mlp.gate_proj.weight"),
+            Some("blk.12.ffn_gate.weight".into()),
+        );
+        assert_eq!(m.map_name("model.norm.weight"), Some("output_norm.weight".into()));
+        assert_eq!(m.map_name("lm_head.weight"), Some("output.weight".into()));
+    }
+
+    #[test]
+    fn qwen25_uses_llama_pattern() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Qwen);
+        assert_eq!(
+            m.map_name("model.layers.0.self_attn.q_proj.weight"),
+            Some("blk.0.attn_q.weight".into()),
+        );
+        assert_eq!(m.map_name("lm_head.weight"), Some("output.weight".into()));
+    }
+
+    #[test]
+    fn mistral_uses_llama_pattern() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Mistral);
+        assert_eq!(
+            m.map_name("model.layers.3.self_attn.v_proj.weight"),
+            Some("blk.3.attn_v.weight".into()),
+        );
+    }
+
+    #[test]
+    fn gemma_has_extra_norm_rules() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Gemma);
+        // Standard rules still work
+        assert_eq!(m.map_name("model.embed_tokens.weight"), Some("token_embd.weight".into()));
+        assert_eq!(
+            m.map_name("model.layers.0.self_attn.q_proj.weight"),
+            Some("blk.0.attn_q.weight".into()),
+        );
+        // Gemma-specific norms
+        assert_eq!(
+            m.map_name("model.layers.1.pre_feedforward_layernorm.weight"),
+            Some("blk.1.ffn_pre_norm.weight".into()),
+        );
+        assert_eq!(
+            m.map_name("model.layers.1.post_feedforward_layernorm.weight"),
+            Some("blk.1.ffn_post_norm.weight".into()),
+        );
+    }
+
+    #[test]
+    fn reverse_mapping_works() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
+        assert_eq!(
+            m.reverse_map("token_embd.weight"),
+            Some("model.embed_tokens.weight".into()),
+        );
+        assert_eq!(
+            m.reverse_map("blk.7.attn_q.weight"),
+            Some("model.layers.7.self_attn.q_proj.weight".into()),
+        );
+        assert_eq!(
+            m.reverse_map("blk.0.ffn_gate.weight"),
+            Some("model.layers.0.mlp.gate_proj.weight".into()),
+        );
+        assert_eq!(
+            m.reverse_map("output_norm.weight"),
+            Some("model.norm.weight".into()),
+        );
+        assert_eq!(
+            m.reverse_map("output.weight"),
+            Some("lm_head.weight".into()),
+        );
+    }
+
+    #[test]
+    fn unknown_name_returns_none() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
+        assert_eq!(m.map_name("totally.unknown.tensor"), None);
+        assert_eq!(m.reverse_map("totally.unknown.tensor"), None);
+    }
+
+    #[test]
+    fn layer_number_extraction() {
+        assert_eq!(
+            extract_layer_number("model.layers.42.self_attn.q_proj.weight", "model.layers.{n}.self_attn.q_proj.weight"),
+            Some(42),
+        );
+        assert_eq!(
+            extract_layer_number("blk.0.attn_q.weight", "blk.{n}.attn_q.weight"),
+            Some(0),
+        );
+        assert_eq!(
+            extract_layer_number("no_match", "blk.{n}.attn_q.weight"),
+            None,
+        );
+    }
+
+    #[test]
+    fn all_names_count_matches_expected() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
+        let num_layers = 32;
+        let (hf, internal) = m.all_names(num_layers);
+        // 9 per-layer rules × 32 layers + 3 global (embed + norm + lm_head) = 291
+        let expected = 9 * num_layers + 3;
+        assert_eq!(hf.len(), expected, "HF names count");
+        assert_eq!(internal.len(), expected, "internal names count");
+    }
+
+    #[test]
+    fn all_names_roundtrip_consistency() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Llama);
+        let (hf_names, internal_names) = m.all_names(4);
+        // Every generated HF name should map to its corresponding internal name
+        for hf in &hf_names {
+            assert!(m.map_name(hf).is_some(), "HF name '{}' should map", hf);
+        }
+        for internal in &internal_names {
+            assert!(m.reverse_map(internal).is_some(), "internal '{}' should reverse-map", internal);
+        }
+    }
+
+    #[test]
+    fn architecture_accessor() {
+        let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
+        assert_eq!(m.architecture(), &ModelArchitecture::Phi);
+    }
+
+    #[test]
+    fn gemma_has_more_rules_than_llama() {
+        let llama = WeightMapper::for_architecture(ModelArchitecture::Llama);
+        let gemma = WeightMapper::for_architecture(ModelArchitecture::Gemma);
+        assert!(
+            gemma.rule_count() > llama.rule_count(),
+            "Gemma should have extra norm rules",
         );
     }
 }
