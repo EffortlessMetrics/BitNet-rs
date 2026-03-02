@@ -4,6 +4,19 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
+
+- **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
+- **Kernel Launcher**: Automatic work-size computation, subgroup selection, and batch launch for OpenCL kernels, 50 tests (#2155)
+- **Thread Pool**: CPU-GPU pipeline parallelism with priority queues for overlapped execution, 42 tests (#2156)
+- **Tensor Allocator**: GPU slab allocation with free-list caching for reduced allocation overhead, 54 tests (#2157)
+- **Pipeline Optimizer**: Compute/transfer overlap scheduling with double buffering for improved throughput, 53 tests (#2159)
+- **Event Synchronization**: Kernel execution ordering with barriers for correct dependency sequencing, 53 tests (#2169)
+- **Zero-Copy Buffer Sharing**: CPU-GPU memory mapping for reduced data transfer latency, 49 tests (#2170)
+- **Mixed Quantization Strategies**: Per-layer precision optimization for flexible model quantization, 58 tests (#2171)
+- **Shader Binary Cache**: Compiled program persistence with LRU/LFU eviction for faster kernel startup, 48 tests (#2175)
+- **GPU Health Check Suite**: Diagnostic validation with recommendations for device readiness, 47 tests (#2176)
+
 ### Added — Intel Arc A770 / OpenCL GPU Backend (Waves 99–103)
 
 - **Capability Detection** (`bitnet-device-probe`): Enhanced Intel Arc A770 capability detection with tier-based classification (A770/A750/A580/A380/A310), PCI device ID matching, and 28 tests (#1913)
