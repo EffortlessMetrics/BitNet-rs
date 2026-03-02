@@ -1,0 +1,82 @@
+name: repo-maintenance-instruments
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - 'scripts/maintenance/**'
+      - '.github/workflows/repo-maintenance-instruments.yml'
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  instruments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate maintenance instruments
+        run: python3 scripts/maintenance/generate_instruments.py
+
+      - name: Upload generated instruments (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: repo-maintenance-instruments
+          path: docs/instruments/
+
+      - name: Publish to generated branch
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euxo pipefail
+          BRANCH=generated
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BRANCH" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            git switch -c "$BRANCH" "origin/$BRANCH"
+          else
+            git switch --orphan "$BRANCH"
+            git rm -rf . || true
+            mkdir -p docs/instruments
+          fi
+          git checkout "$GITHUB_SHA" -- docs/instruments scripts/maintenance .github/workflows/repo-maintenance-instruments.yml
+          git add docs/instruments scripts/maintenance .github/workflows/repo-maintenance-instruments.yml
+          if git diff --cached --quiet; then
+            echo "No generated changes to publish"
+            exit 0
+          fi
+          git commit -m "chore(instruments): refresh generated maintenance artifacts [skip ci]"
+          git push origin "$BRANCH"
+
+  dependency-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: Run dependency and license policy gates
+        run: cargo deny check advisories licenses bans sources
