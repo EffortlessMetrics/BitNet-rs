@@ -103,6 +103,9 @@ pub mod neon_inference_bridge;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_sliding_window_attention;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_batch_scheduler;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
