@@ -38,6 +38,7 @@ pub mod elementwise;
 pub mod embedding;
 pub mod fusion;
 pub mod gating;
+pub mod graph_exec;
 pub mod kv_cache;
 pub mod layernorm;
 pub mod linear;
