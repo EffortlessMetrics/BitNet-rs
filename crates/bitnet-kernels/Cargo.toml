@@ -121,6 +121,11 @@ path = "tests/cpu_scalar_parity.rs"
 required-features = ["cpu"]
 
 [[test]]
+name = "proptest_wave23"
+path = "tests/proptest_wave23.rs"
+required-features = ["cpu"]
+
+[[test]]
 name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
