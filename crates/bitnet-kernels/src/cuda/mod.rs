@@ -24,6 +24,8 @@
 //! - [`embedding`]: Token and positional embedding lookup with padding support
 //! - [`crate::scatter_gather`]: Scatter/gather indexed tensor operations with reductions
 //! - [`elementwise`]: Element-wise arithmetic (add/mul/sub/div) and activations with fused ops
+//! - [`batch_matmul`]: Batched dense matrix multiplication with fused bias/ReLU,
+//!   strided layouts, and int8 quantized paths; includes tiled and WMMA CUDA kernels
 //!
 //! All code is feature-gated behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 //! These stubs define launch configurations and function signatures; actual PTX
@@ -32,6 +34,7 @@
 
 pub mod activations;
 pub mod attention;
+pub mod batch_matmul;
 pub mod batch_norm;
 pub mod conv1d;
 pub mod elementwise;
@@ -188,3 +191,14 @@ pub use fusion::{
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use transpose::{TRANSPOSE_2D_KERNEL_SRC, TRANSPOSE_ND_KERNEL_SRC, launch_transpose_2d};
+
+pub use batch_matmul::{
+    BatchMatmulConfig, BatchMatmulError, BatchStrides, batch_matmul, batch_matmul_transposed,
+    fused_batch_matmul_bias, fused_batch_matmul_relu, quantized_batch_matmul, strided_batch_matmul,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use batch_matmul::{
+    BATCH_MATMUL_TILED_KERNEL_SRC, BATCH_MATMUL_WMMA_KERNEL_SRC, launch_batch_matmul,
+    launch_batch_matmul_wmma,
+};
