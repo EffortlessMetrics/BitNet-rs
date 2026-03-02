@@ -611,3 +611,39 @@ name = "fuzz_pipeline_parallel_stages"
 path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_quantize_roundtrip"
+path = "fuzz_targets/fuzz_quantize_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_model_config_validation"
+path = "fuzz_targets/fuzz_model_config_validation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_prompt_template"
+path = "fuzz_targets/fuzz_prompt_template.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_tensor_reshape"
+path = "fuzz_targets/fuzz_tensor_reshape.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_simd_dispatch"
+path = "fuzz_targets/fuzz_simd_dispatch.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_gguf_metadata"
+path = "fuzz_targets/fuzz_gguf_metadata.rs"
+test = false
+doc = false
