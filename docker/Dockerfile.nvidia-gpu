@@ -24,6 +24,10 @@ WORKDIR /app
 # Copy workspace
 COPY . .
 
+# Tell bindgen_cuda which compute capability to target so it doesn't
+# need nvidia-smi (unavailable in headless Docker builds).
+ENV CUDA_COMPUTE_CAP=86
+
 # Build with GPU feature
 RUN cargo build --locked --no-default-features --features gpu
 
