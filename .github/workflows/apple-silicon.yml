@@ -40,16 +40,16 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Build bitnet-kernels (CPU)
-        run: cargo build --no-default-features --features cpu -p bitnet-kernels
+        run: cargo build --locked --no-default-features --features cpu -p bitnet-kernels
 
       - name: Clippy bitnet-kernels
-        run: cargo clippy -p bitnet-kernels --lib --no-default-features --features cpu -- -D warnings
+        run: cargo clippy --locked -p bitnet-kernels --lib --no-default-features --features cpu -- -D warnings
 
       - name: Test NEON kernels (lib)
-        run: cargo test -p bitnet-kernels --no-default-features --features cpu --lib -- neon
+        run: cargo test --locked -p bitnet-kernels --no-default-features --features cpu --lib -- neon
 
       - name: Test NEON integration
-        run: cargo test -p bitnet-kernels --no-default-features --features cpu -- neon
+        run: cargo test --locked -p bitnet-kernels --no-default-features --features cpu -- neon
 
   metal-tests:
     name: Metal Tests (macOS ARM64)
@@ -71,4 +71,4 @@ jobs:
           shared-key: ci-apple-silicon
 
       - name: Run Metal tests
-        run: cargo test -p bitnet-kernels --no-default-features --features cpu -- metal
+        run: cargo test --locked -p bitnet-kernels --no-default-features --features cpu -- metal
