@@ -409,7 +409,8 @@ impl AttentionComputer {
         // Compute attention per-head, then interleave into
         // [seq, num_heads * d] layout.
         let mut per_head_outputs: Vec<Vec<f32>> = Vec::with_capacity(num_heads);
-        for h in 0..num_heads {
+        #[allow(clippy::needless_range_loop)]
+            for h in 0..num_heads {
             let q_h = &projected.q[h * head_size..(h + 1) * head_size];
             let k_h = &k_expanded[h * head_size..(h + 1) * head_size];
             let v_h = &v_expanded[h * head_size..(h + 1) * head_size];
@@ -417,6 +418,7 @@ impl AttentionComputer {
         }
 
         for t in 0..seq {
+            #[allow(clippy::needless_range_loop)]
             for h in 0..num_heads {
                 output.extend_from_slice(&per_head_outputs[h][t * d..(t + 1) * d]);
             }

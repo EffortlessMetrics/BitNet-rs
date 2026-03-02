@@ -2,7 +2,7 @@ use bitnet_vulkan::{VulkanShaderSource, kernels};
 
 #[test]
 fn shader_reexport_matches_kernels_module() {
-    assert_eq!(VulkanShaderSource::ALL, kernels::VulkanShaderSource::ALL);
+    assert_eq!(VulkanShaderSource::ALL, bitnet_vulkan::VulkanShaderSource::ALL);
     assert_eq!(VulkanShaderSource::Matmul.name(), "matmul");
 }
 

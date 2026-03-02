@@ -205,10 +205,10 @@ impl BackpressureController {
     /// Called when a new event is produced.
     pub fn on_produce(&self) {
         let prev = self.pending.fetch_add(1, Ordering::SeqCst);
-        if (prev + 1) as usize >= self.threshold {
-            if !self.paused.swap(true, Ordering::SeqCst) {
-                self.pause_count.fetch_add(1, Ordering::SeqCst);
-            }
+        if (prev + 1) as usize >= self.threshold
+            && !self.paused.swap(true, Ordering::SeqCst)
+        {
+            self.pause_count.fetch_add(1, Ordering::SeqCst);
         }
     }
 
@@ -348,7 +348,7 @@ impl StreamFormatter for SseFormatter {
         }
     }
 
-    fn content_type(&self) -> &str {
+    fn content_type(&self) -> &'static str {
         "text/event-stream"
     }
 }
@@ -382,7 +382,7 @@ impl StreamFormatter for JsonLinesFormatter {
         s
     }
 
-    fn content_type(&self) -> &str {
+    fn content_type(&self) -> &'static str {
         "application/x-ndjson"
     }
 }
@@ -402,7 +402,7 @@ impl StreamFormatter for RawTextFormatter {
         }
     }
 
-    fn content_type(&self) -> &str {
+    fn content_type(&self) -> &'static str {
         "text/plain"
     }
 }
@@ -440,10 +440,10 @@ impl StreamBuffer {
         if self.buf.len() >= self.capacity {
             return true;
         }
-        if let Some(ts) = self.first_insert {
-            if ts.elapsed() >= self.max_delay {
-                return true;
-            }
+        if let Some(ts) = self.first_insert
+            && ts.elapsed() >= self.max_delay
+        {
+            return true;
         }
         false
     }

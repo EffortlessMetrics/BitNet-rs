@@ -199,7 +199,7 @@ impl CanaryRouter {
             return BackendChoice::Baseline;
         };
 
-        if seq % canary_every_n == 0 { BackendChoice::Canary } else { BackendChoice::Baseline }
+        if seq.is_multiple_of(&canary_every_n) { BackendChoice::Canary } else { BackendChoice::Baseline }
     }
 
     /// Record a comparison result and check for automatic rollback.
