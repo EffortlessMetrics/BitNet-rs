@@ -116,6 +116,10 @@ name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
 
 [[test]]
+name = "metal_normalization_shader_tests"
+path = "tests/metal_normalization_shader_tests.rs"
+
+[[test]]
 name = "cpu_scalar_parity"
 path = "tests/cpu_scalar_parity.rs"
 required-features = ["cpu"]
