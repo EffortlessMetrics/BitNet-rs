@@ -1,0 +1,33 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: profile
+---
+DeviceProfile {
+    device_class: CpuSimd,
+    name: "x86_64 AVX2",
+    compute_units: 8,
+    memory_gb: 32,
+    capabilities: [
+        CapabilityEntry {
+            operation: MatrixOps,
+            precision: FP32,
+            support: Full(
+                0.9,
+            ),
+        },
+        CapabilityEntry {
+            operation: NormOps,
+            precision: FP32,
+            support: Full(
+                0.95,
+            ),
+        },
+        CapabilityEntry {
+            operation: ActivationOps,
+            precision: FP32,
+            support: Full(
+                0.92,
+            ),
+        },
+    ],
+}

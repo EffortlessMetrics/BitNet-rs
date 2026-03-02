@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave17.rs
+expression: entry
+---
+CapabilityEntry {
+    operation: QuantizedOps,
+    precision: INT8,
+    support: Partial(
+        "no native i2s",
+    ),
+}
