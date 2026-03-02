@@ -59,6 +59,7 @@ pub mod quantized_matmul;
 pub mod residual;
 pub mod rmsnorm;
 pub mod rope;
+pub mod shader_cache;
 pub mod softmax;
 pub mod sparse;
 pub mod transpose;
@@ -262,4 +263,11 @@ pub use sparse::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use sparse::{
     SPARSE_SPMM_CSR_KERNEL_SRC, SPARSE_SPMV_CSR_KERNEL_SRC, launch_sparse_spmm, launch_sparse_spmv,
+};
+
+pub use shader_cache::CacheStats as ShaderCacheStats;
+pub use shader_cache::{
+    CachedShader, HashAlgorithm, ShaderCache, ShaderCacheConfig, ShaderMetadata, ShaderSource,
+    cache_stats, compile_shader, invalidate_shader, lookup_shader, precompile_common_shaders,
+    save_cache_to_disk, warm_cache_from_disk,
 };
