@@ -39,6 +39,7 @@ pub mod embedding;
 pub mod fusion;
 pub mod gating;
 pub mod kv_cache;
+pub mod kv_cache_gpu;
 pub mod layernorm;
 pub mod linear;
 pub mod matmul;
@@ -70,6 +71,17 @@ pub use batch_norm::{
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
+pub use kv_cache_gpu::{
+    KvCacheGpuConfig, KvCacheGpuError, KvCacheGpuMetrics, KvCacheGpuState, PageTable,
+    QuantizedKvResult, kv_cache_append, kv_cache_copy_on_write, kv_cache_cow_materialize,
+    kv_cache_defrag, kv_cache_dequantize, kv_cache_evict, kv_cache_gpu_metrics,
+    kv_cache_paged_lookup, kv_cache_prefetch, kv_cache_quantize, kv_cache_rotate,
+};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use kv_cache_gpu::{
+    KV_CACHE_GPU_KERNEL_SRC, launch_kv_cache_append_gpu, launch_kv_cache_gather_gpu,
+};
 pub use layernorm::{
     LayerNormConfig, batch_layer_norm_cpu, layer_norm_cpu_fallback, layer_norm_forward,
     rms_norm_cpu_fallback, rms_norm_forward,
