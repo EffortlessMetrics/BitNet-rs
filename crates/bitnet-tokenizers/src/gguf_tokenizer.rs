@@ -1,6 +1,7 @@
 use crate::Tokenizer;
 use bitnet_common::{BitNetError, ModelError, Result};
 use bitnet_models::{GgufReader, loader::MmapFile};
+use bitnet_tokenizer_byte_core::ByteVocabulary;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -20,24 +21,16 @@ impl GgufTokenizer {
         let (tokens, bos_token_id, eos_token_id) = read_gguf_metadata(path)?;
 
         // Extract vocabulary and byte-level mappings
-        let vocab = extract_vocab(&tokens);
-        let mut reverse_vocab: HashMap<u32, String> = HashMap::with_capacity(vocab.len());
-        let mut byte_to_id = [None; 256];
-        let mut id_to_byte = HashMap::new();
+        let byte_vocab = ByteVocabulary::from_tokens(&tokens);
 
-        for (token, &id) in &vocab {
-            reverse_vocab.insert(id, token.clone());
-            if token.len() == 6
-                && token.starts_with("<0x")
-                && token.ends_with('>')
-                && let Ok(byte) = u8::from_str_radix(&token[3..5], 16)
-            {
-                byte_to_id[byte as usize] = Some(id);
-                id_to_byte.insert(id, byte);
-            }
-        }
-
-        Ok(Self { vocab, reverse_vocab, byte_to_id, id_to_byte, bos_token_id, eos_token_id })
+        Ok(Self {
+            vocab: byte_vocab.vocab().clone(),
+            reverse_vocab: byte_vocab.reverse_vocab().clone(),
+            byte_to_id: *byte_vocab.byte_to_id(),
+            id_to_byte: byte_vocab.id_to_byte().clone(),
+            bos_token_id,
+            eos_token_id,
+        })
     }
 }
 
@@ -127,12 +120,4 @@ fn read_gguf_metadata(path: &Path) -> Result<(Vec<String>, Option<u32>, Option<u
     let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
 
     Ok((tokens, bos, eos))
-}
-
-fn extract_vocab(tokens: &[String]) -> HashMap<String, u32> {
-    let mut vocab = HashMap::with_capacity(tokens.len());
-    for (i, token) in tokens.iter().enumerate() {
-        vocab.insert(token.clone(), i as u32);
-    }
-    vocab
 }
