@@ -20,6 +20,7 @@ pub mod embedding_utils;
 pub mod engine;
 pub mod generation;
 pub mod generation_budget;
+pub mod generation_output;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod kernel_recorder;
