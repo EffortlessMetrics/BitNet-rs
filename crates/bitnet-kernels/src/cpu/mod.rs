@@ -107,7 +107,7 @@ pub mod neon_convolution;
 pub mod neon_padding_clipping;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_activation_suite;
+pub mod neon_top_k_sampling;
 
 pub use activations::ActivationType;
 pub use activations::{
