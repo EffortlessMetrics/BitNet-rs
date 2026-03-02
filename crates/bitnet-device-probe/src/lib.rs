@@ -4,6 +4,8 @@
 //! extracted from `bitnet-kernels` for use by the broader workspace.
 
 pub use bitnet_common::kernel_registry::SimdLevel;
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
+use bitnet_device_probe_env_core::fake_gpu_backends;
 
 pub mod intel_arc;
 pub use intel_arc::{
@@ -178,35 +180,6 @@ pub fn gpu_available_runtime() -> bool {
 #[inline]
 pub const fn gpu_available_runtime() -> bool {
     false
-}
-
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
-fn strict_mode_enabled() -> bool {
-    std::env::var("BITNET_STRICT_MODE")
-        .map(|v| v == "1" || v.to_lowercase() == "true")
-        .unwrap_or(false)
-}
-
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
-fn fake_gpu_backends() -> Option<std::collections::HashSet<String>> {
-    if strict_mode_enabled() {
-        return None;
-    }
-
-    let fake = std::env::var("BITNET_GPU_FAKE").ok()?;
-    let normalized = fake.trim().to_ascii_lowercase();
-
-    if normalized == "none" {
-        return Some(std::collections::HashSet::new());
-    }
-
-    let set = normalized
-        .split([',', ';', '|', ' '])
-        .filter(|part| !part.is_empty())
-        .map(ToOwned::to_owned)
-        .collect();
-
-    Some(set)
 }
 
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]

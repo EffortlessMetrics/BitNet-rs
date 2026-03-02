@@ -620,6 +620,7 @@ version = "0.2.1-dev"
 dependencies = [
  "ash",
  "bitnet-common",
+ "bitnet-device-probe-env-core",
  "bitnet-intel-gpu-id",
  "insta",
  "libloading 0.8.9",
@@ -631,6 +632,10 @@ dependencies = [
  "temp-env",
  "wgpu",
 ]
+
+[[package]]
+name = "bitnet-device-probe-env-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-dispatch-core"

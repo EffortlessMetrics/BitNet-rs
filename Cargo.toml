@@ -33,6 +33,7 @@ members = [
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
   "crates/bitnet-device-probe",  # SRP: device detection / capability probing
+  "crates/bitnet-device-probe-env-core", # SRP: env parsing core for device-probe overrides
   "crates/bitnet-device-config-core", # SRP: shared device config parsing + resolution core
   "crates/bitnet-intel-gpu-id",  # SRP: Intel GPU/Arc identification heuristics
   "crates/bitnet-logits",        # SRP: pure logits transform functions
@@ -161,6 +162,7 @@ default-members = [
   "crates/bitnet-runtime-profile-core",
   # SRP microcrate extractions (phase-6)
   "crates/bitnet-device-probe",
+  "crates/bitnet-device-probe-env-core",
   "crates/bitnet-logits",
   "crates/bitnet-probability",
   "crates/bitnet-logits-filters",
