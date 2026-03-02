@@ -14,6 +14,7 @@ pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
 pub mod cuda;
+pub mod cuda_launch_config;
 pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
