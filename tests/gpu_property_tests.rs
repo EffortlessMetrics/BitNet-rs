@@ -4,6 +4,7 @@
 //! Tolerance-based comparison accounts for floating-point differences between
 //! CPU and GPU execution paths.
 
+use bitnet_matmul_ref_core::cpu_matmul;
 use proptest::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -32,20 +33,6 @@ fn approx_eq(a: &[f32], b: &[f32], abs_tol: f32, rel_tol: f32) -> Result<(), Str
 // ---------------------------------------------------------------------------
 // CPU reference implementations
 // ---------------------------------------------------------------------------
-
-fn cpu_matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
-    let mut c = vec![0.0f32; m * n];
-    for i in 0..m {
-        for j in 0..n {
-            let mut sum = 0.0f32;
-            for l in 0..k {
-                sum += a[i * k + l] * b[l * n + j];
-            }
-            c[i * n + j] = sum;
-        }
-    }
-    c
-}
 
 fn cpu_softmax(input: &[f32], rows: usize, cols: usize) -> Vec<f32> {
     let mut output = vec![0.0f32; rows * cols];
@@ -229,7 +216,7 @@ proptest! {
         for i in 0..k {
             eye[i * k + i] = 1.0;
         }
-        let result = cpu_matmul(&a, &eye, m, k, k);
+        let result = cpu_matmul(&a, &eye, m as u32, k as u32, k as u32);
         approx_eq(&a, &result, ABS_TOL, REL_TOL)?;
     }
 
@@ -237,7 +224,7 @@ proptest! {
     fn prop_matmul_zero(m in small_dim(), n in small_dim(), k in small_dim()) {
         let a = vec![0.0f32; m * k];
         let b: Vec<f32> = (0..k * n).map(|i| i as f32).collect();
-        let result = cpu_matmul(&a, &b, m, n, k);
+        let result = cpu_matmul(&a, &b, m as u32, n as u32, k as u32);
         approx_eq(&result, &vec![0.0f32; m * n], ABS_TOL, REL_TOL)?;
     }
 
@@ -245,7 +232,7 @@ proptest! {
     fn prop_matmul_finite(m in 1..=16usize, n in 1..=16usize, k in 1..=16usize) {
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32 - 3.0) * 0.5).collect();
         let b: Vec<f32> = (0..k * n).map(|i| ((i % 5) as f32 - 2.0) * 0.5).collect();
-        let result = cpu_matmul(&a, &b, m, n, k);
+        let result = cpu_matmul(&a, &b, m as u32, n as u32, k as u32);
         prop_assert_eq!(result.len(), m * n);
         for v in &result {
             prop_assert!(v.is_finite());

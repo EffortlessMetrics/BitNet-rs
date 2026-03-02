@@ -1,5 +1,8 @@
 use crate::error::RunnerError;
 use crate::runner::{KernelRunner, matmul_workgroups};
+use bitnet_matmul_ref_core::validate_flat_matmul_inputs;
+#[cfg(test)]
+use bitnet_matmul_ref_core::cpu_matmul;
 
 /// WGSL shader for naive matrix multiplication.
 ///
@@ -70,20 +73,11 @@ impl MatmulRunner {
         n: u32,
         k: u32,
     ) -> Result<Vec<f32>, RunnerError> {
-        let expected_a = (m * k) as usize;
-        if a.len() != expected_a {
+        if let Err(err) = validate_flat_matmul_inputs(a.len(), b.len(), m, n, k) {
             return Err(RunnerError::InvalidDimensions {
-                expected: expected_a,
-                actual: a.len(),
-                name: "matrix A",
-            });
-        }
-        let expected_b = (k * n) as usize;
-        if b.len() != expected_b {
-            return Err(RunnerError::InvalidDimensions {
-                expected: expected_b,
-                actual: b.len(),
-                name: "matrix B",
+                expected: err.expected,
+                actual: err.actual,
+                name: err.name,
             });
         }
 
@@ -113,29 +107,6 @@ impl MatmulRunner {
 
         self.runner.read_buffer_f32(&buf_c, (m * n) as usize).await
     }
-}
-
-/// CPU reference implementation of matrix multiplication for validation.
-///
-/// - `a`: M×K matrix in row-major order
-/// - `b`: K×N matrix in row-major order
-/// - Returns: M×N result matrix in row-major order
-pub fn cpu_matmul(a: &[f32], b: &[f32], m: u32, n: u32, k: u32) -> Vec<f32> {
-    let (m, n, k) = (m as usize, n as usize, k as usize);
-    assert_eq!(a.len(), m * k, "matrix A size mismatch");
-    assert_eq!(b.len(), k * n, "matrix B size mismatch");
-
-    let mut c = vec![0.0f32; m * n];
-    for row in 0..m {
-        for col in 0..n {
-            let mut sum = 0.0f32;
-            for i in 0..k {
-                sum += a[row * k + i] * b[i * n + col];
-            }
-            c[row * n + col] = sum;
-        }
-    }
-    c
 }
 
 #[cfg(test)]
@@ -246,13 +217,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "matrix A size mismatch")]
+    #[should_panic(expected = "invalid dimensions for matrix A: expected 4, got 2")]
     fn cpu_matmul_wrong_a_size() {
         cpu_matmul(&[1.0, 2.0], &[1.0; 4], 2, 2, 2);
     }
 
     #[test]
-    #[should_panic(expected = "matrix B size mismatch")]
+    #[should_panic(expected = "invalid dimensions for matrix B: expected 4, got 2")]
     fn cpu_matmul_wrong_b_size() {
         cpu_matmul(&[1.0; 4], &[1.0, 2.0], 2, 2, 2);
     }

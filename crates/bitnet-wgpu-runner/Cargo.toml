@@ -7,6 +7,7 @@ description = "Kernel execution runner for wgpu compute pipelines"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+bitnet-matmul-ref-core = { path = "../bitnet-matmul-ref-core", version = "0.2.1-dev" }
 wgpu = { version = "24", features = ["vulkan-portability"] }
 bytemuck = { version = "1", features = ["derive"] }
 thiserror = "2"

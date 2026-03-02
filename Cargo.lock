@@ -389,6 +389,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-logits",
  "bitnet-math",
+ "bitnet-matmul-ref-core",
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-quantization-bits",
@@ -960,6 +961,10 @@ version = "0.2.1-dev"
 dependencies = [
  "proptest",
 ]
+
+[[package]]
+name = "bitnet-matmul-ref-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-metal"
@@ -1874,6 +1879,7 @@ dependencies = [
 name = "bitnet-wgpu-runner"
 version = "0.1.0"
 dependencies = [
+ "bitnet-matmul-ref-core",
  "bytemuck",
  "pollster",
  "thiserror 2.0.18",

@@ -51,6 +51,7 @@ members = [
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
+  "crates/bitnet-matmul-ref-core", # SRP: deterministic CPU reference matmul helpers
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-safetensors-ln", # SRP: shared SafeTensors LayerNorm utilities
@@ -241,6 +242,7 @@ async-trait = "0.1.89"
 bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.1-dev" }
 bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
+bitnet-matmul-ref-core = { path = "crates/bitnet-matmul-ref-core", version = "0.2.1-dev" }
 bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
 candle-nn = { version = "0.9.1", default-features = false }
