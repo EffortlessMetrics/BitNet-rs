@@ -575,3 +575,39 @@ name = "fuzz_cuda_quantize_roundtrip"
 path = "fuzz_targets/fuzz_cuda_quantize_roundtrip.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_batch_norm_numerical"
+path = "fuzz_targets/fuzz_batch_norm_numerical.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_profiling_timing"
+path = "fuzz_targets/fuzz_profiling_timing.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_thread_pool_scheduling"
+path = "fuzz_targets/fuzz_thread_pool_scheduling.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_element_wise_chains"
+path = "fuzz_targets/fuzz_element_wise_chains.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_softmax_large_values"
+path = "fuzz_targets/fuzz_softmax_large_values.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_pipeline_parallel_stages"
+path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
+test = false
+doc = false
