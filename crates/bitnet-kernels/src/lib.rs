@@ -52,6 +52,7 @@ pub mod opencl_pipeline;
 pub mod opencl_profiling;
 pub mod opencl_quantized;
 pub mod opencl_registry;
+pub mod opencl_softmax_variants;
 pub mod opencl_telemetry;
 pub mod opencl_token_embed;
 pub mod opencl_token_gen;
