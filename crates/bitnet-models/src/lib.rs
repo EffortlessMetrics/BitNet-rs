@@ -20,6 +20,7 @@ pub mod gguf_writer;
 pub mod hf_loader;
 pub mod loader;
 pub mod minimal;
+pub mod model_fingerprint;
 pub mod names;
 pub mod production_loader;
 pub mod qk256_utils;
