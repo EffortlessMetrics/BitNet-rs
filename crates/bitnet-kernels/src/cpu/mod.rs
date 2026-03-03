@@ -105,6 +105,9 @@ pub mod neon_batch_norm_v2;
 pub mod neon_padding_clipping;
 
 #[cfg(target_arch = "aarch64")]
+pub mod neon_fma_ops;
+
+#[cfg(target_arch = "aarch64")]
 pub mod neon_inference_bridge;
 
 #[cfg(target_arch = "aarch64")]
