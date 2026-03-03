@@ -5,6 +5,7 @@ members = [
   "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
+  "crates/bitnet-avx512-gemv",   # SRP: AVX-512 optimized GEMV kernels
   "crates/bitnet-warn-once",
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
@@ -127,6 +128,7 @@ default-members = [
   "crates/bitnet-cpu-detect",
   "crates/bitnet-math",
   "crates/bitnet-simd",
+  "crates/bitnet-avx512-gemv",
   "crates/bitnet-warn-once",
   "crates/bitnet-quantization",
   "crates/bitnet-quantization-bits",
