@@ -134,9 +134,9 @@ pub mod neon_kv_cache_v4;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_rope_v3;
 
+pub mod neon_dynamic_quant;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_weight_dequantize;
-pub mod neon_dynamic_quant;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_gather_scatter;
