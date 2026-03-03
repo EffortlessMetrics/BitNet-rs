@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave28.rs
+expression: "StopReason::EndOfSequence.to_string()"
+---
+end_of_sequence

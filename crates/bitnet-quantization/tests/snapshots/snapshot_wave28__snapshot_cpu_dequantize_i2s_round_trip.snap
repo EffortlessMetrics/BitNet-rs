@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave28.rs
+expression: output
+---
+[
+    0.0,
+    1.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+]

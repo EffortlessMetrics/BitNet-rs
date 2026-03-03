@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave28.rs
+expression: err.to_string()
+---
+Model error: Model not found: /tmp/missing.gguf
