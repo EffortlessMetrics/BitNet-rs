@@ -12,6 +12,7 @@ pub mod batch_coordinator;
 pub mod batch_engine;
 pub mod batch_scheduler;
 pub mod cache;
+pub mod cache_eviction;
 pub mod compute_cost;
 pub mod compute_graph;
 pub mod config;
