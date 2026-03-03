@@ -73,10 +73,7 @@ impl SamplerConfig {
     }
 
     pub fn deterministic(seed: u64) -> Self {
-        Self {
-            seed: Some(seed),
-            ..Self::greedy()
-        }
+        Self { seed: Some(seed), ..Self::greedy() }
     }
 
     pub fn with_temperature(mut self, temp: f32) -> Self {
@@ -157,9 +154,7 @@ impl SamplerConfig {
         if let Some(p) = self.top_p {
             return SamplingMethod::TopP { p };
         }
-        SamplingMethod::Temperature {
-            temp: self.temperature,
-        }
+        SamplingMethod::Temperature { temp: self.temperature }
     }
 }
 

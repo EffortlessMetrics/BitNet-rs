@@ -102,11 +102,7 @@ impl RequestContext {
 
     /// Check if the request has exceeded its deadline.
     pub fn is_expired(&self) -> bool {
-        if let Some(deadline) = self.deadlines {
-            self.elapsed() > deadline
-        } else {
-            false
-        }
+        if let Some(deadline) = self.deadlines { self.elapsed() > deadline } else { false }
     }
 
     /// Remaining time before deadline (None if no deadline or expired).
@@ -199,15 +195,13 @@ mod tests {
 
     #[test]
     fn test_not_expired() {
-        let ctx =
-            RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
+        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
         assert!(!ctx.is_expired());
     }
 
     #[test]
     fn test_expired() {
-        let ctx =
-            RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_millis(1));
+        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_millis(1));
         std::thread::sleep(Duration::from_millis(10));
         assert!(ctx.is_expired());
     }
@@ -221,8 +215,7 @@ mod tests {
 
     #[test]
     fn test_remaining() {
-        let ctx =
-            RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
+        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
         assert!(ctx.remaining().is_some());
     }
 
@@ -230,11 +223,7 @@ mod tests {
     fn test_batch() {
         let mut batch = RequestBatch::new();
         batch.add(RequestContext::new(RequestId::new("r1")).with_max_tokens(50));
-        batch.add(
-            RequestContext::new(RequestId::new("r2"))
-                .with_max_tokens(100)
-                .with_stream(true),
-        );
+        batch.add(RequestContext::new(RequestId::new("r2")).with_max_tokens(100).with_stream(true));
         assert_eq!(batch.len(), 2);
         assert_eq!(batch.total_max_tokens(), 150);
         assert!(batch.has_streaming());
