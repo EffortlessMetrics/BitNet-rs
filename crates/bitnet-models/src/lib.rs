@@ -35,6 +35,7 @@ pub mod model_catalog;
 pub mod model_compare;
 pub mod model_diff;
 pub mod model_fingerprint;
+pub mod model_metadata;
 pub mod model_validator;
 pub mod names;
 pub mod production_loader;
