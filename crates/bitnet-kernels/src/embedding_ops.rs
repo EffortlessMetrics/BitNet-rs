@@ -19,7 +19,7 @@ pub fn token_embed_lookup(
         if end <= embed_table.len() {
             output.extend_from_slice(&embed_table[start..end]);
         } else {
-            output.extend(std::iter::repeat(0.0f32).take(embed_dim));
+            output.extend(std::iter::repeat_n(0.0f32, embed_dim));
         }
     }
     output
