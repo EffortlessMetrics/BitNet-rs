@@ -4,8 +4,6 @@
 //! and memory layout constraints critical for correct kernel dispatch.
 //! Tests exercise the public API from `bitnet_kernels::metal_compute`.
 
-#![cfg(feature = "metal")]
-
 use bitnet_kernels::metal_compute::{
     DispatchDimensions, MAX_DISPATCH_DIM, METAL_BUFFER_ALIGNMENT, METAL_MAX_WORKGROUP_SIZE,
     MemoryArchitecture, MetalComputePipeline, MetalConfigError, WorkgroupSize, align_buffer_size,
