@@ -7,4 +7,6 @@ PoolConfig {
     kernel_size: 3,
     stride: 2,
     padding: 1,
+    dilation: 1,
+    ceil_mode: false,
 }

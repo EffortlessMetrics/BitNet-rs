@@ -7,5 +7,6 @@ AttentionConfig {
     head_dim: 64,
     seq_len: 128,
     causal: true,
+    use_alibi: false,
     scale: None,
 }

@@ -2,7 +2,6 @@
 //!
 //! Covers: config defaults, enum Debug/Display formatting, kernel output
 //! shapes, error messages, metric calculations, and state transitions.
-#![allow(clippy::manual_div_ceil)]
 
 // ── Config default snapshots ───────────────────────────────────────
 
@@ -178,8 +177,8 @@ fn snap_pool_config_max() {
         kernel_size: 3,
         stride: 2,
         padding: 1,
-        dilation: 1,
         ceil_mode: false,
+        dilation: 1,
     };
     insta::assert_debug_snapshot!(config);
 }
@@ -453,8 +452,8 @@ fn snap_pool_config_zero_kernel_error() {
         kernel_size: 0,
         stride: 1,
         padding: 0,
-        dilation: 1,
         ceil_mode: false,
+        dilation: 1,
     };
     let err = config.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
@@ -467,8 +466,8 @@ fn snap_pool_config_zero_stride_error() {
         kernel_size: 3,
         stride: 0,
         padding: 0,
-        dilation: 1,
         ceil_mode: false,
+        dilation: 1,
     };
     let err = config.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
@@ -679,8 +678,8 @@ fn snap_pooling_max_output() {
         kernel_size: 3,
         stride: 1,
         padding: 0,
-        dilation: 1,
         ceil_mode: false,
+        dilation: 1,
     };
     let output = bitnet_kernels::cpu::PoolingKernel::apply(&input, &config).unwrap();
     insta::assert_debug_snapshot!(output);
@@ -694,8 +693,8 @@ fn snap_pooling_global_avg_output() {
         kernel_size: 0,
         stride: 0,
         padding: 0,
-        dilation: 1,
         ceil_mode: false,
+        dilation: 1,
     };
     let output = bitnet_kernels::cpu::PoolingKernel::apply(&input, &config).unwrap();
     insta::assert_debug_snapshot!(output);

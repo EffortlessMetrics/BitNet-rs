@@ -64,13 +64,11 @@ impl RateLimitBucket {
     async fn try_consume(&self, tokens: u64) -> bool {
         self.refill().await;
 
-        let current_tokens = self.tokens.load(Ordering::Relaxed);
-        if current_tokens >= tokens {
-            self.tokens.fetch_sub(tokens, Ordering::Relaxed);
-            true
-        } else {
-            false
-        }
+        self.tokens
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                if current >= tokens { Some(current - tokens) } else { None }
+            })
+            .is_ok()
     }
 
     async fn refill(&self) {

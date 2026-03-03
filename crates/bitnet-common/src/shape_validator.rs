@@ -16,7 +16,7 @@ impl std::fmt::Display for ShapeError {
     }
 }
 
-/// Validate matmul compatibility: \[M,K\] × \[K,N\] → \[M,N\].
+/// Validate matmul compatibility: [M,K\] × [K,N\] → [M,N\].
 pub fn validate_matmul(a: &[usize], b: &[usize]) -> Result<Vec<usize>, ShapeError> {
     if a.len() != 2 || b.len() != 2 {
         return Err(ShapeError {
@@ -35,7 +35,7 @@ pub fn validate_matmul(a: &[usize], b: &[usize]) -> Result<Vec<usize>, ShapeErro
     Ok(vec![a[0], b[1]])
 }
 
-/// Validate batched matmul: \[B,M,K\] × \[B,K,N\] → \[B,M,N\].
+/// Validate batched matmul: [B,M,K\] × [B,K,N\] → [B,M,N\].
 pub fn validate_batched_matmul(a: &[usize], b: &[usize]) -> Result<Vec<usize>, ShapeError> {
     if a.len() != 3 || b.len() != 3 {
         return Err(ShapeError {
@@ -118,12 +118,12 @@ pub fn validate_reshape(old: &[usize], new: &[usize]) -> Result<(), ShapeError> 
     Ok(())
 }
 
-/// Validate attention shapes: Q\[B,H,S,D\], K\[B,H,S,D\], V\[B,H,S,D\].
+/// Validate attention shapes: Q`[B,H,S,D]`, K`[B,H,S,D]`, V`[B,H,S,D]`.
 pub fn validate_attention(q: &[usize], k: &[usize], v: &[usize]) -> Result<Vec<usize>, ShapeError> {
     if q.len() != 4 || k.len() != 4 || v.len() != 4 {
         return Err(ShapeError {
             op: "attention".into(),
-            expected: "4D tensors [B,H,S,D]".into(),
+            expected: "4D tensors `[B,H,S,D]`".into(),
             got: format!("{}D, {}D, {}D", q.len(), k.len(), v.len()),
         });
     }

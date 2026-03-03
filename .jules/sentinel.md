@@ -13,3 +13,7 @@
 **Vulnerability:** Input validation in `sanitize_input` blocks carriage return (`\r`) characters, categorizing them as invalid control characters.
 **Learning:** This restricts valid payloads coming from environments (like Windows) or protocols (like HTTP standard format) that use CRLF for newlines, leading to unintentional denial of service for these valid requests.
 **Prevention:** Explicitly allow `\r` alongside `\n` and `\t` when filtering out control characters in text payloads.
+## 2025-06-03 - TOCTOU Rate Limiting Vulnerability
+**Vulnerability:** In `bitnet-server`'s `concurrency` module, the `RateLimitBucket::try_consume` method exhibited a Time-of-Check to Time-of-Use (TOCTOU) vulnerability. It checked available tokens using an atomic `load` followed by an independent `fetch_sub` operation, leading to a race condition where multiple concurrent requests could bypass the check before the count was decremented, causing an integer underflow that allowed unlimited requests.
+**Learning:** For rate limiters or token buckets implemented with atomic counters, checking and modifying the value with separate atomic operations is intrinsically unsafe under high concurrency.
+**Prevention:** Always use Compound Atomic Operations (like `fetch_update` or `compare_exchange_weak`) for atomic variables when the new value depends on the current value and conditional checks.
