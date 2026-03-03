@@ -21,6 +21,7 @@ mod mock;
 pub mod preprocessor;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
+pub mod token_frequency;
 pub mod token_validation;
 pub mod tokenizer_bench;
 pub mod universal;
