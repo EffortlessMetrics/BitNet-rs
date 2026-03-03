@@ -31,6 +31,7 @@ pub mod qk256_dispatch;
 pub mod pipeline;
 pub mod quant_error;
 pub mod quant_planner;
+pub mod quant_stats;
 pub mod simd_ops;
 pub mod tl1;
 pub mod tl2;
