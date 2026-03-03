@@ -9,6 +9,7 @@ compile_error!(
 );
 
 pub mod auto;
+pub mod batch_tokenizer;
 pub mod bench_utils;
 pub mod compat_matrix;
 pub mod encoding_stats;
