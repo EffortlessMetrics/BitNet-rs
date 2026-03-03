@@ -1,284 +1,219 @@
-//! Tensor serialization and deserialization.
+//! Tensor serialization helpers.
 //!
-//! Save and load tensor data in a simple binary format
-//! for caching, checkpointing, and testing.
+//! Utilities for converting tensors to/from byte representations.
 
-use std::io::{self, Read, Write};
-
-/// Magic bytes for the tensor file format.
-const MAGIC: &[u8; 4] = b"BTNS";
-/// Format version.
-const VERSION: u8 = 1;
-
-/// Data type tag for serialization.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum SerialDType {
-    F32 = 0,
-    F16 = 1,
-    BF16 = 2,
-    I8 = 3,
-    U8 = 4,
-    I32 = 5,
+/// Write f32 slice to little-endian bytes.
+pub fn f32_to_bytes(data: &[f32]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(data.len() * 4);
+    for &v in data {
+        bytes.extend_from_slice(&v.to_le_bytes());
+    }
+    bytes
 }
 
-impl SerialDType {
-    pub fn from_u8(v: u8) -> Option<Self> {
-        match v {
-            0 => Some(Self::F32),
-            1 => Some(Self::F16),
-            2 => Some(Self::BF16),
-            3 => Some(Self::I8),
-            4 => Some(Self::U8),
-            5 => Some(Self::I32),
-            _ => None,
-        }
-    }
+/// Read f32 slice from little-endian bytes.
+pub fn bytes_to_f32(bytes: &[u8]) -> Vec<f32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect()
+}
 
-    pub fn element_size(&self) -> usize {
-        match self {
-            SerialDType::F32 | SerialDType::I32 => 4,
-            SerialDType::F16 | SerialDType::BF16 => 2,
-            SerialDType::I8 | SerialDType::U8 => 1,
-        }
+/// Write f16 (as u16) to little-endian bytes.
+pub fn f16_to_bytes(data: &[u16]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(data.len() * 2);
+    for &v in data {
+        bytes.extend_from_slice(&v.to_le_bytes());
     }
+    bytes
+}
+
+/// Read f16 (as u16) from little-endian bytes.
+pub fn bytes_to_f16(bytes: &[u8]) -> Vec<u16> {
+    bytes.chunks_exact(2).map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]])).collect()
+}
+
+/// Compute a simple checksum for tensor data (XOR-based).
+pub fn tensor_checksum(data: &[u8]) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x100000001b3); // FNV prime
+    }
+    hash
+}
+
+/// Validate tensor data integrity with a checksum.
+pub fn verify_checksum(data: &[u8], expected: u64) -> bool {
+    tensor_checksum(data) == expected
+}
+
+/// Pack a shape array into bytes (u64 little-endian per dimension).
+pub fn pack_shape(shape: &[usize]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(shape.len() * 8);
+    for &dim in shape {
+        bytes.extend_from_slice(&(dim as u64).to_le_bytes());
+    }
+    bytes
+}
+
+/// Unpack a shape from bytes.
+pub fn unpack_shape(bytes: &[u8]) -> Vec<usize> {
+    bytes
+        .chunks_exact(8)
+        .map(|chunk| {
+            u64::from_le_bytes([
+                chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+            ]) as usize
+        })
+        .collect()
 }
 
 /// Header for a serialized tensor.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TensorHeader {
     pub name: String,
-    pub dtype: SerialDType,
     pub shape: Vec<usize>,
+    pub dtype: u8, // 0=f32, 1=f16, 2=bf16, 3=i8, 4=i4
+    pub data_offset: u64,
+    pub data_length: u64,
 }
 
 impl TensorHeader {
-    pub fn new(name: impl Into<String>, dtype: SerialDType, shape: Vec<usize>) -> Self {
-        Self { name: name.into(), dtype, shape }
-    }
-
-    pub fn num_elements(&self) -> usize {
+    pub fn elements(&self) -> usize {
         self.shape.iter().product()
     }
 
-    pub fn data_size_bytes(&self) -> usize {
-        self.num_elements() * self.dtype.element_size()
+    pub fn dtype_name(&self) -> &'static str {
+        match self.dtype {
+            0 => "f32",
+            1 => "f16",
+            2 => "bf16",
+            3 => "i8",
+            4 => "i4",
+            _ => "unknown",
+        }
     }
-
-    pub fn ndim(&self) -> usize {
-        self.shape.len()
-    }
-}
-
-/// Write a tensor header to a writer.
-pub fn write_header<W: Write>(w: &mut W, header: &TensorHeader) -> io::Result<()> {
-    w.write_all(MAGIC)?;
-    w.write_all(&[VERSION])?;
-    w.write_all(&[header.dtype as u8])?;
-
-    // Name length + name
-    let name_bytes = header.name.as_bytes();
-    let name_len = name_bytes.len() as u16;
-    w.write_all(&name_len.to_le_bytes())?;
-    w.write_all(name_bytes)?;
-
-    // Number of dimensions + shape
-    let ndim = header.shape.len() as u8;
-    w.write_all(&[ndim])?;
-    for &dim in &header.shape {
-        w.write_all(&(dim as u64).to_le_bytes())?;
-    }
-
-    Ok(())
-}
-
-/// Read a tensor header from a reader.
-pub fn read_header<R: Read>(r: &mut R) -> io::Result<TensorHeader> {
-    let mut magic = [0u8; 4];
-    r.read_exact(&mut magic)?;
-    if &magic != MAGIC {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid magic bytes"));
-    }
-
-    let mut ver = [0u8; 1];
-    r.read_exact(&mut ver)?;
-    if ver[0] != VERSION {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "unsupported version"));
-    }
-
-    let mut dtype_byte = [0u8; 1];
-    r.read_exact(&mut dtype_byte)?;
-    let dtype = SerialDType::from_u8(dtype_byte[0])
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "unknown dtype"))?;
-
-    let mut name_len_bytes = [0u8; 2];
-    r.read_exact(&mut name_len_bytes)?;
-    let name_len = u16::from_le_bytes(name_len_bytes) as usize;
-    let mut name_buf = vec![0u8; name_len];
-    r.read_exact(&mut name_buf)?;
-    let name =
-        String::from_utf8(name_buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-    let mut ndim = [0u8; 1];
-    r.read_exact(&mut ndim)?;
-    let ndim = ndim[0] as usize;
-    let mut shape = Vec::with_capacity(ndim);
-    for _ in 0..ndim {
-        let mut dim_bytes = [0u8; 8];
-        r.read_exact(&mut dim_bytes)?;
-        shape.push(u64::from_le_bytes(dim_bytes) as usize);
-    }
-
-    Ok(TensorHeader { name, dtype, shape })
-}
-
-/// Write f32 tensor data (header + raw bytes).
-pub fn write_f32_tensor<W: Write>(
-    w: &mut W,
-    name: &str,
-    shape: &[usize],
-    data: &[f32],
-) -> io::Result<()> {
-    let header = TensorHeader::new(name, SerialDType::F32, shape.to_vec());
-    assert_eq!(header.num_elements(), data.len(), "shape/data mismatch");
-    write_header(w, &header)?;
-    for &val in data {
-        w.write_all(&val.to_le_bytes())?;
-    }
-    Ok(())
-}
-
-/// Read f32 tensor data.
-pub fn read_f32_tensor<R: Read>(r: &mut R) -> io::Result<(TensorHeader, Vec<f32>)> {
-    let header = read_header(r)?;
-    if header.dtype != SerialDType::F32 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "expected F32 dtype"));
-    }
-    let n = header.num_elements();
-    let mut data = Vec::with_capacity(n);
-    for _ in 0..n {
-        let mut buf = [0u8; 4];
-        r.read_exact(&mut buf)?;
-        data.push(f32::from_le_bytes(buf));
-    }
-    Ok((header, data))
-}
-
-/// Compute a simple checksum for data integrity.
-pub fn checksum(data: &[u8]) -> u32 {
-    let mut hash: u32 = 0x811c9dc5; // FNV-1a offset basis
-    for &byte in data {
-        hash ^= byte as u32;
-        hash = hash.wrapping_mul(0x01000193); // FNV prime
-    }
-    hash
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
 
     #[test]
-    fn test_header_roundtrip() {
-        let header = TensorHeader::new("test.weight", SerialDType::F32, vec![3, 4]);
-        let mut buf = Vec::new();
-        write_header(&mut buf, &header).unwrap();
-        let mut cursor = Cursor::new(&buf);
-        let read = read_header(&mut cursor).unwrap();
-        assert_eq!(read.name, "test.weight");
-        assert_eq!(read.dtype, SerialDType::F32);
-        assert_eq!(read.shape, vec![3, 4]);
+    fn test_f32_roundtrip() {
+        let data = vec![1.0f32, -2.5, 3.14, 0.0];
+        let bytes = f32_to_bytes(&data);
+        let back = bytes_to_f32(&bytes);
+        assert_eq!(data, back);
     }
 
     #[test]
-    fn test_f32_tensor_roundtrip() {
-        let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut buf = Vec::new();
-        write_f32_tensor(&mut buf, "layer.0.weight", &[2, 3], &data).unwrap();
-        let mut cursor = Cursor::new(&buf);
-        let (header, read_data) = read_f32_tensor(&mut cursor).unwrap();
-        assert_eq!(header.name, "layer.0.weight");
-        assert_eq!(header.shape, vec![2, 3]);
-        assert_eq!(read_data, data);
+    fn test_f32_empty() {
+        let bytes = f32_to_bytes(&[]);
+        assert!(bytes.is_empty());
+        assert!(bytes_to_f32(&[]).is_empty());
     }
 
     #[test]
-    fn test_num_elements() {
-        let h = TensorHeader::new("t", SerialDType::F32, vec![2, 3, 4]);
-        assert_eq!(h.num_elements(), 24);
+    fn test_f16_roundtrip() {
+        let data: Vec<u16> = vec![0x3C00, 0x4000, 0x0000]; // 1.0, 2.0, 0.0 in f16
+        let bytes = f16_to_bytes(&data);
+        let back = bytes_to_f16(&bytes);
+        assert_eq!(data, back);
     }
 
     #[test]
-    fn test_data_size_bytes() {
-        let h = TensorHeader::new("t", SerialDType::F32, vec![10]);
-        assert_eq!(h.data_size_bytes(), 40);
-        let h2 = TensorHeader::new("t", SerialDType::F16, vec![10]);
-        assert_eq!(h2.data_size_bytes(), 20);
-    }
-
-    #[test]
-    fn test_serial_dtype_from_u8() {
-        assert_eq!(SerialDType::from_u8(0), Some(SerialDType::F32));
-        assert_eq!(SerialDType::from_u8(5), Some(SerialDType::I32));
-        assert_eq!(SerialDType::from_u8(99), None);
-    }
-
-    #[test]
-    fn test_invalid_magic() {
-        let data = b"XXXX\x01\x00";
-        let mut cursor = Cursor::new(data);
-        assert!(read_header(&mut cursor).is_err());
-    }
-
-    #[test]
-    fn test_invalid_version() {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(MAGIC);
-        buf.push(99); // bad version
-        let mut cursor = Cursor::new(&buf);
-        assert!(read_header(&mut cursor).is_err());
+    fn test_f16_empty() {
+        assert!(f16_to_bytes(&[]).is_empty());
+        assert!(bytes_to_f16(&[]).is_empty());
     }
 
     #[test]
     fn test_checksum_deterministic() {
-        let data = b"hello world";
-        let c1 = checksum(data);
-        let c2 = checksum(data);
+        let data = b"hello tensor";
+        let c1 = tensor_checksum(data);
+        let c2 = tensor_checksum(data);
         assert_eq!(c1, c2);
     }
 
     #[test]
     fn test_checksum_different() {
-        let c1 = checksum(b"hello");
-        let c2 = checksum(b"world");
+        let c1 = tensor_checksum(b"hello");
+        let c2 = tensor_checksum(b"world");
         assert_ne!(c1, c2);
     }
 
     #[test]
-    fn test_empty_tensor() {
-        let data: Vec<f32> = vec![];
-        let mut buf = Vec::new();
-        write_f32_tensor(&mut buf, "empty", &[0], &data).unwrap();
-        let mut cursor = Cursor::new(&buf);
-        let (h, d) = read_f32_tensor(&mut cursor).unwrap();
-        assert_eq!(h.num_elements(), 0);
-        assert!(d.is_empty());
+    fn test_verify_checksum() {
+        let data = b"test data";
+        let cs = tensor_checksum(data);
+        assert!(verify_checksum(data, cs));
+        assert!(!verify_checksum(data, cs + 1));
     }
 
     #[test]
-    fn test_scalar_tensor() {
-        let data = vec![42.0f32];
-        let mut buf = Vec::new();
-        write_f32_tensor(&mut buf, "scalar", &[1], &data).unwrap();
-        let mut cursor = Cursor::new(&buf);
-        let (_, d) = read_f32_tensor(&mut cursor).unwrap();
-        assert_eq!(d, vec![42.0]);
+    fn test_shape_roundtrip() {
+        let shape = vec![3, 1024, 768];
+        let bytes = pack_shape(&shape);
+        let back = unpack_shape(&bytes);
+        assert_eq!(shape, back);
     }
 
     #[test]
-    fn test_ndim() {
-        let h = TensorHeader::new("t", SerialDType::F32, vec![2, 3, 4, 5]);
-        assert_eq!(h.ndim(), 4);
+    fn test_shape_empty() {
+        let bytes = pack_shape(&[]);
+        let back = unpack_shape(&bytes);
+        assert!(back.is_empty());
+    }
+
+    #[test]
+    fn test_header_elements() {
+        let h = TensorHeader {
+            name: "weight".into(),
+            shape: vec![10, 20, 30],
+            dtype: 0,
+            data_offset: 0,
+            data_length: 24000,
+        };
+        assert_eq!(h.elements(), 6000);
+    }
+
+    #[test]
+    fn test_header_dtype_name() {
+        let h = TensorHeader {
+            name: "w".into(),
+            shape: vec![1],
+            dtype: 0,
+            data_offset: 0,
+            data_length: 4,
+        };
+        assert_eq!(h.dtype_name(), "f32");
+        let h2 = TensorHeader {
+            name: "w".into(),
+            shape: vec![1],
+            dtype: 1,
+            data_offset: 0,
+            data_length: 2,
+        };
+        assert_eq!(h2.dtype_name(), "f16");
+    }
+
+    #[test]
+    fn test_f32_byte_count() {
+        let bytes = f32_to_bytes(&[1.0, 2.0, 3.0]);
+        assert_eq!(bytes.len(), 12);
+    }
+
+    #[test]
+    fn test_f16_byte_count() {
+        let bytes = f16_to_bytes(&[1, 2, 3]);
+        assert_eq!(bytes.len(), 6);
+    }
+
+    #[test]
+    fn test_checksum_empty() {
+        let cs = tensor_checksum(&[]);
+        assert_ne!(cs, 0); // FNV offset basis
     }
 }

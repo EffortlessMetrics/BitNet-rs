@@ -1,4 +1,4 @@
-#![allow(non_snake_case, clippy::manual_div_ceil)]
+#![allow(non_snake_case)]
 //! Wave 17 snapshot tests for `bitnet-kernels` — kernel configs,
 //! capability matrix types, SIMD detection, quantization formats,
 //! RoPE/attention/pooling/reduction configs, and activation types.
@@ -168,14 +168,8 @@ use bitnet_kernels::cpu::attention::{AttentionConfig, CpuAttentionConfig, GqaCon
 
 #[test]
 fn snapshot_wave17__attention_config_standard_mha() {
-    let cfg = AttentionConfig {
-        num_heads: 32,
-        head_dim: 128,
-        seq_len: 512,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let cfg =
+        AttentionConfig { num_heads: 32, head_dim: 128, seq_len: 512, causal: true, scale: None };
     insta::assert_debug_snapshot!(cfg);
 }
 
@@ -186,7 +180,6 @@ fn snapshot_wave17__attention_config_small() {
         head_dim: 64,
         seq_len: 256,
         causal: false,
-        use_alibi: false,
         scale: Some(0.1),
     };
     insta::assert_debug_snapshot!(cfg);
@@ -264,53 +257,26 @@ fn snapshot_wave17__pool_type_all_variants_debug() {
 
 #[test]
 fn snapshot_wave17__pool_config_max_pool_3() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 3,
-        stride: 1,
-        padding: 1,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 1 };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_avg_pool_2() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_global_max() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalMax,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_global_average() {
-    let cfg = PoolConfig {
-        pool_type: PoolType::GlobalAverage,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let cfg =
+        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
     insta::assert_debug_snapshot!(cfg);
 }
 

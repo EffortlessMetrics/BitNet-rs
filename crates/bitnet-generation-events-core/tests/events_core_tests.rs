@@ -22,7 +22,7 @@ fn done_event_contains_stats_and_reason() {
         StreamEvent::Done { reason, stats } => {
             assert_eq!(reason, StopReason::MaxTokens);
             assert_eq!(stats.tokens_generated, 4);
-            assert!((stats.tokens_per_second - 2.0).abs() < f64::EPSILON);
+            assert_eq!(stats.tokens_per_second, 2.0);
         }
         StreamEvent::Token(_) => panic!("expected done event"),
     }

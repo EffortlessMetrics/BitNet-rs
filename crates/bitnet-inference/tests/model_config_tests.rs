@@ -3,7 +3,6 @@
 //! Covers: GenerationConfig builders/validation/serialization, InferenceConfig
 //! defaults/overrides, architecture detection via ArchitectureRegistry, GQA
 //! head-count validation, context-length configs, hidden-dimension validation,
-#![allow(clippy::field_reassign_with_default)]
 //! SLM family configs (BitNet, Phi-4, LLaMA, Qwen), and edge cases.
 
 use bitnet_common::ArchitectureRegistry;
