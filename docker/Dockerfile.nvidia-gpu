@@ -25,6 +25,7 @@ WORKDIR /app
 COPY . .
 
 # Build with GPU feature
+ENV CUDA_COMPUTE_CAP=80
 RUN cargo build --locked --no-default-features --features gpu
 
 # ── Stage 2: Test runner ─────────────────────────────────────────

@@ -84,7 +84,7 @@ impl TensorLayout {
         if alignment == 0 {
             return false;
         }
-        self.shape.last().is_some_and(|&last| last % alignment == 0)
+        self.shape.last().is_some_and(|&last| last.is_multiple_of(alignment))
     }
 
     /// Reshape (only valid for contiguous tensors).

@@ -82,7 +82,9 @@ fuzz_target!(|input: LayoutInput| {
     let dim1 = input.transpose_dim1 as usize;
     match layout.transpose(dim0, dim1) {
         Some(transposed) => {
-            assert_eq!(transposed.numel(), layout.numel());
+            let numel1: usize = transposed.numel();
+            let numel2: usize = layout.numel();
+            assert_eq!(numel1, numel2);
             assert_eq!(transposed.ndim(), layout.ndim());
             if dim0 != dim1 {
                 assert_eq!(transposed.shape[dim0], layout.shape[dim1]);
@@ -101,7 +103,9 @@ fuzz_target!(|input: LayoutInput| {
     if !new_shape.is_empty() {
         match layout.reshape(&new_shape) {
             Some(reshaped) => {
-                assert_eq!(reshaped.numel(), layout.numel());
+                let numel1: usize = reshaped.numel();
+                let numel2: usize = layout.numel();
+                assert_eq!(numel1, numel2);
                 assert!(reshaped.is_contiguous());
             }
             None => {
