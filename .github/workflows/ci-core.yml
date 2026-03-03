@@ -247,7 +247,42 @@ jobs:
             -p bitnet-receipts \
             -p bitnet-sampling
 
-  # Job 4: Documentation build
+  # Job 5: Clippy linting (macOS ARM64 / Apple Silicon)
+  clippy-macos-arm64:
+    name: Clippy (macOS ARM64)
+    runs-on: macos-14
+    timeout-minutes: 15
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: ci-core-clippy-macos-arm64
+
+      - name: Run clippy (core crates, libs only)
+        run: |
+          cargo clippy --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu
+
+  # Job 6: Documentation build
   docs:
     name: Documentation
     runs-on: ubuntu-22.04
@@ -276,7 +311,7 @@ jobs:
     name: CI Core Success
     runs-on: ubuntu-22.04
     timeout-minutes: 5
-    needs: [build-test-linux, grid-check, clippy, docs]
+    needs: [build-test-linux, grid-check, clippy, clippy-macos-arm64, docs]
     if: always()
     steps:
       - name: Summarize core results
@@ -286,6 +321,7 @@ jobs:
           echo "  Build & Test: ${{ needs.build-test-linux.result }}"
           echo "  Grid Check:   ${{ needs.grid-check.result }}"
           echo "  Clippy:       ${{ needs.clippy.result }}"
+          echo "  Clippy ARM64: ${{ needs.clippy-macos-arm64.result }}"
           echo "  Docs:         ${{ needs.docs.result }}"
 
       - name: Check all jobs succeeded
@@ -295,6 +331,7 @@ jobs:
           for r in "${{ needs.build-test-linux.result }}" \
                    "${{ needs.grid-check.result }}" \
                    "${{ needs.clippy.result }}" \
+                   "${{ needs.clippy-macos-arm64.result }}" \
                    "${{ needs.docs.result }}"; do
             [ "$r" = "success" ] || bad=1
           done
