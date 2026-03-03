@@ -87,15 +87,11 @@ impl BenchSuite {
     }
 
     pub fn fastest_encode(&self) -> Option<&BenchRun> {
-        self.runs
-            .iter()
-            .min_by(|a, b| a.encode_time.cmp(&b.encode_time))
+        self.runs.iter().min_by(|a, b| a.encode_time.cmp(&b.encode_time))
     }
 
     pub fn slowest_encode(&self) -> Option<&BenchRun> {
-        self.runs
-            .iter()
-            .max_by(|a, b| a.encode_time.cmp(&b.encode_time))
+        self.runs.iter().max_by(|a, b| a.encode_time.cmp(&b.encode_time))
     }
 }
 
@@ -109,11 +105,17 @@ impl Default for BenchSuite {
 pub fn generate_test_texts() -> Vec<(&'static str, &'static str)> {
     vec![
         ("short", "Hello, world!"),
-        ("medium", "The quick brown fox jumps over the lazy dog. This is a medium-length test sentence for tokenizer benchmarking."),
+        (
+            "medium",
+            "The quick brown fox jumps over the lazy dog. This is a medium-length test sentence for tokenizer benchmarking.",
+        ),
         ("code", "fn main() { let x: Vec<u32> = vec![1, 2, 3]; println!(\"{:?}\", x); }"),
         ("numbers", "3.14159 2.71828 1.41421 1.73205 2.23607 2.44949 2.64575 2.82843"),
         ("repeated", "token token token token token token token token token token"),
-        ("special", "<|im_start|>system\nYou are helpful.<|im_end|>\n<|im_start|>user\nHi<|im_end|>"),
+        (
+            "special",
+            "<|im_start|>system\nYou are helpful.<|im_end|>\n<|im_start|>user\nHi<|im_end|>",
+        ),
     ]
 }
 
