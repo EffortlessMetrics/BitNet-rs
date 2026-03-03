@@ -19,6 +19,7 @@ pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
 pub mod monitoring;
+pub mod request_router;
 pub mod security;
 pub mod sse;
 pub mod stream_handler;
