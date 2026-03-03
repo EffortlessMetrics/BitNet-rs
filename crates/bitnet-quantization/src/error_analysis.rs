@@ -73,42 +73,24 @@ pub struct ModelErrorSummary {
 impl ModelErrorSummary {
     pub fn from_layers(layers: Vec<LayerErrorReport>) -> Self {
         if layers.is_empty() {
-            return Self {
-                layers,
-                overall_mse: 0.0,
-                overall_snr_db: 0.0,
-                worst_layer: None,
-            };
+            return Self { layers, overall_mse: 0.0, overall_snr_db: 0.0, worst_layer: None };
         }
 
-        let total_elements: usize =
-            layers.iter().map(|l| l.error.element_count).sum();
-        let weighted_mse: f64 = layers
-            .iter()
-            .map(|l| l.error.mse * l.error.element_count as f64)
-            .sum::<f64>()
-            / total_elements.max(1) as f64;
+        let total_elements: usize = layers.iter().map(|l| l.error.element_count).sum();
+        let weighted_mse: f64 =
+            layers.iter().map(|l| l.error.mse * l.error.element_count as f64).sum::<f64>()
+                / total_elements.max(1) as f64;
 
         let worst = layers
             .iter()
             .max_by(|a, b| {
-                a.error
-                    .mse
-                    .partial_cmp(&b.error.mse)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.error.mse.partial_cmp(&b.error.mse).unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|l| l.layer_name.clone());
 
-        let avg_snr =
-            layers.iter().map(|l| l.error.snr_db).sum::<f64>()
-                / layers.len() as f64;
+        let avg_snr = layers.iter().map(|l| l.error.snr_db).sum::<f64>() / layers.len() as f64;
 
-        Self {
-            layers,
-            overall_mse: weighted_mse,
-            overall_snr_db: avg_snr,
-            worst_layer: worst,
-        }
+        Self { layers, overall_mse: weighted_mse, overall_snr_db: avg_snr, worst_layer: worst }
     }
 
     pub fn layer_count(&self) -> usize {
@@ -116,9 +98,7 @@ impl ModelErrorSummary {
     }
 
     pub fn all_acceptable(&self, max_mse: f64, min_snr: f64) -> bool {
-        self.layers
-            .iter()
-            .all(|l| l.error.is_acceptable(max_mse, min_snr))
+        self.layers.iter().all(|l| l.error.is_acceptable(max_mse, min_snr))
     }
 }
 
@@ -203,14 +183,8 @@ mod tests {
     #[test]
     fn test_all_acceptable() {
         let layers = vec![
-            LayerErrorReport {
-                layer_name: "l0".into(),
-                error: compute_error(&[1.0], &[1.001]),
-            },
-            LayerErrorReport {
-                layer_name: "l1".into(),
-                error: compute_error(&[2.0], &[2.001]),
-            },
+            LayerErrorReport { layer_name: "l0".into(), error: compute_error(&[1.0], &[1.001]) },
+            LayerErrorReport { layer_name: "l1".into(), error: compute_error(&[2.0], &[2.001]) },
         ];
         let summary = ModelErrorSummary::from_layers(layers);
         assert!(summary.all_acceptable(0.01, 10.0));
