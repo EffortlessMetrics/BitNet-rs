@@ -186,3 +186,6 @@ pub mod neon_conv1d;
 pub mod neon_gather_scatter;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_quantized_ffn;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_weight_dequant_v2;
