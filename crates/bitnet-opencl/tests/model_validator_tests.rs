@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Integration tests for model validation and numerical correctness.
 
 use bitnet_opencl::{

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for attention_compute module.
 //!
 //! Covers: AttentionConfig, AttentionType, QKVProjection,

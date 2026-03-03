@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge case and error-path tests for prompt templates.
 //!
 //! Validates behavior under unusual inputs: empty strings, special characters,
@@ -177,7 +178,7 @@ fn render_chat_single_user_turn() {
     let turn = ChatTurn { role: ChatRole::User, text: "Hello!".to_string() };
     let templates = [TemplateType::Phi4Chat, TemplateType::Llama3Chat, TemplateType::QwenChat];
     for template in &templates {
-        let result = template.render_chat(std::slice::from_ref(&turn), None);
+        let result = template.render_chat(&[turn.clone()], None);
         if let Ok(output) = result {
             assert!(
                 output.contains("Hello!"),

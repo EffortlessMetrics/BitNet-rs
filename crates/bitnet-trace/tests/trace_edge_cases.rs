@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-trace: TraceRecord, TraceComparison, TraceSink,
 //! compare_records, and serialization/deserialization edge cases.
 

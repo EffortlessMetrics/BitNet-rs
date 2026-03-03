@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-engine-core session management, config validation,
 //! state machine transitions, concurrency, and serde roundtrips.
 
@@ -423,7 +424,7 @@ fn mock_session_with_tokens() {
         .iter()
         .filter_map(|e| match e {
             StreamEvent::Token(t) => Some(t.text.as_str()),
-            StreamEvent::Done { .. } => None,
+            _ => None,
         })
         .collect();
     assert_eq!(tokens, vec!["Hello", " world"]);

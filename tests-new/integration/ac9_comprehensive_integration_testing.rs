@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, deprecated)]
 //! AC9: Comprehensive Integration Testing for Transformer Pipeline
 //!
 //! Tests feature spec: issue-248-spec.md#ac9-comprehensive-integration-testing

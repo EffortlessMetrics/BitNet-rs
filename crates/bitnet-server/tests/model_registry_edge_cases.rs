@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for model_registry: ModelState, ModelEntry, LoadModelRequest,
 //! UnloadModelRequest, ListModelsResponse, RegistryError, ModelRegistry lifecycle,
 //! memory accounting, state transitions, and concurrent access patterns.
@@ -40,7 +41,7 @@ fn model_state_debug() {
 #[test]
 fn model_state_clone_copy() {
     let state = ModelState::Ready;
-    let cloned = state;
+    let cloned = state.clone();
     let copied = state;
     assert_eq!(cloned, copied);
     assert_eq!(cloned, ModelState::Ready);

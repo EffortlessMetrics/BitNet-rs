@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for sparse_operations module.
 //!
 //! Covers: SparseFormat, SparseMatrix (CSR/CSC/COO), SparseError,

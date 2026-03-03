@@ -1,4 +1,4 @@
-#![allow(clippy::needless_range_loop, clippy::manual_range_contains, clippy::len_zero)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for CPU embedding lookup and RoPE kernels.
 //!
 //! Tests cover basic embedding operations, positional encodings,

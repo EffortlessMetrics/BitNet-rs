@@ -1,8 +1,8 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for `bitnet-server` security module:
 //! SecurityConfig, SecurityValidator, ValidationError, Claims,
 //! validate_inference_request, validate_model_request, sanitize_input,
 //! content_filter.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_server::InferenceRequest;
 use bitnet_server::security::{Claims, SecurityConfig, SecurityValidator, ValidationError};

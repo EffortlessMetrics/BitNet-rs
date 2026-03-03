@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for `bitnet-runtime-context-core`.
 //!
 //! Coverage:

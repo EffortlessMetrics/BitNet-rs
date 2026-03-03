@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-quantization: QuantizedTensor, bit-packing,
 //! quantize/dequantize value functions, scale calculations, metrics,
 //! SimdCapabilities, QuantizationKernels, I2SLayout, QuantizerFactory, and QK256.
@@ -416,9 +417,8 @@ fn qk256_tolerance_large() {
 
 #[test]
 fn qk256_size_tolerance_constant() {
-    let tolerance = bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT;
-    assert!(tolerance > 0.0);
-    assert!(tolerance < 1.0);
+    assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT > 0.0);
+    assert!(bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT < 1.0);
 }
 
 // ===========================================================================

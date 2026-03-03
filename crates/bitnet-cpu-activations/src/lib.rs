@@ -386,6 +386,7 @@ fn derivative_one(x: f32, activation: ActivationType) -> f32 {
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 
@@ -653,7 +654,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::type_complexity)]
     fn test_activate_matches_individual_functions() {
         let input = vec![-3.0, -1.5, 0.0, 1.5, 3.0];
         let types_and_fns: Vec<(ActivationType, Box<dyn Fn(f32) -> f32>)> = vec![

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for the RoPE (Rotary Position Embedding) table generator.
 //!
 //! Tests cover:
@@ -93,10 +94,10 @@ fn build_tables_custom_base() {
 fn sin_cos_values_bounded() {
     let tables = build_tables(64, 128, DEFAULT_ROPE_BASE).unwrap();
     for &v in &tables.sin {
-        assert!((-1.0..=1.0).contains(&v), "sin value out of range: {v}");
+        assert!(v >= -1.0 && v <= 1.0, "sin value out of range: {}", v);
     }
     for &v in &tables.cos {
-        assert!((-1.0..=1.0).contains(&v), "cos value out of range: {v}");
+        assert!(v >= -1.0 && v <= 1.0, "cos value out of range: {}", v);
     }
 }
 

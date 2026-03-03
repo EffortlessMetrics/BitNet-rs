@@ -1,4 +1,4 @@
-#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case integration tests for `bitnet_kernels::cpu::loss` module.
 //!
 //! Covers:

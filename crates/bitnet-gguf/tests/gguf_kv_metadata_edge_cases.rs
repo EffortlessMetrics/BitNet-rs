@@ -1,11 +1,11 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-gguf: KV metadata, value types, and file open.
 //!
 //! Complements existing test files by covering gaps in:
 //! - `read_kv_pairs` with array values, all scalar types, invalid types, truncation
 //! - `open()` and `read_header_blocking` with empty/corrupt files
 //! - `kv::parse_header` vs `lib::parse_header` version-acceptance differences
-//! - `GgufError` IO variant, serde round-trips for complex values
-#![allow(clippy::doc_markdown, clippy::approx_constant)]
+//! - GgufError IO variant, serde round-trips for complex values
 
 use std::io::Write;
 use std::path::Path;

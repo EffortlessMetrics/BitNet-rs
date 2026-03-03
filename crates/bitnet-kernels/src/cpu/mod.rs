@@ -53,9 +53,6 @@ pub mod x86;
 pub mod arm;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_activation_functions;
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_activations;
 
 #[cfg(target_arch = "aarch64")]
@@ -75,9 +72,6 @@ pub mod neon_pooling;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_batch_norm;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_quantized_attention;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_quantized_matmul;
@@ -107,16 +101,10 @@ pub mod neon_padding_clipping;
 pub mod neon_inference_bridge;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_weight_packing;
+pub mod neon_sliding_window_attention;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_batch_scheduler;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_graph_executor;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_fused_mlp;
 
 pub use activations::ActivationType;
 pub use activations::{

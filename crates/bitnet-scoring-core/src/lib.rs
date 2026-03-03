@@ -13,8 +13,8 @@ impl NllStats {
     /// Mean negative log-likelihood.
     #[must_use]
     #[inline]
-    #[allow(clippy::cast_precision_loss)]
     pub fn mean(self) -> f64 {
+        #[allow(clippy::cast_precision_loss)]
         if self.tokens > 0 { self.sum / self.tokens as f64 } else { 0.0 }
     }
 

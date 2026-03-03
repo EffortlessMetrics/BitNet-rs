@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for GPU HAL model validator.
 //!
 //! Tests ValidationConfig, WeightStats, TensorDescriptor, WeightValidator,

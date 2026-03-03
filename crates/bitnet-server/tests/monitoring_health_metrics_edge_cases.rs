@@ -1,8 +1,8 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for monitoring health and metrics modules.
 //!
 //! Covers serialization roundtrips, boundary values, optional-field
 //! handling, stub-probe HTTP mapping, and metrics collector edge cases.
-#![allow(clippy::field_reassign_with_default)]
 
 use std::collections::HashMap;
 use std::sync::Arc;

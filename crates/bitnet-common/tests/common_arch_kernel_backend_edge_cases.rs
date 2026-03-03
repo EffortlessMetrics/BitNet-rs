@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-common kernel registry, architecture registry,
 //! and backend selection.
 //!
@@ -53,7 +54,7 @@ fn simd_level_equality() {
 #[test]
 fn simd_level_clone_copy() {
     let level = SimdLevel::Avx2;
-    let cloned = level;
+    let cloned = level.clone();
     let copied = level;
     assert_eq!(cloned, copied);
 }

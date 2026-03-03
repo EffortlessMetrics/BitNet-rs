@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge case tests for kernel registry capabilities and backend selection.
 //!
 //! Validates KernelCapabilities, KernelBackend, and SimdLevel behavior under
@@ -81,7 +82,7 @@ fn kernel_backend_all_variants_debug() {
 #[test]
 fn kernel_backend_clone_eq() {
     let b = KernelBackend::Cuda;
-    let b2 = b;
+    let b2 = b.clone();
     assert_eq!(b, b2);
 }
 

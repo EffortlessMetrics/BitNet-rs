@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! KV Cache memory estimation tests
 //!
 //! Tests the KV cache memory estimation formula:
@@ -411,7 +412,7 @@ fn test_single_layer_model() {
     };
 
     let cache_size = calculate_kv_cache_size(&config);
-    let expected = 2 * 4 * 64 * 512 * 4; // head_dim = 256/4 = 64
+    let expected = 2 * 1 * 4 * 64 * 512 * 4; // head_dim = 256/4 = 64
 
     assert_eq!(cache_size, expected);
 }
@@ -429,7 +430,7 @@ fn test_single_head_model() {
     };
 
     let cache_size = calculate_kv_cache_size(&config);
-    let expected = 2 * 4 * 128 * 256 * 4; // head_dim = 128/1 = 128
+    let expected = 2 * 4 * 1 * 128 * 256 * 4; // head_dim = 128/1 = 128
 
     assert_eq!(cache_size, expected);
 }
@@ -447,7 +448,7 @@ fn test_minimal_sequence_length() {
     };
 
     let cache_size = calculate_kv_cache_size(&config);
-    let expected = 2 * 8 * 8 * 64 * 4; // head_dim = 512/8 = 64
+    let expected = 2 * 8 * 8 * 64 * 1 * 4; // head_dim = 512/8 = 64
 
     assert_eq!(cache_size, expected);
 }

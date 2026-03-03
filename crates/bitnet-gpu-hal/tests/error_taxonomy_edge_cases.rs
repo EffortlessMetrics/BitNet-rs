@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for GPU HAL error taxonomy.
 //!
 //! Tests all error type construction, Display formatting, From conversions,

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, unused_imports, dead_code)]
 //! Criterion micro-benchmarks for Apple Silicon NEON kernel operations.
 //!
 //! Benchmarks cover: matrix multiplication, softmax (via layernorm path),

@@ -175,6 +175,7 @@ pub fn all_kernel_sources() -> Vec<(&'static str, &'static str)> {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

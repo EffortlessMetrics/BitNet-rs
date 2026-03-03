@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Snapshot tests for bitnet-testing-policy-contract.
 //!
 //! Pins: PolicyContract::detect() succeeds, drift_check() is None when consistent,

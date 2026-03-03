@@ -1,7 +1,7 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for validator module: Severity, ValidationCheck, OverallStatus,
 //! ValidationResult, ValidationReport, ValidationConfig, TensorInfo, TensorStats,
 //! ModelInfo, ModelValidator, and the full validation pipeline.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_models::validator::{
     ModelInfo, ModelValidator, OverallStatus, Severity, TensorInfo, TensorStats, ValidationCheck,
@@ -72,7 +72,7 @@ fn severity_debug() {
 #[test]
 fn severity_clone_copy() {
     let s = Severity::Warning;
-    let cloned = s;
+    let cloned = s.clone();
     let copied = s;
     assert_eq!(cloned, copied);
 }

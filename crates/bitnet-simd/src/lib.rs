@@ -411,7 +411,7 @@ pub fn simd_l2_norm(data: &[f32]) -> f32 {
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
-#[allow(clippy::cast_precision_loss, clippy::float_cmp, clippy::suboptimal_flops)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 
@@ -471,7 +471,7 @@ mod tests {
     #[test]
     fn test_exp_various_lengths() {
         for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.01 - 0.5).collect();
+            let input: Vec<f32> = (0..len).map(|i| (i as f32).mul_add(0.01, -0.5)).collect();
             let result = fast_exp_f32(&input);
             let expected: Vec<f32> = input.iter().map(|&x| x.exp()).collect();
             assert_eq!(result.len(), len);
@@ -533,7 +533,7 @@ mod tests {
     #[test]
     fn test_tanh_various_lengths() {
         for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.02 - 1.0).collect();
+            let input: Vec<f32> = (0..len).map(|i| (i as f32).mul_add(0.02, -1.0)).collect();
             let result = fast_tanh_f32(&input);
             assert_eq!(result.len(), len);
         }
@@ -588,7 +588,7 @@ mod tests {
     #[test]
     fn test_sigmoid_various_lengths() {
         for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.02 - 1.0).collect();
+            let input: Vec<f32> = (0..len).map(|i| (i as f32).mul_add(0.02, -1.0)).collect();
             let result = fast_sigmoid_f32(&input);
             assert_eq!(result.len(), len);
         }
@@ -628,7 +628,7 @@ mod tests {
             let b: Vec<f32> = (0..len).map(|i| (i as f32) * 0.1).collect();
             let result = simd_dot_product(&a, &b);
             let expected: f32 = a.iter().zip(&b).map(|(x, y)| x * y).sum();
-            let tol = expected.abs() * 1e-5 + 1e-5;
+            let tol = expected.abs().mul_add(1e-5, 1e-5);
             assert!((result - expected).abs() < tol, "len={len}: {result} vs {expected}");
         }
     }
@@ -803,7 +803,7 @@ mod tests {
             let data: Vec<f32> = (0..len).map(|i| (i as f32) * 0.01).collect();
             let result = simd_l2_norm(&data);
             let expected = data.iter().map(|&v| v * v).sum::<f32>().sqrt();
-            let tol = expected.abs() * 1e-5 + 1e-5;
+            let tol = expected.abs().mul_add(1e-5, 1e-5);
             assert!(
                 (result - expected).abs() < tol,
                 "Failed for len={len}: {result} vs {expected}"

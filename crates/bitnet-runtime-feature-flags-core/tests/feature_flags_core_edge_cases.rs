@@ -375,7 +375,7 @@ fn feature_activation_is_copy() {
 #[test]
 fn feature_activation_clone() {
     let a = FeatureActivation { gpu: true, ..Default::default() };
-    let b = a.clone();
+    let b = a;
     assert!(b.gpu);
 }
 

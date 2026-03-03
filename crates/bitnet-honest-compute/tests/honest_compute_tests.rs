@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Comprehensive tests for `bitnet-honest-compute` public API.
 //!
 //! Covers:

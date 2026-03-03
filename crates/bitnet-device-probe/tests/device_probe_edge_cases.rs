@@ -1,5 +1,5 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-device-probe public API.
-#![allow(clippy::uninlined_format_args)]
 
 use bitnet_device_probe::{
     DeviceCapabilities, SimdLevel, detect_simd_level, gpu_available_runtime, gpu_compiled,

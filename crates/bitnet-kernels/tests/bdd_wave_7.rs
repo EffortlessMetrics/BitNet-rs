@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! BDD Wave 7 — Inference Pipeline Integration Tests
 //!
 //! Given/When/Then tests for end-to-end kernel pipeline integration:
@@ -1119,8 +1120,8 @@ fn given_attention_config_when_validating_then_catches_invalid_params() {
         head_dim: 4,
         seq_len: 2,
         causal: false,
-        scale: None,
         use_alibi: false,
+        scale: None,
     };
 
     // When

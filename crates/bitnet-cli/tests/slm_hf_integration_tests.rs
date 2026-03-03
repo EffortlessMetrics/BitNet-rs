@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Tests for HuggingFace / SLM model loading CLI integration.
 //!
 //! Validates the `--model-format` and `--architecture` flags added to the `run`
@@ -8,7 +9,6 @@ use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
-#[allow(deprecated)]
 fn bitnet() -> Command {
     Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
 }

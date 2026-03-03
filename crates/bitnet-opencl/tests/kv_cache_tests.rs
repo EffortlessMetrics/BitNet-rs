@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Integration tests for the GPU KV cache and paged attention engine.
 
 use bitnet_opencl::kv_cache::{GpuKvCache, KvCacheConfig};

@@ -1,4 +1,4 @@
-#![allow(clippy::manual_div_ceil, clippy::manual_is_multiple_of)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Metal dispatch sizing and workgroup configuration tests.
 //!
 //! Validates that compute dispatch parameters are correct for Apple Silicon GPU

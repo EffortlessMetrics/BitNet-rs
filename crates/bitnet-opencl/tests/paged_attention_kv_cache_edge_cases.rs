@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for PageAllocator, GpuKvCache, PagedAttentionEngine,
 //! GqaConfig, KvCacheConfig, PageTable, and CacheMemoryStats.
 //!

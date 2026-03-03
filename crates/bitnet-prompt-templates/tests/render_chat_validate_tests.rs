@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! render_chat and validate_output tests for all TemplateType variants.
 //!
 //! Coverage targets:
@@ -156,7 +157,7 @@ fn template_validation_debug() {
 fn template_validation_clone() {
     let v = TemplateValidation { is_valid: false, warnings: vec!["test warning".to_string()] };
     let v2 = v.clone();
-    assert!(!v2.is_valid);
+    assert_eq!(v2.is_valid, false);
     assert_eq!(v2.warnings.len(), 1);
     assert_eq!(v2.warnings[0], "test warning");
 }
@@ -385,8 +386,8 @@ fn render_chat_very_long_text() {
 fn render_chat_many_turns() {
     let mut history = Vec::new();
     for i in 0..20 {
-        history.push(ChatTurn::new(ChatRole::User, format!("Question {i}")));
-        history.push(ChatTurn::new(ChatRole::Assistant, format!("Answer {i}")));
+        history.push(ChatTurn::new(ChatRole::User, &format!("Question {i}")));
+        history.push(ChatTurn::new(ChatRole::Assistant, &format!("Answer {i}")));
     }
     history.push(ChatTurn::new(ChatRole::User, "Final question"));
     // Test just a few representative templates to keep this fast

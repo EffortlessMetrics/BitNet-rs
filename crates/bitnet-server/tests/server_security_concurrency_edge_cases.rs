@@ -1,9 +1,9 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for server security validation, concurrency, and execution router types.
 //!
 //! Tests cover: SecurityConfig defaults, SecurityValidator (prompt length, token limits,
 //! parameter ranges, sanitization, content filtering, model path validation),
 //! ValidationError display, ConcurrencyConfig, CircuitBreakerState, RequestAdmission,
-#![allow(clippy::field_reassign_with_default)]
 //! ConcurrencyManager (admission, circuit breaker), DeviceStats, DeviceCapabilities,
 //! DeviceSelectionStrategy, ExecutionRouterConfig, DeviceHealth.
 

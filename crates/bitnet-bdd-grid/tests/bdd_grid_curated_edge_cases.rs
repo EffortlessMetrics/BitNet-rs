@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-bdd-grid curated grid API.
 
 use bitnet_bdd_grid::{
@@ -11,7 +12,7 @@ use bitnet_bdd_grid::{
 #[test]
 fn curated_grid_is_non_empty() {
     let grid = curated();
-    assert!(!grid.rows().is_empty(), "curated grid should have rows");
+    assert!(grid.rows().len() > 0, "curated grid should have rows");
 }
 
 #[test]

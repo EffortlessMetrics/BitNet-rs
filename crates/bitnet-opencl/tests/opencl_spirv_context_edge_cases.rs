@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for OpenCL SPIR-V kernel registry, SPIR-V types,
 //! and context pool with mock factory.
 

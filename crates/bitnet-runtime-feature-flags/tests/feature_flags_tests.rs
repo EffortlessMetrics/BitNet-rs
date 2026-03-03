@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Comprehensive tests for `bitnet-runtime-feature-flags`.
 //!
 //! Covers `FeatureActivation` construction, feature-lattice implications,

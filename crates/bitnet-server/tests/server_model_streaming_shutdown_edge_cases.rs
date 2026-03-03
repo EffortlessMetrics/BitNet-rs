@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, unused_imports)]
 //! Edge-case tests for server model management, streaming types, and
 //! async model manager operations.
 //!
@@ -9,6 +10,7 @@ use bitnet_server::model_manager::{
     ModelLoadStatus, ModelManagerConfig, ModelManagerHealth, ModelMemoryStats, ModelMetadata,
 };
 use bitnet_server::streaming::{StreamingComplete, StreamingError, StreamingToken};
+use serde_json;
 use std::time::{Duration, SystemTime};
 
 // ---------------------------------------------------------------------------

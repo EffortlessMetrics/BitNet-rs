@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for model format detection and loader infrastructure.
 //!
 //! Tests cover ModelFormat enum, path-based detection, header-based detection,
@@ -22,7 +23,7 @@ fn model_format_debug() {
 #[test]
 fn model_format_clone() {
     let f = ModelFormat::SafeTensors;
-    let f2 = f;
+    let f2 = f.clone();
     assert_eq!(f, f2);
 }
 
@@ -276,8 +277,11 @@ fn safetensors_loader_detect_format_nonexistent() {
     let loader = SafeTensorsLoader;
     let result = loader.detect_format(Path::new("/nonexistent/model.safetensors"));
     // Should either return error or Ok(false) for nonexistent file
-    if let Ok(detected) = result {
-        let _ = detected;
+    match result {
+        Ok(detected) => {
+            let _ = detected;
+        }
+        Err(_) => {} // Expected for nonexistent file
     }
 }
 

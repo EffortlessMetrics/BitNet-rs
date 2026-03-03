@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 use bitnet_testing_scenarios_profile_core::{
     ComparisonToleranceProfile, CrossValidationProfile, FixtureProfile, ReportFormat,
     ReportingProfile, TestConfigProfile,

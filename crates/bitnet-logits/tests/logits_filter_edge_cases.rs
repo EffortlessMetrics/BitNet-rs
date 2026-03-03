@@ -1,8 +1,8 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for logits filter functions.
 //!
 //! Covers: empty/single-element slices, NaN/Inf handling, boundary conditions
 //! for all filters, and filter chaining order dependence.
-#![allow(clippy::float_cmp, clippy::redundant_clone, clippy::cast_precision_loss)]
 
 use bitnet_logits::{
     apply_min_p, apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p,

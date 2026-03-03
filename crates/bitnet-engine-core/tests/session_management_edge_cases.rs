@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge case and boundary tests for engine-core session management.
 //!
 //! Tests exercise validation, state machine transitions, concurrency limits,
@@ -247,8 +248,8 @@ fn backend_info_clone() {
 #[test]
 fn session_metrics_default_is_zero() {
     let metrics = SessionMetrics::default();
-    assert!(metrics.tokens_per_second.abs() < f64::EPSILON);
-    assert!(metrics.time_to_first_token_ms.abs() < f64::EPSILON);
+    assert_eq!(metrics.tokens_per_second, 0.0);
+    assert_eq!(metrics.time_to_first_token_ms, 0.0);
     assert_eq!(metrics.total_tokens, 0);
 }
 

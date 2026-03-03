@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for SpirVValidator, SpirVCache, SpirVModule, SpirVCompiler,
 //! CompileOptions, OptimizationLevel, CompilerBackend, and build_test_spirv helper.
 //!

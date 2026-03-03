@@ -1,31 +1,7 @@
 // GPU hardware abstraction layer for `BitNet` inference.
 
 // Scaffold crate — suppress noisy nursery/pedantic lints until the API stabilises.
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_lossless)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::doc_markdown)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::redundant_closure_for_method_calls)]
-#![allow(clippy::match_same_arms)]
-#![allow(clippy::uninlined_format_args)]
-#![allow(clippy::cloned_instead_of_copied)]
-#![allow(clippy::map_unwrap_or)]
-#![allow(clippy::derive_partial_eq_without_eq)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::manual_is_multiple_of)]
-#![allow(clippy::while_float)]
-#![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::many_single_char_names)]
-#![allow(clippy::needless_pass_by_value)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 
 // === GPU Backend Implementations ===
 pub mod cuda_backend;

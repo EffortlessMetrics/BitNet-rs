@@ -182,10 +182,10 @@ pub fn format_table() -> String {
             if m.auth_required { "HF_TOKEN" } else { "none" }
         ));
     }
-    out.push_str(&format!(
+    out.push_str(
         "\nUse --id <REPO_ID> to select a model. \
-         Files are listed with --list --id <REPO_ID>.\n"
-    ));
+         Files are listed with --list --id <REPO_ID>.\n",
+    );
     out
 }
 
@@ -206,6 +206,7 @@ pub fn format_detail(entry: &ModelEntry) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

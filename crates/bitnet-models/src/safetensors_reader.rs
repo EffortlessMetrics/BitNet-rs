@@ -283,6 +283,7 @@ struct ShardIndex {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
     use safetensors::tensor::TensorView;
@@ -351,7 +352,7 @@ mod tests {
 
     #[test]
     fn f16_to_f32_conversion() {
-        let f32_values: Vec<f32> = vec![0.5, -1.0, std::f32::consts::PI, 0.0];
+        let f32_values: Vec<f32> = vec![0.5, -1.0, 3.14, 0.0];
         let f16_bytes: Vec<u8> =
             f32_values.iter().flat_map(|&f| half::f16::from_f32(f).to_le_bytes()).collect();
 
@@ -437,7 +438,7 @@ mod tests {
     #[test]
     fn error_unsupported_dtype() {
         // I64 is not supported for F32 conversion
-        let i64_bytes: Vec<u8> = [1i64, 2i64].iter().flat_map(|i| i.to_le_bytes()).collect();
+        let i64_bytes: Vec<u8> = vec![1i64, 2i64].iter().flat_map(|i| i.to_le_bytes()).collect();
         let data = make_safetensors(vec![("ids", SafeDtype::I64, vec![2], &i64_bytes)]);
 
         let mut file = NamedTempFile::new().unwrap();
@@ -479,8 +480,8 @@ mod tests {
 
     #[test]
     fn multiple_tensors_single_file() {
-        let w1: Vec<u8> = [1.0f32, 2.0].iter().flat_map(|f| f.to_le_bytes()).collect();
-        let w2: Vec<u8> = [3.0f32, 4.0, 5.0].iter().flat_map(|f| f.to_le_bytes()).collect();
+        let w1: Vec<u8> = vec![1.0f32, 2.0].iter().flat_map(|f| f.to_le_bytes()).collect();
+        let w2: Vec<u8> = vec![3.0f32, 4.0, 5.0].iter().flat_map(|f| f.to_le_bytes()).collect();
 
         let data = make_safetensors(vec![
             ("layer.0.weight", SafeDtype::F32, vec![2], &w1),

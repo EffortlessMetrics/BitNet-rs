@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case and boundary tests for bitnet-st-tools common utilities.
 //!
 //! Tests `rms_for_tensor`, `cast_ln_to_f16`, `iter_ln_tensors`, and

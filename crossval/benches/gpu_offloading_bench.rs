@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, unused_imports)]
 // GPU Offloading Performance Benchmark
 //
 // Benchmark scaffolding for GPU layer offloading performance validation (v0.2.0)

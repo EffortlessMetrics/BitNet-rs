@@ -1,9 +1,12 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, unused_imports)]
 //! Snapshot wave 12 — bitnet-server
 //!
 //! Covers: ServerConfig JSON, ServerSettings debug, DeviceConfig variants/parsing,
 //! BatchEngineConfig, ConcurrencyConfig, SecurityConfig, ModelManagerConfig,
 //! ExecutionRouterConfig, DeviceSelectionStrategy, DeviceHealth, ModelState,
 //! ModelEntry JSON, ErrorResponse JSON, InferenceResponse JSON, DeviceCapabilities.
+
+use std::time::Duration;
 
 use bitnet_server::batch_engine::BatchEngineConfig;
 use bitnet_server::concurrency::ConcurrencyConfig;

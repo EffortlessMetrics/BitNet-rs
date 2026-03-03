@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for `gguf_simple` module — the largest module (~1800 lines)
 //! in the bitnet-models crate.
 //!
@@ -198,7 +199,7 @@ mod tests {
         };
 
         let f32_vec = |name: &str, len: usize| -> TensorEntry {
-            let data = [0x3f, 0x80, 0x00, 0x00].repeat(len); // f32 1.0 repeated
+            let data = vec![0x3f, 0x80, 0x00, 0x00].repeat(len); // f32 1.0 repeated
             TensorEntry::new(name.to_string(), vec![len as u64], TensorDType::F32, data)
         };
 

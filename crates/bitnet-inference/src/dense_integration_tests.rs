@@ -164,6 +164,7 @@ pub fn smollm2_1_7b_config() -> DenseModelConfig {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

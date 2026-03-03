@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for model_pruning module.
 //!
 //! Covers: PruningMethod, PruningGranularity, ScheduleKind,

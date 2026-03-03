@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for context_window module.
 //!
 //! Covers: ChunkingStrategy, EvictionStrategy, ChunkRole,

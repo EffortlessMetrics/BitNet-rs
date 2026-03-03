@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for dynamic batching: PaddingStrategy, BatchConfig,
 //! BatchRequest, DynamicBatch, BatchFormationStrategy, PaddingCalculator,
 //! BatchScheduler, BatchEfficiency, InflightBatchTracker, BatchMetrics,

@@ -1,4 +1,4 @@
-#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case integration tests for `bitnet_kernels::opencl_cache` module.
 //!
 //! Covers:

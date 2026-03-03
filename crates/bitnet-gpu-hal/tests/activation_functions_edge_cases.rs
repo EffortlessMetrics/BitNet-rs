@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for activation functions: ActivationType, ActivationConfig,
 //! Activation trait implementations (ReLU, GeLU, SiLU, Mish, Tanh, Sigmoid,
 //! LeakyReLU, ELU, SELU, Softplus, QuickGELU, HardSwish, HardSigmoid),

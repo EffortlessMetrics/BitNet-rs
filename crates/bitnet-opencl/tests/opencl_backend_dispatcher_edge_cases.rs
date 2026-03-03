@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for OpenCL backend dispatcher, registry, and dispatch strategies.
 //!
 //! Tests cover mock backends, all dispatch strategies (priority, round-robin,

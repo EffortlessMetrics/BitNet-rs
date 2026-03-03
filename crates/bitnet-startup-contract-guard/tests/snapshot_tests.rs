@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 use bitnet_runtime_bootstrap::{ContractPolicy, RuntimeComponent};
 use bitnet_startup_contract_guard::StartupContractGuard;
 

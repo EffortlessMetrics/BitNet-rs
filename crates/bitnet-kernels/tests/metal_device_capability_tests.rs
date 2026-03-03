@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Metal device capability detection tests for Apple Silicon.
 //!
 //! These tests validate the device detection and capability querying logic
@@ -97,7 +98,7 @@ impl MetalDeviceCapabilities {
 
 /// Check that a buffer size satisfies Metal's 256-byte alignment requirement.
 fn is_metal_aligned(size: u64) -> bool {
-    size.is_multiple_of(256)
+    size % 256 == 0
 }
 
 /// Compute optimal threadgroup dimensions for a 2D workload.

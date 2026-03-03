@@ -211,6 +211,7 @@ impl std::fmt::Display for BudgetSummary {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

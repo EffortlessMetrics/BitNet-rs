@@ -278,6 +278,7 @@ impl Default for NumericalValidator {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

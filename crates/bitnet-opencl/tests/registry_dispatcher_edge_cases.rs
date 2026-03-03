@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for BackendRegistry, BackendDispatcher, DispatchLog,
 //! BackendCapabilityMatrix, and associated enums.
 //!

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for GPU HAL backend selector.
 //!
 //! Tests BackendType, BackendPriority, BackendCapability, DType,

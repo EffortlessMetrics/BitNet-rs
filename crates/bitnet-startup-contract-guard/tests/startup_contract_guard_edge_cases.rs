@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-startup-contract-guard StartupContractGuard.
 
 use bitnet_startup_contract_guard::{

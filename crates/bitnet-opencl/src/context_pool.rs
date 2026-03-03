@@ -317,6 +317,7 @@ unsafe impl Send for ContextPool {}
 unsafe impl Sync for ContextPool {}
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};

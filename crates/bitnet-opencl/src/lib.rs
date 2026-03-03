@@ -1,3 +1,14 @@
+#![allow(
+    clippy::doc_markdown,
+    clippy::cast_precision_loss,
+    clippy::cast_lossless,
+    clippy::cast_possible_truncation,
+    clippy::missing_const_for_fn,
+    clippy::uninlined_format_args,
+    clippy::use_self,
+    clippy::map_unwrap_or,
+    clippy::significant_drop_tightening
+)]
 //! OpenCL backend for BitNet GPU inference.
 //!
 //! Provides optimized OpenCL primitives for Intel Arc GPU inference,

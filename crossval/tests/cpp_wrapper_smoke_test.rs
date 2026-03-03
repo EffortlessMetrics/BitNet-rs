@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Smoke test for C++ wrapper FFI
 //!
 //! This test verifies that the C++ wrapper compiles and can be called from Rust.

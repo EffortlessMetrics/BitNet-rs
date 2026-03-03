@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, unused_imports, dead_code)]
 //! Criterion micro-benchmarks for ARM NEON SIMD operations on Apple Silicon.
 //!
 //! Covers softmax, RMS normalization, quantized dot product, matrix-vector

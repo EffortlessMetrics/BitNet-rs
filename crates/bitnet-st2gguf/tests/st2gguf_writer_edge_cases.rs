@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-st2gguf: GgufWriter, TensorEntry,
 //! TensorDType, MetadataValue, and LayerNorm detection utilities.
 
@@ -91,7 +92,7 @@ fn metadata_value_string() {
 
 #[test]
 fn metadata_value_f32() {
-    let v = MetadataValue::F32(std::f32::consts::PI);
+    let v = MetadataValue::F32(3.14);
     let s = format!("{v:?}");
     assert!(s.contains("3.14"));
 }
@@ -176,20 +177,20 @@ fn layernorm_tensor_rejects_non_norms() {
 
 #[test]
 fn count_layernorm_tensors_basic() {
-    let names = [
+    let names = vec![
         "blk.0.attn_norm.weight",
         "blk.0.ffn_norm.weight",
         "blk.0.attn_q.weight",
         "output_norm.weight",
         "token_embd.weight",
     ];
-    let count = count_layernorm_tensors(names.iter().copied());
+    let count = count_layernorm_tensors(names.into_iter());
     assert_eq!(count, 2, "should find 2 LN tensors (blk.X norms)");
 }
 
 #[test]
 fn count_layernorm_tensors_empty() {
-    let names: [&str; 0] = [];
+    let names: Vec<&str> = vec![];
     assert_eq!(count_layernorm_tensors(names.into_iter()), 0);
 }
 

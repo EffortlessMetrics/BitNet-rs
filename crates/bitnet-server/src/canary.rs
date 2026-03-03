@@ -299,7 +299,7 @@ mod tests {
                 canary_count += 1;
             }
         }
-        assert!((40..=60).contains(&canary_count), "got {canary_count}");
+        assert!(canary_count >= 40 && canary_count <= 60, "got {canary_count}");
     }
 
     #[test]

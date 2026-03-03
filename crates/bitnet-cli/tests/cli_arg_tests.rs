@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, deprecated)]
 //! CLI argument parsing and subcommand routing tests.
 //!
 //! Tests the `bitnet` binary's argument parsing using `assert_cmd` for the `Run`
@@ -24,7 +25,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 
-#[allow(deprecated)]
 fn bitnet() -> Command {
     Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
 }

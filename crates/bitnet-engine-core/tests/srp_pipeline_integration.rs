@@ -1,15 +1,9 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Cross-crate integration tests combining bitnet-engine-core, bitnet-generation,
 //! and bitnet-logits to verify the full inference pipeline contract.
 //!
 //! These tests ensure that logits processing → stop-criteria checking → session
 //! configuration all work together coherently.
-#![allow(
-    clippy::cast_possible_truncation,
-    clippy::redundant_clone,
-    clippy::manual_string_new,
-    clippy::large_stack_arrays,
-    clippy::unreadable_literal
-)]
 
 use bitnet_engine_core::{ConfigError, EngineState, EngineStateTracker, SessionConfig};
 use bitnet_generation::{GenerationConfig, StopCriteria, StopReason};

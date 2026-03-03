@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for kernel selection, device features, and Intel GPU detection.
 //!
 //! Tests cover: KernelManager (creation, selection, listing, reset),
@@ -53,7 +54,7 @@ fn kernel_manager_selected_provider_name_before_select() {
 fn kernel_manager_list_providers_nonempty() {
     let km = bitnet_kernels::KernelManager::new();
     let providers = km.list_available_providers();
-    assert!(!providers.is_empty(), "Should have at least fallback");
+    assert!(providers.len() >= 1, "Should have at least fallback");
 }
 
 #[test]

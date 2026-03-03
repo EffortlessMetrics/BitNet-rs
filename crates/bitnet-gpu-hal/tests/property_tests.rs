@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Property-based tests for GPU HAL modules.
 //!
 //! Key invariants tested:

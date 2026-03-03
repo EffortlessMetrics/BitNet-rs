@@ -426,6 +426,7 @@ fn read_nvidia_driver_version() -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

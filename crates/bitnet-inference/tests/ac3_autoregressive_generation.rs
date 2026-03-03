@@ -492,6 +492,7 @@ fn create_mock_bitnet_model(vocab_size: usize, hidden_size: usize) -> Result<Bit
         norm_type: bitnet_common::config::NormType::default(),
         activation_type: bitnet_common::config::ActivationType::default(),
         tokenizer: bitnet_common::config::TokenizerConfig::default(),
+        ..Default::default()
     };
     let config = BitNetConfig { model: model_config, ..Default::default() };
     let device = Device::Cpu;

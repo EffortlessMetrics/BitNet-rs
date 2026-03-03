@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Property and integration tests for `bitnet-testing-policy`.
 //!
 //! The crate is a façade over `bitnet-testing-policy-core`. Tests verify the

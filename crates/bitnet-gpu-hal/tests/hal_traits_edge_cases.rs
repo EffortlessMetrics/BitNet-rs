@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for GPU HAL traits and public types.
 //!
 //! Tests HalError construction, Display formatting, MemoryType, ComputeCapabilities,

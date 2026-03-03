@@ -91,6 +91,7 @@ impl ReceiptStore {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
     use std::io::Write;

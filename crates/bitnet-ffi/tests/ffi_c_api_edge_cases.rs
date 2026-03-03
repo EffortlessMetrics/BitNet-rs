@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for the bitnet-ffi C API surface.
 //!
 //! Tests cover version queries, init/cleanup lifecycle, error handling,

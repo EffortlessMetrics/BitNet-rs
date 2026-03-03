@@ -1,11 +1,6 @@
 //! Sampling utilities for text generation
-#![allow(
-    clippy::float_cmp,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::cast_sign_loss,
-    clippy::option_if_let_else
-)]
+
+#![allow(clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
@@ -30,6 +25,7 @@ impl Sampler {
         repetition_penalty: f32,
         seed: Option<u64>,
     ) -> Self {
+        #[allow(clippy::option_if_let_else)]
         let rng = if let Some(seed) = seed {
             ChaCha20Rng::seed_from_u64(seed)
         } else {

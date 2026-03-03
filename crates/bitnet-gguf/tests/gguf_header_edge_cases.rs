@@ -1,24 +1,16 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for the GGUF header parser and type system.
 //!
 //! Tests cover:
-//! - GGUF magic validation (`check_magic`)
-//! - Version reading (`read_version`)
-//! - Header parsing (`parse_header`) — valid, invalid, boundary
-//! - `GgufValueType` discriminant conversion
-//! - `GgufValue` variants construction and Debug
-//! - `GgufFileInfo` fields
-//! - `GgufMetadataKv` construction
-//! - `TensorInfo` construction
-//! - Constants (`GGUF_MAGIC`, `GGUF_VERSION_MIN`, `GGUF_VERSION_MAX`)
-#![allow(
-    clippy::approx_constant,
-    clippy::doc_markdown,
-    clippy::float_cmp,
-    clippy::unreadable_literal,
-    clippy::uninlined_format_args,
-    clippy::redundant_clone,
-    clippy::assertions_on_constants
-)]
+//! - GGUF magic validation (check_magic)
+//! - Version reading (read_version)
+//! - Header parsing (parse_header) — valid, invalid, boundary
+//! - GgufValueType discriminant conversion
+//! - GgufValue variants construction and Debug
+//! - GgufFileInfo fields
+//! - GgufMetadataKv construction
+//! - TensorInfo construction
+//! - Constants (GGUF_MAGIC, GGUF_VERSION_MIN, GGUF_VERSION_MAX)
 
 use bitnet_gguf::{
     GGUF_MAGIC, GGUF_VERSION_MAX, GGUF_VERSION_MIN, GgufFileInfo, GgufMetadataKv, GgufValue,

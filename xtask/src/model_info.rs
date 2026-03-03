@@ -6,7 +6,7 @@
 use std::path::Path;
 
 /// CLI arguments for the `model-info` subcommand.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ModelInfoCommand {
     /// Path to model file or HuggingFace repo ID.
     pub model_path: String,
@@ -16,12 +16,6 @@ pub struct ModelInfoCommand {
     pub json: bool,
     /// Show extra details (special tokens, quantization info).
     pub verbose: bool,
-}
-
-impl Default for ModelInfoCommand {
-    fn default() -> Self {
-        Self { model_path: String::new(), format: None, json: false, verbose: false }
-    }
 }
 
 /// Comprehensive model metadata output.
@@ -182,6 +176,7 @@ pub fn format_model_info_json(info: &ModelInfoOutput) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

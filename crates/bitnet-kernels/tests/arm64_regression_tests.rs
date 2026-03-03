@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! ARM64/Apple Silicon regression tests
 //!
 //! This test suite validates ARM64-specific functionality including NEON SIMD
@@ -7,7 +8,7 @@
 #[cfg(target_arch = "aarch64")]
 mod arm64_tests {
     use bitnet_common::QuantizationType;
-    use bitnet_kernels::KernelManager;
+    use bitnet_kernels::{KernelManager, KernelProvider};
 
     /// Test NEON SIMD detection on ARM64
     ///
@@ -189,9 +190,6 @@ mod non_aarch64_tests {
     fn test_placeholder_non_aarch64() {
         // This test always passes and serves as a placeholder
         // for the ARM64 regression test suite on non-ARM64 platforms.
-        #[allow(clippy::assertions_on_constants)]
-        {
-            assert!(true);
-        }
+        assert!(true);
     }
 }

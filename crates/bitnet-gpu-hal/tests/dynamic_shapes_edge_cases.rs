@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for dynamic_shapes module.
 //!
 //! Covers: DynamicDim, ShapeSpec, ShapeError, ShapeConstraint,

@@ -1,13 +1,8 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for bitnet-gguf KV header parsing.
 //!
 //! Tests cover `parse_header`, `GgufError` variants, `GgufHeader` fields,
 //! `GgufValue` enum, `GgufKv` struct, and `read_kv_pairs` with synthetic GGUF files.
-#![allow(
-    clippy::clone_on_copy,
-    clippy::single_char_pattern,
-    clippy::collapsible_if,
-    clippy::unreadable_literal
-)]
 
 use bitnet_gguf::kv::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufValue, parse_header};
 use std::io::Write;

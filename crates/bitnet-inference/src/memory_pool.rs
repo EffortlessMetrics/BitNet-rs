@@ -464,6 +464,7 @@ impl Default for MemoryPool {
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
     use std::thread;
@@ -476,7 +477,7 @@ mod tests {
         let alloc = pool.arena_alloc(128).unwrap();
         assert_eq!(alloc.len(), 128);
 
-        pool.write_arena(&alloc, &[0xAB; 128]);
+        pool.write_arena(&alloc, &vec![0xAB; 128]);
         let data = pool.read_arena(&alloc);
         assert!(data.iter().all(|&b| b == 0xAB));
     }

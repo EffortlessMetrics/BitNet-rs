@@ -1,8 +1,8 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! CPU-reference tests for the OpenCL activation and softmax kernels.
 //!
 //! These tests validate kernel correctness without requiring OpenCL hardware
 //! by implementing CPU reference functions that mirror the kernel logic.
-#![allow(clippy::useless_vec, clippy::excessive_precision)]
 
 use bitnet_kernels::kernels;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for execution planner: OpKind, OptimizationLevel, PlanConfig,
 //! ExecutionNode, ExecutionGraph, MemoryPlanner, StreamScheduler, LaunchPlanner,
 //! PipelinePartitioner, CostModel, PlanOptimizer, ExecutionPlannerEngine.

@@ -1,3 +1,4 @@
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_lossless)]
 //! Shared `LayerNorm` helpers for SafeTensors-based tools.
 //!
 //! This microcrate centralizes tensor-name filtering (`is_ln_gamma`),
@@ -25,7 +26,7 @@ pub fn iter_ln_tensors(
 }
 
 /// Compute RMS for the given raw tensor view (sqrt(mean(x^2))).
-#[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
+#[allow(clippy::too_many_lines)]
 pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
     let dtype = t.dtype();
     let shape = t.shape();
@@ -137,7 +138,6 @@ pub fn rms_for_tensor(t: &safetensors::tensor::TensorView<'_>) -> Result<f64> {
 }
 
 /// Cast LN gamma bytes to f16 (returns owned `Vec<u8>` with f16 encoding).
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 pub fn cast_ln_to_f16(t: &safetensors::tensor::TensorView<'_>) -> Result<Vec<u8>> {
     let dtype = t.dtype();
     let shape = t.shape();

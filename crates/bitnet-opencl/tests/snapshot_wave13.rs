@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Snapshot wave 13 — stabilize bitnet-opencl public API surface.
 //!
 //! Pins Debug and Display representations of dispatcher, SPIR-V, and

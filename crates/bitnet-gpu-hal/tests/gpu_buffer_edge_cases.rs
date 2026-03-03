@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for GPU buffer management: BufferConfig, GpuBuffer, BufferPool,
 //! PinnedBuffer, StagingBuffer, BufferView, TransferManager, BufferLifetimeTracker,
 //! BufferMetrics, and associated enums.

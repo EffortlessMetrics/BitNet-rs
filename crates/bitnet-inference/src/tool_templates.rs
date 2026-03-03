@@ -294,6 +294,7 @@ fn parse_call_json(s: &str) -> Option<ToolCall> {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Tests for the multi-backend GPU dispatcher and backend registry.
 
 use bitnet_opencl::{

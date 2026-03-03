@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Tests for quantized inference operations.
 //!
 //! Covers I2_S/QK256 dequantization, ternary matmul/matvec, packing,

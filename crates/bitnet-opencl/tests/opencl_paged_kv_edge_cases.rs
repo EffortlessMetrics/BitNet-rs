@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case tests for OpenCL paged attention, page allocator, KV cache,
 //! and GQA configuration.
 

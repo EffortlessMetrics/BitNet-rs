@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 use bitnet_metal::{MetalKernelSource, kernel_function_names, kernel_source};
 
 // ── Source embedding tests ──────────────────────────────────────────
@@ -118,10 +119,10 @@ fn all_kernels_have_sequential_buffer_bindings() {
             // Collect buffer indices
             let mut indices: Vec<u32> = Vec::new();
             for part in signature.split("[[buffer(") {
-                if let Some(end) = part.find(")]]") {
-                    if let Ok(idx) = part[..end].parse::<u32>() {
-                        indices.push(idx);
-                    }
+                if let Some(end) = part.find(")]]")
+                    && let Ok(idx) = part[..end].parse::<u32>()
+                {
+                    indices.push(idx);
                 }
             }
 

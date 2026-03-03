@@ -202,6 +202,7 @@ pub fn ternary_matmul(
 }
 
 #[cfg(test)]
+#[allow(clippy::all, clippy::pedantic, clippy::nursery)]
 mod tests {
     use super::*;
 

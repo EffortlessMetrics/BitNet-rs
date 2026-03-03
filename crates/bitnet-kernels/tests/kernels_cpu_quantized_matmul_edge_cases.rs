@@ -1,4 +1,4 @@
-#![allow(clippy::too_many_arguments)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Edge-case integration tests for `bitnet_kernels::cpu::quantized_matmul`.
 //!
 //! These tests exercise the public API: `i2s_matmul_f32`, `i2s_matmul_blocked`,

@@ -1,4 +1,4 @@
-#![allow(non_snake_case, clippy::manual_div_ceil)]
+#![allow(non_snake_case)]
 //! Wave 17 snapshot tests for `bitnet-kernels` — kernel configs,
 //! capability matrix types, SIMD detection, quantization formats,
 //! RoPE/attention/pooling/reduction configs, and activation types.
