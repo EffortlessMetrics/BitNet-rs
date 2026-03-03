@@ -20,6 +20,7 @@ members = [
   "crates/bitnet-quantization-bits",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
   "crates/bitnet-kernels",
+  "crates/bitnet-avx512-softmax", # SRP: AVX-512 accelerated softmax kernels with scalar fallback
   "crates/bitnet-inference",
   "crates/bitnet-inference-metrics-core", # SRP: shared inference timing/throughput metric DTOs
   "crates/bitnet-rope",
