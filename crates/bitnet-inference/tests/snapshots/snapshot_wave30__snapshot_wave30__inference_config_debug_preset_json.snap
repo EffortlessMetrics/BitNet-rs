@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave30.rs
+expression: cfg
+---
+{
+  "sampling": {
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0,
+    "repetition_penalty": 1.0,
+    "seed": 0
+  },
+  "generation": {
+    "max_tokens": 8,
+    "stop_sequences": [],
+    "stop_token_ids": [],
+    "stream": false
+  },
+  "hardware": {
+    "num_threads": 1,
+    "memory_limit_mb": 256
+  }
+}

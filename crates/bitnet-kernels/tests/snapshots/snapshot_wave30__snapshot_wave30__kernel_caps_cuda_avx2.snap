@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave30.rs
+expression: caps
+---
+KernelCapabilities {
+    cpu_rust: true,
+    cuda_compiled: true,
+    cuda_runtime: true,
+    hip_compiled: false,
+    hip_runtime: false,
+    oneapi_compiled: false,
+    oneapi_runtime: false,
+    opencl_compiled: false,
+    opencl_runtime: false,
+    cpp_ffi: true,
+    simd_level: Avx2,
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: "format!(\"{err}\")"
+---
+Resource limit exceeded: tensor_elements = 2000000000 exceeds limit 1000000000

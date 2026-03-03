@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: devices
+---
+[
+  "Cpu",
+  {
+    "Cuda": 0
+  },
+  {
+    "Hip": 0
+  },
+  "Npu",
+  "Metal",
+  {
+    "OpenCL": 0
+  }
+]

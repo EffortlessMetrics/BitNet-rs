@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: cfg
+---
+PerformanceConfig {
+    num_threads: None,
+    use_gpu: false,
+    batch_size: 1,
+    memory_limit: None,
+}

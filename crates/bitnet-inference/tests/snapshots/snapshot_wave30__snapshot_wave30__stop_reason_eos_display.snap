@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave30.rs
+expression: "format!(\"{}\", StopReason::EndOfSequence)"
+---
+end_of_sequence

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave30.rs
+expression: reasons
+---
+[
+    MaxTokens,
+    TimeLimit,
+    MemoryLimit,
+    EndOfSequence,
+    UserStop,
+]

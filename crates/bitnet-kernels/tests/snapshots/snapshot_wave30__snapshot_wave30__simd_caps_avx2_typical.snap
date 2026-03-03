@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave30.rs
+expression: caps
+---
+SimdCapabilities {
+    sse2: true,
+    sse4_1: true,
+    sse4_2: true,
+    avx: true,
+    avx2: true,
+    avx512f: false,
+    avx512bw: false,
+    avx512vnni: false,
+    fma: true,
+    neon: false,
+    arch: "x86_64",
+}

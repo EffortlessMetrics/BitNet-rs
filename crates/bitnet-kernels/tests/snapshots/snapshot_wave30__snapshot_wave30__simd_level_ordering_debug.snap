@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave30.rs
+expression: levels
+---
+[
+    Scalar,
+    Neon,
+    Sse42,
+    Avx2,
+    Avx512,
+]

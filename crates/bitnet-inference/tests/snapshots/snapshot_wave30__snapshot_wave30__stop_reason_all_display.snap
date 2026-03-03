@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave30.rs
+expression: "output.join(\"\\n\")"
+---
+max_tokens
+time_limit
+memory_limit
+end_of_sequence
+user_stop

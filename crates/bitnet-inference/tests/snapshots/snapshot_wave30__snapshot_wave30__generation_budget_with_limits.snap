@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave30.rs
+expression: budget
+---
+GenerationBudget {
+    max_tokens: 512,
+    max_time: Some(
+        30s,
+    ),
+    max_memory_bytes: Some(
+        268435456,
+    ),
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: "format!(\"{err}\")"
+---
+No available kernel provider

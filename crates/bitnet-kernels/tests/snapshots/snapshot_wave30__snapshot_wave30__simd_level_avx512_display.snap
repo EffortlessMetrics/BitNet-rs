@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave30.rs
+expression: "format!(\"{}\", SimdLevel::Avx512)"
+---
+avx512

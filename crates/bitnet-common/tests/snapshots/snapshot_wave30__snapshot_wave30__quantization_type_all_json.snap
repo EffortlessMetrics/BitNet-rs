@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: types
+---
+[
+  "I2S",
+  "TL1",
+  "TL2"
+]

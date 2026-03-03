@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave30.rs
+expression: "output.join(\"\\n\")"
+---
+I2_S
+TL1
+TL2
