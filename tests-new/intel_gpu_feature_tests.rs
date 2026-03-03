@@ -9,10 +9,7 @@
 #[test]
 fn bitnet_kernels_compiles_with_cpu() {
     // This test existing means compilation succeeded with cpu feature.
-    #[allow(clippy::assertions_on_constants)]
-    {
-        assert!(true);
-    }
+    assert!(true);
 }
 
 #[test]
