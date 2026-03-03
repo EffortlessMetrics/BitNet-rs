@@ -3,7 +3,6 @@
 //! Covers Device, QuantizationType, error types, StrictModeEnforcer,
 //! warn_once!, ModelConfig, ArchitectureRegistry, NormType, ActivationType,
 //! and serialization roundtrips.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_common::arch_registry::ArchitectureRegistry;
 use bitnet_common::config::{ActivationType, ModelConfig, NormType};

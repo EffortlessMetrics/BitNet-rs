@@ -135,13 +135,14 @@ path = "tests/proptest_wave24.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "kernel_perf_smoke"
-path = "tests/kernel_perf_smoke.rs"
+name = "proptest_wave38"
+path = "tests/proptest_wave38.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "metal_error_recovery_tests"
-path = "tests/metal_error_recovery_tests.rs"
+name = "kernel_perf_smoke"
+path = "tests/kernel_perf_smoke.rs"
+required-features = ["cpu"]
 
 [[test]]
 name = "metal_compute_pipeline_tests"
