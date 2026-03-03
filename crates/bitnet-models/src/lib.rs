@@ -51,6 +51,7 @@ pub mod validator;
 pub mod weight_format;
 pub mod weight_loader;
 pub mod weight_mapper;
+pub mod weight_loader_pipeline;
 pub mod weight_stats;
 
 #[cfg(test)]
