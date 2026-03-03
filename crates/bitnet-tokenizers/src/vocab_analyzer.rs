@@ -1,254 +1,237 @@
-//! Vocabulary analyzer.
-//!
-//! Analyze tokenizer vocabularies: coverage, overlap, special tokens.
+//! Vocabulary analysis utilities for tokenizer diagnostics.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-/// Vocabulary statistics.
+/// Statistics about a token vocabulary.
 #[derive(Debug, Clone)]
 pub struct VocabStats {
     pub total_tokens: usize,
-    pub special_count: usize,
+    pub special_tokens: usize,
     pub byte_tokens: usize,
-    pub single_char: usize,
-    pub multi_char: usize,
+    pub single_char_tokens: usize,
     pub max_token_len: usize,
     pub avg_token_len: f64,
 }
 
-/// Analyze a vocabulary.
-pub fn analyze_vocab(tokens: &[String], special_ids: &HashSet<u32>) -> VocabStats {
-    if tokens.is_empty() {
-        return VocabStats {
-            total_tokens: 0,
-            special_count: 0,
-            byte_tokens: 0,
-            single_char: 0,
-            multi_char: 0,
-            max_token_len: 0,
-            avg_token_len: 0.0,
-        };
-    }
-
-    let mut byte_tokens = 0;
-    let mut single_char = 0;
-    let mut multi_char = 0;
-    let mut max_len = 0;
-    let mut total_len = 0usize;
-
-    for (i, tok) in tokens.iter().enumerate() {
-        if special_ids.contains(&(i as u32)) {
-            continue;
+impl VocabStats {
+    pub fn analyze(tokens: &[String]) -> Self {
+        let total = tokens.len();
+        if total == 0 {
+            return Self {
+                total_tokens: 0,
+                special_tokens: 0,
+                byte_tokens: 0,
+                single_char_tokens: 0,
+                max_token_len: 0,
+                avg_token_len: 0.0,
+            };
         }
-        let len = tok.len();
-        total_len += len;
-        if len > max_len {
-            max_len = len;
+        let mut special = 0;
+        let mut byte_tok = 0;
+        let mut single_char = 0;
+        let mut max_len = 0;
+        let mut total_len: usize = 0;
+        for t in tokens {
+            let len = t.len();
+            total_len += len;
+            if len > max_len {
+                max_len = len;
+            }
+            if is_byte_token(t) {
+                byte_tok += 1;
+            } else if is_special_token(t) {
+                special += 1;
+            } else if t.chars().count() == 1 {
+                single_char += 1;
+            }
         }
-        if tok.starts_with("<0x") && tok.ends_with('>') {
-            byte_tokens += 1;
-        } else if tok.chars().count() == 1 {
-            single_char += 1;
-        } else {
-            multi_char += 1;
-        }
-    }
-
-    let non_special = tokens.len() - special_ids.len().min(tokens.len());
-    VocabStats {
-        total_tokens: tokens.len(),
-        special_count: special_ids.len().min(tokens.len()),
-        byte_tokens,
-        single_char,
-        multi_char,
-        max_token_len: max_len,
-        avg_token_len: if non_special > 0 { total_len as f64 / non_special as f64 } else { 0.0 },
-    }
-}
-
-/// Compare two vocabularies for overlap.
-#[derive(Debug, Clone)]
-pub struct VocabOverlap {
-    pub common: usize,
-    pub only_left: usize,
-    pub only_right: usize,
-    pub jaccard: f64,
-}
-
-pub fn compare_vocabs(left: &[String], right: &[String]) -> VocabOverlap {
-    let left_set: HashSet<_> = left.iter().collect();
-    let right_set: HashSet<_> = right.iter().collect();
-    let common = left_set.intersection(&right_set).count();
-    let union = left_set.union(&right_set).count();
-    VocabOverlap {
-        common,
-        only_left: left_set.len() - common,
-        only_right: right_set.len() - common,
-        jaccard: if union > 0 { common as f64 / union as f64 } else { 0.0 },
-    }
-}
-
-/// Character coverage analysis.
-#[derive(Debug, Clone)]
-pub struct CharCoverage {
-    pub ascii_printable: usize,
-    pub unicode_basic: usize,
-    pub unicode_extended: usize,
-    pub total_unique_chars: usize,
-}
-
-pub fn analyze_char_coverage(tokens: &[String]) -> CharCoverage {
-    let mut chars = HashSet::new();
-    for tok in tokens {
-        for c in tok.chars() {
-            chars.insert(c);
+        Self {
+            total_tokens: total,
+            special_tokens: special,
+            byte_tokens: byte_tok,
+            single_char_tokens: single_char,
+            max_token_len: max_len,
+            avg_token_len: total_len as f64 / total as f64,
         }
     }
-    let ascii = chars.iter().filter(|c| c.is_ascii_graphic() || **c == ' ').count();
-    let basic = chars.iter().filter(|c| (**c as u32) < 0x10000 && !c.is_ascii()).count();
-    let extended = chars.iter().filter(|c| (**c as u32) >= 0x10000).count();
-    CharCoverage {
-        ascii_printable: ascii,
-        unicode_basic: basic,
-        unicode_extended: extended,
-        total_unique_chars: chars.len(),
+
+    pub fn content_ratio(&self) -> f64 {
+        if self.total_tokens == 0 {
+            return 0.0;
+        }
+        (self.total_tokens - self.special_tokens) as f64 / self.total_tokens as f64
     }
 }
 
-/// Token length distribution.
+pub fn is_special_token(token: &str) -> bool {
+    (token.starts_with('<') && token.ends_with('>'))
+        || (token.starts_with('[') && token.ends_with(']'))
+        || token.starts_with("<|")
+        || token.ends_with("|>")
+}
+
+pub fn is_byte_token(token: &str) -> bool {
+    token.starts_with("<0x") && token.ends_with('>') && token.len() <= 6
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenizerType {
+    Bpe,
+    SentencePiece,
+    WordPiece,
+    Unknown,
+}
+
+impl std::fmt::Display for TokenizerType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bpe => write!(f, "BPE"),
+            Self::SentencePiece => write!(f, "SentencePiece"),
+            Self::WordPiece => write!(f, "WordPiece"),
+            Self::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+pub fn detect_tokenizer_type(tokens: &[String]) -> TokenizerType {
+    let mut has_byte = false;
+    let mut has_wp = false;
+    let mut has_sp = false;
+    for t in tokens.iter().take(1000) {
+        if is_byte_token(t) {
+            has_byte = true;
+        }
+        if t.starts_with("##") {
+            has_wp = true;
+        }
+        if t.starts_with('\u{2581}') {
+            has_sp = true;
+        }
+    }
+    if has_wp {
+        TokenizerType::WordPiece
+    } else if has_sp {
+        TokenizerType::SentencePiece
+    } else if has_byte {
+        TokenizerType::Bpe
+    } else {
+        TokenizerType::Unknown
+    }
+}
+
 pub fn length_distribution(tokens: &[String]) -> HashMap<usize, usize> {
     let mut dist = HashMap::new();
-    for tok in tokens {
-        *dist.entry(tok.len()).or_insert(0) += 1;
+    for t in tokens {
+        *dist.entry(t.len()).or_insert(0) += 1;
     }
     dist
-}
-
-/// Find special tokens by common patterns.
-pub fn detect_special_tokens(tokens: &[String]) -> Vec<(u32, String)> {
-    let patterns = &[
-        "<s>",
-        "</s>",
-        "<pad>",
-        "<unk>",
-        "<mask>",
-        "[CLS]",
-        "[SEP]",
-        "[PAD]",
-        "[UNK]",
-        "[MASK]",
-        "<|endoftext|>",
-        "<|im_start|>",
-        "<|im_end|>",
-        "<|begin_of_text|>",
-        "<|end_of_text|>",
-    ];
-    let mut found = Vec::new();
-    for (i, tok) in tokens.iter().enumerate() {
-        if patterns.contains(&tok.as_str()) {
-            found.push((i as u32, tok.clone()));
-        }
-    }
-    found
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_analyze_empty() {
-        let stats = analyze_vocab(&[], &HashSet::new());
-        assert_eq!(stats.total_tokens, 0);
+    fn sample_vocab() -> Vec<String> {
+        vec![
+            "<s>".into(),
+            "</s>".into(),
+            "<unk>".into(),
+            "<0x41>".into(),
+            "<0x42>".into(),
+            "hello".into(),
+            "world".into(),
+            "a".into(),
+        ]
     }
 
     #[test]
-    fn test_analyze_basic() {
-        let tokens = vec!["hello".into(), "world".into(), "<s>".into()];
-        let special = HashSet::from([2]);
-        let stats = analyze_vocab(&tokens, &special);
-        assert_eq!(stats.total_tokens, 3);
-        assert_eq!(stats.special_count, 1);
-    }
-
-    #[test]
-    fn test_byte_tokens() {
-        let tokens = vec!["<0x00>".into(), "<0xFF>".into(), "hi".into()];
-        let stats = analyze_vocab(&tokens, &HashSet::new());
+    fn test_vocab_stats() {
+        let stats = VocabStats::analyze(&sample_vocab());
+        assert_eq!(stats.total_tokens, 8);
+        assert_eq!(stats.special_tokens, 3);
         assert_eq!(stats.byte_tokens, 2);
     }
 
     #[test]
+    fn test_empty() {
+        let stats = VocabStats::analyze(&[]);
+        assert_eq!(stats.total_tokens, 0);
+    }
+
+    #[test]
+    fn test_special_token() {
+        assert!(is_special_token("<s>"));
+        assert!(is_special_token("[CLS]"));
+        assert!(is_special_token("<|endoftext|>"));
+        assert!(!is_special_token("hello"));
+    }
+
+    #[test]
+    fn test_byte_token() {
+        assert!(is_byte_token("<0x41>"));
+        assert!(!is_byte_token("<s>"));
+    }
+
+    #[test]
+    fn test_detect_bpe() {
+        let t = vec!["<0x41>".into(), "hi".into()];
+        assert_eq!(detect_tokenizer_type(&t), TokenizerType::Bpe);
+    }
+
+    #[test]
+    fn test_detect_wordpiece() {
+        let t = vec!["hello".into(), "##ing".into()];
+        assert_eq!(detect_tokenizer_type(&t), TokenizerType::WordPiece);
+    }
+
+    #[test]
+    fn test_detect_sp() {
+        let t = vec!["\u{2581}hello".into()];
+        assert_eq!(detect_tokenizer_type(&t), TokenizerType::SentencePiece);
+    }
+
+    #[test]
+    fn test_detect_unknown() {
+        let t = vec!["hello".into()];
+        assert_eq!(detect_tokenizer_type(&t), TokenizerType::Unknown);
+    }
+
+    #[test]
+    fn test_content_ratio() {
+        let stats = VocabStats::analyze(&sample_vocab());
+        assert!(stats.content_ratio() > 0.5);
+    }
+
+    #[test]
+    fn test_length_dist() {
+        let t = vec!["a".into(), "bb".into(), "cc".into()];
+        let d = length_distribution(&t);
+        assert_eq!(d[&1], 1);
+        assert_eq!(d[&2], 2);
+    }
+
+    #[test]
+    fn test_type_display() {
+        assert_eq!(format!("{}", TokenizerType::Bpe), "BPE");
+    }
+
+    #[test]
     fn test_single_char() {
-        let tokens = vec!["a".into(), "b".into(), "hello".into()];
-        let stats = analyze_vocab(&tokens, &HashSet::new());
-        assert_eq!(stats.single_char, 2);
-        assert_eq!(stats.multi_char, 1);
+        let t = vec!["a".into(), "b".into(), "cd".into()];
+        let stats = VocabStats::analyze(&t);
+        assert_eq!(stats.single_char_tokens, 2);
     }
 
     #[test]
-    fn test_compare_vocabs_identical() {
-        let a = vec!["a".into(), "b".into()];
-        let b = vec!["a".into(), "b".into()];
-        let overlap = compare_vocabs(&a, &b);
-        assert_eq!(overlap.common, 2);
-        assert!((overlap.jaccard - 1.0).abs() < 0.01);
+    fn test_max_len() {
+        let t = vec!["ab".into(), "abcdef".into()];
+        let stats = VocabStats::analyze(&t);
+        assert_eq!(stats.max_token_len, 6);
     }
 
     #[test]
-    fn test_compare_vocabs_disjoint() {
-        let a = vec!["a".into(), "b".into()];
-        let b = vec!["c".into(), "d".into()];
-        let overlap = compare_vocabs(&a, &b);
-        assert_eq!(overlap.common, 0);
-        assert_eq!(overlap.jaccard, 0.0);
-    }
-
-    #[test]
-    fn test_compare_vocabs_partial() {
-        let a = vec!["a".into(), "b".into(), "c".into()];
-        let b = vec!["b".into(), "c".into(), "d".into()];
-        let overlap = compare_vocabs(&a, &b);
-        assert_eq!(overlap.common, 2);
-        assert_eq!(overlap.only_left, 1);
-        assert_eq!(overlap.only_right, 1);
-    }
-
-    #[test]
-    fn test_char_coverage() {
-        let tokens = vec!["hello".into(), "world".into()];
-        let cov = analyze_char_coverage(&tokens);
-        assert!(cov.ascii_printable > 0);
-        assert_eq!(cov.unicode_extended, 0);
-    }
-
-    #[test]
-    fn test_length_distribution() {
-        let tokens = vec!["a".into(), "bb".into(), "cc".into(), "ddd".into()];
-        let dist = length_distribution(&tokens);
-        assert_eq!(dist[&1], 1);
-        assert_eq!(dist[&2], 2);
-        assert_eq!(dist[&3], 1);
-    }
-
-    #[test]
-    fn test_detect_special() {
-        let tokens = vec!["hello".into(), "<s>".into(), "</s>".into(), "world".into()];
-        let special = detect_special_tokens(&tokens);
-        assert_eq!(special.len(), 2);
-        assert_eq!(special[0].1, "<s>");
-    }
-
-    #[test]
-    fn test_detect_no_special() {
-        let tokens = vec!["hello".into(), "world".into()];
-        assert!(detect_special_tokens(&tokens).is_empty());
-    }
-
-    #[test]
-    fn test_max_token_len() {
-        let tokens = vec!["a".into(), "hello".into(), "ab".into()];
-        let stats = analyze_vocab(&tokens, &HashSet::new());
-        assert_eq!(stats.max_token_len, 5);
+    fn test_content_ratio_empty() {
+        let stats = VocabStats::analyze(&[]);
+        assert_eq!(stats.content_ratio(), 0.0);
     }
 }

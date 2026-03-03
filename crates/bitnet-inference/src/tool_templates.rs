@@ -285,7 +285,10 @@ fn extract_between(text: &str, start_tag: &str, end_tag: &str) -> Option<String>
 fn parse_call_json(s: &str) -> Option<ToolCall> {
     let v: serde_json::Value = serde_json::from_str(s.trim()).ok()?;
     let name = v.get("name")?.as_str()?.to_string();
-    let arguments = v.get("arguments").map_or_else(|| "{}".to_string(), |a| a.to_string());
+    let arguments = v.get("arguments").map_or_else(
+        || "{}".to_string(),
+        |a| if a.is_object() || a.is_array() { a.to_string() } else { a.to_string() },
+    );
     Some(ToolCall { name, arguments })
 }
 
