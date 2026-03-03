@@ -114,7 +114,7 @@ fn i2s_boundary_values_minus_one_zero_one() {
     let deq_data = dequantized.to_vec().unwrap();
     // Each dequantized value should be in [-1, 1] range
     for &v in &deq_data {
-        assert!((-1.5..=1.5).contains(&v), "dequantized {v} out of range");
+        assert!(v >= -1.5 && v <= 1.5, "dequantized {v} out of range");
     }
 }
 
@@ -739,7 +739,7 @@ fn simd_capabilities_best_strategy() {
 fn simd_capabilities_optimal_block_size() {
     let caps = SimdCapabilities::detect();
     let block_size = caps.optimal_block_size();
-    assert!((32..=256).contains(&block_size), "block size {block_size} out of range");
+    assert!(block_size >= 32 && block_size <= 256, "block size {block_size} out of range");
 }
 
 // ===========================================================================

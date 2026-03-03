@@ -19,6 +19,7 @@ members = [
   "crates/bitnet-quantization",
   "crates/bitnet-quantization-bits",
   "crates/bitnet-cpu-activations", # SRP: CPU activation kernels shared microcrate
+  "crates/bitnet-cuda-pooling",   # SRP: CUDA pooling kernels (max/avg/global/adaptive)
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-inference-metrics-core", # SRP: shared inference timing/throughput metric DTOs

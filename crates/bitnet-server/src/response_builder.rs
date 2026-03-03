@@ -80,12 +80,20 @@ impl ResponseBuilder {
         let idx = self.choices.len();
         let text = text.into();
         let tokens = text.split_whitespace().count();
-        self.choices.push(Choice { index: idx, text, finish_reason, tokens_generated: tokens });
+        self.choices.push(Choice {
+            index: idx,
+            text,
+            finish_reason,
+            tokens_generated: tokens,
+        });
         self
     }
 
     pub fn with_usage(mut self, prompt_tokens: usize, completion_tokens: usize) -> Self {
-        self.usage = UsageStats { prompt_tokens, completion_tokens };
+        self.usage = UsageStats {
+            prompt_tokens,
+            completion_tokens,
+        };
         self
     }
 
@@ -144,12 +152,20 @@ impl GenerationResponse {
 
 /// Build a health check response.
 pub fn health_response(status: &str, model_loaded: bool) -> String {
-    format!(r#"{{"status":"{}","model_loaded":{}}}"#, escape_json(status), model_loaded,)
+    format!(
+        r#"{{"status":"{}","model_loaded":{}}}"#,
+        escape_json(status),
+        model_loaded,
+    )
 }
 
 /// Build an error response.
 pub fn error_response(code: u16, message: &str) -> String {
-    format!(r#"{{"error":{{"code":{},"message":"{}"}}}}"#, code, escape_json(message),)
+    format!(
+        r#"{{"error":{{"code":{},"message":"{}"}}}}"#,
+        code,
+        escape_json(message),
+    )
 }
 
 /// Escape special characters for JSON strings.
@@ -202,7 +218,10 @@ mod tests {
 
     #[test]
     fn test_usage_total() {
-        let usage = UsageStats { prompt_tokens: 10, completion_tokens: 20 };
+        let usage = UsageStats {
+            prompt_tokens: 10,
+            completion_tokens: 20,
+        };
         assert_eq!(usage.total_tokens(), 30);
     }
 
