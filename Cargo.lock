@@ -428,6 +428,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-avx2-layernorm"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-bdd-grid"
 version = "0.2.1-dev"
 dependencies = [

@@ -8,7 +8,6 @@ use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
-#[allow(deprecated)]
 fn bitnet() -> Command {
     Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
 }
