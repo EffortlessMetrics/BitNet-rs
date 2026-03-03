@@ -79,6 +79,7 @@ pub mod reduction;
 pub mod rocm;
 pub mod scatter_gather;
 pub mod shaped_reduction;
+pub mod simd_detect;
 pub mod simd_diagnostics;
 mod stubs;
 pub mod tl_lut;
