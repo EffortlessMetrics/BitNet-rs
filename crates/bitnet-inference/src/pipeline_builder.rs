@@ -1,196 +1,205 @@
-//! Inference pipeline builder.
+//! Fluent API for assembling inference pipelines.
 //!
-//! Declarative configuration of model loading → inference pipeline steps.
+//! Compose preprocessing, inference stages, and postprocessing
+//! into a configurable execution pipeline.
 
 use std::collections::HashMap;
 
-/// A step in the inference pipeline.
-#[derive(Debug, Clone, PartialEq)]
-pub enum PipelineStep {
-    LoadModel { path: String },
-    LoadTokenizer { path: String },
-    SetContext { max_tokens: usize },
-    SetBatchSize { size: usize },
-    EnableQuantization { format: String },
-    SetDevice { device: String },
-    Warmup { tokens: usize },
-    Custom { name: String, config: HashMap<String, String> },
+/// A stage in the inference pipeline.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum StageKind {
+    /// Input tokenization.
+    Tokenize,
+    /// Input embedding lookup.
+    Embed,
+    /// Transformer layer processing.
+    TransformerBlock,
+    /// Final layer norm.
+    FinalNorm,
+    /// Logits projection.
+    LogitsProjection,
+    /// Sampling (greedy, top-k, etc.).
+    Sample,
+    /// Token decoding.
+    Decode,
+    /// Custom named stage.
+    Custom(String),
 }
 
-/// Validation errors for pipeline configuration.
-#[derive(Debug, Clone, PartialEq)]
-pub enum PipelineError {
-    MissingModel,
-    MissingTokenizer,
-    InvalidContext(usize),
-    InvalidBatchSize(usize),
-    DuplicateStep(String),
-    InvalidDevice(String),
-}
-
-impl std::fmt::Display for PipelineError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl StageKind {
+    pub fn name(&self) -> &str {
         match self {
-            Self::MissingModel => write!(f, "no model path specified"),
-            Self::MissingTokenizer => write!(f, "no tokenizer path specified"),
-            Self::InvalidContext(n) => write!(f, "invalid context length: {n}"),
-            Self::InvalidBatchSize(n) => write!(f, "invalid batch size: {n}"),
-            Self::DuplicateStep(s) => write!(f, "duplicate step: {s}"),
-            Self::InvalidDevice(d) => write!(f, "invalid device: {d}"),
+            Self::Tokenize => "tokenize",
+            Self::Embed => "embed",
+            Self::TransformerBlock => "transformer_block",
+            Self::FinalNorm => "final_norm",
+            Self::LogitsProjection => "logits_projection",
+            Self::Sample => "sample",
+            Self::Decode => "decode",
+            Self::Custom(name) => name,
         }
     }
 }
 
-/// Builder for inference pipelines.
+/// Configuration for a pipeline stage.
 #[derive(Debug, Clone)]
-pub struct PipelineBuilder {
-    steps: Vec<PipelineStep>,
-    model_path: Option<String>,
-    tokenizer_path: Option<String>,
-    context_size: usize,
-    batch_size: usize,
-    device: String,
-    warmup_tokens: Option<usize>,
-    metadata: HashMap<String, String>,
+pub struct StageConfig {
+    pub kind: StageKind,
+    pub enabled: bool,
+    pub params: HashMap<String, String>,
 }
 
-impl Default for PipelineBuilder {
-    fn default() -> Self {
-        Self::new()
+impl StageConfig {
+    pub fn new(kind: StageKind) -> Self {
+        Self { kind, enabled: true, params: HashMap::new() }
     }
+
+    pub fn with_param(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.params.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn disabled(mut self) -> Self {
+        self.enabled = false;
+        self
+    }
+}
+
+/// Builder for constructing inference pipelines.
+#[derive(Debug, Default)]
+pub struct PipelineBuilder {
+    stages: Vec<StageConfig>,
+    name: Option<String>,
+    num_layers: Option<usize>,
+    batch_size: usize,
 }
 
 impl PipelineBuilder {
     pub fn new() -> Self {
-        Self {
-            steps: Vec::new(),
-            model_path: None,
-            tokenizer_path: None,
-            context_size: 2048,
-            batch_size: 1,
-            device: "cpu".to_string(),
-            warmup_tokens: None,
-            metadata: HashMap::new(),
+        Self { stages: Vec::new(), name: None, num_layers: None, batch_size: 1 }
+    }
+
+    /// Set pipeline name.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    /// Set number of transformer layers.
+    pub fn num_layers(mut self, n: usize) -> Self {
+        self.num_layers = Some(n);
+        self
+    }
+
+    /// Set batch size.
+    pub fn batch_size(mut self, n: usize) -> Self {
+        self.batch_size = n;
+        self
+    }
+
+    /// Add a stage.
+    pub fn add_stage(mut self, config: StageConfig) -> Self {
+        self.stages.push(config);
+        self
+    }
+
+    /// Add tokenization stage.
+    pub fn tokenize(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::Tokenize))
+    }
+
+    /// Add embedding stage.
+    pub fn embed(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::Embed))
+    }
+
+    /// Add N transformer block stages.
+    pub fn transformer_blocks(mut self) -> Self {
+        let n = self.num_layers.unwrap_or(1);
+        for _ in 0..n {
+            self.stages.push(StageConfig::new(StageKind::TransformerBlock));
         }
-    }
-
-    pub fn model(mut self, path: &str) -> Self {
-        self.model_path = Some(path.to_string());
-        self.steps.push(PipelineStep::LoadModel { path: path.to_string() });
         self
     }
 
-    pub fn tokenizer(mut self, path: &str) -> Self {
-        self.tokenizer_path = Some(path.to_string());
-        self.steps.push(PipelineStep::LoadTokenizer { path: path.to_string() });
-        self
+    /// Add final normalization stage.
+    pub fn final_norm(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::FinalNorm))
     }
 
-    pub fn context_size(mut self, size: usize) -> Self {
-        self.context_size = size;
-        self.steps.push(PipelineStep::SetContext { max_tokens: size });
-        self
+    /// Add logits projection stage.
+    pub fn logits_projection(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::LogitsProjection))
     }
 
-    pub fn batch_size(mut self, size: usize) -> Self {
-        self.batch_size = size;
-        self.steps.push(PipelineStep::SetBatchSize { size });
-        self
+    /// Add sampling stage.
+    pub fn sample(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::Sample))
     }
 
-    pub fn quantization(mut self, format: &str) -> Self {
-        self.steps.push(PipelineStep::EnableQuantization { format: format.to_string() });
-        self
+    /// Add decoding stage.
+    pub fn decode(self) -> Self {
+        self.add_stage(StageConfig::new(StageKind::Decode))
     }
 
-    pub fn device(mut self, device: &str) -> Self {
-        self.device = device.to_string();
-        self.steps.push(PipelineStep::SetDevice { device: device.to_string() });
-        self
-    }
-
-    pub fn warmup(mut self, tokens: usize) -> Self {
-        self.warmup_tokens = Some(tokens);
-        self.steps.push(PipelineStep::Warmup { tokens });
-        self
-    }
-
-    pub fn custom_step(mut self, name: &str, config: HashMap<String, String>) -> Self {
-        self.steps.push(PipelineStep::Custom { name: name.to_string(), config });
-        self
-    }
-
-    pub fn metadata(mut self, key: &str, value: &str) -> Self {
-        self.metadata.insert(key.to_string(), value.to_string());
-        self
-    }
-
-    /// Validate the pipeline configuration.
-    pub fn validate(&self) -> Result<(), Vec<PipelineError>> {
-        let mut errors = Vec::new();
-
-        if self.model_path.is_none() {
-            errors.push(PipelineError::MissingModel);
-        }
-        if self.tokenizer_path.is_none() {
-            errors.push(PipelineError::MissingTokenizer);
-        }
-        if self.context_size == 0 || self.context_size > 1_048_576 {
-            errors.push(PipelineError::InvalidContext(self.context_size));
-        }
-        if self.batch_size == 0 || self.batch_size > 1024 {
-            errors.push(PipelineError::InvalidBatchSize(self.batch_size));
-        }
-        let valid_devices = ["cpu", "cuda", "metal", "vulkan", "opencl"];
-        if !valid_devices.contains(&self.device.as_str()) {
-            errors.push(PipelineError::InvalidDevice(self.device.clone()));
-        }
-
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
-    }
-
-    /// Build the pipeline configuration (returns steps if valid).
-    pub fn build(self) -> Result<PipelineConfig, Vec<PipelineError>> {
-        self.validate()?;
-        Ok(PipelineConfig {
-            steps: self.steps,
-            model_path: self.model_path.unwrap_or_default(),
-            tokenizer_path: self.tokenizer_path.unwrap_or_default(),
-            context_size: self.context_size,
+    /// Build the pipeline.
+    pub fn build(self) -> Pipeline {
+        Pipeline {
+            name: self.name.unwrap_or_else(|| "default".into()),
+            stages: self.stages,
             batch_size: self.batch_size,
-            device: self.device,
-            warmup_tokens: self.warmup_tokens,
-            metadata: self.metadata,
-        })
+        }
     }
 
-    pub fn steps(&self) -> &[PipelineStep] {
-        &self.steps
+    /// Build a standard text generation pipeline.
+    pub fn text_generation(num_layers: usize) -> Pipeline {
+        PipelineBuilder::new()
+            .name("text_generation")
+            .num_layers(num_layers)
+            .tokenize()
+            .embed()
+            .transformer_blocks()
+            .final_norm()
+            .logits_projection()
+            .sample()
+            .decode()
+            .build()
     }
 }
 
-/// A validated pipeline configuration.
-#[derive(Debug, Clone)]
-pub struct PipelineConfig {
-    pub steps: Vec<PipelineStep>,
-    pub model_path: String,
-    pub tokenizer_path: String,
-    pub context_size: usize,
+/// A configured inference pipeline.
+#[derive(Debug)]
+pub struct Pipeline {
+    pub name: String,
+    pub stages: Vec<StageConfig>,
     pub batch_size: usize,
-    pub device: String,
-    pub warmup_tokens: Option<usize>,
-    pub metadata: HashMap<String, String>,
 }
 
-impl PipelineConfig {
-    pub fn step_count(&self) -> usize {
-        self.steps.len()
+impl Pipeline {
+    pub fn stage_count(&self) -> usize {
+        self.stages.len()
     }
-    pub fn has_warmup(&self) -> bool {
-        self.warmup_tokens.is_some()
+
+    pub fn enabled_stages(&self) -> Vec<&StageConfig> {
+        self.stages.iter().filter(|s| s.enabled).collect()
     }
-    pub fn has_quantization(&self) -> bool {
-        self.steps.iter().any(|s| matches!(s, PipelineStep::EnableQuantization { .. }))
+
+    pub fn has_stage(&self, kind: &StageKind) -> bool {
+        self.stages.iter().any(|s| s.kind == *kind)
+    }
+
+    pub fn stage_names(&self) -> Vec<&str> {
+        self.stages.iter().map(|s| s.kind.name()).collect()
+    }
+
+    /// Summary of the pipeline.
+    pub fn summary(&self) -> String {
+        format!(
+            "Pipeline '{}': {} stages, batch_size={}",
+            self.name,
+            self.stage_count(),
+            self.batch_size,
+        )
     }
 }
 
@@ -198,108 +207,91 @@ impl PipelineConfig {
 mod tests {
     use super::*;
 
-    fn valid_builder() -> PipelineBuilder {
-        PipelineBuilder::new().model("model.gguf").tokenizer("tokenizer.json")
+    #[test]
+    fn test_stage_kind_name() {
+        assert_eq!(StageKind::Tokenize.name(), "tokenize");
+        assert_eq!(StageKind::TransformerBlock.name(), "transformer_block");
+        assert_eq!(StageKind::Custom("my_stage".into()).name(), "my_stage");
     }
 
     #[test]
-    fn test_build_valid() {
-        let cfg = valid_builder().build().unwrap();
-        assert_eq!(cfg.model_path, "model.gguf");
-        assert_eq!(cfg.tokenizer_path, "tokenizer.json");
-        assert_eq!(cfg.context_size, 2048);
+    fn test_stage_config_params() {
+        let cfg = StageConfig::new(StageKind::Sample)
+            .with_param("temperature", "0.7")
+            .with_param("top_k", "50");
+        assert_eq!(cfg.params.len(), 2);
+        assert_eq!(cfg.params["temperature"], "0.7");
     }
 
     #[test]
-    fn test_missing_model() {
-        let r = PipelineBuilder::new().tokenizer("t.json").build();
-        assert!(r.is_err());
-        assert!(r.unwrap_err().contains(&PipelineError::MissingModel));
+    fn test_stage_disabled() {
+        let cfg = StageConfig::new(StageKind::Embed).disabled();
+        assert!(!cfg.enabled);
     }
 
     #[test]
-    fn test_missing_tokenizer() {
-        let r = PipelineBuilder::new().model("m.gguf").build();
-        assert!(r.is_err());
-        assert!(r.unwrap_err().contains(&PipelineError::MissingTokenizer));
+    fn test_builder_basic() {
+        let pipeline = PipelineBuilder::new().name("test").tokenize().embed().build();
+        assert_eq!(pipeline.name, "test");
+        assert_eq!(pipeline.stage_count(), 2);
     }
 
     #[test]
-    fn test_context_size() {
-        let cfg = valid_builder().context_size(16384).build().unwrap();
-        assert_eq!(cfg.context_size, 16384);
+    fn test_builder_batch_size() {
+        let pipeline = PipelineBuilder::new().batch_size(8).tokenize().build();
+        assert_eq!(pipeline.batch_size, 8);
     }
 
     #[test]
-    fn test_invalid_context() {
-        let r = valid_builder().context_size(0).build();
-        assert!(r.is_err());
+    fn test_transformer_blocks() {
+        let pipeline = PipelineBuilder::new().num_layers(4).transformer_blocks().build();
+        let tb_count =
+            pipeline.stages.iter().filter(|s| s.kind == StageKind::TransformerBlock).count();
+        assert_eq!(tb_count, 4);
     }
 
     #[test]
-    fn test_batch_size() {
-        let cfg = valid_builder().batch_size(8).build().unwrap();
-        assert_eq!(cfg.batch_size, 8);
+    fn test_text_generation_pipeline() {
+        let pipeline = PipelineBuilder::text_generation(2);
+        assert_eq!(pipeline.name, "text_generation");
+        assert!(pipeline.has_stage(&StageKind::Tokenize));
+        assert!(pipeline.has_stage(&StageKind::Sample));
+        assert!(pipeline.has_stage(&StageKind::Decode));
     }
 
     #[test]
-    fn test_invalid_batch() {
-        let r = valid_builder().batch_size(0).build();
-        assert!(r.is_err());
+    fn test_enabled_stages() {
+        let pipeline = PipelineBuilder::new()
+            .add_stage(StageConfig::new(StageKind::Embed))
+            .add_stage(StageConfig::new(StageKind::Sample).disabled())
+            .build();
+        assert_eq!(pipeline.enabled_stages().len(), 1);
     }
 
     #[test]
-    fn test_device_cpu() {
-        let cfg = valid_builder().device("cpu").build().unwrap();
-        assert_eq!(cfg.device, "cpu");
+    fn test_stage_names() {
+        let pipeline = PipelineBuilder::new().tokenize().embed().build();
+        assert_eq!(pipeline.stage_names(), vec!["tokenize", "embed"]);
     }
 
     #[test]
-    fn test_device_cuda() {
-        let cfg = valid_builder().device("cuda").build().unwrap();
-        assert_eq!(cfg.device, "cuda");
+    fn test_summary() {
+        let pipeline = PipelineBuilder::new().name("my_pipeline").tokenize().build();
+        let s = pipeline.summary();
+        assert!(s.contains("my_pipeline"));
+        assert!(s.contains("1 stages"));
     }
 
     #[test]
-    fn test_invalid_device() {
-        let r = valid_builder().device("tpu").build();
-        assert!(r.is_err());
+    fn test_has_stage() {
+        let pipeline = PipelineBuilder::new().tokenize().build();
+        assert!(pipeline.has_stage(&StageKind::Tokenize));
+        assert!(!pipeline.has_stage(&StageKind::Sample));
     }
 
     #[test]
-    fn test_warmup() {
-        let cfg = valid_builder().warmup(32).build().unwrap();
-        assert!(cfg.has_warmup());
-        assert_eq!(cfg.warmup_tokens, Some(32));
-    }
-
-    #[test]
-    fn test_no_warmup() {
-        let cfg = valid_builder().build().unwrap();
-        assert!(!cfg.has_warmup());
-    }
-
-    #[test]
-    fn test_quantization() {
-        let cfg = valid_builder().quantization("int4").build().unwrap();
-        assert!(cfg.has_quantization());
-    }
-
-    #[test]
-    fn test_step_count() {
-        let cfg = valid_builder().warmup(10).device("cpu").build().unwrap();
-        assert!(cfg.step_count() >= 4); // model + tokenizer + warmup + device
-    }
-
-    #[test]
-    fn test_metadata() {
-        let cfg = valid_builder().metadata("version", "1.0").build().unwrap();
-        assert_eq!(cfg.metadata.get("version").unwrap(), "1.0");
-    }
-
-    #[test]
-    fn test_default() {
-        let b = PipelineBuilder::default();
-        assert_eq!(b.steps().len(), 0);
+    fn test_default_pipeline_name() {
+        let pipeline = PipelineBuilder::new().build();
+        assert_eq!(pipeline.name, "default");
     }
 }
