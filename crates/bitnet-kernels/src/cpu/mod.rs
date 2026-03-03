@@ -65,8 +65,6 @@ pub mod neon_rope;
 pub mod neon_elementwise;
 
 #[cfg(target_arch = "aarch64")]
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
 
 #[cfg(target_arch = "aarch64")]
@@ -123,6 +121,14 @@ pub mod neon_batch_processing_v2;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_embedding_lookup;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_gather_scatter;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_kv_cache;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quant_calibration;
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
