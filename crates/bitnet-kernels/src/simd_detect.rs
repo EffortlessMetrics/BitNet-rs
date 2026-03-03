@@ -97,11 +97,7 @@ impl SimdCapabilities {
             features.push(SimdFeatureLevel::Neon);
         }
 
-        let best = features
-            .iter()
-            .copied()
-            .max()
-            .unwrap_or(SimdFeatureLevel::Scalar);
+        let best = features.iter().copied().max().unwrap_or(SimdFeatureLevel::Scalar);
         Self { features, best }
     }
 
@@ -113,11 +109,7 @@ impl SimdCapabilities {
         format!(
             "best={}, available=[{}]",
             self.best.as_str(),
-            self.features
-                .iter()
-                .map(|f| f.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
+            self.features.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")
         )
     }
 }

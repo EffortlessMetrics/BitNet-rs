@@ -7,7 +7,7 @@ use bitnet_common::error::{
     BitNetError, InferenceError, KernelError, ModelError, QuantizationError, SecurityError,
     ValidationErrorDetails,
 };
-use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
+use bitnet_common::kernel_registry::{KernelBackend, SimdLevel};
 use bitnet_common::tensor_validation::ShapeError;
 use bitnet_common::types::{Device, ModelMetadata, PerformanceMetrics, QuantizationType};
 
@@ -197,13 +197,8 @@ fn snapshot_kernel_backend_display_all() {
 
 #[test]
 fn snapshot_simd_level_ordering() {
-    let mut levels = vec![
-        SimdLevel::Avx512,
-        SimdLevel::Scalar,
-        SimdLevel::Avx2,
-        SimdLevel::Neon,
-        SimdLevel::Sse42,
-    ];
+    let mut levels =
+        [SimdLevel::Avx512, SimdLevel::Scalar, SimdLevel::Avx2, SimdLevel::Neon, SimdLevel::Sse42];
     levels.sort();
     let sorted: Vec<String> = levels.iter().map(|l| l.to_string()).collect();
     insta::assert_debug_snapshot!("simd_level_sorted_order", sorted);

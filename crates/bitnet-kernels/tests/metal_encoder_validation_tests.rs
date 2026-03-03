@@ -380,7 +380,7 @@ impl MockComputeEncoder {
         if slot >= MAX_BUFFER_SLOTS {
             return Err(EncoderError::BufferSlotOutOfRange { slot, max: MAX_BUFFER_SLOTS - 1 });
         }
-        if offset % BUFFER_OFFSET_ALIGNMENT != 0 {
+        if !offset.is_multiple_of(BUFFER_OFFSET_ALIGNMENT) {
             return Err(EncoderError::BufferOffsetMisaligned {
                 offset,
                 alignment: BUFFER_OFFSET_ALIGNMENT,
@@ -404,7 +404,7 @@ impl MockComputeEncoder {
         if slot >= MAX_BUFFER_SLOTS {
             return Err(EncoderError::BufferSlotOutOfRange { slot, max: MAX_BUFFER_SLOTS - 1 });
         }
-        if offset % BUFFER_OFFSET_ALIGNMENT != 0 {
+        if !offset.is_multiple_of(BUFFER_OFFSET_ALIGNMENT) {
             return Err(EncoderError::BufferOffsetMisaligned {
                 offset,
                 alignment: BUFFER_OFFSET_ALIGNMENT,
@@ -578,7 +578,7 @@ fn pipeline_with_max_threads(n: usize) -> MockComputePipelineState {
 
 /// Helper: warp-aligned threadgroup size (Apple GPU warp = 32).
 fn warp_aligned_size(threads: usize) -> usize {
-    ((threads + 31) / 32) * 32
+    threads.div_ceil(32) * 32
 }
 
 // ============================================================================
@@ -1520,7 +1520,7 @@ fn test_matmul_dispatch_pattern() {
 
     let tile_m = 16;
     let tile_n = 16;
-    let grid = Size3D::new((n + tile_n - 1) / tile_n, (m + tile_m - 1) / tile_m, 1);
+    let grid = Size3D::new(n.div_ceil(tile_n), m.div_ceil(tile_m), 1);
     let tg = Size3D::new(tile_n, tile_m, 1);
 
     encoder.dispatch_threadgroups(grid, tg).unwrap();
@@ -1580,7 +1580,7 @@ fn test_elementwise_add_dispatch() {
     encoder.set_buffer(&buf_c, 0, 2).unwrap();
 
     let tg_size = 256_usize;
-    let grid_x = (n + tg_size - 1) / tg_size;
+    let grid_x = n.div_ceil(tg_size);
     encoder.dispatch_threadgroups(Size3D::new(grid_x, 1, 1), Size3D::new(tg_size, 1, 1)).unwrap();
     encoder.end_encoding().unwrap();
 
@@ -1597,7 +1597,7 @@ fn test_reduction_sum_dispatch() {
 
     // Pass 1: reduce chunks
     let tg_size = 256_usize;
-    let num_groups = (n + tg_size - 1) / tg_size;
+    let num_groups = n.div_ceil(tg_size);
 
     let mut enc1 = cmd_buf.make_compute_encoder();
     enc1.begin_encoding().unwrap();
@@ -1656,7 +1656,7 @@ fn test_attention_compute_dispatch() {
     enc1.set_buffer_with_usage(&buf_scores, 0, 2, ResourceUsage::Write).unwrap();
 
     let tg = Size3D::new(16, 16, 1);
-    let grid = Size3D::new((seq_len + 15) / 16, (seq_len + 15) / 16, batch * heads);
+    let grid = Size3D::new(seq_len.div_ceil(16), seq_len.div_ceil(16), batch * heads);
     enc1.dispatch_threadgroups(grid, tg).unwrap();
     enc1.end_encoding().unwrap();
 
@@ -1687,7 +1687,7 @@ fn test_attention_compute_dispatch() {
     enc3.set_buffer_with_usage(&buf_v, 0, 1, ResourceUsage::Read).unwrap();
     enc3.set_buffer_with_usage(&buf_out, 0, 2, ResourceUsage::Write).unwrap();
     enc3.dispatch_threadgroups(
-        Size3D::new((head_dim + 15) / 16, (seq_len + 15) / 16, batch * heads),
+        Size3D::new(head_dim.div_ceil(16), seq_len.div_ceil(16), batch * heads),
         Size3D::new(16, 16, 1),
     )
     .unwrap();
@@ -1743,7 +1743,7 @@ fn test_gelu_activation_dispatch() {
     encoder.set_buffer_with_usage(&buf_inout, 0, 0, ResourceUsage::ReadWrite).unwrap();
 
     let tg_size = 256_usize;
-    let grid_x = (n + tg_size - 1) / tg_size;
+    let grid_x = n.div_ceil(tg_size);
     encoder.dispatch_threadgroups(Size3D::new(grid_x, 1, 1), Size3D::new(tg_size, 1, 1)).unwrap();
     encoder.end_encoding().unwrap();
 

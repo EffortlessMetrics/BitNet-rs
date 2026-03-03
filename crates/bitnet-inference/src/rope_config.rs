@@ -3,29 +3,18 @@
 //! Configure RoPE parameters for different model architectures:
 //! base frequency, scaling, NTK-aware extensions, and YaRN.
 
-
 /// RoPE scaling strategy.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum RopeScaling {
     /// No scaling (standard RoPE).
+    #[default]
     None,
     /// Linear frequency scaling.
     Linear { factor: f64 },
     /// Dynamic NTK-aware scaling.
     DynamicNtk { factor: f64, original_max_pos: usize },
     /// YaRN (Yet another RoPE extension).
-    Yarn {
-        factor: f64,
-        attention_factor: f64,
-        beta_fast: f64,
-        beta_slow: f64,
-    },
-}
-
-impl Default for RopeScaling {
-    fn default() -> Self {
-        Self::None
-    }
+    Yarn { factor: f64, attention_factor: f64, beta_fast: f64, beta_slow: f64 },
 }
 
 /// Full RoPE configuration.
@@ -39,12 +28,7 @@ pub struct RopeConfig {
 
 impl RopeConfig {
     pub fn new(head_dim: usize) -> Self {
-        Self {
-            head_dim,
-            base_freq: 10000.0,
-            max_seq_len: 4096,
-            scaling: RopeScaling::None,
-        }
+        Self { head_dim, base_freq: 10000.0, max_seq_len: 4096, scaling: RopeScaling::None }
     }
 
     pub fn with_base_freq(mut self, freq: f64) -> Self {
@@ -80,10 +64,7 @@ impl RopeConfig {
         match &self.scaling {
             RopeScaling::None => self.base_freq,
             RopeScaling::Linear { factor } => self.base_freq * factor,
-            RopeScaling::DynamicNtk {
-                factor,
-                original_max_pos,
-            } => {
+            RopeScaling::DynamicNtk { factor, original_max_pos } => {
                 let dim = self.head_dim as f64;
                 self.base_freq
                     * ((factor * self.max_seq_len as f64 / *original_max_pos as f64)
@@ -91,9 +72,7 @@ impl RopeConfig {
                         - 1.0)
                         .max(1.0)
             }
-            RopeScaling::Yarn { factor, .. } => {
-                self.base_freq * factor
-            }
+            RopeScaling::Yarn { factor, .. } => self.base_freq * factor,
         }
     }
 
@@ -122,9 +101,7 @@ impl RopeConfig {
 
 /// Preset: BitNet-2B RoPE (standard, 4K context).
 pub fn bitnet_rope(head_dim: usize) -> RopeConfig {
-    RopeConfig::new(head_dim)
-        .with_base_freq(10000.0)
-        .with_max_seq_len(4096)
+    RopeConfig::new(head_dim).with_base_freq(10000.0).with_max_seq_len(4096)
 }
 
 /// Preset: Phi-4 RoPE (extended 16K context).
@@ -132,17 +109,12 @@ pub fn phi4_rope(head_dim: usize) -> RopeConfig {
     RopeConfig::new(head_dim)
         .with_base_freq(10000.0)
         .with_max_seq_len(16384)
-        .with_scaling(RopeScaling::DynamicNtk {
-            factor: 4.0,
-            original_max_pos: 4096,
-        })
+        .with_scaling(RopeScaling::DynamicNtk { factor: 4.0, original_max_pos: 4096 })
 }
 
 /// Preset: LLaMA-3 RoPE (extended 8K context).
 pub fn llama3_rope(head_dim: usize) -> RopeConfig {
-    RopeConfig::new(head_dim)
-        .with_base_freq(500000.0)
-        .with_max_seq_len(8192)
+    RopeConfig::new(head_dim).with_base_freq(500000.0).with_max_seq_len(8192)
 }
 
 #[cfg(test)]
@@ -192,8 +164,7 @@ mod tests {
     #[test]
     fn test_linear_scaling() {
         let base = RopeConfig::new(128);
-        let scaled = RopeConfig::new(128)
-            .with_scaling(RopeScaling::Linear { factor: 2.0 });
+        let scaled = RopeConfig::new(128).with_scaling(RopeScaling::Linear { factor: 2.0 });
         assert!((scaled.effective_base() - base.effective_base() * 2.0).abs() < 1e-6);
     }
 

@@ -101,7 +101,7 @@ pub fn partition_work(total: usize, num_threads: usize) -> Vec<WorkPartition> {
 pub fn optimal_threads(work_items: usize, min_items_per_thread: usize) -> usize {
     let max_threads = available_parallelism();
     let min_per = min_items_per_thread.max(1);
-    let needed = (work_items + min_per - 1) / min_per;
+    let needed = work_items.div_ceil(min_per);
     needed.clamp(1, max_threads)
 }
 
