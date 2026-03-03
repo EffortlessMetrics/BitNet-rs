@@ -7,18 +7,13 @@ use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 /// Priority level for inference requests.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Low = 0,
+    #[default]
     Normal = 1,
     High = 2,
     Critical = 3,
-}
-
-impl Default for Priority {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// An inference request in the batch queue.
@@ -33,13 +28,7 @@ pub struct BatchRequest {
 
 impl BatchRequest {
     pub fn new(id: u64, token_ids: Vec<u32>, max_tokens: usize) -> Self {
-        Self {
-            id,
-            token_ids,
-            max_tokens,
-            priority: Priority::Normal,
-            enqueued_at: Instant::now(),
-        }
+        Self { id, token_ids, max_tokens, priority: Priority::Normal, enqueued_at: Instant::now() }
     }
 
     pub fn with_priority(mut self, priority: Priority) -> Self {
@@ -127,12 +116,7 @@ pub struct BatchCoordinator {
 
 impl BatchCoordinator {
     pub fn new(config: BatchConfig) -> Self {
-        Self {
-            queue: VecDeque::new(),
-            config,
-            next_id: 0,
-            batches_formed: 0,
-        }
+        Self { queue: VecDeque::new(), config, next_id: 0, batches_formed: 0 }
     }
 
     pub fn with_defaults() -> Self {
@@ -158,11 +142,7 @@ impl BatchCoordinator {
         self.next_id += 1;
         let req = BatchRequest::new(id, token_ids, max_tokens).with_priority(priority);
         // Insert based on priority: higher priority goes earlier
-        let pos = self
-            .queue
-            .iter()
-            .position(|r| r.priority < priority)
-            .unwrap_or(self.queue.len());
+        let pos = self.queue.iter().position(|r| r.priority < priority).unwrap_or(self.queue.len());
         self.queue.insert(pos, req);
         id
     }
@@ -201,10 +181,7 @@ impl BatchCoordinator {
         }
 
         self.batches_formed += 1;
-        Some(Batch {
-            requests,
-            formed_at: Instant::now(),
-        })
+        Some(Batch { requests, formed_at: Instant::now() })
     }
 
     pub fn batches_formed(&self) -> u64 {
@@ -235,10 +212,7 @@ mod tests {
 
     #[test]
     fn test_max_batch_size() {
-        let config = BatchConfig {
-            max_batch_size: 2,
-            ..Default::default()
-        };
+        let config = BatchConfig { max_batch_size: 2, ..Default::default() };
         let mut coord = BatchCoordinator::new(config);
         coord.enqueue(vec![1], 10);
         coord.enqueue(vec![2], 10);
@@ -250,11 +224,7 @@ mod tests {
 
     #[test]
     fn test_max_total_tokens() {
-        let config = BatchConfig {
-            max_batch_size: 100,
-            max_total_tokens: 5,
-            ..Default::default()
-        };
+        let config = BatchConfig { max_batch_size: 100, max_total_tokens: 5, ..Default::default() };
         let mut coord = BatchCoordinator::new(config);
         coord.enqueue(vec![1, 2, 3], 10);
         coord.enqueue(vec![4, 5, 6], 10);
