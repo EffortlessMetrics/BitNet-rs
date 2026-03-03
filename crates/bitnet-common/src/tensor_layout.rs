@@ -85,7 +85,7 @@ impl TensorLayout {
         if alignment == 0 {
             return true;
         }
-        self.offset % alignment == 0
+        self.offset.is_multiple_of(alignment)
     }
 
     /// Transpose (swap last two dims).

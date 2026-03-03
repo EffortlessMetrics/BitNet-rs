@@ -140,7 +140,7 @@ impl NeonDispatchConfig {
 
     /// Validate that `hidden_dim` is evenly divisible by `num_heads`.
     pub fn head_dim_valid(&self) -> bool {
-        self.hidden_dim % self.num_heads == 0
+        self.hidden_dim.is_multiple_of(self.num_heads)
     }
 
     /// Per-head dimension (panics if not evenly divisible).
