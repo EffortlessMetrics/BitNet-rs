@@ -1391,6 +1391,13 @@ name = "bitnet-simd"
 version = "0.2.1-dev"
 
 [[package]]
+name = "bitnet-simd-softmax"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-spirv"
 version = "0.2.1-dev"
 dependencies = [

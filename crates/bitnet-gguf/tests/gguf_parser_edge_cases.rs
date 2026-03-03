@@ -1,13 +1,6 @@
 //! Edge case and boundary tests for GGUF parsing primitives.
 //!
 //! Tests focus on malformed input handling, boundary values, and type system coverage.
-#![allow(
-    clippy::approx_constant,
-    clippy::float_cmp,
-    clippy::unreadable_literal,
-    clippy::legacy_numeric_constants,
-    clippy::single_char_pattern
-)]
 
 use bitnet_gguf::{
     GGUF_MAGIC, GGUF_VERSION_MAX, GGUF_VERSION_MIN, GgufFileInfo, GgufMetadataKv, GgufValue,

@@ -1,4 +1,3 @@
-#![allow(dead_code, clippy::manual_div_ceil, clippy::manual_slice_size_calculation)]
 //! Metal compute pipeline integration tests for Apple Silicon.
 //!
 //! Validates wgpu/Metal compute pipeline behavior including adapter selection,

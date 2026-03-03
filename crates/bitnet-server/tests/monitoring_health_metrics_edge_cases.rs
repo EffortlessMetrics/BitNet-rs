@@ -2,7 +2,6 @@
 //!
 //! Covers serialization roundtrips, boundary values, optional-field
 //! handling, stub-probe HTTP mapping, and metrics collector edge cases.
-#![allow(clippy::field_reassign_with_default)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
