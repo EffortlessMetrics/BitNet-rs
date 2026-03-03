@@ -4,7 +4,7 @@
 
 /// Pack 4 int2 values (0..3) into one byte, LSB first.
 pub fn pack_int2(values: &[u8]) -> Vec<u8> {
-    let out_len = (values.len() + 3) / 4;
+    let out_len = values.len().div_ceil(4);
     let mut packed = vec![0u8; out_len];
     for (i, &v) in values.iter().enumerate() {
         let byte_idx = i / 4;
@@ -31,7 +31,7 @@ pub fn unpack_int2(packed: &[u8], count: usize) -> Vec<u8> {
 
 /// Pack 2 int4 values (0..15) into one byte (low nibble first).
 pub fn pack_int4(values: &[u8]) -> Vec<u8> {
-    let out_len = (values.len() + 1) / 2;
+    let out_len = values.len().div_ceil(2);
     let mut packed = vec![0u8; out_len];
     for (i, &v) in values.iter().enumerate() {
         let byte_idx = i / 2;
@@ -77,8 +77,8 @@ pub fn unpack_int8(packed: &[u8], count: usize) -> Vec<u8> {
 /// Compute packed size in bytes for a given element count and bit width.
 pub fn packed_size(element_count: usize, bits: u8) -> usize {
     match bits {
-        2 => (element_count + 3) / 4,
-        4 => (element_count + 1) / 2,
+        2 => element_count.div_ceil(4),
+        4 => element_count.div_ceil(2),
         8 => element_count,
         _ => panic!("unsupported bit width: {bits}"),
     }
