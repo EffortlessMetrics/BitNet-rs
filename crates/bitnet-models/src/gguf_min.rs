@@ -197,7 +197,7 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
         let ty = read_u32(r)?;
         let offset = read_u64(r)?;
         ensure!(
-            offset.is_multiple_of(alignment),
+            offset % alignment == 0,
             "tensor '{}' offset {} not aligned to {alignment}",
             name,
             offset
