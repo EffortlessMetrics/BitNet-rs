@@ -199,11 +199,7 @@ impl CanaryRouter {
             return BackendChoice::Baseline;
         };
 
-        if seq.is_multiple_of(canary_every_n) {
-            BackendChoice::Canary
-        } else {
-            BackendChoice::Baseline
-        }
+        if seq % canary_every_n == 0 { BackendChoice::Canary } else { BackendChoice::Baseline }
     }
 
     /// Record a comparison result and check for automatic rollback.
@@ -299,7 +295,7 @@ mod tests {
                 canary_count += 1;
             }
         }
-        assert!((40..=60).contains(&canary_count), "got {canary_count}");
+        assert!(canary_count >= 40 && canary_count <= 60, "got {canary_count}");
     }
 
     #[test]

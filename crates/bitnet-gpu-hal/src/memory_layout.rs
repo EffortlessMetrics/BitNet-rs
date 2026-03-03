@@ -733,8 +733,8 @@ impl LayoutValidator {
     /// Validate that strides are consistent with the declared shape and
     /// element size.
     ///
-    /// Specifically: for dense row-major, `stride[i]` should ==
-    /// `product(shape[i+1..]) * element_size`.
+    /// Specifically: for dense row-major, stride[i] should ==
+    /// product(shape[i+1..]) * element_size.
     pub fn validate_strides(layout: &MemoryLayout) -> LayoutResult<()> {
         if layout.shape.is_empty() {
             return Ok(());

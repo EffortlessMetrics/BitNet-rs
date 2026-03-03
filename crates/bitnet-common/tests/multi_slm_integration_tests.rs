@@ -2,7 +2,6 @@
 //!
 //! Verifies that ArchitectureRegistry lookups correctly configure ModelConfig
 //! for all supported model families.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_common::ArchitectureRegistry;
 use bitnet_common::config::{ActivationType, ModelConfig, NormType};
