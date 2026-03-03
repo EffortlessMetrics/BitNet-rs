@@ -98,7 +98,7 @@ pub fn compute_per_channel_scales(data: &[f32], channels: usize, channel_size: u
 pub fn compute_per_group_scales(data: &[f32], group_size: usize) -> Vec<f32> {
     assert!(group_size > 0, "group_size must be > 0");
 
-    data.chunks(group_size).map(|chunk| compute_absmax(chunk)).collect()
+    data.chunks(group_size).map(compute_absmax).collect()
 }
 
 // ── Symmetric int8 quantization ─────────────────────────────────────
@@ -133,7 +133,7 @@ pub fn quantize_symmetric_i8(data: &[f32], scale: f32, output: &mut [i8]) {
 ///
 /// Panics if `output.len() < ceil(data.len() / 4)`.
 pub fn quantize_symmetric_i2(data: &[f32], scale: f32, output: &mut [u8]) {
-    let needed = (data.len() + 3) / 4;
+    let needed = data.len().div_ceil(4);
     assert!(
         output.len() >= needed,
         "output must have at least {} bytes, got {}",
@@ -186,7 +186,7 @@ pub fn dequantize_i8(data: &[i8], scale: f32, output: &mut [f32]) {
 ///
 /// Panics if `data.len() < ceil(output.len() / 4)`.
 pub fn dequantize_i2(data: &[u8], scale: f32, output: &mut [f32]) {
-    let needed = (output.len() + 3) / 4;
+    let needed = output.len().div_ceil(4);
     assert!(
         data.len() >= needed,
         "data must have at least {} bytes for {} outputs",

@@ -3,6 +3,7 @@
 //! Provides 4×4 block transpose using NEON intrinsics, a general
 //! transpose that tiles 4×4 blocks with scalar edges, in-place square
 //! matrix transpose, batched transpose, and transpose-add.
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use std::arch::aarch64::*;
 
@@ -107,8 +108,8 @@ unsafe fn transpose_4x4_block_add(
 /// do not match `rows * cols`.
 pub fn neon_transpose_4x4_f32(src: &[f32], dst: &mut [f32], rows: usize, cols: usize) {
     let numel = rows * cols;
-    assert!(rows % 4 == 0, "rows must be a multiple of 4, got {rows}");
-    assert!(cols % 4 == 0, "cols must be a multiple of 4, got {cols}");
+    assert!(rows.is_multiple_of(4), "rows must be a multiple of 4, got {rows}");
+    assert!(cols.is_multiple_of(4), "cols must be a multiple of 4, got {cols}");
     assert!(src.len() >= numel, "src length {} < rows*cols {numel}", src.len());
     assert!(dst.len() >= numel, "dst length {} < rows*cols {numel}", dst.len());
 
