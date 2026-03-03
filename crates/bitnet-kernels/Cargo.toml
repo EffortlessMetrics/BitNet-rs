@@ -140,10 +140,6 @@ path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "metal_error_recovery_tests"
-path = "tests/metal_error_recovery_tests.rs"
-
-[[test]]
 name = "metal_compute_pipeline_tests"
 path = "tests/metal_compute_pipeline_tests.rs"
 
@@ -154,6 +150,11 @@ path = "tests/metal_layernorm_shader_tests.rs"
 [[test]]
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
+
+[[test]]
+name = "proptest_wave34"
+path = "tests/proptest_wave34.rs"
+required-features = ["cpu"]
 
 [[example]]
 name = "gpu_validation"

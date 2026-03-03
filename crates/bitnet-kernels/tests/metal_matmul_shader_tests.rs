@@ -1,4 +1,3 @@
-#![allow(clippy::too_many_arguments, clippy::manual_div_ceil, unused_variables)]
 //! Tests for Metal matrix multiplication compute shaders on Apple Silicon.
 //!
 //! Verifies GEMM correctness, transposed variants, batch matmul, dimension
