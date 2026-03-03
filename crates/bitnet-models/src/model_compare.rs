@@ -190,14 +190,14 @@ pub fn compare_shapes(
     let right_map: std::collections::HashMap<_, _> = right.iter().cloned().collect();
     let mut diffs = Vec::new();
     for (name, lshape) in left {
-        if let Some(rshape) = right_map.get(name)
-            && lshape != rshape
-        {
-            diffs.push(ShapeDiff {
-                tensor_name: name.clone(),
-                left_shape: lshape.clone(),
-                right_shape: rshape.clone(),
-            });
+        if let Some(rshape) = right_map.get(name) {
+            if lshape != rshape {
+                diffs.push(ShapeDiff {
+                    tensor_name: name.clone(),
+                    left_shape: lshape.clone(),
+                    right_shape: rshape.clone(),
+                });
+            }
         }
     }
     diffs
