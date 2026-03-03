@@ -1,4 +1,3 @@
-#![allow(clippy::manual_range_contains, clippy::approx_constant)]
 //! Edge-case tests for CPU activation function kernels.
 //!
 //! Tests cover boundary conditions, special values (NaN, infinity, zero),

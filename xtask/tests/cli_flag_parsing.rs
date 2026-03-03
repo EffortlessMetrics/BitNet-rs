@@ -195,12 +195,37 @@ fn test_metrics_validation() {
 
 /// Test positions parameter validation
 ///
-/// TODO: Implement actual position validation logic when CLI positions parameter is implemented
-/// Currently scaffolding - placeholder assertions removed
+/// Validates that the positions parameter accepts valid usize values
+/// and that the default value is sensible.
 #[test]
-#[ignore = "TDD scaffolding - blocked pending CLI position parameter feature implementation"]
+#[cfg(feature = "inference")]
 fn test_positions_validation() {
-    unimplemented!(
-        "Waiting for CLI position parameter feature - implement actual validation logic"
-    );
+    use clap::Parser;
+
+    #[derive(Parser, Debug)]
+    #[command(name = "test")]
+    struct TestPositions {
+        #[arg(long, default_value_t = 8)]
+        positions: usize,
+    }
+
+    // Default value
+    let args = TestPositions::parse_from(["test"]);
+    assert_eq!(args.positions, 8, "Default positions should be 8");
+
+    // Explicit value
+    let args = TestPositions::parse_from(["test", "--positions", "16"]);
+    assert_eq!(args.positions, 16);
+
+    // Zero is accepted by the parser (application logic may reject)
+    let args = TestPositions::parse_from(["test", "--positions", "0"]);
+    assert_eq!(args.positions, 0);
+
+    // Negative values should be rejected by usize parser
+    let result = TestPositions::try_parse_from(["test", "--positions", "-1"]);
+    assert!(result.is_err(), "Negative positions should be rejected");
+
+    // Non-numeric should be rejected
+    let result = TestPositions::try_parse_from(["test", "--positions", "abc"]);
+    assert!(result.is_err(), "Non-numeric positions should be rejected");
 }

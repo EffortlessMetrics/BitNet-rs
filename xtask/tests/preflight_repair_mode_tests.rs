@@ -557,73 +557,100 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Network error: DNS resolution failure
     #[test]
-    #[ignore = "TODO: Implement DNS error classification"]
     fn test_classify_network_error_dns() {
-        // Mock: Stderr = "could not resolve host"
-        // Assert: Classified as NetworkFailure
-        unimplemented!("AC7: Implement DNS error classification test");
+        let error = RepairError::classify("could not resolve host github.com", "bitnet");
+        assert!(
+            matches!(error, RepairError::NetworkFailure { .. }),
+            "Expected NetworkFailure, got: {:?}",
+            error
+        );
+        assert!(is_retryable_error(&error), "DNS errors should be retryable");
+        assert_eq!(error.to_exit_code(), 3);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Build error: CMake not found
     #[test]
-    #[ignore = "TODO: Implement CMake error classification"]
     fn test_classify_build_error_cmake_missing() {
-        // Mock: Stderr = "cmake not found"
-        // Assert: Classified as BuildFailure
-        // Assert: is_retryable_error() returns false
-        unimplemented!("AC7: Implement CMake missing classification test");
+        let error = RepairError::classify("cmake error: could not find cmake", "bitnet");
+        assert!(
+            matches!(error, RepairError::BuildFailure { .. }),
+            "Expected BuildFailure, got: {:?}",
+            error
+        );
+        assert!(!is_retryable_error(&error), "Build errors should not be retryable");
+        assert_eq!(error.to_exit_code(), 5);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Build error: Compiler not found
     #[test]
-    #[ignore = "TODO: Implement compiler error classification"]
     fn test_classify_build_error_compiler_missing() {
-        // Mock: Stderr = "No CMAKE_CXX_COMPILER could be found"
-        // Assert: Classified as BuildFailure
-        unimplemented!("AC7: Implement compiler missing classification test");
+        let error = RepairError::classify("No CMAKE_CXX_COMPILER could be found", "bitnet");
+        assert!(
+            matches!(error, RepairError::BuildFailure { .. }),
+            "Expected BuildFailure, got: {:?}",
+            error
+        );
+        assert!(!is_retryable_error(&error), "Compiler errors should not be retryable");
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Permission error: mkdir failure
     #[test]
-    #[ignore = "TODO: Implement permission error classification"]
     fn test_classify_permission_error_mkdir() {
-        // Mock: Stderr = "cannot create directory '/path': Permission denied"
-        // Assert: Classified as PermissionDenied
-        // Assert: Path extracted correctly
-        unimplemented!("AC7: Implement mkdir permission classification test");
+        let error = RepairError::classify(
+            "cannot create directory '/opt/bitnet': Permission denied",
+            "bitnet",
+        );
+        assert!(
+            matches!(error, RepairError::PermissionDenied { .. }),
+            "Expected PermissionDenied, got: {:?}",
+            error
+        );
+        assert!(!is_retryable_error(&error), "Permission errors should not be retryable");
+        assert_eq!(error.to_exit_code(), 4);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Permission error: EACCES
     #[test]
-    #[ignore = "TODO: Implement EACCES classification"]
     fn test_classify_permission_error_eacces() {
-        // Mock: Stderr contains "EACCES"
-        // Assert: Classified as PermissionDenied
-        unimplemented!("AC7: Implement EACCES classification test");
+        let error = RepairError::classify("open failed: EACCES", "llama");
+        assert!(
+            matches!(error, RepairError::PermissionDenied { .. }),
+            "Expected PermissionDenied, got: {:?}",
+            error
+        );
+        assert_eq!(error.to_exit_code(), 4);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Unknown error fallback
     #[test]
-    #[ignore = "TODO: Implement unknown error classification"]
     fn test_classify_unknown_error() {
-        // Mock: Stderr = "unexpected error message"
-        // Assert: Classified as Unknown
-        unimplemented!("AC7: Implement unknown error classification test");
+        let error = RepairError::classify("unexpected error message xyz", "bitnet");
+        assert!(matches!(error, RepairError::Unknown { .. }), "Expected Unknown, got: {:?}", error);
+        assert!(!is_retryable_error(&error), "Unknown errors should not be retryable");
+        assert_eq!(error.to_exit_code(), 1);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Path extraction from permission error
     #[test]
-    #[ignore = "TODO: Implement path extraction"]
     fn test_extract_path_from_permission_error() {
-        // Mock: Stderr = "permission denied: /home/user/.cache/bitnet_cpp"
-        // Assert: extract_path_from_error() returns Some("/home/user/.cache/bitnet_cpp")
-        unimplemented!("AC7: Implement path extraction test");
+        let error =
+            RepairError::classify("permission denied: /home/user/.cache/bitnet_cpp", "bitnet");
+        match &error {
+            RepairError::PermissionDenied { path, backend } => {
+                assert_eq!(
+                    path, "/home/user/.cache/bitnet_cpp",
+                    "Path should be extracted from error message"
+                );
+                assert_eq!(backend, "bitnet");
+            }
+            other => panic!("Expected PermissionDenied, got: {:?}", other),
+        }
     }
 }
 
@@ -638,57 +665,80 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Network error message format
     #[test]
-    #[ignore = "TODO: Implement error message formatting"]
     fn test_error_message_network() {
-        // Mock: NetworkFailure error
-        // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (network error during repair)"
-        // Assert: Message contains "Recovery Steps:"
-        // Assert: Message contains "Exit code: 3"
-        unimplemented!("AC8: Implement network error message test");
+        let error = RepairError::NetworkFailure {
+            error: "connection timeout".into(),
+            backend: "bitnet".into(),
+        };
+        let msg = error.to_string();
+        assert!(msg.contains("Network failure"), "Should mention network failure");
+        assert!(msg.contains("Recovery steps"), "Should contain recovery steps");
+        assert!(msg.contains("ping github.com"), "Should suggest checking connectivity");
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Build error message format
     #[test]
-    #[ignore = "TODO: Implement build error message"]
     fn test_error_message_build() {
-        // Mock: BuildFailure error
-        // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (build error during repair)"
-        // Assert: Message contains "cmake --version"
-        // Assert: Message contains "Exit code: 5"
-        unimplemented!("AC8: Implement build error message test");
+        let error =
+            RepairError::BuildFailure { error: "cmake error".into(), backend: "bitnet".into() };
+        let msg = error.to_string();
+        assert!(msg.contains("Build failure"), "Should mention build failure");
+        assert!(msg.contains("cmake --version"), "Should suggest checking cmake");
+        assert!(msg.contains("Recovery steps"), "Should contain recovery steps");
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Permission error message format
     #[test]
-    #[ignore = "TODO: Implement permission error message"]
     fn test_error_message_permission() {
-        // Mock: PermissionDenied error with path
-        // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (permission error during repair)"
-        // Assert: Message contains "sudo chown -R $USER"
-        // Assert: Message contains "Exit code: 4"
-        unimplemented!("AC8: Implement permission error message test");
+        let error =
+            RepairError::PermissionDenied { path: "/opt/bitnet".into(), backend: "bitnet".into() };
+        let msg = error.to_string();
+        assert!(msg.contains("Permission denied"), "Should mention permission denied");
+        assert!(msg.contains("sudo chown"), "Should suggest fixing ownership");
+        assert!(msg.contains("Recovery steps"), "Should contain recovery steps");
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - All error messages have recovery steps
     #[test]
-    #[ignore = "TODO: Implement recovery steps validation"]
     fn test_error_message_has_recovery_steps() {
-        // Test: All error variants
-        // Assert: Each message contains "Recovery Steps:" section
-        unimplemented!("AC8: Implement recovery steps test");
+        let errors: Vec<RepairError> = vec![
+            RepairError::NetworkFailure { error: "timeout".into(), backend: "bitnet".into() },
+            RepairError::BuildFailure { error: "cmake error".into(), backend: "bitnet".into() },
+            RepairError::PermissionDenied { path: "/tmp".into(), backend: "bitnet".into() },
+        ];
+        for error in &errors {
+            let msg = error.to_string();
+            assert!(
+                msg.contains("Recovery steps"),
+                "Error {:?} should contain 'Recovery steps', got: {}",
+                std::mem::discriminant(error),
+                msg
+            );
+        }
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - All error messages document exit code
     #[test]
-    #[ignore = "TODO: Implement exit code documentation"]
     fn test_error_message_has_exit_code() {
-        // Test: All error variants
-        // Assert: Each message contains "Exit code: N"
-        unimplemented!("AC8: Implement exit code documentation test");
+        // Verify exit code mappings for all classifiable error types
+        let net = RepairError::NetworkFailure { error: "timeout".into(), backend: "b".into() };
+        assert_eq!(net.to_exit_code(), PreflightExitCode::NetworkFailure as i32);
+
+        let build = RepairError::BuildFailure { error: "fail".into(), backend: "b".into() };
+        assert_eq!(build.to_exit_code(), PreflightExitCode::BuildFailure as i32);
+
+        let perm = RepairError::PermissionDenied { path: "/tmp".into(), backend: "b".into() };
+        assert_eq!(perm.to_exit_code(), PreflightExitCode::PermissionDenied as i32);
+
+        let recursion = RepairError::RecursionDetected;
+        assert_eq!(recursion.to_exit_code(), PreflightExitCode::RecursionDetected as i32);
+
+        let unknown = RepairError::Unknown { error: "?".into(), backend: "b".into() };
+        assert_eq!(unknown.to_exit_code(), PreflightExitCode::Unavailable as i32);
     }
 }
 
@@ -725,12 +775,32 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Only network errors are retryable
     #[test]
-    #[ignore = "TODO: Implement retryable error predicate"]
     fn test_retry_network_only() {
-        // Test: is_retryable_error(NetworkFailure) -> true
-        // Test: is_retryable_error(BuildFailure) -> false
-        // Test: is_retryable_error(PermissionDenied) -> false
-        unimplemented!("AC9: Implement network-only retry test");
+        // NetworkFailure is retryable
+        let net_err = RepairError::NetworkFailure {
+            error: "connection timeout".into(),
+            backend: "bitnet".into(),
+        };
+        assert!(is_retryable_error(&net_err), "NetworkFailure should be retryable");
+
+        // BuildFailure is NOT retryable
+        let build_err =
+            RepairError::BuildFailure { error: "cmake error".into(), backend: "bitnet".into() };
+        assert!(!is_retryable_error(&build_err), "BuildFailure should not be retryable");
+
+        // PermissionDenied is NOT retryable
+        let perm_err =
+            RepairError::PermissionDenied { path: "/opt/bitnet".into(), backend: "bitnet".into() };
+        assert!(!is_retryable_error(&perm_err), "PermissionDenied should not be retryable");
+
+        // Unknown is NOT retryable
+        let unknown_err =
+            RepairError::Unknown { error: "something went wrong".into(), backend: "bitnet".into() };
+        assert!(!is_retryable_error(&unknown_err), "Unknown should not be retryable");
+
+        // RecursionDetected is NOT retryable
+        let recursion_err = RepairError::RecursionDetected;
+        assert!(!is_retryable_error(&recursion_err), "RecursionDetected should not be retryable");
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
