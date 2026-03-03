@@ -19,6 +19,7 @@ pub mod memory_pool;
 pub mod op_pool;
 pub mod perf_profiler;
 pub mod runtime_diag;
+pub mod shape_inference;
 pub mod shape_validator;
 pub mod strict_mode;
 pub mod tensor;
