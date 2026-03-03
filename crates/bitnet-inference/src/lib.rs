@@ -3,6 +3,7 @@
 //! High-performance inference engine for BitNet models with streaming support,
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
+pub mod attention_config;
 pub mod attention_mask;
 pub mod attention_pattern;
 pub mod backends;
