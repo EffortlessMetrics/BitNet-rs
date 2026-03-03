@@ -17,6 +17,7 @@ pub mod execution_router;
 pub mod gpu_streaming;
 pub mod health;
 pub mod hf_model_service;
+pub mod middleware_chain;
 pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
