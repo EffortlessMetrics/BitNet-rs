@@ -60,6 +60,7 @@ pub mod neon_activations;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_rope;
+pub mod neon_rope_v4;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_elementwise;
