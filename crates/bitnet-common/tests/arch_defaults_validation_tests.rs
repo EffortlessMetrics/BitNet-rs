@@ -3,7 +3,6 @@
 //! Ensures `ModelConfig::apply_architecture_defaults()` correctly sets
 //! norm_type, activation_type, and default_context_length for every
 //! architecture in the registry.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_common::ArchitectureRegistry;
 use bitnet_common::config::{ActivationType, ModelConfig, NormType};
