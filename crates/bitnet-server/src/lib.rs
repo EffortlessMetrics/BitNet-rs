@@ -1,6 +1,7 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
+pub mod api_versioning;
 pub mod auth;
 pub mod batch_engine;
 pub mod batch_request;
