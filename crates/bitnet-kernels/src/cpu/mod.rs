@@ -137,9 +137,9 @@ pub mod neon_kv_cache_v4;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_rope_v3;
 
+pub mod neon_simd_utils;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_weight_dequantize;
-pub mod neon_simd_utils;
 
 pub use activations::ActivationType;
 pub use activations::{
