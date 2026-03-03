@@ -10,6 +10,7 @@ pub mod compute_pool;
 pub mod config;
 pub mod dtype_convert;
 pub mod error_catalog;
+pub mod error_context;
 
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
