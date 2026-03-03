@@ -42,6 +42,7 @@ pub mod model_profiler;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
+pub mod prompt_validator;
 pub mod receipts; // AC4: Inference receipt generation
 pub mod request_types;
 pub mod rope_config;
