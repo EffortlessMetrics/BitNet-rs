@@ -31,6 +31,7 @@ pub mod gpu;
 pub mod gpu_utils;
 pub mod kernel_select;
 pub mod kernels;
+pub mod matmul_dispatch;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
 pub mod norm_registry;
