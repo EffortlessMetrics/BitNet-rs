@@ -1,4 +1,3 @@
-#![allow(clippy::manual_div_ceil, clippy::manual_is_multiple_of)]
 //! Metal embedding shader tests for Apple Silicon.
 //!
 //! Validates token embedding lookup, positional embedding computation
