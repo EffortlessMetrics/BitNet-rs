@@ -239,7 +239,7 @@ fn test_metal_compute_shader_add_buffers() {
         });
         pass.set_pipeline(&pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
-        let workgroups = (n as u32).div_ceil(64);
+        let workgroups = ((n as u32) + 63) / 64;
         pass.dispatch_workgroups(workgroups, 1, 1);
     }
 
