@@ -538,6 +538,10 @@ sign-tag = true
 # required-features = ["bench"]
 # NOTE: Temporarily disabled - needs API updates
 
+[[test]]
+name = "bdd_wave16"
+path = "tests/bdd_wave16.rs"
+
 [workspace.metadata.bitnet]
 categories = [
   "science",      # Scientific computing

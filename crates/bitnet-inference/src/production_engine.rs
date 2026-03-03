@@ -16,7 +16,7 @@ use crate::{GenerationConfig, InferenceEngine};
 #[cfg(feature = "inference")]
 use bitnet_common::KernelCapabilities;
 use bitnet_common::{BackendStartupSummary, BitNetError, Device, InferenceError, Result};
-pub use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
+use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::sync::Arc;

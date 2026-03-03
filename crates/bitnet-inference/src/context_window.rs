@@ -1,132 +1,114 @@
-//! Context window management.
+//! Context window management for inference.
 //!
-//! Track and manage the token context window for inference.
+//! Tracks token positions within the model's context window,
+//! handles overflow, and manages prompt/generation boundaries.
 
-/// Context window state.
+/// Context window configuration.
 #[derive(Debug, Clone)]
 pub struct ContextWindow {
-    max_length: usize,
-    tokens: Vec<u32>,
+    /// Maximum context length (e.g., 4096, 8192, 16384).
+    pub max_length: usize,
+    /// Current position in the context.
+    pub position: usize,
+    /// Position where prompt ends and generation begins.
+    pub prompt_end: usize,
 }
 
 impl ContextWindow {
     pub fn new(max_length: usize) -> Self {
-        Self { max_length, tokens: Vec::new() }
+        Self { max_length, position: 0, prompt_end: 0 }
     }
 
-    pub fn max_length(&self) -> usize {
-        self.max_length
+    /// Advance position by n tokens.
+    pub fn advance(&mut self, n: usize) {
+        self.position += n;
     }
-    pub fn current_length(&self) -> usize {
-        self.tokens.len()
+
+    /// Set the prompt boundary at current position.
+    pub fn mark_prompt_end(&mut self) {
+        self.prompt_end = self.position;
     }
+
+    /// Remaining capacity in the context window.
     pub fn remaining(&self) -> usize {
-        self.max_length.saturating_sub(self.tokens.len())
+        self.max_length.saturating_sub(self.position)
     }
+
+    /// Whether the context window is full.
     pub fn is_full(&self) -> bool {
-        self.tokens.len() >= self.max_length
+        self.position >= self.max_length
     }
-    pub fn is_empty(&self) -> bool {
-        self.tokens.is_empty()
+
+    /// Tokens generated so far (after prompt).
+    pub fn generated_tokens(&self) -> usize {
+        self.position.saturating_sub(self.prompt_end)
     }
+
+    /// Prompt length in tokens.
+    pub fn prompt_length(&self) -> usize {
+        self.prompt_end
+    }
+
+    /// Utilization as a fraction (0.0 to 1.0).
     pub fn utilization(&self) -> f64 {
         if self.max_length == 0 {
             return 0.0;
         }
-        self.tokens.len() as f64 / self.max_length as f64
+        self.position as f64 / self.max_length as f64
     }
 
-    /// Append tokens, returns how many were actually added.
-    pub fn append(&mut self, tokens: &[u32]) -> usize {
-        let space = self.remaining();
-        let to_add = tokens.len().min(space);
-        self.tokens.extend_from_slice(&tokens[..to_add]);
-        to_add
+    /// Reset the context window.
+    pub fn reset(&mut self) {
+        self.position = 0;
+        self.prompt_end = 0;
     }
 
-    /// Get all tokens.
-    pub fn tokens(&self) -> &[u32] {
-        &self.tokens
+    /// Whether we can fit n more tokens.
+    pub fn can_fit(&self, n: usize) -> bool {
+        self.position + n <= self.max_length
     }
 
-    /// Get last N tokens.
-    pub fn last_n(&self, n: usize) -> &[u32] {
-        let start = self.tokens.len().saturating_sub(n);
-        &self.tokens[start..]
-    }
-
-    /// Truncate to keep only the last N tokens (sliding window).
-    pub fn truncate_to_last(&mut self, n: usize) {
-        if self.tokens.len() > n {
-            let start = self.tokens.len() - n;
-            self.tokens = self.tokens[start..].to_vec();
-        }
-    }
-
-    /// Clear the context.
-    pub fn clear(&mut self) {
-        self.tokens.clear();
-    }
-
-    /// Check if a given number of new tokens would fit.
-    pub fn can_fit(&self, count: usize) -> bool {
-        self.remaining() >= count
-    }
-}
-
-/// Context allocation strategy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AllocationStrategy {
-    /// Fixed: prompt gets up to max_prompt, rest for generation.
-    Fixed { max_prompt: usize },
-    /// Dynamic: generation gets at least min_gen tokens.
-    Dynamic { min_generation: usize },
-    /// Even split between prompt and generation.
-    EvenSplit,
-}
-
-/// Compute prompt and generation budgets.
-pub fn compute_budgets(
-    max_context: usize,
-    prompt_len: usize,
-    strategy: AllocationStrategy,
-) -> (usize, usize) {
-    match strategy {
-        AllocationStrategy::Fixed { max_prompt } => {
-            let prompt = prompt_len.min(max_prompt);
-            let generation = max_context.saturating_sub(prompt);
-            (prompt, generation)
-        }
-        AllocationStrategy::Dynamic { min_generation } => {
-            let generation = min_generation.max(max_context.saturating_sub(prompt_len));
-            let prompt = max_context.saturating_sub(generation);
-            (prompt.min(prompt_len), generation)
-        }
-        AllocationStrategy::EvenSplit => {
-            let half = max_context / 2;
-            (prompt_len.min(half), half)
+    /// Truncate to fit within max_length (drop oldest tokens).
+    pub fn truncate_to_fit(&mut self) {
+        if self.position > self.max_length {
+            let overflow = self.position - self.max_length;
+            self.position = self.max_length;
+            self.prompt_end = self.prompt_end.saturating_sub(overflow);
         }
     }
 }
 
-/// Context usage report.
-#[derive(Debug, Clone)]
-pub struct ContextReport {
-    pub max_length: usize,
-    pub used: usize,
-    pub remaining: usize,
-    pub utilization: f64,
+/// Common context window sizes.
+pub fn context_2k() -> ContextWindow {
+    ContextWindow::new(2048)
+}
+pub fn context_4k() -> ContextWindow {
+    ContextWindow::new(4096)
+}
+pub fn context_8k() -> ContextWindow {
+    ContextWindow::new(8192)
+}
+pub fn context_16k() -> ContextWindow {
+    ContextWindow::new(16384)
+}
+pub fn context_32k() -> ContextWindow {
+    ContextWindow::new(32768)
 }
 
-impl ContextWindow {
-    pub fn report(&self) -> ContextReport {
-        ContextReport {
-            max_length: self.max_length,
-            used: self.current_length(),
-            remaining: self.remaining(),
-            utilization: self.utilization(),
-        }
-    }
+/// Estimate KV cache memory for a context window.
+pub fn kv_cache_bytes(
+    ctx_len: usize,
+    num_layers: usize,
+    num_kv_heads: usize,
+    head_dim: usize,
+    bytes_per_element: usize,
+) -> u64 {
+    // 2 (K+V) * layers * kv_heads * head_dim * ctx_len * bytes
+    2 * num_layers as u64
+        * num_kv_heads as u64
+        * head_dim as u64
+        * ctx_len as u64
+        * bytes_per_element as u64
 }
 
 #[cfg(test)]
@@ -134,95 +116,120 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new_window() {
-        let w = ContextWindow::new(4096);
-        assert_eq!(w.max_length(), 4096);
-        assert!(w.is_empty());
-        assert_eq!(w.remaining(), 4096);
+    fn test_new() {
+        let cw = ContextWindow::new(4096);
+        assert_eq!(cw.max_length, 4096);
+        assert_eq!(cw.position, 0);
     }
 
     #[test]
-    fn test_append() {
-        let mut w = ContextWindow::new(5);
-        assert_eq!(w.append(&[1, 2, 3]), 3);
-        assert_eq!(w.current_length(), 3);
-        assert_eq!(w.remaining(), 2);
+    fn test_advance() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(10);
+        assert_eq!(cw.position, 10);
+        assert_eq!(cw.remaining(), 90);
     }
 
     #[test]
-    fn test_append_overflow() {
-        let mut w = ContextWindow::new(3);
-        assert_eq!(w.append(&[1, 2, 3, 4, 5]), 3);
-        assert!(w.is_full());
+    fn test_mark_prompt_end() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(20);
+        cw.mark_prompt_end();
+        assert_eq!(cw.prompt_length(), 20);
+        cw.advance(5);
+        assert_eq!(cw.generated_tokens(), 5);
     }
 
     #[test]
-    fn test_last_n() {
-        let mut w = ContextWindow::new(10);
-        w.append(&[1, 2, 3, 4, 5]);
-        assert_eq!(w.last_n(3), &[3, 4, 5]);
-        assert_eq!(w.last_n(10), &[1, 2, 3, 4, 5]);
+    fn test_is_full() {
+        let mut cw = ContextWindow::new(10);
+        assert!(!cw.is_full());
+        cw.advance(10);
+        assert!(cw.is_full());
     }
 
     #[test]
-    fn test_truncate() {
-        let mut w = ContextWindow::new(10);
-        w.append(&[1, 2, 3, 4, 5]);
-        w.truncate_to_last(3);
-        assert_eq!(w.tokens(), &[3, 4, 5]);
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut w = ContextWindow::new(10);
-        w.append(&[1, 2]);
-        w.clear();
-        assert!(w.is_empty());
-    }
-
-    #[test]
-    fn test_can_fit() {
-        let mut w = ContextWindow::new(5);
-        w.append(&[1, 2, 3]);
-        assert!(w.can_fit(2));
-        assert!(!w.can_fit(3));
+    fn test_remaining() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(75);
+        assert_eq!(cw.remaining(), 25);
     }
 
     #[test]
     fn test_utilization() {
-        let mut w = ContextWindow::new(4);
-        w.append(&[1, 2]);
-        assert!((w.utilization() - 0.5).abs() < 0.01);
+        let mut cw = ContextWindow::new(100);
+        cw.advance(50);
+        assert!((cw.utilization() - 0.5).abs() < 0.01);
     }
 
     #[test]
-    fn test_fixed_budget() {
-        let (p, g) = compute_budgets(4096, 1000, AllocationStrategy::Fixed { max_prompt: 2048 });
-        assert_eq!(p, 1000);
-        assert_eq!(g, 3096);
+    fn test_utilization_zero() {
+        let cw = ContextWindow::new(0);
+        assert_eq!(cw.utilization(), 0.0);
     }
 
     #[test]
-    fn test_dynamic_budget() {
-        let (_p, g) =
-            compute_budgets(4096, 3900, AllocationStrategy::Dynamic { min_generation: 256 });
-        assert!(g >= 256);
+    fn test_reset() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(50);
+        cw.mark_prompt_end();
+        cw.reset();
+        assert_eq!(cw.position, 0);
+        assert_eq!(cw.prompt_end, 0);
     }
 
     #[test]
-    fn test_even_split() {
-        let (p, g) = compute_budgets(4096, 3000, AllocationStrategy::EvenSplit);
-        assert_eq!(p, 2048);
-        assert_eq!(g, 2048);
+    fn test_can_fit() {
+        let mut cw = ContextWindow::new(10);
+        cw.advance(8);
+        assert!(cw.can_fit(2));
+        assert!(!cw.can_fit(3));
     }
 
     #[test]
-    fn test_report() {
-        let mut w = ContextWindow::new(100);
-        w.append(&[1, 2, 3]);
-        let r = w.report();
-        assert_eq!(r.max_length, 100);
-        assert_eq!(r.used, 3);
-        assert_eq!(r.remaining, 97);
+    fn test_truncate() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(150);
+        cw.prompt_end = 50;
+        cw.truncate_to_fit();
+        assert_eq!(cw.position, 100);
+        assert_eq!(cw.prompt_end, 0);
+    }
+
+    #[test]
+    fn test_truncate_no_overflow() {
+        let mut cw = ContextWindow::new(100);
+        cw.advance(50);
+        cw.truncate_to_fit();
+        assert_eq!(cw.position, 50);
+    }
+
+    #[test]
+    fn test_context_presets() {
+        assert_eq!(context_4k().max_length, 4096);
+        assert_eq!(context_16k().max_length, 16384);
+        assert_eq!(context_32k().max_length, 32768);
+    }
+
+    #[test]
+    fn test_kv_cache_bytes() {
+        // Phi-4: 40 layers, 10 kv heads, 128 head dim, fp16
+        let bytes = kv_cache_bytes(4096, 40, 10, 128, 2);
+        assert!(bytes > 0);
+        // Expected: 2 * 40 * 10 * 128 * 4096 * 2 = 838,860,800
+        assert_eq!(bytes, 838_860_800);
+    }
+
+    #[test]
+    fn test_kv_cache_scales() {
+        let short = kv_cache_bytes(1024, 32, 8, 128, 2);
+        let long = kv_cache_bytes(4096, 32, 8, 128, 2);
+        assert_eq!(long, short * 4);
+    }
+
+    #[test]
+    fn test_generated_no_prompt() {
+        let cw = ContextWindow::new(100);
+        assert_eq!(cw.generated_tokens(), 0);
     }
 }
