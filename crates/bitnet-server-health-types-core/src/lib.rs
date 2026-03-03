@@ -32,7 +32,6 @@ pub struct PerformanceIndicators {
 }
 
 /// Readiness checks for Kubernetes readiness probe.
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadinessChecks {
     pub model_loaded: bool,
@@ -60,7 +59,6 @@ pub struct Ac05HealthResponse {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
     use serde_json::json;
