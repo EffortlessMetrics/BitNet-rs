@@ -29,6 +29,7 @@ pub mod security;
 pub mod sse;
 pub mod stream_handler;
 pub mod streaming;
+pub mod streaming_response;
 pub mod websocket;
 
 use anyhow::Result;
