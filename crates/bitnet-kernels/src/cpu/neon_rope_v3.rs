@@ -1,3 +1,9 @@
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::let_and_return)]
 //! NEON-optimized RoPE (Rotary Position Embedding) v3 kernel for Apple Silicon.
 //!
 //! Provides six RoPE operations with NEON SIMD acceleration on AArch64:
@@ -500,9 +506,7 @@ pub fn rope_batch_f32(
             return;
         }
     }
-    scalar_rope_batch_f32(
-        input, cos_table, sin_table, num_heads, head_dim, seq_start, seq_len,
-    );
+    scalar_rope_batch_f32(input, cos_table, sin_table, num_heads, head_dim, seq_start, seq_len);
 }
 
 /// NeoX-style RoPE (split-half layout), dispatching to NEON when available.
@@ -538,9 +542,7 @@ pub fn rope_with_scaling_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_rope_with_scaling_f32(
-                    input, cos_table, sin_table, head_dim, seq_pos, scale,
-                );
+                neon_rope_with_scaling_f32(input, cos_table, sin_table, head_dim, seq_pos, scale);
             }
             return;
         }
@@ -782,7 +784,12 @@ mod tests {
         rope_forward_f32(&mut data, &cos_t, &sin_t, 8, 2);
         inverse_rope_f32(&mut data, &cos_t, &sin_t, 8, 2);
         for i in 0..8 {
-            assert!(approx_eq(data[i], orig[i]), "roundtrip fail at {i}: {} vs {}", data[i], orig[i]);
+            assert!(
+                approx_eq(data[i], orig[i]),
+                "roundtrip fail at {i}: {} vs {}",
+                data[i],
+                orig[i]
+            );
         }
     }
 
@@ -864,10 +871,7 @@ mod tests {
             let mut single = orig[start..start + head_dim].to_vec();
             rope_forward_f32(&mut single, &cos_t, &sin_t, head_dim, 2);
             for d in 0..head_dim {
-                assert!(
-                    approx_eq(batch[start + d], single[d]),
-                    "head {h} dim {d}"
-                );
+                assert!(approx_eq(batch[start + d], single[d]), "head {h} dim {d}");
             }
         }
     }
@@ -891,10 +895,7 @@ mod tests {
                 let mut single = orig[base_idx..base_idx + head_dim].to_vec();
                 rope_forward_f32(&mut single, &cos_t, &sin_t, head_dim, pos);
                 for d in 0..head_dim {
-                    assert!(
-                        approx_eq(batch[base_idx + d], single[d]),
-                        "s={s} h={h} d={d}"
-                    );
+                    assert!(approx_eq(batch[base_idx + d], single[d]), "s={s} h={h} d={d}");
                 }
             }
         }
@@ -925,10 +926,7 @@ mod tests {
         // All heads should be identical since same input + same position
         for h in 1..num_heads {
             for d in 0..head_dim {
-                assert!(
-                    approx_eq(data[d], data[h * head_dim + d]),
-                    "head {h} differs at dim {d}"
-                );
+                assert!(approx_eq(data[d], data[h * head_dim + d]), "head {h} differs at dim {d}");
             }
         }
     }

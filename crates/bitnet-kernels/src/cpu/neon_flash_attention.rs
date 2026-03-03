@@ -1,3 +1,9 @@
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::let_and_return)]
 //! ARM NEON flash attention kernels for Apple Silicon.
 //!
 //! Implements tiled flash attention with NEON SIMD intrinsics, following the

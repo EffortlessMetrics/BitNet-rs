@@ -118,6 +118,26 @@ pub mod neon_quant_calibration;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_fused_mlp;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_attention_masking;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_flash_attention;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_gemv;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_instruction_scheduler;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_kv_cache_v4;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_rope_v3;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_weight_dequantize;
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
