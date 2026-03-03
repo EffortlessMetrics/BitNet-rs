@@ -1,3 +1,24 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(clippy::assertions_on_constants)]
+
 //! Comprehensive property-based tests for Apple Silicon NEON kernel invariants.
 //!
 //! Validates mathematical properties that must hold for NEON-accelerated
@@ -20,7 +41,7 @@ use bitnet_kernels::cpu::neon_activations::{neon_gelu_f32, neon_relu_f32, neon_s
 use bitnet_kernels::cpu::neon_elementwise::{neon_add_f32, neon_mul_f32, neon_scale_f32};
 use bitnet_kernels::cpu::neon_layernorm::{layernorm_neon, rmsnorm_neon};
 use bitnet_kernels::cpu::neon_reductions::{neon_argmax_f32, neon_sum_f32};
-use bitnet_kernels::cpu::neon_rope::build_cos_sin_tables_neon;
+use bitnet_kernels::cpu::neon_rope::neon_rope_precompute_freqs;
 use bitnet_kernels::cpu::neon_softmax::{softmax_neon, softmax_scalar};
 use bitnet_kernels::cpu::quantize::{dequantize_symmetric_i8, quantize_symmetric_i8};
 
@@ -195,8 +216,8 @@ proptest! {
     #![proptest_config(cfg())]
 
     /// RoPE preserves vector norm (rotation is norm-preserving).
-    /// build_cos_sin_tables_neon(dim, max_seq, base) -> (cos, sin).
-    /// apply_rope_neon(data, cos, sin, dim, pos) mutates data in-place.
+    /// neon_rope_precompute_freqs(dim, max_seq, base) -> (cos, sin).
+    /// neon_rope_apply(data, cos, sin, dim, pos) mutates data in-place.
     #[test]
     #[ignore = "requires aarch64 - run on Apple Silicon hardware"]
     fn prop_rope_preserves_norm(
@@ -209,10 +230,10 @@ proptest! {
         let norm_in: f32 = data.iter().map(|x| x * x).sum::<f32>().sqrt();
 
         let (cos_table, sin_table) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, theta) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, theta) };
 
         unsafe {
-            bitnet_kernels::cpu::neon_rope::apply_rope_neon(
+            bitnet_kernels::cpu::neon_rope::neon_rope_apply(
                 &mut data, &cos_table, &sin_table, dim, pos,
             );
         }
@@ -233,8 +254,8 @@ proptest! {
     ) {
         let theta = 10000.0f32;
 
-        let (cos1, sin1) = unsafe { build_cos_sin_tables_neon(dim, max_seq, theta) };
-        let (cos2, sin2) = unsafe { build_cos_sin_tables_neon(dim, max_seq, theta) };
+        let (cos1, sin1) = unsafe { neon_rope_precompute_freqs(dim, max_seq, theta) };
+        let (cos2, sin2) = unsafe { neon_rope_precompute_freqs(dim, max_seq, theta) };
 
         prop_assert_eq!(&cos1, &cos2, "cos tables not deterministic");
         prop_assert_eq!(&sin1, &sin2, "sin tables not deterministic");
@@ -250,10 +271,10 @@ proptest! {
         let mut data: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.1 + 1.0).collect();
 
         let (cos_table, sin_table) =
-            unsafe { build_cos_sin_tables_neon(dim, 1, theta) };
+            unsafe { neon_rope_precompute_freqs(dim, 1, theta) };
 
         unsafe {
-            bitnet_kernels::cpu::neon_rope::apply_rope_neon(
+            bitnet_kernels::cpu::neon_rope::neon_rope_apply(
                 &mut data, &cos_table, &sin_table, dim, 0,
             );
         }

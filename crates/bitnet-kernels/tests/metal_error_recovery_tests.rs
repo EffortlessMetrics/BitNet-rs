@@ -1,3 +1,25 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::manual_saturating_arithmetic)]
+
 //! Metal error recovery and resilience tests for Apple Silicon.
 //!
 //! Validates GPU error handling paths: memory allocation failures, shader
@@ -9,8 +31,6 @@
 
 // Types and constants from `metal_compute` are duplicated here so this test
 // compiles without `--features metal`.
-
-#![allow(dead_code)]
 
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};

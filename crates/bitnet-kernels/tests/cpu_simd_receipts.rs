@@ -1,3 +1,22 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 //! CPU SIMD Receipts and Validation for BitNet-rs Issue #260
 //!
 //! This module validates real CPU SIMD operations and emits receipts for CI validation.
@@ -40,10 +59,10 @@ fn detect_simd_features() -> Vec<String> {
 fn detect_simd_features() -> Vec<String> {
     let mut features = Vec::new();
 
-    if std::is_aarch64_feature_detected!("neon") {
+    if std::arch::is_aarch64_feature_detected!("neon") {
         features.push("neon".to_string());
     }
-    if std::is_aarch64_feature_detected!("asimd") {
+    if std::arch::is_aarch64_feature_detected!("asimd") {
         features.push("asimd".to_string());
     }
 
@@ -84,7 +103,7 @@ fn simd_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
     assert_eq!(a.len(), b.len());
     let mut result = vec![0.0f32; a.len()];
 
-    if std::is_aarch64_feature_detected!("neon") {
+    if std::arch::is_aarch64_feature_detected!("neon") {
         // In a real implementation, this would use NEON intrinsics
         // For testing, we'll simulate the operation
         for i in 0..a.len() {

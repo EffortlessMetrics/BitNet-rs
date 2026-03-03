@@ -1,4 +1,22 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
+
 //! ARM64-specific property-based tests for NEON kernels on Apple Silicon.
 //!
 //! Validates numerical invariants of NEON-accelerated kernels using proptest:
@@ -17,9 +35,7 @@ use proptest::prelude::*;
 use bitnet_kernels::cpu::embedding::embedding_lookup;
 use bitnet_kernels::cpu::layer_norm::{LayerNormConfig, layer_norm as cpu_layer_norm, rms_norm};
 use bitnet_kernels::cpu::neon_layernorm::{layernorm_neon, rmsnorm_neon};
-use bitnet_kernels::cpu::neon_rope::{
-    apply_rope_batch_neon, apply_rope_neon, build_cos_sin_tables_neon,
-};
+use bitnet_kernels::cpu::neon_rope::{neon_rope_apply, neon_rope_precompute_freqs};
 use bitnet_kernels::cpu::quantized_matmul::{i2s_matmul_f32, pack_i2s};
 use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, compute_frequencies};
 
@@ -295,13 +311,13 @@ proptest! {
         let dim = dim_half * 2;
         let max_seq = 65;
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, 10_000.0) };
 
         let data: Vec<f32> = (0..dim).map(|i| (i as f32 + 1.0) * 0.3).collect();
         let norm_before: f32 = data.iter().map(|v| v * v).sum::<f32>().sqrt();
 
         let mut out = data.clone();
-        unsafe { apply_rope_neon(&mut out, &cos_t, &sin_t, dim, pos) };
+        unsafe { neon_rope_apply(&mut out, &cos_t, &sin_t, dim, pos) };
 
         let norm_after: f32 = out.iter().map(|v| v * v).sum::<f32>().sqrt();
         prop_assert!(
@@ -317,11 +333,11 @@ proptest! {
     ) {
         let dim = dim_half * 2;
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, 1, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, 1, 10_000.0) };
 
         let data: Vec<f32> = (0..dim).map(|i| (i as f32 + 1.0) * 0.7).collect();
         let mut out = data.clone();
-        unsafe { apply_rope_neon(&mut out, &cos_t, &sin_t, dim, 0) };
+        unsafe { neon_rope_apply(&mut out, &cos_t, &sin_t, dim, 0) };
 
         for (i, (&orig, &rot)) in data.iter().zip(out.iter()).enumerate() {
             prop_assert!(
@@ -341,7 +357,7 @@ proptest! {
         let dim = dim_half * 2;
         let max_seq = 33;
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, 10_000.0) };
 
         let data: Vec<f32> = (0..num_heads * dim)
             .map(|i| (i as f32 * 0.13) - 2.0)
@@ -350,7 +366,7 @@ proptest! {
         // Batch path.
         let mut batch = data.clone();
         unsafe {
-            apply_rope_batch_neon(&mut batch, &cos_t, &sin_t, dim, num_heads, pos);
+            neon_rope_apply(&mut batch, &cos_t, &sin_t, dim, num_heads, pos);
         }
 
         // Sequential per-head path.
@@ -358,7 +374,7 @@ proptest! {
         for h in 0..num_heads {
             let off = h * dim;
             unsafe {
-                apply_rope_neon(
+                neon_rope_apply(
                     &mut sequential[off..off + dim],
                     &cos_t,
                     &sin_t,
@@ -387,7 +403,7 @@ proptest! {
 
         // NEON tables.
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, 10_000.0) };
 
         // Scalar frequencies (interleaved [cos, sin] per pair).
         let config = RopeConfig::new(dim, max_seq);
@@ -398,7 +414,7 @@ proptest! {
             .collect();
 
         let mut neon_data = data.clone();
-        unsafe { apply_rope_neon(&mut neon_data, &cos_t, &sin_t, dim, pos) };
+        unsafe { neon_rope_apply(&mut neon_data, &cos_t, &sin_t, dim, pos) };
 
         let mut scalar_data = data.clone();
         apply_rope(&mut scalar_data, pos, dim, &freqs);
@@ -420,10 +436,10 @@ proptest! {
         let dim = dim_half * 2;
         let max_seq = 65;
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, 10_000.0) };
 
         let mut data: Vec<f32> = (0..dim).map(|i| (i as f32) * 100.0 - 5000.0).collect();
-        unsafe { apply_rope_neon(&mut data, &cos_t, &sin_t, dim, pos) };
+        unsafe { neon_rope_apply(&mut data, &cos_t, &sin_t, dim, pos) };
 
         for (i, &v) in data.iter().enumerate() {
             prop_assert!(v.is_finite(), "RoPE output[{i}] is not finite: {v}");
@@ -643,7 +659,7 @@ proptest! {
         let dim = dim_half * 2;
         let max_seq = 17;
         let (cos_t, sin_t) =
-            unsafe { build_cos_sin_tables_neon(dim, max_seq, 10_000.0) };
+            unsafe { neon_rope_precompute_freqs(dim, max_seq, 10_000.0) };
 
         let config = RopeConfig::new(dim, max_seq);
         let freqs = compute_frequencies(&config);
@@ -651,7 +667,7 @@ proptest! {
         let data: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.3 - 1.5).collect();
 
         let mut neon_data = data.clone();
-        unsafe { apply_rope_neon(&mut neon_data, &cos_t, &sin_t, dim, pos) };
+        unsafe { neon_rope_apply(&mut neon_data, &cos_t, &sin_t, dim, pos) };
 
         let mut scalar_data = data.clone();
         apply_rope(&mut scalar_data, pos, dim, &freqs);

@@ -85,6 +85,21 @@ impl KernelProvider for NeonKernel {
     }
 }
 
+#[cfg(not(target_arch = "x86_64"))]
+impl Avx2Kernel {
+    /// Stub: QK256 dequantization is not available on non-x86_64 architectures.
+    pub fn dequantize_qk256(
+        &self,
+        _quantized: &[i8],
+        _scales: &[f32],
+        _block_size: usize,
+    ) -> Result<Vec<f32>> {
+        Err(BitNetError::Kernel(KernelError::UnsupportedArchitecture {
+            arch: "AVX2 kernel not available on non-x86_64 architectures".to_string(),
+        }))
+    }
+}
+
 #[cfg(not(target_arch = "aarch64"))]
 impl NeonKernel {
     /// Stub: QK256 dequantization is not available on non-ARM64 architectures.

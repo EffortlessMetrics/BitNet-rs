@@ -1,8 +1,7 @@
 //! Snapshot wave 27 — bitnet-inference config/profiler output stability.
 
 use bitnet_inference::config_builder::{
-    GenerationConfig, HardwareConfig, InferenceConfig, InferenceConfigBuilder, InferencePreset,
-    SamplingConfig,
+    GenerationConfig, HardwareConfig, InferenceConfigBuilder, InferencePreset, SamplingConfig,
 };
 use bitnet_inference::profiler::{
     LayerProfile, LayerStats, MemorySnapshot, ProfileReport, ProfilerConfig,

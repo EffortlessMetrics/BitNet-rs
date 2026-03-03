@@ -2,7 +2,7 @@
 //!
 //! This example shows how to use the AVX2-optimized QK256 dequantization kernel.
 
-use bitnet_kernels::{KernelProvider, cpu::Avx2Kernel};
+use bitnet_kernels::{Avx2Kernel, KernelProvider};
 
 fn main() -> anyhow::Result<()> {
     println!("QK256 Dequantization Demo\n");

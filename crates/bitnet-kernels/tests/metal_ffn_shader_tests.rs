@@ -1,14 +1,25 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::manual_saturating_arithmetic)]
 #![cfg(target_os = "macos")]
-#![allow(
-    dead_code,
-    clippy::let_and_return,
-    clippy::upper_case_acronyms,
-    clippy::useless_vec,
-    clippy::identity_op,
-    clippy::manual_div_ceil,
-    clippy::manual_is_multiple_of,
-    clippy::needless_range_loop
-)]
 
 //! Metal FFN (feed-forward network) shader validation tests for Apple Silicon.
 //!

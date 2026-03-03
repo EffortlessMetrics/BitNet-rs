@@ -1,8 +1,29 @@
+#![allow(clippy::approx_constant)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::duplicated_attributes)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_abs_diff)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_slice_size_calculation)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::no_effect)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_vec)]
+#![allow(clippy::useless_vec, clippy::excessive_precision)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(clippy::assertions_on_constants)]
+
 //! CPU-reference tests for the OpenCL activation and softmax kernels.
 //!
 //! These tests validate kernel correctness without requiring OpenCL hardware
 //! by implementing CPU reference functions that mirror the kernel logic.
-#![allow(clippy::useless_vec, clippy::excessive_precision)]
 
 use bitnet_kernels::kernels;
 
