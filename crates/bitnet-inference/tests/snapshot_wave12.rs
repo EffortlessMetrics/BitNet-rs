@@ -3,7 +3,6 @@
 //! Covers: CacheConfig, EvictionPolicy, KV cache optimized types
 //! (CacheEvictionPolicy, EvictionConfig, CacheMetrics), PrefixCacheConfig,
 //! PrefixCacheStats, GenConfig, PerformanceMode, InferenceMetrics edge cases,
-#![allow(clippy::field_reassign_with_default)]
 //! LatencyHistogram edge cases, GenerationConfig JSON, InferenceConfig JSON.
 
 use bitnet_inference::GenConfig;
@@ -231,5 +230,6 @@ fn inference_config_default_json() {
         generation: GenerationConfig::default(),
         hardware: HardwareConfig::default(),
     };
+    #[allow(clippy::needless_borrows_for_generic_args)]
     insta::assert_json_snapshot!(&c);
 }

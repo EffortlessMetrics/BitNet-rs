@@ -5,6 +5,8 @@
 //! ExecutionRouterConfig, DeviceSelectionStrategy, DeviceHealth, ModelState,
 //! ModelEntry JSON, ErrorResponse JSON, InferenceResponse JSON, DeviceCapabilities.
 
+use std::time::Duration;
+
 use bitnet_server::batch_engine::BatchEngineConfig;
 use bitnet_server::concurrency::ConcurrencyConfig;
 use bitnet_server::config::{DeviceConfig, ServerConfig};
