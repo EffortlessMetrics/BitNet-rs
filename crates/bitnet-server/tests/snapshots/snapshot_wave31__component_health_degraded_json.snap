@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: c
+---
+{
+  "status": "degraded",
+  "message": "High memory pressure",
+  "last_check": "2025-01-15T01:00:00Z",
+  "response_time_ms": 150
+}

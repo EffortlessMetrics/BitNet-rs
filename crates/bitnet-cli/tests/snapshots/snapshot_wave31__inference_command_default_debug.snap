@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: "format!(\"model_format={} max_tokens={} temperature={:.1} repetition_penalty={:.2}\",\ncmd.model_format, cmd.max_tokens, cmd.temperature, cmd.repetition_penalty)"
+---
+model_format= max_tokens=0 temperature=0.0 repetition_penalty=0.00

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: "format!(\"QK256_BLOCK={} QK256_PACKED_BYTES={} QK256_SIZE_TOLERANCE={}\",\nbitnet_quantization::i2s_qk256::QK256_BLOCK,\nbitnet_quantization::i2s_qk256::QK256_PACKED_BYTES,\nbitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT,)"
+---
+QK256_BLOCK=256 QK256_PACKED_BYTES=64 QK256_SIZE_TOLERANCE=0.001

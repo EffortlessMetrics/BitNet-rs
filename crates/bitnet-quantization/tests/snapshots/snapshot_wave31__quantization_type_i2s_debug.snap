@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: "QuantizationType::I2S"
+---
+I2S

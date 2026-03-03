@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: "QuantizationType::TL2"
+---
+TL2

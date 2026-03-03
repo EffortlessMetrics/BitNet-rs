@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: e
+---
+{
+  "error": "Model not loaded",
+  "error_code": "MODEL_NOT_LOADED",
+  "request_id": "req-789",
+  "details": {
+    "available_models": [],
+    "hint": "POST /models/load to load a model first"
+  }
+}

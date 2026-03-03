@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: toml
+---
+default_device = "auto"
+
+[logging]
+level = "info"
+format = "pretty"
+timestamps = true
+
+[performance]
+batch_size = 1
+memory_optimization = true

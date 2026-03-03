@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: m
+---
+{
+  "active_requests": 0,
+  "total_requests": 0,
+  "error_rate_percent": 0.0,
+  "avg_response_time_ms": 0.0,
+  "memory_usage_mb": 0.0,
+  "tokens_per_second": 0.0
+}

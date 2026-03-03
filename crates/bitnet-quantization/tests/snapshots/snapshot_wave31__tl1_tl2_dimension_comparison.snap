@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: "format!(\"tl1(block={} table={} bits={}) tl2(block={} table={} bits={})\",\ntl1.block_size, tl1.lookup_table_size, tl1.precision_bits, tl2.block_size,\ntl2.lookup_table_size, tl2.precision_bits)"
+---
+tl1(block=64 table=256 bits=2) tl2(block=128 table=256 bits=2)

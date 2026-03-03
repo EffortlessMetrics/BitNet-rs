@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: cfg
+---
+{
+  "cpu_threads": null,
+  "batch_size": 1,
+  "memory_optimization": true
+}

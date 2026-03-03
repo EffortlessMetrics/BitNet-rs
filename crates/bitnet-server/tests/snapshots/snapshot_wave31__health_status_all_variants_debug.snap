@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: variants
+---
+[
+    "Healthy",
+    "Degraded",
+    "Unhealthy",
+]

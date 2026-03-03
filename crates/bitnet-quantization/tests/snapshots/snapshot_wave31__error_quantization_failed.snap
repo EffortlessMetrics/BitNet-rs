@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: err.to_string()
+---
+Quantization failed: block size mismatch: expected 256, got 128

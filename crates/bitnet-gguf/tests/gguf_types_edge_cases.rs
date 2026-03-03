@@ -1,6 +1,5 @@
 //! Edge-case tests for bitnet-gguf: magic validation, version reading,
-//! header parsing, `GgufValueType` enum, `GgufValue` variants, and file info.
-#![allow(clippy::approx_constant, clippy::redundant_clone, clippy::assertions_on_constants)]
+//! header parsing, GgufValueType enum, GgufValue variants, and file info.
 
 use bitnet_gguf::{
     GGUF_MAGIC, GGUF_VERSION_MAX, GGUF_VERSION_MIN, GgufFileInfo, GgufMetadataKv, GgufValue,

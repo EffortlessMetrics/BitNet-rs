@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: cfg.server
+---
+ServerSettings {
+    host: "0.0.0.0",
+    port: 8080,
+    workers: None,
+    keep_alive: 60s,
+    request_timeout: 300s,
+    graceful_shutdown_timeout: 30s,
+    default_model_path: None,
+    default_tokenizer_path: None,
+    default_device: Auto,
+}

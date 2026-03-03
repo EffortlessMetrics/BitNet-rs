@@ -245,7 +245,6 @@ fn get_memory_usage_linux() -> u64 {
 fn get_memory_usage_macos() -> u64 {
     use std::mem;
 
-    #[allow(deprecated)]
     unsafe {
         let mut info: libc::mach_task_basic_info = mem::zeroed();
         let mut count = libc::MACH_TASK_BASIC_INFO_COUNT;

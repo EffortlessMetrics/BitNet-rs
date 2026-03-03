@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: "format!(\"health_path={} prometheus_path={} metrics_interval={}\",\ncfg.monitoring.health_path, cfg.monitoring.prometheus_path,\ncfg.monitoring.metrics_interval)"
+---
+health_path=/health prometheus_path=/metrics metrics_interval=10

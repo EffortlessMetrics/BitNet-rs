@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: r
+---
+{
+  "text": "The capital of France is Paris.",
+  "tokens_generated": 8,
+  "inference_time_ms": 320,
+  "tokens_per_second": 25.0
+}

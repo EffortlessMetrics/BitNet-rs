@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: "format!(\"retry_ms={} keep_alive_secs={}\", cfg.retry_ms, cfg.keep_alive_secs)"
+---
+retry_ms=3000 keep_alive_secs=15

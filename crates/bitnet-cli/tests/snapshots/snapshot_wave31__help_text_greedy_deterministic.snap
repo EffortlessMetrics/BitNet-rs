@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: relevant
+---
+      --greedy                        Enable greedy decoding (temperature=0, top_p=1, top_k=0)
+      --deterministic                 Force deterministic execution (single-threaded, deterministic ops)

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: cfg
+---
+{
+  "level": "info",
+  "format": "pretty",
+  "timestamps": true
+}

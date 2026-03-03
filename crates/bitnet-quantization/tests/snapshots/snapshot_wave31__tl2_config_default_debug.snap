@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave31.rs
+expression: "TL2Config::default()"
+---
+TL2Config {
+    block_size: 128,
+    lookup_table_size: 256,
+    use_avx512: true,
+    use_avx2: true,
+    precision_bits: 2,
+    vectorized_tables: true,
+}

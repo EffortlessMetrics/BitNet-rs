@@ -1,0 +1,36 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: r
+---
+{
+  "status": "healthy",
+  "timestamp": "2025-01-15T00:00:00Z",
+  "uptime_seconds": 3600,
+  "version": "0.2.1-dev",
+  "build": {
+    "version": "0.2.1-dev",
+    "git_sha": "abc1234",
+    "git_branch": "main",
+    "build_timestamp": "2025-01-15T00:00:00Z",
+    "rustc_version": "1.92.0",
+    "cargo_target": "x86_64-unknown-linux-gnu",
+    "cargo_profile": "release"
+  },
+  "components": {
+    "inference_engine": {
+      "status": "healthy",
+      "message": "Ready",
+      "last_check": "2025-01-15T00:00:00Z",
+      "response_time_ms": 2
+    }
+  },
+  "metrics": {
+    "active_requests": 0,
+    "total_requests": 1000,
+    "error_rate_percent": 0.1,
+    "avg_response_time_ms": 45.0,
+    "memory_usage_mb": 512.0,
+    "tokens_per_second": 20.0,
+    "cpu_usage_percent": 35.0
+  }
+}

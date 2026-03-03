@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: r
+---
+{
+  "text": "4",
+  "tokens_generated": 1,
+  "inference_time_ms": 42,
+  "tokens_per_second": 23.8
+}

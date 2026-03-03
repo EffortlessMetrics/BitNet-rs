@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: relevant
+---
+      --temperature <TEMP>            Temperature for sampling (0.0 = greedy, higher = more random) [default: 0.7]
+      --chat-template <TEMPLATE>      Chat template to use (deprecated - use --prompt-template)
+      --prompt-template <TEMPLATE>    Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format) [default: auto]
+      --qa                            Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50) Individual parameters can still be overridden (e.g., --qa --temperature 0.5)

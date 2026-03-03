@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave31.rs
+expression: err.to_string()
+---
+Invalid log format: yaml. Must be one of: pretty, json, compact

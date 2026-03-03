@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: e
+---
+{
+  "error": "Internal server error",
+  "error_code": "INTERNAL_ERROR",
+  "request_id": null,
+  "details": null
+}

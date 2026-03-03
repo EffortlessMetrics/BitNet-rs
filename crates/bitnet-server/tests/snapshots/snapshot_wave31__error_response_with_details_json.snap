@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave31.rs
+expression: e
+---
+{
+  "error": "Invalid request parameters",
+  "error_code": "INVALID_REQUEST",
+  "request_id": "req-abc-456",
+  "details": {
+    "field": "max_tokens",
+    "reason": "must be between 1 and 4096"
+  }
+}
