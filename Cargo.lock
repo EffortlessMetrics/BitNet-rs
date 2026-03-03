@@ -624,6 +624,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-cuda-matmul"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-device-config-core"
 version = "0.2.1-dev"
 dependencies = [
