@@ -23,6 +23,7 @@ members = [
   "crates/bitnet-inference",
   "crates/bitnet-inference-metrics-core", # SRP: shared inference timing/throughput metric DTOs
   "crates/bitnet-rope",
+  "crates/bitnet-cuda-rope",   # CUDA RoPE kernel parameters and launch helpers
   "crates/bitnet-tokenizers",
   "crates/bitnet-tokenizer-model-core", # SRP: tokenizer model/vocabulary detection helpers
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core

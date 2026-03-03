@@ -58,7 +58,6 @@ pub fn observe_target_nll(stats: &mut NllStats, logits: &[f32], target: usize) {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
