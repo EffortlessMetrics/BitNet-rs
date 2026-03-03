@@ -1,10 +1,5 @@
 #![cfg(target_os = "macos")]
-#![allow(
-    dead_code,
-    clippy::identity_op,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop
-)]
+#![allow(dead_code, clippy::identity_op, clippy::manual_div_ceil, clippy::needless_range_loop)]
 
 //! Metal attention shader validation tests for Apple Silicon.
 //!

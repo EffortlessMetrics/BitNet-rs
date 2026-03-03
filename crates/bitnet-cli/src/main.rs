@@ -611,10 +611,7 @@ async fn main() -> Result<()> {
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&archs).unwrap());
             } else {
-                println!(
-                    "{:<30} {:<12} {:<12} Context",
-                    "Architecture", "Norm", "Activation"
-                );
+                println!("{:<30} {:<12} {:<12} Context", "Architecture", "Norm", "Activation");
                 println!("{}", "-".repeat(70));
                 for arch in ArchitectureRegistry::known_architectures() {
                     if let Some(defaults) = ArchitectureRegistry::lookup(arch) {

@@ -1,9 +1,5 @@
 #![cfg(target_os = "macos")]
-#![allow(
-    clippy::identity_op,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop
-)]
+#![allow(clippy::identity_op, clippy::manual_div_ceil, clippy::needless_range_loop)]
 //! Metal full transformer layer validation tests for Apple Silicon.
 //!
 //! Validates complete transformer block computation: self-attention,

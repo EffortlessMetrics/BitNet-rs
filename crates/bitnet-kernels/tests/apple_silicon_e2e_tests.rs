@@ -3,11 +3,7 @@
 //! These tests validate that the ARM NEON kernel implementations produce
 //! correct results when composed together in an inference-like pipeline.
 //! Tests run on any platform but exercise ARM-specific code on aarch64.
-#![allow(
-    clippy::useless_vec,
-    clippy::manual_range_contains,
-    unused_doc_comments
-)]
+#![allow(clippy::useless_vec, clippy::manual_range_contains, unused_doc_comments)]
 
 #[cfg(test)]
 mod tests {
