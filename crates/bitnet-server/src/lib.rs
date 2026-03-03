@@ -21,6 +21,7 @@ pub mod model_registry;
 pub mod monitoring;
 pub mod security;
 pub mod sse;
+pub mod stream_handler;
 pub mod streaming;
 pub mod websocket;
 
