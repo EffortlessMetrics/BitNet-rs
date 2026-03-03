@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_bf16_roundtrip() {
-        let vals = [0.0f32, 1.0, -1.0, 3.14, 100.0, -0.5];
+        let vals = [0.0f32, 1.0, -1.0, 3.15, 100.0, -0.5];
         for &v in &vals {
             let bf = f32_to_bf16(v);
             let back = bf16_to_f32(bf);
