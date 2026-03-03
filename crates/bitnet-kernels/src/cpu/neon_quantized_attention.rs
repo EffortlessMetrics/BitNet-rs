@@ -58,7 +58,7 @@ fn unpack_byte_i2s(byte: u8) -> [i8; 4] {
 // ── Scalar fallback helpers ────────────────────────────────────────────
 
 /// Scalar dot product of f32 query with packed I2_S values.
-#[cfg(test)]
+#[cfg(all(test, target_arch = "aarch64"))]
 fn scalar_dot_i2s(query: &[f32], packed: &[u8], scale: f32) -> f32 {
     let mut acc = 0.0f32;
     let full_bytes = query.len() / 4;
@@ -477,9 +477,410 @@ pub unsafe fn neon_kv_cache_append_i2(
     *cache_len += copy_len;
 }
 
+// ── F32 Quantized Attention Functions ──────────────────────────────────
+
+/// NEON helper: project input through a single quantized i8 weight matrix.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+unsafe fn project_one_neon(
+    input: &[f32],
+    weights: &[i8],
+    scale: f32,
+    hidden_dim: usize,
+    head_dim: usize,
+    output: &mut [f32],
+) {
+    let chunks = hidden_dim / 4;
+    let rem = hidden_dim % 4;
+
+    for j in 0..head_dim {
+        let w_off = j * hidden_dim;
+        let mut acc = vdupq_n_f32(0.0);
+
+        for c in 0..chunks {
+            let b = c * 4;
+            let inp = vld1q_f32(input.as_ptr().add(b));
+            let w = [
+                weights[w_off + b] as f32,
+                weights[w_off + b + 1] as f32,
+                weights[w_off + b + 2] as f32,
+                weights[w_off + b + 3] as f32,
+            ];
+            let wv = vld1q_f32(w.as_ptr());
+            acc = vfmaq_f32(acc, inp, wv);
+        }
+
+        let mut dot = vaddvq_f32(acc);
+        let tail = chunks * 4;
+        for r in 0..rem {
+            dot += input[tail + r] * weights[w_off + tail + r] as f32;
+        }
+
+        output[j] = dot * scale;
+    }
+}
+
+/// Fused Q/K/V projection from quantized i8 weights using NEON.
+///
+/// - `input`: `[hidden_dim]` input vector
+/// - `weights_q/k/v`: `[head_dim * hidden_dim]` row-major quantized
+///   weights
+/// - `scales`: `[3]` dequantization scales for Q, K, V respectively
+/// - `q_out/k_out/v_out`: `[head_dim]` output vectors
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+pub unsafe fn quantized_qkv_projection_neon(
+    input: &[f32],
+    weights_q: &[i8],
+    weights_k: &[i8],
+    weights_v: &[i8],
+    scales: &[f32],
+    hidden_dim: usize,
+    head_dim: usize,
+    q_out: &mut [f32],
+    k_out: &mut [f32],
+    v_out: &mut [f32],
+) {
+    if hidden_dim == 0 || head_dim == 0 {
+        return;
+    }
+    project_one_neon(input, weights_q, scales[0], hidden_dim, head_dim, q_out);
+    project_one_neon(input, weights_k, scales[1], hidden_dim, head_dim, k_out);
+    project_one_neon(input, weights_v, scales[2], hidden_dim, head_dim, v_out);
+}
+
+/// Scalar fallback for `quantized_qkv_projection_neon`.
+#[cfg(not(target_arch = "aarch64"))]
+#[allow(clippy::too_many_arguments)]
+pub fn quantized_qkv_projection_neon(
+    input: &[f32],
+    weights_q: &[i8],
+    weights_k: &[i8],
+    weights_v: &[i8],
+    scales: &[f32],
+    hidden_dim: usize,
+    head_dim: usize,
+    q_out: &mut [f32],
+    k_out: &mut [f32],
+    v_out: &mut [f32],
+) {
+    if hidden_dim == 0 || head_dim == 0 {
+        return;
+    }
+    fn project_scalar(
+        input: &[f32],
+        weights: &[i8],
+        scale: f32,
+        hidden_dim: usize,
+        head_dim: usize,
+        output: &mut [f32],
+    ) {
+        for j in 0..head_dim {
+            let w_off = j * hidden_dim;
+            let mut dot = 0.0f32;
+            for i in 0..hidden_dim {
+                dot += input[i] * weights[w_off + i] as f32;
+            }
+            output[j] = dot * scale;
+        }
+    }
+    project_scalar(input, weights_q, scales[0], hidden_dim, head_dim, q_out);
+    project_scalar(input, weights_k, scales[1], hidden_dim, head_dim, k_out);
+    project_scalar(input, weights_v, scales[2], hidden_dim, head_dim, v_out);
+}
+
+/// Compute scaled dot-product attention scores using NEON.
+///
+/// - `q`: `[seq_len * head_dim]` query vectors
+/// - `k`: `[seq_len * head_dim]` key vectors
+/// - `scale`: scaling factor (typically 1/√head_dim)
+/// - `output`: `[seq_len * seq_len]` attention score matrix
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+pub unsafe fn attention_scores_neon(
+    q: &[f32],
+    k: &[f32],
+    seq_len: usize,
+    head_dim: usize,
+    scale: f32,
+    output: &mut [f32],
+) {
+    if seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    let chunks = head_dim / 4;
+    let rem = head_dim % 4;
+
+    for qi in 0..seq_len {
+        let q_off = qi * head_dim;
+        for ki in 0..seq_len {
+            let k_off = ki * head_dim;
+
+            let mut acc = vdupq_n_f32(0.0);
+            for c in 0..chunks {
+                let b = c * 4;
+                let qv = vld1q_f32(q.as_ptr().add(q_off + b));
+                let kv = vld1q_f32(k.as_ptr().add(k_off + b));
+                acc = vfmaq_f32(acc, qv, kv);
+            }
+
+            let mut dot = vaddvq_f32(acc);
+            let tail = chunks * 4;
+            for r in 0..rem {
+                dot += q[q_off + tail + r] * k[k_off + tail + r];
+            }
+
+            output[qi * seq_len + ki] = dot * scale;
+        }
+    }
+}
+
+/// Scalar fallback for `attention_scores_neon`.
+#[cfg(not(target_arch = "aarch64"))]
+pub fn attention_scores_neon(
+    q: &[f32],
+    k: &[f32],
+    seq_len: usize,
+    head_dim: usize,
+    scale: f32,
+    output: &mut [f32],
+) {
+    if seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    for qi in 0..seq_len {
+        for ki in 0..seq_len {
+            let mut dot = 0.0f32;
+            for d in 0..head_dim {
+                dot += q[qi * head_dim + d] * k[ki * head_dim + d];
+            }
+            output[qi * seq_len + ki] = dot * scale;
+        }
+    }
+}
+
+/// In-place numerically stable softmax over attention scores per row.
+///
+/// - `scores`: `[seq_len * seq_len]` attention scores (modified in
+///   place)
+/// - `seq_len`: number of rows and columns
+///
+/// Uses max-subtraction for numerical stability.
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+pub unsafe fn attention_softmax_neon(scores: &mut [f32], seq_len: usize) {
+    if seq_len == 0 {
+        return;
+    }
+    for i in 0..seq_len {
+        let start = i * seq_len;
+        let row = &mut scores[start..start + seq_len];
+        neon_softmax_row(row);
+    }
+}
+
+/// Scalar fallback for `attention_softmax_neon`.
+#[cfg(not(target_arch = "aarch64"))]
+pub fn attention_softmax_neon(scores: &mut [f32], seq_len: usize) {
+    if seq_len == 0 {
+        return;
+    }
+    for i in 0..seq_len {
+        let start = i * seq_len;
+        let row = &mut scores[start..start + seq_len];
+        let max = row.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        let mut sum = 0.0f32;
+        for v in row.iter_mut() {
+            *v = (*v - max).exp();
+            sum += *v;
+        }
+        if sum > 0.0 {
+            for v in row.iter_mut() {
+                *v /= sum;
+            }
+        }
+    }
+}
+
+/// Weighted sum of value vectors using attention scores (NEON).
+///
+/// - `scores`: `[seq_len * seq_len]` attention weights (after softmax)
+/// - `v`: `[seq_len * head_dim]` value vectors
+/// - `output`: `[seq_len * head_dim]` result
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+pub unsafe fn attention_weighted_sum_neon(
+    scores: &[f32],
+    v: &[f32],
+    seq_len: usize,
+    head_dim: usize,
+    output: &mut [f32],
+) {
+    if seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    let chunks = head_dim / 4;
+    let rem = head_dim % 4;
+
+    for val in output[..seq_len * head_dim].iter_mut() {
+        *val = 0.0;
+    }
+
+    for qi in 0..seq_len {
+        let out_off = qi * head_dim;
+        for vi in 0..seq_len {
+            let w = scores[qi * seq_len + vi];
+            if w == 0.0 {
+                continue;
+            }
+            let w_vec = vdupq_n_f32(w);
+            let v_off = vi * head_dim;
+
+            for c in 0..chunks {
+                let b = c * 4;
+                let existing = vld1q_f32(output.as_ptr().add(out_off + b));
+                let val = vld1q_f32(v.as_ptr().add(v_off + b));
+                let result = vfmaq_f32(existing, w_vec, val);
+                vst1q_f32(output.as_mut_ptr().add(out_off + b), result);
+            }
+
+            let tail = chunks * 4;
+            for r in 0..rem {
+                output[out_off + tail + r] += w * v[v_off + tail + r];
+            }
+        }
+    }
+}
+
+/// Scalar fallback for `attention_weighted_sum_neon`.
+#[cfg(not(target_arch = "aarch64"))]
+pub fn attention_weighted_sum_neon(
+    scores: &[f32],
+    v: &[f32],
+    seq_len: usize,
+    head_dim: usize,
+    output: &mut [f32],
+) {
+    if seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    for val in output[..seq_len * head_dim].iter_mut() {
+        *val = 0.0;
+    }
+    for qi in 0..seq_len {
+        for vi in 0..seq_len {
+            let w = scores[qi * seq_len + vi];
+            for d in 0..head_dim {
+                output[qi * head_dim + d] += w * v[vi * head_dim + d];
+            }
+        }
+    }
+}
+
+/// Full multi-head attention pipeline (NEON-accelerated).
+///
+/// Computes scaled dot-product attention per head:
+/// `output = softmax(Q·K^T * scale) · V`
+///
+/// - `q/k/v`: `[num_heads * seq_len * head_dim]`
+/// - `scale`: attention scale factor (typically 1/√head_dim)
+/// - `output`: `[num_heads * seq_len * head_dim]` result
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+pub unsafe fn multi_head_attention_neon(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    num_heads: usize,
+    seq_len: usize,
+    head_dim: usize,
+    scale: f32,
+    output: &mut [f32],
+) {
+    if num_heads == 0 || seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    let head_stride = seq_len * head_dim;
+    let score_size = seq_len * seq_len;
+
+    for h in 0..num_heads {
+        let off = h * head_stride;
+        let q_head = &q[off..off + head_stride];
+        let k_head = &k[off..off + head_stride];
+        let v_head = &v[off..off + head_stride];
+        let out_head = &mut output[off..off + head_stride];
+
+        let mut scores = vec![0.0f32; score_size];
+        attention_scores_neon(q_head, k_head, seq_len, head_dim, scale, &mut scores);
+        attention_softmax_neon(&mut scores, seq_len);
+        attention_weighted_sum_neon(&scores, v_head, seq_len, head_dim, out_head);
+    }
+}
+
+/// Scalar fallback for `multi_head_attention_neon`.
+#[cfg(not(target_arch = "aarch64"))]
+#[allow(clippy::too_many_arguments)]
+pub fn multi_head_attention_neon(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    num_heads: usize,
+    seq_len: usize,
+    head_dim: usize,
+    scale: f32,
+    output: &mut [f32],
+) {
+    if num_heads == 0 || seq_len == 0 || head_dim == 0 {
+        return;
+    }
+    let head_stride = seq_len * head_dim;
+    let score_size = seq_len * seq_len;
+
+    for h in 0..num_heads {
+        let off = h * head_stride;
+        let mut scores = vec![0.0f32; score_size];
+        attention_scores_neon(
+            &q[off..off + head_stride],
+            &k[off..off + head_stride],
+            seq_len,
+            head_dim,
+            scale,
+            &mut scores,
+        );
+        attention_softmax_neon(&mut scores, seq_len);
+        attention_weighted_sum_neon(
+            &scores,
+            &v[off..off + head_stride],
+            seq_len,
+            head_dim,
+            &mut output[off..off + head_stride],
+        );
+    }
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "aarch64"))]
 mod tests {
     use super::*;
 
@@ -1378,5 +1779,483 @@ mod tests {
         for (a, b) in r1.iter().zip(r2.iter()) {
             assert!((b - 2.0 * a).abs() < 1e-4, "{b} vs 2*{a}");
         }
+    }
+
+    // ── quantized_qkv_projection_neon tests ────────────────────────────
+
+    #[test]
+    fn projection_basic() {
+        let hidden_dim = 4;
+        let head_dim = 2;
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let wq: Vec<i8> = vec![1, 0, -1, 0, 0, 1, 0, -1];
+        let wk: Vec<i8> = vec![1, 1, 0, 0, 0, 0, 1, 1];
+        let wv: Vec<i8> = vec![-1, -1, -1, -1, 1, 1, 1, 1];
+        let scales = vec![1.0, 1.0, 1.0];
+        let mut q = vec![0.0; head_dim];
+        let mut k = vec![0.0; head_dim];
+        let mut v = vec![0.0; head_dim];
+        unsafe {
+            quantized_qkv_projection_neon(
+                &input, &wq, &wk, &wv, &scales, hidden_dim, head_dim, &mut q, &mut k, &mut v,
+            );
+        }
+        // q[0]=1-3=-2, q[1]=2-4=-2
+        assert!((q[0] - (-2.0)).abs() < 1e-5);
+        assert!((q[1] - (-2.0)).abs() < 1e-5);
+        // k[0]=1+2=3, k[1]=3+4=7
+        assert!((k[0] - 3.0).abs() < 1e-5);
+        assert!((k[1] - 7.0).abs() < 1e-5);
+        // v[0]=-(1+2+3+4)=-10, v[1]=1+2+3+4=10
+        assert!((v[0] - (-10.0)).abs() < 1e-5);
+        assert!((v[1] - 10.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn projection_zero_weights() {
+        let hd = 4;
+        let od = 2;
+        let input = vec![5.0; hd];
+        let w: Vec<i8> = vec![0; od * hd];
+        let s = vec![1.0, 1.0, 1.0];
+        let mut q = vec![99.0; od];
+        let mut k = vec![99.0; od];
+        let mut v = vec![99.0; od];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, od, &mut q, &mut k, &mut v);
+        }
+        for val in q.iter().chain(k.iter()).chain(v.iter()) {
+            assert!(*val == 0.0);
+        }
+    }
+
+    #[test]
+    fn projection_scale_factor() {
+        let hd = 4;
+        let od = 1;
+        let input = vec![1.0; hd];
+        let w: Vec<i8> = vec![1; hd];
+        let s = vec![0.5, 2.0, 3.0];
+        let mut q = vec![0.0];
+        let mut k = vec![0.0];
+        let mut v = vec![0.0];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, od, &mut q, &mut k, &mut v);
+        }
+        assert!((q[0] - 2.0).abs() < 1e-5);
+        assert!((k[0] - 8.0).abs() < 1e-5);
+        assert!((v[0] - 12.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn projection_single_dim() {
+        let input = vec![3.0];
+        let w: Vec<i8> = vec![-1];
+        let s = vec![1.0, 1.0, 1.0];
+        let mut q = vec![0.0];
+        let mut k = vec![0.0];
+        let mut v = vec![0.0];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, 1, 1, &mut q, &mut k, &mut v);
+        }
+        assert!((q[0] - (-3.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn projection_non_aligned_dim() {
+        let hd = 5;
+        let od = 3;
+        let input = vec![1.0; hd];
+        let w: Vec<i8> = vec![1; od * hd];
+        let s = vec![1.0, 1.0, 1.0];
+        let mut q = vec![0.0; od];
+        let mut k = vec![0.0; od];
+        let mut v = vec![0.0; od];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, od, &mut q, &mut k, &mut v);
+        }
+        for val in &q {
+            assert!((*val - 5.0).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn projection_negative_weights() {
+        let hd = 4;
+        let input = vec![2.0; hd];
+        let w: Vec<i8> = vec![-1; hd];
+        let s = vec![1.0, 1.0, 1.0];
+        let mut q = vec![0.0];
+        let mut k = vec![0.0];
+        let mut v = vec![0.0];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, 1, &mut q, &mut k, &mut v);
+        }
+        assert!((q[0] - (-8.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn projection_large_dim() {
+        let hd = 64;
+        let od = 16;
+        let input = vec![0.5; hd];
+        let w: Vec<i8> = vec![1; od * hd];
+        let s = vec![0.1, 0.1, 0.1];
+        let mut q = vec![0.0; od];
+        let mut k = vec![0.0; od];
+        let mut v = vec![0.0; od];
+        unsafe {
+            quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, od, &mut q, &mut k, &mut v);
+        }
+        // dot = 64*0.5 = 32, * 0.1 = 3.2
+        for val in &q {
+            assert!((*val - 3.2).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn projection_empty_returns_early() {
+        let mut q = vec![99.0];
+        let mut k = vec![99.0];
+        let mut v = vec![99.0];
+        unsafe {
+            quantized_qkv_projection_neon(
+                &[],
+                &[],
+                &[],
+                &[],
+                &[1.0, 1.0, 1.0],
+                0,
+                0,
+                &mut q,
+                &mut k,
+                &mut v,
+            );
+        }
+        assert_eq!(q[0], 99.0);
+    }
+
+    // ── attention_scores_neon tests ────────────────────────────────────
+
+    #[test]
+    fn scores_single_position() {
+        let q = vec![1.0, 0.0, 0.0, 0.0];
+        let k = vec![1.0, 0.0, 0.0, 0.0];
+        let mut out = vec![0.0];
+        unsafe {
+            attention_scores_neon(&q, &k, 1, 4, 1.0, &mut out);
+        }
+        assert!((out[0] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scores_two_positions() {
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let k = vec![1.0, 0.0, 0.0, 1.0];
+        let mut out = vec![0.0; 4];
+        unsafe {
+            attention_scores_neon(&q, &k, 2, 2, 1.0, &mut out);
+        }
+        assert!((out[0] - 1.0).abs() < 1e-5);
+        assert!(out[1].abs() < 1e-5);
+        assert!(out[2].abs() < 1e-5);
+        assert!((out[3] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scores_scale_applied() {
+        let q = vec![1.0; 4];
+        let k = vec![1.0; 4];
+        let mut out = vec![0.0];
+        unsafe {
+            attention_scores_neon(&q, &k, 1, 4, 0.25, &mut out);
+        }
+        assert!((out[0] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scores_matches_manual_dot() {
+        let q = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let k = vec![0.5, -0.5, 1.0, 1.0, 1.0, 1.0];
+        let mut out = vec![0.0; 4];
+        unsafe {
+            attention_scores_neon(&q, &k, 2, 3, 1.0, &mut out);
+        }
+        assert!((out[0] - 2.5).abs() < 1e-5);
+        assert!((out[1] - 6.0).abs() < 1e-5);
+        assert!((out[2] - 5.5).abs() < 1e-5);
+        assert!((out[3] - 15.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scores_non_aligned_dim() {
+        let q = vec![1.0; 5];
+        let k = vec![2.0; 5];
+        let mut out = vec![0.0];
+        unsafe {
+            attention_scores_neon(&q, &k, 1, 5, 1.0, &mut out);
+        }
+        assert!((out[0] - 10.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scores_empty_input() {
+        let mut out = vec![99.0];
+        unsafe {
+            attention_scores_neon(&[], &[], 0, 4, 1.0, &mut out);
+        }
+        assert_eq!(out[0], 99.0);
+    }
+
+    // ── attention_softmax_neon tests ───────────────────────────────────
+
+    #[test]
+    fn attn_softmax_uniform_input() {
+        let sl = 4;
+        let mut scores = vec![1.0; sl * sl];
+        unsafe { attention_softmax_neon(&mut scores, sl) };
+        for i in 0..sl {
+            let sum: f32 = scores[i * sl..(i + 1) * sl].iter().sum();
+            assert!((sum - 1.0).abs() < 1e-5);
+            for j in 0..sl {
+                assert!((scores[i * sl + j] - 0.25).abs() < 1e-5);
+            }
+        }
+    }
+
+    #[test]
+    fn attn_softmax_rows_sum_to_one() {
+        let sl = 3;
+        let mut scores = vec![1.0, 2.0, 3.0, -1.0, 0.0, 1.0, 10.0, -10.0, 0.0];
+        unsafe { attention_softmax_neon(&mut scores, sl) };
+        for i in 0..sl {
+            let sum: f32 = scores[i * sl..(i + 1) * sl].iter().sum();
+            assert!((sum - 1.0).abs() < 1e-5, "row {i} sum = {sum}");
+        }
+    }
+
+    #[test]
+    fn attn_softmax_large_values_stability() {
+        let sl = 2;
+        let mut scores = vec![1000.0, 1001.0, -1000.0, -999.0];
+        unsafe { attention_softmax_neon(&mut scores, sl) };
+        for v in &scores {
+            assert!(v.is_finite(), "non-finite: {v}");
+            assert!(*v >= 0.0);
+        }
+        let s0: f32 = scores[0..2].iter().sum();
+        let s1: f32 = scores[2..4].iter().sum();
+        assert!((s0 - 1.0).abs() < 1e-5);
+        assert!((s1 - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn attn_softmax_negative_values() {
+        let sl = 2;
+        let mut scores = vec![-5.0, -3.0, -100.0, -50.0];
+        unsafe { attention_softmax_neon(&mut scores, sl) };
+        for v in &scores {
+            assert!(*v >= 0.0 && *v <= 1.0);
+        }
+    }
+
+    #[test]
+    fn attn_softmax_single_element_rows() {
+        let mut scores = vec![42.0];
+        unsafe { attention_softmax_neon(&mut scores, 1) };
+        assert!((scores[0] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn attn_softmax_preserves_order() {
+        let sl = 3;
+        let mut scores = vec![1.0, 3.0, 2.0, 5.0, 1.0, 3.0, 0.0, 0.0, 0.0];
+        unsafe { attention_softmax_neon(&mut scores, sl) };
+        // Row 0: input [1,3,2] → scores[1] > scores[2] > scores[0]
+        assert!(scores[1] > scores[2]);
+        assert!(scores[2] > scores[0]);
+    }
+
+    #[test]
+    fn attn_softmax_empty() {
+        let mut scores: Vec<f32> = vec![];
+        unsafe { attention_softmax_neon(&mut scores, 0) };
+    }
+
+    // ── attention_weighted_sum_neon tests ──────────────────────────────
+
+    #[test]
+    fn wsum_f32_identity() {
+        let sl = 2;
+        let hd = 3;
+        let scores = vec![1.0, 0.0, 0.0, 1.0];
+        let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut out = vec![0.0; sl * hd];
+        unsafe {
+            attention_weighted_sum_neon(&scores, &v, sl, hd, &mut out);
+        }
+        let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        for (i, (&e, &r)) in expected.iter().zip(out.iter()).enumerate() {
+            assert!((e - r).abs() < 1e-5, "idx {i}: {e} vs {r}");
+        }
+    }
+
+    #[test]
+    fn wsum_f32_uniform() {
+        let sl = 2;
+        let hd = 2;
+        let scores = vec![0.5, 0.5, 0.5, 0.5];
+        let v = vec![2.0, 4.0, 6.0, 8.0];
+        let mut out = vec![0.0; sl * hd];
+        unsafe {
+            attention_weighted_sum_neon(&scores, &v, sl, hd, &mut out);
+        }
+        assert!((out[0] - 4.0).abs() < 1e-5);
+        assert!((out[1] - 6.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn wsum_f32_single_pos() {
+        let hd = 4;
+        let scores = vec![1.0];
+        let v = vec![1.0, -1.0, 2.0, -2.0];
+        let mut out = vec![0.0; hd];
+        unsafe {
+            attention_weighted_sum_neon(&scores, &v, 1, hd, &mut out);
+        }
+        assert!((out[0] - 1.0).abs() < 1e-5);
+        assert!((out[1] - (-1.0)).abs() < 1e-5);
+        assert!((out[2] - 2.0).abs() < 1e-5);
+        assert!((out[3] - (-2.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn wsum_f32_zero_scores() {
+        let sl = 2;
+        let hd = 2;
+        let scores = vec![0.0; sl * sl];
+        let v = vec![100.0, 200.0, 300.0, 400.0];
+        let mut out = vec![0.0; sl * hd];
+        unsafe {
+            attention_weighted_sum_neon(&scores, &v, sl, hd, &mut out);
+        }
+        for val in &out {
+            assert!(*val == 0.0);
+        }
+    }
+
+    #[test]
+    fn wsum_f32_non_aligned() {
+        let hd = 5;
+        let scores = vec![1.0];
+        let v = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let mut out = vec![0.0; hd];
+        unsafe {
+            attention_weighted_sum_neon(&scores, &v, 1, hd, &mut out);
+        }
+        for (i, val) in out.iter().enumerate() {
+            assert!((*val - (i + 1) as f32).abs() < 1e-5);
+        }
+    }
+
+    // ── multi_head_attention_neon tests ────────────────────────────────
+
+    #[test]
+    fn mha_f32_single_head_single_seq() {
+        let hd = 4;
+        let scale = 1.0 / (hd as f32).sqrt();
+        let q = vec![1.0; hd];
+        let k = vec![1.0; hd];
+        let v = vec![2.0, 3.0, 4.0, 5.0];
+        let mut out = vec![0.0; hd];
+        unsafe {
+            multi_head_attention_neon(&q, &k, &v, 1, 1, hd, scale, &mut out);
+        }
+        assert!((out[0] - 2.0).abs() < 1e-5);
+        assert!((out[1] - 3.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn mha_f32_output_shape() {
+        let nh = 3;
+        let sl = 2;
+        let hd = 4;
+        let total = nh * sl * hd;
+        let q = vec![1.0; total];
+        let k = vec![1.0; total];
+        let v = vec![1.0; total];
+        let mut out = vec![0.0; total];
+        unsafe {
+            multi_head_attention_neon(&q, &k, &v, nh, sl, hd, 0.5, &mut out);
+        }
+        for val in &out {
+            assert!(val.is_finite());
+        }
+    }
+
+    #[test]
+    fn mha_f32_deterministic() {
+        let nh = 2;
+        let sl = 2;
+        let hd = 4;
+        let total = nh * sl * hd;
+        let q: Vec<f32> = (0..total).map(|i| (i as f32) * 0.1).collect();
+        let k: Vec<f32> = (0..total).map(|i| (i as f32) * -0.05).collect();
+        let v: Vec<f32> = (0..total).map(|i| (i as f32) * 0.2).collect();
+        let mut o1 = vec![0.0; total];
+        let mut o2 = vec![0.0; total];
+        unsafe {
+            multi_head_attention_neon(&q, &k, &v, nh, sl, hd, 0.5, &mut o1);
+            multi_head_attention_neon(&q, &k, &v, nh, sl, hd, 0.5, &mut o2);
+        }
+        assert_eq!(o1, o2);
+    }
+
+    #[test]
+    fn mha_f32_numerical_stability() {
+        let sl = 2;
+        let hd = 4;
+        let total = sl * hd;
+        let q = vec![100.0; total];
+        let k = vec![100.0; total];
+        let v = vec![1.0; total];
+        let mut out = vec![0.0; total];
+        unsafe {
+            multi_head_attention_neon(&q, &k, &v, 1, sl, hd, 1.0, &mut out);
+        }
+        for val in &out {
+            assert!(val.is_finite(), "non-finite: {val}");
+        }
+    }
+
+    #[test]
+    fn mha_f32_heads_independent() {
+        let nh = 2;
+        let hd = 4;
+        let q = vec![
+            1.0, 0.0, 0.0, 0.0, // head 0 q
+            0.0, 0.0, 0.0, 1.0, // head 1 q
+        ];
+        let k = vec![1.0; nh * hd];
+        let v = vec![
+            1.0, 2.0, 3.0, 4.0, // head 0 v
+            5.0, 6.0, 7.0, 8.0, // head 1 v
+        ];
+        let mut out = vec![0.0; nh * hd];
+        unsafe {
+            multi_head_attention_neon(&q, &k, &v, nh, 1, hd, 1.0, &mut out);
+        }
+        // Single-position → softmax([x])=[1.0] → out = v
+        assert!((out[0] - 1.0).abs() < 1e-5);
+        assert!((out[4] - 5.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn mha_f32_empty_returns_early() {
+        let mut out = vec![99.0; 4];
+        unsafe {
+            multi_head_attention_neon(&[], &[], &[], 0, 0, 4, 1.0, &mut out);
+        }
+        assert_eq!(out[0], 99.0);
     }
 }
