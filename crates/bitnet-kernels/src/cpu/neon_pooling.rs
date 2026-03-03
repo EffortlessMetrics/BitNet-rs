@@ -492,7 +492,7 @@ fn adaptive_avg_pool1d_scalar(
 // Tests
 // ===================================================================
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "aarch64"))]
 mod tests {
     use super::*;
 
