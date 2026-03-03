@@ -40,12 +40,7 @@ pub fn rms_norm_inplace(input: &mut [f32], weight: &[f32], eps: f32) {
 }
 
 /// LayerNorm: (x - mean) / sqrt(var + eps) * weight + bias.
-pub fn layer_norm(
-    input: &[f32],
-    weight: &[f32],
-    bias: &[f32],
-    eps: f32,
-) -> Vec<f32> {
+pub fn layer_norm(input: &[f32], weight: &[f32], bias: &[f32], eps: f32) -> Vec<f32> {
     let n = input.len();
     if n == 0 {
         return Vec::new();
@@ -73,11 +68,7 @@ pub fn layer_norm(
 }
 
 /// LayerNorm without bias (weight only).
-pub fn layer_norm_no_bias(
-    input: &[f32],
-    weight: &[f32],
-    eps: f32,
-) -> Vec<f32> {
+pub fn layer_norm_no_bias(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     let n = input.len();
     if n == 0 {
         return Vec::new();
