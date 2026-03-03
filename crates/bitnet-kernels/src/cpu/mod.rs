@@ -139,6 +139,8 @@ pub mod neon_rope_v3;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_weight_dequantize;
+pub mod neon_simd_utils;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
