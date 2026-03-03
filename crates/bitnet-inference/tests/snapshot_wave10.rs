@@ -2,7 +2,6 @@
 //!
 //! Covers: SamplingConfig, config_builder presets, GenerationConfig Debug,
 //! InferenceConfig JSON serialization, streaming config, and validation errors.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_inference::config::{GenerationConfig, InferenceConfig};
 use bitnet_inference::config_builder::{

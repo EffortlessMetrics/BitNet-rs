@@ -339,7 +339,7 @@ jobs:
       - name: Build Rust implementation
         run: |
           echo "🔨 Building Rust implementation with crossval features..."
-          cargo build --workspace \ --locked
+          cargo build --workspace \
             --locked \
             --no-default-features \
             --features "cpu,ffi,crossval"
@@ -354,7 +354,7 @@ jobs:
           echo "🧪 Running Lane B cross-validation tests..."
 
           # Run crossval tests with llama.cpp backend
-          cargo test -p bitnet-crossval \ --locked
+          cargo test -p bitnet-crossval \
             --locked \
             --features "cpu,ffi,crossval" \
             --test dual_backend_integration \
@@ -479,7 +479,7 @@ jobs:
       - name: Build Rust implementation
         run: |
           echo "🔨 Building Rust with BitNet crossval features..."
-          cargo build --workspace \ --locked
+          cargo build --workspace \
             --locked \
             --no-default-features \
             --features "cpu,ffi,crossval"
@@ -491,7 +491,7 @@ jobs:
         run: |
           echo "🧪 Running Lane A cross-validation tests..."
 
-          cargo test -p bitnet-crossval \ --locked
+          cargo test -p bitnet-crossval \
             --locked \
             --features "cpu,ffi,crossval" \
             --test dual_backend_integration \

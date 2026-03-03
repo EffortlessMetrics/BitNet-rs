@@ -107,16 +107,10 @@ pub mod neon_padding_clipping;
 pub mod neon_inference_bridge;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_weight_packing;
+pub mod neon_tensor_ops;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_batch_scheduler;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_graph_executor;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_fused_mlp;
 
 pub use activations::ActivationType;
 pub use activations::{

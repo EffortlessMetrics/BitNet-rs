@@ -1,11 +1,10 @@
-#![allow(clippy::manual_div_ceil, clippy::assertions_on_constants)]
 //! Metal compute pipeline validation tests for Apple Silicon.
 //!
 //! These tests validate Metal/wgpu compute pipeline behaviour including
 //! buffer operations, shader compilation, and dispatch validation.
 //! All tests are `#[ignore]` since they require Metal GPU hardware.
 
-#[cfg(all(test, target_os = "macos", target_arch = "aarch64"))]
+#[cfg(test)]
 mod tests {
     use wgpu::{
         BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
