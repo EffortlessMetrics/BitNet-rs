@@ -21,6 +21,7 @@ pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
 pub mod monitoring;
+pub mod rate_limiter;
 pub mod request_router;
 pub mod runtime_model_registry;
 pub mod security;
