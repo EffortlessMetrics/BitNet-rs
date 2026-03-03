@@ -71,10 +71,10 @@ impl DenseModelConfig {
         if self.hidden_size == 0 {
             return Err("hidden_size must be > 0".to_string());
         }
-        if !self.hidden_size.is_multiple_of(self.num_heads) {
+        if self.hidden_size % self.num_heads != 0 {
             return Err("hidden_size must be divisible by num_heads".to_string());
         }
-        if !self.num_heads.is_multiple_of(self.num_kv_heads) {
+        if self.num_heads % self.num_kv_heads != 0 {
             return Err("num_heads must be divisible by num_kv_heads".to_string());
         }
         if self.vocab_size == 0 {

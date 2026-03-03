@@ -23,23 +23,6 @@ fn shape_numel(shape: &[usize]) -> usize {
 /// Stateless dispatcher for CPU transpose and reshape operations.
 pub struct TransposeKernel;
 
-/// Configuration for an N-dimensional transpose operation.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TransposeConfig {
-    /// Input tensor shape.
-    pub shape: Vec<usize>,
-    /// Dimension permutation (e.g. `[1, 0]` for a 2-D transpose).
-    pub permutation: Vec<usize>,
-}
-
-impl TransposeConfig {
-    /// Compute the output shape after applying the permutation.
-    #[must_use]
-    pub fn output_shape(&self) -> Vec<usize> {
-        self.permutation.iter().map(|&p| self.shape[p]).collect()
-    }
-}
-
 impl TransposeKernel {
     // ── 2-D transpose ──────────────────────────────────────────
 
