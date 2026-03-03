@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: summary
+---
+{
+  "requested": "gpu",
+  "detected": [
+    "cpu-rust"
+  ],
+  "selected": "cpu-rust"
+}

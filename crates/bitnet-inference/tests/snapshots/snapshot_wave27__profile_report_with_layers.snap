@@ -1,0 +1,61 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave27.rs
+expression: report
+---
+{
+  "total_time_us": 2500.0,
+  "per_layer_breakdown": [
+    {
+      "layer_name": "layer_0.attention",
+      "layer_type": "attention",
+      "mean_time_us": 1200.0,
+      "std_time_us": 50.0,
+      "min_time_us": 1150.0,
+      "max_time_us": 1250.0,
+      "count": 5,
+      "total_memory_bytes": 4194304,
+      "total_flops": 1000000
+    },
+    {
+      "layer_name": "layer_0.ffn",
+      "layer_type": "ffn",
+      "mean_time_us": 800.0,
+      "std_time_us": 30.0,
+      "min_time_us": 770.0,
+      "max_time_us": 830.0,
+      "count": 5,
+      "total_memory_bytes": 2097152,
+      "total_flops": 500000
+    }
+  ],
+  "bottleneck_layers": [
+    "layer_0.attention"
+  ],
+  "memory_peak": 8388608,
+  "estimated_flops": 1500000,
+  "memory_snapshots": [
+    {
+      "label": "post_attention",
+      "timestamp_us": 1200.0,
+      "memory_bytes": 8388608
+    }
+  ],
+  "layer_profiles": [
+    {
+      "layer_name": "layer_0.attention",
+      "layer_type": "attention",
+      "forward_time_us": 1200.0,
+      "backward_time_us": 0.0,
+      "memory_bytes": 4194304,
+      "flops_estimate": 1000000
+    },
+    {
+      "layer_name": "layer_0.ffn",
+      "layer_type": "ffn",
+      "forward_time_us": 800.0,
+      "backward_time_us": 0.0,
+      "memory_bytes": 2097152,
+      "flops_estimate": 500000
+    }
+  ]
+}

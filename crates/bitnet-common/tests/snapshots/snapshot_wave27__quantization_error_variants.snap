@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: errors
+---
+[
+    "Unsupported quantization type: Q4_K_M",
+    "Invalid block size: 17",
+    "Quantization failed: overflow in scale",
+    "Resource limit exceeded: exceeds 4GB",
+]

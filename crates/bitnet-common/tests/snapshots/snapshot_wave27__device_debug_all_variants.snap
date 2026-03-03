@@ -1,0 +1,24 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: devices
+---
+[
+    Cpu,
+    Cuda(
+        0,
+    ),
+    Cuda(
+        3,
+    ),
+    Hip(
+        1,
+    ),
+    Npu,
+    Metal,
+    OpenCL(
+        0,
+    ),
+    OpenCL(
+        7,
+    ),
+]

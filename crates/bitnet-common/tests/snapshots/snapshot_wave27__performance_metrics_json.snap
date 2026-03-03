@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: metrics
+---
+{
+  "tokens_per_second": 42.5,
+  "latency_ms": 23.5,
+  "memory_usage_mb": 1024.0,
+  "gpu_utilization": 0.85
+}

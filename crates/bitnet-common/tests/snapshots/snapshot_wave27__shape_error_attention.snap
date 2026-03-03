@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: err.to_string()
+---
+attention shape mismatch: Q=[1, 8, 64, 96], K=[1, 8, 128, 96], V=[1, 8, 128, 48] — V head_dim != Q head_dim

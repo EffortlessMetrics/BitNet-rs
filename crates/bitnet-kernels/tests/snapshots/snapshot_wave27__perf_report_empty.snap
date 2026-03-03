@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave27.rs
+expression: report
+---
+=== Kernel Performance Report ===
+Total kernels: 0
+Total time:    0.00ns
+
+Kernel                Count        Total          Avg   Throughput
+----------------------------------------------------------------------

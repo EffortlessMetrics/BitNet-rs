@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave27.rs
+expression: cfg
+---
+{
+  "num_threads": 0,
+  "memory_limit_mb": 0
+}

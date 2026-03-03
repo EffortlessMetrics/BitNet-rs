@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave27.rs
+expression: errors
+---
+[
+    "Input validation failed: null byte in prompt",
+    "Memory allocation attack detected: tensor claims 1TB",
+    "Resource limit exceeded: tensor_elements = 2000000000 exceeds limit 1000000000",
+    "Malformed data structure: cyclic reference in metadata",
+    "Unsafe operation blocked: mmap - path traversal",
+]
