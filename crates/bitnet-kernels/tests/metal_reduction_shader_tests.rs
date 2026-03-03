@@ -1,3 +1,4 @@
+#![allow(clippy::approx_constant, clippy::redundant_closure, clippy::manual_div_ceil)]
 //! Metal reduction shader tests for Apple Silicon.
 //!
 //! Validates GPU reduction operations (sum, max, min, mean, argmax, argmin,

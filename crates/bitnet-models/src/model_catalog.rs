@@ -61,9 +61,7 @@ pub struct ModelCatalog {
 
 impl ModelCatalog {
     pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-        }
+        Self { entries: Vec::new() }
     }
 
     /// Build catalog with known SLM models.
@@ -206,16 +204,13 @@ impl ModelCatalog {
         self.entries
             .iter()
             .filter(|e| {
-                e.name.to_lowercase().contains(&q)
-                    || e.id.contains(&q)
-                    || e.family.contains(&q)
+                e.name.to_lowercase().contains(&q) || e.id.contains(&q) || e.family.contains(&q)
             })
             .collect()
     }
 
     pub fn families(&self) -> Vec<String> {
-        let mut fams: Vec<_> =
-            self.entries.iter().map(|e| e.family.clone()).collect();
+        let mut fams: Vec<_> = self.entries.iter().map(|e| e.family.clone()).collect();
         fams.sort();
         fams.dedup();
         fams

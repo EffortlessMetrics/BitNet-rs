@@ -114,6 +114,7 @@ impl NeonKernel {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[cfg(not(target_arch = "aarch64"))]

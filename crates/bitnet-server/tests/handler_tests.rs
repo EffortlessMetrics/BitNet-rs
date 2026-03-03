@@ -2,8 +2,8 @@
 //!
 //! These tests validate config types, request/response serialization, and
 //! handler logic in isolation — no actual server is started.
+#![allow(clippy::field_reassign_with_default)]
 
-use std::collections::HashSet;
 use std::net::IpAddr;
 use std::time::Duration;
 

@@ -125,7 +125,7 @@ fn macro_named_args() {
 
 #[test]
 fn macro_padding_and_precision() {
-    warn_once!("boundary_macro_pad", "pi={:.5}, padded={:>10}", 3.14159, "hi");
+    warn_once!("boundary_macro_pad", "pi={:.5}, padded={:>10}", std::f64::consts::PI, "hi");
 }
 
 #[test]

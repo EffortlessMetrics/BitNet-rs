@@ -22,7 +22,7 @@ fn model_format_debug() {
 #[test]
 fn model_format_clone() {
     let f = ModelFormat::SafeTensors;
-    let f2 = f.clone();
+    let f2 = f;
     assert_eq!(f, f2);
 }
 
@@ -276,11 +276,8 @@ fn safetensors_loader_detect_format_nonexistent() {
     let loader = SafeTensorsLoader;
     let result = loader.detect_format(Path::new("/nonexistent/model.safetensors"));
     // Should either return error or Ok(false) for nonexistent file
-    match result {
-        Ok(detected) => {
-            let _ = detected;
-        }
-        Err(_) => {} // Expected for nonexistent file
+    if let Ok(detected) = result {
+        let _ = detected;
     }
 }
 

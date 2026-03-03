@@ -53,7 +53,7 @@ fn kernel_manager_selected_provider_name_before_select() {
 fn kernel_manager_list_providers_nonempty() {
     let km = bitnet_kernels::KernelManager::new();
     let providers = km.list_available_providers();
-    assert!(providers.len() >= 1, "Should have at least fallback");
+    assert!(!providers.is_empty(), "Should have at least fallback");
 }
 
 #[test]

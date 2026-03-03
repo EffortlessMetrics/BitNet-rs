@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_f32_roundtrip() {
-        let data = vec![1.0f32, -2.5, 3.14, 0.0];
+        let data = vec![1.0f32, -2.5, std::f32::consts::PI, 0.0];
         let bytes = f32_to_bytes(&data);
         let back = bytes_to_f32(&bytes);
         assert_eq!(data, back);

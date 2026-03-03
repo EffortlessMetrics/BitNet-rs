@@ -264,15 +264,13 @@ mod tests {
 
     #[test]
     fn test_validate_bad_top_p() {
-        let mut p = SamplingParams::default();
-        p.top_p = 0.0;
+        let p = SamplingParams { top_p: 0.0, ..SamplingParams::default() };
         assert!(p.validate().is_err());
     }
 
     #[test]
     fn test_validate_bad_rep_pen() {
-        let mut p = SamplingParams::default();
-        p.repetition_penalty = 0.5;
+        let p = SamplingParams { repetition_penalty: 0.5, ..SamplingParams::default() };
         assert!(p.validate().is_err());
     }
 

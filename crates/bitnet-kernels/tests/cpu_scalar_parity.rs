@@ -1,4 +1,5 @@
 #![cfg(feature = "cpu")]
+#![allow(clippy::needless_range_loop)]
 //! CPU kernel scalar-vs-SIMD parity tests.
 //!
 //! Exercises key CPU kernels with known inputs across multiple sizes

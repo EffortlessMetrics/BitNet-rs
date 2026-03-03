@@ -7,7 +7,7 @@
 #[cfg(target_arch = "aarch64")]
 mod arm64_tests {
     use bitnet_common::QuantizationType;
-    use bitnet_kernels::{KernelManager, KernelProvider};
+    use bitnet_kernels::KernelManager;
 
     /// Test NEON SIMD detection on ARM64
     ///
@@ -189,6 +189,9 @@ mod non_aarch64_tests {
     fn test_placeholder_non_aarch64() {
         // This test always passes and serves as a placeholder
         // for the ARM64 regression test suite on non-ARM64 platforms.
-        assert!(true);
+        #[allow(clippy::assertions_on_constants)]
+        {
+            assert!(true);
+        }
     }
 }

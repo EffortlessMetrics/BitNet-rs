@@ -3,6 +3,7 @@
 //!
 //! Tests cover: defaults, presets (greedy/creative/balanced/cpu/gpu/memory/
 //! low_latency/high_throughput), builder chaining, validation (valid/invalid
+#![allow(clippy::field_reassign_with_default)]
 //! boundaries), serde roundtrip, stop token management, and debug formatting.
 
 use bitnet_inference::StreamingConfig;

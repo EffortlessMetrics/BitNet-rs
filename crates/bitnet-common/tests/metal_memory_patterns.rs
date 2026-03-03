@@ -131,7 +131,7 @@ fn pool_bucket_satisfies_metal_alignment_for_large_allocs() {
     for &req in &[256, 300, 512, 1000, 4096] {
         let buf = pool.allocate(req);
         assert!(
-            buf.len() % METAL_BUFFER_ALIGNMENT == 0,
+            buf.len().is_multiple_of(METAL_BUFFER_ALIGNMENT),
             "bucket size {} not aligned to {METAL_BUFFER_ALIGNMENT} (req={req})",
             buf.len()
         );
@@ -152,7 +152,7 @@ fn align_up_page_boundary() {
     let size = 17000;
     let aligned = align_up(size, APPLE_SILICON_PAGE_SIZE);
     assert_eq!(aligned, 2 * APPLE_SILICON_PAGE_SIZE);
-    assert!(aligned % APPLE_SILICON_PAGE_SIZE == 0);
+    assert!(aligned.is_multiple_of(APPLE_SILICON_PAGE_SIZE));
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -322,7 +322,7 @@ fn f32_reinterpret_after_reuse() {
     let mut buf = pool.allocate(256);
     {
         let floats = buf.as_f32_mut_slice();
-        floats[0] = 3.14;
+        floats[0] = std::f32::consts::PI;
     }
     drop(buf);
 
@@ -556,7 +556,7 @@ fn metal_aligned_sizes_for_typical_tensors() {
     for &hidden in &[768, 1024, 2048, 4096] {
         let bytes = hidden * 4; // f32
         let aligned = align_up(bytes, METAL_BUFFER_ALIGNMENT);
-        assert!(aligned % METAL_BUFFER_ALIGNMENT == 0);
+        assert!(aligned.is_multiple_of(METAL_BUFFER_ALIGNMENT));
         assert!(aligned >= bytes);
     }
 }

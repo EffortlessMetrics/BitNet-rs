@@ -1,4 +1,5 @@
 //! Wave 9 property tests: kernel module invariants.
+#![allow(clippy::manual_range_contains, clippy::needless_range_loop)]
 //!
 //! Key invariants tested:
 //! - Reduction: sum preserves total, max ≥ all elements, min ≤ all elements,

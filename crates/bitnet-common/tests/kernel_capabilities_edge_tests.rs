@@ -81,7 +81,7 @@ fn kernel_backend_all_variants_debug() {
 #[test]
 fn kernel_backend_clone_eq() {
     let b = KernelBackend::Cuda;
-    let b2 = b.clone();
+    let b2 = b;
     assert_eq!(b, b2);
 }
 

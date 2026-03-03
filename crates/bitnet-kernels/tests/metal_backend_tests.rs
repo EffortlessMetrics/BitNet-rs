@@ -207,7 +207,7 @@ mod metal_buffer_alignment {
         for size in [1_usize, 64, 128, 255, 256, 300, 1024, 4096, 65535] {
             let aligned = metal_align_up(size);
             assert!(
-                aligned % METAL_BUFFER_ALIGNMENT == 0 || size == 0,
+                aligned.is_multiple_of(METAL_BUFFER_ALIGNMENT) || size == 0,
                 "Aligned size {aligned} (from {size}) not a multiple of 256"
             );
             assert!(aligned >= size, "Aligned size {aligned} must be >= input {size}");

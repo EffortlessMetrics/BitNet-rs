@@ -122,7 +122,7 @@ impl ProfileSession {
         self.iteration
     }
 
-    /// Begin timing a layer. Call [`end_layer`] to record the result.
+    /// Begin timing a layer. Call `end_layer` to record the result.
     pub fn begin_layer(&mut self, name: &str, layer_type: &str) {
         if !self.config.enabled {
             return;

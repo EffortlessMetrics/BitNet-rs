@@ -440,11 +440,11 @@ mod tests {
             .unwrap();
 
         // Tensor data: all tiny shapes to keep tests fast
-        let embed_data = f32_bytes(&vec![0.1; 16 * 4]); // [vocab=16, hidden=4]
-        let norm_data = f32_bytes(&vec![1.0; 4]); // [hidden=4]
-        let attn_proj = f32_bytes(&vec![0.5; 4 * 4]); // [4, 4]
-        let ffn_gate = f32_bytes(&vec![0.3; 8 * 4]); // [inter=8, hidden=4]
-        let ffn_down = f32_bytes(&vec![0.2; 4 * 8]); // [hidden=4, inter=8]
+        let embed_data = f32_bytes(&[0.1; 16 * 4]); // [vocab=16, hidden=4]
+        let norm_data = f32_bytes(&[1.0; 4]); // [hidden=4]
+        let attn_proj = f32_bytes(&[0.5; 4 * 4]); // [4, 4]
+        let ffn_gate = f32_bytes(&[0.3; 8 * 4]); // [inter=8, hidden=4]
+        let ffn_down = f32_bytes(&[0.2; 4 * 8]); // [hidden=4, inter=8]
 
         let data = make_safetensors(vec![
             ("model.embed_tokens.weight", SafeDtype::F32, vec![16, 4], &embed_data),

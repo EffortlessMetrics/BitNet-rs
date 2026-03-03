@@ -1,3 +1,4 @@
+#![allow(clippy::manual_div_ceil, clippy::assertions_on_constants)]
 //! Metal compute pipeline validation tests for Apple Silicon.
 //!
 //! These tests validate Metal/wgpu compute pipeline behaviour including

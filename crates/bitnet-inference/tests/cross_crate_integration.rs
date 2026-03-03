@@ -337,7 +337,7 @@ fn gqa_head_dim_compatible_with_attention() {
 
     // Run attention with these dimensions (1 head, short seq for test)
     let seq_len = 4;
-    let total = 1 * seq_len * head_dim;
+    let total = seq_len * head_dim;
     let query = vec![0.1f32; total];
     let key = vec![0.1f32; total];
     let value = vec![0.5f32; total];

@@ -1,3 +1,4 @@
+#![allow(clippy::manual_div_ceil)]
 //! Metal kernel validation tests for Apple Silicon.
 //!
 //! Tests Metal kernel configuration, workgroup sizing, buffer alignment,

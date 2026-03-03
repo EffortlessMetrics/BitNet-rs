@@ -299,7 +299,8 @@ fn get_available_disk_space(_path: &Path) -> Option<u64> {
         let mut statvfs: libc::statvfs = unsafe { mem::zeroed() };
 
         if unsafe { libc::statvfs(path_cstr.as_ptr(), &mut statvfs) } == 0 {
-            Some(statvfs.f_bavail as u64 * statvfs.f_frsize as u64)
+            #[allow(clippy::unnecessary_cast)]
+            Some(statvfs.f_bavail as u64 * statvfs.f_frsize)
         } else {
             None
         }

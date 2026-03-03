@@ -1,4 +1,9 @@
 #![cfg(target_os = "macos")]
+#![allow(
+    clippy::manual_div_ceil,
+    clippy::needless_range_loop,
+    clippy::manual_slice_size_calculation
+)]
 
 //! Metal/wgpu performance validation tests for Apple Silicon.
 //!

@@ -116,7 +116,7 @@ fn mqa_32_to_1_falcon_style() {
 
     assert_eq!(g.head_dim, 128);
     assert_eq!(g.group_size, 32);
-    assert_eq!(g.kv_proj_out, 1 * 128, "MQA: single KV head");
+    assert_eq!(g.kv_proj_out, 128, "MQA: single KV head");
     assert_eq!(g.q_proj_out, 32 * 128);
 }
 

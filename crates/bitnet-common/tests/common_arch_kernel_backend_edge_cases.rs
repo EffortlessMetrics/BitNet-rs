@@ -53,7 +53,7 @@ fn simd_level_equality() {
 #[test]
 fn simd_level_clone_copy() {
     let level = SimdLevel::Avx2;
-    let cloned = level.clone();
+    let cloned = level;
     let copied = level;
     assert_eq!(cloned, copied);
 }

@@ -42,10 +42,16 @@ impl ModelInfo {
         }
     }
 
-    pub fn is_ready(&self) -> bool { self.status == ModelStatus::Ready }
-    pub fn is_failed(&self) -> bool { self.status == ModelStatus::Failed }
+    pub fn is_ready(&self) -> bool {
+        self.status == ModelStatus::Ready
+    }
+    pub fn is_failed(&self) -> bool {
+        self.status == ModelStatus::Failed
+    }
 
-    pub fn mark_loading(&mut self) { self.status = ModelStatus::Loading; }
+    pub fn mark_loading(&mut self) {
+        self.status = ModelStatus::Loading;
+    }
 
     pub fn mark_ready(&mut self) {
         self.status = ModelStatus::Ready;
@@ -63,7 +69,9 @@ impl ModelInfo {
         self.loaded_at = None;
     }
 
-    pub fn record_request(&mut self) { self.request_count += 1; }
+    pub fn record_request(&mut self) {
+        self.request_count += 1;
+    }
 }
 
 /// Registry of models.
@@ -94,8 +102,12 @@ impl RuntimeModelRegistry {
         info
     }
 
-    pub fn get(&self, id: &str) -> Option<&ModelInfo> { self.models.get(id) }
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut ModelInfo> { self.models.get_mut(id) }
+    pub fn get(&self, id: &str) -> Option<&ModelInfo> {
+        self.models.get(id)
+    }
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut ModelInfo> {
+        self.models.get_mut(id)
+    }
 
     pub fn set_default(&mut self, id: &str) -> bool {
         if self.models.contains_key(id) {
@@ -110,7 +122,9 @@ impl RuntimeModelRegistry {
         self.default_model.as_ref().and_then(|id| self.models.get(id))
     }
 
-    pub fn model_count(&self) -> usize { self.models.len() }
+    pub fn model_count(&self) -> usize {
+        self.models.len()
+    }
 
     pub fn ready_models(&self) -> Vec<&ModelInfo> {
         self.models.values().filter(|m| m.is_ready()).collect()
@@ -130,7 +144,9 @@ impl RuntimeModelRegistry {
 }
 
 impl Default for RuntimeModelRegistry {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

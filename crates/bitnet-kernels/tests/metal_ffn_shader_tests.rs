@@ -1,4 +1,14 @@
 #![cfg(target_os = "macos")]
+#![allow(
+    dead_code,
+    clippy::let_and_return,
+    clippy::upper_case_acronyms,
+    clippy::useless_vec,
+    clippy::identity_op,
+    clippy::manual_div_ceil,
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop
+)]
 
 //! Metal FFN (feed-forward network) shader validation tests for Apple Silicon.
 //!
