@@ -12,6 +12,15 @@
 //!
 //! All NEON functions require `target_arch = "aarch64"` and use
 //! `#[target_feature(enable = "neon")]`.
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;

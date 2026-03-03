@@ -7,6 +7,15 @@
 //! - `batched_gemm_f32` — batched matrix multiply
 //! - `fused_gemm_bias_relu_f32` — fused GEMM + bias + ReLU
 //! - `quantized_gemv_i2_f32` — 2-bit quantized weights × f32 input
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -92,14 +101,7 @@ pub fn gemv_f32(a: &[f32], x: &[f32], y: &mut [f32], m: usize, n: usize) {
 /// Requires `neon` target feature at runtime.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_gemm_f32(
-    a: &[f32],
-    b: &[f32],
-    c: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) {
+unsafe fn neon_gemm_f32(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     let m4 = m / 4 * 4;
     let n4 = n / 4 * 4;
 
@@ -162,14 +164,7 @@ unsafe fn neon_gemm_f32(
     }
 }
 
-fn scalar_gemm_f32(
-    a: &[f32],
-    b: &[f32],
-    c: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) {
+fn scalar_gemm_f32(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     for i in 0..m {
         for j in 0..n {
             let mut sum = 0.0f32;
@@ -182,14 +177,7 @@ fn scalar_gemm_f32(
 }
 
 /// General matrix multiply: `C[m×n] = A[m×k] · B[k×n]`.
-pub fn gemm_f32(
-    a: &[f32],
-    b: &[f32],
-    c: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) {
+pub fn gemm_f32(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     assert!(a.len() >= m * k, "a too short");
     assert!(b.len() >= k * n, "b too short");
     assert!(c.len() >= m * n, "c too short");
@@ -254,14 +242,7 @@ unsafe fn neon_gemm_transb_f32(
     }
 }
 
-fn scalar_gemm_transb_f32(
-    a: &[f32],
-    b_t: &[f32],
-    c: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) {
+fn scalar_gemm_transb_f32(a: &[f32], b_t: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     for i in 0..m {
         for j in 0..n {
             let mut sum = 0.0f32;
@@ -274,14 +255,7 @@ fn scalar_gemm_transb_f32(
 }
 
 /// GEMM with B transposed: `C[m×n] = A[m×k] · Bᵀ[n×k]`.
-pub fn gemm_transb_f32(
-    a: &[f32],
-    b_t: &[f32],
-    c: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) {
+pub fn gemm_transb_f32(a: &[f32], b_t: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     assert!(a.len() >= m * k, "a too short");
     assert!(b_t.len() >= n * k, "b_t too short");
     assert!(c.len() >= m * n, "c too short");

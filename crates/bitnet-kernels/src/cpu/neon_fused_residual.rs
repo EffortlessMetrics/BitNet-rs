@@ -9,6 +9,15 @@
 //! 6. Weighted residual
 //! 7. Residual with dropout mask
 //! 8. Stochastic depth
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 // ---------------------------------------------------------------------------
 // Variant 1: Simple residual add — output = input + residual

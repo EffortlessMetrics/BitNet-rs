@@ -13,6 +13,15 @@
 //! via `is_aarch64_feature_detected!("neon")`.
 //!
 //! Processes 4 × f32 NEON lanes with scalar tail fallback.
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -98,12 +107,7 @@ unsafe fn neon_fast_inv_sqrt(val: f32) -> f32 {
 /// Caller must ensure the target supports NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_rms_norm_f32(
-    input: &[f32],
-    weight: &[f32],
-    output: &mut [f32],
-    eps: f32,
-) {
+pub unsafe fn neon_rms_norm_f32(input: &[f32], weight: &[f32], output: &mut [f32], eps: f32) {
     let n = input.len();
     assert_eq!(weight.len(), n, "weight length mismatch");
     assert_eq!(output.len(), n, "output length mismatch");
@@ -141,12 +145,7 @@ pub unsafe fn neon_rms_norm_f32(
 }
 
 /// Scalar RMS normalization (reference / fallback).
-pub fn scalar_rms_norm_f32(
-    input: &[f32],
-    weight: &[f32],
-    output: &mut [f32],
-    eps: f32,
-) {
+pub fn scalar_rms_norm_f32(input: &[f32], weight: &[f32], output: &mut [f32], eps: f32) {
     let n = input.len();
     assert_eq!(weight.len(), n, "weight length mismatch");
     assert_eq!(output.len(), n, "output length mismatch");
@@ -267,8 +266,7 @@ pub fn scalar_layer_norm_f32(
         return;
     }
     let mean: f32 = input.iter().sum::<f32>() / n as f32;
-    let var: f32 =
-        input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n as f32;
+    let var: f32 = input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n as f32;
     let inv_std = 1.0 / (var + eps).sqrt();
     for i in 0..n {
         output[i] = weight[i] * (input[i] - mean) * inv_std + bias[i];
@@ -276,13 +274,7 @@ pub fn scalar_layer_norm_f32(
 }
 
 /// Public dispatcher for layer normalization.
-pub fn layer_norm_f32(
-    input: &[f32],
-    weight: &[f32],
-    bias: &[f32],
-    output: &mut [f32],
-    eps: f32,
-) {
+pub fn layer_norm_f32(input: &[f32], weight: &[f32], bias: &[f32], output: &mut [f32], eps: f32) {
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
@@ -369,8 +361,7 @@ pub unsafe fn neon_group_norm_f32(
                 let off = c * spatial;
                 for s in 0..spatial {
                     let idx = off + s;
-                    output[idx] =
-                        w * (input[idx] - mean) * inv_std + b;
+                    output[idx] = w * (input[idx] - mean) * inv_std + b;
                 }
             }
         }
@@ -407,11 +398,8 @@ pub fn scalar_group_norm_f32(
         let group_data = &input[base..base + group_size];
 
         let mean: f32 = group_data.iter().sum::<f32>() / group_size as f32;
-        let var: f32 = group_data
-            .iter()
-            .map(|x| (x - mean) * (x - mean))
-            .sum::<f32>()
-            / group_size as f32;
+        let var: f32 =
+            group_data.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / group_size as f32;
         let inv_std = 1.0 / (var + eps).sqrt();
 
         for c_off in 0..channels_per_group {
@@ -443,16 +431,13 @@ pub fn group_norm_f32(
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
                 neon_group_norm_f32(
-                    input, weight, bias, output, num_groups, channels,
-                    spatial, eps,
+                    input, weight, bias, output, num_groups, channels, spatial, eps,
                 );
             }
             return;
         }
     }
-    scalar_group_norm_f32(
-        input, weight, bias, output, num_groups, channels, spatial, eps,
-    );
+    scalar_group_norm_f32(input, weight, bias, output, num_groups, channels, spatial, eps);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -512,8 +497,7 @@ pub unsafe fn neon_batch_norm_f32(
 
             let tail = chunks * 4;
             for i in 0..remainder {
-                chunk_out[tail + i] =
-                    scale * chunk_data[tail + i] + shift;
+                chunk_out[tail + i] = scale * chunk_data[tail + i] + shift;
             }
         }
     }
@@ -566,17 +550,12 @@ pub fn batch_norm_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_batch_norm_f32(
-                    input, mean, var, weight, bias, output, channels,
-                    spatial, eps,
-                );
+                neon_batch_norm_f32(input, mean, var, weight, bias, output, channels, spatial, eps);
             }
             return;
         }
     }
-    scalar_batch_norm_f32(
-        input, mean, var, weight, bias, output, channels, spatial, eps,
-    );
+    scalar_batch_norm_f32(input, mean, var, weight, bias, output, channels, spatial, eps);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -591,11 +570,7 @@ pub fn batch_norm_f32(
 /// Caller must ensure the target supports NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_l2_normalize_f32(
-    input: &[f32],
-    output: &mut [f32],
-    eps: f32,
-) {
+pub unsafe fn neon_l2_normalize_f32(input: &[f32], output: &mut [f32], eps: f32) {
     let n = input.len();
     assert_eq!(output.len(), n, "output length mismatch");
     if n == 0 {
@@ -721,8 +696,7 @@ pub unsafe fn neon_instance_norm_f32(
             }
 
             for i in 0..remainder {
-                output[off + tail + i] =
-                    (ch_data[tail + i] - mean) * inv_std;
+                output[off + tail + i] = (ch_data[tail + i] - mean) * inv_std;
             }
         }
     }
@@ -748,11 +722,7 @@ pub fn scalar_instance_norm_f32(
         let off = c * spatial;
         let ch = &input[off..off + spatial];
         let mean: f32 = ch.iter().sum::<f32>() / spatial as f32;
-        let var: f32 = ch
-            .iter()
-            .map(|x| (x - mean) * (x - mean))
-            .sum::<f32>()
-            / spatial as f32;
+        let var: f32 = ch.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / spatial as f32;
         let inv_std = 1.0 / (var + eps).sqrt();
         for s in 0..spatial {
             output[off + s] = (ch[s] - mean) * inv_std;
@@ -810,16 +780,10 @@ mod tests {
         input.iter().zip(weight).map(|(&x, &w)| w * x * inv).collect()
     }
 
-    fn ref_layer_norm(
-        input: &[f32],
-        weight: &[f32],
-        bias: &[f32],
-        eps: f32,
-    ) -> Vec<f32> {
+    fn ref_layer_norm(input: &[f32], weight: &[f32], bias: &[f32], eps: f32) -> Vec<f32> {
         let n = input.len();
         let mean: f32 = input.iter().sum::<f32>() / n as f32;
-        let var: f32 =
-            input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n as f32;
+        let var: f32 = input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / n as f32;
         let inv = 1.0 / (var + eps).sqrt();
         input
             .iter()
@@ -918,10 +882,8 @@ mod tests {
     #[test]
     fn test_rms_norm_scalar_neon_parity() {
         let n = 137;
-        let input: Vec<f32> =
-            (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
-        let weight: Vec<f32> =
-            (0..n).map(|i| 0.5 + (i % 5) as f32 * 0.2).collect();
+        let input: Vec<f32> = (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
+        let weight: Vec<f32> = (0..n).map(|i| 0.5 + (i % 5) as f32 * 0.2).collect();
         let mut out_scalar = vec![0.0; n];
         let mut out_dispatch = vec![0.0; n];
         scalar_rms_norm_f32(&input, &weight, &mut out_scalar, EPS);
@@ -1030,12 +992,9 @@ mod tests {
     #[test]
     fn test_layer_norm_scalar_neon_parity() {
         let n = 137;
-        let input: Vec<f32> =
-            (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
-        let weight: Vec<f32> =
-            (0..n).map(|i| 0.5 + (i % 5) as f32 * 0.2).collect();
-        let bias: Vec<f32> =
-            (0..n).map(|i| -0.3 + (i % 3) as f32 * 0.1).collect();
+        let input: Vec<f32> = (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
+        let weight: Vec<f32> = (0..n).map(|i| 0.5 + (i % 5) as f32 * 0.2).collect();
+        let bias: Vec<f32> = (0..n).map(|i| -0.3 + (i % 3) as f32 * 0.1).collect();
         let mut out_scalar = vec![0.0; n];
         let mut out_dispatch = vec![0.0; n];
         scalar_layer_norm_f32(&input, &weight, &bias, &mut out_scalar, EPS);
@@ -1069,8 +1028,7 @@ mod tests {
         group_norm_f32(&input, &weight, &bias, &mut output, 1, channels, spatial, EPS);
         // All elements normalized together
         let mean: f32 = input.iter().sum::<f32>() / 16.0;
-        let var: f32 =
-            input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / 16.0;
+        let var: f32 = input.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / 16.0;
         let inv = 1.0 / (var + EPS).sqrt();
         let expected: Vec<f32> = input.iter().map(|&x| (x - mean) * inv).collect();
         assert_approx_eq(&output, &expected, TOL);
@@ -1086,9 +1044,7 @@ mod tests {
         let bias = vec![0.0; channels];
         let mut out_gn = vec![0.0; 12];
         let mut out_in = vec![0.0; 12];
-        group_norm_f32(
-            &input, &weight, &bias, &mut out_gn, channels, channels, spatial, EPS,
-        );
+        group_norm_f32(&input, &weight, &bias, &mut out_gn, channels, channels, spatial, EPS);
         // Should match instance norm (weight=1, bias=0)
         scalar_instance_norm_f32(&input, &mut out_in, channels, spatial, EPS);
         assert_approx_eq(&out_gn, &out_in, TOL);
@@ -1105,9 +1061,7 @@ mod tests {
         group_norm_f32(&input, &weight, &bias, &mut output, 2, channels, spatial, EPS);
         // Verify each group normalized independently
         let mut expected = vec![0.0; 8];
-        scalar_group_norm_f32(
-            &input, &weight, &bias, &mut expected, 2, channels, spatial, EPS,
-        );
+        scalar_group_norm_f32(&input, &weight, &bias, &mut expected, 2, channels, spatial, EPS);
         assert_approx_eq(&output, &expected, TOL);
     }
 
@@ -1120,9 +1074,7 @@ mod tests {
         let bias = vec![0.1, -0.1, 0.0, 0.5];
         let mut output = vec![0.0; 12];
         let mut expected = vec![0.0; 12];
-        scalar_group_norm_f32(
-            &input, &weight, &bias, &mut expected, 2, channels, spatial, EPS,
-        );
+        scalar_group_norm_f32(&input, &weight, &bias, &mut expected, 2, channels, spatial, EPS);
         group_norm_f32(&input, &weight, &bias, &mut output, 2, channels, spatial, EPS);
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -1132,15 +1084,12 @@ mod tests {
         let channels = 8;
         let spatial = 7;
         let n = channels * spatial;
-        let input: Vec<f32> =
-            (0..n).map(|i| ((i * 11 + 5) % 200) as f32 * 0.05 - 5.0).collect();
+        let input: Vec<f32> = (0..n).map(|i| ((i * 11 + 5) % 200) as f32 * 0.05 - 5.0).collect();
         let weight: Vec<f32> = (0..channels).map(|i| 0.3 + i as f32 * 0.2).collect();
         let bias: Vec<f32> = (0..channels).map(|i| -0.5 + i as f32 * 0.1).collect();
         let mut out_s = vec![0.0; n];
         let mut out_d = vec![0.0; n];
-        scalar_group_norm_f32(
-            &input, &weight, &bias, &mut out_s, 4, channels, spatial, EPS,
-        );
+        scalar_group_norm_f32(&input, &weight, &bias, &mut out_s, 4, channels, spatial, EPS);
         group_norm_f32(&input, &weight, &bias, &mut out_d, 4, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }
@@ -1155,9 +1104,7 @@ mod tests {
         let bias = vec![0.0; channels];
         let mut out_s = vec![0.0; n];
         let mut out_d = vec![0.0; n];
-        scalar_group_norm_f32(
-            &input, &weight, &bias, &mut out_s, 8, channels, spatial, EPS,
-        );
+        scalar_group_norm_f32(&input, &weight, &bias, &mut out_s, 8, channels, spatial, EPS);
         group_norm_f32(&input, &weight, &bias, &mut out_d, 8, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }
@@ -1190,11 +1137,17 @@ mod tests {
         let mut output = vec![0.0; 12];
         let mut expected = vec![0.0; 12];
         scalar_batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut expected, channels, spatial, EPS,
+            &input,
+            &mean,
+            &var,
+            &weight,
+            &bias,
+            &mut expected,
+            channels,
+            spatial,
+            EPS,
         );
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS);
         assert_approx_eq(&output, &expected, TOL);
     }
 
@@ -1210,11 +1163,17 @@ mod tests {
         let mut output = vec![0.0; 8];
         let mut expected = vec![0.0; 8];
         scalar_batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut expected, channels, spatial, EPS,
+            &input,
+            &mean,
+            &var,
+            &weight,
+            &bias,
+            &mut expected,
+            channels,
+            spatial,
+            EPS,
         );
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS);
         assert_approx_eq(&output, &expected, TOL);
     }
 
@@ -1229,9 +1188,7 @@ mod tests {
         let weight = vec![1.0; 2];
         let bias = vec![0.0; 2];
         let mut output = vec![0.0; 8];
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut output, channels, spatial, EPS);
         // With var=1 and mean=0, output ≈ input * inv_sqrt(1+eps)
         let inv = 1.0 / (1.0 + EPS).sqrt();
         let expected: Vec<f32> = input.iter().map(|&x| x * inv).collect();
@@ -1243,8 +1200,7 @@ mod tests {
         let channels = 6;
         let spatial = 11;
         let n = channels * spatial;
-        let input: Vec<f32> =
-            (0..n).map(|i| ((i * 13 + 7) % 200) as f32 * 0.05 - 5.0).collect();
+        let input: Vec<f32> = (0..n).map(|i| ((i * 13 + 7) % 200) as f32 * 0.05 - 5.0).collect();
         let mean: Vec<f32> = (0..channels).map(|i| i as f32 * 0.5 - 1.0).collect();
         let var: Vec<f32> = (0..channels).map(|i| 0.5 + i as f32 * 0.3).collect();
         let weight: Vec<f32> = (0..channels).map(|i| 0.8 + i as f32 * 0.1).collect();
@@ -1254,9 +1210,7 @@ mod tests {
         scalar_batch_norm_f32(
             &input, &mean, &var, &weight, &bias, &mut out_s, channels, spatial, EPS,
         );
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }
 
@@ -1275,9 +1229,7 @@ mod tests {
         scalar_batch_norm_f32(
             &input, &mean, &var, &weight, &bias, &mut out_s, channels, spatial, EPS,
         );
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }
 
@@ -1309,9 +1261,7 @@ mod tests {
         scalar_batch_norm_f32(
             &input, &mean, &var, &weight, &bias, &mut out_s, channels, spatial, EPS,
         );
-        batch_norm_f32(
-            &input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS,
-        );
+        batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }
 
@@ -1392,8 +1342,7 @@ mod tests {
     #[test]
     fn test_l2_normalize_scalar_neon_parity() {
         let n = 137;
-        let input: Vec<f32> =
-            (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
+        let input: Vec<f32> = (0..n).map(|i| ((i * 7 + 3) % 100) as f32 * 0.1 - 5.0).collect();
         let mut out_s = vec![0.0; n];
         let mut out_d = vec![0.0; n];
         scalar_l2_normalize_f32(&input, &mut out_s, EPS);
@@ -1516,9 +1465,7 @@ mod tests {
         let bias = vec![0.0; channels];
         let mut out_gn = vec![0.0; n];
         let mut out_in = vec![0.0; n];
-        group_norm_f32(
-            &input, &weight, &bias, &mut out_gn, channels, channels, spatial, EPS,
-        );
+        group_norm_f32(&input, &weight, &bias, &mut out_gn, channels, channels, spatial, EPS);
         instance_norm_f32(&input, &mut out_in, channels, spatial, EPS);
         assert_approx_eq(&out_gn, &out_in, TOL);
     }
@@ -1617,7 +1564,9 @@ mod tests {
         let bias = vec![0.0; 4];
         let mut out_s = vec![0.0; 4];
         let mut out_d = vec![0.0; 4];
-        scalar_batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut out_s, channels, spatial, EPS);
+        scalar_batch_norm_f32(
+            &input, &mean, &var, &weight, &bias, &mut out_s, channels, spatial, EPS,
+        );
         batch_norm_f32(&input, &mean, &var, &weight, &bias, &mut out_d, channels, spatial, EPS);
         assert_approx_eq(&out_s, &out_d, TOL);
     }

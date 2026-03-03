@@ -1,6 +1,15 @@
 //! NEON-optimized dynamic quantization v2 for Apple Silicon.
 //! Per-channel and per-token quantization with calibration
 //! and symmetric/asymmetric modes.
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -167,13 +176,7 @@ unsafe fn neon_min_max(data: &[f32]) -> (f32, f32) {
 /// Caller must ensure the `neon` target feature is available.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_quantize_row(
-    src: *const f32,
-    dst: *mut i8,
-    len: usize,
-    inv_scale: f32,
-    zp: f32,
-) {
+unsafe fn neon_quantize_row(src: *const f32, dst: *mut i8, len: usize, inv_scale: f32, zp: f32) {
     let chunks = len / 4;
 
     let vzp = vdupq_n_f32(zp);
@@ -740,9 +743,7 @@ pub fn per_channel_quantize_i8_dispatch(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                per_channel_quantize_i8(data, num_channels, channel_size, mode)
-            };
+            return unsafe { per_channel_quantize_i8(data, num_channels, channel_size, mode) };
         }
     }
     per_channel_quantize_i8_scalar(data, num_channels, channel_size, mode)
@@ -758,9 +759,7 @@ pub fn per_token_quantize_i8_dispatch(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                per_token_quantize_i8(data, num_tokens, hidden_dim, mode)
-            };
+            return unsafe { per_token_quantize_i8(data, num_tokens, hidden_dim, mode) };
         }
     }
     per_token_quantize_i8_scalar(data, num_tokens, hidden_dim, mode)
@@ -776,9 +775,7 @@ pub fn symmetric_quantize_i2_dispatch(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                symmetric_quantize_i2(data, num_rows, row_size, threshold)
-            };
+            return unsafe { symmetric_quantize_i2(data, num_rows, row_size, threshold) };
         }
     }
     symmetric_quantize_i2_scalar(data, num_rows, row_size, threshold)
@@ -811,9 +808,7 @@ pub fn dequantize_i8_f32_dispatch(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                dequantize_i8_f32(data, num_rows, row_size, scales, zero_points)
-            };
+            return unsafe { dequantize_i8_f32(data, num_rows, row_size, scales, zero_points) };
         }
     }
     dequantize_i8_f32_scalar(data, num_rows, row_size, scales, zero_points)
@@ -847,11 +842,7 @@ mod tests {
     fn assert_close(a: &[f32], b: &[f32], eps: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() <= eps,
-                "index {i}: {x} vs {y} (diff {})",
-                (x - y).abs()
-            );
+            assert!((x - y).abs() <= eps, "index {i}: {x} vs {y} (diff {})", (x - y).abs());
         }
     }
 
@@ -1013,7 +1004,7 @@ mod tests {
         let data = vec![1.0, -1.0, 0.0, 0.5];
         let result = symmetric_quantize_i2_scalar(&data, 1, 4, 0.3);
         let byte = result.packed[0];
-        assert_eq!(byte & 0x03, 0b01);       // +1
+        assert_eq!(byte & 0x03, 0b01); // +1
         assert_eq!((byte >> 2) & 0x03, 0b11); // -1
         assert_eq!((byte >> 4) & 0x03, 0b00); // 0
         assert_eq!((byte >> 6) & 0x03, 0b01); // +1
@@ -1059,7 +1050,7 @@ mod tests {
         let data = vec![0.1, -0.1, 0.0, 0.001];
         let result = symmetric_quantize_i2_scalar(&data, 1, 4, 0.0);
         let byte = result.packed[0];
-        assert_eq!(byte & 0x03, 0b01);       // +1
+        assert_eq!(byte & 0x03, 0b01); // +1
         assert_eq!((byte >> 2) & 0x03, 0b11); // -1
         assert_eq!((byte >> 4) & 0x03, 0b00); // 0
         assert_eq!((byte >> 6) & 0x03, 0b01); // +1
@@ -1107,11 +1098,8 @@ mod tests {
     #[test]
     fn test_calibrated_basic() {
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let stats = CalibrationStats {
-            scales: vec![0.1],
-            zero_points: vec![0.0],
-            num_samples: 100,
-        };
+        let stats =
+            CalibrationStats { scales: vec![0.1], zero_points: vec![0.0], num_samples: 100 };
         let result = calibrated_quantize_scalar(&data, 1, 4, &stats);
         assert_eq!(result.data[0], 10);
         assert_eq!(result.data[1], 20);
@@ -1122,11 +1110,8 @@ mod tests {
     #[test]
     fn test_calibrated_with_zero_point() {
         let data = vec![0.0, 0.5, 1.0, 1.5];
-        let stats = CalibrationStats {
-            scales: vec![0.01],
-            zero_points: vec![-50.0],
-            num_samples: 50,
-        };
+        let stats =
+            CalibrationStats { scales: vec![0.01], zero_points: vec![-50.0], num_samples: 50 };
         let result = calibrated_quantize_scalar(&data, 1, 4, &stats);
         assert_eq!(result.data[0], -50);
         assert_eq!(result.data[1], 0);
@@ -1137,11 +1122,7 @@ mod tests {
     #[test]
     fn test_calibrated_clamp() {
         let data = vec![100.0];
-        let stats = CalibrationStats {
-            scales: vec![0.1],
-            zero_points: vec![0.0],
-            num_samples: 10,
-        };
+        let stats = CalibrationStats { scales: vec![0.1], zero_points: vec![0.0], num_samples: 10 };
         let result = calibrated_quantize_scalar(&data, 1, 1, &stats);
         assert_eq!(result.data[0], 127);
     }
@@ -1162,11 +1143,7 @@ mod tests {
     #[should_panic(expected = "not enough calibration scales")]
     fn test_calibrated_insufficient_stats() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let stats = CalibrationStats {
-            scales: vec![0.1],
-            zero_points: vec![0.0],
-            num_samples: 1,
-        };
+        let stats = CalibrationStats { scales: vec![0.1], zero_points: vec![0.0], num_samples: 1 };
         calibrated_quantize_scalar(&data, 2, 4, &stats);
     }
 
@@ -1187,11 +1164,7 @@ mod tests {
     #[test]
     fn test_calibrated_dispatch() {
         let data = vec![1.0, -1.0, 0.5, -0.5];
-        let stats = CalibrationStats {
-            scales: vec![0.1],
-            zero_points: vec![0.0],
-            num_samples: 10,
-        };
+        let stats = CalibrationStats { scales: vec![0.1], zero_points: vec![0.0], num_samples: 10 };
         let result = calibrated_quantize_dispatch(&data, 1, 4, &stats);
         assert_eq!(result.data.len(), 4);
     }
@@ -1301,9 +1274,7 @@ mod tests {
     fn test_roundtrip_neon_symmetric() {
         let data: Vec<f32> = (0..32).map(|i| (i as f32) * 0.1 - 1.5).collect();
         let q = unsafe { per_channel_quantize_i8(&data, 2, 16, QuantMode::Symmetric) };
-        let dq = unsafe {
-            dequantize_i8_f32(&q.data, 2, 16, &q.scales, &q.zero_points)
-        };
+        let dq = unsafe { dequantize_i8_f32(&q.data, 2, 16, &q.scales, &q.zero_points) };
         for (i, (&orig, &restored)) in data.iter().zip(dq.iter()).enumerate() {
             let row = i / 16;
             let max_err = q.scales[row] + 1e-4;
@@ -1507,11 +1478,8 @@ mod tests {
 
     #[test]
     fn test_quantized_output_debug() {
-        let out = QuantizedOutput {
-            data: vec![1, -1, 0],
-            scales: vec![0.5],
-            zero_points: vec![0.0],
-        };
+        let out =
+            QuantizedOutput { data: vec![1, -1, 0], scales: vec![0.5], zero_points: vec![0.0] };
         let dbg = format!("{out:?}");
         assert!(dbg.contains("QuantizedOutput"));
     }

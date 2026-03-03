@@ -9,6 +9,15 @@
 //! 4. **RMSNorm + MLP** — combined normalisation and MLP in one kernel
 //! 5. **Quantised-weight MLP** — I2_S dequant + MLP fused
 //! 6. **Attention + MLP** — pipeline attention output through MLP
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -90,8 +99,8 @@ pub fn scalar_fused_gate_up_silu(gate: &[f32], up: &[f32], output: &mut [f32]) {
 unsafe fn neon_fused_gate_up_silu(gate: &[f32], up: &[f32], output: &mut [f32]) {
     let n = gate.len();
     let chunks = n / 4;
-    let one = vdupq_n_f32(1.0);
-    let neg_one = vdupq_n_f32(-1.0);
+    let _one = vdupq_n_f32(1.0);
+    let _neg_one = vdupq_n_f32(-1.0);
 
     for c in 0..chunks {
         let off = c * 4;

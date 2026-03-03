@@ -14,6 +14,15 @@
 //! - `norm_residual_add_f32` — fused LayerNorm + residual add
 //!
 //! All NEON paths process 4×f32 lanes with scalar tail fallback.
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -127,13 +136,7 @@ pub fn scalar_layer_norm_f32(
 }
 
 /// Dispatcher: NEON on aarch64, scalar otherwise.
-pub fn layer_norm_f32(
-    input: &[f32],
-    gamma: &[f32],
-    beta: &[f32],
-    eps: f32,
-    output: &mut [f32],
-) {
+pub fn layer_norm_f32(input: &[f32], gamma: &[f32], beta: &[f32], eps: f32, output: &mut [f32]) {
     #[cfg(target_arch = "aarch64")]
     {
         // SAFETY: aarch64 always has NEON.
@@ -156,12 +159,7 @@ pub fn layer_norm_f32(
 /// Requires aarch64 target with NEON support.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_rms_norm_f32(
-    input: &[f32],
-    gamma: &[f32],
-    eps: f32,
-    output: &mut [f32],
-) {
+pub unsafe fn neon_rms_norm_f32(input: &[f32], gamma: &[f32], eps: f32, output: &mut [f32]) {
     let n = input.len();
     assert_eq!(gamma.len(), n, "gamma length mismatch");
     assert_eq!(output.len(), n, "output length mismatch");
@@ -350,8 +348,7 @@ pub fn scalar_group_norm_f32(
         let start = g * group_size;
         let group = &input[start..start + group_size];
         let mean = group.iter().sum::<f32>() / group_size as f32;
-        let var =
-            group.iter().map(|&x| (x - mean) * (x - mean)).sum::<f32>() / group_size as f32;
+        let var = group.iter().map(|&x| (x - mean) * (x - mean)).sum::<f32>() / group_size as f32;
         let inv_std = 1.0 / (var + eps).sqrt();
         for i in 0..group_size {
             let gi = start + i;
@@ -391,12 +388,7 @@ pub fn group_norm_f32(
 /// Requires aarch64 target with NEON support.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_fused_norm_silu_f32(
-    input: &[f32],
-    gamma: &[f32],
-    eps: f32,
-    output: &mut [f32],
-) {
+pub unsafe fn neon_fused_norm_silu_f32(input: &[f32], gamma: &[f32], eps: f32, output: &mut [f32]) {
     let n = input.len();
     assert_eq!(gamma.len(), n, "gamma length mismatch");
     assert_eq!(output.len(), n, "output length mismatch");
@@ -450,12 +442,7 @@ pub unsafe fn neon_fused_norm_silu_f32(
 }
 
 /// Scalar fallback for fused RMSNorm + SiLU.
-pub fn scalar_fused_norm_silu_f32(
-    input: &[f32],
-    gamma: &[f32],
-    eps: f32,
-    output: &mut [f32],
-) {
+pub fn scalar_fused_norm_silu_f32(input: &[f32], gamma: &[f32], eps: f32, output: &mut [f32]) {
     let n = input.len();
     assert_eq!(gamma.len(), n, "gamma length mismatch");
     assert_eq!(output.len(), n, "output length mismatch");
@@ -680,9 +667,7 @@ pub fn norm_residual_add_f32(
 ) {
     #[cfg(target_arch = "aarch64")]
     {
-        unsafe {
-            neon_norm_residual_add_f32(input, residual, gamma, beta, eps, output)
-        }
+        unsafe { neon_norm_residual_add_f32(input, residual, gamma, beta, eps, output) }
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
@@ -702,11 +687,7 @@ mod tests {
     fn assert_approx(a: &[f32], b: &[f32], tol: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() <= tol,
-                "mismatch at [{i}]: {x} vs {y} (diff={})",
-                (x - y).abs()
-            );
+            assert!((x - y).abs() <= tol, "mismatch at [{i}]: {x} vs {y} (diff={})", (x - y).abs());
         }
     }
 
@@ -1016,7 +997,12 @@ mod tests {
         let mut expected = Vec::new();
         for g in 0..3 {
             let s = g * 5;
-            expected.extend(ref_layer_norm(&input[s..s + 5], &gamma[s..s + 5], &beta[s..s + 5], EPS));
+            expected.extend(ref_layer_norm(
+                &input[s..s + 5],
+                &gamma[s..s + 5],
+                &beta[s..s + 5],
+                EPS,
+            ));
         }
         let mut out = vec![0.0; n];
         group_norm_f32(&input, &gamma, &beta, 3, EPS, &mut out);
@@ -1142,16 +1128,10 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let stats = online_norm_stats_f32(&input);
         let exp_mean = input.iter().sum::<f32>() / input.len() as f32;
-        let exp_var =
-            input.iter().map(|&x| (x - exp_mean) * (x - exp_mean)).sum::<f32>()
-                / input.len() as f32;
+        let exp_var = input.iter().map(|&x| (x - exp_mean) * (x - exp_mean)).sum::<f32>()
+            / input.len() as f32;
         assert!((stats.mean - exp_mean).abs() < TOL, "mean: {} vs {}", stats.mean, exp_mean);
-        assert!(
-            (stats.variance - exp_var).abs() < TOL,
-            "var: {} vs {}",
-            stats.variance,
-            exp_var
-        );
+        assert!((stats.variance - exp_var).abs() < TOL, "var: {} vs {}", stats.variance, exp_var);
     }
 
     #[test]
@@ -1191,12 +1171,7 @@ mod tests {
         let input = vec![1e6, 1e6 + 1.0, 1e6 + 2.0, 1e6 + 3.0];
         let stats = online_norm_stats_f32(&input);
         let exp_mean = (4e6 + 6.0) / 4.0;
-        assert!(
-            (stats.mean - exp_mean).abs() < 1.0,
-            "mean: {} vs {}",
-            stats.mean,
-            exp_mean
-        );
+        assert!((stats.mean - exp_mean).abs() < 1.0, "mean: {} vs {}", stats.mean, exp_mean);
     }
 
     #[test]
@@ -1205,12 +1180,7 @@ mod tests {
         let stats = online_norm_stats_f32(&input);
         assert!(stats.mean.abs() < TOL, "mean should be ~0, got {}", stats.mean);
         let exp_var = (9.0 + 1.0 + 1.0 + 9.0) / 4.0;
-        assert!(
-            (stats.variance - exp_var).abs() < TOL,
-            "var: {} vs {}",
-            stats.variance,
-            exp_var
-        );
+        assert!((stats.variance - exp_var).abs() < TOL, "var: {} vs {}", stats.variance, exp_var);
     }
 
     #[test]
@@ -1331,8 +1301,7 @@ mod tests {
 
         let mut ln_out = vec![0.0; 8];
         layer_norm_f32(&input, &gamma, &beta, EPS, &mut ln_out);
-        let separate: Vec<f32> =
-            ln_out.iter().zip(residual.iter()).map(|(&l, &r)| l + r).collect();
+        let separate: Vec<f32> = ln_out.iter().zip(residual.iter()).map(|(&l, &r)| l + r).collect();
 
         let mut fused = vec![0.0; 8];
         norm_residual_add_f32(&input, &residual, &gamma, &beta, EPS, &mut fused);

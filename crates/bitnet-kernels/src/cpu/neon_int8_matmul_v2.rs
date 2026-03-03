@@ -12,6 +12,15 @@
 //! - [`batched_matmul_i8`] — batch of int8 matmuls
 //! - [`symmetric_quantized_matmul`] — symmetric dequant fused with matmul
 //! - [`tiled_matmul_i8`] — cache-friendly tiled matmul
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unused_unsafe)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::manual_is_multiple_of)]
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -122,15 +131,7 @@ fn scalar_matmul_i8_f32(
 ///
 /// Computes `C[m,n] = scale * A[m,k] · B[k,n]` where A and B are i8,
 /// C is f32. Uses NEON intrinsics on aarch64, scalar fallback otherwise.
-pub fn matmul_i8_f32(
-    a: &[i8],
-    b: &[i8],
-    c: &mut [f32],
-    m: usize,
-    k: usize,
-    n: usize,
-    scale: f32,
-) {
+pub fn matmul_i8_f32(a: &[i8], b: &[i8], c: &mut [f32], m: usize, k: usize, n: usize, scale: f32) {
     assert!(a.len() >= m * k, "A too small");
     assert!(b.len() >= k * n, "B too small");
     assert!(c.len() >= m * n, "C too small");
@@ -153,14 +154,7 @@ pub fn matmul_i8_f32(
 /// Caller must ensure the `neon` target feature is available.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_matmul_i8_i32(
-    a: &[i8],
-    b: &[i8],
-    c: &mut [i32],
-    m: usize,
-    k: usize,
-    n: usize,
-) {
+unsafe fn neon_matmul_i8_i32(a: &[i8], b: &[i8], c: &mut [i32], m: usize, k: usize, n: usize) {
     let chunks = k / 16;
     let tail = k % 16;
 
@@ -202,14 +196,7 @@ unsafe fn neon_matmul_i8_i32(
     }
 }
 
-fn scalar_matmul_i8_i32(
-    a: &[i8],
-    b: &[i8],
-    c: &mut [i32],
-    m: usize,
-    k: usize,
-    n: usize,
-) {
+fn scalar_matmul_i8_i32(a: &[i8], b: &[i8], c: &mut [i32], m: usize, k: usize, n: usize) {
     for row in 0..m {
         for col in 0..n {
             let mut sum: i32 = 0;
@@ -224,14 +211,7 @@ fn scalar_matmul_i8_i32(
 /// Int8 matmul with i32 accumulation for higher precision.
 ///
 /// Computes `C[m,n] = A[m,k] · B[k,n]` where A and B are i8, C is i32.
-pub fn matmul_i8_i32_accum(
-    a: &[i8],
-    b: &[i8],
-    c: &mut [i32],
-    m: usize,
-    k: usize,
-    n: usize,
-) {
+pub fn matmul_i8_i32_accum(a: &[i8], b: &[i8], c: &mut [i32], m: usize, k: usize, n: usize) {
     assert!(a.len() >= m * k, "A too small");
     assert!(b.len() >= k * n, "B too small");
     assert!(c.len() >= m * n, "C too small");
@@ -254,14 +234,7 @@ pub fn matmul_i8_i32_accum(
 /// Caller must ensure the `neon` target feature is available.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_gemv_i8_f32(
-    a: &[i8],
-    x: &[i8],
-    y: &mut [f32],
-    m: usize,
-    k: usize,
-    scale: f32,
-) {
+unsafe fn neon_gemv_i8_f32(a: &[i8], x: &[i8], y: &mut [f32], m: usize, k: usize, scale: f32) {
     let chunks = k / 16;
     let tail = k % 16;
 
@@ -296,14 +269,7 @@ unsafe fn neon_gemv_i8_f32(
     }
 }
 
-fn scalar_gemv_i8_f32(
-    a: &[i8],
-    x: &[i8],
-    y: &mut [f32],
-    m: usize,
-    k: usize,
-    scale: f32,
-) {
+fn scalar_gemv_i8_f32(a: &[i8], x: &[i8], y: &mut [f32], m: usize, k: usize, scale: f32) {
     for row in 0..m {
         let mut sum: i32 = 0;
         for i in 0..k {
@@ -317,14 +283,7 @@ fn scalar_gemv_i8_f32(
 ///
 /// Computes `y[m] = scale * A[m,k] · x[k]`.
 /// Optimised single-column case: contiguous vector loads for `x`.
-pub fn gemv_i8_f32(
-    a: &[i8],
-    x: &[i8],
-    y: &mut [f32],
-    m: usize,
-    k: usize,
-    scale: f32,
-) {
+pub fn gemv_i8_f32(a: &[i8], x: &[i8], y: &mut [f32], m: usize, k: usize, scale: f32) {
     assert!(a.len() >= m * k, "A too small");
     assert!(x.len() >= k, "x too small");
     assert!(y.len() >= m, "y too small");
@@ -428,9 +387,7 @@ pub fn symmetric_quantized_matmul(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                neon_symmetric_quantized_matmul(a, b, c, m, k, n, scale_a, scale_b)
-            };
+            return unsafe { neon_symmetric_quantized_matmul(a, b, c, m, k, n, scale_a, scale_b) };
         }
     }
     scalar_symmetric_quantized_matmul(a, b, c, m, k, n, scale_a, scale_b);
@@ -546,8 +503,7 @@ fn scalar_tiled_matmul_i8(
                     for col in j0..j_end {
                         let mut sum: i32 = 0;
                         for i in k0..k_end {
-                            sum +=
-                                a[row * k + i] as i32 * b[i * n + col] as i32;
+                            sum += a[row * k + i] as i32 * b[i * n + col] as i32;
                         }
                         c[row * n + col] += sum as f32 * scale;
                     }
@@ -631,10 +587,7 @@ mod tests {
     fn assert_slices_close(got: &[f32], want: &[f32], eps: f32) {
         assert_eq!(got.len(), want.len(), "length mismatch");
         for (i, (&g, &w)) in got.iter().zip(want.iter()).enumerate() {
-            assert!(
-                approx_eq(g, w, eps),
-                "mismatch at index {i}: got {g}, want {w} (eps={eps})"
-            );
+            assert!(approx_eq(g, w, eps), "mismatch at index {i}: got {g}, want {w} (eps={eps})");
         }
     }
 
@@ -1254,8 +1207,16 @@ mod tests {
         let b = pseudo_random_i8(k * n, 1301);
         let mut c = vec![0.0f32; m * n];
         tiled_matmul_i8(
-            &a, &b, &mut c, m, k, n, 1.0,
-            DEFAULT_TILE_M, DEFAULT_TILE_N, DEFAULT_TILE_K,
+            &a,
+            &b,
+            &mut c,
+            m,
+            k,
+            n,
+            1.0,
+            DEFAULT_TILE_M,
+            DEFAULT_TILE_N,
+            DEFAULT_TILE_K,
         );
         let expected = reference_matmul_i8_f32(&a, &b, m, k, n, 1.0);
         assert_slices_close(&c, &expected, 1e-6);
