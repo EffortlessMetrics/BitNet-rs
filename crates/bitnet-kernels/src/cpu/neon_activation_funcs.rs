@@ -7,6 +7,19 @@
 //! Transcendental approximations (exp, tanh) use Horner-scheme polynomials with
 //! Cody-Waite range reduction, giving < 1e-3 max error in the working range.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision, clippy::let_and_return)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_is_multiple_of,
+    dead_code
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -55,34 +68,32 @@ fn scalar_tanh_approx(x: f32) -> f32 {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let min_val = vdupq_n_f32(-88.0);
-        let max_val = vdupq_n_f32(88.0);
-        let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
+    let min_val = vdupq_n_f32(-88.0);
+    let max_val = vdupq_n_f32(88.0);
+    let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
 
-        let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
-        let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
-        let n = vrndnq_f32(vmulq_f32(x, log2e));
-        let r = vsubq_f32(x, vmulq_f32(n, ln2));
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    let n = vrndnq_f32(vmulq_f32(x, log2e));
+    let r = vsubq_f32(x, vmulq_f32(n, ln2));
 
-        // Horner: 1 + r*(1 + r*(0.5 + r*(1/6 + r/24)))
-        let c1 = vdupq_n_f32(1.0 / 24.0);
-        let c2 = vdupq_n_f32(1.0 / 6.0);
-        let c3 = vdupq_n_f32(0.5);
-        let one = vdupq_n_f32(1.0);
+    // Horner: 1 + r*(1 + r*(0.5 + r*(1/6 + r/24)))
+    let c1 = vdupq_n_f32(1.0 / 24.0);
+    let c2 = vdupq_n_f32(1.0 / 6.0);
+    let c3 = vdupq_n_f32(0.5);
+    let one = vdupq_n_f32(1.0);
 
-        let p = vfmaq_f32(c2, r, c1);
-        let p = vfmaq_f32(c3, r, p);
-        let p = vfmaq_f32(one, r, p);
-        let poly = vfmaq_f32(one, r, p);
+    let p = vfmaq_f32(c2, r, c1);
+    let p = vfmaq_f32(c3, r, p);
+    let p = vfmaq_f32(one, r, p);
+    let poly = vfmaq_f32(one, r, p);
 
-        // 2^n via IEEE-754 exponent bias
-        let bias = vdupq_n_s32(127);
-        let ni = vcvtq_s32_f32(n);
-        let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
+    // 2^n via IEEE-754 exponent bias
+    let bias = vdupq_n_s32(127);
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
 
-        vmulq_f32(poly, pow2n)
-    }
+    vmulq_f32(poly, pow2n)
 }
 
 /// NEON sigmoid: 1 / (1 + exp(-x))
@@ -832,7 +843,11 @@ mod tests {
         let mut output = [0.0_f32; 4];
         sigmoid_f32(&input, &mut output);
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!(approx_eq(o, ref_sigmoid(x), EPS), "sigmoid({x}) = {o}, expected {}", ref_sigmoid(x));
+            assert!(
+                approx_eq(o, ref_sigmoid(x), EPS),
+                "sigmoid({x}) = {o}, expected {}",
+                ref_sigmoid(x)
+            );
         }
     }
 
@@ -944,7 +959,11 @@ mod tests {
         fused_silu_mul_f32(&x, &gate, &mut output);
         for i in 0..4 {
             let expected = ref_silu(x[i]) * gate[i];
-            assert!(approx_eq(output[i], expected, EPS), "fused_silu_mul at {i}: {} vs {expected}", output[i]);
+            assert!(
+                approx_eq(output[i], expected, EPS),
+                "fused_silu_mul at {i}: {} vs {expected}",
+                output[i]
+            );
         }
     }
 
@@ -960,7 +979,11 @@ mod tests {
         silu_f32(&x, &mut silu_out);
         for i in 0..8 {
             let separate = silu_out[i] * gate[i];
-            assert!(approx_eq(fused[i], separate, EPS), "fused vs separate at {i}: {} vs {separate}", fused[i]);
+            assert!(
+                approx_eq(fused[i], separate, EPS),
+                "fused vs separate at {i}: {} vs {separate}",
+                fused[i]
+            );
         }
     }
 
@@ -1062,7 +1085,11 @@ mod tests {
         let mut output = [0.0_f32; 4];
         softcap_f32(&input, cap, &mut output);
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!(approx_eq(o, ref_softcap(x, cap), EPS), "softcap({x}, {cap}) = {o}, expected {}", ref_softcap(x, cap));
+            assert!(
+                approx_eq(o, ref_softcap(x, cap), EPS),
+                "softcap({x}, {cap}) = {o}, expected {}",
+                ref_softcap(x, cap)
+            );
         }
     }
 
@@ -1227,7 +1254,11 @@ mod tests {
         sigmoid_f32(&input, &mut pos_out);
         sigmoid_f32(&neg_input, &mut neg_out);
         for i in 0..4 {
-            assert!(approx_eq(pos_out[i] + neg_out[i], 1.0, EPS), "sigmoid symmetry at {}", input[i]);
+            assert!(
+                approx_eq(pos_out[i] + neg_out[i], 1.0, EPS),
+                "sigmoid symmetry at {}",
+                input[i]
+            );
         }
     }
 

@@ -10,6 +10,19 @@
 //! `vrecpeq_f32`/`vrecpsq_f32` for fast reciprocal, and Horner's
 //! method polynomial approximation for exp/sigmoid.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision, clippy::let_and_return)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_is_multiple_of,
+    dead_code
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -141,34 +154,32 @@ pub fn scalar_softplus_f32(input: &[f32], output: &mut [f32]) {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let min_val = vdupq_n_f32(-88.0);
-        let max_val = vdupq_n_f32(88.0);
-        let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
+    let min_val = vdupq_n_f32(-88.0);
+    let max_val = vdupq_n_f32(88.0);
+    let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
 
-        let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
-        let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
-        let n = vrndnq_f32(vmulq_f32(x, log2e));
-        let r = vsubq_f32(x, vmulq_f32(n, ln2));
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    let n = vrndnq_f32(vmulq_f32(x, log2e));
+    let r = vsubq_f32(x, vmulq_f32(n, ln2));
 
-        // Horner's method: 1 + r*(1 + r*(0.5 + r*(1/6 + r/24)))
-        let c1 = vdupq_n_f32(1.0 / 24.0);
-        let c2 = vdupq_n_f32(1.0 / 6.0);
-        let c3 = vdupq_n_f32(0.5);
-        let one = vdupq_n_f32(1.0);
+    // Horner's method: 1 + r*(1 + r*(0.5 + r*(1/6 + r/24)))
+    let c1 = vdupq_n_f32(1.0 / 24.0);
+    let c2 = vdupq_n_f32(1.0 / 6.0);
+    let c3 = vdupq_n_f32(0.5);
+    let one = vdupq_n_f32(1.0);
 
-        let p = vfmaq_f32(c2, r, c1);
-        let p = vfmaq_f32(c3, r, p);
-        let p = vfmaq_f32(one, r, p);
-        let poly = vfmaq_f32(one, r, p);
+    let p = vfmaq_f32(c2, r, c1);
+    let p = vfmaq_f32(c3, r, p);
+    let p = vfmaq_f32(one, r, p);
+    let poly = vfmaq_f32(one, r, p);
 
-        // 2^n via bit manipulation
-        let bias = vdupq_n_s32(127);
-        let ni = vcvtq_s32_f32(n);
-        let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
+    // 2^n via bit manipulation
+    let bias = vdupq_n_s32(127);
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
 
-        vmulq_f32(poly, pow2n)
-    }
+    vmulq_f32(poly, pow2n)
 }
 
 /// NEON sigmoid: 1 / (1 + exp(-x)) using vrecpeq_f32 for fast reciprocal.
@@ -179,16 +190,13 @@ unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn sigmoid_neon(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let one = vdupq_n_f32(1.0);
-        let neg_x = vnegq_f32(x);
-        let exp_neg = fast_exp_neon(neg_x);
-        let denom = vaddq_f32(one, exp_neg);
-        // Newton-Raphson refined reciprocal
-        let recip = vrecpeq_f32(denom);
-        let recip = vmulq_f32(vrecpsq_f32(denom, recip), recip);
-        recip
-    }
+    let one = vdupq_n_f32(1.0);
+    let neg_x = vnegq_f32(x);
+    let exp_neg = fast_exp_neon(neg_x);
+    let denom = vaddq_f32(one, exp_neg);
+    // Newton-Raphson refined reciprocal
+    let recip = vrecpeq_f32(denom);
+    vmulq_f32(vrecpsq_f32(denom, recip), recip)
 }
 
 /// NEON tanh: (exp(2x)-1)/(exp(2x)+1).
@@ -199,16 +207,14 @@ unsafe fn sigmoid_neon(x: float32x4_t) -> float32x4_t {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn tanh_neon(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let two = vdupq_n_f32(2.0);
-        let one = vdupq_n_f32(1.0);
-        let e2x = fast_exp_neon(vmulq_f32(two, x));
-        let num = vsubq_f32(e2x, one);
-        let den = vaddq_f32(e2x, one);
-        let recip = vrecpeq_f32(den);
-        let recip = vmulq_f32(vrecpsq_f32(den, recip), recip);
-        vmulq_f32(num, recip)
-    }
+    let two = vdupq_n_f32(2.0);
+    let one = vdupq_n_f32(1.0);
+    let e2x = fast_exp_neon(vmulq_f32(two, x));
+    let num = vsubq_f32(e2x, one);
+    let den = vaddq_f32(e2x, one);
+    let recip = vrecpeq_f32(den);
+    let recip = vmulq_f32(vrecpsq_f32(den, recip), recip);
+    vmulq_f32(num, recip)
 }
 
 /// NEON fast approximate ln(x) for positive x.
@@ -222,38 +228,36 @@ unsafe fn tanh_neon(x: float32x4_t) -> float32x4_t {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn fast_ln_neon(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let one = vdupq_n_f32(1.0);
-        let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
-        let bias = vdupq_n_s32(127);
+    let one = vdupq_n_f32(1.0);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    let bias = vdupq_n_s32(127);
 
-        let xi = vreinterpretq_s32_f32(x);
-        let exponent = vsubq_s32(vshrq_n_s32(xi, 23), bias);
-        let e_f = vcvtq_f32_s32(exponent);
+    let xi = vreinterpretq_s32_f32(x);
+    let exponent = vsubq_s32(vshrq_n_s32(xi, 23), bias);
+    let e_f = vcvtq_f32_s32(exponent);
 
-        // Extract mantissa in [1, 2)
-        let mantissa_mask = vdupq_n_s32(0x007F_FFFF);
-        let one_bits = vreinterpretq_s32_f32(one);
-        let m = vreinterpretq_f32_s32(vorrq_s32(vandq_s32(xi, mantissa_mask), one_bits));
+    // Extract mantissa in [1, 2)
+    let mantissa_mask = vdupq_n_s32(0x007F_FFFF);
+    let one_bits = vreinterpretq_s32_f32(one);
+    let m = vreinterpretq_f32_s32(vorrq_s32(vandq_s32(xi, mantissa_mask), one_bits));
 
-        // Polynomial approx of ln(m) for m in [1, 2):
-        // ln(m) ≈ (m-1) * (c0 + (m-1)*(c1 + (m-1)*(c2 + (m-1)*c3)))
-        // Minimax coefficients for better accuracy
-        let m1 = vsubq_f32(m, one);
-        let c0 = vdupq_n_f32(0.99949556);
-        let c1 = vdupq_n_f32(-0.49190896);
-        let c2 = vdupq_n_f32(0.28947478);
-        let c3 = vdupq_n_f32(-0.13606275);
+    // Polynomial approx of ln(m) for m in [1, 2):
+    // ln(m) ≈ (m-1) * (c0 + (m-1)*(c1 + (m-1)*(c2 + (m-1)*c3)))
+    // Minimax coefficients for better accuracy
+    let m1 = vsubq_f32(m, one);
+    let c0 = vdupq_n_f32(0.99949556);
+    let c1 = vdupq_n_f32(-0.49190896);
+    let c2 = vdupq_n_f32(0.28947478);
+    let c3 = vdupq_n_f32(-0.13606275);
 
-        // Horner's method: c0 + m1*(c1 + m1*(c2 + m1*c3))
-        let p = vfmaq_f32(c2, m1, c3);
-        let p = vfmaq_f32(c1, m1, p);
-        let p = vfmaq_f32(c0, m1, p);
-        let ln_m = vmulq_f32(m1, p);
+    // Horner's method: c0 + m1*(c1 + m1*(c2 + m1*c3))
+    let p = vfmaq_f32(c2, m1, c3);
+    let p = vfmaq_f32(c1, m1, p);
+    let p = vfmaq_f32(c0, m1, p);
+    let ln_m = vmulq_f32(m1, p);
 
-        // ln(x) = ln(m) + e * ln(2)
-        vfmaq_f32(ln_m, e_f, ln2)
-    }
+    // ln(x) = ln(m) + e * ln(2)
+    vfmaq_f32(ln_m, e_f, ln2)
 }
 
 // ── Unsafe NEON implementations ─────────────────────────────────────
@@ -905,7 +909,14 @@ mod tests {
         swiglu_f32(&gate, &up, &mut output);
         for i in 0..4 {
             let expected = ref_silu(gate[i]) * up[i];
-            assert!((output[i] - expected).abs() < TOL, "swiglu gate={}, up={}: got {}, expected {}", gate[i], up[i], output[i], expected);
+            assert!(
+                (output[i] - expected).abs() < TOL,
+                "swiglu gate={}, up={}: got {}, expected {}",
+                gate[i],
+                up[i],
+                output[i],
+                expected
+            );
         }
     }
 
@@ -994,7 +1005,11 @@ mod tests {
         let mut output = [0.0f32; 4];
         sigmoid_f32(&input, &mut output);
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!((o - ref_sigmoid(x)).abs() < TOL, "sigmoid({x}) = {o}, expected {}", ref_sigmoid(x));
+            assert!(
+                (o - ref_sigmoid(x)).abs() < TOL,
+                "sigmoid({x}) = {o}, expected {}",
+                ref_sigmoid(x)
+            );
         }
     }
 
@@ -1038,7 +1053,10 @@ mod tests {
         sigmoid_f32(&input, &mut out_pos);
         sigmoid_f32(&neg_input, &mut out_neg);
         for i in 0..4 {
-            assert!((out_pos[i] + out_neg[i] - 1.0).abs() < TOL, "sigmoid(x) + sigmoid(-x) should ≈ 1");
+            assert!(
+                (out_pos[i] + out_neg[i] - 1.0).abs() < TOL,
+                "sigmoid(x) + sigmoid(-x) should ≈ 1"
+            );
         }
     }
 
@@ -1089,7 +1107,11 @@ mod tests {
         let mut output = [0.0f32; 4];
         softplus_f32(&input, &mut output);
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!((o - ref_softplus(x)).abs() < TOL, "softplus({x}) = {o}, expected {}", ref_softplus(x));
+            assert!(
+                (o - ref_softplus(x)).abs() < TOL,
+                "softplus({x}) = {o}, expected {}",
+                ref_softplus(x)
+            );
         }
     }
 
@@ -1140,7 +1162,10 @@ mod tests {
         let mut output = vec![0.0f32; input.len()];
         softplus_f32(&input, &mut output);
         for i in 1..output.len() {
-            assert!(output[i] >= output[i - 1] - TOL, "softplus should be monotonically increasing");
+            assert!(
+                output[i] >= output[i - 1] - TOL,
+                "softplus should be monotonically increasing"
+            );
         }
     }
 

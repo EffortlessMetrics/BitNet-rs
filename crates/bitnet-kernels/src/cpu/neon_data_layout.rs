@@ -8,6 +8,19 @@
 //! All hot paths use `float32x4_t` NEON intrinsics with scalar fallback
 //! for remainder elements.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision, clippy::let_and_return)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_is_multiple_of,
+    dead_code
+)]
+
 use std::arch::aarch64::*;
 
 /// NEON lane count for `float32x4_t`.

@@ -25,7 +25,8 @@
     clippy::too_many_arguments,
     clippy::collapsible_if,
     clippy::let_and_return,
-    clippy::excessive_precision
+    clippy::excessive_precision,
+    dead_code
 )]
 
 #[cfg(target_arch = "aarch64")]

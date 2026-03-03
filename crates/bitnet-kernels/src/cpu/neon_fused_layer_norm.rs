@@ -3,6 +3,21 @@
 //! Provides eight normalization variants with ARM NEON SIMD acceleration
 //! and scalar fallbacks for non-aarch64 targets.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision, clippy::let_and_return)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_assignments,
+    unused_variables
+)]
+
 // ---------------------------------------------------------------------------
 // Helper: NEON horizontal sum of a float32x4 vector
 // ---------------------------------------------------------------------------

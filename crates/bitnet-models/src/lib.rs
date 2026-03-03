@@ -31,6 +31,7 @@ pub mod loading_progress;
 pub mod memory_estimator;
 pub mod metadata_extractor;
 pub mod minimal;
+pub mod model_bench;
 pub mod model_catalog;
 pub mod model_checkpoint;
 pub mod model_compare;

@@ -4,6 +4,19 @@
 //! top-k pruning, length penalty, diversity grouping, hypothesis
 //! merging, and early stopping checks.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::excessive_precision, clippy::let_and_return)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_is_multiple_of,
+    dead_code
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -90,9 +103,7 @@ fn beam_prune_topk_scalar(scores: &[f32], k: usize) -> Vec<usize> {
         b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
     });
     indexed.truncate(k);
-    indexed.sort_unstable_by(|a, b| {
-        b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    indexed.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     indexed.into_iter().map(|(i, _)| i).collect()
 }
 
@@ -125,11 +136,7 @@ fn lp_factor(length: f32, alpha: f32) -> f32 {
 /// Requires `aarch64` target with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn length_penalty_scale_neon(
-    scores: &mut [f32],
-    lengths: &[f32],
-    alpha: f32,
-) {
+unsafe fn length_penalty_scale_neon(scores: &mut [f32], lengths: &[f32], alpha: f32) {
     debug_assert_eq!(scores.len(), lengths.len());
     let len = scores.len();
     let sp = scores.as_mut_ptr();
@@ -223,10 +230,7 @@ unsafe fn hamming_distance_neon(a: &[u32], b: &[u32]) -> u32 {
 /// Scalar hamming distance between two token-id slices.
 fn hamming_distance_scalar(a: &[u32], b: &[u32]) -> u32 {
     debug_assert_eq!(a.len(), b.len());
-    a.iter()
-        .zip(b.iter())
-        .filter(|(x, y)| x != y)
-        .count() as u32
+    a.iter().zip(b.iter()).filter(|(x, y)| x != y).count() as u32
 }
 
 /// Compute hamming distance (number of differing positions) between two
@@ -327,10 +331,7 @@ fn beam_hypothesis_merge_scalar(
     max_hyps: usize,
 ) {
     // Insert in sorted position (descending by score).
-    let pos = completed
-        .iter()
-        .position(|h| new.score > h.score)
-        .unwrap_or(completed.len());
+    let pos = completed.iter().position(|h| new.score > h.score).unwrap_or(completed.len());
     completed.insert(pos, new);
     if completed.len() > max_hyps {
         completed.truncate(max_hyps);
@@ -412,9 +413,7 @@ fn early_stopping_check_scalar(
     best_completed: f32,
     max_remaining_bonus: f32,
 ) -> bool {
-    active_scores
-        .iter()
-        .all(|&s| s + max_remaining_bonus <= best_completed)
+    active_scores.iter().all(|&s| s + max_remaining_bonus <= best_completed)
 }
 
 /// Check whether early stopping is warranted.
@@ -673,11 +672,7 @@ mod tests {
         length_penalty_scale(&mut s_neon, &lengths, alpha);
         length_penalty_scale_scalar(&mut s_scalar, &lengths, alpha);
         for (a, b) in s_neon.iter().zip(s_scalar.iter()) {
-            assert!(
-                (a - b).abs() < 0.05,
-                "neon={a} scalar={b} diff={}",
-                (a - b).abs()
-            );
+            assert!((a - b).abs() < 0.05, "neon={a} scalar={b} diff={}", (a - b).abs());
         }
     }
 
@@ -838,10 +833,7 @@ mod tests {
     // ── beam_hypothesis_merge tests ─────────────────────────────────────
 
     fn hyp(score: f32, toks: &[u32]) -> BeamHypothesis {
-        BeamHypothesis {
-            score,
-            token_ids: toks.to_vec(),
-        }
+        BeamHypothesis { score, token_ids: toks.to_vec() }
     }
 
     #[test]
@@ -911,12 +903,7 @@ mod tests {
     fn test_merge_neon_scalar_parity() {
         let mut c_neon = Vec::new();
         let mut c_scalar = Vec::new();
-        let hyps = vec![
-            hyp(3.0, &[1]),
-            hyp(7.0, &[2]),
-            hyp(1.0, &[3]),
-            hyp(5.0, &[4]),
-        ];
+        let hyps = vec![hyp(3.0, &[1]), hyp(7.0, &[2]), hyp(1.0, &[3]), hyp(5.0, &[4])];
         for h in &hyps {
             beam_hypothesis_merge(&mut c_neon, h.clone(), 3);
             beam_hypothesis_merge_scalar(&mut c_scalar, h.clone(), 3);
@@ -1033,11 +1020,7 @@ mod tests {
         assert_eq!(groups.len(), 2);
         let mut completed = Vec::new();
         for &beam_idx in &groups[0] {
-            beam_hypothesis_merge(
-                &mut completed,
-                hyp(beam_idx as f32, &[beam_idx as u32]),
-                3,
-            );
+            beam_hypothesis_merge(&mut completed, hyp(beam_idx as f32, &[beam_idx as u32]), 3);
         }
         assert!(!completed.is_empty());
     }
@@ -1081,9 +1064,8 @@ mod tests {
 
         for step in 0..max_steps {
             // Simulate log probs.
-            let log_probs: Vec<f32> = (0..num_beams)
-                .map(|i| -((i + step) as f32) * 0.1 - 0.1)
-                .collect();
+            let log_probs: Vec<f32> =
+                (0..num_beams).map(|i| -((i + step) as f32) * 0.1 - 0.1).collect();
             beam_score_update(&mut scores, &log_probs);
 
             let lengths: Vec<f32> = vec![(step + 1) as f32; num_beams];
