@@ -1,10 +1,4 @@
 //! Metal activation function shader tests for Apple Silicon
-#![allow(
-    clippy::manual_clamp,
-    clippy::manual_range_contains,
-    clippy::needless_range_loop,
-    clippy::useless_vec
-)]
 //! Tests GPU-side activation correctness, edge cases, and numerical stability
 //!
 //! All tests use pure Rust CPU simulation of Metal shader computations.

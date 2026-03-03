@@ -70,7 +70,7 @@ jobs:
   build-test-linux:
     name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
