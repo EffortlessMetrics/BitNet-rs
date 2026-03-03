@@ -23,7 +23,7 @@
 //! All tests are `#[ignore]` with justification — they represent planned
 //! implementation work for optimized KV cache on ARM64 platforms.
 
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{Layout, alloc, dealloc};
 use std::ptr::NonNull;
 
 // =============================================================================
