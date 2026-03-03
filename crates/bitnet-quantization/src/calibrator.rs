@@ -1,159 +1,172 @@
-//! Quantization calibration for determining optimal scale/zero-point.
+//! Quantization calibrator.
 //!
-//! Collects activation statistics during calibration passes and
-//! computes optimal quantization parameters for INT8/INT4.
+//! Collects activation statistics for calibration-aware quantization.
 
-/// Quantization bit width.
+/// Calibration method.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BitWidth {
-    Int4,
-    Int8,
+pub enum CalibrationMethod {
+    MinMax,
+    Percentile,
+    Entropy,
+    Mse,
 }
 
-impl BitWidth {
-    pub fn bits(&self) -> u32 {
+impl CalibrationMethod {
+    pub fn as_str(&self) -> &'static str {
         match self {
-            BitWidth::Int4 => 4,
-            BitWidth::Int8 => 8,
+            Self::MinMax => "minmax",
+            Self::Percentile => "percentile",
+            Self::Entropy => "entropy",
+            Self::Mse => "mse",
         }
     }
-
-    pub fn max_int(&self) -> i32 {
-        (1 << (self.bits() - 1)) - 1
-    }
-
-    pub fn min_int(&self) -> i32 {
-        -(1 << (self.bits() - 1))
-    }
-
-    pub fn range(&self) -> i32 {
-        self.max_int() - self.min_int()
-    }
 }
 
-/// Quantization parameters for a tensor.
+/// Running statistics for a tensor.
 #[derive(Debug, Clone)]
-pub struct QuantParams {
-    pub scale: f32,
-    pub zero_point: i32,
-    pub bit_width: BitWidth,
-}
-
-impl QuantParams {
-    /// Quantize a float value.
-    pub fn quantize(&self, val: f32) -> i32 {
-        if self.scale == 0.0 {
-            return 0;
-        }
-        let q = (val / self.scale).round() as i32 + self.zero_point;
-        q.clamp(self.bit_width.min_int(), self.bit_width.max_int())
-    }
-
-    /// Dequantize an integer value.
-    pub fn dequantize(&self, val: i32) -> f32 {
-        (val - self.zero_point) as f32 * self.scale
-    }
-}
-
-/// Statistics collector for calibration.
-#[derive(Debug, Clone)]
-pub struct CalibrationStats {
-    pub min_val: f32,
-    pub max_val: f32,
-    pub sum: f64,
-    pub sum_sq: f64,
+pub struct TensorStats {
+    pub name: String,
+    pub min: f64,
+    pub max: f64,
+    pub mean: f64,
+    pub variance: f64,
     pub count: u64,
+    sum: f64,
+    sum_sq: f64,
 }
 
-impl CalibrationStats {
-    pub fn new() -> Self {
-        Self { min_val: f32::INFINITY, max_val: f32::NEG_INFINITY, sum: 0.0, sum_sq: 0.0, count: 0 }
+impl TensorStats {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            min: f64::INFINITY,
+            max: f64::NEG_INFINITY,
+            mean: 0.0,
+            variance: 0.0,
+            count: 0,
+            sum: 0.0,
+            sum_sq: 0.0,
+        }
     }
 
-    /// Update with a batch of values.
+    /// Update stats with new values.
     pub fn update(&mut self, values: &[f32]) {
         for &v in values {
-            if v < self.min_val {
-                self.min_val = v;
-            }
-            if v > self.max_val {
-                self.max_val = v;
-            }
-            self.sum += v as f64;
-            self.sum_sq += (v as f64) * (v as f64);
+            let v = v as f64;
+            self.min = self.min.min(v);
+            self.max = self.max.max(v);
+            self.sum += v;
+            self.sum_sq += v * v;
             self.count += 1;
         }
-    }
-
-    pub fn mean(&self) -> f64 {
-        if self.count == 0 {
-            return 0.0;
+        if self.count > 0 {
+            self.mean = self.sum / self.count as f64;
+            self.variance = (self.sum_sq / self.count as f64) - self.mean * self.mean;
         }
-        self.sum / self.count as f64
     }
 
-    pub fn variance(&self) -> f64 {
-        if self.count == 0 {
-            return 0.0;
+    pub fn range(&self) -> f64 {
+        self.max - self.min
+    }
+
+    pub fn absmax(&self) -> f64 {
+        self.max.abs().max(self.min.abs())
+    }
+}
+
+/// Calibration result for computing quantization parameters.
+#[derive(Debug, Clone)]
+pub struct CalibrationResult {
+    pub scale: f64,
+    pub zero_point: i64,
+    pub bits: u32,
+    pub symmetric: bool,
+}
+
+/// Compute quantization parameters.
+pub fn compute_params(
+    stats: &TensorStats,
+    bits: u32,
+    symmetric: bool,
+    method: CalibrationMethod,
+) -> CalibrationResult {
+    let (min_val, max_val) = match method {
+        CalibrationMethod::MinMax => (stats.min, stats.max),
+        CalibrationMethod::Percentile => {
+            // Approximate: use 99.9% range from mean ± 3.5*std
+            let std_dev = stats.variance.sqrt();
+            let lo = stats.mean - 3.5 * std_dev;
+            let hi = stats.mean + 3.5 * std_dev;
+            (lo.max(stats.min), hi.min(stats.max))
         }
-        let mean = self.mean();
-        self.sum_sq / self.count as f64 - mean * mean
-    }
-
-    pub fn std_dev(&self) -> f64 {
-        self.variance().sqrt()
-    }
-
-    /// Range of observed values.
-    pub fn range(&self) -> f32 {
-        if self.count == 0 {
-            return 0.0;
+        CalibrationMethod::Entropy | CalibrationMethod::Mse => {
+            // Simplified: use absmax symmetric
+            let absmax = stats.absmax();
+            (-absmax, absmax)
         }
-        self.max_val - self.min_val
+    };
+
+    let qmax = (1i64 << (bits - 1)) - 1;
+    let qmin = -(1i64 << (bits - 1));
+
+    if symmetric {
+        let absmax = max_val.abs().max(min_val.abs());
+        let scale = if absmax == 0.0 { 1.0 } else { absmax / qmax as f64 };
+        CalibrationResult { scale, zero_point: 0, bits, symmetric: true }
+    } else {
+        let range = max_val - min_val;
+        let scale = if range == 0.0 { 1.0 } else { range / (qmax - qmin) as f64 };
+        let zero_point = (qmin as f64 - min_val / scale).round() as i64;
+        CalibrationResult { scale, zero_point, bits, symmetric: false }
+    }
+}
+
+/// Calibrator collecting stats across batches.
+#[derive(Debug)]
+pub struct Calibrator {
+    pub method: CalibrationMethod,
+    pub bits: u32,
+    pub symmetric: bool,
+    stats: Vec<TensorStats>,
+}
+
+impl Calibrator {
+    pub fn new(method: CalibrationMethod, bits: u32, symmetric: bool) -> Self {
+        Self { method, bits, symmetric, stats: Vec::new() }
     }
 
-    /// Merge with another stats collector.
-    pub fn merge(&mut self, other: &CalibrationStats) {
-        if other.count == 0 {
-            return;
+    pub fn int8_symmetric() -> Self {
+        Self::new(CalibrationMethod::MinMax, 8, true)
+    }
+
+    pub fn int4_symmetric() -> Self {
+        Self::new(CalibrationMethod::MinMax, 4, true)
+    }
+
+    pub fn observe(&mut self, name: &str, values: &[f32]) {
+        if let Some(s) = self.stats.iter_mut().find(|s| s.name == name) {
+            s.update(values);
+        } else {
+            let mut s = TensorStats::new(name);
+            s.update(values);
+            self.stats.push(s);
         }
-        self.min_val = self.min_val.min(other.min_val);
-        self.max_val = self.max_val.max(other.max_val);
-        self.sum += other.sum;
-        self.sum_sq += other.sum_sq;
-        self.count += other.count;
     }
-}
 
-impl Default for CalibrationStats {
-    fn default() -> Self {
-        Self::new()
+    pub fn tensor_count(&self) -> usize {
+        self.stats.len()
     }
-}
 
-/// Compute symmetric quantization params (zero_point = 0).
-pub fn symmetric_params(stats: &CalibrationStats, bw: BitWidth) -> QuantParams {
-    let abs_max = stats.min_val.abs().max(stats.max_val.abs());
-    let scale = if abs_max == 0.0 { 1.0 } else { abs_max / bw.max_int() as f32 };
-    QuantParams { scale, zero_point: 0, bit_width: bw }
-}
+    pub fn calibrate(&self) -> Vec<(String, CalibrationResult)> {
+        self.stats
+            .iter()
+            .map(|s| (s.name.clone(), compute_params(s, self.bits, self.symmetric, self.method)))
+            .collect()
+    }
 
-/// Compute asymmetric quantization params.
-pub fn asymmetric_params(stats: &CalibrationStats, bw: BitWidth) -> QuantParams {
-    let range = stats.range();
-    let scale = if range == 0.0 { 1.0 } else { range / bw.range() as f32 };
-    let zero_point = (bw.min_int() as f32 - stats.min_val / scale).round() as i32;
-    QuantParams { scale, zero_point, bit_width: bw }
-}
-
-/// Quantize a slice of f32 values.
-pub fn quantize_slice(data: &[f32], params: &QuantParams) -> Vec<i32> {
-    data.iter().map(|&v| params.quantize(v)).collect()
-}
-
-/// Dequantize a slice of i32 values.
-pub fn dequantize_slice(data: &[i32], params: &QuantParams) -> Vec<f32> {
-    data.iter().map(|&v| params.dequantize(v)).collect()
+    pub fn get_stats(&self, name: &str) -> Option<&TensorStats> {
+        self.stats.iter().find(|s| s.name == name)
+    }
 }
 
 #[cfg(test)]
@@ -161,116 +174,109 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bit_width() {
-        assert_eq!(BitWidth::Int8.max_int(), 127);
-        assert_eq!(BitWidth::Int8.min_int(), -128);
-        assert_eq!(BitWidth::Int4.max_int(), 7);
-        assert_eq!(BitWidth::Int4.min_int(), -8);
-    }
-
-    #[test]
-    fn test_symmetric_roundtrip() {
-        let mut stats = CalibrationStats::new();
-        stats.update(&[-1.0, 0.0, 0.5, 1.0]);
-        let params = symmetric_params(&stats, BitWidth::Int8);
-        let q = params.quantize(0.5);
-        let dq = params.dequantize(q);
-        assert!((dq - 0.5).abs() < 0.02);
-    }
-
-    #[test]
-    fn test_asymmetric_roundtrip() {
-        let mut stats = CalibrationStats::new();
-        stats.update(&[0.0, 1.0, 2.0, 3.0]);
-        let params = asymmetric_params(&stats, BitWidth::Int8);
-        let q = params.quantize(1.5);
-        let dq = params.dequantize(q);
-        assert!((dq - 1.5).abs() < 0.05);
-    }
-
-    #[test]
-    fn test_clamping() {
-        let params = QuantParams { scale: 0.01, zero_point: 0, bit_width: BitWidth::Int8 };
-        let q = params.quantize(1000.0);
-        assert!(q <= 127);
-    }
-
-    #[test]
-    fn test_stats_basic() {
-        let mut s = CalibrationStats::new();
-        s.update(&[1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(s.min_val, 1.0);
-        assert_eq!(s.max_val, 4.0);
-        assert_eq!(s.count, 4);
-        assert!((s.mean() - 2.5).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_stats_variance() {
-        let mut s = CalibrationStats::new();
-        s.update(&[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]);
-        assert!((s.mean() - 5.0).abs() < 1e-6);
-        assert!((s.variance() - 4.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_stats_merge() {
-        let mut a = CalibrationStats::new();
-        a.update(&[1.0, 2.0]);
-        let mut b = CalibrationStats::new();
-        b.update(&[3.0, 4.0]);
-        a.merge(&b);
-        assert_eq!(a.count, 4);
-        assert_eq!(a.min_val, 1.0);
-        assert_eq!(a.max_val, 4.0);
-    }
-
-    #[test]
-    fn test_quantize_slice() {
-        let params = symmetric_params(
-            &{
-                let mut s = CalibrationStats::new();
-                s.update(&[-1.0, 1.0]);
-                s
-            },
-            BitWidth::Int8,
-        );
-        let q = quantize_slice(&[-1.0, 0.0, 1.0], &params);
-        assert_eq!(q.len(), 3);
-        assert_eq!(q[0], -127);
-        assert_eq!(q[1], 0);
-        assert_eq!(q[2], 127);
-    }
-
-    #[test]
-    fn test_dequantize_slice() {
-        let params = QuantParams { scale: 0.1, zero_point: 0, bit_width: BitWidth::Int8 };
-        let dq = dequantize_slice(&[10, -10, 0], &params);
-        assert!((dq[0] - 1.0).abs() < 0.01);
-        assert!((dq[1] - (-1.0)).abs() < 0.01);
-        assert!((dq[2]).abs() < 0.01);
-    }
-
-    #[test]
-    fn test_zero_scale() {
-        let params = QuantParams { scale: 0.0, zero_point: 0, bit_width: BitWidth::Int8 };
-        assert_eq!(params.quantize(5.0), 0);
-    }
-
-    #[test]
-    fn test_empty_stats() {
-        let s = CalibrationStats::new();
+    fn test_tensor_stats_new() {
+        let s = TensorStats::new("test");
         assert_eq!(s.count, 0);
-        assert_eq!(s.mean(), 0.0);
-        assert_eq!(s.range(), 0.0);
+        assert_eq!(s.min, f64::INFINITY);
     }
 
     #[test]
-    fn test_int4_range() {
-        let mut stats = CalibrationStats::new();
-        stats.update(&[-1.0, 1.0]);
-        let params = symmetric_params(&stats, BitWidth::Int4);
-        let q = params.quantize(1.0);
-        assert_eq!(q, 7);
+    fn test_tensor_stats_update() {
+        let mut s = TensorStats::new("test");
+        s.update(&[1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(s.min, 1.0);
+        assert_eq!(s.max, 5.0);
+        assert!((s.mean - 3.0).abs() < 1e-10);
+        assert_eq!(s.count, 5);
+    }
+
+    #[test]
+    fn test_range() {
+        let mut s = TensorStats::new("test");
+        s.update(&[-2.0, 3.0]);
+        assert!((s.range() - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_absmax() {
+        let mut s = TensorStats::new("test");
+        s.update(&[-5.0, 3.0]);
+        assert!((s.absmax() - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_symmetric_int8() {
+        let mut s = TensorStats::new("test");
+        s.update(&[-1.0, 0.5, 1.0]);
+        let result = compute_params(&s, 8, true, CalibrationMethod::MinMax);
+        assert!(result.symmetric);
+        assert_eq!(result.zero_point, 0);
+        assert_eq!(result.bits, 8);
+        assert!(result.scale > 0.0);
+    }
+
+    #[test]
+    fn test_asymmetric_int8() {
+        let mut s = TensorStats::new("test");
+        s.update(&[0.0, 1.0, 2.0]);
+        let result = compute_params(&s, 8, false, CalibrationMethod::MinMax);
+        assert!(!result.symmetric);
+    }
+
+    #[test]
+    fn test_int4_params() {
+        let mut s = TensorStats::new("test");
+        s.update(&[-8.0, 7.0]);
+        let result = compute_params(&s, 4, true, CalibrationMethod::MinMax);
+        assert_eq!(result.bits, 4);
+    }
+
+    #[test]
+    fn test_calibrator_observe() {
+        let mut c = Calibrator::int8_symmetric();
+        c.observe("layer.0.weight", &[1.0, 2.0, 3.0]);
+        c.observe("layer.0.weight", &[4.0, 5.0]);
+        assert_eq!(c.tensor_count(), 1);
+        let stats = c.get_stats("layer.0.weight").unwrap();
+        assert_eq!(stats.count, 5);
+    }
+
+    #[test]
+    fn test_calibrator_multiple_tensors() {
+        let mut c = Calibrator::int4_symmetric();
+        c.observe("w1", &[1.0]);
+        c.observe("w2", &[2.0]);
+        assert_eq!(c.tensor_count(), 2);
+    }
+
+    #[test]
+    fn test_calibrate() {
+        let mut c = Calibrator::int8_symmetric();
+        c.observe("w1", &[-1.0, 1.0]);
+        c.observe("w2", &[0.0, 0.5]);
+        let results = c.calibrate();
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_percentile_method() {
+        let mut s = TensorStats::new("test");
+        s.update(&[-10.0, -1.0, 0.0, 1.0, 10.0]);
+        let result = compute_params(&s, 8, true, CalibrationMethod::Percentile);
+        assert!(result.scale > 0.0);
+    }
+
+    #[test]
+    fn test_method_str() {
+        assert_eq!(CalibrationMethod::MinMax.as_str(), "minmax");
+        assert_eq!(CalibrationMethod::Entropy.as_str(), "entropy");
+    }
+
+    #[test]
+    fn test_zero_range() {
+        let mut s = TensorStats::new("test");
+        s.update(&[5.0, 5.0, 5.0]);
+        let result = compute_params(&s, 8, true, CalibrationMethod::MinMax);
+        assert!(result.scale > 0.0); // should not be zero
     }
 }
