@@ -110,10 +110,10 @@ impl VersionRange {
 /// Extract API version from a URL path prefix like "/v1/..." or "/api/v1.0/...".
 pub fn extract_version_from_path(path: &str) -> Option<ApiVersion> {
     for segment in path.split('/') {
-        if let Some(version) = ApiVersion::parse(segment) {
-            if version.major > 0 {
-                return Some(version);
-            }
+        if let Some(version) = ApiVersion::parse(segment)
+            && version.major > 0
+        {
+            return Some(version);
         }
     }
     None

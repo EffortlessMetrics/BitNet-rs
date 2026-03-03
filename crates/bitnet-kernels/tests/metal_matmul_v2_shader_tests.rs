@@ -334,7 +334,7 @@ fn align_to_metal(byte_len: usize) -> usize {
 
 /// Compute workgroup dispatch count: ceil(dim / group_size).
 fn dispatch_count(dim: u32, group_size: u32) -> u32 {
-    (dim + group_size - 1) / group_size
+    dim.div_ceil(group_size)
 }
 
 /// Compute theoretical FLOPs for a GEMM of dimensions M×N×K.

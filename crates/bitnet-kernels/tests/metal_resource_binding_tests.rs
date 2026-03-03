@@ -65,7 +65,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
 /// Run a simple copy-dispatch and return the GPU-side result.
 fn run_copy_dispatch(device: &wgpu::Device, queue: &wgpu::Queue, data: &[f32]) -> Vec<f32> {
-    let byte_len = (data.len() * std::mem::size_of::<f32>()) as u64;
+    let byte_len = std::mem::size_of_val(data) as u64;
 
     let input_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("input"),
@@ -151,7 +151,7 @@ fn run_copy_dispatch(device: &wgpu::Device, queue: &wgpu::Queue, data: &[f32]) -
         });
         pass.set_pipeline(&pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
-        pass.dispatch_workgroups(((data.len() as u32) + 63) / 64, 1, 1);
+        pass.dispatch_workgroups((data.len() as u32).div_ceil(64), 1, 1);
     }
     encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, byte_len);
     queue.submit(Some(encoder.finish()));
@@ -672,7 +672,7 @@ fn test_heap_type_tracking() {
         usage: wgpu::BufferUsages,
         size: u64,
     }
-    let entries = vec![
+    let entries = [
         HeapEntry { usage: wgpu::BufferUsages::STORAGE, size: 512 },
         HeapEntry { usage: wgpu::BufferUsages::UNIFORM, size: 256 },
         HeapEntry { usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE, size: 1024 },

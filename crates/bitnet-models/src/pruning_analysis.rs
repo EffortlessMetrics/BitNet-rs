@@ -191,7 +191,7 @@ mod tests {
         let threshold = threshold_for_sparsity(&weights, 0.5);
         // ~50% of values should be below this threshold
         let below = weights.iter().filter(|&&w| w.abs() < threshold).count();
-        assert!(below >= 45 && below <= 55);
+        assert!((45..=55).contains(&below));
     }
 
     #[test]

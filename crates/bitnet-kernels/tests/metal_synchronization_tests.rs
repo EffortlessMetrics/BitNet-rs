@@ -1454,7 +1454,7 @@ mod multi_queue_coordination {
 
     #[test]
     fn priority_based_scheduling_order() {
-        let mut queues = vec![
+        let mut queues = [
             CommandQueue::new("low", QueuePriority::Low),
             CommandQueue::new("normal", QueuePriority::Normal),
             CommandQueue::new("high", QueuePriority::High),
@@ -1692,7 +1692,7 @@ mod ring_buffer_patterns {
     #[test]
     fn ring_buffer_with_fence_sync() {
         let mut rb = RingBuffer::new(2, 256);
-        let mut fences = vec![Fence::new(0, "slot-0"), Fence::new(1, "slot-1")];
+        let mut fences = [Fence::new(0, "slot-0"), Fence::new(1, "slot-1")];
 
         // Frame 0: acquire slot 0, submit GPU work.
         let s0 = rb.acquire().unwrap();
