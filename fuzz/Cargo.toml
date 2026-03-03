@@ -29,6 +29,7 @@ bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates", version 
 bitnet-validation = { path = "../crates/bitnet-validation", version = "0.2.1-dev" }
 bitnet-engine-core = { path = "../crates/bitnet-engine-core", version = "0.2.1-dev" }
 bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev" }
+bitnet-generation-stop-core = { path = "../crates/bitnet-generation-stop-core", version = "0.2.1-dev" }
 bitnet-honest-compute = { path = "../crates/bitnet-honest-compute", version = "0.2.1-dev" }
 bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core", version = "0.2.1-dev" }
 bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core", version = "0.2.1-dev" }
@@ -613,31 +614,37 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_quantization_calibration"
-path = "fuzz_targets/fuzz_quantization_calibration.rs"
+name = "fuzz_layernorm"
+path = "fuzz_targets/fuzz_layernorm.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_download_manifest_parse"
-path = "fuzz_targets/fuzz_download_manifest_parse.rs"
+name = "fuzz_attention_mask"
+path = "fuzz_targets/fuzz_attention_mask.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_capability_check"
-path = "fuzz_targets/fuzz_capability_check.rs"
+name = "fuzz_kv_cache"
+path = "fuzz_targets/fuzz_kv_cache.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_conversion_pipeline"
-path = "fuzz_targets/fuzz_conversion_pipeline.rs"
+name = "fuzz_sampling_strategy"
+path = "fuzz_targets/fuzz_sampling_strategy.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_tensor_layout"
-path = "fuzz_targets/fuzz_tensor_layout.rs"
+name = "fuzz_stop_sequence_detection"
+path = "fuzz_targets/fuzz_stop_sequence_detection.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_model_metadata"
+path = "fuzz_targets/fuzz_model_metadata.rs"
 test = false
 doc = false

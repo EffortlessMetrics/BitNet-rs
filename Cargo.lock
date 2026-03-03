@@ -742,6 +742,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-engine-core",
  "bitnet-generation",
+ "bitnet-generation-stop-core",
  "bitnet-gguf",
  "bitnet-honest-compute",
  "bitnet-inference",
