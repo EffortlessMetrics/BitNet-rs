@@ -49,12 +49,12 @@ impl OpPool {
         let key = BufferKey::new(shape, dtype);
         let needed = key.elements() * bytes_per_element;
 
-        if let Some(buffers) = self.buffers.get_mut(&key)
-            && let Some(buf) = buffers.iter_mut().find(|b| !b.in_use)
-        {
-            buf.in_use = true;
-            self.hits += 1;
-            return buf.data.clone();
+        if let Some(buffers) = self.buffers.get_mut(&key) {
+            if let Some(buf) = buffers.iter_mut().find(|b| !b.in_use) {
+                buf.in_use = true;
+                self.hits += 1;
+                return buf.data.clone();
+            }
         }
 
         self.misses += 1;
@@ -76,10 +76,10 @@ impl OpPool {
     /// Release a buffer back to the pool.
     pub fn release(&mut self, shape: &[usize], dtype: &str) {
         let key = BufferKey::new(shape, dtype);
-        if let Some(buffers) = self.buffers.get_mut(&key)
-            && let Some(buf) = buffers.iter_mut().find(|b| b.in_use)
-        {
-            buf.in_use = false;
+        if let Some(buffers) = self.buffers.get_mut(&key) {
+            if let Some(buf) = buffers.iter_mut().find(|b| b.in_use) {
+                buf.in_use = false;
+            }
         }
     }
 

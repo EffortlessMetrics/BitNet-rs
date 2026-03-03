@@ -85,7 +85,7 @@ fn request_priority_equality() {
 fn request_priority_clone_copy() {
     let p = RequestPriority::High;
     let p2 = p; // copy
-    let p3 = p;
+    let p3 = p.clone();
     assert_eq!(p, p2);
     assert_eq!(p, p3);
 }

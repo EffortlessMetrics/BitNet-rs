@@ -1,4 +1,3 @@
-#![allow(clippy::manual_div_ceil)]
 //! A770 OpenCL numerical stability regression harness.
 //!
 //! Validates GPU kernel outputs against CPU reference implementations to detect

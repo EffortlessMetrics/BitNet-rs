@@ -4,13 +4,11 @@
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod attention_mask;
-pub mod attention_pattern;
 pub mod backends;
 pub mod batch;
 pub mod batch_engine;
 pub mod batch_scheduler;
 pub mod cache;
-pub mod cache_eviction;
 pub mod compute_cost;
 pub mod compute_graph;
 pub mod config;
@@ -21,12 +19,10 @@ pub mod decode_strategy;
 pub mod dense_forward;
 pub mod dense_generation;
 pub mod dense_integration_tests;
-pub mod embedding_table;
 pub mod embedding_utils;
 pub mod engine;
 pub mod generation;
 pub mod generation_budget;
-pub mod generation_hooks;
 pub mod generation_output;
 pub mod generation_pipeline;
 pub mod gguf;
@@ -53,7 +49,6 @@ pub mod rope_config;
 pub mod run_metrics;
 pub mod template_registry;
 pub mod thread_pool;
-pub mod token_filter;
 pub mod tool_templates; // Tool-use / function-calling prompt templates
 pub mod warmup;
 

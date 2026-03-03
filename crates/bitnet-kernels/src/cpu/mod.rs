@@ -116,7 +116,7 @@ pub mod neon_batch_scheduler;
 pub mod neon_graph_executor;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_fused_mlp;
+pub mod neon_kv_cache_ops;
 
 pub use activations::ActivationType;
 pub use activations::{

@@ -29,10 +29,8 @@ pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
-pub mod kernel_profiler;
 pub mod kernel_select;
 pub mod kernels;
-pub mod matmul_dispatch;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
 pub mod norm_registry;
@@ -81,7 +79,6 @@ pub mod perf_tracker;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
-pub mod rope_freq;
 pub mod scatter_gather;
 pub mod shaped_reduction;
 pub mod simd_detect;

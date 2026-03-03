@@ -19,7 +19,7 @@ impl QuantFormat {
         let data_bits = self.bits as usize * self.block_size;
         let scale_bits = if self.has_scale { 16 } else { 0 }; // f16 scale
         let zp_bits = if self.has_zero_point { 8 } else { 0 };
-        (data_bits + scale_bits + zp_bits).div_ceil(8)
+        (data_bits + scale_bits + zp_bits + 7) / 8
     }
 
     pub fn compression_ratio_vs_f32(&self) -> f64 {
