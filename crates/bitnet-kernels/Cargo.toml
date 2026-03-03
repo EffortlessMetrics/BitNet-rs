@@ -57,6 +57,7 @@ insta.workspace = true
 rand_chacha = "0.9.0"
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
+libc = "0.2.182"
 libm = "0.2.16"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
