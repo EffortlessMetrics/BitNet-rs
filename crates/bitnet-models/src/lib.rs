@@ -30,6 +30,7 @@ pub mod loader;
 pub mod loading_progress;
 pub mod metadata_extractor;
 pub mod minimal;
+pub mod model_compare;
 pub mod model_fingerprint;
 pub mod model_validator;
 pub mod names;
