@@ -204,7 +204,7 @@ impl GpuDiagnostics {
         FeatureStatus {
             cpu: cfg!(feature = "cpu"),
             gpu: cfg!(feature = "gpu"),
-            cuda: cfg!(feature = "cuda"),
+            cuda: cfg!(any(feature = "gpu", feature = "cuda")),
             opencl: cfg!(feature = "opencl"),
             vulkan: cfg!(feature = "vulkan"),
         }
@@ -476,7 +476,7 @@ mod tests {
         let f = diag.check_features();
         assert_eq!(f.cpu, cfg!(feature = "cpu"));
         assert_eq!(f.gpu, cfg!(feature = "gpu"));
-        assert_eq!(f.cuda, cfg!(feature = "cuda"));
+        assert_eq!(f.cuda, cfg!(any(feature = "gpu", feature = "cuda")));
         assert_eq!(f.opencl, cfg!(feature = "opencl"));
         assert_eq!(f.vulkan, cfg!(feature = "vulkan"));
     }

@@ -138,7 +138,7 @@ fn feature_status_reflects_compiled_features() {
     let f = diag.check_features();
     assert_eq!(f.cpu, cfg!(feature = "cpu"));
     assert_eq!(f.gpu, cfg!(feature = "gpu"));
-    assert_eq!(f.cuda, cfg!(feature = "cuda"));
+    assert_eq!(f.cuda, cfg!(any(feature = "gpu", feature = "cuda")));
     assert_eq!(f.opencl, cfg!(feature = "opencl"));
     assert_eq!(f.vulkan, cfg!(feature = "vulkan"));
 }

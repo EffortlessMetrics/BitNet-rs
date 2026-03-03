@@ -20,16 +20,16 @@ use std::time::Duration;
 
 use bitnet_common::{BitNetConfig, ConcreteTensor, Device};
 use bitnet_inference::engine::{InferenceResult, PerformanceMetrics, PerformanceTracker};
-use bitnet_inference_metrics_core::{
-    GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
-    ThroughputMetrics, TimingMetrics,
-};
 use bitnet_inference::receipts::{
     InferenceReceipt, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
 };
 use bitnet_inference::{
     CacheConfig, GenerationConfig, InferenceConfig, InferenceEngine, KVCache, SamplingConfig,
     SamplingStrategy, StreamingConfig,
+};
+use bitnet_inference_metrics_core::{
+    GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
+    ThroughputMetrics, TimingMetrics,
 };
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
