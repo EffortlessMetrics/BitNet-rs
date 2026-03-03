@@ -5,6 +5,27 @@
 //! argmax, and log-softmax. Each operation has a NEON implementation,
 //! a scalar fallback, and a public dispatcher that selects the best path.
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -233,48 +254,26 @@ pub fn argmax_f32(logits: &[f32]) -> usize {
 /// Panics if `penalty` is not positive finite or if any token ID >= logits.len().
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_repetition_penalty_f32(
-    logits: &mut [f32],
-    seen_tokens: &[u32],
-    penalty: f32,
-) {
-    assert!(
-        penalty.is_finite() && penalty > 0.0,
-        "penalty must be positive finite, got {penalty}"
-    );
+pub unsafe fn neon_repetition_penalty_f32(logits: &mut [f32], seen_tokens: &[u32], penalty: f32) {
+    assert!(penalty.is_finite() && penalty > 0.0, "penalty must be positive finite, got {penalty}");
     let vocab = logits.len();
     for &tok in seen_tokens {
         let idx = tok as usize;
         assert!(idx < vocab, "token id {idx} out of range (vocab={vocab})");
         let val = logits[idx];
-        logits[idx] = if val > 0.0 {
-            val / penalty
-        } else {
-            val * penalty
-        };
+        logits[idx] = if val > 0.0 { val / penalty } else { val * penalty };
     }
 }
 
 /// Scalar repetition penalty fallback.
-pub fn scalar_repetition_penalty_f32(
-    logits: &mut [f32],
-    seen_tokens: &[u32],
-    penalty: f32,
-) {
-    assert!(
-        penalty.is_finite() && penalty > 0.0,
-        "penalty must be positive finite, got {penalty}"
-    );
+pub fn scalar_repetition_penalty_f32(logits: &mut [f32], seen_tokens: &[u32], penalty: f32) {
+    assert!(penalty.is_finite() && penalty > 0.0, "penalty must be positive finite, got {penalty}");
     let vocab = logits.len();
     for &tok in seen_tokens {
         let idx = tok as usize;
         assert!(idx < vocab, "token id {idx} out of range (vocab={vocab})");
         let val = logits[idx];
-        logits[idx] = if val > 0.0 {
-            val / penalty
-        } else {
-            val * penalty
-        };
+        logits[idx] = if val > 0.0 { val / penalty } else { val * penalty };
     }
 }
 
@@ -310,12 +309,7 @@ pub fn repetition_penalty_f32(logits: &mut [f32], seen_tokens: &[u32], penalty: 
 pub unsafe fn neon_top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]) {
     assert!(k > 0, "k must be > 0");
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -355,11 +349,7 @@ pub unsafe fn neon_top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]
     }
     let tail = chunks * LANES;
     for i in 0..remainder {
-        output[tail + i] = if logits[tail + i] > threshold {
-            logits[tail + i]
-        } else {
-            neg_inf
-        };
+        output[tail + i] = if logits[tail + i] > threshold { logits[tail + i] } else { neg_inf };
     }
 
     // Second pass: fill in exactly `needed_at_threshold` values equal to threshold.
@@ -376,12 +366,7 @@ pub unsafe fn neon_top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]
 pub fn scalar_top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]) {
     assert!(k > 0, "k must be > 0");
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -400,11 +385,7 @@ pub fn scalar_top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]) {
 
     let neg_inf = f32::NEG_INFINITY;
     for i in 0..len {
-        output[i] = if logits[i] > threshold {
-            logits[i]
-        } else {
-            neg_inf
-        };
+        output[i] = if logits[i] > threshold { logits[i] } else { neg_inf };
     }
 
     let mut at_thresh_remaining = needed_at_threshold;
@@ -446,12 +427,7 @@ pub fn top_k_filter_f32(logits: &[f32], k: usize, output: &mut [f32]) {
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_top_p_filter_f32(logits: &[f32], p: f32, output: &mut [f32]) {
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -530,12 +506,7 @@ pub unsafe fn neon_top_p_filter_f32(logits: &[f32], p: f32, output: &mut [f32]) 
 /// Scalar top-P filter fallback.
 pub fn scalar_top_p_filter_f32(logits: &[f32], p: f32, output: &mut [f32]) {
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -600,12 +571,7 @@ pub fn top_p_filter_f32(logits: &[f32], p: f32, output: &mut [f32]) {
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_log_softmax_f32(logits: &[f32], output: &mut [f32]) {
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -670,12 +636,7 @@ pub unsafe fn neon_log_softmax_f32(logits: &[f32], output: &mut [f32]) {
 /// Scalar numerically stable log-softmax.
 pub fn scalar_log_softmax_f32(logits: &[f32], output: &mut [f32]) {
     let len = logits.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
 
     if len == 0 {
         return;
@@ -802,8 +763,12 @@ mod tests {
         scalar_temperature_scale_f32(&logits, 0.7, &mut scalar_out);
         temperature_scale_f32(&logits, 0.7, &mut neon_out);
         for i in 0..logits.len() {
-            assert!(approx_eq_default(neon_out[i], scalar_out[i]),
-                "mismatch at {i}: {} vs {}", neon_out[i], scalar_out[i]);
+            assert!(
+                approx_eq_default(neon_out[i], scalar_out[i]),
+                "mismatch at {i}: {} vs {}",
+                neon_out[i],
+                scalar_out[i]
+            );
         }
     }
 
@@ -901,10 +866,10 @@ mod tests {
     fn test_repetition_penalty_mixed() {
         let mut logits = vec![3.0f32, -3.0, 0.0, 6.0];
         repetition_penalty_f32(&mut logits, &[0, 1, 3], 3.0);
-        assert!(approx_eq_default(logits[0], 1.0));   // 3/3
-        assert!(approx_eq_default(logits[1], -9.0));   // -3*3
-        assert!(approx_eq_default(logits[2], 0.0));    // untouched
-        assert!(approx_eq_default(logits[3], 2.0));    // 6/3
+        assert!(approx_eq_default(logits[0], 1.0)); // 3/3
+        assert!(approx_eq_default(logits[1], -9.0)); // -3*3
+        assert!(approx_eq_default(logits[2], 0.0)); // untouched
+        assert!(approx_eq_default(logits[3], 2.0)); // 6/3
     }
 
     #[test]
@@ -941,8 +906,12 @@ mod tests {
         repetition_penalty_f32(&mut neon_logits, &seen, 1.5);
         scalar_repetition_penalty_f32(&mut scalar_logits, &seen, 1.5);
         for i in 0..100 {
-            assert!(approx_eq_default(neon_logits[i], scalar_logits[i]),
-                "mismatch at {i}: {} vs {}", neon_logits[i], scalar_logits[i]);
+            assert!(
+                approx_eq_default(neon_logits[i], scalar_logits[i]),
+                "mismatch at {i}: {} vs {}",
+                neon_logits[i],
+                scalar_logits[i]
+            );
         }
     }
 
@@ -1151,7 +1120,11 @@ mod tests {
         let logits = [42.0f32];
         let mut output = vec![0.0f32; 1];
         log_softmax_f32(&logits, &mut output);
-        assert!(approx_eq(output[0], 0.0, 1e-3), "single element log_softmax should ≈ 0, got {}", output[0]);
+        assert!(
+            approx_eq(output[0], 0.0, 1e-3),
+            "single element log_softmax should ≈ 0, got {}",
+            output[0]
+        );
     }
 
     #[test]
@@ -1213,8 +1186,12 @@ mod tests {
         log_softmax_f32(&logits, &mut neon_out);
         scalar_log_softmax_f32(&logits, &mut scalar_out);
         for i in 0..logits.len() {
-            assert!(approx_eq(neon_out[i], scalar_out[i], 1e-3),
-                "mismatch at {i}: {} vs {}", neon_out[i], scalar_out[i]);
+            assert!(
+                approx_eq(neon_out[i], scalar_out[i], 1e-3),
+                "mismatch at {i}: {} vs {}",
+                neon_out[i],
+                scalar_out[i]
+            );
         }
     }
 

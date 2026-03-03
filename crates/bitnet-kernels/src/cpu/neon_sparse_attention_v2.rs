@@ -14,6 +14,27 @@
 //! `[num_heads, seq_len, head_dim]` for Q/K/V and produce output of the
 //! same shape.
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 

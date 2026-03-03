@@ -8,6 +8,27 @@
 //! 5. Generalized dimension permutation (like numpy transpose with axes)
 //! 6. Contiguous layout check
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -88,16 +109,8 @@ fn scalar_transpose_f32(input: &[f32], output: &mut [f32], rows: usize, cols: us
 /// Panics if slice lengths are less than `rows * cols`.
 pub fn transpose_f32(input: &[f32], output: &mut [f32], rows: usize, cols: usize) {
     let numel = rows * cols;
-    assert!(
-        input.len() >= numel,
-        "input length {} < rows*cols {numel}",
-        input.len()
-    );
-    assert!(
-        output.len() >= numel,
-        "output length {} < rows*cols {numel}",
-        output.len()
-    );
+    assert!(input.len() >= numel, "input length {} < rows*cols {numel}", input.len());
+    assert!(output.len() >= numel, "output length {} < rows*cols {numel}", output.len());
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -237,12 +250,7 @@ fn scalar_transpose_inplace_f32(data: &mut [f32], n: usize) {
 ///
 /// Panics if `data.len() < n * n`.
 pub fn transpose_inplace_f32(data: &mut [f32], n: usize) {
-    assert!(
-        data.len() >= n * n,
-        "data length {} < n*n {}",
-        data.len(),
-        n * n
-    );
+    assert!(data.len() >= n * n, "data length {} < n*n {}", data.len(), n * n);
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -371,16 +379,8 @@ pub fn transpose_blocked_f32(
 ) {
     let numel = rows * cols;
     assert!(block_size > 0, "block_size must be > 0");
-    assert!(
-        input.len() >= numel,
-        "input length {} < rows*cols {numel}",
-        input.len()
-    );
-    assert!(
-        output.len() >= numel,
-        "output length {} < rows*cols {numel}",
-        output.len()
-    );
+    assert!(input.len() >= numel, "input length {} < rows*cols {numel}", input.len());
+    assert!(output.len() >= numel, "output length {} < rows*cols {numel}", output.len());
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -458,16 +458,8 @@ pub fn batch_transpose_f32(
     cols: usize,
 ) {
     let total = batch * rows * cols;
-    assert!(
-        input.len() >= total,
-        "input length {} < batch*rows*cols {total}",
-        input.len()
-    );
-    assert!(
-        output.len() >= total,
-        "output length {} < batch*rows*cols {total}",
-        output.len()
-    );
+    assert!(input.len() >= total, "input length {} < batch*rows*cols {total}", input.len());
+    assert!(output.len() >= total, "output length {} < batch*rows*cols {total}", output.len());
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -515,12 +507,7 @@ unsafe fn neon_permute_dims_f32(
     scalar_permute_dims_f32(input, output, shape, perm);
 }
 
-fn scalar_permute_dims_f32(
-    input: &[f32],
-    output: &mut [f32],
-    shape: &[usize],
-    perm: &[usize],
-) {
+fn scalar_permute_dims_f32(input: &[f32], output: &mut [f32], shape: &[usize], perm: &[usize]) {
     let ndim = shape.len();
     let total: usize = shape.iter().product();
     if total == 0 {
@@ -567,19 +554,9 @@ fn scalar_permute_dims_f32(
 ///
 /// Panics if `perm` is not a valid permutation of `0..shape.len()`,
 /// or if slice lengths are less than the product of `shape`.
-pub fn permute_dims_f32(
-    input: &[f32],
-    output: &mut [f32],
-    shape: &[usize],
-    perm: &[usize],
-) {
+pub fn permute_dims_f32(input: &[f32], output: &mut [f32], shape: &[usize], perm: &[usize]) {
     let ndim = shape.len();
-    assert_eq!(
-        perm.len(),
-        ndim,
-        "perm length {} != shape length {ndim}",
-        perm.len()
-    );
+    assert_eq!(perm.len(), ndim, "perm length {} != shape length {ndim}", perm.len());
     // Validate perm is a proper permutation
     let mut seen = vec![false; ndim];
     for &p in perm {
@@ -589,16 +566,8 @@ pub fn permute_dims_f32(
     }
 
     let total: usize = shape.iter().product();
-    assert!(
-        input.len() >= total,
-        "input length {} < total {total}",
-        input.len()
-    );
-    assert!(
-        output.len() >= total,
-        "output length {} < total {total}",
-        output.len()
-    );
+    assert!(input.len() >= total, "input length {} < total {total}", input.len());
+    assert!(output.len() >= total, "output length {} < total {total}", output.len());
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -1022,10 +991,7 @@ mod tests {
                 for k in 0..4 {
                     let in_idx = b * 12 + j * 4 + k;
                     let out_idx = b * 12 + k * 3 + j;
-                    assert_eq!(
-                        output[out_idx], input[in_idx],
-                        "mismatch at b={b} j={j} k={k}"
-                    );
+                    assert_eq!(output[out_idx], input[in_idx], "mismatch at b={b} j={j} k={k}");
                 }
             }
         }
@@ -1047,10 +1013,7 @@ mod tests {
                 for k in 0..4 {
                     let in_idx = i * 12 + j * 4 + k;
                     let out_idx = k * 6 + i * 3 + j;
-                    assert_eq!(
-                        output[out_idx], input[in_idx],
-                        "mismatch at i={i} j={j} k={k}"
-                    );
+                    assert_eq!(output[out_idx], input[in_idx], "mismatch at i={i} j={j} k={k}");
                 }
             }
         }
@@ -1223,12 +1186,7 @@ mod tests {
         for b in 0..batch {
             let off = b * mat_size;
             let mut individual_out = vec![0.0f32; mat_size];
-            transpose_f32(
-                &input[off..off + mat_size],
-                &mut individual_out,
-                rows,
-                cols,
-            );
+            transpose_f32(&input[off..off + mat_size], &mut individual_out, rows, cols);
             assert_eq!(&batch_out[off..off + mat_size], individual_out.as_slice());
         }
     }
@@ -1295,20 +1253,12 @@ mod tests {
     #[test]
     fn test_contiguous_4d() {
         let data = vec![0.0f32; 120];
-        assert!(contiguous_check_f32(
-            &data,
-            &[2, 3, 4, 5],
-            &[60, 20, 5, 1]
-        ));
+        assert!(contiguous_check_f32(&data, &[2, 3, 4, 5], &[60, 20, 5, 1]));
     }
 
     #[test]
     fn test_non_contiguous_4d() {
         let data = vec![0.0f32; 120];
-        assert!(!contiguous_check_f32(
-            &data,
-            &[2, 3, 4, 5],
-            &[60, 20, 1, 5]
-        ));
+        assert!(!contiguous_check_f32(&data, &[2, 3, 4, 5], &[60, 20, 1, 5]));
     }
 }

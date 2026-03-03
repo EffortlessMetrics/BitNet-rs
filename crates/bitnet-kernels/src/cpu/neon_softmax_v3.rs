@@ -12,6 +12,27 @@
 //! and a public dispatcher that selects at runtime via
 //! `is_aarch64_feature_detected!("neon")`.
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -487,12 +508,7 @@ unsafe fn neon_fused_softmax_mask_f32(
 }
 
 /// Scalar fallback fused softmax with mask.
-fn scalar_fused_softmax_mask_f32(
-    input: &[f32],
-    mask: &[bool],
-    output: &mut [f32],
-    neg_inf: f32,
-) {
+fn scalar_fused_softmax_mask_f32(input: &[f32], mask: &[bool], output: &mut [f32], neg_inf: f32) {
     let len = input.len();
     if len == 0 {
         return;
@@ -528,24 +544,14 @@ fn scalar_fused_softmax_mask_f32(
 ///
 /// # Panics
 /// Panics if `output.len() < input.len()` or `mask.len() < input.len()`.
-pub fn fused_softmax_mask_f32(
-    input: &[f32],
-    mask: &[bool],
-    output: &mut [f32],
-    neg_inf: f32,
-) {
+pub fn fused_softmax_mask_f32(input: &[f32], mask: &[bool], output: &mut [f32], neg_inf: f32) {
     assert!(
         output.len() >= input.len(),
         "output buffer too small: {} < {}",
         output.len(),
         input.len()
     );
-    assert!(
-        mask.len() >= input.len(),
-        "mask buffer too small: {} < {}",
-        mask.len(),
-        input.len()
-    );
+    assert!(mask.len() >= input.len(), "mask buffer too small: {} < {}", mask.len(), input.len());
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
@@ -703,12 +709,7 @@ pub fn softmax_temperature_f32(input: &[f32], output: &mut [f32], temperature: f
 /// `input.len()` is not divisible by `group_size`.
 pub fn grouped_softmax_f32(input: &[f32], group_size: usize, output: &mut [f32]) {
     let len = input.len();
-    assert!(
-        output.len() >= len,
-        "output buffer too small: {} < {}",
-        output.len(),
-        len
-    );
+    assert!(output.len() >= len, "output buffer too small: {} < {}", output.len(), len);
     assert!(group_size > 0, "group_size must be > 0");
     assert!(
         len % group_size == 0,
@@ -753,10 +754,7 @@ mod tests {
         let exps: Vec<f64> = input.iter().map(|&x| ((x as f64) - max_val).exp()).collect();
         let sum: f64 = exps.iter().sum();
         let log_sum = sum.ln();
-        input
-            .iter()
-            .map(|&x| ((x as f64 - max_val) - log_sum) as f32)
-            .collect()
+        input.iter().map(|&x| ((x as f64 - max_val) - log_sum) as f32).collect()
     }
 
     /// Tolerance for fast_exp approximation (relative error ~2e-4).
@@ -767,10 +765,7 @@ mod tests {
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
             let diff = (x - y).abs();
             let denom = x.abs().max(y.abs()).max(1e-12);
-            assert!(
-                diff / denom < tol || diff < tol,
-                "{msg}: index {i}: {x} vs {y} (diff={diff})"
-            );
+            assert!(diff / denom < tol || diff < tol, "{msg}: index {i}: {x} vs {y} (diff={diff})");
         }
     }
 
@@ -1460,12 +1455,7 @@ mod tests {
         let mut scalar = vec![0.0; 5];
         log_softmax_f32(&input, &mut dispatched);
         scalar_log_softmax_f32(&input, &mut scalar);
-        assert_close(
-            &dispatched,
-            &scalar,
-            APPROX_TOL,
-            "scalar_log_matches_dispatch",
-        );
+        assert_close(&dispatched, &scalar, APPROX_TOL, "scalar_log_matches_dispatch");
     }
 
     #[test]
@@ -1475,12 +1465,7 @@ mod tests {
         let mut scalar = vec![0.0; 5];
         online_softmax_f32(&input, &mut dispatched);
         scalar_online_softmax_f32(&input, &mut scalar);
-        assert_close(
-            &dispatched,
-            &scalar,
-            APPROX_TOL,
-            "scalar_online_matches_dispatch",
-        );
+        assert_close(&dispatched, &scalar, APPROX_TOL, "scalar_online_matches_dispatch");
     }
 
     #[test]

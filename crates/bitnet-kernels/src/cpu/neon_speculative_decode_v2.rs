@@ -10,6 +10,27 @@
 //!
 //! Each function has a NEON fast-path and a scalar fallback.
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -89,14 +110,9 @@ unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
 #[inline]
 unsafe fn fast_ln_neon(x: float32x4_t) -> float32x4_t {
     let bits = vreinterpretq_s32_f32(x);
-    let exponent = vsubq_s32(
-        vandq_s32(vshrq_n_s32(bits, 23), vdupq_n_s32(0xFF)),
-        vdupq_n_s32(127),
-    );
-    let mantissa_bits = vorrq_s32(
-        vandq_s32(bits, vdupq_n_s32(0x007F_FFFF)),
-        vdupq_n_s32(0x3F80_0000_u32 as i32),
-    );
+    let exponent = vsubq_s32(vandq_s32(vshrq_n_s32(bits, 23), vdupq_n_s32(0xFF)), vdupq_n_s32(127));
+    let mantissa_bits =
+        vorrq_s32(vandq_s32(bits, vdupq_n_s32(0x007F_FFFF)), vdupq_n_s32(0x3F80_0000_u32 as i32));
     let mantissa = vreinterpretq_f32_s32(mantissa_bits);
     let one = vdupq_n_f32(1.0);
     let m = vsubq_f32(mantissa, one);
@@ -170,15 +186,8 @@ unsafe fn draft_token_verify_neon(
     accepted
 }
 
-fn draft_token_verify_scalar(
-    draft_probs: &[f32],
-    target_probs_per_token: &[f32],
-) -> Vec<bool> {
-    draft_probs
-        .iter()
-        .zip(target_probs_per_token.iter())
-        .map(|(&d, &t)| t >= d)
-        .collect()
+fn draft_token_verify_scalar(draft_probs: &[f32], target_probs_per_token: &[f32]) -> Vec<bool> {
+    draft_probs.iter().zip(target_probs_per_token.iter()).map(|(&d, &t)| t >= d).collect()
 }
 
 /// Verify draft tokens against target model logits.
@@ -200,18 +209,14 @@ pub fn draft_token_verify(
     assert_eq!(target_probs_per_token.len(), len);
 
     if len == 0 {
-        return DraftVerifyResult {
-            accepted_count: 0,
-            accepted: vec![],
-        };
+        return DraftVerifyResult { accepted_count: 0, accepted: vec![] };
     }
 
     let accepted;
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            accepted =
-                unsafe { draft_token_verify_neon(draft_probs, target_probs_per_token) };
+            accepted = unsafe { draft_token_verify_neon(draft_probs, target_probs_per_token) };
         } else {
             accepted = draft_token_verify_scalar(draft_probs, target_probs_per_token);
         }
@@ -222,10 +227,7 @@ pub fn draft_token_verify(
     }
 
     let accepted_count = accepted.iter().take_while(|&&a| a).count();
-    DraftVerifyResult {
-        accepted_count,
-        accepted,
-    }
+    DraftVerifyResult { accepted_count, accepted }
 }
 
 // ── 2. acceptance_probability ───────────────────────────────────────────
@@ -239,10 +241,7 @@ pub fn draft_token_verify(
 /// Requires `aarch64` target with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn acceptance_probability_neon(
-    draft_probs: &[f32],
-    target_probs: &[f32],
-) -> Vec<f32> {
+unsafe fn acceptance_probability_neon(draft_probs: &[f32], target_probs: &[f32]) -> Vec<f32> {
     let len = draft_probs.len();
     let mut result = vec![0.0f32; len];
     let chunks = len / LANES;
@@ -275,10 +274,7 @@ unsafe fn acceptance_probability_neon(
     result
 }
 
-fn acceptance_probability_scalar(
-    draft_probs: &[f32],
-    target_probs: &[f32],
-) -> Vec<f32> {
+fn acceptance_probability_scalar(draft_probs: &[f32], target_probs: &[f32]) -> Vec<f32> {
     draft_probs
         .iter()
         .zip(target_probs.iter())
@@ -293,10 +289,7 @@ fn acceptance_probability_scalar(
 ///
 /// Returns `min(1, target_prob / draft_prob)` for each position, clamped to
 /// `[0, 1]`.
-pub fn acceptance_probability(
-    draft_probs: &[f32],
-    target_probs: &[f32],
-) -> Vec<f32> {
+pub fn acceptance_probability(draft_probs: &[f32], target_probs: &[f32]) -> Vec<f32> {
     let len = draft_probs.len();
     assert_eq!(target_probs.len(), len);
 
@@ -307,9 +300,7 @@ pub fn acceptance_probability(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                acceptance_probability_neon(draft_probs, target_probs)
-            };
+            return unsafe { acceptance_probability_neon(draft_probs, target_probs) };
         }
     }
     acceptance_probability_scalar(draft_probs, target_probs)
@@ -334,18 +325,12 @@ pub struct DraftScore {
 /// Requires `aarch64` target with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn parallel_draft_scoring_neon(
-    logits: &[f32],
-    candidate_ids: &[u32],
-) -> Vec<DraftScore> {
+unsafe fn parallel_draft_scoring_neon(logits: &[f32], candidate_ids: &[u32]) -> Vec<DraftScore> {
     let len = logits.len();
     if len == 0 || candidate_ids.is_empty() {
         return candidate_ids
             .iter()
-            .map(|&id| DraftScore {
-                token_id: id,
-                log_prob: f32::NEG_INFINITY,
-            })
+            .map(|&id| DraftScore { token_id: id, log_prob: f32::NEG_INFINITY })
             .collect();
     }
 
@@ -392,36 +377,21 @@ unsafe fn parallel_draft_scoring_neon(
             } else {
                 f32::NEG_INFINITY
             };
-            DraftScore {
-                token_id: id,
-                log_prob,
-            }
+            DraftScore { token_id: id, log_prob }
         })
         .collect()
 }
 
-fn parallel_draft_scoring_scalar(
-    logits: &[f32],
-    candidate_ids: &[u32],
-) -> Vec<DraftScore> {
+fn parallel_draft_scoring_scalar(logits: &[f32], candidate_ids: &[u32]) -> Vec<DraftScore> {
     if logits.is_empty() || candidate_ids.is_empty() {
         return candidate_ids
             .iter()
-            .map(|&id| DraftScore {
-                token_id: id,
-                log_prob: f32::NEG_INFINITY,
-            })
+            .map(|&id| DraftScore { token_id: id, log_prob: f32::NEG_INFINITY })
             .collect();
     }
 
-    let max_val = logits
-        .iter()
-        .copied()
-        .fold(f32::NEG_INFINITY, f32::max);
-    let sum_exp: f32 = logits
-        .iter()
-        .map(|&l| fast_exp_scalar(l - max_val))
-        .sum();
+    let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let sum_exp: f32 = logits.iter().map(|&l| fast_exp_scalar(l - max_val)).sum();
     let log_sum_exp = max_val + fast_ln_scalar(sum_exp);
 
     candidate_ids
@@ -432,10 +402,7 @@ fn parallel_draft_scoring_scalar(
             } else {
                 f32::NEG_INFINITY
             };
-            DraftScore {
-                token_id: id,
-                log_prob,
-            }
+            DraftScore { token_id: id, log_prob }
         })
         .collect()
 }
@@ -444,16 +411,11 @@ fn parallel_draft_scoring_scalar(
 ///
 /// Computes the log-softmax of the logits and returns the log-probability for
 /// each candidate token id.
-pub fn parallel_draft_scoring(
-    logits: &[f32],
-    candidate_ids: &[u32],
-) -> Vec<DraftScore> {
+pub fn parallel_draft_scoring(logits: &[f32], candidate_ids: &[u32]) -> Vec<DraftScore> {
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                parallel_draft_scoring_neon(logits, candidate_ids)
-            };
+            return unsafe { parallel_draft_scoring_neon(logits, candidate_ids) };
         }
     }
     parallel_draft_scoring_scalar(logits, candidate_ids)
@@ -530,11 +492,8 @@ unsafe fn rejection_sampling_neon(
 
     // Compute adjusted distribution at first rejection point.
     let adjusted_distribution = if accepted_count < len {
-        let adj: Vec<f32> = draft_probs
-            .iter()
-            .zip(target_probs.iter())
-            .map(|(&d, &t)| (t - d).max(0.0))
-            .collect();
+        let adj: Vec<f32> =
+            draft_probs.iter().zip(target_probs.iter()).map(|(&d, &t)| (t - d).max(0.0)).collect();
         let sum: f32 = adj.iter().sum();
         if sum > 0.0 {
             Some(adj.iter().map(|&v| v / sum).collect())
@@ -545,11 +504,7 @@ unsafe fn rejection_sampling_neon(
         None
     };
 
-    RejectionSampleResult {
-        accepted_count,
-        accepted,
-        adjusted_distribution,
-    }
+    RejectionSampleResult { accepted_count, accepted, adjusted_distribution }
 }
 
 fn rejection_sampling_scalar(
@@ -569,11 +524,8 @@ fn rejection_sampling_scalar(
     let accepted_count = accepted.iter().take_while(|&&a| a).count();
 
     let adjusted_distribution = if accepted_count < len {
-        let adj: Vec<f32> = draft_probs
-            .iter()
-            .zip(target_probs.iter())
-            .map(|(&d, &t)| (t - d).max(0.0))
-            .collect();
+        let adj: Vec<f32> =
+            draft_probs.iter().zip(target_probs.iter()).map(|(&d, &t)| (t - d).max(0.0)).collect();
         let sum: f32 = adj.iter().sum();
         if sum > 0.0 {
             Some(adj.iter().map(|&v| v / sum).collect())
@@ -584,11 +536,7 @@ fn rejection_sampling_scalar(
         None
     };
 
-    RejectionSampleResult {
-        accepted_count,
-        accepted,
-        adjusted_distribution,
-    }
+    RejectionSampleResult { accepted_count, accepted, adjusted_distribution }
 }
 
 /// Perform rejection sampling for speculative decoding.
@@ -616,9 +564,7 @@ pub fn rejection_sampling(
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            return unsafe {
-                rejection_sampling_neon(draft_probs, target_probs, random_values)
-            };
+            return unsafe { rejection_sampling_neon(draft_probs, target_probs, random_values) };
         }
     }
     rejection_sampling_scalar(draft_probs, target_probs, random_values)
@@ -656,10 +602,7 @@ pub struct TokenTreeResult {
 /// Requires `aarch64` target with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn batch_compare_probs_neon(
-    draft_probs: &[f32],
-    target_probs: &[f32],
-) -> Vec<bool> {
+unsafe fn batch_compare_probs_neon(draft_probs: &[f32], target_probs: &[f32]) -> Vec<bool> {
     let len = draft_probs.len();
     let mut result = vec![false; len];
     let chunks = len / LANES;
@@ -687,15 +630,8 @@ unsafe fn batch_compare_probs_neon(
     result
 }
 
-fn batch_compare_probs_scalar(
-    draft_probs: &[f32],
-    target_probs: &[f32],
-) -> Vec<bool> {
-    draft_probs
-        .iter()
-        .zip(target_probs.iter())
-        .map(|(&d, &t)| t >= d)
-        .collect()
+fn batch_compare_probs_scalar(draft_probs: &[f32], target_probs: &[f32]) -> Vec<bool> {
+    draft_probs.iter().zip(target_probs.iter()).map(|(&d, &t)| t >= d).collect()
 }
 
 /// Verify a token tree for multi-path speculative decoding.
@@ -705,11 +641,7 @@ fn batch_compare_probs_scalar(
 /// per-node acceptance flags.
 pub fn token_tree_verify(tree: &[TokenTreeNode]) -> TokenTreeResult {
     if tree.is_empty() {
-        return TokenTreeResult {
-            best_path: vec![],
-            node_accepted: vec![],
-            total_accepted: 0,
-        };
+        return TokenTreeResult { best_path: vec![], node_accepted: vec![], total_accepted: 0 };
     }
 
     // Batch compare all node probabilities.
@@ -720,18 +652,14 @@ pub fn token_tree_verify(tree: &[TokenTreeNode]) -> TokenTreeResult {
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            node_accepted = unsafe {
-                batch_compare_probs_neon(&draft_probs, &target_probs)
-            };
+            node_accepted = unsafe { batch_compare_probs_neon(&draft_probs, &target_probs) };
         } else {
-            node_accepted =
-                batch_compare_probs_scalar(&draft_probs, &target_probs);
+            node_accepted = batch_compare_probs_scalar(&draft_probs, &target_probs);
         }
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
-        node_accepted =
-            batch_compare_probs_scalar(&draft_probs, &target_probs);
+        node_accepted = batch_compare_probs_scalar(&draft_probs, &target_probs);
     }
 
     let total_accepted = node_accepted.iter().filter(|&&a| a).count();
@@ -739,19 +667,11 @@ pub fn token_tree_verify(tree: &[TokenTreeNode]) -> TokenTreeResult {
     // DFS to find the longest accepted path.
     let best_path = find_best_path(tree, &node_accepted, 0);
 
-    TokenTreeResult {
-        best_path,
-        node_accepted,
-        total_accepted,
-    }
+    TokenTreeResult { best_path, node_accepted, total_accepted }
 }
 
 /// DFS helper to find the longest accepted path starting from `node_idx`.
-fn find_best_path(
-    tree: &[TokenTreeNode],
-    accepted: &[bool],
-    node_idx: usize,
-) -> Vec<u32> {
+fn find_best_path(tree: &[TokenTreeNode], accepted: &[bool], node_idx: usize) -> Vec<u32> {
     if node_idx >= tree.len() || !accepted[node_idx] {
         return vec![];
     }
@@ -789,10 +709,7 @@ pub struct KlDivergenceResult {
 /// Requires `aarch64` target with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn kl_divergence_neon(
-    target_dist: &[f32],
-    draft_dist: &[f32],
-) -> f32 {
+unsafe fn kl_divergence_neon(target_dist: &[f32], draft_dist: &[f32]) -> f32 {
     let len = target_dist.len();
     if len == 0 {
         return 0.0;
@@ -858,10 +775,7 @@ pub fn kl_divergence_check(
     assert_eq!(draft_dist.len(), len);
 
     if len == 0 {
-        return KlDivergenceResult {
-            kl_divergence: 0.0,
-            within_threshold: true,
-        };
+        return KlDivergenceResult { kl_divergence: 0.0, within_threshold: true };
     }
 
     let kl;
@@ -878,10 +792,7 @@ pub fn kl_divergence_check(
         kl = kl_divergence_scalar(target_dist, draft_dist);
     }
 
-    KlDivergenceResult {
-        kl_divergence: kl,
-        within_threshold: kl <= threshold,
-    }
+    KlDivergenceResult { kl_divergence: kl, within_threshold: kl <= threshold }
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────
@@ -1086,17 +997,13 @@ mod tests {
         let neon_result = draft_token_verify(&tokens, &draft, &target);
         let scalar_result = draft_token_verify_scalar(&draft, &target);
         for i in 0..17 {
-            assert_eq!(
-                neon_result.accepted[i], scalar_result[i],
-                "mismatch at {i}"
-            );
+            assert_eq!(neon_result.accepted[i], scalar_result[i], "mismatch at {i}");
         }
     }
 
     #[test]
     fn test_acceptance_prob_neon_scalar_parity() {
-        let draft: Vec<f32> =
-            (0..19).map(|i| 0.05 * (i as f32 + 1.0)).collect();
+        let draft: Vec<f32> = (0..19).map(|i| 0.05 * (i as f32 + 1.0)).collect();
         let target: Vec<f32> = (0..19).map(|i| 0.9 - 0.04 * i as f32).collect();
         let neon = acceptance_probability(&draft, &target);
         let scalar = acceptance_probability_scalar(&draft, &target);
@@ -1112,8 +1019,7 @@ mod tests {
 
     #[test]
     fn test_parallel_scoring_neon_scalar_parity() {
-        let logits: Vec<f32> =
-            (0..32).map(|i| -2.0 + 0.2 * i as f32).collect();
+        let logits: Vec<f32> = (0..32).map(|i| -2.0 + 0.2 * i as f32).collect();
         let candidates: Vec<u32> = vec![0, 5, 15, 31];
         let neon = parallel_draft_scoring(&logits, &candidates);
         let scalar = parallel_draft_scoring_scalar(&logits, &candidates);
@@ -1142,13 +1048,9 @@ mod tests {
     fn test_kl_divergence_neon_scalar_parity() {
         let target = vec![0.4, 0.3, 0.2, 0.1];
         let draft = vec![0.25, 0.25, 0.25, 0.25];
-        let neon =
-            kl_divergence_check(&target, &draft, 1.0).kl_divergence;
+        let neon = kl_divergence_check(&target, &draft, 1.0).kl_divergence;
         let scalar = kl_divergence_scalar(&target, &draft);
-        assert!(
-            (neon - scalar).abs() < 0.01,
-            "neon={neon}, scalar={scalar}"
-        );
+        assert!((neon - scalar).abs() < 0.01, "neon={neon}, scalar={scalar}");
     }
 
     #[test]
@@ -1158,13 +1060,9 @@ mod tests {
         let sum_t: f32 = target.iter().sum();
         let target: Vec<f32> = target.iter().map(|&v| v / sum_t).collect();
         let draft = vec![1.0 / n as f32; n];
-        let neon =
-            kl_divergence_check(&target, &draft, 10.0).kl_divergence;
+        let neon = kl_divergence_check(&target, &draft, 10.0).kl_divergence;
         let scalar = kl_divergence_scalar(&target, &draft);
-        assert!(
-            (neon - scalar).abs() < 0.05,
-            "neon={neon}, scalar={scalar}"
-        );
+        assert!((neon - scalar).abs() < 0.05, "neon={neon}, scalar={scalar}");
     }
 
     // ── parallel_draft_scoring tests ────────────────────────────────────
@@ -1189,11 +1087,7 @@ mod tests {
         let scores = parallel_draft_scoring(&logits, &[5]);
         assert_eq!(scores.len(), 1);
         let expected = -(10.0f32).ln();
-        assert!(
-            (scores[0].log_prob - expected).abs() < 0.05,
-            "got {}",
-            scores[0].log_prob
-        );
+        assert!((scores[0].log_prob - expected).abs() < 0.05, "got {}", scores[0].log_prob);
     }
 
     #[test]
@@ -1293,10 +1187,7 @@ mod tests {
         let result = rejection_sampling(&draft, &target, &random);
         if let Some(ref adj) = result.adjusted_distribution {
             let sum: f32 = adj.iter().sum();
-            assert!(
-                (sum - 1.0).abs() < 1e-5,
-                "adjusted dist sum = {sum}"
-            );
+            assert!((sum - 1.0).abs() < 1e-5, "adjusted dist sum = {sum}");
         }
     }
 
@@ -1367,24 +1258,9 @@ mod tests {
     #[test]
     fn test_tree_verify_linear_chain_all_accepted() {
         let tree = vec![
-            TokenTreeNode {
-                token_id: 1,
-                draft_prob: 0.2,
-                target_prob: 0.5,
-                children: vec![1],
-            },
-            TokenTreeNode {
-                token_id: 2,
-                draft_prob: 0.3,
-                target_prob: 0.4,
-                children: vec![2],
-            },
-            TokenTreeNode {
-                token_id: 3,
-                draft_prob: 0.1,
-                target_prob: 0.6,
-                children: vec![],
-            },
+            TokenTreeNode { token_id: 1, draft_prob: 0.2, target_prob: 0.5, children: vec![1] },
+            TokenTreeNode { token_id: 2, draft_prob: 0.3, target_prob: 0.4, children: vec![2] },
+            TokenTreeNode { token_id: 3, draft_prob: 0.1, target_prob: 0.6, children: vec![] },
         ];
         let result = token_tree_verify(&tree);
         assert_eq!(result.best_path, vec![1, 2, 3]);
@@ -1396,30 +1272,10 @@ mod tests {
         // Root → child 1 (accepted) → grandchild (accepted)
         //      → child 2 (rejected)
         let tree = vec![
-            TokenTreeNode {
-                token_id: 10,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![1, 2],
-            },
-            TokenTreeNode {
-                token_id: 20,
-                draft_prob: 0.2,
-                target_prob: 0.4,
-                children: vec![3],
-            },
-            TokenTreeNode {
-                token_id: 30,
-                draft_prob: 0.9,
-                target_prob: 0.1,
-                children: vec![],
-            },
-            TokenTreeNode {
-                token_id: 40,
-                draft_prob: 0.1,
-                target_prob: 0.3,
-                children: vec![],
-            },
+            TokenTreeNode { token_id: 10, draft_prob: 0.1, target_prob: 0.5, children: vec![1, 2] },
+            TokenTreeNode { token_id: 20, draft_prob: 0.2, target_prob: 0.4, children: vec![3] },
+            TokenTreeNode { token_id: 30, draft_prob: 0.9, target_prob: 0.1, children: vec![] },
+            TokenTreeNode { token_id: 40, draft_prob: 0.1, target_prob: 0.3, children: vec![] },
         ];
         let result = token_tree_verify(&tree);
         assert_eq!(result.best_path, vec![10, 20, 40]);
@@ -1431,30 +1287,10 @@ mod tests {
     fn test_tree_verify_picks_longest_branch() {
         // Root → branch A (1 node) vs branch B (2 nodes).
         let tree = vec![
-            TokenTreeNode {
-                token_id: 1,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![1, 2],
-            },
-            TokenTreeNode {
-                token_id: 2,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![],
-            },
-            TokenTreeNode {
-                token_id: 3,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![3],
-            },
-            TokenTreeNode {
-                token_id: 4,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![],
-            },
+            TokenTreeNode { token_id: 1, draft_prob: 0.1, target_prob: 0.5, children: vec![1, 2] },
+            TokenTreeNode { token_id: 2, draft_prob: 0.1, target_prob: 0.5, children: vec![] },
+            TokenTreeNode { token_id: 3, draft_prob: 0.1, target_prob: 0.5, children: vec![3] },
+            TokenTreeNode { token_id: 4, draft_prob: 0.1, target_prob: 0.5, children: vec![] },
         ];
         let result = token_tree_verify(&tree);
         assert_eq!(result.best_path, vec![1, 3, 4]);
@@ -1463,18 +1299,8 @@ mod tests {
     #[test]
     fn test_tree_verify_root_rejected() {
         let tree = vec![
-            TokenTreeNode {
-                token_id: 1,
-                draft_prob: 0.9,
-                target_prob: 0.1,
-                children: vec![1],
-            },
-            TokenTreeNode {
-                token_id: 2,
-                draft_prob: 0.1,
-                target_prob: 0.9,
-                children: vec![],
-            },
+            TokenTreeNode { token_id: 1, draft_prob: 0.9, target_prob: 0.1, children: vec![1] },
+            TokenTreeNode { token_id: 2, draft_prob: 0.1, target_prob: 0.9, children: vec![] },
         ];
         let result = token_tree_verify(&tree);
         assert!(result.best_path.is_empty());
@@ -1510,11 +1336,7 @@ mod tests {
     fn test_kl_identical_distributions() {
         let dist = vec![0.25, 0.25, 0.25, 0.25];
         let result = kl_divergence_check(&dist, &dist, 0.01);
-        assert!(
-            result.kl_divergence < 0.01,
-            "KL = {}",
-            result.kl_divergence
-        );
+        assert!(result.kl_divergence < 0.01, "KL = {}", result.kl_divergence);
         assert!(result.within_threshold);
     }
 
@@ -1630,32 +1452,16 @@ mod tests {
 
     #[test]
     fn test_rejection_single_token() {
-        let result =
-            rejection_sampling(&[0.3], &[0.6], &[0.5]);
+        let result = rejection_sampling(&[0.3], &[0.6], &[0.5]);
         assert_eq!(result.accepted_count, 1);
     }
 
     #[test]
     fn test_tree_verify_all_leaves_rejected() {
         let tree = vec![
-            TokenTreeNode {
-                token_id: 1,
-                draft_prob: 0.1,
-                target_prob: 0.5,
-                children: vec![1, 2],
-            },
-            TokenTreeNode {
-                token_id: 2,
-                draft_prob: 0.9,
-                target_prob: 0.1,
-                children: vec![],
-            },
-            TokenTreeNode {
-                token_id: 3,
-                draft_prob: 0.9,
-                target_prob: 0.1,
-                children: vec![],
-            },
+            TokenTreeNode { token_id: 1, draft_prob: 0.1, target_prob: 0.5, children: vec![1, 2] },
+            TokenTreeNode { token_id: 2, draft_prob: 0.9, target_prob: 0.1, children: vec![] },
+            TokenTreeNode { token_id: 3, draft_prob: 0.9, target_prob: 0.1, children: vec![] },
         ];
         let result = token_tree_verify(&tree);
         assert_eq!(result.best_path, vec![1]);
@@ -1667,11 +1473,7 @@ mod tests {
         let scores = parallel_draft_scoring(&logits, &[0, 50, 99]);
         let expected = -(100.0f32).ln();
         for s in &scores {
-            assert!(
-                (s.log_prob - expected).abs() < 0.1,
-                "got {}",
-                s.log_prob
-            );
+            assert!((s.log_prob - expected).abs() < 0.1, "got {}", s.log_prob);
         }
     }
 

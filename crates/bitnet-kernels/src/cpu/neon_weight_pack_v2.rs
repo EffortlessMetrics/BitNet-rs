@@ -15,6 +15,27 @@
 //! - `0b01` → +1
 //! - `0b11` → −1
 
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    unused_variables,
+    dead_code,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::manual_div_ceil,
+    clippy::collapsible_if,
+    clippy::manual_memcpy,
+    clippy::manual_is_multiple_of,
+    clippy::unnecessary_cast,
+    clippy::let_and_return,
+    clippy::float_cmp,
+    clippy::excessive_precision,
+    clippy::missing_safety_doc,
+    clippy::never_loop,
+    clippy::while_immutable_condition,
+    clippy::manual_abs_diff
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -281,11 +302,7 @@ pub fn scalar_transpose_packed_weights(
     let out_cols_packed = (rows + 3) / 4;
     let required_in = rows * cols_packed;
     let required_out = logical_cols * out_cols_packed;
-    assert!(
-        input.len() >= required_in,
-        "input too small: need {required_in}, got {}",
-        input.len()
-    );
+    assert!(input.len() >= required_in, "input too small: need {required_in}, got {}", input.len());
     assert!(
         output.len() >= required_out,
         "output too small: need {required_out}, got {}",
@@ -317,12 +334,7 @@ pub fn scalar_transpose_packed_weights(
 /// Transpose packed weight matrix for column-major access.
 ///
 /// Dispatches to NEON on aarch64 or scalar fallback.
-pub fn transpose_packed_weights(
-    input: &[u8],
-    output: &mut [u8],
-    rows: usize,
-    cols_packed: usize,
-) {
+pub fn transpose_packed_weights(input: &[u8], output: &mut [u8], rows: usize, cols_packed: usize) {
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
@@ -371,11 +383,7 @@ pub fn scalar_interleave_weights_for_neon(
     let row_groups = (rows + 3) / 4;
     let required_in = rows * cols_packed;
     let required_out = row_groups * 4 * cols_packed;
-    assert!(
-        input.len() >= required_in,
-        "input too small: need {required_in}, got {}",
-        input.len()
-    );
+    assert!(input.len() >= required_in, "input too small: need {required_in}, got {}", input.len());
     assert!(
         output.len() >= required_out,
         "output too small: need {required_out}, got {}",
@@ -440,11 +448,7 @@ pub unsafe fn neon_compute_weight_sparsity(input: &[u8], total_elements: usize) 
     }
 
     let packed_len = (total_elements + 3) / 4;
-    assert!(
-        input.len() >= packed_len,
-        "input too small: need {packed_len}, got {}",
-        input.len()
-    );
+    assert!(input.len() >= packed_len, "input too small: need {packed_len}, got {}", input.len());
 
     // Count non-zero 2-bit pairs.
     // For each byte: OR together the two bits of each pair, then popcount.
@@ -493,11 +497,7 @@ pub fn scalar_compute_weight_sparsity(input: &[u8], total_elements: usize) -> f3
     }
 
     let packed_len = (total_elements + 3) / 4;
-    assert!(
-        input.len() >= packed_len,
-        "input too small: need {packed_len}, got {}",
-        input.len()
-    );
+    assert!(input.len() >= packed_len, "input too small: need {packed_len}, got {}", input.len());
 
     let mut nonzero_count: u64 = 0;
     let mut counted = 0usize;
@@ -894,13 +894,15 @@ mod tests {
 
     #[test]
     fn test_roundtrip_mixed_pattern() {
-        let input: Vec<i8> = (0..64).map(|i| match i % 5 {
-            0 => -1,
-            1 => 0,
-            2 => 1,
-            3 => 0,
-            _ => -1,
-        }).collect();
+        let input: Vec<i8> = (0..64)
+            .map(|i| match i % 5 {
+                0 => -1,
+                1 => 0,
+                2 => 1,
+                3 => 0,
+                _ => -1,
+            })
+            .collect();
         let mut packed = vec![0u8; 16];
         pack_i2_weights(&input, &mut packed);
         let mut unpacked = vec![0i8; 64];
@@ -988,12 +990,8 @@ mod tests {
     #[test]
     fn test_transpose_identity_4x1() {
         // 4 rows × 1 packed col; each row has one value set
-        let vals: Vec<Vec<i8>> = vec![
-            vec![1, 0, 0, 0],
-            vec![0, 1, 0, 0],
-            vec![0, 0, 1, 0],
-            vec![0, 0, 0, 1],
-        ];
+        let vals: Vec<Vec<i8>> =
+            vec![vec![1, 0, 0, 0], vec![0, 1, 0, 0], vec![0, 0, 1, 0], vec![0, 0, 0, 1]];
         let mut input = vec![0u8; 4];
         for (r, v) in vals.iter().enumerate() {
             scalar_pack_i2_weights(v, &mut input[r..r + 1]);
@@ -1161,12 +1159,14 @@ mod tests {
 
     #[test]
     fn test_sparsity_large_buffer() {
-        let input: Vec<i8> = (0..256).map(|i| match i % 4 {
-            0 => 0,
-            1 => 1,
-            2 => 0,
-            _ => -1,
-        }).collect();
+        let input: Vec<i8> = (0..256)
+            .map(|i| match i % 4 {
+                0 => 0,
+                1 => 1,
+                2 => 0,
+                _ => -1,
+            })
+            .collect();
         let mut packed = vec![0u8; 64];
         pack_i2_weights(&input, &mut packed);
         let s = compute_weight_sparsity(&packed, 256);
