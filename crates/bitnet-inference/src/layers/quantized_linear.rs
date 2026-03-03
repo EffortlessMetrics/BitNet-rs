@@ -630,10 +630,10 @@ impl QuantizedLinear {
         #[cfg(target_arch = "aarch64")]
         {
             // Use ARM NEON-optimized TL1 kernel when available
-            if let Ok(provider) = self.kernel_manager.select_best()
-                && (provider.name().contains("neon") || provider.name().contains("arm"))
-            {
-                return self.vectorized_tl1_matmul(input, provider).await;
+            if let Ok(provider) = self.kernel_manager.select_best() {
+                if provider.name().contains("neon") || provider.name().contains("arm") {
+                    return self.vectorized_tl1_matmul(input, provider).await;
+                }
             }
         }
 

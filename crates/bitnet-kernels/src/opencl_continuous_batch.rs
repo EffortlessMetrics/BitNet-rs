@@ -244,7 +244,7 @@ impl SlotManager {
         &self.config
     }
 
-    /// Accumulated stats (call [`Self::compute_stats`] for a utilisation snapshot).
+    /// Accumulated stats (call [`compute_stats`] for a utilisation snapshot).
     pub fn stats(&self) -> &ContinuousBatchStats {
         &self.stats
     }
