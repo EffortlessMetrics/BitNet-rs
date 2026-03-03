@@ -23,6 +23,7 @@ pub mod cuda_graph_capture;
 pub mod device_aware;
 pub mod device_features;
 pub mod dispatch_planner;
+pub mod dispatch_registry;
 pub mod dispatch_table;
 #[cfg(feature = "ffi")]
 pub mod ffi;
