@@ -115,6 +115,9 @@ pub mod neon_batch_scheduler;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_graph_executor;
 
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_layernorm;
+
 pub use activations::ActivationType;
 pub use activations::{
     apply_activation, elu_vec, gelu_approx_vec, gelu_inplace, gelu_vec, hard_sigmoid_vec,
