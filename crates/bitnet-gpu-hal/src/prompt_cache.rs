@@ -546,14 +546,14 @@ impl PromptCache {
             CacheEviction::SizeBased => self.find_size_victim(),
         };
 
-        if let Some(id) = victim_id
-            && let Some(entry) = self.entries.remove(&id)
-        {
+        if let Some(id) = victim_id {
+            if let Some(entry) = self.entries.remove(&id) {
                 self.trie.remove(&entry.kv_state.prefix_tokens);
                 let freed = entry.kv_state.memory_bytes();
                 self.stats.memory_bytes = self.stats.memory_bytes.saturating_sub(freed);
                 self.stats.evictions += 1;
                 self.stats.entry_count = self.entries.len();
+            }
         }
     }
 

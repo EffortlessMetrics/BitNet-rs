@@ -264,7 +264,7 @@ impl PressureMonitor {
             return false;
         }
         #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss)]
-        let predicted = delta.mul_add(steps as f64, used as f64);
+        let predicted = used as f64 + delta * steps as f64;
         #[allow(clippy::cast_precision_loss)]
         let total_f = self.total as f64;
         predicted >= total_f

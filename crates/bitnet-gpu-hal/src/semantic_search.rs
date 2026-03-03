@@ -293,7 +293,7 @@ impl HNSWIndex {
 
     fn random_level(&self, id_hash: u64) -> usize {
         // Deterministic level from id hash for reproducibility.
-        let uniform = ((id_hash.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1)) as f64)
+        let uniform = ((id_hash.wrapping_mul(6364136223846793005).wrapping_add(1)) as f64)
             / (u64::MAX as f64);
         let level = (-uniform.ln() * self.level_mult) as usize;
         level.min(12)
@@ -339,7 +339,7 @@ impl HNSWIndex {
                 self.search_level(current, &self.vectors[idx].vector, self.ef_construction, lev);
             let selected = Self::select_neighbors(&neighbors, self.max_neighbors);
 
-            self.nodes[idx].neighbors[lev].clone_from(&selected);
+            self.nodes[idx].neighbors[lev] = selected.clone();
             for &nb in &selected {
                 if lev < self.nodes[nb].neighbors.len() {
                     self.nodes[nb].neighbors[lev].push(idx);
@@ -464,7 +464,10 @@ impl HNSWIndex {
         if query.len() != self.dim {
             return Err(SearchError::DimensionMismatch { expected: self.dim, got: query.len() });
         }
-        let Some(entry) = self.entry_point else { return Ok(Vec::new()) };
+        let entry = match self.entry_point {
+            Some(e) => e,
+            None => return Ok(Vec::new()),
+        };
 
         let mut current = entry;
         for lev in (1..=self.max_level).rev() {
@@ -542,10 +545,10 @@ impl HNSWIndex {
 }
 
 fn hash_id(id: &str) -> u64 {
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut h: u64 = 0xcbf29ce484222325;
     for b in id.bytes() {
         h ^= b as u64;
-        h = h.wrapping_mul(0x0100_0000_01b3);
+        h = h.wrapping_mul(0x100000001b3);
     }
     h
 }
@@ -903,7 +906,7 @@ mod tests {
         let mut s = seed;
         (0..dim)
             .map(|_| {
-                s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1442695040888963407);
+                s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
                 ((s >> 33) as f32) / (u32::MAX as f32) * 2.0 - 1.0
             })
             .collect()

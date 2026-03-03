@@ -191,7 +191,7 @@ impl ActivationObserver {
             return 0.0;
         }
         let mean = self.mean();
-        mean.mul_add(-mean, self.sum_sq / self.count as f64)
+        self.sum_sq / self.count as f64 - mean * mean
     }
 
     /// Total number of observed values.

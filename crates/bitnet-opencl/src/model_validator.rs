@@ -368,9 +368,7 @@ impl ModelValidator {
 
         // Memory check
         if model.model_size_bytes > device.available_memory_bytes {
-            #[allow(clippy::cast_precision_loss)]
             let model_mb = model.model_size_bytes as f64 / (1024.0 * 1024.0);
-            #[allow(clippy::cast_precision_loss)]
             let avail_mb = device.available_memory_bytes as f64 / (1024.0 * 1024.0);
             report.add(
                 ValidationSeverity::Error,
@@ -383,8 +381,7 @@ impl ModelValidator {
             );
         } else {
             let usage_pct = if device.available_memory_bytes > 0 {
-                #[allow(clippy::cast_precision_loss)]
-                { (model.model_size_bytes as f64 / device.available_memory_bytes as f64) * 100.0 }
+                (model.model_size_bytes as f64 / device.available_memory_bytes as f64) * 100.0
             } else {
                 100.0
             };
