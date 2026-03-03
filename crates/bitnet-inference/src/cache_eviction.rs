@@ -1,213 +1,168 @@
-//! Cache eviction policies for KV cache management.
+//! KV cache eviction policies.
 //!
-//! Implements LRU, FIFO, and priority-based eviction strategies
-//! for managing memory-constrained KV caches.
+//! Manage cache memory under pressure: LRU, sliding window,
+//! attention-score-based eviction, and budget management.
 
 use std::collections::VecDeque;
 
 /// Eviction policy type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EvictionPolicy {
-    /// Least Recently Used: evict the entry accessed longest ago.
+    /// Least Recently Used.
     Lru,
-    /// First In First Out: evict the oldest entry.
-    Fifo,
-    /// Evict the entry with the lowest priority score.
-    Priority,
+    /// Fixed sliding window — keep most recent N positions.
+    SlidingWindow,
+    /// Evict positions with lowest cumulative attention scores.
+    AttentionBased,
+    /// No eviction — fail when full.
+    NoEviction,
 }
 
-/// A tracked cache entry.
+/// A cache entry tracking metadata.
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
-    pub key: u64,
-    pub access_count: u64,
-    pub priority: f32,
-    insert_order: u64,
-    last_access: u64,
+    pub position: usize,
+    pub last_accessed: u64,
+    pub attention_score: f64,
 }
 
-/// Eviction tracker that determines which entries to evict.
-#[derive(Debug)]
-pub struct EvictionTracker {
-    policy: EvictionPolicy,
-    entries: Vec<CacheEntry>,
-    capacity: usize,
-    clock: u64,
-    insert_counter: u64,
-    eviction_count: u64,
+/// Cache budget constraints.
+#[derive(Debug, Clone)]
+pub struct CacheBudget {
+    pub max_entries: usize,
+    pub current_entries: usize,
 }
 
-impl EvictionTracker {
-    pub fn new(policy: EvictionPolicy, capacity: usize) -> Self {
-        Self {
-            policy,
-            entries: Vec::with_capacity(capacity),
-            capacity,
-            clock: 0,
-            insert_counter: 0,
-            eviction_count: 0,
+impl CacheBudget {
+    pub fn new(max_entries: usize) -> Self {
+        Self { max_entries, current_entries: 0 }
+    }
+
+    pub fn utilization(&self) -> f64 {
+        if self.max_entries == 0 {
+            return 1.0;
         }
-    }
-
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
+        self.current_entries as f64 / self.max_entries as f64
     }
 
     pub fn is_full(&self) -> bool {
-        self.entries.len() >= self.capacity
+        self.current_entries >= self.max_entries
     }
 
-    pub fn capacity(&self) -> usize {
-        self.capacity
-    }
-
-    pub fn eviction_count(&self) -> u64 {
-        self.eviction_count
-    }
-
-    /// Record an access to a key (for LRU tracking).
-    pub fn access(&mut self, key: u64) {
-        self.clock += 1;
-        if let Some(entry) = self.entries.iter_mut().find(|e| e.key == key) {
-            entry.last_access = self.clock;
-            entry.access_count += 1;
-        }
-    }
-
-    /// Insert a new entry. Returns the evicted key if cache was full.
-    pub fn insert(&mut self, key: u64, priority: f32) -> Option<u64> {
-        // Check if key already exists
-        if self.entries.iter().any(|e| e.key == key) {
-            self.access(key);
-            return None;
-        }
-
-        let evicted = if self.is_full() {
-            let victim = self.select_victim();
-            victim.map(|idx| {
-                let evicted_key = self.entries[idx].key;
-                self.entries.swap_remove(idx);
-                self.eviction_count += 1;
-                evicted_key
-            })
-        } else {
-            None
-        };
-
-        self.clock += 1;
-        self.insert_counter += 1;
-        self.entries.push(CacheEntry {
-            key,
-            access_count: 1,
-            priority,
-            insert_order: self.insert_counter,
-            last_access: self.clock,
-        });
-
-        evicted
-    }
-
-    /// Select the index of the victim to evict.
-    fn select_victim(&self) -> Option<usize> {
-        if self.entries.is_empty() {
-            return None;
-        }
-        match self.policy {
-            EvictionPolicy::Lru => {
-                self.entries.iter().enumerate().min_by_key(|(_, e)| e.last_access).map(|(i, _)| i)
-            }
-            EvictionPolicy::Fifo => {
-                self.entries.iter().enumerate().min_by_key(|(_, e)| e.insert_order).map(|(i, _)| i)
-            }
-            EvictionPolicy::Priority => self
-                .entries
-                .iter()
-                .enumerate()
-                .min_by(|(_, a), (_, b)| {
-                    a.priority.partial_cmp(&b.priority).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .map(|(i, _)| i),
-        }
-    }
-
-    /// Remove a specific key.
-    pub fn remove(&mut self, key: u64) -> bool {
-        if let Some(pos) = self.entries.iter().position(|e| e.key == key) {
-            self.entries.swap_remove(pos);
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Check whether a key is present.
-    pub fn contains(&self, key: u64) -> bool {
-        self.entries.iter().any(|e| e.key == key)
-    }
-
-    /// Clear all entries.
-    pub fn clear(&mut self) {
-        self.entries.clear();
-        self.clock = 0;
-        self.insert_counter = 0;
-    }
-
-    /// Get keys in eviction order (first = next to be evicted).
-    pub fn eviction_order(&self) -> Vec<u64> {
-        let mut indices: Vec<usize> = (0..self.entries.len()).collect();
-        match self.policy {
-            EvictionPolicy::Lru => {
-                indices.sort_by_key(|&i| self.entries[i].last_access);
-            }
-            EvictionPolicy::Fifo => {
-                indices.sort_by_key(|&i| self.entries[i].insert_order);
-            }
-            EvictionPolicy::Priority => {
-                indices.sort_by(|&a, &b| {
-                    self.entries[a]
-                        .priority
-                        .partial_cmp(&self.entries[b].priority)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
-            }
-        }
-        indices.iter().map(|&i| self.entries[i].key).collect()
+    pub fn remaining(&self) -> usize {
+        self.max_entries.saturating_sub(self.current_entries)
     }
 }
 
-/// Simple bounded FIFO queue for sequence IDs.
+/// LRU eviction tracker.
 #[derive(Debug)]
-pub struct EvictionQueue {
-    queue: VecDeque<u64>,
+pub struct LruTracker {
+    order: VecDeque<usize>,
     max_size: usize,
 }
 
-impl EvictionQueue {
+impl LruTracker {
     pub fn new(max_size: usize) -> Self {
-        Self { queue: VecDeque::with_capacity(max_size), max_size }
+        Self { order: VecDeque::new(), max_size }
     }
 
-    pub fn push(&mut self, id: u64) -> Option<u64> {
-        if self.queue.len() >= self.max_size {
-            let evicted = self.queue.pop_front();
-            self.queue.push_back(id);
-            evicted
-        } else {
-            self.queue.push_back(id);
-            None
-        }
+    pub fn access(&mut self, position: usize) {
+        self.order.retain(|&p| p != position);
+        self.order.push_back(position);
+    }
+
+    /// Returns positions to evict (oldest first) to free `count` slots.
+    pub fn evict(&mut self, count: usize) -> Vec<usize> {
+        let n = count.min(self.order.len());
+        let evicted: Vec<usize> = self.order.drain(..n).collect();
+        evicted
     }
 
     pub fn len(&self) -> usize {
-        self.queue.len()
+        self.order.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.queue.is_empty()
+    pub fn is_full(&self) -> bool {
+        self.order.len() >= self.max_size
+    }
+
+    pub fn should_evict(&self) -> bool {
+        self.order.len() > self.max_size
+    }
+}
+
+/// Sliding window eviction.
+#[derive(Debug)]
+pub struct SlidingWindowTracker {
+    window_size: usize,
+    current_pos: usize,
+}
+
+impl SlidingWindowTracker {
+    pub fn new(window_size: usize) -> Self {
+        Self { window_size, current_pos: 0 }
+    }
+
+    pub fn advance(&mut self) {
+        self.current_pos += 1;
+    }
+
+    pub fn advance_to(&mut self, pos: usize) {
+        self.current_pos = pos;
+    }
+
+    /// Range of positions to keep: [start, end).
+    pub fn active_range(&self) -> (usize, usize) {
+        let start = self.current_pos.saturating_sub(self.window_size);
+        (start, self.current_pos)
+    }
+
+    /// Positions that should be evicted (before the window start).
+    pub fn evictable_before(&self) -> usize {
+        self.current_pos.saturating_sub(self.window_size)
+    }
+}
+
+/// Attention-score-based eviction.
+pub fn evict_by_attention(entries: &mut Vec<CacheEntry>, count: usize) -> Vec<usize> {
+    if count == 0 || entries.is_empty() {
+        return vec![];
+    }
+    entries.sort_by(|a, b| a.attention_score.partial_cmp(&b.attention_score).unwrap());
+    let n = count.min(entries.len());
+    let evicted: Vec<usize> = entries.drain(..n).map(|e| e.position).collect();
+    evicted
+}
+
+/// Select eviction targets based on policy.
+pub fn select_evictions(
+    policy: EvictionPolicy,
+    entries: &[CacheEntry],
+    count: usize,
+) -> Vec<usize> {
+    if count == 0 || entries.is_empty() {
+        return vec![];
+    }
+    let n = count.min(entries.len());
+
+    match policy {
+        EvictionPolicy::Lru => {
+            let mut sorted = entries.to_vec();
+            sorted.sort_by_key(|e| e.last_accessed);
+            sorted[..n].iter().map(|e| e.position).collect()
+        }
+        EvictionPolicy::AttentionBased => {
+            let mut sorted = entries.to_vec();
+            sorted.sort_by(|a, b| a.attention_score.partial_cmp(&b.attention_score).unwrap());
+            sorted[..n].iter().map(|e| e.position).collect()
+        }
+        EvictionPolicy::SlidingWindow => {
+            // Evict oldest positions
+            let mut sorted = entries.to_vec();
+            sorted.sort_by_key(|e| e.position);
+            sorted[..n].iter().map(|e| e.position).collect()
+        }
+        EvictionPolicy::NoEviction => vec![],
     }
 }
 
@@ -216,117 +171,110 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_lru_eviction() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 3);
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        t.insert(3, 0.0);
-        t.access(1); // 1 is most recent now
-        let evicted = t.insert(4, 0.0);
-        assert_eq!(evicted, Some(2)); // 2 was least recently used
+    fn test_cache_budget() {
+        let mut budget = CacheBudget::new(100);
+        assert!(!budget.is_full());
+        assert_eq!(budget.remaining(), 100);
+        budget.current_entries = 100;
+        assert!(budget.is_full());
+        assert!((budget.utilization() - 1.0).abs() < 1e-6);
     }
 
     #[test]
-    fn test_fifo_eviction() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Fifo, 3);
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        t.insert(3, 0.0);
-        t.access(1); // access doesn't matter for FIFO
-        let evicted = t.insert(4, 0.0);
-        assert_eq!(evicted, Some(1)); // 1 was first in
+    fn test_lru_tracker() {
+        let mut lru = LruTracker::new(3);
+        lru.access(0);
+        lru.access(1);
+        lru.access(2);
+        assert_eq!(lru.len(), 3);
+        lru.access(0); // refresh 0
+        let evicted = lru.evict(1);
+        assert_eq!(evicted, vec![1]); // 1 is oldest now
     }
 
     #[test]
-    fn test_priority_eviction() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Priority, 3);
-        t.insert(1, 5.0);
-        t.insert(2, 1.0); // lowest priority
-        t.insert(3, 3.0);
-        let evicted = t.insert(4, 10.0);
-        assert_eq!(evicted, Some(2)); // lowest priority evicted
+    fn test_lru_evict_multiple() {
+        let mut lru = LruTracker::new(5);
+        for i in 0..5 {
+            lru.access(i);
+        }
+        let evicted = lru.evict(3);
+        assert_eq!(evicted, vec![0, 1, 2]);
+        assert_eq!(lru.len(), 2);
     }
 
     #[test]
-    fn test_no_eviction_under_capacity() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 5);
-        assert_eq!(t.insert(1, 0.0), None);
-        assert_eq!(t.insert(2, 0.0), None);
-        assert_eq!(t.len(), 2);
+    fn test_sliding_window() {
+        let mut sw = SlidingWindowTracker::new(4);
+        sw.advance_to(10);
+        let (start, end) = sw.active_range();
+        assert_eq!(start, 6);
+        assert_eq!(end, 10);
     }
 
     #[test]
-    fn test_duplicate_insert() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 3);
-        t.insert(1, 0.0);
-        t.insert(1, 0.0); // duplicate - just access
-        assert_eq!(t.len(), 1);
+    fn test_sliding_window_early() {
+        let mut sw = SlidingWindowTracker::new(10);
+        sw.advance_to(3);
+        let (start, _) = sw.active_range();
+        assert_eq!(start, 0); // can't go negative
     }
 
     #[test]
-    fn test_remove() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 5);
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        assert!(t.remove(1));
-        assert!(!t.remove(99));
-        assert_eq!(t.len(), 1);
+    fn test_attention_eviction() {
+        let mut entries = vec![
+            CacheEntry { position: 0, last_accessed: 10, attention_score: 0.9 },
+            CacheEntry { position: 1, last_accessed: 5, attention_score: 0.1 },
+            CacheEntry { position: 2, last_accessed: 8, attention_score: 0.5 },
+        ];
+        let evicted = evict_by_attention(&mut entries, 1);
+        assert_eq!(evicted, vec![1]); // lowest attention score
     }
 
     #[test]
-    fn test_contains() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 5);
-        t.insert(42, 0.0);
-        assert!(t.contains(42));
-        assert!(!t.contains(99));
+    fn test_select_lru() {
+        let entries = vec![
+            CacheEntry { position: 0, last_accessed: 10, attention_score: 0.5 },
+            CacheEntry { position: 1, last_accessed: 1, attention_score: 0.5 },
+            CacheEntry { position: 2, last_accessed: 5, attention_score: 0.5 },
+        ];
+        let evicted = select_evictions(EvictionPolicy::Lru, &entries, 1);
+        assert_eq!(evicted, vec![1]); // oldest access
     }
 
     #[test]
-    fn test_eviction_count() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Fifo, 2);
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        t.insert(3, 0.0);
-        t.insert(4, 0.0);
-        assert_eq!(t.eviction_count(), 2);
+    fn test_select_no_eviction() {
+        let entries = vec![CacheEntry { position: 0, last_accessed: 1, attention_score: 0.5 }];
+        let evicted = select_evictions(EvictionPolicy::NoEviction, &entries, 1);
+        assert!(evicted.is_empty());
     }
 
     #[test]
-    fn test_clear() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 5);
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        t.clear();
-        assert!(t.is_empty());
-        assert_eq!(t.len(), 0);
+    fn test_lru_is_full() {
+        let mut lru = LruTracker::new(2);
+        lru.access(0);
+        assert!(!lru.is_full());
+        lru.access(1);
+        assert!(lru.is_full());
     }
 
     #[test]
-    fn test_eviction_order() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Priority, 5);
-        t.insert(1, 5.0);
-        t.insert(2, 1.0);
-        t.insert(3, 3.0);
-        let order = t.eviction_order();
-        assert_eq!(order[0], 2); // lowest priority first
+    fn test_budget_zero() {
+        let budget = CacheBudget::new(0);
+        assert!(budget.is_full());
+        assert!((budget.utilization() - 1.0).abs() < 1e-6);
     }
 
     #[test]
-    fn test_eviction_queue() {
-        let mut q = EvictionQueue::new(3);
-        assert_eq!(q.push(1), None);
-        assert_eq!(q.push(2), None);
-        assert_eq!(q.push(3), None);
-        assert_eq!(q.push(4), Some(1)); // evicts oldest
-        assert_eq!(q.len(), 3);
+    fn test_empty_eviction() {
+        let evicted = select_evictions(EvictionPolicy::Lru, &[], 5);
+        assert!(evicted.is_empty());
     }
 
     #[test]
-    fn test_is_full() {
-        let mut t = EvictionTracker::new(EvictionPolicy::Lru, 2);
-        assert!(!t.is_full());
-        t.insert(1, 0.0);
-        t.insert(2, 0.0);
-        assert!(t.is_full());
+    fn test_evictable_before() {
+        let mut sw = SlidingWindowTracker::new(100);
+        sw.advance_to(150);
+        assert_eq!(sw.evictable_before(), 50);
     }
 }
