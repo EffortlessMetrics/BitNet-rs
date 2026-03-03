@@ -236,8 +236,8 @@ mod tests {
     #[test]
     fn test_report() {
         let mut r = ModelWeightReport::new();
-        r.add(WeightStats::compute("a", &[10], &vec![1.0f32; 10]));
-        r.add(WeightStats::compute("b", &[20], &vec![0.5f32; 20]));
+        r.add(WeightStats::compute("a", &[10], &[1.0f32; 10]));
+        r.add(WeightStats::compute("b", &[20], &[0.5f32; 20]));
         assert_eq!(r.total_elements(), 30);
         assert_eq!(r.tensors.len(), 2);
     }

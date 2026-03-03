@@ -1267,7 +1267,7 @@ fn test_copy_buffer_to_texture_offset() {
 fn test_copy_buffer_too_small() {
     let tex =
         MockTexture::create(TextureDescriptor::new_2d(PixelFormat::RGBA8Unorm, 16, 16)).unwrap();
-    let buffer = vec![0u8; 100]; // too small
+    let buffer = [0u8; 100]; // too small
     let copy = BufferTextureCopy {
         buffer_offset: 0,
         bytes_per_row: 16 * 4,

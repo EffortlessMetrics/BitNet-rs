@@ -123,7 +123,7 @@ impl ValidationCheck for HeadDimCheck {
     }
     fn validate(&self, c: &ModelConfig) -> Vec<ValidationIssue> {
         let mut issues = vec![];
-        if c.num_heads > 0 && c.hidden_size % c.num_heads != 0 {
+        if c.num_heads > 0 && !c.hidden_size.is_multiple_of(c.num_heads) {
             issues.push(ValidationIssue::error(
                 self.name(),
                 format!("hidden_size {} not divisible by num_heads {}", c.hidden_size, c.num_heads),
@@ -147,7 +147,7 @@ impl ValidationCheck for GqaCheck {
                 format!("num_kv_heads {} > num_heads {}", c.num_kv_heads, c.num_heads),
             ));
         }
-        if c.num_kv_heads > 0 && c.num_heads % c.num_kv_heads != 0 {
+        if c.num_kv_heads > 0 && !c.num_heads.is_multiple_of(c.num_kv_heads) {
             issues.push(ValidationIssue::error(
                 self.name(),
                 format!(
