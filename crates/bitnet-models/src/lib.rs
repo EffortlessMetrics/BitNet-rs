@@ -43,6 +43,7 @@ pub mod model_validation;
 pub mod model_validator;
 pub mod names;
 pub mod production_loader;
+pub mod pruning_analysis;
 pub mod qk256_utils;
 pub mod quant;
 pub mod registry_persist;
