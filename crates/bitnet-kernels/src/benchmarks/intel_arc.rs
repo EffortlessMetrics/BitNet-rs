@@ -1085,14 +1085,14 @@ mod tests {
 
     #[test]
     fn test_result_percentile_p95() {
-        let samples: Vec<Duration> = (1..=100).map(|i| Duration::from_millis(i)).collect();
+        let samples: Vec<Duration> = (1..=100).map(Duration::from_millis).collect();
         let r = BenchResult::new("pct", samples);
         assert_eq!(r.p95(), Duration::from_millis(95));
     }
 
     #[test]
     fn test_result_percentile_p99() {
-        let samples: Vec<Duration> = (1..=100).map(|i| Duration::from_millis(i)).collect();
+        let samples: Vec<Duration> = (1..=100).map(Duration::from_millis).collect();
         let r = BenchResult::new("pct99", samples);
         assert_eq!(r.p99(), Duration::from_millis(99));
     }

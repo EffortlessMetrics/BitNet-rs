@@ -233,8 +233,7 @@ fn rope_known_value_head_dim2_pos5() {
     let mut data = vec![2.0, -1.0];
 
     let angle = 5.0f32;
-    let expected =
-        [2.0 * angle.cos() - (-1.0) * angle.sin(), 2.0 * angle.sin() + (-1.0) * angle.cos()];
+    let expected = [2.0 * angle.cos() - -angle.sin(), 2.0 * angle.sin() + -angle.cos()];
 
     apply_rope(&mut data, 5, 2, &freqs);
 

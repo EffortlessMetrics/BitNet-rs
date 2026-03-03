@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_bf16_round_trip() {
-        let val = 3.14f32;
+        let val = std::f32::consts::PI;
         let bf16 = f32_to_bf16(val);
         let back = bf16_to_f32(bf16);
         assert!((val - back).abs() < 0.02);

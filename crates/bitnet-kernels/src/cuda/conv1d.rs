@@ -668,7 +668,7 @@ mod tests {
     fn cuda_conv1d_depthwise() {
         let c = cfg(64, 64, 3, 1, PaddingMode::Zero(1), 1, 64, false);
         let input = vec![0.0f32; 64 * 256];
-        let weight = vec![0.0f32; 64 * 1 * 3];
+        let weight = vec![0.0f32; 64 * 3];
         let result = launch_conv1d(&input, &weight, None, &c, 256);
         assert!(result.is_ok(), "CUDA depthwise failed: {result:?}");
     }

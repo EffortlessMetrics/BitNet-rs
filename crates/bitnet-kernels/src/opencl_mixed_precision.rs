@@ -961,7 +961,7 @@ mod tests {
     #[test]
     fn test_cast_identity_f32() {
         let cast = CastOp::new(Precision::F32, Precision::F32);
-        assert_eq!(cast.cast_f32(3.14), 3.14);
+        assert_eq!(cast.cast_f32(std::f32::consts::PI), std::f32::consts::PI);
         assert_eq!(cast.cast_f32(-0.0), -0.0);
     }
 

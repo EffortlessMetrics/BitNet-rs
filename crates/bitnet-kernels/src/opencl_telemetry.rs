@@ -1423,7 +1423,7 @@ mod tests {
         }
         // Value is one of 0, 1, 2, 3
         let v = reg.get_value("g").unwrap();
-        assert!(v >= 0.0 && v <= 3.0);
+        assert!((0.0..=3.0).contains(&v));
     }
 
     // ── Prometheus export ──────────────────────────────────────────

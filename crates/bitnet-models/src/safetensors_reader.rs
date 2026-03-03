@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn f16_to_f32_conversion() {
-        let f32_values: Vec<f32> = vec![0.5, -1.0, 3.14, 0.0];
+        let f32_values: Vec<f32> = vec![0.5, -1.0, std::f32::consts::PI, 0.0];
         let f16_bytes: Vec<u8> =
             f32_values.iter().flat_map(|&f| half::f16::from_f32(f).to_le_bytes()).collect();
 

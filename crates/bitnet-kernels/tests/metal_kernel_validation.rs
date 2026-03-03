@@ -49,7 +49,7 @@ fn optimal_threadgroup_1d(total_threads: u32) -> u32 {
     let max = METAL_MAX_THREADS_PER_THREADGROUP;
     if total_threads <= max {
         // Round up to next SIMD-width multiple
-        let aligned = (total_threads + METAL_SIMD_WIDTH - 1) / METAL_SIMD_WIDTH * METAL_SIMD_WIDTH;
+        let aligned = total_threads.div_ceil(METAL_SIMD_WIDTH) * METAL_SIMD_WIDTH;
         aligned.min(max)
     } else {
         max
@@ -61,7 +61,7 @@ fn dispatch_grid_1d(total_threads: u32, threadgroup_size: u32) -> u32 {
     if threadgroup_size == 0 {
         return 0;
     }
-    (total_threads + threadgroup_size - 1) / threadgroup_size
+    total_threads.div_ceil(threadgroup_size)
 }
 
 /// Validate a Metal dispatch configuration.

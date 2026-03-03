@@ -322,7 +322,7 @@ fn f32_reinterpret_after_reuse() {
     let mut buf = pool.allocate(256);
     {
         let floats = buf.as_f32_mut_slice();
-        floats[0] = 3.14;
+        floats[0] = std::f32::consts::PI;
     }
     drop(buf);
 

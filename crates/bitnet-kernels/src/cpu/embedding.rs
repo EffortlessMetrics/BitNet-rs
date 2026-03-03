@@ -1552,7 +1552,7 @@ mod tests {
     fn test_positional_embedding_bounded_values() {
         let pe = positional_embedding(100, 64);
         for &v in &pe {
-            assert!(v >= -1.0 && v <= 1.0, "PE value {v} out of [-1,1]");
+            assert!((-1.0..=1.0).contains(&v), "PE value {v} out of [-1,1]");
         }
     }
 
@@ -1586,7 +1586,7 @@ mod tests {
         assert_eq!(pe.len(), 4000);
         // Values should still be bounded
         for &v in &pe {
-            assert!(v >= -1.0 && v <= 1.0);
+            assert!((-1.0..=1.0).contains(&v));
         }
     }
 

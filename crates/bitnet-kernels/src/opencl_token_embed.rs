@@ -1214,8 +1214,8 @@ mod tests {
 
     #[test]
     fn scaler_custom_factor() {
-        let s = EmbeddingScaler::with_factor(3.14);
-        assert!((s.factor - 3.14).abs() < 1e-6);
+        let s = EmbeddingScaler::with_factor(std::f32::consts::PI);
+        assert!((s.factor - std::f32::consts::PI).abs() < 1e-6);
     }
 
     #[test]

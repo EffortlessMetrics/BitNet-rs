@@ -25,7 +25,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn bitnet() -> Command {
-    Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
+    assert_cmd::Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
 }
 
 // ============================================================================

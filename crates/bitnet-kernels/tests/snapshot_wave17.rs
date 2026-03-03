@@ -168,8 +168,14 @@ use bitnet_kernels::cpu::attention::{AttentionConfig, CpuAttentionConfig, GqaCon
 
 #[test]
 fn snapshot_wave17__attention_config_standard_mha() {
-    let cfg =
-        AttentionConfig { num_heads: 32, head_dim: 128, seq_len: 512, causal: true, scale: None };
+    let cfg = AttentionConfig {
+        num_heads: 32,
+        head_dim: 128,
+        seq_len: 512,
+        causal: true,
+        scale: None,
+        use_alibi: false,
+    };
     insta::assert_debug_snapshot!(cfg);
 }
 
@@ -181,6 +187,7 @@ fn snapshot_wave17__attention_config_small() {
         seq_len: 256,
         causal: false,
         scale: Some(0.1),
+        use_alibi: false,
     };
     insta::assert_debug_snapshot!(cfg);
 }
@@ -257,26 +264,53 @@ fn snapshot_wave17__pool_type_all_variants_debug() {
 
 #[test]
 fn snapshot_wave17__pool_config_max_pool_3() {
-    let cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 3, stride: 1, padding: 1 };
+    let cfg = PoolConfig {
+        pool_type: PoolType::Max,
+        kernel_size: 3,
+        stride: 1,
+        padding: 1,
+        ceil_mode: false,
+        dilation: 1,
+    };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_avg_pool_2() {
-    let cfg = PoolConfig { pool_type: PoolType::Average, kernel_size: 2, stride: 2, padding: 0 };
+    let cfg = PoolConfig {
+        pool_type: PoolType::Average,
+        kernel_size: 2,
+        stride: 2,
+        padding: 0,
+        ceil_mode: false,
+        dilation: 1,
+    };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_global_max() {
-    let cfg = PoolConfig { pool_type: PoolType::GlobalMax, kernel_size: 0, stride: 0, padding: 0 };
+    let cfg = PoolConfig {
+        pool_type: PoolType::GlobalMax,
+        kernel_size: 0,
+        stride: 0,
+        padding: 0,
+        ceil_mode: false,
+        dilation: 1,
+    };
     insta::assert_debug_snapshot!(cfg);
 }
 
 #[test]
 fn snapshot_wave17__pool_config_global_average() {
-    let cfg =
-        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
+    let cfg = PoolConfig {
+        pool_type: PoolType::GlobalAverage,
+        kernel_size: 0,
+        stride: 0,
+        padding: 0,
+        ceil_mode: false,
+        dilation: 1,
+    };
     insta::assert_debug_snapshot!(cfg);
 }
 

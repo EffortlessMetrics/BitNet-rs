@@ -343,7 +343,7 @@ proptest! {
         let out = softmax_reference(&input);
         for (i, &v) in out.iter().enumerate() {
             prop_assert!(
-                v >= 0.0 - 1e-7 && v <= 1.0 + 1e-7,
+                (0.0 - 1e-7..=1.0 + 1e-7).contains(&v),
                 "softmax[{i}] = {v} not in [0, 1]"
             );
         }

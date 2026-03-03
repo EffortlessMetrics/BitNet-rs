@@ -861,7 +861,7 @@ mod tests {
 
         let total = n_heads * seq_len * head_dim;
         // All heads get the same data
-        let pattern = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let pattern = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let input: Vec<f32> = pattern.iter().copied().cycle().take(total).collect();
         let mut output = vec![0.0f32; total];
 
@@ -905,7 +905,7 @@ mod tests {
     fn test_rope_cpu_different_head_dims() {
         for head_dim in [2, 4, 8, 32, 64, 128, 256] {
             let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
-            let total = 1 * 4 * head_dim;
+            let total = 4 * head_dim;
             let input: Vec<f32> = (0..total).map(|i| (i as f32) * 0.01).collect();
             let mut output = vec![0.0f32; total];
 

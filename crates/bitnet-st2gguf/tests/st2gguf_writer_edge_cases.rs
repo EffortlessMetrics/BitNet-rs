@@ -91,9 +91,9 @@ fn metadata_value_string() {
 
 #[test]
 fn metadata_value_f32() {
-    let v = MetadataValue::F32(3.14);
+    let v = MetadataValue::F32(std::f32::consts::PI);
     let s = format!("{v:?}");
-    assert!(s.contains("3.14"));
+    assert!(s.contains("std::f32::consts::PI"));
 }
 
 // ── GgufWriter ───────────────────────────────────────────────────────

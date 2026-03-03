@@ -143,7 +143,7 @@ fn attention_weights_sum_to_one_varying_scores() {
 
     // Output must be in convex hull: each dim in [0, 10]
     for &val in &result {
-        assert!(val >= -EPS && val <= 10.0 + EPS, "out of convex hull: {val}");
+        assert!((-EPS..=10.0 + EPS).contains(&val), "out of convex hull: {val}");
     }
 }
 
@@ -445,7 +445,7 @@ fn attention_with_kv_cache_incremental_decoding() {
 #[test]
 fn sdpa_seq_len_1_returns_value_unchanged() {
     let head_dim = 8;
-    let v: Vec<f32> = (0..head_dim).map(|i| (i as f32) * 3.14).collect();
+    let v: Vec<f32> = (0..head_dim).map(|i| (i as f32) * std::f32::consts::PI).collect();
     let q = vec![0.5; head_dim];
     let k = vec![0.5; head_dim];
 

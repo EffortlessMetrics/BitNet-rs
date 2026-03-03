@@ -65,7 +65,9 @@ impl Conv1DParams {
         if self.groups == 0 || self.stride == 0 || self.dilation == 0 || self.kernel_size == 0 {
             return false;
         }
-        if self.in_channels % self.groups != 0 || self.out_channels % self.groups != 0 {
+        if !self.in_channels.is_multiple_of(self.groups)
+            || !self.out_channels.is_multiple_of(self.groups)
+        {
             return false;
         }
         let effective_kernel = self.dilation * (self.kernel_size - 1) + 1;
@@ -182,19 +184,19 @@ impl ConvParams {
         if self.groups == 0 {
             return false;
         }
-        if self.stride.iter().any(|&s| s == 0) {
+        if self.stride.contains(&0) {
             return false;
         }
-        if self.dilation.iter().any(|&d| d == 0) {
+        if self.dilation.contains(&0) {
             return false;
         }
         if self.kh() == 0 || self.kw() == 0 {
             return false;
         }
-        if self.in_channels() % self.groups != 0 {
+        if !self.in_channels().is_multiple_of(self.groups) {
             return false;
         }
-        if self.out_channels() % self.groups != 0 {
+        if !self.out_channels().is_multiple_of(self.groups) {
             return false;
         }
         // Check that padded input is large enough
@@ -309,10 +311,10 @@ impl TransposedConvParams {
         if self.groups == 0 {
             return false;
         }
-        if self.stride.iter().any(|&s| s == 0) {
+        if self.stride.contains(&0) {
             return false;
         }
-        if self.in_channels() % self.groups != 0 {
+        if !self.in_channels().is_multiple_of(self.groups) {
             return false;
         }
         // output_padding must be < stride
@@ -339,7 +341,7 @@ impl WinogradParams {
 
     fn tiles_per_dim(&self, spatial: usize, padding: usize) -> usize {
         let padded = spatial + 2 * padding;
-        (padded + self.tile_size - 1) / self.tile_size
+        padded.div_ceil(self.tile_size)
     }
 
     fn is_supported(&self) -> bool {
@@ -946,7 +948,7 @@ mod tests {
     fn f32_conv_buffer_size() {
         let p = ConvParams::new(vec![1, 3, 32, 32], vec![16, 3, 3, 3]).with_padding(1, 1);
         let output_bytes = p.output_numel() * std::mem::size_of::<f32>();
-        assert_eq!(p.output_numel(), 1 * 16 * 32 * 32);
+        assert_eq!(p.output_numel(), 16 * 32 * 32);
         assert_eq!(output_bytes, 16384 * 4);
     }
 

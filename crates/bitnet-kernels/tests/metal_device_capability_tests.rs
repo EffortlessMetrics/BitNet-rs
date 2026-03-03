@@ -97,7 +97,7 @@ impl MetalDeviceCapabilities {
 
 /// Check that a buffer size satisfies Metal's 256-byte alignment requirement.
 fn is_metal_aligned(size: u64) -> bool {
-    size % 256 == 0
+    size.is_multiple_of(256)
 }
 
 /// Compute optimal threadgroup dimensions for a 2D workload.

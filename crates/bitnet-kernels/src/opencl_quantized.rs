@@ -1295,8 +1295,8 @@ mod tests {
     #[test]
     fn test_build_test_data_scale_value() {
         let weights: Vec<i8> = vec![0; 4];
-        let (_, scales) = build_test_data(&weights, 1, 4, 32, 3.14);
-        assert!((scales[0] - 3.14).abs() < 1e-6);
+        let (_, scales) = build_test_data(&weights, 1, 4, 32, std::f32::consts::PI);
+        assert!((scales[0] - std::f32::consts::PI).abs() < 1e-6);
     }
 
     // ── Bench reference ─────────────────────────────────────────────────

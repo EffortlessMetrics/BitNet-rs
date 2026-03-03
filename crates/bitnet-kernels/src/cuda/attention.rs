@@ -1234,7 +1234,7 @@ mod tests {
         let out = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
         // Each output should be in [0, 100] (convex combination)
         for &val in &out {
-            assert!(val >= -1e-5 && val <= 100.0 + 1e-5, "out of range: {val}");
+            assert!((-1e-5..=100.0 + 1e-5).contains(&val), "out of range: {val}");
         }
     }
 

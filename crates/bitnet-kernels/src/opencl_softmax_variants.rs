@@ -825,7 +825,7 @@ mod tests {
     #[test]
     fn test_softmax_all_same_large_row() {
         let n = 1024;
-        let input = vec![3.14; n];
+        let input = vec![std::f32::consts::PI; n];
         let mut output = vec![0.0; n];
         Softmax::forward(&input, &mut output, 1, n).unwrap();
         let expected = 1.0 / n as f32;
@@ -1442,7 +1442,7 @@ mod tests {
             let mut output = vec![0.0; size];
             Softmax::forward(&input, &mut output, 1, size).unwrap();
             for &v in &output {
-                assert!(v >= 0.0 && v <= 1.0, "out of [0,1]: {v}");
+                assert!((0.0..=1.0).contains(&v), "out of [0,1]: {v}");
             }
         }
     }
@@ -1542,7 +1542,7 @@ mod tests {
 
     #[test]
     fn test_all_variants_agree_on_single_element() {
-        let input = vec![3.14];
+        let input = vec![std::f32::consts::PI];
         let mask = vec![true];
         let mut out_std = vec![0.0];
         let mut out_log = vec![0.0];
