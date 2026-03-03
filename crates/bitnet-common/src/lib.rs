@@ -6,6 +6,7 @@
 
 pub mod arch_registry;
 pub mod backend_selection;
+pub mod compute_pool;
 pub mod config;
 pub mod dtype_convert;
 pub mod error_catalog;
