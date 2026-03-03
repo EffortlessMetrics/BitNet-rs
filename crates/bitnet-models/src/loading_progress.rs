@@ -31,8 +31,7 @@ pub struct LoadingProgress {
     shards_done: usize,
     total_tensors: usize,
     tensors_done: usize,
-    #[allow(dead_code)]
-    total_bytes: u64,
+    _total_bytes: u64,
     bytes_done: u64,
     events: Vec<LoadEvent>,
 }
@@ -45,7 +44,7 @@ impl LoadingProgress {
             shards_done: 0,
             total_tensors: 0,
             tensors_done: 0,
-            total_bytes: 0,
+            _total_bytes: 0,
             bytes_done: 0,
             events: Vec::new(),
         }

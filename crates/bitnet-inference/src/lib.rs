@@ -4,55 +4,37 @@
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod attention_mask;
-pub mod attention_pattern;
 pub mod backends;
 pub mod batch;
 pub mod batch_engine;
-pub mod batch_scheduler;
 pub mod cache;
 pub mod compute_cost;
-pub mod compute_graph;
 pub mod config;
 pub mod config_builder;
 pub mod context_window;
 pub mod cpu_opt;
-pub mod decode_strategy;
 pub mod dense_forward;
 pub mod dense_generation;
 pub mod dense_integration_tests;
-pub mod embedding_table;
 pub mod embedding_utils;
 pub mod engine;
 pub mod generation;
 pub mod generation_budget;
-pub mod generation_hooks;
 pub mod generation_output;
-pub mod generation_pipeline;
 pub mod gguf;
 pub mod gpu_streaming;
-pub mod inference_cache;
 pub mod kernel_recorder;
-pub mod kv_cache_manager;
 pub mod kv_cache_optimized;
-pub mod kv_cache_stats;
-pub mod layer_executor;
 pub mod layers;
 pub mod memory_estimation;
 pub mod memory_pool;
 pub mod metrics;
-pub mod metrics_collector;
-pub mod model_profiler;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
-pub mod prompt_validator;
 pub mod receipts; // AC4: Inference receipt generation
-pub mod request_types;
-pub mod rope_config;
 pub mod run_metrics;
-pub mod template_registry;
 pub mod thread_pool;
-pub mod token_filter;
 pub mod tool_templates; // Tool-use / function-calling prompt templates
 pub mod warmup;
 
@@ -66,12 +48,8 @@ pub mod prefix_cache;
 pub mod profiler;
 pub mod rt;
 pub mod runtime_utils;
-pub mod sampler_config;
 pub mod sampling;
 pub mod sampling_presets;
-pub mod sampling_utils;
-pub mod seq_scheduler;
-pub mod session_manager;
 pub mod simple_forward;
 pub mod streaming;
 pub mod streaming_render;

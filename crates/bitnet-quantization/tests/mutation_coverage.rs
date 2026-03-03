@@ -11,13 +11,10 @@
 //! Specification: docs/explanation/specs/issue-261-mock-performance-reporting-elimination-spec.md
 
 use bitnet_common::QuantizationType;
-use bitnet_quantization::{I2SQuantizer, QuantizerFactory, QuantizerTrait};
+use bitnet_quantization::{I2SQuantizer, QuantizerFactory, QuantizerTrait, TL2Quantizer};
 
 #[cfg(target_arch = "aarch64")]
 use bitnet_quantization::TL1Quantizer;
-
-#[cfg(target_arch = "x86_64")]
-use bitnet_quantization::TL2Quantizer;
 
 #[cfg(feature = "cpu")]
 use {

@@ -44,6 +44,7 @@ pub mod rope;
 pub mod scatter_gather;
 pub mod simd_math;
 pub mod simd_matmul;
+pub mod simd_prefix_sum;
 pub mod transpose;
 
 #[cfg(target_arch = "x86_64")]
@@ -65,7 +66,6 @@ pub mod neon_rope;
 pub mod neon_elementwise;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_kv_cache;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
@@ -113,10 +113,7 @@ pub mod neon_weight_packing;
 pub mod neon_batch_scheduler;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_quant_calibration;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_fused_mlp;
+pub mod neon_graph_executor;
 
 pub use activations::ActivationType;
 pub use activations::{
@@ -159,4 +156,3 @@ pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
 pub mod pipeline_parallel;
 pub use pipeline_parallel::*;
-pub mod neon_gather_scatter;

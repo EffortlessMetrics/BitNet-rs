@@ -1,6 +1,5 @@
 //! Edge-case tests for BitNetConfig: validation rules, merge semantics,
 //! sub-config defaults, serde roundtrips, and multi-SLM model presets.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_common::config::{
     ActivationType, BitNetConfig, InferenceConfig, ModelConfig, ModelFormat, NormType,
