@@ -1,6 +1,6 @@
 //! GPU-aware streaming generation with device-to-host token transfer.
 //!
-//! Extends [`GenerationStream`] to work transparently with GPU backends,
+//! Extends `GenerationStream` to work transparently with GPU backends,
 //! handling per-token GPU→host transfers and backpressure when the client
 //! cannot keep up with generation speed.
 

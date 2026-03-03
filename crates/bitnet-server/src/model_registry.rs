@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// Unique model identifier (e.g. "bitnet-2b-4t").
 pub type ModelId = String;
 
-/// Unique device identifier matching [`super::gpu_router::DeviceId`].
+/// Unique device identifier matching `super::gpu_router::DeviceId`.
 pub type DeviceId = String;
 
 /// Lifecycle state of a loaded model instance.

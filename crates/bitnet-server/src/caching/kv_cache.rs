@@ -14,7 +14,7 @@ use super::performance_tuning::PerformanceReport;
 #[cfg(any(test, feature = "receipts"))]
 use super::receipts::{KvEventSink, KvEvictionReport, TracingSink};
 
-/// KV cache entry backed by pool slices (no owned Vec<f32>).
+/// KV cache entry backed by pool slices (no owned `Vec<f32>`).
 #[derive(Debug, Clone)]
 pub struct KVCacheEntry {
     /// Session identifier
