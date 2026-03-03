@@ -5,20 +5,6 @@
 //! batch completion tracking. NEON intrinsics accelerate hot-path aggregation
 //! while all public APIs remain safe Rust.
 
-#![allow(unsafe_op_in_unsafe_fn)]
-#![allow(
-    clippy::missing_safety_doc,
-    clippy::float_cmp,
-    clippy::manual_div_ceil,
-    clippy::unnecessary_cast,
-    clippy::needless_range_loop,
-    clippy::too_many_arguments,
-    clippy::collapsible_if,
-    clippy::let_and_return,
-    clippy::derivable_impls,
-    clippy::excessive_precision,
-    clippy::manual_is_multiple_of
-)]
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 use std::collections::BinaryHeap;

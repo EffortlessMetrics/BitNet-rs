@@ -398,7 +398,7 @@ pub fn pad_to_neon(input: &[f32]) -> Vec<f32> {
 /// Return `true` if `n` is a multiple of `LANES`.
 #[inline]
 pub const fn is_neon_aligned(n: usize) -> bool {
-    n.is_multiple_of(LANES)
+    n % LANES == 0
 }
 
 // ── NCHW ↔ NHWC Layout Conversion ──────────────────────────────────
