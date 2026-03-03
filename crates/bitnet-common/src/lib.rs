@@ -15,6 +15,7 @@ pub mod error;
 pub mod kernel_registry;
 pub mod memory_estimator;
 pub mod memory_pool;
+pub mod op_pool;
 pub mod runtime_diag;
 pub mod shape_validator;
 pub mod strict_mode;
