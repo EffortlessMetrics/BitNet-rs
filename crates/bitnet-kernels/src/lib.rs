@@ -80,6 +80,7 @@ pub mod perf_tracker;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
+pub mod rope_freq;
 pub mod scatter_gather;
 pub mod shaped_reduction;
 pub mod simd_detect;
