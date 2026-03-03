@@ -118,6 +118,7 @@ members = [
   "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
   "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
   "crates/bitnet-qk256-dispatch",
+  "crates/bitnet-cuda-reduction", # SRP: CUDA reduction operations (sum, max, min, mean, softmax, argmax)
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,

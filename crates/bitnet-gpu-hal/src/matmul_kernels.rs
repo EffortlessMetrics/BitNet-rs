@@ -418,7 +418,7 @@ impl QuantizedMatmul {
 // BatchedMatmul
 // ---------------------------------------------------------------------------
 
-/// Batched matmul: for each batch index compute `C[b] = A[b] × B[b]`.
+/// Batched matmul: for each batch index compute C[b] = A[b] × B[b].
 ///
 /// Useful for multi-head attention where each head has its own QK^T matmul.
 pub struct BatchedMatmul;
