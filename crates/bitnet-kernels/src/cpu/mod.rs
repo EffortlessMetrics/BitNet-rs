@@ -27,6 +27,7 @@ pub use layer_norm::{
     GroupNormConfig, LayerNormConfig, batch_group_norm, batch_instance_norm, batch_layer_norm,
     batch_rms_norm, group_norm, instance_norm, layer_norm as cpu_layer_norm, rms_norm,
 };
+pub mod layer_norm_simd;
 pub mod linear;
 pub use linear::{LinearConfig, linear_cpu, linear_forward};
 pub mod loss;
