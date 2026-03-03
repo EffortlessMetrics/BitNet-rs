@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! ARM NEON reduction v2 operations for Apple Silicon (aarch64).
 //!
 //! Provides NEON-optimized horizontal sum, max, min, mean, argmax, and
@@ -105,10 +118,7 @@ unsafe fn neon_max_f32(input: &[f32]) -> f32 {
 }
 
 fn scalar_max_f32(input: &[f32]) -> f32 {
-    input
-        .iter()
-        .copied()
-        .fold(f32::NEG_INFINITY, f32::max)
+    input.iter().copied().fold(f32::NEG_INFINITY, f32::max)
 }
 
 /// Horizontal max of an `f32` slice.
@@ -167,10 +177,7 @@ unsafe fn neon_min_f32(input: &[f32]) -> f32 {
 }
 
 fn scalar_min_f32(input: &[f32]) -> f32 {
-    input
-        .iter()
-        .copied()
-        .fold(f32::INFINITY, f32::min)
+    input.iter().copied().fold(f32::INFINITY, f32::min)
 }
 
 /// Horizontal min of an `f32` slice.
@@ -752,10 +759,7 @@ mod tests {
     fn test_variance_five_elements() {
         // [2,4,4,4,5,5,7,9] mean=5, deviations=[-3,-1,-1,-1,0,0,2,4]
         // sq=[9,1,1,1,0,0,4,16] = 32/8 = 4
-        assert!(approx_eq(
-            variance_f32(&[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]),
-            4.0
-        ));
+        assert!(approx_eq(variance_f32(&[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]), 4.0));
     }
 
     #[test]
@@ -779,10 +783,7 @@ mod tests {
         // Var of 0..n-1 = (n^2 - 1) / 12
         let expected = (n as f32 * n as f32 - 1.0) / 12.0;
         let result = variance_f32(&data);
-        assert!(
-            (result - expected).abs() < 1.0,
-            "expected ~{expected}, got {result}"
-        );
+        assert!((result - expected).abs() < 1.0, "expected ~{expected}, got {result}");
     }
 
     // -----------------------------------------------------------------------
@@ -862,10 +863,7 @@ mod tests {
         let data: Vec<f32> = (0..20).map(|i| i as f32 * 0.5).collect();
         let s = scalar_variance_f32(&data);
         let d = variance_f32(&data);
-        assert!(
-            (s - d).abs() < 0.01,
-            "scalar={s}, dispatcher={d}"
-        );
+        assert!((s - d).abs() < 0.01, "scalar={s}, dispatcher={d}");
     }
 
     // -----------------------------------------------------------------------

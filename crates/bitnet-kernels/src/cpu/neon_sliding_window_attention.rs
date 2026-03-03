@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! ARM NEON sliding window attention for Apple Silicon.
 //!
 //! Implements memory-efficient sliding window attention restricting each query

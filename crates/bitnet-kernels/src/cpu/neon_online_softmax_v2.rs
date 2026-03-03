@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! NEON-optimized online softmax v2 for Apple Silicon.
 //! Numerically stable streaming softmax computation using
 //! the Online Normalizer trick for large vocabularies.
@@ -819,10 +832,7 @@ pub fn temperature_softmax_scalar(input: &[f32], temperature: f32, output: &mut 
     }
 
     let inv_temp = 1.0 / temperature;
-    let max_val = input
-        .iter()
-        .map(|&x| x * inv_temp)
-        .fold(f32::NEG_INFINITY, f32::max);
+    let max_val = input.iter().map(|&x| x * inv_temp).fold(f32::NEG_INFINITY, f32::max);
 
     let mut sum = 0.0f32;
     for (o, &x) in output.iter_mut().zip(input.iter()) {
@@ -877,21 +887,13 @@ mod tests {
     fn assert_close(a: &[f32], b: &[f32], tol: f32, msg: &str) {
         assert_eq!(a.len(), b.len(), "{msg}: length mismatch");
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() < tol,
-                "{msg}: index {i}: {x} vs {y} (diff {})",
-                (x - y).abs()
-            );
+            assert!((x - y).abs() < tol, "{msg}: index {i}: {x} vs {y} (diff {})", (x - y).abs());
         }
     }
 
     fn sums_to_one(v: &[f32], tol: f32) {
         let s: f32 = v.iter().sum();
-        assert!(
-            (s - 1.0).abs() < tol,
-            "sum = {s}, expected 1.0 (diff {})",
-            (s - 1.0).abs()
-        );
+        assert!((s - 1.0).abs() < tol, "sum = {s}, expected 1.0 (diff {})", (s - 1.0).abs());
     }
 
     fn all_non_negative(v: &[f32]) {

@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! NEON-optimized RoPE (Rotary Position Embedding) compute kernels.
 //!
 //! Six operations with ARM NEON SIMD acceleration, scalar fallback, and
@@ -28,12 +41,7 @@ const LANES: usize = 4;
 /// Requires AArch64 with NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_rope_apply_f32(
-    data: &mut [f32],
-    cos_table: &[f32],
-    sin_table: &[f32],
-    dim: usize,
-) {
+unsafe fn neon_rope_apply_f32(data: &mut [f32], cos_table: &[f32], sin_table: &[f32], dim: usize) {
     let half = dim / 2;
     // Process 4 data elements = 2 rotation pairs per iteration.
     let chunks = half / 2;
@@ -71,12 +79,7 @@ unsafe fn neon_rope_apply_f32(
 }
 
 /// Scalar RoPE rotation on a single vector.
-fn scalar_rope_apply_f32(
-    data: &mut [f32],
-    cos_table: &[f32],
-    sin_table: &[f32],
-    dim: usize,
-) {
+fn scalar_rope_apply_f32(data: &mut [f32], cos_table: &[f32], sin_table: &[f32], dim: usize) {
     let half = dim / 2;
     for i in 0..half {
         let idx = i * 2;
@@ -96,12 +99,7 @@ fn scalar_rope_apply_f32(
 ///
 /// # Panics
 /// Panics if `data.len() < dim`, or tables are shorter than `dim / 2`.
-pub fn rope_apply_f32(
-    data: &mut [f32],
-    cos_table: &[f32],
-    sin_table: &[f32],
-    dim: usize,
-) {
+pub fn rope_apply_f32(data: &mut [f32], cos_table: &[f32], sin_table: &[f32], dim: usize) {
     let half = dim / 2;
     assert!(data.len() >= dim, "data too short");
     assert!(cos_table.len() >= half, "cos_table too short");
@@ -182,11 +180,7 @@ unsafe fn neon_rope_build_cos_sin_table(
 }
 
 /// Scalar cos/sin table construction.
-fn scalar_rope_build_cos_sin_table(
-    dim: usize,
-    max_seq: usize,
-    base: f32,
-) -> (Vec<f32>, Vec<f32>) {
+fn scalar_rope_build_cos_sin_table(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
     let half = dim / 2;
     let total = max_seq * half;
     let mut cos_out = vec![0.0f32; total];
@@ -211,11 +205,7 @@ fn scalar_rope_build_cos_sin_table(
 ///
 /// # Panics
 /// Panics if `dim` is 0 or odd.
-pub fn rope_build_cos_sin_table(
-    dim: usize,
-    max_seq: usize,
-    base: f32,
-) -> (Vec<f32>, Vec<f32>) {
+pub fn rope_build_cos_sin_table(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
     assert!(dim > 0 && dim % 2 == 0, "dim must be positive and even");
     if max_seq == 0 {
         return (vec![], vec![]);
@@ -296,12 +286,7 @@ fn scalar_rope_apply_neox_style(
 ///
 /// # Panics
 /// Panics if slices are too short or `dim` is odd.
-pub fn rope_apply_neox_style(
-    data: &mut [f32],
-    cos_table: &[f32],
-    sin_table: &[f32],
-    dim: usize,
-) {
+pub fn rope_apply_neox_style(data: &mut [f32], cos_table: &[f32], sin_table: &[f32], dim: usize) {
     let half = dim / 2;
     assert!(data.len() >= dim, "data too short");
     assert!(cos_table.len() >= half, "cos_table too short");
@@ -406,28 +391,18 @@ pub fn rope_apply_with_position_offset(
 ) {
     let half = dim / 2;
     assert!(data.len() >= dim, "data too short");
-    assert!(
-        cos_table.len() >= (pos_offset + 1) * half,
-        "cos_table too short for offset"
-    );
-    assert!(
-        sin_table.len() >= (pos_offset + 1) * half,
-        "sin_table too short for offset"
-    );
+    assert!(cos_table.len() >= (pos_offset + 1) * half, "cos_table too short for offset");
+    assert!(sin_table.len() >= (pos_offset + 1) * half, "sin_table too short for offset");
 
     #[cfg(target_arch = "aarch64")]
     {
         unsafe {
-            neon_rope_apply_with_position_offset(
-                data, cos_table, sin_table, dim, half, pos_offset,
-            )
+            neon_rope_apply_with_position_offset(data, cos_table, sin_table, dim, half, pos_offset)
         };
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
-        scalar_rope_apply_with_position_offset(
-            data, cos_table, sin_table, dim, half, pos_offset,
-        );
+        scalar_rope_apply_with_position_offset(data, cos_table, sin_table, dim, half, pos_offset);
     }
 }
 
@@ -507,33 +482,20 @@ pub fn rope_apply_batched(
     start_pos: usize,
 ) {
     let half = dim / 2;
-    assert!(
-        data.len() >= num_seqs * num_heads * dim,
-        "data too short for batch"
-    );
+    assert!(data.len() >= num_seqs * num_heads * dim, "data too short for batch");
     let max_pos = start_pos + num_seqs;
-    assert!(
-        cos_table.len() >= max_pos * half,
-        "cos_table too short for batch"
-    );
-    assert!(
-        sin_table.len() >= max_pos * half,
-        "sin_table too short for batch"
-    );
+    assert!(cos_table.len() >= max_pos * half, "cos_table too short for batch");
+    assert!(sin_table.len() >= max_pos * half, "sin_table too short for batch");
 
     #[cfg(target_arch = "aarch64")]
     {
         unsafe {
-            neon_rope_apply_batched(
-                data, cos_table, sin_table, dim, num_heads, num_seqs, start_pos,
-            )
+            neon_rope_apply_batched(data, cos_table, sin_table, dim, num_heads, num_seqs, start_pos)
         };
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
-        scalar_rope_apply_batched(
-            data, cos_table, sin_table, dim, num_heads, num_seqs, start_pos,
-        );
+        scalar_rope_apply_batched(data, cos_table, sin_table, dim, num_heads, num_seqs, start_pos);
     }
 }
 
@@ -580,9 +542,7 @@ unsafe fn neon_rope_frequency_scaling(
 
             let mut out_arr = [0.0f32; 4];
             for j in 0..4 {
-                out_arr[j] = scale_single_freq(
-                    f_arr[j], scale_factor, low_freq, high_freq, range,
-                );
+                out_arr[j] = scale_single_freq(f_arr[j], scale_factor, low_freq, high_freq, range);
             }
             let res = vld1q_f32(out_arr.as_ptr());
             // Multiply by 1.0 to keep NEON pipeline warm (compiler will elide).
@@ -592,9 +552,7 @@ unsafe fn neon_rope_frequency_scaling(
     }
 
     for i in (chunks * LANES)..n {
-        output[i] = scale_single_freq(
-            inv_freq[i], scale_factor, low_freq, high_freq, range,
-        );
+        output[i] = scale_single_freq(inv_freq[i], scale_factor, low_freq, high_freq, range);
     }
 }
 
@@ -638,9 +596,7 @@ fn scalar_rope_frequency_scaling(
     let range = high_freq - low_freq;
 
     for i in 0..n {
-        output[i] = scale_single_freq(
-            inv_freq[i], scale_factor, low_freq, high_freq, range,
-        );
+        output[i] = scale_single_freq(inv_freq[i], scale_factor, low_freq, high_freq, range);
     }
 }
 
@@ -712,10 +668,7 @@ mod tests {
     }
 
     fn max_abs_err(a: &[f32], b: &[f32]) -> f32 {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| (x - y).abs())
-            .fold(0.0f32, f32::max)
+        a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max)
     }
 
     // ── rope_apply_f32 ──────────────────────────────────────────────
@@ -1092,10 +1045,7 @@ mod tests {
             let mut ref_data = data.clone();
             scalar_rope_apply_with_position_offset(&mut ref_data, &ct, &st, dim, half, offset);
             rope_apply_with_position_offset(&mut data, &ct, &st, dim, offset);
-            assert!(
-                max_abs_err(&data, &ref_data) < 1e-5,
-                "mismatch at offset {offset}"
-            );
+            assert!(max_abs_err(&data, &ref_data) < 1e-5, "mismatch at offset {offset}");
         }
     }
 
@@ -1118,10 +1068,7 @@ mod tests {
             let norm_before: f32 = data.iter().map(|x| x * x).sum::<f32>().sqrt();
             rope_apply_with_position_offset(&mut data, &ct, &st, dim, offset);
             let norm_after: f32 = data.iter().map(|x| x * x).sum::<f32>().sqrt();
-            assert!(
-                (norm_before - norm_after).abs() < 1e-3,
-                "norm changed at offset {offset}"
-            );
+            assert!((norm_before - norm_after).abs() < 1e-3, "norm changed at offset {offset}");
         }
     }
 
@@ -1196,12 +1143,7 @@ mod tests {
             let sin_row = &st[pos * half..(pos + 1) * half];
             for head in 0..num_heads {
                 let base = (seq * num_heads + head) * dim;
-                scalar_rope_apply_f32(
-                    &mut ref_data[base..base + dim],
-                    cos_row,
-                    sin_row,
-                    dim,
-                );
+                scalar_rope_apply_f32(&mut ref_data[base..base + dim], cos_row, sin_row, dim);
             }
         }
         rope_apply_batched(&mut data, &ct, &st, dim, num_heads, num_seqs, start_pos);
@@ -1262,15 +1204,8 @@ mod tests {
         rope_apply_batched(&mut data, &ct, &st, dim, num_heads, num_seqs, 0);
         for k in 0..num_seqs * num_heads {
             let off = k * dim;
-            let norm_after: f32 = data[off..off + dim]
-                .iter()
-                .map(|x| x * x)
-                .sum::<f32>()
-                .sqrt();
-            assert!(
-                (norms_before[k] - norm_after).abs() < 1e-3,
-                "batch norm changed at head {k}"
-            );
+            let norm_after: f32 = data[off..off + dim].iter().map(|x| x * x).sum::<f32>().sqrt();
+            assert!((norms_before[k] - norm_after).abs() < 1e-3, "batch norm changed at head {k}");
         }
     }
 
@@ -1283,10 +1218,7 @@ mod tests {
         let mut out = vec![0.0; 4];
         rope_frequency_scaling(&inv_freq, &mut out, 1.0, 1.0, 4.0, 8192);
         for i in 0..4 {
-            assert!(
-                (out[i] - inv_freq[i]).abs() < 1e-7,
-                "expected identity at i={i}"
-            );
+            assert!((out[i] - inv_freq[i]).abs() < 1e-7, "expected identity at i={i}");
         }
     }
 
@@ -1297,10 +1229,7 @@ mod tests {
         let inv_freq = vec![low];
         let mut out = vec![0.0; 1];
         rope_frequency_scaling(&inv_freq, &mut out, 4.0, 1.0, 4.0, 8192);
-        assert!(
-            (out[0] - low / 4.0).abs() < 1e-12,
-            "low freq should be divided by scale_factor"
-        );
+        assert!((out[0] - low / 4.0).abs() < 1e-12, "low freq should be divided by scale_factor");
     }
 
     #[test]
@@ -1310,16 +1239,14 @@ mod tests {
         let inv_freq = vec![high];
         let mut out = vec![0.0; 1];
         rope_frequency_scaling(&inv_freq, &mut out, 4.0, 1.0, 4.0, 8192);
-        assert!(
-            (out[0] - high).abs() < 1e-6,
-            "high freq should be unchanged"
-        );
+        assert!((out[0] - high).abs() < 1e-6, "high freq should be unchanged");
     }
 
     #[test]
     fn test_freq_scaling_matches_scalar() {
         let n = 17; // not a multiple of 4.
-        let inv_freq: Vec<f32> = (0..n).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 64.0)).collect();
+        let inv_freq: Vec<f32> =
+            (0..n).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 64.0)).collect();
         let mut out_dispatch = vec![0.0; n];
         let mut out_scalar = vec![0.0; n];
         rope_frequency_scaling(&inv_freq, &mut out_dispatch, 4.0, 1.0, 4.0, 8192);
@@ -1330,7 +1257,8 @@ mod tests {
     #[test]
     fn test_freq_scaling_output_bounded() {
         // Output should be between freq/scale_factor and freq.
-        let inv_freq: Vec<f32> = (0..32).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 128.0)).collect();
+        let inv_freq: Vec<f32> =
+            (0..32).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 128.0)).collect();
         let mut out = vec![0.0; 32];
         let sf = 4.0;
         rope_frequency_scaling(&inv_freq, &mut out, sf, 1.0, 4.0, 8192);
@@ -1365,7 +1293,8 @@ mod tests {
         // Higher dimensional indices have lower inv_freq; scaled versions
         // should preserve relative ordering.
         let n = 16;
-        let inv_freq: Vec<f32> = (0..n).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 64.0)).collect();
+        let inv_freq: Vec<f32> =
+            (0..n).map(|i| 10000.0f32.powf(-(2.0 * i as f32) / 64.0)).collect();
         let mut out = vec![0.0; n];
         rope_frequency_scaling(&inv_freq, &mut out, 4.0, 1.0, 4.0, 8192);
         for i in 1..n {
@@ -1486,11 +1415,7 @@ mod tests {
         rope_apply_f32(&mut standard, cos_row, sin_row, dim);
         rope_apply_neox_style(&mut neox, cos_row, sin_row, dim);
         // They should differ.
-        let diff: f32 = standard
-            .iter()
-            .zip(neox.iter())
-            .map(|(a, b)| (a - b).abs())
-            .sum();
+        let diff: f32 = standard.iter().zip(neox.iter()).map(|(a, b)| (a - b).abs()).sum();
         assert!(diff > 1e-3, "NeoX should differ from standard");
     }
 
@@ -1500,9 +1425,8 @@ mod tests {
         let dim = 16;
         let half = dim / 2;
         let base = 10000.0f32;
-        let inv_freq: Vec<f32> = (0..half)
-            .map(|i| base.powf(-(2.0 * i as f32) / dim as f32))
-            .collect();
+        let inv_freq: Vec<f32> =
+            (0..half).map(|i| base.powf(-(2.0 * i as f32) / dim as f32)).collect();
         let mut scaled = vec![0.0; half];
         rope_frequency_scaling(&inv_freq, &mut scaled, 4.0, 1.0, 4.0, 8192);
 
@@ -1543,9 +1467,6 @@ mod tests {
         rope_apply_f32(&mut data, cos_row, &st[half..half * 2], dim);
         // Now apply with negated sin to invert.
         rope_apply_f32(&mut data, cos_row, &sin_row, dim);
-        assert!(
-            max_abs_err(&data, &original) < 1e-4,
-            "double rotation should recover original"
-        );
+        assert!(max_abs_err(&data, &original) < 1e-4, "double rotation should recover original");
     }
 }

@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! NEON-optimized pooling v2 operations for Apple Silicon (aarch64).
 //!
 //! Provides six pooling operations: mean pool, 1D max pool, 1D average pool,
@@ -444,11 +457,7 @@ pub fn weighted_mean_pool_f32(
         seq_len * dim,
         input.len()
     );
-    assert!(
-        weights.len() >= seq_len,
-        "weights too small: need {seq_len}, got {}",
-        weights.len()
-    );
+    assert!(weights.len() >= seq_len, "weights too small: need {seq_len}, got {}", weights.len());
     assert!(output.len() >= dim, "output too small: need {dim}, got {}", output.len());
 
     #[cfg(target_arch = "aarch64")]
@@ -474,12 +483,7 @@ pub fn weighted_mean_pool_f32(
 /// Caller must ensure the target supports NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-unsafe fn neon_last_token_pool_f32(
-    input: &[f32],
-    seq_len: usize,
-    dim: usize,
-    output: &mut [f32],
-) {
+unsafe fn neon_last_token_pool_f32(input: &[f32], seq_len: usize, dim: usize, output: &mut [f32]) {
     if seq_len == 0 {
         output[..dim].fill(0.0);
         return;
@@ -497,12 +501,7 @@ unsafe fn neon_last_token_pool_f32(
     }
 }
 
-fn scalar_last_token_pool_f32(
-    input: &[f32],
-    seq_len: usize,
-    dim: usize,
-    output: &mut [f32],
-) {
+fn scalar_last_token_pool_f32(input: &[f32], seq_len: usize, dim: usize, output: &mut [f32]) {
     if seq_len == 0 {
         output[..dim].fill(0.0);
         return;
@@ -601,10 +600,7 @@ mod tests {
     fn approx_eq(a: &[f32], b: &[f32], tol: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(
-                (x - y).abs() <= tol,
-                "mismatch at index {i}: {x} vs {y} (tol={tol})"
-            );
+            assert!((x - y).abs() <= tol, "mismatch at index {i}: {x} vs {y} (tol={tol})");
         }
     }
 
@@ -773,11 +769,7 @@ mod tests {
         max_pool_1d_f32(&input, seq_len, dim, 2, 1, &mut output);
         // row 0-1: max(0..5, 5..10) = [5,6,7,8,9]
         // row 1-2: max(5..10, 10..15) = [10,11,12,13,14]
-        approx_eq(
-            &output,
-            &[5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0],
-            1e-6,
-        );
+        approx_eq(&output, &[5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0], 1e-6);
     }
 
     #[test]
@@ -927,9 +919,8 @@ mod tests {
         let mut output = vec![0.0; dim];
         weighted_mean_pool_f32(&input, &weights, 2, dim, &mut output);
         // expected: (0.5*row0 + 1.5*row1) / 2.0
-        let expected: Vec<f32> = (0..dim)
-            .map(|d| (0.5 * input[d] + 1.5 * input[dim + d]) / 2.0)
-            .collect();
+        let expected: Vec<f32> =
+            (0..dim).map(|d| (0.5 * input[d] + 1.5 * input[dim + d]) / 2.0).collect();
         approx_eq(&output, &expected, 1e-5);
     }
 
@@ -1009,9 +1000,7 @@ mod tests {
         let input: Vec<f32> = (0..seq_len * dim).map(|i| i as f32).collect();
         let mut output = vec![0.0; dim];
         last_token_pool_f32(&input, seq_len, dim, &mut output);
-        let expected: Vec<f32> = ((seq_len - 1) * dim..seq_len * dim)
-            .map(|i| i as f32)
-            .collect();
+        let expected: Vec<f32> = ((seq_len - 1) * dim..seq_len * dim).map(|i| i as f32).collect();
         approx_eq(&output, &expected, 0.0);
     }
 

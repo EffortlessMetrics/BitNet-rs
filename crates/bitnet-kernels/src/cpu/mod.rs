@@ -65,7 +65,6 @@ pub mod neon_rope;
 pub mod neon_elementwise;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_kv_cache;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_layernorm;
@@ -113,10 +112,34 @@ pub mod neon_weight_packing;
 pub mod neon_batch_scheduler;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_quant_calibration;
+pub mod neon_graph_executor;
 
 #[cfg(target_arch = "aarch64")]
 pub mod neon_fused_mlp;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_online_softmax;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_online_softmax_v2;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_pooling_v2;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_gemm;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_gemv;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_reduction_v2;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_rope_compute;
+
+#[cfg(target_arch = "aarch64")]
+pub mod neon_sliding_window_attention;
 
 pub use activations::ActivationType;
 pub use activations::{
@@ -159,4 +182,3 @@ pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
 pub mod pipeline_parallel;
 pub use pipeline_parallel::*;
-pub mod neon_gather_scatter;

@@ -1,3 +1,16 @@
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    clippy::needless_range_loop,
+    clippy::manual_div_ceil,
+    clippy::manual_abs_diff,
+    clippy::manual_contains,
+    clippy::manual_is_multiple_of,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::unnecessary_cast
+)]
 //! ARM NEON online softmax kernel (FlashAttention-style) for Apple Silicon.
 //!
 //! Implements the FlashAttention-2 online softmax algorithm with NEON
@@ -387,7 +400,7 @@ pub unsafe fn apply_causal_mask_neon(
 ///
 /// * `queries`     — `[num_heads × head_dim]` (row-major).
 /// * `keys`        — `[seq_len × head_dim]` (shared across heads, or
-///                   pre-sliced for GQA).
+///   pre-sliced for GQA).
 /// * `values`      — `[seq_len × head_dim]` (same layout as keys).
 /// * `num_heads`   — number of attention heads.
 /// * `head_dim`    — dimensionality per head.
