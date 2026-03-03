@@ -98,9 +98,9 @@ impl TileConfig {
     }
 
     pub fn num_tiles(&self, shape: &MatmulShape) -> usize {
-        let tm = (shape.m + self.tile_m - 1) / self.tile_m;
-        let tn = (shape.n + self.tile_n - 1) / self.tile_n;
-        let tk = (shape.k + self.tile_k - 1) / self.tile_k;
+        let tm = shape.m.div_ceil(self.tile_m);
+        let tn = shape.n.div_ceil(self.tile_n);
+        let tk = shape.k.div_ceil(self.tile_k);
         tm * tn * tk
     }
 }
@@ -115,25 +115,13 @@ pub struct DispatchDecision {
 }
 
 /// Available hardware features.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HardwareFeatures {
     pub has_avx2: bool,
     pub has_avx512: bool,
     pub has_neon: bool,
     pub has_cuda: bool,
     pub has_opencl: bool,
-}
-
-impl Default for HardwareFeatures {
-    fn default() -> Self {
-        Self {
-            has_avx2: false,
-            has_avx512: false,
-            has_neon: false,
-            has_cuda: false,
-            has_opencl: false,
-        }
-    }
 }
 
 /// Select the best matmul backend for given shape and hardware.

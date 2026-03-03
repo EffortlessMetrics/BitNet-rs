@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_summarize() {
-        let stats = vec![analyze_head(0, &vec![0.25; 4]), analyze_head(1, &vec![0.25; 4])];
+        let stats = vec![analyze_head(0, &[0.25; 4]), analyze_head(1, &[0.25; 4])];
         let summary = summarize_layer(&stats);
         assert_eq!(summary.num_heads, 2);
         assert!(summary.avg_entropy > 0.0);
