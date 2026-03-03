@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave32.rs
+expression: reasons
+---
+[
+    MaxTokens,
+    StopSequence,
+    EosToken,
+    Error(
+        "timeout",
+    ),
+]

@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: cfg
+---
+architecture: llama
+model_name: test-model
+vocab_size: 128256
+hidden_size: 4096
+num_layers: 32
+num_heads: 32
+num_kv_heads: 8
+head_dim: 128
+intermediate_size: 14336
+max_seq_len: 8192
+rope_theta: 500000
+rope_scaling:
+  scaling_type: YaRn
+  factor: 4
+quantization:
+  bit_width: 2
+  block_size: 256
+  format: QK256

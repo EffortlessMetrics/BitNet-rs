@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave32.rs
+expression: entry
+---
+CapabilityEntry {
+    operation: QuantizedOps,
+    precision: Binary,
+    support: Full(
+        0.95,
+    ),
+}

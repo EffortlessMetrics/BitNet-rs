@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave32.rs
+expression: "SupportLevel::Unsupported.to_string()"
+---
+Unsupported

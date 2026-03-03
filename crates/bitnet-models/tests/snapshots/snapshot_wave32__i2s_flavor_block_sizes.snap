@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: "output.join(\"\\n\")"
+---
+BitNet32F16: block_size=32, data_bytes=8, total_bytes=10
+Split32WithSibling: block_size=32, data_bytes=8, total_bytes=8
+GgmlQk256NoScale: block_size=256, data_bytes=64, total_bytes=64

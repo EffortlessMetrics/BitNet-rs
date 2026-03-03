@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: scaling
+---
+RopeScaling {
+    scaling_type: Linear,
+    factor: 2.0,
+}

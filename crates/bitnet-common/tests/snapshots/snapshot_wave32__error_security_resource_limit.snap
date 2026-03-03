@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave32.rs
+expression: err.to_string()
+---
+Security error: Resource limit exceeded: memory = 8589934592 exceeds limit 4294967296

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: cfg
+---
+VocabConfig {
+    unk_token: None,
+    bos_token: None,
+    eos_token: None,
+    pad_token: None,
+    additional_special_tokens: [],
+}

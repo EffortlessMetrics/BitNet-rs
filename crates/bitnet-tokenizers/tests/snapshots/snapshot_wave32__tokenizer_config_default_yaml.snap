@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: cfg
+---
+model_type: ""
+vocab_size: 0
+pre_tokenizer: ~
+add_bos: false
+add_eos: false
+add_space_prefix: false
+byte_fallback: false
+bos_token_id: ~
+eos_token_id: ~
+pad_token_id: ~
+unk_token_id: ~
+vocabulary: ~
+bpe_merges: ~

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: stats
+---
+VocabStats {
+    total_tokens: 0,
+    special_tokens: 0,
+    byte_tokens: 0,
+    single_char_tokens: 0,
+    max_token_len: 0,
+    avg_token_len: 0.0,
+}

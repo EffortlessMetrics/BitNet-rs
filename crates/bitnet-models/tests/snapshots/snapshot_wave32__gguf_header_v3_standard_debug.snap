@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: header
+---
+GgufHeader {
+    magic: [
+        71,
+        71,
+        85,
+        70,
+    ],
+    version: 3,
+    tensor_count: 291,
+    metadata_kv_count: 26,
+    alignment: 32,
+    data_offset: 4096,
+}

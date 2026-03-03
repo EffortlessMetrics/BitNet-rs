@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave32.rs
+expression: "DeviceClass::ALL"
+---
+[
+    IntelArc,
+    IntelXe,
+    NvidiaCuda,
+    AmdRocm,
+    AppleMetal,
+    CpuSimd,
+    CpuScalar,
+    WebGpu,
+]

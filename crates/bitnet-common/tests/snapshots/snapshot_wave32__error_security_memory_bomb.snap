@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave32.rs
+expression: err.to_string()
+---
+Security error: Memory allocation attack detected: Tensor metadata claims 1TB allocation

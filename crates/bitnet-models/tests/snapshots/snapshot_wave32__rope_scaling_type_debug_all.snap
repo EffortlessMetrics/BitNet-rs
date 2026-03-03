@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: types
+---
+[
+    None,
+    Linear,
+    Ntk,
+    YaRn,
+]

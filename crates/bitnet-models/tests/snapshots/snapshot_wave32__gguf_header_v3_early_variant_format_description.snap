@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: header.format_description()
+---
+GGUF v3 (early variant, missing alignment/data_offset fields)

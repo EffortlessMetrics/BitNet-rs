@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave32.rs
+expression: "format!(\"{:?}\", Device::Hip(0))"
+---
+Hip(0)

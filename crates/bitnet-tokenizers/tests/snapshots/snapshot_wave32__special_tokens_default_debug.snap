@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: tokens
+---
+SpecialTokens {
+    unk_id: None,
+    bos_id: None,
+    eos_id: None,
+    pad_id: None,
+    all_ids: {},
+}

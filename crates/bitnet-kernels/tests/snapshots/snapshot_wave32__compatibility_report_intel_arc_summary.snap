@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave32.rs
+expression: report.summary()
+---
+Intel Arc A770 (Intel Arc): READY — 2/2 required ops supported

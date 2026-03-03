@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: "output.join(\"\\n\")"
+---
+tensor_shapes
+weight_distribution
+layer_norm_stats
+vocab_size
+embedding_dim
+architecture_match
+quantization_format

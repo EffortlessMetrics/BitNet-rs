@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: "output.join(\"\\n\")"
+---
+PASSED
+PASSED_WITH_WARNINGS
+FAILED

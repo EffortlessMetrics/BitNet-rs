@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave32.rs
+expression: "output.join(\"\\n\")"
+---
+FP32
+FP16
+BF16
+INT8
+INT4
+Binary

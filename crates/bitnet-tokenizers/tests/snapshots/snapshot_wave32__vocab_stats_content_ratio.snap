@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: "format!(\"content_ratio: {:.4}\", stats.content_ratio())"
+---
+content_ratio: 0.5000

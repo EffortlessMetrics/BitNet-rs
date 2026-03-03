@@ -1,0 +1,34 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: pairs
+---
+[
+    (
+        "i2_s",
+        Some(
+            I2_S,
+        ),
+    ),
+    (
+        "iq2_s",
+        Some(
+            IQ2_S,
+        ),
+    ),
+    (
+        "q4_0",
+        Some(
+            Q4_0,
+        ),
+    ),
+    (
+        "f16",
+        Some(
+            F16,
+        ),
+    ),
+    (
+        "unknown",
+        None,
+    ),
+]

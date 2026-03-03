@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: flavors
+---
+[
+    BitNet32F16,
+    Split32WithSibling,
+    GgmlQk256NoScale,
+]

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave32.rs
+expression: policies
+---
+[
+    FIFO,
+    PriorityBased,
+    ShortestJobFirst,
+    RoundRobin,
+]

@@ -1,0 +1,31 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave32.rs
+expression: resp
+---
+InferenceResponse {
+    id: "resp-001",
+    text: "The capital of France is Paris.",
+    token_ids: [
+        450,
+        6864,
+        315,
+        9822,
+        374,
+        12366,
+        13,
+    ],
+    token_count: 7,
+    prompt_tokens: 5,
+    finish_reason: EosToken,
+    timing: TimingInfo {
+        prompt_eval_ms: 0,
+        generation_ms: 0,
+        total_ms: 0,
+        tokens_per_sec: 0.0,
+    },
+    usage: UsageInfo {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+    },
+}

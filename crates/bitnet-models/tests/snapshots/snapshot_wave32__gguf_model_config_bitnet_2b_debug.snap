@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: cfg
+---
+GgufModelConfig {
+    architecture: "llama",
+    model_name: Some(
+        "bitnet-b1.58-2B-4T",
+    ),
+    vocab_size: 32000,
+    hidden_size: 2048,
+    num_layers: 24,
+    num_heads: 32,
+    num_kv_heads: 8,
+    head_dim: 64,
+    intermediate_size: 5632,
+    max_seq_len: 2048,
+    rope_theta: 10000.0,
+    rope_scaling: None,
+    quantization: GgufQuantizationConfig {
+        bit_width: 2,
+        block_size: 64,
+        format: "I2_S",
+    },
+}

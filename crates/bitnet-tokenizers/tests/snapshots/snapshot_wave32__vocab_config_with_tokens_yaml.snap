@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-tokenizers/tests/snapshot_wave32.rs
+expression: cfg
+---
+unk_token: "<unk>"
+bos_token: "<s>"
+eos_token: "</s>"
+pad_token: "<pad>"
+additional_special_tokens:
+  - "<|eot_id|>"
+  - "<|begin_of_text|>"

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_wave32.rs
+expression: "QuantizationType::I2S.to_string()"
+---
+I2_S

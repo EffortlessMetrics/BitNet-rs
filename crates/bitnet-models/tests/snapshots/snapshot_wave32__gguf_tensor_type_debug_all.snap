@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave32.rs
+expression: types
+---
+[
+    F32,
+    F16,
+    F64,
+    Q4_0,
+    Q4_1,
+    Q8_0,
+    I2_S,
+    IQ2_S,
+]

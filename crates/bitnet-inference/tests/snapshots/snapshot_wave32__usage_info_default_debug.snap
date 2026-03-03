@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave32.rs
+expression: u
+---
+UsageInfo {
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    total_tokens: 0,
+}

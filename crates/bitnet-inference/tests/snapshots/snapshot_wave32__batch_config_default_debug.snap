@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave32.rs
+expression: cfg
+---
+BatchConfig {
+    max_batch_size: 8,
+    max_queue_depth: 1000,
+    scheduling_policy: FIFO,
+    timeout_ms: 30000,
+}
