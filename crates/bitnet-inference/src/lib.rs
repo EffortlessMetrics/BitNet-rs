@@ -4,6 +4,7 @@
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod attention_mask;
+pub mod attention_pattern;
 pub mod backends;
 pub mod batch;
 pub mod batch_engine;
