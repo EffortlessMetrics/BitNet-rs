@@ -25,6 +25,7 @@ pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
+pub mod kernel_select;
 pub mod kernels;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
