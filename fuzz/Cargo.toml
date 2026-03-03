@@ -613,31 +613,31 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_quantization_calibration"
-path = "fuzz_targets/fuzz_quantization_calibration.rs"
+name = "fuzz_sampling_strategy"
+path = "fuzz_targets/fuzz_sampling_strategy.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_download_manifest_parse"
-path = "fuzz_targets/fuzz_download_manifest_parse.rs"
+name = "fuzz_token_id_mapping"
+path = "fuzz_targets/fuzz_token_id_mapping.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_capability_check"
-path = "fuzz_targets/fuzz_capability_check.rs"
+name = "fuzz_model_header_parse"
+path = "fuzz_targets/fuzz_model_header_parse.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_conversion_pipeline"
-path = "fuzz_targets/fuzz_conversion_pipeline.rs"
+name = "fuzz_quantize_i2s"
+path = "fuzz_targets/fuzz_quantize_i2s.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_tensor_layout"
-path = "fuzz_targets/fuzz_tensor_layout.rs"
+name = "fuzz_stop_sequence"
+path = "fuzz_targets/fuzz_stop_sequence.rs"
 test = false
 doc = false
