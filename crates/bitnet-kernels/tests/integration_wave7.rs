@@ -324,14 +324,7 @@ fn conv1d_then_max_pool_then_rmsnorm() {
     assert_eq!(conv_out.len(), input_width);
 
     // Max pool with kernel=2, stride=2 → 4 outputs.
-    let pool_cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let pool_cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
     let pooled = PoolingKernel::apply(&conv_out, &pool_cfg).unwrap();
     assert_eq!(pooled.len(), 4);
     // Max of consecutive pairs: [2, 4, 6, 8].
@@ -371,14 +364,8 @@ fn conv1d_with_bias_then_avg_pool() {
     assert_slice_close(&conv_out, &[3.5, 5.5, 7.5], EPS, "conv1d_bias");
 
     // Global average pool.
-    let pool_cfg = PoolConfig {
-        pool_type: PoolType::GlobalAverage,
-        kernel_size: 0,
-        stride: 0,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let pool_cfg =
+        PoolConfig { pool_type: PoolType::GlobalAverage, kernel_size: 0, stride: 0, padding: 0 };
     let pooled = PoolingKernel::apply(&conv_out, &pool_cfg).unwrap();
     assert_eq!(pooled.len(), 1);
     let expected_avg = (3.5 + 5.5 + 7.5) / 3.0;

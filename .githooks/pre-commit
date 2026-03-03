@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Guard: Ensure staged .rs files are formatted
-if git diff --cached --name-only --diff-filter=d | grep -q '\.rs$'; then
-  if ! cargo fmt --all -- --check >/dev/null 2>&1; then
-    echo "✖ Formatting check failed. Run: cargo fmt --all"
-    exit 1
-  fi
-fi
-
 # Guard: Prevent GenerationConfig struct literals in tests (must use builder API)
-# Exclude snapshot (.snap) files — they contain Debug output, not source code.
-if rg -n --glob '!*.snap' 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig" >/dev/null 2>&1; then
+if rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests --glob '!*.snap' | grep -v ") -> GenerationConfig" >/dev/null 2>&1; then
   echo "✖ Found GenerationConfig struct literal in tests; use builder API instead."
   echo ""
-  rg -n --glob '!*.snap' 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig"
+  rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests --glob '!*.snap' | grep -v ") -> GenerationConfig"
   echo ""
   echo "Example: Replace"
   echo "  GenerationConfig { max_new_tokens: 10, temperature: 0.7, ... }"

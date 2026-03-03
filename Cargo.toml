@@ -11,7 +11,6 @@ members = [
   "crates/bitnet-bdd-grid",
   "crates/bitnet-bdd-grid-core",
   "crates/bitnet-compat",
-  "crates/bitnet-compat-core", # SRP: shared GGUF compatibility diagnostics core
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
   "crates/bitnet-runtime-feature-flags",
   "crates/bitnet-runtime-feature-flags-core",
@@ -83,7 +82,6 @@ members = [
   "crates/bitnet-testing-policy-runtime-core",
   "crates/bitnet-testing-policy-state-core",
   "crates/bitnet-startup-contract-core",
-  "crates/bitnet-startup-contract-diagnostics-core",
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
@@ -105,7 +103,6 @@ members = [
   "crates/bitnet-wgpu",          # WebGPU compute backend for cross-platform GPU inference
   "crates/bitnet-dispatch-core", # SRP: backend-agnostic compute dispatch sizing/contracts
   "crates/bitnet-bench-receipts", # SRP: benchmark receipt model + JSONL persistence
-  "crates/bitnet-bench-regression-core", # SRP: benchmark regression comparison primitives
   "crates/bitnet-wgpu-bench",    # Benchmarking and profiling harness for wgpu compute kernels
   "crates/bitnet-wgpu-runner",   # WebGPU kernel runner for GPU compute dispatch
   "crossval",
@@ -243,7 +240,6 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 async-trait = "0.1.89"
 bitnet-cpu-activations = { path = "crates/bitnet-cpu-activations", version = "0.2.1-dev" }
 bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.1-dev" }
-bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
 bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
@@ -372,6 +368,7 @@ required-features = ["cpu"]
 [[bench]]
 name = "quantization_ops"
 harness = false
+required-features = ["cpu", "bench"]
 
 [[bench]]
 name = "kernel_ops"
@@ -392,10 +389,6 @@ required-features = ["cpu"]
 name = "slm_inference"
 harness = false
 required-features = ["cpu"]
-
-[[bench]]
-name = "tokenizer_ops"
-harness = false
 
 [workspace.dependencies]
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }

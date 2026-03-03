@@ -458,13 +458,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitnet-bench-regression-core"
-version = "0.1.0"
-dependencies = [
- "bitnet-bench-receipts",
-]
-
-[[package]]
 name = "bitnet-cli"
 version = "0.2.1-dev"
 dependencies = [
@@ -556,7 +549,6 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
- "bitnet-compat-core",
  "bitnet-models",
  "bitnet-tokenizers",
  "chrono",
@@ -566,16 +558,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "tempfile",
- "tracing",
-]
-
-[[package]]
-name = "bitnet-compat-core"
-version = "0.2.1-dev"
-dependencies = [
- "anyhow",
- "bitnet-models",
  "tempfile",
  "tracing",
 ]
@@ -669,7 +651,6 @@ dependencies = [
 name = "bitnet-download-core"
 version = "0.2.1-dev"
 dependencies = [
- "tempfile",
  "thiserror 2.0.18",
 ]
 
@@ -1462,18 +1443,10 @@ dependencies = [
 name = "bitnet-startup-contract-diagnostics"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-runtime-bootstrap",
- "bitnet-startup-contract-diagnostics-core",
- "insta",
- "proptest",
-]
-
-[[package]]
-name = "bitnet-startup-contract-diagnostics-core"
-version = "0.2.1-dev"
-dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
+ "insta",
+ "proptest",
 ]
 
 [[package]]
@@ -1894,7 +1867,6 @@ name = "bitnet-wgpu-bench"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
- "bitnet-bench-regression-core",
  "bitnet-nvidia",
  "proptest",
  "serde",
@@ -2308,12 +2280,9 @@ checksum = "3a822ea5bc7590f9d40f1ba12c0dc3c2760f3482c6984db1573ad11031420831"
 
 [[package]]
 name = "clru"
-version = "0.6.3"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "197fd99cb113a8d5d9b6376f3aa817f32c1078f2343b714fff7d2ca44fdf67d5"
-dependencies = [
- "hashbrown 0.16.1",
-]
+checksum = "cbd0f76e066e64fdc5631e3bb46381254deab9ef1158292f27c8c57e3bf3fe59"
 
 [[package]]
 name = "cmake"

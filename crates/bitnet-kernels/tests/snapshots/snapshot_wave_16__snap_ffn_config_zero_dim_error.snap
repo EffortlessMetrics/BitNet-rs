@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: err.to_string()
----
-Kernel error: Invalid arguments: FFN dimensions must be non-zero: hidden_dim=0, intermediate_dim=3072

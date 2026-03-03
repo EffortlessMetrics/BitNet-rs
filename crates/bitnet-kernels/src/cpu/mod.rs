@@ -53,9 +53,6 @@ pub mod x86;
 pub mod arm;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_activation_functions;
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_activations;
 
 #[cfg(target_arch = "aarch64")]
@@ -77,9 +74,6 @@ pub mod neon_pooling;
 pub mod neon_batch_norm;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_quantized_attention;
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_quantized_matmul;
 
 #[cfg(target_arch = "aarch64")]
@@ -98,25 +92,7 @@ pub mod neon_transpose;
 pub mod neon_convolution;
 
 #[cfg(target_arch = "aarch64")]
-pub mod neon_batch_norm_v2;
-
-#[cfg(target_arch = "aarch64")]
 pub mod neon_padding_clipping;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_inference_bridge;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_weight_packing;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_batch_scheduler;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_quant_calibration;
-
-#[cfg(target_arch = "aarch64")]
-pub mod neon_fused_mlp;
 
 pub use activations::ActivationType;
 pub use activations::{
@@ -157,6 +133,3 @@ pub use x86::*;
 pub use arm::*;
 pub mod gather;
 pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
-pub mod pipeline_parallel;
-pub use pipeline_parallel::*;
-pub mod neon_gather_scatter;

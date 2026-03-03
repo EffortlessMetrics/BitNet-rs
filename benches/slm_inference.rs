@@ -101,14 +101,7 @@ fn bench_attention_single_head(c: &mut Criterion) {
     let k = rand_vec(total);
     let v = rand_vec(total);
 
-    let config = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let config = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
 
     c.bench_function("attention_single_head_128", |b| {
         b.iter(|| {
@@ -135,15 +128,8 @@ fn bench_attention_gqa_40_10(c: &mut Criterion) {
     let k = rand_vec(seq_len * num_kv_heads * head_dim);
     let v = rand_vec(seq_len * num_kv_heads * head_dim);
 
-    let config = GqaConfig {
-        num_q_heads,
-        num_kv_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let config =
+        GqaConfig { num_q_heads, num_kv_heads, head_dim, seq_len, causal: true, scale: None };
 
     let mut group = c.benchmark_group("attention_gqa");
     group.sample_size(10);

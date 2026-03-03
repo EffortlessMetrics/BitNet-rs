@@ -1,8 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave17.rs
-expression: norms
----
-[
-    LayerNorm,
-    RmsNorm,
-]

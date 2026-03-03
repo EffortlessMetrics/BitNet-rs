@@ -22,7 +22,8 @@ ENV PATH=/root/.cargo/bin:$PATH
 WORKDIR /app
 
 # Copy workspace
-COPY . .
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
 
 # Build with GPU feature
 RUN cargo build --locked --no-default-features --features gpu

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave27.rs
-expression: report.to_string()
----
-NVIDIA RTX 4090 (NVIDIA CUDA): READY — 1/1 required ops supported

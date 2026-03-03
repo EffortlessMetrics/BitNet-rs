@@ -1,4 +1,3 @@
-#![allow(clippy::manual_range_contains, clippy::approx_constant)]
 //! Attention kernel correctness regression tests (CPU path).
 //!
 //! Verifies numerical correctness of scaled dot-product attention,
@@ -532,7 +531,6 @@ fn causal_attention_wrapper_matches_mha_causal() {
         head_dim,
         seq_len,
         causal: false, // causal_attention forces true
-        use_alibi: false,
         scale: None,
     };
     let causal_result = causal_attention(&q, &k, &v, &cfg).unwrap();

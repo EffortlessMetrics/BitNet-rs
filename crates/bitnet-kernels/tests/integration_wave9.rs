@@ -84,14 +84,7 @@ fn embedding_layernorm_attention_pipeline() {
     let normed = layer_norm(&emb, &gamma, None, &ln_cfg).unwrap();
     assert_eq!(normed.len(), seq_len * dim);
 
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: false,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: false, scale: None };
     let out = AttentionKernel::multi_head_attention(&normed, &normed, &normed, &attn_cfg).unwrap();
     assert_eq!(out.len(), seq_len * dim);
     assert!(out.iter().all(|v| v.is_finite()));
@@ -118,14 +111,7 @@ fn rope_mha_layernorm_pipeline() {
     apply_rope_batch(&mut q, 0, seq_len, num_heads, head_dim, &freqs);
     apply_rope_batch(&mut k, 0, seq_len, num_heads, head_dim, &freqs);
 
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
     let attn_out = AttentionKernel::multi_head_attention(&q, &k, &v, &attn_cfg).unwrap();
     assert_eq!(attn_out.len(), seq_len * model_dim);
 
@@ -201,14 +187,7 @@ fn conv2d_silu_maxpool_pipeline() {
     let activated = activate(&conv_out, ActivationType::SiLU);
     assert_eq!(activated.len(), conv_out.len());
 
-    let pool_cfg = PoolConfig {
-        pool_type: PoolType::Max,
-        kernel_size: 2,
-        stride: 2,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let pool_cfg = PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 2, padding: 0 };
     let pooled = PoolingKernel::apply(&activated, &pool_cfg).unwrap();
     assert!(!pooled.is_empty());
     assert!(pooled.iter().all(|v| v.is_finite()));
@@ -384,14 +363,7 @@ fn normalized_embedding_attention_preserves_shape() {
         assert_close(norm, 1.0, 1e-5, &format!("row_{row}_norm"));
     }
 
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: false,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: false, scale: None };
     let out = AttentionKernel::multi_head_attention(&emb, &emb, &emb, &attn_cfg).unwrap();
     assert_eq!(out.len(), seq_len * dim);
 }
@@ -506,14 +478,8 @@ fn shaped_reduction_axis0_sum() {
 fn pooling_activation_reduction_pipeline() {
     let data: Vec<f32> = (0..16).map(|i| i as f32 - 8.0).collect();
 
-    let pool_cfg = PoolConfig {
-        pool_type: PoolType::Average,
-        kernel_size: 4,
-        stride: 4,
-        padding: 0,
-        dilation: 1,
-        ceil_mode: false,
-    };
+    let pool_cfg =
+        PoolConfig { pool_type: PoolType::Average, kernel_size: 4, stride: 4, padding: 0 };
     let pooled = PoolingKernel::apply(&data, &pool_cfg).unwrap();
     assert_eq!(pooled.len(), 4);
 
@@ -563,14 +529,7 @@ fn attention_output_bounded_by_value_range() {
     let v_min = v.iter().copied().fold(f32::INFINITY, f32::min);
     let v_max = v.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 
-    let cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: false,
-        use_alibi: false,
-        scale: None,
-    };
+    let cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: false, scale: None };
     let out = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
 
     for (i, &val) in out.iter().enumerate() {
@@ -622,14 +581,7 @@ fn mini_transformer_block_pipeline() {
     let ln_cfg = LayerNormConfig::new(vec![dim]);
     let normed = rms_norm(&emb, &gamma, &ln_cfg).unwrap();
 
-    let attn_cfg = AttentionConfig {
-        num_heads,
-        head_dim,
-        seq_len,
-        causal: true,
-        use_alibi: false,
-        scale: None,
-    };
+    let attn_cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: true, scale: None };
     let attn_out =
         AttentionKernel::multi_head_attention(&normed, &normed, &normed, &attn_cfg).unwrap();
 
@@ -763,14 +715,7 @@ fn shaped_reduction_global_mean_agrees() {
 
 #[test]
 fn pipeline_error_propagation_on_shape_mismatch() {
-    let cfg = AttentionConfig {
-        num_heads: 2,
-        head_dim: 4,
-        seq_len: 3,
-        causal: false,
-        use_alibi: false,
-        scale: None,
-    };
+    let cfg = AttentionConfig { num_heads: 2, head_dim: 4, seq_len: 3, causal: false, scale: None };
     let q = vec![0.0f32; 10]; // wrong (expected 24)
     let k = vec![0.0f32; 24];
     let v = vec![0.0f32; 24];

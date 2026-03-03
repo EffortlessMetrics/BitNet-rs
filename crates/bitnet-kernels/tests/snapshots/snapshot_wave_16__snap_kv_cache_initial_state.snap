@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: "format!(\"layers={}, seq_len_per_layer={:?}\", cache.blocks.len(),\ncache.blocks.iter().map(|b| b.seq_len).collect::<Vec<_>>())"
----
-layers=2, seq_len_per_layer=[0, 0]

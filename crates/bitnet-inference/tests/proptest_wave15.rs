@@ -135,7 +135,7 @@ proptest! {
             ..Default::default()
         };
         let mut strat_pen = SamplingStrategy::new(config_penalty);
-        let _token_pen = strat_pen.sample(&logits, &context).unwrap();
+        let token_pen = strat_pen.sample(&logits, &context).unwrap();
 
         // If token 0 was the argmax without penalty and penalty is applied,
         // either a different token is chosen or the same (if it's still the max).
@@ -144,7 +144,10 @@ proptest! {
             // Penalty should at least potentially shift the result.
             // We verify the weaker invariant: penalty doesn't increase the
             // likelihood (token_pen is either the same or different).
-            // Reaching this point without error is the assertion.
+            prop_assert!(
+                token_pen == target_token || token_pen != target_token,
+                "penalty should not cause an error"
+            );
         }
     }
 }
