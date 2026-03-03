@@ -1,0 +1,208 @@
+//! Thread pool configuration for inference.
+//!
+//! Configure thread counts, affinity hints, and work partitioning
+//! for CPU inference workloads.
+
+/// Thread pool configuration.
+#[derive(Debug, Clone)]
+pub struct ThreadConfig {
+    pub num_threads: usize,
+    pub pin_threads: bool,
+    pub priority: ThreadPriority,
+    pub stack_size: usize,
+}
+
+/// Thread priority level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThreadPriority {
+    Low,
+    Normal,
+    High,
+    Realtime,
+}
+
+impl Default for ThreadConfig {
+    fn default() -> Self {
+        Self {
+            num_threads: available_parallelism(),
+            pin_threads: false,
+            priority: ThreadPriority::Normal,
+            stack_size: 8 * 1024 * 1024, // 8 MB
+        }
+    }
+}
+
+impl ThreadConfig {
+    pub fn new(num_threads: usize) -> Self {
+        Self { num_threads: num_threads.max(1), ..Default::default() }
+    }
+
+    pub fn single_threaded() -> Self {
+        Self::new(1)
+    }
+
+    pub fn with_pin(mut self) -> Self {
+        self.pin_threads = true;
+        self
+    }
+
+    pub fn with_priority(mut self, priority: ThreadPriority) -> Self {
+        self.priority = priority;
+        self
+    }
+
+    pub fn with_stack_size(mut self, size: usize) -> Self {
+        self.stack_size = size;
+        self
+    }
+}
+
+/// Get available parallelism (number of logical CPUs).
+pub fn available_parallelism() -> usize {
+    std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1)
+}
+
+/// Work partitioning: divide `total` items across `threads`.
+#[derive(Debug, Clone)]
+pub struct WorkPartition {
+    pub thread_id: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
+impl WorkPartition {
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+}
+
+/// Partition `total` items across `num_threads` as evenly as possible.
+pub fn partition_work(total: usize, num_threads: usize) -> Vec<WorkPartition> {
+    let threads = num_threads.max(1);
+    let base_chunk = total / threads;
+    let remainder = total % threads;
+    let mut partitions = Vec::with_capacity(threads);
+    let mut start = 0;
+
+    for i in 0..threads {
+        let extra = if i < remainder { 1 } else { 0 };
+        let chunk = base_chunk + extra;
+        partitions.push(WorkPartition { thread_id: i, start, end: start + chunk });
+        start += chunk;
+    }
+    partitions
+}
+
+/// Estimate optimal thread count for a given workload size.
+pub fn optimal_threads(work_items: usize, min_items_per_thread: usize) -> usize {
+    let max_threads = available_parallelism();
+    let min_per = min_items_per_thread.max(1);
+    let needed = (work_items + min_per - 1) / min_per;
+    needed.clamp(1, max_threads)
+}
+
+/// Check if work should be parallelized (heuristic).
+pub fn should_parallelize(work_items: usize, threshold: usize) -> bool {
+    work_items >= threshold && available_parallelism() > 1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let config = ThreadConfig::default();
+        assert!(config.num_threads >= 1);
+        assert!(!config.pin_threads);
+        assert_eq!(config.priority, ThreadPriority::Normal);
+    }
+
+    #[test]
+    fn test_single_threaded() {
+        let config = ThreadConfig::single_threaded();
+        assert_eq!(config.num_threads, 1);
+    }
+
+    #[test]
+    fn test_builder() {
+        let config = ThreadConfig::new(4)
+            .with_pin()
+            .with_priority(ThreadPriority::High)
+            .with_stack_size(16 * 1024 * 1024);
+        assert_eq!(config.num_threads, 4);
+        assert!(config.pin_threads);
+        assert_eq!(config.priority, ThreadPriority::High);
+    }
+
+    #[test]
+    fn test_available_parallelism() {
+        assert!(available_parallelism() >= 1);
+    }
+
+    #[test]
+    fn test_partition_even() {
+        let parts = partition_work(12, 3);
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[0].start, 0);
+        assert_eq!(parts[0].end, 4);
+        assert_eq!(parts[1].start, 4);
+        assert_eq!(parts[1].end, 8);
+        assert_eq!(parts[2].start, 8);
+        assert_eq!(parts[2].end, 12);
+    }
+
+    #[test]
+    fn test_partition_uneven() {
+        let parts = partition_work(10, 3);
+        assert_eq!(parts.len(), 3);
+        // 10 / 3 = 3r1 → first thread gets 4, rest get 3
+        let total: usize = parts.iter().map(|p| p.len()).sum();
+        assert_eq!(total, 10);
+        assert!(parts[0].len() >= parts[2].len());
+    }
+
+    #[test]
+    fn test_partition_more_threads_than_work() {
+        let parts = partition_work(2, 5);
+        assert_eq!(parts.len(), 5);
+        let non_empty: Vec<_> = parts.iter().filter(|p| !p.is_empty()).collect();
+        assert_eq!(non_empty.len(), 2);
+    }
+
+    #[test]
+    fn test_partition_zero_work() {
+        let parts = partition_work(0, 4);
+        assert!(parts.iter().all(|p| p.is_empty()));
+    }
+
+    #[test]
+    fn test_optimal_threads() {
+        let t = optimal_threads(100, 10);
+        assert!(t >= 1);
+        assert!(t <= available_parallelism());
+    }
+
+    #[test]
+    fn test_optimal_threads_tiny() {
+        let t = optimal_threads(5, 100);
+        assert_eq!(t, 1);
+    }
+
+    #[test]
+    fn test_should_parallelize() {
+        assert!(!should_parallelize(1, 100));
+        // This depends on machine but should not panic
+        let _ = should_parallelize(10000, 100);
+    }
+
+    #[test]
+    fn test_min_one_thread() {
+        let config = ThreadConfig::new(0);
+        assert_eq!(config.num_threads, 1);
+    }
+}
