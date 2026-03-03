@@ -112,11 +112,7 @@ pub unsafe fn neon_store_partial_f32(ptr: *mut f32, v: float32x4_t, count: usize
 /// Fused multiply-add: `a + b * c`.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-pub unsafe fn neon_fma_f32(
-    a: float32x4_t,
-    b: float32x4_t,
-    c: float32x4_t,
-) -> float32x4_t {
+pub unsafe fn neon_fma_f32(a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
     unsafe { vfmaq_f32(a, b, c) }
 }
 
@@ -130,11 +126,7 @@ pub unsafe fn neon_abs_f32(v: float32x4_t) -> float32x4_t {
 /// Per-lane clamp: `max(min_val, min(v, max_val))`.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-pub unsafe fn neon_clamp_f32(
-    v: float32x4_t,
-    min: float32x4_t,
-    max: float32x4_t,
-) -> float32x4_t {
+pub unsafe fn neon_clamp_f32(v: float32x4_t, min: float32x4_t, max: float32x4_t) -> float32x4_t {
     unsafe { vmaxq_f32(min, vminq_f32(v, max)) }
 }
 
@@ -142,11 +134,7 @@ pub unsafe fn neon_clamp_f32(
 /// from `b` where `mask` is 0.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-pub unsafe fn neon_select_f32(
-    mask: uint32x4_t,
-    a: float32x4_t,
-    b: float32x4_t,
-) -> float32x4_t {
+pub unsafe fn neon_select_f32(mask: uint32x4_t, a: float32x4_t, b: float32x4_t) -> float32x4_t {
     unsafe { vbslq_f32(mask, a, b) }
 }
 
@@ -156,10 +144,7 @@ pub unsafe fn neon_select_f32(
 /// `high = [a2, b2, a3, b3]`.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-pub unsafe fn neon_interleave_f32(
-    a: float32x4_t,
-    b: float32x4_t,
-) -> (float32x4_t, float32x4_t) {
+pub unsafe fn neon_interleave_f32(a: float32x4_t, b: float32x4_t) -> (float32x4_t, float32x4_t) {
     unsafe {
         let lo = vzip1q_f32(a, b);
         let hi = vzip2q_f32(a, b);
@@ -173,10 +158,7 @@ pub unsafe fn neon_interleave_f32(
 /// `odd = [a1, a3, b1, b3]`.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-pub unsafe fn neon_deinterleave_f32(
-    a: float32x4_t,
-    b: float32x4_t,
-) -> (float32x4_t, float32x4_t) {
+pub unsafe fn neon_deinterleave_f32(a: float32x4_t, b: float32x4_t) -> (float32x4_t, float32x4_t) {
     unsafe {
         let even = vuzp1q_f32(a, b);
         let odd = vuzp2q_f32(a, b);
@@ -616,7 +598,12 @@ mod tests {
             ];
             for i in 0..4 {
                 let diff = (fma_result[i] - expected[i]).abs();
-                assert!(diff < 1e-6, "lane {i}: fma={} sep={} diff={diff}", fma_result[i], expected[i]);
+                assert!(
+                    diff < 1e-6,
+                    "lane {i}: fma={} sep={} diff={diff}",
+                    fma_result[i],
+                    expected[i]
+                );
             }
         }
     }
