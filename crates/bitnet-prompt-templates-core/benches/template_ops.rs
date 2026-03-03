@@ -5,7 +5,7 @@
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
-use bitnet_prompt_templates_core::{ChatRole, ChatTurn, TemplateType};
+use bitnet_prompt_templates::{ChatRole, ChatTurn, TemplateType};
 
 fn bench_detect(c: &mut Criterion) {
     let mut group = c.benchmark_group("template_detect");
