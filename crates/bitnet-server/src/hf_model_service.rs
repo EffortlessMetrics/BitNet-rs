@@ -296,7 +296,7 @@ mod tests {
         };
         let json = serde_json::to_string(&resp).unwrap();
         let deser: HfModelLoadResponse = serde_json::from_str(&json).unwrap();
-        assert!(deser.success);
+        assert_eq!(deser.success, true);
         assert_eq!(deser.load_time_ms, 42);
         assert!(deser.model_info.is_some());
     }
