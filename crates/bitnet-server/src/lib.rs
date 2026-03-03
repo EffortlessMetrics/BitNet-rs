@@ -32,6 +32,7 @@ pub mod stream_handler;
 pub mod streaming;
 pub mod streaming_response;
 pub mod websocket;
+pub mod ws_messages;
 
 use anyhow::Result;
 use axum::{
