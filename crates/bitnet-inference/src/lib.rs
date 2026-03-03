@@ -70,6 +70,7 @@ pub mod runtime_utils;
 pub mod sampling;
 pub mod sampling_presets;
 pub mod sampling_utils;
+pub mod seq_scheduler;
 pub mod session_manager;
 pub mod simple_forward;
 pub mod streaming;
