@@ -156,6 +156,11 @@ path = "tests/metal_layernorm_shader_tests.rs"
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
 
+[[test]]
+name = "bdd_wave_8"
+path = "tests/bdd_wave_8.rs"
+required-features = ["cpu"]
+
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
