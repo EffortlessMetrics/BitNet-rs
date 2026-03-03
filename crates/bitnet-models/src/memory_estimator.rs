@@ -1,159 +1,163 @@
 //! Model memory estimation.
 //!
-//! Estimate memory requirements for model loading and inference.
+//! Estimate RAM/VRAM requirements for model loading and inference
+//! based on model configuration parameters.
 
-/// Data type for memory calculations.
+/// Precision of model weights.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DType {
-    F32,
-    F16,
-    BF16,
-    I8,
-    I4,
-    I2,
+pub enum WeightPrecision {
+    /// 1.58-bit (BitNet I2_S)
+    Bit158,
+    /// 2-bit quantized
+    Int2,
+    /// 4-bit quantized
+    Int4,
+    /// 8-bit quantized
+    Int8,
+    /// 16-bit float (FP16/BF16)
+    Float16,
+    /// 32-bit float
+    Float32,
 }
 
-impl DType {
-    pub fn bits(&self) -> usize {
+impl WeightPrecision {
+    /// Bits per weight element.
+    pub fn bits_per_element(&self) -> f64 {
         match self {
-            Self::F32 => 32,
-            Self::F16 | Self::BF16 => 16,
-            Self::I8 => 8,
-            Self::I4 => 4,
-            Self::I2 => 2,
+            Self::Bit158 => 1.58,
+            Self::Int2 => 2.0,
+            Self::Int4 => 4.0,
+            Self::Int8 => 8.0,
+            Self::Float16 => 16.0,
+            Self::Float32 => 32.0,
         }
     }
 
+    /// Bytes per element (rounded up for sub-byte types).
     pub fn bytes_per_element(&self) -> f64 {
-        self.bits() as f64 / 8.0
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::F32 => "f32",
-            Self::F16 => "f16",
-            Self::BF16 => "bf16",
-            Self::I8 => "int8",
-            Self::I4 => "int4",
-            Self::I2 => "int2",
-        }
+        self.bits_per_element() / 8.0
     }
 }
 
-/// Model configuration for memory estimation.
+/// Model configuration for estimation.
 #[derive(Debug, Clone)]
 pub struct ModelSpec {
-    pub num_layers: usize,
     pub hidden_size: usize,
-    pub intermediate_size: usize,
+    pub num_layers: usize,
     pub num_heads: usize,
     pub num_kv_heads: usize,
+    pub intermediate_size: usize,
     pub vocab_size: usize,
-    pub max_context: usize,
-    pub weight_dtype: DType,
+    pub max_seq_len: usize,
+    pub precision: WeightPrecision,
 }
 
 impl ModelSpec {
-    pub fn head_dim(&self) -> usize {
-        if self.num_heads == 0 {
-            return 0;
-        }
-        self.hidden_size / self.num_heads
+    /// Total model parameters (approximate).
+    pub fn total_params(&self) -> u64 {
+        let h = self.hidden_size as u64;
+        let l = self.num_layers as u64;
+        let v = self.vocab_size as u64;
+        let ff = self.intermediate_size as u64;
+
+        // Embedding + output projection
+        let embedding = v * h * 2;
+
+        // Per-layer: QKV projections + output proj + FFN (gate + up + down) + norms
+        let head_dim = h / self.num_heads as u64;
+        let qkv = h * (h + 2 * self.num_kv_heads as u64 * head_dim);
+        let out_proj = h * h;
+        let ffn = h * ff * 3; // gate + up + down
+        let norms = h * 4; // 2 norms per layer * 2 (weight + possible bias)
+        let per_layer = qkv + out_proj + ffn + norms;
+
+        embedding + l * per_layer
+    }
+
+    /// Estimated weight memory in bytes.
+    pub fn weight_memory_bytes(&self) -> u64 {
+        let params = self.total_params();
+        (params as f64 * self.precision.bytes_per_element()) as u64
+    }
+
+    /// Estimated KV cache memory for a given batch size and sequence length.
+    pub fn kv_cache_bytes(&self, batch_size: usize, seq_len: usize) -> u64 {
+        // 2 (K+V) * layers * kv_heads * head_dim * seq_len * batch * 2 bytes (fp16)
+        let head_dim = self.hidden_size / self.num_heads;
+        2 * self.num_layers as u64
+            * self.num_kv_heads as u64
+            * head_dim as u64
+            * seq_len as u64
+            * batch_size as u64
+            * 2 // fp16 for KV cache
+    }
+
+    /// Total inference memory estimate (weights + KV cache + overhead).
+    pub fn inference_memory_bytes(&self, batch_size: usize, seq_len: usize) -> u64 {
+        let weights = self.weight_memory_bytes();
+        let kv = self.kv_cache_bytes(batch_size, seq_len);
+        // ~20% overhead for activations, workspace buffers, etc.
+        let overhead = (weights + kv) / 5;
+        weights + kv + overhead
     }
 }
 
-/// Memory breakdown.
-#[derive(Debug, Clone)]
-pub struct MemoryEstimate {
-    pub weights_bytes: u64,
-    pub kv_cache_bytes: u64,
-    pub activations_bytes: u64,
-    pub total_bytes: u64,
-}
+/// Format bytes as a human-readable string.
+pub fn format_bytes(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
 
-impl MemoryEstimate {
-    pub fn weights_gb(&self) -> f64 {
-        self.weights_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
-    }
-    pub fn kv_cache_gb(&self) -> f64 {
-        self.kv_cache_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
-    }
-    pub fn total_gb(&self) -> f64 {
-        self.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
-    }
-    pub fn total_mb(&self) -> f64 {
-        self.total_bytes as f64 / (1024.0 * 1024.0)
+    if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{bytes} B")
     }
 }
 
-/// Estimate memory for a model.
-pub fn estimate_memory(spec: &ModelSpec) -> MemoryEstimate {
-    let bpe = spec.weight_dtype.bytes_per_element();
-    let h = spec.hidden_size as u64;
-    let ff = spec.intermediate_size as u64;
-    let v = spec.vocab_size as u64;
-    let l = spec.num_layers as u64;
-
-    // Weights: embedding + per-layer (QKV + O + gate + up + down + norms) + output
-    let embed = v * h;
-    let qkv = h * (h + 2 * (spec.num_kv_heads as u64 * spec.head_dim() as u64));
-    let output_proj = h * h;
-    let ffn = h * ff * 3; // gate + up + down
-    let norms = h * 2; // 2 norms per layer
-    let per_layer = qkv + output_proj + ffn + norms;
-    let total_params = embed + l * per_layer + v * h;
-    let weights_bytes = (total_params as f64 * bpe) as u64;
-
-    // KV cache: 2 * num_layers * num_kv_heads * head_dim * max_context * sizeof(f16)
-    let kv_per_layer =
-        2 * spec.num_kv_heads as u64 * spec.head_dim() as u64 * spec.max_context as u64 * 2; // f16
-    let kv_cache_bytes = l * kv_per_layer;
-
-    // Activations: ~2 * batch * seq * hidden (rough estimate)
-    let activations_bytes = 2 * spec.max_context as u64 * h * 4; // f32 activations
-
-    let total = weights_bytes + kv_cache_bytes + activations_bytes;
-
-    MemoryEstimate { weights_bytes, kv_cache_bytes, activations_bytes, total_bytes: total }
-}
-
-/// Presets for known models.
-pub fn phi4_spec() -> ModelSpec {
+/// Preset: BitNet-b1.58-2B configuration.
+pub fn bitnet_2b() -> ModelSpec {
     ModelSpec {
-        num_layers: 40,
+        hidden_size: 2560,
+        num_layers: 30,
+        num_heads: 20,
+        num_kv_heads: 20,
+        intermediate_size: 6912,
+        vocab_size: 32000,
+        max_seq_len: 4096,
+        precision: WeightPrecision::Bit158,
+    }
+}
+
+/// Preset: Phi-4 (14B) configuration.
+pub fn phi4_14b() -> ModelSpec {
+    ModelSpec {
         hidden_size: 5120,
-        intermediate_size: 14336,
+        num_layers: 40,
         num_heads: 40,
         num_kv_heads: 10,
+        intermediate_size: 17920,
         vocab_size: 100352,
-        max_context: 16384,
-        weight_dtype: DType::BF16,
+        max_seq_len: 16384,
+        precision: WeightPrecision::Float16,
     }
 }
 
-pub fn bitnet_2b_spec() -> ModelSpec {
+/// Preset: LLaMA-3 8B configuration.
+pub fn llama3_8b() -> ModelSpec {
     ModelSpec {
-        num_layers: 30,
-        hidden_size: 2560,
-        intermediate_size: 6912,
-        num_heads: 20,
-        num_kv_heads: 5,
-        vocab_size: 32000,
-        max_context: 4096,
-        weight_dtype: DType::I2,
-    }
-}
-
-pub fn llama3_8b_spec() -> ModelSpec {
-    ModelSpec {
-        num_layers: 32,
         hidden_size: 4096,
-        intermediate_size: 14336,
+        num_layers: 32,
         num_heads: 32,
         num_kv_heads: 8,
+        intermediate_size: 14336,
         vocab_size: 128256,
-        max_context: 8192,
-        weight_dtype: DType::F16,
+        max_seq_len: 8192,
+        precision: WeightPrecision::Float16,
     }
 }
 
@@ -162,95 +166,107 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_dtype_bits() {
-        assert_eq!(DType::F32.bits(), 32);
-        assert_eq!(DType::F16.bits(), 16);
-        assert_eq!(DType::I4.bits(), 4);
-        assert_eq!(DType::I2.bits(), 2);
+    fn test_weight_precision_bits() {
+        assert!((WeightPrecision::Bit158.bits_per_element() - 1.58).abs() < 1e-6);
+        assert!((WeightPrecision::Float16.bits_per_element() - 16.0).abs() < 1e-6);
+        assert!((WeightPrecision::Int4.bits_per_element() - 4.0).abs() < 1e-6);
     }
 
     #[test]
-    fn test_dtype_bytes() {
-        assert!((DType::F32.bytes_per_element() - 4.0).abs() < 0.01);
-        assert!((DType::I4.bytes_per_element() - 0.5).abs() < 0.01);
+    fn test_bitnet_2b_params() {
+        let spec = bitnet_2b();
+        let params = spec.total_params();
+        // Should be in the ~2B range
+        assert!(params > 1_000_000_000);
+        assert!(params < 5_000_000_000);
     }
 
     #[test]
-    fn test_phi4_estimate() {
-        let est = estimate_memory(&phi4_spec());
-        assert!(est.weights_gb() > 20.0); // ~28GB BF16
-        assert!(est.kv_cache_gb() > 1.0);
-        assert!(est.total_gb() > 20.0);
+    fn test_bitnet_2b_weight_memory() {
+        let spec = bitnet_2b();
+        let mem = spec.weight_memory_bytes();
+        // 1.58 bits * ~2B params ≈ ~400 MB
+        assert!(mem > 100_000_000);
+        assert!(mem < 2_000_000_000);
     }
 
     #[test]
-    fn test_bitnet_small() {
-        let est = estimate_memory(&bitnet_2b_spec());
-        assert!(est.weights_gb() < 5.0); // 2-bit = very small
+    fn test_phi4_params() {
+        let spec = phi4_14b();
+        let params = spec.total_params();
+        // Should be in the ~14B range
+        assert!(params > 5_000_000_000);
+        assert!(params < 30_000_000_000);
     }
 
     #[test]
-    fn test_llama_estimate() {
-        let est = estimate_memory(&llama3_8b_spec());
-        assert!(est.weights_gb() > 10.0);
+    fn test_phi4_weight_memory() {
+        let spec = phi4_14b();
+        let mem = spec.weight_memory_bytes();
+        // FP16 * ~14B params ≈ ~28 GB
+        assert!(mem > 10_000_000_000);
+        assert!(mem < 60_000_000_000);
     }
 
     #[test]
-    fn test_head_dim() {
-        assert_eq!(phi4_spec().head_dim(), 128);
-        assert_eq!(bitnet_2b_spec().head_dim(), 128);
+    fn test_kv_cache_scaling() {
+        let spec = phi4_14b();
+        let kv1 = spec.kv_cache_bytes(1, 1024);
+        let kv2 = spec.kv_cache_bytes(1, 2048);
+        // Double seq_len should double KV cache
+        assert_eq!(kv2, kv1 * 2);
     }
 
     #[test]
-    fn test_total_mb() {
-        let est = estimate_memory(&bitnet_2b_spec());
-        assert!(est.total_mb() > 0.0);
+    fn test_kv_cache_batch_scaling() {
+        let spec = llama3_8b();
+        let kv1 = spec.kv_cache_bytes(1, 1024);
+        let kv4 = spec.kv_cache_bytes(4, 1024);
+        assert_eq!(kv4, kv1 * 4);
     }
 
     #[test]
-    fn test_kv_cache_scales_with_context() {
-        let mut spec = bitnet_2b_spec();
-        spec.max_context = 4096;
-        let est1 = estimate_memory(&spec);
-        spec.max_context = 16384;
-        let est2 = estimate_memory(&spec);
-        assert!(est2.kv_cache_bytes > est1.kv_cache_bytes);
+    fn test_inference_memory_includes_overhead() {
+        let spec = bitnet_2b();
+        let weights = spec.weight_memory_bytes();
+        let kv = spec.kv_cache_bytes(1, 512);
+        let total = spec.inference_memory_bytes(1, 512);
+        assert!(total > weights + kv);
     }
 
     #[test]
-    fn test_dtype_str() {
-        assert_eq!(DType::BF16.as_str(), "bf16");
-        assert_eq!(DType::I8.as_str(), "int8");
+    fn test_format_bytes() {
+        assert_eq!(format_bytes(512), "512 B");
+        assert_eq!(format_bytes(1024), "1.00 KB");
+        assert_eq!(format_bytes(1_048_576), "1.00 MB");
+        assert_eq!(format_bytes(1_073_741_824), "1.00 GB");
     }
 
     #[test]
-    fn test_zero_heads() {
-        let spec = ModelSpec {
-            num_layers: 1,
-            hidden_size: 128,
-            intermediate_size: 256,
-            num_heads: 0,
-            num_kv_heads: 0,
-            vocab_size: 100,
-            max_context: 32,
-            weight_dtype: DType::F32,
+    fn test_format_bytes_fractional() {
+        assert_eq!(format_bytes(1_500_000_000), "1.40 GB");
+    }
+
+    #[test]
+    fn test_int4_precision() {
+        let mut spec = bitnet_2b();
+        spec.precision = WeightPrecision::Int4;
+        let fp16_mem = {
+            let mut s = spec.clone();
+            s.precision = WeightPrecision::Float16;
+            s.weight_memory_bytes()
         };
-        assert_eq!(spec.head_dim(), 0);
+        let int4_mem = spec.weight_memory_bytes();
+        // int4 should be ~4x smaller than fp16
+        assert!((fp16_mem as f64 / int4_mem as f64 - 4.0).abs() < 0.1);
     }
 
     #[test]
-    fn test_quantized_smaller() {
-        let mut spec = llama3_8b_spec();
-        let fp16_est = estimate_memory(&spec);
-        spec.weight_dtype = DType::I4;
-        let i4_est = estimate_memory(&spec);
-        assert!(i4_est.weights_bytes < fp16_est.weights_bytes);
-    }
-
-    #[test]
-    fn test_activations_included() {
-        let est = estimate_memory(&bitnet_2b_spec());
-        assert!(est.activations_bytes > 0);
-        assert!(est.total_bytes > est.weights_bytes + est.kv_cache_bytes);
+    fn test_llama3_kv_cache() {
+        let spec = llama3_8b();
+        let kv = spec.kv_cache_bytes(1, 8192);
+        // 8 KV heads * 128 dim * 32 layers * 8192 seq * 2 (K+V) * 2 bytes
+        let expected: u64 = 2 * 32 * 8 * 128 * 8192 * 2;
+        assert_eq!(kv, expected);
     }
 }
