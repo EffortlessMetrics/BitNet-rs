@@ -10,6 +10,7 @@ use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
 pub mod activation_bench;
+pub mod activation_ops;
 pub mod activation_registry;
 pub mod attention_patterns;
 pub mod bench_harness;
