@@ -183,3 +183,5 @@ pub use gather::{gather_rows, index_select_dim, scatter_add_rows};
 pub mod pipeline_parallel;
 pub use pipeline_parallel::*;
 pub mod neon_gather_scatter;
+#[cfg(target_arch = "aarch64")]
+pub mod neon_quantized_ffn;
