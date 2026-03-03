@@ -33,6 +33,7 @@ pub mod metadata_extractor;
 pub mod minimal;
 pub mod model_catalog;
 pub mod model_compare;
+pub mod model_diff;
 pub mod model_fingerprint;
 pub mod model_validator;
 pub mod names;
@@ -50,8 +51,8 @@ pub mod validation_suite;
 pub mod validator;
 pub mod weight_format;
 pub mod weight_loader;
-pub mod weight_mapper;
 pub mod weight_loader_pipeline;
+pub mod weight_mapper;
 pub mod weight_stats;
 
 #[cfg(test)]
