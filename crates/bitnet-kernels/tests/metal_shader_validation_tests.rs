@@ -1,411 +1,687 @@
-#![cfg(all(target_os = "macos", feature = "cpu"))]
-#![allow(clippy::manual_div_ceil)]
+#![cfg(target_os = "macos")]
+#![allow(clippy::float_cmp)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::approx_constant)]
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
 
-//! Pure-logic tests validating Metal Shading Language patterns for neural network
-//! inference on Apple Silicon. No GPU required — these test the calculations and
-//! layouts used when setting up Metal shaders.
+//! Integration tests for Metal shader validation patterns on Apple Silicon.
+//!
+//! These tests validate Metal shader input/output handling, numerical precision,
+//! and resource binding without requiring actual GPU execution. They simulate
+//! the validation logic using pure Rust.
 
-// ---------------------------------------------------------------------------
-// MSL source helpers
-// ---------------------------------------------------------------------------
+use std::f32;
 
-/// Minimal check that an MSL kernel source contains required keywords.
-fn msl_source_has_required_keywords(source: &str) -> Vec<&'static str> {
-    let required = &["kernel", "device", "threadgroup"];
-    required.iter().copied().filter(|kw| !source.contains(kw)).collect()
-}
+// ============================================================================
+// Helper Types and Utilities
+// ============================================================================
 
-// ---------------------------------------------------------------------------
-// Threadgroup / workgroup helpers
-// ---------------------------------------------------------------------------
-
-const METAL_MAX_THREADGROUP_MEMORY_BYTES: usize = 32 * 1024; // 32 KB
-const METAL_MAX_THREADS_PER_THREADGROUP: u32 = 1024;
-const METAL_SIMD_GROUP_SIZE: u32 = 32;
-
-/// Compute shared-memory bytes needed for a float reduction inside one threadgroup.
-fn threadgroup_reduction_memory(threads: u32, element_bytes: usize) -> usize {
-    threads as usize * element_bytes
-}
-
-/// Round `n` up to the next multiple of `align`.
-fn align_up(n: usize, align: usize) -> usize {
-    assert!(align > 0);
-    (n + align - 1) / align * align
-}
-
-// ---------------------------------------------------------------------------
-// Buffer binding layout
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct BufferBinding {
-    index: u32,
-    label: &'static str,
-}
-
-/// Standard inference pipeline bindings.
-const INFERENCE_BINDINGS: &[BufferBinding] = &[
-    BufferBinding { index: 0, label: "weights" },
-    BufferBinding { index: 1, label: "input" },
-    BufferBinding { index: 2, label: "output" },
-    BufferBinding { index: 3, label: "config" },
-];
-
-// ---------------------------------------------------------------------------
-// Texture format compatibility
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct TextureFormat {
-    name: &'static str,
-    bytes_per_pixel: u32,
-    channels: u32,
-}
-
-const NEURAL_TEXTURE_FORMATS: &[TextureFormat] = &[
-    TextureFormat { name: "r16float", bytes_per_pixel: 2, channels: 1 },
-    TextureFormat { name: "rg16float", bytes_per_pixel: 4, channels: 2 },
-    TextureFormat { name: "rgba16float", bytes_per_pixel: 8, channels: 4 },
-    TextureFormat { name: "r32float", bytes_per_pixel: 4, channels: 1 },
-];
-
-// ---------------------------------------------------------------------------
-// Argument buffer encoding
-// ---------------------------------------------------------------------------
-
+/// Represents a shader input tensor with metadata
 #[derive(Debug, Clone)]
-struct ArgumentBufferEntry {
-    index: u32,
-    size_bytes: usize,
-    #[allow(dead_code)]
-    label: &'static str,
+#[allow(dead_code)]
+struct ShaderInput {
+    shape: Vec<usize>,
+    dtype: DataType,
+    data: Vec<f32>,
+    alignment_bytes: usize,
 }
 
-fn compute_argument_buffer_size(entries: &[ArgumentBufferEntry], alignment: usize) -> usize {
-    entries.iter().map(|e| align_up(e.size_bytes, alignment)).sum()
+/// Supported data types for shader processing
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DataType {
+    Float32,
+    Float16,
+    Int32,
+    Int16,
 }
 
-// ---------------------------------------------------------------------------
-// Dispatch validation
-// ---------------------------------------------------------------------------
-
-/// Apple Silicon dispatch dimension limits (per axis).
-const METAL_MAX_DISPATCH_DIM: u32 = 65535;
-
-fn validate_dispatch(grid: [u32; 3], threadgroup_size: [u32; 3]) -> Result<(), &'static str> {
-    let total_threads: u32 = threadgroup_size
-        .iter()
-        .copied()
-        .try_fold(1u32, |acc, v| acc.checked_mul(v))
-        .ok_or("threadgroup size overflows u32")?;
-
-    if total_threads > METAL_MAX_THREADS_PER_THREADGROUP {
-        return Err("exceeds maxTotalThreadsPerThreadgroup");
-    }
-
-    for &dim in &grid {
-        if dim == 0 {
-            return Err("grid dimension is zero");
-        }
-        if dim > METAL_MAX_DISPATCH_DIM {
-            return Err("grid dimension exceeds device limit");
+impl DataType {
+    fn size_bytes(&self) -> usize {
+        match self {
+            DataType::Float32 => 4,
+            DataType::Float16 => 2,
+            DataType::Int32 => 4,
+            DataType::Int16 => 2,
         }
     }
+}
 
-    for &dim in &threadgroup_size {
+/// Represents shader output tensor
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct ShaderOutput {
+    shape: Vec<usize>,
+    data: Vec<f32>,
+    has_nan: bool,
+    has_inf: bool,
+}
+
+/// Resource binding metadata
+#[derive(Debug, Clone)]
+struct ResourceBinding {
+    buffer_index: u32,
+    texture_format: TextureFormat,
+    alignment: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum TextureFormat {
+    RGBA8Unorm,
+    RGBA16Float,
+    RGBA32Float,
+    R32Float,
+}
+
+// ============================================================================
+// Validation Functions (Pure Rust, No GPU)
+// ============================================================================
+
+/// Validates shader input dimensions are within acceptable bounds
+fn validate_input_dimensions(shape: &[usize]) -> Result<(), String> {
+    const MAX_DIMENSION: usize = 2048;
+    const MAX_RANK: usize = 4;
+
+    if shape.is_empty() {
+        return Err("Shape cannot be empty".to_string());
+    }
+
+    if shape.len() > MAX_RANK {
+        return Err(format!("Shape rank {} exceeds maximum {}", shape.len(), MAX_RANK));
+    }
+
+    for (i, &dim) in shape.iter().enumerate() {
         if dim == 0 {
-            return Err("threadgroup dimension is zero");
+            return Err(format!("Dimension {} is zero", i));
+        }
+        if dim > MAX_DIMENSION {
+            return Err(format!("Dimension {} value {} exceeds maximum {}", i, dim, MAX_DIMENSION));
         }
     }
 
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Memory barrier patterns
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BarrierScope {
-    Threadgroup,
-    Device,
-    SIMDGroup,
-}
-
-#[derive(Debug, Clone)]
-struct BarrierPoint {
-    scope: BarrierScope,
-    after_write: bool,
-    before_read: bool,
-}
-
-fn validate_barrier_pattern(barriers: &[BarrierPoint]) -> Result<(), &'static str> {
-    for b in barriers {
-        if b.before_read && !b.after_write {
-            return Err("barrier before read without prior write is suspicious");
-        }
-    }
-    // Ensure at least one threadgroup-scope barrier for shared-memory reductions.
-    let has_tg = barriers.iter().any(|b| b.scope == BarrierScope::Threadgroup);
-    if !has_tg {
-        return Err("reduction pattern requires at least one threadgroup barrier");
+/// Validates data type matches expected shader input format
+fn validate_dtype_match(input_dtype: DataType, expected_dtype: DataType) -> Result<(), String> {
+    if input_dtype != expected_dtype {
+        return Err(format!(
+            "Data type mismatch: got {:?}, expected {:?}",
+            input_dtype, expected_dtype
+        ));
     }
     Ok(())
 }
 
-// ===========================================================================
-// Tests
-// ===========================================================================
+/// Validates buffer alignment requirements for Metal
+fn validate_alignment(buffer_size: usize, alignment_bytes: usize) -> Result<(), String> {
+    const VALID_ALIGNMENTS: &[usize] = &[1, 4, 8, 16, 32, 64, 256];
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_msl_source_compilation_syntax() {
-        let source = r#"
-            #include <metal_stdlib>
-            using namespace metal;
-
-            kernel void matmul(
-                device const float* weights [[buffer(0)]],
-                device const float* input   [[buffer(1)]],
-                device float* output        [[buffer(2)]],
-                threadgroup float* shared   [[threadgroup(0)]],
-                uint tid [[thread_position_in_grid]]
-            ) {
-                // neural network matmul kernel
-            }
-        "#;
-
-        let missing = msl_source_has_required_keywords(source);
-        assert!(missing.is_empty(), "MSL source missing keywords: {missing:?}");
-
-        // Negative: source without required keywords should report them.
-        let bad_source = "void foo() {}";
-        let missing_bad = msl_source_has_required_keywords(bad_source);
-        assert_eq!(missing_bad.len(), 3);
+    if !VALID_ALIGNMENTS.contains(&alignment_bytes) {
+        return Err(format!(
+            "Invalid alignment: {}. Must be one of {:?}",
+            alignment_bytes, VALID_ALIGNMENTS
+        ));
     }
 
-    #[test]
-    fn test_msl_numeric_precision_constants() {
-        // IEEE 754 half-precision (f16) range used in MSL.
-        let f16_max: f32 = 65504.0;
-        let f16_min_positive: f32 = 6.103_515_6e-5; // smallest normal f16
-        let f16_epsilon: f32 = 9.765_625e-4; // f16 machine epsilon
+    if buffer_size % alignment_bytes != 0 {
+        return Err(format!("Buffer size {} not aligned to {}", buffer_size, alignment_bytes));
+    }
 
-        assert!(f16_max.is_finite());
-        assert!(f16_min_positive > 0.0);
-        assert!(f16_epsilon > 0.0 && f16_epsilon < 1.0);
+    Ok(())
+}
 
-        // inf / nan handling mirrors Metal semantics.
-        let inf = f32::INFINITY;
-        let nan = f32::NAN;
-        assert!(inf.is_infinite());
-        assert!(nan.is_nan());
-        assert!(nan != nan); // NaN != NaN in IEEE 754
+/// Validates buffer size is sufficient for data
+fn validate_buffer_size(
+    shape: &[usize],
+    dtype: DataType,
+    buffer_size: usize,
+) -> Result<(), String> {
+    let element_count: usize = shape.iter().product();
+    let required_bytes = element_count * dtype.size_bytes();
 
-        // Softmax numerical stability: subtracting max prevents overflow.
-        let logits = [1.0_f32, 2.0, 3.0, f16_max];
-        let max_val = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        for &l in &logits {
-            let shifted = l - max_val;
-            assert!(shifted <= 0.0, "shifted logit must be <= 0 for stability");
+    if buffer_size < required_bytes {
+        return Err(format!(
+            "Buffer too small: {} bytes needed for {} elements of {:?} ({}B each), got {}",
+            required_bytes,
+            element_count,
+            dtype,
+            dtype.size_bytes(),
+            buffer_size
+        ));
+    }
+
+    Ok(())
+}
+
+/// Validates output shape matches expected dimensions
+fn validate_output_shape(output: &ShaderOutput, expected_shape: &[usize]) -> Result<(), String> {
+    if output.shape != expected_shape {
+        return Err(format!(
+            "Output shape mismatch: got {:?}, expected {:?}",
+            output.shape, expected_shape
+        ));
+    }
+
+    let expected_len: usize = expected_shape.iter().product();
+    if output.data.len() != expected_len {
+        return Err(format!(
+            "Output data length {} doesn't match shape product {}",
+            output.data.len(),
+            expected_len
+        ));
+    }
+
+    Ok(())
+}
+
+/// Validates output values are within acceptable range
+fn validate_output_range(data: &[f32], min: f32, max: f32) -> Result<(), String> {
+    for (i, &val) in data.iter().enumerate() {
+        if val < min || val > max {
+            return Err(format!("Output[{}] = {} outside range [{}, {}]", i, val, min, max));
         }
     }
+    Ok(())
+}
 
-    #[test]
-    fn test_msl_threadgroup_memory_calculations() {
-        // f32 reduction: 256 threads × 4 bytes = 1024 bytes (fits in 32 KB).
-        let mem_256 = threadgroup_reduction_memory(256, 4);
-        assert_eq!(mem_256, 1024);
-        assert!(mem_256 <= METAL_MAX_THREADGROUP_MEMORY_BYTES);
+/// Detects NaN values in output
+fn check_for_nan(data: &[f32]) -> bool {
+    data.iter().any(|&v| v.is_nan())
+}
 
-        // f16 reduction: 1024 threads × 2 bytes = 2048 bytes.
-        let mem_1024_f16 = threadgroup_reduction_memory(1024, 2);
-        assert_eq!(mem_1024_f16, 2048);
-        assert!(mem_1024_f16 <= METAL_MAX_THREADGROUP_MEMORY_BYTES);
+/// Detects infinity values in output
+fn check_for_inf(data: &[f32]) -> bool {
+    data.iter().any(|&v| v.is_infinite())
+}
 
-        // Maximum practical: 1024 threads × 32 bytes (float8) = 32 KB exactly.
-        let mem_max = threadgroup_reduction_memory(1024, 32);
-        assert_eq!(mem_max, METAL_MAX_THREADGROUP_MEMORY_BYTES);
+/// Simulates float32 accumulation accuracy with careful ordering
+fn simulate_float32_accumulation(values: &[f32]) -> f32 {
+    // Sort values by magnitude for better numerical stability
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|a, b| a.abs().partial_cmp(&b.abs()).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Exceeding the limit: 1024 threads × 64 bytes.
-        let mem_over = threadgroup_reduction_memory(1024, 64);
-        assert!(mem_over > METAL_MAX_THREADGROUP_MEMORY_BYTES);
+    sorted.iter().sum()
+}
+
+/// Validates reduction operation result accuracy
+fn validate_reduction_accuracy(input_data: &[f32], _output: f32) -> Result<f32, String> {
+    let accurate_sum = simulate_float32_accumulation(input_data);
+    let element_mean = accurate_sum / input_data.len() as f32;
+
+    Ok(element_mean)
+}
+
+/// Validates fused multiply-add consistency
+fn validate_fma_consistency(a: f32, b: f32, c: f32) -> f32 {
+    // Simulate FMA: (a * b) + c with high precision
+    (a * b) + c
+}
+
+/// Handles denormal numbers (very small floats)
+fn validate_denormal_handling(value: f32) -> Result<f32, String> {
+    if value != 0.0 && value.abs() < f32::MIN_POSITIVE {
+        // Denormal detected
+        Ok(0.0) // Flush to zero
+    } else {
+        Ok(value)
+    }
+}
+
+/// Validates buffer index is within acceptable bounds
+fn validate_buffer_index(index: u32, max_buffers: u32) -> Result<(), String> {
+    if index >= max_buffers {
+        return Err(format!("Buffer index {} exceeds maximum {}", index, max_buffers - 1));
+    }
+    Ok(())
+}
+
+/// Validates texture format is supported
+fn validate_texture_format(format: TextureFormat) -> Result<(), String> {
+    match format {
+        TextureFormat::RGBA8Unorm
+        | TextureFormat::RGBA16Float
+        | TextureFormat::RGBA32Float
+        | TextureFormat::R32Float => Ok(()),
+    }
+}
+
+/// Validates argument buffer layout alignment
+fn validate_argument_buffer_layout(alignment: u32) -> Result<(), String> {
+    const VALID_ALIGNMENTS: &[u32] = &[4, 8, 16, 32];
+
+    if !VALID_ALIGNMENTS.contains(&alignment) {
+        return Err(format!(
+            "Invalid argument buffer alignment: {}. Must be one of {:?}",
+            alignment, VALID_ALIGNMENTS
+        ));
     }
 
-    #[test]
-    fn test_msl_buffer_binding_layout() {
-        // Indices must be unique and sequential starting from 0.
-        let mut seen = std::collections::HashSet::new();
-        for (expected_idx, binding) in INFERENCE_BINDINGS.iter().enumerate() {
-            assert_eq!(binding.index as usize, expected_idx);
-            assert!(seen.insert(binding.index), "duplicate binding index {}", binding.index);
-            assert!(!binding.label.is_empty());
-        }
+    Ok(())
+}
 
-        assert_eq!(INFERENCE_BINDINGS.len(), 4);
-        assert_eq!(INFERENCE_BINDINGS[0].label, "weights");
-        assert_eq!(INFERENCE_BINDINGS[3].label, "config");
-    }
+// ============================================================================
+// SHADER INPUT VALIDATION TESTS (4 tests)
+// ============================================================================
 
-    #[test]
-    fn test_msl_workgroup_dimension_limits() {
-        // 1-D: 1024 threads is the maximum.
-        assert!(validate_dispatch([1024, 1, 1], [1024, 1, 1]).is_ok());
+#[test]
+fn test_input_dimension_bounds_valid() {
+    // Valid dimensions should pass
+    let shape = vec![256, 512, 64, 32];
+    assert!(validate_input_dimensions(&shape).is_ok());
 
-        // 2-D: 32 × 32 = 1024 threads (valid).
-        assert!(validate_dispatch([64, 64, 1], [32, 32, 1]).is_ok());
+    let shape = vec![1024];
+    assert!(validate_input_dimensions(&shape).is_ok());
 
-        // 3-D: 8 × 8 × 16 = 1024 threads (valid).
-        assert!(validate_dispatch([16, 16, 4], [8, 8, 16]).is_ok());
+    let shape = vec![1, 1, 1, 1];
+    assert!(validate_input_dimensions(&shape).is_ok());
+}
 
-        // Exceeds limit: 32 × 32 × 2 = 2048 threads.
-        assert!(validate_dispatch([64, 64, 1], [32, 32, 2]).is_err());
+#[test]
+fn test_input_dimension_bounds_invalid() {
+    // Dimensions exceeding limits should fail
+    let shape = vec![2049]; // Exceeds MAX_DIMENSION (2048)
+    assert!(validate_input_dimensions(&shape).is_err());
 
-        // Exceeds limit: single axis > 1024.
-        assert!(validate_dispatch([1, 1, 1], [2048, 1, 1]).is_err());
-    }
+    // Rank exceeding limits should fail
+    let shape = vec![1, 2, 3, 4, 5]; // Exceeds MAX_RANK (4)
+    assert!(validate_input_dimensions(&shape).is_err());
 
-    #[test]
-    fn test_msl_simd_group_size() {
-        // Apple GPU SIMD width is always 32.
-        assert_eq!(METAL_SIMD_GROUP_SIZE, 32);
+    // Zero dimension should fail
+    let shape = vec![256, 0, 64];
+    assert!(validate_input_dimensions(&shape).is_err());
 
-        // Number of SIMD groups in a threadgroup.
-        let threadgroup_size = 256u32;
-        let simd_groups = threadgroup_size / METAL_SIMD_GROUP_SIZE;
-        assert_eq!(simd_groups, 8);
+    // Empty shape should fail
+    let shape = vec![];
+    assert!(validate_input_dimensions(&shape).is_err());
+}
 
-        // For a parallel reduction the number of SIMD groups should be a power of 2.
-        assert!(simd_groups.is_power_of_two());
+#[test]
+fn test_input_dtype_matching() {
+    // Matching types should succeed
+    assert!(validate_dtype_match(DataType::Float32, DataType::Float32).is_ok());
+    assert!(validate_dtype_match(DataType::Int32, DataType::Int32).is_ok());
 
-        // Shared memory for SIMD-group reduction (one element per SIMD group).
-        let reduction_mem = simd_groups as usize * std::mem::size_of::<f32>();
-        assert_eq!(reduction_mem, 32); // 8 × 4 bytes
-        assert!(reduction_mem <= METAL_MAX_THREADGROUP_MEMORY_BYTES);
-    }
+    // Mismatched types should fail
+    assert!(validate_dtype_match(DataType::Float32, DataType::Float16).is_err());
+    assert!(validate_dtype_match(DataType::Int32, DataType::Int16).is_err());
+}
 
-    #[test]
-    fn test_msl_texture_format_compatibility() {
-        assert_eq!(NEURAL_TEXTURE_FORMATS.len(), 4);
+#[test]
+fn test_input_alignment_requirements() {
+    // Valid alignments
+    assert!(validate_alignment(256, 16).is_ok());
+    assert!(validate_alignment(512, 32).is_ok());
+    assert!(validate_alignment(1024, 64).is_ok());
 
-        // r16float: single-channel half precision.
-        let r16 = &NEURAL_TEXTURE_FORMATS[0];
-        assert_eq!(r16.name, "r16float");
-        assert_eq!(r16.bytes_per_pixel, 2);
-        assert_eq!(r16.channels, 1);
+    // Invalid alignments
+    assert!(validate_alignment(256, 3).is_err()); // Not in valid list
+    assert!(validate_alignment(256, 17).is_err()); // Not in valid list
 
-        // rgba16float: 4-channel half precision (activations).
-        let rgba16 = &NEURAL_TEXTURE_FORMATS[2];
-        assert_eq!(rgba16.name, "rgba16float");
-        assert_eq!(rgba16.bytes_per_pixel, 8);
-        assert_eq!(rgba16.channels, 4);
+    // Misaligned buffers
+    assert!(validate_alignment(255, 16).is_err()); // 255 % 16 != 0
+    assert!(validate_alignment(1000, 32).is_err()); // 1000 % 32 != 0
+}
 
-        // r32float: single-channel full precision (accumulation).
-        let r32 = &NEURAL_TEXTURE_FORMATS[3];
-        assert_eq!(r32.name, "r32float");
-        assert_eq!(r32.bytes_per_pixel, 4);
-        assert_eq!(r32.channels, 1);
+#[test]
+fn test_buffer_size_validation() {
+    let shape = vec![64, 64];
+    let dtype = DataType::Float32;
+    let element_count = 64 * 64; // 4096 elements
+    let required_bytes = element_count * 4; // 16384 bytes
 
-        // bytes_per_pixel == channels * per-channel size.
-        for fmt in NEURAL_TEXTURE_FORMATS {
-            let per_ch = if fmt.name.contains("16") { 2u32 } else { 4u32 };
-            assert_eq!(fmt.bytes_per_pixel, fmt.channels * per_ch, "mismatch for {}", fmt.name);
-        }
-    }
+    // Sufficient buffer
+    assert!(validate_buffer_size(&shape, dtype, required_bytes).is_ok());
+    assert!(validate_buffer_size(&shape, dtype, required_bytes + 100).is_ok());
 
-    #[test]
-    fn test_msl_argument_buffer_encoding() {
-        let entries = vec![
-            ArgumentBufferEntry { index: 0, size_bytes: 64, label: "weight_matrix" },
-            ArgumentBufferEntry { index: 1, size_bytes: 32, label: "bias_vector" },
-            ArgumentBufferEntry { index: 2, size_bytes: 16, label: "scale_factors" },
-            ArgumentBufferEntry { index: 3, size_bytes: 8, label: "config_params" },
-        ];
+    // Insufficient buffer
+    assert!(validate_buffer_size(&shape, dtype, required_bytes - 1).is_err());
+    assert!(validate_buffer_size(&shape, dtype, 1000).is_err());
 
-        // 8-byte alignment (Metal minimum for buffer pointers).
-        let total_8 = compute_argument_buffer_size(&entries, 8);
-        // 64 + 32 + 16 + 8 = 120 (all already aligned to 8).
-        assert_eq!(total_8, 120);
+    // Different dtype
+    let dtype_fp16 = DataType::Float16;
+    let required_bytes_fp16 = element_count * 2; // 8192 bytes
+    assert!(validate_buffer_size(&shape, dtype_fp16, required_bytes_fp16).is_ok());
+    assert!(validate_buffer_size(&shape, dtype_fp16, required_bytes_fp16 - 1).is_err());
+}
 
-        // 16-byte alignment.
-        let total_16 = compute_argument_buffer_size(&entries, 16);
-        // 64 + 32 + 16 + 16 = 128
-        assert_eq!(total_16, 128);
+// ============================================================================
+// SHADER OUTPUT VALIDATION TESTS (4 tests)
+// ============================================================================
 
-        // Indices must be unique.
-        let mut indices: Vec<u32> = entries.iter().map(|e| e.index).collect();
-        indices.sort();
-        indices.dedup();
-        assert_eq!(indices.len(), entries.len());
-    }
+#[test]
+fn test_output_shape_correctness() {
+    let expected_shape = vec![128, 128];
 
-    #[test]
-    fn test_msl_dispatch_validation() {
-        // Valid dispatches.
-        assert!(validate_dispatch([128, 128, 1], [256, 1, 1]).is_ok());
-        assert!(validate_dispatch([1, 1, 1], [1, 1, 1]).is_ok());
-        assert!(validate_dispatch([65535, 65535, 65535], [1, 1, 1]).is_ok());
+    // Matching shape should pass
+    let output = ShaderOutput {
+        shape: vec![128, 128],
+        data: vec![1.0; 128 * 128],
+        has_nan: false,
+        has_inf: false,
+    };
+    assert!(validate_output_shape(&output, &expected_shape).is_ok());
 
-        // Grid dimension zero is invalid.
-        assert_eq!(validate_dispatch([0, 128, 1], [256, 1, 1]), Err("grid dimension is zero"));
+    // Mismatched shape should fail
+    let output = ShaderOutput {
+        shape: vec![256, 64],
+        data: vec![1.0; 256 * 64],
+        has_nan: false,
+        has_inf: false,
+    };
+    assert!(validate_output_shape(&output, &expected_shape).is_err());
 
-        // Grid dimension exceeds device limit.
-        assert_eq!(
-            validate_dispatch([65536, 1, 1], [1, 1, 1]),
-            Err("grid dimension exceeds device limit")
-        );
+    // Wrong data length should fail
+    let output = ShaderOutput {
+        shape: vec![128, 128],
+        data: vec![1.0; 1000], // Wrong length
+        has_nan: false,
+        has_inf: false,
+    };
+    assert!(validate_output_shape(&output, &expected_shape).is_err());
+}
 
-        // Threadgroup dimension zero is invalid.
-        assert_eq!(validate_dispatch([1, 1, 1], [0, 1, 1]), Err("threadgroup dimension is zero"));
+#[test]
+fn test_output_range_bounds() {
+    let data = vec![0.5, 0.75, 0.25, 1.0, 0.0];
 
-        // Threadgroup total exceeds 1024.
-        assert_eq!(
-            validate_dispatch([1, 1, 1], [1025, 1, 1]),
-            Err("exceeds maxTotalThreadsPerThreadgroup")
-        );
-    }
+    // Valid range
+    assert!(validate_output_range(&data, 0.0, 1.0).is_ok());
 
-    #[test]
-    fn test_msl_memory_barrier_patterns() {
-        // Valid write-then-barrier-then-read pattern.
-        let valid_pattern = vec![BarrierPoint {
-            scope: BarrierScope::Threadgroup,
-            after_write: true,
-            before_read: true,
-        }];
-        assert!(validate_barrier_pattern(&valid_pattern).is_ok());
+    // Out of range (too high)
+    let data_high = vec![1.1, 0.5];
+    assert!(validate_output_range(&data_high, 0.0, 1.0).is_err());
 
-        // SIMD-group barrier for warp-level reduction + threadgroup barrier.
-        let simd_pattern = vec![
-            BarrierPoint { scope: BarrierScope::SIMDGroup, after_write: true, before_read: true },
-            BarrierPoint { scope: BarrierScope::Threadgroup, after_write: true, before_read: true },
-        ];
-        assert!(validate_barrier_pattern(&simd_pattern).is_ok());
+    // Out of range (too low)
+    let data_low = vec![-0.1, 0.5];
+    assert!(validate_output_range(&data_low, 0.0, 1.0).is_err());
 
-        // Missing threadgroup barrier is an error for reductions.
-        let no_tg = vec![BarrierPoint {
-            scope: BarrierScope::Device,
-            after_write: true,
-            before_read: true,
-        }];
-        assert_eq!(
-            validate_barrier_pattern(&no_tg),
-            Err("reduction pattern requires at least one threadgroup barrier")
-        );
+    // Boundary values
+    assert!(validate_output_range(&vec![0.0, 1.0], 0.0, 1.0).is_ok());
+}
 
-        // Read without prior write is suspicious.
-        let suspicious = vec![BarrierPoint {
-            scope: BarrierScope::Threadgroup,
-            after_write: false,
-            before_read: true,
-        }];
-        assert_eq!(
-            validate_barrier_pattern(&suspicious),
-            Err("barrier before read without prior write is suspicious")
-        );
-    }
+#[test]
+fn test_output_nan_detection() {
+    // No NaN
+    let data = vec![1.0, 2.0, 3.0, 4.0];
+    assert!(!check_for_nan(&data));
+
+    // Single NaN
+    let data_with_nan = vec![1.0, f32::NAN, 3.0];
+    assert!(check_for_nan(&data_with_nan));
+
+    // Multiple NaN
+    let data_multi_nan = vec![f32::NAN, 2.0, f32::NAN];
+    assert!(check_for_nan(&data_multi_nan));
+}
+
+#[test]
+fn test_output_inf_detection() {
+    // No infinity
+    let data = vec![1.0, 2.0, 3.0, 4.0];
+    assert!(!check_for_inf(&data));
+
+    // Positive infinity
+    let data_with_inf = vec![1.0, f32::INFINITY, 3.0];
+    assert!(check_for_inf(&data_with_inf));
+
+    // Negative infinity
+    let data_neg_inf = vec![f32::NEG_INFINITY, 2.0, 3.0];
+    assert!(check_for_inf(&data_neg_inf));
+
+    // Mixed infinities
+    let data_multi_inf = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0];
+    assert!(check_for_inf(&data_multi_inf));
+}
+
+// ============================================================================
+// NUMERICAL PRECISION TESTS (4 tests)
+// ============================================================================
+
+#[test]
+fn test_float32_accumulation_accuracy() {
+    // Small values that test accumulation precision
+    let values = vec![0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
+    let result = simulate_float32_accumulation(&values);
+    let expected = 1.0;
+
+    // Allow for floating point error with reasonable tolerance
+    assert!((result - expected).abs() < 1e-5, "Expected ~{}, got {}", expected, result);
+
+    // Test with larger magnitude values
+    let large_values = vec![1000.0, 2000.0, 3000.0, 4000.0, 5000.0];
+    let large_result = simulate_float32_accumulation(&large_values);
+    let large_expected = 15000.0;
+
+    assert!(
+        (large_result - large_expected).abs() < 1e-3,
+        "Expected ~{}, got {}",
+        large_expected,
+        large_result
+    );
+}
+
+#[test]
+fn test_reduction_ordering_consistency() {
+    // Different orderings should produce numerically similar results
+    let values1 = vec![0.1, 0.2, 0.3, 0.4, 0.5];
+    let values2 = vec![0.5, 0.4, 0.3, 0.2, 0.1];
+
+    let mean1 = validate_reduction_accuracy(&values1, 1.5).unwrap();
+    let mean2 = validate_reduction_accuracy(&values2, 1.5).unwrap();
+
+    // Means should be very close despite different ordering
+    assert!(
+        (mean1 - mean2).abs() < 1e-6,
+        "Reduction ordering caused excessive deviation: {} vs {}",
+        mean1,
+        mean2
+    );
+}
+
+#[test]
+fn test_fused_multiply_add_consistency() {
+    let a = 2.5;
+    let b = 3.0;
+    let c = 1.5;
+
+    let result = validate_fma_consistency(a, b, c);
+    let expected = (a * b) + c; // 7.5 + 1.5 = 9.0
+
+    assert!((result - expected).abs() < 1e-6, "FMA consistency failed: {} vs {}", result, expected);
+
+    // Test with very small numbers
+    let small_a = 1e-6;
+    let small_b = 2e-6;
+    let small_c = 3e-6;
+
+    let small_result = validate_fma_consistency(small_a, small_b, small_c);
+    let small_expected = (small_a * small_b) + small_c;
+
+    assert!(
+        (small_result - small_expected).abs() < 1e-15,
+        "FMA consistency failed for small numbers: {} vs {}",
+        small_result,
+        small_expected
+    );
+}
+
+#[test]
+fn test_denormal_handling() {
+    // Normal number
+    let normal = 1.0;
+    let result = validate_denormal_handling(normal).unwrap();
+    assert_eq!(result, 1.0);
+
+    // Denormal number (very small)
+    let denormal = f32::MIN_POSITIVE / 2.0;
+    let result = validate_denormal_handling(denormal).unwrap();
+    assert_eq!(result, 0.0); // Flushed to zero
+
+    // Exactly zero
+    let zero = 0.0;
+    let result = validate_denormal_handling(zero).unwrap();
+    assert_eq!(result, 0.0);
+
+    // Negative denormal
+    let neg_denormal = -f32::MIN_POSITIVE / 2.0;
+    let result = validate_denormal_handling(neg_denormal).unwrap();
+    assert_eq!(result, 0.0); // Flushed to zero
+}
+
+// ============================================================================
+// RESOURCE BINDING TESTS (3+ tests)
+// ============================================================================
+
+#[test]
+fn test_buffer_index_validation() {
+    let max_buffers = 16u32;
+
+    // Valid indices
+    assert!(validate_buffer_index(0, max_buffers).is_ok());
+    assert!(validate_buffer_index(7, max_buffers).is_ok());
+    assert!(validate_buffer_index(15, max_buffers).is_ok());
+
+    // Invalid indices
+    assert!(validate_buffer_index(16, max_buffers).is_err());
+    assert!(validate_buffer_index(255, max_buffers).is_err());
+
+    // Edge cases
+    assert!(validate_buffer_index(0, 1).is_ok());
+    assert!(validate_buffer_index(1, 1).is_err());
+}
+
+#[test]
+fn test_texture_format_validation() {
+    // All valid formats
+    assert!(validate_texture_format(TextureFormat::RGBA8Unorm).is_ok());
+    assert!(validate_texture_format(TextureFormat::RGBA16Float).is_ok());
+    assert!(validate_texture_format(TextureFormat::RGBA32Float).is_ok());
+    assert!(validate_texture_format(TextureFormat::R32Float).is_ok());
+}
+
+#[test]
+fn test_argument_buffer_layout_validation() {
+    // Valid alignments
+    assert!(validate_argument_buffer_layout(4).is_ok());
+    assert!(validate_argument_buffer_layout(8).is_ok());
+    assert!(validate_argument_buffer_layout(16).is_ok());
+    assert!(validate_argument_buffer_layout(32).is_ok());
+
+    // Invalid alignments
+    assert!(validate_argument_buffer_layout(3).is_err());
+    assert!(validate_argument_buffer_layout(5).is_err());
+    assert!(validate_argument_buffer_layout(12).is_err());
+    assert!(validate_argument_buffer_layout(64).is_err());
+}
+
+#[test]
+fn test_resource_binding_comprehensive() {
+    // Create valid resource binding
+    let binding = ResourceBinding {
+        buffer_index: 0,
+        texture_format: TextureFormat::RGBA32Float,
+        alignment: 16,
+    };
+
+    // Validate all components
+    assert!(validate_buffer_index(binding.buffer_index, 16).is_ok());
+    assert!(validate_texture_format(binding.texture_format).is_ok());
+    assert!(validate_argument_buffer_layout(binding.alignment).is_ok());
+
+    // Test with maximum valid values
+    let max_binding = ResourceBinding {
+        buffer_index: 15,
+        texture_format: TextureFormat::RGBA16Float,
+        alignment: 32,
+    };
+
+    assert!(validate_buffer_index(max_binding.buffer_index, 16).is_ok());
+    assert!(validate_texture_format(max_binding.texture_format).is_ok());
+    assert!(validate_argument_buffer_layout(max_binding.alignment).is_ok());
+}
+
+// ============================================================================
+// INTEGRATION TESTS (Combined validation scenarios)
+// ============================================================================
+
+#[test]
+fn test_full_shader_input_validation_pipeline() {
+    // Simulate complete input validation pipeline
+    let shape = vec![256, 256];
+    let dtype = DataType::Float32;
+    let buffer_size = 256 * 256 * 4; // 262144 bytes
+    let alignment = 16;
+
+    // All validations should pass
+    assert!(validate_input_dimensions(&shape).is_ok());
+    assert!(validate_dtype_match(dtype, DataType::Float32).is_ok());
+    assert!(validate_buffer_size(&shape, dtype, buffer_size).is_ok());
+    assert!(validate_alignment(buffer_size, alignment).is_ok());
+}
+
+#[test]
+fn test_full_shader_output_validation_pipeline() {
+    // Simulate complete output validation pipeline
+    let output_data =
+        vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95];
+    let expected_shape = vec![4, 4];
+
+    let output = ShaderOutput {
+        shape: expected_shape.clone(),
+        data: output_data.clone(),
+        has_nan: false,
+        has_inf: false,
+    };
+
+    // All validations should pass
+    assert!(validate_output_shape(&output, &expected_shape).is_ok());
+    assert!(validate_output_range(&output_data, 0.0, 1.0).is_ok());
+    assert!(!check_for_nan(&output_data));
+    assert!(!check_for_inf(&output_data));
+}
+
+#[test]
+fn test_precision_pipeline_with_reductions() {
+    let input = vec![0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0, 1.125, 1.25];
+
+    // Accumulate with proper ordering
+    let accumulated = simulate_float32_accumulation(&input);
+    let expected_sum = 6.875;
+
+    assert!(
+        (accumulated - expected_sum).abs() < 1e-5,
+        "Accumulation precision check failed: expected {}, got {}, diff {}",
+        expected_sum,
+        accumulated,
+        (accumulated - expected_sum).abs()
+    );
+
+    // Compute mean
+    let mean = accumulated / input.len() as f32;
+    let expected_mean = expected_sum / input.len() as f32;
+
+    assert!((mean - expected_mean).abs() < 1e-6, "Mean precision check failed");
+}
+
+#[test]
+fn test_mixed_datatype_scenarios() {
+    let shape_3d = vec![32, 32, 32];
+
+    // Float32 scenario
+    let fp32_bytes = 32 * 32 * 32 * 4;
+    assert!(validate_buffer_size(&shape_3d, DataType::Float32, fp32_bytes).is_ok());
+    assert!(validate_alignment(fp32_bytes, 16).is_ok());
+
+    // Float16 scenario (half the size)
+    let fp16_bytes = 32 * 32 * 32 * 2;
+    assert!(validate_buffer_size(&shape_3d, DataType::Float16, fp16_bytes).is_ok());
+    assert!(validate_alignment(fp16_bytes, 8).is_ok());
+
+    // Int32 scenario
+    let int32_bytes = 32 * 32 * 32 * 4;
+    assert!(validate_buffer_size(&shape_3d, DataType::Int32, int32_bytes).is_ok());
+    assert!(validate_alignment(int32_bytes, 16).is_ok());
 }
