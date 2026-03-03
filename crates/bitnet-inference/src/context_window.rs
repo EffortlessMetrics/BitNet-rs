@@ -98,8 +98,7 @@ pub fn compute_budgets(
             (prompt, generation)
         }
         AllocationStrategy::Dynamic { min_generation } => {
-            let generation =
-                min_generation.max(max_context.saturating_sub(prompt_len));
+            let generation = min_generation.max(max_context.saturating_sub(prompt_len));
             let prompt = max_context.saturating_sub(generation);
             (prompt.min(prompt_len), generation)
         }
@@ -198,29 +197,21 @@ mod tests {
 
     #[test]
     fn test_fixed_budget() {
-        let (p, g) = compute_budgets(
-            4096,
-            1000,
-            AllocationStrategy::Fixed { max_prompt: 2048 },
-        );
+        let (p, g) = compute_budgets(4096, 1000, AllocationStrategy::Fixed { max_prompt: 2048 });
         assert_eq!(p, 1000);
         assert_eq!(g, 3096);
     }
 
     #[test]
     fn test_dynamic_budget() {
-        let (_p, g) = compute_budgets(
-            4096,
-            3900,
-            AllocationStrategy::Dynamic { min_generation: 256 },
-        );
+        let (_p, g) =
+            compute_budgets(4096, 3900, AllocationStrategy::Dynamic { min_generation: 256 });
         assert!(g >= 256);
     }
 
     #[test]
     fn test_even_split() {
-        let (p, g) =
-            compute_budgets(4096, 3000, AllocationStrategy::EvenSplit);
+        let (p, g) = compute_budgets(4096, 3000, AllocationStrategy::EvenSplit);
         assert_eq!(p, 2048);
         assert_eq!(g, 2048);
     }

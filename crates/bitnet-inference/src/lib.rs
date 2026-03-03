@@ -23,6 +23,7 @@ pub mod embedding_utils;
 pub mod engine;
 pub mod generation;
 pub mod generation_budget;
+pub mod generation_hooks;
 pub mod generation_output;
 pub mod generation_pipeline;
 pub mod gguf;
