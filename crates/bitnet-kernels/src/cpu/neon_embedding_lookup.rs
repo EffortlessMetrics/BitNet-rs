@@ -1,1469 +1,1029 @@
-//! NEON-optimized embedding lookup and operations for Apple Silicon.
-
-#![allow(unsafe_op_in_unsafe_fn)]
-#![allow(
-    clippy::missing_safety_doc,
-    clippy::float_cmp,
-    clippy::manual_div_ceil,
-    clippy::unnecessary_cast,
-    clippy::needless_range_loop,
-    clippy::too_many_arguments,
-    clippy::collapsible_if,
-    clippy::let_and_return,
-    clippy::excessive_precision
-)]
+//! ARM NEON-optimized embedding lookup kernels for Apple Silicon.
+//!
+//! Provides vectorized embedding table operations using NEON SIMD intrinsics
+//! on AArch64: f32 lookup, batched lookup with prefetching, multi-embedding
+//! summation, embedding scaling, and quantized i8 table lookup with
+//! dequantization.
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
-// ---------------------------------------------------------------------------
-// Scalar reference implementations (portable, used for testing)
-// ---------------------------------------------------------------------------
+// ── f32 Embedding Lookup ────────────────────────────────────────────
 
-/// Scalar embedding lookup: copies `embedding_table[token_id]` into `output`.
-pub fn scalar_embedding_lookup(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    token_id: usize,
-    output: &mut [f32],
-) {
-    assert!(token_id < vocab_size, "token_id {token_id} out of bounds (vocab_size={vocab_size})");
-    assert_eq!(embedding_table.len(), vocab_size * dim);
-    assert!(output.len() >= dim);
-    let start = token_id * dim;
-    output[..dim].copy_from_slice(&embedding_table[start..start + dim]);
-}
-
-/// Scalar batched embedding lookup.
-pub fn scalar_embedding_lookup_batched(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    token_ids: &[usize],
-    output: &mut [f32],
-) {
-    let batch = token_ids.len();
-    assert!(output.len() >= batch * dim);
-    for (i, &tid) in token_ids.iter().enumerate() {
-        scalar_embedding_lookup(embedding_table, vocab_size, dim, tid, &mut output[i * dim..]);
-    }
-}
-
-/// Scalar: add positional embeddings element-wise.
-pub fn scalar_embedding_add_position(
-    token_emb: &[f32],
-    pos_emb: &[f32],
-    output: &mut [f32],
-    batch: usize,
-    dim: usize,
-) {
-    assert!(token_emb.len() >= batch * dim);
-    assert!(pos_emb.len() >= batch * dim);
-    assert!(output.len() >= batch * dim);
-    for i in 0..batch * dim {
-        output[i] = token_emb[i] + pos_emb[i];
-    }
-}
-
-/// Scalar gather-scatter: gather embeddings for sparse `indices`, write to
-/// contiguous `output`.
-pub fn scalar_embedding_gather_scatter(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    indices: &[usize],
-    output: &mut [f32],
-) {
-    assert!(output.len() >= indices.len() * dim);
-    for (i, &idx) in indices.iter().enumerate() {
-        assert!(idx < vocab_size, "index {idx} out of bounds (vocab_size={vocab_size})");
-        let src = idx * dim;
-        output[i * dim..(i + 1) * dim].copy_from_slice(&embedding_table[src..src + dim]);
-    }
-}
-
-/// Scalar L2-normalize each embedding vector in a batch.
-pub fn scalar_embedding_normalize(data: &mut [f32], batch: usize, dim: usize, eps: f32) {
-    assert!(data.len() >= batch * dim);
-    for b in 0..batch {
-        let off = b * dim;
-        let mut sq_sum = 0.0f32;
-        for j in 0..dim {
-            sq_sum += data[off + j] * data[off + j];
-        }
-        let inv_norm = 1.0 / (sq_sum + eps).sqrt();
-        for j in 0..dim {
-            data[off + j] *= inv_norm;
-        }
-    }
-}
-
-/// Scalar batch dot-product: `out[i] = dot(a[i], b[i])`.
-pub fn scalar_embedding_dot_product(
-    a: &[f32],
-    b: &[f32],
-    out: &mut [f32],
-    batch: usize,
-    dim: usize,
-) {
-    assert!(a.len() >= batch * dim);
-    assert!(b.len() >= batch * dim);
-    assert!(out.len() >= batch);
-    for i in 0..batch {
-        let off = i * dim;
-        let mut acc = 0.0f32;
-        for j in 0..dim {
-            acc += a[off + j] * b[off + j];
-        }
-        out[i] = acc;
-    }
-}
-
-// ---------------------------------------------------------------------------
-// NEON-optimised implementations
-// ---------------------------------------------------------------------------
-
-/// NEON-accelerated embedding lookup using 128-bit vector loads/stores.
+/// NEON-accelerated f32 embedding lookup.
 ///
-/// Copies the embedding vector for `token_id` from `embedding_table` into
-/// `output`, processing 4 × f32 lanes per iteration.
+/// Copies `embedding_dim` floats from `table[index * embedding_dim ..]`
+/// into `output` using 4-wide NEON loads/stores.
 ///
 /// # Safety
 ///
-/// Caller must ensure the target supports NEON (always true on AArch64).
+/// Caller must ensure the target supports NEON (always true on AArch64)
+/// and that `index < vocab_size`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_lookup(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    token_id: usize,
+unsafe fn neon_lookup_f32_single(
+    table: &[f32],
+    index: usize,
+    embedding_dim: usize,
     output: &mut [f32],
 ) {
-    assert!(token_id < vocab_size, "token_id {token_id} out of bounds (vocab_size={vocab_size})");
-    assert_eq!(embedding_table.len(), vocab_size * dim);
-    assert!(output.len() >= dim);
-
-    let src = embedding_table.as_ptr().add(token_id * dim);
+    let src = table.as_ptr().add(index * embedding_dim);
     let dst = output.as_mut_ptr();
-    let chunks = dim / 4;
+    let chunks = embedding_dim / 4;
+    let remainder = embedding_dim % 4;
 
     for i in 0..chunks {
-        let off = i * 4;
-        let v = vld1q_f32(src.add(off));
-        vst1q_f32(dst.add(off), v);
+        let v = vld1q_f32(src.add(i * 4));
+        vst1q_f32(dst.add(i * 4), v);
     }
-    for i in (chunks * 4)..dim {
-        *dst.add(i) = *src.add(i);
+
+    let tail = chunks * 4;
+    for i in 0..remainder {
+        *dst.add(tail + i) = *src.add(tail + i);
     }
 }
 
-/// NEON-accelerated batched embedding lookup.
+/// Scalar fallback for f32 embedding lookup.
+fn scalar_lookup_f32_single(table: &[f32], index: usize, embedding_dim: usize, output: &mut [f32]) {
+    let start = index * embedding_dim;
+    output[..embedding_dim].copy_from_slice(&table[start..start + embedding_dim]);
+}
+
+/// Look up a single embedding vector from an f32 table.
 ///
-/// For each token ID in `token_ids`, copies the corresponding embedding row
-/// into the matching region of `output`.
+/// Returns a vector of `embedding_dim` floats for the given `index`.
+///
+/// # Errors
+///
+/// Returns an error if `index >= vocab_size`.
+pub fn embedding_lookup_f32(
+    table: &[f32],
+    index: u32,
+    embedding_dim: usize,
+) -> Result<Vec<f32>, String> {
+    if embedding_dim == 0 {
+        return Ok(Vec::new());
+    }
+    let vocab_size = table.len() / embedding_dim;
+    let idx = index as usize;
+    if idx >= vocab_size {
+        return Err(format!(
+            "embedding index {index} out of bounds for vocab_size {vocab_size}"
+        ));
+    }
+    let mut output = vec![0.0f32; embedding_dim];
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            unsafe {
+                neon_lookup_f32_single(table, idx, embedding_dim, &mut output);
+            }
+            return Ok(output);
+        }
+    }
+
+    scalar_lookup_f32_single(table, idx, embedding_dim, &mut output);
+    Ok(output)
+}
+
+// ── Batched Embedding Lookup ────────────────────────────────────────
+
+/// NEON-accelerated batched embedding lookup with software prefetching.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON and all indices are valid.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+unsafe fn neon_batched_lookup(
+    table: &[f32],
+    indices: &[u32],
+    embedding_dim: usize,
+    output: &mut [f32],
+) {
+    let chunks = embedding_dim / 4;
+    let remainder = embedding_dim % 4;
+
+    for (tok_i, &idx) in indices.iter().enumerate() {
+        let src = table.as_ptr().add((idx as usize) * embedding_dim);
+        let dst = output.as_mut_ptr().add(tok_i * embedding_dim);
+
+        // Prefetch the next embedding row if available.
+        if tok_i + 1 < indices.len() {
+            let next_src = table
+                .as_ptr()
+                .add((indices[tok_i + 1] as usize) * embedding_dim);
+            #[cfg(target_arch = "aarch64")]
+            {
+                std::arch::asm!(
+                    "prfm pldl1keep, [{addr}]",
+                    addr = in(reg) next_src,
+                    options(nostack, preserves_flags, readonly)
+                );
+            }
+        }
+
+        for i in 0..chunks {
+            let v = vld1q_f32(src.add(i * 4));
+            vst1q_f32(dst.add(i * 4), v);
+        }
+
+        let tail = chunks * 4;
+        for i in 0..remainder {
+            *dst.add(tail + i) = *src.add(tail + i);
+        }
+    }
+}
+
+/// Scalar fallback for batched embedding lookup.
+fn scalar_batched_lookup(
+    table: &[f32],
+    indices: &[u32],
+    embedding_dim: usize,
+    output: &mut [f32],
+) {
+    for (tok_i, &idx) in indices.iter().enumerate() {
+        let src_off = (idx as usize) * embedding_dim;
+        let dst_off = tok_i * embedding_dim;
+        output[dst_off..dst_off + embedding_dim]
+            .copy_from_slice(&table[src_off..src_off + embedding_dim]);
+    }
+}
+
+/// Look up multiple embeddings in a single call.
+///
+/// Returns a flat vector of `indices.len() * embedding_dim` floats.
+///
+/// # Errors
+///
+/// Returns an error if any index is out of bounds.
+pub fn batched_embedding_lookup(
+    table: &[f32],
+    indices: &[u32],
+    embedding_dim: usize,
+) -> Result<Vec<f32>, String> {
+    if embedding_dim == 0 || indices.is_empty() {
+        return Ok(Vec::new());
+    }
+    let vocab_size = table.len() / embedding_dim;
+    for &idx in indices {
+        if (idx as usize) >= vocab_size {
+            return Err(format!(
+                "embedding index {idx} out of bounds for vocab_size {vocab_size}"
+            ));
+        }
+    }
+    let mut output = vec![0.0f32; indices.len() * embedding_dim];
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            unsafe {
+                neon_batched_lookup(table, indices, embedding_dim, &mut output);
+            }
+            return Ok(output);
+        }
+    }
+
+    scalar_batched_lookup(table, indices, embedding_dim, &mut output);
+    Ok(output)
+}
+
+// ── Embedding Sum ───────────────────────────────────────────────────
+
+/// NEON-accelerated element-wise sum of embedding vectors.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON and all slices have
+/// length `embedding_dim`.
+#[cfg(target_arch = "aarch64")]
+#[target_feature(enable = "neon")]
+unsafe fn neon_embedding_sum_impl(embeddings: &[&[f32]], embedding_dim: usize, output: &mut [f32]) {
+    let chunks = embedding_dim / 4;
+    let remainder = embedding_dim % 4;
+    let dst = output.as_mut_ptr();
+
+    // Initialize from first embedding.
+    let first = embeddings[0].as_ptr();
+    for i in 0..chunks {
+        let v = vld1q_f32(first.add(i * 4));
+        vst1q_f32(dst.add(i * 4), v);
+    }
+    let tail = chunks * 4;
+    for i in 0..remainder {
+        *dst.add(tail + i) = *first.add(tail + i);
+    }
+
+    // Accumulate remaining embeddings.
+    for emb in &embeddings[1..] {
+        let src = emb.as_ptr();
+        for i in 0..chunks {
+            let a = vld1q_f32(dst.add(i * 4));
+            let b = vld1q_f32(src.add(i * 4));
+            vst1q_f32(dst.add(i * 4), vaddq_f32(a, b));
+        }
+        for i in 0..remainder {
+            *dst.add(tail + i) += *src.add(tail + i);
+        }
+    }
+}
+
+/// Scalar fallback for embedding sum.
+fn scalar_embedding_sum(embeddings: &[&[f32]], embedding_dim: usize, output: &mut [f32]) {
+    output[..embedding_dim].copy_from_slice(&embeddings[0][..embedding_dim]);
+    for emb in &embeddings[1..] {
+        for j in 0..embedding_dim {
+            output[j] += emb[j];
+        }
+    }
+}
+
+/// Sum multiple embedding vectors element-wise (e.g. token + positional + type).
+///
+/// All input slices must have length `embedding_dim`.
+///
+/// # Errors
+///
+/// Returns an error if `embeddings` is empty or any slice has wrong length.
+pub fn embedding_sum(embeddings: &[&[f32]], embedding_dim: usize) -> Result<Vec<f32>, String> {
+    if embeddings.is_empty() {
+        return Err("embedding_sum: no embeddings provided".to_string());
+    }
+    if embedding_dim == 0 {
+        return Ok(Vec::new());
+    }
+    for (i, emb) in embeddings.iter().enumerate() {
+        if emb.len() != embedding_dim {
+            return Err(format!(
+                "embedding_sum: embedding[{i}] has length {} but expected {embedding_dim}",
+                emb.len()
+            ));
+        }
+    }
+    let mut output = vec![0.0f32; embedding_dim];
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            unsafe {
+                neon_embedding_sum_impl(embeddings, embedding_dim, &mut output);
+            }
+            return Ok(output);
+        }
+    }
+
+    scalar_embedding_sum(embeddings, embedding_dim, &mut output);
+    Ok(output)
+}
+
+// ── Embedding Scale ─────────────────────────────────────────────────
+
+/// NEON-accelerated in-place embedding scaling.
 ///
 /// # Safety
 ///
 /// Caller must ensure the target supports NEON.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_lookup_batched(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    token_ids: &[usize],
-    output: &mut [f32],
-) {
-    let batch = token_ids.len();
-    assert!(output.len() >= batch * dim);
-
-    for (i, &tid) in token_ids.iter().enumerate() {
-        neon_embedding_lookup(embedding_table, vocab_size, dim, tid, &mut output[i * dim..]);
-    }
-}
-
-/// NEON element-wise addition of positional embeddings to token embeddings.
-///
-/// `output[i] = token_emb[i] + pos_emb[i]` for `batch * dim` elements.
-///
-/// # Safety
-///
-/// Caller must ensure the target supports NEON.
-#[cfg(target_arch = "aarch64")]
-#[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_add_position(
-    token_emb: &[f32],
-    pos_emb: &[f32],
-    output: &mut [f32],
-    batch: usize,
-    dim: usize,
-) {
-    let total = batch * dim;
-    assert!(token_emb.len() >= total);
-    assert!(pos_emb.len() >= total);
-    assert!(output.len() >= total);
-
-    let t_ptr = token_emb.as_ptr();
-    let p_ptr = pos_emb.as_ptr();
-    let o_ptr = output.as_mut_ptr();
-    let chunks = total / 4;
+unsafe fn neon_scale_impl(data: &mut [f32], factor: f32) {
+    let len = data.len();
+    let chunks = len / 4;
+    let remainder = len % 4;
+    let ptr = data.as_mut_ptr();
+    let vfactor = vdupq_n_f32(factor);
 
     for i in 0..chunks {
-        let off = i * 4;
-        let vt = vld1q_f32(t_ptr.add(off));
-        let vp = vld1q_f32(p_ptr.add(off));
-        vst1q_f32(o_ptr.add(off), vaddq_f32(vt, vp));
+        let v = vld1q_f32(ptr.add(i * 4));
+        vst1q_f32(ptr.add(i * 4), vmulq_f32(v, vfactor));
     }
-    for i in (chunks * 4)..total {
-        *o_ptr.add(i) = *t_ptr.add(i) + *p_ptr.add(i);
+    let tail = chunks * 4;
+    for i in 0..remainder {
+        *ptr.add(tail + i) *= factor;
     }
 }
 
-/// NEON gather-scatter: gather embeddings for sparse `indices`, write
-/// contiguously into `output`.
+/// Scalar fallback for embedding scaling.
+fn scalar_scale(data: &mut [f32], factor: f32) {
+    for v in data.iter_mut() {
+        *v *= factor;
+    }
+}
+
+/// Scale an embedding vector by a constant factor (for pre-norm architectures).
+///
+/// Modifies `embedding` in place and also returns a copy for convenience.
+pub fn embedding_scale(embedding: &mut [f32], factor: f32) -> Vec<f32> {
+    #[cfg(target_arch = "aarch64")]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            unsafe {
+                neon_scale_impl(embedding, factor);
+            }
+            return embedding.to_vec();
+        }
+    }
+
+    scalar_scale(embedding, factor);
+    embedding.to_vec()
+}
+
+// ── Packed i8 Embedding Lookup ──────────────────────────────────────
+
+/// NEON-accelerated dequantizing lookup from a quantized i8 table.
+///
+/// Each i8 value is dequantized as: `f32_val = (i8_val as f32) * scale`.
 ///
 /// # Safety
 ///
-/// Caller must ensure the target supports NEON.
+/// Caller must ensure the target supports NEON and `index < vocab_size`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_gather_scatter(
-    embedding_table: &[f32],
-    vocab_size: usize,
-    dim: usize,
-    indices: &[usize],
+unsafe fn neon_packed_lookup_i8(
+    table: &[i8],
+    index: usize,
+    embedding_dim: usize,
+    scale: f32,
     output: &mut [f32],
 ) {
-    assert!(output.len() >= indices.len() * dim);
+    let src = table.as_ptr().add(index * embedding_dim);
+    let dst = output.as_mut_ptr();
+    let vscale = vdupq_n_f32(scale);
+    let chunks = embedding_dim / 8;
+    let remainder = embedding_dim % 8;
 
-    for (i, &idx) in indices.iter().enumerate() {
-        assert!(idx < vocab_size, "index {idx} out of bounds (vocab_size={vocab_size})");
-        let src = embedding_table.as_ptr().add(idx * dim);
-        let dst = output.as_mut_ptr().add(i * dim);
-        let chunks = dim / 4;
-        for c in 0..chunks {
-            let off = c * 4;
-            let v = vld1q_f32(src.add(off));
-            vst1q_f32(dst.add(off), v);
-        }
-        for j in (chunks * 4)..dim {
-            *dst.add(j) = *src.add(j);
-        }
+    for i in 0..chunks {
+        let off = i * 8;
+        // Load 8 × i8 into a NEON register.
+        let raw = vld1_s8(src.add(off));
+        // Widen low 4 to i16, then to i32, then to f32.
+        let wide16 = vmovl_s8(raw);
+        let lo32 = vmovl_s16(vget_low_s16(wide16));
+        let hi32 = vmovl_s16(vget_high_s16(wide16));
+        let lo_f = vcvtq_f32_s32(lo32);
+        let hi_f = vcvtq_f32_s32(hi32);
+        vst1q_f32(dst.add(off), vmulq_f32(lo_f, vscale));
+        vst1q_f32(dst.add(off + 4), vmulq_f32(hi_f, vscale));
+    }
+
+    let tail = chunks * 8;
+    for i in 0..remainder {
+        *dst.add(tail + i) = (*src.add(tail + i) as f32) * scale;
     }
 }
 
-/// NEON L2-normalize each embedding vector in a batch.
-///
-/// Each row `data[b*dim .. (b+1)*dim]` is divided by its L2 norm
-/// (with epsilon for numerical stability).
-///
-/// # Safety
-///
-/// Caller must ensure the target supports NEON.
-#[cfg(target_arch = "aarch64")]
-#[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_normalize(data: &mut [f32], batch: usize, dim: usize, eps: f32) {
-    assert!(data.len() >= batch * dim);
-
-    for b in 0..batch {
-        let base = data.as_mut_ptr().add(b * dim);
-
-        // Accumulate squared sum with NEON.
-        let chunks = dim / 4;
-        let mut vsum = vdupq_n_f32(0.0);
-        for c in 0..chunks {
-            let v = vld1q_f32(base.add(c * 4));
-            vsum = vfmaq_f32(vsum, v, v);
-        }
-        let mut sq_sum: f32 = vaddvq_f32(vsum);
-        for j in (chunks * 4)..dim {
-            let x = *base.add(j);
-            sq_sum += x * x;
-        }
-
-        let inv_norm = 1.0 / (sq_sum + eps).sqrt();
-        let vinv = vdupq_n_f32(inv_norm);
-
-        for c in 0..chunks {
-            let off = c * 4;
-            let v = vld1q_f32(base.add(off));
-            vst1q_f32(base.add(off), vmulq_f32(v, vinv));
-        }
-        for j in (chunks * 4)..dim {
-            *base.add(j) *= inv_norm;
-        }
-    }
-}
-
-/// NEON batch dot-product between embedding vectors.
-///
-/// `out[i] = dot(a[i*dim .. (i+1)*dim], b[i*dim .. (i+1)*dim])`.
-///
-/// # Safety
-///
-/// Caller must ensure the target supports NEON.
-#[cfg(target_arch = "aarch64")]
-#[target_feature(enable = "neon")]
-pub unsafe fn neon_embedding_dot_product(
-    a: &[f32],
-    b: &[f32],
-    out: &mut [f32],
-    batch: usize,
-    dim: usize,
+/// Scalar fallback for i8 dequantizing lookup.
+fn scalar_packed_lookup_i8(
+    table: &[i8],
+    index: usize,
+    embedding_dim: usize,
+    scale: f32,
+    output: &mut [f32],
 ) {
-    assert!(a.len() >= batch * dim);
-    assert!(b.len() >= batch * dim);
-    assert!(out.len() >= batch);
-
-    let a_ptr = a.as_ptr();
-    let b_ptr = b.as_ptr();
-    let chunks = dim / 4;
-
-    for i in 0..batch {
-        let off = i * dim;
-        let mut vsum = vdupq_n_f32(0.0);
-        for c in 0..chunks {
-            let va = vld1q_f32(a_ptr.add(off + c * 4));
-            let vb = vld1q_f32(b_ptr.add(off + c * 4));
-            vsum = vfmaq_f32(vsum, va, vb);
-        }
-        let mut acc: f32 = vaddvq_f32(vsum);
-        for j in (chunks * 4)..dim {
-            acc += a[off + j] * b[off + j];
-        }
-        out[i] = acc;
+    let start = index * embedding_dim;
+    for i in 0..embedding_dim {
+        output[i] = (table[start + i] as f32) * scale;
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+/// Look up an embedding from a quantized i8 table and dequantize to f32.
+///
+/// Each i8 entry is converted via `f32_val = i8_val as f32 * scale`.
+///
+/// # Errors
+///
+/// Returns an error if `index >= vocab_size`.
+pub fn packed_embedding_lookup_i8(
+    table: &[i8],
+    index: u32,
+    embedding_dim: usize,
+    scale: f32,
+) -> Result<Vec<f32>, String> {
+    if embedding_dim == 0 {
+        return Ok(Vec::new());
+    }
+    let vocab_size = table.len() / embedding_dim;
+    let idx = index as usize;
+    if idx >= vocab_size {
+        return Err(format!(
+            "embedding index {index} out of bounds for vocab_size {vocab_size}"
+        ));
+    }
+    let mut output = vec![0.0f32; embedding_dim];
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            unsafe {
+                neon_packed_lookup_i8(table, idx, embedding_dim, scale, &mut output);
+            }
+            return Ok(output);
+        }
+    }
+
+    scalar_packed_lookup_i8(table, idx, embedding_dim, scale, &mut output);
+    Ok(output)
+}
+
+// ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Helpers ---------------------------------------------------------------
-
-    /// Build a deterministic embedding table: row `r`, col `c` = `(r * dim + c) as f32 * 0.01`.
+    /// Build a simple embedding table where row `i` is filled with `(i+1) as f32`.
     fn make_table(vocab_size: usize, dim: usize) -> Vec<f32> {
-        (0..vocab_size * dim).map(|i| i as f32 * 0.01).collect()
+        (0..vocab_size)
+            .flat_map(|i| std::iter::repeat_n((i + 1) as f32, dim))
+            .collect()
     }
 
-    fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
-        (a - b).abs() <= tol
+    /// Build a ramp table: element `[i][j] = (i * dim + j) as f32`.
+    fn make_ramp_table(vocab_size: usize, dim: usize) -> Vec<f32> {
+        (0..vocab_size * dim).map(|v| v as f32).collect()
     }
 
-    fn assert_slices_approx(a: &[f32], b: &[f32], tol: f32) {
-        assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
-        for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!(approx_eq(x, y, tol), "mismatch at index {i}: {x} vs {y} (tol={tol})");
-        }
+    /// Build a quantized i8 table where row `i` is filled with `(i+1) as i8`.
+    fn make_i8_table(vocab_size: usize, dim: usize) -> Vec<i8> {
+        (0..vocab_size)
+            .flat_map(|i| std::iter::repeat_n(((i + 1) % 127) as i8, dim))
+            .collect()
     }
 
-    // -----------------------------------------------------------------------
-    // Basic lookup correctness vs scalar (15 tests)
-    // -----------------------------------------------------------------------
+    // ── embedding_lookup_f32 ────────────────────────────────────────
 
     #[test]
-    fn test_scalar_lookup_first_row() {
-        let table = make_table(8, 4);
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_lookup(&table, 8, 4, 0, &mut out);
-        assert_eq!(&out, &[0.0, 0.01, 0.02, 0.03]);
-    }
-
-    #[test]
-    fn test_scalar_lookup_last_row() {
-        let table = make_table(8, 4);
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_lookup(&table, 8, 4, 7, &mut out);
-        let expected: Vec<f32> = (28..32).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_lookup_middle_row() {
-        let table = make_table(10, 8);
-        let mut out = vec![0.0f32; 8];
-        scalar_embedding_lookup(&table, 10, 8, 5, &mut out);
-        let expected: Vec<f32> = (40..48).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim4() {
-        let table = make_table(16, 4);
-        let mut neon_out = vec![0.0f32; 4];
-        let mut scalar_out = vec![0.0f32; 4];
-        for tid in 0..16 {
-            unsafe { neon_embedding_lookup(&table, 16, 4, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 16, 4, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim8() {
-        let table = make_table(10, 8);
-        let mut neon_out = vec![0.0f32; 8];
-        let mut scalar_out = vec![0.0f32; 8];
-        for tid in [0, 3, 7, 9] {
-            unsafe { neon_embedding_lookup(&table, 10, 8, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 10, 8, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim5_remainder() {
-        let table = make_table(4, 5);
-        let mut neon_out = vec![0.0f32; 5];
-        let mut scalar_out = vec![0.0f32; 5];
-        for tid in 0..4 {
-            unsafe { neon_embedding_lookup(&table, 4, 5, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 4, 5, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim1() {
-        let table = make_table(3, 1);
-        let mut neon_out = vec![0.0f32; 1];
-        let mut scalar_out = vec![0.0f32; 1];
-        for tid in 0..3 {
-            unsafe { neon_embedding_lookup(&table, 3, 1, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 3, 1, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim3() {
-        let table = make_table(6, 3);
-        let mut neon_out = vec![0.0f32; 3];
-        let mut scalar_out = vec![0.0f32; 3];
-        for tid in 0..6 {
-            unsafe { neon_embedding_lookup(&table, 6, 3, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 6, 3, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_matches_scalar_dim16() {
-        let table = make_table(4, 16);
-        let mut neon_out = vec![0.0f32; 16];
-        let mut scalar_out = vec![0.0f32; 16];
-        for tid in 0..4 {
-            unsafe { neon_embedding_lookup(&table, 4, 16, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, 4, 16, tid, &mut scalar_out);
-            assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_output_overwrite() {
+    fn test_lookup_f32_basic() {
         let table = make_table(4, 8);
-        let mut out = vec![999.0f32; 8];
-        unsafe { neon_embedding_lookup(&table, 4, 8, 0, &mut out) };
-        let expected: Vec<f32> = (0..8).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-6);
+        let result = embedding_lookup_f32(&table, 0, 8).unwrap();
+        assert_eq!(result, vec![1.0; 8]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_larger_output_buffer() {
-        let table = make_table(4, 4);
-        let mut out = vec![0.0f32; 8];
-        unsafe { neon_embedding_lookup(&table, 4, 4, 2, &mut out) };
-        let expected: Vec<f32> = (8..12).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out[..4], &expected, 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_lookup_deterministic() {
-        let table = make_table(16, 32);
-        let mut out1 = vec![0.0f32; 32];
-        let mut out2 = vec![0.0f32; 32];
-        scalar_embedding_lookup(&table, 16, 32, 11, &mut out1);
-        scalar_embedding_lookup(&table, 16, 32, 11, &mut out2);
-        assert_eq!(out1, out2);
-    }
-
-    #[test]
-    fn test_scalar_lookup_distinct_rows() {
-        let table = make_table(4, 4);
-        let mut out0 = vec![0.0f32; 4];
-        let mut out1 = vec![0.0f32; 4];
-        scalar_embedding_lookup(&table, 4, 4, 0, &mut out0);
-        scalar_embedding_lookup(&table, 4, 4, 1, &mut out1);
-        assert_ne!(out0, out1);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_distinct_rows() {
+    fn test_lookup_f32_last_row() {
         let table = make_table(4, 8);
-        let mut out0 = vec![0.0f32; 8];
-        let mut out1 = vec![0.0f32; 8];
-        unsafe { neon_embedding_lookup(&table, 4, 8, 0, &mut out0) };
-        unsafe { neon_embedding_lookup(&table, 4, 8, 1, &mut out1) };
-        assert_ne!(out0, out1);
+        let result = embedding_lookup_f32(&table, 3, 8).unwrap();
+        assert_eq!(result, vec![4.0; 8]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_all_rows_covered() {
-        let vs = 5;
-        let dim = 4;
-        let table = make_table(vs, dim);
-        for tid in 0..vs {
-            let mut neon_out = vec![0.0f32; dim];
-            let mut scalar_out = vec![0.0f32; dim];
-            unsafe { neon_embedding_lookup(&table, vs, dim, tid, &mut neon_out) };
-            scalar_embedding_lookup(&table, vs, dim, tid, &mut scalar_out);
-            assert_eq!(neon_out, scalar_out, "mismatch at tid={tid}");
+    fn test_lookup_f32_out_of_bounds() {
+        let table = make_table(4, 8);
+        assert!(embedding_lookup_f32(&table, 4, 8).is_err());
+    }
+
+    #[test]
+    fn test_lookup_f32_zero_dim() {
+        let result = embedding_lookup_f32(&[], 0, 0).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_lookup_f32_single_element() {
+        let table = vec![42.0];
+        let result = embedding_lookup_f32(&table, 0, 1).unwrap();
+        assert_eq!(result, vec![42.0]);
+    }
+
+    #[test]
+    fn test_lookup_f32_non_aligned_dim() {
+        let table = make_ramp_table(3, 5);
+        let result = embedding_lookup_f32(&table, 1, 5).unwrap();
+        assert_eq!(result, vec![5.0, 6.0, 7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn test_lookup_f32_large_dim() {
+        let dim = 1024;
+        let table = make_ramp_table(2, dim);
+        let result = embedding_lookup_f32(&table, 1, dim).unwrap();
+        for (j, &v) in result.iter().enumerate() {
+            assert_eq!(v, (dim + j) as f32);
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Various embedding dimensions (15 tests)
-    // -----------------------------------------------------------------------
+    #[test]
+    fn test_lookup_f32_dim_3() {
+        let table = make_ramp_table(4, 3);
+        let result = embedding_lookup_f32(&table, 2, 3).unwrap();
+        assert_eq!(result, vec![6.0, 7.0, 8.0]);
+    }
 
-    macro_rules! dim_test {
-        ($name:ident, $dim:expr) => {
-            #[test]
-            #[cfg(target_arch = "aarch64")]
-            fn $name() {
-                let vs = 32;
-                let dim = $dim;
-                let table = make_table(vs, dim);
-                let mut neon_out = vec![0.0f32; dim];
-                let mut scalar_out = vec![0.0f32; dim];
-                for tid in [0, 1, vs / 2, vs - 1] {
-                    unsafe { neon_embedding_lookup(&table, vs, dim, tid, &mut neon_out) };
-                    scalar_embedding_lookup(&table, vs, dim, tid, &mut scalar_out);
-                    assert_slices_approx(&neon_out, &scalar_out, 1e-5);
-                }
+    #[test]
+    fn test_lookup_f32_dim_7() {
+        let table = make_ramp_table(2, 7);
+        let result = embedding_lookup_f32(&table, 1, 7).unwrap();
+        assert_eq!(result, vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0]);
+    }
+
+    #[test]
+    fn test_lookup_f32_neon_scalar_parity() {
+        let dim = 33; // intentionally non-aligned
+        let table = make_ramp_table(8, dim);
+        for idx in 0..8u32 {
+            let via_pub = embedding_lookup_f32(&table, idx, dim).unwrap();
+            let mut scalar = vec![0.0f32; dim];
+            scalar_lookup_f32_single(&table, idx as usize, dim, &mut scalar);
+            assert_eq!(via_pub, scalar, "mismatch at index {idx}");
+        }
+    }
+
+    // ── batched_embedding_lookup ────────────────────────────────────
+
+    #[test]
+    fn test_batched_basic() {
+        let table = make_table(4, 8);
+        let result = batched_embedding_lookup(&table, &[0, 2], 8).unwrap();
+        assert_eq!(result.len(), 16);
+        assert_eq!(&result[..8], &[1.0; 8]);
+        assert_eq!(&result[8..], &[3.0; 8]);
+    }
+
+    #[test]
+    fn test_batched_empty_indices() {
+        let table = make_table(4, 8);
+        let result = batched_embedding_lookup(&table, &[], 8).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_batched_zero_dim() {
+        let result = batched_embedding_lookup(&[], &[0], 0).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_batched_single_index() {
+        let table = make_table(4, 8);
+        let result = batched_embedding_lookup(&table, &[3], 8).unwrap();
+        assert_eq!(result, vec![4.0; 8]);
+    }
+
+    #[test]
+    fn test_batched_out_of_bounds() {
+        let table = make_table(4, 8);
+        assert!(batched_embedding_lookup(&table, &[0, 5], 8).is_err());
+    }
+
+    #[test]
+    fn test_batched_repeated_indices() {
+        let table = make_table(4, 8);
+        let result = batched_embedding_lookup(&table, &[1, 1, 1], 8).unwrap();
+        assert_eq!(result.len(), 24);
+        for chunk in result.chunks(8) {
+            assert_eq!(chunk, &[2.0; 8]);
+        }
+    }
+
+    #[test]
+    fn test_batched_large() {
+        let dim = 512;
+        let vocab = 1000;
+        let table = make_ramp_table(vocab, dim);
+        let indices: Vec<u32> = (0..64).collect();
+        let result = batched_embedding_lookup(&table, &indices, dim).unwrap();
+        assert_eq!(result.len(), 64 * dim);
+        for (tok_i, idx) in indices.iter().enumerate() {
+            let row = &result[tok_i * dim..(tok_i + 1) * dim];
+            for (j, &v) in row.iter().enumerate() {
+                assert_eq!(v, (*idx as usize * dim + j) as f32);
             }
-        };
-    }
-
-    dim_test!(test_dim_64, 64);
-    dim_test!(test_dim_128, 128);
-    dim_test!(test_dim_256, 256);
-    dim_test!(test_dim_512, 512);
-    dim_test!(test_dim_768, 768);
-    dim_test!(test_dim_1024, 1024);
-    dim_test!(test_dim_2048, 2048);
-
-    // Non-power-of-two dimensions (remainder path exercised)
-    dim_test!(test_dim_65, 65);
-    dim_test!(test_dim_127, 127);
-    dim_test!(test_dim_255, 255);
-    dim_test!(test_dim_513, 513);
-    dim_test!(test_dim_769, 769);
-    dim_test!(test_dim_1023, 1023);
-    dim_test!(test_dim_2047, 2047);
-    dim_test!(test_dim_7, 7);
-
-    // -----------------------------------------------------------------------
-    // Batched lookup with various batch sizes (12 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_batched_basic() {
-        let table = make_table(8, 4);
-        let ids = [0usize, 3, 7];
-        let mut out = vec![0.0f32; 12];
-        scalar_embedding_lookup_batched(&table, 8, 4, &ids, &mut out);
-        let mut expected = vec![0.0f32; 12];
-        for (i, &tid) in ids.iter().enumerate() {
-            scalar_embedding_lookup(&table, 8, 4, tid, &mut expected[i * 4..]);
-        }
-        assert_eq!(out, expected);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_matches_scalar_batch1() {
-        let table = make_table(16, 8);
-        let ids = [5usize];
-        let mut neon_out = vec![0.0f32; 8];
-        let mut scalar_out = vec![0.0f32; 8];
-        unsafe { neon_embedding_lookup_batched(&table, 16, 8, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 16, 8, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_matches_scalar_batch4() {
-        let table = make_table(16, 8);
-        let ids = [0usize, 5, 10, 15];
-        let mut neon_out = vec![0.0f32; 32];
-        let mut scalar_out = vec![0.0f32; 32];
-        unsafe { neon_embedding_lookup_batched(&table, 16, 8, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 16, 8, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_matches_scalar_batch8() {
-        let table = make_table(32, 16);
-        let ids = [0usize, 4, 8, 12, 16, 20, 24, 28];
-        let total = ids.len() * 16;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 32, 16, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 32, 16, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_matches_scalar_batch16() {
-        let table = make_table(64, 32);
-        let ids: Vec<usize> = (0..16).map(|i| i * 4).collect();
-        let total = ids.len() * 32;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 64, 32, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 64, 32, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_matches_scalar_batch32() {
-        let table = make_table(64, 16);
-        let ids: Vec<usize> = (0..32).map(|i| i * 2).collect();
-        let total = ids.len() * 16;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 64, 16, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 64, 16, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_duplicate_ids() {
-        let table = make_table(8, 4);
-        let ids = [3usize, 3, 3, 3];
-        let total = ids.len() * 4;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 8, 4, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 8, 4, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-        // All rows should be identical.
-        for i in 1..4 {
-            assert_eq!(&neon_out[0..4], &neon_out[i * 4..(i + 1) * 4]);
         }
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_reverse_order() {
-        let table = make_table(8, 4);
-        let ids = [7usize, 6, 5, 4, 3, 2, 1, 0];
-        let total = ids.len() * 4;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 8, 4, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 8, 4, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
+    fn test_batched_non_aligned_dim() {
+        let table = make_ramp_table(4, 5);
+        let result = batched_embedding_lookup(&table, &[0, 3], 5).unwrap();
+        assert_eq!(&result[..5], &[0.0, 1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(&result[5..], &[15.0, 16.0, 17.0, 18.0, 19.0]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_odd_dim() {
-        let table = make_table(8, 7);
-        let ids = [1usize, 3, 5];
-        let total = ids.len() * 7;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, 8, 7, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, 8, 7, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
+    fn test_batched_neon_scalar_parity() {
+        let dim = 17;
+        let table = make_ramp_table(10, dim);
+        let indices: Vec<u32> = vec![0, 3, 7, 9, 1];
+        let via_pub = batched_embedding_lookup(&table, &indices, dim).unwrap();
+        let mut scalar = vec![0.0f32; indices.len() * dim];
+        scalar_batched_lookup(&table, &indices, dim, &mut scalar);
+        assert_eq!(via_pub, scalar);
     }
 
     #[test]
-    fn test_scalar_batched_single_token() {
-        let table = make_table(4, 4);
-        let ids = [2usize];
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_lookup_batched(&table, 4, 4, &ids, &mut out);
-        let expected: Vec<f32> = (8..12).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_large_batch_64() {
-        let vs = 128;
-        let dim = 64;
-        let table = make_table(vs, dim);
-        let ids: Vec<usize> = (0..64).map(|i| i * 2).collect();
-        let total = ids.len() * dim;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, vs, dim, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, vs, dim, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-5);
-    }
-
-    // -----------------------------------------------------------------------
-    // Position embedding addition (11 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_add_position_basic() {
-        let tok = vec![1.0f32, 2.0, 3.0, 4.0];
-        let pos = vec![0.1f32, 0.2, 0.3, 0.4];
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_add_position(&tok, &pos, &mut out, 1, 4);
-        assert_slices_approx(&out, &[1.1, 2.2, 3.3, 4.4], 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_matches_scalar_dim4() {
-        let tok: Vec<f32> = (0..4).map(|i| i as f32).collect();
-        let pos: Vec<f32> = (0..4).map(|i| i as f32 * 0.5).collect();
-        let mut neon_out = vec![0.0f32; 4];
-        let mut scalar_out = vec![0.0f32; 4];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, 1, 4) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, 1, 4);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_matches_scalar_dim128_batch4() {
-        let batch = 4;
-        let dim = 128;
-        let total = batch * dim;
-        let tok: Vec<f32> = (0..total).map(|i| i as f32 * 0.01).collect();
-        let pos: Vec<f32> = (0..total).map(|i| (i as f32 * 0.001) + 1.0).collect();
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, batch, dim) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-5);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_zero_pos() {
-        let tok = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let pos = vec![0.0f32; 8];
-        let mut out = vec![0.0f32; 8];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut out, 2, 4) };
-        assert_slices_approx(&out, &tok, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_negative_pos() {
-        let tok = vec![1.0f32; 8];
-        let pos = vec![-0.5f32; 8];
-        let mut out = vec![0.0f32; 8];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut out, 2, 4) };
-        assert_slices_approx(&out, &[0.5; 8], 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_remainder_dim5() {
-        let batch = 2;
-        let dim = 5;
-        let total = batch * dim;
-        let tok: Vec<f32> = (0..total).map(|i| i as f32).collect();
-        let pos: Vec<f32> = (0..total).map(|i| 100.0 + i as f32).collect();
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, batch, dim) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_dim256_batch8() {
-        let batch = 8;
-        let dim = 256;
-        let total = batch * dim;
-        let tok: Vec<f32> = (0..total).map(|i| (i % 256) as f32 * 0.001).collect();
-        let pos: Vec<f32> = (0..total).map(|i| (i % 256) as f32 * 0.0005).collect();
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, batch, dim) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-5);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_dim1() {
-        let tok = vec![3.0f32, 7.0];
-        let pos = vec![0.5f32, -0.5];
-        let mut out = vec![0.0f32; 2];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut out, 2, 1) };
-        assert_slices_approx(&out, &[3.5, 6.5], 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_add_position_batch1_dim1() {
-        let tok = vec![42.0f32];
-        let pos = vec![0.5f32];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_add_position(&tok, &pos, &mut out, 1, 1);
-        assert_slices_approx(&out, &[42.5], 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_large_values() {
-        let tok = vec![1e6f32; 4];
-        let pos = vec![1e6f32; 4];
-        let mut out = vec![0.0f32; 4];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut out, 1, 4) };
-        assert_slices_approx(&out, &[2e6; 4], 1.0);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_add_position_dim768_batch2() {
-        let batch = 2;
-        let dim = 768;
-        let total = batch * dim;
-        let tok: Vec<f32> = (0..total).map(|i| (i as f32).sin()).collect();
-        let pos: Vec<f32> = (0..total).map(|i| (i as f32).cos()).collect();
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, batch, dim) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-5);
-    }
-
-    // -----------------------------------------------------------------------
-    // Normalization correctness (12 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_normalize_unit_vector() {
-        let mut data = vec![1.0f32, 0.0, 0.0, 0.0];
-        scalar_embedding_normalize(&mut data, 1, 4, 1e-8);
-        assert_slices_approx(&data, &[1.0, 0.0, 0.0, 0.0], 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_normalize_equal_components() {
-        let mut data = vec![1.0f32, 1.0, 1.0, 1.0];
-        scalar_embedding_normalize(&mut data, 1, 4, 1e-8);
-        let expected = 1.0f32 / 2.0; // 1/sqrt(4) = 0.5
-        for &v in &data {
-            assert!(approx_eq(v, expected, 1e-6));
+    fn test_batched_all_same_index() {
+        let table = make_table(4, 8);
+        let indices = vec![2u32; 16];
+        let result = batched_embedding_lookup(&table, &indices, 8).unwrap();
+        for chunk in result.chunks(8) {
+            assert_eq!(chunk, &[3.0; 8]);
         }
     }
 
+    // ── embedding_sum ───────────────────────────────────────────────
+
     #[test]
-    fn test_scalar_normalize_norm_is_one() {
-        let mut data = vec![3.0f32, 4.0, 0.0, 0.0];
-        scalar_embedding_normalize(&mut data, 1, 4, 1e-8);
-        let norm: f32 = data.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!(approx_eq(norm, 1.0, 1e-5));
+    fn test_sum_two_embeddings() {
+        let a = vec![1.0f32; 8];
+        let b = vec![2.0f32; 8];
+        let result = embedding_sum(&[&a, &b], 8).unwrap();
+        assert_eq!(result, vec![3.0; 8]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_matches_scalar_dim4() {
-        let orig = vec![3.0f32, 4.0, 5.0, 6.0];
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, 1, 4, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, 1, 4, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-6);
+    fn test_sum_three_embeddings() {
+        let a = vec![1.0f32; 8];
+        let b = vec![2.0f32; 8];
+        let c = vec![3.0f32; 8];
+        let result = embedding_sum(&[&a, &b, &c], 8).unwrap();
+        assert_eq!(result, vec![6.0; 8]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_matches_scalar_dim128() {
-        let dim = 128;
-        let orig: Vec<f32> = (0..dim).map(|i| (i as f32 + 1.0) * 0.1).collect();
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, 1, dim, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, 1, dim, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-5);
+    fn test_sum_single_embedding() {
+        let a = vec![5.0f32; 8];
+        let result = embedding_sum(&[&a], 8).unwrap();
+        assert_eq!(result, vec![5.0; 8]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_batch2_dim64() {
-        let batch = 2;
-        let dim = 64;
-        let total = batch * dim;
-        let orig: Vec<f32> = (0..total).map(|i| (i as f32 + 0.5) * 0.01).collect();
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, batch, dim, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, batch, dim, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-5);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_norm_is_one() {
-        let dim = 32;
-        let mut data: Vec<f32> = (0..dim).map(|i| (i as f32 + 1.0)).collect();
-        unsafe { neon_embedding_normalize(&mut data, 1, dim, 1e-8) };
-        let norm: f32 = data.iter().map(|x| x * x).sum::<f32>().sqrt();
-        assert!(approx_eq(norm, 1.0, 1e-5));
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_remainder_dim5() {
-        let orig = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, 1, 5, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, 1, 5, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_batch4_dim256() {
-        let batch = 4;
-        let dim = 256;
-        let total = batch * dim;
-        let orig: Vec<f32> = (0..total).map(|i| ((i % 100) as f32 - 50.0) * 0.1).collect();
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, batch, dim, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, batch, dim, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-4);
-    }
-
-    #[test]
-    fn test_scalar_normalize_near_zero_uses_eps() {
-        let mut data = vec![1e-20f32, 0.0, 0.0, 0.0];
-        scalar_embedding_normalize(&mut data, 1, 4, 1e-8);
-        // Should not produce NaN/Inf.
-        for &v in &data {
-            assert!(v.is_finite());
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_near_zero_uses_eps() {
-        let mut data = vec![1e-20f32, 0.0, 0.0, 0.0];
-        unsafe { neon_embedding_normalize(&mut data, 1, 4, 1e-8) };
-        for &v in &data {
-            assert!(v.is_finite());
-        }
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_negative_values() {
-        let orig = vec![-3.0f32, -4.0, 5.0, 6.0, -1.0, 2.0, -3.0, 4.0];
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, 2, 4, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, 2, 4, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-6);
-    }
-
-    // -----------------------------------------------------------------------
-    // Dot product / similarity (12 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_dot_basic() {
-        let a = vec![1.0f32, 2.0, 3.0, 4.0];
-        let b = vec![4.0f32, 3.0, 2.0, 1.0];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_dot_product(&a, &b, &mut out, 1, 4);
-        assert!(approx_eq(out[0], 20.0, 1e-6));
-    }
-
-    #[test]
-    fn test_scalar_dot_orthogonal() {
-        let a = vec![1.0f32, 0.0, 0.0, 0.0];
-        let b = vec![0.0f32, 1.0, 0.0, 0.0];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_dot_product(&a, &b, &mut out, 1, 4);
-        assert!(approx_eq(out[0], 0.0, 1e-6));
-    }
-
-    #[test]
-    fn test_scalar_dot_self() {
-        let a = vec![3.0f32, 4.0];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_dot_product(&a, &a, &mut out, 1, 2);
-        assert!(approx_eq(out[0], 25.0, 1e-6));
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_matches_scalar_dim4() {
-        let a = vec![1.0f32, 2.0, 3.0, 4.0];
-        let b = vec![5.0f32, 6.0, 7.0, 8.0];
-        let mut neon_out = vec![0.0f32; 1];
-        let mut scalar_out = vec![0.0f32; 1];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, 1, 4) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, 1, 4);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_matches_scalar_dim128() {
-        let dim = 128;
-        let a: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.01).collect();
-        let b: Vec<f32> = (0..dim).map(|i| 1.0 - (i as f32) * 0.005).collect();
-        let mut neon_out = vec![0.0f32; 1];
-        let mut scalar_out = vec![0.0f32; 1];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, 1, dim) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, 1, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-3);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_batch4_dim8() {
-        let batch = 4;
-        let dim = 8;
-        let total = batch * dim;
-        let a: Vec<f32> = (0..total).map(|i| (i as f32) * 0.1).collect();
-        let b: Vec<f32> = (0..total).map(|i| 1.0 + (i as f32) * 0.05).collect();
-        let mut neon_out = vec![0.0f32; batch];
-        let mut scalar_out = vec![0.0f32; batch];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, batch, dim) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-3);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_remainder_dim5() {
-        let a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
-        let b = vec![5.0f32, 4.0, 3.0, 2.0, 1.0];
-        let mut neon_out = vec![0.0f32; 1];
-        let mut scalar_out = vec![0.0f32; 1];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, 1, 5) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, 1, 5);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_dim256_batch2() {
-        let batch = 2;
-        let dim = 256;
-        let total = batch * dim;
-        let a: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.37).sin()).collect();
-        let b: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.53).cos()).collect();
-        let mut neon_out = vec![0.0f32; batch];
-        let mut scalar_out = vec![0.0f32; batch];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, batch, dim) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-2);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_dim1() {
-        let a = vec![3.0f32, 7.0];
-        let b = vec![2.0f32, -1.0];
-        let mut neon_out = vec![0.0f32; 2];
-        let mut scalar_out = vec![0.0f32; 2];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, 2, 1) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, 2, 1);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_zeros() {
-        let a = vec![0.0f32; 16];
-        let b: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 2];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut out, 2, 8) };
-        assert_slices_approx(&out, &[0.0, 0.0], 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_dot_negative() {
-        let a = vec![-1.0f32, -2.0, -3.0, -4.0];
-        let b = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_dot_product(&a, &b, &mut out, 1, 4);
-        assert!(approx_eq(out[0], -30.0, 1e-6));
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_dot_negative_matches_scalar() {
-        let a = vec![-1.0f32, -2.0, -3.0, -4.0];
-        let b = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut neon_out = vec![0.0f32; 1];
-        let mut scalar_out = vec![0.0f32; 1];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, 1, 4) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, 1, 4);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    // -----------------------------------------------------------------------
-    // Edge cases (13 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_lookup_vocab1() {
-        let table = vec![42.0f32, 43.0];
-        let mut out = vec![0.0f32; 2];
-        scalar_embedding_lookup(&table, 1, 2, 0, &mut out);
-        assert_eq!(&out, &[42.0, 43.0]);
-    }
-
-    #[test]
-    fn test_scalar_lookup_dim1_vocab1() {
-        let table = vec![7.0f32];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_lookup(&table, 1, 1, 0, &mut out);
-        assert_eq!(out[0], 7.0);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_vocab1() {
-        let table = vec![10.0f32, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 4];
-        unsafe { neon_embedding_lookup(&table, 1, 4, 0, &mut out) };
-        assert_eq!(&out, &[10.0, 20.0, 30.0, 40.0]);
-    }
-
-    #[test]
-    fn test_scalar_batched_empty() {
-        let table = make_table(8, 4);
-        let ids: &[usize] = &[];
-        let mut out: Vec<f32> = vec![];
-        scalar_embedding_lookup_batched(&table, 8, 4, ids, &mut out);
-        assert!(out.is_empty());
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_batched_empty() {
-        let table = make_table(8, 4);
-        let ids: &[usize] = &[];
-        let mut out: Vec<f32> = vec![];
-        unsafe { neon_embedding_lookup_batched(&table, 8, 4, ids, &mut out) };
-        assert!(out.is_empty());
-    }
-
-    #[test]
-    #[should_panic(expected = "out of bounds")]
-    fn test_scalar_lookup_oob() {
-        let table = make_table(4, 4);
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_lookup(&table, 4, 4, 4, &mut out);
-    }
-
-    #[test]
-    #[should_panic(expected = "out of bounds")]
-    fn test_scalar_lookup_oob_large() {
-        let table = make_table(4, 4);
-        let mut out = vec![0.0f32; 4];
-        scalar_embedding_lookup(&table, 4, 4, 100, &mut out);
-    }
-
-    #[test]
-    #[should_panic(expected = "out of bounds")]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_lookup_oob() {
-        let table = make_table(4, 4);
-        let mut out = vec![0.0f32; 4];
-        unsafe { neon_embedding_lookup(&table, 4, 4, 4, &mut out) };
-    }
-
-    #[test]
-    #[should_panic(expected = "out of bounds")]
-    fn test_scalar_gather_scatter_oob() {
-        let table = make_table(4, 4);
-        let indices = [0usize, 5]; // 5 is OOB
-        let mut out = vec![0.0f32; 8];
-        scalar_embedding_gather_scatter(&table, 4, 4, &indices, &mut out);
-    }
-
-    #[test]
-    fn test_scalar_normalize_dim1() {
-        let mut data = vec![5.0f32];
-        scalar_embedding_normalize(&mut data, 1, 1, 1e-8);
-        assert!(approx_eq(data[0], 1.0, 1e-5));
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_normalize_dim1() {
-        let mut data = vec![5.0f32];
-        unsafe { neon_embedding_normalize(&mut data, 1, 1, 1e-8) };
-        assert!(approx_eq(data[0], 1.0, 1e-5));
-    }
-
-    #[test]
-    fn test_scalar_dot_dim1_batch1() {
-        let a = vec![3.0f32];
-        let b = vec![4.0f32];
-        let mut out = vec![0.0f32; 1];
-        scalar_embedding_dot_product(&a, &b, &mut out, 1, 1);
-        assert!(approx_eq(out[0], 12.0, 1e-6));
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_gather_scatter_oob_panics() {
-        let result = std::panic::catch_unwind(|| {
-            let table = make_table(4, 4);
-            let indices = [0usize, 10];
-            let mut out = vec![0.0f32; 8];
-            unsafe { neon_embedding_gather_scatter(&table, 4, 4, &indices, &mut out) };
-        });
+    fn test_sum_empty_list() {
+        let result = embedding_sum(&[], 8);
         assert!(result.is_err());
     }
 
-    // -----------------------------------------------------------------------
-    // Gather / scatter (6 tests)
-    // -----------------------------------------------------------------------
-
     #[test]
-    fn test_scalar_gather_scatter_basic() {
-        let table = make_table(8, 4);
-        let indices = [1usize, 3, 5];
-        let mut out = vec![0.0f32; 12];
-        scalar_embedding_gather_scatter(&table, 8, 4, &indices, &mut out);
-        let mut expected = vec![0.0f32; 12];
-        scalar_embedding_lookup_batched(&table, 8, 4, &indices, &mut expected);
-        assert_eq!(out, expected);
+    fn test_sum_zero_dim() {
+        let a: Vec<f32> = vec![];
+        let result = embedding_sum(&[&a[..]], 0).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_gather_scatter_matches_scalar() {
-        let table = make_table(16, 8);
-        let indices = [0usize, 7, 15, 3];
-        let total = indices.len() * 8;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_gather_scatter(&table, 16, 8, &indices, &mut neon_out) };
-        scalar_embedding_gather_scatter(&table, 16, 8, &indices, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
+    fn test_sum_mismatched_length() {
+        let a = vec![1.0f32; 8];
+        let b = vec![2.0f32; 4];
+        assert!(embedding_sum(&[&a, &b], 8).is_err());
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_gather_scatter_single() {
-        let table = make_table(4, 4);
-        let indices = [2usize];
-        let mut out = vec![0.0f32; 4];
-        unsafe { neon_embedding_gather_scatter(&table, 4, 4, &indices, &mut out) };
-        let expected: Vec<f32> = (8..12).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-6);
+    fn test_sum_non_aligned_dim() {
+        let a: Vec<f32> = (0..5).map(|i| i as f32).collect();
+        let b: Vec<f32> = (10..15).map(|i| i as f32).collect();
+        let result = embedding_sum(&[&a, &b], 5).unwrap();
+        assert_eq!(result, vec![10.0, 12.0, 14.0, 16.0, 18.0]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_gather_scatter_odd_dim() {
-        let table = make_table(8, 7);
-        let indices = [0usize, 4, 7];
-        let total = indices.len() * 7;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_gather_scatter(&table, 8, 7, &indices, &mut neon_out) };
-        scalar_embedding_gather_scatter(&table, 8, 7, &indices, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-6);
-    }
-
-    #[test]
-    fn test_scalar_gather_scatter_empty_indices() {
-        let table = make_table(4, 4);
-        let indices: &[usize] = &[];
-        let mut out: Vec<f32> = vec![];
-        scalar_embedding_gather_scatter(&table, 4, 4, indices, &mut out);
-        assert!(out.is_empty());
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_gather_scatter_empty_indices() {
-        let table = make_table(4, 4);
-        let indices: &[usize] = &[];
-        let mut out: Vec<f32> = vec![];
-        unsafe { neon_embedding_gather_scatter(&table, 4, 4, indices, &mut out) };
-        assert!(out.is_empty());
-    }
-
-    // -----------------------------------------------------------------------
-    // Large vocab stress tests (10 tests)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_scalar_large_vocab_lookup() {
-        let vs = 50_000;
-        let dim = 64;
-        let table = make_table(vs, dim);
-        let mut out = vec![0.0f32; dim];
-        scalar_embedding_lookup(&table, vs, dim, vs - 1, &mut out);
-        let start = (vs - 1) * dim;
-        let expected: Vec<f32> = (start..start + dim).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out, &expected, 1e-2);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_lookup() {
-        let vs = 50_000;
-        let dim = 64;
-        let table = make_table(vs, dim);
-        let mut neon_out = vec![0.0f32; dim];
-        let mut scalar_out = vec![0.0f32; dim];
-        unsafe { neon_embedding_lookup(&table, vs, dim, vs - 1, &mut neon_out) };
-        scalar_embedding_lookup(&table, vs, dim, vs - 1, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-2);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_batched() {
-        let vs = 32_000;
-        let dim = 128;
-        let table = make_table(vs, dim);
-        let ids: Vec<usize> = (0..32).map(|i| i * 1000).collect();
-        let total = ids.len() * dim;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_lookup_batched(&table, vs, dim, &ids, &mut neon_out) };
-        scalar_embedding_lookup_batched(&table, vs, dim, &ids, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-1);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_dim_2048_lookup() {
-        let vs = 100;
-        let dim = 2048;
-        let table = make_table(vs, dim);
-        let mut neon_out = vec![0.0f32; dim];
-        let mut scalar_out = vec![0.0f32; dim];
-        unsafe { neon_embedding_lookup(&table, vs, dim, 50, &mut neon_out) };
-        scalar_embedding_lookup(&table, vs, dim, 50, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-1);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_normalize() {
-        let batch = 16;
-        let dim = 512;
-        let total = batch * dim;
-        let orig: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.017).sin()).collect();
-        let mut neon_data = orig.clone();
-        let mut scalar_data = orig;
-        unsafe { neon_embedding_normalize(&mut neon_data, batch, dim, 1e-8) };
-        scalar_embedding_normalize(&mut scalar_data, batch, dim, 1e-8);
-        assert_slices_approx(&neon_data, &scalar_data, 1e-3);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_dot() {
-        let batch = 16;
-        let dim = 512;
-        let total = batch * dim;
-        let a: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.013).cos()).collect();
-        let b: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.019).sin()).collect();
-        let mut neon_out = vec![0.0f32; batch];
-        let mut scalar_out = vec![0.0f32; batch];
-        unsafe { neon_embedding_dot_product(&a, &b, &mut neon_out, batch, dim) };
-        scalar_embedding_dot_product(&a, &b, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-1);
-    }
-
-    #[test]
-    fn test_scalar_large_vocab_batched() {
-        let vs = 10_000;
-        let dim = 32;
-        let table = make_table(vs, dim);
-        let ids: Vec<usize> = (0..16).map(|i| i * 625).collect();
-        let total = ids.len() * dim;
-        let mut out = vec![0.0f32; total];
-        scalar_embedding_lookup_batched(&table, vs, dim, &ids, &mut out);
-        // Verify first embedding.
-        let expected_start = ids[0] * dim;
-        let expected: Vec<f32> =
-            (expected_start..expected_start + dim).map(|i| i as f32 * 0.01).collect();
-        assert_slices_approx(&out[..dim], &expected, 1e-2);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_gather_scatter() {
-        let vs = 10_000;
-        let dim = 64;
-        let table = make_table(vs, dim);
-        let indices: Vec<usize> = (0..20).map(|i| i * 500).collect();
-        let total = indices.len() * dim;
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_gather_scatter(&table, vs, dim, &indices, &mut neon_out) };
-        scalar_embedding_gather_scatter(&table, vs, dim, &indices, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-1);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_add_position() {
-        let batch = 32;
+    fn test_sum_large_dim() {
         let dim = 1024;
-        let total = batch * dim;
-        let tok: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.003).sin()).collect();
-        let pos: Vec<f32> = (0..total).map(|i| ((i as f32) * 0.007).cos()).collect();
-        let mut neon_out = vec![0.0f32; total];
-        let mut scalar_out = vec![0.0f32; total];
-        unsafe { neon_embedding_add_position(&tok, &pos, &mut neon_out, batch, dim) };
-        scalar_embedding_add_position(&tok, &pos, &mut scalar_out, batch, dim);
-        assert_slices_approx(&neon_out, &scalar_out, 1e-5);
+        let a: Vec<f32> = vec![1.0; dim];
+        let b: Vec<f32> = vec![2.0; dim];
+        let c: Vec<f32> = vec![3.0; dim];
+        let result = embedding_sum(&[&a, &b, &c], dim).unwrap();
+        assert_eq!(result, vec![6.0; dim]);
     }
 
     #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn test_neon_large_vocab_100k_dim256() {
-        let vs = 100_000;
-        let dim = 256;
-        let table = make_table(vs, dim);
-        let tid = 99_999;
-        let mut neon_out = vec![0.0f32; dim];
-        let mut scalar_out = vec![0.0f32; dim];
-        unsafe { neon_embedding_lookup(&table, vs, dim, tid, &mut neon_out) };
-        scalar_embedding_lookup(&table, vs, dim, tid, &mut scalar_out);
-        assert_slices_approx(&neon_out, &scalar_out, 1.0);
+    fn test_sum_neon_scalar_parity() {
+        let dim = 19;
+        let a: Vec<f32> = (0..dim).map(|i| i as f32 * 0.1).collect();
+        let b: Vec<f32> = (0..dim).map(|i| i as f32 * 0.2).collect();
+        let c: Vec<f32> = (0..dim).map(|i| i as f32 * 0.3).collect();
+        let via_pub = embedding_sum(&[&a, &b, &c], dim).unwrap();
+        let mut scalar = vec![0.0f32; dim];
+        scalar_embedding_sum(&[&a[..], &b[..], &c[..]], dim, &mut scalar);
+        for (j, (&a_v, &b_v)) in via_pub.iter().zip(scalar.iter()).enumerate() {
+            assert!(
+                (a_v - b_v).abs() < 1e-6,
+                "mismatch at [{j}]: neon={a_v} scalar={b_v}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sum_negative_values() {
+        let a = vec![-1.0f32; 8];
+        let b = vec![1.0f32; 8];
+        let result = embedding_sum(&[&a, &b], 8).unwrap();
+        for &v in &result {
+            assert!((v).abs() < 1e-6);
+        }
+    }
+
+    // ── embedding_scale ─────────────────────────────────────────────
+
+    #[test]
+    fn test_scale_basic() {
+        let mut emb = vec![2.0f32; 8];
+        let result = embedding_scale(&mut emb, 3.0);
+        assert_eq!(result, vec![6.0; 8]);
+        assert_eq!(emb, vec![6.0; 8]);
+    }
+
+    #[test]
+    fn test_scale_zero() {
+        let mut emb = vec![5.0f32; 8];
+        let result = embedding_scale(&mut emb, 0.0);
+        assert_eq!(result, vec![0.0; 8]);
+    }
+
+    #[test]
+    fn test_scale_one() {
+        let mut emb = vec![3.0f32; 8];
+        let result = embedding_scale(&mut emb, 1.0);
+        assert_eq!(result, vec![3.0; 8]);
+    }
+
+    #[test]
+    fn test_scale_negative() {
+        let mut emb = vec![2.0f32; 8];
+        let result = embedding_scale(&mut emb, -1.0);
+        assert_eq!(result, vec![-2.0; 8]);
+    }
+
+    #[test]
+    fn test_scale_empty() {
+        let mut emb: Vec<f32> = vec![];
+        let result = embedding_scale(&mut emb, 5.0);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_scale_non_aligned() {
+        let mut emb: Vec<f32> = (0..5).map(|i| i as f32).collect();
+        let result = embedding_scale(&mut emb, 2.0);
+        assert_eq!(result, vec![0.0, 2.0, 4.0, 6.0, 8.0]);
+    }
+
+    #[test]
+    fn test_scale_large() {
+        let dim = 1024;
+        let mut emb = vec![1.0f32; dim];
+        let result = embedding_scale(&mut emb, 0.5);
+        assert_eq!(result, vec![0.5; dim]);
+    }
+
+    #[test]
+    fn test_scale_fractional() {
+        let mut emb = vec![10.0f32; 4];
+        let result = embedding_scale(&mut emb, 0.1);
+        for &v in &result {
+            assert!((v - 1.0).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_scale_neon_scalar_parity() {
+        let dim = 33;
+        let factor = 1.5f32;
+        let original: Vec<f32> = (0..dim).map(|i| i as f32 * 0.7).collect();
+
+        let mut neon_copy = original.clone();
+        let neon_result = embedding_scale(&mut neon_copy, factor);
+
+        let mut scalar_copy = original.clone();
+        scalar_scale(&mut scalar_copy, factor);
+
+        for (j, (&a, &b)) in neon_result.iter().zip(scalar_copy.iter()).enumerate() {
+            assert!(
+                (a - b).abs() < 1e-6,
+                "mismatch at [{j}]: neon={a} scalar={b}"
+            );
+        }
+    }
+
+    // ── packed_embedding_lookup_i8 ──────────────────────────────────
+
+    #[test]
+    fn test_i8_lookup_basic() {
+        let table = make_i8_table(4, 8);
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 1.0).unwrap();
+        assert_eq!(result, vec![1.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_with_scale() {
+        let table = make_i8_table(4, 8);
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 0.5).unwrap();
+        assert_eq!(result, vec![0.5; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_last_row() {
+        let table = make_i8_table(4, 8);
+        let result = packed_embedding_lookup_i8(&table, 3, 8, 1.0).unwrap();
+        assert_eq!(result, vec![4.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_out_of_bounds() {
+        let table = make_i8_table(4, 8);
+        assert!(packed_embedding_lookup_i8(&table, 4, 8, 1.0).is_err());
+    }
+
+    #[test]
+    fn test_i8_lookup_zero_dim() {
+        let result = packed_embedding_lookup_i8(&[], 0, 0, 1.0).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_i8_lookup_single_element() {
+        let table = vec![42i8];
+        let result = packed_embedding_lookup_i8(&table, 0, 1, 1.0).unwrap();
+        assert_eq!(result, vec![42.0]);
+    }
+
+    #[test]
+    fn test_i8_lookup_negative_values() {
+        let table = vec![-10i8; 8];
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 1.0).unwrap();
+        assert_eq!(result, vec![-10.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_non_aligned_dim() {
+        let dim = 5;
+        let table: Vec<i8> = (0..20).map(|v| (v % 127) as i8).collect();
+        let result = packed_embedding_lookup_i8(&table, 1, dim, 2.0).unwrap();
+        let expected: Vec<f32> = (5..10).map(|v| v as f32 * 2.0).collect();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_i8_lookup_large_dim() {
+        let dim = 1024;
+        let table: Vec<i8> = (0..dim * 2).map(|v| ((v % 127) as i8)).collect();
+        let result = packed_embedding_lookup_i8(&table, 1, dim, 0.1).unwrap();
+        assert_eq!(result.len(), dim);
+        for (j, &v) in result.iter().enumerate() {
+            let expected = ((dim + j) % 127) as f32 * 0.1;
+            assert!(
+                (v - expected).abs() < 1e-5,
+                "mismatch at [{j}]: got={v} expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_i8_lookup_neon_scalar_parity() {
+        let dim = 33;
+        let scale = 0.25f32;
+        let table: Vec<i8> = (0..10 * dim)
+            .map(|v| ((v as i32 % 255) - 128) as i8)
+            .collect();
+        for idx in 0..10u32 {
+            let via_pub = packed_embedding_lookup_i8(&table, idx, dim, scale).unwrap();
+            let mut scalar = vec![0.0f32; dim];
+            scalar_packed_lookup_i8(&table, idx as usize, dim, scale, &mut scalar);
+            for (j, (&a, &b)) in via_pub.iter().zip(scalar.iter()).enumerate() {
+                assert!(
+                    (a - b).abs() < 1e-6,
+                    "mismatch at idx={idx} [{j}]: neon={a} scalar={b}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_i8_lookup_dim_7() {
+        let table: Vec<i8> = vec![1, 2, 3, 4, 5, 6, 7, 10, 20, 30, 40, 50, 60, 70];
+        let result = packed_embedding_lookup_i8(&table, 1, 7, 1.0).unwrap();
+        assert_eq!(result, vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]);
+    }
+
+    #[test]
+    fn test_i8_lookup_extreme_scale() {
+        let table = vec![100i8; 8];
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 1000.0).unwrap();
+        assert_eq!(result, vec![100_000.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_zero_scale() {
+        let table = vec![100i8; 8];
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 0.0).unwrap();
+        assert_eq!(result, vec![0.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_negative_scale() {
+        let table = vec![10i8; 8];
+        let result = packed_embedding_lookup_i8(&table, 0, 8, -1.0).unwrap();
+        assert_eq!(result, vec![-10.0; 8]);
+    }
+
+    // ── Cross-function integration tests ────────────────────────────
+
+    #[test]
+    fn test_lookup_then_scale() {
+        let table = make_table(4, 8);
+        let mut emb = embedding_lookup_f32(&table, 2, 8).unwrap();
+        assert_eq!(emb, vec![3.0; 8]);
+        let scaled = embedding_scale(&mut emb, 2.0);
+        assert_eq!(scaled, vec![6.0; 8]);
+    }
+
+    #[test]
+    fn test_lookup_then_sum() {
+        let table = make_table(4, 8);
+        let tok = embedding_lookup_f32(&table, 0, 8).unwrap();
+        let pos = embedding_lookup_f32(&table, 1, 8).unwrap();
+        let result = embedding_sum(&[&tok, &pos], 8).unwrap();
+        assert_eq!(result, vec![3.0; 8]);
+    }
+
+    #[test]
+    fn test_batched_then_sum() {
+        let table = make_table(4, 8);
+        let batch = batched_embedding_lookup(&table, &[0, 1], 8).unwrap();
+        let tok = &batch[..8];
+        let pos = &batch[8..];
+        let result = embedding_sum(&[tok, pos], 8).unwrap();
+        assert_eq!(result, vec![3.0; 8]);
+    }
+
+    #[test]
+    fn test_i8_lookup_then_scale() {
+        let table = make_i8_table(4, 8);
+        let mut emb = packed_embedding_lookup_i8(&table, 1, 8, 0.5).unwrap();
+        assert_eq!(emb, vec![1.0; 8]);
+        let scaled = embedding_scale(&mut emb, 3.0);
+        assert_eq!(scaled, vec![3.0; 8]);
+    }
+
+    #[test]
+    fn test_sum_i8_and_f32() {
+        let f32_table = make_table(4, 8);
+        let i8_table = make_i8_table(4, 8);
+        let tok = embedding_lookup_f32(&f32_table, 0, 8).unwrap();
+        let pos = packed_embedding_lookup_i8(&i8_table, 1, 8, 1.0).unwrap();
+        let result = embedding_sum(&[&tok, &pos], 8).unwrap();
+        assert_eq!(result, vec![3.0; 8]);
+    }
+
+    // ── Stress / edge-case tests ────────────────────────────────────
+
+    #[test]
+    fn test_batched_large_vocab() {
+        let vocab = 50_000;
+        let dim = 128;
+        let table = make_ramp_table(vocab, dim);
+        let indices: Vec<u32> = vec![0, 49_999, 25_000];
+        let result = batched_embedding_lookup(&table, &indices, dim).unwrap();
+        assert_eq!(result.len(), 3 * dim);
+        assert_eq!(result[0], 0.0);
+        assert_eq!(result[dim], (49_999 * dim) as f32);
+    }
+
+    #[test]
+    fn test_scale_preserves_nan() {
+        let mut emb = vec![f32::NAN; 4];
+        let result = embedding_scale(&mut emb, 2.0);
+        for v in &result {
+            assert!(v.is_nan());
+        }
+    }
+
+    #[test]
+    fn test_scale_inf() {
+        let mut emb = vec![f32::INFINITY; 4];
+        let result = embedding_scale(&mut emb, 2.0);
+        assert_eq!(result, vec![f32::INFINITY; 4]);
+    }
+
+    #[test]
+    fn test_lookup_f32_dim_1() {
+        let table = vec![10.0, 20.0, 30.0];
+        let result = embedding_lookup_f32(&table, 2, 1).unwrap();
+        assert_eq!(result, vec![30.0]);
+    }
+
+    #[test]
+    fn test_batched_dim_1() {
+        let table = vec![10.0, 20.0, 30.0];
+        let result = batched_embedding_lookup(&table, &[2, 0, 1], 1).unwrap();
+        assert_eq!(result, vec![30.0, 10.0, 20.0]);
+    }
+
+    #[test]
+    fn test_i8_min_max_values() {
+        let table = vec![i8::MIN, i8::MAX, 0, 1, -1, 50, -50, 127];
+        let result = packed_embedding_lookup_i8(&table, 0, 8, 1.0).unwrap();
+        assert_eq!(result[0], -128.0);
+        assert_eq!(result[1], 127.0);
+        assert_eq!(result[2], 0.0);
+    }
+
+    #[test]
+    fn test_sum_many_embeddings() {
+        let dim = 16;
+        let count = 10;
+        let vecs: Vec<Vec<f32>> = (0..count).map(|_| vec![1.0; dim]).collect();
+        let refs: Vec<&[f32]> = vecs.iter().map(|v| v.as_slice()).collect();
+        let result = embedding_sum(&refs, dim).unwrap();
+        assert_eq!(result, vec![count as f32; dim]);
     }
 }

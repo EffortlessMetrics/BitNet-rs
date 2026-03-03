@@ -1,9 +1,7 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
-pub mod auth;
 pub mod batch_engine;
-pub mod batch_request;
 pub mod canary;
 // Expose `caching` only when generating docs to avoid -Dwarnings dead_code in scaffolding.
 #[cfg(doc)]
@@ -21,15 +19,10 @@ pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
 pub mod monitoring;
-pub mod rate_limiter;
-pub mod request_context;
-pub mod request_router;
-pub mod runtime_model_registry;
 pub mod security;
 pub mod sse;
 pub mod stream_handler;
 pub mod streaming;
-pub mod streaming_response;
 pub mod websocket;
 
 use anyhow::Result;
