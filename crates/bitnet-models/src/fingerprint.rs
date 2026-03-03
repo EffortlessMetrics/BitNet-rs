@@ -1,121 +1,16 @@
-//! Model fingerprinting.
+//! GGUF file fingerprinting for correction policy matching
 //!
-//! Generate unique fingerprints for model identification and caching.
+//! This module provides SHA256 fingerprinting of GGUF files to identify
+//! specific model versions for policy-driven corrections.
 
+use bitnet_common::{BitNetError, Result};
 use sha2::{Digest, Sha256};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::io::Read;
+use std::path::Path;
 
-/// Model fingerprint components.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct FingerprintInput {
-    pub architecture: String,
-    pub num_layers: usize,
-    pub hidden_size: usize,
-    pub vocab_size: usize,
-    pub quant_type: String,
-}
-
-/// Computed fingerprint.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ModelFingerprint {
-    pub hash: u64,
-    pub hex: String,
-    pub short: String,
-}
-
-impl ModelFingerprint {
-    pub fn matches(&self, other: &ModelFingerprint) -> bool {
-        self.hash == other.hash
-    }
-}
-
-/// Compute a fingerprint from model properties.
-pub fn compute_fingerprint(input: &FingerprintInput) -> ModelFingerprint {
-    let mut hasher = DefaultHasher::new();
-    input.hash(&mut hasher);
-    let hash = hasher.finish();
-    let hex = format!("{hash:016x}");
-    let short = hex[..8].to_string();
-    ModelFingerprint { hash, hex, short }
-}
-
-/// Compute a fingerprint from raw bytes (e.g., first N bytes of a file).
-pub fn fingerprint_bytes(data: &[u8]) -> ModelFingerprint {
-    let mut hasher = DefaultHasher::new();
-    data.hash(&mut hasher);
-    let hash = hasher.finish();
-    let hex = format!("{hash:016x}");
-    let short = hex[..8].to_string();
-    ModelFingerprint { hash, hex, short }
-}
-
-/// Fingerprint cache entry.
-#[derive(Debug, Clone)]
-pub struct CacheEntry {
-    pub fingerprint: ModelFingerprint,
-    pub model_path: String,
-    pub model_name: String,
-    pub file_size: u64,
-}
-
-/// Fingerprint cache for quick model lookup.
-#[derive(Debug, Clone, Default)]
-pub struct FingerprintCache {
-    entries: Vec<CacheEntry>,
-}
-
-impl FingerprintCache {
-    pub fn new() -> Self {
-        Self { entries: Vec::new() }
-    }
-
-    pub fn add(&mut self, entry: CacheEntry) {
-        self.entries.push(entry);
-    }
-
-    pub fn find(&self, fp: &ModelFingerprint) -> Option<&CacheEntry> {
-        self.entries.iter().find(|e| e.fingerprint.matches(fp))
-    }
-
-    pub fn find_by_name(&self, name: &str) -> Option<&CacheEntry> {
-        self.entries.iter().find(|e| e.model_name == name)
-    }
-
-    pub fn count(&self) -> usize {
-        self.entries.len()
-    }
-
-    pub fn remove(&mut self, fp: &ModelFingerprint) -> bool {
-        let before = self.entries.len();
-        self.entries.retain(|e| !e.fingerprint.matches(fp));
-        self.entries.len() < before
-    }
-
-    pub fn all(&self) -> &[CacheEntry] {
-        &self.entries
-    }
-}
-
-/// Quick fingerprint from model config values.
-pub fn quick_fingerprint(
-    arch: &str,
-    layers: usize,
-    hidden: usize,
-    vocab: usize,
-) -> ModelFingerprint {
-    compute_fingerprint(&FingerprintInput {
-        architecture: arch.to_string(),
-        num_layers: layers,
-        hidden_size: hidden,
-        vocab_size: vocab,
-        quant_type: String::new(),
-    })
-}
-
-// Legacy SHA256 fingerprinting used by GGUF loader for policy matching.
-
-/// Compute SHA256 fingerprint of a GGUF file (returns `"sha256-<hex>"`).
+/// Compute SHA256 fingerprint of a GGUF file
+///
+/// Returns a string in the format "sha256-<hex_digest>"
 pub fn compute_gguf_fingerprint(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
@@ -123,7 +18,32 @@ pub fn compute_gguf_fingerprint(data: &[u8]) -> String {
     format!("sha256-{:x}", result)
 }
 
-/// Format raw hash bytes as a `"sha256-<hex>"` string.
+/// Compute SHA256 fingerprint from a file path
+pub fn compute_file_fingerprint(path: &Path) -> Result<String> {
+    let mut file = std::fs::File::open(path).map_err(|e| {
+        BitNetError::Validation(format!("Failed to open file for fingerprinting: {}", e))
+    })?;
+
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; 1024 * 1024]; // 1MB buffer
+
+    loop {
+        let n = file.read(&mut buffer).map_err(|e| {
+            BitNetError::Validation(format!("Failed to read file for fingerprinting: {}", e))
+        })?;
+
+        if n == 0 {
+            break;
+        }
+
+        hasher.update(&buffer[..n]);
+    }
+
+    let result = hasher.finalize();
+    Ok(format!("sha256-{:x}", result))
+}
+
+/// Extract fingerprint from metadata (if already computed)
 pub fn format_fingerprint(hash_bytes: &[u8]) -> String {
     format!("sha256-{}", hex::encode(hash_bytes))
 }
@@ -131,126 +51,71 @@ pub fn format_fingerprint(hash_bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
-    fn sample_input() -> FingerprintInput {
-        FingerprintInput {
-            architecture: "PhiForCausalLM".into(),
-            num_layers: 40,
-            hidden_size: 5120,
-            vocab_size: 100352,
-            quant_type: "bf16".into(),
+    #[test]
+    fn test_compute_fingerprint_empty() {
+        let data = b"";
+        let fp = compute_gguf_fingerprint(data);
+        // SHA256 of empty string
+        assert_eq!(fp, "sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    }
+
+    #[test]
+    fn test_compute_fingerprint_known() {
+        let data = b"hello world";
+        let fp = compute_gguf_fingerprint(data);
+        // SHA256 of "hello world"
+        assert_eq!(fp, "sha256-b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+    }
+
+    #[test]
+    fn test_compute_fingerprint_stability() {
+        let data = b"test data for fingerprinting";
+        let fp1 = compute_gguf_fingerprint(data);
+        let fp2 = compute_gguf_fingerprint(data);
+        assert_eq!(fp1, fp2, "Fingerprint should be stable");
+    }
+
+    #[test]
+    fn test_compute_fingerprint_different_data() {
+        let data1 = b"data1";
+        let data2 = b"data2";
+        let fp1 = compute_gguf_fingerprint(data1);
+        let fp2 = compute_gguf_fingerprint(data2);
+        assert_ne!(fp1, fp2, "Different data should have different fingerprints");
+    }
+
+    #[test]
+    fn test_compute_file_fingerprint() {
+        let mut temp = tempfile::NamedTempFile::new().unwrap();
+        temp.write_all(b"test file content").unwrap();
+        temp.flush().unwrap();
+
+        let fp = compute_file_fingerprint(temp.path()).unwrap();
+        assert!(fp.starts_with("sha256-"));
+        assert_eq!(fp.len(), 71); // "sha256-" + 64 hex chars
+    }
+
+    #[test]
+    fn test_compute_file_fingerprint_large() {
+        let mut temp = tempfile::NamedTempFile::new().unwrap();
+        // Write 10MB of data
+        let chunk = vec![0xAB; 1024 * 1024];
+        for _ in 0..10 {
+            temp.write_all(&chunk).unwrap();
         }
+        temp.flush().unwrap();
+
+        let fp = compute_file_fingerprint(temp.path()).unwrap();
+        assert!(fp.starts_with("sha256-"));
+        assert_eq!(fp.len(), 71);
     }
 
     #[test]
-    fn test_deterministic() {
-        let a = compute_fingerprint(&sample_input());
-        let b = compute_fingerprint(&sample_input());
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn test_different_inputs() {
-        let mut input = sample_input();
-        let a = compute_fingerprint(&input);
-        input.num_layers = 32;
-        let b = compute_fingerprint(&input);
-        assert_ne!(a, b);
-    }
-
-    #[test]
-    fn test_hex_length() {
-        let fp = compute_fingerprint(&sample_input());
-        assert_eq!(fp.hex.len(), 16);
-        assert_eq!(fp.short.len(), 8);
-    }
-
-    #[test]
-    fn test_matches() {
-        let a = compute_fingerprint(&sample_input());
-        let b = compute_fingerprint(&sample_input());
-        assert!(a.matches(&b));
-    }
-
-    #[test]
-    fn test_fingerprint_bytes() {
-        let a = fingerprint_bytes(b"hello world");
-        let b = fingerprint_bytes(b"hello world");
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn test_fingerprint_bytes_different() {
-        let a = fingerprint_bytes(b"hello");
-        let b = fingerprint_bytes(b"world");
-        assert_ne!(a, b);
-    }
-
-    #[test]
-    fn test_cache_add_find() {
-        let mut cache = FingerprintCache::new();
-        let fp = compute_fingerprint(&sample_input());
-        cache.add(CacheEntry {
-            fingerprint: fp.clone(),
-            model_path: "/models/phi4.gguf".into(),
-            model_name: "phi-4".into(),
-            file_size: 28_000_000_000,
-        });
-        assert_eq!(cache.count(), 1);
-        assert!(cache.find(&fp).is_some());
-    }
-
-    #[test]
-    fn test_cache_find_by_name() {
-        let mut cache = FingerprintCache::new();
-        let fp = compute_fingerprint(&sample_input());
-        cache.add(CacheEntry {
-            fingerprint: fp,
-            model_path: "/test".into(),
-            model_name: "phi-4".into(),
-            file_size: 100,
-        });
-        assert!(cache.find_by_name("phi-4").is_some());
-        assert!(cache.find_by_name("llama").is_none());
-    }
-
-    #[test]
-    fn test_cache_remove() {
-        let mut cache = FingerprintCache::new();
-        let fp = compute_fingerprint(&sample_input());
-        cache.add(CacheEntry {
-            fingerprint: fp.clone(),
-            model_path: "/test".into(),
-            model_name: "test".into(),
-            file_size: 100,
-        });
-        assert!(cache.remove(&fp));
-        assert_eq!(cache.count(), 0);
-    }
-
-    #[test]
-    fn test_quick_fingerprint() {
-        let fp = quick_fingerprint("Phi", 40, 5120, 100352);
-        assert!(!fp.hex.is_empty());
-    }
-
-    #[test]
-    fn test_empty_cache() {
-        let cache = FingerprintCache::new();
-        assert_eq!(cache.count(), 0);
-        let fp = compute_fingerprint(&sample_input());
-        assert!(cache.find(&fp).is_none());
-    }
-
-    #[test]
-    fn test_cache_all() {
-        let mut cache = FingerprintCache::new();
-        cache.add(CacheEntry {
-            fingerprint: compute_fingerprint(&sample_input()),
-            model_path: "/a".into(),
-            model_name: "a".into(),
-            file_size: 1,
-        });
-        assert_eq!(cache.all().len(), 1);
+    fn test_format_fingerprint() {
+        let hash_bytes = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
+        let fp = format_fingerprint(&hash_bytes);
+        assert_eq!(fp, "sha256-0123456789abcdef");
     }
 }

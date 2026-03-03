@@ -191,6 +191,44 @@ pub fn append_to_loader_path(new_path: &str) -> String {
     }
 }
 
+/// Returns platform-specific path separator for loader paths
+///
+/// # Returns
+/// - `":"` on Unix (Linux/macOS)
+/// - `";"` on Windows
+pub fn path_separator() -> &'static str {
+    if cfg!(target_os = "windows") { ";" } else { ":" }
+}
+
+/// Splits a loader path string into individual path components
+///
+/// Uses platform-specific separator (`:` on Unix, `;` on Windows).
+///
+/// # Arguments
+/// - `path`: Combined path string (e.g., "/usr/lib:/opt/lib")
+///
+/// # Returns
+/// Vector of individual path strings. Empty input returns empty vec.
+pub fn split_loader_path(path: &str) -> Vec<String> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    path.split(path_separator()).map(|s| s.to_string()).collect()
+}
+
+/// Joins path components into a single loader path string
+///
+/// Uses platform-specific separator (`:` on Unix, `;` on Windows).
+///
+/// # Arguments
+/// - `paths`: Slice of path strings to join
+///
+/// # Returns
+/// Combined path string. Empty slice returns empty string.
+pub fn join_loader_path(paths: &[&str]) -> String {
+    paths.join(path_separator())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
