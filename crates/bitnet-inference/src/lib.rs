@@ -36,6 +36,7 @@ pub mod layers;
 pub mod memory_estimation;
 pub mod memory_pool;
 pub mod metrics;
+pub mod metrics_collector;
 pub mod model_profiler;
 pub mod npu;
 pub mod production_engine; // always available (sync parser)
