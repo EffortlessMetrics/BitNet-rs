@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+assertion_line: 183
 expression: config
 ---
 PoolConfig {
@@ -7,4 +8,6 @@ PoolConfig {
     kernel_size: 3,
     stride: 2,
     padding: 1,
+    dilation: 1,
+    ceil_mode: false,
 }

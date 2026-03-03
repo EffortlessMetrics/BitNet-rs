@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
+assertion_line: 92
 expression: config
 ---
 AttentionConfig {
@@ -7,5 +8,6 @@ AttentionConfig {
     head_dim: 64,
     seq_len: 128,
     causal: true,
+    use_alibi: false,
     scale: None,
 }

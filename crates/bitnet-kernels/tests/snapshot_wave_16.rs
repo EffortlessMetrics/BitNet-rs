@@ -2,7 +2,6 @@
 //!
 //! Covers: config defaults, enum Debug/Display formatting, kernel output
 //! shapes, error messages, metric calculations, and state transitions.
-#![allow(clippy::manual_div_ceil)]
 
 // ── Config default snapshots ───────────────────────────────────────
 
