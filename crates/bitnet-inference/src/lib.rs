@@ -67,6 +67,7 @@ pub mod prefix_cache;
 pub mod profiler;
 pub mod rt;
 pub mod runtime_utils;
+pub mod sampler_config;
 pub mod sampling;
 pub mod sampling_presets;
 pub mod sampling_utils;
