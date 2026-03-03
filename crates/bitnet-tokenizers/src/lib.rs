@@ -22,7 +22,6 @@ pub mod preprocessor;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
 pub mod token_validation;
-pub mod tokenizer_bench;
 pub mod universal;
 
 // New tokenizer discovery and auto-download modules

@@ -1,7 +1,6 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
-pub mod auth;
 pub mod batch_engine;
 pub mod batch_request;
 pub mod canary;
@@ -21,10 +20,7 @@ pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
 pub mod monitoring;
-pub mod rate_limiter;
 pub mod request_router;
-pub mod response_builder;
-pub mod runtime_model_registry;
 pub mod security;
 pub mod sse;
 pub mod stream_handler;

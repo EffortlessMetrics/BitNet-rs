@@ -6,13 +6,18 @@
 use std::time::{Duration, Instant};
 
 /// Priority level for a request.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Priority {
     Low,
-    #[default]
     Normal,
     High,
     Critical,
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Self::Normal
+    }
 }
 
 /// A single inference request in a batch.

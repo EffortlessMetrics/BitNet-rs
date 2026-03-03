@@ -3,9 +3,6 @@
 //! Provides chat and instruct format templates for common model families.
 //! Ensures proper prompt formatting for optimal model behavior.
 
-#![allow(rustdoc::broken_intra_doc_links)]
-#![allow(rustdoc::invalid_html_tags)]
-
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 

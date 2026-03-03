@@ -21,6 +21,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
 
 # Build release binary with GPU support
+ENV CUDA_COMPUTE_CAP=80
 RUN cargo build --release --bin bitnet-cli --no-default-features --features gpu
 
 # Runtime stage

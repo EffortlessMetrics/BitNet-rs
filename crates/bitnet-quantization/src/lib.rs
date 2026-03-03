@@ -29,7 +29,6 @@ pub mod property_based_tests;
 pub mod qk256_dispatch;
 // pub mod robustness_tests; // Keep disabled until needed
 pub mod pipeline;
-pub mod quant_error;
 pub mod quant_planner;
 pub mod simd_ops;
 pub mod tl1;

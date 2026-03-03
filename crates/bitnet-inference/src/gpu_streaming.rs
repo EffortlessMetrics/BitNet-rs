@@ -1,6 +1,6 @@
 //! GPU-aware streaming generation with device-to-host token transfer.
 //!
-//! Extends `GenerationStream` to work transparently with GPU backends,
+//! Extends [`GenerationStream`] to work transparently with GPU backends,
 //! handling per-token GPU→host transfers and backpressure when the client
 //! cannot keep up with generation speed.
 
@@ -266,7 +266,8 @@ mod tests {
 
     #[test]
     fn zero_capacity_config_is_invalid() {
-        let cfg = GpuStreamingConfig { channel_capacity: 0, ..Default::default() };
+        let mut cfg = GpuStreamingConfig::default();
+        cfg.channel_capacity = 0;
         assert!(cfg.validate().is_err());
     }
 
