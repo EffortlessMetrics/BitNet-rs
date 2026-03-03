@@ -23,6 +23,7 @@ pub mod tensor;
 pub mod tensor_layout;
 pub mod tensor_serde;
 pub mod tensor_validation;
+pub mod token_ring;
 pub mod types;
 
 // Re-exports from microcrates for backward compatibility
