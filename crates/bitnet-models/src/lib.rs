@@ -32,6 +32,7 @@ pub mod memory_estimator;
 pub mod metadata_extractor;
 pub mod minimal;
 pub mod model_catalog;
+pub mod model_checkpoint;
 pub mod model_compare;
 pub mod model_diff;
 pub mod model_fingerprint;
