@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"head_dim={:?} gqa_groups={:?} complete={}\", m.head_dim(),\nm.gqa_groups(), m.is_complete(),)"
+---
+head_dim=Some(128) gqa_groups=Some(4) complete=true

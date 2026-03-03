@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: caps
+---
+[
+    "text_generation",
+]

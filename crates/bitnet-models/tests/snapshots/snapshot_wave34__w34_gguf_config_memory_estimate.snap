@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"weight_bytes={} kv_cache_bytes={} total_bytes={}\", est.weight_bytes,\nest.kv_cache_bytes, est.total_bytes,)"
+---
+weight_bytes=1882193920 kv_cache_bytes=2147483648 total_bytes=4029677568

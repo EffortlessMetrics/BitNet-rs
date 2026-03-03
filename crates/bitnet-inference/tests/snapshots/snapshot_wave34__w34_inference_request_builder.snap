@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: req
+---
+InferenceRequest {
+    id: "req-001",
+    prompt: "What is 2+2?",
+    max_tokens: 32,
+    temperature: 0.0,
+    top_p: 1.0,
+    top_k: 1,
+    repetition_penalty: 1.1,
+    stop_sequences: [],
+    seed: Some(
+        42,
+    ),
+    stream: true,
+    metadata: {},
+}

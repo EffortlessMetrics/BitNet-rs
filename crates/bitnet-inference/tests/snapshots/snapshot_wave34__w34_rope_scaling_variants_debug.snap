@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: debug
+---
+[
+    "None",
+    "Linear(2.0)",
+    "Dynamic(1.5)",
+    "Yarn { factor: 4.0, original_max_pos: 8192 }",
+    "NTKAware(8.0)",
+]

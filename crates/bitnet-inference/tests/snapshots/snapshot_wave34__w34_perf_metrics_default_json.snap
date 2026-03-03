@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "serde_json::to_string_pretty(&m).unwrap()"
+---
+{
+  "total_latency_ms": 0,
+  "tokens_generated": 0,
+  "tokens_per_second": 0.0,
+  "first_token_latency_ms": null,
+  "average_token_latency_ms": null,
+  "memory_usage_bytes": null,
+  "cache_hit_rate": null,
+  "backend_type": "unknown",
+  "model_load_time_ms": null,
+  "tokenizer_encode_time_ms": null,
+  "tokenizer_decode_time_ms": null,
+  "forward_pass_time_ms": null,
+  "sampling_time_ms": null
+}

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: t
+---
+TimingInfo {
+    prompt_eval_ms: 50,
+    generation_ms: 2000,
+    total_ms: 2050,
+    tokens_per_sec: 32.0,
+}

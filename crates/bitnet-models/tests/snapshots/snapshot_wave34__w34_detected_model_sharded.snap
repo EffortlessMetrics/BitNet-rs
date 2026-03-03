@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: m
+---
+DetectedModel {
+    path: "model-00002-of-00006.safetensors",
+    format: SafeTensors,
+    size_bytes: 5000000000,
+    shard_index: Some(
+        2,
+    ),
+    total_shards: Some(
+        6,
+    ),
+}

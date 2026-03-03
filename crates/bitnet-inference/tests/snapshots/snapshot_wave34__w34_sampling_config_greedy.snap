@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: cfg
+---
+SamplingConfig {
+    temperature: 0.0,
+    top_k: 1,
+    top_p: 1.0,
+    repetition_penalty: 1.0,
+    seed: Some(
+        42,
+    ),
+}

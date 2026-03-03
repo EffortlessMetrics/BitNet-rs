@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"healthy={} errors={} warnings={} checks={}\", report.is_healthy(),\nreport.error_count(), report.warning_count(), report.checks.len(),)"
+---
+healthy=true errors=0 warnings=0 checks=3

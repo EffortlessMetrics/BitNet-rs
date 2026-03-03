@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"display={}\\ncompact_id={}\\nsize_label={}\\nis_quantized={}\\nest_bytes={}\",\nfp, fp.compact_id(), fp.size_label(), fp.is_quantized(),\nfp.estimated_weight_bytes(),)"
+---
+display=llama (6.7B, 32 layers, hidden=4096, heads=32, vocab=32000, quant=f16)
+compact_id=llama-L32-H4096-A32-V32000-f16
+size_label=6.7B
+is_quantized=false
+est_bytes=13476831232

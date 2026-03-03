@@ -1,0 +1,30 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: structure
+---
+ModelStructure {
+    num_layers: 2,
+    layers: [
+        LayerInfo {
+            index: 0,
+            components: {
+                "attn_q",
+                "ffn_gate",
+            },
+            tensor_count: 2,
+        },
+        LayerInfo {
+            index: 1,
+            components: {
+                "attn_q",
+                "ffn_gate",
+            },
+            tensor_count: 2,
+        },
+    ],
+    non_layer_tensors: [
+        "token_embd.weight",
+        "output_norm.weight",
+    ],
+    tensor_name_pattern: Gguf,
+}

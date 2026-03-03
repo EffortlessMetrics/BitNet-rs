@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: agg
+---
+AggregateMetrics {
+    runs: 3,
+    total_tokens: 60,
+    total_duration: 3s,
+    avg_tps: 25.0,
+    min_tps: 25.0,
+    max_tps: 25.0,
+}

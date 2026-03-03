@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"strict={} align={} profile={} device={:?} max_size_gb={}\",\ncfg.strict_validation, cfg.validate_tensor_alignment, cfg.profile_memory,\ncfg.target_device, cfg.max_model_size_bytes.unwrap_or(0) /\n(1024 * 1024 * 1024),)"
+---
+strict=true align=true profile=false device=Cpu max_size_gb=32

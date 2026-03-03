@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"{e}\")"
+---
+configuration validation failed: hidden_size must be divisible by num_heads

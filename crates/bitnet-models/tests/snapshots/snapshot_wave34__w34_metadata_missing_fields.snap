@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: m.missing_fields()
+---
+[
+    "num_layers",
+    "num_heads",
+    "vocab_size",
+]

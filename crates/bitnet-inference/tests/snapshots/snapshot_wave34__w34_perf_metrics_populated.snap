@@ -1,0 +1,37 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: m
+---
+PerformanceMetrics {
+    total_latency_ms: 2500,
+    tokens_generated: 64,
+    tokens_per_second: 25.6,
+    first_token_latency_ms: Some(
+        150,
+    ),
+    average_token_latency_ms: Some(
+        36.72,
+    ),
+    memory_usage_bytes: Some(
+        536870912,
+    ),
+    cache_hit_rate: Some(
+        0.87,
+    ),
+    backend_type: "cpu-avx2",
+    model_load_time_ms: Some(
+        800,
+    ),
+    tokenizer_encode_time_ms: Some(
+        5,
+    ),
+    tokenizer_decode_time_ms: Some(
+        3,
+    ),
+    forward_pass_time_ms: Some(
+        2200,
+    ),
+    sampling_time_ms: Some(
+        45,
+    ),
+}

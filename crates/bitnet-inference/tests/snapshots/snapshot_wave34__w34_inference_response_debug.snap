@@ -1,0 +1,31 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: resp
+---
+InferenceResponse {
+    id: "resp-001",
+    text: "The answer is 4.",
+    token_ids: [
+        1,
+        450,
+        1234,
+        338,
+        29871,
+        29946,
+        29889,
+    ],
+    token_count: 7,
+    prompt_tokens: 5,
+    finish_reason: EosToken,
+    timing: TimingInfo {
+        prompt_eval_ms: 30,
+        generation_ms: 350,
+        total_ms: 380,
+        tokens_per_sec: 18.4,
+    },
+    usage: UsageInfo {
+        prompt_tokens: 5,
+        completion_tokens: 7,
+        total_tokens: 12,
+    },
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"{:?}\", m.validate())"
+---
+Ok(())

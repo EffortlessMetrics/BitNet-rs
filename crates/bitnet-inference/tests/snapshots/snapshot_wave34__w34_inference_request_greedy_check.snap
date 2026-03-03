@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"is_greedy={} is_deterministic={}\", req.is_greedy(),\nreq.is_deterministic(),)"
+---
+is_greedy=true is_deterministic=true

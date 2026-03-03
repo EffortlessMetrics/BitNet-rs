@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: spec
+---
+DownloadSpec {
+    url: "https://example.com/model.safetensors",
+    filename: "model.safetensors",
+    expected_bytes: Some(
+        4800000000,
+    ),
+    sha256: Some(
+        "abc123def456",
+    ),
+}

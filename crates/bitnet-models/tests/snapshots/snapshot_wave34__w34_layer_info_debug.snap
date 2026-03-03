@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: li
+---
+LayerInfo {
+    index: 0,
+    components: {
+        "attn_k",
+        "attn_output",
+        "attn_q",
+        "attn_v",
+        "ffn_down",
+        "ffn_gate",
+        "ffn_up",
+    },
+    tensor_count: 7,
+}

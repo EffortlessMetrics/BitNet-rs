@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: debug
+---
+[
+    "MaxTokens",
+    "EosToken",
+    "StopSequence(\"</s>\")",
+    "UserAbort",
+    "Error(\"out of memory\")",
+]

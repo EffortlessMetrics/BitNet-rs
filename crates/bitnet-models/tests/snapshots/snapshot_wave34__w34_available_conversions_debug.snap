@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: info
+---
+[
+    "SafeTensors->GGUF: available=true desc=SafeTensors to GGUF via bitnet-st2gguf",
+    "PyTorch Binary->SafeTensors: available=false desc=PyTorch to SafeTensors (requires Python)",
+    "ONNX->GGUF: available=false desc=ONNX to GGUF (not yet implemented)",
+]

@@ -1,0 +1,46 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: m
+---
+ModelMetadata {
+    model_type: Some(
+        "llama",
+    ),
+    architecture: Some(
+        "LlamaForCausalLM",
+    ),
+    hidden_size: Some(
+        4096,
+    ),
+    num_layers: Some(
+        32,
+    ),
+    num_heads: Some(
+        32,
+    ),
+    num_kv_heads: Some(
+        32,
+    ),
+    vocab_size: Some(
+        32000,
+    ),
+    max_position: Some(
+        4096,
+    ),
+    intermediate_size: Some(
+        11008,
+    ),
+    activation: Some(
+        "silu",
+    ),
+    norm_type: Some(
+        "rms_norm",
+    ),
+    rope_base: Some(
+        10000.0,
+    ),
+    tie_word_embeddings: Some(
+        false,
+    ),
+    extra: {},
+}

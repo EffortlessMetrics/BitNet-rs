@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: dims
+---
+ModelDims {
+    hidden_size: 2048,
+    num_layers: 24,
+    num_heads: 16,
+    num_kv_heads: 4,
+    intermediate_size: 5504,
+    vocab_size: 100000,
+    head_dim: 128,
+}

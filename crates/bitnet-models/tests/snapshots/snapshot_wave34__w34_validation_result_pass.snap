@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: vr
+---
+ValidationResult {
+    passed: true,
+    warnings: [],
+    errors: [],
+    alignment_issues: [],
+    recommendations: [
+        "Consider using AVX2 for better performance",
+    ],
+}

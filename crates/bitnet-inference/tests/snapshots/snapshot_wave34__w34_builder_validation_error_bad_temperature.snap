@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: err
+---
+temperature must be >= 0.0

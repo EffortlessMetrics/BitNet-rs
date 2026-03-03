@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"total_inferences={} total_tokens={} cache_hits={} cache_misses={}\",\nt.total_inferences, t.total_tokens_generated, t.cache_hits, t.cache_misses,)"
+---
+total_inferences=0 total_tokens=0 cache_hits=0 cache_misses=0

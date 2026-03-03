@@ -33,7 +33,6 @@ fn vec_f32(max_len: usize) -> impl Strategy<Value = Vec<f32>> {
 
 /// Strategy producing non-empty f32 vectors with strictly positive
 /// values (useful for gamma weights).
-#[allow(dead_code)]
 fn vec_positive_f32(max_len: usize) -> impl Strategy<Value = Vec<f32>> {
     prop::collection::vec(0.1f32..10.0f32, 1..=max_len)
 }

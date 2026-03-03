@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"{e}\")"
+---
+invalid metadata value for key 'llama.block_count': expected u32, got string

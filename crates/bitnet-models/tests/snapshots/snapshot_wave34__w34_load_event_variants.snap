@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: debug
+---
+[
+    "ShardStart { index: 0, total: 4, name: \"shard-00001.safetensors\" }",
+    "ShardDone { index: 0, total: 4, bytes: 4900000000 }",
+    "TensorStart { name: \"model.embed_tokens.weight\", elements: 131072000 }",
+    "TensorDone { name: \"model.embed_tokens.weight\", elements: 131072000 }",
+    "Conversion { from_dtype: \"bf16\", to_dtype: \"f32\", elements: 4096 }",
+    "Complete { total_tensors: 291, total_bytes: 13600000000, elapsed_ms: 5200 }",
+    "Error { message: \"checksum mismatch\" }",
+]

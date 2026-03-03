@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: m
+---
+InferenceMetrics {
+    prompt_tokens: 0,
+    generated_tokens: 0,
+    total_duration: 0ns,
+    prefill_duration: 0ns,
+    decode_durations: [],
+    peak_memory_bytes: None,
+}

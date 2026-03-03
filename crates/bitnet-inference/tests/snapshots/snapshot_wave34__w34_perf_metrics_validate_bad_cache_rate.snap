@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"{:?}\", m.validate())"
+---
+Err("cache_hit_rate must be between 0.0 and 1.0")

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: results
+---
+[
+    "model-00001-of-00006.safetensors => Some((1, 6))",
+    "weights-00003-of-00012.safetensors => Some((3, 12))",
+    "model.safetensors => None",
+]

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"id={} files={} total_expected={} has_checksums={}\", m.model_id,\nm.file_count(), m.total_expected_bytes(), m.has_checksums(),)"
+---
+id=microsoft/phi-4 files=7 total_expected=28817000000 has_checksums=false

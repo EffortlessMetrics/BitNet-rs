@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: cfg
+---
+RopeConfig {
+    head_dim: 64,
+    max_position: 8192,
+    base: 500000.0,
+    scaling: NTKAware(
+        4.0,
+    ),
+    interleaved: true,
+}

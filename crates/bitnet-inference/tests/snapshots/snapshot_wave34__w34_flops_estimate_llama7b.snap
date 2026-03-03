@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: flops
+---
+FlopsEstimate {
+    attention_flops: 4294967296,
+    ffn_flops: 8657043456,
+    lm_head_flops: 262144000,
+    total_flops: 13214154752,
+}

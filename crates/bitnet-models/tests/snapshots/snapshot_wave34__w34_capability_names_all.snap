@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: names
+---
+[
+    "text_generation",
+    "chat_completion",
+    "code_generation",
+    "fill_in_middle",
+    "embedding",
+    "classification",
+    "tool_use",
+    "vision_input",
+    "audio_input",
+]

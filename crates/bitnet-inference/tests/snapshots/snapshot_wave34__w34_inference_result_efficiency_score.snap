@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"efficiency_score={:.2} acceptable={}\", result.efficiency_score(),\nresult.is_performance_acceptable(),)"
+---
+efficiency_score=0.50 acceptable=true

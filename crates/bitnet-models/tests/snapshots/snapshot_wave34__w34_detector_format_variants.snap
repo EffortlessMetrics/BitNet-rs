@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: info
+---
+[
+    "GGUF supported=true needs_conversion=false",
+    "SafeTensors supported=true needs_conversion=false",
+    "SafeTensors Index supported=true needs_conversion=false",
+    "PyTorch Binary supported=false needs_conversion=true",
+    "ONNX supported=false needs_conversion=true",
+    "Unknown supported=false needs_conversion=false",
+]

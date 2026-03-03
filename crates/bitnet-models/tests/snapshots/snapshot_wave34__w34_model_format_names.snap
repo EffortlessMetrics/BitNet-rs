@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: info
+---
+[
+    "name=SafeTensors ext=safetensors",
+    "name=GGUF ext=gguf",
+]

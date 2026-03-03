@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "run_metrics::format_metrics(&m)"
+---
+=== Inference Metrics ===
+Prompt tokens:    0
+Generated tokens: 0
+Total time:       0.00ns
+TTFT:             0.00ns
+Tokens/sec:       0.00
+Avg latency:      0.00ns
+P50 latency:      0.00ns
+P95 latency:      0.00ns
+P99 latency:      0.00ns

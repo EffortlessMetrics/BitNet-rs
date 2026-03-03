@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"efficiency_ratio={:.4}\", m.efficiency_ratio())"
+---
+efficiency_ratio=0.0500

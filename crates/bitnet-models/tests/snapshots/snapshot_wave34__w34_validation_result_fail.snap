@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: vr
+---
+ValidationResult {
+    passed: false,
+    warnings: [
+        "LayerNorm gamma RMS out of expected range",
+    ],
+    errors: [
+        "Tensor blk.0.attn_q.weight: shape mismatch",
+    ],
+    alignment_issues: [
+        "blk.5.ffn_gate.weight: offset not 32-byte aligned",
+    ],
+    recommendations: [
+        "Re-export model with F16 LayerNorm",
+    ],
+}

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: info
+---
+[
+    "Healthy is_healthy=true is_error=false",
+    "Warning(\"minor alignment issue\") is_healthy=false is_error=false",
+    "Error(\"tensor shape mismatch\") is_healthy=false is_error=true",
+]

@@ -1,0 +1,29 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: report
+---
+HealthReport {
+    checks: [
+        CheckResult {
+            name: "tensor_shapes",
+            status: Healthy,
+            duration_us: 150,
+        },
+        CheckResult {
+            name: "weight_values",
+            status: Warning(
+                "unusual range",
+            ),
+            duration_us: 200,
+        },
+        CheckResult {
+            name: "file_size",
+            status: Error(
+                "too small for claimed param count",
+            ),
+            duration_us: 5,
+        },
+    ],
+    model_path: "models/bad.gguf",
+    total_duration_us: 355,
+}

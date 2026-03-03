@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"format={} size_mb={:.1} size_gb={:.2} sharded={}\",\nm.format.display_name(), m.size_mb(), m.size_gb(), m.is_sharded(),)"
+---
+format=GGUF size_mb=2048.0 size_gb=2.00 sharded=false

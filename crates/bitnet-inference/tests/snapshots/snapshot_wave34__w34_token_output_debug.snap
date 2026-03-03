@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: tok
+---
+TokenOutput {
+    token_id: 42,
+    text: "hello",
+    logit: 2.5,
+    probability: 0.85,
+    latency_us: 1200,
+    position: 3,
+}

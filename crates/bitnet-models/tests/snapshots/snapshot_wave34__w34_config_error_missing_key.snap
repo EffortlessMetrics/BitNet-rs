@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"{e}\")"
+---
+missing required metadata key: llama.vocab_size

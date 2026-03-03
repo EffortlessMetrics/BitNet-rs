@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"id={} files={} total_expected={} has_checksums={}\", m.model_id,\nm.file_count(), m.total_expected_bytes(), m.has_checksums(),)"
+---
+id=meta-llama/Meta-Llama-3-8B files=4 total_expected=19600000000 has_checksums=false

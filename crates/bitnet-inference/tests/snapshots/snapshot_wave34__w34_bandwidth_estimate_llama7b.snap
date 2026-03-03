@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: bw
+---
+BandwidthEstimate {
+    weight_bytes: 13214154752,
+    kv_cache_bytes: 268435456,
+    total_bytes: 13482590208,
+}

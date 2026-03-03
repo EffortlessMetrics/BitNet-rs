@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: caps
+---
+[
+    "chat_completion",
+    "text_generation",
+    "tool_use",
+]

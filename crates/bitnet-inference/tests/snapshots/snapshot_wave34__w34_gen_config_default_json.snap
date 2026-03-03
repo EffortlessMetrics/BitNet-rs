@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "serde_json::to_string_pretty(&cfg).unwrap()"
+---
+{
+  "max_new_tokens": 100,
+  "temperature": 0.7,
+  "top_k": 50,
+  "top_p": 0.9,
+  "repetition_penalty": 1.0,
+  "stop_sequences": [],
+  "stop_token_ids": [],
+  "stop_string_window": 64,
+  "seed": null,
+  "skip_special_tokens": true,
+  "eos_token_id": null,
+  "logits_tap_steps": 0,
+  "logits_topk": 10,
+  "add_bos": false
+}

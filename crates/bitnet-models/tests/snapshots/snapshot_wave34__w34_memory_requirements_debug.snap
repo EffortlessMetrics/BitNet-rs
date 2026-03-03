@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: req
+---
+MemoryRequirements {
+    total_mb: 8192,
+    gpu_memory_mb: Some(
+        6144,
+    ),
+    cpu_memory_mb: 7168,
+    kv_cache_mb: 512,
+    activation_mb: 256,
+    headroom_mb: 256,
+}

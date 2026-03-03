@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: fp
+---
+ModelFingerprint {
+    architecture: "bitnet",
+    param_count: 2000000000,
+    num_layers: 24,
+    hidden_size: 2048,
+    num_heads: 16,
+    vocab_size: 100000,
+    quant_type: "i2s",
+    tags: {
+        "family": "microsoft-bitnet",
+    },
+}

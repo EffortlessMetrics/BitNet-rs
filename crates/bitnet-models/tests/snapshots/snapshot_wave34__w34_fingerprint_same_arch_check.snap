@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"same_arch={} same_model_diff_quant={}\", a.same_architecture(&b),\na.same_model_different_quant(&b),)"
+---
+same_arch=true same_model_diff_quant=true

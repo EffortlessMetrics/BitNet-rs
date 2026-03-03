@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: issues
+---
+[
+    "hidden_size 33 is very small (min recommended: 64)",
+    "num_layers is 0",
+    "vocab_size 50 is very small (min recommended: 100)",
+    "hidden_size 33 is odd (should be even for attention)",
+]

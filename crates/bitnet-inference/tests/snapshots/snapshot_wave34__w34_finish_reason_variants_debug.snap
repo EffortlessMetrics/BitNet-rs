@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: debug
+---
+[
+    "MaxTokens",
+    "StopSequence",
+    "EosToken",
+    "Error(\"timeout\")",
+]

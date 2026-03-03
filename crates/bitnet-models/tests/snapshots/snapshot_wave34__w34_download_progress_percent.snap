@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: "format!(\"percent={:.1} file_percent={:.1} file={}/{}\", p.percent(),\np.file_percent(), p.file_index, p.total_files,)"
+---
+percent=24.8 file_percent=33.3 file=2/6

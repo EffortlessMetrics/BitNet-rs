@@ -1,0 +1,32 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: m
+---
+ModelMetadata {
+    model_type: None,
+    architecture: None,
+    hidden_size: Some(
+        5120,
+    ),
+    num_layers: Some(
+        40,
+    ),
+    num_heads: Some(
+        40,
+    ),
+    num_kv_heads: Some(
+        10,
+    ),
+    vocab_size: Some(
+        100352,
+    ),
+    max_position: None,
+    intermediate_size: None,
+    activation: Some(
+        "silu",
+    ),
+    norm_type: None,
+    rope_base: None,
+    tie_word_embeddings: None,
+    extra: {},
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "format!(\"attn={} ffn={} lm_head={} total={}\", flops.attention_flops,\nflops.ffn_flops, flops.lm_head_flops, flops.total_flops,)"
+---
+attn=503316480 ffn=1623195648 lm_head=409600000 total=2536112128

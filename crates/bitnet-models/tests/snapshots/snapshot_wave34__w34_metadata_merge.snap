@@ -1,0 +1,30 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: a
+---
+ModelMetadata {
+    model_type: None,
+    architecture: None,
+    hidden_size: Some(
+        4096,
+    ),
+    num_layers: Some(
+        32,
+    ),
+    num_heads: Some(
+        32,
+    ),
+    num_kv_heads: None,
+    vocab_size: Some(
+        32000,
+    ),
+    max_position: None,
+    intermediate_size: None,
+    activation: Some(
+        "gelu",
+    ),
+    norm_type: None,
+    rope_base: None,
+    tie_word_embeddings: None,
+    extra: {},
+}

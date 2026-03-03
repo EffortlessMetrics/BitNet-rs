@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_wave34.rs
+expression: debug
+---
+[
+    "CpuOnly",
+    "GpuOnly",
+    "Hybrid { cpu_layers: 8, gpu_layers: 24 }",
+]

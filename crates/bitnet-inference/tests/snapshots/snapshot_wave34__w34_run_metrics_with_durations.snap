@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave34.rs
+expression: "run_metrics::format_metrics(&m)"
+---
+=== Inference Metrics ===
+Prompt tokens:    10
+Generated tokens: 5
+Total time:       500.00ms
+TTFT:             100.00ms
+Tokens/sec:       12.50
+Avg latency:      80.00ms
+P50 latency:      80.00ms
+P95 latency:      85.00ms
+P99 latency:      85.00ms
+Peak memory:      268.4 MB
