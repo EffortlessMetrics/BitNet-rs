@@ -108,6 +108,7 @@ members = [
   "crates/bitnet-bench-regression-core", # SRP: benchmark regression comparison primitives
   "crates/bitnet-wgpu-bench",    # Benchmarking and profiling harness for wgpu compute kernels
   "crates/bitnet-wgpu-runner",   # WebGPU kernel runner for GPU compute dispatch
+  "crates/bitnet-cuda-elementwise", # SRP: CUDA element-wise operations for inference
   "crossval",
   "tests",
   "tests-new",

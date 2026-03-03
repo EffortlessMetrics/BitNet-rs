@@ -180,7 +180,7 @@ pub struct ModelMetadata {
     pub vocab_size: usize,
     pub context_length: usize,
     pub quantization: Option<QuantizationType>,
-    /// SHA256 fingerprint of the model file (format: `sha256-<hex>`)
+    /// SHA256 fingerprint of the model file (format: "sha256-<hex>")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fingerprint: Option<String>,
     /// Applied corrections (if any)
