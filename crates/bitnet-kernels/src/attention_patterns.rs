@@ -74,7 +74,7 @@ impl GqaConfig {
         !self.is_mha() && !self.is_mqa()
     }
     pub fn is_valid(&self) -> bool {
-        self.num_kv_heads > 0 && self.num_heads % self.num_kv_heads == 0
+        self.num_kv_heads > 0 && self.num_heads.is_multiple_of(self.num_kv_heads)
     }
 
     pub fn q_size(&self) -> usize {
