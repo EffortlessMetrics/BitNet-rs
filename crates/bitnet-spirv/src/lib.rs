@@ -1,6 +1,6 @@
 //! SPIR-V compilation pipeline and utilities.
 //!
-//! Provides offline compilation of OpenCL kernel sources to SPIR-V binary,
+//! Provides offline compilation of `OpenCL` kernel sources to SPIR-V binary,
 //! runtime compiler detection (`clang`, `ocloc`), lightweight validation,
 //! and a thread-safe in-memory cache.
 

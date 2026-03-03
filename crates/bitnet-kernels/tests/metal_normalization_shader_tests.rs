@@ -1,4 +1,5 @@
 //! Metal normalization shader tests for Apple Silicon.
+#![allow(clippy::assertions_on_constants)]
 //!
 //! Validates RMS normalization, layer normalization, group normalization,
 //! fused normalization + activation, numerical stability, buffer alignment,
@@ -1074,7 +1075,7 @@ fn test_threadgroup_sizing_hidden_dims() {
 fn test_threadgroup_optimal_workgroup_size() {
     // Verify that workgroup size 256 doesn't exceed max threads.
     assert!(
-        256 <= MAX_THREADS_PER_THREADGROUP,
+        256_u32 <= MAX_THREADS_PER_THREADGROUP,
         "workgroup_size(256) exceeds max_threads_per_threadgroup={}",
         MAX_THREADS_PER_THREADGROUP,
     );

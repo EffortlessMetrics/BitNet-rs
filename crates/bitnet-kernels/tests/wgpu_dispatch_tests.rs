@@ -1,4 +1,5 @@
 #![cfg(all(target_os = "macos", feature = "cpu"))]
+#![allow(clippy::assertions_on_constants)]
 
 //! Validation tests for wgpu/Metal compute dispatch logic on Apple Silicon.
 //!
@@ -7,7 +8,7 @@
 
 /// Compute the number of workgroups needed along one axis.
 fn dispatch_count(total: u32, workgroup_size: u32) -> u32 {
-    (total + workgroup_size - 1) / workgroup_size
+    total.div_ceil(workgroup_size)
 }
 
 /// Round `size` up to the next multiple of `alignment`.

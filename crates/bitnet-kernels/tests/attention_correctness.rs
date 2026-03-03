@@ -1,3 +1,4 @@
+#![allow(clippy::manual_range_contains, clippy::approx_constant)]
 //! Attention kernel correctness regression tests (CPU path).
 //!
 //! Verifies numerical correctness of scaled dot-product attention,

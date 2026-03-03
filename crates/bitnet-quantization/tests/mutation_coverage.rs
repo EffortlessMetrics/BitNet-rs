@@ -11,7 +11,7 @@
 //! Specification: docs/explanation/specs/issue-261-mock-performance-reporting-elimination-spec.md
 
 use bitnet_common::QuantizationType;
-use bitnet_quantization::{I2SQuantizer, QuantizerFactory, QuantizerTrait, TL2Quantizer};
+use bitnet_quantization::{I2SQuantizer, QuantizerFactory, QuantizerTrait};
 
 #[cfg(target_arch = "aarch64")]
 use bitnet_quantization::TL1Quantizer;

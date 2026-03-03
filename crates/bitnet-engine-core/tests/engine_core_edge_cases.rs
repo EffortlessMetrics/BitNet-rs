@@ -423,7 +423,7 @@ fn mock_session_with_tokens() {
         .iter()
         .filter_map(|e| match e {
             StreamEvent::Token(t) => Some(t.text.as_str()),
-            _ => None,
+            StreamEvent::Done { .. } => None,
         })
         .collect();
     assert_eq!(tokens, vec!["Hello", " world"]);

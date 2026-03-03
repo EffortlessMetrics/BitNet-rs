@@ -7,7 +7,7 @@
 #[cfg(target_arch = "aarch64")]
 mod arm64_tests {
     use bitnet_common::QuantizationType;
-    use bitnet_kernels::{KernelManager, KernelProvider};
+    use bitnet_kernels::KernelManager;
 
     /// Test NEON SIMD detection on ARM64
     ///

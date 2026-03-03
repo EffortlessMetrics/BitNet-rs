@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 #![allow(dead_code)]
+#![allow(clippy::useless_vec)]
 
 //! Metal softmax shader validation tests for Apple Silicon.
 //!

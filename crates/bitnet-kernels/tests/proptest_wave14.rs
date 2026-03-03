@@ -1,3 +1,4 @@
+#![allow(clippy::manual_range_contains)]
 //! Wave 14 property tests: CPU fallback kernel invariants for conv2d,
 //! loss functions, and batch normalization.
 //!

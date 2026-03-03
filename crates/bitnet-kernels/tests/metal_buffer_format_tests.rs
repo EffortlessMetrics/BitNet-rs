@@ -1,4 +1,12 @@
 #![cfg(target_os = "macos")]
+#![allow(
+    clippy::useless_vec,
+    clippy::approx_constant,
+    clippy::excessive_precision,
+    clippy::manual_div_ceil,
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop
+)]
 //! Metal buffer format validation tests for Apple Silicon.
 //!
 //! Tests Metal buffer alignment, format packing/unpacking, threadgroup

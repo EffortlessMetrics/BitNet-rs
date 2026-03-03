@@ -256,7 +256,7 @@ fn many_metadata_entries() {
     let mut builder = GgufBuilder::new();
     let count = 200;
     for i in 0..count {
-        builder = builder.metadata_u32(&format!("key.{i}"), i as u32);
+        builder = builder.metadata_u32(format!("key.{i}"), i as u32);
     }
     let data = write_to_vec(builder);
     let reader = GgufReader::new(&data).unwrap();
@@ -274,7 +274,7 @@ fn many_tensors() {
     let count = 50;
     for i in 0..count {
         builder =
-            builder.tensor(&format!("layer.{i}.weight"), &[4], GgufTensorType::F32, &[0u8; 16]);
+            builder.tensor(format!("layer.{i}.weight"), &[4], GgufTensorType::F32, &[0u8; 16]);
     }
     let data = write_to_vec(builder);
     let reader = GgufReader::new(&data).unwrap();

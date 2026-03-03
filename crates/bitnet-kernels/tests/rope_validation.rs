@@ -1,3 +1,4 @@
+#![allow(clippy::neg_multiply)]
 //! Comprehensive RoPE (Rotary Position Embedding) validation tests.
 //!
 //! Categories:

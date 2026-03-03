@@ -411,6 +411,11 @@ pub fn simd_l2_norm(data: &[f32]) -> f32 {
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::suboptimal_flops
+)]
 mod tests {
     use super::*;
 

@@ -1,3 +1,4 @@
+#![allow(dead_code, clippy::manual_is_multiple_of, clippy::manual_clamp, clippy::manual_div_ceil, clippy::identity_op, clippy::manual_contains)]
 //! Metal convolution shader validation tests for Apple Silicon.
 //!
 //! Tests validate convolution operation parameters, output shapes,

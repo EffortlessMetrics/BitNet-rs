@@ -143,7 +143,7 @@ fn stop_string_substring_match() {
 fn stop_string_empty_string_always_matches() {
     let criteria = StopCriteria {
         stop_token_ids: vec![],
-        stop_strings: vec!["".to_string()],
+        stop_strings: vec![String::new()],
         max_tokens: 100,
         eos_token_id: None,
     };
@@ -283,7 +283,7 @@ fn token_event_with_unicode() {
 fn generation_stats_zero_values() {
     let stats = GenerationStats { tokens_generated: 0, tokens_per_second: 0.0 };
     assert_eq!(stats.tokens_generated, 0);
-    assert_eq!(stats.tokens_per_second, 0.0);
+    assert!(stats.tokens_per_second.abs() < f64::EPSILON);
 }
 
 #[test]
@@ -301,7 +301,7 @@ fn stream_event_token_variant() {
             assert_eq!(t.id, 1);
             assert_eq!(t.text, "hello");
         }
-        _ => panic!("Expected Token variant"),
+        StreamEvent::Done { .. } => panic!("Expected Token variant"),
     }
 }
 
@@ -316,7 +316,7 @@ fn stream_event_done_variant() {
             assert!(matches!(reason, StopReason::MaxTokens));
             assert_eq!(stats.tokens_generated, 10);
         }
-        _ => panic!("Expected Done variant"),
+        StreamEvent::Token(_) => panic!("Expected Done variant"),
     }
 }
 

@@ -9,7 +9,6 @@ use bitnet_server::model_manager::{
     ModelLoadStatus, ModelManagerConfig, ModelManagerHealth, ModelMemoryStats, ModelMetadata,
 };
 use bitnet_server::streaming::{StreamingComplete, StreamingError, StreamingToken};
-use serde_json;
 use std::time::{Duration, SystemTime};
 
 // ---------------------------------------------------------------------------

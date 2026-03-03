@@ -1,3 +1,4 @@
+#![allow(clippy::manual_is_multiple_of, clippy::manual_memcpy, clippy::needless_range_loop)]
 //! Apple Silicon performance benchmark tests.
 //!
 //! These tests measure NEON throughput, memory bandwidth, cache efficiency,

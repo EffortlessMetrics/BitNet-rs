@@ -266,8 +266,7 @@ mod tests {
 
     #[test]
     fn zero_capacity_config_is_invalid() {
-        let mut cfg = GpuStreamingConfig::default();
-        cfg.channel_capacity = 0;
+        let cfg = GpuStreamingConfig { channel_capacity: 0, ..Default::default() };
         assert!(cfg.validate().is_err());
     }
 

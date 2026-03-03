@@ -1204,7 +1204,7 @@ fn test_metal_layernorm_multi_row_varied() {
     let num_rows: u32 = 4;
     let mut input = Vec::with_capacity((num_rows * n) as usize);
     // Row 0: uniform 1.0
-    input.extend(std::iter::repeat(1.0f32).take(n as usize));
+    input.extend(std::iter::repeat_n(1.0f32, n as usize));
     // Row 1: linear ramp
     input.extend((0..n).map(|i| i as f32));
     // Row 2: sinusoidal

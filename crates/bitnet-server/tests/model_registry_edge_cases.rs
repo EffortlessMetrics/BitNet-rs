@@ -40,7 +40,7 @@ fn model_state_debug() {
 #[test]
 fn model_state_clone_copy() {
     let state = ModelState::Ready;
-    let cloned = state.clone();
+    let cloned = state;
     let copied = state;
     assert_eq!(cloned, copied);
     assert_eq!(cloned, ModelState::Ready);

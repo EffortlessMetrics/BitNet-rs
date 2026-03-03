@@ -3,6 +3,7 @@
 //! Focuses on boundary values, corner cases, and behaviours NOT covered by
 //! existing test suites (engine_core_edge_cases, session_management_edge_cases,
 //! validation_and_state_tests, engine_core_tests).
+#![allow(clippy::doc_markdown, clippy::redundant_clone, clippy::uninlined_format_args)]
 
 use bitnet_engine_core::{
     BackendInfo, ConcurrencyConfig, ConfigError, EngineState, EngineStateError, EngineStateTracker,
