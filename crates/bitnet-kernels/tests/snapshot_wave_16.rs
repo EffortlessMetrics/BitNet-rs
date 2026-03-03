@@ -87,6 +87,7 @@ fn snap_attention_config_mha() {
         head_dim: 64,
         seq_len: 128,
         causal: true,
+        use_alibi: false,
         scale: None,
     };
     insta::assert_debug_snapshot!(config);
@@ -177,6 +178,8 @@ fn snap_pool_config_max() {
         kernel_size: 3,
         stride: 2,
         padding: 1,
+        dilation: 1,
+        ceil_mode: false,
     };
     insta::assert_debug_snapshot!(config);
 }
@@ -450,6 +453,8 @@ fn snap_pool_config_zero_kernel_error() {
         kernel_size: 0,
         stride: 1,
         padding: 0,
+        dilation: 1,
+        ceil_mode: false,
     };
     let err = config.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
@@ -462,6 +467,8 @@ fn snap_pool_config_zero_stride_error() {
         kernel_size: 3,
         stride: 0,
         padding: 0,
+        dilation: 1,
+        ceil_mode: false,
     };
     let err = config.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
@@ -474,6 +481,7 @@ fn snap_attention_config_zero_heads_error() {
         head_dim: 64,
         seq_len: 128,
         causal: false,
+        use_alibi: false,
         scale: None,
     };
     let err = config.validate().unwrap_err();
@@ -571,6 +579,7 @@ fn snap_attention_resolved_scale_default() {
         head_dim: 64,
         seq_len: 128,
         causal: true,
+        use_alibi: false,
         scale: None,
     };
     insta::assert_snapshot!(format!("{:.6}", config.resolved_scale()));
@@ -583,6 +592,7 @@ fn snap_attention_resolved_scale_explicit() {
         head_dim: 64,
         seq_len: 128,
         causal: false,
+        use_alibi: false,
         scale: Some(0.05),
     };
     insta::assert_snapshot!(format!("{:.6}", config.resolved_scale()));
@@ -669,6 +679,8 @@ fn snap_pooling_max_output() {
         kernel_size: 3,
         stride: 1,
         padding: 0,
+        dilation: 1,
+        ceil_mode: false,
     };
     let output = bitnet_kernels::cpu::PoolingKernel::apply(&input, &config).unwrap();
     insta::assert_debug_snapshot!(output);
@@ -682,6 +694,8 @@ fn snap_pooling_global_avg_output() {
         kernel_size: 0,
         stride: 0,
         padding: 0,
+        dilation: 1,
+        ceil_mode: false,
     };
     let output = bitnet_kernels::cpu::PoolingKernel::apply(&input, &config).unwrap();
     insta::assert_debug_snapshot!(output);
