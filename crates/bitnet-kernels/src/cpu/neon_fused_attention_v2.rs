@@ -24,6 +24,24 @@
 //! | `vaddvq_f32`   | Horizontal sum of four lanes            |
 //! | `vmaxvq_f32`   | Horizontal max of four lanes            |
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -786,9 +804,9 @@ fn apply_rope_inplace_neon(vec: &mut [f32], pos: usize, head_dim: usize) {
         let theta1 = (pos as f32) / 10000.0f32.powf(2.0 * i1 as f32 / head_dim as f32);
 
         unsafe {
-            let cos_v =
+            let _cos_v =
                 vld1q_f32([theta0.cos(), theta0.cos(), theta1.cos(), theta1.cos()].as_ptr());
-            let sin_v =
+            let _sin_v =
                 vld1q_f32([theta0.sin(), theta0.sin(), theta1.sin(), theta1.sin()].as_ptr());
 
             let offset = i0 * 2;

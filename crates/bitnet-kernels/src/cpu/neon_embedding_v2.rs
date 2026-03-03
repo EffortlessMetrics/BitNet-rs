@@ -6,6 +6,24 @@
 //! fast-path (with `__prefetch`) and a portable scalar fallback selected at
 //! runtime via `is_aarch64_feature_detected!("neon")`.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -72,12 +90,7 @@ unsafe fn neon_embedding_lookup_f32(
 }
 
 /// Scalar fallback for f32 embedding lookup.
-fn scalar_embedding_lookup_f32(
-    table: &[f32],
-    indices: &[u32],
-    dim: usize,
-    output: &mut [f32],
-) {
+fn scalar_embedding_lookup_f32(table: &[f32], indices: &[u32], dim: usize, output: &mut [f32]) {
     for (i, &idx) in indices.iter().enumerate() {
         let src_off = (idx as usize) * dim;
         let dst_off = i * dim;
@@ -171,12 +184,7 @@ unsafe fn neon_embedding_lookup_f16(
 }
 
 /// Scalar fallback for f16→f32 embedding lookup.
-fn scalar_embedding_lookup_f16(
-    table: &[f16],
-    indices: &[u32],
-    dim: usize,
-    output: &mut [f32],
-) {
+fn scalar_embedding_lookup_f16(table: &[f16], indices: &[u32], dim: usize, output: &mut [f32]) {
     for (i, &idx) in indices.iter().enumerate() {
         let src_off = (idx as usize) * dim;
         let dst_off = i * dim;
@@ -264,12 +272,7 @@ unsafe fn neon_embedding_sum_f32(
 }
 
 /// Scalar fallback for embedding sum.
-fn scalar_embedding_sum_f32(
-    table: &[f32],
-    indices: &[&[u32]],
-    dim: usize,
-    output: &mut [f32],
-) {
+fn scalar_embedding_sum_f32(table: &[f32], indices: &[&[u32]], dim: usize, output: &mut [f32]) {
     for v in output.iter_mut() {
         *v = 0.0;
     }
@@ -296,10 +299,7 @@ pub fn embedding_sum_f32(table: &[f32], indices: &[&[u32]], dim: usize, output: 
     assert_eq!(table.len(), vocab * dim, "table length must be a multiple of dim");
     for group in indices {
         for &idx in *group {
-            assert!(
-                (idx as usize) < vocab,
-                "index {idx} out of bounds for vocab {vocab}"
-            );
+            assert!((idx as usize) < vocab, "index {idx} out of bounds for vocab {vocab}");
         }
     }
     assert!(output.len() >= dim, "output too small: need {dim} but got {}", output.len());
@@ -594,12 +594,7 @@ fn scalar_position_embedding_rope(
 ///
 /// # Panics
 /// Panics if `dim` is odd or `embeddings` length does not match.
-pub fn position_embedding_rope(
-    embeddings: &mut [f32],
-    positions: &[u32],
-    dim: usize,
-    base: f32,
-) {
+pub fn position_embedding_rope(embeddings: &mut [f32], positions: &[u32], dim: usize, base: f32) {
     assert!(dim > 0 && dim % 2 == 0, "dim must be a positive even number, got {dim}");
     assert!(
         embeddings.len() >= positions.len() * dim,

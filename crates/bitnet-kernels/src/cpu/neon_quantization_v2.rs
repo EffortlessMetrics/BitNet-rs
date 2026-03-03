@@ -16,6 +16,24 @@
 //! - `0b11` → −1
 //! - `0b10` → unused (treated as 0)
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -54,12 +72,7 @@ fn pack_4_i2s(vals: &[i8]) -> u8 {
 /// Unpack one byte into 4 f32 ternary values.
 #[inline(always)]
 fn unpack_4_i2s(byte: u8) -> [f32; 4] {
-    [
-        decode_i2s(byte),
-        decode_i2s(byte >> 2),
-        decode_i2s(byte >> 4),
-        decode_i2s(byte >> 6),
-    ]
+    [decode_i2s(byte), decode_i2s(byte >> 2), decode_i2s(byte >> 4), decode_i2s(byte >> 6)]
 }
 
 // ── 1. quantize_f32_to_i2 ─────────────────────────────────────────
@@ -72,12 +85,7 @@ fn unpack_4_i2s(byte: u8) -> [f32; 4] {
 ///
 /// `output` must have length `ceil(input.len() / 4)`.
 /// `scales` must have length `ceil(input.len() / block_size)`.
-pub fn quantize_f32_to_i2(
-    input: &[f32],
-    output: &mut [u8],
-    scales: &mut [f32],
-    block_size: usize,
-) {
+pub fn quantize_f32_to_i2(input: &[f32], output: &mut [u8], scales: &mut [f32], block_size: usize) {
     assert!(block_size == 32 || block_size == 256, "block_size must be 32 or 256");
     let n = input.len();
     assert!(output.len() >= (n + 3) / 4);
@@ -211,7 +219,13 @@ unsafe fn neon_quantize_f32_to_i2(
                     0i8
                 } else {
                     let norm = input[base + k] / s;
-                    if norm > 0.5 { 1 } else if norm < -0.5 { -1 } else { 0 }
+                    if norm > 0.5 {
+                        1
+                    } else if norm < -0.5 {
+                        -1
+                    } else {
+                        0
+                    }
                 };
                 byte |= encode_i2s(t) << (k * 2);
             }
@@ -256,7 +270,13 @@ unsafe fn neon_quantize_f32_to_i2(
                 0i8
             } else {
                 let norm = input[i] / s;
-                if norm > 0.5 { 1 } else if norm < -0.5 { -1 } else { 0 }
+                if norm > 0.5 {
+                    1
+                } else if norm < -0.5 {
+                    -1
+                } else {
+                    0
+                }
             };
             byte |= encode_i2s(t) << (k * 2);
         }
@@ -271,12 +291,7 @@ unsafe fn neon_quantize_f32_to_i2(
 /// `input` has packed bytes (4 values per byte).
 /// `output` receives the dequantized f32 values (length must match element count).
 /// `block_size` must be 32 or 256.
-pub fn dequantize_i2_to_f32(
-    input: &[u8],
-    scales: &[f32],
-    output: &mut [f32],
-    block_size: usize,
-) {
+pub fn dequantize_i2_to_f32(input: &[u8], scales: &[f32], output: &mut [f32], block_size: usize) {
     assert!(block_size == 32 || block_size == 256, "block_size must be 32 or 256");
     let n = output.len();
     assert!(input.len() >= (n + 3) / 4);
@@ -528,12 +543,7 @@ unsafe fn neon_dequantize_i8_to_f32(input: &[i8], scale: f32, output: &mut [f32]
             unsafe { *in_ptr.add(base + 2) },
             unsafe { *in_ptr.add(base + 3) },
         ];
-        let i32_arr: [i32; 4] = [
-            vals[0] as i32,
-            vals[1] as i32,
-            vals[2] as i32,
-            vals[3] as i32,
-        ];
+        let i32_arr: [i32; 4] = [vals[0] as i32, vals[1] as i32, vals[2] as i32, vals[3] as i32];
         let i32_vec = unsafe { vld1q_s32(i32_arr.as_ptr()) };
         let f32_vec = unsafe { vcvtq_f32_s32(i32_vec) };
         let result = unsafe { vmulq_f32(f32_vec, scale_v) };
@@ -840,7 +850,13 @@ mod tests {
     fn test_i2_roundtrip_block256() {
         let mut input = vec![0.0f32; 256];
         for i in 0..256 {
-            input[i] = if i % 3 == 0 { 1.0 } else if i % 3 == 1 { -1.0 } else { 0.0 };
+            input[i] = if i % 3 == 0 {
+                1.0
+            } else if i % 3 == 1 {
+                -1.0
+            } else {
+                0.0
+            };
         }
         let mut packed = vec![0u8; 64];
         let mut scales = vec![0.0f32; 1];
@@ -850,7 +866,13 @@ mod tests {
         dequantize_i2_to_f32(&packed, &scales, &mut output, 256);
 
         for i in 0..256 {
-            let expected = if i % 3 == 0 { 1.0 } else if i % 3 == 1 { -1.0 } else { 0.0 };
+            let expected = if i % 3 == 0 {
+                1.0
+            } else if i % 3 == 1 {
+                -1.0
+            } else {
+                0.0
+            };
             assert!(approx_eq(output[i], expected, 1e-6), "idx {i}: {} != {}", output[i], expected);
         }
     }

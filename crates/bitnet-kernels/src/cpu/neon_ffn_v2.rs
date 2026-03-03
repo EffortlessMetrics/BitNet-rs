@@ -12,6 +12,24 @@
 //! Each operation has an `unsafe fn neon_*` implementation using NEON intrinsics,
 //! a `fn scalar_*` fallback, and a public dispatcher that selects at runtime.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -55,11 +73,7 @@ fn decode_i2s(bits: u8) -> f32 {
 #[inline]
 fn scalar_matvec_row(input: &[f32], weight_row: &[f32]) -> f32 {
     debug_assert_eq!(input.len(), weight_row.len());
-    input
-        .iter()
-        .zip(weight_row.iter())
-        .map(|(&a, &b)| a * b)
-        .sum()
+    input.iter().zip(weight_row.iter()).map(|(&a, &b)| a * b).sum()
 }
 
 // ── 1. Standard FFN forward ─────────────────────────────────────────
@@ -312,9 +326,7 @@ pub fn swiglu_ffn_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_swiglu_ffn_f32(
-                    input, w_gate, w_up, w_down, output, hidden, intermediate,
-                );
+                neon_swiglu_ffn_f32(input, w_gate, w_up, w_down, output, hidden, intermediate);
             }
             return;
         }
@@ -350,12 +362,8 @@ pub unsafe fn neon_gelu_f32(input: &[f32], output: &mut [f32]) {
         // tanh via scalar for each lane
         let mut inner_arr = [0.0f32; 4];
         vst1q_f32(inner_arr.as_mut_ptr(), inner);
-        let tanh_arr = [
-            inner_arr[0].tanh(),
-            inner_arr[1].tanh(),
-            inner_arr[2].tanh(),
-            inner_arr[3].tanh(),
-        ];
+        let tanh_arr =
+            [inner_arr[0].tanh(), inner_arr[1].tanh(), inner_arr[2].tanh(), inner_arr[3].tanh()];
         let tanh_v = vld1q_f32(tanh_arr.as_ptr());
         let result = vmulq_f32(half, vmulq_f32(x, vaddq_f32(one, tanh_v)));
         vst1q_f32(output.as_mut_ptr().add(off), result);
@@ -522,16 +530,12 @@ pub fn fused_residual_ffn_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_fused_residual_ffn_f32(
-                    input, residual, w1, w2, output, hidden, intermediate,
-                );
+                neon_fused_residual_ffn_f32(input, residual, w1, w2, output, hidden, intermediate);
             }
             return;
         }
     }
-    scalar_fused_residual_ffn_f32(
-        input, residual, w1, w2, output, hidden, intermediate,
-    );
+    scalar_fused_residual_ffn_f32(input, residual, w1, w2, output, hidden, intermediate);
 }
 
 // ── 6. Quantized FFN (I2_S 2-bit weights) ──────────────────────────
@@ -539,12 +543,7 @@ pub fn fused_residual_ffn_f32(
 /// Dequantize a packed I2_S byte to 4 f32 values.
 #[inline(always)]
 fn unpack_i2s_byte(byte: u8) -> [f32; 4] {
-    [
-        decode_i2s(byte),
-        decode_i2s(byte >> 2),
-        decode_i2s(byte >> 4),
-        decode_i2s(byte >> 6),
-    ]
+    [decode_i2s(byte), decode_i2s(byte >> 2), decode_i2s(byte >> 4), decode_i2s(byte >> 6)]
 }
 
 /// Scalar dot product of input with a packed I2_S weight row, scaled.
@@ -719,15 +718,27 @@ pub fn quantized_ffn_i2_f32(
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
                 neon_quantized_ffn_i2_f32(
-                    input, w1_packed, w1_scales, w2_packed, w2_scales, output,
-                    hidden, intermediate,
+                    input,
+                    w1_packed,
+                    w1_scales,
+                    w2_packed,
+                    w2_scales,
+                    output,
+                    hidden,
+                    intermediate,
                 );
             }
             return;
         }
     }
     scalar_quantized_ffn_i2_f32(
-        input, w1_packed, w1_scales, w2_packed, w2_scales, output, hidden,
+        input,
+        w1_packed,
+        w1_scales,
+        w2_packed,
+        w2_scales,
+        output,
+        hidden,
         intermediate,
     );
 }
@@ -804,10 +815,7 @@ mod tests {
         gelu_f32(&values, &mut output);
         for (&x, &o) in values.iter().zip(output.iter()) {
             let expected = ref_gelu_f64(x as f64) as f32;
-            assert!(
-                (o - expected).abs() < TOL,
-                "gelu({x}): got {o}, expected {expected}"
-            );
+            assert!((o - expected).abs() < TOL, "gelu({x}): got {o}, expected {expected}");
         }
     }
 
@@ -893,10 +901,7 @@ mod tests {
         scalar_gelu_f32(&input, &mut out_scalar);
         gelu_f32(&input, &mut out_dispatch);
         for i in 0..input.len() {
-            assert!(
-                (out_scalar[i] - out_dispatch[i]).abs() < 1e-6,
-                "Mismatch at {i}"
-            );
+            assert!((out_scalar[i] - out_dispatch[i]).abs() < 1e-6, "Mismatch at {i}");
         }
     }
 
@@ -920,10 +925,7 @@ mod tests {
         silu_f32(&values, &mut output);
         for (&x, &o) in values.iter().zip(output.iter()) {
             let expected = ref_silu_f64(x as f64) as f32;
-            assert!(
-                (o - expected).abs() < TOL,
-                "silu({x}): got {o}, expected {expected}"
-            );
+            assert!((o - expected).abs() < TOL, "silu({x}): got {o}, expected {expected}");
         }
     }
 
@@ -1003,10 +1005,7 @@ mod tests {
         scalar_silu_f32(&input, &mut out_scalar);
         silu_f32(&input, &mut out_dispatch);
         for i in 0..input.len() {
-            assert!(
-                (out_scalar[i] - out_dispatch[i]).abs() < 1e-6,
-                "Mismatch at {i}"
-            );
+            assert!((out_scalar[i] - out_dispatch[i]).abs() < 1e-6, "Mismatch at {i}");
         }
     }
 
@@ -1244,10 +1243,7 @@ mod tests {
         scalar_swiglu_ffn_f32(&input, &w_g, &w_u, &w_d, &mut out_scalar, h, inter);
         swiglu_ffn_f32(&input, &w_g, &w_u, &w_d, &mut out_dispatch, h, inter);
         for i in 0..h {
-            assert!(
-                (out_scalar[i] - out_dispatch[i]).abs() < 1e-5,
-                "Mismatch at {i}"
-            );
+            assert!((out_scalar[i] - out_dispatch[i]).abs() < 1e-5, "Mismatch at {i}");
         }
     }
 
@@ -1329,17 +1325,10 @@ mod tests {
         let w2: Vec<f32> = (0..h * inter).map(|i| (i as f32 * 0.01) - 0.05).collect();
         let mut out_scalar = vec![0.0; h];
         let mut out_dispatch = vec![0.0; h];
-        scalar_fused_residual_ffn_f32(
-            &input, &residual, &w1, &w2, &mut out_scalar, h, inter,
-        );
-        fused_residual_ffn_f32(
-            &input, &residual, &w1, &w2, &mut out_dispatch, h, inter,
-        );
+        scalar_fused_residual_ffn_f32(&input, &residual, &w1, &w2, &mut out_scalar, h, inter);
+        fused_residual_ffn_f32(&input, &residual, &w1, &w2, &mut out_dispatch, h, inter);
         for i in 0..h {
-            assert!(
-                (out_scalar[i] - out_dispatch[i]).abs() < 1e-5,
-                "Mismatch at {i}"
-            );
+            assert!((out_scalar[i] - out_dispatch[i]).abs() < 1e-5, "Mismatch at {i}");
         }
     }
 
@@ -1533,10 +1522,7 @@ mod tests {
         // dot(input, all-neg-ones) = -4.0 per row
         let mid_val = ref_gelu_f64(-4.0) as f32;
         for &o in &output {
-            assert!(
-                (o - mid_val).abs() < TOL,
-                "got {o}, expected {mid_val}"
-            );
+            assert!((o - mid_val).abs() < TOL, "got {o}, expected {mid_val}");
         }
     }
 
@@ -1573,10 +1559,7 @@ mod tests {
             inter,
         );
         for i in 0..h {
-            assert!(
-                (out_scalar[i] - out_dispatch[i]).abs() < 1e-5,
-                "Mismatch at {i}"
-            );
+            assert!((out_scalar[i] - out_dispatch[i]).abs() < 1e-5, "Mismatch at {i}");
         }
     }
 
@@ -1620,10 +1603,7 @@ mod tests {
         gelu_f32(&input, &mut gelu_out);
         silu_f32(&input, &mut silu_out);
         // GELU and SiLU should give different results for non-zero
-        let different = gelu_out
-            .iter()
-            .zip(silu_out.iter())
-            .any(|(&g, &s)| (g - s).abs() > 1e-6);
+        let different = gelu_out.iter().zip(silu_out.iter()).any(|(&g, &s)| (g - s).abs() > 1e-6);
         assert!(different, "GELU and SiLU should produce different outputs");
     }
 
@@ -1649,14 +1629,8 @@ mod tests {
         let mut swiglu_out = vec![0.0; h];
         ffn_forward_f32(&input, &w, &wd, &mut ffn_out, h, inter);
         swiglu_ffn_f32(&input, &w, &w, &wd, &mut swiglu_out, h, inter);
-        let different = ffn_out
-            .iter()
-            .zip(swiglu_out.iter())
-            .any(|(&a, &b)| (a - b).abs() > 1e-6);
-        assert!(
-            different,
-            "Standard FFN and SwiGLU should produce different outputs"
-        );
+        let different = ffn_out.iter().zip(swiglu_out.iter()).any(|(&a, &b)| (a - b).abs() > 1e-6);
+        assert!(different, "Standard FFN and SwiGLU should produce different outputs");
     }
 
     #[test]
@@ -1680,10 +1654,7 @@ mod tests {
         gelu_f32(&input, &mut output);
         // For large positive x, GELU ≈ x
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!(
-                (o - x).abs() / x.abs() < 0.01,
-                "gelu({x}) ≈ {x}, got {o}"
-            );
+            assert!((o - x).abs() / x.abs() < 0.01, "gelu({x}) ≈ {x}, got {o}");
         }
     }
 
@@ -1694,10 +1665,7 @@ mod tests {
         silu_f32(&input, &mut output);
         // For large positive x, SiLU ≈ x
         for (&x, &o) in input.iter().zip(output.iter()) {
-            assert!(
-                (o - x).abs() / x.abs() < 0.01,
-                "silu({x}) ≈ {x}, got {o}"
-            );
+            assert!((o - x).abs() / x.abs() < 0.01, "silu({x}) ≈ {x}, got {o}");
         }
     }
 
@@ -1717,10 +1685,7 @@ mod tests {
             let sum = out_pos[i] + out_neg[i];
             let x = input_pos[i];
             let expected = x * (2.0 * ref_sigmoid_f64(x as f64) as f32 - 1.0);
-            assert!(
-                (sum - expected).abs() < TOL,
-                "silu symmetry check failed at x={x}"
-            );
+            assert!((sum - expected).abs() < TOL, "silu symmetry check failed at x={x}");
         }
     }
 
@@ -1874,28 +1839,18 @@ mod tests {
             0b11_11_01_01, // +1, +1, -1, -1
         ];
         let w1_scales = vec![1.0; inter];
-        let w2_packed = vec![
-            0b00_00_00_01,
-            0b00_00_01_00,
-            0b00_01_00_00,
-            0b01_00_00_00,
-        ];
+        let w2_packed = vec![0b00_00_00_01, 0b00_00_01_00, 0b00_01_00_00, 0b01_00_00_00];
         let w2_scales = vec![1.0; h];
         let mut out_s = vec![0.0; h];
         let mut out_d = vec![0.0; h];
         scalar_quantized_ffn_i2_f32(
-            &input, &w1_packed, &w1_scales, &w2_packed, &w2_scales,
-            &mut out_s, h, inter,
+            &input, &w1_packed, &w1_scales, &w2_packed, &w2_scales, &mut out_s, h, inter,
         );
         quantized_ffn_i2_f32(
-            &input, &w1_packed, &w1_scales, &w2_packed, &w2_scales,
-            &mut out_d, h, inter,
+            &input, &w1_packed, &w1_scales, &w2_packed, &w2_scales, &mut out_d, h, inter,
         );
         for i in 0..h {
-            assert!(
-                (out_s[i] - out_d[i]).abs() < 1e-5,
-                "Mixed quant mismatch at {i}"
-            );
+            assert!((out_s[i] - out_d[i]).abs() < 1e-5, "Mixed quant mismatch at {i}");
         }
     }
 

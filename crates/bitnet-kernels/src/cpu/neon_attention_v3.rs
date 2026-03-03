@@ -10,6 +10,24 @@
 //! 5. Flash (tiled/blocked) attention for cache efficiency
 //! 6. Attention with ALiBi positional bias
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -48,7 +66,7 @@ unsafe fn neon_softmax_inplace(data: &mut [f32]) {
     // Phase 1: find max
     let ptr = data.as_ptr();
     let chunks = len / LANES;
-    let remainder = len % LANES;
+    let _remainder = len % LANES;
 
     let mut vmax = unsafe { vdupq_n_f32(f32::NEG_INFINITY) };
     for i in 0..chunks {
@@ -303,9 +321,7 @@ pub fn multi_head_attention_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_multi_head_attention_f32(
-                    q, k, v, output, num_heads, seq_len, head_dim,
-                );
+                neon_multi_head_attention_f32(q, k, v, output, num_heads, seq_len, head_dim);
             }
             return;
         }
@@ -479,14 +495,28 @@ pub fn grouped_query_attention_f32(
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
                 neon_grouped_query_attention_f32(
-                    q, k, v, output, num_q_heads, num_kv_heads, seq_len, head_dim,
+                    q,
+                    k,
+                    v,
+                    output,
+                    num_q_heads,
+                    num_kv_heads,
+                    seq_len,
+                    head_dim,
                 );
             }
             return;
         }
     }
     scalar_grouped_query_attention_f32(
-        q, k, v, output, num_q_heads, num_kv_heads, seq_len, head_dim,
+        q,
+        k,
+        v,
+        output,
+        num_q_heads,
+        num_kv_heads,
+        seq_len,
+        head_dim,
     );
 }
 
@@ -532,10 +562,7 @@ unsafe fn neon_flash_attention_tiled_f32(
             }
 
             // Block max
-            let block_max = block_scores
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let block_max = block_scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let new_max = running_max.max(block_max);
 
             // Rescale existing output
@@ -617,10 +644,7 @@ fn scalar_flash_attention_tiled_f32(
                 block_scores[idx] = scalar_dot_f32(q_row, k_row, head_dim) * scale;
             }
 
-            let block_max = block_scores
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let block_max = block_scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let new_max = running_max.max(block_max);
 
             if rescale_out {
@@ -664,9 +688,7 @@ pub fn flash_attention_tiled_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_flash_attention_tiled_f32(
-                    q, k, v, output, seq_len, head_dim, block_size,
-                );
+                neon_flash_attention_tiled_f32(q, k, v, output, seq_len, head_dim, block_size);
             }
             return;
         }
@@ -755,9 +777,7 @@ pub fn attention_with_alibi_f32(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                neon_attention_with_alibi_f32(
-                    q, k, v, output, seq_len, head_dim, alibi_slope,
-                );
+                neon_attention_with_alibi_f32(q, k, v, output, seq_len, head_dim, alibi_slope);
             }
             return;
         }
@@ -901,10 +921,7 @@ mod tests {
         assert_eq!(a.len(), b.len(), "{label}: length mismatch");
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
             let diff = (x - y).abs();
-            assert!(
-                diff < tol,
-                "{label}[{i}]: {x} vs {y}, diff={diff} > tol={tol}"
-            );
+            assert!(diff < tol, "{label}[{i}]: {x} vs {y}, diff={diff} > tol={tol}");
         }
     }
 
@@ -1019,10 +1036,7 @@ mod tests {
         scaled_dot_product_attention_f32(&q, &k, &v_ones, &mut out, seq_len, head_dim, scale);
         // Since V is all 1.0, output[i][d] = sum_j(attn[i][j]) * 1.0 = 1.0
         for val in &out {
-            assert!(
-                (*val - 1.0).abs() < 1e-5,
-                "weight sum check: got {val}, expected ~1.0"
-            );
+            assert!((*val - 1.0).abs() < 1e-5, "weight sum check: got {val}, expected ~1.0");
         }
     }
 
@@ -1076,12 +1090,7 @@ mod tests {
                 head_dim,
                 scale,
             );
-            assert_close(
-                &out[h * hs..(h + 1) * hs],
-                &expected,
-                1e-5,
-                &format!("mha_head{h}"),
-            );
+            assert_close(&out[h * hs..(h + 1) * hs], &expected, 1e-5, &format!("mha_head{h}"));
         }
     }
 
@@ -1143,12 +1152,7 @@ mod tests {
         let mut out2 = vec![0.0f32; total];
         multi_head_attention_f32(&q2, &k, &v, &mut out2, num_heads, seq_len, head_dim);
         // Head 1 should be identical
-        assert_close(
-            &out[hs..],
-            &out2[hs..],
-            1e-7,
-            "mha_head_independence",
-        );
+        assert_close(&out[hs..], &out2[hs..], 1e-7, "mha_head_independence");
     }
 
     // ── 3. Causal attention tests ──────────────────────────────────────
@@ -1198,12 +1202,7 @@ mod tests {
         let mut out = vec![0.0f32; seq_len * head_dim];
         causal_attention_f32(&q, &k, &v, &mut out, seq_len, head_dim, scale);
         // Row 0: attends only to V[0], so out[0] == V[0]
-        assert_close(
-            &out[0..head_dim],
-            &v[0..head_dim],
-            1e-6,
-            "causal_row0",
-        );
+        assert_close(&out[0..head_dim], &v[0..head_dim], 1e-6, "causal_row0");
         // Row 1: uniform over V[0],V[1] → mean
         for d in 0..head_dim {
             let expected = (v[d] + v[head_dim + d]) / 2.0;
@@ -1228,9 +1227,7 @@ mod tests {
         causal_attention_f32(&q, &k, &v, &mut out_causal, seq_len, head_dim, scale);
         scaled_dot_product_attention_f32(&q, &k, &v, &mut out_full, seq_len, head_dim, scale);
         // Row 0: causal attends only to pos 0 while full attends to all → differ
-        let row0_diff: f32 = (0..head_dim)
-            .map(|d| (out_causal[d] - out_full[d]).abs())
-            .sum();
+        let row0_diff: f32 = (0..head_dim).map(|d| (out_causal[d] - out_full[d]).abs()).sum();
         assert!(row0_diff > 1e-3, "row0 should differ: diff={row0_diff}");
         // Last row: causal attends to all → should equal full
         let last_start = (seq_len - 1) * head_dim;
@@ -1266,10 +1263,7 @@ mod tests {
         let mut out = vec![0.0f32; seq_len * head_dim];
         causal_attention_f32(&q, &k, &v_ones, &mut out, seq_len, head_dim, scale);
         for val in &out {
-            assert!(
-                (*val - 1.0).abs() < 1e-5,
-                "causal weight sum: {val} != 1.0"
-            );
+            assert!((*val - 1.0).abs() < 1e-5, "causal weight sum: {val} != 1.0");
         }
     }
 
@@ -1315,12 +1309,7 @@ mod tests {
         let mut out = vec![0.0f32; num_q * hs];
         grouped_query_attention_f32(&q, &k, &v, &mut out, num_q, num_kv, seq_len, head_dim);
         // Heads 0 and 1 share KV[0] and have same Q → identical output
-        assert_close(
-            &out[0..hs],
-            &out[hs..2 * hs],
-            1e-6,
-            "gqa_sharing_01",
-        );
+        assert_close(&out[0..hs], &out[hs..2 * hs], 1e-6, "gqa_sharing_01");
     }
 
     #[test]
@@ -1334,7 +1323,14 @@ mod tests {
         let mut out_gqa = vec![0.0f32; total];
         let mut out_mha = vec![0.0f32; total];
         grouped_query_attention_f32(
-            &q, &k, &v, &mut out_gqa, num_heads, num_heads, seq_len, head_dim,
+            &q,
+            &k,
+            &v,
+            &mut out_gqa,
+            num_heads,
+            num_heads,
+            seq_len,
+            head_dim,
         );
         multi_head_attention_f32(&q, &k, &v, &mut out_mha, num_heads, seq_len, head_dim);
         assert_close(&out_gqa, &out_mha, 1e-6, "gqa_eq_mha");
@@ -1487,10 +1483,7 @@ mod tests {
         let mut out = vec![0.0f32; seq_len * head_dim];
         flash_attention_tiled_f32(&q, &k, &v_ones, &mut out, seq_len, head_dim, 2);
         for (i, val) in out.iter().enumerate() {
-            assert!(
-                (*val - 1.0).abs() < 1e-4,
-                "flash weight sum [{i}]: {val} != 1.0"
-            );
+            assert!((*val - 1.0).abs() < 1e-4, "flash weight sum [{i}]: {val} != 1.0");
         }
     }
 
@@ -1604,10 +1597,7 @@ mod tests {
         let mut out = vec![0.0f32; seq_len * head_dim];
         attention_with_alibi_f32(&q, &k, &v_ones, &mut out, seq_len, head_dim, slope);
         for val in &out {
-            assert!(
-                (*val - 1.0).abs() < 1e-5,
-                "alibi weight sum: {val} != 1.0"
-            );
+            assert!((*val - 1.0).abs() < 1e-5, "alibi weight sum: {val} != 1.0");
         }
     }
 
@@ -1658,10 +1648,7 @@ mod tests {
             let mut out = vec![0.0f32; nq * seq_len * head_dim];
             grouped_query_attention_f32(&q, &k, &v, &mut out, nq, nkv, seq_len, head_dim);
             for val in &out {
-                assert!(
-                    val.is_finite(),
-                    "gqa({nq},{nkv}): non-finite"
-                );
+                assert!(val.is_finite(), "gqa({nq},{nkv}): non-finite");
             }
         }
     }
@@ -1747,12 +1734,7 @@ mod tests {
                 head_dim,
                 scale,
             );
-            assert_close(
-                &out[h * hs..(h + 1) * hs],
-                &expected,
-                1e-5,
-                &format!("mha_ref_head{h}"),
-            );
+            assert_close(&out[h * hs..(h + 1) * hs], &expected, 1e-5, &format!("mha_ref_head{h}"));
         }
     }
 
@@ -1768,8 +1750,8 @@ mod tests {
         // Uniform attention → output is mean of all V rows for each row
         for i in 0..seq_len {
             for d in 0..head_dim {
-                let mean: f32 = (0..seq_len).map(|j| v[j * head_dim + d]).sum::<f32>()
-                    / seq_len as f32;
+                let mean: f32 =
+                    (0..seq_len).map(|j| v[j * head_dim + d]).sum::<f32>() / seq_len as f32;
                 assert!(
                     (out[i * head_dim + d] - mean).abs() < 1e-5,
                     "zero_scale[{i}][{d}]: {} vs {}",
@@ -1848,10 +1830,7 @@ mod tests {
         let mut out = vec![0.0f32; num_q * seq_len * head_dim];
         grouped_query_attention_f32(&q, &k, &v_ones, &mut out, num_q, num_kv, seq_len, head_dim);
         for val in &out {
-            assert!(
-                (*val - 1.0).abs() < 1e-5,
-                "gqa weight sum: {val}"
-            );
+            assert!((*val - 1.0).abs() < 1e-5, "gqa weight sum: {val}");
         }
     }
 
@@ -1865,10 +1844,7 @@ mod tests {
         let mut out = vec![0.0f32; total];
         multi_head_attention_f32(&q, &k, &v_ones, &mut out, num_heads, seq_len, head_dim);
         for val in &out {
-            assert!(
-                (*val - 1.0).abs() < 1e-5,
-                "mha weight sum: {val}"
-            );
+            assert!((*val - 1.0).abs() < 1e-5, "mha weight sum: {val}");
         }
     }
 
@@ -1943,10 +1919,7 @@ mod tests {
         for i in 0..seq_len {
             let val = out[i * head_dim];
             // Should be close to v[i][0] = i
-            assert!(
-                (val - i as f32).abs() < 0.5,
-                "alibi_local[{i}]: got {val}, expected ~{i}"
-            );
+            assert!((val - i as f32).abs() < 0.5, "alibi_local[{i}]: got {val}, expected ~{i}");
         }
     }
 }

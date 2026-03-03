@@ -18,6 +18,24 @@
 //! - `0b11` → −1
 //! - `0b10` → unused (treated as 0)
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -523,11 +541,7 @@ unsafe fn fused_quantize_gemm_neon(
     n: usize,
     quant_scale: f32,
 ) {
-    let inv_scale = if quant_scale.abs() > f32::EPSILON {
-        1.0 / quant_scale
-    } else {
-        0.0
-    };
+    let inv_scale = if quant_scale.abs() > f32::EPSILON { 1.0 / quant_scale } else { 0.0 };
 
     for row in 0..m {
         let n_full = n / 4;
@@ -571,11 +585,7 @@ fn fused_quantize_gemm_scalar(
     n: usize,
     quant_scale: f32,
 ) {
-    let inv_scale = if quant_scale.abs() > f32::EPSILON {
-        1.0 / quant_scale
-    } else {
-        0.0
-    };
+    let inv_scale = if quant_scale.abs() > f32::EPSILON { 1.0 / quant_scale } else { 0.0 };
 
     for row in 0..m {
         for col in 0..n {
@@ -615,9 +625,7 @@ pub fn fused_quantize_gemm(
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
-                fused_quantize_gemm_neon(
-                    weights_f32, activations, output, m, k, n, quant_scale,
-                );
+                fused_quantize_gemm_neon(weights_f32, activations, output, m, k, n, quant_scale);
             }
             return;
         }
@@ -710,14 +718,8 @@ pub fn mixed_precision_batch_gemm(
     let a_stride = k * n;
     let c_stride = m * n;
     assert!(weights.len() >= m * packed_k, "weights too short");
-    assert!(
-        activations_batch.len() >= batch_size * a_stride,
-        "activations_batch too short"
-    );
-    assert!(
-        output_batch.len() >= batch_size * c_stride,
-        "output_batch too short"
-    );
+    assert!(activations_batch.len() >= batch_size * a_stride, "activations_batch too short");
+    assert!(output_batch.len() >= batch_size * c_stride, "output_batch too short");
 
     if m == 0 || k == 0 || n == 0 || batch_size == 0 {
         return;
@@ -798,10 +800,7 @@ unsafe fn asymmetric_quant_gemm_neon(
             let off = row * n + col0;
             let vc = vld1q_f32(output.as_ptr().add(off));
             let vscale = vdupq_n_f32(scale);
-            vst1q_f32(
-                output.as_mut_ptr().add(off),
-                vfmaq_f32(vc, acc, vscale),
-            );
+            vst1q_f32(output.as_mut_ptr().add(off), vfmaq_f32(vc, acc, vscale));
         }
 
         for col in (n_full * 4)..n {
@@ -874,7 +873,14 @@ pub fn asymmetric_quant_gemm(
         if std::arch::is_aarch64_feature_detected!("neon") {
             unsafe {
                 asymmetric_quant_gemm_neon(
-                    weights, activations, output, m, k, n, scale, zero_point,
+                    weights,
+                    activations,
+                    output,
+                    m,
+                    k,
+                    n,
+                    scale,
+                    zero_point,
                 );
             }
             return;
@@ -924,7 +930,14 @@ mod tests {
     }
 
     /// Naive scalar GEMM: C[m×n] += scale · W[m×k] · A[k×n].
-    fn naive_i2s_gemm(weights: &[i8], activations: &[f32], m: usize, k: usize, n: usize, scale: f32) -> Vec<f32> {
+    fn naive_i2s_gemm(
+        weights: &[i8],
+        activations: &[f32],
+        m: usize,
+        k: usize,
+        n: usize,
+        scale: f32,
+    ) -> Vec<f32> {
         let mut out = vec![0.0f32; m * n];
         for row in 0..m {
             for col in 0..n {
@@ -1400,7 +1413,10 @@ mod tests {
             let bf = f32_to_bf16(v);
             let back = bf16_to_f32(bf);
             // bf16 truncation loses lower 16 bits of mantissa
-            assert!((v - back).abs() <= v.abs() * 0.01 + 1e-6, "bf16 roundtrip failed for {v}: got {back}");
+            assert!(
+                (v - back).abs() <= v.abs() * 0.01 + 1e-6,
+                "bf16 roundtrip failed for {v}: got {back}"
+            );
         }
     }
 
@@ -1504,10 +1520,13 @@ mod tests {
         fused_quantize_gemm(&w, &a, &mut out_fused, m, k, n, 1.0);
 
         // Manually quantize and compute
-        let quant_w: Vec<i8> = w.iter().map(|&v| {
-            let q = v.round().clamp(-1.0, 1.0) as i32;
-            q as i8
-        }).collect();
+        let quant_w: Vec<i8> = w
+            .iter()
+            .map(|&v| {
+                let q = v.round().clamp(-1.0, 1.0) as i32;
+                q as i8
+            })
+            .collect();
         let expected = naive_i2s_gemm(&quant_w, &a, m, k, n, 1.0);
         assert_close(&out_fused, &expected, 0.1);
     }

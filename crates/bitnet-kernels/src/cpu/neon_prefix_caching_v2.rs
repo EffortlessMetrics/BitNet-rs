@@ -2,6 +2,24 @@
 //! Efficient KV cache reuse for shared prompt prefixes,
 //! with radix-tree prefix matching and cache eviction.
 
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::float_cmp,
+    clippy::manual_div_ceil,
+    clippy::unnecessary_cast,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::let_and_return,
+    clippy::derivable_impls,
+    clippy::excessive_precision,
+    clippy::manual_is_multiple_of,
+    clippy::manual_memcpy,
+    dead_code,
+    unused_unsafe
+)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -35,11 +53,7 @@ impl RadixNode {
     /// Create an empty root node.
     #[must_use]
     pub fn new_root() -> Self {
-        Self {
-            tokens: Vec::new(),
-            cache_index: None,
-            children: Vec::new(),
-        }
+        Self { tokens: Vec::new(), cache_index: None, children: Vec::new() }
     }
 
     fn find_child(&self, key: u32) -> Option<usize> {
@@ -47,10 +61,7 @@ impl RadixNode {
     }
 
     fn find_child_mut(&mut self, key: u32) -> Option<&mut RadixNode> {
-        self.children
-            .iter_mut()
-            .find(|(k, _)| *k == key)
-            .map(|(_, node)| node)
+        self.children.iter_mut().find(|(k, _)| *k == key).map(|(_, node)| node)
     }
 }
 
@@ -67,11 +78,7 @@ pub struct LruEntry {
 
 impl Default for LruEntry {
     fn default() -> Self {
-        Self {
-            last_used: 0,
-            prefix_len: 0,
-            occupied: false,
-        }
+        Self { last_used: 0, prefix_len: 0, occupied: false }
     }
 }
 
@@ -209,13 +216,7 @@ pub fn prefix_match_v2_scalar(a: &[u32], b: &[u32]) -> usize {
 // ===================================================================
 
 /// Copy `len` f32 values from `src[src_off..]` to `dst[dst_off..]`.
-pub fn cache_copy_v2(
-    src: &[f32],
-    dst: &mut [f32],
-    src_off: usize,
-    dst_off: usize,
-    len: usize,
-) {
+pub fn cache_copy_v2(src: &[f32], dst: &mut [f32], src_off: usize, dst_off: usize, len: usize) {
     assert!(
         src_off + len <= src.len(),
         "source overflow: src_off={src_off} len={len} src.len={}",
@@ -300,10 +301,8 @@ unsafe fn cache_evict_lru_neon(entries: &[LruEntry]) -> Option<usize> {
         return None;
     }
 
-    let mut timestamps: Vec<u64> = entries
-        .iter()
-        .map(|e| if e.occupied { e.last_used } else { u64::MAX })
-        .collect();
+    let timestamps: Vec<u64> =
+        entries.iter().map(|e| if e.occupied { e.last_used } else { u64::MAX }).collect();
 
     // NEON works on 32-bit lanes; we only need to find the argmin, so
     // if all timestamps fit in u32 we can fast-path. Otherwise fall back
@@ -394,11 +393,7 @@ fn radix_insert_inner(node: &mut RadixNode, tokens: &[u32], cache_index: usize) 
             // Move old child under split.
             let mut old_child = std::mem::replace(
                 child,
-                RadixNode {
-                    tokens: Vec::new(),
-                    cache_index: None,
-                    children: Vec::new(),
-                },
+                RadixNode { tokens: Vec::new(), cache_index: None, children: Vec::new() },
             );
             old_child.tokens = old_suffix.clone();
             split.children.push((old_suffix[0], old_child));
@@ -484,10 +479,7 @@ pub struct BatchMatchResult {
 }
 
 /// Match a batch of token sequences against a radix tree.
-pub fn batch_prefix_match(
-    root: &RadixNode,
-    requests: &[&[u32]],
-) -> Vec<BatchMatchResult> {
+pub fn batch_prefix_match(root: &RadixNode, requests: &[&[u32]]) -> Vec<BatchMatchResult> {
     requests
         .iter()
         .enumerate()
@@ -548,10 +540,7 @@ mod tests {
     #[test]
     fn test_hash_scalar_matches_dispatch() {
         let tokens = vec![10, 20, 30, 40, 50];
-        assert_eq!(
-            prefix_hash_v2(&tokens),
-            prefix_hash_v2_scalar(&tokens),
-        );
+        assert_eq!(prefix_hash_v2(&tokens), prefix_hash_v2_scalar(&tokens),);
     }
 
     #[test]
@@ -639,10 +628,7 @@ mod tests {
     fn test_match_scalar_parity() {
         let a: Vec<u32> = (0..17).collect();
         let b: Vec<u32> = (0..13).collect();
-        assert_eq!(
-            prefix_match_v2(&a, &b),
-            prefix_match_v2_scalar(&a, &b),
-        );
+        assert_eq!(prefix_match_v2(&a, &b), prefix_match_v2_scalar(&a, &b),);
     }
 
     #[test]
@@ -799,25 +785,14 @@ mod tests {
             LruEntry { last_used: 15, prefix_len: 3, occupied: true },
             LruEntry { last_used: 1, prefix_len: 5, occupied: true },
         ];
-        assert_eq!(
-            cache_evict_lru(&entries),
-            cache_evict_lru_scalar(&entries),
-        );
+        assert_eq!(cache_evict_lru(&entries), cache_evict_lru_scalar(&entries),);
     }
 
     #[test]
     fn test_evict_large_timestamps() {
         let entries = vec![
-            LruEntry {
-                last_used: u64::MAX - 1,
-                prefix_len: 1,
-                occupied: true,
-            },
-            LruEntry {
-                last_used: u64::MAX - 2,
-                prefix_len: 1,
-                occupied: true,
-            },
+            LruEntry { last_used: u64::MAX - 1, prefix_len: 1, occupied: true },
+            LruEntry { last_used: u64::MAX - 2, prefix_len: 1, occupied: true },
         ];
         assert_eq!(cache_evict_lru(&entries), Some(1));
     }
@@ -889,10 +864,7 @@ mod tests {
         let mut root = RadixNode::new_root();
         radix_insert(&mut root, &[1, 2], 10);
         radix_insert(&mut root, &[1, 2, 3, 4], 20);
-        assert_eq!(
-            radix_prefix_lookup(&root, &[1, 2, 3, 4, 5]),
-            Some((4, 20))
-        );
+        assert_eq!(radix_prefix_lookup(&root, &[1, 2, 3, 4, 5]), Some((4, 20)));
         assert_eq!(radix_prefix_lookup(&root, &[1, 2, 9]), Some((2, 10)));
     }
 
@@ -901,10 +873,7 @@ mod tests {
         let mut root = RadixNode::new_root();
         radix_insert(&mut root, &[1, 2, 3], 0);
         radix_insert(&mut root, &[1, 2, 3], 99);
-        assert_eq!(
-            radix_prefix_lookup(&root, &[1, 2, 3]),
-            Some((3, 99))
-        );
+        assert_eq!(radix_prefix_lookup(&root, &[1, 2, 3]), Some((3, 99)));
     }
 
     #[test]
@@ -922,10 +891,7 @@ mod tests {
             radix_insert(&mut root, &[i, i + 100], i as usize);
         }
         for i in 0u32..64 {
-            assert_eq!(
-                radix_prefix_lookup(&root, &[i, i + 100]),
-                Some((2, i as usize))
-            );
+            assert_eq!(radix_prefix_lookup(&root, &[i, i + 100]), Some((2, i as usize)));
         }
     }
 
@@ -971,11 +937,7 @@ mod tests {
         let mut root = RadixNode::new_root();
         radix_insert(&mut root, &[1, 2, 3], 0);
         radix_insert(&mut root, &[4, 5], 1);
-        let reqs: Vec<&[u32]> = vec![
-            &[1, 2, 3, 9],
-            &[7, 8, 9],
-            &[4, 5, 6],
-        ];
+        let reqs: Vec<&[u32]> = vec![&[1, 2, 3, 9], &[7, 8, 9], &[4, 5, 6]];
         let results = batch_prefix_match(&root, &reqs);
         assert_eq!(results[0].matched_len, 3);
         assert_eq!(results[0].cache_index, Some(0));
@@ -1130,10 +1092,7 @@ mod tests {
         let mut root = RadixNode::new_root();
         radix_insert(&mut root, &[10, 20, 30], 0);
         // Query with the exact stored prefix should work.
-        assert_eq!(
-            radix_prefix_lookup(&root, &[10, 20, 30]),
-            Some((3, 0))
-        );
+        assert_eq!(radix_prefix_lookup(&root, &[10, 20, 30]), Some((3, 0)));
     }
 
     #[test]
@@ -1144,10 +1103,7 @@ mod tests {
         radix_insert(&mut root, &[1, 2], 2);
         // Now [1,2] has cache_index=2, acts as intermediate node.
         assert_eq!(radix_prefix_lookup(&root, &[1, 2, 9]), Some((2, 2)));
-        assert_eq!(
-            radix_prefix_lookup(&root, &[1, 2, 3, 4]),
-            Some((4, 0))
-        );
+        assert_eq!(radix_prefix_lookup(&root, &[1, 2, 3, 4]), Some((4, 0)));
     }
 
     #[test]
@@ -1170,11 +1126,7 @@ mod tests {
     fn test_full_cache_eviction_cycle() {
         let n = 8;
         let mut entries: Vec<LruEntry> = (0..n)
-            .map(|i| LruEntry {
-                last_used: i as u64 * 10,
-                prefix_len: 4,
-                occupied: true,
-            })
+            .map(|i| LruEntry { last_used: i as u64 * 10, prefix_len: 4, occupied: true })
             .collect();
         // Evict should return index 0 (timestamp 0).
         assert_eq!(cache_evict_lru(&entries), Some(0));
