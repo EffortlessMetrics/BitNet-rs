@@ -923,11 +923,10 @@ mod resource_lifecycle {
 
     #[test]
     fn purgeable_state_transitions() {
-        let state = PurgeableState::NonVolatile;
-        let _ = state;
-        let state = PurgeableState::Volatile;
+        let mut state = PurgeableState::NonVolatile;
+        state = PurgeableState::Volatile;
         assert_eq!(state, PurgeableState::Volatile);
-        let state = PurgeableState::Empty;
+        state = PurgeableState::Empty;
         assert_eq!(state, PurgeableState::Empty);
     }
 

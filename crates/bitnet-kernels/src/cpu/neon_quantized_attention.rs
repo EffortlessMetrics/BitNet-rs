@@ -10,20 +10,6 @@
 //! - `0b11` → −1
 //! - `0b10` → unused (treated as 0)
 
-#![allow(unsafe_op_in_unsafe_fn)]
-#![allow(
-    clippy::missing_safety_doc,
-    clippy::float_cmp,
-    clippy::manual_div_ceil,
-    clippy::unnecessary_cast,
-    clippy::needless_range_loop,
-    clippy::too_many_arguments,
-    clippy::collapsible_if,
-    clippy::let_and_return,
-    clippy::derivable_impls,
-    clippy::excessive_precision,
-    clippy::manual_is_multiple_of
-)]
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -108,7 +94,7 @@ pub unsafe fn neon_qk_dot_i2_f32(
     let packed_dim = (head_dim + 3) / 4;
     let mut output = vec![0.0f32; seq_len * seq_len];
 
-    let _scale_vec = vdupq_n_f32(key_scale);
+    let scale_vec = vdupq_n_f32(key_scale);
 
     for q_idx in 0..seq_len {
         let q_offset = q_idx * head_dim;
@@ -917,7 +903,7 @@ mod tests {
         let seq_len = 1;
         let head_dim = 4;
         let queries = vec![1.0; num_heads * seq_len * head_dim];
-        let _packed_dim = (head_dim + 3) / 4;
+        let packed_dim = (head_dim + 3) / 4;
         let keys = pack_slice(&vec![1i8; num_heads * seq_len * head_dim]);
         let values = pack_slice(&vec![1i8; num_heads * seq_len * head_dim]);
         let result = unsafe {
