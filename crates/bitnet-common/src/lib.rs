@@ -28,6 +28,7 @@ pub mod tensor_math;
 pub mod tensor_pool;
 pub mod tensor_serde;
 pub mod tensor_validation;
+pub mod thread_config;
 pub mod token_ring;
 pub mod types;
 
