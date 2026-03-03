@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! ARM64-specific property-based tests for NEON kernels on Apple Silicon.
 //!
 //! Validates numerical invariants of NEON-accelerated kernels using proptest:

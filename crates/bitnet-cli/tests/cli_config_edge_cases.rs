@@ -1,6 +1,5 @@
 //! Edge-case tests for `bitnet-cli` configuration management:
 //! CliConfig, LoggingConfig, PerformanceConfig, ConfigBuilder, validation, and TOML serde.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_cli::config::{CliConfig, ConfigBuilder, LoggingConfig, PerformanceConfig};
 use std::path::PathBuf;

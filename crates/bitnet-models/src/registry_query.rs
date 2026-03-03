@@ -76,35 +76,35 @@ impl RegistryFilter {
     }
 
     pub fn matches(&self, entry: &RegistryEntry) -> bool {
-        if let Some(ref arch) = self.architecture
-            && !entry.architecture.eq_ignore_ascii_case(arch)
-        {
-            return false;
+        if let Some(ref arch) = self.architecture {
+            if !entry.architecture.eq_ignore_ascii_case(arch) {
+                return false;
+            }
         }
-        if let Some(max) = self.max_params
-            && entry.param_count > max
-        {
-            return false;
+        if let Some(max) = self.max_params {
+            if entry.param_count > max {
+                return false;
+            }
         }
-        if let Some(min) = self.min_params
-            && entry.param_count < min
-        {
-            return false;
+        if let Some(min) = self.min_params {
+            if entry.param_count < min {
+                return false;
+            }
         }
-        if let Some(ref qt) = self.quant_type
-            && !entry.quant_type.eq_ignore_ascii_case(qt)
-        {
-            return false;
+        if let Some(ref qt) = self.quant_type {
+            if !entry.quant_type.eq_ignore_ascii_case(qt) {
+                return false;
+            }
         }
-        if let Some(ref fmt) = self.format
-            && !entry.format.eq_ignore_ascii_case(fmt)
-        {
-            return false;
+        if let Some(ref fmt) = self.format {
+            if !entry.format.eq_ignore_ascii_case(fmt) {
+                return false;
+            }
         }
-        if let Some(ref tag) = self.tag
-            && !entry.tags.iter().any(|t| t.eq_ignore_ascii_case(tag))
-        {
-            return false;
+        if let Some(ref tag) = self.tag {
+            if !entry.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
+                return false;
+            }
         }
         true
     }
