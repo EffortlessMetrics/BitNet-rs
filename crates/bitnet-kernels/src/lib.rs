@@ -86,6 +86,7 @@ pub mod scatter_gather;
 pub mod shaped_reduction;
 pub mod simd_detect;
 pub mod simd_diagnostics;
+pub mod softmax_utils;
 mod stubs;
 pub mod tl_lut;
 
