@@ -341,8 +341,8 @@ mod matmul_accumulation {
     #[test]
     fn matmul_2d_small() {
         // 2×3 * 3×2 matmul
-        let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3 row-major
-        let b = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]; // 3×2 row-major
+        let a: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3 row-major
+        let b: Vec<f32> = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]; // 3×2 row-major
         let m = 2;
         let k = 3;
         let n = 2;
@@ -482,10 +482,10 @@ mod quantization_rounding {
     #[test]
     fn ternary_quantization_boundary_values() {
         let threshold = 0.5_f32;
-        // Exactly at threshold — should map to zero (not in the > threshold set)
+        // Exactly at ±threshold — should map to zero (strict inequality: v < -t or v > t)
         let vals = vec![-0.5, -0.25, 0.0, 0.25, 0.5];
         let quant = quantize_ternary(&vals, threshold);
-        assert_eq!(quant, vec![-1, 0, 0, 0, 0]);
+        assert_eq!(quant, vec![0, 0, 0, 0, 0]);
     }
 
     #[test]
