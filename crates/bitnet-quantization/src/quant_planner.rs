@@ -1,229 +1,293 @@
-//! Weight quantization planning utilities.
+//! Quantization strategy planner.
 //!
-//! Estimates quantization impact and selects optimal configurations.
+//! Given model characteristics and hardware constraints, recommend
+//! a quantization strategy that balances accuracy and performance.
 
-/// Quantization format options.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum QuantFormat {
-    F32,
-    F16,
+/// Quantization precision level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum QuantLevel {
+    FP32,
+    FP16,
     BF16,
-    Int8,
-    Int4,
-    I2S,
-    QK256,
+    INT8,
+    INT4,
+    INT2,
 }
 
-impl QuantFormat {
-    pub fn bits_per_weight(&self) -> f32 {
+impl QuantLevel {
+    pub fn bits_per_weight(&self) -> u32 {
         match self {
-            Self::F32 => 32.0,
-            Self::F16 | Self::BF16 => 16.0,
-            Self::Int8 => 8.0,
-            Self::Int4 => 4.5, // with scales overhead
-            Self::I2S => 2.0,
-            Self::QK256 => 2.3, // with block scales
+            Self::FP32 => 32,
+            Self::FP16 | Self::BF16 => 16,
+            Self::INT8 => 8,
+            Self::INT4 => 4,
+            Self::INT2 => 2,
         }
     }
 
     pub fn name(&self) -> &'static str {
         match self {
-            Self::F32 => "f32",
-            Self::F16 => "f16",
-            Self::BF16 => "bf16",
-            Self::Int8 => "int8",
-            Self::Int4 => "int4",
-            Self::I2S => "i2s",
-            Self::QK256 => "qk256",
+            Self::FP32 => "FP32",
+            Self::FP16 => "FP16",
+            Self::BF16 => "BF16",
+            Self::INT8 => "INT8",
+            Self::INT4 => "INT4",
+            Self::INT2 => "INT2",
         }
     }
 
-    pub fn is_integer(&self) -> bool {
-        matches!(self, Self::Int8 | Self::Int4 | Self::I2S | Self::QK256)
+    pub fn compression_ratio_vs_fp32(&self) -> f64 {
+        32.0 / self.bits_per_weight() as f64
     }
 }
 
-/// Quantization plan for a model.
+/// Layer type classification for mixed-precision planning.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayerKind {
+    Embedding,
+    Attention,
+    FeedForward,
+    Normalization,
+    OutputHead,
+}
+
+/// Per-layer quantization decision.
 #[derive(Debug, Clone)]
-pub struct QuantPlan {
-    pub source_format: QuantFormat,
-    pub target_format: QuantFormat,
-    pub param_count: u64,
-    pub source_bytes: u64,
-    pub target_bytes: u64,
-    pub compression_ratio: f32,
-    pub estimated_quality_loss: f32,
+pub struct LayerPlan {
+    pub layer_name: String,
+    pub kind: LayerKind,
+    pub level: QuantLevel,
+    pub param_count: usize,
+    pub rationale: String,
 }
 
-/// Plan quantization from source to target format.
-pub fn plan_quantization(param_count: u64, source: QuantFormat, target: QuantFormat) -> QuantPlan {
-    let source_bytes = (param_count as f64 * source.bits_per_weight() as f64 / 8.0) as u64;
-    let target_bytes = (param_count as f64 * target.bits_per_weight() as f64 / 8.0) as u64;
-    let compression =
-        if target_bytes > 0 { source_bytes as f32 / target_bytes as f32 } else { 0.0 };
-
-    // Rough quality loss estimates based on literature
-    let quality_loss = match (&source, &target) {
-        (_, QuantFormat::F32) => 0.0,
-        (QuantFormat::F32, QuantFormat::F16) | (QuantFormat::F32, QuantFormat::BF16) => 0.001,
-        (_, QuantFormat::F16) | (_, QuantFormat::BF16) => 0.001,
-        (_, QuantFormat::Int8) => 0.01,
-        (_, QuantFormat::Int4) => 0.03,
-        (_, QuantFormat::I2S) => 0.05,
-        (_, QuantFormat::QK256) => 0.04,
-    };
-
-    QuantPlan {
-        source_format: source,
-        target_format: target,
-        param_count,
-        source_bytes,
-        target_bytes,
-        compression_ratio: compression,
-        estimated_quality_loss: quality_loss,
+impl LayerPlan {
+    pub fn size_bytes(&self) -> usize {
+        (self.param_count as f64 * self.level.bits_per_weight() as f64 / 8.0) as usize
     }
 }
 
-/// Compare multiple quantization options.
-pub fn compare_formats(
-    param_count: u64,
-    source: QuantFormat,
-    targets: &[QuantFormat],
-) -> Vec<QuantPlan> {
-    targets.iter().map(|&t| plan_quantization(param_count, source, t)).collect()
+/// Hardware constraints.
+#[derive(Debug, Clone)]
+pub struct HardwareConstraints {
+    pub available_memory_bytes: usize,
+    pub supports_int8: bool,
+    pub supports_int4: bool,
+    pub supports_bf16: bool,
+    pub prefer_speed: bool,
 }
 
-/// Recommend the best quantization for a given memory budget.
-pub fn recommend_for_budget(
-    param_count: u64,
-    source: QuantFormat,
-    max_bytes: u64,
-) -> Option<QuantFormat> {
-    let candidates = [
-        QuantFormat::F16,
-        QuantFormat::BF16,
-        QuantFormat::Int8,
-        QuantFormat::Int4,
-        QuantFormat::I2S,
-        QuantFormat::QK256,
-    ];
-
-    // Pick the highest-quality format that fits
-    candidates
-        .iter()
-        .map(|&fmt| (fmt, plan_quantization(param_count, source, fmt)))
-        .filter(|(_, plan)| plan.target_bytes <= max_bytes)
-        .min_by(|(_, a), (_, b)| {
-            a.estimated_quality_loss.partial_cmp(&b.estimated_quality_loss).unwrap()
-        })
-        .map(|(fmt, _)| fmt)
+impl Default for HardwareConstraints {
+    fn default() -> Self {
+        Self {
+            available_memory_bytes: 16 * 1024 * 1024 * 1024, // 16 GB
+            supports_int8: true,
+            supports_int4: false,
+            supports_bf16: false,
+            prefer_speed: false,
+        }
+    }
 }
 
-/// Estimated memory savings in bytes.
-pub fn memory_savings(plan: &QuantPlan) -> i64 {
-    plan.source_bytes as i64 - plan.target_bytes as i64
+/// Model profile for planning.
+#[derive(Debug, Clone)]
+pub struct ModelProfile {
+    pub total_params: usize,
+    pub layers: Vec<(String, LayerKind, usize)>, // (name, kind, param_count)
+    pub original_dtype: QuantLevel,
+}
+
+/// Complete quantization plan.
+#[derive(Debug)]
+pub struct QuantPlan {
+    pub layer_plans: Vec<LayerPlan>,
+    pub total_original_bytes: usize,
+    pub total_quantized_bytes: usize,
+}
+
+impl QuantPlan {
+    pub fn compression_ratio(&self) -> f64 {
+        if self.total_quantized_bytes == 0 {
+            return 0.0;
+        }
+        self.total_original_bytes as f64 / self.total_quantized_bytes as f64
+    }
+
+    pub fn layer_count(&self) -> usize {
+        self.layer_plans.len()
+    }
+
+    pub fn memory_saved_bytes(&self) -> usize {
+        self.total_original_bytes.saturating_sub(self.total_quantized_bytes)
+    }
+
+    pub fn unique_levels(&self) -> Vec<QuantLevel> {
+        let mut levels: Vec<_> = self.layer_plans.iter().map(|p| p.level).collect();
+        levels.sort();
+        levels.dedup();
+        levels
+    }
+}
+
+/// Plan quantization for a model.
+pub fn plan_quantization(profile: &ModelProfile, constraints: &HardwareConstraints) -> QuantPlan {
+    let original_bytes_per_param = profile.original_dtype.bits_per_weight() as f64 / 8.0;
+    let total_original_bytes = (profile.total_params as f64 * original_bytes_per_param) as usize;
+
+    let mut layer_plans = Vec::new();
+
+    for (name, kind, params) in &profile.layers {
+        let (level, rationale) = select_level(*kind, constraints);
+        layer_plans.push(LayerPlan {
+            layer_name: name.clone(),
+            kind: *kind,
+            level,
+            param_count: *params,
+            rationale,
+        });
+    }
+
+    let total_quantized_bytes: usize = layer_plans.iter().map(|p| p.size_bytes()).sum();
+
+    QuantPlan { layer_plans, total_original_bytes, total_quantized_bytes }
+}
+
+fn select_level(kind: LayerKind, constraints: &HardwareConstraints) -> (QuantLevel, String) {
+    match kind {
+        LayerKind::Normalization => {
+            (QuantLevel::FP16, "normalization kept at FP16 for numerical stability".into())
+        }
+        LayerKind::Embedding | LayerKind::OutputHead => {
+            if constraints.supports_int8 {
+                (QuantLevel::INT8, "embedding/head quantized to INT8 for memory savings".into())
+            } else {
+                (QuantLevel::FP16, "embedding/head kept at FP16 (INT8 not supported)".into())
+            }
+        }
+        LayerKind::Attention | LayerKind::FeedForward => {
+            if constraints.supports_int4 && constraints.prefer_speed {
+                (QuantLevel::INT4, "aggressive INT4 for speed".into())
+            } else if constraints.supports_int8 {
+                (QuantLevel::INT8, "INT8 for balanced accuracy/speed".into())
+            } else if constraints.supports_bf16 {
+                (QuantLevel::BF16, "BF16 for hardware-native computation".into())
+            } else {
+                (QuantLevel::FP16, "FP16 default (no lower precision supported)".into())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_bits_per_weight() {
-        assert_eq!(QuantFormat::F32.bits_per_weight(), 32.0);
-        assert_eq!(QuantFormat::F16.bits_per_weight(), 16.0);
-        assert_eq!(QuantFormat::Int8.bits_per_weight(), 8.0);
-        assert_eq!(QuantFormat::I2S.bits_per_weight(), 2.0);
+    fn sample_profile() -> ModelProfile {
+        ModelProfile {
+            total_params: 1_000_000,
+            layers: vec![
+                ("embed".into(), LayerKind::Embedding, 500_000),
+                ("attn.0".into(), LayerKind::Attention, 200_000),
+                ("ffn.0".into(), LayerKind::FeedForward, 200_000),
+                ("norm".into(), LayerKind::Normalization, 50_000),
+                ("head".into(), LayerKind::OutputHead, 50_000),
+            ],
+            original_dtype: QuantLevel::FP16,
+        }
     }
 
     #[test]
-    fn test_format_name() {
-        assert_eq!(QuantFormat::Int4.name(), "int4");
-        assert_eq!(QuantFormat::QK256.name(), "qk256");
+    fn test_quant_level_bits() {
+        assert_eq!(QuantLevel::INT4.bits_per_weight(), 4);
+        assert_eq!(QuantLevel::FP32.bits_per_weight(), 32);
     }
 
     #[test]
-    fn test_is_integer() {
-        assert!(QuantFormat::Int8.is_integer());
-        assert!(QuantFormat::I2S.is_integer());
-        assert!(!QuantFormat::F32.is_integer());
-        assert!(!QuantFormat::BF16.is_integer());
+    fn test_compression_ratio() {
+        assert!((QuantLevel::INT8.compression_ratio_vs_fp32() - 4.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_plan_f32_to_f16() {
-        let p = plan_quantization(1_000_000, QuantFormat::F32, QuantFormat::F16);
-        assert_eq!(p.source_bytes, 4_000_000);
-        assert_eq!(p.target_bytes, 2_000_000);
-        assert!((p.compression_ratio - 2.0).abs() < 0.01);
+    fn test_plan_default_constraints() {
+        let plan = plan_quantization(&sample_profile(), &HardwareConstraints::default());
+        assert_eq!(plan.layer_count(), 5);
+        assert!(plan.compression_ratio() > 1.0);
     }
 
     #[test]
-    fn test_plan_f32_to_int4() {
-        let p = plan_quantization(1_000_000, QuantFormat::F32, QuantFormat::Int4);
-        assert!(p.target_bytes < p.source_bytes);
-        assert!(p.compression_ratio > 5.0);
+    fn test_norm_stays_fp16() {
+        let plan = plan_quantization(&sample_profile(), &HardwareConstraints::default());
+        let norm = plan.layer_plans.iter().find(|p| p.kind == LayerKind::Normalization).unwrap();
+        assert_eq!(norm.level, QuantLevel::FP16);
     }
 
     #[test]
-    fn test_plan_quality_loss() {
-        let p16 = plan_quantization(1000, QuantFormat::F32, QuantFormat::F16);
-        let p8 = plan_quantization(1000, QuantFormat::F32, QuantFormat::Int8);
-        let p4 = plan_quantization(1000, QuantFormat::F32, QuantFormat::Int4);
-        assert!(p16.estimated_quality_loss < p8.estimated_quality_loss);
-        assert!(p8.estimated_quality_loss < p4.estimated_quality_loss);
+    fn test_int4_aggressive() {
+        let hw =
+            HardwareConstraints { supports_int4: true, prefer_speed: true, ..Default::default() };
+        let plan = plan_quantization(&sample_profile(), &hw);
+        let attn = plan.layer_plans.iter().find(|p| p.kind == LayerKind::Attention).unwrap();
+        assert_eq!(attn.level, QuantLevel::INT4);
     }
 
     #[test]
-    fn test_compare_formats() {
-        let plans = compare_formats(
-            1_000_000,
-            QuantFormat::F32,
-            &[QuantFormat::F16, QuantFormat::Int8, QuantFormat::Int4],
-        );
-        assert_eq!(plans.len(), 3);
+    fn test_bf16_fallback() {
+        let hw =
+            HardwareConstraints { supports_int8: false, supports_bf16: true, ..Default::default() };
+        let plan = plan_quantization(&sample_profile(), &hw);
+        let ffn = plan.layer_plans.iter().find(|p| p.kind == LayerKind::FeedForward).unwrap();
+        assert_eq!(ffn.level, QuantLevel::BF16);
     }
 
     #[test]
-    fn test_recommend_large_budget() {
-        let rec = recommend_for_budget(1_000_000, QuantFormat::F32, 10_000_000);
-        // Should pick F16/BF16 — highest quality that fits
-        assert!(rec.is_some());
-        let r = rec.unwrap();
-        assert!(r == QuantFormat::F16 || r == QuantFormat::BF16);
+    fn test_memory_saved() {
+        let plan = plan_quantization(&sample_profile(), &HardwareConstraints::default());
+        assert!(plan.memory_saved_bytes() > 0);
     }
 
     #[test]
-    fn test_recommend_small_budget() {
-        let rec = recommend_for_budget(1_000_000, QuantFormat::F32, 500_000);
-        // Only I2S and QK256 fit under 500KB for 1M params
-        assert!(rec.is_some());
+    fn test_unique_levels() {
+        let plan = plan_quantization(&sample_profile(), &HardwareConstraints::default());
+        let levels = plan.unique_levels();
+        assert!(levels.contains(&QuantLevel::FP16));
+        assert!(levels.contains(&QuantLevel::INT8));
     }
 
     #[test]
-    fn test_recommend_zero_budget() {
-        let rec = recommend_for_budget(1_000_000, QuantFormat::F32, 0);
-        assert!(rec.is_none());
+    fn test_layer_plan_size() {
+        let lp = LayerPlan {
+            layer_name: "test".into(),
+            kind: LayerKind::Attention,
+            level: QuantLevel::INT8,
+            param_count: 1000,
+            rationale: "test".into(),
+        };
+        assert_eq!(lp.size_bytes(), 1000);
     }
 
     #[test]
-    fn test_memory_savings() {
-        let p = plan_quantization(1_000_000, QuantFormat::F32, QuantFormat::F16);
-        assert_eq!(memory_savings(&p), 2_000_000);
+    fn test_fp16_only_hw() {
+        let hw = HardwareConstraints {
+            supports_int8: false,
+            supports_int4: false,
+            supports_bf16: false,
+            ..Default::default()
+        };
+        let plan = plan_quantization(&sample_profile(), &hw);
+        assert!(plan.layer_plans.iter().all(|p| p.level == QuantLevel::FP16));
     }
 
     #[test]
-    fn test_memory_savings_same() {
-        let p = plan_quantization(1_000_000, QuantFormat::F32, QuantFormat::F32);
-        assert_eq!(memory_savings(&p), 0);
+    fn test_empty_model() {
+        let profile =
+            ModelProfile { total_params: 0, layers: vec![], original_dtype: QuantLevel::FP16 };
+        let plan = plan_quantization(&profile, &HardwareConstraints::default());
+        assert_eq!(plan.layer_count(), 0);
     }
 
     #[test]
-    fn test_phi4_plan() {
-        // Phi-4: ~14B params, BF16 → Int4
-        let p = plan_quantization(14_000_000_000, QuantFormat::BF16, QuantFormat::Int4);
-        // 14B * 16bits = 28GB → 14B * 4.5bits ≈ 7.9GB
-        assert!(p.target_bytes < 10_000_000_000);
-        assert!(p.compression_ratio > 3.0);
+    fn test_quant_level_name() {
+        assert_eq!(QuantLevel::INT4.name(), "INT4");
+        assert_eq!(QuantLevel::BF16.name(), "BF16");
     }
 }
