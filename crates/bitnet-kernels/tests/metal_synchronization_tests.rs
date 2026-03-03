@@ -1,22 +1,21 @@
+//! Metal synchronization and concurrency pattern tests for Apple Silicon.
+//!
+//! Validates command buffer ordering, fence/event synchronization, resource
+//! hazard tracking, multi-queue coordination, atomic operations, buffer
+//! coherence, execution dependency graphs, and Apple Silicon–specific sync
+//! primitives. All tests use mock/simulated types — no GPU hardware required.
+
 #![cfg(feature = "cpu")]
-#![allow(clippy::needless_range_loop)]
-//! Metal GPU synchronization and barrier pattern tests.
-//!
-//! Validates Metal synchronization primitives using pure-Rust models:
-//! command buffer ordering, fences, events, memory barriers,
-//! resource hazard tracking, multi-queue coordination, and
-//! double/triple buffering patterns.
-//!
-//! All tests run with `--features cpu` — no Metal runtime required.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
-// ═══════════════════════════════════════════════════════════════════════
-// Model types for Metal synchronization concepts
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// Mock / simulated Metal types
+// ═══════════════════════════════════════════════════════════════════════════
 
-/// Simulated command buffer status.
+/// Simulated Metal command buffer status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CommandBufferStatus {
     NotEnqueued,
@@ -27,28 +26,30 @@ enum CommandBufferStatus {
     Error,
 }
 
-/// A modeled Metal command buffer.
-#[derive(Debug)]
-struct CommandBuffer {
+/// A mock Metal command buffer that tracks encoding order and dependencies.
+#[derive(Debug, Clone)]
+struct MockCommandBuffer {
     id: u64,
-    status: CommandBufferStatus,
     label: String,
-    execution_order: Option<u64>,
+    status: CommandBufferStatus,
+    encoded_at: Option<u64>,
+    completed_at: Option<u64>,
+    /// IDs of command buffers this one depends on.
     dependencies: Vec<u64>,
-    writes: Vec<String>,
-    reads: Vec<String>,
+    /// Resource accesses recorded during encoding.
+    resource_accesses: Vec<ResourceAccess>,
 }
 
-impl CommandBuffer {
+impl MockCommandBuffer {
     fn new(id: u64, label: &str) -> Self {
         Self {
             id,
-            status: CommandBufferStatus::NotEnqueued,
             label: label.to_string(),
-            execution_order: None,
+            status: CommandBufferStatus::NotEnqueued,
+            encoded_at: None,
+            completed_at: None,
             dependencies: Vec::new(),
-            writes: Vec::new(),
-            reads: Vec::new(),
+            resource_accesses: Vec::new(),
         }
     }
 
@@ -57,97 +58,51 @@ impl CommandBuffer {
         self.status = CommandBufferStatus::Enqueued;
     }
 
-    fn commit(&mut self) {
+    fn commit(&mut self, tick: u64) {
         assert!(
             self.status == CommandBufferStatus::Enqueued
                 || self.status == CommandBufferStatus::NotEnqueued
         );
         self.status = CommandBufferStatus::Committed;
+        self.encoded_at = Some(tick);
     }
 
-    fn schedule(&mut self) {
+    fn complete(&mut self, tick: u64) {
         assert_eq!(self.status, CommandBufferStatus::Committed);
-        self.status = CommandBufferStatus::Scheduled;
-    }
-
-    fn complete(&mut self, order: u64) {
-        assert_eq!(self.status, CommandBufferStatus::Scheduled);
         self.status = CommandBufferStatus::Completed;
-        self.execution_order = Some(order);
-    }
-
-    fn fail(&mut self) {
-        self.status = CommandBufferStatus::Error;
-    }
-
-    fn add_dependency(&mut self, dep_id: u64) {
-        self.dependencies.push(dep_id);
-    }
-
-    fn add_write(&mut self, resource: &str) {
-        self.writes.push(resource.to_string());
-    }
-
-    fn add_read(&mut self, resource: &str) {
-        self.reads.push(resource.to_string());
+        self.completed_at = Some(tick);
     }
 }
 
-/// Command queue that processes command buffers in submission order.
+/// Access mode for a GPU resource inside a command buffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AccessMode {
+    Read,
+    Write,
+    ReadWrite,
+}
+
+/// A single resource access record.
+#[derive(Debug, Clone)]
+struct ResourceAccess {
+    resource_id: u64,
+    mode: AccessMode,
+    offset: usize,
+    length: usize,
+}
+
+/// Simulated GPU fence.
 #[derive(Debug)]
-struct CommandQueue {
-    label: String,
-    priority: QueuePriority,
-    buffers: VecDeque<u64>,
-    next_order: AtomicU64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum QueuePriority {
-    Low,
-    Normal,
-    High,
-}
-
-impl CommandQueue {
-    fn new(label: &str, priority: QueuePriority) -> Self {
-        Self {
-            label: label.to_string(),
-            priority,
-            buffers: VecDeque::new(),
-            next_order: AtomicU64::new(0),
-        }
-    }
-
-    fn submit(&mut self, buffer_id: u64) {
-        self.buffers.push_back(buffer_id);
-    }
-
-    fn next_execution_order(&self) -> u64 {
-        self.next_order.fetch_add(1, Ordering::SeqCst)
-    }
-
-    fn pending_count(&self) -> usize {
-        self.buffers.len()
-    }
-
-    fn drain_all(&mut self) -> Vec<u64> {
-        self.buffers.drain(..).collect()
-    }
-}
-
-/// Fence for cross-encoder / cross-queue synchronization.
-#[derive(Debug)]
-struct Fence {
+struct MockFence {
     id: u64,
+    label: String,
     signaled: bool,
     signal_value: u64,
-    label: String,
 }
 
-impl Fence {
+impl MockFence {
     fn new(id: u64, label: &str) -> Self {
-        Self { id, signaled: false, signal_value: 0, label: label.to_string() }
+        Self { id, label: label.to_string(), signaled: false, signal_value: 0 }
     }
 
     fn signal(&mut self, value: u64) {
@@ -165,1639 +120,1621 @@ impl Fence {
     }
 }
 
-/// GPU event for fine-grained synchronization.
+/// Simulated shared event (CPU↔GPU synchronization).
 #[derive(Debug)]
-struct GpuEvent {
+struct MockSharedEvent {
     id: u64,
-    signaled_value: u64,
+    value: AtomicU64,
+    listeners: Vec<(u64, bool)>, // (threshold, notified)
+}
+
+impl MockSharedEvent {
+    fn new(id: u64) -> Self {
+        Self { id, value: AtomicU64::new(0), listeners: Vec::new() }
+    }
+
+    fn signal(&self, value: u64) {
+        self.value.store(value, Ordering::SeqCst);
+    }
+
+    fn current_value(&self) -> u64 {
+        self.value.load(Ordering::SeqCst)
+    }
+
+    fn add_listener(&mut self, threshold: u64) {
+        self.listeners.push((threshold, false));
+    }
+
+    fn poll_listeners(&mut self) -> Vec<u64> {
+        let current = self.current_value();
+        let mut notified = Vec::new();
+        for (threshold, fired) in &mut self.listeners {
+            if !*fired && current >= *threshold {
+                *fired = true;
+                notified.push(*threshold);
+            }
+        }
+        notified
+    }
+}
+
+/// Simulated command queue with ordering guarantees.
+struct MockCommandQueue {
+    id: u64,
     label: String,
+    submitted: Vec<MockCommandBuffer>,
+    completion_order: Vec<u64>,
+    next_tick: u64,
 }
 
-impl GpuEvent {
+impl MockCommandQueue {
     fn new(id: u64, label: &str) -> Self {
-        Self { id, signaled_value: 0, label: label.to_string() }
+        Self {
+            id,
+            label: label.to_string(),
+            submitted: Vec::new(),
+            completion_order: Vec::new(),
+            next_tick: 0,
+        }
     }
 
-    fn signal(&mut self, value: u64) {
-        self.signaled_value = self.signaled_value.max(value);
+    fn submit(&mut self, mut buf: MockCommandBuffer) -> u64 {
+        let tick = self.next_tick;
+        self.next_tick += 1;
+        buf.commit(tick);
+        let id = buf.id;
+        self.submitted.push(buf);
+        id
     }
 
-    fn wait(&self, value: u64) -> bool {
-        self.signaled_value >= value
+    fn complete_next(&mut self) -> Option<u64> {
+        for buf in &mut self.submitted {
+            if buf.status == CommandBufferStatus::Committed {
+                let tick = self.next_tick;
+                self.next_tick += 1;
+                buf.complete(tick);
+                self.completion_order.push(buf.id);
+                return Some(buf.id);
+            }
+        }
+        None
+    }
+
+    fn complete_all(&mut self) {
+        while self.complete_next().is_some() {}
+    }
+
+    fn is_completed(&self, id: u64) -> bool {
+        self.submitted.iter().any(|b| b.id == id && b.status == CommandBufferStatus::Completed)
     }
 }
 
-/// Resource access type for hazard tracking.
+/// Hazard types between two resource accesses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AccessType {
-    Read,
-    Write,
-    ReadWrite,
+enum HazardType {
+    ReadAfterWrite,
+    WriteAfterRead,
+    WriteAfterWrite,
 }
 
-/// Memory barrier scope.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BarrierScope {
-    Buffers,
-    Textures,
-    RenderTargets,
-    All,
-}
-
-/// Resource state for hazard tracking.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ResourceState {
-    name: String,
-    last_access: AccessType,
-    last_writer_cmd: Option<u64>,
-    last_reader_cmds: Vec<u64>,
-    barrier_pending: bool,
-}
-
-impl ResourceState {
-    fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            last_access: AccessType::Read,
-            last_writer_cmd: None,
-            last_reader_cmds: Vec::new(),
-            barrier_pending: false,
+/// Detects data hazards between two command buffers.
+fn detect_hazards(a: &MockCommandBuffer, b: &MockCommandBuffer) -> Vec<(u64, HazardType)> {
+    let mut hazards = Vec::new();
+    for acc_a in &a.resource_accesses {
+        for acc_b in &b.resource_accesses {
+            if acc_a.resource_id != acc_b.resource_id {
+                continue;
+            }
+            // Check range overlap.
+            let a_end = acc_a.offset + acc_a.length;
+            let b_end = acc_b.offset + acc_b.length;
+            if acc_a.offset >= b_end || acc_b.offset >= a_end {
+                continue;
+            }
+            match (acc_a.mode, acc_b.mode) {
+                (AccessMode::Write, AccessMode::Read)
+                | (AccessMode::Write, AccessMode::ReadWrite)
+                | (AccessMode::ReadWrite, AccessMode::Read) => {
+                    hazards.push((acc_a.resource_id, HazardType::ReadAfterWrite));
+                }
+                (AccessMode::Read, AccessMode::Write)
+                | (AccessMode::Read, AccessMode::ReadWrite)
+                | (AccessMode::ReadWrite, AccessMode::Write) => {
+                    hazards.push((acc_a.resource_id, HazardType::WriteAfterRead));
+                }
+                (AccessMode::Write, AccessMode::Write)
+                | (AccessMode::ReadWrite, AccessMode::ReadWrite) => {
+                    hazards.push((acc_a.resource_id, HazardType::WriteAfterWrite));
+                }
+                (AccessMode::Read, AccessMode::Read) => { /* no hazard */ }
+            }
         }
     }
-
-    fn record_write(&mut self, cmd_id: u64) -> bool {
-        let needs_barrier = !self.last_reader_cmds.is_empty() || self.last_writer_cmd.is_some();
-        self.last_access = AccessType::Write;
-        self.last_writer_cmd = Some(cmd_id);
-        self.last_reader_cmds.clear();
-        self.barrier_pending = needs_barrier;
-        needs_barrier
-    }
-
-    fn record_read(&mut self, cmd_id: u64) -> bool {
-        let needs_barrier = self.last_writer_cmd.is_some() && self.last_access == AccessType::Write;
-        self.last_access = AccessType::Read;
-        self.last_reader_cmds.push(cmd_id);
-        if needs_barrier {
-            self.barrier_pending = true;
-        }
-        needs_barrier
-    }
-
-    fn clear_barrier(&mut self) {
-        self.barrier_pending = false;
-    }
+    hazards
 }
 
-/// Hazard tracking mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HazardTrackingMode {
-    Automatic,
-    Manual,
-    Untracked,
+/// Dependency graph for execution ordering (topological sort + cycle detection).
+struct DependencyGraph {
+    /// node → set of nodes it depends on (predecessors).
+    edges: HashMap<u64, HashSet<u64>>,
+    nodes: HashSet<u64>,
 }
 
-/// Memory barrier descriptor.
-#[derive(Debug, Clone)]
-struct MemoryBarrier {
-    scope: BarrierScope,
-    after_stages: &'static str,
-    before_stages: &'static str,
-    resources: Vec<String>,
-}
-
-impl MemoryBarrier {
-    fn buffer_barrier(resources: Vec<String>) -> Self {
-        Self {
-            scope: BarrierScope::Buffers,
-            after_stages: "compute",
-            before_stages: "compute",
-            resources,
-        }
-    }
-
-    fn texture_barrier(resources: Vec<String>) -> Self {
-        Self {
-            scope: BarrierScope::Textures,
-            after_stages: "fragment",
-            before_stages: "compute",
-            resources,
-        }
-    }
-
-    fn full_barrier() -> Self {
-        Self {
-            scope: BarrierScope::All,
-            after_stages: "all",
-            before_stages: "all",
-            resources: Vec::new(),
-        }
-    }
-}
-
-/// Ring buffer slot for double/triple buffering.
-#[derive(Debug)]
-struct BufferSlot {
-    index: usize,
-    in_flight: bool,
-    frame_id: u64,
-    data: Vec<f32>,
-}
-
-impl BufferSlot {
-    fn new(index: usize, capacity: usize) -> Self {
-        Self { index, in_flight: false, frame_id: 0, data: vec![0.0; capacity] }
-    }
-}
-
-/// Ring buffer manager for N-buffering patterns.
-#[derive(Debug)]
-struct RingBuffer {
-    slots: Vec<BufferSlot>,
-    current: usize,
-    frame_counter: u64,
-    buffer_count: usize,
-}
-
-impl RingBuffer {
-    fn new(count: usize, capacity: usize) -> Self {
-        let slots = (0..count).map(|i| BufferSlot::new(i, capacity)).collect();
-        Self { slots, current: 0, frame_counter: 0, buffer_count: count }
-    }
-
-    fn acquire(&mut self) -> Option<usize> {
-        let idx = self.current;
-        if self.slots[idx].in_flight {
-            return None;
-        }
-        self.slots[idx].in_flight = true;
-        self.slots[idx].frame_id = self.frame_counter;
-        self.frame_counter += 1;
-        self.current = (self.current + 1) % self.buffer_count;
-        Some(idx)
-    }
-
-    fn release(&mut self, index: usize) {
-        assert!(index < self.buffer_count);
-        self.slots[index].in_flight = false;
-    }
-
-    fn in_flight_count(&self) -> usize {
-        self.slots.iter().filter(|s| s.in_flight).count()
-    }
-
-    fn available_count(&self) -> usize {
-        self.slots.iter().filter(|s| !s.in_flight).count()
-    }
-}
-
-/// Completion handler record for ordering verification.
-#[derive(Debug)]
-struct CompletionRecord {
-    buffer_id: u64,
-    timestamp: u64,
-}
-
-/// Simple synchronization coordinator.
-struct SyncCoordinator {
-    completed: Vec<CompletionRecord>,
-    fences: Vec<Fence>,
-    events: Vec<GpuEvent>,
-    barriers: Vec<MemoryBarrier>,
-    resources: Vec<ResourceState>,
-    clock: AtomicU64,
-}
-
-impl SyncCoordinator {
+impl DependencyGraph {
     fn new() -> Self {
+        Self { edges: HashMap::new(), nodes: HashSet::new() }
+    }
+
+    fn add_node(&mut self, id: u64) {
+        self.nodes.insert(id);
+        self.edges.entry(id).or_default();
+    }
+
+    fn add_edge(&mut self, from: u64, to: u64) {
+        self.nodes.insert(from);
+        self.nodes.insert(to);
+        self.edges.entry(to).or_default().insert(from);
+        self.edges.entry(from).or_default();
+    }
+
+    /// Kahn's algorithm: returns topological order or `Err` if cycle.
+    fn topological_sort(&self) -> Result<Vec<u64>, &'static str> {
+        let mut in_degree: HashMap<u64, usize> = HashMap::new();
+        for &n in &self.nodes {
+            in_degree.entry(n).or_insert(0);
+        }
+        for deps in self.edges.values() {
+            for &_d in deps {
+                // _d is a predecessor, so this node has in-degree contribution.
+            }
+        }
+        // Recompute: in_degree[n] = number of predecessors.
+        for &n in &self.nodes {
+            in_degree.insert(n, self.edges.get(&n).map_or(0, |s| s.len()));
+        }
+        // Reverse: in_degree[n] = how many edges point *to* n.
+        // Our edges: edges[n] = set of predecessors of n.
+        // So in_degree[n] = edges[n].len() means "n waits for this many".
+        // But topological sort needs: in_degree = number of incoming edges.
+        // edges[n] = predecessors → these ARE the incoming edges of n.
+        let mut in_deg: HashMap<u64, usize> = HashMap::new();
+        for &n in &self.nodes {
+            in_deg.insert(n, self.edges.get(&n).map_or(0, |s| s.len()));
+        }
+
+        let mut queue: VecDeque<u64> =
+            in_deg.iter().filter(|&(_, &d)| d == 0).map(|(&n, _)| n).collect();
+        // Sort the initial queue for deterministic output.
+        let mut sorted_init: Vec<u64> = queue.drain(..).collect();
+        sorted_init.sort();
+        queue.extend(sorted_init);
+
+        let mut order = Vec::new();
+        while let Some(n) = queue.pop_front() {
+            order.push(n);
+            // For every node m whose predecessor set contains n, decrement.
+            let mut ready: Vec<u64> = Vec::new();
+            for (&m, preds) in &self.edges {
+                if preds.contains(&n) {
+                    let deg = in_deg.get_mut(&m).unwrap();
+                    *deg -= 1;
+                    if *deg == 0 {
+                        ready.push(m);
+                    }
+                }
+            }
+            ready.sort();
+            queue.extend(ready);
+        }
+
+        if order.len() == self.nodes.len() { Ok(order) } else { Err("cycle detected") }
+    }
+
+    fn has_cycle(&self) -> bool {
+        self.topological_sort().is_err()
+    }
+}
+
+/// Atomic counter for simulated GPU atomics.
+struct AtomicCounter {
+    value: AtomicU64,
+}
+
+impl AtomicCounter {
+    fn new(initial: u64) -> Self {
+        Self { value: AtomicU64::new(initial) }
+    }
+
+    fn load(&self) -> u64 {
+        self.value.load(Ordering::SeqCst)
+    }
+
+    fn store(&self, val: u64) {
+        self.value.store(val, Ordering::SeqCst);
+    }
+
+    fn fetch_add(&self, val: u64) -> u64 {
+        self.value.fetch_add(val, Ordering::SeqCst)
+    }
+
+    fn compare_exchange(&self, expected: u64, desired: u64) -> Result<u64, u64> {
+        self.value.compare_exchange(expected, desired, Ordering::SeqCst, Ordering::SeqCst)
+    }
+
+    fn fetch_max(&self, val: u64) -> u64 {
+        self.value.fetch_max(val, Ordering::SeqCst)
+    }
+
+    fn fetch_min(&self, val: u64) -> u64 {
+        self.value.fetch_min(val, Ordering::SeqCst)
+    }
+}
+
+/// Shared buffer with simulated coherence tracking.
+struct CoherentBuffer {
+    data: Arc<Mutex<Vec<u8>>>,
+    /// Tracks whether the CPU-side copy is stale.
+    cpu_dirty: Arc<Mutex<bool>>,
+    /// Tracks whether the GPU-side copy is stale.
+    gpu_dirty: Arc<Mutex<bool>>,
+}
+
+impl CoherentBuffer {
+    fn new(size: usize) -> Self {
         Self {
-            completed: Vec::new(),
-            fences: Vec::new(),
-            events: Vec::new(),
-            barriers: Vec::new(),
-            resources: Vec::new(),
-            clock: AtomicU64::new(0),
+            data: Arc::new(Mutex::new(vec![0u8; size])),
+            cpu_dirty: Arc::new(Mutex::new(false)),
+            gpu_dirty: Arc::new(Mutex::new(false)),
         }
     }
 
-    fn tick(&self) -> u64 {
-        self.clock.fetch_add(1, Ordering::SeqCst)
+    fn gpu_write(&self, offset: usize, bytes: &[u8]) {
+        let mut data = self.data.lock().unwrap();
+        data[offset..offset + bytes.len()].copy_from_slice(bytes);
+        *self.cpu_dirty.lock().unwrap() = true;
+        *self.gpu_dirty.lock().unwrap() = false;
     }
 
-    fn record_completion(&mut self, buffer_id: u64) {
-        let ts = self.tick();
-        self.completed.push(CompletionRecord { buffer_id, timestamp: ts });
+    fn cpu_write(&self, offset: usize, bytes: &[u8]) {
+        let mut data = self.data.lock().unwrap();
+        data[offset..offset + bytes.len()].copy_from_slice(bytes);
+        *self.gpu_dirty.lock().unwrap() = true;
+        *self.cpu_dirty.lock().unwrap() = false;
     }
 
-    fn add_fence(&mut self, id: u64, label: &str) -> usize {
-        self.fences.push(Fence::new(id, label));
-        self.fences.len() - 1
+    fn cpu_read(&self, offset: usize, len: usize) -> Vec<u8> {
+        let data = self.data.lock().unwrap();
+        data[offset..offset + len].to_vec()
     }
 
-    fn add_event(&mut self, id: u64, label: &str) -> usize {
-        self.events.push(GpuEvent::new(id, label));
-        self.events.len() - 1
+    fn is_cpu_stale(&self) -> bool {
+        *self.cpu_dirty.lock().unwrap()
     }
 
-    fn add_resource(&mut self, name: &str) -> usize {
-        self.resources.push(ResourceState::new(name));
-        self.resources.len() - 1
+    fn is_gpu_stale(&self) -> bool {
+        *self.gpu_dirty.lock().unwrap()
     }
 
-    fn insert_barrier(&mut self, barrier: MemoryBarrier) {
-        self.barriers.push(barrier);
+    fn flush_gpu_cache(&self) {
+        *self.cpu_dirty.lock().unwrap() = false;
     }
 
-    fn completion_order(&self) -> Vec<u64> {
-        let mut sorted = self.completed.clone();
-        sorted.sort_by_key(|r| r.timestamp);
-        sorted.iter().map(|r| r.buffer_id).collect()
+    fn invalidate_gpu_cache(&self) {
+        *self.gpu_dirty.lock().unwrap() = false;
+    }
+
+    fn len(&self) -> usize {
+        self.data.lock().unwrap().len()
     }
 }
 
-impl Clone for CompletionRecord {
-    fn clone(&self) -> Self {
-        Self { buffer_id: self.buffer_id, timestamp: self.timestamp }
+/// Pipeline stage for render-to-compute transitions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PipelineStage {
+    Vertex,
+    Fragment,
+    Compute,
+    Blit,
+}
+
+/// Records a pipeline transition barrier.
+#[derive(Debug, Clone, Copy)]
+struct PipelineBarrier {
+    src_stage: PipelineStage,
+    dst_stage: PipelineStage,
+    resource_id: u64,
+}
+
+impl PipelineBarrier {
+    fn is_valid_transition(&self) -> bool {
+        // Metal allows transitions between any stages, but certain ones need barriers.
+        self.src_stage != self.dst_stage
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 1. Command buffer synchronization (20+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+/// Simple sync-overhead tracker for regression detection.
+struct SyncOverheadTracker {
+    fence_count: u32,
+    event_signals: u32,
+    barrier_count: u32,
+    max_fence_limit: u32,
+    max_barrier_limit: u32,
+}
 
-mod command_buffer_sync {
+impl SyncOverheadTracker {
+    fn new(max_fences: u32, max_barriers: u32) -> Self {
+        Self {
+            fence_count: 0,
+            event_signals: 0,
+            barrier_count: 0,
+            max_fence_limit: max_fences,
+            max_barrier_limit: max_barriers,
+        }
+    }
+
+    fn record_fence(&mut self) {
+        self.fence_count += 1;
+    }
+
+    fn record_event_signal(&mut self) {
+        self.event_signals += 1;
+    }
+
+    fn record_barrier(&mut self) {
+        self.barrier_count += 1;
+    }
+
+    fn is_within_budget(&self) -> bool {
+        self.fence_count <= self.max_fence_limit && self.barrier_count <= self.max_barrier_limit
+    }
+
+    fn total_sync_ops(&self) -> u32 {
+        self.fence_count + self.event_signals + self.barrier_count
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. Command Buffer Ordering
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod command_buffer_ordering {
     use super::*;
 
     #[test]
-    fn command_buffer_initial_state() {
-        let cb = CommandBuffer::new(1, "init");
-        assert_eq!(cb.status, CommandBufferStatus::NotEnqueued);
-        assert!(cb.execution_order.is_none());
-        assert!(cb.dependencies.is_empty());
-    }
-
-    #[test]
-    fn command_buffer_enqueue_transition() {
-        let mut cb = CommandBuffer::new(1, "enqueue");
-        cb.enqueue();
-        assert_eq!(cb.status, CommandBufferStatus::Enqueued);
-    }
-
-    #[test]
-    fn command_buffer_commit_from_enqueued() {
-        let mut cb = CommandBuffer::new(1, "commit");
-        cb.enqueue();
-        cb.commit();
-        assert_eq!(cb.status, CommandBufferStatus::Committed);
-    }
-
-    #[test]
-    fn command_buffer_commit_from_not_enqueued() {
-        let mut cb = CommandBuffer::new(1, "direct-commit");
-        cb.commit();
-        assert_eq!(cb.status, CommandBufferStatus::Committed);
-    }
-
-    #[test]
-    fn command_buffer_full_lifecycle() {
-        let mut cb = CommandBuffer::new(1, "lifecycle");
-        cb.enqueue();
-        cb.commit();
-        cb.schedule();
-        cb.complete(0);
-        assert_eq!(cb.status, CommandBufferStatus::Completed);
-        assert_eq!(cb.execution_order, Some(0));
-    }
-
-    #[test]
-    fn sequential_command_buffer_execution_order() {
-        let mut queue = CommandQueue::new("serial", QueuePriority::Normal);
-        let mut buffers: Vec<CommandBuffer> =
-            (0..5).map(|i| CommandBuffer::new(i, &format!("cb-{i}"))).collect();
-
-        for buf in &mut buffers {
-            buf.enqueue();
-            buf.commit();
-            queue.submit(buf.id);
-        }
-
-        let drained = queue.drain_all();
-        for (i, &buf_id) in drained.iter().enumerate() {
-            buffers[buf_id as usize].schedule();
-            let order = i as u64;
-            buffers[buf_id as usize].complete(order);
-        }
-
-        for (i, buf) in buffers.iter().enumerate() {
-            assert_eq!(buf.execution_order, Some(i as u64));
-        }
-    }
-
-    #[test]
-    fn completion_handler_ordering() {
-        let mut coord = SyncCoordinator::new();
+    fn sequential_encoding_preserves_order() {
+        let mut queue = MockCommandQueue::new(0, "main");
         for i in 0..4 {
-            coord.record_completion(i);
+            let buf = MockCommandBuffer::new(i, &format!("cmd_{i}"));
+            queue.submit(buf);
         }
-        assert_eq!(coord.completion_order(), vec![0, 1, 2, 3]);
+        queue.complete_all();
+        assert_eq!(queue.completion_order, vec![0, 1, 2, 3]);
     }
 
     #[test]
-    fn completion_handlers_preserve_submission_order() {
-        let mut coord = SyncCoordinator::new();
-        let ids = [10, 20, 30, 40, 50];
+    fn parallel_buffers_all_complete() {
+        let mut queue = MockCommandQueue::new(0, "main");
+        let ids: Vec<u64> = (0..8).collect();
         for &id in &ids {
-            coord.record_completion(id);
+            queue.submit(MockCommandBuffer::new(id, &format!("par_{id}")));
         }
-        let order = coord.completion_order();
-        assert_eq!(order, vec![10, 20, 30, 40, 50]);
-    }
-
-    #[test]
-    fn command_buffer_dependency_single() {
-        let mut cb_a = CommandBuffer::new(0, "producer");
-        let mut cb_b = CommandBuffer::new(1, "consumer");
-        cb_b.add_dependency(cb_a.id);
-
-        cb_a.enqueue();
-        cb_a.commit();
-        cb_a.schedule();
-        cb_a.complete(0);
-
-        assert!(cb_b.dependencies.contains(&cb_a.id));
-        assert_eq!(cb_a.status, CommandBufferStatus::Completed);
-
-        cb_b.enqueue();
-        cb_b.commit();
-        cb_b.schedule();
-        cb_b.complete(1);
-        assert_eq!(cb_b.status, CommandBufferStatus::Completed);
-        assert!(cb_b.execution_order.unwrap() > cb_a.execution_order.unwrap());
-    }
-
-    #[test]
-    fn command_buffer_dependency_chain() {
-        let mut buffers: Vec<CommandBuffer> =
-            (0..4).map(|i| CommandBuffer::new(i, &format!("chain-{i}"))).collect();
-
-        for i in 1..4 {
-            buffers[i].add_dependency((i - 1) as u64);
-        }
-
-        for (order, buf) in buffers.iter_mut().enumerate() {
-            buf.enqueue();
-            buf.commit();
-            buf.schedule();
-            buf.complete(order as u64);
-        }
-
-        for i in 1..4 {
-            assert!(buffers[i].execution_order.unwrap() > buffers[i - 1].execution_order.unwrap());
+        queue.complete_all();
+        for &id in &ids {
+            assert!(queue.is_completed(id), "buffer {id} not completed");
         }
     }
 
     #[test]
-    fn command_buffer_fan_out_dependencies() {
-        let mut root = CommandBuffer::new(0, "root");
-        let mut children: Vec<CommandBuffer> = (1..=4)
-            .map(|i| {
-                let mut cb = CommandBuffer::new(i, &format!("child-{i}"));
-                cb.add_dependency(0);
-                cb
-            })
-            .collect();
-
-        root.enqueue();
-        root.commit();
-        root.schedule();
-        root.complete(0);
-
-        for (i, child) in children.iter_mut().enumerate() {
-            assert!(child.dependencies.contains(&0));
-            child.enqueue();
-            child.commit();
-            child.schedule();
-            child.complete((i + 1) as u64);
+    fn dependency_dag_respects_edges() {
+        let mut graph = DependencyGraph::new();
+        // A(0) → B(1) → C(2), A(0) → D(3)
+        for id in 0..4 {
+            graph.add_node(id);
         }
+        graph.add_edge(0, 1); // B depends on A
+        graph.add_edge(1, 2); // C depends on B
+        graph.add_edge(0, 3); // D depends on A
+        let order = graph.topological_sort().unwrap();
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(0) < pos(1));
+        assert!(pos(1) < pos(2));
+        assert!(pos(0) < pos(3));
+    }
 
-        for child in &children {
-            assert!(child.execution_order.unwrap() > 0);
+    #[test]
+    fn empty_queue_completes_immediately() {
+        let mut queue = MockCommandQueue::new(0, "empty");
+        assert_eq!(queue.complete_next(), None);
+        assert!(queue.completion_order.is_empty());
+    }
+
+    #[test]
+    fn single_buffer_lifecycle() {
+        let mut buf = MockCommandBuffer::new(0, "single");
+        assert_eq!(buf.status, CommandBufferStatus::NotEnqueued);
+        buf.enqueue();
+        assert_eq!(buf.status, CommandBufferStatus::Enqueued);
+        buf.commit(0);
+        assert_eq!(buf.status, CommandBufferStatus::Committed);
+        buf.complete(1);
+        assert_eq!(buf.status, CommandBufferStatus::Completed);
+    }
+
+    #[test]
+    fn encoded_at_tick_monotonic() {
+        let mut queue = MockCommandQueue::new(0, "ticks");
+        for i in 0..5 {
+            queue.submit(MockCommandBuffer::new(i, "t"));
         }
-    }
-
-    #[test]
-    fn command_buffer_fan_in_dependencies() {
-        let mut producers: Vec<CommandBuffer> =
-            (0..3).map(|i| CommandBuffer::new(i, &format!("prod-{i}"))).collect();
-        let mut consumer = CommandBuffer::new(10, "consumer");
-        for p in &producers {
-            consumer.add_dependency(p.id);
-        }
-
-        for (i, p) in producers.iter_mut().enumerate() {
-            p.enqueue();
-            p.commit();
-            p.schedule();
-            p.complete(i as u64);
-        }
-
-        assert_eq!(consumer.dependencies.len(), 3);
-        consumer.enqueue();
-        consumer.commit();
-        consumer.schedule();
-        consumer.complete(10);
-        assert_eq!(consumer.execution_order, Some(10));
-    }
-
-    #[test]
-    fn gpu_cpu_sync_point_wait_until_completed() {
-        let mut cb = CommandBuffer::new(1, "gpu-work");
-        cb.enqueue();
-        cb.commit();
-        cb.schedule();
-        cb.complete(0);
-        // Simulate CPU waiting for GPU completion.
-        assert_eq!(cb.status, CommandBufferStatus::Completed);
-    }
-
-    #[test]
-    fn gpu_cpu_sync_multiple_buffers() {
-        let mut buffers: Vec<CommandBuffer> =
-            (0..3).map(|i| CommandBuffer::new(i, &format!("gpu-{i}"))).collect();
-        for (order, buf) in buffers.iter_mut().enumerate() {
-            buf.enqueue();
-            buf.commit();
-            buf.schedule();
-            buf.complete(order as u64);
-        }
-        // CPU sync: all must be completed.
-        assert!(buffers.iter().all(|b| b.status == CommandBufferStatus::Completed));
-    }
-
-    #[test]
-    fn command_buffer_error_state() {
-        let mut cb = CommandBuffer::new(1, "error-test");
-        cb.enqueue();
-        cb.commit();
-        cb.fail();
-        assert_eq!(cb.status, CommandBufferStatus::Error);
-    }
-
-    #[test]
-    fn command_buffer_with_resource_tracking() {
-        let mut cb = CommandBuffer::new(1, "resource-track");
-        cb.add_write("buffer_a");
-        cb.add_read("buffer_b");
-        cb.add_write("buffer_c");
-        assert_eq!(cb.writes, vec!["buffer_a", "buffer_c"]);
-        assert_eq!(cb.reads, vec!["buffer_b"]);
-    }
-
-    #[test]
-    fn command_queue_fifo_ordering() {
-        let mut queue = CommandQueue::new("fifo", QueuePriority::Normal);
-        queue.submit(5);
-        queue.submit(3);
-        queue.submit(7);
-        let drained = queue.drain_all();
-        assert_eq!(drained, vec![5, 3, 7]);
-    }
-
-    #[test]
-    fn command_queue_pending_count() {
-        let mut queue = CommandQueue::new("count", QueuePriority::Normal);
-        assert_eq!(queue.pending_count(), 0);
-        queue.submit(1);
-        queue.submit(2);
-        assert_eq!(queue.pending_count(), 2);
-        let _ = queue.drain_all();
-        assert_eq!(queue.pending_count(), 0);
-    }
-
-    #[test]
-    fn command_buffer_label_preserved() {
-        let cb = CommandBuffer::new(42, "my-compute-pass");
-        assert_eq!(cb.label, "my-compute-pass");
-        assert_eq!(cb.id, 42);
-    }
-
-    #[test]
-    fn sequential_execution_no_reordering() {
-        let mut coord = SyncCoordinator::new();
-        let mut queue = CommandQueue::new("serial", QueuePriority::Normal);
-
-        for i in 0..8 {
-            queue.submit(i);
-        }
-
-        let drained = queue.drain_all();
-        for &id in &drained {
-            coord.record_completion(id);
-        }
-
-        let order = coord.completion_order();
-        for i in 0..7 {
-            assert!(order[i] < order[i + 1] || order[i] == i as u64);
+        let ticks: Vec<u64> = queue.submitted.iter().map(|b| b.encoded_at.unwrap()).collect();
+        for w in ticks.windows(2) {
+            assert!(w[0] < w[1], "ticks must be strictly increasing");
         }
     }
 
     #[test]
-    fn command_buffer_empty_dependencies() {
-        let cb = CommandBuffer::new(0, "no-deps");
-        assert!(cb.dependencies.is_empty());
+    fn diamond_dependency_ordering() {
+        // Diamond: A→B, A→C, B→D, C→D
+        let mut graph = DependencyGraph::new();
+        for id in 0..4 {
+            graph.add_node(id);
+        }
+        graph.add_edge(0, 1);
+        graph.add_edge(0, 2);
+        graph.add_edge(1, 3);
+        graph.add_edge(2, 3);
+        let order = graph.topological_sort().unwrap();
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(0) < pos(1));
+        assert!(pos(0) < pos(2));
+        assert!(pos(1) < pos(3));
+        assert!(pos(2) < pos(3));
+    }
+
+    #[test]
+    fn long_chain_preserves_order() {
+        let mut graph = DependencyGraph::new();
+        let n = 16;
+        for i in 0..n {
+            graph.add_node(i);
+        }
+        for i in 0..n - 1 {
+            graph.add_edge(i, i + 1);
+        }
+        let order = graph.topological_sort().unwrap();
+        assert_eq!(order, (0..n).collect::<Vec<_>>());
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 2. Fence and event tests (20+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// 2. Fence Synchronization
+// ═══════════════════════════════════════════════════════════════════════════
 
-mod fence_and_event_sync {
+mod fence_synchronization {
     use super::*;
 
     #[test]
-    fn fence_initial_state() {
-        let fence = Fence::new(0, "init");
+    fn fence_creation_defaults_unsignaled() {
+        let fence = MockFence::new(0, "f0");
         assert!(!fence.signaled);
         assert_eq!(fence.signal_value, 0);
     }
 
     #[test]
-    fn fence_signal_and_wait() {
-        let mut fence = Fence::new(0, "sig");
-        fence.signal(1);
-        assert!(fence.signaled);
-        assert!(fence.wait(1));
+    fn fence_signal_and_wait_succeeds() {
+        let mut fence = MockFence::new(0, "f0");
+        fence.signal(42);
+        assert!(fence.wait(42));
+        assert!(fence.wait(1)); // Any value ≤ 42.
     }
 
     #[test]
     fn fence_wait_before_signal_fails() {
-        let fence = Fence::new(0, "early-wait");
+        let fence = MockFence::new(0, "f0");
         assert!(!fence.wait(1));
     }
 
     #[test]
-    fn fence_signal_higher_value_satisfies_lower_wait() {
-        let mut fence = Fence::new(0, "high");
+    fn fence_wait_exceeds_signal_value_fails() {
+        let mut fence = MockFence::new(0, "f0");
         fence.signal(10);
-        assert!(fence.wait(5));
-        assert!(fence.wait(10));
         assert!(!fence.wait(11));
     }
 
     #[test]
-    fn fence_reset() {
-        let mut fence = Fence::new(0, "reset");
-        fence.signal(5);
+    fn fence_reset_clears_state() {
+        let mut fence = MockFence::new(0, "f0");
+        fence.signal(99);
         assert!(fence.signaled);
         fence.reset();
         assert!(!fence.signaled);
         assert_eq!(fence.signal_value, 0);
+        assert!(!fence.wait(1));
     }
 
     #[test]
-    fn fence_label_preserved() {
-        let fence = Fence::new(42, "my-fence");
-        assert_eq!(fence.label, "my-fence");
-        assert_eq!(fence.id, 42);
+    fn multiple_fences_independent() {
+        let mut f1 = MockFence::new(1, "f1");
+        let mut f2 = MockFence::new(2, "f2");
+        f1.signal(10);
+        assert!(f1.wait(10));
+        assert!(!f2.wait(1));
+        f2.signal(20);
+        assert!(f2.wait(20));
     }
 
     #[test]
-    fn fence_signal_monotonic_values() {
-        let mut fence = Fence::new(0, "mono");
-        for v in 1..=10 {
+    fn fence_monotonic_signal_values() {
+        let mut fence = MockFence::new(0, "mono");
+        for v in [1, 5, 10, 50, 100] {
             fence.signal(v);
             assert!(fence.wait(v));
         }
     }
 
     #[test]
-    fn event_initial_state() {
-        let event = GpuEvent::new(0, "init");
-        assert_eq!(event.signaled_value, 0);
-    }
-
-    #[test]
-    fn event_signal_and_wait() {
-        let mut event = GpuEvent::new(0, "sig");
-        event.signal(1);
-        assert!(event.wait(1));
-    }
-
-    #[test]
-    fn event_monotonic_signal() {
-        let mut event = GpuEvent::new(0, "mono");
-        event.signal(5);
-        event.signal(3); // lower value should not decrease
-        assert_eq!(event.signaled_value, 5);
-        assert!(event.wait(5));
-        assert!(!event.wait(6));
-    }
-
-    #[test]
-    fn event_wait_zero_always_succeeds() {
-        let event = GpuEvent::new(0, "zero");
-        assert!(event.wait(0));
-    }
-
-    #[test]
-    fn event_label_preserved() {
-        let event = GpuEvent::new(99, "sync-point");
-        assert_eq!(event.label, "sync-point");
-        assert_eq!(event.id, 99);
-    }
-
-    #[test]
-    fn cross_queue_fence_coordination() {
-        let mut fence = Fence::new(0, "cross-queue");
-        let mut q1 = CommandQueue::new("producer", QueuePriority::Normal);
-        let mut q2 = CommandQueue::new("consumer", QueuePriority::Normal);
-
-        q1.submit(1);
-        let drained = q1.drain_all();
-        assert_eq!(drained, vec![1]);
-        // Producer signals fence after completing work.
-        fence.signal(1);
-
-        // Consumer waits on fence before starting.
-        assert!(fence.wait(1));
-        q2.submit(2);
-        let drained = q2.drain_all();
-        assert_eq!(drained, vec![2]);
-    }
-
-    #[test]
-    fn cross_queue_fence_blocks_until_signal() {
-        let fence = Fence::new(0, "blocking");
-        // Consumer checks fence before producer signals.
-        assert!(!fence.wait(1));
-    }
-
-    #[test]
-    fn multiple_fences_independent() {
-        let mut f1 = Fence::new(0, "fence-a");
-        let mut f2 = Fence::new(1, "fence-b");
-        f1.signal(1);
-        assert!(f1.wait(1));
-        assert!(!f2.wait(1));
-        f2.signal(2);
-        assert!(f2.wait(2));
-    }
-
-    #[test]
-    fn fence_coordinator_multiple_fences() {
-        let mut coord = SyncCoordinator::new();
-        let f0 = coord.add_fence(0, "a");
-        let f1 = coord.add_fence(1, "b");
-        let f2 = coord.add_fence(2, "c");
-
-        coord.fences[f0].signal(1);
-        coord.fences[f1].signal(2);
-        coord.fences[f2].signal(3);
-
-        assert!(coord.fences[f0].wait(1));
-        assert!(coord.fences[f1].wait(2));
-        assert!(coord.fences[f2].wait(3));
-    }
-
-    #[test]
-    fn fence_timeout_simulation() {
-        let fence = Fence::new(0, "timeout");
-        let max_polls = 100;
-        let mut signaled_in_time = false;
-        for poll in 0..max_polls {
+    fn timeout_simulation_on_unsignaled_fence() {
+        let fence = MockFence::new(0, "timeout");
+        let deadline = 3u32;
+        let mut timed_out = false;
+        for _ in 0..deadline {
             if fence.wait(1) {
-                signaled_in_time = true;
                 break;
             }
-            // Fence never signaled — simulates timeout.
-            assert!(poll < max_polls);
+            timed_out = true;
         }
-        assert!(!signaled_in_time, "fence should timeout (never signaled)");
-    }
-
-    #[test]
-    fn event_progressive_signaling() {
-        let mut event = GpuEvent::new(0, "progress");
-        for step in 1..=5 {
-            event.signal(step);
-            assert!(event.wait(step));
-            assert!(!event.wait(step + 1));
-        }
-    }
-
-    #[test]
-    fn event_coordinator_multiple_events() {
-        let mut coord = SyncCoordinator::new();
-        let e0 = coord.add_event(0, "pass-a");
-        let e1 = coord.add_event(1, "pass-b");
-
-        coord.events[e0].signal(10);
-        coord.events[e1].signal(20);
-
-        assert!(coord.events[e0].wait(10));
-        assert!(!coord.events[e0].wait(11));
-        assert!(coord.events[e1].wait(20));
-    }
-
-    #[test]
-    fn cross_queue_event_synchronization() {
-        let mut event = GpuEvent::new(0, "xqueue");
-        // Queue A signals after dispatch.
-        event.signal(1);
-        // Queue B waits on the event.
-        assert!(event.wait(1));
-        // Queue B signals after its dispatch.
-        event.signal(2);
-        // Queue A can see the update.
-        assert!(event.wait(2));
-    }
-
-    #[test]
-    fn fence_reuse_after_reset() {
-        let mut fence = Fence::new(0, "reuse");
-        for round in 1..=3 {
-            fence.signal(round);
-            assert!(fence.wait(round));
-            fence.reset();
-            assert!(!fence.wait(1));
-        }
+        assert!(timed_out, "should time out on unsignaled fence");
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 3. Memory barrier tests (20+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. Event Synchronization
+// ═══════════════════════════════════════════════════════════════════════════
 
-mod memory_barriers {
+mod event_synchronization {
     use super::*;
 
     #[test]
-    fn buffer_barrier_creation() {
-        let barrier = MemoryBarrier::buffer_barrier(vec!["buf_a".into()]);
-        assert_eq!(barrier.scope, BarrierScope::Buffers);
-        assert_eq!(barrier.after_stages, "compute");
-        assert_eq!(barrier.before_stages, "compute");
-        assert_eq!(barrier.resources, vec!["buf_a"]);
+    fn shared_event_initial_value_zero() {
+        let event = MockSharedEvent::new(0);
+        assert_eq!(event.current_value(), 0);
     }
 
     #[test]
-    fn texture_barrier_creation() {
-        let barrier = MemoryBarrier::texture_barrier(vec!["tex_0".into()]);
-        assert_eq!(barrier.scope, BarrierScope::Textures);
-        assert_eq!(barrier.after_stages, "fragment");
-        assert_eq!(barrier.before_stages, "compute");
+    fn gpu_signals_cpu_observes() {
+        let event = MockSharedEvent::new(0);
+        event.signal(5);
+        assert_eq!(event.current_value(), 5);
     }
 
     #[test]
-    fn full_barrier_creation() {
-        let barrier = MemoryBarrier::full_barrier();
-        assert_eq!(barrier.scope, BarrierScope::All);
-        assert!(barrier.resources.is_empty());
+    fn event_value_monotonically_increases() {
+        let event = MockSharedEvent::new(0);
+        for v in 1..=10 {
+            event.signal(v);
+            assert_eq!(event.current_value(), v);
+        }
     }
 
     #[test]
-    fn read_after_write_hazard_detected() {
-        let mut res = ResourceState::new("shared_buf");
-        let needs_barrier = res.record_write(0);
-        assert!(!needs_barrier); // First write needs no barrier.
-        let needs_barrier = res.record_read(1);
-        assert!(needs_barrier); // Read after write → barrier needed.
+    fn listener_fires_when_threshold_reached() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(5);
+        event.add_listener(10);
+
+        event.signal(5);
+        let notified = event.poll_listeners();
+        assert_eq!(notified, vec![5]);
+
+        event.signal(10);
+        let notified = event.poll_listeners();
+        assert_eq!(notified, vec![10]);
     }
 
     #[test]
-    fn write_after_read_hazard_detected() {
-        let mut res = ResourceState::new("shared_buf");
-        res.record_read(0);
-        let needs_barrier = res.record_write(1);
-        assert!(needs_barrier); // Write after read → barrier needed.
+    fn listener_does_not_fire_below_threshold() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(10);
+        event.signal(9);
+        let notified = event.poll_listeners();
+        assert!(notified.is_empty());
     }
 
     #[test]
-    fn write_after_write_hazard_detected() {
-        let mut res = ResourceState::new("shared_buf");
-        res.record_write(0);
-        let needs_barrier = res.record_write(1);
-        assert!(needs_barrier); // Write after write → barrier needed.
+    fn listener_fires_only_once() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(3);
+        event.signal(3);
+        let first = event.poll_listeners();
+        assert_eq!(first.len(), 1);
+        let second = event.poll_listeners();
+        assert!(second.is_empty(), "listener must not fire twice");
     }
 
     #[test]
-    fn read_after_read_no_hazard() {
-        let mut res = ResourceState::new("readonly_buf");
-        res.record_read(0);
-        let needs_barrier = res.record_read(1);
-        assert!(!needs_barrier); // Read after read → no hazard.
+    fn multiple_listeners_same_threshold() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(7);
+        event.add_listener(7);
+        event.signal(7);
+        let notified = event.poll_listeners();
+        assert_eq!(notified.len(), 2);
     }
 
     #[test]
-    fn barrier_clears_pending_state() {
-        let mut res = ResourceState::new("buf");
-        res.record_write(0);
-        res.record_read(1);
-        assert!(res.barrier_pending);
-        res.clear_barrier();
-        assert!(!res.barrier_pending);
-    }
-
-    #[test]
-    fn multiple_readers_then_write() {
-        let mut res = ResourceState::new("multi_read");
-        res.record_read(0);
-        res.record_read(1);
-        res.record_read(2);
-        assert_eq!(res.last_reader_cmds.len(), 3);
-        let needs_barrier = res.record_write(3);
-        assert!(needs_barrier);
-        assert!(res.last_reader_cmds.is_empty());
-    }
-
-    #[test]
-    fn write_clears_reader_list() {
-        let mut res = ResourceState::new("clear-readers");
-        res.record_read(0);
-        res.record_read(1);
-        assert_eq!(res.last_reader_cmds.len(), 2);
-        res.record_write(2);
-        assert!(res.last_reader_cmds.is_empty());
-        assert_eq!(res.last_writer_cmd, Some(2));
-    }
-
-    #[test]
-    fn resource_state_tracks_last_writer() {
-        let mut res = ResourceState::new("writer-track");
-        res.record_write(5);
-        assert_eq!(res.last_writer_cmd, Some(5));
-        res.record_write(10);
-        assert_eq!(res.last_writer_cmd, Some(10));
-    }
-
-    #[test]
-    fn barrier_with_multiple_resources() {
-        let barrier =
-            MemoryBarrier::buffer_barrier(vec!["buf_0".into(), "buf_1".into(), "buf_2".into()]);
-        assert_eq!(barrier.resources.len(), 3);
-    }
-
-    #[test]
-    fn coordinator_barrier_insertion() {
-        let mut coord = SyncCoordinator::new();
-        coord.insert_barrier(MemoryBarrier::full_barrier());
-        coord.insert_barrier(MemoryBarrier::buffer_barrier(vec!["x".into()]));
-        assert_eq!(coord.barriers.len(), 2);
-    }
-
-    #[test]
-    fn raw_hazard_sequence_compute_to_compute() {
-        let mut res = ResourceState::new("compute_buf");
-        // Pass 1 writes.
-        res.record_write(0);
-        // Pass 2 reads — needs barrier.
-        let raw = res.record_read(1);
-        assert!(raw);
-        res.clear_barrier();
-        // Pass 3 reads — no new barrier (writer unchanged).
-        let raw2 = res.record_read(2);
-        assert!(!raw2);
-    }
-
-    #[test]
-    fn war_hazard_sequence() {
-        let mut res = ResourceState::new("war_buf");
-        // Cmd 0 reads.
-        res.record_read(0);
-        // Cmd 1 writes — WAR hazard.
-        let war = res.record_write(1);
-        assert!(war);
-    }
-
-    #[test]
-    fn waw_hazard_sequence() {
-        let mut res = ResourceState::new("waw_buf");
-        res.record_write(0);
-        let waw = res.record_write(1);
-        assert!(waw);
-    }
-
-    #[test]
-    fn barrier_scope_variants() {
-        assert_ne!(BarrierScope::Buffers, BarrierScope::Textures);
-        assert_ne!(BarrierScope::Textures, BarrierScope::RenderTargets);
-        assert_ne!(BarrierScope::RenderTargets, BarrierScope::All);
-    }
-
-    #[test]
-    fn access_type_variants() {
-        assert_ne!(AccessType::Read, AccessType::Write);
-        assert_ne!(AccessType::Write, AccessType::ReadWrite);
-        assert_ne!(AccessType::Read, AccessType::ReadWrite);
-    }
-
-    #[test]
-    fn complex_hazard_pattern_pipeline() {
-        let mut buf_a = ResourceState::new("a");
-        let mut buf_b = ResourceState::new("b");
-
-        // Step 1: write A, read B.
-        buf_a.record_write(0);
-        buf_b.record_read(0);
-
-        // Step 2: read A (RAW on A), write B (WAR on B).
-        let raw_a = buf_a.record_read(1);
-        let war_b = buf_b.record_write(1);
-        assert!(raw_a);
-        assert!(war_b);
-
-        buf_a.clear_barrier();
-        buf_b.clear_barrier();
-
-        // Step 3: write A (WAR on A), read B (RAW on B).
-        let war_a = buf_a.record_write(2);
-        let raw_b = buf_b.record_read(2);
-        assert!(war_a);
-        assert!(raw_b);
-    }
-
-    #[test]
-    fn resource_name_preserved() {
-        let res = ResourceState::new("my_tensor_buffer");
-        assert_eq!(res.name, "my_tensor_buffer");
-    }
-
-    #[test]
-    fn coordinator_tracks_resources() {
-        let mut coord = SyncCoordinator::new();
-        let r0 = coord.add_resource("weight_buf");
-        let r1 = coord.add_resource("activation_buf");
-        assert_eq!(coord.resources[r0].name, "weight_buf");
-        assert_eq!(coord.resources[r1].name, "activation_buf");
-        assert_eq!(coord.resources.len(), 2);
+    fn event_overshoot_fires_pending_listeners() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(2);
+        event.add_listener(4);
+        event.add_listener(6);
+        // Signal past all thresholds in one shot.
+        event.signal(100);
+        let notified = event.poll_listeners();
+        assert_eq!(notified.len(), 3);
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 4. Resource hazard tracking (15+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// 4. Resource Hazard Tracking
+// ═══════════════════════════════════════════════════════════════════════════
 
 mod resource_hazard_tracking {
     use super::*;
 
-    #[test]
-    fn hazard_tracking_mode_variants() {
-        assert_ne!(HazardTrackingMode::Automatic, HazardTrackingMode::Manual);
-        assert_ne!(HazardTrackingMode::Manual, HazardTrackingMode::Untracked);
+    fn buf_with_access(id: u64, res: u64, mode: AccessMode) -> MockCommandBuffer {
+        let mut b = MockCommandBuffer::new(id, "h");
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: res,
+            mode,
+            offset: 0,
+            length: 1024,
+        });
+        b
     }
 
     #[test]
-    fn automatic_tracking_inserts_barriers_on_raw() {
-        let mode = HazardTrackingMode::Automatic;
-        assert_eq!(mode, HazardTrackingMode::Automatic);
-
-        let mut res = ResourceState::new("auto_buf");
-        res.record_write(0);
-        let needs = res.record_read(1);
-        // Automatic mode would insert barrier here.
-        assert!(needs);
+    fn read_read_no_hazard() {
+        let a = buf_with_access(0, 1, AccessMode::Read);
+        let b = buf_with_access(1, 1, AccessMode::Read);
+        assert!(detect_hazards(&a, &b).is_empty());
     }
 
     #[test]
-    fn automatic_tracking_inserts_barriers_on_war() {
-        let mut res = ResourceState::new("auto_war");
-        res.record_read(0);
-        let needs = res.record_write(1);
-        assert!(needs);
+    fn write_then_read_is_raw() {
+        let a = buf_with_access(0, 1, AccessMode::Write);
+        let b = buf_with_access(1, 1, AccessMode::Read);
+        let h = detect_hazards(&a, &b);
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].1, HazardType::ReadAfterWrite);
     }
 
     #[test]
-    fn manual_tracking_requires_explicit_barriers() {
-        let mode = HazardTrackingMode::Manual;
-        assert_eq!(mode, HazardTrackingMode::Manual);
-        // In manual mode, the app must insert barriers explicitly.
-        let mut res = ResourceState::new("manual_buf");
-        res.record_write(0);
-        let needs = res.record_read(1);
-        assert!(needs);
-        // Manual: caller is responsible for calling clear_barrier.
-        assert!(res.barrier_pending);
-        res.clear_barrier();
-        assert!(!res.barrier_pending);
+    fn read_then_write_is_war() {
+        let a = buf_with_access(0, 1, AccessMode::Read);
+        let b = buf_with_access(1, 1, AccessMode::Write);
+        let h = detect_hazards(&a, &b);
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].1, HazardType::WriteAfterRead);
     }
 
     #[test]
-    fn untracked_mode_no_implicit_barriers() {
-        let mode = HazardTrackingMode::Untracked;
-        assert_eq!(mode, HazardTrackingMode::Untracked);
-        // Untracked resources rely on the application for correctness.
+    fn write_then_write_is_waw() {
+        let a = buf_with_access(0, 1, AccessMode::Write);
+        let b = buf_with_access(1, 1, AccessMode::Write);
+        let h = detect_hazards(&a, &b);
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].1, HazardType::WriteAfterWrite);
     }
 
     #[test]
-    fn resource_state_transition_read_to_write() {
-        let mut res = ResourceState::new("transition");
-        assert_eq!(res.last_access, AccessType::Read);
-        res.record_write(0);
-        assert_eq!(res.last_access, AccessType::Write);
+    fn non_overlapping_ranges_no_hazard() {
+        let mut a = MockCommandBuffer::new(0, "a");
+        a.resource_accesses.push(ResourceAccess {
+            resource_id: 1,
+            mode: AccessMode::Write,
+            offset: 0,
+            length: 512,
+        });
+        let mut b = MockCommandBuffer::new(1, "b");
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: 1,
+            mode: AccessMode::Read,
+            offset: 512,
+            length: 512,
+        });
+        assert!(detect_hazards(&a, &b).is_empty());
     }
 
     #[test]
-    fn resource_state_transition_write_to_read() {
-        let mut res = ResourceState::new("transition");
-        res.record_write(0);
-        assert_eq!(res.last_access, AccessType::Write);
-        res.record_read(1);
-        assert_eq!(res.last_access, AccessType::Read);
+    fn different_resources_no_hazard() {
+        let a = buf_with_access(0, 1, AccessMode::Write);
+        let b = buf_with_access(1, 2, AccessMode::Read);
+        assert!(detect_hazards(&a, &b).is_empty());
     }
 
     #[test]
-    fn resource_state_transition_write_to_write() {
-        let mut res = ResourceState::new("waw");
-        res.record_write(0);
-        res.record_write(1);
-        assert_eq!(res.last_access, AccessType::Write);
-        assert_eq!(res.last_writer_cmd, Some(1));
+    fn readwrite_vs_read_is_raw() {
+        let a = buf_with_access(0, 1, AccessMode::ReadWrite);
+        let b = buf_with_access(1, 1, AccessMode::Read);
+        let h = detect_hazards(&a, &b);
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].1, HazardType::ReadAfterWrite);
     }
 
     #[test]
-    fn multi_resource_independent_tracking() {
-        let mut r_a = ResourceState::new("a");
-        let mut r_b = ResourceState::new("b");
-        let mut r_c = ResourceState::new("c");
-
-        r_a.record_write(0);
-        r_b.record_read(0);
-        r_c.record_write(0);
-
-        let raw_a = r_a.record_read(1);
-        let no_hazard_b = r_b.record_read(1);
-        let raw_c = r_c.record_read(1);
-
-        assert!(raw_a);
-        assert!(!no_hazard_b);
-        assert!(raw_c);
-    }
-
-    #[test]
-    fn hazard_tracking_with_barrier_insertion() {
-        let mut coord = SyncCoordinator::new();
-        let r = coord.add_resource("tracked");
-
-        coord.resources[r].record_write(0);
-        let needs = coord.resources[r].record_read(1);
-        assert!(needs);
-
-        coord.insert_barrier(MemoryBarrier::buffer_barrier(vec!["tracked".into()]));
-        coord.resources[r].clear_barrier();
-        assert!(!coord.resources[r].barrier_pending);
-    }
-
-    #[test]
-    fn hazard_detection_across_many_commands() {
-        let mut res = ResourceState::new("many_cmds");
-        let mut hazard_count = 0;
-
-        // Pattern: W, R, R, W, R, W, W, R
-        let ops = [
-            AccessType::Write,
-            AccessType::Read,
-            AccessType::Read,
-            AccessType::Write,
-            AccessType::Read,
-            AccessType::Write,
-            AccessType::Write,
-            AccessType::Read,
-        ];
-
-        for (cmd_id, &op) in ops.iter().enumerate() {
-            let needs = match op {
-                AccessType::Write => res.record_write(cmd_id as u64),
-                AccessType::Read => res.record_read(cmd_id as u64),
-                AccessType::ReadWrite => {
-                    let w = res.record_write(cmd_id as u64);
-                    let r = res.record_read(cmd_id as u64);
-                    w || r
-                }
-            };
-            if needs {
-                hazard_count += 1;
-                res.clear_barrier();
-            }
-        }
-
-        assert!(hazard_count >= 4, "expected at least 4 hazards");
-    }
-
-    #[test]
-    fn fresh_resource_no_pending_barrier() {
-        let res = ResourceState::new("fresh");
-        assert!(!res.barrier_pending);
-        assert!(res.last_writer_cmd.is_none());
-        assert!(res.last_reader_cmds.is_empty());
-    }
-
-    #[test]
-    fn automatic_tracking_pipeline_example() {
-        // Simulates a compute pipeline with automatic hazard tracking.
-        let mut coord = SyncCoordinator::new();
-        let weights = coord.add_resource("weights");
-        let activations = coord.add_resource("activations");
-        let output = coord.add_resource("output");
-
-        // Layer 1: read weights, write activations.
-        coord.resources[weights].record_read(0);
-        coord.resources[activations].record_write(0);
-
-        // Layer 2: read activations (RAW), read weights, write output.
-        let raw = coord.resources[activations].record_read(1);
-        assert!(raw);
-        coord.insert_barrier(MemoryBarrier::buffer_barrier(vec!["activations".into()]));
-        coord.resources[activations].clear_barrier();
-
-        coord.resources[weights].record_read(1);
-        coord.resources[output].record_write(1);
-
-        assert_eq!(coord.barriers.len(), 1);
-    }
-
-    #[test]
-    fn manual_tracking_requires_explicit_clear() {
-        let mut res = ResourceState::new("manual");
-        res.record_write(0);
-        res.record_read(1);
-        assert!(res.barrier_pending);
-        // Without clear, barrier stays pending.
-        res.record_read(2);
-        assert!(res.barrier_pending);
-        res.clear_barrier();
-        assert!(!res.barrier_pending);
-    }
-
-    #[test]
-    fn resource_tracks_all_readers() {
-        let mut res = ResourceState::new("multi_reader");
-        res.record_read(10);
-        res.record_read(20);
-        res.record_read(30);
-        assert_eq!(res.last_reader_cmds, vec![10, 20, 30]);
+    fn multiple_resources_multiple_hazards() {
+        let mut a = MockCommandBuffer::new(0, "a");
+        a.resource_accesses.push(ResourceAccess {
+            resource_id: 1,
+            mode: AccessMode::Write,
+            offset: 0,
+            length: 256,
+        });
+        a.resource_accesses.push(ResourceAccess {
+            resource_id: 2,
+            mode: AccessMode::Read,
+            offset: 0,
+            length: 256,
+        });
+        let mut b = MockCommandBuffer::new(1, "b");
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: 1,
+            mode: AccessMode::Read,
+            offset: 0,
+            length: 256,
+        });
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: 2,
+            mode: AccessMode::Write,
+            offset: 0,
+            length: 256,
+        });
+        let h = detect_hazards(&a, &b);
+        assert_eq!(h.len(), 2);
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 5. Multi-queue coordination (15+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. Compute-to-Compute Sync
+// ═══════════════════════════════════════════════════════════════════════════
 
-mod multi_queue_coordination {
+mod compute_to_compute_sync {
     use super::*;
 
     #[test]
-    fn serial_queue_preserves_order() {
-        let mut queue = CommandQueue::new("serial", QueuePriority::Normal);
-        for i in 0..10 {
-            queue.submit(i);
+    fn back_to_back_dispatches_ordered() {
+        let mut queue = MockCommandQueue::new(0, "compute");
+        let ids: Vec<u64> = (0..4)
+            .map(|i| queue.submit(MockCommandBuffer::new(i, &format!("dispatch_{i}"))))
+            .collect();
+        queue.complete_all();
+        assert_eq!(queue.completion_order, ids);
+    }
+
+    #[test]
+    fn shared_resource_fence_required() {
+        let mut a = MockCommandBuffer::new(0, "write");
+        a.resource_accesses.push(ResourceAccess {
+            resource_id: 10,
+            mode: AccessMode::Write,
+            offset: 0,
+            length: 4096,
+        });
+        let mut b = MockCommandBuffer::new(1, "read");
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: 10,
+            mode: AccessMode::Read,
+            offset: 0,
+            length: 4096,
+        });
+        let hazards = detect_hazards(&a, &b);
+        assert!(!hazards.is_empty(), "RAW hazard requires fence");
+    }
+
+    #[test]
+    fn independent_dispatches_no_sync_needed() {
+        let a = buf_with_access(0, 1, AccessMode::Write);
+        let b = buf_with_access(1, 2, AccessMode::Write);
+        assert!(detect_hazards(&a, &b).is_empty());
+    }
+
+    fn buf_with_access(id: u64, res: u64, mode: AccessMode) -> MockCommandBuffer {
+        let mut b = MockCommandBuffer::new(id, "c");
+        b.resource_accesses.push(ResourceAccess {
+            resource_id: res,
+            mode,
+            offset: 0,
+            length: 1024,
+        });
+        b
+    }
+
+    #[test]
+    fn producer_consumer_chain() {
+        let mut graph = DependencyGraph::new();
+        // producer(0) → transform(1) → consumer(2)
+        for i in 0..3 {
+            graph.add_node(i);
         }
-        let drained = queue.drain_all();
-        let expected: Vec<u64> = (0..10).collect();
-        assert_eq!(drained, expected);
+        graph.add_edge(0, 1);
+        graph.add_edge(1, 2);
+        let order = graph.topological_sort().unwrap();
+        assert_eq!(order, vec![0, 1, 2]);
     }
 
     #[test]
-    fn queue_priority_ordering() {
-        assert!(QueuePriority::Low < QueuePriority::Normal);
-        assert!(QueuePriority::Normal < QueuePriority::High);
-    }
-
-    #[test]
-    fn multiple_queues_independent() {
-        let mut q1 = CommandQueue::new("q1", QueuePriority::Normal);
-        let mut q2 = CommandQueue::new("q2", QueuePriority::Normal);
-
-        q1.submit(1);
-        q1.submit(2);
-        q2.submit(10);
-        q2.submit(20);
-
-        assert_eq!(q1.pending_count(), 2);
-        assert_eq!(q2.pending_count(), 2);
-
-        let d1 = q1.drain_all();
-        let d2 = q2.drain_all();
-        assert_eq!(d1, vec![1, 2]);
-        assert_eq!(d2, vec![10, 20]);
-    }
-
-    #[test]
-    fn high_priority_queue_label() {
-        let q = CommandQueue::new("compute-high", QueuePriority::High);
-        assert_eq!(q.label, "compute-high");
-        assert_eq!(q.priority, QueuePriority::High);
-    }
-
-    #[test]
-    fn work_submission_ordering_across_queues() {
-        let mut q_compute = CommandQueue::new("compute", QueuePriority::High);
-        let mut q_copy = CommandQueue::new("copy", QueuePriority::Normal);
-
-        // Submit compute work.
+    fn reduction_fan_in_pattern() {
+        // 4 producers → 1 reducer
+        let mut graph = DependencyGraph::new();
         for i in 0..5 {
-            q_compute.submit(i);
+            graph.add_node(i);
         }
-        // Submit copy work.
-        for i in 100..103 {
-            q_copy.submit(i);
+        for i in 0..4 {
+            graph.add_edge(i, 4);
         }
-
-        let compute_items = q_compute.drain_all();
-        let copy_items = q_copy.drain_all();
-
-        assert_eq!(compute_items.len(), 5);
-        assert_eq!(copy_items.len(), 3);
+        let order = graph.topological_sort().unwrap();
+        let reducer_pos = order.iter().position(|&x| x == 4).unwrap();
+        assert_eq!(reducer_pos, 4, "reducer must come last");
     }
 
     #[test]
-    fn queue_with_fence_synchronization() {
-        let mut q1 = CommandQueue::new("producer", QueuePriority::Normal);
-        let mut q2 = CommandQueue::new("consumer", QueuePriority::Normal);
-        let mut fence = Fence::new(0, "q1->q2");
+    fn scatter_gather_pattern() {
+        // scatter(0) → [work_0(1), work_1(2), work_2(3)] → gather(4)
+        let mut graph = DependencyGraph::new();
+        for i in 0..5 {
+            graph.add_node(i);
+        }
+        graph.add_edge(0, 1);
+        graph.add_edge(0, 2);
+        graph.add_edge(0, 3);
+        graph.add_edge(1, 4);
+        graph.add_edge(2, 4);
+        graph.add_edge(3, 4);
+        let order = graph.topological_sort().unwrap();
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(0) < pos(1));
+        assert!(pos(0) < pos(2));
+        assert!(pos(0) < pos(3));
+        assert!(pos(1) < pos(4));
+        assert!(pos(2) < pos(4));
+        assert!(pos(3) < pos(4));
+    }
 
-        q1.submit(1);
-        let _ = q1.drain_all();
+    #[test]
+    fn fence_guards_compute_output() {
+        let mut fence = MockFence::new(0, "compute_fence");
+        // Simulate: compute writes, signals fence, then next dispatch reads.
         fence.signal(1);
-
-        assert!(fence.wait(1));
-        q2.submit(2);
-        let items = q2.drain_all();
-        assert_eq!(items, vec![2]);
+        assert!(fence.wait(1), "reader must see fence after writer signals");
     }
 
     #[test]
-    fn concurrent_queue_execution_model() {
-        // Two concurrent queues executing independently.
-        let mut q_a = CommandQueue::new("a", QueuePriority::Normal);
-        let mut q_b = CommandQueue::new("b", QueuePriority::Normal);
-        let mut coord = SyncCoordinator::new();
-
-        q_a.submit(1);
-        q_a.submit(2);
-        q_b.submit(3);
-        q_b.submit(4);
-
-        // Interleaved execution simulating concurrency.
-        let a_items = q_a.drain_all();
-        let b_items = q_b.drain_all();
-
-        for &id in &a_items {
-            coord.record_completion(id);
-        }
-        for &id in &b_items {
-            coord.record_completion(id);
-        }
-
-        assert_eq!(coord.completed.len(), 4);
-    }
-
-    #[test]
-    fn priority_based_scheduling_order() {
-        let mut queues = vec![
-            CommandQueue::new("low", QueuePriority::Low),
-            CommandQueue::new("normal", QueuePriority::Normal),
-            CommandQueue::new("high", QueuePriority::High),
-        ];
-
-        queues[0].submit(1);
-        queues[1].submit(2);
-        queues[2].submit(3);
-
-        // Sort by priority descending for scheduling.
-        queues.sort_by(|a, b| b.priority.cmp(&a.priority));
-        assert_eq!(queues[0].label, "high");
-        assert_eq!(queues[1].label, "normal");
-        assert_eq!(queues[2].label, "low");
-    }
-
-    #[test]
-    fn queue_drain_empties_queue() {
-        let mut q = CommandQueue::new("drain", QueuePriority::Normal);
-        q.submit(1);
-        q.submit(2);
-        assert_eq!(q.pending_count(), 2);
-        let _ = q.drain_all();
-        assert_eq!(q.pending_count(), 0);
-    }
-
-    #[test]
-    fn empty_queue_drain_returns_empty() {
-        let mut q = CommandQueue::new("empty", QueuePriority::Normal);
-        let drained = q.drain_all();
-        assert!(drained.is_empty());
-    }
-
-    #[test]
-    fn execution_order_counter_increments() {
-        let q = CommandQueue::new("counter", QueuePriority::Normal);
-        let o0 = q.next_execution_order();
-        let o1 = q.next_execution_order();
-        let o2 = q.next_execution_order();
-        assert_eq!(o0, 0);
-        assert_eq!(o1, 1);
-        assert_eq!(o2, 2);
-    }
-
-    #[test]
-    fn multi_queue_fence_chain() {
-        let mut q1 = CommandQueue::new("stage-1", QueuePriority::High);
-        let mut q2 = CommandQueue::new("stage-2", QueuePriority::Normal);
-        let mut q3 = CommandQueue::new("stage-3", QueuePriority::Low);
-        let mut f12 = Fence::new(0, "1->2");
-        let mut f23 = Fence::new(1, "2->3");
-
-        q1.submit(1);
-        let _ = q1.drain_all();
-        f12.signal(1);
-
-        assert!(f12.wait(1));
-        q2.submit(2);
-        let _ = q2.drain_all();
-        f23.signal(1);
-
-        assert!(f23.wait(1));
-        q3.submit(3);
-        let items = q3.drain_all();
-        assert_eq!(items, vec![3]);
-    }
-
-    #[test]
-    fn producer_consumer_with_event() {
-        let mut event = GpuEvent::new(0, "prod-cons");
-        let mut q_prod = CommandQueue::new("producer", QueuePriority::Normal);
-        let mut q_cons = CommandQueue::new("consumer", QueuePriority::Normal);
-
-        // Producer enqueues and signals event.
-        q_prod.submit(1);
-        let _ = q_prod.drain_all();
-        event.signal(1);
-
-        // Consumer waits and then processes.
-        assert!(event.wait(1));
-        q_cons.submit(2);
-        assert_eq!(q_cons.pending_count(), 1);
-    }
-
-    #[test]
-    fn three_queue_diamond_sync() {
-        // A → B and A → C, then B+C → D (modeled as fence waits).
-        let mut q_a = CommandQueue::new("A", QueuePriority::High);
-        let mut q_b = CommandQueue::new("B", QueuePriority::Normal);
-        let mut q_c = CommandQueue::new("C", QueuePriority::Normal);
-        let mut f_ab = Fence::new(0, "A->B");
-        let mut f_ac = Fence::new(1, "A->C");
-
-        q_a.submit(0);
-        let _ = q_a.drain_all();
-        f_ab.signal(1);
-        f_ac.signal(1);
-
-        assert!(f_ab.wait(1));
-        q_b.submit(1);
-        let _ = q_b.drain_all();
-
-        assert!(f_ac.wait(1));
-        q_c.submit(2);
-        let _ = q_c.drain_all();
-
-        // Both B and C complete, D can proceed.
-        let mut f_bd = Fence::new(2, "B->D");
-        let mut f_cd = Fence::new(3, "C->D");
-        f_bd.signal(1);
-        f_cd.signal(1);
-        assert!(f_bd.wait(1) && f_cd.wait(1));
-    }
-
-    #[test]
-    fn queue_priority_all_variants() {
-        let priorities = [QueuePriority::Low, QueuePriority::Normal, QueuePriority::High];
-        for (i, p) in priorities.iter().enumerate() {
-            for q in priorities.iter().skip(i + 1) {
-                assert!(p < q);
-            }
-        }
+    fn accumulator_pattern_waw() {
+        // Two dispatches writing to the same accumulator buffer.
+        let a = buf_with_access(0, 42, AccessMode::Write);
+        let b = buf_with_access(1, 42, AccessMode::Write);
+        let h = detect_hazards(&a, &b);
+        assert!(h.iter().any(|(_, t)| *t == HazardType::WriteAfterWrite));
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 6. Double/triple buffering (15+ tests)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. Render-to-Compute Sync
+// ═══════════════════════════════════════════════════════════════════════════
 
-mod ring_buffer_patterns {
+mod render_to_compute_sync {
     use super::*;
 
     #[test]
-    fn double_buffer_creation() {
-        let rb = RingBuffer::new(2, 256);
-        assert_eq!(rb.buffer_count, 2);
-        assert_eq!(rb.slots.len(), 2);
-        assert_eq!(rb.in_flight_count(), 0);
-        assert_eq!(rb.available_count(), 2);
+    fn fragment_to_compute_barrier_valid() {
+        let b = PipelineBarrier {
+            src_stage: PipelineStage::Fragment,
+            dst_stage: PipelineStage::Compute,
+            resource_id: 1,
+        };
+        assert!(b.is_valid_transition());
     }
 
     #[test]
-    fn triple_buffer_creation() {
-        let rb = RingBuffer::new(3, 512);
-        assert_eq!(rb.buffer_count, 3);
-        assert_eq!(rb.available_count(), 3);
+    fn compute_to_vertex_barrier_valid() {
+        let b = PipelineBarrier {
+            src_stage: PipelineStage::Compute,
+            dst_stage: PipelineStage::Vertex,
+            resource_id: 1,
+        };
+        assert!(b.is_valid_transition());
     }
 
     #[test]
-    fn acquire_returns_slot_index() {
-        let mut rb = RingBuffer::new(2, 128);
-        let slot = rb.acquire();
-        assert_eq!(slot, Some(0));
-        assert_eq!(rb.in_flight_count(), 1);
+    fn same_stage_barrier_invalid() {
+        let b = PipelineBarrier {
+            src_stage: PipelineStage::Compute,
+            dst_stage: PipelineStage::Compute,
+            resource_id: 1,
+        };
+        assert!(!b.is_valid_transition());
     }
 
     #[test]
-    fn acquire_rotates_through_slots() {
-        let mut rb = RingBuffer::new(3, 128);
-        assert_eq!(rb.acquire(), Some(0));
-        assert_eq!(rb.acquire(), Some(1));
-        assert_eq!(rb.acquire(), Some(2));
-        assert_eq!(rb.in_flight_count(), 3);
+    fn blit_to_compute_transition() {
+        let b = PipelineBarrier {
+            src_stage: PipelineStage::Blit,
+            dst_stage: PipelineStage::Compute,
+            resource_id: 5,
+        };
+        assert!(b.is_valid_transition());
     }
 
     #[test]
-    fn acquire_fails_when_all_in_flight() {
-        let mut rb = RingBuffer::new(2, 128);
-        assert!(rb.acquire().is_some());
-        assert!(rb.acquire().is_some());
-        assert_eq!(rb.acquire(), None); // All in flight.
+    fn render_output_to_compute_input_hazard() {
+        // Fragment writes a texture, compute reads it → RAW.
+        let mut render = MockCommandBuffer::new(0, "render");
+        render.resource_accesses.push(ResourceAccess {
+            resource_id: 100,
+            mode: AccessMode::Write,
+            offset: 0,
+            length: 4096,
+        });
+        let mut compute = MockCommandBuffer::new(1, "compute");
+        compute.resource_accesses.push(ResourceAccess {
+            resource_id: 100,
+            mode: AccessMode::Read,
+            offset: 0,
+            length: 4096,
+        });
+        let h = detect_hazards(&render, &compute);
+        assert!(h.iter().any(|(_, t)| *t == HazardType::ReadAfterWrite));
     }
 
     #[test]
-    fn release_makes_slot_available() {
-        let mut rb = RingBuffer::new(2, 128);
-        let idx = rb.acquire().unwrap();
-        assert_eq!(rb.available_count(), 1);
-        rb.release(idx);
-        assert_eq!(rb.available_count(), 2);
-    }
-
-    #[test]
-    fn double_buffer_ping_pong() {
-        let mut rb = RingBuffer::new(2, 128);
-
-        for frame in 0..10 {
-            let slot = rb.acquire().expect("should have free slot");
-            assert_eq!(slot, frame % 2);
-            // Simulate GPU work completing on previous frame.
-            if frame > 0 {
-                rb.release((frame - 1) % 2);
-            }
-            // On last iteration, release current.
-            if frame == 9 {
-                rb.release(slot);
-            }
+    fn vertex_to_fragment_to_compute_chain() {
+        let barriers = vec![
+            PipelineBarrier {
+                src_stage: PipelineStage::Vertex,
+                dst_stage: PipelineStage::Fragment,
+                resource_id: 1,
+            },
+            PipelineBarrier {
+                src_stage: PipelineStage::Fragment,
+                dst_stage: PipelineStage::Compute,
+                resource_id: 1,
+            },
+        ];
+        for b in &barriers {
+            assert!(b.is_valid_transition());
         }
     }
 
     #[test]
-    fn triple_buffer_rotation() {
-        let mut rb = RingBuffer::new(3, 64);
-
-        // Fill all three.
-        let s0 = rb.acquire().unwrap();
-        let s1 = rb.acquire().unwrap();
-        let s2 = rb.acquire().unwrap();
-        assert_eq!((s0, s1, s2), (0, 1, 2));
-        assert_eq!(rb.available_count(), 0);
-
-        // Release oldest, acquire new.
-        rb.release(s0);
-        let s3 = rb.acquire().unwrap();
-        assert_eq!(s3, 0); // Wraps around to slot 0.
+    fn compute_feedback_to_vertex() {
+        // Compute writes vertex buffer, next frame vertex stage reads it.
+        let b = PipelineBarrier {
+            src_stage: PipelineStage::Compute,
+            dst_stage: PipelineStage::Vertex,
+            resource_id: 77,
+        };
+        assert!(b.is_valid_transition());
     }
 
     #[test]
-    fn frame_id_increments() {
-        let mut rb = RingBuffer::new(2, 64);
-        let s0 = rb.acquire().unwrap();
-        assert_eq!(rb.slots[s0].frame_id, 0);
-        rb.release(s0);
-        let s1 = rb.acquire().unwrap();
-        assert_eq!(rb.slots[s1].frame_id, 1);
-    }
-
-    #[test]
-    fn buffer_slot_data_capacity() {
-        let rb = RingBuffer::new(2, 1024);
-        assert_eq!(rb.slots[0].data.len(), 1024);
-        assert_eq!(rb.slots[1].data.len(), 1024);
-    }
-
-    #[test]
-    fn ring_buffer_with_fence_sync() {
-        let mut rb = RingBuffer::new(2, 256);
-        let mut fences = vec![Fence::new(0, "slot-0"), Fence::new(1, "slot-1")];
-
-        // Frame 0: acquire slot 0, submit GPU work.
-        let s0 = rb.acquire().unwrap();
-        assert_eq!(s0, 0);
-
-        // Frame 1: acquire slot 1, signal fence for slot 0.
-        let s1 = rb.acquire().unwrap();
-        assert_eq!(s1, 1);
-        fences[s0].signal(1);
-
-        // Frame 2: wait for slot 0 fence, release, reacquire.
-        assert!(fences[s0].wait(1));
-        rb.release(s0);
-        let s2 = rb.acquire().unwrap();
-        assert_eq!(s2, 0); // Reuses slot 0.
-
-        // Clean up.
-        fences[s1].signal(1);
-        rb.release(s1);
-        rb.release(s2);
-    }
-
-    #[test]
-    fn frame_synchronization_with_events() {
-        let mut rb = RingBuffer::new(3, 128);
-        let mut frame_event = GpuEvent::new(0, "frame-done");
-
-        for frame in 0u64..6 {
-            // Wait for oldest in-flight frame if buffer full.
-            if rb.available_count() == 0 {
-                let oldest_frame = frame - rb.buffer_count as u64;
-                assert!(frame_event.wait(oldest_frame + 1), "frame {oldest_frame} should be done");
-                rb.release((oldest_frame as usize) % rb.buffer_count);
-            }
-
-            let slot = rb.acquire().unwrap();
-            // Simulate GPU completion.
-            frame_event.signal(frame + 1);
-
-            if frame == 5 {
-                rb.release(slot);
+    fn all_cross_stage_transitions_valid() {
+        let stages = [
+            PipelineStage::Vertex,
+            PipelineStage::Fragment,
+            PipelineStage::Compute,
+            PipelineStage::Blit,
+        ];
+        let mut valid_count = 0;
+        for &src in &stages {
+            for &dst in &stages {
+                let b = PipelineBarrier { src_stage: src, dst_stage: dst, resource_id: 0 };
+                if src != dst {
+                    assert!(b.is_valid_transition());
+                    valid_count += 1;
+                }
             }
         }
+        // 4 stages × 3 other stages = 12.
+        assert_eq!(valid_count, 12);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 7. Multi-Queue Synchronization
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod multi_queue_synchronization {
+    use super::*;
+
+    #[test]
+    fn two_queues_independent_completion() {
+        let mut q1 = MockCommandQueue::new(0, "queue_0");
+        let mut q2 = MockCommandQueue::new(1, "queue_1");
+        q1.submit(MockCommandBuffer::new(0, "q1_cmd"));
+        q2.submit(MockCommandBuffer::new(1, "q2_cmd"));
+        q1.complete_all();
+        q2.complete_all();
+        assert!(q1.is_completed(0));
+        assert!(q2.is_completed(1));
     }
 
     #[test]
-    fn buffer_data_isolation() {
-        let mut rb = RingBuffer::new(2, 4);
-        rb.slots[0].data = vec![1.0, 2.0, 3.0, 4.0];
-        rb.slots[1].data = vec![5.0, 6.0, 7.0, 8.0];
-
-        assert_ne!(rb.slots[0].data, rb.slots[1].data);
-        assert_eq!(rb.slots[0].data[0], 1.0);
-        assert_eq!(rb.slots[1].data[0], 5.0);
+    fn cross_queue_event_sync() {
+        let event = MockSharedEvent::new(0);
+        // Queue A signals event, Queue B waits.
+        event.signal(1);
+        assert!(event.current_value() >= 1, "queue B can proceed");
     }
 
     #[test]
-    fn single_buffer_blocks_immediately() {
-        let mut rb = RingBuffer::new(1, 64);
-        let s = rb.acquire().unwrap();
-        assert_eq!(rb.acquire(), None);
-        rb.release(s);
-        assert!(rb.acquire().is_some());
+    fn cross_queue_fence_handoff() {
+        let mut fence = MockFence::new(0, "cross_q");
+        // Queue A completes and signals.
+        fence.signal(1);
+        // Queue B waits.
+        assert!(fence.wait(1));
     }
 
     #[test]
-    fn quad_buffer_rotation() {
-        let mut rb = RingBuffer::new(4, 32);
+    fn parallel_queues_unordered_ids() {
+        let mut q1 = MockCommandQueue::new(0, "q1");
+        let mut q2 = MockCommandQueue::new(1, "q2");
+        // Submit in interleaved order: q1 gets even, q2 gets odd.
+        for i in 0..4u64 {
+            if i % 2 == 0 {
+                q1.submit(MockCommandBuffer::new(i, "even"));
+            } else {
+                q2.submit(MockCommandBuffer::new(i, "odd"));
+            }
+        }
+        q1.complete_all();
+        q2.complete_all();
+        assert_eq!(q1.completion_order.len(), 2);
+        assert_eq!(q2.completion_order.len(), 2);
+    }
+
+    #[test]
+    fn queue_starvation_detection() {
+        let mut q1 = MockCommandQueue::new(0, "busy");
+        let q2 = MockCommandQueue::new(1, "starved");
+        for i in 0..10 {
+            q1.submit(MockCommandBuffer::new(i, "work"));
+        }
+        // q2 has nothing.
+        q1.complete_all();
+        assert_eq!(q1.completion_order.len(), 10);
+        assert!(q2.completion_order.is_empty(), "starved queue has no work");
+    }
+
+    #[test]
+    fn event_coordinates_three_queues() {
+        let mut event = MockSharedEvent::new(0);
+        event.add_listener(1); // queue B waits for 1
+        event.add_listener(2); // queue C waits for 2
+
+        // Queue A signals 1.
+        event.signal(1);
+        let n1 = event.poll_listeners();
+        assert_eq!(n1, vec![1]);
+
+        // Queue A signals 2.
+        event.signal(2);
+        let n2 = event.poll_listeners();
+        assert_eq!(n2, vec![2]);
+    }
+
+    #[test]
+    fn multi_queue_dependency_graph() {
+        let mut graph = DependencyGraph::new();
+        // q1: A(0)→B(1), q2: C(2)→D(3), cross: B(1)→D(3)
         for i in 0..4 {
-            assert_eq!(rb.acquire(), Some(i));
+            graph.add_node(i);
         }
-        assert_eq!(rb.acquire(), None);
-        rb.release(0);
-        assert_eq!(rb.acquire(), Some(0));
+        graph.add_edge(0, 1);
+        graph.add_edge(2, 3);
+        graph.add_edge(1, 3); // cross-queue dep
+        let order = graph.topological_sort().unwrap();
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(1) < pos(3), "B must complete before D");
     }
 
     #[test]
-    fn ring_buffer_frame_counter_monotonic() {
-        let mut rb = RingBuffer::new(2, 16);
-        let mut last_frame = 0u64;
+    fn separate_queues_no_implicit_ordering() {
+        // Two independent queues with independent buffers have no hazards.
+        let a = {
+            let mut b = MockCommandBuffer::new(0, "q1");
+            b.resource_accesses.push(ResourceAccess {
+                resource_id: 1,
+                mode: AccessMode::Write,
+                offset: 0,
+                length: 1024,
+            });
+            b
+        };
+        let b = {
+            let mut b = MockCommandBuffer::new(1, "q2");
+            b.resource_accesses.push(ResourceAccess {
+                resource_id: 2,
+                mode: AccessMode::Write,
+                offset: 0,
+                length: 1024,
+            });
+            b
+        };
+        assert!(detect_hazards(&a, &b).is_empty());
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 8. Atomic Operations
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod atomic_operations {
+    use super::*;
+
+    #[test]
+    fn atomic_counter_initial_value() {
+        let c = AtomicCounter::new(0);
+        assert_eq!(c.load(), 0);
+    }
+
+    #[test]
+    fn atomic_fetch_add() {
+        let c = AtomicCounter::new(0);
+        let prev = c.fetch_add(5);
+        assert_eq!(prev, 0);
+        assert_eq!(c.load(), 5);
+    }
+
+    #[test]
+    fn atomic_compare_exchange_success() {
+        let c = AtomicCounter::new(10);
+        let res = c.compare_exchange(10, 20);
+        assert_eq!(res, Ok(10));
+        assert_eq!(c.load(), 20);
+    }
+
+    #[test]
+    fn atomic_compare_exchange_failure() {
+        let c = AtomicCounter::new(10);
+        let res = c.compare_exchange(99, 20);
+        assert_eq!(res, Err(10));
+        assert_eq!(c.load(), 10);
+    }
+
+    #[test]
+    fn atomic_fetch_max() {
+        let c = AtomicCounter::new(5);
+        c.fetch_max(10);
+        assert_eq!(c.load(), 10);
+        c.fetch_max(3);
+        assert_eq!(c.load(), 10);
+    }
+
+    #[test]
+    fn atomic_fetch_min() {
+        let c = AtomicCounter::new(10);
+        c.fetch_min(3);
+        assert_eq!(c.load(), 3);
+        c.fetch_min(7);
+        assert_eq!(c.load(), 3);
+    }
+
+    #[test]
+    fn concurrent_fetch_add_simulated() {
+        let c = AtomicCounter::new(0);
+        let n = 100u64;
+        for _ in 0..n {
+            c.fetch_add(1);
+        }
+        assert_eq!(c.load(), n);
+    }
+
+    #[test]
+    fn cas_spin_loop_converges() {
+        let c = AtomicCounter::new(0);
+        let target = 42u64;
+        let mut attempts = 0u32;
+        loop {
+            let current = c.load();
+            if current == target {
+                break;
+            }
+            match c.compare_exchange(current, current + 1) {
+                Ok(_) => {}
+                Err(_) => {} // retry
+            }
+            attempts += 1;
+            assert!(attempts < 1000, "spin loop must converge");
+        }
+        assert_eq!(c.load(), target);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 9. Buffer Coherence
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod buffer_coherence {
+    use super::*;
+
+    #[test]
+    fn initial_buffer_not_stale() {
+        let buf = CoherentBuffer::new(256);
+        assert!(!buf.is_cpu_stale());
+        assert!(!buf.is_gpu_stale());
+    }
+
+    #[test]
+    fn gpu_write_makes_cpu_stale() {
+        let buf = CoherentBuffer::new(256);
+        buf.gpu_write(0, &[1, 2, 3, 4]);
+        assert!(buf.is_cpu_stale());
+        assert!(!buf.is_gpu_stale());
+    }
+
+    #[test]
+    fn cpu_write_makes_gpu_stale() {
+        let buf = CoherentBuffer::new(256);
+        buf.cpu_write(0, &[5, 6, 7, 8]);
+        assert!(buf.is_gpu_stale());
+        assert!(!buf.is_cpu_stale());
+    }
+
+    #[test]
+    fn flush_gpu_cache_clears_cpu_staleness() {
+        let buf = CoherentBuffer::new(256);
+        buf.gpu_write(0, &[1]);
+        assert!(buf.is_cpu_stale());
+        buf.flush_gpu_cache();
+        assert!(!buf.is_cpu_stale());
+    }
+
+    #[test]
+    fn invalidate_gpu_cache_clears_gpu_staleness() {
+        let buf = CoherentBuffer::new(256);
+        buf.cpu_write(0, &[1]);
+        assert!(buf.is_gpu_stale());
+        buf.invalidate_gpu_cache();
+        assert!(!buf.is_gpu_stale());
+    }
+
+    #[test]
+    fn cpu_read_returns_latest_data() {
+        let buf = CoherentBuffer::new(16);
+        buf.cpu_write(0, &[0xAA, 0xBB]);
+        let data = buf.cpu_read(0, 2);
+        assert_eq!(data, vec![0xAA, 0xBB]);
+    }
+
+    #[test]
+    fn gpu_write_then_cpu_read_sees_data() {
+        let buf = CoherentBuffer::new(16);
+        buf.gpu_write(4, &[0xDE, 0xAD]);
+        buf.flush_gpu_cache();
+        let data = buf.cpu_read(4, 2);
+        assert_eq!(data, vec![0xDE, 0xAD]);
+    }
+
+    #[test]
+    fn coherence_round_trip() {
+        let buf = CoherentBuffer::new(64);
+        // CPU writes, GPU reads (need invalidate), GPU writes back, CPU reads (need flush).
+        buf.cpu_write(0, &[1, 2, 3, 4]);
+        assert!(buf.is_gpu_stale());
+        buf.invalidate_gpu_cache();
+        assert!(!buf.is_gpu_stale());
+
+        buf.gpu_write(0, &[10, 20, 30, 40]);
+        assert!(buf.is_cpu_stale());
+        buf.flush_gpu_cache();
+        assert!(!buf.is_cpu_stale());
+
+        let data = buf.cpu_read(0, 4);
+        assert_eq!(data, vec![10, 20, 30, 40]);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 10. Execution Dependencies
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod execution_dependencies {
+    use super::*;
+
+    #[test]
+    fn linear_chain_resolves() {
+        let mut g = DependencyGraph::new();
+        for i in 0..5 {
+            g.add_node(i);
+        }
+        for i in 0..4 {
+            g.add_edge(i, i + 1);
+        }
+        assert!(!g.has_cycle());
+        assert_eq!(g.topological_sort().unwrap(), vec![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn simple_cycle_detected() {
+        let mut g = DependencyGraph::new();
+        g.add_node(0);
+        g.add_node(1);
+        g.add_edge(0, 1);
+        g.add_edge(1, 0);
+        assert!(g.has_cycle());
+    }
+
+    #[test]
+    fn self_loop_detected() {
+        let mut g = DependencyGraph::new();
+        g.add_node(0);
+        g.add_edge(0, 0);
+        assert!(g.has_cycle());
+    }
+
+    #[test]
+    fn triangle_cycle_detected() {
+        let mut g = DependencyGraph::new();
+        for i in 0..3 {
+            g.add_node(i);
+        }
+        g.add_edge(0, 1);
+        g.add_edge(1, 2);
+        g.add_edge(2, 0);
+        assert!(g.has_cycle());
+    }
+
+    #[test]
+    fn disconnected_components_resolve() {
+        let mut g = DependencyGraph::new();
+        // Component 1: 0→1
+        g.add_node(0);
+        g.add_node(1);
+        g.add_edge(0, 1);
+        // Component 2: 2→3
+        g.add_node(2);
+        g.add_node(3);
+        g.add_edge(2, 3);
+        let order = g.topological_sort().unwrap();
+        assert_eq!(order.len(), 4);
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(0) < pos(1));
+        assert!(pos(2) < pos(3));
+    }
+
+    #[test]
+    fn wide_fan_out_no_cycle() {
+        let mut g = DependencyGraph::new();
+        g.add_node(0);
+        for i in 1..=10 {
+            g.add_node(i);
+            g.add_edge(0, i);
+        }
+        assert!(!g.has_cycle());
+        let order = g.topological_sort().unwrap();
+        assert_eq!(order[0], 0);
+    }
+
+    #[test]
+    fn single_node_no_cycle() {
+        let mut g = DependencyGraph::new();
+        g.add_node(42);
+        assert!(!g.has_cycle());
+        assert_eq!(g.topological_sort().unwrap(), vec![42]);
+    }
+
+    #[test]
+    fn complex_dag_with_convergence() {
+        // 0→1, 0→2, 1→3, 2→3, 3→4
+        let mut g = DependencyGraph::new();
+        for i in 0..5 {
+            g.add_node(i);
+        }
+        g.add_edge(0, 1);
+        g.add_edge(0, 2);
+        g.add_edge(1, 3);
+        g.add_edge(2, 3);
+        g.add_edge(3, 4);
+        assert!(!g.has_cycle());
+        let order = g.topological_sort().unwrap();
+        let pos = |id: u64| order.iter().position(|&x| x == id).unwrap();
+        assert!(pos(0) < pos(1));
+        assert!(pos(0) < pos(2));
+        assert!(pos(1) < pos(3));
+        assert!(pos(2) < pos(3));
+        assert!(pos(3) < pos(4));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 11. Apple Silicon Sync
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod apple_silicon_sync {
+    use super::*;
+
+    /// Apple Silicon UMA means CPU and GPU share physical memory.
+    /// Simulate: after GPU write + fence, CPU sees the data without an explicit copy.
+    #[test]
+    fn uma_coherence_after_fence() {
+        let buf = CoherentBuffer::new(128);
+        let mut fence = MockFence::new(0, "uma");
+        buf.gpu_write(0, &[0xCA, 0xFE]);
+        fence.signal(1);
+        // On UMA, flush is conceptually free but still needed for ordering.
+        assert!(fence.wait(1));
+        buf.flush_gpu_cache();
+        assert_eq!(buf.cpu_read(0, 2), vec![0xCA, 0xFE]);
+    }
+
+    /// Tile memory is local to a tile; simulate that tile-local data must be
+    /// flushed before being visible outside the tile.
+    #[test]
+    fn tile_memory_flush_required() {
+        let tile_buf = CoherentBuffer::new(32);
+        tile_buf.gpu_write(0, &[1, 2, 3, 4]);
+        assert!(tile_buf.is_cpu_stale(), "tile output not yet visible");
+        tile_buf.flush_gpu_cache();
+        assert!(!tile_buf.is_cpu_stale());
+    }
+
+    /// simdgroup barrier: all threads in a SIMD group must reach the barrier
+    /// before any proceed. Simulate with a counter that reaches group width.
+    #[test]
+    fn simdgroup_barrier_all_threads_reach() {
+        let simd_width = 32u64;
+        let counter = AtomicCounter::new(0);
+        for _ in 0..simd_width {
+            counter.fetch_add(1);
+        }
+        assert_eq!(counter.load(), simd_width, "all threads reached barrier");
+    }
+
+    /// threadgroup barrier: all threads in a threadgroup synchronize.
+    #[test]
+    fn threadgroup_barrier_synchronization() {
+        let threadgroup_size = 256u64;
+        let counter = AtomicCounter::new(0);
+        for _ in 0..threadgroup_size {
+            counter.fetch_add(1);
+        }
+        assert_eq!(counter.load(), threadgroup_size);
+    }
+
+    #[test]
+    fn uma_no_explicit_copy_needed() {
+        // On UMA architectures, the buffer data pointer is the same for CPU & GPU.
+        let buf = CoherentBuffer::new(64);
+        buf.cpu_write(0, &[42]);
+        // GPU "reads" the same physical memory — invalidate makes it logically fresh.
+        buf.invalidate_gpu_cache();
+        assert!(!buf.is_gpu_stale());
+        // Simulate GPU processing and writing result.
+        buf.gpu_write(8, &[84]);
+        buf.flush_gpu_cache();
+        assert_eq!(buf.cpu_read(0, 1), vec![42]);
+        assert_eq!(buf.cpu_read(8, 1), vec![84]);
+    }
+
+    #[test]
+    fn tile_memory_size_within_limit() {
+        // Apple Silicon: max 32 KB threadgroup memory.
+        let max_tile_memory: usize = 32 * 1024;
+        let requested: usize = 16 * 1024;
+        assert!(requested <= max_tile_memory, "tile memory request within limit");
+    }
+
+    #[test]
+    fn simdgroup_reduction_produces_single_result() {
+        let simd_width = 32usize;
+        let values: Vec<f32> = (0..simd_width).map(|i| i as f32).collect();
+        let sum: f32 = values.iter().sum();
+        let expected = (simd_width as f32 - 1.0) * simd_width as f32 / 2.0;
+        assert!((sum - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn event_cpu_gpu_round_trip_uma() {
+        let event = MockSharedEvent::new(0);
+        // CPU signals "data ready".
+        event.signal(1);
+        assert!(event.current_value() >= 1, "GPU can see CPU signal on UMA");
+        // GPU signals "done".
+        event.signal(2);
+        assert!(event.current_value() >= 2, "CPU can see GPU signal on UMA");
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 12. Regression Detection
+// ═══════════════════════════════════════════════════════════════════════════
+
+mod regression_detection {
+    use super::*;
+
+    #[test]
+    fn sync_overhead_within_budget() {
+        let mut t = SyncOverheadTracker::new(10, 20);
         for _ in 0..10 {
-            let slot = rb.acquire().unwrap();
-            assert!(rb.slots[slot].frame_id >= last_frame);
-            last_frame = rb.slots[slot].frame_id;
-            rb.release(slot);
+            t.record_fence();
         }
-    }
-
-    #[test]
-    fn buffer_recycling_preserves_capacity() {
-        let mut rb = RingBuffer::new(2, 512);
         for _ in 0..20 {
-            let slot = rb.acquire().unwrap();
-            assert_eq!(rb.slots[slot].data.len(), 512);
-            rb.release(slot);
+            t.record_barrier();
         }
+        assert!(t.is_within_budget());
     }
 
     #[test]
-    fn in_flight_and_available_sum_to_total() {
-        let mut rb = RingBuffer::new(3, 64);
-        assert_eq!(rb.in_flight_count() + rb.available_count(), rb.buffer_count);
-        rb.acquire();
-        assert_eq!(rb.in_flight_count() + rb.available_count(), rb.buffer_count);
-        rb.acquire();
-        assert_eq!(rb.in_flight_count() + rb.available_count(), rb.buffer_count);
+    fn fence_count_exceeds_budget() {
+        let mut t = SyncOverheadTracker::new(5, 100);
+        for _ in 0..6 {
+            t.record_fence();
+        }
+        assert!(!t.is_within_budget());
+    }
+
+    #[test]
+    fn barrier_count_exceeds_budget() {
+        let mut t = SyncOverheadTracker::new(100, 3);
+        for _ in 0..4 {
+            t.record_barrier();
+        }
+        assert!(!t.is_within_budget());
+    }
+
+    #[test]
+    fn total_sync_ops_accumulates() {
+        let mut t = SyncOverheadTracker::new(100, 100);
+        t.record_fence();
+        t.record_fence();
+        t.record_event_signal();
+        t.record_barrier();
+        t.record_barrier();
+        t.record_barrier();
+        assert_eq!(t.total_sync_ops(), 6);
+    }
+
+    #[test]
+    fn stall_detection_via_fence_timeout() {
+        let fence = MockFence::new(0, "stall_check");
+        let max_polls = 5;
+        let mut polls = 0;
+        while !fence.wait(1) && polls < max_polls {
+            polls += 1;
+        }
+        assert_eq!(polls, max_polls, "detected stall: fence never signaled");
+    }
+
+    #[test]
+    fn zero_budget_rejects_any_sync() {
+        let mut t = SyncOverheadTracker::new(0, 0);
+        t.record_fence();
+        assert!(!t.is_within_budget());
+    }
+
+    #[test]
+    fn event_signal_does_not_count_against_fence_budget() {
+        let mut t = SyncOverheadTracker::new(0, 100);
+        t.record_event_signal();
+        t.record_event_signal();
+        // Fence budget is 0 but we only added events — still within budget.
+        assert!(t.is_within_budget());
+    }
+
+    #[test]
+    fn regression_overhead_scales_linearly() {
+        // For N dispatches we expect at most N-1 fences (pairwise).
+        let dispatches = 16u32;
+        let max_fences = dispatches - 1;
+        let mut t = SyncOverheadTracker::new(max_fences, dispatches * 2);
+        for _ in 0..max_fences {
+            t.record_fence();
+        }
+        for _ in 0..dispatches {
+            t.record_barrier();
+            t.record_barrier();
+        }
+        assert!(t.is_within_budget());
     }
 }
