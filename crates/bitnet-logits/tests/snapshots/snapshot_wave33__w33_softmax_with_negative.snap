@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-logits/tests/snapshot_wave33.rs
+expression: rounded
+---
+[
+    0.0321,
+    0.0871,
+    0.2369,
+    0.6439,
+]

@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: json
+---
+{
+  "error": "Validation failed",
+  "error_code": "VALIDATION_ERROR",
+  "request_id": "req-def-456",
+  "details": {
+    "field": "prompt",
+    "reason": "exceeds maximum length"
+  }
+}

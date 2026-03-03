@@ -1,0 +1,30 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: bos_map
+---
+[
+    (
+        "raw",
+        true,
+    ),
+    (
+        "instruct",
+        true,
+    ),
+    (
+        "llama3-chat",
+        false,
+    ),
+    (
+        "phi4-chat",
+        false,
+    ),
+    (
+        "gemma-chat",
+        false,
+    ),
+    (
+        "mistral-chat",
+        false,
+    ),
+]

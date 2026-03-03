@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: json
+---
+{
+  "Done": {
+    "reason": "MaxTokens",
+    "stats": {
+      "tokens_generated": 64,
+      "tokens_per_second": 12.5
+    }
+  }
+}

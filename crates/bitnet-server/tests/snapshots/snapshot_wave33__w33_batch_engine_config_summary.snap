@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: "format!(\"max_batch={} timeout_ms={} concurrent={} priority={} adaptive={} quant_aware={} simd={}\",\nc.max_batch_size, c.batch_timeout.as_millis(), c.max_concurrent_batches,\nc.priority_queue_enabled, c.adaptive_batching, c.quantization_aware,\nc.simd_optimization,)"
+---
+max_batch=16 timeout_ms=100 concurrent=4 priority=true adaptive=true quant_aware=true simd=true

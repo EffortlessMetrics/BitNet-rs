@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: out
+---
+Hello, world!

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-logits/tests/snapshot_wave33.rs
+expression: "format!(\"non_zero={non_zero} sum={:.4}\", sum)"
+---
+non_zero=2 sum=0.7000

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: "format!(\"{}:{}\", s.host, s.port)"
+---
+0.0.0.0:8080

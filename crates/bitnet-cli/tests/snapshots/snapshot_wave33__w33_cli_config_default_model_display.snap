@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: "format!(\"model={:?} quant={:?}\", cfg.default_model, cfg.default_quantization)"
+---
+model=None quant=None

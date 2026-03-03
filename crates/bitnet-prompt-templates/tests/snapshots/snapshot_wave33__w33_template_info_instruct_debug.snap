@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: info
+---
+TemplateInfo {
+    name: "instruct",
+    stop_sequences: [
+        "\n\nQ:",
+        "\n\nHuman:",
+    ],
+    adds_bos: true,
+    parses_special: false,
+}

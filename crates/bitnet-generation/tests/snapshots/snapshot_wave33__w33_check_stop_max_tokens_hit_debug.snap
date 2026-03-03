@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: result
+---
+Some(
+    MaxTokens,
+)

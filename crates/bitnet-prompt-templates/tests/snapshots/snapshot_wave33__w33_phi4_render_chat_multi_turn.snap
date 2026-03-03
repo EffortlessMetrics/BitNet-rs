@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: out
+---
+<|im_start|>system
+You are a Rust teacher.<|im_end|>
+<|im_start|>user
+Explain closures<|im_end|>
+<|im_start|>assistant
+Closures capture their environment.<|im_end|>
+<|im_start|>user
+Give an example<|im_end|>
+<|im_start|>assistant

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: "format!(\"keep_alive={}s request_timeout={}s graceful_shutdown={}s\",\ns.keep_alive.as_secs(), s.request_timeout.as_secs(),\ns.graceful_shutdown_timeout.as_secs())"
+---
+keep_alive=60s request_timeout=300s graceful_shutdown=30s

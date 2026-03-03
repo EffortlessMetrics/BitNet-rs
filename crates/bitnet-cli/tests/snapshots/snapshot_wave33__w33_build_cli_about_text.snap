@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: about
+---
+BitNet-rs — 1-bit neural network inference with strict receipts

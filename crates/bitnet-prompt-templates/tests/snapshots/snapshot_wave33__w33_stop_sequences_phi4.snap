@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: stops
+---
+[
+    "<|im_end|>",
+    "<|endoftext|>",
+]

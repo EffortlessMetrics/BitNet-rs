@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: display
+---
+[
+    "raw",
+    "instruct",
+    "llama3-chat",
+    "phi4-chat",
+    "qwen-chat",
+    "gemma-chat",
+    "mistral-chat",
+    "deepseek-chat",
+]

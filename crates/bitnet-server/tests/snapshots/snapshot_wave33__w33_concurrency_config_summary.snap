@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: "format!(\"max_concurrent={} rps={} rpm={} backpressure={} cb_enabled={} per_ip={:?}\",\nc.max_concurrent_requests, c.max_requests_per_second,\nc.max_requests_per_minute, c.backpressure_threshold,\nc.circuit_breaker_enabled, c.per_ip_rate_limit,)"
+---
+max_concurrent=100 rps=50 rpm=1000 backpressure=0.8 cb_enabled=true per_ip=Some(10)

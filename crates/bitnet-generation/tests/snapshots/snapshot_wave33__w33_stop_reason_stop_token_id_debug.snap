@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: "StopReason::StopTokenId(128_009)"
+---
+StopTokenId(
+    128009,
+)

@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: h
+---
+Degraded {
+    reason: "High latency detected",
+}

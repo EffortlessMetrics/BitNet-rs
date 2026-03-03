@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: cfg
+---
+{
+  "default_model": null,
+  "default_device": "auto",
+  "default_quantization": null,
+  "logging": {
+    "level": "info",
+    "format": "pretty",
+    "timestamps": true
+  },
+  "performance": {
+    "cpu_threads": null,
+    "batch_size": 1,
+    "memory_optimization": true
+  },
+  "model_cache_dir": null
+}

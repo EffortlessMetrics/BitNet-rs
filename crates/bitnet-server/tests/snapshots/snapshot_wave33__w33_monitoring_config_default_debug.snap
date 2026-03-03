@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: c
+---
+MonitoringConfig {
+    prometheus_enabled: true,
+    prometheus_path: "/metrics",
+    opentelemetry_enabled: false,
+    opentelemetry_endpoint: None,
+    otlp_endpoint: None,
+    health_path: "/health",
+    metrics_interval: 10,
+    structured_logging: true,
+    log_level: "info",
+    log_format: "json",
+}

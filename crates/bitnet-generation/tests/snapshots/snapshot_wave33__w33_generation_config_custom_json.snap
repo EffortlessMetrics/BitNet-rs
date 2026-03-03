@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: json
+---
+{
+  "max_new_tokens": 512,
+  "seed": 42,
+  "stop_criteria": {
+    "stop_token_ids": [
+      128009
+    ],
+    "stop_strings": [
+      "<|eot_id|>"
+    ],
+    "max_tokens": 512,
+    "eos_token_id": 2
+  }
+}

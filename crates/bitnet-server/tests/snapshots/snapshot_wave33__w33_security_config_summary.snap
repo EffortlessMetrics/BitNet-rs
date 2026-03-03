@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: "format!(\"auth={} max_prompt={} max_tokens={} rate_by_ip={} sanitize={} filter={}\",\nc.require_authentication, c.max_prompt_length, c.max_tokens_per_request,\nc.rate_limit_by_ip, c.input_sanitization, c.content_filtering,)"
+---
+auth=false max_prompt=8192 max_tokens=2048 rate_by_ip=true sanitize=true filter=true

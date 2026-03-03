@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: json
+---
+{
+  "Done": {
+    "reason": "EosToken",
+    "stats": {
+      "tokens_generated": 32,
+      "tokens_per_second": 8.0
+    }
+  }
+}

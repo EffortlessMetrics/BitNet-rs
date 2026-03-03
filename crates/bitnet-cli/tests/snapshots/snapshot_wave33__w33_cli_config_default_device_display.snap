@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: "format!(\"device={}\", cfg.default_device)"
+---
+device=auto

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: parsed
+---
+[
+    "raw -> raw",
+    "instruct -> instruct",
+    "llama3-chat -> llama3-chat",
+    "phi4-chat -> phi4-chat",
+    "gemma-chat -> gemma-chat",
+    "mistral-chat -> mistral-chat",
+]

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: info
+---
+TemplateInfo {
+    name: "raw",
+    stop_sequences: [],
+    adds_bos: true,
+    parses_special: false,
+}

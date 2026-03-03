@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: tmpl
+---
+PromptTemplate {
+    template_type: Llama3Chat,
+    system_prompt: Some(
+        "You are helpful.",
+    ),
+    conversation_history: [],
+}

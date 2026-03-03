@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: info
+---
+TemplateInfo {
+    name: "llama3-chat",
+    stop_sequences: [
+        "<|eot_id|>",
+        "<|end_of_text|>",
+    ],
+    adds_bos: false,
+    parses_special: true,
+}

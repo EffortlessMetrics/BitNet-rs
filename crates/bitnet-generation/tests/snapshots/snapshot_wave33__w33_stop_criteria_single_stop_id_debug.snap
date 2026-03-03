@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: c
+---
+StopCriteria {
+    stop_token_ids: [
+        42,
+    ],
+    stop_strings: [],
+    max_tokens: 0,
+    eos_token_id: None,
+}

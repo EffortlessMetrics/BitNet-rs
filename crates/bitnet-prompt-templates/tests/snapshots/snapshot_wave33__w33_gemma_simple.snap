@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: out
+---
+<start_of_turn>user
+Tell me a joke.<end_of_turn>
+<start_of_turn>model

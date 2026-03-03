@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: out
+---
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are a programming assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Hello<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Hi there!<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+What is Rust?<|eot_id|><|start_header_id|>assistant<|end_header_id|>

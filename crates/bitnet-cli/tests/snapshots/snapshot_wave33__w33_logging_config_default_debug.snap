@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: cfg
+---
+LoggingConfig {
+    level: "info",
+    format: "pretty",
+    timestamps: true,
+}

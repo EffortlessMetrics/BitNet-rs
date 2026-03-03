@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: stops
+---
+[
+    "<end_of_turn>",
+]

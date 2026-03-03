@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: validation
+---
+TemplateValidation {
+    is_valid: false,
+    warnings: [
+        "Template produced empty output",
+        "Output does not contain user text: \"What is 2+2?\"",
+    ],
+}

@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: event
+---
+TokenEvent {
+    id: 42,
+    text: "hello",
+}

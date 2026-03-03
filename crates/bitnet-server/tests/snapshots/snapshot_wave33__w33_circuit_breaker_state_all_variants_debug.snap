@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: states
+---
+[
+    "Closed",
+    "Open",
+    "HalfOpen",
+]

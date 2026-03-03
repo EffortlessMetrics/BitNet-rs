@@ -8,20 +8,6 @@
 //! All kernel calls are stubs that track dispatch/fallback counts; the actual
 //! wiring to individual NEON kernels is done in follow-up PRs.
 
-#![allow(unsafe_op_in_unsafe_fn)]
-#![allow(
-    clippy::missing_safety_doc,
-    clippy::float_cmp,
-    clippy::manual_div_ceil,
-    clippy::unnecessary_cast,
-    clippy::needless_range_loop,
-    clippy::too_many_arguments,
-    clippy::collapsible_if,
-    clippy::let_and_return,
-    clippy::derivable_impls,
-    clippy::excessive_precision,
-    clippy::manual_is_multiple_of
-)]
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // ── Capability flags ────────────────────────────────────────────────────
@@ -140,7 +126,7 @@ impl NeonDispatchConfig {
 
     /// Validate that `hidden_dim` is evenly divisible by `num_heads`.
     pub fn head_dim_valid(&self) -> bool {
-        self.hidden_dim.is_multiple_of(self.num_heads)
+        self.hidden_dim % self.num_heads == 0
     }
 
     /// Per-head dimension (panics if not evenly divisible).

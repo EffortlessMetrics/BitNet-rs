@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_wave33.rs
+expression: "format!(\"{err}\")"
+---
+Invalid log format: xml. Must be one of: pretty, json, compact

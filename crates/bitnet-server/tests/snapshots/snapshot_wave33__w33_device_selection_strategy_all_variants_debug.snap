@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_wave33.rs
+expression: variants
+---
+[
+    "PreferGpu",
+    "CpuOnly",
+    "PerformanceBased",
+    "LoadBalance",
+]

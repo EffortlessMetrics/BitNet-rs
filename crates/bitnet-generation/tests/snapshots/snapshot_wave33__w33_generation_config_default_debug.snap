@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: cfg
+---
+GenerationConfig {
+    max_new_tokens: 128,
+    seed: None,
+    stop_criteria: StopCriteria {
+        stop_token_ids: [],
+        stop_strings: [],
+        max_tokens: 0,
+        eos_token_id: None,
+    },
+}

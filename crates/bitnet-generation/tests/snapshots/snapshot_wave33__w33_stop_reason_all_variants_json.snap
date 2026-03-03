@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: json
+---
+[
+  "MaxTokens",
+  {
+    "StopTokenId": 128009
+  },
+  {
+    "StopString": "\n\nQ:"
+  },
+  "EosToken"
+]

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: truncated
+---
+Unknown template type: nonexistent-template. Supported: raw, instruct, llama3-chat, phi4-chat, qwen-...

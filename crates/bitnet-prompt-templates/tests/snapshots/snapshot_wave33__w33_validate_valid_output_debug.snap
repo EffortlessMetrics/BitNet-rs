@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_wave33.rs
+expression: validation
+---
+TemplateValidation {
+    is_valid: true,
+    warnings: [],
+}

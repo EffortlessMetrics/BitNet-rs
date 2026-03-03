@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-generation/tests/snapshot_wave33.rs
+expression: event
+---
+Done {
+    reason: StopString(
+        "\n\nHuman:",
+    ),
+    stats: GenerationStats {
+        tokens_generated: 15,
+        tokens_per_second: 3.0,
+    },
+}
