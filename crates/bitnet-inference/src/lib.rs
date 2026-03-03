@@ -30,6 +30,7 @@ pub mod inference_cache;
 pub mod kernel_recorder;
 pub mod kv_cache_manager;
 pub mod kv_cache_optimized;
+pub mod layer_executor;
 pub mod layers;
 pub mod memory_estimation;
 pub mod memory_pool;
