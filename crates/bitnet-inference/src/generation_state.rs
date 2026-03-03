@@ -128,11 +128,11 @@ impl GenerationTracker {
         self.last_token_ids.push(token_id);
 
         // Check EOS
-        if let Some(eos) = self.eos_token_id {
-            if token_id == eos {
-                self.state = GenState::Stopped(StopReason::EndOfSequence);
-                return self.state;
-            }
+        if let Some(eos) = self.eos_token_id
+            && token_id == eos
+        {
+            self.state = GenState::Stopped(StopReason::EndOfSequence);
+            return self.state;
         }
 
         // Check max tokens

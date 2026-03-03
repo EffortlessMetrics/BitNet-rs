@@ -127,15 +127,15 @@ impl SamplerConfig {
         if self.temperature < 0.0 {
             issues.push("temperature must be >= 0".into());
         }
-        if let Some(k) = self.top_k {
-            if k == 0 {
-                issues.push("top_k must be > 0".into());
-            }
+        if let Some(k) = self.top_k
+            && k == 0
+        {
+            issues.push("top_k must be > 0".into());
         }
-        if let Some(p) = self.top_p {
-            if !(0.0..=1.0).contains(&p) {
-                issues.push("top_p must be in [0.0, 1.0]".into());
-            }
+        if let Some(p) = self.top_p
+            && !(0.0..=1.0).contains(&p)
+        {
+            issues.push("top_p must be in [0.0, 1.0]".into());
         }
         if self.repetition_penalty < 0.0 {
             issues.push("repetition_penalty must be >= 0".into());
