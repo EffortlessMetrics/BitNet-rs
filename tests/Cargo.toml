@@ -163,12 +163,8 @@ name = "test_reporting_minimal"
 path = "test_reporting_minimal.rs"
 
 [[test]]
-name = "test_infrastructure_helpers_tests"
-path = "test_infrastructure_helpers_tests.rs"
-
-[[test]]
-name = "test_support_tests"
-path = "test_support_tests.rs"
+name = "bdd_wave17"
+path = "tests/bdd_wave17.rs"
 
 [[example]]
 name = "reporting_example"
