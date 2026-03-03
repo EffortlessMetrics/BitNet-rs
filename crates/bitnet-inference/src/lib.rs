@@ -43,6 +43,7 @@ pub mod receipts; // AC4: Inference receipt generation
 pub mod request_types;
 pub mod rope_config;
 pub mod run_metrics;
+pub mod template_registry;
 pub mod thread_pool;
 pub mod tool_templates; // Tool-use / function-calling prompt templates
 pub mod warmup;
