@@ -13,6 +13,7 @@ pub mod activation_bench;
 pub mod activation_registry;
 pub mod attention_patterns;
 pub mod bench_harness;
+pub mod bench_runner;
 pub mod benchmarks;
 pub mod capability_matrix;
 pub mod convolution;
