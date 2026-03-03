@@ -9,20 +9,16 @@ compile_error!(
 );
 
 pub mod auto;
-pub mod batch_tokenizer;
 pub mod bench_utils;
 pub mod compat_matrix;
-pub mod encoding_stats;
 pub mod gguf_loader;
 pub mod gguf_tokenizer;
 pub mod hf_tokenizer;
 pub mod loader;
 mod mock;
-pub mod preprocessor;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
 pub mod token_validation;
-pub mod tokenizer_bench;
 pub mod universal;
 
 // New tokenizer discovery and auto-download modules
@@ -34,7 +30,6 @@ pub mod fallback;
 pub mod strategy;
 pub mod utils;
 pub mod vocab_analyzer;
-pub mod vocab_index;
 pub mod vocabulary;
 
 use bitnet_common::{BitNetError, ModelError, Result};
