@@ -4,8 +4,7 @@
 //! - `read_kv_pairs` with array values, all scalar types, invalid types, truncation
 //! - `open()` and `read_header_blocking` with empty/corrupt files
 //! - `kv::parse_header` vs `lib::parse_header` version-acceptance differences
-//! - `GgufError` IO variant, serde round-trips for complex values
-#![allow(clippy::doc_markdown, clippy::approx_constant)]
+//! - GgufError IO variant, serde round-trips for complex values
 
 use std::io::Write;
 use std::path::Path;

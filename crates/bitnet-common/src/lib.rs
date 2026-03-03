@@ -8,15 +8,12 @@ pub mod arch_registry;
 pub mod backend_selection;
 pub mod config;
 pub mod dtype_convert;
-pub mod error_catalog;
 
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
 pub mod kernel_registry;
 pub mod memory_estimator;
 pub mod memory_pool;
-pub mod op_pool;
-pub mod perf_profiler;
 pub mod runtime_diag;
 pub mod shape_validator;
 pub mod strict_mode;
@@ -24,7 +21,6 @@ pub mod tensor;
 pub mod tensor_layout;
 pub mod tensor_serde;
 pub mod tensor_validation;
-pub mod token_ring;
 pub mod types;
 
 // Re-exports from microcrates for backward compatibility

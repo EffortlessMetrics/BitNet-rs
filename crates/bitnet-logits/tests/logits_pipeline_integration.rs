@@ -3,7 +3,6 @@
 //! These tests exercise the full logits → sampling pipeline as used in
 //! multi-SLM inference, covering realistic vocab sizes (32K–256K), edge
 //! cases in each transform, and end-to-end pipeline composition.
-#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 
 use bitnet_logits::*;
 

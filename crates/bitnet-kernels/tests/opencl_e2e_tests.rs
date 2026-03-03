@@ -962,41 +962,32 @@ fn e2e_context_and_cache_configs_validate_together() {
 }
 
 // ============================================================================
-// Tests for modules not yet exported (marked #[ignore])
+// Scaffold stubs below have been replaced by opencl_module_export_tests.rs
+// which provides real test implementations now that the modules are exported.
+// These stubs are kept for reference but will not compile (the file has
+// pre-existing compilation errors from InferencePipeline API mismatch).
 // ============================================================================
 
 #[test]
-#[ignore = "requires opencl_attention module to be exported in lib.rs"]
-fn e2e_attention_with_rope_and_kv_cache() {
-    // Would test: RoPE encoding → multi-head attention → KV cache update
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_attention_config_creation et al."]
+fn e2e_attention_with_rope_and_kv_cache() {}
 
 #[test]
-#[ignore = "requires opencl_ffn module to be exported in lib.rs"]
-fn e2e_gated_ffn_with_silu_activation() {
-    // Would test: gate_proj → up_proj → SiLU → down_proj
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_gated_ffn_forward"]
+fn e2e_gated_ffn_with_silu_activation() {}
 
 #[test]
-#[ignore = "requires opencl_memory module to be exported in lib.rs"]
-fn e2e_memory_transfer_tracking_full_pipeline() {
-    // Would test: H2D transfer → computation → D2H transfer → bandwidth stats
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_memory_transfer_tracking"]
+fn e2e_memory_transfer_tracking_full_pipeline() {}
 
 #[test]
-#[ignore = "requires opencl_quantized module to be exported in lib.rs"]
-fn e2e_quantized_matmul_i2s_round_trip() {
-    // Would test: quantize weights → I2S matmul → verify against float reference
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_i2s_pack_unpack_round_trip"]
+fn e2e_quantized_matmul_i2s_round_trip() {}
 
 #[test]
-#[ignore = "requires opencl_transformer module to be exported in lib.rs"]
-fn e2e_transformer_layer_full_forward() {
-    // Would test: pre-norm → attention → residual → FFN → post-norm
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_transformer_layer_config_validation"]
+fn e2e_transformer_layer_full_forward() {}
 
 #[test]
-#[ignore = "requires opencl_provider module to be exported in lib.rs"]
-fn e2e_opencl_provider_fallback_to_cpu() {
-    // Would test: OpenCL provider init failure → CPU fallback → correct output
-}
+#[ignore = "Replaced by opencl_module_export_tests.rs — see test_cpu_fallback_always_available"]
+fn e2e_opencl_provider_fallback_to_cpu() {}
