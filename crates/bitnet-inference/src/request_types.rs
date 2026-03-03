@@ -40,44 +40,22 @@ impl Default for InferenceRequest {
 
 impl InferenceRequest {
     pub fn new(prompt: &str) -> Self {
-        Self { prompt: prompt.to_string(), ..Default::default() }
+        Self {
+            prompt: prompt.to_string(),
+            ..Default::default()
+        }
     }
 
-    pub fn with_id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-        self
-    }
-    pub fn with_max_tokens(mut self, n: usize) -> Self {
-        self.max_tokens = n;
-        self
-    }
-    pub fn with_temperature(mut self, t: f32) -> Self {
-        self.temperature = t;
-        self
-    }
-    pub fn with_top_p(mut self, p: f32) -> Self {
-        self.top_p = p;
-        self
-    }
-    pub fn with_top_k(mut self, k: usize) -> Self {
-        self.top_k = k;
-        self
-    }
-    pub fn with_seed(mut self, s: u64) -> Self {
-        self.seed = Some(s);
-        self
-    }
-    pub fn with_stream(mut self, s: bool) -> Self {
-        self.stream = s;
-        self
-    }
+    pub fn with_id(mut self, id: &str) -> Self { self.id = id.to_string(); self }
+    pub fn with_max_tokens(mut self, n: usize) -> Self { self.max_tokens = n; self }
+    pub fn with_temperature(mut self, t: f32) -> Self { self.temperature = t; self }
+    pub fn with_top_p(mut self, p: f32) -> Self { self.top_p = p; self }
+    pub fn with_top_k(mut self, k: usize) -> Self { self.top_k = k; self }
+    pub fn with_seed(mut self, s: u64) -> Self { self.seed = Some(s); self }
+    pub fn with_stream(mut self, s: bool) -> Self { self.stream = s; self }
 
-    pub fn is_greedy(&self) -> bool {
-        self.temperature <= 0.01
-    }
-    pub fn is_deterministic(&self) -> bool {
-        self.seed.is_some()
-    }
+    pub fn is_greedy(&self) -> bool { self.temperature <= 0.01 }
+    pub fn is_deterministic(&self) -> bool { self.seed.is_some() }
 }
 
 /// Inference response.
@@ -121,11 +99,7 @@ pub struct UsageInfo {
 
 impl UsageInfo {
     pub fn new(prompt: usize, completion: usize) -> Self {
-        Self {
-            prompt_tokens: prompt,
-            completion_tokens: completion,
-            total_tokens: prompt + completion,
-        }
+        Self { prompt_tokens: prompt, completion_tokens: completion, total_tokens: prompt + completion }
     }
 }
 
@@ -177,7 +151,10 @@ mod tests {
 
     #[test]
     fn test_builder_chain() {
-        let r = InferenceRequest::new("Hi").with_max_tokens(64).with_temperature(0.0).with_seed(42);
+        let r = InferenceRequest::new("Hi")
+            .with_max_tokens(64)
+            .with_temperature(0.0)
+            .with_seed(42);
         assert_eq!(r.max_tokens, 64);
         assert!(r.is_greedy());
         assert!(r.is_deterministic());
