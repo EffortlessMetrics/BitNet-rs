@@ -24,6 +24,7 @@ pub mod engine;
 pub mod generation;
 pub mod generation_budget;
 pub mod generation_output;
+pub mod generation_pipeline;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod inference_cache;
