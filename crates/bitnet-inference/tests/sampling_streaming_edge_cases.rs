@@ -1,6 +1,5 @@
 //! Edge-case tests for SamplingStrategy state management, StreamingConfig,
 //! GenerationStats, and GenerationConfig stop-token mechanics.
-#![allow(clippy::field_reassign_with_default)]
 
 use std::sync::atomic::Ordering;
 
