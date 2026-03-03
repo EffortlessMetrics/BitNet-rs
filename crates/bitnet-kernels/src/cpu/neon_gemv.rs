@@ -1,3 +1,9 @@
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::let_and_return)]
 //! NEON-optimized GEMV (General Matrix-Vector Multiply) kernels for ARM/Apple Silicon.
 //!
 //! GEMV is the core operation in every linear layer during inference:
