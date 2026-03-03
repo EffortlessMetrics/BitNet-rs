@@ -59,7 +59,7 @@ fn align_buffer_size(size: usize) -> usize {
 /// Check whether `offset` is 256-byte aligned (mirrors
 /// `metal_compute::is_aligned`).
 fn is_aligned(offset: usize) -> bool {
-    offset.is_multiple_of(METAL_ALIGNMENT)
+    offset % METAL_ALIGNMENT == 0
 }
 
 /// Compute aligned buffer bytes for `element_count × element_bytes`.
