@@ -314,7 +314,7 @@ jobs:
     name: CI Core Success
     runs-on: ubuntu-22.04
     timeout-minutes: 5
-    needs: [build-test-linux, grid-check, clippy, clippy-macos-arm64, docs]
+    needs: [build-test-linux, grid-check, clippy, docs]
     if: always()
     steps:
       - name: Summarize core results
@@ -324,7 +324,6 @@ jobs:
           echo "  Build & Test: ${{ needs.build-test-linux.result }}"
           echo "  Grid Check:   ${{ needs.grid-check.result }}"
           echo "  Clippy:       ${{ needs.clippy.result }}"
-          echo "  Clippy ARM64: ${{ needs.clippy-macos-arm64.result }}"
           echo "  Docs:         ${{ needs.docs.result }}"
 
       - name: Check all jobs succeeded
@@ -338,12 +337,6 @@ jobs:
                    "${{ needs.docs.result }}"; do
             [ "$r" = "success" ] || bad=1
           done
-          # Non-blocking jobs (report but don't gate)
-          arm64="${{ needs.clippy-macos-arm64.result }}"
-          echo "  Clippy ARM64 (non-blocking): ${arm64}"
-          if [ "${arm64}" != "success" ]; then
-            echo "⚠️  macOS ARM64 clippy did not succeed (${arm64}) — non-blocking"
-          fi
           if [ $bad -ne 0 ]; then
             echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi
