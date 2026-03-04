@@ -559,7 +559,7 @@ pub fn plan_thread_pinning(
     let mut assigned = 0;
     for (i, node) in topology.nodes.iter().enumerate() {
         let share = if i == n - 1 {
-            num_workers - assigned
+            num_workers.saturating_sub(assigned)
         } else {
             let fraction = node.cpus.len() as f64 / total_cpus as f64;
             (num_workers as f64 * fraction).round() as usize
