@@ -32,30 +32,30 @@ fn fast_exp_scalar(x: f32) -> f32 {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
-    let min_val = unsafe { vdupq_n_f32(-88.0) };
-    let max_val = unsafe { vdupq_n_f32(88.0) };
-    let x = unsafe { vmaxq_f32(vminq_f32(x, max_val), min_val) };
+    let min_val = vdupq_n_f32(-88.0);
+    let max_val = vdupq_n_f32(88.0);
+    let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
 
-    let log2e = unsafe { vdupq_n_f32(std::f32::consts::LOG2_E) };
-    let ln2 = unsafe { vdupq_n_f32(std::f32::consts::LN_2) };
-    let n = unsafe { vrndnq_f32(vmulq_f32(x, log2e)) };
-    let r = unsafe { vsubq_f32(x, vmulq_f32(n, ln2)) };
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    let n = vrndnq_f32(vmulq_f32(x, log2e));
+    let r = vsubq_f32(x, vmulq_f32(n, ln2));
 
-    let c1 = unsafe { vdupq_n_f32(1.0 / 24.0) };
-    let c2 = unsafe { vdupq_n_f32(1.0 / 6.0) };
-    let c3 = unsafe { vdupq_n_f32(0.5) };
-    let one = unsafe { vdupq_n_f32(1.0) };
+    let c1 = vdupq_n_f32(1.0 / 24.0);
+    let c2 = vdupq_n_f32(1.0 / 6.0);
+    let c3 = vdupq_n_f32(0.5);
+    let one = vdupq_n_f32(1.0);
 
-    let p = unsafe { vfmaq_f32(c2, r, c1) };
-    let p = unsafe { vfmaq_f32(c3, r, p) };
-    let p = unsafe { vfmaq_f32(one, r, p) };
-    let poly = unsafe { vfmaq_f32(one, r, p) };
+    let p = vfmaq_f32(c2, r, c1);
+    let p = vfmaq_f32(c3, r, p);
+    let p = vfmaq_f32(one, r, p);
+    let poly = vfmaq_f32(one, r, p);
 
-    let bias = unsafe { vdupq_n_s32(127) };
-    let ni = unsafe { vcvtq_s32_f32(n) };
-    let pow2n = unsafe { vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23)) };
+    let bias = vdupq_n_s32(127);
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
 
-    unsafe { vmulq_f32(poly, pow2n) }
+    vmulq_f32(poly, pow2n)
 }
 
 // ── Internal NEON helpers ───────────────────────────────────────────────
@@ -72,14 +72,14 @@ unsafe fn find_max_neon(data: &[f32]) -> f32 {
     let chunks = len / LANES;
     let remainder = len % LANES;
 
-    let mut max_vec = unsafe { vdupq_n_f32(f32::NEG_INFINITY) };
+    let mut max_vec = vdupq_n_f32(f32::NEG_INFINITY);
     let ptr = data.as_ptr();
     for i in 0..chunks {
         let v = unsafe { vld1q_f32(ptr.add(i * LANES)) };
-        max_vec = unsafe { vmaxq_f32(max_vec, v) };
+        max_vec = vmaxq_f32(max_vec, v);
     }
 
-    let mut max_val = unsafe { vmaxvq_f32(max_vec) };
+    let mut max_val = vmaxvq_f32(max_vec);
     for i in 0..remainder {
         let val = data[chunks * LANES + i];
         if val > max_val {
@@ -102,21 +102,21 @@ unsafe fn exp_sum_neon(data: &[f32], max_val: f32) -> (Vec<f32>, f32) {
     let chunks = len / LANES;
     let remainder = len % LANES;
 
-    let max_vec = unsafe { vdupq_n_f32(max_val) };
-    let mut sum_vec = unsafe { vdupq_n_f32(0.0) };
+    let max_vec = vdupq_n_f32(max_val);
+    let mut sum_vec = vdupq_n_f32(0.0);
 
     let in_ptr = data.as_ptr();
     let out_ptr = exps.as_mut_ptr();
 
     for i in 0..chunks {
         let v = unsafe { vld1q_f32(in_ptr.add(i * LANES)) };
-        let shifted = unsafe { vsubq_f32(v, max_vec) };
+        let shifted = vsubq_f32(v, max_vec);
         let e = unsafe { fast_exp_neon(shifted) };
-        sum_vec = unsafe { vaddq_f32(sum_vec, e) };
+        sum_vec = vaddq_f32(sum_vec, e);
         unsafe { vst1q_f32(out_ptr.add(i * LANES), e) };
     }
 
-    let mut sum_val = unsafe { vaddvq_f32(sum_vec) };
+    let mut sum_val = vaddvq_f32(sum_vec);
     let tail_start = chunks * LANES;
     for i in 0..remainder {
         let e = fast_exp_scalar(data[tail_start + i] - max_val);
@@ -135,14 +135,14 @@ unsafe fn normalize_neon(exps: &[f32], sum: f32, output: &mut [f32]) {
     let chunks = len / LANES;
     let remainder = len % LANES;
     let inv_sum = 1.0 / sum;
-    let inv_sum_vec = unsafe { vdupq_n_f32(inv_sum) };
+    let inv_sum_vec = vdupq_n_f32(inv_sum);
 
     let exp_ptr = exps.as_ptr();
     let out_ptr = output.as_mut_ptr();
 
     for i in 0..chunks {
         let e = unsafe { vld1q_f32(exp_ptr.add(i * LANES)) };
-        let r = unsafe { vmulq_f32(e, inv_sum_vec) };
+        let r = vmulq_f32(e, inv_sum_vec);
         unsafe { vst1q_f32(out_ptr.add(i * LANES), r) };
     }
 
@@ -155,6 +155,7 @@ unsafe fn normalize_neon(exps: &[f32], sum: f32, output: &mut [f32]) {
 // ── Scalar reference helpers ────────────────────────────────────────────
 
 /// Plain scalar softmax for parity testing.
+#[allow(dead_code)]
 fn scalar_softmax(input: &[f32], output: &mut [f32]) {
     let len = input.len();
     if len == 0 {
