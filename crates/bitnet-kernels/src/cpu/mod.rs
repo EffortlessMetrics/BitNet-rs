@@ -43,6 +43,7 @@ pub mod quantize;
 pub mod quantized_attention;
 pub use quantized_attention::QuantizedAttentionWorkspace;
 pub mod quantized_matmul;
+pub use quantized_matmul::DequantWorkspace;
 pub mod reduction;
 pub mod residual;
 pub use residual::{add_residual, add_residual_scaled, add_residual_with_dropout};
