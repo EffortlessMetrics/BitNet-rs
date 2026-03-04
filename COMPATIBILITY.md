@@ -38,7 +38,7 @@ float* llama_get_logits(llama_context* ctx);
 
 ### Python API (llama-cpp-python compatibility)
 
-We guarantee drop-in compatibility with llama-cpp-python. The following will always work:
+We target drop-in compatibility with llama-cpp-python. The following is the intended API (scaffolded; not yet validated end-to-end in CI):
 
 ```python
 # This import change is the ONLY change needed
@@ -136,13 +136,11 @@ All compatibility features are protected by tests:
 ### Required Test Files
 - `crates/bitnet-ffi/tests/api_contract.rs` - C API contracts
 - `crates/bitnet-tokenizers/tests/tokenizer_contracts.rs` - Tokenizer contracts
-- `crates/bitnet-models/tests/gguf_compatibility.rs` - GGUF fix contracts
-- `crates/bitnet-py/tests/test_llama_compat.py` - Python API contracts
+- `crates/bitnet-py/tests/test_llama_compat.py` - Python API contracts (not yet run in CI)
 
 ### CI Requirements
-- `.github/workflows/compatibility.yml` - Runs on every PR
-- Must test on Linux, macOS, Windows
-- Must test Python 3.12+ (updated PyO3 ABI3-py312 requirement)
+- `.github/workflows/compatibility.yml` - Runs on every PR (Linux only; macOS and Windows coverage planned)
+- Python 3.10 tested in CI (PyO3 ABI3 targets py312+; CI coverage gap)
 - Must test Rust stable and MSRV (1.92.0)
   - MSRV bumped to 1.92.0 for Rust 2024 edition support, AVX2 SIMD intrinsics, and stabilized portable SIMD APIs for QK256 performance optimizations
 
@@ -150,12 +148,11 @@ All compatibility features are protected by tests:
 
 While not breaking compatibility, we aim for:
 
-1. **No performance regression** vs llama.cpp for supported operations
-2. **Better performance** for:
+1. **No performance regression** vs llama.cpp for supported operations (not yet benchmarked)
+2. **Better performance** for (aspirational; not yet validated):
    - Model loading (memory-mapped)
    - Tokenization (especially GPT-2)
-   - SIMD operations (hand-optimized)
-   - AVX-512 acceleration on compatible Intel hardware
+   - SIMD operations (hand-optimized AVX2; AVX-512 code paths exist but are not validated)
 
 > **Note:** Performance targets are aspirational during pre-alpha (v0.2.x). Formal guarantees begin at v1.0.
 
@@ -170,9 +167,8 @@ While not breaking compatibility, we aim for:
 
 **SIMD Acceleration:**
 - **AVX2 (Intel Haswell 2013+, AMD Excavator 2015+)**: Automatic detection, ~2x speedup
-- **AVX-512 (Intel Skylake-X 2017+, Ice Lake 2019+)**: Runtime detection, up to 2x additional speedup
+- **AVX-512 (Intel Skylake-X 2017+, Ice Lake 2019+)**: Runtime detection, code paths exist but not yet validated in CI
   - Requires both AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets
-  - Automatic fallback to AVX2 if thermal throttling detected
 - **NEON (ARM64/AArch64)**: Automatic detection on compatible ARM processors
 
 **GPU Support:**
@@ -194,8 +190,8 @@ While not breaking compatibility, we aim for:
 | AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Scaffold |
 
 **Backend selection** is controlled by `--device`:
-- `auto` (default): Probes available backends and selects the best (CUDA > Metal > Vulkan > OpenCL > CPU)
-- Explicit: `cuda`, `opencl`, `vulkan`, `cpu`
+- `auto` (default): Selects CUDA if available, otherwise falls back to CPU. (Metal, Vulkan, OpenCL probe support is scaffolded but not yet wired into auto-detection.)
+- Explicit: `cuda`, `opencl`, `cpu` (other backends are scaffolded)
 
 **Runtime detection**: `bitnet-device-probe` probes hardware at startup and reports `requested=X detected=[…] selected=Y` via `BackendStartupSummary`.
 
@@ -206,10 +202,12 @@ While not breaking compatibility, we aim for:
 - macOS (Intel, Apple Silicon): Full support with CPU path; Apple GPU backend tracked in roadmap (`docs/reference/macos-26-apple-silicon-roadmap.md`)
 - Windows (x86_64): Full support with MSVC or GNU toolchains
 
-**Verified Configurations:**
-- Ubuntu 20.04+ LTS with GCC 9.0+
+**Tested Configurations (CI):**
+- Ubuntu 22.04 with GCC (ci-core.yml, compatibility.yml)
+- macOS ARM64 (apple-silicon.yml — clippy only, build/test in progress)
+
+**Intended Configurations (not yet in CI):**
 - CentOS/RHEL 8+ with GCC 8.0+
-- macOS 11+ (Big Sur) with Xcode 12+
 - Windows 10/11 with Visual Studio 2019+ or MinGW-w64
 
 ### GPU Backend Summary
@@ -283,7 +281,7 @@ from bitnet.llama_compat import Llama  # was: from llama_cpp import Llama
 | `llama_batch_*` | • | Planned for v1.2 |
 | `llama_kv_cache_*` | • | Planned for v1.2 |
 | `llama_grammar_*` | × | Not planned (use constraints API) |
-| `llama_sampling_*` | ✓ | Full support |
+| `llama_sampling_*` | • | Planned (Rust SamplingStrategy exists; FFI wrapper not yet exposed) |
 | `llama_model_quantize` | • | Planned for v1.3 |
 
 **Legend:**
