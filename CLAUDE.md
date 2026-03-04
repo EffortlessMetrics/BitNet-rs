@@ -21,6 +21,8 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 - **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
 - **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download); includes deterministic output, reproducibility (seed=42 identical tokens), kernel-ID recording, and receipt invariants. Separate `e2e_cpu_golden_path.rs` adds pinned-output regression guard [140,459,459,459] (#790)
+- **AVX2 Parity Tests** — 53 tests across 4 files verifying AVX2 dispatch matches scalar reference for all CPU kernel modules (softmax, matmul, layer_norm, activations, attention, embedding, pooling, batch_norm, conv1d)
+- **Attention Buffer Reuse** — `AttentionWorkspace` and `QuantizedAttentionWorkspace` eliminate per-head allocations in MHA/GQA hot loops (O(seq_len²) savings per forward pass)
 - **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
@@ -56,7 +58,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~2,800+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
+- **Test Scaffolding**: ~1,050+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
 
 ## Quick Reference
 
