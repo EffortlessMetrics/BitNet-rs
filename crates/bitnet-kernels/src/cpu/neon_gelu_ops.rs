@@ -43,27 +43,35 @@ unsafe fn neon_clamp(v: float32x4_t, limit: f32) -> float32x4_t {
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 unsafe fn neon_tanh_poly(x: float32x4_t) -> float32x4_t {
-    // Clamp to avoid blow-up in the polynomial outside its design range.
-    let x = unsafe { neon_clamp(x, 4.5) };
+    // Padé(3,3) rational approximant for tanh, accurate to ~0.005 on [-3,3].
+    // tanh(x) ≈ x*(105 + 10*x²) / (105 + 45*x² + x⁴)
+    // For |x| > 3, saturate to ±1 (tanh(3) = 0.995).
+    let zero = vdupq_n_f32(0.0);
+    let one = vdupq_n_f32(1.0);
+    let neg_one = vdupq_n_f32(-1.0);
+    let limit = vdupq_n_f32(3.0);
+    let c105 = vdupq_n_f32(105.0);
+    let c10 = vdupq_n_f32(10.0);
+    let c45 = vdupq_n_f32(45.0);
 
     let x2 = vmulq_f32(x, x);
-    let x3 = vmulq_f32(x2, x);
-    let x5 = vmulq_f32(x3, x2);
-    let x7 = vmulq_f32(x5, x2);
+    let x4 = vmulq_f32(x2, x2);
 
-    // tanh(x) ≈ c1*x + c3*x³ + c5*x⁵ + c7*x⁷
-    let c1 = vdupq_n_f32(1.0);
-    let c3 = vdupq_n_f32(-0.333_333_34);
-    let c5 = vdupq_n_f32(0.133_333_33);
-    let c7 = vdupq_n_f32(-0.053_968_254);
+    // Numerator: x * (105 + 10*x²)
+    let num = vmulq_f32(x, vfmaq_f32(c105, c10, x2));
+    // Denominator: 105 + 45*x² + x⁴
+    let den = vaddq_f32(vfmaq_f32(c105, c45, x2), x4);
 
-    let mut r = vmulq_f32(c1, x);
-    r = vfmaq_f32(r, c3, x3);
-    r = vfmaq_f32(r, c5, x5);
-    r = vfmaq_f32(r, c7, x7);
+    // Approximate division (NEON has no f32 div, use reciprocal estimate).
+    let inv = vrecpeq_f32(den);
+    let inv = vmulq_f32(vrecpsq_f32(den, inv), inv); // one Newton-Raphson step
+    let poly = vmulq_f32(num, inv);
 
-    // Clamp result to [-1, 1].
-    unsafe { neon_clamp(r, 1.0) }
+    // For |x| > 3, use sign(x).
+    let abs_x = vabsq_f32(x);
+    let saturated = vcgtq_f32(abs_x, limit);
+    let sign = vbslq_f32(vcgeq_f32(x, zero), one, neg_one);
+    vbslq_f32(saturated, sign, poly)
 }
 
 // ── Fast GELU ───────────────────────────────────────────────────────
