@@ -907,6 +907,7 @@ dependencies = [
  "bitnet-sys",
  "bitnet-test-support",
  "bitnet-tokenizers",
+ "bitnet-tool-use-core",
  "candle-core",
  "candle-nn",
  "chrono",
@@ -1829,6 +1830,14 @@ dependencies = [
  "tokenizers",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "bitnet-tool-use-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

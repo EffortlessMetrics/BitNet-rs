@@ -3,64 +3,10 @@
 //! Provides formatting infrastructure for models that support tool calling
 //! (Qwen, LLaMA 3.1+, Mistral, Hermes/NousResearch, and generic JSON).
 
-use serde::{Deserialize, Serialize};
-
-// ---------------------------------------------------------------------------
-// Data types
-// ---------------------------------------------------------------------------
-
-/// Describes a single parameter accepted by a tool.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolParameter {
-    pub name: String,
-    pub param_type: String,
-    pub description: String,
-    pub required: bool,
-    pub default_value: Option<String>,
-}
-
-/// A tool that can be offered to the model.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolDefinition {
-    pub name: String,
-    pub description: String,
-    pub parameters: Vec<ToolParameter>,
-}
-
-/// A structured tool invocation produced (or consumed) by the model.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolCall {
-    pub name: String,
-    /// JSON-encoded arguments string.
-    pub arguments: String,
-}
-
-/// The result returned after executing a tool call.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolResult {
-    pub tool_call_id: String,
-    pub content: String,
-    pub is_error: bool,
-}
-
-// ---------------------------------------------------------------------------
-// Format enum
-// ---------------------------------------------------------------------------
-
-/// Prompt format families that support tool / function calling.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ToolUseFormat {
-    /// ChatML with function-calling extensions (Qwen, Phi).
-    ChatMLTools,
-    /// LLaMA 3.1+ tool-calling format.
-    Llama3Tools,
-    /// Mistral tool-use format.
-    MistralTools,
-    /// Plain JSON function-calling envelope.
-    GenericJson,
-    /// Hermes / NousResearch tool-calling format.
-    HermesTools,
-}
+pub use bitnet_tool_use_core::{detect_tool_format, parse_tool_call};
+use bitnet_tool_use_core::{
+    ToolCall, ToolDefinition, ToolParameter, ToolResult, ToolUseFormat,
+};
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
@@ -233,60 +179,6 @@ pub fn format_tool_result(result: &ToolResult, format: &ToolUseFormat) -> String
             )
         }
     }
-}
-
-/// Try to parse a tool call from raw model output.
-///
-/// Looks for the JSON payload in format-specific delimiters, then falls back
-/// to bare `{"name": …, "arguments": …}` extraction.
-pub fn parse_tool_call(text: &str, format: &ToolUseFormat) -> Option<ToolCall> {
-    let json_str = match format {
-        ToolUseFormat::ChatMLTools | ToolUseFormat::HermesTools => {
-            extract_between(text, "<tool_call>", "</tool_call>")
-        }
-        ToolUseFormat::Llama3Tools => extract_between(text, "<|python_tag|>", "<|eot_id|>"),
-        ToolUseFormat::MistralTools => extract_between(text, "[TOOL_CALLS]", "[/TOOL_CALLS]"),
-        ToolUseFormat::GenericJson => Some(text.trim().to_string()),
-    };
-    let json_str = json_str.as_deref().unwrap_or(text.trim());
-    parse_call_json(json_str)
-}
-
-/// Auto-detect the tool-use format from a model name / path.
-pub fn detect_tool_format(model_name: &str) -> ToolUseFormat {
-    let lower = model_name.to_lowercase();
-    if lower.contains("qwen") || lower.contains("phi") {
-        ToolUseFormat::ChatMLTools
-    } else if lower.contains("llama-3.1")
-        || lower.contains("llama-3.2")
-        || lower.contains("llama-3.3")
-        || lower.contains("llama3.1")
-    {
-        ToolUseFormat::Llama3Tools
-    } else if lower.contains("mistral") || lower.contains("mixtral") {
-        ToolUseFormat::MistralTools
-    } else if lower.contains("hermes") || lower.contains("nous") {
-        ToolUseFormat::HermesTools
-    } else {
-        ToolUseFormat::GenericJson
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-fn extract_between(text: &str, start_tag: &str, end_tag: &str) -> Option<String> {
-    let start = text.find(start_tag).map(|i| i + start_tag.len())?;
-    let end = text[start..].find(end_tag).map(|i| i + start)?;
-    Some(text[start..end].trim().to_string())
-}
-
-fn parse_call_json(s: &str) -> Option<ToolCall> {
-    let v: serde_json::Value = serde_json::from_str(s.trim()).ok()?;
-    let name = v.get("name")?.as_str()?.to_string();
-    let arguments = v.get("arguments").map_or_else(|| "{}".to_string(), |a| a.to_string());
-    Some(ToolCall { name, arguments })
 }
 
 // ---------------------------------------------------------------------------
