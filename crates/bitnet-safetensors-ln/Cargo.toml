@@ -11,7 +11,7 @@ description = "Shared LayerNorm utilities for SafeTensors inspection and casting
 [dependencies]
 anyhow = "1.0.100"
 bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
-safetensors = "0.6.2"
+safetensors = "0.7.0"
 half = "2.7.1"
 bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }
 

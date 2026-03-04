@@ -432,7 +432,7 @@ candle-transformers = { version = "0.9.1", default-features = false }
 
 # Serialization formats
 memmap2 = "0.9.9"
-safetensors = "0.6.2"
+safetensors = "0.7.0"
 
 # CLI and configuration
 clap = { version = "4.5.51", features = ["derive", "env"] }
