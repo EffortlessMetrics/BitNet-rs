@@ -965,6 +965,7 @@ dependencies = [
  "bitnet-cpu-detect",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
+ "bitnet-kv-cache-policy-core",
  "bitnet-quantization",
  "bitnet-simd",
  "bitnet-test-support",
