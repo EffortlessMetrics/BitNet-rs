@@ -42,15 +42,15 @@ pub struct ToolResult {
 /// Prompt format families that support tool / function calling.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ToolUseFormat {
-    /// ChatML with function-calling extensions (Qwen, Phi).
+    /// `ChatML` with function-calling extensions (Qwen, Phi).
     ChatMLTools,
-    /// LLaMA 3.1+ tool-calling format.
+    /// `LLaMA` 3.1+ tool-calling format.
     Llama3Tools,
     /// Mistral tool-use format.
     MistralTools,
     /// Plain JSON function-calling envelope.
     GenericJson,
-    /// Hermes / NousResearch tool-calling format.
+    /// Hermes / `NousResearch` tool-calling format.
     HermesTools,
 }
 
@@ -67,7 +67,7 @@ pub fn parse_tool_call(text: &str, format: &ToolUseFormat) -> Option<ToolCall> {
         ToolUseFormat::MistralTools => extract_between(text, "[TOOL_CALLS]", "[/TOOL_CALLS]"),
         ToolUseFormat::GenericJson => Some(text.trim().to_string()),
     };
-    let json_str = json_str.as_deref().unwrap_or(text.trim());
+    let json_str = json_str.as_deref().unwrap_or_else(|| text.trim());
     parse_call_json(json_str)
 }
 
@@ -101,7 +101,7 @@ fn extract_between(text: &str, start_tag: &str, end_tag: &str) -> Option<String>
 fn parse_call_json(s: &str) -> Option<ToolCall> {
     let v: serde_json::Value = serde_json::from_str(s.trim()).ok()?;
     let name = v.get("name")?.as_str()?.to_string();
-    let arguments = v.get("arguments").map_or_else(|| "{}".to_string(), |a| a.to_string());
+    let arguments = v.get("arguments").map_or_else(|| "{}".to_string(), ToString::to_string);
     Some(ToolCall { name, arguments })
 }
 
