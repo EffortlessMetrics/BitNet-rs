@@ -16,6 +16,7 @@ const LANES: usize = 4;
 
 /// Scalar dot product.
 #[inline]
+#[allow(dead_code)]
 fn scalar_dot(a: &[f32], b: &[f32]) -> f32 {
     debug_assert_eq!(a.len(), b.len());
     a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
@@ -27,13 +28,13 @@ fn scalar_dot(a: &[f32], b: &[f32]) -> f32 {
 unsafe fn neon_dot(a: &[f32], b: &[f32]) -> f32 {
     let len = a.len().min(b.len());
     let chunks = len / LANES;
-    let mut vacc = unsafe { vdupq_n_f32(0.0) };
+    let mut vacc = vdupq_n_f32(0.0);
     for i in 0..chunks {
         let va = unsafe { vld1q_f32(a.as_ptr().add(i * LANES)) };
         let vb = unsafe { vld1q_f32(b.as_ptr().add(i * LANES)) };
-        vacc = unsafe { vfmaq_f32(vacc, va, vb) };
+        vacc = vfmaq_f32(vacc, va, vb);
     }
-    let mut acc = unsafe { vaddvq_f32(vacc) };
+    let mut acc = vaddvq_f32(vacc);
     for i in (chunks * LANES)..len {
         acc += unsafe { *a.as_ptr().add(i) * *b.as_ptr().add(i) };
     }
@@ -41,6 +42,7 @@ unsafe fn neon_dot(a: &[f32], b: &[f32]) -> f32 {
 }
 
 /// Scalar softmax in-place (max‑subtract‑exp‑normalise).
+#[allow(dead_code)]
 fn scalar_softmax_inplace(data: &mut [f32]) {
     if data.is_empty() {
         return;
@@ -75,59 +77,60 @@ unsafe fn neon_softmax_inplace(data: &mut [f32]) {
     // Phase 1 – max
     let ptr = data.as_ptr();
     let chunks = len / LANES;
-    let mut vmax = unsafe { vdupq_n_f32(f32::NEG_INFINITY) };
+    let mut vmax = vdupq_n_f32(f32::NEG_INFINITY);
     for i in 0..chunks {
         let v = unsafe { vld1q_f32(ptr.add(i * LANES)) };
-        vmax = unsafe { vmaxq_f32(vmax, v) };
+        vmax = vmaxq_f32(vmax, v);
     }
-    let mut max_val = unsafe { vmaxvq_f32(vmax) };
-    for i in (chunks * LANES)..len {
-        max_val = max_val.max(data[i]);
+    let mut max_val = vmaxvq_f32(vmax);
+    for val in &data[chunks * LANES..len] {
+        max_val = max_val.max(*val);
     }
     if max_val == f32::NEG_INFINITY {
         return;
     }
 
     // Phase 2 – exp(x − max)
-    let vmax_s = unsafe { vdupq_n_f32(max_val) };
-    let mut vsum = unsafe { vdupq_n_f32(0.0) };
+    let vmax_s = vdupq_n_f32(max_val);
+    let mut vsum = vdupq_n_f32(0.0);
     let out_ptr = data.as_mut_ptr();
     for i in 0..chunks {
         let v = unsafe { vld1q_f32(ptr.add(i * LANES)) };
-        let shifted = unsafe { vsubq_f32(v, vmax_s) };
+        let shifted = vsubq_f32(v, vmax_s);
         let mut arr = [0.0f32; LANES];
         unsafe { vst1q_f32(arr.as_mut_ptr(), shifted) };
         for a in &mut arr {
             *a = a.exp();
         }
         let exp_v = unsafe { vld1q_f32(arr.as_ptr()) };
-        vsum = unsafe { vaddq_f32(vsum, exp_v) };
+        vsum = vaddq_f32(vsum, exp_v);
         unsafe { vst1q_f32(out_ptr.add(i * LANES), exp_v) };
     }
-    let mut sum = unsafe { vaddvq_f32(vsum) };
-    for i in (chunks * LANES)..len {
-        let e = (data[i] - max_val).exp();
-        data[i] = e;
+    let mut sum = vaddvq_f32(vsum);
+    for val in &mut data[chunks * LANES..len] {
+        let e = (*val - max_val).exp();
+        *val = e;
         sum += e;
     }
 
     // Phase 3 – normalise
     if sum > 0.0 {
         let inv = 1.0 / sum;
-        let vinv = unsafe { vdupq_n_f32(inv) };
+        let vinv = vdupq_n_f32(inv);
         for i in 0..chunks {
             let v = unsafe { vld1q_f32(out_ptr.add(i * LANES) as *const f32) };
-            let normed = unsafe { vmulq_f32(v, vinv) };
+            let normed = vmulq_f32(v, vinv);
             unsafe { vst1q_f32(out_ptr.add(i * LANES), normed) };
         }
-        for i in (chunks * LANES)..len {
-            data[i] *= inv;
+        for val in &mut data[chunks * LANES..len] {
+            *val *= inv;
         }
     }
 }
 
 /// Scalar weighted accumulate: `out[i] += src[i] * w`.
 #[inline]
+#[allow(dead_code)]
 fn scalar_weighted_acc(out: &mut [f32], src: &[f32], w: f32) {
     for (o, s) in out.iter_mut().zip(src.iter()) {
         *o += s * w;
@@ -140,12 +143,12 @@ fn scalar_weighted_acc(out: &mut [f32], src: &[f32], w: f32) {
 unsafe fn neon_weighted_acc(out: &mut [f32], src: &[f32], w: f32) {
     let len = out.len().min(src.len());
     let chunks = len / LANES;
-    let vw = unsafe { vdupq_n_f32(w) };
+    let vw = vdupq_n_f32(w);
     let op = out.as_mut_ptr();
     for i in 0..chunks {
         let vo = unsafe { vld1q_f32(op.add(i * LANES) as *const f32) };
         let vs = unsafe { vld1q_f32(src.as_ptr().add(i * LANES)) };
-        let r = unsafe { vfmaq_f32(vo, vs, vw) };
+        let r = vfmaq_f32(vo, vs, vw);
         unsafe { vst1q_f32(op.add(i * LANES), r) };
     }
     for i in (chunks * LANES)..len {

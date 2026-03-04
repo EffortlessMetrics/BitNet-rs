@@ -5,6 +5,8 @@
 //! functions include scalar tail handling for vectors whose length is not a
 //! multiple of 4.
 
+#![allow(clippy::missing_safety_doc)]
+
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
@@ -39,7 +41,7 @@ pub fn neon_dot_product(a: &[f32], b: &[f32]) -> f32 {
     let chunks = n / LANES;
     let remainder = n % LANES;
 
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
     for i in 0..chunks {
         let off = i * LANES;
         let va = unsafe { vld1q_f32(a.as_ptr().add(off)) };
@@ -75,9 +77,9 @@ pub fn neon_cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     let chunks = n / LANES;
     let remainder = n % LANES;
 
-    let mut acc_dot = unsafe { vdupq_n_f32(0.0) };
-    let mut acc_a2 = unsafe { vdupq_n_f32(0.0) };
-    let mut acc_b2 = unsafe { vdupq_n_f32(0.0) };
+    let mut acc_dot = vdupq_n_f32(0.0);
+    let mut acc_a2 = vdupq_n_f32(0.0);
+    let mut acc_b2 = vdupq_n_f32(0.0);
 
     for i in 0..chunks {
         let off = i * LANES;
@@ -123,7 +125,7 @@ pub fn neon_euclidean_distance(a: &[f32], b: &[f32]) -> f32 {
     let chunks = n / LANES;
     let remainder = n % LANES;
 
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
     for i in 0..chunks {
         let off = i * LANES;
         let va = unsafe { vld1q_f32(a.as_ptr().add(off)) };
@@ -159,7 +161,7 @@ pub fn neon_manhattan_distance(a: &[f32], b: &[f32]) -> f32 {
     let chunks = n / LANES;
     let remainder = n % LANES;
 
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
     for i in 0..chunks {
         let off = i * LANES;
         let va = unsafe { vld1q_f32(a.as_ptr().add(off)) };
@@ -226,7 +228,7 @@ pub fn neon_normalize_l2(vec: &mut [f32]) {
     let remainder = n % LANES;
 
     // Accumulate squared norm.
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
     for i in 0..chunks {
         let off = i * LANES;
         let v = unsafe { vld1q_f32(vec.as_ptr().add(off)) };
@@ -286,7 +288,7 @@ pub fn neon_hamming_distance(a: &[u8], b: &[u8]) -> u32 {
         // vcntq_u8 counts set bits per byte.
         let bits = vcntq_u8(xor);
         // Horizontal sum via widening add.
-        total += unsafe { vaddlvq_u8(bits) } as u32;
+        total += vaddlvq_u8(bits) as u32;
     }
 
     // Scalar tail.

@@ -55,30 +55,30 @@ fn fast_exp_scalar(x: f32) -> f32 {
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn fast_exp_neon(x: float32x4_t) -> float32x4_t {
-    let min_val = unsafe { vdupq_n_f32(-88.0) };
-    let max_val = unsafe { vdupq_n_f32(88.0) };
-    let x = unsafe { vmaxq_f32(vminq_f32(x, max_val), min_val) };
+    let min_val = vdupq_n_f32(-88.0);
+    let max_val = vdupq_n_f32(88.0);
+    let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
 
-    let log2e = unsafe { vdupq_n_f32(std::f32::consts::LOG2_E) };
-    let ln2 = unsafe { vdupq_n_f32(std::f32::consts::LN_2) };
-    let n = unsafe { vrndnq_f32(vmulq_f32(x, log2e)) };
-    let r = unsafe { vsubq_f32(x, vmulq_f32(n, ln2)) };
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    let n = vrndnq_f32(vmulq_f32(x, log2e));
+    let r = vsubq_f32(x, vmulq_f32(n, ln2));
 
-    let c1 = unsafe { vdupq_n_f32(1.0 / 24.0) };
-    let c2 = unsafe { vdupq_n_f32(1.0 / 6.0) };
-    let c3 = unsafe { vdupq_n_f32(0.5) };
-    let one = unsafe { vdupq_n_f32(1.0) };
+    let c1 = vdupq_n_f32(1.0 / 24.0);
+    let c2 = vdupq_n_f32(1.0 / 6.0);
+    let c3 = vdupq_n_f32(0.5);
+    let one = vdupq_n_f32(1.0);
 
-    let p = unsafe { vfmaq_f32(c2, r, c1) };
-    let p = unsafe { vfmaq_f32(c3, r, p) };
-    let p = unsafe { vfmaq_f32(one, r, p) };
-    let poly = unsafe { vfmaq_f32(one, r, p) };
+    let p = vfmaq_f32(c2, r, c1);
+    let p = vfmaq_f32(c3, r, p);
+    let p = vfmaq_f32(one, r, p);
+    let poly = vfmaq_f32(one, r, p);
 
-    let bias = unsafe { vdupq_n_s32(127) };
-    let ni = unsafe { vcvtq_s32_f32(n) };
-    let pow2n = unsafe { vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23)) };
+    let bias = vdupq_n_s32(127);
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, bias), 23));
 
-    unsafe { vmulq_f32(poly, pow2n) }
+    vmulq_f32(poly, pow2n)
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -127,7 +127,7 @@ pub fn flash_attention_forward_neon(
                 for j in 0..kj_count {
                     let qi_row = qi_start + i;
                     let kj_row = kj_start + j;
-                    let mut dot = 0.0f32;
+                    let mut dot: f32;
 
                     let q_off = qi_row * head_dim;
                     let k_off = kj_row * head_dim;
@@ -691,6 +691,7 @@ pub fn multi_head_flash_attention_neon(
 
 /// Naive reference attention for validation:
 /// softmax(Q·Kᵀ / √d + causal_mask) × V
+#[allow(dead_code)]
 fn reference_attention(
     q: &[f32],
     k: &[f32],
@@ -737,6 +738,7 @@ fn reference_attention(
 }
 
 /// Reference matmul: C = A × B (naive triple loop).
+#[allow(dead_code)]
 fn reference_matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
     let mut c = vec![0.0f32; m * n];
     for i in 0..m {
