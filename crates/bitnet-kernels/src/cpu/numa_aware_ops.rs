@@ -554,7 +554,7 @@ pub fn plan_thread_pinning(
 
     let mut assignments = Vec::with_capacity(num_workers);
     let n = topology.num_nodes();
-    // Proportional distribution.
+    // Proportional distribution with clamped rounding.
     let mut per_node: Vec<usize> = Vec::with_capacity(n);
     let mut assigned = 0;
     for (i, node) in topology.nodes.iter().enumerate() {
@@ -562,7 +562,9 @@ pub fn plan_thread_pinning(
             num_workers.saturating_sub(assigned)
         } else {
             let fraction = node.cpus.len() as f64 / total_cpus as f64;
-            (num_workers as f64 * fraction).round() as usize
+            let raw = (num_workers as f64 * fraction).round() as usize;
+            // Clamp so we never over-allocate past num_workers.
+            raw.min(num_workers.saturating_sub(assigned))
         };
         per_node.push(share);
         assigned += share;
