@@ -165,11 +165,10 @@ nix develop && nix build .#bitnet-cli && nix flake check
 | `cuda` | CUDA acceleration (preferred; requires CUDA 12.x); backward-compat alias for `gpu` |
 | `metal` | Metal GPU backend (macOS/iOS Apple Silicon) |
 | `vulkan` | Vulkan compute backend (cross-platform) |
-| `oneapi` | Intel oneAPI (sub-crate feature in `bitnet-kernels`; use `opencl` for root-level Intel GPU) |
 | `ffi` | C++ FFI bridge for cross-validation |
 | `fixtures` | GGUF fixture-based integration tests (test-only) |
 | `full-cli` | Enable all CLI subcommands |
-| `rocm` | AMD ROCm detection (device probe; inference kernels not yet validated) |
+| `rocm` | AMD ROCm/HIP inference backend (experimental; kernels not yet validated end-to-end) |
 | `npu` | NPU detection via `bitnet-device-probe` |
 | `opencl` | Intel Arc OpenCL backend (experimental; `bitnet-opencl` crate) |
 
