@@ -7,7 +7,7 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
     use bitnet_quantization::i2s_qk256::gemv_qk256;
 
     let qk256_dims = qk256_tensor.dims();
-    let layout = parse_qk256_layout(weight_name, &qk256_dims)
+    let layout = parse_qk256_layout(weight_name, qk256_dims)
         .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
     debug_assert!(
@@ -25,7 +25,7 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
 
     let input_dims = input.dims();
     let shape =
-        parse_input_shape(&input_dims).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        parse_input_shape(input_dims).map_err(|e| BitNetError::Validation(e.to_string()))?;
 
     validate_input_cols(weight_name, shape.cols, layout.cols)
         .map_err(|e| BitNetError::Validation(e.to_string()))?;
