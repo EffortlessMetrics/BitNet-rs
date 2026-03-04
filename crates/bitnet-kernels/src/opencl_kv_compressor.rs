@@ -17,6 +17,8 @@
 
 use std::fmt;
 
+pub use bitnet_kv_cache_policy_core::{EvictionPolicy, KvEviction};
+
 // ---------------------------------------------------------------------------
 // OpenCL kernel source (embedded string — no runtime dependency)
 // ---------------------------------------------------------------------------
@@ -115,58 +117,6 @@ impl fmt::Display for QuantFormat {
         match self {
             Self::Int8 => write!(f, "INT8"),
             Self::Int4 => write!(f, "INT4"),
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// EvictionPolicy
-// ---------------------------------------------------------------------------
-
-/// Policy used to choose which KV entries to evict when the cache is full.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EvictionPolicy {
-    /// Least-recently-used: evict the entry that was appended earliest.
-    Lru,
-    /// First-in-first-out (identical to LRU for append-only caches).
-    Fifo,
-    /// Evict the entry with the lowest cumulative attention score.
-    AttentionScore,
-    /// Hybrid: combine recency and attention score (configurable weight).
-    Hybrid {
-        /// Weight ∈ [0, 1] for the attention-score component.
-        /// `0.0` = pure LRU, `1.0` = pure attention-score.
-        attention_weight: u8, // stored as 0..=100 to keep Copy + Eq
-    },
-}
-
-impl EvictionPolicy {
-    /// Create a hybrid policy with the given attention-score weight in `[0.0, 1.0]`.
-    /// The weight is clamped and stored as a percentage (0–100).
-    pub fn hybrid(attention_weight: f32) -> Self {
-        let pct = (attention_weight.clamp(0.0, 1.0) * 100.0).round() as u8;
-        Self::Hybrid { attention_weight: pct }
-    }
-
-    /// Return the attention-score weight as `f32` in `[0.0, 1.0]`.
-    pub fn attention_weight_f32(&self) -> f32 {
-        match self {
-            Self::Lru | Self::Fifo => 0.0,
-            Self::AttentionScore => 1.0,
-            Self::Hybrid { attention_weight } => *attention_weight as f32 / 100.0,
-        }
-    }
-}
-
-impl fmt::Display for EvictionPolicy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Lru => write!(f, "LRU"),
-            Self::Fifo => write!(f, "FIFO"),
-            Self::AttentionScore => write!(f, "AttentionScore"),
-            Self::Hybrid { attention_weight } => {
-                write!(f, "Hybrid(attn={:.0}%)", *attention_weight as f32)
-            }
         }
     }
 }
@@ -566,116 +516,6 @@ fn sign_extend_4bit(nibble: u8) -> i8 {
         (val | 0xF0) as i8
     } else {
         val as i8
-    }
-}
-
-// ---------------------------------------------------------------------------
-// KvEviction — evict entries by policy
-// ---------------------------------------------------------------------------
-
-/// A single entry in the eviction tracker.
-#[derive(Debug, Clone)]
-struct EvictionEntry {
-    /// Position index in the original sequence.
-    position: usize,
-    /// Insertion order (lower = older).
-    insertion_order: u64,
-    /// Cumulative attention score (updated externally).
-    attention_score: f32,
-}
-
-/// Manages eviction of KV cache entries according to a configured policy.
-#[derive(Debug)]
-pub struct KvEviction {
-    policy: EvictionPolicy,
-    entries: Vec<EvictionEntry>,
-    next_order: u64,
-}
-
-impl KvEviction {
-    /// Create a new eviction manager with the given policy.
-    pub fn new(policy: EvictionPolicy) -> Self {
-        Self { policy, entries: Vec::new(), next_order: 0 }
-    }
-
-    /// Register a new entry at the given position.
-    pub fn insert(&mut self, position: usize) {
-        self.entries.push(EvictionEntry {
-            position,
-            insertion_order: self.next_order,
-            attention_score: 0.0,
-        });
-        self.next_order += 1;
-    }
-
-    /// Update attention scores for all tracked entries.
-    /// `scores` maps each tracked index (in insertion order) to a score.
-    pub fn update_scores(&mut self, scores: &[f32]) {
-        let n = scores.len().min(self.entries.len());
-        for i in 0..n {
-            self.entries[i].attention_score += scores[i];
-        }
-    }
-
-    /// Number of tracked entries.
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-
-    /// Whether the tracker is empty.
-    pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
-
-    /// Select `count` entries to evict according to the policy.
-    /// Returns the *positions* of the entries to remove.
-    pub fn select_evictions(&self, count: usize) -> Vec<usize> {
-        if count == 0 || self.entries.is_empty() {
-            return Vec::new();
-        }
-        let count = count.min(self.entries.len());
-
-        // Build (index, priority) where *lowest* priority gets evicted.
-        let mut scored: Vec<(usize, f64)> = self
-            .entries
-            .iter()
-            .enumerate()
-            .map(|(idx, e)| {
-                let priority = match self.policy {
-                    EvictionPolicy::Lru | EvictionPolicy::Fifo => {
-                        // Lower insertion order → older → lower priority.
-                        e.insertion_order as f64
-                    }
-                    EvictionPolicy::AttentionScore => {
-                        // Lower cumulative attention → lower priority.
-                        e.attention_score as f64
-                    }
-                    EvictionPolicy::Hybrid { attention_weight } => {
-                        let w = attention_weight as f64 / 100.0;
-                        let max_order =
-                            self.entries.iter().map(|e| e.insertion_order).max().unwrap_or(1)
-                                as f64;
-                        let recency = if max_order > 0.0 {
-                            e.insertion_order as f64 / max_order
-                        } else {
-                            0.0
-                        };
-                        let attn = e.attention_score as f64;
-                        (1.0 - w) * recency + w * attn
-                    }
-                };
-                (idx, priority)
-            })
-            .collect();
-
-        // Sort ascending by priority — first `count` have lowest priority.
-        scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-        scored.iter().take(count).map(|(idx, _)| self.entries[*idx].position).collect()
-    }
-
-    /// Remove entries at the given positions from the tracker.
-    pub fn remove_positions(&mut self, positions: &[usize]) {
-        self.entries.retain(|e| !positions.contains(&e.position));
     }
 }
 
