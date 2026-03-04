@@ -21,7 +21,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 - **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
 - **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download); includes deterministic output, reproducibility (seed=42 identical tokens), kernel-ID recording, and receipt invariants. Separate `e2e_cpu_golden_path.rs` adds pinned-output regression guard [140,459,459,459] (#790)
-- **AVX2 Parity Tests** — 53 tests across 4 files verifying AVX2 dispatch matches scalar reference for all CPU kernel modules (softmax, matmul, layer_norm, activations, attention, embedding, pooling, batch_norm, conv1d)
+- **AVX2 Parity Tests** — ~99 tests across 7 files verifying AVX2 dispatch matches scalar reference for CPU kernel modules (softmax, matmul, layer_norm, activations, reductions, attention, embedding, pooling, batch_norm, conv1d, RoPE, elementwise ops, cache matmul)
 - **Attention Buffer Reuse** — `AttentionWorkspace` and `QuantizedAttentionWorkspace` eliminate per-head allocations in MHA/GQA hot loops (O(seq_len²) savings per forward pass)
 - **Matmul Dequant Buffer Reuse** — `DequantWorkspace` eliminates per-call allocation of the k×n dequantized weight matrix in `dequantize_and_matmul` (~687 MB for 2B-model FFN layers)
 - **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
@@ -29,6 +29,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
 - **Nightly Fuzz Workflow** — 84 fuzz targets (45 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
+- **macOS ARM64 CI** — Non-blocking `clippy-macos-arm64` job in `ci-core.yml` runs on `macos-14` with `continue-on-error: true`; reports Apple Silicon clippy status without gating merges
 - **Criterion Benchmarks** — 6 active bench targets: `srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops`, `slm_inference` (#787)
 - **KV Cache Optimization** — incremental inference module with paged cache and eviction policies (LRU, SlidingWindow, AttentionBased) in `kv_cache_optimized` (#1685)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
