@@ -50,6 +50,7 @@ members = [
   "crates/bitnet-eval-core",     # SRP: deterministic eval/scoring math helpers
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
+  "crates/bitnet-api-version-core", # SRP: reusable API version parsing/negotiation primitives
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
