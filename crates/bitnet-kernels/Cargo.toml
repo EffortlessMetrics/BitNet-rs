@@ -136,6 +136,11 @@ path = "tests/proptest_wave24.rs"
 required-features = ["cpu"]
 
 [[test]]
+name = "proptest_wave27"
+path = "tests/proptest_wave27.rs"
+required-features = ["cpu"]
+
+[[test]]
 name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
