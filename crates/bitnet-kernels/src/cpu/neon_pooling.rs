@@ -87,13 +87,13 @@ unsafe fn max_pool1d_neon_inner(
 
         let mut acc = vdupq_n_f32(f32::NEG_INFINITY);
         for c in 0..chunks {
-            let v = vld1q_f32(ptr.add(base + c * 4));
+            let v = unsafe { vld1q_f32(ptr.add(base + c * 4)) };
             acc = vmaxq_f32(acc, v);
         }
 
         let mut max_val = vmaxvq_f32(acc);
         for r in 0..remainder {
-            let val = *ptr.add(base + chunks * 4 + r);
+            let val = unsafe { *ptr.add(base + chunks * 4 + r) };
             if val > max_val {
                 max_val = val;
             }
@@ -187,13 +187,13 @@ unsafe fn avg_pool1d_neon_inner(
 
         let mut acc = vdupq_n_f32(0.0);
         for c in 0..chunks {
-            let v = vld1q_f32(ptr.add(base + c * 4));
+            let v = unsafe { vld1q_f32(ptr.add(base + c * 4)) };
             acc = vaddq_f32(acc, v);
         }
 
         let mut sum = vaddvq_f32(acc);
         for r in 0..remainder {
-            sum += *ptr.add(base + chunks * 4 + r);
+            sum += unsafe { *ptr.add(base + chunks * 4 + r) };
         }
         output[idx] = sum * inv_k;
     }
@@ -280,13 +280,13 @@ unsafe fn global_avg_pool_neon_inner(
 
         let mut acc = vdupq_n_f32(0.0);
         for c in 0..chunks {
-            let v = vld1q_f32(ptr.add(base + c * 4));
+            let v = unsafe { vld1q_f32(ptr.add(base + c * 4)) };
             acc = vaddq_f32(acc, v);
         }
 
         let mut sum = vaddvq_f32(acc);
         for r in 0..remainder {
-            sum += *ptr.add(base + chunks * 4 + r);
+            sum += unsafe { *ptr.add(base + chunks * 4 + r) };
         }
         output[ch] = sum * inv_s;
     }
@@ -365,13 +365,13 @@ unsafe fn global_max_pool_neon_inner(
 
         let mut acc = vdupq_n_f32(f32::NEG_INFINITY);
         for c in 0..chunks {
-            let v = vld1q_f32(ptr.add(base + c * 4));
+            let v = unsafe { vld1q_f32(ptr.add(base + c * 4)) };
             acc = vmaxq_f32(acc, v);
         }
 
         let mut max_val = vmaxvq_f32(acc);
         for r in 0..remainder {
-            let val = *ptr.add(base + chunks * 4 + r);
+            let val = unsafe { *ptr.add(base + chunks * 4 + r) };
             if val > max_val {
                 max_val = val;
             }
@@ -457,13 +457,13 @@ unsafe fn adaptive_avg_pool1d_neon_inner(
 
         let mut acc = vdupq_n_f32(0.0);
         for c in 0..chunks {
-            let v = vld1q_f32(ptr.add(start + c * 4));
+            let v = unsafe { vld1q_f32(ptr.add(start + c * 4)) };
             acc = vaddq_f32(acc, v);
         }
 
         let mut sum = vaddvq_f32(acc);
         for r in 0..remainder {
-            sum += *ptr.add(start + chunks * 4 + r);
+            sum += unsafe { *ptr.add(start + chunks * 4 + r) };
         }
         output[i] = sum / bin_len as f32;
     }

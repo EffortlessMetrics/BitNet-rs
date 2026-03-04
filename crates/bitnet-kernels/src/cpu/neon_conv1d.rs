@@ -28,6 +28,7 @@ mod neon_impl {
     ///
     /// Both `a` and `b` must be valid for reads of `len` elements.
     #[inline]
+    #[target_feature(enable = "neon")]
     unsafe fn neon_dot(a: *const f32, b: *const f32, len: usize) -> f32 {
         let chunks = len / 4;
         let rem = len % 4;
@@ -35,8 +36,8 @@ mod neon_impl {
 
         for c in 0..chunks {
             let off = c * 4;
-            let va = vld1q_f32(a.add(off));
-            let vb = vld1q_f32(b.add(off));
+            let va = unsafe { vld1q_f32(a.add(off)) };
+            let vb = unsafe { vld1q_f32(b.add(off)) };
             acc = vfmaq_f32(acc, va, vb);
         }
 
@@ -49,7 +50,7 @@ mod neon_impl {
         // Scalar tail.
         let tail_start = chunks * 4;
         for r in 0..rem {
-            sum += *a.add(tail_start + r) * *b.add(tail_start + r);
+            sum += unsafe { *a.add(tail_start + r) * *b.add(tail_start + r) };
         }
         sum
     }
@@ -84,8 +85,8 @@ mod neon_impl {
 
         for o in 0..out_len {
             let base = o * stride;
-            let in_ptr = input.as_ptr().add(base);
-            output[o] = neon_dot(in_ptr, k_ptr, k_len);
+            let in_ptr = unsafe { input.as_ptr().add(base) };
+            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
         }
     }
 
@@ -119,8 +120,8 @@ mod neon_impl {
 
         for o in 0..out_len {
             let base = o * stride;
-            let in_ptr = input.as_ptr().add(base);
-            output[o] = neon_dot(in_ptr, k_ptr, k_len) + bias;
+            let in_ptr = unsafe { input.as_ptr().add(base) };
+            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) } + bias;
         }
     }
 
@@ -166,9 +167,9 @@ mod neon_impl {
 
             for o in 0..out_per_ch {
                 let base = in_off + o * stride;
-                let in_ptr = input.as_ptr().add(base);
-                let k_ptr = kernels.as_ptr().add(k_off);
-                output[out_off + o] = neon_dot(in_ptr, k_ptr, kernel_len);
+                let in_ptr = unsafe { input.as_ptr().add(base) };
+                let k_ptr = unsafe { kernels.as_ptr().add(k_off) };
+                output[out_off + o] = unsafe { neon_dot(in_ptr, k_ptr, kernel_len) };
             }
         }
     }
@@ -202,8 +203,8 @@ mod neon_impl {
 
         for o in 0..out_len {
             let base = o * stride;
-            let in_ptr = input.as_ptr().add(base);
-            let val = neon_dot(in_ptr, k_ptr, k_len);
+            let in_ptr = unsafe { input.as_ptr().add(base) };
+            let val = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
             output[o] = if val > 0.0 { val } else { 0.0 };
         }
     }
@@ -259,6 +260,7 @@ mod neon_impl {
     ///
     /// Caller must ensure the target supports NEON.
     #[target_feature(enable = "neon")]
+    #[allow(dead_code)]
     pub unsafe fn causal_conv1d_neon_fast(
         input: &[f32],
         kernel: &[f32],
@@ -292,8 +294,8 @@ mod neon_impl {
         // Phase 2: full-kernel positions — use NEON dot.
         for o in pad..out_len {
             let start = o - pad; // first input element
-            let in_ptr = input.as_ptr().add(start);
-            output[o] = neon_dot(in_ptr, k_ptr, k_len);
+            let in_ptr = unsafe { input.as_ptr().add(start) };
+            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
         }
     }
 }

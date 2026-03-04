@@ -43,7 +43,7 @@ unsafe fn neon_clamp(v: float32x4_t, limit: f32) -> float32x4_t {
 #[target_feature(enable = "neon")]
 unsafe fn neon_tanh_poly(x: float32x4_t) -> float32x4_t {
     // Clamp to avoid blow-up in the polynomial outside its design range.
-    let x = neon_clamp(x, 4.5);
+    let x = unsafe { neon_clamp(x, 4.5) };
 
     let x2 = vmulq_f32(x, x);
     let x3 = vmulq_f32(x2, x);
@@ -62,7 +62,7 @@ unsafe fn neon_tanh_poly(x: float32x4_t) -> float32x4_t {
     r = vfmaq_f32(r, c7, x7);
 
     // Clamp result to [-1, 1].
-    neon_clamp(r, 1.0)
+    unsafe { neon_clamp(r, 1.0) }
 }
 
 // ── Fast GELU ───────────────────────────────────────────────────────
@@ -86,13 +86,13 @@ unsafe fn neon_gelu_fast_impl(input: &mut [f32]) {
     let remainder = input.len() % 4;
 
     for i in 0..chunks {
-        let ptr = input.as_mut_ptr().add(i * 4);
-        let x = vld1q_f32(ptr);
+        let ptr = unsafe { input.as_mut_ptr().add(i * 4) };
+        let x = unsafe { vld1q_f32(ptr) };
         let x3 = vmulq_f32(vmulq_f32(x, x), x);
         let inner = vmulq_f32(sqrt2pi, vfmaq_f32(x, coeff, x3));
-        let tanh_val = neon_tanh_poly(inner);
+        let tanh_val = unsafe { neon_tanh_poly(inner) };
         let result = vmulq_f32(half, vmulq_f32(x, vaddq_f32(one, tanh_val)));
-        vst1q_f32(ptr, result);
+        unsafe { vst1q_f32(ptr, result) };
     }
 
     // Scalar tail
@@ -147,11 +147,11 @@ unsafe fn neon_erf_approx(x: float32x4_t) -> float32x4_t {
     // exp(-x²) approximation via scalar (NEON has no native exp).
     let neg_x2 = vnegq_f32(vmulq_f32(abs_x, abs_x));
     let mut exp_vals: [f32; 4] = [0.0; 4];
-    vst1q_f32(exp_vals.as_mut_ptr(), neg_x2);
+    unsafe { vst1q_f32(exp_vals.as_mut_ptr(), neg_x2) };
     for v in &mut exp_vals {
         *v = v.exp();
     }
-    let exp_neg_x2 = vld1q_f32(exp_vals.as_ptr());
+    let exp_neg_x2 = unsafe { vld1q_f32(exp_vals.as_ptr()) };
 
     // poly = ((((a5*t + a4)*t + a3)*t + a2)*t + a1)*t
     let mut poly = vmulq_f32(a5, t);
@@ -183,12 +183,12 @@ unsafe fn neon_gelu_exact_impl(input: &mut [f32]) {
     let remainder = input.len() % 4;
 
     for i in 0..chunks {
-        let ptr = input.as_mut_ptr().add(i * 4);
-        let x = vld1q_f32(ptr);
+        let ptr = unsafe { input.as_mut_ptr().add(i * 4) };
+        let x = unsafe { vld1q_f32(ptr) };
         let scaled = vmulq_f32(x, inv_sqrt2);
-        let erf_val = neon_erf_approx(scaled);
+        let erf_val = unsafe { neon_erf_approx(scaled) };
         let result = vmulq_f32(half, vmulq_f32(x, vaddq_f32(one, erf_val)));
-        vst1q_f32(ptr, result);
+        unsafe { vst1q_f32(ptr, result) };
     }
 
     // Scalar tail
@@ -227,19 +227,19 @@ unsafe fn neon_swiglu_impl(gate: &[f32], up: &[f32]) -> Vec<f32> {
     let remainder = n % 4;
 
     for i in 0..chunks {
-        let g = vld1q_f32(gate.as_ptr().add(i * 4));
-        let u = vld1q_f32(up.as_ptr().add(i * 4));
+        let g = unsafe { vld1q_f32(gate.as_ptr().add(i * 4)) };
+        let u = unsafe { vld1q_f32(up.as_ptr().add(i * 4)) };
 
         // silu(g) via scalar (exp not available in NEON)
         let mut g_arr: [f32; 4] = [0.0; 4];
-        vst1q_f32(g_arr.as_mut_ptr(), g);
+        unsafe { vst1q_f32(g_arr.as_mut_ptr(), g) };
         for v in &mut g_arr {
             *v = scalar_silu(*v);
         }
-        let silu_g = vld1q_f32(g_arr.as_ptr());
+        let silu_g = unsafe { vld1q_f32(g_arr.as_ptr()) };
 
         let result = vmulq_f32(silu_g, u);
-        vst1q_f32(out.as_mut_ptr().add(i * 4), result);
+        unsafe { vst1q_f32(out.as_mut_ptr().add(i * 4), result) };
     }
 
     let tail_start = chunks * 4;
@@ -288,16 +288,16 @@ unsafe fn neon_geglu_impl(gate: &[f32], up: &[f32]) -> Vec<f32> {
     let remainder = n % 4;
 
     for i in 0..chunks {
-        let g = vld1q_f32(gate.as_ptr().add(i * 4));
-        let u = vld1q_f32(up.as_ptr().add(i * 4));
+        let g = unsafe { vld1q_f32(gate.as_ptr().add(i * 4)) };
+        let u = unsafe { vld1q_f32(up.as_ptr().add(i * 4)) };
 
         let g3 = vmulq_f32(vmulq_f32(g, g), g);
         let inner = vmulq_f32(sqrt2pi, vfmaq_f32(g, coeff, g3));
-        let tanh_val = neon_tanh_poly(inner);
+        let tanh_val = unsafe { neon_tanh_poly(inner) };
         let gelu_g = vmulq_f32(half, vmulq_f32(g, vaddq_f32(one, tanh_val)));
 
         let result = vmulq_f32(gelu_g, u);
-        vst1q_f32(out.as_mut_ptr().add(i * 4), result);
+        unsafe { vst1q_f32(out.as_mut_ptr().add(i * 4), result) };
     }
 
     let tail_start = chunks * 4;
@@ -331,10 +331,10 @@ unsafe fn neon_tanh_fast_impl(input: &mut [f32]) {
     let remainder = input.len() % 4;
 
     for i in 0..chunks {
-        let ptr = input.as_mut_ptr().add(i * 4);
-        let x = vld1q_f32(ptr);
-        let result = neon_tanh_poly(x);
-        vst1q_f32(ptr, result);
+        let ptr = unsafe { input.as_mut_ptr().add(i * 4) };
+        let x = unsafe { vld1q_f32(ptr) };
+        let result = unsafe { neon_tanh_poly(x) };
+        unsafe { vst1q_f32(ptr, result) };
     }
 
     // Scalar tail
