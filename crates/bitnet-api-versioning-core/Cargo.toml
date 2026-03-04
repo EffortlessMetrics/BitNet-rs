@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-api-versioning-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core API version parsing and negotiation contracts for BitNet services"
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
