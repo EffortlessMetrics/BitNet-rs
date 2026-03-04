@@ -37,7 +37,8 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
-> Default features are **empty** by design — always pass `--no-default-features --features cpu` (or `gpu`).
+> **Workspace** default features are **empty** — always pass `--no-default-features --features cpu` (or `gpu`).
+> `bitnet-cli` defaults to `cpu,full-cli` when built standalone.
 
 ## Status
 
@@ -45,11 +46,11 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 |-------------------------------|-------|-------|
 | CPU inference — I2_S BitNet32 | ✅    | Production path; 10–20× faster than QK256 scalar |
 | CPU inference — I2_S QK256    | ✅    | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
-| GPU inference — CUDA          | ⚠️    | Implemented; receipt validation pending |
-| GPU inference — Metal         | ⚠️    | Feature gate + kernel stubs; validation in progress |
-| GPU inference — Vulkan        | ⚠️    | Runtime probing compiled; end-to-end validation pending |
-| GPU inference — Intel oneAPI  | ⚠️    | Intel CPU/GPU feature gate; validation in progress |
-| AMD ROCm detection            | ⚠️    | Device detection only; inference kernels not yet validated |
+| GPU inference — CUDA          | 🔶    | Scaffolded; receipt validation pending |
+| GPU inference — Metal         | 🧪    | Feature gate + kernel stubs; not validated end-to-end |
+| GPU inference — Vulkan        | 🧪    | Runtime probing compiled; not validated end-to-end |
+| GPU inference — Intel oneAPI  | 🧪    | Intel CPU/GPU feature gate; not validated end-to-end |
+| AMD ROCm detection            | 🧪    | Device detection only; inference kernels not yet validated |
 | GPU HAL — multi-backend       | 🔧    | `bitnet-gpu-hal`: OpenCL, Vulkan, Metal, ROCm backends; 10,000+ tests (scaffold; CPU-only validation) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
@@ -64,11 +65,11 @@ BitNet-rs supports inference on multiple GPU platforms:
 
 | Backend | Feature Flag | Status | Hardware |
 |---------|-------------|--------|----------|
-| NVIDIA CUDA | `--features gpu` | ✅ Production | GeForce/Tesla/A100+ |
-| Intel Arc (OpenCL) | `--features opencl` | 🔶 Alpha | Arc A770/A750 |
-| AMD ROCm | `--features rocm` | 🧪 Experimental | Unvalidated target: RDNA3-class AMD GPUs |
-| Vulkan | `--features vulkan` | 🧪 Experimental | Any Vulkan 1.3 GPU |
-| Apple Metal | `--features metal` | 🧪 Experimental | M1/M2/M3+ |
+| NVIDIA CUDA | `--features gpu` | 🔶 Alpha | GeForce/Tesla/A100+ |
+| Intel Arc (OpenCL) | `--features opencl` | 🧪 Experimental | Arc A770/A750 |
+| AMD ROCm | `--features rocm` | 🧪 Scaffold | Unvalidated target: RDNA3-class AMD GPUs |
+| Vulkan | `--features vulkan` | 🧪 Scaffold | Any Vulkan 1.3 GPU |
+| Apple Metal | `--features metal` | 🧪 Scaffold | M1/M2/M3+ |
 | WebGPU | N/A (sub-crate only) | 🧪 Experimental | Browser/wgpu (`bitnet-wgpu`) |
 | CPU (SIMD) | `--features cpu` | ✅ Production | x86-64/ARM64 |
 
