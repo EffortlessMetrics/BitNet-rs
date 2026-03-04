@@ -23,6 +23,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download); includes deterministic output, reproducibility (seed=42 identical tokens), kernel-ID recording, and receipt invariants. Separate `e2e_cpu_golden_path.rs` adds pinned-output regression guard [140,459,459,459] (#790)
 - **AVX2 Parity Tests** — 53 tests across 4 files verifying AVX2 dispatch matches scalar reference for all CPU kernel modules (softmax, matmul, layer_norm, activations, attention, embedding, pooling, batch_norm, conv1d)
 - **Attention Buffer Reuse** — `AttentionWorkspace` and `QuantizedAttentionWorkspace` eliminate per-head allocations in MHA/GQA hot loops (O(seq_len²) savings per forward pass)
+- **Matmul Dequant Buffer Reuse** — `DequantWorkspace` eliminates per-call allocation of the k×n dequantized weight matrix in `dequantize_and_matmul` (~687 MB for 2B-model FFN layers)
 - **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
@@ -58,7 +59,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~1,050+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
+- **Test Scaffolding**: ~1,600+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
 
 ## Quick Reference
 
@@ -903,7 +904,7 @@ bitnet-rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current counts.
-- **~2,800+ tests skipped** at last count — all with `#[ignore = "reason"]` justification
+- **~1,600+ tests skipped** at last count — all with `#[ignore = "reason"]` justification
 - All enabled tests pass in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
@@ -1181,7 +1182,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 **Current State**:
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current pass counts
-- ~2,800+ tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
+- ~1,600+ tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
 - Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds, network-dependent tests
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation, snapshot tests, property tests, fuzz
 
@@ -1215,7 +1216,7 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding for unimplemented features**: ~2,800+ tests skipped across the workspace (TDD scaffolds, resource-gated, slow, CUDA, crossval, network-dependent); all have justification strings
+- **Expect test scaffolding for unimplemented features**: ~1,600+ tests skipped across the workspace (TDD scaffolds, resource-gated, slow, CUDA, crossval, network-dependent); all have justification strings
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
 - **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
 - **Check `#[ignore = "..."]` justification before investigating**: The reason tells you exactly what's needed to unblock
