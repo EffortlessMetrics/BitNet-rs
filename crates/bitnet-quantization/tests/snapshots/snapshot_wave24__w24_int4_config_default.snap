@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: cfg
+---
+Int4QuantConfig {
+    group_size: 128,
+    symmetric: true,
+    block_wise: true,
+}

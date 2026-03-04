@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: cfg
+---
+ProductionInferenceConfig {
+    enable_performance_monitoring: false,
+    enable_memory_tracking: false,
+    max_inference_time_seconds: 60,
+    enable_quality_assessment: true,
+    prefill_strategy: Always,
+}

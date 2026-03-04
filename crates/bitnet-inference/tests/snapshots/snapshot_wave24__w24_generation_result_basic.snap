@@ -1,0 +1,53 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: result
+---
+GenerationResult {
+    text: "The answer is 42.",
+    tokens_generated: 16,
+    performance_metrics: PerformanceMetrics {
+        total_latency_ms: 1000,
+        tokens_generated: 16,
+        tokens_per_second: 16.0,
+        first_token_latency_ms: Some(
+            80,
+        ),
+        average_token_latency_ms: Some(
+            62.5,
+        ),
+        memory_usage_bytes: None,
+        cache_hit_rate: None,
+        backend_type: "cpu",
+        model_load_time_ms: None,
+        tokenizer_encode_time_ms: None,
+        tokenizer_decode_time_ms: None,
+        forward_pass_time_ms: None,
+        sampling_time_ms: None,
+    },
+    timing_metrics: TimingMetrics {
+        prefill_ms: Some(
+            80,
+        ),
+        decode_ms: Some(
+            920,
+        ),
+        tokenization_encode_ms: Some(
+            2,
+        ),
+        tokenization_decode_ms: Some(
+            1,
+        ),
+        total_ms: 1003,
+    },
+    throughput_metrics: ThroughputMetrics {
+        prefill_tokens_per_sec: Some(
+            500.0,
+        ),
+        decode_tokens_per_sec: Some(
+            17.4,
+        ),
+        end_to_end_tokens_per_sec: 16.0,
+        total_tokens: 16,
+    },
+    quality_score: None,
+}

@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: "(packed.len, &packed.data, &unpacked)"
+---
+(
+    3,
+    [
+        213,
+        2,
+    ],
+    [
+        5,
+        -3,
+        2,
+    ],
+)

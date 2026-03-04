@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: report
+---
+AccuracyReport {
+    quantization_type: I2S,
+    device: Cpu,
+    max_absolute_error: 0.0012,
+    mean_absolute_error: 0.00035,
+    relative_error: 0.0008,
+    passed: true,
+    tolerance: 1e-5,
+    metrics: {
+        "snr_db": 42.5,
+    },
+}

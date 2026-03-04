@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: stats
+---
+BatchStats {
+    total_requests: 1000,
+    completed_requests: 980,
+    failed_requests: 20,
+    avg_latency_ms: 125.5,
+    avg_tokens_per_second: 42.3,
+    queue_depth: 5,
+    active_batch_size: 8,
+    uptime_ms: 3600000,
+}

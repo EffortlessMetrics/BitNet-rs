@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: variants
+---
+[
+    Sequential,
+    GPipe,
+    PipeDream,
+    Interleaved,
+]

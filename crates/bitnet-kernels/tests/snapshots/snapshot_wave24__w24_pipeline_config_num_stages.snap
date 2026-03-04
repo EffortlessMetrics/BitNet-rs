@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: "format!(\"num_stages={}\", cfg.num_stages())"
+---
+num_stages=3

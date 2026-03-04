@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: cfg
+---
+BatchNormConfig {
+    num_features: 512,
+    eps: 0.001,
+    momentum: 0.05,
+    training: true,
+}

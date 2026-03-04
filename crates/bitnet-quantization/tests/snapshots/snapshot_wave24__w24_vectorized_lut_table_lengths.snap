@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: "format!(\"forward_len={} reverse_len={}\", lut.forward_len(), lut.reverse_len())"
+---
+forward_len=256 reverse_len=16

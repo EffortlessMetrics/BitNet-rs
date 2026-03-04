@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: cfg
+---
+ShapedReductionConfig {
+    op: Max,
+    axis: Some(
+        1,
+    ),
+    keepdim: true,
+}

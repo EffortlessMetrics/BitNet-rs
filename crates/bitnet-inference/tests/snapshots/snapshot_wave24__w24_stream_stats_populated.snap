@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: stats
+---
+StreamStats {
+    tokens_generated: 128,
+    text_chunks_emitted: 32,
+    avg_tokens_per_chunk: 4.0,
+    total_bytes: 512,
+}

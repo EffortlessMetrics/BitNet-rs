@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_wave24.rs
+expression: cal
+---
+CalibrationData {
+    min_values: [
+        -1.5,
+        -2.0,
+        -0.8,
+    ],
+    max_values: [
+        1.5,
+        2.0,
+        0.8,
+    ],
+    mean_values: [
+        0.01,
+        -0.02,
+        0.005,
+    ],
+    num_samples: 1000,
+}

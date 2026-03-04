@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-inference/tests/snapshot_wave24.rs
+expression: caps
+---
+DeviceCapabilities {
+    memory_bytes: None,
+    compute_capability: None,
+    supports_mixed_precision: false,
+    optimal_batch_size: 1,
+}

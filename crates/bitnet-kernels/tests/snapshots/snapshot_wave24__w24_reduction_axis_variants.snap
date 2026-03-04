@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_wave24.rs
+expression: axes
+---
+[
+    Row,
+    Column,
+]
