@@ -43,6 +43,7 @@ members = [
   "crates/bitnet-generation-events-core", # SRP: reusable generation stream event/stat contracts
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
   "crates/bitnet-kv-cache-policy-core", # SRP: KV-cache sequence transition decision policy
+  "crates/bitnet-engine-state-core", # SRP: reusable engine lifecycle state machine core
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
