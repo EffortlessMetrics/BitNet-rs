@@ -194,7 +194,7 @@ cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 - `bitnet-gpu-hal`: Unified GPU hardware abstraction, backend selection, async runtime
 - `bitnet-opencl`: Intel Arc OpenCL backend with kernel registry
 
-**SRP Microcrates** (wired into CI): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core`, `bitnet-validation`, `bitnet-prompt-templates`
+**SRP Microcrates** (wired into CI): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
 
 Note: The workspace has 107+ total crates; the above lists user-facing and architecture-critical ones.
 
