@@ -41,10 +41,6 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
-#[allow(dead_code)]
-mod health_check;
-#[allow(dead_code)]
-mod model_info;
 mod model_registry;
 mod tokenizers;
 mod trace_diff;

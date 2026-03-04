@@ -2,7 +2,6 @@
 //!
 //! These tests validate kernel correctness without requiring OpenCL hardware
 //! by implementing CPU reference functions that mirror the kernel logic.
-#![allow(clippy::useless_vec, clippy::excessive_precision)]
 
 use bitnet_kernels::kernels;
 
@@ -15,7 +14,7 @@ fn cpu_silu(x: f32) -> f32 {
 }
 
 fn cpu_gelu(x: f32) -> f32 {
-    let cdf = 0.5 * (1.0 + (0.797_884_560_8_f32 * (x + 0.044715 * x * x * x)).tanh());
+    let cdf = 0.5 * (1.0 + (0.797_884_6_f32 * (x + 0.044715 * x * x * x)).tanh());
     x * cdf
 }
 
@@ -113,8 +112,8 @@ fn silu_is_odd_like_near_origin() {
 
 #[test]
 fn silu_mul_matches_separate_ops() {
-    let gate = vec![1.0_f32, -1.0, 0.5, 2.0, -0.5];
-    let up = vec![2.0_f32, 3.0, -1.0, 0.5, 4.0];
+    let gate = [1.0_f32, -1.0, 0.5, 2.0, -0.5];
+    let up = [2.0_f32, 3.0, -1.0, 0.5, 4.0];
 
     for i in 0..gate.len() {
         let fused = cpu_silu(gate[i]) * up[i];
@@ -191,9 +190,9 @@ fn relu_zero_is_zero() {
 
 #[test]
 fn elementwise_add_correctness() {
-    let a = vec![1.0_f32, 2.0, 3.0, -1.0];
-    let b = vec![4.0_f32, -2.0, 0.0, 5.0];
-    let expected = vec![5.0_f32, 0.0, 3.0, 4.0];
+    let a = [1.0_f32, 2.0, 3.0, -1.0];
+    let b = [4.0_f32, -2.0, 0.0, 5.0];
+    let expected = [5.0_f32, 0.0, 3.0, 4.0];
     for i in 0..a.len() {
         assert!((a[i] + b[i] - expected[i]).abs() < 1e-7, "add mismatch at {i}");
     }
@@ -201,9 +200,9 @@ fn elementwise_add_correctness() {
 
 #[test]
 fn elementwise_mul_correctness() {
-    let a = vec![1.0_f32, 2.0, 3.0, -1.0];
-    let b = vec![4.0_f32, -2.0, 0.0, 5.0];
-    let expected = vec![4.0_f32, -4.0, 0.0, -5.0];
+    let a = [1.0_f32, 2.0, 3.0, -1.0];
+    let b = [4.0_f32, -2.0, 0.0, 5.0];
+    let expected = [4.0_f32, -4.0, 0.0, -5.0];
     for i in 0..a.len() {
         assert!((a[i] * b[i] - expected[i]).abs() < 1e-7, "mul mismatch at {i}");
     }
@@ -215,9 +214,9 @@ fn elementwise_mul_correctness() {
 
 #[test]
 fn scale_correctness() {
-    let data = vec![1.0_f32, -2.0, 3.0, 0.0];
+    let data = [1.0_f32, -2.0, 3.0, 0.0];
     let scalar = 0.5_f32;
-    let expected = vec![0.5_f32, -1.0, 1.5, 0.0];
+    let expected = [0.5_f32, -1.0, 1.5, 0.0];
     for i in 0..data.len() {
         assert!((data[i] * scalar - expected[i]).abs() < 1e-7, "scale mismatch at {i}");
     }

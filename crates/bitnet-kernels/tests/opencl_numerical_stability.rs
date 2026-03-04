@@ -1,4 +1,3 @@
-#![allow(clippy::manual_div_ceil)]
 //! A770 OpenCL numerical stability regression harness.
 //!
 //! Validates GPU kernel outputs against CPU reference implementations to detect
@@ -374,7 +373,7 @@ fn gpu_reduce_sum(data: &[f32]) -> f32 {
     }
     let mut buf: Vec<f32> = data.to_vec();
     while buf.len() > 1 {
-        let mut next = Vec::with_capacity((buf.len() + 1) / 2);
+        let mut next = Vec::with_capacity(buf.len().div_ceil(2));
         for chunk in buf.chunks(2) {
             if chunk.len() == 2 {
                 next.push(chunk[0] + chunk[1]);

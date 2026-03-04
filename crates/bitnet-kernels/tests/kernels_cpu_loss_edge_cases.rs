@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_cast)]
 //! Edge-case integration tests for `bitnet_kernels::cpu::loss` module.
 //!
 //! Covers:
@@ -322,7 +321,7 @@ fn smooth_l1_negative_beta_error() {
 fn kl_identical_distributions_zero() {
     // KL(p || p) = 0
     let p = vec![0.25, 0.25, 0.25, 0.25];
-    let log_p: Vec<f32> = p.iter().map(|x| (*x as f32).ln()).collect();
+    let log_p: Vec<f32> = p.iter().map(|x| f32::ln(*x)).collect();
     let loss = kl_divergence(&log_p, &p, LossReduction::Sum).unwrap();
     assert!(loss.abs() < TOL, "KL(p||p) should be 0, got {loss}");
 }

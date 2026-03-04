@@ -25,8 +25,6 @@ pub struct AttentionConfig {
     pub seq_len: usize,
     /// Whether to apply a causal (upper-triangular) mask.
     pub causal: bool,
-    /// Whether to use ALiBi (Attention with Linear Biases) positional encoding.
-    pub use_alibi: bool,
     /// Scaling factor applied to Q·K^T.  When `None`, defaults to
     /// `1 / sqrt(head_dim)`.
     pub scale: Option<f32>,
@@ -537,14 +535,8 @@ impl CpuAttention {
             ));
         }
 
-        let cfg = AttentionConfig {
-            num_heads,
-            head_dim,
-            seq_len,
-            causal,
-            use_alibi: false,
-            scale: self.config.scale,
-        };
+        let cfg =
+            AttentionConfig { num_heads, head_dim, seq_len, causal, scale: self.config.scale };
 
         let mut output = Vec::with_capacity(total);
         for b in 0..batch_size {
@@ -664,8 +656,7 @@ pub fn multi_head_attention_cpu(
     seq_len: usize,
     causal: bool,
 ) -> Result<Vec<f32>> {
-    let cfg =
-        AttentionConfig { num_heads, head_dim, seq_len, causal, use_alibi: false, scale: None };
+    let cfg = AttentionConfig { num_heads, head_dim, seq_len, causal, scale: None };
     AttentionKernel::multi_head_attention(q, k, v, &cfg)
 }
 
@@ -851,376 +842,6 @@ fn scatter_head(
     }
 }
 
-// ── Compute Q, K, V projections ────────────────────────────────────
-
-/// Project input through weight matrices to produce Q, K, V tensors.
-///
-/// * `input` — shape `[seq_len, model_dim]`
-/// * `wq`    — query weights,  shape `[model_dim, num_q_heads * head_dim]`
-/// * `wk`    — key weights,    shape `[model_dim, num_kv_heads * head_dim]`
-/// * `wv`    — value weights,  shape `[model_dim, num_kv_heads * head_dim]`
-///
-/// Returns `(Q, K, V)` with shapes `[seq_len, num_q_heads * head_dim]`,
-/// `[seq_len, num_kv_heads * head_dim]`, `[seq_len, num_kv_heads * head_dim]`.
-#[allow(clippy::too_many_arguments)]
-pub fn compute_qkv(
-    input: &[f32],
-    wq: &[f32],
-    wk: &[f32],
-    wv: &[f32],
-    seq_len: usize,
-    model_dim: usize,
-    num_q_heads: usize,
-    num_kv_heads: usize,
-    head_dim: usize,
-) -> Result<(Vec<f32>, Vec<f32>, Vec<f32>)> {
-    let q_dim = num_q_heads * head_dim;
-    let kv_dim = num_kv_heads * head_dim;
-
-    if input.len() != seq_len * model_dim {
-        return Err(invalid_arg("input length does not match seq_len * model_dim"));
-    }
-    if wq.len() != model_dim * q_dim {
-        return Err(invalid_arg("wq shape mismatch: expected model_dim * num_q_heads * head_dim"));
-    }
-    if wk.len() != model_dim * kv_dim {
-        return Err(invalid_arg("wk shape mismatch: expected model_dim * num_kv_heads * head_dim"));
-    }
-    if wv.len() != model_dim * kv_dim {
-        return Err(invalid_arg("wv shape mismatch: expected model_dim * num_kv_heads * head_dim"));
-    }
-
-    let q = matmul_project(input, wq, seq_len, model_dim, q_dim);
-    let k = matmul_project(input, wk, seq_len, model_dim, kv_dim);
-    let v = matmul_project(input, wv, seq_len, model_dim, kv_dim);
-
-    Ok((q, k, v))
-}
-
-/// Internal matmul: `input[rows, inner] × weight[inner, cols] → out[rows, cols]`.
-fn matmul_project(
-    input: &[f32],
-    weight: &[f32],
-    rows: usize,
-    inner: usize,
-    cols: usize,
-) -> Vec<f32> {
-    let mut out = vec![0.0_f32; rows * cols];
-    for r in 0..rows {
-        let inp_row = &input[r * inner..(r + 1) * inner];
-        let out_row = &mut out[r * cols..(r + 1) * cols];
-        for i in 0..inner {
-            let w = inp_row[i];
-            let weight_row = &weight[i * cols..(i + 1) * cols];
-            for c in 0..cols {
-                out_row[c] += w * weight_row[c];
-            }
-        }
-    }
-    out
-}
-
-// ── Attention score computation ────────────────────────────────────
-
-/// Compute scaled attention scores: `Q · K^T * scale`.
-///
-/// Uses SIMD-accelerated dot products when available (AVX2+FMA on x86_64).
-///
-/// * `q` — queries, shape `[seq_q, head_dim]`
-/// * `k` — keys,    shape `[seq_k, head_dim]`
-/// * `scale` — scaling factor (typically `1/√d_k`)
-///
-/// Returns scores of shape `[seq_q, seq_k]`.
-pub fn attention_score_computation(
-    q: &[f32],
-    k: &[f32],
-    seq_q: usize,
-    seq_k: usize,
-    head_dim: usize,
-    scale: f32,
-) -> Result<Vec<f32>> {
-    if head_dim == 0 {
-        return Err(invalid_arg("head_dim must be > 0"));
-    }
-    if q.len() != seq_q * head_dim {
-        return Err(invalid_arg("q length does not match seq_q * head_dim"));
-    }
-    if k.len() != seq_k * head_dim {
-        return Err(invalid_arg("k length does not match seq_k * head_dim"));
-    }
-
-    let mut scores = dispatch_qk(q, k, seq_q, seq_k, head_dim);
-    for s in &mut scores {
-        *s *= scale;
-    }
-    Ok(scores)
-}
-
-// ── Softmax for attention ──────────────────────────────────────────
-
-/// Row-wise softmax for attention score matrices.
-///
-/// Applies numerically stable softmax to each row of `scores`
-/// (shape `[rows, cols]`) in-place.
-pub fn softmax_attention(scores: &mut [f32], rows: usize, cols: usize) -> Result<()> {
-    if scores.len() != rows * cols {
-        return Err(invalid_arg("scores length does not match rows * cols"));
-    }
-    softmax_rows(scores, rows, cols);
-    Ok(())
-}
-
-// ── Causal mask alias ──────────────────────────────────────────────
-
-/// Apply causal mask to attention scores (alias for [`apply_causal_mask`]).
-pub fn causal_mask_apply(scores: &mut [f32], seq_len: usize) -> Result<()> {
-    apply_causal_mask(scores, seq_len)
-}
-
-// ── RoPE alias ─────────────────────────────────────────────────────
-
-/// Apply rotary position embeddings to Q and K tensors in-place
-/// (alias for [`apply_rotary_embedding`]).
-pub fn apply_rope_to_qk(
-    q: &mut [f32],
-    k: &mut [f32],
-    positions: &[usize],
-    head_dim: usize,
-) -> Result<()> {
-    apply_rotary_embedding(q, k, positions, head_dim)
-}
-
-// ── ALiBi positional bias ──────────────────────────────────────────
-
-/// Compute ALiBi slopes for each attention head.
-///
-/// Returns `num_heads` slopes following the geometric sequence
-/// `m_h = 2^(-8 * (h+1) / num_heads)` from the ALiBi paper.
-pub fn alibi_slopes(num_heads: usize) -> Vec<f32> {
-    (0..num_heads).map(|h| 2.0f32.powf(-8.0 * (h as f32 + 1.0) / num_heads as f32)).collect()
-}
-
-/// Apply ALiBi positional bias to a single head's attention scores.
-///
-/// Adds `-slope * |i - j|` to each score at position `(i, j)`.
-///
-/// * `scores` — pre-softmax scores, shape `[seq_q, seq_k]`
-/// * `slope` — head-specific slope (from [`alibi_slopes`])
-pub fn apply_alibi_bias(scores: &mut [f32], seq_q: usize, seq_k: usize, slope: f32) -> Result<()> {
-    if scores.len() != seq_q * seq_k {
-        return Err(invalid_arg("scores length does not match seq_q * seq_k"));
-    }
-    for i in 0..seq_q {
-        for j in 0..seq_k {
-            let distance = i.abs_diff(j);
-            scores[i * seq_k + j] -= slope * distance as f32;
-        }
-    }
-    Ok(())
-}
-
-// ── Grouped-query attention (free function) ────────────────────────
-
-/// Grouped-query attention (free function).
-///
-/// Delegates to [`AttentionKernel::grouped_query_attention`].
-pub fn grouped_query_attention(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    cfg: &GqaConfig,
-) -> Result<Vec<f32>> {
-    AttentionKernel::grouped_query_attention(q, k, v, cfg)
-}
-
-// ── KV-cache incremental attention (alias) ─────────────────────────
-
-/// Incremental attention with KV cache (alias for [`attention_with_kv_cache`]).
-pub fn kv_cache_incremental_attention(
-    q: &[f32],
-    k_cache: &mut Vec<f32>,
-    v_cache: &mut Vec<f32>,
-    k_new: &[f32],
-    v_new: &[f32],
-    head_dim: usize,
-) -> Result<Vec<f32>> {
-    attention_with_kv_cache(q, k_cache, v_cache, k_new, v_new, head_dim)
-}
-
-// ── Full attention forward pass ────────────────────────────────────
-
-/// Full attention forward pass with optional ALiBi bias.
-///
-/// Performs multi-head attention with SIMD-accelerated score computation,
-/// optional causal masking, and optional ALiBi positional bias.
-///
-/// * `q` — queries, shape `[seq_len, num_heads * head_dim]`
-/// * `k` — keys,    shape `[seq_len, num_heads * head_dim]`
-/// * `v` — values,  shape `[seq_len, num_heads * head_dim]`
-///
-/// Returns output of shape `[seq_len, num_heads * head_dim]`.
-pub fn attention_forward(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    cfg: &AttentionConfig,
-) -> Result<Vec<f32>> {
-    cfg.validate()?;
-    let AttentionConfig { num_heads, head_dim, seq_len, causal, use_alibi, .. } = *cfg;
-    let model_dim = num_heads * head_dim;
-    let expected = seq_len * model_dim;
-
-    if q.len() != expected {
-        return Err(invalid_arg("q length does not match seq_len * num_heads * head_dim"));
-    }
-    if k.len() != expected {
-        return Err(invalid_arg("k length does not match seq_len * num_heads * head_dim"));
-    }
-    if v.len() != expected {
-        return Err(invalid_arg("v length does not match seq_len * num_heads * head_dim"));
-    }
-
-    // If no ALiBi, delegate to the existing optimized path.
-    if !use_alibi {
-        return AttentionKernel::multi_head_attention(q, k, v, cfg);
-    }
-
-    let scale = cfg.resolved_scale();
-    let mask_vec = if causal { Some(causal_mask(seq_len)) } else { None };
-    let slopes = alibi_slopes(num_heads);
-    let mut output = vec![0.0_f32; expected];
-
-    for (h, slope) in slopes.iter().enumerate().take(num_heads) {
-        let q_head = extract_head(q, seq_len, num_heads, head_dim, h);
-        let k_head = extract_head(k, seq_len, num_heads, head_dim, h);
-        let v_head = extract_head(v, seq_len, num_heads, head_dim, h);
-
-        // Compute scaled scores with SIMD dispatch.
-        let mut scores = dispatch_qk(&q_head, &k_head, seq_len, seq_len, head_dim);
-        for s in &mut scores {
-            *s *= scale;
-        }
-
-        // Apply causal mask.
-        if let Some(ref m) = mask_vec {
-            apply_mask(&mut scores, m)?;
-        }
-
-        // Apply ALiBi bias.
-        apply_alibi_bias(&mut scores, seq_len, seq_len, *slope)?;
-
-        // Softmax + weighted sum.
-        softmax_rows(&mut scores, seq_len, seq_len);
-        let head_out = scalar_sv(&scores, &v_head, seq_len, seq_len, head_dim);
-        scatter_head(&mut output, &head_out, seq_len, num_heads, head_dim, h);
-    }
-
-    Ok(output)
-}
-
-// ── Flash attention CPU (tiled) ────────────────────────────────────
-
-/// Flash attention approximation for CPU with tiled computation.
-///
-/// Processes Q against K/V in fixed-size tiles to improve cache locality
-/// and reduce peak memory from O(N²) to O(N × block_size).  Uses
-/// online softmax (running max + sum) to avoid materializing the full
-/// attention matrix.
-///
-/// * `q` — query, shape `[seq_q, head_dim]`
-/// * `k` — key,   shape `[seq_k, head_dim]`
-/// * `v` — value, shape `[seq_k, head_dim]`
-///
-/// Returns output of shape `[seq_q, head_dim]`.
-pub fn flash_attention_cpu(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    seq_q: usize,
-    seq_k: usize,
-    head_dim: usize,
-    causal: bool,
-) -> Result<Vec<f32>> {
-    const BLOCK_SIZE: usize = 32;
-
-    if head_dim == 0 {
-        return Err(invalid_arg("head_dim must be > 0"));
-    }
-    if q.len() != seq_q * head_dim {
-        return Err(invalid_arg("q length mismatch"));
-    }
-    if k.len() != seq_k * head_dim {
-        return Err(invalid_arg("k length mismatch"));
-    }
-    if v.len() != seq_k * head_dim {
-        return Err(invalid_arg("v length mismatch"));
-    }
-
-    let scale = 1.0 / (head_dim as f32).sqrt();
-    let mut output = vec![0.0_f32; seq_q * head_dim];
-    let mut row_max = vec![f32::NEG_INFINITY; seq_q];
-    let mut row_sum = vec![0.0_f32; seq_q];
-
-    // Process K/V in tiles of BLOCK_SIZE.
-    for kv_start in (0..seq_k).step_by(BLOCK_SIZE) {
-        let kv_end = (kv_start + BLOCK_SIZE).min(seq_k);
-        let block_k = kv_end - kv_start;
-
-        for qi in 0..seq_q {
-            let q_row = &q[qi * head_dim..(qi + 1) * head_dim];
-
-            // Compute scores for this Q row against the K tile.
-            let mut block_scores = Vec::with_capacity(block_k);
-            for kj in 0..block_k {
-                let k_idx = kv_start + kj;
-                if causal && k_idx > qi {
-                    block_scores.push(f32::NEG_INFINITY);
-                } else {
-                    let k_row = &k[k_idx * head_dim..(k_idx + 1) * head_dim];
-                    block_scores.push(scalar_dot(q_row, k_row) * scale);
-                }
-            }
-
-            // Online softmax update: re-scale previous accumulator.
-            let block_max = block_scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let new_max = row_max[qi].max(block_max);
-
-            let correction = (row_max[qi] - new_max).exp();
-            let out_row = &mut output[qi * head_dim..(qi + 1) * head_dim];
-            for d in out_row.iter_mut() {
-                *d *= correction;
-            }
-            row_sum[qi] *= correction;
-
-            // Accumulate this tile's contribution.
-            for (kj, &score) in block_scores.iter().enumerate().take(block_k) {
-                let w = (score - new_max).exp();
-                row_sum[qi] += w;
-                let k_idx = kv_start + kj;
-                let v_row = &v[k_idx * head_dim..(k_idx + 1) * head_dim];
-                for d in 0..head_dim {
-                    out_row[d] += w * v_row[d];
-                }
-            }
-
-            row_max[qi] = new_max;
-        }
-    }
-
-    // Final normalization.
-    for qi in 0..seq_q {
-        if row_sum[qi] > 0.0 {
-            let inv = 1.0 / row_sum[qi];
-            let out_row = &mut output[qi * head_dim..(qi + 1) * head_dim];
-            for d in out_row.iter_mut() {
-                *d *= inv;
-            }
-        }
-    }
-
-    Ok(output)
-}
-
 // ── Tests ──────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1241,14 +862,8 @@ mod tests {
 
     #[test]
     fn config_default_scale() {
-        let cfg = AttentionConfig {
-            num_heads: 4,
-            head_dim: 64,
-            seq_len: 8,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 4, head_dim: 64, seq_len: 8, causal: false, scale: None };
         let expected = 1.0 / 64.0_f32.sqrt();
         assert!(approx_eq(cfg.resolved_scale(), expected));
     }
@@ -1260,7 +875,6 @@ mod tests {
             head_dim: 64,
             seq_len: 8,
             causal: false,
-            use_alibi: false,
             scale: Some(0.5),
         };
         assert!(approx_eq(cfg.resolved_scale(), 0.5));
@@ -1268,40 +882,22 @@ mod tests {
 
     #[test]
     fn config_validate_zero_heads() {
-        let cfg = AttentionConfig {
-            num_heads: 0,
-            head_dim: 64,
-            seq_len: 8,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 0, head_dim: 64, seq_len: 8, causal: false, scale: None };
         assert!(cfg.validate().is_err());
     }
 
     #[test]
     fn config_validate_zero_head_dim() {
-        let cfg = AttentionConfig {
-            num_heads: 4,
-            head_dim: 0,
-            seq_len: 8,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 4, head_dim: 0, seq_len: 8, causal: false, scale: None };
         assert!(cfg.validate().is_err());
     }
 
     #[test]
     fn config_validate_zero_seq_len() {
-        let cfg = AttentionConfig {
-            num_heads: 4,
-            head_dim: 64,
-            seq_len: 0,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 4, head_dim: 64, seq_len: 0, causal: false, scale: None };
         assert!(cfg.validate().is_err());
     }
 
@@ -1429,7 +1025,7 @@ mod tests {
         for r in 0..seq_len {
             let row = &out[r * head_dim..(r + 1) * head_dim];
             for &val in row {
-                assert!(val >= 1.0 && val <= 4.0, "out of convex range: {val}");
+                assert!((1.0..=4.0).contains(&val), "out of convex range: {val}");
             }
         }
     }
@@ -1513,14 +1109,8 @@ mod tests {
 
     #[test]
     fn mha_single_head_matches_sdp() {
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 4,
-            seq_len: 2,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 2, causal: false, scale: None };
         let q = vec![1.0; 8];
         let k = vec![1.0; 8];
         let v: Vec<f32> = (0..8).map(|i| i as f32).collect();
@@ -1541,14 +1131,8 @@ mod tests {
 
     #[test]
     fn mha_output_shape() {
-        let cfg = AttentionConfig {
-            num_heads: 4,
-            head_dim: 8,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 4, head_dim: 8, seq_len: 3, causal: false, scale: None };
         let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
         let q = vec![0.1; n];
         let k = vec![0.1; n];
@@ -1564,7 +1148,6 @@ mod tests {
             head_dim: 2,
             seq_len: 4,
             causal: true,
-            use_alibi: false,
             scale: Some(1.0),
         };
         let model_dim = cfg.num_heads * cfg.head_dim;
@@ -1585,14 +1168,8 @@ mod tests {
 
     #[test]
     fn mha_dimension_mismatch() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 2, head_dim: 4, seq_len: 3, causal: false, scale: None };
         let wrong_len = vec![0.0; 10]; // wrong size
         let correct = vec![0.0; 24];
         assert!(
@@ -1612,14 +1189,7 @@ mod tests {
         let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
         let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
 
-        let cfg = AttentionConfig {
-            num_heads,
-            head_dim,
-            seq_len,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg = AttentionConfig { num_heads, head_dim, seq_len, causal: false, scale: None };
         let mha = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
         let gqa = AttentionKernel::grouped_query_attention(
             &q,
@@ -1953,7 +1523,6 @@ mod tests {
             head_dim: dim,
             seq_len: seq,
             causal: false,
-            use_alibi: false,
             scale: None,
         };
         let expected = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
@@ -2084,14 +1653,8 @@ mod tests {
 
     #[test]
     fn mha_single_head_single_token() {
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 8,
-            seq_len: 1,
-            causal: true,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 8, seq_len: 1, causal: true, scale: None };
         let n = 8;
         let q = vec![1.0; n];
         let k = vec![1.0; n];
@@ -2116,14 +1679,8 @@ mod tests {
 
     #[test]
     fn causal_attn_first_position_self_only() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 2,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 2, head_dim: 2, seq_len: 3, causal: false, scale: None };
         let model_dim = cfg.num_heads * cfg.head_dim;
         let n = cfg.seq_len * model_dim;
         let q = vec![1.0; n];
@@ -2141,14 +1698,8 @@ mod tests {
 
     #[test]
     fn causal_attn_matches_mha_causal() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 3,
-            causal: true,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 2, head_dim: 4, seq_len: 3, causal: true, scale: None };
         let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
         let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
         let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
@@ -2161,14 +1712,8 @@ mod tests {
     #[test]
     fn causal_attn_forces_causal_flag() {
         // Config says causal=false, but causal_attention should override.
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 2,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 2, seq_len: 3, causal: false, scale: None };
         let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
         let q = vec![1.0; n];
         let k = vec![1.0; n];
@@ -2186,14 +1731,8 @@ mod tests {
 
     #[test]
     fn causal_attn_single_token() {
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 4,
-            seq_len: 1,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
+        let cfg =
+            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 1, causal: false, scale: None };
         let v = vec![5.0; 4];
         let out = causal_attention(&[1.0; 4], &[1.0; 4], &v, &cfg).unwrap();
         assert!(slices_approx_eq(&out, &v));
@@ -2746,730 +2285,6 @@ mod tests {
                     );
                 }
             }
-        }
-    }
-
-    // ── compute_qkv ────────────────────────────────────────────────
-
-    #[test]
-    fn compute_qkv_identity_weights() {
-        // 2×2 identity weights → Q=K=V=input
-        let input = vec![1.0, 2.0, 3.0, 4.0]; // 2 tokens, dim=2
-        let eye = vec![1.0, 0.0, 0.0, 1.0]; // 2×2 identity
-        let (q, k, v) = compute_qkv(&input, &eye, &eye, &eye, 2, 2, 1, 1, 2).unwrap();
-        assert!(slices_approx_eq(&q, &input));
-        assert!(slices_approx_eq(&k, &input));
-        assert!(slices_approx_eq(&v, &input));
-    }
-
-    #[test]
-    fn compute_qkv_output_shapes() {
-        let seq_len = 3;
-        let model_dim = 4;
-        let num_q = 2;
-        let num_kv = 1;
-        let head_dim = 2;
-        let input = vec![0.1; seq_len * model_dim];
-        let wq = vec![0.1; model_dim * num_q * head_dim];
-        let wk = vec![0.1; model_dim * num_kv * head_dim];
-        let wv = vec![0.1; model_dim * num_kv * head_dim];
-        let (q, k, v) =
-            compute_qkv(&input, &wq, &wk, &wv, seq_len, model_dim, num_q, num_kv, head_dim)
-                .unwrap();
-        assert_eq!(q.len(), seq_len * num_q * head_dim);
-        assert_eq!(k.len(), seq_len * num_kv * head_dim);
-        assert_eq!(v.len(), seq_len * num_kv * head_dim);
-    }
-
-    #[test]
-    fn compute_qkv_zero_input() {
-        let input = vec![0.0; 6];
-        let w = vec![1.0; 6];
-        let (q, k, v) = compute_qkv(&input, &w, &w, &w, 2, 3, 1, 1, 2).unwrap();
-        assert!(q.iter().all(|&x| x == 0.0));
-        assert!(k.iter().all(|&x| x == 0.0));
-        assert!(v.iter().all(|&x| x == 0.0));
-    }
-
-    #[test]
-    fn compute_qkv_rejects_input_mismatch() {
-        let input = vec![0.0; 5]; // wrong size
-        let w = vec![0.0; 6];
-        assert!(compute_qkv(&input, &w, &w, &w, 2, 3, 1, 1, 2).is_err());
-    }
-
-    #[test]
-    fn compute_qkv_rejects_wq_mismatch() {
-        let input = vec![0.0; 6];
-        let wq = vec![0.0; 5]; // wrong
-        let wk = vec![0.0; 6];
-        assert!(compute_qkv(&input, &wq, &wk, &wk, 2, 3, 1, 1, 2).is_err());
-    }
-
-    #[test]
-    fn compute_qkv_known_values() {
-        // input=[1,1], wq=[[1,0],[0,2]] → q=[1,2]
-        let input = vec![1.0, 1.0];
-        let wq = vec![1.0, 0.0, 0.0, 2.0]; // row0=[1,0], row1=[0,2]
-        let wi = vec![1.0, 0.0, 0.0, 1.0]; // identity
-        let (q, _k, _v) = compute_qkv(&input, &wq, &wi, &wi, 1, 2, 1, 1, 2).unwrap();
-        assert!(approx_eq(q[0], 1.0));
-        assert!(approx_eq(q[1], 2.0));
-    }
-
-    // ── attention_score_computation ────────────────────────────────
-
-    #[test]
-    fn score_comp_basic() {
-        let dim = 2;
-        let q = vec![1.0, 0.0];
-        let k = vec![1.0, 0.0, 0.0, 1.0]; // 2 keys
-        let scores = attention_score_computation(&q, &k, 1, 2, dim, 1.0).unwrap();
-        assert_eq!(scores.len(), 2);
-        assert!(approx_eq(scores[0], 1.0)); // dot([1,0],[1,0]) = 1
-        assert!(approx_eq(scores[1], 0.0)); // dot([1,0],[0,1]) = 0
-    }
-
-    #[test]
-    fn score_comp_scale() {
-        let dim = 2;
-        let q = vec![2.0, 0.0];
-        let k = vec![3.0, 0.0];
-        let scores = attention_score_computation(&q, &k, 1, 1, dim, 0.5).unwrap();
-        assert!(approx_eq(scores[0], 3.0)); // 2*3 * 0.5 = 3
-    }
-
-    #[test]
-    fn score_comp_rejects_bad_dim() {
-        assert!(attention_score_computation(&[], &[], 0, 0, 0, 1.0).is_err());
-    }
-
-    #[test]
-    fn score_comp_rejects_q_mismatch() {
-        assert!(attention_score_computation(&[1.0], &[1.0, 2.0], 1, 1, 2, 1.0).is_err());
-    }
-
-    #[test]
-    fn score_comp_matches_dispatch() {
-        let dim = 8;
-        let seq = 4;
-        let q: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.1).collect();
-        let k: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.05).collect();
-        let scale = 1.0 / (dim as f32).sqrt();
-        let scores = attention_score_computation(&q, &k, seq, seq, dim, scale).unwrap();
-        let mut reference = dispatch_qk(&q, &k, seq, seq, dim);
-        for s in &mut reference {
-            *s *= scale;
-        }
-        assert!(slices_approx_eq(&scores, &reference));
-    }
-
-    // ── softmax_attention ──────────────────────────────────────────
-
-    #[test]
-    fn softmax_attn_uniform() {
-        let mut scores = vec![1.0; 6]; // 2 rows × 3 cols
-        softmax_attention(&mut scores, 2, 3).unwrap();
-        for r in 0..2 {
-            let row_sum: f32 = scores[r * 3..(r + 1) * 3].iter().sum();
-            assert!(approx_eq(row_sum, 1.0));
-        }
-    }
-
-    #[test]
-    fn softmax_attn_rejects_mismatch() {
-        let mut scores = vec![1.0; 5];
-        assert!(softmax_attention(&mut scores, 2, 3).is_err());
-    }
-
-    #[test]
-    fn softmax_attn_preserves_order() {
-        let mut scores = vec![1.0, 3.0, 2.0];
-        softmax_attention(&mut scores, 1, 3).unwrap();
-        assert!(scores[1] > scores[2] && scores[2] > scores[0]);
-    }
-
-    // ── causal_mask_apply ──────────────────────────────────────────
-
-    #[test]
-    fn causal_mask_apply_matches_original() {
-        let mut s1 = vec![1.0; 9];
-        let mut s2 = vec![1.0; 9];
-        causal_mask_apply(&mut s1, 3).unwrap();
-        apply_causal_mask(&mut s2, 3).unwrap();
-        assert!(slices_approx_eq(&s1, &s2));
-    }
-
-    #[test]
-    fn causal_mask_apply_rejects_bad_len() {
-        let mut s = vec![1.0; 5];
-        assert!(causal_mask_apply(&mut s, 3).is_err());
-    }
-
-    // ── apply_rope_to_qk ──────────────────────────────────────────
-
-    #[test]
-    fn rope_to_qk_matches_original() {
-        let head_dim = 4;
-        let mut q1 = vec![1.0, 2.0, 3.0, 4.0];
-        let mut k1 = vec![5.0, 6.0, 7.0, 8.0];
-        let mut q2 = q1.clone();
-        let mut k2 = k1.clone();
-        apply_rope_to_qk(&mut q1, &mut k1, &[1], head_dim).unwrap();
-        apply_rotary_embedding(&mut q2, &mut k2, &[1], head_dim).unwrap();
-        assert!(slices_approx_eq(&q1, &q2));
-        assert!(slices_approx_eq(&k1, &k2));
-    }
-
-    #[test]
-    fn rope_to_qk_position_zero_identity() {
-        let head_dim = 4;
-        let original = vec![1.0, 2.0, 3.0, 4.0];
-        let mut q = original.clone();
-        let mut k = original.clone();
-        apply_rope_to_qk(&mut q, &mut k, &[0], head_dim).unwrap();
-        assert!(slices_approx_eq(&q, &original));
-        assert!(slices_approx_eq(&k, &original));
-    }
-
-    // ── alibi_slopes ───────────────────────────────────────────────
-
-    #[test]
-    fn alibi_slopes_length() {
-        for h in [1, 2, 4, 8, 16] {
-            assert_eq!(alibi_slopes(h).len(), h);
-        }
-    }
-
-    #[test]
-    fn alibi_slopes_decreasing() {
-        let slopes = alibi_slopes(8);
-        for i in 1..slopes.len() {
-            assert!(
-                slopes[i] < slopes[i - 1],
-                "slopes should decrease: s[{}]={} >= s[{}]={}",
-                i,
-                slopes[i],
-                i - 1,
-                slopes[i - 1]
-            );
-        }
-    }
-
-    #[test]
-    fn alibi_slopes_positive() {
-        for &s in &alibi_slopes(4) {
-            assert!(s > 0.0, "slopes must be positive: {s}");
-        }
-    }
-
-    #[test]
-    fn alibi_slopes_known_values() {
-        // For 1 head: m = 2^(-8*1/1) = 2^-8 = 1/256
-        let s = alibi_slopes(1);
-        assert!(approx_eq(s[0], 1.0 / 256.0));
-    }
-
-    // ── apply_alibi_bias ───────────────────────────────────────────
-
-    #[test]
-    fn alibi_bias_diagonal_zero() {
-        let seq = 3;
-        let mut scores = vec![0.0; seq * seq];
-        apply_alibi_bias(&mut scores, seq, seq, 0.5).unwrap();
-        // Diagonal positions (i==j) have distance 0 → no bias
-        for i in 0..seq {
-            assert!(approx_eq(scores[i * seq + i], 0.0));
-        }
-    }
-
-    #[test]
-    fn alibi_bias_off_diagonal() {
-        let mut scores = vec![0.0; 4]; // 2×2
-        apply_alibi_bias(&mut scores, 2, 2, 1.0).unwrap();
-        // (0,0)=0, (0,1)=-1, (1,0)=-1, (1,1)=0
-        assert!(approx_eq(scores[0], 0.0));
-        assert!(approx_eq(scores[1], -1.0));
-        assert!(approx_eq(scores[2], -1.0));
-        assert!(approx_eq(scores[3], 0.0));
-    }
-
-    #[test]
-    fn alibi_bias_slope_scaling() {
-        let mut s1 = vec![0.0; 4];
-        let mut s2 = vec![0.0; 4];
-        apply_alibi_bias(&mut s1, 2, 2, 0.5).unwrap();
-        apply_alibi_bias(&mut s2, 2, 2, 1.0).unwrap();
-        // s2 should have 2× the bias of s1
-        assert!(approx_eq(s1[1] * 2.0, s2[1]));
-    }
-
-    #[test]
-    fn alibi_bias_rejects_mismatch() {
-        let mut scores = vec![0.0; 5];
-        assert!(apply_alibi_bias(&mut scores, 2, 3, 0.5).is_err());
-    }
-
-    #[test]
-    fn alibi_bias_symmetric_distances() {
-        let seq = 4;
-        let mut scores = vec![0.0; seq * seq];
-        apply_alibi_bias(&mut scores, seq, seq, 1.0).unwrap();
-        // bias(i,j) == bias(j,i) since |i-j| == |j-i|
-        for i in 0..seq {
-            for j in 0..seq {
-                assert!(approx_eq(scores[i * seq + j], scores[j * seq + i]));
-            }
-        }
-    }
-
-    #[test]
-    fn alibi_bias_additive_to_existing_scores() {
-        let mut scores = vec![10.0, 20.0, 30.0, 40.0]; // 2×2
-        apply_alibi_bias(&mut scores, 2, 2, 0.5).unwrap();
-        assert!(approx_eq(scores[0], 10.0)); // diagonal: no change
-        assert!(approx_eq(scores[1], 19.5)); // 20 - 0.5*1
-        assert!(approx_eq(scores[2], 29.5)); // 30 - 0.5*1
-        assert!(approx_eq(scores[3], 40.0)); // diagonal: no change
-    }
-
-    // ── grouped_query_attention (free fn) ──────────────────────────
-
-    #[test]
-    fn gqa_free_fn_matches_method() {
-        let cfg = GqaConfig {
-            num_q_heads: 4,
-            num_kv_heads: 2,
-            head_dim: 4,
-            seq_len: 2,
-            causal: false,
-            scale: None,
-        };
-        let q = vec![0.1; cfg.seq_len * cfg.num_q_heads * cfg.head_dim];
-        let k = vec![0.1; cfg.seq_len * cfg.num_kv_heads * cfg.head_dim];
-        let v = vec![0.2; cfg.seq_len * cfg.num_kv_heads * cfg.head_dim];
-        let method = AttentionKernel::grouped_query_attention(&q, &k, &v, &cfg).unwrap();
-        let free_fn = grouped_query_attention(&q, &k, &v, &cfg).unwrap();
-        assert!(slices_approx_eq(&method, &free_fn));
-    }
-
-    // ── kv_cache_incremental_attention ──────────────────────────────
-
-    #[test]
-    fn kv_cache_incr_matches_original() {
-        let dim = 4;
-        let q = vec![1.0; dim];
-        let mut kc1 = Vec::new();
-        let mut vc1 = Vec::new();
-        let mut kc2 = Vec::new();
-        let mut vc2 = Vec::new();
-        let k_new = vec![1.0; dim];
-        let v_new = vec![2.0; dim];
-        let out1 = attention_with_kv_cache(&q, &mut kc1, &mut vc1, &k_new, &v_new, dim).unwrap();
-        let out2 =
-            kv_cache_incremental_attention(&q, &mut kc2, &mut vc2, &k_new, &v_new, dim).unwrap();
-        assert!(slices_approx_eq(&out1, &out2));
-    }
-
-    #[test]
-    fn kv_cache_incr_growing() {
-        let dim = 4;
-        let mut kc = Vec::new();
-        let mut vc = Vec::new();
-        for step in 0..3 {
-            let q = vec![1.0; dim];
-            let k = vec![1.0; dim];
-            let v = vec![step as f32; dim];
-            let out = kv_cache_incremental_attention(&q, &mut kc, &mut vc, &k, &v, dim).unwrap();
-            assert_eq!(out.len(), dim);
-            assert_eq!(kc.len(), (step + 1) * dim);
-        }
-    }
-
-    // ── attention_forward ──────────────────────────────────────────
-
-    #[test]
-    fn attn_fwd_no_alibi_matches_mha() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
-        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
-        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
-        let fwd = attention_forward(&q, &k, &v, &cfg).unwrap();
-        let mha = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
-        assert!(slices_approx_eq(&fwd, &mha));
-    }
-
-    #[test]
-    fn attn_fwd_alibi_output_shape() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 3,
-            causal: false,
-            use_alibi: true,
-            scale: None,
-        };
-        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let q = vec![0.1; n];
-        let k = vec![0.1; n];
-        let v = vec![0.2; n];
-        let out = attention_forward(&q, &k, &v, &cfg).unwrap();
-        assert_eq!(out.len(), n);
-        assert!(out.iter().all(|x| x.is_finite()));
-    }
-
-    #[test]
-    fn attn_fwd_alibi_causal() {
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 2,
-            seq_len: 3,
-            causal: true,
-            use_alibi: true,
-            scale: Some(1.0),
-        };
-        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let q = vec![1.0; n];
-        let k = vec![1.0; n];
-        let mut v = vec![0.0_f32; n];
-        for t in 0..cfg.seq_len {
-            for d in 0..cfg.head_dim {
-                v[t * cfg.head_dim + d] = t as f32;
-            }
-        }
-        let out = attention_forward(&q, &k, &v, &cfg).unwrap();
-        // Position 0 can only attend to itself → output ≈ v[0] = 0.0
-        assert!(approx_eq(out[0], 0.0));
-        assert!(approx_eq(out[1], 0.0));
-    }
-
-    #[test]
-    fn attn_fwd_alibi_differs_from_no_alibi() {
-        let cfg_no = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 4,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
-        let cfg_yes = AttentionConfig { use_alibi: true, ..cfg_no.clone() };
-        let n = cfg_no.seq_len * cfg_no.num_heads * cfg_no.head_dim;
-        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.1).collect();
-        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.05).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
-        let out_no = attention_forward(&q, &k, &v, &cfg_no).unwrap();
-        let out_yes = attention_forward(&q, &k, &v, &cfg_yes).unwrap();
-        let any_diff = out_no.iter().zip(out_yes.iter()).any(|(a, b)| (a - b).abs() > 1e-6);
-        assert!(any_diff, "ALiBi should change attention output");
-    }
-
-    #[test]
-    fn attn_fwd_rejects_bad_q() {
-        let cfg = AttentionConfig {
-            num_heads: 2,
-            head_dim: 4,
-            seq_len: 3,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
-        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let wrong = vec![0.0; 10];
-        let correct = vec![0.0; n];
-        assert!(attention_forward(&wrong, &correct, &correct, &cfg).is_err());
-    }
-
-    #[test]
-    fn attn_fwd_single_token() {
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 4,
-            seq_len: 1,
-            causal: true,
-            use_alibi: true,
-            scale: None,
-        };
-        let v = vec![5.0; 4];
-        let out = attention_forward(&[1.0; 4], &[1.0; 4], &v, &cfg).unwrap();
-        // Single token → attention weight = 1 → output = v
-        assert!(slices_approx_eq(&out, &v));
-    }
-
-    #[test]
-    fn attn_fwd_alibi_recency_bias() {
-        // With ALiBi, nearer tokens should get more weight.
-        let cfg = AttentionConfig {
-            num_heads: 1,
-            head_dim: 2,
-            seq_len: 4,
-            causal: false,
-            use_alibi: true,
-            scale: Some(0.0), // zero scale → equal raw scores, ALiBi decides
-        };
-        let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let q = vec![1.0; n];
-        let k = vec![1.0; n];
-        // V: each position has value = position index
-        let mut v = vec![0.0_f32; n];
-        for t in 0..cfg.seq_len {
-            for d in 0..cfg.head_dim {
-                v[t * cfg.head_dim + d] = t as f32;
-            }
-        }
-        let out = attention_forward(&q, &k, &v, &cfg).unwrap();
-        // Last token (pos 3): with ALiBi, position 3 is closest to itself
-        // so output should be biased toward v[3]=3.0
-        let last_row_start = 3 * cfg.head_dim;
-        assert!(out[last_row_start] > 1.5, "recency bias should pull toward v[3]");
-    }
-
-    // ── flash_attention_cpu ────────────────────────────────────────
-
-    #[test]
-    fn flash_attn_single_token() {
-        const DIM: usize = 4;
-        let v = vec![2.0; DIM];
-        let out = flash_attention_cpu(&[1.0; DIM], &[1.0; DIM], &v, 1, 1, DIM, false).unwrap();
-        assert!(slices_approx_eq(&out, &v));
-    }
-
-    #[test]
-    fn flash_attn_matches_sdp_no_mask() {
-        let dim = 4;
-        let seq = 8;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
-        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.02).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.03).collect();
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, false).unwrap();
-        let flash = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        for (i, (&s, &f)) in sdp.iter().zip(flash.iter()).enumerate() {
-            assert!((s - f).abs() < 1e-4, "mismatch at {i}: sdp={s} flash={f}");
-        }
-    }
-
-    #[test]
-    fn flash_attn_matches_sdp_causal() {
-        let dim = 4;
-        let seq = 6;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| ((i * 7 + 3) as f32) * 0.01).collect();
-        let k: Vec<f32> = (0..n).map(|i| ((i * 11 + 5) as f32) * 0.01).collect();
-        let v: Vec<f32> = (0..n).map(|i| ((i * 13 + 7) as f32) * 0.01).collect();
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, true).unwrap();
-        let flash = flash_attention_cpu(&q, &k, &v, seq, seq, dim, true).unwrap();
-        for (i, (&s, &f)) in sdp.iter().zip(flash.iter()).enumerate() {
-            assert!((s - f).abs() < 1e-4, "causal mismatch at {i}: sdp={s} flash={f}");
-        }
-    }
-
-    #[test]
-    fn flash_attn_larger_than_block_size() {
-        // Sequence longer than block size (32) to test multi-tile path.
-        let dim = 4;
-        let seq = 50;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.001).collect();
-        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.001).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, false).unwrap();
-        let flash = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        for (i, (&s, &f)) in sdp.iter().zip(flash.iter()).enumerate() {
-            assert!((s - f).abs() < 1e-3, "large seq mismatch at {i}: sdp={s} flash={f}");
-        }
-    }
-
-    #[test]
-    fn flash_attn_causal_first_row() {
-        let dim = 2;
-        let seq = 4;
-        let q = vec![1.0; seq * dim];
-        let k = vec![1.0; seq * dim];
-        let mut v = vec![0.0_f32; seq * dim];
-        for t in 0..seq {
-            for d in 0..dim {
-                v[t * dim + d] = t as f32;
-            }
-        }
-        let out = flash_attention_cpu(&q, &k, &v, seq, seq, dim, true).unwrap();
-        // Position 0 can only attend to itself → output ≈ v[0] = 0.0
-        assert!(approx_eq(out[0], 0.0));
-        assert!(approx_eq(out[1], 0.0));
-    }
-
-    #[test]
-    fn flash_attn_output_shape() {
-        let dim = 8;
-        let seq_q = 3;
-        let seq_k = 5;
-        let q = vec![0.1; seq_q * dim];
-        let k = vec![0.1; seq_k * dim];
-        let v = vec![0.2; seq_k * dim];
-        let out = flash_attention_cpu(&q, &k, &v, seq_q, seq_k, dim, false).unwrap();
-        assert_eq!(out.len(), seq_q * dim);
-    }
-
-    #[test]
-    fn flash_attn_rejects_bad_dim() {
-        assert!(flash_attention_cpu(&[], &[], &[], 0, 0, 0, false).is_err());
-    }
-
-    #[test]
-    fn flash_attn_rejects_q_mismatch() {
-        assert!(flash_attention_cpu(&[1.0], &[1.0, 2.0], &[1.0, 2.0], 1, 1, 2, false).is_err());
-    }
-
-    #[test]
-    fn flash_attn_uniform_attention() {
-        let dim = 2;
-        let seq = 3;
-        let q = vec![1.0; seq * dim];
-        let k = vec![1.0; seq * dim];
-        let v: Vec<f32> = (0..seq).flat_map(|t| vec![t as f32; dim]).collect();
-        let out = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        // All Q rows identical, all K rows identical → uniform attention
-        let expected = (0.0 + 1.0 + 2.0) / 3.0;
-        for &o in &out {
-            assert!((o - expected).abs() < 1e-4, "expected uniform ~{expected}, got {o}");
-        }
-    }
-
-    #[test]
-    fn flash_attn_numerical_stability() {
-        let dim = 4;
-        let seq = 4;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| 500.0 + (i as f32) * 0.1).collect();
-        let k: Vec<f32> = (0..n).map(|i| 500.0 + (i as f32) * 0.1).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01).collect();
-        let out = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        assert!(out.iter().all(|x| x.is_finite()), "should be finite for large inputs");
-    }
-
-    #[test]
-    fn flash_attn_asymmetric_seq() {
-        // seq_q=1, seq_k=4 (decode step)
-        let dim = 2;
-        let q = vec![1.0, 0.0]; // 1×2
-        let k = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]; // 4×2
-        let v = vec![1.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0]; // 4×2
-        let out = flash_attention_cpu(&q, &k, &v, 1, 4, dim, false).unwrap();
-        assert_eq!(out.len(), dim);
-        assert!(out.iter().all(|x| x.is_finite()));
-    }
-
-    #[test]
-    fn flash_attn_matches_sdp_large_dim() {
-        let dim = 64;
-        let seq = 4;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| (i as f32) * 0.001).collect();
-        let k: Vec<f32> = (0..n).map(|i| (i as f32) * 0.002).collect();
-        let v: Vec<f32> = (0..n).map(|i| (i as f32) * 0.003).collect();
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, false).unwrap();
-        let flash = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        for (i, (&s, &f)) in sdp.iter().zip(flash.iter()).enumerate() {
-            assert!((s - f).abs() < 1e-3, "dim=64 mismatch at {i}: sdp={s} flash={f}");
-        }
-    }
-
-    #[test]
-    fn flash_attn_output_within_value_range() {
-        let dim = 4;
-        let seq = 6;
-        let v: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.5 - 5.0).collect();
-        let q = vec![0.5; seq * dim];
-        let k = vec![0.5; seq * dim];
-        let out = flash_attention_cpu(&q, &k, &v, seq, seq, dim, false).unwrap();
-        for d in 0..dim {
-            let col: Vec<f32> = (0..seq).map(|r| v[r * dim + d]).collect();
-            let v_min = col.iter().copied().fold(f32::INFINITY, f32::min);
-            let v_max = col.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            for r in 0..seq {
-                let o = out[r * dim + d];
-                assert!(
-                    o >= v_min - 1e-4 && o <= v_max + 1e-4,
-                    "row {r} dim {d}: out={o} not in [{v_min}, {v_max}]"
-                );
-            }
-        }
-    }
-
-    // ── Cross-function integration tests ───────────────────────────
-
-    #[test]
-    fn integration_score_softmax_sv_matches_sdp() {
-        let dim = 4;
-        let seq = 3;
-        let scale = 1.0 / (dim as f32).sqrt();
-        let q: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.1).collect();
-        let k: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.05).collect();
-        let v: Vec<f32> = (0..seq * dim).map(|i| (i as f32) * 0.03).collect();
-
-        // Manual pipeline: score → softmax → weighted sum
-        let mut scores = attention_score_computation(&q, &k, seq, seq, dim, scale).unwrap();
-        softmax_attention(&mut scores, seq, seq).unwrap();
-        let manual = scalar_sv(&scores, &v, seq, seq, dim);
-
-        // SDP function
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, false).unwrap();
-        assert!(slices_approx_eq(&manual, &sdp));
-    }
-
-    #[test]
-    fn integration_compute_qkv_then_attend() {
-        let seq_len = 2;
-        let model_dim = 4;
-        let head_dim = 4;
-        let num_heads = 1;
-        let input = vec![1.0; seq_len * model_dim];
-        let w_eye = {
-            let mut w = vec![0.0_f32; model_dim * head_dim];
-            for i in 0..model_dim.min(head_dim) {
-                w[i * head_dim + i] = 1.0;
-            }
-            w
-        };
-        let (q, k, v) = compute_qkv(
-            &input, &w_eye, &w_eye, &w_eye, seq_len, model_dim, num_heads, num_heads, head_dim,
-        )
-        .unwrap();
-
-        let cfg = AttentionConfig {
-            num_heads,
-            head_dim,
-            seq_len,
-            causal: false,
-            use_alibi: false,
-            scale: None,
-        };
-        let out = attention_forward(&q, &k, &v, &cfg).unwrap();
-        assert_eq!(out.len(), seq_len * num_heads * head_dim);
-        assert!(out.iter().all(|x| x.is_finite()));
-    }
-
-    #[test]
-    fn integration_flash_causal_matches_sdp_causal_exact() {
-        // Exact block boundary: seq=32 = 1 block
-        let dim = 4;
-        let seq = 32;
-        let n = seq * dim;
-        let q: Vec<f32> = (0..n).map(|i| ((i * 3 + 1) as f32) * 0.01).collect();
-        let k: Vec<f32> = (0..n).map(|i| ((i * 5 + 2) as f32) * 0.01).collect();
-        let v: Vec<f32> = (0..n).map(|i| ((i * 7 + 3) as f32) * 0.01).collect();
-        let sdp = scaled_dot_product_attention(&q, &k, &v, seq, seq, dim, true).unwrap();
-        let flash = flash_attention_cpu(&q, &k, &v, seq, seq, dim, true).unwrap();
-        for (i, (&s, &f)) in sdp.iter().zip(flash.iter()).enumerate() {
-            assert!((s - f).abs() < 1e-4, "block-boundary mismatch at {i}: sdp={s} flash={f}");
         }
     }
 }

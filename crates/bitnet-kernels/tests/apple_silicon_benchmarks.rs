@@ -1,4 +1,3 @@
-#![allow(clippy::manual_is_multiple_of, clippy::manual_memcpy, clippy::needless_range_loop)]
 //! Apple Silicon performance benchmark tests.
 //!
 //! These tests measure NEON throughput, memory bandwidth, cache efficiency,
@@ -300,14 +299,14 @@ fn memory_alignment_impact() {
     let aligned: Vec<f32> = (0..n).map(|i| i as f32).collect();
     // Misaligned: shift by 1 byte inside a u8 buffer
     let raw = vec![0u8; n * 4 + 1];
-    let offset = if raw.as_ptr() as usize % 4 == 0 { 1 } else { 0 };
+    let offset = if (raw.as_ptr() as usize).is_multiple_of(4) { 1 } else { 0 };
     // Build an f32 slice that is *not* 4-byte aligned by copying into aligned buf
     // (Rust forbids truly misaligned f32 reads, so we simulate with an extra copy)
     let misaligned: Vec<f32> = {
         let mut v = vec![0.0f32; n];
         // Copy byte-by-byte from raw+offset to exercise a "nearly misaligned" path
-        for i in 0..n {
-            v[i] = aligned[i];
+        for _i in 0..n {
+            v[..n].copy_from_slice(&aligned[..n]);
         }
         // Introduce a 1-element rotation to break prefetch patterns
         v.rotate_left(1);

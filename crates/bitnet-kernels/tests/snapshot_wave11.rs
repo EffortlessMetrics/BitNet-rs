@@ -12,27 +12,6 @@
 
 // ── TransposeConfig ────────────────────────────────────────────────
 
-use bitnet_kernels::cpu::transpose::TransposeConfig;
-
-#[test]
-fn transpose_config_2d_debug() {
-    let cfg = TransposeConfig { shape: vec![3, 4], permutation: vec![1, 0] };
-    insta::assert_debug_snapshot!(cfg);
-}
-
-#[test]
-fn transpose_config_3d_debug() {
-    let cfg = TransposeConfig { shape: vec![2, 3, 4], permutation: vec![0, 2, 1] };
-    insta::assert_debug_snapshot!(cfg);
-}
-
-#[test]
-fn transpose_config_output_shape() {
-    let cfg = TransposeConfig { shape: vec![2, 3, 4], permutation: vec![2, 0, 1] };
-    insta::assert_debug_snapshot!(cfg.output_shape());
-}
-
-// ── BatchNormConfig ────────────────────────────────────────────────
 
 use bitnet_kernels::cpu::batch_norm::BatchNormConfig;
 

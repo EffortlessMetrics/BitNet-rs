@@ -541,103 +541,13 @@ test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_softmax_stability"
-path = "fuzz_targets/fuzz_cuda_softmax_stability.rs"
+name = "fuzz_quantize_round_trip"
+path = "fuzz_targets/fuzz_quantize_round_trip.rs"
 test = false
 doc = false
 
 [[bin]]
-name = "fuzz_cuda_layernorm_numerical"
-path = "fuzz_targets/fuzz_cuda_layernorm_numerical.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_cuda_attention_score"
-path = "fuzz_targets/fuzz_cuda_attention_score.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_cuda_matmul_shapes"
-path = "fuzz_targets/fuzz_cuda_matmul_shapes.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_cuda_rope_positions"
-path = "fuzz_targets/fuzz_cuda_rope_positions.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_cuda_quantize_roundtrip"
-path = "fuzz_targets/fuzz_cuda_quantize_roundtrip.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_batch_norm_numerical"
-path = "fuzz_targets/fuzz_batch_norm_numerical.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_profiling_timing"
-path = "fuzz_targets/fuzz_profiling_timing.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_thread_pool_scheduling"
-path = "fuzz_targets/fuzz_thread_pool_scheduling.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_element_wise_chains"
-path = "fuzz_targets/fuzz_element_wise_chains.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_softmax_large_values"
-path = "fuzz_targets/fuzz_softmax_large_values.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_pipeline_parallel_stages"
-path = "fuzz_targets/fuzz_pipeline_parallel_stages.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_quantization_calibration"
-path = "fuzz_targets/fuzz_quantization_calibration.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_download_manifest_parse"
-path = "fuzz_targets/fuzz_download_manifest_parse.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_capability_check"
-path = "fuzz_targets/fuzz_capability_check.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_conversion_pipeline"
-path = "fuzz_targets/fuzz_conversion_pipeline.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "fuzz_tensor_layout"
-path = "fuzz_targets/fuzz_tensor_layout.rs"
+name = "fuzz_embedding_bounds"
+path = "fuzz_targets/fuzz_embedding_bounds.rs"
 test = false
 doc = false

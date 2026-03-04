@@ -1,4 +1,3 @@
-#![allow(clippy::neg_multiply)]
 //! Comprehensive RoPE (Rotary Position Embedding) validation tests.
 //!
 //! Categories:
@@ -235,7 +234,7 @@ fn rope_known_value_head_dim2_pos5() {
 
     let angle = 5.0f32;
     let expected =
-        [2.0 * angle.cos() - (-1.0) * angle.sin(), 2.0 * angle.sin() + (-1.0) * angle.cos()];
+        [2.0 * angle.cos() - -angle.sin(), 2.0 * angle.sin() + -angle.cos()];
 
     apply_rope(&mut data, 5, 2, &freqs);
 

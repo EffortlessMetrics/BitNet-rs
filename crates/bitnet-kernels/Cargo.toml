@@ -112,10 +112,6 @@ name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
 
 [[test]]
-name = "metal_performance_tests"
-path = "tests/metal_performance_tests.rs"
-
-[[test]]
 name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
 
@@ -125,35 +121,9 @@ path = "tests/cpu_scalar_parity.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "proptest_wave23"
-path = "tests/proptest_wave23.rs"
-required-features = ["cpu"]
-
-[[test]]
-name = "proptest_wave24"
-path = "tests/proptest_wave24.rs"
-required-features = ["cpu"]
-
-[[test]]
 name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
-
-[[test]]
-name = "metal_error_recovery_tests"
-path = "tests/metal_error_recovery_tests.rs"
-
-[[test]]
-name = "metal_compute_pipeline_tests"
-path = "tests/metal_compute_pipeline_tests.rs"
-
-[[test]]
-name = "metal_layernorm_shader_tests"
-path = "tests/metal_layernorm_shader_tests.rs"
-
-[[test]]
-name = "metal_reduction_shader_tests"
-path = "tests/metal_reduction_shader_tests.rs"
 
 [[example]]
 name = "gpu_validation"

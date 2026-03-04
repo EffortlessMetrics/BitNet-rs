@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: err.to_string()
----
-Kernel error: Invalid arguments: number of reductions must be non-zero

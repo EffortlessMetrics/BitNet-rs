@@ -1,4 +1,3 @@
-#![allow(clippy::needless_range_loop, clippy::manual_range_contains, clippy::len_zero)]
 //! Edge-case tests for CPU embedding lookup and RoPE kernels.
 //!
 //! Tests cover basic embedding operations, positional encodings,
@@ -151,7 +150,7 @@ fn positional_embedding_first_position_known() {
 fn positional_embedding_values_bounded() {
     let pe = positional_embedding(32, 64);
     for &v in &pe {
-        assert!(v >= -1.0 && v <= 1.0, "PE value {v} out of [-1,1]");
+        assert!((-1.0..=1.0).contains(&v), "PE value {v} out of [-1,1]");
     }
 }
 
@@ -198,7 +197,7 @@ fn compute_frequencies_shape() {
     let config = RopeConfig { head_dim: 8, max_seq_len: 4, base: 10000.0, scaling_factor: 1.0 };
     let freqs = compute_frequencies(&config);
     // Shape depends on implementation: typically max_seq_len * (head_dim / 2) or similar
-    assert!(freqs.len() > 0);
+    assert!(!freqs.is_empty());
     // Verify it's related to the config dimensions
     assert_eq!(freqs.len() % (config.head_dim / 2), 0);
 }

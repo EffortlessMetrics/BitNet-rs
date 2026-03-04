@@ -3,7 +3,6 @@
 //! Covers: Device::to_candle(), apply_architecture_defaults(), ConfigLoader multi-source,
 //! ModelConfig field interactions, KernelCapabilities, SimdLevel, BackendStartupSummary,
 //! and strict mode validation through the config pipeline.
-#![allow(clippy::field_reassign_with_default)]
 
 use bitnet_common::{
     BackendRequest, BackendStartupSummary, BitNetConfig, ConfigSource, Device, KernelBackend,

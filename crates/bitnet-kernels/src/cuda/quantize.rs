@@ -593,7 +593,7 @@ mod tests {
         let (packed, _) = quantize_i2s_cpu(&input, 4).unwrap();
         assert_eq!(packed.len(), 1); // 4 values → 1 byte
         let byte = packed[0];
-        assert_eq!(decode_i2s((byte >> 0) & 0x03), 1);
+        assert_eq!(decode_i2s(byte & 0x03), 1);
         assert_eq!(decode_i2s((byte >> 2) & 0x03), -1);
         assert_eq!(decode_i2s((byte >> 4) & 0x03), 0);
         assert_eq!(decode_i2s((byte >> 6) & 0x03), 1);

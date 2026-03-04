@@ -1,5 +1,4 @@
 #![cfg(all(target_os = "macos", feature = "cpu"))]
-#![allow(clippy::manual_div_ceil)]
 
 //! Pure-logic tests validating Metal Shading Language patterns for neural network
 //! inference on Apple Silicon. No GPU required — these test the calculations and

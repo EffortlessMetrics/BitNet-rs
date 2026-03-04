@@ -1,4 +1,3 @@
-#![allow(clippy::manual_range_contains)]
 //! Wave 14 property tests: CPU fallback kernel invariants for conv2d,
 //! loss functions, and batch normalization.
 //!
@@ -270,7 +269,7 @@ proptest! {
     ) {
         let b: Vec<f32> = a.iter().map(|&x| x * 0.5 + 1.0).collect();
         let loss = cosine_similarity_loss(&a, &b).unwrap();
-        prop_assert!(loss >= -1e-5 && loss <= 2.0 + 1e-5, "cosine loss should be in [0,2], got {loss}");
+        prop_assert!((-1e-5..=2.0 + 1e-5).contains(&loss), "cosine loss should be in [0,2], got {loss}");
     }
 
     /// Contrastive loss is always non-negative.

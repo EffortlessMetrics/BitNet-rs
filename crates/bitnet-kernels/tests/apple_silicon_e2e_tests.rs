@@ -3,7 +3,6 @@
 //! These tests validate that the ARM NEON kernel implementations produce
 //! correct results when composed together in an inference-like pipeline.
 //! Tests run on any platform but exercise ARM-specific code on aarch64.
-#![allow(clippy::useless_vec, clippy::manual_range_contains, unused_doc_comments)]
 
 #[cfg(test)]
 mod tests {
@@ -73,7 +72,7 @@ mod tests {
             let sum: f32 = output[start..end].iter().sum();
             assert!((sum - 1.0).abs() < 1e-5, "Softmax should sum to 1.0, got {sum}");
             for &v in &output[start..end] {
-                assert!(v >= 0.0 && v <= 1.0, "Softmax values should be in [0,1]");
+                assert!((0.0..=1.0).contains(&v), "Softmax values should be in [0,1]");
                 assert!(v.is_finite(), "No NaN/Inf allowed");
             }
         }
@@ -82,7 +81,7 @@ mod tests {
     /// Test NEON vs scalar parity for key operations
     #[test]
     fn test_neon_scalar_parity_softmax() {
-        let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
         // Scalar softmax
         let max_val = input.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
@@ -131,7 +130,7 @@ mod tests {
         assert_eq!(output, expected);
     }
 
-    /// Property test: layernorm output has zero mean and unit variance
+    // Property test: layernorm output has zero mean and unit variance
     proptest! {
         #[test]
         fn prop_layernorm_output_normalized(
@@ -151,7 +150,7 @@ mod tests {
         }
     }
 
-    /// Property test: softmax output sums to 1 and is monotonic with input
+    // Property test: softmax output sums to 1 and is monotonic with input
     proptest! {
         #[test]
         fn prop_softmax_output_valid(

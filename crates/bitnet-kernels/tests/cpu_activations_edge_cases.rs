@@ -1,4 +1,3 @@
-#![allow(clippy::manual_range_contains, clippy::approx_constant)]
 //! Edge-case tests for CPU activation function kernels.
 //!
 //! Tests cover boundary conditions, special values (NaN, infinity, zero),
@@ -92,7 +91,7 @@ fn sigmoid_symmetry() {
 fn sigmoid_output_range() {
     for &x in &[-100.0, -10.0, -1.0, 0.0, 1.0, 10.0, 100.0] {
         let y = sigmoid(x);
-        assert!(y >= 0.0 && y <= 1.0, "sigmoid({x}) = {y} out of [0,1]");
+        assert!((0.0..=1.0).contains(&y), "sigmoid({x}) = {y} out of [0,1]");
     }
 }
 
@@ -212,8 +211,8 @@ fn hard_swish_large_positive_approximates_x() {
 
 #[test]
 fn softplus_zero() {
-    // softplus(0) = ln(2) ≈ 0.6931
-    assert!((softplus(0.0) - 0.6931).abs() < 0.001);
+    // softplus(0) = ln(2) ≈ std::f32::consts::LN_2
+    assert!((softplus(0.0) - std::f32::consts::LN_2).abs() < 0.001);
 }
 
 #[test]

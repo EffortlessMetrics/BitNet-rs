@@ -352,7 +352,7 @@ mod attention_softmax_tests {
     #[test]
     fn multi_head_attention_output_is_valid() {
         let config =
-            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 2, causal: false, use_alibi: false, scale: None };
+            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 2, causal: false, scale: None };
         // q, k, v: [seq_len, num_heads * head_dim] = [2, 4] flattened
         let q = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
         let k = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
@@ -374,7 +374,7 @@ mod attention_softmax_tests {
     #[test]
     fn attention_then_softmax_pipeline() {
         let config =
-            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 3, causal: true, use_alibi: false, scale: None };
+            AttentionConfig { num_heads: 1, head_dim: 4, seq_len: 3, causal: true, scale: None };
         let q = vec![0.1f32; 12];
         let k = vec![0.2f32; 12];
         let v = vec![0.3f32; 12];

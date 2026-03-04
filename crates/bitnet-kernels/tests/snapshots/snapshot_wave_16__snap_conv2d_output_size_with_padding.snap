@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave_16.rs
-expression: "format!(\"input=28, kernel=3, stride=1, pad=1, dil=1 -> {out}\")"
----
-input=28, kernel=3, stride=1, pad=1, dil=1 -> 28

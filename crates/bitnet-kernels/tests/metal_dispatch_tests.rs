@@ -1,4 +1,3 @@
-#![allow(clippy::manual_div_ceil, clippy::manual_is_multiple_of)]
 //! Metal dispatch sizing and workgroup configuration tests.
 //!
 //! Validates that compute dispatch parameters are correct for Apple Silicon GPU
@@ -24,7 +23,7 @@ const MAX_THREADGROUP_MEMORY: usize = 32 * 1024;
 /// elements with `group_size` threads per group.
 fn ceil_div(total: u32, group_size: u32) -> u32 {
     assert_ne!(group_size, 0, "group_size must be non-zero");
-    (total + group_size - 1) / group_size
+    total.div_ceil(group_size)
 }
 
 /// Align `size` up to the next multiple of [`BUFFER_ALIGNMENT`].
@@ -40,7 +39,7 @@ fn is_power_of_two(n: u32) -> bool {
 /// Returns true if `n` is a valid Metal workgroup dimension: either a power of
 /// two or a multiple of [`SIMD_WIDTH`].
 fn is_valid_workgroup_dim(n: u32) -> bool {
-    n > 0 && (is_power_of_two(n) || n % SIMD_WIDTH == 0)
+    n > 0 && (is_power_of_two(n) || n.is_multiple_of(SIMD_WIDTH))
 }
 
 /// Choose a 1-D threadgroup size ≤ [`MAX_THREADS_PER_THREADGROUP`] that is
@@ -50,7 +49,7 @@ fn optimal_threadgroup_1d(total_elements: u32) -> u32 {
         return 0;
     }
     // Round up to the nearest SIMD_WIDTH, then clamp.
-    let rounded = ((total_elements + SIMD_WIDTH - 1) / SIMD_WIDTH) * SIMD_WIDTH;
+    let rounded = total_elements.div_ceil(SIMD_WIDTH) * SIMD_WIDTH;
     rounded.min(MAX_THREADS_PER_THREADGROUP)
 }
 

@@ -625,7 +625,7 @@ mod tests {
         cpu_top_k_filter(&mut logits, 3);
         cpu_top_p_filter(&mut logits, 0.5);
         let finite: usize = logits.iter().filter(|v| v.is_finite()).count();
-        assert!(finite >= 1 && finite <= 3);
+        assert!((1..=3).contains(&finite));
     }
 
     // ── greedy decode tests ───────────────────────────────────────────

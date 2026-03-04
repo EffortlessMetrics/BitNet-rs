@@ -1178,7 +1178,7 @@ mod tests {
 
     #[test]
     fn split_merge_roundtrip() {
-        let original = linspace(1 * 4 * 2 * 8);
+        let original = linspace(4 * 2 * 8);
         let split = split_heads(&original, 1, 4, 2, 8).unwrap();
         let merged = merge_heads(&split, 1, 4, 2, 8).unwrap();
         assert_close(&original, &merged, 1e-6);
@@ -1214,11 +1214,11 @@ mod tests {
     #[test]
     fn sdp_basic_noncausal() {
         let cfg = make_config(1, 4, false);
-        let q = ones(1 * 1 * 2 * 4);
-        let k = ones(1 * 1 * 2 * 4);
-        let v = ones(1 * 1 * 2 * 4);
+        let q = ones(2 * 4);
+        let k = ones(2 * 4);
+        let v = ones(2 * 4);
         let out = scaled_dot_product(&q, &k, &v, &cfg, 2, 2, 1).unwrap();
-        assert_eq!(out.output.len(), 1 * 1 * 2 * 4);
+        assert_eq!(out.output.len(), 2 * 4);
         // With all ones, output should also be all ones (softmax uniform → avg of V=1).
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1228,9 +1228,9 @@ mod tests {
     #[test]
     fn sdp_basic_causal() {
         let cfg = make_config(1, 4, true);
-        let q = ones(1 * 1 * 3 * 4);
-        let k = ones(1 * 1 * 3 * 4);
-        let v = ones(1 * 1 * 3 * 4);
+        let q = ones(3 * 4);
+        let k = ones(3 * 4);
+        let v = ones(3 * 4);
         let out = scaled_dot_product(&q, &k, &v, &cfg, 3, 3, 1).unwrap();
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1240,7 +1240,7 @@ mod tests {
     #[test]
     fn sdp_multi_head() {
         let cfg = make_config(2, 4, false);
-        let n = 1 * 2 * 3 * 4;
+        let n = 2 * 3 * 4;
         let q = linspace(n);
         let k = linspace(n);
         let v = ones(n);
@@ -1269,7 +1269,7 @@ mod tests {
     #[test]
     fn sdp_batch2() {
         let cfg = make_config(1, 4, false);
-        let n = 2 * 1 * 2 * 4;
+        let n = 2 * 2 * 4;
         let q = ones(n);
         let k = ones(n);
         let v = ones(n);
@@ -1280,11 +1280,11 @@ mod tests {
     #[test]
     fn sdp_different_seq_lengths() {
         let cfg = make_config(1, 4, false);
-        let q = ones(1 * 1 * 2 * 4);
-        let k = ones(1 * 1 * 5 * 4);
-        let v = ones(1 * 1 * 5 * 4);
+        let q = ones(2 * 4);
+        let k = ones(5 * 4);
+        let v = ones(5 * 4);
         let out = scaled_dot_product(&q, &k, &v, &cfg, 2, 5, 1).unwrap();
-        assert_eq!(out.output.len(), 1 * 1 * 2 * 4);
+        assert_eq!(out.output.len(), 2 * 4);
     }
 
     // ── multi_head_attention (merged-head layout) ────────────────────
@@ -1292,11 +1292,11 @@ mod tests {
     #[test]
     fn mha_basic() {
         let cfg = make_config(2, 4, false);
-        let q = ones(1 * 3 * 2 * 4); // batch=1, seq=3, heads*dim=8
-        let k = ones(1 * 3 * 2 * 4);
-        let v = ones(1 * 3 * 2 * 4);
+        let q = ones(3 * 2 * 4); // batch=1, seq=3, heads*dim=8
+        let k = ones(3 * 2 * 4);
+        let v = ones(3 * 2 * 4);
         let out = multi_head_attention(&q, &k, &v, &cfg, 3, 3, 1).unwrap();
-        assert_eq!(out.output.len(), 1 * 3 * 8);
+        assert_eq!(out.output.len(), 3 * 8);
     }
 
     #[test]
@@ -1314,7 +1314,7 @@ mod tests {
     #[test]
     fn mha_causal() {
         let cfg = make_config(2, 4, true);
-        let n = 1 * 4 * 2 * 4;
+        let n = 4 * 2 * 4;
         let out = multi_head_attention(&ones(n), &ones(n), &ones(n), &cfg, 4, 4, 1).unwrap();
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1334,34 +1334,34 @@ mod tests {
     #[test]
     fn gqa_basic() {
         let cfg = make_gqa_config(4, 2, 8, false);
-        let q = ones(1 * 4 * 3 * 8);
-        let kv = ones(1 * 2 * 3 * 8);
+        let q = ones(4 * 3 * 8);
+        let kv = ones(2 * 3 * 8);
         let out = grouped_query_attention(&q, &kv, &kv, &cfg, 3, 3, 1).unwrap();
-        assert_eq!(out.output.len(), 1 * 4 * 3 * 8);
+        assert_eq!(out.output.len(), 4 * 3 * 8);
     }
 
     #[test]
     fn gqa_mqa_single_kv() {
         let cfg = make_gqa_config(4, 1, 8, false);
-        let q = ones(1 * 4 * 2 * 8);
-        let kv = ones(1 * 1 * 2 * 8);
+        let q = ones(4 * 2 * 8);
+        let kv = ones(2 * 8);
         let out = grouped_query_attention(&q, &kv, &kv, &cfg, 2, 2, 1).unwrap();
-        assert_eq!(out.output.len(), 1 * 4 * 2 * 8);
+        assert_eq!(out.output.len(), 4 * 2 * 8);
     }
 
     #[test]
     fn gqa_wrong_kv_shape() {
         let cfg = make_gqa_config(4, 2, 8, false);
-        let q = ones(1 * 4 * 2 * 8);
-        let kv_wrong = ones(1 * 4 * 2 * 8); // should be 2 kv heads
+        let q = ones(4 * 2 * 8);
+        let kv_wrong = ones(4 * 2 * 8); // should be 2 kv heads
         assert!(grouped_query_attention(&q, &kv_wrong, &kv_wrong, &cfg, 2, 2, 1).is_err());
     }
 
     #[test]
     fn gqa_causal() {
         let cfg = make_gqa_config(4, 2, 4, true);
-        let q = ones(1 * 4 * 3 * 4);
-        let kv = ones(1 * 2 * 3 * 4);
+        let q = ones(4 * 3 * 4);
+        let kv = ones(2 * 3 * 4);
         let out = grouped_query_attention(&q, &kv, &kv, &cfg, 3, 3, 1).unwrap();
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1382,7 +1382,7 @@ mod tests {
     #[test]
     fn causal_forces_mask() {
         let cfg = make_config(1, 4, false); // causal=false in config
-        let n = 1 * 1 * 3 * 4;
+        let n = 3 * 4;
         let q = linspace(n);
         let k = linspace(n);
         let v = linspace(n);
@@ -1403,9 +1403,9 @@ mod tests {
     #[test]
     fn causal_single_token() {
         let cfg = make_config(2, 4, false);
-        let q = ones(1 * 2 * 1 * 4);
-        let k = ones(1 * 2 * 1 * 4);
-        let v = ones(1 * 2 * 1 * 4);
+        let q = ones(2 * 4);
+        let k = ones(2 * 4);
+        let v = ones(2 * 4);
         let out = causal_attention(&q, &k, &v, &cfg, 1, 1, 1).unwrap();
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1417,9 +1417,9 @@ mod tests {
     #[test]
     fn kv_cache_no_prior_cache() {
         let cfg = make_config(1, 4, true);
-        let q = ones(1 * 1 * 1 * 4);
-        let new_k = ones(1 * 1 * 1 * 4);
-        let new_v = ones(1 * 1 * 1 * 4);
+        let q = ones(4);
+        let new_k = ones(4);
+        let new_v = ones(4);
         let out = kv_cache_attention(&q, &new_k, &new_v, &[], &[], &cfg, 1, 0, 1).unwrap();
         assert_eq!(out.output.len(), 4);
         assert!(out.key_cache.is_some());
@@ -1429,34 +1429,34 @@ mod tests {
     #[test]
     fn kv_cache_with_prior() {
         let cfg = make_config(1, 4, true);
-        let cached_k = ones(1 * 1 * 2 * 4);
-        let cached_v = ones(1 * 1 * 2 * 4);
-        let q = ones(1 * 1 * 1 * 4);
-        let new_k = ones(1 * 1 * 1 * 4);
-        let new_v = ones(1 * 1 * 1 * 4);
+        let cached_k = ones(2 * 4);
+        let cached_v = ones(2 * 4);
+        let q = ones(4);
+        let new_k = ones(4);
+        let new_v = ones(4);
         let out =
             kv_cache_attention(&q, &new_k, &new_v, &cached_k, &cached_v, &cfg, 1, 2, 1).unwrap();
         // Total KV seq = 2 + 1 = 3
-        assert_eq!(out.key_cache.as_ref().unwrap().len(), 1 * 1 * 3 * 4);
+        assert_eq!(out.key_cache.as_ref().unwrap().len(), 3 * 4);
     }
 
     #[test]
     fn kv_cache_incremental_growth() {
         let cfg = make_config(1, 4, true);
         // Step 1: first token
-        let q1 = ones(1 * 1 * 1 * 4);
-        let k1 = ones(1 * 1 * 1 * 4);
-        let v1 = ones(1 * 1 * 1 * 4);
+        let q1 = ones(4);
+        let k1 = ones(4);
+        let v1 = ones(4);
         let out1 = kv_cache_attention(&q1, &k1, &v1, &[], &[], &cfg, 1, 0, 1).unwrap();
         let ck1 = out1.key_cache.unwrap();
         let cv1 = out1.value_cache.unwrap();
 
         // Step 2: second token using cache from step 1
-        let q2 = ones(1 * 1 * 1 * 4);
-        let k2 = ones(1 * 1 * 1 * 4);
-        let v2 = ones(1 * 1 * 1 * 4);
+        let q2 = ones(4);
+        let k2 = ones(4);
+        let v2 = ones(4);
         let out2 = kv_cache_attention(&q2, &k2, &v2, &ck1, &cv1, &cfg, 1, 1, 1).unwrap();
-        assert_eq!(out2.key_cache.unwrap().len(), 1 * 1 * 2 * 4);
+        assert_eq!(out2.key_cache.unwrap().len(), 2 * 4);
     }
 
     #[test]
@@ -1500,14 +1500,14 @@ mod tests {
     #[test]
     fn kv_cache_multi_head() {
         let cfg = make_config(2, 4, true);
-        let q = ones(1 * 2 * 1 * 4);
-        let new_k = ones(1 * 2 * 1 * 4);
-        let new_v = ones(1 * 2 * 1 * 4);
-        let cached_k = ones(1 * 2 * 3 * 4);
-        let cached_v = ones(1 * 2 * 3 * 4);
+        let q = ones(2 * 4);
+        let new_k = ones(2 * 4);
+        let new_v = ones(2 * 4);
+        let cached_k = ones(2 * 3 * 4);
+        let cached_v = ones(2 * 3 * 4);
         let out =
             kv_cache_attention(&q, &new_k, &new_v, &cached_k, &cached_v, &cfg, 1, 3, 1).unwrap();
-        assert_eq!(out.key_cache.unwrap().len(), 1 * 2 * 4 * 4);
+        assert_eq!(out.key_cache.unwrap().len(), 2 * 4 * 4);
     }
 
     // ── sliding_window_attention ─────────────────────────────────────
@@ -1515,7 +1515,7 @@ mod tests {
     #[test]
     fn sliding_window_basic() {
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 4 * 4;
+        let n = 4 * 4;
         let q = ones(n);
         let k = ones(n);
         let v = ones(n);
@@ -1526,7 +1526,7 @@ mod tests {
     #[test]
     fn sliding_window_causal() {
         let cfg = make_config(1, 4, true);
-        let n = 1 * 1 * 4 * 4;
+        let n = 4 * 4;
         let out = sliding_window_attention(&ones(n), &ones(n), &ones(n), &cfg, 4, 4, 1, 2).unwrap();
         for &val in &out.output {
             assert!((val - 1.0).abs() < 1e-5);
@@ -1542,7 +1542,7 @@ mod tests {
     #[test]
     fn sliding_window_larger_than_seq() {
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 3 * 4;
+        let n = 3 * 4;
         // Window larger than seq → equivalent to full attention.
         let full = scaled_dot_product(&ones(n), &ones(n), &ones(n), &cfg, 3, 3, 1).unwrap();
         let windowed =
@@ -1553,10 +1553,10 @@ mod tests {
     #[test]
     fn sliding_window_gqa() {
         let cfg = make_gqa_config(4, 2, 4, false);
-        let q = ones(1 * 4 * 3 * 4);
-        let kv = ones(1 * 2 * 3 * 4);
+        let q = ones(4 * 3 * 4);
+        let kv = ones(2 * 3 * 4);
         let out = sliding_window_attention(&q, &kv, &kv, &cfg, 3, 3, 1, 2).unwrap();
-        assert_eq!(out.output.len(), 1 * 4 * 3 * 4);
+        assert_eq!(out.output.len(), 4 * 3 * 4);
     }
 
     // ── ALiBi ────────────────────────────────────────────────────────
@@ -1591,7 +1591,7 @@ mod tests {
     #[test]
     fn alibi_attention_basic() {
         let cfg = make_config(2, 4, false);
-        let n_q = 1 * 2 * 3 * 4;
+        let n_q = 2 * 3 * 4;
         let q = ones(n_q);
         let k = ones(n_q);
         let v = ones(n_q);
@@ -1606,9 +1606,9 @@ mod tests {
         let slopes = alibi_slopes(2); // should be 4
         assert!(
             attention_with_alibi(
-                &ones(1 * 4 * 2 * 4),
-                &ones(1 * 4 * 2 * 4),
-                &ones(1 * 4 * 2 * 4),
+                &ones(4 * 2 * 4),
+                &ones(4 * 2 * 4),
+                &ones(4 * 2 * 4),
                 &cfg,
                 2,
                 2,
@@ -1622,7 +1622,7 @@ mod tests {
     #[test]
     fn alibi_causal() {
         let cfg = make_config(2, 4, true);
-        let n = 1 * 2 * 4 * 4;
+        let n = 2 * 4 * 4;
         let slopes = alibi_slopes(2);
         let out =
             attention_with_alibi(&ones(n), &ones(n), &ones(n), &cfg, 4, 4, 1, &slopes).unwrap();
@@ -1632,19 +1632,19 @@ mod tests {
     #[test]
     fn alibi_gqa() {
         let cfg = make_gqa_config(4, 2, 4, false);
-        let q = ones(1 * 4 * 2 * 4);
-        let kv = ones(1 * 2 * 2 * 4);
+        let q = ones(4 * 2 * 4);
+        let kv = ones(2 * 2 * 4);
         let slopes = alibi_slopes(4);
         let out = attention_with_alibi(&q, &kv, &kv, &cfg, 2, 2, 1, &slopes).unwrap();
-        assert_eq!(out.output.len(), 1 * 4 * 2 * 4);
+        assert_eq!(out.output.len(), 4 * 2 * 4);
     }
 
     #[test]
     fn alibi_single_position() {
         let cfg = make_config(1, 4, false);
-        let q = ones(1 * 1 * 1 * 4);
-        let k = ones(1 * 1 * 1 * 4);
-        let v = ones(1 * 1 * 1 * 4);
+        let q = ones(4);
+        let k = ones(4);
+        let v = ones(4);
         let slopes = alibi_slopes(1);
         let out = attention_with_alibi(&q, &k, &v, &cfg, 1, 1, 1, &slopes).unwrap();
         // Single position: bias is slope * (0-0) = 0 → same as normal attention.
@@ -1658,7 +1658,7 @@ mod tests {
     #[test]
     fn rope_attention_basic() {
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 2 * 4;
+        let n = 2 * 4;
         let out =
             attention_with_rope(&ones(n), &ones(n), &ones(n), &cfg, 2, 2, 1, 10000.0, 0).unwrap();
         assert_eq!(out.output.len(), n);
@@ -1685,7 +1685,7 @@ mod tests {
         // matter in dot-products). Verify that applying RoPE produces different
         // output than standard attention without RoPE.
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 3 * 4;
+        let n = 3 * 4;
         let q: Vec<f32> = (0..n).map(|i| 1.0 + i as f32 * 0.3).collect();
         let k: Vec<f32> = (0..n).map(|i| 0.5 - i as f32 * 0.2).collect();
         let v = linspace(n);
@@ -1699,7 +1699,7 @@ mod tests {
     #[test]
     fn rope_causal() {
         let cfg = make_config(1, 4, true);
-        let n = 1 * 1 * 3 * 4;
+        let n = 3 * 4;
         let out =
             attention_with_rope(&ones(n), &ones(n), &ones(n), &cfg, 3, 3, 1, 10000.0, 0).unwrap();
         assert_eq!(out.output.len(), n);
@@ -1708,7 +1708,7 @@ mod tests {
     #[test]
     fn rope_multi_head() {
         let cfg = make_config(4, 8, false);
-        let n = 1 * 4 * 3 * 8;
+        let n = 4 * 3 * 8;
         let out =
             attention_with_rope(&ones(n), &ones(n), &ones(n), &cfg, 3, 3, 1, 10000.0, 0).unwrap();
         assert_eq!(out.output.len(), n);
@@ -1717,16 +1717,16 @@ mod tests {
     #[test]
     fn rope_gqa() {
         let cfg = make_gqa_config(4, 2, 8, false);
-        let q = ones(1 * 4 * 2 * 8);
-        let kv = ones(1 * 2 * 2 * 8);
+        let q = ones(4 * 2 * 8);
+        let kv = ones(2 * 2 * 8);
         let out = attention_with_rope(&q, &kv, &kv, &cfg, 2, 2, 1, 10000.0, 0).unwrap();
-        assert_eq!(out.output.len(), 1 * 4 * 2 * 8);
+        assert_eq!(out.output.len(), 4 * 2 * 8);
     }
 
     #[test]
     fn rope_different_bases() {
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 2 * 4;
+        let n = 2 * 4;
         let q: Vec<f32> = (0..n).map(|i| 1.0 + i as f32 * 0.3).collect();
         let k: Vec<f32> = (0..n).map(|i| 0.5 - i as f32 * 0.2).collect();
         let v = linspace(n); // varying V so softmax weight changes are visible
@@ -1743,7 +1743,7 @@ mod tests {
     fn launch_cpu_fallback() {
         // With `--features cpu` (no gpu), this should fall through to CPU.
         let cfg = make_config(1, 4, false);
-        let n = 1 * 1 * 2 * 4;
+        let n = 2 * 4;
         let result = launch_multi_head_attention(&ones(n), &ones(n), &ones(n), &cfg, 2, 2, 1);
         // Depending on feature flags:
         // - cpu only: should succeed (CPU fallback)
@@ -1763,8 +1763,8 @@ mod tests {
     #[test]
     fn softmax_rows_sum_to_one() {
         let cfg = make_config(1, 4, false);
-        let q = linspace(1 * 1 * 3 * 4);
-        let k = linspace(1 * 1 * 3 * 4);
+        let q = linspace(3 * 4);
+        let k = linspace(3 * 4);
         // Use identity-like V so output reflects softmax weights directly.
         let mut v = vec![0.0_f32; 3 * 4];
         for i in 0..3 {
@@ -1803,7 +1803,7 @@ mod tests {
     #[test]
     fn large_head_dim() {
         let cfg = make_config(1, 128, false);
-        let n = 1 * 1 * 2 * 128;
+        let n = 2 * 128;
         let out = scaled_dot_product(&ones(n), &ones(n), &ones(n), &cfg, 2, 2, 1).unwrap();
         assert_eq!(out.output.len(), n);
         for &val in &out.output {
@@ -1814,7 +1814,7 @@ mod tests {
     #[test]
     fn many_heads() {
         let cfg = make_config(32, 4, false);
-        let n = 1 * 32 * 2 * 4;
+        let n = 32 * 2 * 4;
         let out = scaled_dot_product(&ones(n), &ones(n), &ones(n), &cfg, 2, 2, 1).unwrap();
         assert_eq!(out.output.len(), n);
     }
@@ -1855,13 +1855,13 @@ mod tests {
     #[test]
     fn kv_cache_gqa() {
         let cfg = make_gqa_config(4, 2, 4, true);
-        let q = ones(1 * 4 * 1 * 4);
-        let new_k = ones(1 * 2 * 1 * 4);
-        let new_v = ones(1 * 2 * 1 * 4);
-        let cached_k = ones(1 * 2 * 2 * 4);
-        let cached_v = ones(1 * 2 * 2 * 4);
+        let q = ones(4 * 4);
+        let new_k = ones(2 * 4);
+        let new_v = ones(2 * 4);
+        let cached_k = ones(2 * 2 * 4);
+        let cached_v = ones(2 * 2 * 4);
         let out =
             kv_cache_attention(&q, &new_k, &new_v, &cached_k, &cached_v, &cfg, 1, 2, 1).unwrap();
-        assert_eq!(out.key_cache.unwrap().len(), 1 * 2 * 3 * 4);
+        assert_eq!(out.key_cache.unwrap().len(), 2 * 3 * 4);
     }
 }

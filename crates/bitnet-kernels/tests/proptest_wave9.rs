@@ -1,5 +1,4 @@
 //! Wave 9 property tests: kernel module invariants.
-#![allow(clippy::manual_range_contains, clippy::needless_range_loop)]
 //!
 //! Key invariants tested:
 //! - Reduction: sum preserves total, max ≥ all elements, min ≤ all elements,
@@ -344,7 +343,7 @@ proptest! {
         let out = softmax_reference(&input);
         for (i, &v) in out.iter().enumerate() {
             prop_assert!(
-                v >= 0.0 - 1e-7 && v <= 1.0 + 1e-7,
+                (0.0 - 1e-7..=1.0 + 1e-7).contains(&v),
                 "softmax[{i}] = {v} not in [0, 1]"
             );
         }
@@ -615,7 +614,7 @@ proptest! {
         let maxes = reduce_rows_f32(&matrix, rows, cols, ReductionOp::Max)
             .expect("reduce_rows must succeed");
 
-        for r in 0..rows {
+        for (r, _val) in maxes.iter().enumerate().take(rows) {
             let start = r * cols;
             for c in 0..cols {
                 prop_assert!(

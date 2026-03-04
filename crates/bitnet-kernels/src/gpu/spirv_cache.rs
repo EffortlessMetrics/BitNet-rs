@@ -864,7 +864,7 @@ mod tests {
                         device_fingerprint: "dev".into(),
                     });
                     let key = CacheKey::from_source(&format!("thread_{i}"), "", "dev");
-                    cache.store(&key, &vec![i as u8; 64]).unwrap();
+                    cache.store(&key, &[i as u8; 64]).unwrap();
                     let got = cache.lookup(&key).unwrap();
                     assert_eq!(got.len(), 64);
                     assert!(got.iter().all(|&b| b == i as u8));

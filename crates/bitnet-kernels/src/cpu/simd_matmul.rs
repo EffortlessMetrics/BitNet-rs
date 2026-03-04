@@ -650,9 +650,15 @@ pub fn simd_matmul_f32_tiled(
 
 /// Returns `true` when AVX-512F is available at runtime.
 #[inline]
-#[cfg(target_arch = "x86_64")]
 fn has_avx512f() -> bool {
-    is_x86_feature_detected!("avx512f")
+    #[cfg(target_arch = "x86_64")]
+    {
+        is_x86_feature_detected!("avx512f")
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        false
+    }
 }
 
 // ── Scalar tile kernel ─────────────────────────────────────────────────
@@ -965,7 +971,7 @@ mod tests {
         let b = vec![0.0f32; 9];
         let mut c = vec![0.0f32; 9];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
-        assert_close(&c, &vec![0.0; 9], 1e-6);
+        assert_close(&c, &[0.0; 9], 1e-6);
     }
 
     #[test]

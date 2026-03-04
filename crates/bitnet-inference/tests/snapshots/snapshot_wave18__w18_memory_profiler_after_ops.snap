@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave18.rs
-expression: "format!(\"current={} peak={} allocs={} deallocs={}\", mp.current_bytes(),\nmp.peak_bytes(), mp.allocation_count(), mp.deallocation_count(),)"
----
-current=10240 peak=12288 allocs=2 deallocs=1

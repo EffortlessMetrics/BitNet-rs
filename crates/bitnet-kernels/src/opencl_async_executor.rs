@@ -726,11 +726,10 @@ impl PipelineStats {
         let mut merged: Vec<(u64, u64)> = Vec::new();
         for interval in all {
             if let Some(last) = merged.last_mut()
-                && interval.0 <= last.1
-            {
-                last.1 = last.1.max(interval.1);
-                continue;
-            }
+                && interval.0 <= last.1 {
+                    last.1 = last.1.max(interval.1);
+                    continue;
+                }
             merged.push(interval);
         }
         merged

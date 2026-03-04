@@ -1501,7 +1501,7 @@ mod tests {
     fn profiler_aggregate_utilization() {
         let p = StreamProfiler::new(2);
         let agg = p.aggregate_utilization();
-        assert!(agg >= 0.0 && agg <= 100.0);
+        assert!((0.0..=100.0).contains(&agg));
     }
 
     #[test]

@@ -869,9 +869,9 @@ mod tests {
 
     #[test]
     fn test_single_element_int8() {
-        let (q, scale) = cpu_convert_f32_to_int8(&[3.14]);
+        let (q, scale) = cpu_convert_f32_to_int8(&[std::f32::consts::PI]);
         let back = cpu_convert_int8_to_f32(&q, scale);
-        assert!((3.14 - back[0]).abs() < 0.05);
+        assert!((std::f32::consts::PI - back[0]).abs() < 0.05);
     }
 
     #[test]

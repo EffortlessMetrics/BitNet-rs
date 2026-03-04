@@ -1,8 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave27.rs
-expression: report.to_string()
----
-CPU Scalar (CPU Scalar): INCOMPLETE — 1/3 required ops supported
-  Missing:
-    - Quantized Ops @ Binary
-    - Attention Ops @ FP16

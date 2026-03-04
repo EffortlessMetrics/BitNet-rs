@@ -9,33 +9,21 @@ use bitnet_cpu_detect::avx512_available;
 use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
-pub mod activation_bench;
-pub mod activation_registry;
-pub mod attention_patterns;
-pub mod bench_harness;
 pub mod benchmarks;
 pub mod capability_matrix;
 pub mod convolution;
 pub mod cpu;
 pub mod cuda;
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub mod cuda_graph_capture;
 pub mod device_aware;
 pub mod device_features;
-pub mod dispatch_planner;
-pub mod dispatch_registry;
-pub mod dispatch_table;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
-pub mod kernel_select;
 pub mod kernels;
-pub mod matmul_dispatch;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
-pub mod norm_registry;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 pub mod opencl_async_executor;
@@ -53,40 +41,26 @@ pub mod opencl_elementwise;
 pub mod opencl_embedding;
 pub mod opencl_engine_bridge;
 pub mod opencl_ffn;
-pub mod opencl_gqa;
 pub mod opencl_graph_compiler;
 pub mod opencl_kernel_sources;
 pub mod opencl_kv_cache;
 pub mod opencl_layer_norm;
-pub mod opencl_matmul_variants;
 pub mod opencl_memory;
-pub mod opencl_mixed_precision;
 pub mod opencl_model_converter;
-pub mod opencl_numerical_stability;
 pub mod opencl_pipeline;
-pub mod opencl_prefix_cache;
 pub mod opencl_profiling;
-pub mod opencl_program_cache;
 pub mod opencl_quantized;
-pub mod opencl_reductions;
 pub mod opencl_registry;
-pub mod opencl_softmax_variants;
-pub mod opencl_telemetry;
 pub mod opencl_token_embed;
 pub mod opencl_token_gen;
 pub mod opencl_transformer;
 pub mod opencl_weight_manager;
 pub mod opencl_work_size;
-pub mod perf_tracker;
 pub mod reduction;
 #[cfg(feature = "rocm")]
 pub mod rocm;
-pub mod rope_freq;
 pub mod scatter_gather;
 pub mod shaped_reduction;
-pub mod simd_detect;
-pub mod simd_diagnostics;
-pub mod softmax_utils;
 mod stubs;
 pub mod tl_lut;
 

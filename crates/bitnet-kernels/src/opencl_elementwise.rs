@@ -1321,7 +1321,7 @@ mod tests {
     #[test]
     fn test_property_add_sub_roundtrip() {
         // a + b - b ≈ a (within f32 precision).
-        let a = vec![1.0, -2.5, 3.14, 0.0, 100.0];
+        let a = vec![1.0, -2.5, std::f32::consts::PI, 0.0, 100.0];
         let b = vec![10.0, 20.0, -5.0, 0.0, 1e-6];
         let mut sum = vec![0.0; 5];
         let mut result = vec![0.0; 5];
@@ -1402,7 +1402,7 @@ mod tests {
 
     #[test]
     fn test_property_scale_one_identity() {
-        let a = vec![1.0, -2.0, 3.14, 0.0];
+        let a = vec![1.0, -2.0, std::f32::consts::PI, 0.0];
         let mut out = vec![0.0; 4];
         ScalarBroadcast::scale(&a, 1.0, &mut out).unwrap();
         assert_eq!(out, a);
@@ -1410,7 +1410,7 @@ mod tests {
 
     #[test]
     fn test_property_add_zero_identity() {
-        let a = vec![1.0, -2.0, 3.14, 0.0];
+        let a = vec![1.0, -2.0, std::f32::consts::PI, 0.0];
         let zeros = vec![0.0; 4];
         let mut out = vec![0.0; 4];
         ElemwiseKernel::apply_binary(ElemOp::Add, &a, &zeros, &mut out).unwrap();
