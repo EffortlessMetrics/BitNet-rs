@@ -164,6 +164,28 @@ impl DenseGenerationStep {
     }
 }
 
+// ── Reusable sampling buffer ─────────────────────────────────────────────────
+
+/// Pre-allocated buffers for [`DenseTokenSampler`] to avoid per-token
+/// allocations in the sampling hot path. Create once, pass to
+/// [`DenseTokenSampler::sample_token_with_buffer`] on every token.
+#[derive(Debug, Clone, Default)]
+pub struct SamplingBuffer {
+    /// Working copy of logits (modified in-place through the pipeline).
+    logits: Vec<f32>,
+    /// Scratch space for indexed sorts (top-k / top-p).
+    indexed: Vec<(usize, f32)>,
+    /// Scratch space for probability distributions.
+    probs: Vec<f32>,
+}
+
+impl SamplingBuffer {
+    /// Create a new, empty buffer. It will grow to vocab size on first use.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 // ── Token sampler ────────────────────────────────────────────────────────────
 
 /// Stateless sampler operating on raw `f32` logit slices.
@@ -351,6 +373,189 @@ impl DenseTokenSampler {
                 (z as f32) / (u64::MAX as f32)
             }
             None => rand::random::<f32>(),
+        }
+    }
+
+    // ── Buffer-reusing pipeline (zero per-token allocation) ──────────────
+
+    /// Full sampling pipeline that reuses `buf` to avoid per-token heap
+    /// allocations. Semantically identical to [`Self::sample_token`].
+    pub fn sample_token_with_buffer(
+        logits: &[f32],
+        config: &DenseGenerationConfig,
+        past_tokens: &[u32],
+        buf: &mut SamplingBuffer,
+    ) -> Option<u32> {
+        if logits.is_empty() {
+            return None;
+        }
+
+        // Copy logits into reusable working buffer (one memcpy, no alloc
+        // after the first call because the Vec capacity is retained).
+        buf.logits.clear();
+        buf.logits.extend_from_slice(logits);
+
+        // Temperature
+        Self::temperature_scale_in_place(&mut buf.logits, config.temperature);
+
+        // Top-k
+        if let Some(k) = config.top_k {
+            Self::top_k_filter_in_place(&mut buf.logits, k, &mut buf.indexed);
+        }
+
+        // Top-p
+        if let Some(p) = config.top_p {
+            Self::top_p_filter_in_place(
+                &mut buf.logits,
+                p,
+                &mut buf.indexed,
+                &mut buf.probs,
+            );
+        }
+
+        // Repetition penalty
+        Self::apply_repetition_penalty_in_place(
+            &mut buf.logits,
+            past_tokens,
+            config.repetition_penalty,
+        );
+
+        if config.temperature <= 0.0 {
+            return Some(Self::greedy_sample(&buf.logits));
+        }
+
+        // Softmax → categorical sample
+        Self::softmax_into(&buf.logits, &mut buf.probs);
+        let r = Self::seeded_random(config.seed);
+        let mut cumsum = 0.0f32;
+        for (i, &p) in buf.probs.iter().enumerate() {
+            cumsum += p;
+            if cumsum >= r {
+                return Some(i as u32);
+            }
+        }
+        Some((buf.probs.len() - 1) as u32)
+    }
+
+    // ── In-place helpers ─────────────────────────────────────────────────
+
+    fn temperature_scale_in_place(logits: &mut [f32], temp: f32) {
+        if logits.is_empty() {
+            return;
+        }
+        if temp <= 0.0 {
+            let max_idx = Self::greedy_sample(logits) as usize;
+            for (i, l) in logits.iter_mut().enumerate() {
+                if i != max_idx {
+                    *l = f32::NEG_INFINITY;
+                }
+            }
+            return;
+        }
+        for l in logits.iter_mut() {
+            *l /= temp;
+        }
+    }
+
+    fn top_k_filter_in_place(
+        logits: &mut [f32],
+        k: usize,
+        indexed: &mut Vec<(usize, f32)>,
+    ) {
+        if k == 0 || k >= logits.len() {
+            return;
+        }
+        indexed.clear();
+        indexed.extend(logits.iter().copied().enumerate());
+        indexed.sort_unstable_by(|a, b| {
+            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        // Blank everything, then restore top-k.
+        for l in logits.iter_mut() {
+            *l = f32::NEG_INFINITY;
+        }
+        for &(idx, val) in &indexed[..k] {
+            logits[idx] = val;
+        }
+    }
+
+    fn top_p_filter_in_place(
+        logits: &mut [f32],
+        p: f32,
+        indexed: &mut Vec<(usize, f32)>,
+        probs: &mut Vec<f32>,
+    ) {
+        if logits.is_empty() || p >= 1.0 {
+            return;
+        }
+        if p <= 0.0 {
+            let max_idx = Self::greedy_sample(logits) as usize;
+            for (i, l) in logits.iter_mut().enumerate() {
+                if i != max_idx {
+                    *l = f32::NEG_INFINITY;
+                }
+            }
+            return;
+        }
+
+        Self::softmax_into(logits, probs);
+        indexed.clear();
+        indexed.extend(probs.iter().copied().enumerate());
+        indexed.sort_unstable_by(|a, b| {
+            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut cumsum = 0.0f32;
+        let mut cutoff = indexed.len();
+        for (rank, &(_idx, prob)) in indexed.iter().enumerate() {
+            cumsum += prob;
+            if cumsum >= p {
+                cutoff = rank + 1;
+                break;
+            }
+        }
+        for &(idx, _) in &indexed[cutoff..] {
+            logits[idx] = f32::NEG_INFINITY;
+        }
+    }
+
+    fn apply_repetition_penalty_in_place(
+        logits: &mut [f32],
+        past_tokens: &[u32],
+        penalty: f32,
+    ) {
+        if penalty == 1.0 || past_tokens.is_empty() {
+            return;
+        }
+        for &tok in past_tokens {
+            let idx = tok as usize;
+            if idx < logits.len() {
+                if logits[idx] > 0.0 {
+                    logits[idx] /= penalty;
+                } else {
+                    logits[idx] *= penalty;
+                }
+            }
+        }
+    }
+
+    /// Write softmax of `logits` into `out`, reusing `out`'s allocation.
+    fn softmax_into(logits: &[f32], out: &mut Vec<f32>) {
+        out.clear();
+        if logits.is_empty() {
+            return;
+        }
+        let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        out.extend(logits.iter().map(|&l| (l - max).exp()));
+        let sum: f32 = out.iter().sum();
+        if sum == 0.0 {
+            for v in out.iter_mut() {
+                *v = 0.0;
+            }
+            return;
+        }
+        for v in out.iter_mut() {
+            *v /= sum;
         }
     }
 }
@@ -657,5 +862,90 @@ mod tests {
         let a = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
         let b = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
         assert_eq!(a, b, "same seed should produce same token");
+    }
+
+    // ── sample_token_with_buffer parity ──────────────────────────────────
+
+    #[test]
+    fn test_buffered_greedy_matches_original() {
+        let logits = vec![1.0, 5.0, 3.0];
+        let cfg = DenseGenerationConfig::default().with_temperature(0.0);
+        let mut buf = SamplingBuffer::new();
+        let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
+        let buffered =
+            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        assert_eq!(original, buffered);
+    }
+
+    #[test]
+    fn test_buffered_seeded_matches_original() {
+        let logits = vec![1.0, 2.0, 3.0, 2.5];
+        let cfg = DenseGenerationConfig::default().with_seed(42).with_temperature(1.0);
+        let mut buf = SamplingBuffer::new();
+        let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
+        let buffered =
+            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        assert_eq!(original, buffered);
+    }
+
+    #[test]
+    fn test_buffered_with_top_k() {
+        let logits = vec![1.0, 5.0, 3.0, 2.0];
+        let cfg = DenseGenerationConfig::default()
+            .with_temperature(0.0)
+            .with_top_k(2);
+        let mut buf = SamplingBuffer::new();
+        let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
+        let buffered =
+            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        assert_eq!(original, buffered);
+    }
+
+    #[test]
+    fn test_buffered_with_repetition_penalty() {
+        let logits = vec![4.0, 2.0, 3.0];
+        let past = vec![0u32];
+        let cfg = DenseGenerationConfig::default()
+            .with_temperature(0.0)
+            .with_repetition_penalty(2.0);
+        let mut buf = SamplingBuffer::new();
+        let original = DenseTokenSampler::sample_token(&logits, &cfg, &past);
+        let buffered =
+            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &past, &mut buf);
+        assert_eq!(original, buffered);
+    }
+
+    #[test]
+    fn test_buffered_empty_logits() {
+        let empty: Vec<f32> = vec![];
+        let cfg = DenseGenerationConfig::default();
+        let mut buf = SamplingBuffer::new();
+        assert_eq!(
+            DenseTokenSampler::sample_token_with_buffer(&empty, &cfg, &[], &mut buf),
+            None
+        );
+    }
+
+    #[test]
+    fn test_buffer_reuse_across_calls() {
+        let mut buf = SamplingBuffer::new();
+        let cfg = DenseGenerationConfig::default().with_temperature(0.0);
+
+        let tok1 = DenseTokenSampler::sample_token_with_buffer(
+            &[1.0, 5.0, 3.0],
+            &cfg,
+            &[],
+            &mut buf,
+        );
+        assert_eq!(tok1, Some(1));
+
+        // Second call reuses the same buffer — no new allocation.
+        let tok2 = DenseTokenSampler::sample_token_with_buffer(
+            &[9.0, 2.0, 3.0],
+            &cfg,
+            &[],
+            &mut buf,
+        );
+        assert_eq!(tok2, Some(0));
     }
 }
