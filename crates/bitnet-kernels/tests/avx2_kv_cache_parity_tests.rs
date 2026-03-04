@@ -17,7 +17,7 @@ use bitnet_kernels::cpu::kv_cache_simd::{scalar_dot_f32, simd_dot_f32, simd_scal
 // Cache management API — available for integration tests.
 #[allow(unused_imports)]
 use bitnet_kernels::cpu::kv_cache_simd::{
-    append_kv, create_kv_cache, lookup_kv, EvictionPolicy, KVCacheConfig,
+    EvictionPolicy, KVCacheConfig, append_kv, create_kv_cache, lookup_kv,
 };
 
 // ── Tolerance constants ────────────────────────────────────────────────
