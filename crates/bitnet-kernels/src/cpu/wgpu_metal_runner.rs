@@ -98,7 +98,7 @@ impl MetalKernelConfig {
     /// Validate the configuration against Metal hardware limits.
     pub fn validate(&self) -> Result<(), MetalRunnerError> {
         // Workgroup dimensions must be non-zero.
-        if self.workgroup_size.iter().any(|&d| d == 0) {
+        if self.workgroup_size.contains(&0) {
             return Err(MetalRunnerError::InvalidWorkgroupConfig(
                 "workgroup dimensions must be non-zero".into(),
             ));
@@ -129,7 +129,7 @@ impl MetalKernelConfig {
         }
 
         // Dispatch dimensions must be non-zero.
-        if self.dispatch_dimensions.iter().any(|&d| d == 0) {
+        if self.dispatch_dimensions.contains(&0) {
             return Err(MetalRunnerError::InvalidWorkgroupConfig(
                 "dispatch dimensions must be non-zero".into(),
             ));
@@ -308,7 +308,7 @@ fn align_up(value: usize, alignment: usize) -> usize {
 
 /// Check whether a workgroup size is a multiple of the SIMD group size.
 pub fn is_simd_aligned(workgroup_x: u32) -> bool {
-    workgroup_x > 0 && workgroup_x % METAL_SIMD_GROUP_SIZE == 0
+    workgroup_x > 0 && workgroup_x.is_multiple_of(METAL_SIMD_GROUP_SIZE)
 }
 
 /// Compute the aligned buffer size for a given byte count.
