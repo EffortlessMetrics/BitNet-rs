@@ -46,7 +46,7 @@ impl ModelValidator {
                 message: format!("invalid magic: expected {GGUF_MAGIC:#010X}, got {magic:#010X}"),
             };
         }
-        if version < GGUF_VERSION_MIN || version > GGUF_VERSION_MAX {
+        if !(GGUF_VERSION_MIN..=GGUF_VERSION_MAX).contains(&version) {
             return ValidationCheck {
                 name: "header".into(),
                 passed: false,
