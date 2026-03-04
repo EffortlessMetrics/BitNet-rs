@@ -101,6 +101,7 @@ members = [
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-download-core", # SRP: pure download utility helpers
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
+  "crates/bitnet-http-auth-core", # SRP: reusable Authorization Bearer parsing helpers
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
   "crates/bitnet-nvidia",        # SRP: NVIDIA-specific tuning heuristics
   "crates/bitnet-opencl",        # OpenCL backend for Intel Arc GPU inference

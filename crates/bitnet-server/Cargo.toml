@@ -24,6 +24,7 @@ axum.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-device-config-core = { path = "../bitnet-device-config-core", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
+bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
