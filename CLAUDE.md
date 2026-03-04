@@ -56,7 +56,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~1,050+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
+- **Test Scaffolding**: ~2,800+ tests skipped in full `--workspace` runs (TDD scaffolds, resource-gated, slow, CUDA, crossval, and network-dependent tests), all with `#[ignore = "..."]` justification
 
 ## Quick Reference
 
@@ -901,7 +901,7 @@ bitnet-rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current counts.
-- **~1,050+ tests skipped** at last count — all with `#[ignore = "reason"]` justification
+- **~2,800+ tests skipped** at last count — all with `#[ignore = "reason"]` justification
 - All enabled tests pass in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
@@ -1179,7 +1179,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 **Current State**:
 
 - Run `cargo nextest run --workspace --no-default-features --features cpu` for current pass counts
-- ~1,050+ tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
+- ~2,800+ tests intentionally skipped at last count; all have `#[ignore = "reason"]` justification strings
 - Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds, network-dependent tests
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation, snapshot tests, property tests, fuzz
 
@@ -1213,7 +1213,7 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding for unimplemented features**: ~1,050+ tests skipped across the workspace (TDD scaffolds, resource-gated, slow, CUDA, crossval, network-dependent); all have justification strings
+- **Expect test scaffolding for unimplemented features**: ~2,800+ tests skipped across the workspace (TDD scaffolds, resource-gated, slow, CUDA, crossval, network-dependent); all have justification strings
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
 - **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
 - **Check `#[ignore = "..."]` justification before investigating**: The reason tells you exactly what's needed to unblock
