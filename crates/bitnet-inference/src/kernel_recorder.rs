@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 /// providing verifiable evidence for honest compute gates in CI/CD.
 #[derive(Debug, Clone)]
 pub struct KernelRecorder {
-    inner: Arc<Mutex<Vec<String>>>,
+    inner: Arc<Mutex<Vec<&'static str>>>,
 }
 
 impl KernelRecorder {
@@ -26,7 +26,7 @@ impl KernelRecorder {
     /// IDs should be static strings like "i2s_gemv", "gemm_fp16", etc.
     pub fn record(&self, id: &'static str) {
         if let Ok(mut kernels) = self.inner.lock() {
-            kernels.push(id.to_string());
+            kernels.push(id);
         }
     }
 
@@ -37,7 +37,7 @@ impl KernelRecorder {
         if let Ok(kernels) = self.inner.lock() {
             // Keep insertion order but deduplicate
             let mut seen = std::collections::HashSet::new();
-            kernels.iter().filter(|k| seen.insert(k.as_str())).cloned().collect()
+            kernels.iter().copied().filter(|k| seen.insert(*k)).map(|k| k.to_string()).collect()
         } else {
             Vec::new()
         }
