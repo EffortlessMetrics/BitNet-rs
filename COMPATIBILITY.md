@@ -143,12 +143,12 @@ All compatibility features are protected by tests:
 - `.github/workflows/compatibility.yml` - Runs on every PR
 - Must test on Linux, macOS, Windows
 - Must test Python 3.12+ (updated PyO3 ABI3-py312 requirement)
-- Must test Rust stable and MSRV (1.90.0)
-  - MSRV bumped to 1.90.0 to enable AVX2 SIMD intrinsics and stabilized portable SIMD APIs for QK256 performance optimizations
+- Must test Rust stable and MSRV (1.92.0)
+  - MSRV bumped to 1.92.0 for Rust 2024 edition support, AVX2 SIMD intrinsics, and stabilized portable SIMD APIs for QK256 performance optimizations
 
-## 📊 Performance Guarantees
+## 📊 Performance Goals
 
-While not breaking compatibility, we guarantee:
+While not breaking compatibility, we aim for:
 
 1. **No performance regression** vs llama.cpp for supported operations
 2. **Better performance** for:
@@ -156,6 +156,8 @@ While not breaking compatibility, we guarantee:
    - Tokenization (especially GPT-2)
    - SIMD operations (hand-optimized)
    - AVX-512 acceleration on compatible Intel hardware
+
+> **Note:** Performance targets are aspirational during pre-alpha (v0.2.x). Formal guarantees begin at v1.0.
 
 ## 🖥️ Hardware Compatibility
 
@@ -177,7 +179,7 @@ While not breaking compatibility, we guarantee:
 - NVIDIA GPUs with compute capability 6.0+ (Pascal architecture, GTX 10 series and newer)
 - CUDA 12.0+ toolkit for compilation (via `cudarc 0.17.8`); CUDA 11.x supported for runtime
 - Minimum 4GB VRAM for inference (8 GB+ recommended for 2B models)
-- Intel Arc A-series GPUs (A770, A750, A580) via OpenCL (`--features oneapi`); see [Intel GPU Setup](docs/INTEL_GPU_SETUP.md)
+- Intel Arc A-series GPUs (A770, A750, A580) via OpenCL (`--features opencl`); see [Intel GPU Setup](docs/INTEL_GPU_SETUP.md)
 - For the full hardware compatibility matrix, feature support per backend, and driver links see [GPU Compatibility Matrix](docs/GPU_COMPATIBILITY_MATRIX.md)
 - For throughput targets and memory requirements see [GPU Performance Expectations](docs/GPU_PERFORMANCE_EXPECTATIONS.md)
 
@@ -185,12 +187,11 @@ While not breaking compatibility, we guarantee:
 
 | Backend | Feature Flag | Min Hardware | Driver Requirements | Status |
 |---------|-------------|-------------|-------------------|--------|
-| NVIDIA CUDA | `gpu` / `cuda` | Compute 6.0+ (Pascal) | CUDA 11.0+ toolkit | ✅ Production |
-| Intel oneAPI | `oneapi` | Arc A-series (A770/A750) | Intel compute runtime + OpenCL ICD | 🔶 Alpha |
-| Apple Metal | `metal` | M1/M2/M3+ Apple Silicon | macOS 11+ (Big Sur) | 🧪 Experimental |
-| Vulkan | `vulkan` | Any Vulkan 1.3 GPU | Vulkan 1.3 driver | 🧪 Experimental |
-| AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Experimental |
-| WebGPU | `webgpu` | Any wgpu-compatible GPU | Browser or native wgpu | 🧪 Experimental |
+| NVIDIA CUDA | `gpu` / `cuda` | Compute 6.0+ (Pascal) | CUDA 12.0+ toolkit | 🔶 Alpha |
+| Intel OpenCL | `opencl` | Arc A-series (A770/A750) | Intel compute runtime + OpenCL ICD | 🧪 Experimental |
+| Apple Metal | `metal` | M1/M2/M3+ Apple Silicon | macOS 11+ (Big Sur) | 🧪 Scaffold |
+| Vulkan | `vulkan` | Any Vulkan 1.3 GPU | Vulkan 1.3 driver | 🧪 Scaffold |
+| AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Scaffold |
 
 **Backend selection** is controlled by `--device`:
 - `auto` (default): Probes available backends and selects the best (CUDA > Metal > Vulkan > OpenCL > CPU)
@@ -215,11 +216,11 @@ While not breaking compatibility, we guarantee:
 
 | Backend | Feature Flag | Status | Hardware |
 |---------|-------------|--------|----------|
-| **CUDA** | `gpu` / `cuda` | ✅ Production | NVIDIA Pascal+ (CC 6.0+) |
-| **OpenCL** | `oneapi` | 🔄 Early | Intel Arc A-series |
-| **ROCm** | `rocm` | 🔮 Planned (v0.3) | AMD RDNA 3 / CDNA |
-| **Vulkan** | `vulkan` | 🔮 Planned | Cross-vendor |
-| **Metal** | — | 🔮 Planned (v0.3) | Apple Silicon |
+| **CUDA** | `gpu` / `cuda` | 🔶 Alpha | NVIDIA Pascal+ (CC 6.0+) |
+| **OpenCL** | `opencl` | 🧪 Experimental | Intel Arc A-series |
+| **ROCm** | `rocm` | 🧪 Scaffold | AMD RDNA 3 / CDNA |
+| **Vulkan** | `vulkan` | 🧪 Scaffold | Cross-vendor |
+| **Metal** | `metal` | 🧪 Scaffold | Apple Silicon |
 
 For detailed hardware tables, feature support per backend, precision mode
 compatibility, and driver links see the
