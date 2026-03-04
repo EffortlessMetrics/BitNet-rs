@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! wgpu compute pipeline validation tests for Apple Silicon Metal backend.
 //!
 //! Validates WGSL shader modules, pipeline layouts, buffer bindings, workgroup

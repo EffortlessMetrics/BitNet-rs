@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 #![cfg(feature = "cpu")]
 
 //! TDD scaffolds for Metal resource binding and argument encoding on Apple Silicon.

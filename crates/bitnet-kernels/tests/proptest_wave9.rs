@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Wave 9 property tests: kernel module invariants.
 #![allow(clippy::manual_range_contains, clippy::needless_range_loop)]
 //!

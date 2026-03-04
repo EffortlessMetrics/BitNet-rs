@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Comprehensive tests for Metal buffer management on Apple Silicon.
 //!
 //! Validates buffer allocation/deallocation, pool management, storage modes,

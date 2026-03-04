@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal quantization shader tests for Apple Silicon.
 //!
 //! Validates I2_S (2-bit ternary) quantization, dequantization, matrix-vector
@@ -225,9 +226,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_i2s_matvec_identity_like() {
         // k=4, n=4, block_size=4: diagonal of +1 weights, scale=1.0
-        let k = 4;
+        let k: usize = 4;
         let n = 4;
-        let block_size = 4;
+        let block_size: usize = 4;
         let packed_k = k.div_ceil(4); // 1 byte per column
 
         let mut weights_packed = vec![0u8; n * packed_k];
@@ -247,9 +248,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_i2s_matvec_all_ones_weights() {
-        let k = 8;
+        let k: usize = 8;
         let n = 2;
-        let block_size = 8;
+        let block_size: usize = 8;
         let packed_k = k.div_ceil(4); // 2 bytes per column
 
         // All +1 weights
@@ -274,9 +275,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_i2s_matvec_negative_weights() {
-        let k = 4;
+        let k: usize = 4;
         let n = 1;
-        let block_size = 4;
+        let block_size: usize = 4;
         let packed_k = k.div_ceil(4);
 
         let vals: Vec<i8> = vec![-1; k];
@@ -309,9 +310,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_per_block_scale_factors() {
         // Two blocks, each with a different scale.
-        let k = 8;
+        let k: usize = 8;
         let n = 1;
-        let block_size = 4;
+        let block_size: usize = 4;
         let packed_k = k.div_ceil(4);
         let num_blocks = k.div_ceil(block_size); // 2
 
@@ -354,7 +355,7 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_bitnet32_block_size() {
-        let k = BITNET32_BLOCK; // 32
+        let k: usize = BITNET32_BLOCK; // 32
         let n = 1;
         let packed_k = k.div_ceil(4); // 8 bytes
         let num_blocks = k.div_ceil(BITNET32_BLOCK);
@@ -375,7 +376,7 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_qk256_block_size() {
-        let k = QK256_BLOCK; // 256
+        let k: usize = QK256_BLOCK; // 256
         let n = 1;
         let packed_k = k.div_ceil(4); // 64 bytes
         let num_blocks = k.div_ceil(QK256_BLOCK);
@@ -396,7 +397,7 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_bitnet32_multi_block() {
         // 64 elements → 2 blocks of 32
-        let k = 64;
+        let k: usize = 64;
         let n = 1;
         let num_blocks = k.div_ceil(BITNET32_BLOCK);
         assert_eq!(num_blocks, 2);
@@ -419,7 +420,7 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_qk256_multi_block() {
         // 512 elements → 2 blocks of 256
-        let k = 512;
+        let k: usize = 512;
         let n = 1;
         let num_blocks = k.div_ceil(QK256_BLOCK);
         assert_eq!(num_blocks, 2);
@@ -444,9 +445,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_mixed_precision_f16_activation() {
         // Simulate f16 activations via half crate, compute in f32.
-        let k = 4;
+        let k: usize = 4;
         let n = 1;
-        let block_size = 4;
+        let block_size: usize = 4;
 
         let vals: [i8; 4] = [1, -1, 1, -1];
         let weights_packed = pack_i2s_vec(&vals);
@@ -485,9 +486,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_mixed_precision_accumulation_order() {
         // Larger dot-product to expose accumulation drift.
-        let k = 256;
+        let k: usize = 256;
         let n = 1;
-        let block_size = QK256_BLOCK;
+        let block_size: usize = QK256_BLOCK;
 
         let vals: Vec<i8> = (0..k).map(|i| if i % 2 == 0 { 1 } else { -1 }).collect();
         let weights_packed = pack_i2s_vec(&vals);
@@ -542,7 +543,7 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_packed_weight_buffer_layout() {
         // Verify column-major layout: n columns of packed_k bytes each.
-        let k = 32;
+        let k: usize = 32;
         let n = 4;
         let packed_k = k.div_ceil(4); // 8
         let total = n * packed_k;
@@ -562,9 +563,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_scale_buffer_layout() {
         // Scales: [n * num_blocks_k] f32, column-major block ordering.
-        let k = 64;
+        let k: usize = 64;
         let n = 3;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let num_blocks = k.div_ceil(block_size); // 2
 
         let mut scales = vec![0.0f32; n * num_blocks];
@@ -601,9 +602,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_accuracy_small_matvec() {
-        let k = 32;
+        let k: usize = 32;
         let n = 8;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
 
         // Deterministic pseudo-random weights
         let vals: Vec<i8> = (0..k * n)
@@ -647,9 +648,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_accuracy_qk256_large() {
-        let k = 2048;
+        let k: usize = 2048;
         let n = 4;
-        let block_size = QK256_BLOCK;
+        let block_size: usize = QK256_BLOCK;
         let packed_k = k.div_ceil(4);
         let num_blocks = k.div_ceil(block_size);
 
@@ -703,9 +704,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_edge_all_zero_weights() {
-        let k = 64;
+        let k: usize = 64;
         let n = 2;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let packed_k = k.div_ceil(4);
 
         let weights_packed = vec![0u8; n * packed_k]; // all 0b00 → weight 0
@@ -722,9 +723,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_edge_all_plus_one_weights() {
-        let k = 128;
+        let k: usize = 128;
         let n = 1;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let packed_k = k.div_ceil(4);
 
         let vals: Vec<i8> = vec![1; k];
@@ -746,9 +747,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_edge_alternating_plus_minus() {
-        let k = 128;
+        let k: usize = 128;
         let n = 1;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let packed_k = k.div_ceil(4);
 
         let vals: Vec<i8> = (0..k).map(|i| if i % 2 == 0 { 1 } else { -1 }).collect();
@@ -771,9 +772,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_edge_single_element() {
-        let k = 1;
+        let k: usize = 1;
         let n = 1;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
 
         let vals: Vec<i8> = vec![1];
         let weights_packed = pack_i2s_vec(&vals);
@@ -788,9 +789,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_edge_non_multiple_of_four() {
         // k=7 → packed into 2 bytes (8 slots, last slot padding)
-        let k = 7;
+        let k: usize = 7;
         let n = 1;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
 
         let vals: Vec<i8> = vec![1, -1, 1, -1, 1, -1, 1];
         let weights_packed = pack_i2s_vec(&vals);
@@ -833,9 +834,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_block_size_64() {
-        let k = 128;
+        let k: usize = 128;
         let n = 1;
-        let block_size = 64;
+        let block_size: usize = 64;
         let num_blocks = k.div_ceil(block_size);
         assert_eq!(num_blocks, 2);
 
@@ -853,9 +854,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_block_size_128() {
-        let k = 256;
+        let k: usize = 256;
         let n = 1;
-        let block_size = 128;
+        let block_size: usize = 128;
         let num_blocks = k.div_ceil(block_size);
         assert_eq!(num_blocks, 2);
 
@@ -877,7 +878,7 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_bitnet32_inline_f16_scale_precision() {
         // BitNet32-F16: each 32-element block stores its scale as F16 inline.
-        let k = BITNET32_BLOCK;
+        let k: usize = BITNET32_BLOCK;
         let n = 1;
 
         let vals: Vec<i8> = vec![1; k];
@@ -939,9 +940,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_per_channel_quantization() {
         // Each output channel (column) has independent scales per block.
-        let k = 64;
+        let k: usize = 64;
         let n = 3;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let num_blocks = k.div_ceil(block_size); // 2
         let packed_k = k.div_ceil(4);
 
@@ -971,9 +972,9 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_per_tensor_quantization() {
         // Per-tensor: all blocks and channels share a single scale.
-        let k = 64;
+        let k: usize = 64;
         let n = 3;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let num_blocks = k.div_ceil(block_size);
         let packed_k = k.div_ceil(4);
 
@@ -1076,9 +1077,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_zero_activation_input() {
-        let k = 64;
+        let k: usize = 64;
         let n = 2;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
         let packed_k = k.div_ceil(4);
 
         let vals: Vec<i8> = (0..k * n).map(|i| if i % 2 == 0 { 1 } else { -1 }).collect();
@@ -1101,9 +1102,9 @@ mod tests {
     #[test]
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_constant_activation_input() {
-        let k = 32;
+        let k: usize = 32;
         let n = 1;
-        let block_size = BITNET32_BLOCK;
+        let block_size: usize = BITNET32_BLOCK;
 
         // Weights: half +1, half -1
         let mut vals = vec![0i8; k];
@@ -1210,7 +1211,7 @@ mod tests {
     #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
     fn test_threadgroup_dispatch_power_of_two_dims() {
         // Optimal Metal dispatch uses power-of-two threadgroup sizes.
-        for &dim in &[32, 64, 128, 256, 512, 1024] {
+        for &dim in &[32usize, 64, 128, 256, 512, 1024] {
             let tg_size = dim.min(METAL_MAX_THREADS_PER_THREADGROUP);
             assert!(tg_size.is_power_of_two(), "Dim {dim} → tg_size {tg_size} should be po2");
             assert!(tg_size <= METAL_MAX_THREADS_PER_THREADGROUP);
@@ -1225,7 +1226,7 @@ mod tests {
             n.next_power_of_two()
         }
 
-        for &dim in &[33, 65, 129, 257, 513, 1025, 2048, 4096] {
+        for &dim in &[33usize, 65, 129, 257, 513, 1025, 2048, 4096] {
             let tg_size = next_power_of_two(dim).min(METAL_MAX_THREADS_PER_THREADGROUP);
             assert!(tg_size.is_power_of_two());
             assert!(tg_size >= dim.min(METAL_MAX_THREADS_PER_THREADGROUP));
@@ -1243,7 +1244,7 @@ mod tests {
     fn test_threadgroup_dispatch_quantization_kernel() {
         // For quantization: each threadgroup processes one block of elements.
         for &block_size in &[BITNET32_BLOCK, 64, 128, QK256_BLOCK] {
-            let elements = 4096;
+            let elements: usize = 4096;
             let num_blocks = elements.div_ceil(block_size);
             // One threadgroup per block, threads within handle elements
             let threads_per_tg = block_size.min(METAL_MAX_THREADS_PER_THREADGROUP);

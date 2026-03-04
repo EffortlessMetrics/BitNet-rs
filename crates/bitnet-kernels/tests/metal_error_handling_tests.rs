@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal GPU error handling tests for Apple Silicon.
 //!
 //! Validates graceful failure handling for Metal GPU compute operations including

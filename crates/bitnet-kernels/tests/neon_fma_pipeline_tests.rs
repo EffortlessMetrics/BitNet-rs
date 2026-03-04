@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! TDD scaffold tests for NEON FMA (fused multiply-add) operations on Apple Silicon.
 //!
 //! These tests cover accuracy, intrinsics patterns, matrix multiplication tiling,

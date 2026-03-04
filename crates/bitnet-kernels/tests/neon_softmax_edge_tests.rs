@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! NEON softmax edge-case TDD scaffolds for Apple Silicon (aarch64).
 //!
 //! ~25 ignored TDD scaffold tests covering numerical stability, NaN/Inf

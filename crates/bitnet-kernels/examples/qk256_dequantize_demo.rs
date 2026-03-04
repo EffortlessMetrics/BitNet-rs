@@ -1,10 +1,23 @@
 //! QK256 dequantization demonstration
 //!
 //! This example shows how to use the AVX2-optimized QK256 dequantization kernel.
-
-use bitnet_kernels::{KernelProvider, cpu::Avx2Kernel};
+//! Only functional on x86_64 targets with AVX2 support.
 
 fn main() -> anyhow::Result<()> {
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        println!("QK256 AVX2 demo requires x86_64 — skipping on this architecture.");
+        return Ok(());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    inner_main()
+}
+
+#[cfg(target_arch = "x86_64")]
+fn inner_main() -> anyhow::Result<()> {
+    use bitnet_kernels::{Avx2Kernel, KernelProvider};
+
     println!("QK256 Dequantization Demo\n");
 
     // Create AVX2 kernel instance
@@ -49,8 +62,8 @@ fn main() -> anyhow::Result<()> {
     let expected_block0 = 2.0f32;
     let expected_block1 = 3.0f32;
 
-    let block0_ok = result[..QK256_BLOCK].iter().all(|&v| (v - expected_block0).abs() < 1e-5);
-    let block1_ok = result[QK256_BLOCK..].iter().all(|&v| (v - expected_block1).abs() < 1e-5);
+    let block0_ok = result[..QK256_BLOCK].iter().all(|&v: &f32| (v - expected_block0).abs() < 1e-5);
+    let block1_ok = result[QK256_BLOCK..].iter().all(|&v: &f32| (v - expected_block1).abs() < 1e-5);
 
     println!("\nValidation:");
     println!("  Block 0 (scale={:.1}): {} ✅", scales[0], if block0_ok { "PASS" } else { "FAIL" });

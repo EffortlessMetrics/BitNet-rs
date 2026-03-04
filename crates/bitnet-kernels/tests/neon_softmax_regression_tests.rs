@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! NEON softmax regression tests for Apple Silicon (aarch64).
 //!
 //! Validates NEON-accelerated softmax against the scalar CPU reference for

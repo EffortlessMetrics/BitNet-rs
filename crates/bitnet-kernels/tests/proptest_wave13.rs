@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Wave 13 property tests: kernel mathematical invariants for activations,
 //! quantization, layer normalization, attention, RoPE, fusion, and SIMD math.
 //!

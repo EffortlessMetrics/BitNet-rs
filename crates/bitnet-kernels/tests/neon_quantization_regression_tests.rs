@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 #![cfg(all(feature = "cpu", target_arch = "aarch64"))]
 #![allow(
     clippy::float_cmp,

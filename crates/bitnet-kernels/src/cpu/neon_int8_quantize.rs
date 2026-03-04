@@ -853,7 +853,7 @@ mod tests {
 
     #[test]
     fn test_dequantize_large_1000() {
-        let input: Vec<i8> = (0..1000).map(|i| ((i % 256) as i8)).collect();
+        let input: Vec<i8> = (0..1000).map(|i| (i % 256) as i8).collect();
         let result = dequantize_i8_to_f32_neon(&input, 0.1);
         assert_eq!(result.len(), 1000);
         for (i, &v) in input.iter().enumerate() {

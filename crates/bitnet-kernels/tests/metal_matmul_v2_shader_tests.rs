@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal matmul v2 shader validation tests for Apple Silicon.
 //!
 //! Comprehensive tests covering GEMM correctness, quantized I2_S matmul,

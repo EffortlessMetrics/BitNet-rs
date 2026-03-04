@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests — wave 23.
 //!
 //! Kernel correctness invariants: matmul associativity, transpose involution,

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests — wave 30 (kernels).
 //!
 //! Covers: perf_tracker aggregation invariants, SIMD diagnostics consistency,

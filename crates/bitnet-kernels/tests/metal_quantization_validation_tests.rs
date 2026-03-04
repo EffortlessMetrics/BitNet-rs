@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal quantization validation tests for Apple Silicon.
 //!
 //! TDD scaffolding for Metal GPU quantization shader operations: I2_S encoding,

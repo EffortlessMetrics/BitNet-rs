@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal shader validation tests for Apple Silicon.
 //!
 //! These tests validate Metal shader source structure, configuration,

@@ -1366,7 +1366,7 @@ mod tests {
     #[test]
     fn test_table_monotonic_frequency_decay() {
         // Higher dimension indices should have lower frequency (smaller theta)
-        let (cos_t, sin_t) = make_tables(16, 4, 10000.0);
+        let (_cos_t, sin_t) = make_tables(16, 4, 10000.0);
         let half = 8;
         // At pos=1, sin values should decrease in magnitude for higher dims
         // (because theta decreases → angle decreases → sin(angle) decreases)

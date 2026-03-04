@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal pipeline cache tests for Apple Silicon.
 //!
 //! Validates Metal compute pipeline caching, buffer management, dispatch

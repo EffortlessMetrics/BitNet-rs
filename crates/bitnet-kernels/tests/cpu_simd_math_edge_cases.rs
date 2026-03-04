@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Edge-case tests for CPU SIMD math operations.
 //!
 //! Tests cover fast approximations (exp, tanh, sigmoid),

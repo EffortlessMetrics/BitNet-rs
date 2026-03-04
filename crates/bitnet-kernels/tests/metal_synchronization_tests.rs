@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 #![cfg(feature = "cpu")]
 #![allow(clippy::needless_range_loop)]
 //! Metal GPU synchronization and barrier pattern tests.

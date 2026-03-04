@@ -633,7 +633,7 @@ mod tests {
     #[test]
     fn test_symmetric_tiny_values() {
         let input = vec![1e-7, -1e-7, 2e-7, -2e-7];
-        let (q, s) = dynamic_quantize_symmetric_neon(&input);
+        let (_q, s) = dynamic_quantize_symmetric_neon(&input);
         assert!(s > 0.0);
         assert!(s < 1e-5);
     }
@@ -761,7 +761,7 @@ mod tests {
         let input: Vec<f32> = (0..100).map(|i| (i as f32 - 50.0) * 0.1).collect();
         let (q, _, _) = dynamic_quantize_asymmetric_neon(&input);
         for &v in &q {
-            assert!(v <= 255); // u8 always satisfies this but check logic
+            let _ = v; // u8 is always in range 0..=255
         }
     }
 
@@ -960,7 +960,7 @@ mod tests {
         // 99 values at 1.0, one outlier at 100.0
         let mut input = vec![1.0; 99];
         input.push(100.0);
-        let (lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
+        let (_lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
         // At 99th percentile of 100 values, the clip index rounds to
         // the 99th sorted entry. Since 99 values are 1.0 and one is 100.0,
         // the clipped value should be 1.0 (the 99th sorted element).

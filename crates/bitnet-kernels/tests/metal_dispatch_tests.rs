@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 #![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 //! TDD scaffold tests for Metal compute dispatch on Apple Silicon.
 //!

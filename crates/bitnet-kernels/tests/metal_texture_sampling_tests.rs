@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 #![cfg(feature = "cpu")]
 
 //! TDD scaffold tests for Metal texture sampling and image operations on Apple Silicon.

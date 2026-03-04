@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal inference pipeline end-to-end tests for Apple Silicon.
 //!
 //! Tests validate the complete inference pipeline on Metal GPU:

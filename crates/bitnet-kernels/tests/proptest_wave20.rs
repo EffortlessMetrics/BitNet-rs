@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests — wave 20.
 //!
 //! Mathematical invariants for neural network kernels covering:
@@ -571,7 +572,7 @@ proptest! {
         _seed in 0u64..1000,
     ) {
         let data = vec![3.0f32, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
-        let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 4, stride: 4, padding: 0 };
+        let config = PoolConfig { pool_type: PoolType::Max, kernel_size: 4, stride: 4, padding: 0, dilation: 1, ceil_mode: false };
         let result = pool_1d(&data, &config).unwrap();
 
         // Permute each window and check same result
@@ -619,6 +620,8 @@ proptest! {
             kernel_size: 2,
             stride: 2,
             padding: 0,
+            dilation: 1,
+            ceil_mode: false,
         };
         // Ensure even length
         let len = input.len() - (input.len() % 2);

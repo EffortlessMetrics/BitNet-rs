@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Numerical edge-case tests for Metal shader correctness on Apple Silicon.
 //!
 //! These tests validate the **mathematical correctness** of operations as they

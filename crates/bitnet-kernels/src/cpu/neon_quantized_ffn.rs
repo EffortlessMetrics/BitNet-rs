@@ -475,7 +475,7 @@ mod tests {
         let in_dim = 64;
         let out_dim = 16;
         let input: Vec<f32> = (0..in_dim).map(|i| (i as f32) * 0.01).collect();
-        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| ((i % 3) as i8 - 1)).collect();
+        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| (i % 3) as i8 - 1).collect();
         let mut neon_out = vec![0.0f32; out_dim];
         let mut scalar_out = vec![0.0f32; out_dim];
         quantized_linear_neon(&input, &weights, 1.0, &mut neon_out, in_dim, out_dim);
@@ -933,9 +933,9 @@ mod tests {
         let hidden = 8;
         let inter = 16;
         let input: Vec<f32> = (0..hidden).map(|i| (i as f32) * 0.1).collect();
-        let w_gate: Vec<i8> = (0..inter * hidden).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w_up: Vec<i8> = (0..inter * hidden).map(|i| ((i % 5) as i8 - 2)).collect();
-        let w_down: Vec<i8> = (0..hidden * inter).map(|i| ((i % 3) as i8 - 1)).collect();
+        let w_gate: Vec<i8> = (0..inter * hidden).map(|i| (i % 3) as i8 - 1).collect();
+        let w_up: Vec<i8> = (0..inter * hidden).map(|i| (i % 5) as i8 - 2).collect();
+        let w_down: Vec<i8> = (0..hidden * inter).map(|i| (i % 3) as i8 - 1).collect();
         let mut output = vec![0.0f32; hidden];
         quantized_ffn_forward_neon(
             &input,
@@ -1063,9 +1063,9 @@ mod tests {
         let dim = 4;
         let inter = 8;
         let input: Vec<f32> = vec![0.5, -1.0, 2.0, 0.3];
-        let w1: Vec<i8> = (0..inter * dim).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w2: Vec<i8> = (0..dim * inter).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w3: Vec<i8> = (0..inter * dim).map(|i| ((i % 5) as i8 - 2)).collect();
+        let w1: Vec<i8> = (0..inter * dim).map(|i| (i % 3) as i8 - 1).collect();
+        let w2: Vec<i8> = (0..dim * inter).map(|i| (i % 3) as i8 - 1).collect();
+        let w3: Vec<i8> = (0..inter * dim).map(|i| (i % 5) as i8 - 2).collect();
 
         let mut mlp_out = vec![0.0f32; dim];
         let mut ffn_out = vec![0.0f32; dim];
@@ -1098,9 +1098,9 @@ mod tests {
         let dim = 8;
         let inter = 16;
         let input: Vec<f32> = (0..dim).map(|i| (i as f32) * 0.1).collect();
-        let w1: Vec<i8> = (0..inter * dim).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w2: Vec<i8> = (0..dim * inter).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w3: Vec<i8> = (0..inter * dim).map(|i| ((i % 5) as i8 - 2)).collect();
+        let w1: Vec<i8> = (0..inter * dim).map(|i| (i % 3) as i8 - 1).collect();
+        let w2: Vec<i8> = (0..dim * inter).map(|i| (i % 3) as i8 - 1).collect();
+        let w3: Vec<i8> = (0..inter * dim).map(|i| (i % 5) as i8 - 2).collect();
         let mut output = vec![0.0f32; dim];
         quantized_gated_mlp_neon(&input, &w1, &w2, &w3, 1.0, 1.0, 1.0, &mut output, dim, inter);
         for v in &output {
@@ -1229,9 +1229,9 @@ mod tests {
         let dim = 4;
         let inter = 8;
         let input = vec![1.0f32; dim];
-        let w1: Vec<i8> = (0..inter * dim).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w2: Vec<i8> = (0..dim * inter).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w3: Vec<i8> = (0..inter * dim).map(|i| ((i % 5) as i8 - 2)).collect();
+        let w1: Vec<i8> = (0..inter * dim).map(|i| (i % 3) as i8 - 1).collect();
+        let w2: Vec<i8> = (0..dim * inter).map(|i| (i % 3) as i8 - 1).collect();
+        let w3: Vec<i8> = (0..inter * dim).map(|i| (i % 5) as i8 - 2).collect();
         let mut mlp_out = vec![0.0f32; dim];
         quantized_gated_mlp_neon(&input, &w1, &w2, &w3, 1.0, 1.0, 1.0, &mut mlp_out, dim, inter);
         let mut final_out = vec![0.0f32; dim];
@@ -1343,7 +1343,7 @@ mod tests {
     #[test]
     fn test_linear_deterministic() {
         let input: Vec<f32> = (0..16).map(|i| (i as f32) * 0.1).collect();
-        let weights: Vec<i8> = (0..16 * 4).map(|i| ((i % 3) as i8 - 1)).collect();
+        let weights: Vec<i8> = (0..16 * 4).map(|i| (i % 3) as i8 - 1).collect();
         let mut out1 = vec![0.0f32; 4];
         let mut out2 = vec![0.0f32; 4];
         quantized_linear_neon(&input, &weights, 0.5, &mut out1, 16, 4);
@@ -1378,9 +1378,9 @@ mod tests {
         let hidden = 4;
         let inter = 8;
         let input: Vec<f32> = vec![0.5, -1.0, 2.0, 0.3];
-        let w_gate: Vec<i8> = (0..inter * hidden).map(|i| ((i % 3) as i8 - 1)).collect();
-        let w_up: Vec<i8> = (0..inter * hidden).map(|i| ((i % 5) as i8 - 2)).collect();
-        let w_down: Vec<i8> = (0..hidden * inter).map(|i| ((i % 3) as i8 - 1)).collect();
+        let w_gate: Vec<i8> = (0..inter * hidden).map(|i| (i % 3) as i8 - 1).collect();
+        let w_up: Vec<i8> = (0..inter * hidden).map(|i| (i % 5) as i8 - 2).collect();
+        let w_down: Vec<i8> = (0..hidden * inter).map(|i| (i % 3) as i8 - 1).collect();
         let mut out1 = vec![0.0f32; hidden];
         let mut out2 = vec![0.0f32; hidden];
         quantized_ffn_forward_neon(
@@ -1399,7 +1399,7 @@ mod tests {
         let in_dim = 128;
         let out_dim = 4;
         let input: Vec<f32> = (0..in_dim).map(|i| (i as f32) * 0.001).collect();
-        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| ((i % 3) as i8 - 1)).collect();
+        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| (i % 3) as i8 - 1).collect();
         let mut neon_out = vec![0.0f32; out_dim];
         let mut scalar_out = vec![0.0f32; out_dim];
         quantized_linear_neon(&input, &weights, 1.0, &mut neon_out, in_dim, out_dim);
@@ -1446,7 +1446,7 @@ mod tests {
         let in_dim = 2;
         let out_dim = 8;
         let input = vec![1.0, 1.0];
-        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| ((i % 3) as i8 - 1)).collect();
+        let weights: Vec<i8> = (0..out_dim * in_dim).map(|i| (i % 3) as i8 - 1).collect();
         let mut output = vec![0.0f32; out_dim];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, in_dim, out_dim);
         let mut scalar_out = vec![0.0f32; out_dim];

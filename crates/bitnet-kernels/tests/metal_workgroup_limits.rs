@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal workgroup and dispatch limit validation for Apple Silicon GPUs.
 //! Tests ensure correct handling of Metal compute constraints without GPU runtime.
 #![cfg(target_os = "macos")]

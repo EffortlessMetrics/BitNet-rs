@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal compute dispatch sizing tests for Apple Silicon.
 //!
 //! Validates threadgroup dimensions, grid sizing, workgroup limits, dispatch

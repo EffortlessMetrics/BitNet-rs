@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests for NEON SIMD kernel correctness on ARM64.
 //!
 //! These tests exercise the public CPU kernel APIs on `aarch64` targets
