@@ -98,6 +98,8 @@ pub struct DenseGenerationState {
     pub total_time_ms: u64,
     pub is_finished: bool,
     pub finish_reason: Option<FinishReason>,
+    /// Reusable buffer for the sampling pipeline, avoiding per-token allocation.
+    sampling_buffer: SamplingBuffer,
 }
 
 impl DenseGenerationState {
@@ -107,6 +109,7 @@ impl DenseGenerationState {
             total_time_ms: 0,
             is_finished: false,
             finish_reason: None,
+            sampling_buffer: SamplingBuffer::new(),
         }
     }
 
@@ -127,6 +130,20 @@ impl DenseGenerationState {
     pub fn finish_eos(&mut self) {
         self.is_finished = true;
         self.finish_reason = Some(FinishReason::EndOfSequence);
+    }
+
+    /// Sample the next token using the internal reusable buffer.
+    ///
+    /// This delegates to [`DenseTokenSampler::sample_token_with_buffer`],
+    /// reusing the [`SamplingBuffer`] owned by this state across every token
+    /// in the generation loop — eliminating per-token heap allocations.
+    pub fn sample_token(&mut self, logits: &[f32], config: &DenseGenerationConfig) -> Option<u32> {
+        DenseTokenSampler::sample_token_with_buffer(
+            logits,
+            config,
+            &self.tokens_generated,
+            &mut self.sampling_buffer,
+        )
     }
 }
 
@@ -912,5 +929,39 @@ mod tests {
         let tok2 =
             DenseTokenSampler::sample_token_with_buffer(&[9.0, 2.0, 3.0], &cfg, &[], &mut buf);
         assert_eq!(tok2, Some(0));
+    }
+
+    // ── DenseGenerationState::sample_token (buffer-reusing convenience) ───
+
+    #[test]
+    fn test_state_sample_token_greedy() {
+        let cfg = DenseGenerationConfig::default().with_temperature(0.0);
+        let mut state = DenseGenerationState::new();
+        let tok = state.sample_token(&[1.0, 5.0, 3.0], &cfg);
+        assert_eq!(tok, Some(1));
+    }
+
+    #[test]
+    fn test_state_sample_token_reuses_buffer() {
+        let cfg = DenseGenerationConfig::default().with_temperature(0.0);
+        let mut state = DenseGenerationState::new();
+
+        let tok1 = state.sample_token(&[1.0, 5.0, 3.0], &cfg);
+        assert_eq!(tok1, Some(1));
+        state.push_token(tok1.unwrap(), &cfg);
+
+        // Second call reuses the same internal buffer — no new allocation.
+        let tok2 = state.sample_token(&[9.0, 2.0, 3.0], &cfg);
+        assert_eq!(tok2, Some(0));
+    }
+
+    #[test]
+    fn test_state_sample_token_matches_standalone() {
+        let logits = vec![1.0, 2.0, 3.0, 2.5];
+        let cfg = DenseGenerationConfig::default().with_seed(42).with_temperature(1.0);
+        let mut state = DenseGenerationState::new();
+        let standalone = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
+        let via_state = state.sample_token(&logits, &cfg);
+        assert_eq!(standalone, via_state);
     }
 }
