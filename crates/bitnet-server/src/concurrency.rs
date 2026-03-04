@@ -64,13 +64,11 @@ impl RateLimitBucket {
     async fn try_consume(&self, tokens: u64) -> bool {
         self.refill().await;
 
-        let current_tokens = self.tokens.load(Ordering::Relaxed);
-        if current_tokens >= tokens {
-            self.tokens.fetch_sub(tokens, Ordering::Relaxed);
-            true
-        } else {
-            false
-        }
+        let result = self.tokens.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+            if current >= tokens { Some(current - tokens) } else { None }
+        });
+
+        result.is_ok()
     }
 
     async fn refill(&self) {
@@ -80,10 +78,11 @@ impl RateLimitBucket {
 
         if elapsed.as_secs() > 0 {
             let tokens_to_add = elapsed.as_secs() * self.refill_rate;
-            let current_tokens = self.tokens.load(Ordering::Relaxed);
-            let new_tokens = (current_tokens + tokens_to_add).min(self.capacity);
 
-            self.tokens.store(new_tokens, Ordering::Relaxed);
+            let _ = self.tokens.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                Some((current + tokens_to_add).min(self.capacity))
+            });
+
             *last_refill = now;
         }
     }
@@ -585,5 +584,31 @@ mod tests {
 
         let stats = manager.get_stats().await;
         assert_eq!(stats.per_ip_limiter_count, 0);
+    }
+
+    #[tokio::test]
+    async fn test_rate_limiter_toctou() {
+        // Create a bucket with 5 tokens
+        let bucket = Arc::new(RateLimitBucket::new(5, 1));
+
+        let mut handles = vec![];
+
+        // Spawn 10 concurrent tasks trying to consume tokens
+        for _ in 0..10 {
+            let bucket_clone = Arc::clone(&bucket);
+            handles.push(tokio::spawn(async move { bucket_clone.try_consume(1).await }));
+        }
+
+        let mut successful_consumptions = 0;
+        for handle in handles {
+            if handle.await.unwrap() {
+                successful_consumptions += 1;
+            }
+        }
+
+        // At most 5 requests should have succeeded, and underflow should not happen
+        assert!(successful_consumptions <= 5);
+        let remaining_tokens = bucket.tokens.load(Ordering::Relaxed);
+        assert!(remaining_tokens <= 5); // Should be 0, but definitely not a huge number due to underflow
     }
 }
