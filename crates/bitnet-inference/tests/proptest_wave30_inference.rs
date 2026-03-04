@@ -472,13 +472,13 @@ proptest! {
     #[test]
     fn argmax_within_bounds(logits in finite_f32_vec(1, 200)) {
         let idx = argmax(&logits);
-        prop_assert!((idx as usize) < logits.len());
+        prop_assert!(idx < logits.len());
     }
 
     /// argmax picks the actual maximum value.
     #[test]
     fn argmax_picks_max(logits in finite_f32_vec(1, 200)) {
-        let idx = argmax(&logits) as usize;
+        let idx = argmax(&logits);
         let max_val = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         prop_assert!((logits[idx] - max_val).abs() < f32::EPSILON);
     }

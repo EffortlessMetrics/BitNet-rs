@@ -134,9 +134,7 @@ pub fn detect_template(model_name: &str) -> TemplateFormat {
         TemplateFormat::Phi
     } else if lower.contains("llama-3") || lower.contains("llama3") {
         TemplateFormat::Llama3
-    } else if lower.contains("qwen") || lower.contains("chatml") {
-        TemplateFormat::ChatMl
-    } else if lower.contains("bitnet") {
+    } else if lower.contains("qwen") || lower.contains("chatml") || lower.contains("bitnet") {
         TemplateFormat::ChatMl
     } else {
         TemplateFormat::SimpleInstruct
@@ -146,7 +144,7 @@ pub fn detect_template(model_name: &str) -> TemplateFormat {
 /// Count tokens approximately (word-based estimate).
 pub fn estimate_token_count(text: &str) -> usize {
     // Rough estimate: ~4 chars per token
-    (text.len() + 3) / 4
+    text.len().div_ceil(4)
 }
 
 #[cfg(test)]

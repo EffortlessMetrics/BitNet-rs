@@ -216,7 +216,7 @@ mod tests {
         }
         let p50 = m.percentile_first_token_ms(50.0);
         // Median of [10,20,..,100] → 50 or 60 depending on rounding
-        assert!(p50 >= 50.0 && p50 <= 60.0);
+        assert!((50.0..=60.0).contains(&p50));
     }
 
     #[test]
@@ -227,8 +227,8 @@ mod tests {
         }
         let p95 = m.percentile_first_token_ms(95.0);
         let p99 = m.percentile_first_token_ms(99.0);
-        assert!(p95 >= 94.0 && p95 <= 96.0);
-        assert!(p99 >= 98.0 && p99 <= 100.0);
+        assert!((94.0..=96.0).contains(&p95));
+        assert!((98.0..=100.0).contains(&p99));
     }
 
     #[test]

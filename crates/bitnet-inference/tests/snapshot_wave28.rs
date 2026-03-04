@@ -57,6 +57,7 @@ fn snapshot_generation_config_default() {
 }
 
 #[test]
+#[allow(clippy::field_reassign_with_default)]
 fn snapshot_generation_config_custom() {
     let mut cfg = GenerationConfig::default();
     cfg.max_new_tokens = 128;
