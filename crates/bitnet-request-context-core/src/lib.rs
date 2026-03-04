@@ -65,31 +65,37 @@ impl RequestContext {
         }
     }
 
+    #[must_use]
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
         self.model_id = Some(model.into());
         self
     }
 
-    pub fn with_max_tokens(mut self, n: usize) -> Self {
+    #[must_use]
+    pub const fn with_max_tokens(mut self, n: usize) -> Self {
         self.max_tokens = n;
         self
     }
 
-    pub fn with_temperature(mut self, t: f32) -> Self {
+    #[must_use]
+    pub const fn with_temperature(mut self, t: f32) -> Self {
         self.temperature = t;
         self
     }
 
-    pub fn with_stream(mut self, stream: bool) -> Self {
+    #[must_use]
+    pub const fn with_stream(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
     }
 
-    pub fn with_deadline(mut self, timeout: Duration) -> Self {
+    #[must_use]
+    pub const fn with_deadline(mut self, timeout: Duration) -> Self {
         self.deadlines = Some(timeout);
         self
     }
 
+    #[must_use]
     pub fn with_client(mut self, client: ClientInfo) -> Self {
         self.client = client;
         self
@@ -102,7 +108,7 @@ impl RequestContext {
 
     /// Check if the request has exceeded its deadline.
     pub fn is_expired(&self) -> bool {
-        if let Some(deadline) = self.deadlines { self.elapsed() > deadline } else { false }
+        self.deadlines.is_some_and(|deadline| self.elapsed() > deadline)
     }
 
     /// Remaining time before deadline (None if no deadline or expired).
@@ -118,7 +124,7 @@ pub struct RequestBatch {
 }
 
 impl RequestBatch {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { requests: Vec::new() }
     }
 
@@ -126,11 +132,11 @@ impl RequestBatch {
         self.requests.push(ctx);
     }
 
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.requests.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.requests.is_empty()
     }
 
@@ -252,7 +258,7 @@ mod tests {
     fn test_default_values() {
         let ctx = RequestContext::new(RequestId::new("r"));
         assert_eq!(ctx.max_tokens, 256);
-        assert_eq!(ctx.temperature, 1.0);
+        assert!((ctx.temperature - 1.0).abs() < f32::EPSILON);
         assert!(!ctx.stream);
     }
 }
