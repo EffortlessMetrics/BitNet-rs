@@ -97,7 +97,7 @@ pub struct NumericalValidator {
 
 impl NumericalValidator {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { default_tolerance: 1e-5, divergence_threshold: 10.0 }
     }
 
@@ -109,6 +109,7 @@ impl NumericalValidator {
 
     /// Compute distribution statistics for a tensor.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn check_distribution(tensor: &[f32]) -> DistributionStats {
         if tensor.is_empty() {
             return DistributionStats {
@@ -138,7 +139,7 @@ impl NumericalValidator {
                 inf_count += 1;
                 continue;
             }
-            sum += v as f64;
+            sum += f64::from(v);
             finite_count += 1;
             if v < min {
                 min = v;
@@ -155,7 +156,7 @@ impl NumericalValidator {
                 .iter()
                 .filter(|v| v.is_finite())
                 .map(|&v| {
-                    let d = v as f64 - mean;
+                    let d = f64::from(v) - mean;
                     d * d
                 })
                 .sum::<f64>()
@@ -183,6 +184,7 @@ impl NumericalValidator {
 
     /// Compare CPU and GPU outputs element-wise.
     #[must_use]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
     pub fn compare_outputs(cpu: &[f32], gpu: &[f32], tolerance: f32) -> ComparisonResult {
         assert_eq!(cpu.len(), gpu.len(), "CPU and GPU output lengths must match");
 
@@ -205,7 +207,7 @@ impl NumericalValidator {
             if diff > max_diff {
                 max_diff = diff;
             }
-            sum_diff += diff as f64;
+            sum_diff += f64::from(diff);
             if diff > tolerance {
                 outlier_count += 1;
             }

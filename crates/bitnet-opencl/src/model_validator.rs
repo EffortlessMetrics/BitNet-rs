@@ -51,7 +51,7 @@ pub struct ValidationReport {
 
 impl ValidationReport {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { findings: Vec::new() }
     }
 
@@ -87,7 +87,7 @@ impl ValidationReport {
     }
 
     /// Merge another report into this one.
-    pub fn merge(&mut self, other: ValidationReport) {
+    pub fn merge(&mut self, other: Self) {
         self.findings.extend(other.findings);
     }
 }
@@ -121,7 +121,7 @@ impl fmt::Display for ValidationReport {
 /// Simulated model weights for validation.
 #[derive(Debug, Clone)]
 pub struct ModelWeights {
-    /// Per-layer LayerNorm weight vectors.
+    /// Per-layer `LayerNorm` weight vectors.
     pub layer_norm_weights: Vec<Vec<f32>>,
     /// Per-layer projection weight matrices (flattened, with shape).
     pub projection_weights: Vec<ProjectionWeight>,
@@ -177,7 +177,7 @@ pub struct GpuDeviceCapabilities {
 
 /// Pre-flight validator for model weights, architecture, and GPU fit.
 pub struct ModelValidator {
-    /// Tolerance for LayerNorm weight mean deviation from 1.0.
+    /// Tolerance for `LayerNorm` weight mean deviation from 1.0.
     pub ln_mean_tolerance: f32,
     /// Minimum acceptable RMS for projection matrices.
     pub proj_rms_min: f32,
@@ -187,12 +187,13 @@ pub struct ModelValidator {
 
 impl ModelValidator {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { ln_mean_tolerance: 0.5, proj_rms_min: 0.001, proj_rms_max: 100.0 }
     }
 
-    /// Validate model weights (LayerNorm means, projection norms).
+    /// Validate model weights (`LayerNorm` means, projection norms).
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn validate_weights(&self, weights: &ModelWeights) -> ValidationReport {
         let mut report = ValidationReport::new();
 
@@ -289,6 +290,7 @@ impl ModelValidator {
 
     /// Validate transformer architecture configuration.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn validate_architecture(&self, config: &TransformerConfig) -> ValidationReport {
         let mut report = ValidationReport::new();
 
@@ -359,6 +361,7 @@ impl ModelValidator {
 
     /// Validate that a model fits on the target GPU device.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn validate_gpu_compatibility(
         &self,
         model: &ModelMetadata,
