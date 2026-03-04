@@ -41,6 +41,7 @@ pub use pooling::{
 };
 pub mod quantize;
 pub mod quantized_attention;
+pub use quantized_attention::QuantizedAttentionWorkspace;
 pub mod quantized_matmul;
 pub mod reduction;
 pub mod residual;

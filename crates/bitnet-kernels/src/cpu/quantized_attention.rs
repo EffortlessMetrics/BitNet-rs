@@ -92,6 +92,30 @@ pub struct QuantizedQKV {
     pub v_scales: Vec<f32>,
 }
 
+/// Pre-allocated workspace for quantized attention, avoiding
+/// per-call `scores` allocation in the hot loop.
+#[derive(Debug, Clone)]
+pub struct QuantizedAttentionWorkspace {
+    /// Scores buffer of at least `seq_len * seq_len` elements.
+    pub scores: Vec<f32>,
+}
+
+impl QuantizedAttentionWorkspace {
+    /// Create a workspace sized for the given sequence length.
+    pub fn new(seq_len: usize) -> Self {
+        Self { scores: vec![0.0f32; seq_len * seq_len] }
+    }
+
+    /// Ensure the workspace is large enough for the given sequence
+    /// length, growing the buffer if needed.
+    pub fn ensure_capacity(&mut self, seq_len: usize) {
+        let required = seq_len * seq_len;
+        if self.scores.len() < required {
+            self.scores.resize(required, 0.0);
+        }
+    }
+}
+
 // ── SIMD: AVX2 i8 dot product ─────────────────────────────────────
 
 /// AVX2-accelerated dot product of two `i8` slices.
@@ -189,11 +213,14 @@ fn unpack_i4(val: i8) -> i8 {
 
 // ── Public API ─────────────────────────────────────────────────────
 
-/// Compute quantized scaled dot-product attention for a single head.
+/// Compute quantized scaled dot-product attention for a single head,
+/// writing intermediate scores into the caller-provided `scores_buf`.
 ///
+/// `scores_buf` must have at least `seq_len * seq_len` elements.
 /// `q`, `k`, `v` are quantized i8 matrices of shape `[seq_len, head_dim]`.
 /// Returns `output` of shape `[seq_len, head_dim]` in f32.
-pub fn quantized_dot_product_attention(
+#[allow(clippy::too_many_arguments)]
+pub fn quantized_dot_product_attention_into(
     config: &QuantizedAttentionConfig,
     q: &[i8],
     k: &[i8],
@@ -201,6 +228,7 @@ pub fn quantized_dot_product_attention(
     q_scale: f32,
     k_scale: f32,
     v_scale: f32,
+    scores_buf: &mut [f32],
     output: &mut [f32],
 ) -> Result<()> {
     config.validate()?;
@@ -213,11 +241,14 @@ pub fn quantized_dot_product_attention(
     if output.len() < expected {
         return Err(invalid_arg("output buffer too small"));
     }
+    if scores_buf.len() < s * s {
+        return Err(invalid_arg("scores buffer too small for seq_len * seq_len"));
+    }
 
     let scale = config.scale_factor() * q_scale * k_scale;
 
     // Compute attention scores: scores[i][j] = scale * dot(Q[i], K[j]).
-    let mut scores = vec![0.0f32; s * s];
+    let scores = &mut scores_buf[..s * s];
     for i in 0..s {
         for j in 0..s {
             if config.causal && j > i {
@@ -241,6 +272,34 @@ pub fn quantized_dot_product_attention(
         }
     }
     Ok(())
+}
+
+/// Compute quantized scaled dot-product attention for a single head.
+///
+/// `q`, `k`, `v` are quantized i8 matrices of shape `[seq_len, head_dim]`.
+/// Returns `output` of shape `[seq_len, head_dim]` in f32.
+pub fn quantized_dot_product_attention(
+    config: &QuantizedAttentionConfig,
+    q: &[i8],
+    k: &[i8],
+    v: &[i8],
+    q_scale: f32,
+    k_scale: f32,
+    v_scale: f32,
+    output: &mut [f32],
+) -> Result<()> {
+    let mut scores = vec![0.0f32; config.seq_len * config.seq_len];
+    quantized_dot_product_attention_into(
+        config,
+        q,
+        k,
+        v,
+        q_scale,
+        k_scale,
+        v_scale,
+        &mut scores,
+        output,
+    )
 }
 
 /// Multi-head quantized attention.
@@ -318,6 +377,95 @@ pub fn quantized_grouped_query_attention(
             qkv.q_scales[h],
             qkv.k_scales[kv_h],
             qkv.v_scales[kv_h],
+            &mut output[q_off..q_off + head_elems],
+        )?;
+    }
+    Ok(())
+}
+
+/// Multi-head quantized attention with a pre-allocated workspace.
+///
+/// Semantically identical to [`quantized_multi_head_attention`], but
+/// reuses the scores buffer from `ws` instead of allocating per head.
+pub fn quantized_multi_head_attention_with_workspace(
+    config: &QuantizedAttentionConfig,
+    qkv: &QuantizedQKV,
+    ws: &mut QuantizedAttentionWorkspace,
+    output: &mut [f32],
+) -> Result<()> {
+    config.validate()?;
+    if config.num_kv_heads != config.num_heads {
+        return Err(invalid_arg("MHA requires num_kv_heads == num_heads; use GQA for grouped"));
+    }
+    let head_elems = config.seq_len * config.head_dim;
+    let total = config.num_heads * head_elems;
+    if qkv.q_data.len() < total || qkv.k_data.len() < total || qkv.v_data.len() < total {
+        return Err(invalid_arg("QKV data too small for MHA dimensions"));
+    }
+    if output.len() < total {
+        return Err(invalid_arg("output buffer too small for MHA"));
+    }
+
+    ws.ensure_capacity(config.seq_len);
+
+    for h in 0..config.num_heads {
+        let off = h * head_elems;
+        quantized_dot_product_attention_into(
+            config,
+            &qkv.q_data[off..off + head_elems],
+            &qkv.k_data[off..off + head_elems],
+            &qkv.v_data[off..off + head_elems],
+            qkv.q_scales[h],
+            qkv.k_scales[h],
+            qkv.v_scales[h],
+            &mut ws.scores,
+            &mut output[off..off + head_elems],
+        )?;
+    }
+    Ok(())
+}
+
+/// Grouped-query quantized attention with a pre-allocated workspace.
+///
+/// Semantically identical to [`quantized_grouped_query_attention`], but
+/// reuses the scores buffer from `ws` instead of allocating per head.
+pub fn quantized_grouped_query_attention_with_workspace(
+    config: &QuantizedAttentionConfig,
+    qkv: &QuantizedQKV,
+    ws: &mut QuantizedAttentionWorkspace,
+    output: &mut [f32],
+) -> Result<()> {
+    config.validate()?;
+    let head_elems = config.seq_len * config.head_dim;
+    let group_size = config.num_heads / config.num_kv_heads;
+    let total_q = config.num_heads * head_elems;
+    let total_kv = config.num_kv_heads * head_elems;
+
+    if qkv.q_data.len() < total_q {
+        return Err(invalid_arg("Q data too small for GQA"));
+    }
+    if qkv.k_data.len() < total_kv || qkv.v_data.len() < total_kv {
+        return Err(invalid_arg("K/V data too small for GQA"));
+    }
+    if output.len() < total_q {
+        return Err(invalid_arg("output too small for GQA"));
+    }
+
+    ws.ensure_capacity(config.seq_len);
+
+    for h in 0..config.num_heads {
+        let kv_h = h / group_size;
+        let q_off = h * head_elems;
+        let kv_off = kv_h * head_elems;
+        quantized_dot_product_attention_into(
+            config,
+            &qkv.q_data[q_off..q_off + head_elems],
+            &qkv.k_data[kv_off..kv_off + head_elems],
+            &qkv.v_data[kv_off..kv_off + head_elems],
+            qkv.q_scales[h],
+            qkv.k_scales[kv_h],
+            qkv.v_scales[kv_h],
+            &mut ws.scores,
             &mut output[q_off..q_off + head_elems],
         )?;
     }
