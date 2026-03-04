@@ -23,6 +23,10 @@ pub mod cpu_avx2_quantize;
 pub mod cuda;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod cuda_graph_capture;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub mod cuda_memory_pool;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub mod cuda_warp_utils;
 pub mod device_aware;
 pub mod device_features;
 pub mod dispatch_planner;

@@ -476,6 +476,7 @@ pub fn matrix_sub(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize) -> Re
     Ok(())
 }
 
+#[allow(dead_code)]
 enum BinOp {
     Add,
     Sub,
