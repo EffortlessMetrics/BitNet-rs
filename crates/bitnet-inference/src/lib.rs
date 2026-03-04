@@ -35,6 +35,7 @@ pub mod generation_state;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod inference_cache;
+pub mod inference_metrics;
 pub mod kernel_recorder;
 pub mod kv_cache_manager;
 pub mod kv_cache_optimized;
