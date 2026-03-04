@@ -1128,7 +1128,7 @@ mod tests {
         let input: Vec<i8> = vec![127, -128, 64, -64];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = int8_layer_norm(&input, 0.05, &[1.0; 4], None, &cfg).unwrap();
-        assert!(out.data.iter().all(|&v| v >= -127 && v <= 127));
+        assert!(out.data.iter().all(|&v| v >= -127));
     }
 
     // =======================================================================

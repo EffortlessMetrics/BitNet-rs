@@ -1250,7 +1250,7 @@ mod tests {
         let mut cache = create_kv_cache(cfg.clone(), EvictionPolicy::LRU).unwrap();
         let (k, v) = make_tokens(&cfg, 4, 10.0);
         append_kv(&mut cache, 0, &k, &v).unwrap();
-        let (gk, gv) = gather_kv(&mut cache, 0, &[1, 3]).unwrap();
+        let (gk, _gv) = gather_kv(&mut cache, 0, &[1, 3]).unwrap();
         assert_eq!(gk.len(), 2 * te);
         assert!((gk[0] - 11.0).abs() < f32::EPSILON); // token 1
         assert!((gk[te] - 13.0).abs() < f32::EPSILON); // token 3
@@ -1618,7 +1618,7 @@ mod tests {
     #[test]
     fn test_batch_append_all_layers() {
         let cfg = small_config(); // 2 layers
-        let te = cfg.token_elements();
+        let _te = cfg.token_elements();
         let mut cache = create_kv_cache(cfg.clone(), EvictionPolicy::LRU).unwrap();
         let (k, v) = make_token(&cfg, 5.0);
         let counts = batch_append_kv(&mut cache, &[&k, &k], &[&v, &v]).unwrap();

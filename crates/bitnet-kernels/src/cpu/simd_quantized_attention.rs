@@ -234,10 +234,8 @@ fn qkv_projection_scalar(
 ) {
     for j in 0..out_dim {
         let row = &weight[j * in_dim..(j + 1) * in_dim];
-        let mut acc = 0.0f32;
-        for i in 0..in_dim {
-            acc += input[i] * row[i] as f32;
-        }
+        let acc: f32 =
+            input[..in_dim].iter().zip(row.iter()).map(|(&inp, &w)| inp * w as f32).sum();
         output[j] = acc * weight_scale;
     }
 }
@@ -267,8 +265,8 @@ unsafe fn qkv_projection_avx2(
         // Horizontal sum of the 8 lanes.
         let mut sum = hsum_avx2(acc);
         // Scalar tail.
-        for i in (chunks * 8)..in_dim {
-            sum += input[i] * row[i] as f32;
+        for (&inp, &w) in input[chunks * 8..in_dim].iter().zip(row[chunks * 8..in_dim].iter()) {
+            sum += inp * w as f32;
         }
         output[j] = sum * weight_scale;
     }
@@ -340,10 +338,11 @@ fn score_computation_scalar(
         let q_row = &q[i * head_dim..(i + 1) * head_dim];
         for j in 0..seq_len {
             let k_row = &k[j * head_dim..(j + 1) * head_dim];
-            let mut dot: i32 = 0;
-            for d in 0..head_dim {
-                dot += q_row[d] as i32 * k_row[d] as i32;
-            }
+            let dot: i32 = q_row
+                .iter()
+                .zip(k_row.iter())
+                .map(|(&q_val, &k_val)| q_val as i32 * k_val as i32)
+                .sum();
             scores[i * seq_len + j] = dot as f32 * combined_scale;
         }
     }
@@ -467,8 +466,8 @@ unsafe fn softmax_row_avx2(row: &mut [f32]) {
         max_vec = _mm256_max_ps(max_vec, v);
     }
     let mut max_val = hsum_max_avx2(max_vec);
-    for i in (chunks * 8)..n {
-        max_val = max_val.max(row[i]);
+    for val in &row[chunks * 8..n] {
+        max_val = max_val.max(*val);
     }
     if max_val == f32::NEG_INFINITY {
         row.iter_mut().for_each(|v| *v = 0.0);
@@ -492,9 +491,9 @@ unsafe fn softmax_row_avx2(row: &mut [f32]) {
         sum_vec = _mm256_add_ps(sum_vec, exp_v);
     }
     let mut sum = hsum_avx2(sum_vec);
-    for i in (chunks * 8)..n {
-        row[i] = (row[i] - max_val).exp();
-        sum += row[i];
+    for val in &mut row[chunks * 8..n] {
+        *val = (*val - max_val).exp();
+        sum += *val;
     }
     // Normalize.
     if sum > 0.0 {
@@ -505,8 +504,8 @@ unsafe fn softmax_row_avx2(row: &mut [f32]) {
             let v = _mm256_loadu_ps(ptr);
             _mm256_storeu_ps(ptr, _mm256_mul_ps(v, inv_vec));
         }
-        for i in (chunks * 8)..n {
-            row[i] *= inv;
+        for val in &mut row[chunks * 8..n] {
+            *val *= inv;
         }
     }
 }
@@ -580,8 +579,8 @@ fn value_aggregation_scalar(
         let w_row = &weights[i * seq_len..(i + 1) * seq_len];
         for d in 0..head_dim {
             let mut acc = 0.0f32;
-            for j in 0..seq_len {
-                acc += w_row[j] * v[j * head_dim + d] as f32;
+            for (j, &w) in w_row[..seq_len].iter().enumerate() {
+                acc += w * v[j * head_dim + d] as f32;
             }
             output[i * head_dim + d] = acc * v_scale;
         }
@@ -688,9 +687,11 @@ unsafe fn dequantized_output_avx2(
         }
         _mm256_storeu_ps(output.as_mut_ptr().add(base), result);
     }
-    for i in (chunks * 8)..n {
-        let val = quantized[i] as f32 * scale;
-        output[i] = if let Some(b) = bias { val + b[i] } else { val };
+    for (idx, (&q, out)) in
+        quantized[chunks * 8..n].iter().zip(output[chunks * 8..n].iter_mut()).enumerate()
+    {
+        let val = q as f32 * scale;
+        *out = if let Some(b) = bias { val + b[chunks * 8 + idx] } else { val };
     }
 }
 

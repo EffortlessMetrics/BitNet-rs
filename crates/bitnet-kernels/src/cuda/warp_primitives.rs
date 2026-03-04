@@ -1814,7 +1814,7 @@ mod tests {
         }
         // After 5 butterfly stages, all lanes should have ~2*sum
         // (because we add both sides at each step)
-        let sum = (1..=32).sum::<u32>() as f32;
+        let _sum = (1..=32).sum::<u32>() as f32;
         // Each lane should have sum * 2^0 + ... but butterfly pattern
         // gives 2*sum in each step — the actual result is 32 * lane_value_contribution
         // This is a simplified check: all lanes should have the same value
