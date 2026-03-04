@@ -145,21 +145,36 @@ fn scalar_dot(a: &[f32], b: &[f32]) -> f32 {
     a.iter().zip(b).map(|(&x, &y)| x * y).sum()
 }
 
+/// Scalar Q·K^T → scores `[seq_q, seq_k]` written into `out`.
+fn scalar_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
+    debug_assert!(out.len() >= seq_q * seq_k);
+    for i in 0..seq_q {
+        for j in 0..seq_k {
+            out[i * seq_k + j] = scalar_dot(&q[i * dim..(i + 1) * dim], &k[j * dim..(j + 1) * dim]);
+        }
+    }
+}
+
 /// Scalar Q·K^T → scores `[seq_q, seq_k]`.
 fn scalar_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
     let mut scores = vec![0.0_f32; seq_q * seq_k];
-    for i in 0..seq_q {
-        for j in 0..seq_k {
-            scores[i * seq_k + j] =
-                scalar_dot(&q[i * dim..(i + 1) * dim], &k[j * dim..(j + 1) * dim]);
-        }
-    }
+    scalar_qk_into(q, k, seq_q, seq_k, dim, &mut scores);
     scores
 }
 
-/// Scalar scores·V → output `[seq_q, dim_v]`.
-fn scalar_sv(scores: &[f32], v: &[f32], seq_q: usize, seq_k: usize, dim_v: usize) -> Vec<f32> {
-    let mut out = vec![0.0_f32; seq_q * dim_v];
+/// Scalar scores·V → output `[seq_q, dim_v]` written into `out`.
+fn scalar_sv_into(
+    scores: &[f32],
+    v: &[f32],
+    seq_q: usize,
+    seq_k: usize,
+    dim_v: usize,
+    out: &mut [f32],
+) {
+    debug_assert!(out.len() >= seq_q * dim_v);
+    for val in &mut out[..seq_q * dim_v] {
+        *val = 0.0;
+    }
     for i in 0..seq_q {
         for j in 0..seq_k {
             let w = scores[i * seq_k + j];
@@ -168,6 +183,12 @@ fn scalar_sv(scores: &[f32], v: &[f32], seq_q: usize, seq_k: usize, dim_v: usize
             }
         }
     }
+}
+
+/// Scalar scores·V → output `[seq_q, dim_v]`.
+fn scalar_sv(scores: &[f32], v: &[f32], seq_q: usize, seq_k: usize, dim_v: usize) -> Vec<f32> {
+    let mut out = vec![0.0_f32; seq_q * dim_v];
+    scalar_sv_into(scores, v, seq_q, seq_k, dim_v, &mut out);
     out
 }
 
@@ -201,14 +222,20 @@ unsafe fn avx2_dot(a: &[f32], b: &[f32]) -> f32 {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn avx2_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
-    let mut scores = vec![0.0_f32; seq_q * seq_k];
+fn avx2_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
+    debug_assert!(out.len() >= seq_q * seq_k);
     for i in 0..seq_q {
         for j in 0..seq_k {
-            scores[i * seq_k + j] =
+            out[i * seq_k + j] =
                 unsafe { avx2_dot(&q[i * dim..(i + 1) * dim], &k[j * dim..(j + 1) * dim]) };
         }
     }
+}
+
+#[cfg(target_arch = "x86_64")]
+fn avx2_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
+    let mut scores = vec![0.0_f32; seq_q * seq_k];
+    avx2_qk_into(q, k, seq_q, seq_k, dim, &mut scores);
     scores
 }
 
@@ -236,6 +263,19 @@ fn dispatch_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> 
     }
     // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
     scalar_qk(q, k, seq_q, seq_k, dim)
+}
+
+/// Compute Q·K^T into a pre-allocated buffer.
+fn dispatch_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            avx2_qk_into(q, k, seq_q, seq_k, dim, out);
+            return;
+        }
+    }
+    // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
+    scalar_qk_into(q, k, seq_q, seq_k, dim, out);
 }
 
 // ── Public API ─────────────────────────────────────────────────────
@@ -412,6 +452,142 @@ impl AttentionKernel {
     }
 }
 
+// ── Workspace for allocation reuse ────────────────────────────────
+
+/// Pre-allocated buffers for multi-head attention, avoiding per-head
+/// allocations in the hot loop.
+///
+/// Create once (or once per new shape) and pass to
+/// [`AttentionKernel::multi_head_attention_with_workspace`].
+///
+/// # Savings
+///
+/// Without workspace: `num_heads × (3 × seq_len × head_dim + seq_len²)`
+/// temporary allocations per forward pass.
+///
+/// With workspace: **zero** temporary allocations in the per-head loop.
+pub struct AttentionWorkspace {
+    q_head: Vec<f32>,
+    k_head: Vec<f32>,
+    v_head: Vec<f32>,
+    scores: Vec<f32>,
+    head_out: Vec<f32>,
+}
+
+impl AttentionWorkspace {
+    /// Create a workspace sized for the given attention dimensions.
+    pub fn new(seq_len: usize, head_dim: usize) -> Self {
+        let head_buf = seq_len * head_dim;
+        let scores_buf = seq_len * seq_len;
+        Self {
+            q_head: vec![0.0_f32; head_buf],
+            k_head: vec![0.0_f32; head_buf],
+            v_head: vec![0.0_f32; head_buf],
+            scores: vec![0.0_f32; scores_buf],
+            head_out: vec![0.0_f32; head_buf],
+        }
+    }
+
+    /// Ensure the workspace is large enough for the given dimensions,
+    /// growing buffers if needed.
+    pub fn ensure_capacity(&mut self, seq_len: usize, head_dim: usize) {
+        let head_buf = seq_len * head_dim;
+        let scores_buf = seq_len * seq_len;
+        if self.q_head.len() < head_buf {
+            self.q_head.resize(head_buf, 0.0);
+            self.k_head.resize(head_buf, 0.0);
+            self.v_head.resize(head_buf, 0.0);
+            self.head_out.resize(head_buf, 0.0);
+        }
+        if self.scores.len() < scores_buf {
+            self.scores.resize(scores_buf, 0.0);
+        }
+    }
+}
+
+impl AttentionKernel {
+    /// Multi-head attention using a pre-allocated workspace to avoid
+    /// per-head temporary allocations.
+    ///
+    /// Semantically identical to [`Self::multi_head_attention`], but
+    /// reuses buffers from `ws` instead of allocating inside the loop.
+    pub fn multi_head_attention_with_workspace(
+        q: &[f32],
+        k: &[f32],
+        v: &[f32],
+        cfg: &AttentionConfig,
+        ws: &mut AttentionWorkspace,
+    ) -> Result<Vec<f32>> {
+        cfg.validate()?;
+        let AttentionConfig { num_heads, head_dim, seq_len, causal, .. } = *cfg;
+        let model_dim = num_heads * head_dim;
+        let expected = seq_len * model_dim;
+
+        if q.len() != expected {
+            return Err(invalid_arg("q length does not match seq_len * num_heads * head_dim"));
+        }
+        if k.len() != expected {
+            return Err(invalid_arg("k length does not match seq_len * num_heads * head_dim"));
+        }
+        if v.len() != expected {
+            return Err(invalid_arg("v length does not match seq_len * num_heads * head_dim"));
+        }
+
+        ws.ensure_capacity(seq_len, head_dim);
+
+        let scale = cfg.resolved_scale();
+        let mask_vec = if causal { Some(causal_mask(seq_len)) } else { None };
+        let mask_ref = mask_vec.as_deref();
+
+        let mut output = vec![0.0_f32; expected];
+        let head_buf = seq_len * head_dim;
+        let scores_len = seq_len * seq_len;
+
+        for h in 0..num_heads {
+            extract_head_into(q, seq_len, num_heads, head_dim, h, &mut ws.q_head);
+            extract_head_into(k, seq_len, num_heads, head_dim, h, &mut ws.k_head);
+            extract_head_into(v, seq_len, num_heads, head_dim, h, &mut ws.v_head);
+
+            // Q · K^T → scores
+            dispatch_qk_into(
+                &ws.q_head[..head_buf],
+                &ws.k_head[..head_buf],
+                seq_len,
+                seq_len,
+                head_dim,
+                &mut ws.scores,
+            );
+
+            // scale
+            for s in &mut ws.scores[..scores_len] {
+                *s *= scale;
+            }
+
+            // optional mask
+            if let Some(m) = mask_ref {
+                apply_mask(&mut ws.scores[..scores_len], m)?;
+            }
+
+            // softmax row-wise
+            softmax_rows(&mut ws.scores[..scores_len], seq_len, seq_len);
+
+            // scores · V → head_out
+            scalar_sv_into(
+                &ws.scores[..scores_len],
+                &ws.v_head[..head_buf],
+                seq_len,
+                seq_len,
+                head_dim,
+                &mut ws.head_out,
+            );
+
+            scatter_head(&mut output, &ws.head_out[..head_buf], seq_len, num_heads, head_dim, h);
+        }
+
+        Ok(output)
+    }
+}
+
 // ── CpuAttentionConfig ─────────────────────────────────────────────
 
 /// Batched attention configuration mirroring the CUDA
@@ -546,15 +722,17 @@ impl CpuAttention {
             scale: self.config.scale,
         };
 
+        let mut ws = AttentionWorkspace::new(seq_len, head_dim);
         let mut output = Vec::with_capacity(total);
         for b in 0..batch_size {
             let start = b * batch_stride;
             let end = start + batch_stride;
-            let batch_out = AttentionKernel::multi_head_attention(
+            let batch_out = AttentionKernel::multi_head_attention_with_workspace(
                 &q[start..end],
                 &k[start..end],
                 &v[start..end],
                 &cfg,
+                &mut ws,
             )?;
             output.extend_from_slice(&batch_out);
         }
@@ -823,13 +1001,27 @@ fn extract_head(
     head_dim: usize,
     h: usize,
 ) -> Vec<f32> {
-    let stride = num_heads * head_dim;
-    let mut head = Vec::with_capacity(seq_len * head_dim);
-    for t in 0..seq_len {
-        let start = t * stride + h * head_dim;
-        head.extend_from_slice(&data[start..start + head_dim]);
-    }
+    let mut head = vec![0.0_f32; seq_len * head_dim];
+    extract_head_into(data, seq_len, num_heads, head_dim, h, &mut head);
     head
+}
+
+/// Extract head `h` into a pre-allocated buffer.
+fn extract_head_into(
+    data: &[f32],
+    seq_len: usize,
+    num_heads: usize,
+    head_dim: usize,
+    h: usize,
+    out: &mut [f32],
+) {
+    let stride = num_heads * head_dim;
+    for t in 0..seq_len {
+        let src_start = t * stride + h * head_dim;
+        let dst_start = t * head_dim;
+        out[dst_start..dst_start + head_dim]
+            .copy_from_slice(&data[src_start..src_start + head_dim]);
+    }
 }
 
 /// Scatter a `[seq_len, head_dim]` result back into the interleaved
