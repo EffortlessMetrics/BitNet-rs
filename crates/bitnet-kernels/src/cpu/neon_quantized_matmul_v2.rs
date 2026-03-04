@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized I2_S quantized matrix multiplication v2 for Apple Silicon.
 //!
 //! Targets the I2_S 2-bit ternary encoding used by BitNet models:

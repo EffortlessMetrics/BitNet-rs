@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized quantized feed-forward network kernels for Apple Silicon.
 //!
 //! Provides fused quantized FFN primitives (SwiGLU, gated MLP, residual add)

@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON-optimized GELU and activation function variants for Apple Silicon.
 //!
 //! Provides fast and exact GELU, SwiGLU, GeGLU, and fast tanh using NEON SIMD

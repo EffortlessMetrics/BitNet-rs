@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized tiled matrix multiplication for Apple Silicon.
 //!
 //! Provides cache-friendly tiled matmul, a fixed 4×4 micro-kernel,

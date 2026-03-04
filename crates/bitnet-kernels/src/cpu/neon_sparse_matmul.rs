@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized sparse matrix multiplication kernels for Apple Silicon.
 //!
 //! Provides CSR, CSC, block-sparse matrix multiply, sparse dot product, and

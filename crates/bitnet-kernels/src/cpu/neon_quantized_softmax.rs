@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized quantized softmax operations for Apple Silicon / ARM64.
 //!
 //! Provides numerically stable softmax variants designed for quantized

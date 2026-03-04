@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON optimized token embedding kernels for Apple Silicon.
 //!
 //! Provides SIMD-accelerated token embedding operations using `float32x4`

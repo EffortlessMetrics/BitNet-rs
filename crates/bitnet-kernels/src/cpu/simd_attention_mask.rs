@@ -7,7 +7,7 @@
 //! On x86-64 with AVX2, hot loops are 8-wide; a scalar fallback handles all
 //! other targets and tail elements.  All masks use the **additive** convention:
 //! `0.0` means "attend" and `f32::NEG_INFINITY` means "block".
-#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 
 #[cfg(target_arch = "x86_64")]
 #[allow(clippy::wildcard_imports)]

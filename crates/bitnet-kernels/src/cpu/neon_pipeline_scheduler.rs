@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON-optimized pipeline scheduler for Apple Silicon inference.
 //!
 //! Provides an efficient multi-stage pipeline that dispatches compute kernels
