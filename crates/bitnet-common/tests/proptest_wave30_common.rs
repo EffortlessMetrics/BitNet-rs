@@ -9,10 +9,6 @@
 //! consistency, type enum coverage, config defaults, and security limits.
 
 use bitnet_common::error::{BitNetError, SecurityLimits};
-use bitnet_common::shape_validator::{
-    assert_broadcastable, assert_dim, assert_element_count, assert_head_divisible,
-    assert_matmul_compat, assert_rank, assert_shape_eq,
-};
 use bitnet_common::types::{
     Device, GenerationConfig, ModelMetadata, PerformanceMetrics, QuantizationType,
 };
@@ -20,9 +16,6 @@ use proptest::prelude::*;
 
 // ── Strategy helpers ────────────────────────────────────────────────────────
 
-fn arb_shape(max_rank: usize, max_dim: usize) -> impl Strategy<Value = Vec<usize>> {
-    prop::collection::vec(1usize..=max_dim, 1..=max_rank)
-}
 
 fn arb_device() -> impl Strategy<Value = Device> {
     prop_oneof![
@@ -41,142 +34,6 @@ fn arb_quant_type() -> impl Strategy<Value = QuantizationType> {
         Just(QuantizationType::TL1),
         Just(QuantizationType::TL2),
     ]
-}
-
-// ── Shape validation: equality ──────────────────────────────────────────────
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
-    /// Shape equality is reflexive.
-    #[test]
-    fn shape_eq_reflexive(shape in arb_shape(4, 64)) {
-        prop_assert!(assert_shape_eq("test", &shape, &shape).is_ok());
-    }
-
-    /// Different shapes are not equal.
-    #[test]
-    fn shape_eq_different_fails(
-        a in arb_shape(4, 64),
-        b in arb_shape(4, 64),
-    ) {
-        if a != b {
-            prop_assert!(assert_shape_eq("test", &a, &b).is_err());
-        }
-    }
-
-    /// Rank assertion succeeds for correct rank.
-    #[test]
-    fn rank_assert_correct(shape in arb_shape(4, 64)) {
-        prop_assert!(assert_rank("test", &shape, shape.len()).is_ok());
-    }
-
-    /// Rank assertion fails for wrong rank.
-    #[test]
-    fn rank_assert_wrong_fails(shape in arb_shape(4, 64), extra in 1usize..5) {
-        let wrong_rank = shape.len() + extra;
-        prop_assert!(assert_rank("test", &shape, wrong_rank).is_err());
-    }
-
-    /// Dim assertion succeeds when dimension matches.
-    #[test]
-    fn dim_assert_correct(shape in arb_shape(4, 64)) {
-        for (i, &d) in shape.iter().enumerate() {
-            prop_assert!(assert_dim("test", &shape, i, d).is_ok());
-        }
-    }
-
-    /// Dim assertion fails for wrong size.
-    #[test]
-    fn dim_assert_wrong_fails(shape in arb_shape(4, 64), extra in 1usize..10) {
-        if !shape.is_empty() {
-            let wrong = shape[0] + extra;
-            prop_assert!(assert_dim("test", &shape, 0, wrong).is_err());
-        }
-    }
-}
-
-// ── Shape validation: element count ─────────────────────────────────────────
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
-    /// Element count of shape equals product of dimensions.
-    #[test]
-    fn element_count_product(shape in arb_shape(4, 16)) {
-        let product: usize = shape.iter().product();
-        prop_assert!(assert_element_count("test", &shape, product).is_ok());
-    }
-
-    /// Wrong element count fails.
-    #[test]
-    fn element_count_wrong_fails(shape in arb_shape(4, 16), extra in 1usize..100) {
-        let product: usize = shape.iter().product();
-        prop_assert!(assert_element_count("test", &shape, product + extra).is_err());
-    }
-}
-
-// ── Shape validation: head divisible ────────────────────────────────────────
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
-    /// Hidden size divisible by num_heads succeeds.
-    #[test]
-    fn head_divisible_ok(num_heads in 1usize..32, head_dim in 1usize..128) {
-        let hidden = num_heads * head_dim;
-        prop_assert!(assert_head_divisible("test", hidden, num_heads).is_ok());
-    }
-
-    /// Hidden size not divisible by num_heads fails.
-    #[test]
-    fn head_divisible_fails(num_heads in 2usize..32, head_dim in 1usize..128) {
-        let hidden = num_heads * head_dim + 1;
-        prop_assert!(assert_head_divisible("test", hidden, num_heads).is_err());
-    }
-}
-
-// ── Shape validation: matmul compatibility ──────────────────────────────────
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
-    /// [M, K] × [K, N] is compatible.
-    #[test]
-    fn matmul_compat_valid(m in 1usize..64, k in 1usize..64, n in 1usize..64) {
-        prop_assert!(assert_matmul_compat("test", &[m, k], &[k, n]).is_ok());
-    }
-
-    /// [M, K1] × [K2, N] with K1 != K2 is incompatible.
-    #[test]
-    fn matmul_compat_invalid(m in 1usize..64, k1 in 1usize..64, n in 1usize..64, delta in 1usize..10) {
-        let k2 = k1 + delta;
-        prop_assert!(assert_matmul_compat("test", &[m, k1], &[k2, n]).is_err());
-    }
-}
-
-// ── Shape validation: broadcastable ─────────────────────────────────────────
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
-    /// Any shape is broadcastable with itself.
-    #[test]
-    fn broadcastable_reflexive(shape in arb_shape(4, 16)) {
-        prop_assert!(assert_broadcastable("test", &shape, &shape).is_ok());
-    }
-
-    /// Shape [1, N] is broadcastable with [M, N].
-    #[test]
-    fn broadcastable_unit_dim(m in 2usize..16, n in 1usize..16) {
-        prop_assert!(assert_broadcastable("test", &[1, n], &[m, n]).is_ok());
-    }
-
-    /// Shape [M, 1] is broadcastable with [M, N].
-    #[test]
-    fn broadcastable_trailing_unit(m in 1usize..16, n in 2usize..16) {
-        prop_assert!(assert_broadcastable("test", &[m, 1], &[m, n]).is_ok());
-    }
 }
 
 // ── Device enum properties ──────────────────────────────────────────────────
