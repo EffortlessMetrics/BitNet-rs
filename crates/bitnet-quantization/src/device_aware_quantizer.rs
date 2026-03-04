@@ -452,7 +452,7 @@ impl CPUQuantizer {
         // TL2 lookup table: 4 values for 2-bit codes
         let lut = [-1.0f32, -0.33, 0.33, 1.0];
 
-        let mut dequantized = Vec::new();
+        let mut dequantized = Vec::with_capacity(tensor.numel());
         let block_size = tensor.block_size;
         let num_blocks = tensor.scales.len();
 
