@@ -56,6 +56,7 @@ impl EvictionPolicy {
     /// Create a hybrid policy with the given attention-score weight in `[0.0, 1.0]`.
     /// The weight is clamped and stored as a percentage (0–100).
     #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn hybrid(attention_weight: f32) -> Self {
         let pct = (attention_weight.clamp(0.0, 1.0) * 100.0).round() as u8;
         Self::Hybrid { attention_weight: pct }
@@ -63,7 +64,7 @@ impl EvictionPolicy {
 
     /// Return the attention-score weight as `f32` in `[0.0, 1.0]`.
     #[must_use]
-    pub fn attention_weight_f32(&self) -> f32 {
+    pub const fn attention_weight_f32(&self) -> f32 {
         match self {
             Self::Lru | Self::Fifo => 0.0,
             Self::AttentionScore => 1.0,
@@ -79,7 +80,7 @@ impl fmt::Display for EvictionPolicy {
             Self::Fifo => write!(f, "FIFO"),
             Self::AttentionScore => write!(f, "AttentionScore"),
             Self::Hybrid { attention_weight } => {
-                write!(f, "Hybrid(attn={:.0}%)", *attention_weight as f32)
+                write!(f, "Hybrid(attn={:.0}%)", f32::from(*attention_weight))
             }
         }
     }
@@ -103,7 +104,7 @@ struct EvictionEntry {
 impl KvEviction {
     /// Create a new eviction manager with the given policy.
     #[must_use]
-    pub fn new(policy: EvictionPolicy) -> Self {
+    pub const fn new(policy: EvictionPolicy) -> Self {
         Self { policy, entries: Vec::new(), next_order: 0 }
     }
 
@@ -128,13 +129,13 @@ impl KvEviction {
 
     /// Number of tracked entries.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Whether the tracker is empty.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
@@ -153,10 +154,15 @@ impl KvEviction {
             .enumerate()
             .map(|(idx, e)| {
                 let priority = match self.policy {
-                    EvictionPolicy::Lru | EvictionPolicy::Fifo => e.insertion_order as f64,
-                    EvictionPolicy::AttentionScore => e.attention_score as f64,
+                    EvictionPolicy::Lru | EvictionPolicy::Fifo => {
+                        #[allow(clippy::cast_precision_loss)]
+                        let v = e.insertion_order as f64;
+                        v
+                    }
+                    EvictionPolicy::AttentionScore => f64::from(e.attention_score),
                     EvictionPolicy::Hybrid { attention_weight } => {
-                        let w = attention_weight as f64 / 100.0;
+                        let w = f64::from(attention_weight) / 100.0;
+                        #[allow(clippy::cast_precision_loss)]
                         let max_order = self
                             .entries
                             .iter()
@@ -164,12 +170,14 @@ impl KvEviction {
                             .max()
                             .unwrap_or(1) as f64;
                         let recency = if max_order > 0.0 {
-                            e.insertion_order as f64 / max_order
+                            #[allow(clippy::cast_precision_loss)]
+                            let v = e.insertion_order as f64 / max_order;
+                            v
                         } else {
                             0.0
                         };
-                        let attn = e.attention_score as f64;
-                        (1.0 - w) * recency + w * attn
+                        let attn = f64::from(e.attention_score);
+                        (1.0 - w).mul_add(recency, w * attn)
                     }
                 };
                 (idx, priority)
