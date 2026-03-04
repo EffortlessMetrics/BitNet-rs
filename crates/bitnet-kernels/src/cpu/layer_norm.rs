@@ -66,9 +66,32 @@ pub fn layer_norm(
     beta: Option<&[f32]>,
     config: &LayerNormConfig,
 ) -> Result<Vec<f32>> {
-    let norm_size = validate_layer_norm_args(input, gamma, beta, config)?;
-    let batch_size = input.len() / norm_size;
     let mut output = vec![0.0f32; input.len()];
+    layer_norm_into(input, gamma, beta, config, &mut output)?;
+    Ok(output)
+}
+
+/// Like [`layer_norm`] but writes the result into an existing `output` buffer,
+/// avoiding allocation on every call.
+///
+/// `output.len()` must equal `input.len()`.
+///
+/// # Errors
+///
+/// Returns `InvalidArguments` on dimension mismatches, output length mismatch,
+/// empty input, or non-positive/non-finite eps.
+pub fn layer_norm_into(
+    input: &[f32],
+    gamma: &[f32],
+    beta: Option<&[f32]>,
+    config: &LayerNormConfig,
+    output: &mut [f32],
+) -> Result<()> {
+    let norm_size = validate_layer_norm_args(input, gamma, beta, config)?;
+    if output.len() != input.len() {
+        return Err(invalid_args("output buffer length must equal input length"));
+    }
+    let batch_size = input.len() / norm_size;
 
     for b in 0..batch_size {
         let start = b * norm_size;
@@ -99,7 +122,7 @@ pub fn layer_norm(
         }
     }
 
-    Ok(output)
+    Ok(())
 }
 
 /// Compute RMS (root mean square) normalization.
@@ -116,9 +139,31 @@ pub fn layer_norm(
 /// Returns `InvalidArguments` on dimension mismatches, empty input,
 /// or non-positive/non-finite eps.
 pub fn rms_norm(input: &[f32], gamma: &[f32], config: &LayerNormConfig) -> Result<Vec<f32>> {
-    let norm_size = validate_rms_norm_args(input, gamma, config)?;
-    let batch_size = input.len() / norm_size;
     let mut output = vec![0.0f32; input.len()];
+    rms_norm_into(input, gamma, config, &mut output)?;
+    Ok(output)
+}
+
+/// Like [`rms_norm`] but writes the result into an existing `output` buffer,
+/// avoiding allocation on every call.
+///
+/// `output.len()` must equal `input.len()`.
+///
+/// # Errors
+///
+/// Returns `InvalidArguments` on dimension mismatches, output length mismatch,
+/// empty input, or non-positive/non-finite eps.
+pub fn rms_norm_into(
+    input: &[f32],
+    gamma: &[f32],
+    config: &LayerNormConfig,
+    output: &mut [f32],
+) -> Result<()> {
+    let norm_size = validate_rms_norm_args(input, gamma, config)?;
+    if output.len() != input.len() {
+        return Err(invalid_args("output buffer length must equal input length"));
+    }
+    let batch_size = input.len() / norm_size;
 
     for b in 0..batch_size {
         let start = b * norm_size;
@@ -133,7 +178,7 @@ pub fn rms_norm(input: &[f32], gamma: &[f32], config: &LayerNormConfig) -> Resul
         }
     }
 
-    Ok(output)
+    Ok(())
 }
 
 // ── Internal helpers ───────────────────────────────────────────────
@@ -1417,5 +1462,68 @@ mod tests {
         assert_eq!(config.spatial_size, 8);
         assert!((config.eps - 1e-5).abs() < 1e-10);
         assert!(config.elementwise_affine);
+    }
+
+    // ── _into variant tests ────────────────────────────────────────
+
+    #[test]
+    fn layer_norm_into_matches_allocating() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let gamma = vec![1.0; 4];
+        let beta = vec![0.0; 4];
+        let config = LayerNormConfig::new(vec![4]);
+
+        let expected = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+        let mut output = vec![0.0f32; 4];
+        layer_norm_into(&input, &gamma, Some(&beta), &config, &mut output).unwrap();
+
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn layer_norm_into_rejects_wrong_output_len() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let gamma = vec![1.0; 4];
+        let config = LayerNormConfig::new(vec![4]);
+        let mut output = vec![0.0f32; 3]; // wrong length
+
+        assert!(layer_norm_into(&input, &gamma, None, &config, &mut output).is_err());
+    }
+
+    #[test]
+    fn rms_norm_into_matches_allocating() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let gamma = vec![1.0; 4];
+        let config = LayerNormConfig::new(vec![4]);
+
+        let expected = rms_norm(&input, &gamma, &config).unwrap();
+        let mut output = vec![0.0f32; 4];
+        rms_norm_into(&input, &gamma, &config, &mut output).unwrap();
+
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn rms_norm_into_rejects_wrong_output_len() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let gamma = vec![1.0; 4];
+        let config = LayerNormConfig::new(vec![4]);
+        let mut output = vec![0.0f32; 5]; // wrong length
+
+        assert!(rms_norm_into(&input, &gamma, &config, &mut output).is_err());
+    }
+
+    #[test]
+    fn layer_norm_into_batch_matches_allocating() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let gamma = vec![1.0; 4];
+        let beta = vec![0.5; 4];
+        let config = LayerNormConfig::new(vec![4]);
+
+        let expected = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+        let mut output = vec![0.0f32; 8];
+        layer_norm_into(&input, &gamma, Some(&beta), &config, &mut output).unwrap();
+
+        assert_eq!(output, expected);
     }
 }
