@@ -280,9 +280,12 @@ pub fn softmax_with_temperature(input: &[f32], output: &mut [f32], temperature: 
         return Ok(());
     }
 
-    // Scale then delegate.
-    let scaled: Vec<f32> = input.iter().map(|&x| x / temperature).collect();
-    softmax_f32(&scaled, output)
+    // Scale into output buffer, then softmax in-place (avoids a Vec allocation).
+    let inv_temp = 1.0 / temperature;
+    for (o, &x) in output.iter_mut().zip(input.iter()) {
+        *o = x * inv_temp;
+    }
+    softmax_f32_inplace(output)
 }
 
 /// Masked softmax: positions where `mask[i]` is `false` are set to 0 in the
