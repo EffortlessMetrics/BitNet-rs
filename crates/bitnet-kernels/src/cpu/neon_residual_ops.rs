@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON-optimized residual connection and normalization operations
 //! for Apple Silicon (AArch64).
 //!

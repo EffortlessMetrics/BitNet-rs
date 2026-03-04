@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON Flash Attention v2 kernel for Apple Silicon.
 //!
 //! Implements tiled, memory-efficient flash attention v2 with NEON SIMD

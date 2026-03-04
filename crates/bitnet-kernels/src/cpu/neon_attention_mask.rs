@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON optimized attention mask operations for Apple Silicon.
 //!
 //! Provides SIMD-accelerated attention masking: causal (triangular), padding,

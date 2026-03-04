@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON dynamic quantization kernels for Apple Silicon.
 //!
 //! Provides NEON-optimized dynamic quantization operations including

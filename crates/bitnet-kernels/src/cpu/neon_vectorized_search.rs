@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON optimized vectorized search and similarity operations for Apple Silicon.
 //!
 //! Provides SIMD-accelerated nearest-neighbor search and distance/similarity

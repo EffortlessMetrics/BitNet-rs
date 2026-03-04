@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON optimized Grouped Query Attention (GQA) for Apple Silicon.
 //!
 //! GQA shares KV heads across multiple query heads, reducing memory bandwidth.

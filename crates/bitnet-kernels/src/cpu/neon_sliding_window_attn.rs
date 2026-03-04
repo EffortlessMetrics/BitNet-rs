@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON sliding window attention kernel for Apple Silicon.
 //!
 //! Provides efficient local attention with a sliding window mask, restricting

@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! NEON SIMD-accelerated 1D convolution kernels for Apple Silicon.
 //!
 //! Provides vectorized 1D convolution variants using AArch64 NEON intrinsics:

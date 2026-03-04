@@ -1,3 +1,4 @@
+#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
 //! ARM NEON optimized batch matrix multiplication for Apple Silicon (aarch64).
 //!
 //! Provides batched GEMM variants accelerated with `float32x4_t` NEON intrinsics
