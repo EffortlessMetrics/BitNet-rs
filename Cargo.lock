@@ -1544,6 +1544,7 @@ dependencies = [
 name = "bitnet-testing-policy-core"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-testing-policy-snapshot-core",
  "bitnet-testing-profile",
  "bitnet-testing-scenarios-core",
  "insta",
@@ -1585,6 +1586,14 @@ version = "0.2.1-dev"
 dependencies = [
  "bitnet-testing-policy-interop",
  "bitnet-testing-policy-state-core",
+]
+
+[[package]]
+name = "bitnet-testing-policy-snapshot-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-testing-profile",
+ "bitnet-testing-scenarios-core",
 ]
 
 [[package]]
