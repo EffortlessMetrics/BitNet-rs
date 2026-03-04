@@ -38,6 +38,7 @@ pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
+pub mod kernel_profiler;
 pub mod kernel_select;
 pub mod kernel_selection;
 pub mod kernels;
