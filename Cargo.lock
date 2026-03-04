@@ -690,12 +690,21 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-engine-state-core",
  "bitnet-generation",
  "bitnet-logits",
  "insta",
  "proptest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-engine-state-core"
+version = "0.2.1-dev"
+dependencies = [
+ "proptest",
+ "serde",
 ]
 
 [[package]]

@@ -4,6 +4,7 @@
 //! session must do, without prescribing _how_ it does it.  Concrete
 //! implementations live in `bitnet-inference`.
 
+pub use bitnet_engine_state_core::{EngineState, EngineStateError, EngineStateTracker};
 pub use bitnet_generation::{
     GenerationConfig, GenerationStats, StopCriteria, StopReason, StreamEvent, TokenEvent,
 };
@@ -266,110 +267,6 @@ impl SessionId {
 }
 
 // ---------------------------------------------------------------------------
-// Engine state machine
-// ---------------------------------------------------------------------------
-
-/// States an inference engine can be in.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EngineState {
-    /// Engine is initialised and waiting for work.
-    Idle,
-    /// Engine is actively generating tokens.
-    Running,
-    /// Engine has finished generating and is ready to be discarded.
-    Done,
-}
-
-/// Error produced by invalid [`EngineStateTracker`] transitions.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EngineStateError(pub String);
-
-impl std::fmt::Display for EngineStateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::error::Error for EngineStateError {}
-
-/// Tracks and enforces valid state transitions for an inference engine.
-///
-/// Valid transitions:
-/// - [`EngineState::Idle`] → [`EngineState::Running`]  via [`start`](Self::start)
-/// - [`EngineState::Running`] → [`EngineState::Done`]  via [`finish`](Self::finish)
-///
-/// All other transitions return [`EngineStateError`].
-///
-/// # Examples
-///
-/// ```
-/// use bitnet_engine_core::{EngineStateTracker, EngineState};
-///
-/// let mut tracker = EngineStateTracker::new();
-/// assert_eq!(tracker.state(), &EngineState::Idle);
-///
-/// tracker.start().unwrap();
-/// assert_eq!(tracker.state(), &EngineState::Running);
-///
-/// tracker.finish().unwrap();
-/// assert_eq!(tracker.state(), &EngineState::Done);
-///
-/// // Invalid transition returns an error.
-/// let err = tracker.finish().unwrap_err();
-/// assert!(!err.to_string().is_empty());
-/// ```
-#[derive(Debug)]
-pub struct EngineStateTracker {
-    state: EngineState,
-}
-
-impl Default for EngineStateTracker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl EngineStateTracker {
-    /// Create a new tracker in the [`EngineState::Idle`] state.
-    pub const fn new() -> Self {
-        Self { state: EngineState::Idle }
-    }
-
-    /// Return a reference to the current state.
-    pub const fn state(&self) -> &EngineState {
-        &self.state
-    }
-
-    /// Transition `Idle → Running`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EngineStateError`] if the current state is not [`EngineState::Idle`].
-    pub fn start(&mut self) -> std::result::Result<(), EngineStateError> {
-        if self.state == EngineState::Idle {
-            self.state = EngineState::Running;
-            Ok(())
-        } else {
-            Err(EngineStateError(format!("cannot transition to Running from {:?}", self.state)))
-        }
-    }
-
-    /// Transition `Running → Done`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EngineStateError`] if the current state is not [`EngineState::Running`].
-    pub fn finish(&mut self) -> std::result::Result<(), EngineStateError> {
-        if self.state == EngineState::Running {
-            self.state = EngineState::Done;
-            Ok(())
-        } else {
-            Err(EngineStateError(format!("cannot transition to Done from {:?}", self.state)))
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Concurrency configuration
 // ---------------------------------------------------------------------------
 
@@ -447,6 +344,14 @@ mod tests {
     fn generation_config_re_exported() {
         let cfg = GenerationConfig::default();
         assert_eq!(cfg.max_new_tokens, 128);
+    }
+
+    #[test]
+    fn engine_state_tracker_re_exported() {
+        let mut tracker = EngineStateTracker::new();
+        assert_eq!(tracker.state(), &EngineState::Idle);
+        tracker.start().expect("idle -> running");
+        assert_eq!(tracker.state(), &EngineState::Running);
     }
 
     #[test]
