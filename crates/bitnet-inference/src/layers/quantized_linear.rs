@@ -11,7 +11,7 @@ pub use bitnet_quantization::QuantizedTensor as QuantizedTensorType;
 use bitnet_quantization::{Quantize, QuantizedTensor};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 use candle_core::DType;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 // Import QK256 kernel from bitnet-models
 use bitnet_models::quant::i2s_qk256;
@@ -172,6 +172,9 @@ pub struct QuantizedLinear {
     /// Optional QK256 quantized data (GGML I2_S format with QK=256)
     /// When present, forward pass uses QK256 kernel instead of standard I2S path
     qk256_data: Option<std::sync::OnceLock<QK256Data>>,
+
+    /// Cached unpacked I2S weights (avoids re-unpacking every forward pass)
+    cached_i2s_weights: OnceLock<Vec<u8>>,
 }
 
 /// Storage for QK256 quantized weights (GGML I2_S format)
@@ -209,6 +212,7 @@ impl QuantizedLinear {
             memory_pool: None,
             alignment_padding,
             qk256_data: None,
+            cached_i2s_weights: OnceLock::new(),
         };
 
         layer.optimize_memory_layout()?;
@@ -240,6 +244,7 @@ impl QuantizedLinear {
             memory_pool: None,
             alignment_padding,
             qk256_data: None,
+            cached_i2s_weights: OnceLock::new(),
         };
 
         layer.optimize_memory_layout()?;
@@ -271,13 +276,14 @@ impl QuantizedLinear {
             memory_pool: None,
             alignment_padding,
             qk256_data: None,
+            cached_i2s_weights: OnceLock::new(),
         };
 
         layer.optimize_memory_layout()?;
         Ok(layer)
     }
 
-    /// Set QK256 quantized data for this layer (GGML I2_S format with QK=256)
+    /// Set QK256 quantized datafor this layer (GGML I2_S format with QK=256)
     ///
     /// This method allows the model loader to provide pre-quantized QK256 weights
     /// loaded from GGUF files. When QK256 data is set, the forward pass will use
@@ -715,14 +721,14 @@ impl QuantizedLinear {
 
         // Prepare quantized inputs and weights
         let quantized_input = quantize_input_i2s(&input_data, in_features)?;
-        let weight_data = self.prepare_quantized_weights_i2s()?;
+        let weight_data = self.prepare_quantized_weights_i2s();
 
         // Execute kernel operation
         let mut output_data = vec![0.0f32; batch_size * out_features];
         provider
             .matmul_i2s(
                 &quantized_input,
-                &weight_data,
+                weight_data,
                 &mut output_data,
                 batch_size,
                 out_features,
@@ -765,14 +771,16 @@ impl QuantizedLinear {
         (batch_size, in_features, out_features)
     }
 
-    /// Prepare quantized weights for I2S kernel
-    fn prepare_quantized_weights_i2s(&self) -> Result<Vec<u8>> {
-        use utils::unpack_2bit_values;
+    /// Prepare quantized weights for I2S kernel (cached after first call)
+    fn prepare_quantized_weights_i2s(&self) -> &[u8] {
+        self.cached_i2s_weights.get_or_init(|| {
+            use utils::unpack_2bit_values;
 
-        let unpacked_weights = unpack_2bit_values(&self.weights.data, self.weights.numel());
+            let unpacked_weights = unpack_2bit_values(&self.weights.data, self.weights.numel());
 
-        // Convert i8 range [-2,1] to u8 range [0,3] for kernel interface
-        Ok(unpacked_weights.iter().map(|&x| (x + 2) as u8).collect())
+            // Convert i8 range [-2,1] to u8 range [0,3] for kernel interface
+            unpacked_weights.iter().map(|&x| (x + 2) as u8).collect()
+        })
     }
 
     /// Apply quantization scales to output data
@@ -1805,6 +1813,9 @@ mod utils {
     #[cfg(test)]
     mod tests {
         use super::{quantize_input_tl2, unpack_tl2_values};
+        use crate::QuantizedLinear;
+        use bitnet_common::Device;
+        use bitnet_quantization::QuantizedTensor;
 
         #[test]
         fn tl2_quantization_matches_2bit_domain() {
@@ -1822,6 +1833,28 @@ mod utils {
             let unpacked = unpack_tl2_values(&packed, 4);
 
             assert_eq!(unpacked, vec![-2, -1, 0, 1]);
+        }
+
+        #[test]
+        fn cached_i2s_weights_returns_same_data() {
+            // 4x4 I2S weights: 4 values per byte, 16 elements = 4 bytes
+            let weights = QuantizedTensor::new_with_params(
+                vec![0b11100100; 4],
+                vec![1.0; 4],
+                None,
+                vec![4, 4],
+                bitnet_common::QuantizationType::I2S,
+                4,
+            );
+            let layer = QuantizedLinear::new_i2s(weights, Device::Cpu).expect("layer creation");
+
+            let first = layer.prepare_quantized_weights_i2s();
+            let second = layer.prepare_quantized_weights_i2s();
+
+            // Same pointer (cached, not re-allocated)
+            assert!(std::ptr::eq(first, second));
+            // Values are in u8 [0,3] range
+            assert!(first.iter().all(|&v| v <= 3));
         }
     }
 }
