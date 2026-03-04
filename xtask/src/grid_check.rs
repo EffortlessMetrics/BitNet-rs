@@ -50,8 +50,8 @@ pub fn run(cpu_only: bool, verbose: bool, dry_run: bool) -> Result<()> {
     let mut failed = 0usize;
     let mut skipped = 0usize;
     // Track which feature sets we've already checked to avoid redundant cargo invocations.
-    let mut checked_feature_sets: std::collections::HashSet<String> =
-        std::collections::HashSet::new();
+    let mut checked_feature_sets: std::collections::HashMap<String, bool> =
+        std::collections::HashMap::new();
 
     for cell in rows {
         let label = format!("{}/{}", cell.scenario, cell.environment);
@@ -102,17 +102,21 @@ pub fn run(cpu_only: bool, verbose: bool, dry_run: bool) -> Result<()> {
         }
 
         // Skip if we already ran cargo check for this exact feature set.
-        if checked_feature_sets.contains(&features_str) {
+        if let Some(&cached_success) = checked_feature_sets.get(&features_str) {
+            let status = if cached_success {
+                "PASS (cached)"
+            } else {
+                failed += 1;
+                "FAIL (cached)"
+            };
             results.push(CellResult {
                 label,
                 features: cargo_features,
-                status: "PASS (cached)",
-                success: true,
+                status,
+                success: cached_success,
             });
             continue;
         }
-        checked_feature_sets.insert(features_str.clone());
-
         let output = Command::new("cargo")
             .args([
                 "check",
@@ -137,6 +141,7 @@ pub fn run(cpu_only: bool, verbose: bool, dry_run: bool) -> Result<()> {
                 );
             }
         }
+        checked_feature_sets.insert(features_str, success);
 
         results.push(CellResult {
             label,
