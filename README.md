@@ -198,9 +198,12 @@ cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features
 
 # Lint before pushing
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
+
+# Quick local CI smoke test (replicates the 4 required CI gates)
+./ci/local.sh
 ```
 
-The suite has tens of thousands of tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (84 targets; 45 in nightly CI matrix), and BDD grid categories. ~1,050+ tests are intentionally `#[ignore]`-d — TDD scaffolds, resource-gated tests, slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
+The suite has tens of thousands of tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (117 targets; 38 in nightly CI matrix), and BDD grid categories. ~2,800+ tests are intentionally `#[ignore]`-d — TDD scaffolds, resource-gated tests, slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
 
 See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
 
@@ -210,11 +213,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
 
 Before opening a PR, run:
 ```bash
+# Option 1: Quick local CI smoke test (recommended)
+./ci/local.sh
+
+# Option 2: Manual checks
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 cargo nextest run --workspace --no-default-features --features cpu
 ```
 
-Note: ~1,050+ tests are intentionally `#[ignore]`-d. This is expected — they are TDD scaffolds, resource-gated tests (model files, GPU hardware), slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
+Note: ~2,800+ tests are intentionally `#[ignore]`-d. This is expected — they are TDD scaffolds, resource-gated tests (model files, GPU hardware), slow tests, and crossval tests. See `#[ignore = "..."]` justification strings.
 
 ## License
 
