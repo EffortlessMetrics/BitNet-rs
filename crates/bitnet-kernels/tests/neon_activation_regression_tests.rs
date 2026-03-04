@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! NEON activation function regression tests for Apple Silicon.
 //!
 //! TDD scaffolding for ARM NEON SIMD-optimized activation functions.

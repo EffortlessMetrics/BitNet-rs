@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests — wave 24.
 //!
 //! Covers newer kernel modules: CUDA attention CPU fallbacks, CUDA softmax

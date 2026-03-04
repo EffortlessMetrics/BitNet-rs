@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal transformer pipeline tests for Apple Silicon GPU backend.
 //!
 //! Tests validate the complete transformer forward pass pipeline including

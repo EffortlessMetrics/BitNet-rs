@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal GPU memory coalescing validation tests.
 //!
 //! Pure-Rust tests that model Apple Metal GPU memory access patterns,

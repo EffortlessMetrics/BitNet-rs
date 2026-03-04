@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Comprehensive property-based tests for Apple Silicon NEON kernel invariants.
 //!
 //! Validates mathematical properties that must hold for NEON-accelerated
@@ -20,7 +21,13 @@ use bitnet_kernels::cpu::neon_activations::{neon_gelu_f32, neon_relu_f32, neon_s
 use bitnet_kernels::cpu::neon_elementwise::{neon_add_f32, neon_mul_f32, neon_scale_f32};
 use bitnet_kernels::cpu::neon_layernorm::{layernorm_neon, rmsnorm_neon};
 use bitnet_kernels::cpu::neon_reductions::{neon_argmax_f32, neon_sum_f32};
-use bitnet_kernels::cpu::neon_rope::build_cos_sin_tables_neon;
+use bitnet_kernels::cpu::neon_rope::{scalar_precompute_freqs, scalar_rope_apply};
+
+// Compat wrappers: map old API names to current neon_rope functions.
+unsafe fn build_cos_sin_tables_neon(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
+    scalar_precompute_freqs(dim, max_seq, base, 1.0)
+}
+
 use bitnet_kernels::cpu::neon_softmax::{softmax_neon, softmax_scalar};
 use bitnet_kernels::cpu::quantize::{dequantize_symmetric_i8, quantize_symmetric_i8};
 
@@ -212,7 +219,7 @@ proptest! {
             unsafe { build_cos_sin_tables_neon(dim, max_seq, theta) };
 
         unsafe {
-            bitnet_kernels::cpu::neon_rope::apply_rope_neon(
+            scalar_rope_apply(
                 &mut data, &cos_table, &sin_table, dim, pos,
             );
         }
@@ -253,7 +260,7 @@ proptest! {
             unsafe { build_cos_sin_tables_neon(dim, 1, theta) };
 
         unsafe {
-            bitnet_kernels::cpu::neon_rope::apply_rope_neon(
+            scalar_rope_apply(
                 &mut data, &cos_table, &sin_table, dim, 0,
             );
         }

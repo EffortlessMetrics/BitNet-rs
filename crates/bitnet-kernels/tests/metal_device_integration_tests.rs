@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Integration tests for Metal GPU device creation and compute on Apple Silicon.
 //!
 //! These tests verify that wgpu can enumerate Metal adapters, create devices,

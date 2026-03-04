@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal GPU KV cache validation tests for Apple Silicon.
 //!
 //! Validates KV cache operations targeting Metal via the compute

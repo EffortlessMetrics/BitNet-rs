@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal buffer management validation tests for Apple Silicon GPUs.
 //!
 //! Validates buffer creation, alignment, pooling, double buffering,
@@ -7,6 +8,7 @@
 //! exposed by `bitnet_kernels::metal_compute`.
 
 #![cfg(target_os = "macos")]
+#![cfg(feature = "metal")]
 
 use bitnet_kernels::metal_compute::{
     DispatchDimensions, METAL_BUFFER_ALIGNMENT, METAL_MAX_WORKGROUP_SIZE, MemoryArchitecture,

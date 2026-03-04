@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Apple Silicon NEON ARM64 regression tests.
 //!
 //! Validates NEON-accelerated kernels against scalar reference implementations

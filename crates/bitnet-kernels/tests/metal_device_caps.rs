@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal device capability detection tests for Apple Silicon.
 //!
 //! Tests the LOGIC of Metal device property detection, feature support,

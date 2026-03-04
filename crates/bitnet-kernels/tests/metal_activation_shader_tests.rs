@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal activation function shader tests for Apple Silicon
 #![allow(
     clippy::manual_clamp,

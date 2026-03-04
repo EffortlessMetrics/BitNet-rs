@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Wave 11 property tests: CPU kernel invariants for batch normalization,
 //! scatter/gather, loss functions, pooling, transpose, and shaped reduction.
 //!

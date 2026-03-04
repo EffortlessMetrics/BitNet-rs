@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal GPU LayerNorm / RMSNorm shader tests for Apple Silicon.
 //!
 //! 30+ tests validating Metal GPU LayerNorm operations including

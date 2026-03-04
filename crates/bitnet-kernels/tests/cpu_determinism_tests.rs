@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! CPU determinism regression tests — verifies identical outputs for identical inputs.
 //!
 //! Core invariant: same weights + same input + same seed = same output, bit-for-bit.

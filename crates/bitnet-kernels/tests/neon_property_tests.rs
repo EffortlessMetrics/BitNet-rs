@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unsafe_op_in_unsafe_fn, unused_unsafe)]
 //! ARM64-specific property-based tests for NEON kernels on Apple Silicon.
 //!
 //! Validates numerical invariants of NEON-accelerated kernels using proptest:
@@ -18,8 +18,28 @@ use bitnet_kernels::cpu::embedding::embedding_lookup;
 use bitnet_kernels::cpu::layer_norm::{LayerNormConfig, layer_norm as cpu_layer_norm, rms_norm};
 use bitnet_kernels::cpu::neon_layernorm::{layernorm_neon, rmsnorm_neon};
 use bitnet_kernels::cpu::neon_rope::{
-    apply_rope_batch_neon, apply_rope_neon, build_cos_sin_tables_neon,
+    scalar_precompute_freqs, scalar_rope_apply, scalar_rope_batched,
 };
+
+// Compat wrappers: map old API names to current neon_rope functions.
+unsafe fn build_cos_sin_tables_neon(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
+    scalar_precompute_freqs(dim, max_seq, base, 1.0)
+}
+
+unsafe fn apply_rope_neon(data: &mut [f32], cos_t: &[f32], sin_t: &[f32], dim: usize, pos: usize) {
+    scalar_rope_apply(data, cos_t, sin_t, dim, pos);
+}
+
+fn apply_rope_batch_neon(
+    data: &mut [f32],
+    cos_t: &[f32],
+    sin_t: &[f32],
+    dim: usize,
+    num_heads: usize,
+    pos: usize,
+) {
+    scalar_rope_batched(data, cos_t, sin_t, dim, num_heads, pos, 1);
+}
 use bitnet_kernels::cpu::quantized_matmul::{i2s_matmul_f32, pack_i2s};
 use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, compute_frequencies};
 

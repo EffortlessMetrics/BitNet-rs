@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Property-based tests for bitnet-kernels (wave 32).
 
 use bitnet_kernels::cpu::batch::{batched_matmul, batched_softmax};

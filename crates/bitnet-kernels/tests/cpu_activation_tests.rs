@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 //! Comprehensive tests for CPU activation functions.
 //!
 //! Covers mathematical accuracy (f64 reference), edge cases (NaN, Inf, zero,
