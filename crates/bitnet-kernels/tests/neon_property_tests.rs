@@ -22,21 +22,11 @@ use bitnet_kernels::cpu::neon_rope::{
 };
 
 // Compat wrappers: map old API names to current neon_rope functions.
-unsafe fn build_cos_sin_tables_neon(
-    dim: usize,
-    max_seq: usize,
-    base: f32,
-) -> (Vec<f32>, Vec<f32>) {
+unsafe fn build_cos_sin_tables_neon(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
     scalar_precompute_freqs(dim, max_seq, base, 1.0)
 }
 
-unsafe fn apply_rope_neon(
-    data: &mut [f32],
-    cos_t: &[f32],
-    sin_t: &[f32],
-    dim: usize,
-    pos: usize,
-) {
+unsafe fn apply_rope_neon(data: &mut [f32], cos_t: &[f32], sin_t: &[f32], dim: usize, pos: usize) {
     scalar_rope_apply(data, cos_t, sin_t, dim, pos);
 }
 

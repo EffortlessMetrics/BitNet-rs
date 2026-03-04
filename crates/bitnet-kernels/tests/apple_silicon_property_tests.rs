@@ -24,11 +24,7 @@ use bitnet_kernels::cpu::neon_reductions::{neon_argmax_f32, neon_sum_f32};
 use bitnet_kernels::cpu::neon_rope::{scalar_precompute_freqs, scalar_rope_apply};
 
 // Compat wrappers: map old API names to current neon_rope functions.
-unsafe fn build_cos_sin_tables_neon(
-    dim: usize,
-    max_seq: usize,
-    base: f32,
-) -> (Vec<f32>, Vec<f32>) {
+unsafe fn build_cos_sin_tables_neon(dim: usize, max_seq: usize, base: f32) -> (Vec<f32>, Vec<f32>) {
     scalar_precompute_freqs(dim, max_seq, base, 1.0)
 }
 
