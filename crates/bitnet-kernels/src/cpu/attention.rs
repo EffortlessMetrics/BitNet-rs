@@ -255,9 +255,14 @@ fn avx2_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<
 
 /// Compute Q·K^T, choosing the best available SIMD path.
 fn dispatch_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
-    let mut out = vec![0.0_f32; seq_q * seq_k];
-    dispatch_qk_into(q, k, seq_q, seq_k, dim, &mut out);
-    out
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            return avx2_qk(q, k, seq_q, seq_k, dim);
+        }
+    }
+    // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
+    scalar_qk(q, k, seq_q, seq_k, dim)
 }
 
 /// Compute Q·K^T into a pre-allocated buffer.
