@@ -13,6 +13,7 @@ pub mod caching;
 mod caching;
 pub mod concurrency;
 pub mod config;
+pub mod cors_config;
 pub mod endpoint_registry;
 pub mod execution_router;
 pub mod gpu_streaming;
