@@ -27,14 +27,14 @@ pub unsafe fn sparse_matmul_csr_neon(
     _cols: usize,
     dense_cols: usize,
 ) {
-    assert!(row_ptrs.len() >= rows + 1);
+    assert!(row_ptrs.len() > rows);
     assert!(output.len() >= rows * dense_cols);
 
     for i in 0..rows {
         let start = row_ptrs[i];
         let end = row_ptrs[i + 1];
         for dc in 0..dense_cols {
-            let mut acc = unsafe { vdupq_n_f32(0.0) };
+            let mut acc = vdupq_n_f32(0.0);
             let mut scalar_acc: f32 = 0.0;
             let nnz = end - start;
             let chunks = nnz / 4;
@@ -59,7 +59,7 @@ pub unsafe fn sparse_matmul_csr_neon(
                         .as_ptr(),
                     )
                 };
-                acc = unsafe { vfmaq_f32(acc, v, d) };
+                acc = vfmaq_f32(acc, v, d);
             }
 
             for k in 0..rem {
@@ -68,7 +68,7 @@ pub unsafe fn sparse_matmul_csr_neon(
             }
 
             // Horizontal add
-            let sum = unsafe {
+            let sum = {
                 let pair = vpadd_f32(vget_low_f32(acc), vget_high_f32(acc));
                 vget_lane_f32::<0>(vpadd_f32(pair, pair))
             };
@@ -90,7 +90,7 @@ pub fn sparse_matmul_csr_neon(
     _cols: usize,
     dense_cols: usize,
 ) {
-    assert!(row_ptrs.len() >= rows + 1);
+    assert!(row_ptrs.len() > rows);
     assert!(output.len() >= rows * dense_cols);
 
     for i in 0..rows {
@@ -125,7 +125,7 @@ pub unsafe fn sparse_matmul_csc_neon(
     cols: usize,
     dense_cols: usize,
 ) {
-    assert!(col_ptrs.len() >= cols + 1);
+    assert!(col_ptrs.len() > cols);
     assert!(output.len() >= rows * dense_cols);
 
     // Zero output
@@ -141,7 +141,7 @@ pub unsafe fn sparse_matmul_csc_neon(
             if dense_val == 0.0 {
                 continue;
             }
-            let d_vec = unsafe { vdupq_n_f32(dense_val) };
+            let d_vec = vdupq_n_f32(dense_val);
             let nnz = end - start;
             let chunks = nnz / 4;
             let rem = nnz % 4;
@@ -154,7 +154,7 @@ pub unsafe fn sparse_matmul_csc_neon(
                             .as_ptr(),
                     )
                 };
-                let prod = unsafe { vmulq_f32(v, d_vec) };
+                let prod = vmulq_f32(v, d_vec);
                 // Scatter-add to output rows
                 let r0 = row_indices[base];
                 let r1 = row_indices[base + 1];
@@ -188,7 +188,7 @@ pub fn sparse_matmul_csc_neon(
     cols: usize,
     dense_cols: usize,
 ) {
-    assert!(col_ptrs.len() >= cols + 1);
+    assert!(col_ptrs.len() > cols);
     assert!(output.len() >= rows * dense_cols);
 
     for v in output.iter_mut().take(rows * dense_cols) {
@@ -225,7 +225,7 @@ pub unsafe fn sparse_dot_product_neon(
 
     let mut ia = 0;
     let mut ib = 0;
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
     let mut buf_a = [0.0f32; 4];
     let mut buf_b = [0.0f32; 4];
     let mut buf_count = 0;
@@ -238,7 +238,7 @@ pub unsafe fn sparse_dot_product_neon(
             if buf_count == 4 {
                 let va = unsafe { vld1q_f32(buf_a.as_ptr()) };
                 let vb = unsafe { vld1q_f32(buf_b.as_ptr()) };
-                acc = unsafe { vfmaq_f32(acc, va, vb) };
+                acc = vfmaq_f32(acc, va, vb);
                 buf_count = 0;
             }
             ia += 1;
@@ -257,7 +257,7 @@ pub unsafe fn sparse_dot_product_neon(
     }
 
     // Horizontal add
-    let sum = unsafe {
+    let sum = {
         let pair = vpadd_f32(vget_low_f32(acc), vget_high_f32(acc));
         vget_lane_f32::<0>(vpadd_f32(pair, pair))
     };
@@ -314,7 +314,7 @@ pub unsafe fn sparse_dense_add_neon(values: &[f32], indices: &[usize], dense: &m
         cur[2] = dense[indices[base + 2]];
         cur[3] = dense[indices[base + 3]];
         let d = unsafe { vld1q_f32(cur.as_ptr()) };
-        let r = unsafe { vaddq_f32(d, v) };
+        let r = vaddq_f32(d, v);
         let mut out = [0.0f32; 4];
         unsafe { vst1q_f32(out.as_mut_ptr(), r) };
         dense[indices[base]] = out[0];
@@ -363,7 +363,7 @@ pub unsafe fn sparse_matmul_block_neon(
     block_size: usize,
 ) {
     let block_rows = (rows + block_size - 1) / block_size;
-    assert!(block_ptrs.len() >= block_rows + 1);
+    assert!(block_ptrs.len() > block_rows);
     assert!(output.len() >= rows * dense_cols);
 
     for v in output.iter_mut().take(rows * dense_cols) {
@@ -385,7 +385,7 @@ pub unsafe fn sparse_matmul_block_neon(
                     break;
                 }
                 for dc in 0..dense_cols {
-                    let mut acc = unsafe { vdupq_n_f32(0.0) };
+                    let mut acc = vdupq_n_f32(0.0);
                     let mut scalar_acc: f32 = 0.0;
                     let chunks = block_size / 4;
                     let rem = block_size % 4;
@@ -415,7 +415,7 @@ pub unsafe fn sparse_matmul_block_neon(
                                 .as_ptr(),
                             )
                         };
-                        acc = unsafe { vfmaq_f32(acc, bv, dv) };
+                        acc = vfmaq_f32(acc, bv, dv);
                     }
 
                     for bj in (chunks * 4)..block_size {
@@ -426,7 +426,7 @@ pub unsafe fn sparse_matmul_block_neon(
                         }
                     }
 
-                    let sum = unsafe {
+                    let sum = {
                         let pair = vpadd_f32(vget_low_f32(acc), vget_high_f32(acc));
                         vget_lane_f32::<0>(vpadd_f32(pair, pair))
                     };
@@ -452,7 +452,7 @@ pub fn sparse_matmul_block_neon(
     block_size: usize,
 ) {
     let block_rows = (rows + block_size - 1) / block_size;
-    assert!(block_ptrs.len() >= block_rows + 1);
+    assert!(block_ptrs.len() > block_rows);
     assert!(output.len() >= rows * dense_cols);
 
     for v in output.iter_mut().take(rows * dense_cols) {
