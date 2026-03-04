@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use bitnet_http_auth_core::strip_bearer_prefix;
+
 // ── Configuration ───────────────────────────────────────────────────────────
 
 /// Top-level gateway configuration.
@@ -897,7 +899,7 @@ fn generate_api_key() -> String {
 
 /// Strip `"Bearer "` prefix from a header value.
 fn strip_bearer(val: &str) -> String {
-    val.strip_prefix("Bearer ").unwrap_or(val).to_string()
+    strip_bearer_prefix(val).to_string()
 }
 
 // ── Minimal JSON helper (no serde dependency) ───────────────────────────────

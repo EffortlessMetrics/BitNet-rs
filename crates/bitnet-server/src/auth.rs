@@ -3,6 +3,7 @@
 //! Validate Bearer tokens and API keys from request headers.
 //! Supports multiple keys, key rotation, and usage tracking.
 
+use bitnet_http_auth_core::bearer_token;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -156,7 +157,7 @@ impl KeyStore {
 
     /// Extract bearer token from Authorization header value.
     pub fn extract_bearer(header_value: &str) -> Option<&str> {
-        header_value.strip_prefix("Bearer ")
+        bearer_token(header_value)
     }
 
     /// Get usage stats.

@@ -7,6 +7,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use bitnet_http_auth_core::bearer_token;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::net::IpAddr;
@@ -285,12 +286,7 @@ pub async fn auth_middleware(
         .and_then(|h| h.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // Check if it's a Bearer token
-    if !auth_header.starts_with("Bearer ") {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    let token = &auth_header[7..]; // Remove "Bearer " prefix
+    let token = bearer_token(auth_header).ok_or(StatusCode::UNAUTHORIZED)?;
 
     // Validate JWT token
     if let Some(jwt_secret) = &auth_state.jwt_secret {

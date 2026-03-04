@@ -830,6 +830,7 @@ dependencies = [
 name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-http-auth-core",
  "insta",
  "log",
  "proptest",
@@ -847,6 +848,10 @@ dependencies = [
  "insta",
  "proptest",
 ]
+
+[[package]]
+name = "bitnet-http-auth-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-http-retry"
@@ -1352,6 +1357,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-device-config-core",
  "bitnet-eval-core",
+ "bitnet-http-auth-core",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
