@@ -151,13 +151,17 @@ pub fn apply_repetition_penalty(logits: &mut [f32], token_ids: &[u32], penalty: 
     if penalty <= 0.0 || !penalty.is_finite() || penalty == 1.0 || token_ids.is_empty() {
         return;
     }
+    // Optimization: Pre-calculate 1.0 / penalty outside the loop to replace division with multiplication,
+    // as strict IEEE-754 compliance prevents the Rust compiler from doing this automatically.
+    let inv_penalty = 1.0 / penalty;
     for &id in token_ids {
         let idx = id as usize;
-        if idx < logits.len() {
-            if logits[idx] > 0.0 {
-                logits[idx] /= penalty;
+        // Optimization: Use get_mut to eliminate redundant bounds checking
+        if let Some(logit) = logits.get_mut(idx) {
+            if *logit > 0.0 {
+                *logit *= inv_penalty;
             } else {
-                logits[idx] *= penalty;
+                *logit *= penalty;
             }
         }
     }
