@@ -20,7 +20,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Receipt Verification** - Schema v1.0.0 with 8 validation gates (160+ tests across receipt crates)
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 - **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
-- **CPU Golden Path E2E Tests** - 7 deterministic end-to-end tests always running in PR CI (no model download); includes reproducibility (seed=42 identical tokens) and pinned-output regression guard [140,459,459,459] (#790)
+- **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download); includes deterministic output, reproducibility (seed=42 identical tokens), kernel-ID recording, and receipt invariants. Separate `e2e_cpu_golden_path.rs` adds pinned-output regression guard [140,459,459,459] (#790)
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
@@ -1000,7 +1000,7 @@ These test suites pass reliably (run `cargo nextest run --workspace --no-default
 - **receipt verification tests**: Schema v1.0.0 with 8 gates (160+ tests passing)
 - **strict mode tests**: Runtime guards and enforcement (12/12 passing)
 - **environment isolation tests**: EnvGuard parallel safety (serial + temp_env)
-- **CPU golden path E2E tests**: Deterministic inference with receipt invariants (7 tests passing)
+- **CPU golden path E2E tests**: Deterministic inference with receipt invariants (5 tests passing in `cpu_golden_path.rs`)
 - **SRP microcrate tests**: bitnet-logits (280+), bitnet-gguf (370+), bitnet-generation (210+), bitnet-device-probe (400+), bitnet-engine-core (240+)
 - **KVCache property tests**: 5 new shape-invariant properties (after N appends, layer independence, layer count, head divisibility, seq_len monotonicity) (#784)
 - **tokenizer property tests**: 5 new encode/decode properties (BOS/EOS prepend, decode never panics, word preservation, config serde round-trip, EOS ID bounds) (#785)
