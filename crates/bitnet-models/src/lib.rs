@@ -39,6 +39,7 @@ pub mod model_config_builder;
 pub mod model_diff;
 pub mod model_fingerprint;
 pub mod model_metadata;
+pub mod model_registry;
 pub mod model_validation;
 pub mod model_validator;
 pub mod names;
