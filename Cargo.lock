@@ -479,6 +479,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "bitnet-cli-config-core",
  "bitnet-cli-sampling-core",
  "bitnet-common",
  "bitnet-eval-core",
@@ -503,7 +504,6 @@ dependencies = [
  "clap_complete",
  "console 0.16.2",
  "crossterm",
- "dirs",
  "futures",
  "half",
  "humansize",
@@ -525,6 +525,17 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "bitnet-cli-config-core"
+version = "0.2.1-dev"
+dependencies = [
+ "anyhow",
+ "dirs",
+ "serde",
+ "toml",
+ "tracing",
 ]
 
 [[package]]
