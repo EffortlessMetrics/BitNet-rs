@@ -384,6 +384,7 @@ fn detect_linux_sysfs() -> Result<NumaTopology, NumaError> {
 }
 
 /// Parse a Linux CPU-list string like `"0-3,8-11"` into a sorted `Vec<usize>`.
+#[allow(dead_code)]
 fn parse_cpu_list(s: &str) -> Vec<usize> {
     let mut cpus = Vec::new();
     if s.is_empty() {
@@ -404,6 +405,7 @@ fn parse_cpu_list(s: &str) -> Vec<usize> {
 }
 
 /// Parse a Linux node `meminfo` for MemTotal / MemFree (in kB → bytes).
+#[allow(dead_code)]
 fn parse_node_meminfo(raw: &str) -> (u64, u64) {
     let mut total: u64 = 0;
     let mut free: u64 = 0;
@@ -421,6 +423,7 @@ fn parse_node_meminfo(raw: &str) -> (u64, u64) {
     (total, free)
 }
 
+#[allow(dead_code)]
 fn extract_kb(line: &str) -> Option<u64> {
     // Value follows the colon, e.g. "Node 0 MemTotal:    16384000 kB"
     let after_colon = line.split_once(':')?.1;

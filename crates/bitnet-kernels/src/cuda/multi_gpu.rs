@@ -659,7 +659,7 @@ impl AllReduceOp {
         let num_devs = ring.len();
 
         // Phase 1: Reduce-scatter — each device accumulates a segment.
-        let chunk_len = (n + num_devs - 1) / num_devs;
+        let _chunk_len = n.div_ceil(num_devs);
         let mut reduced = vec![0.0f32; n];
 
         for elem in 0..n {
@@ -796,7 +796,7 @@ impl PeerTransfer {
             }
             .into());
         }
-        let bytes = src_data.len() * std::mem::size_of::<f32>();
+        let bytes = std::mem::size_of_val(src_data);
         let start = Instant::now();
         dst_data.copy_from_slice(src_data);
         let dur = start.elapsed();

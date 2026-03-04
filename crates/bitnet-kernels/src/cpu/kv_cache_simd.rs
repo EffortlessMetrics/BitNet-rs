@@ -595,11 +595,11 @@ pub struct CacheStats {
 #[inline]
 fn simd_copy_f32(src: &[f32], dst: &mut [f32]) {
     debug_assert_eq!(src.len(), dst.len());
-    let len = src.len();
+    let _len = src.len();
 
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") && len >= 8 {
+        if is_x86_feature_detected!("avx2") && _len >= 8 {
             // Safety: we checked AVX2 availability and length >= 8.
             unsafe {
                 avx2_copy_f32(src, dst);

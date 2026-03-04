@@ -95,7 +95,7 @@ pub fn quantize_to_i4(input: &[f32]) -> QuantizedTensorI4 {
     let abs_max = input.iter().map(|v| v.abs()).fold(0.0f32, f32::max);
     if abs_max == 0.0 {
         return QuantizedTensorI4 {
-            data: vec![0u8; (input.len() + 1) / 2],
+            data: vec![0u8; input.len().div_ceil(2)],
             scale: 0.0,
             len: input.len(),
         };
@@ -104,7 +104,7 @@ pub fn quantize_to_i4(input: &[f32]) -> QuantizedTensorI4 {
     let inv_scale = 7.0 / abs_max;
     let quantized: Vec<i8> =
         input.iter().map(|&v| (v * inv_scale).round().clamp(-7.0, 7.0) as i8).collect();
-    let packed_len = (quantized.len() + 1) / 2;
+    let packed_len = quantized.len().div_ceil(2);
     let mut data = vec![0u8; packed_len];
     for (i, chunk) in quantized.chunks(2).enumerate() {
         let lo = (chunk[0] & 0x0F) as u8;
@@ -421,8 +421,8 @@ pub fn quantized_softmax(scores: &mut [f32], seq_len: usize, causal: bool) -> Re
         let row = &mut scores[i * seq_len..(i + 1) * seq_len];
         // Apply causal mask.
         if causal {
-            for j in (i + 1)..seq_len {
-                row[j] = f32::NEG_INFINITY;
+            for elem in row.iter_mut().skip(i + 1) {
+                *elem = f32::NEG_INFINITY;
             }
         }
         if has_avx2() {
@@ -636,12 +636,12 @@ pub fn dequantized_output(
             reason: format!("output length {} < required {}", output.len(), n),
         }));
     }
-    if let Some(b) = bias {
-        if b.len() < n {
-            return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: "bias length too small".into(),
-            }));
-        }
+    if let Some(b) = bias
+        && b.len() < n
+    {
+        return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+            reason: "bias length too small".into(),
+        }));
     }
     if has_avx2() {
         #[cfg(target_arch = "x86_64")]

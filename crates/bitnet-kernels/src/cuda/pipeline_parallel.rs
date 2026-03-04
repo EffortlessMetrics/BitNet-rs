@@ -297,15 +297,15 @@ impl GpuPipelineConfig {
         }
         // Validate stream assignments are within bounds.
         for (i, stage) in self.stages.iter().enumerate() {
-            if let Some(sid) = stage.stream_id {
-                if sid >= self.num_streams {
-                    return Err(BitNetError::Kernel(KernelError::InvalidArguments {
-                        reason: format!(
-                            "stage {} stream_id {} exceeds num_streams {}",
-                            i, sid, self.num_streams,
-                        ),
-                    }));
-                }
+            if let Some(sid) = stage.stream_id
+                && sid >= self.num_streams
+            {
+                return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                    reason: format!(
+                        "stage {} stream_id {} exceeds num_streams {}",
+                        i, sid, self.num_streams,
+                    ),
+                }));
             }
         }
         Ok(())
