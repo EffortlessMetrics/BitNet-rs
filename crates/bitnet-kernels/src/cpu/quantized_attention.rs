@@ -219,6 +219,7 @@ fn unpack_i4(val: i8) -> i8 {
 /// `scores_buf` must have at least `seq_len * seq_len` elements.
 /// `q`, `k`, `v` are quantized i8 matrices of shape `[seq_len, head_dim]`.
 /// Returns `output` of shape `[seq_len, head_dim]` in f32.
+#[allow(clippy::too_many_arguments)]
 pub fn quantized_dot_product_attention_into(
     config: &QuantizedAttentionConfig,
     q: &[i8],
