@@ -3,10 +3,8 @@
 //! Provides formatting infrastructure for models that support tool calling
 //! (Qwen, LLaMA 3.1+, Mistral, Hermes/NousResearch, and generic JSON).
 
+use bitnet_tool_use_core::{ToolCall, ToolDefinition, ToolResult, ToolUseFormat};
 pub use bitnet_tool_use_core::{detect_tool_format, parse_tool_call};
-use bitnet_tool_use_core::{
-    ToolCall, ToolDefinition, ToolParameter, ToolResult, ToolUseFormat,
-};
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
@@ -187,6 +185,8 @@ pub fn format_tool_result(result: &ToolResult, format: &ToolUseFormat) -> String
 
 #[cfg(test)]
 mod tests {
+    use bitnet_tool_use_core::ToolParameter;
+
     use super::*;
 
     // -- helpers --
