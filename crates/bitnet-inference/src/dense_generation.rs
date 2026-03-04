@@ -405,12 +405,7 @@ impl DenseTokenSampler {
 
         // Top-p
         if let Some(p) = config.top_p {
-            Self::top_p_filter_in_place(
-                &mut buf.logits,
-                p,
-                &mut buf.indexed,
-                &mut buf.probs,
-            );
+            Self::top_p_filter_in_place(&mut buf.logits, p, &mut buf.indexed, &mut buf.probs);
         }
 
         // Repetition penalty
@@ -457,19 +452,13 @@ impl DenseTokenSampler {
         }
     }
 
-    fn top_k_filter_in_place(
-        logits: &mut [f32],
-        k: usize,
-        indexed: &mut Vec<(usize, f32)>,
-    ) {
+    fn top_k_filter_in_place(logits: &mut [f32], k: usize, indexed: &mut Vec<(usize, f32)>) {
         if k == 0 || k >= logits.len() {
             return;
         }
         indexed.clear();
         indexed.extend(logits.iter().copied().enumerate());
-        indexed.sort_unstable_by(|a, b| {
-            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        indexed.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         // Blank everything, then restore top-k.
         for l in logits.iter_mut() {
             *l = f32::NEG_INFINITY;
@@ -501,9 +490,7 @@ impl DenseTokenSampler {
         Self::softmax_into(logits, probs);
         indexed.clear();
         indexed.extend(probs.iter().copied().enumerate());
-        indexed.sort_unstable_by(|a, b| {
-            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        indexed.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut cumsum = 0.0f32;
         let mut cutoff = indexed.len();
@@ -519,11 +506,7 @@ impl DenseTokenSampler {
         }
     }
 
-    fn apply_repetition_penalty_in_place(
-        logits: &mut [f32],
-        past_tokens: &[u32],
-        penalty: f32,
-    ) {
+    fn apply_repetition_penalty_in_place(logits: &mut [f32], past_tokens: &[u32], penalty: f32) {
         if penalty == 1.0 || past_tokens.is_empty() {
             return;
         }
@@ -872,8 +855,7 @@ mod tests {
         let cfg = DenseGenerationConfig::default().with_temperature(0.0);
         let mut buf = SamplingBuffer::new();
         let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
-        let buffered =
-            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        let buffered = DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
         assert_eq!(original, buffered);
     }
 
@@ -883,21 +865,17 @@ mod tests {
         let cfg = DenseGenerationConfig::default().with_seed(42).with_temperature(1.0);
         let mut buf = SamplingBuffer::new();
         let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
-        let buffered =
-            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        let buffered = DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
         assert_eq!(original, buffered);
     }
 
     #[test]
     fn test_buffered_with_top_k() {
         let logits = vec![1.0, 5.0, 3.0, 2.0];
-        let cfg = DenseGenerationConfig::default()
-            .with_temperature(0.0)
-            .with_top_k(2);
+        let cfg = DenseGenerationConfig::default().with_temperature(0.0).with_top_k(2);
         let mut buf = SamplingBuffer::new();
         let original = DenseTokenSampler::sample_token(&logits, &cfg, &[]);
-        let buffered =
-            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
+        let buffered = DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &[], &mut buf);
         assert_eq!(original, buffered);
     }
 
@@ -905,13 +883,11 @@ mod tests {
     fn test_buffered_with_repetition_penalty() {
         let logits = vec![4.0, 2.0, 3.0];
         let past = vec![0u32];
-        let cfg = DenseGenerationConfig::default()
-            .with_temperature(0.0)
-            .with_repetition_penalty(2.0);
+        let cfg =
+            DenseGenerationConfig::default().with_temperature(0.0).with_repetition_penalty(2.0);
         let mut buf = SamplingBuffer::new();
         let original = DenseTokenSampler::sample_token(&logits, &cfg, &past);
-        let buffered =
-            DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &past, &mut buf);
+        let buffered = DenseTokenSampler::sample_token_with_buffer(&logits, &cfg, &past, &mut buf);
         assert_eq!(original, buffered);
     }
 
@@ -920,10 +896,7 @@ mod tests {
         let empty: Vec<f32> = vec![];
         let cfg = DenseGenerationConfig::default();
         let mut buf = SamplingBuffer::new();
-        assert_eq!(
-            DenseTokenSampler::sample_token_with_buffer(&empty, &cfg, &[], &mut buf),
-            None
-        );
+        assert_eq!(DenseTokenSampler::sample_token_with_buffer(&empty, &cfg, &[], &mut buf), None);
     }
 
     #[test]
@@ -931,21 +904,13 @@ mod tests {
         let mut buf = SamplingBuffer::new();
         let cfg = DenseGenerationConfig::default().with_temperature(0.0);
 
-        let tok1 = DenseTokenSampler::sample_token_with_buffer(
-            &[1.0, 5.0, 3.0],
-            &cfg,
-            &[],
-            &mut buf,
-        );
+        let tok1 =
+            DenseTokenSampler::sample_token_with_buffer(&[1.0, 5.0, 3.0], &cfg, &[], &mut buf);
         assert_eq!(tok1, Some(1));
 
         // Second call reuses the same buffer — no new allocation.
-        let tok2 = DenseTokenSampler::sample_token_with_buffer(
-            &[9.0, 2.0, 3.0],
-            &cfg,
-            &[],
-            &mut buf,
-        );
+        let tok2 =
+            DenseTokenSampler::sample_token_with_buffer(&[9.0, 2.0, 3.0], &cfg, &[], &mut buf);
         assert_eq!(tok2, Some(0));
     }
 }
