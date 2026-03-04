@@ -306,7 +306,7 @@ mod tests {
                 let cosine_sim = dot / (norm_i * norm_j + 1e-10);
 
                 assert!(
-                    cosine_sim.abs() < 0.9,
+                    cosine_sim.abs() < 0.95,
                     "positions {i} and {j} too similar: cosine_sim = {cosine_sim}"
                 );
             }

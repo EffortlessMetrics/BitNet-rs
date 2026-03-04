@@ -380,13 +380,13 @@ impl PagedKvCachePool {
                     .push(PageTableEntry { physical_block: phys, cow_pending: false });
             }
 
-            let phys = self.sequences[seq_idx].page_table.last().unwrap().physical_block;
-
-            // Handle copy-on-write.
+            // Handle copy-on-write before reading physical block index.
             if self.sequences[seq_idx].page_table.last().unwrap().cow_pending {
                 self.cow_duplicate(seq_idx)?;
             }
 
+            // Read phys AFTER CoW so we get the duplicated block.
+            let phys = self.sequences[seq_idx].page_table.last().unwrap().physical_block;
             let blk = &mut self.blocks[phys];
             let space = blk.remaining().min(num_tokens - written);
             let src_off = written * hd;
