@@ -2,12 +2,120 @@
 //!
 //! Validate shapes for common neural network operations.
 
+use crate::tensor_validation::can_broadcast;
+
 /// Shape validation error.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapeError {
     pub op: String,
     pub expected: String,
     pub got: String,
+}
+
+/// Assert two shapes are equal.
+pub fn assert_shape_eq(op: &str, a: &[usize], b: &[usize]) -> Result<(), ShapeError> {
+    if a == b {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("shape {a:?}"),
+            got: format!("shape {b:?}"),
+        })
+    }
+}
+
+/// Assert tensor rank.
+pub fn assert_rank(op: &str, shape: &[usize], rank: usize) -> Result<(), ShapeError> {
+    if shape.len() == rank {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("rank {rank}"),
+            got: format!("rank {}", shape.len()),
+        })
+    }
+}
+
+/// Assert a specific dimension equals `expected`.
+pub fn assert_dim(
+    op: &str,
+    shape: &[usize],
+    dim: usize,
+    expected: usize,
+) -> Result<(), ShapeError> {
+    let got = shape.get(dim).copied().ok_or_else(|| ShapeError {
+        op: op.into(),
+        expected: format!("shape with dim index {dim}"),
+        got: format!("shape with rank {}", shape.len()),
+    })?;
+
+    if got == expected {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("dim[{dim}]={expected}"),
+            got: format!("dim[{dim}]={got}"),
+        })
+    }
+}
+
+/// Assert element count equals `expected`.
+pub fn assert_element_count(op: &str, shape: &[usize], expected: usize) -> Result<(), ShapeError> {
+    let got = shape.iter().product::<usize>();
+    if got == expected {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("{expected} elements"),
+            got: format!("{got} elements"),
+        })
+    }
+}
+
+/// Assert hidden size is divisible by number of heads.
+pub fn assert_head_divisible(op: &str, hidden: usize, num_heads: usize) -> Result<(), ShapeError> {
+    if num_heads == 0 {
+        return Err(ShapeError {
+            op: op.into(),
+            expected: "num_heads > 0".into(),
+            got: "num_heads = 0".into(),
+        });
+    }
+
+    if hidden.is_multiple_of(num_heads) {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("hidden divisible by {num_heads}"),
+            got: format!("hidden={hidden}"),
+        })
+    }
+}
+
+/// Assert 2-D matrix multiplication compatibility.
+pub fn assert_matmul_compat(op: &str, a: &[usize], b: &[usize]) -> Result<(), ShapeError> {
+    validate_matmul(a, b).map(|_| ()).map_err(|mut e| {
+        e.op = op.into();
+        e
+    })
+}
+
+/// Assert broadcasting compatibility.
+pub fn assert_broadcastable(op: &str, a: &[usize], b: &[usize]) -> Result<(), ShapeError> {
+    if can_broadcast(a, b) {
+        Ok(())
+    } else {
+        Err(ShapeError {
+            op: op.into(),
+            expected: format!("broadcastable with {a:?}"),
+            got: format!("{b:?}"),
+        })
+    }
 }
 
 impl std::fmt::Display for ShapeError {
@@ -232,5 +340,37 @@ mod tests {
     fn test_shape_error_display() {
         let e = ShapeError { op: "test".into(), expected: "A".into(), got: "B".into() };
         assert_eq!(format!("{e}"), "test: expected A, got B");
+    }
+
+    #[test]
+    fn test_assert_shape_eq() {
+        assert!(assert_shape_eq("eq", &[1, 2], &[1, 2]).is_ok());
+        assert!(assert_shape_eq("eq", &[1, 2], &[2, 1]).is_err());
+    }
+
+    #[test]
+    fn test_assert_rank_and_dim() {
+        assert!(assert_rank("rank", &[2, 3, 4], 3).is_ok());
+        assert!(assert_rank("rank", &[2, 3, 4], 2).is_err());
+        assert!(assert_dim("dim", &[2, 3, 4], 1, 3).is_ok());
+        assert!(assert_dim("dim", &[2, 3, 4], 1, 99).is_err());
+        assert!(assert_dim("dim", &[2, 3, 4], 4, 99).is_err());
+    }
+
+    #[test]
+    fn test_assert_element_and_head() {
+        assert!(assert_element_count("count", &[2, 3, 4], 24).is_ok());
+        assert!(assert_element_count("count", &[2, 3, 4], 12).is_err());
+        assert!(assert_head_divisible("heads", 64, 8).is_ok());
+        assert!(assert_head_divisible("heads", 65, 8).is_err());
+        assert!(assert_head_divisible("heads", 64, 0).is_err());
+    }
+
+    #[test]
+    fn test_assert_matmul_and_broadcastable() {
+        assert!(assert_matmul_compat("gemm", &[2, 3], &[3, 4]).is_ok());
+        assert!(assert_matmul_compat("gemm", &[2, 3], &[4, 4]).is_err());
+        assert!(assert_broadcastable("add", &[1, 3], &[2, 3]).is_ok());
+        assert!(assert_broadcastable("add", &[2, 3], &[2, 4]).is_err());
     }
 }

@@ -542,6 +542,7 @@ dependencies = [
  "anyhow",
  "bitnet-math",
  "bitnet-test-support",
+ "bitnet-thread-config-core",
  "bitnet-warn-once",
  "bytemuck",
  "candle-core",
@@ -1745,6 +1746,10 @@ dependencies = [
  "bitnet-models",
  "tokio",
 ]
+
+[[package]]
+name = "bitnet-thread-config-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-tokenizer-discovery-core"
