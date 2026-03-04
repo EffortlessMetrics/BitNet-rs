@@ -10,6 +10,7 @@ documentation.workspace = true
 description = "SRP download mechanics helpers for retry, offline mode, metadata, and validation"
 
 [dependencies]
+bitnet-atomic-file-core = { workspace = true }
 bitnet-download-core = { path = "../bitnet-download-core", version = "0.2.1-dev" }
 bitnet-http-retry = { path = "../bitnet-http-retry", version = "0.2.1-dev" }
 reqwest = { workspace = true, features = ["blocking"] }

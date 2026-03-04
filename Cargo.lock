@@ -382,6 +382,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bitnet-atomic-file-core",
  "bitnet-common",
  "bitnet-cpu-activations",
  "bitnet-device-probe",
@@ -425,6 +426,13 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "vergen",
+]
+
+[[package]]
+name = "bitnet-atomic-file-core"
+version = "0.2.1-dev"
+dependencies = [
+ "tempfile",
 ]
 
 [[package]]
@@ -659,6 +667,7 @@ version = "0.1.0"
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
+ "bitnet-atomic-file-core",
  "bitnet-download-core",
  "bitnet-http-retry",
  "httpdate",
@@ -1171,6 +1180,7 @@ name = "bitnet-receipts-core"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-atomic-file-core",
  "bitnet-common",
  "bitnet-honest-compute",
  "bitnet-kernels",
