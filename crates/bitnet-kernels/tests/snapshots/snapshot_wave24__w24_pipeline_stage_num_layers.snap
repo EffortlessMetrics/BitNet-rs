@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave24.rs
-expression: "format!(\"num_layers={}\", stage.num_layers())"
----
-num_layers=12

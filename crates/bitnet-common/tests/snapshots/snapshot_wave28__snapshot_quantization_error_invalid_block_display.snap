@@ -1,5 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave28.rs
-expression: err.to_string()
----
-Quantization error: Invalid block size: 0

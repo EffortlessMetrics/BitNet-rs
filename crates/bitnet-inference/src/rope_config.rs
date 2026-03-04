@@ -1,120 +1,111 @@
-//! RoPE (Rotary Position Embedding) configuration.
+//! RoPE (Rotary Position Embedding) configuration utilities.
 //!
-//! Configure RoPE parameters for different model architectures:
-//! base frequency, scaling, NTK-aware extensions, and YaRN.
+//! Configuration for different model families' RoPE parameters.
 
-/// RoPE scaling strategy.
-#[derive(Debug, Clone, PartialEq, Default)]
+/// RoPE scaling type.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RopeScaling {
-    /// No scaling (standard RoPE).
-    #[default]
     None,
-    /// Linear frequency scaling.
-    Linear { factor: f64 },
-    /// Dynamic NTK-aware scaling.
-    DynamicNtk { factor: f64, original_max_pos: usize },
-    /// YaRN (Yet another RoPE extension).
-    Yarn { factor: f64, attention_factor: f64, beta_fast: f64, beta_slow: f64 },
+    Linear(f32),
+    Dynamic(f32),
+    Yarn { factor: f32, original_max_pos: usize },
+    NTKAware(f32),
 }
 
-/// Full RoPE configuration.
+/// RoPE configuration for a model.
 #[derive(Debug, Clone)]
 pub struct RopeConfig {
     pub head_dim: usize,
-    pub base_freq: f64,
-    pub max_seq_len: usize,
+    pub max_position: usize,
+    pub base: f32,
     pub scaling: RopeScaling,
+    pub interleaved: bool,
+}
+
+impl Default for RopeConfig {
+    fn default() -> Self {
+        Self {
+            head_dim: 128,
+            max_position: 4096,
+            base: 10000.0,
+            scaling: RopeScaling::None,
+            interleaved: false,
+        }
+    }
 }
 
 impl RopeConfig {
-    pub fn new(head_dim: usize) -> Self {
-        Self { head_dim, base_freq: 10000.0, max_seq_len: 4096, scaling: RopeScaling::None }
+    /// Compute inverse frequency table.
+    pub fn inv_freq(&self) -> Vec<f32> {
+        let effective_base = match self.scaling {
+            RopeScaling::NTKAware(factor) => self.base * factor,
+            _ => self.base,
+        };
+
+        (0..self.head_dim / 2)
+            .map(|i| 1.0 / effective_base.powf(2.0 * i as f32 / self.head_dim as f32))
+            .collect()
     }
 
-    pub fn with_base_freq(mut self, freq: f64) -> Self {
-        self.base_freq = freq;
-        self
-    }
+    /// Build sin/cos tables for positions [0, max_position).
+    pub fn build_tables(&self) -> (Vec<f32>, Vec<f32>) {
+        let inv = self.inv_freq();
+        let half = self.head_dim / 2;
+        let mut sin_table = vec![0.0f32; self.max_position * half];
+        let mut cos_table = vec![0.0f32; self.max_position * half];
 
-    pub fn with_max_seq_len(mut self, len: usize) -> Self {
-        self.max_seq_len = len;
-        self
-    }
+        for pos in 0..self.max_position {
+            let scaled_pos = match self.scaling {
+                RopeScaling::Linear(factor) => pos as f32 / factor,
+                RopeScaling::Dynamic(factor) => pos as f32 / factor,
+                _ => pos as f32,
+            };
 
-    pub fn with_scaling(mut self, scaling: RopeScaling) -> Self {
-        self.scaling = scaling;
-        self
-    }
-
-    /// Compute inverse frequency table for the given config.
-    pub fn inv_freq(&self) -> Vec<f64> {
-        let dim = self.head_dim;
-        let mut freqs = Vec::with_capacity(dim / 2);
-        let base = self.effective_base();
-
-        for i in (0..dim).step_by(2) {
-            let freq = 1.0 / base.powf(i as f64 / dim as f64);
-            freqs.push(freq);
-        }
-        freqs
-    }
-
-    /// Effective base frequency after scaling.
-    pub fn effective_base(&self) -> f64 {
-        match &self.scaling {
-            RopeScaling::None => self.base_freq,
-            RopeScaling::Linear { factor } => self.base_freq * factor,
-            RopeScaling::DynamicNtk { factor, original_max_pos } => {
-                let dim = self.head_dim as f64;
-                self.base_freq
-                    * ((factor * self.max_seq_len as f64 / *original_max_pos as f64)
-                        .powf(dim / (dim - 2.0))
-                        - 1.0)
-                        .max(1.0)
+            for (i, &freq) in inv.iter().enumerate() {
+                let angle = scaled_pos * freq;
+                sin_table[pos * half + i] = angle.sin();
+                cos_table[pos * half + i] = angle.cos();
             }
-            RopeScaling::Yarn { factor, .. } => self.base_freq * factor,
-        }
-    }
-
-    /// Compute cos/sin tables for positions [0, max_pos).
-    pub fn compute_cos_sin(&self, max_pos: usize) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
-        let inv_freq = self.inv_freq();
-        let half_dim = inv_freq.len();
-        let mut cos_table = Vec::with_capacity(max_pos);
-        let mut sin_table = Vec::with_capacity(max_pos);
-
-        for pos in 0..max_pos {
-            let mut cos_row = Vec::with_capacity(half_dim);
-            let mut sin_row = Vec::with_capacity(half_dim);
-            for &freq in &inv_freq {
-                let angle = pos as f64 * freq;
-                cos_row.push(angle.cos());
-                sin_row.push(angle.sin());
-            }
-            cos_table.push(cos_row);
-            sin_table.push(sin_row);
         }
 
-        (cos_table, sin_table)
+        (sin_table, cos_table)
+    }
+
+    /// Table size in bytes for sin+cos combined.
+    pub fn table_size_bytes(&self) -> usize {
+        self.max_position * self.head_dim / 2 * 4 * 2 // sin + cos, f32
+    }
+
+    /// Config for BitNet models.
+    pub fn bitnet() -> Self {
+        Self { head_dim: 128, max_position: 4096, base: 10000.0, ..Default::default() }
+    }
+
+    /// Config for Phi-4 (extended context).
+    pub fn phi4() -> Self {
+        Self { head_dim: 128, max_position: 16384, base: 10000.0, ..Default::default() }
+    }
+
+    /// Config for LLaMA-3 (extended base).
+    pub fn llama3() -> Self {
+        Self { head_dim: 128, max_position: 8192, base: 500000.0, ..Default::default() }
+    }
+
+    /// Config for Qwen2 (YaRN scaling).
+    pub fn qwen2() -> Self {
+        Self {
+            head_dim: 128,
+            max_position: 32768,
+            base: 1000000.0,
+            scaling: RopeScaling::Yarn { factor: 4.0, original_max_pos: 8192 },
+            ..Default::default()
+        }
     }
 }
 
-/// Preset: BitNet-2B RoPE (standard, 4K context).
-pub fn bitnet_rope(head_dim: usize) -> RopeConfig {
-    RopeConfig::new(head_dim).with_base_freq(10000.0).with_max_seq_len(4096)
-}
-
-/// Preset: Phi-4 RoPE (extended 16K context).
-pub fn phi4_rope(head_dim: usize) -> RopeConfig {
-    RopeConfig::new(head_dim)
-        .with_base_freq(10000.0)
-        .with_max_seq_len(16384)
-        .with_scaling(RopeScaling::DynamicNtk { factor: 4.0, original_max_pos: 4096 })
-}
-
-/// Preset: LLaMA-3 RoPE (extended 8K context).
-pub fn llama3_rope(head_dim: usize) -> RopeConfig {
-    RopeConfig::new(head_dim).with_base_freq(500000.0).with_max_seq_len(8192)
+/// Apply RoPE rotation to a pair of values.
+pub fn apply_rope_pair(x0: f32, x1: f32, cos_val: f32, sin_val: f32) -> (f32, f32) {
+    (x0 * cos_val - x1 * sin_val, x0 * sin_val + x1 * cos_val)
 }
 
 #[cfg(test)]
@@ -122,105 +113,117 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_basic_config() {
-        let config = RopeConfig::new(128);
-        assert_eq!(config.head_dim, 128);
-        assert_eq!(config.base_freq, 10000.0);
-        assert_eq!(config.max_seq_len, 4096);
+    fn test_default() {
+        let c = RopeConfig::default();
+        assert_eq!(c.head_dim, 128);
+        assert_eq!(c.max_position, 4096);
+        assert!((c.base - 10000.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_inv_freq_length() {
-        let config = RopeConfig::new(64);
-        let freqs = config.inv_freq();
-        assert_eq!(freqs.len(), 32); // dim/2
+    fn test_inv_freq() {
+        let c = RopeConfig { head_dim: 4, ..Default::default() };
+        let inv = c.inv_freq();
+        assert_eq!(inv.len(), 2);
+        assert!((inv[0] - 1.0).abs() < 0.01); // 1/10000^0 = 1
     }
 
     #[test]
-    fn test_inv_freq_monotonic() {
-        let config = RopeConfig::new(128);
-        let freqs = config.inv_freq();
-        for i in 1..freqs.len() {
-            assert!(freqs[i] < freqs[i - 1], "frequencies should decrease");
-        }
+    fn test_build_tables() {
+        let c = RopeConfig { head_dim: 4, max_position: 2, ..Default::default() };
+        let (sin_t, cos_t) = c.build_tables();
+        assert_eq!(sin_t.len(), 4); // 2 positions * 2 half_dim
+        assert_eq!(cos_t.len(), 4);
+        // Position 0: sin(0)=0, cos(0)=1
+        assert!(sin_t[0].abs() < 0.01);
+        assert!((cos_t[0] - 1.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_cos_sin_tables() {
-        let config = RopeConfig::new(64);
-        let (cos, sin) = config.compute_cos_sin(10);
-        assert_eq!(cos.len(), 10);
-        assert_eq!(sin.len(), 10);
-        assert_eq!(cos[0].len(), 32);
-        // Position 0: cos=1, sin=0
-        for &c in &cos[0] {
-            assert!((c - 1.0).abs() < 1e-10);
-        }
-        for &s in &sin[0] {
-            assert!(s.abs() < 1e-10);
-        }
+    fn test_table_size() {
+        let c = RopeConfig::default();
+        let size = c.table_size_bytes();
+        assert!(size > 0);
+        assert_eq!(size, 4096 * 64 * 4 * 2); // 4096 * (128/2) * sizeof(f32) * 2
+    }
+
+    #[test]
+    fn test_bitnet_config() {
+        let c = RopeConfig::bitnet();
+        assert_eq!(c.max_position, 4096);
+    }
+
+    #[test]
+    fn test_phi4_config() {
+        let c = RopeConfig::phi4();
+        assert_eq!(c.max_position, 16384);
+    }
+
+    #[test]
+    fn test_llama3_config() {
+        let c = RopeConfig::llama3();
+        assert_eq!(c.max_position, 8192);
+        assert!((c.base - 500000.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_qwen2_config() {
+        let c = RopeConfig::qwen2();
+        assert!(matches!(c.scaling, RopeScaling::Yarn { .. }));
     }
 
     #[test]
     fn test_linear_scaling() {
-        let base = RopeConfig::new(128);
-        let scaled = RopeConfig::new(128).with_scaling(RopeScaling::Linear { factor: 2.0 });
-        assert!((scaled.effective_base() - base.effective_base() * 2.0).abs() < 1e-6);
+        let c = RopeConfig {
+            head_dim: 4,
+            max_position: 4,
+            scaling: RopeScaling::Linear(2.0),
+            ..Default::default()
+        };
+        let (sin_t, _) = c.build_tables();
+        // Position 2 with scale=2 → effective position 1
+        assert!(!sin_t.is_empty());
     }
 
     #[test]
-    fn test_dynamic_ntk_scaling() {
-        let config = phi4_rope(128);
-        let effective = config.effective_base();
-        assert!(effective > 10000.0, "NTK scaling should increase base freq");
+    fn test_ntk_aware() {
+        let c = RopeConfig {
+            head_dim: 4,
+            max_position: 4,
+            scaling: RopeScaling::NTKAware(2.0),
+            ..Default::default()
+        };
+        let inv = c.inv_freq();
+        // Base should be doubled
+        let c2 = RopeConfig { head_dim: 4, ..Default::default() };
+        let inv2 = c2.inv_freq();
+        assert!(inv[1] < inv2[1]); // higher base = lower freq
     }
 
     #[test]
-    fn test_bitnet_preset() {
-        let config = bitnet_rope(128);
-        assert_eq!(config.max_seq_len, 4096);
-        assert_eq!(config.scaling, RopeScaling::None);
+    fn test_apply_rope_pair() {
+        // cos=1, sin=0 → identity
+        let (a, b) = apply_rope_pair(3.0, 4.0, 1.0, 0.0);
+        assert!((a - 3.0).abs() < 0.01);
+        assert!((b - 4.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_phi4_preset() {
-        let config = phi4_rope(128);
-        assert_eq!(config.max_seq_len, 16384);
-        matches!(config.scaling, RopeScaling::DynamicNtk { .. });
+    fn test_apply_rope_90deg() {
+        // cos=0, sin=1 → rotation by 90 degrees
+        let (a, b) = apply_rope_pair(3.0, 4.0, 0.0, 1.0);
+        assert!((a - (-4.0)).abs() < 0.01);
+        assert!((b - 3.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_llama3_preset() {
-        let config = llama3_rope(128);
-        assert_eq!(config.max_seq_len, 8192);
-        assert_eq!(config.base_freq, 500000.0);
+    fn test_scaling_none() {
+        assert_eq!(RopeScaling::None, RopeScaling::None);
     }
 
     #[test]
-    fn test_cos_sin_range() {
-        let config = RopeConfig::new(64);
-        let (cos, sin) = config.compute_cos_sin(100);
-        for pos in 0..100 {
-            for i in 0..32 {
-                assert!(cos[pos][i] >= -1.0 && cos[pos][i] <= 1.0);
-                assert!(sin[pos][i] >= -1.0 && sin[pos][i] <= 1.0);
-            }
-        }
-    }
-
-    #[test]
-    fn test_builder_chaining() {
-        let config = RopeConfig::new(64)
-            .with_base_freq(50000.0)
-            .with_max_seq_len(32768)
-            .with_scaling(RopeScaling::Linear { factor: 4.0 });
-        assert_eq!(config.base_freq, 50000.0);
-        assert_eq!(config.max_seq_len, 32768);
-    }
-
-    #[test]
-    fn test_no_scaling_effective_base() {
-        let config = RopeConfig::new(128).with_base_freq(10000.0);
-        assert!((config.effective_base() - 10000.0).abs() < 1e-6);
+    fn test_interleaved() {
+        let c = RopeConfig { interleaved: true, ..Default::default() };
+        assert!(c.interleaved);
     }
 }

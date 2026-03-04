@@ -1081,11 +1081,9 @@ mod tests {
                         .sum::<f32>()
                         / batch as f32;
                     // eps=1e-5 in batch_norm shifts inv_std slightly,
-                    // Tolerance widened from 0.1 to 0.15 to accommodate edge cases
-                    // near the filter boundary with high-magnitude inputs.
                     // causing output variance to be fractionally < 1.0.
                     prop_assert!(
-                        (ch_var - 1.0).abs() < 0.15,
+                        (ch_var - 1.0).abs() < 0.1,
                         "ch {}: var={} (batch={}, features={})",
                         ch, ch_var, batch, features
                     );

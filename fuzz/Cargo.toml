@@ -11,7 +11,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4.10"
 serde_json = "1.0.145"
-safetensors = "0.7.0"
+safetensors = "0.6.2"
 tempfile = "3"
 bitnet-quantization = { path = "../crates/bitnet-quantization", version = "0.2.1-dev" }
 bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev" }

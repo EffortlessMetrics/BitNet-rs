@@ -1,7 +1,6 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
-pub mod api_versioning;
 pub mod auth;
 pub mod batch_engine;
 pub mod batch_request;
@@ -17,24 +16,19 @@ pub mod endpoint_registry;
 pub mod execution_router;
 pub mod gpu_streaming;
 pub mod health;
-pub mod health_monitor;
 pub mod hf_model_service;
-pub mod middleware_chain;
 pub mod middleware_config;
 pub mod model_manager;
 pub mod model_registry;
 pub mod monitoring;
 pub mod rate_limiter;
-pub mod request_context;
 pub mod request_router;
 pub mod runtime_model_registry;
 pub mod security;
 pub mod sse;
 pub mod stream_handler;
 pub mod streaming;
-pub mod streaming_response;
 pub mod websocket;
-pub mod ws_messages;
 
 use anyhow::Result;
 use axum::{

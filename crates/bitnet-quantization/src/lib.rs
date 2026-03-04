@@ -13,7 +13,6 @@ use bitnet_common::{BitNetTensor, QuantizationType, Result};
 
 // Enable accuracy validation tests for production-ready quantization
 pub mod accuracy_validation_tests;
-pub mod calibration;
 pub mod calibrator;
 pub mod device_aware_quantizer;
 pub mod error_analysis;
@@ -32,13 +31,11 @@ pub mod qk256_dispatch;
 pub mod pipeline;
 pub mod quant_error;
 pub mod quant_planner;
-pub mod quant_stats;
 pub mod simd_ops;
 pub mod tl1;
 pub mod tl2;
 pub mod utils;
 pub mod validation;
-pub mod weight_packing;
 
 pub use device_aware_quantizer::{
     AccuracyValidator, DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType,

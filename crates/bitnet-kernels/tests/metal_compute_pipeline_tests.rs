@@ -1,355 +1,357 @@
-#![cfg(feature = "cpu")]
-#![allow(
-    dead_code,
-    unused_imports,
-    unused_variables,
-    clippy::manual_div_ceil,
-    clippy::useless_vec,
-    clippy::approx_constant,
-    clippy::too_many_arguments,
-    clippy::needless_range_loop,
-    clippy::assertions_on_constants
-)]
-//! Metal compute pipeline TDD scaffolds for Apple Silicon.
+#![allow(dead_code, clippy::manual_div_ceil, clippy::manual_slice_size_calculation)]
+//! Metal compute pipeline integration tests for Apple Silicon.
 //!
-//! This file contains a collection of ignored test scaffolds covering:
-//! - Compute pipeline creation and initialization
-//! - Thread group sizing and optimization
-//! - Dispatch optimization strategies
-//! - Shared memory usage patterns
-//! - Indirect dispatch mechanisms
-//! - Multiple command encoders coordination
-//! - Synchronization barriers
-//! - Resource binding and argument buffers
-//! - Pipeline caching strategies
-//! - Error recovery mechanisms
+//! Validates wgpu/Metal compute pipeline behavior including adapter selection,
+//! device limits, shader compilation, buffer round-trips, compute dispatch
+//! correctness, buffer alignment, and workgroup size handling.
 //!
-//! All tests are marked with `#[ignore = "TDD scaffold: ..."]` and are
-//! intended to be incrementally implemented during feature development.
+//! All tests require a Metal-capable GPU and are `#[ignore]` for CI.
+
+#![cfg(target_os = "macos")]
 
 use wgpu::util::DeviceExt;
 
-// ─────────────────────────────────────────────────────────────────────────
-// Helper: Metal device creation (with fallback support)
-// ─────────────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Shared WGSL shader: doubles every element in a storage buffer.
+// ---------------------------------------------------------------------------
+
+const DOUBLING_SHADER: &str = r#"
+@group(0) @binding(0) var<storage, read_write> data: array<f32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    data[id.x] = data[id.x] * 2.0;
+}
+"#;
+
+/// Parameterised variant: workgroup size is baked into the source at call site.
+fn doubling_shader_with_workgroup_size(size: u32) -> String {
+    format!(
+        r#"
+@group(0) @binding(0) var<storage, read_write> data: array<f32>;
+
+@compute @workgroup_size({size})
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
+    data[id.x] = data[id.x] * 2.0;
+}}
+"#
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Helper: create Metal device + queue (returns None if unavailable)
+// ---------------------------------------------------------------------------
 
 fn create_metal_device() -> Option<(wgpu::Device, wgpu::Queue)> {
-    #[cfg(target_arch = "aarch64")]
+    pollster::block_on(async {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::METAL,
+            ..Default::default()
+        });
+
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                compatible_surface: None,
+                force_fallback_adapter: false,
+            })
+            .await?;
+
+        let (device, queue) =
+            adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await.ok()?;
+
+        Some((device, queue))
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers for dispatch-heavy tests
+// ---------------------------------------------------------------------------
+
+/// Run the doubling shader on `data` using the given device/queue and return
+/// the GPU-side result.
+fn run_doubling_dispatch(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    data: &[f32],
+    shader_src: &str,
+) -> Vec<f32> {
+    let byte_len = (data.len() * std::mem::size_of::<f32>()) as u64;
+
+    let storage_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("storage"),
+        contents: bytemuck::cast_slice(data),
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+    });
+
+    let staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("staging"),
+        size: byte_len,
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("doubling"),
+        source: wgpu::ShaderSource::Wgsl(shader_src.into()),
+    });
+
+    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("layout"),
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }],
+    });
+
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("bind_group"),
+        layout: &bind_group_layout,
+        entries: &[wgpu::BindGroupEntry { binding: 0, resource: storage_buf.as_entire_binding() }],
+    });
+
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("pipeline_layout"),
+        bind_group_layouts: &[&bind_group_layout],
+        push_constant_ranges: &[],
+    });
+
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("pipeline"),
+        layout: Some(&pipeline_layout),
+        module: &module,
+        entry_point: Some("main"),
+        compilation_options: Default::default(),
+        cache: None,
+    });
+
+    let mut encoder =
+        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("encoder") });
+
     {
-        pollster::block_on(async {
-            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-                backends: wgpu::Backends::METAL,
-                ..Default::default()
-            });
-
-            let adapter = instance
-                .request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    compatible_surface: None,
-                    force_fallback_adapter: false,
-                })
-                .await?;
-
-            let (device, queue) =
-                adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await.ok()?;
-
-            Some((device, queue))
-        })
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("pass"),
+            timestamp_writes: None,
+        });
+        pass.set_pipeline(&pipeline);
+        pass.set_bind_group(0, &bind_group, &[]);
+        let workgroups = ((data.len() as u32) + 63) / 64;
+        pass.dispatch_workgroups(workgroups, 1, 1);
     }
-    #[cfg(not(target_arch = "aarch64"))]
-    {
-        None
+
+    encoder.copy_buffer_to_buffer(&storage_buf, 0, &staging_buf, 0, byte_len);
+    queue.submit(std::iter::once(encoder.finish()));
+
+    pollster::block_on(async {
+        let slice = staging_buf.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            tx.send(r).unwrap();
+        });
+        device.poll(wgpu::Maintain::Wait);
+        rx.recv().unwrap().unwrap();
+        bytemuck::cast_slice::<u8, f32>(&slice.get_mapped_range()).to_vec()
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+const IGNORE_REASON: &str = "requires Metal GPU - run on \
+    macOS with: cargo test --test metal_compute_pipeline_tests \
+    -- --ignored";
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_adapter_selection() {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::METAL,
+        ..Default::default()
+    });
+
+    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        compatible_surface: None,
+        force_fallback_adapter: false,
+    }));
+
+    let adapter = adapter.expect("wgpu should find a Metal adapter on macOS");
+    let info = adapter.get_info();
+    assert_eq!(info.backend, wgpu::Backend::Metal, "Adapter backend must be Metal");
+    assert!(!info.name.is_empty(), "Adapter name should be non-empty (e.g. 'Apple M1')");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_device_limits() {
+    let (device, _queue) =
+        create_metal_device().expect("Metal device should be available on macOS");
+    let limits = device.limits();
+
+    assert!(
+        limits.max_compute_workgroup_size_x >= 256,
+        "max_compute_workgroup_size_x should be >= 256, got {}",
+        limits.max_compute_workgroup_size_x
+    );
+    assert!(
+        limits.max_compute_workgroups_per_dimension >= 65535,
+        "max_compute_workgroups_per_dimension should be >= 65535, got {}",
+        limits.max_compute_workgroups_per_dimension
+    );
+    assert!(
+        limits.max_buffer_size >= 256 * 1024 * 1024,
+        "max_buffer_size should be >= 256 MiB, got {}",
+        limits.max_buffer_size
+    );
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_shader_compilation() {
+    let (device, _queue) =
+        create_metal_device().expect("Metal device should be available on macOS");
+
+    // Push an error scope so we can detect compilation failures.
+    device.push_error_scope(wgpu::ErrorFilter::Validation);
+
+    let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("doubling_shader"),
+        source: wgpu::ShaderSource::Wgsl(DOUBLING_SHADER.into()),
+    });
+
+    let error = pollster::block_on(device.pop_error_scope());
+    assert!(error.is_none(), "Shader compilation should succeed, got error: {error:?}");
+}
+
+#[test]
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_buffer_roundtrip() {
+    let (device, queue) = create_metal_device().expect("Metal device should be available on macOS");
+
+    let original: Vec<f32> = (0..256).map(|i| i as f32 * 0.5).collect();
+    let byte_len = (original.len() * std::mem::size_of::<f32>()) as u64;
+
+    // Upload via an init buffer, copy to a staging buffer, read back.
+    let gpu_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("gpu_buf"),
+        contents: bytemuck::cast_slice(&original),
+        usage: wgpu::BufferUsages::COPY_SRC,
+    });
+
+    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("staging"),
+        size: byte_len,
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
+    let mut encoder = device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("copy_encoder") });
+    encoder.copy_buffer_to_buffer(&gpu_buf, 0, &staging, 0, byte_len);
+    queue.submit(std::iter::once(encoder.finish()));
+
+    let readback = pollster::block_on(async {
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            tx.send(r).unwrap();
+        });
+        device.poll(wgpu::Maintain::Wait);
+        rx.recv().unwrap().unwrap();
+        bytemuck::cast_slice::<u8, f32>(&slice.get_mapped_range()).to_vec()
+    });
+
+    assert_eq!(readback.len(), original.len());
+    for (i, (&got, &expected)) in readback.iter().zip(original.iter()).enumerate() {
+        assert!(
+            (got - expected).abs() < f32::EPSILON,
+            "Mismatch at index {i}: got {got}, expected {expected}"
+        );
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// TDD Scaffold Tests: Compute Pipeline Operations
-// ─────────────────────────────────────────────────────────────────────────
-
-/// Test: Initialize a basic compute pipeline with minimal shader
 #[test]
-#[ignore = "TDD scaffold: implement basic compute pipeline initialization with WGSL shader compilation"]
-fn test_metal_compute_pipeline_basic_creation() {
-    // TODO: Create Metal device/queue
-    // TODO: Compile a minimal WGSL shader (e.g., no-op kernel)
-    // TODO: Create pipeline layout with appropriate bind groups
-    // TODO: Create compute pipeline from layout and shader
-    // TODO: Verify pipeline creation succeeds without errors
-    // TODO: Assert device limits permit pipeline configuration
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_compute_dispatch() {
+    let (device, queue) = create_metal_device().expect("Metal device should be available on macOS");
+
+    let input = [1.0_f32, 2.0, 3.0, 4.0];
+    let result = run_doubling_dispatch(&device, &queue, &input, DOUBLING_SHADER);
+
+    let expected = [2.0_f32, 4.0, 6.0, 8.0];
+    assert_eq!(result.len(), expected.len());
+    for (i, (&got, &exp)) in result.iter().zip(expected.iter()).enumerate() {
+        assert!((got - exp).abs() < 1e-6, "Mismatch at index {i}: got {got}, expected {exp}");
+    }
 }
 
-/// Test: Optimize thread group size for target hardware
 #[test]
-#[ignore = "TDD scaffold: implement thread group sizing algorithm respecting Metal hardware limits"]
-fn test_metal_thread_group_sizing_optimization() {
-    // TODO: Query device max workgroup sizes (x, y, z dimensions)
-    // TODO: Query device max threads per workgroup (total product)
-    // TODO: Implement sizing algorithm for: occupancy, register pressure, memory access patterns
-    // TODO: Test with various kernel types: reduction, matrix ops, element-wise
-    // TODO: Verify thread group products stay within limits (typically 1024 on Apple)
-    // TODO: Benchmark different thread group configs for throughput/latency
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_large_buffer_alignment() {
+    let (device, _queue) =
+        create_metal_device().expect("Metal device should be available on macOS");
+
+    for size in [256_u64, 512, 1024, 4096] {
+        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("aligned_buf"),
+            size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        assert!(
+            buf.size() >= size,
+            "Buffer size {actual} should be >= requested {size}",
+            actual = buf.size()
+        );
+    }
 }
 
-/// Test: Dispatch optimization based on workload characteristics
 #[test]
-#[ignore = "TDD scaffold: implement dispatch optimizer analyzing kernel properties and workload"]
-fn test_metal_dispatch_optimization_analysis() {
-    // TODO: Parse kernel shader to extract workgroup size declarations
-    // TODO: Analyze workload (input tensor shapes, reduction patterns)
-    // TODO: Calculate optimal dispatch dimensions (compute workgroups X, Y, Z)
-    // TODO: Account for Metal's SIMD group size (32 threads typical)
-    // TODO: Optimize for cache locality and memory coalescing
-    // TODO: Test edge cases: prime-sized tensors, 1D/2D/3D workloads
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_multiple_dispatches() {
+    let (device, queue) = create_metal_device().expect("Metal device should be available on macOS");
+
+    // Start with [1.0; 4], double three times → expect [8.0; 4].
+    let mut data = vec![1.0_f32; 4];
+    for _ in 0..3 {
+        data = run_doubling_dispatch(&device, &queue, &data, DOUBLING_SHADER);
+    }
+
+    for (i, &val) in data.iter().enumerate() {
+        assert!((val - 8.0).abs() < 1e-6, "After 3 doublings index {i}: got {val}, expected 8.0");
+    }
 }
 
-/// Test: Shared memory allocation and coherency
 #[test]
-#[ignore = "TDD scaffold: implement shared memory management with proper layout and barrier synchronization"]
-fn test_metal_shared_memory_usage_pattern() {
-    // TODO: Allocate threadgroup (shared) memory in Metal shader
-    // TODO: Implement data layout for cache efficiency (padding for bank conflicts)
-    // TODO: Test threadgroup barrier semantics (memory_order_acquire, memory_order_release)
-    // TODO: Verify threadgroup data persists across workgroup synchronization
-    // TODO: Measure shared memory allocation limits and fragmentation
-    // TODO: Test with various data layouts: AOS, SOA, hybrid layouts
-}
+#[ignore = "requires Metal GPU - run on macOS with: cargo test --test metal_compute_pipeline_tests -- --ignored"]
+fn test_metal_workgroup_size_limits() {
+    let (device, queue) = create_metal_device().expect("Metal device should be available on macOS");
 
-/// Test: Shared memory bank conflict detection
-#[test]
-#[ignore = "TDD scaffold: detect and mitigate shared memory bank conflicts in Metal kernels"]
-fn test_metal_shared_memory_bank_conflicts() {
-    // TODO: Analyze memory access patterns in threadgroup memory
-    // TODO: Detect bank conflict patterns (consecutive threads accessing same bank)
-    // TODO: Implement bank conflict mitigation (padding, data layout permutation)
-    // TODO: Measure performance impact of conflicts vs. optimized layouts
-    // TODO: Create test matrices with known conflict patterns
-    // TODO: Verify mitigation strategies improve throughput
-}
+    let input: Vec<f32> = (0..256).map(|i| i as f32).collect();
 
-/// Test: Indirect command dispatch mechanism
-#[test]
-#[ignore = "TDD scaffold: implement indirect dispatch using Metal indirect command buffers"]
-fn test_metal_indirect_command_buffer_dispatch() {
-    // TODO: Create indirect command buffer on GPU
-    // TODO: Set up compute commands that read dispatch parameters from GPU buffer
-    // TODO: Implement kernel that writes dispatch parameters (workgroup counts)
-    // TODO: Dispatch using indirect parameters from GPU computation
-    // TODO: Verify correctness with varying dispatch parameters from GPU
-    // TODO: Test performance vs. CPU-side dispatch submission
-}
+    for wg_size in [1_u32, 32, 64, 128, 256] {
+        let shader = doubling_shader_with_workgroup_size(wg_size);
+        let result = run_doubling_dispatch(&device, &queue, &input, &shader);
 
-/// Test: Multiple command encoders for pipeline parallelism
-#[test]
-#[ignore = "TDD scaffold: coordinate multiple Metal command encoders for pipeline parallelism"]
-fn test_metal_multiple_command_encoders_coordination() {
-    // TODO: Create multiple command encoders for different kernels
-    // TODO: Implement data dependencies between kernels (A→B→C chains)
-    // TODO: Submit encoders with proper synchronization (event fences, semaphores)
-    // TODO: Verify correct execution order and data flow
-    // TODO: Measure parallelism gains vs. single encoder overhead
-    // TODO: Test race conditions and synchronization corner cases
-}
-
-/// Test: GPU-side synchronization barriers
-#[test]
-#[ignore = "TDD scaffold: implement GPU-side synchronization barriers in Metal compute"]
-fn test_metal_gpu_synchronization_barriers() {
-    // TODO: Implement threadgroup_barrier() calls in WGSL shader
-    // TODO: Test memory_storage_barrier() for coherency across workgroups
-    // TODO: Implement device-level barriers (multi-workgroup synchronization)
-    // TODO: Create reduction pattern requiring all-workgroup sync
-    // TODO: Verify barriers prevent race conditions and data hazards
-    // TODO: Measure barrier overhead relative to computation
-}
-
-/// Test: Resource binding with argument buffers
-#[test]
-#[ignore = "TDD scaffold: bind resources using Metal argument buffers for efficient GPU memory access"]
-fn test_metal_argument_buffer_binding() {
-    // TODO: Create argument buffer descriptor
-    // TODO: Bind multiple buffers/textures through single argument buffer
-    // TODO: Implement GPU-side shader accessing bindless resources
-    // TODO: Test with varying resource counts (10, 100, 1000 resources)
-    // TODO: Verify binding correctness and data access
-    // TODO: Compare performance vs. traditional bind groups
-}
-
-/// Test: Argument buffer GPU address tracking
-#[test]
-#[ignore = "TDD scaffold: track and validate GPU memory addresses in argument buffers"]
-fn test_metal_argument_buffer_gpu_addresses() {
-    // TODO: Create GPU-resident argument buffers
-    // TODO: Extract and track GPU memory addresses
-    // TODO: Implement shader accessing resources via GPU addresses
-    // TODO: Verify address correctness across memory allocations
-    // TODO: Test address stability across command submissions
-    // TODO: Validate cache invalidation behavior with address reuse
-}
-
-/// Test: Compute pipeline caching strategy
-#[test]
-#[ignore = "TDD scaffold: implement pipeline caching to avoid recompilation costs"]
-fn test_metal_compute_pipeline_caching() {
-    // TODO: Create first compute pipeline from WGSL source
-    // TODO: Cache pipeline with hash of shader + layout + device limits
-    // TODO: Create second pipeline with identical configuration
-    // TODO: Verify cache hit (second pipeline reuses first without recompilation)
-    // TODO: Test cache invalidation with modified shader or device
-    // TODO: Measure compilation time savings with caching
-}
-
-/// Test: Pipeline compilation error recovery
-#[test]
-#[ignore = "TDD scaffold: gracefully handle and report shader compilation errors in Metal"]
-fn test_metal_pipeline_compilation_error_recovery() {
-    // TODO: Submit deliberately broken WGSL shader (syntax error)
-    // TODO: Catch compilation error via error scope
-    // TODO: Verify error message identifies shader issue location
-    // TODO: Implement fallback to CPU kernel or simpler GPU kernel
-    // TODO: Test recovery with incremental shader fixes
-    // TODO: Verify error does not corrupt pipeline state for subsequent kernels
-}
-
-/// Test: Pipeline state validation
-#[test]
-#[ignore = "TDD scaffold: validate compute pipeline state before and after execution"]
-fn test_metal_pipeline_state_validation() {
-    // TODO: Create compute pipeline with valid configuration
-    // TODO: Verify all required bind groups are bound before dispatch
-    // TODO: Test dispatch with missing bind groups (should error gracefully)
-    // TODO: Verify pipeline state consistency across multiple dispatches
-    // TODO: Test state cleanup after compute pass completes
-    // TODO: Validate state isolation between multiple pipelines
-}
-
-/// Test: Resource hazard detection
-#[test]
-#[ignore = "TDD scaffold: detect resource hazards (RAW, WAR, WAW) in compute operations"]
-fn test_metal_resource_hazard_detection() {
-    // TODO: Detect read-after-write hazards (kernel A writes, kernel B reads buffer)
-    // TODO: Detect write-after-read hazards (kernel A reads, kernel B writes)
-    // TODO: Detect write-after-write hazards (two kernels write same buffer)
-    // TODO: Implement barriers or synchronization to resolve hazards
-    // TODO: Test correctness with and without hazard resolution
-    // TODO: Measure overhead of additional synchronization
-}
-
-/// Test: Pipeline resource cleanup and lifecycle
-#[test]
-#[ignore = "TDD scaffold: properly manage compute pipeline resource lifecycle"]
-fn test_metal_pipeline_resource_lifecycle() {
-    // TODO: Create pipeline with buffers and bind groups
-    // TODO: Execute compute passes
-    // TODO: Verify device memory is properly cleaned up after pipeline drop
-    // TODO: Test with multiple pipeline creations/deletions (memory leak detection)
-    // TODO: Verify no dangling references or use-after-free errors
-    // TODO: Test cleanup order dependencies
-}
-
-/// Test: Pipeline performance profiling
-#[test]
-#[ignore = "TDD scaffold: profile and measure Metal compute pipeline performance"]
-fn test_metal_pipeline_performance_profiling() {
-    // TODO: Implement timing wrapper around compute dispatch
-    // TODO: Measure kernel execution time using GPU timestamps
-    // TODO: Account for GPU queue latency and memory transfer overhead
-    // TODO: Collect execution statistics (occupancy, memory bandwidth)
-    // TODO: Identify bottlenecks (compute-bound vs. memory-bound)
-    // TODO: Compare different pipeline configurations
-}
-
-/// Test: Device memory pressure handling
-#[test]
-#[ignore = "TDD scaffold: handle device memory pressure gracefully"]
-fn test_metal_device_memory_pressure_handling() {
-    // TODO: Allocate large buffers to simulate memory pressure
-    // TODO: Attempt to create compute pipeline under memory pressure
-    // TODO: Verify graceful degradation or error handling
-    // TODO: Test eviction of unused buffers and pipeline state
-    // TODO: Verify recovery after memory is freed
-    // TODO: Test memory pressure monitoring and notification
-}
-
-/// Test: Workgroup occupancy optimization
-#[test]
-#[ignore = "TDD scaffold: optimize compute workgroup occupancy on Metal GPU"]
-fn test_metal_workgroup_occupancy_optimization() {
-    // TODO: Analyze hardware occupancy models (SM count, thread capacity)
-    // TODO: Calculate optimal workgroup size for full occupancy
-    // TODO: Implement occupancy calculator for different kernel types
-    // TODO: Test with occupancy-bound vs. register-bound kernels
-    // TODO: Measure actual hardware occupancy if counters available
-    // TODO: Optimize for occupancy vs. other metrics (memory efficiency)
-}
-
-/// Test: Dispatch validation and bounds checking
-#[test]
-#[ignore = "TDD scaffold: validate dispatch parameters and detect out-of-bounds workgroups"]
-fn test_metal_dispatch_validation_bounds_checking() {
-    // TODO: Validate workgroup counts don't exceed device limits
-    // TODO: Check kernel local memory (stack frame) doesn't exceed limits
-    // TODO: Verify thread group size product ≤ max threads per group
-    // TODO: Detect workgroup indices that exceed data dimensions
-    // TODO: Implement safeguards against out-of-bounds memory access
-    // TODO: Test error reporting for invalid dispatch configurations
-}
-
-/// Test: Pipeline specialization and variants
-#[test]
-#[ignore = "TDD scaffold: create pipeline variants for different optimization targets"]
-fn test_metal_pipeline_specialization_variants() {
-    // TODO: Create base compute pipeline
-    // TODO: Generate specialized variants (e.g., for different tensor dimensions)
-    // TODO: Cache variants with specialization keys
-    // TODO: Verify correct variant selection based on kernel arguments
-    // TODO: Test with dynamic specialization parameters
-    // TODO: Measure performance of generic vs. specialized pipelines
-}
-
-/// Test: Nested compute operations
-#[test]
-#[ignore = "TDD scaffold: support nested/recursive compute operations with proper synchronization"]
-fn test_metal_nested_compute_operations() {
-    // TODO: Launch parent kernel that queues child kernel submissions
-    // TODO: Implement proper synchronization between parent and child
-    // TODO: Test data flow from parent to child computations
-    // TODO: Verify no deadlocks or resource conflicts
-    // TODO: Measure overhead of nested vs. flat dispatch hierarchy
-    // TODO: Test deeply nested computation trees
-}
-
-/// Test: Compute pipeline extensibility for custom operations
-#[test]
-#[ignore = "TDD scaffold: extend compute pipeline with custom user-defined operations"]
-fn test_metal_compute_pipeline_extensibility() {
-    // TODO: Define trait/interface for custom compute operation
-    // TODO: Allow registration of custom shaders and pipelines
-    // TODO: Test instantiation and execution of custom operations
-    // TODO: Verify custom operations integrate with standard pipeline
-    // TODO: Test composition of multiple custom operations
-    // TODO: Validate error handling for invalid custom operations
-}
-
-/// Test: Cross-pipeline synchronization
-#[test]
-#[ignore = "TDD scaffold: synchronize execution across multiple independent pipelines"]
-fn test_metal_cross_pipeline_synchronization() {
-    // TODO: Create multiple independent compute pipelines
-    // TODO: Implement data dependencies between pipelines
-    // TODO: Use events/semaphores for cross-pipeline synchronization
-    // TODO: Verify data correctness with dependencies
-    // TODO: Test without synchronization (should fail/corrupt data)
-    // TODO: Measure synchronization overhead in multi-pipeline scenarios
-}
-
-/// Test: Pipeline debug and diagnostic information
-#[test]
-#[ignore = "TDD scaffold: capture and expose pipeline debug and diagnostic information"]
-fn test_metal_pipeline_debug_diagnostics() {
-    // TODO: Capture shader compilation diagnostics
-    // TODO: Record kernel execution statistics
-    // TODO: Implement debug output/logging during compute passes
-    // TODO: Capture device error messages and warnings
-    // TODO: Test diagnostic capture with various kernel configurations
-    // TODO: Verify diagnostics aid in performance analysis and debugging
+        assert_eq!(
+            result.len(),
+            input.len(),
+            "Result length mismatch for workgroup_size={wg_size}"
+        );
+        for (i, (&got, &orig)) in result.iter().zip(input.iter()).enumerate() {
+            let expected = orig * 2.0;
+            assert!(
+                (got - expected).abs() < 1e-6,
+                "workgroup_size={wg_size} index {i}: \
+                 got {got}, expected {expected}"
+            );
+        }
+    }
 }

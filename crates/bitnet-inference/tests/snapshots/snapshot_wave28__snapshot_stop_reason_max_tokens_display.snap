@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave28.rs
-expression: "StopReason::MaxTokens.to_string()"
----
-max_tokens

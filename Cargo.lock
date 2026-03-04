@@ -382,7 +382,6 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
- "bitnet-atomic-file-core",
  "bitnet-common",
  "bitnet-cpu-activations",
  "bitnet-device-probe",
@@ -426,13 +425,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "vergen",
-]
-
-[[package]]
-name = "bitnet-atomic-file-core"
-version = "0.2.1-dev"
-dependencies = [
- "tempfile",
 ]
 
 [[package]]
@@ -667,7 +659,6 @@ version = "0.1.0"
 name = "bitnet-download"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-atomic-file-core",
  "bitnet-download-core",
  "bitnet-http-retry",
  "httpdate",
@@ -768,7 +759,7 @@ dependencies = [
  "bitnet-validation",
  "candle-core",
  "libfuzzer-sys",
- "safetensors 0.7.0",
+ "safetensors 0.6.2",
  "serde_json",
  "tempfile",
 ]
@@ -941,7 +932,6 @@ dependencies = [
  "env_logger",
  "half",
  "insta",
- "libc",
  "libm",
  "log",
  "memory-stats",
@@ -1024,7 +1014,7 @@ dependencies = [
  "rand_chacha 0.9.0",
  "regex",
  "reqwest",
- "safetensors 0.7.0",
+ "safetensors 0.6.2",
  "serde",
  "serde_json",
  "serde_yaml_ng",
@@ -1180,7 +1170,6 @@ name = "bitnet-receipts-core"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
- "bitnet-atomic-file-core",
  "bitnet-common",
  "bitnet-honest-compute",
  "bitnet-kernels",
@@ -1308,7 +1297,7 @@ dependencies = [
  "bitnet-validation",
  "bytemuck",
  "half",
- "safetensors 0.7.0",
+ "safetensors 0.6.2",
 ]
 
 [[package]]
@@ -1419,7 +1408,7 @@ dependencies = [
  "clap",
  "half",
  "proptest",
- "safetensors 0.7.0",
+ "safetensors 0.6.2",
  "serde_json",
  "tempfile",
  "walkdir",
@@ -1440,7 +1429,7 @@ dependencies = [
  "insta",
  "memmap2",
  "proptest",
- "safetensors 0.7.0",
+ "safetensors 0.6.2",
  "serde",
  "serde_json",
  "tempfile",
@@ -1554,7 +1543,6 @@ dependencies = [
 name = "bitnet-testing-policy-core"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-testing-policy-snapshot-core",
  "bitnet-testing-profile",
  "bitnet-testing-scenarios-core",
  "insta",
@@ -1596,14 +1584,6 @@ version = "0.2.1-dev"
 dependencies = [
  "bitnet-testing-policy-interop",
  "bitnet-testing-policy-state-core",
-]
-
-[[package]]
-name = "bitnet-testing-policy-snapshot-core"
-version = "0.2.1-dev"
-dependencies = [
- "bitnet-testing-profile",
- "bitnet-testing-scenarios-core",
 ]
 
 [[package]]
@@ -2257,14 +2237,13 @@ dependencies = [
 
 [[package]]
 name = "cl3"
-version = "0.13.1"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ad5f4170f520224684c5c6e86e8d5474c2a10696e553b1db8389970cd82ece7"
+checksum = "b823f24e72fa0c68aa14a250ae1c0848e68d4ae188b71c3972343e45b46f8644"
 dependencies = [
- "dlopen2",
  "libc",
  "opencl-sys",
- "thiserror 2.0.18",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -2951,29 +2930,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "dlopen2"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e2c5bd4158e66d1e215c49b837e11d62f3267b30c92f1d171c4d3105e3dc4d4"
-dependencies = [
- "dlopen2_derive",
- "libc",
- "once_cell",
- "winapi",
-]
-
-[[package]]
-name = "dlopen2_derive"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fbbb781877580993a8707ec48672673ec7b81eeba04cfd2310bd28c08e47c8f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -3710,20 +3666,20 @@ dependencies = [
  "cfg-if",
  "js-sys",
  "libc",
- "r-efi 5.3.0",
+ "r-efi",
  "wasip2",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "getrandom"
-version = "0.4.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0de51e6874e94e7bf76d726fc5d13ba782deca734ff60d5bb2fb2607c7406555"
+checksum = "139ef39800118c7683f2fd3c98c1b23c09ae076556b435f8e9064ae108aaeeec"
 dependencies = [
  "cfg-if",
  "libc",
- "r-efi 6.0.0",
+ "r-efi",
  "wasip2",
  "wasip3",
 ]
@@ -5089,9 +5045,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.12.0"
+version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
+checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
 name = "iri-string"
@@ -6093,18 +6049,18 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "opencl-sys"
-version = "0.6.1"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd005f352b2f05acd01d04122448e84f8bc66bdae49045927841bc63de62123"
+checksum = "de15dd01496ae90c5799f5266184ab020082b4065800ff0b732f489371d0e5cf"
 dependencies = [
  "libc",
 ]
 
 [[package]]
 name = "opencl3"
-version = "0.12.1"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d751bba4112cee4736166d8b8bd61ef57bbb3807e41d18b33a843dc8f974a9ee"
+checksum = "26ab4a90cb496f787d3934deb0c54fa9d65e7bed710c10071234aab0196fba04"
 dependencies = [
  "cl3",
  "libc",
@@ -6614,9 +6570,9 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bee689443a2bd0a16ab0348b52ee43e3b2d1b1f931c8aa5c9f8de4c86fbe8c40"
+checksum = "37566cb3fdacef14c0737f9546df7cfeadbfbc9fef10991038bf5015d0c80532"
 dependencies = [
  "bit-set",
  "bit-vec",
@@ -6952,12 +6908,6 @@ name = "r-efi"
 version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
-
-[[package]]
-name = "r-efi"
-version = "6.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "rand"
@@ -7374,6 +7324,16 @@ name = "safetensors"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44560c11236a6130a46ce36c836a62936dc81ebf8c36a37947423571be0e55b6"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "safetensors"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "172dd94c5a87b5c79f945c863da53b2ebc7ccef4eca24ac63cca66a41aab2178"
 dependencies = [
  "serde",
  "serde_json",
@@ -8006,7 +7966,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82a72c767771b47409d2345987fda8628641887d5466101319899796367354a0"
 dependencies = [
  "fastrand",
- "getrandom 0.4.2",
+ "getrandom 0.4.1",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -8192,9 +8152,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.50.0"
+version = "1.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27ad5e34374e03cfffefc301becb44e9dc3c17584f414349ebe29ed26661822d"
+checksum = "72a2903cd7736441aac9df9d7688bd0ce48edccaadf181c3b90be801e81d3d86"
 dependencies = [
  "bytes",
  "libc",
@@ -8209,9 +8169,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "2.6.1"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c55a2eff8b69ce66c84f85e1da1c233edc36ceb85a2058d11b0d6a3c7e7569c"
+checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8742,7 +8702,7 @@ version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b672338555252d43fd2240c714dc444b8c6fb0a5c5335e65a07bba7742735ddb"
 dependencies = [
- "getrandom 0.4.2",
+ "getrandom 0.4.1",
  "js-sys",
  "wasm-bindgen",
 ]

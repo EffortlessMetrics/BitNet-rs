@@ -61,7 +61,7 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn parses_content_range_total() {
@@ -80,13 +80,19 @@ mod tests {
     }
 
     #[test]
-    fn atomic_write_persists_contents() {
-        let dir = tempfile::tempdir().expect("create temp dir");
-        let file_path = dir.path().join("etag");
-        atomic_write(&file_path, b"etag-v1").expect("atomic write should succeed");
-        assert_eq!(fs::read(&file_path).expect("read file"), b"etag-v1");
+    fn atomic_write_creates_file() {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("etag.txt");
+        atomic_write(&path, b"abc").expect("atomic write should succeed");
+        assert_eq!(std::fs::read(&path).expect("file should exist"), b"abc");
+    }
 
-        atomic_write(&file_path, b"etag-v2").expect("atomic overwrite should succeed");
-        assert_eq!(fs::read(&file_path).expect("read file"), b"etag-v2");
+    #[test]
+    fn atomic_write_overwrites_file() {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("etag.txt");
+        atomic_write(&path, b"first").expect("first write should succeed");
+        atomic_write(&path, b"second").expect("second write should succeed");
+        assert_eq!(std::fs::read(&path).expect("file should exist"), b"second");
     }
 }

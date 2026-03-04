@@ -160,7 +160,6 @@ fn scalar_sigmoid(x: f32) -> f32 {
 }
 
 #[inline]
-#[allow(dead_code)]
 fn scalar_tanh(x: f32) -> f32 {
     x.tanh()
 }

@@ -3,16 +3,13 @@
 //! High-performance inference engine for BitNet models with streaming support,
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
-pub mod attention_config;
 pub mod attention_mask;
 pub mod attention_pattern;
 pub mod backends;
 pub mod batch;
-pub mod batch_coordinator;
 pub mod batch_engine;
 pub mod batch_scheduler;
 pub mod cache;
-pub mod cache_eviction;
 pub mod compute_cost;
 pub mod compute_graph;
 pub mod config;
@@ -31,7 +28,6 @@ pub mod generation_budget;
 pub mod generation_hooks;
 pub mod generation_output;
 pub mod generation_pipeline;
-pub mod generation_state;
 pub mod gguf;
 pub mod gpu_streaming;
 pub mod inference_cache;
@@ -70,11 +66,9 @@ pub mod prefix_cache;
 pub mod profiler;
 pub mod rt;
 pub mod runtime_utils;
-pub mod sampler_config;
 pub mod sampling;
 pub mod sampling_presets;
 pub mod sampling_utils;
-pub mod seq_scheduler;
 pub mod session_manager;
 pub mod simple_forward;
 pub mod streaming;

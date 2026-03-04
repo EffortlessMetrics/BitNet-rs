@@ -124,7 +124,7 @@ pub struct HardwareFeatures {
     pub has_opencl: bool,
 }
 
-/// Select the best matmul backend for given shape and hardware.
+/// Select the best matmul backendfor given shape and hardware.
 pub fn select_backend(
     shape: &MatmulShape,
     features: &HardwareFeatures,

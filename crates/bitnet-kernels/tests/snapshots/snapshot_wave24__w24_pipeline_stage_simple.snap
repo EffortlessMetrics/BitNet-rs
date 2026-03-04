@@ -1,9 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_wave24.rs
-expression: stage
----
-PipelineStage {
-    start_layer: 0,
-    end_layer: 6,
-    thread_affinity: None,
-}

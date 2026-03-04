@@ -1,9 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave28.rs
-expression: budget
----
-GenerationBudget {
-    max_tokens: 256,
-    max_time: None,
-    max_memory_bytes: None,
-}

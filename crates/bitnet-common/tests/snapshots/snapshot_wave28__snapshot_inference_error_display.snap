@@ -1,5 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave28.rs
-expression: err.to_string()
----
-Inference error: Generation failed: out of memory

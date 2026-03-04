@@ -28,15 +28,12 @@ bytemuck.workspace = true
 rayon.workspace = true
 log.workspace = true
 cudarc = { version = "0.17.8", optional = true, features = ["cuda-12000"] }
-opencl3 = { version = "0.12", optional = true }
+opencl3 = { version = "0.9", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
 half = { version = "2.7.1", optional = true }
 sysinfo = "0.37.2"
 memory-stats = "1.2.0"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.182"
 
 [build-dependencies]
 bindgen = { version = "0.72.1", optional = true }
@@ -60,7 +57,6 @@ insta.workspace = true
 rand_chacha = "0.9.0"
 bitnet-tests = { path = "../../tests", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
-libc = "0.2.182"
 libm = "0.2.16"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
@@ -77,7 +73,7 @@ pollster = "0.4"
 integration-tests = []
 default = []
 npu-backend = []
-cpu = ["cpu-fallback", "dep:half"]
+cpu = ["cpu-fallback"]
 cpu-fallback = []
 cpu-optimized = ["avx512", "avx2", "neon"]
 avx2 = ["bitnet-cpu-detect/avx2"]
@@ -139,11 +135,6 @@ path = "tests/proptest_wave24.rs"
 required-features = ["cpu"]
 
 [[test]]
-name = "proptest_wave27"
-path = "tests/proptest_wave27.rs"
-required-features = ["cpu"]
-
-[[test]]
 name = "kernel_perf_smoke"
 path = "tests/kernel_perf_smoke.rs"
 required-features = ["cpu"]
@@ -163,11 +154,6 @@ path = "tests/metal_layernorm_shader_tests.rs"
 [[test]]
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
-
-[[test]]
-name = "bdd_wave_8"
-path = "tests/bdd_wave_8.rs"
-required-features = ["cpu"]
 
 [[example]]
 name = "gpu_validation"

@@ -1,283 +1,265 @@
-//! Model layer inspection and analysis.
+//! Model layer inspection for architecture analysis.
 //!
-//! Enumerate, classify, and inspect transformer layers and their
-//! constituent tensors for debugging and validation.
+//! Inspects tensor names to reconstruct model architecture
+//! (layer count, component types, naming patterns).
 
-/// Type of a transformer layer component.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ComponentType {
-    Embedding,
-    Attention,
-    FeedForward,
-    Normalization,
-    OutputHead,
-    Other,
+use std::collections::{BTreeMap, BTreeSet};
+
+/// A discovered layer in the model.
+#[derive(Debug, Clone)]
+pub struct LayerInfo {
+    pub index: usize,
+    pub components: BTreeSet<String>,
+    pub tensor_count: usize,
 }
 
-impl ComponentType {
-    pub fn name(&self) -> &'static str {
+/// Overall model structure from tensor names.
+#[derive(Debug, Clone)]
+pub struct ModelStructure {
+    pub num_layers: usize,
+    pub layers: Vec<LayerInfo>,
+    pub non_layer_tensors: Vec<String>,
+    pub tensor_name_pattern: NamingPattern,
+}
+
+/// Naming convention used in the model.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NamingPattern {
+    /// `model.layers.{n}.self_attn.q_proj.weight` (HuggingFace style)
+    HuggingFace,
+    /// `blk.{n}.attn_q.weight` (GGUF style)
+    Gguf,
+    /// Unknown/mixed naming.
+    Unknown,
+}
+
+impl std::fmt::Display for NamingPattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ComponentType::Embedding => "embedding",
-            ComponentType::Attention => "attention",
-            ComponentType::FeedForward => "feed_forward",
-            ComponentType::Normalization => "normalization",
-            ComponentType::OutputHead => "output_head",
-            ComponentType::Other => "other",
+            Self::HuggingFace => write!(f, "HuggingFace"),
+            Self::Gguf => write!(f, "GGUF"),
+            Self::Unknown => write!(f, "Unknown"),
         }
     }
 }
 
-/// A tensor within a layer.
-#[derive(Debug, Clone)]
-pub struct TensorInfo {
-    pub name: String,
-    pub shape: Vec<usize>,
-    pub dtype: String,
-    pub component: ComponentType,
-}
+/// Inspect tensor names and reconstruct model structure.
+pub fn inspect_layers(tensor_names: &[String]) -> ModelStructure {
+    let mut layer_map: BTreeMap<usize, BTreeSet<String>> = BTreeMap::new();
+    let mut non_layer = Vec::new();
+    let mut hf_count = 0u32;
+    let mut gguf_count = 0u32;
 
-impl TensorInfo {
-    pub fn new(name: impl Into<String>, shape: Vec<usize>, dtype: impl Into<String>) -> Self {
-        let name_str: String = name.into();
-        let component = classify_component(&name_str);
-        Self { name: name_str, shape, dtype: dtype.into(), component }
+    for name in tensor_names {
+        if let Some(idx) = extract_layer_index(name) {
+            let component = extract_component(name);
+            layer_map.entry(idx).or_default().insert(component);
+            if name.contains("model.layers.") {
+                hf_count += 1;
+            }
+            if name.starts_with("blk.") {
+                gguf_count += 1;
+            }
+        } else {
+            non_layer.push(name.clone());
+        }
     }
 
-    pub fn num_elements(&self) -> usize {
-        self.shape.iter().product()
-    }
+    let layers: Vec<LayerInfo> = layer_map
+        .into_iter()
+        .map(|(index, components)| {
+            let tensor_count = components.len();
+            LayerInfo { index, components, tensor_count }
+        })
+        .collect();
 
-    pub fn size_bytes(&self) -> usize {
-        let elem_size = match self.dtype.as_str() {
-            "f32" | "i32" => 4,
-            "f16" | "bf16" => 2,
-            "i8" | "u8" => 1,
-            _ => 4, // default to f32
-        };
-        self.num_elements() * elem_size
-    }
-}
-
-/// Classify a tensor name into a component type.
-fn classify_component(name: &str) -> ComponentType {
-    let lower = name.to_lowercase();
-    if lower.contains("embed") || lower.contains("wte") || lower.contains("wpe") {
-        ComponentType::Embedding
-    } else if lower.contains("attn")
-        || lower.contains("attention")
-        || lower.contains("q_proj")
-        || lower.contains("k_proj")
-        || lower.contains("v_proj")
-        || lower.contains("o_proj")
-    {
-        ComponentType::Attention
-    } else if lower.contains("mlp")
-        || lower.contains("ffn")
-        || lower.contains("gate_proj")
-        || lower.contains("up_proj")
-        || lower.contains("down_proj")
-    {
-        ComponentType::FeedForward
-    } else if lower.contains("norm") || lower.contains("ln_") || lower.contains("layer_norm") {
-        ComponentType::Normalization
-    } else if lower.contains("lm_head") || lower.contains("output") {
-        ComponentType::OutputHead
+    let num_layers = layers.len();
+    let pattern = if hf_count > gguf_count && hf_count > 0 {
+        NamingPattern::HuggingFace
+    } else if gguf_count > 0 {
+        NamingPattern::Gguf
     } else {
-        ComponentType::Other
+        NamingPattern::Unknown
+    };
+
+    ModelStructure {
+        num_layers,
+        layers,
+        non_layer_tensors: non_layer,
+        tensor_name_pattern: pattern,
     }
 }
 
-/// A model layer (group of tensors at the same depth).
-#[derive(Debug, Clone)]
-pub struct LayerInfo {
-    pub index: usize,
-    pub tensors: Vec<TensorInfo>,
-}
-
-impl LayerInfo {
-    pub fn new(index: usize) -> Self {
-        Self { index, tensors: Vec::new() }
-    }
-
-    pub fn add_tensor(&mut self, tensor: TensorInfo) {
-        self.tensors.push(tensor);
-    }
-
-    pub fn tensor_count(&self) -> usize {
-        self.tensors.len()
-    }
-
-    pub fn total_params(&self) -> usize {
-        self.tensors.iter().map(|t| t.num_elements()).sum()
-    }
-
-    pub fn total_bytes(&self) -> usize {
-        self.tensors.iter().map(|t| t.size_bytes()).sum()
-    }
-
-    pub fn has_attention(&self) -> bool {
-        self.tensors.iter().any(|t| t.component == ComponentType::Attention)
-    }
-
-    pub fn has_ffn(&self) -> bool {
-        self.tensors.iter().any(|t| t.component == ComponentType::FeedForward)
-    }
-
-    pub fn has_norm(&self) -> bool {
-        self.tensors.iter().any(|t| t.component == ComponentType::Normalization)
-    }
-}
-
-/// Complete layer inspection report.
-#[derive(Debug)]
-pub struct InspectionReport {
-    pub layers: Vec<LayerInfo>,
-    pub non_layer_tensors: Vec<TensorInfo>,
-}
-
-impl InspectionReport {
-    pub fn new() -> Self {
-        Self { layers: Vec::new(), non_layer_tensors: Vec::new() }
-    }
-
-    pub fn num_layers(&self) -> usize {
-        self.layers.len()
-    }
-
-    pub fn total_tensors(&self) -> usize {
-        self.layers.iter().map(|l| l.tensor_count()).sum::<usize>() + self.non_layer_tensors.len()
-    }
-
-    pub fn total_params(&self) -> usize {
-        self.layers.iter().map(|l| l.total_params()).sum::<usize>()
-            + self.non_layer_tensors.iter().map(|t| t.num_elements()).sum::<usize>()
-    }
-
-    pub fn total_bytes(&self) -> usize {
-        self.layers.iter().map(|l| l.total_bytes()).sum::<usize>()
-            + self.non_layer_tensors.iter().map(|t| t.size_bytes()).sum::<usize>()
-    }
-
-    pub fn params_millions(&self) -> f64 {
-        self.total_params() as f64 / 1e6
-    }
-
-    pub fn summary(&self) -> String {
-        format!(
-            "{} layers, {} tensors, {:.1}M params, {:.1} MB",
-            self.num_layers(),
-            self.total_tensors(),
-            self.params_millions(),
-            self.total_bytes() as f64 / (1024.0 * 1024.0),
-        )
-    }
-}
-
-impl Default for InspectionReport {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Extract layer index from tensor name (e.g., "layers.5.attn.q_proj" → Some(5)).
-pub fn extract_layer_index(name: &str) -> Option<usize> {
-    for part in name.split('.') {
-        if let Ok(idx) = part.parse::<usize>() {
+/// Extract layer index from a tensor name.
+fn extract_layer_index(name: &str) -> Option<usize> {
+    for prefix in &["model.layers.", "blk.", "layers.", "encoder.layer.", "decoder.layer."] {
+        if let Some(rest) = name.strip_prefix(prefix)
+            && let Some(idx_str) = rest.split('.').next()
+            && let Ok(idx) = idx_str.parse::<usize>()
+        {
             return Some(idx);
         }
     }
     None
 }
 
+/// Extract component name from a tensor name.
+fn extract_component(name: &str) -> String {
+    let parts: Vec<&str> = name.split('.').collect();
+    for (i, &part) in parts.iter().enumerate() {
+        if part.parse::<usize>().is_ok() && i + 1 < parts.len() {
+            return parts[i + 1..].join(".");
+        }
+    }
+    name.to_string()
+}
+
+/// Common components expected in transformer layers.
+pub fn expected_components() -> Vec<&'static str> {
+    vec![
+        "self_attn.q_proj.weight",
+        "self_attn.k_proj.weight",
+        "self_attn.v_proj.weight",
+        "self_attn.o_proj.weight",
+        "mlp.gate_proj.weight",
+        "mlp.up_proj.weight",
+        "mlp.down_proj.weight",
+        "input_layernorm.weight",
+        "post_attention_layernorm.weight",
+    ]
+}
+
+/// Check what expected components are missing from a layer.
+pub fn missing_components(layer: &LayerInfo) -> Vec<String> {
+    expected_components()
+        .into_iter()
+        .filter(|c| !layer.components.contains(*c))
+        .map(|c| c.to_string())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn hf_tensor_names() -> Vec<String> {
+        vec![
+            "model.embed_tokens.weight".into(),
+            "model.layers.0.self_attn.q_proj.weight".into(),
+            "model.layers.0.self_attn.k_proj.weight".into(),
+            "model.layers.0.mlp.gate_proj.weight".into(),
+            "model.layers.1.self_attn.q_proj.weight".into(),
+            "model.layers.1.mlp.gate_proj.weight".into(),
+            "lm_head.weight".into(),
+        ]
+    }
+
+    fn gguf_tensor_names() -> Vec<String> {
+        vec![
+            "token_embd.weight".into(),
+            "blk.0.attn_q.weight".into(),
+            "blk.0.attn_k.weight".into(),
+            "blk.1.attn_q.weight".into(),
+            "output.weight".into(),
+        ]
+    }
+
     #[test]
-    fn test_classify_attention() {
+    fn test_inspect_hf() {
+        let s = inspect_layers(&hf_tensor_names());
+        assert_eq!(s.num_layers, 2);
+        assert_eq!(s.tensor_name_pattern, NamingPattern::HuggingFace);
+    }
+
+    #[test]
+    fn test_inspect_gguf() {
+        let s = inspect_layers(&gguf_tensor_names());
+        assert_eq!(s.num_layers, 2);
+        assert_eq!(s.tensor_name_pattern, NamingPattern::Gguf);
+    }
+
+    #[test]
+    fn test_non_layer_tensors() {
+        let s = inspect_layers(&hf_tensor_names());
+        assert!(s.non_layer_tensors.contains(&"model.embed_tokens.weight".into()));
+        assert!(s.non_layer_tensors.contains(&"lm_head.weight".into()));
+    }
+
+    #[test]
+    fn test_layer_components() {
+        let s = inspect_layers(&hf_tensor_names());
+        let l0 = &s.layers[0];
+        assert_eq!(l0.index, 0);
+        assert!(l0.components.contains("self_attn.q_proj.weight"));
+    }
+
+    #[test]
+    fn test_empty() {
+        let s = inspect_layers(&[]);
+        assert_eq!(s.num_layers, 0);
+        assert_eq!(s.tensor_name_pattern, NamingPattern::Unknown);
+    }
+
+    #[test]
+    fn test_extract_index_hf() {
+        assert_eq!(extract_layer_index("model.layers.5.self_attn.q_proj.weight"), Some(5));
+    }
+
+    #[test]
+    fn test_extract_index_gguf() {
+        assert_eq!(extract_layer_index("blk.3.attn_q.weight"), Some(3));
+    }
+
+    #[test]
+    fn test_extract_index_none() {
+        assert_eq!(extract_layer_index("lm_head.weight"), None);
+    }
+
+    #[test]
+    fn test_extract_component() {
         assert_eq!(
-            classify_component("model.layers.0.self_attn.q_proj.weight"),
-            ComponentType::Attention
+            extract_component("model.layers.0.self_attn.q_proj.weight"),
+            "self_attn.q_proj.weight"
         );
     }
 
     #[test]
-    fn test_classify_ffn() {
-        assert_eq!(
-            classify_component("model.layers.0.mlp.gate_proj.weight"),
-            ComponentType::FeedForward
-        );
+    fn test_naming_pattern_display() {
+        assert_eq!(format!("{}", NamingPattern::HuggingFace), "HuggingFace");
+        assert_eq!(format!("{}", NamingPattern::Gguf), "GGUF");
     }
 
     #[test]
-    fn test_classify_norm() {
-        assert_eq!(
-            classify_component("model.layers.0.input_layernorm.weight"),
-            ComponentType::Normalization
-        );
+    fn test_expected_components() {
+        let comps = expected_components();
+        assert!(comps.len() >= 9);
     }
 
     #[test]
-    fn test_classify_embedding() {
-        assert_eq!(classify_component("model.embed_tokens.weight"), ComponentType::Embedding);
+    fn test_missing_components() {
+        let layer = LayerInfo {
+            index: 0,
+            components: BTreeSet::from(["self_attn.q_proj.weight".into()]),
+            tensor_count: 1,
+        };
+        let missing = missing_components(&layer);
+        assert!(missing.len() >= 8);
+        assert!(!missing.contains(&"self_attn.q_proj.weight".into()));
     }
 
     #[test]
-    fn test_classify_output() {
-        assert_eq!(classify_component("lm_head.weight"), ComponentType::OutputHead);
+    fn test_layer_count() {
+        let mut names = vec![];
+        for i in 0..32 {
+            names.push(format!("model.layers.{i}.self_attn.q_proj.weight"));
+        }
+        let s = inspect_layers(&names);
+        assert_eq!(s.num_layers, 32);
     }
 
     #[test]
-    fn test_tensor_info() {
-        let t = TensorInfo::new("test.weight", vec![512, 512], "f32");
-        assert_eq!(t.num_elements(), 262144);
-        assert_eq!(t.size_bytes(), 1048576);
-    }
-
-    #[test]
-    fn test_tensor_f16_size() {
-        let t = TensorInfo::new("test.weight", vec![100], "f16");
-        assert_eq!(t.size_bytes(), 200);
-    }
-
-    #[test]
-    fn test_layer_info() {
-        let mut layer = LayerInfo::new(0);
-        layer.add_tensor(TensorInfo::new("attn.q_proj", vec![512, 512], "f32"));
-        layer.add_tensor(TensorInfo::new("mlp.gate_proj", vec![512, 1024], "f32"));
-        assert!(layer.has_attention());
-        assert!(layer.has_ffn());
-        assert_eq!(layer.tensor_count(), 2);
-    }
-
-    #[test]
-    fn test_extract_layer_index() {
-        assert_eq!(extract_layer_index("model.layers.5.attn.q_proj"), Some(5));
-        assert_eq!(extract_layer_index("model.layers.39.mlp"), Some(39));
-        assert_eq!(extract_layer_index("embed_tokens.weight"), None);
-    }
-
-    #[test]
-    fn test_inspection_report() {
-        let mut report = InspectionReport::new();
-        let mut layer = LayerInfo::new(0);
-        layer.add_tensor(TensorInfo::new("attn", vec![100], "f32"));
-        report.layers.push(layer);
-        report.non_layer_tensors.push(TensorInfo::new("embed", vec![1000], "f16"));
-        assert_eq!(report.num_layers(), 1);
-        assert_eq!(report.total_tensors(), 2);
-    }
-
-    #[test]
-    fn test_report_summary() {
-        let report = InspectionReport::new();
-        let s = report.summary();
-        assert!(s.contains("layers"));
-    }
-
-    #[test]
-    fn test_component_name() {
-        assert_eq!(ComponentType::Attention.name(), "attention");
-        assert_eq!(ComponentType::FeedForward.name(), "feed_forward");
+    fn test_tensor_count_per_layer() {
+        let s = inspect_layers(&hf_tensor_names());
+        assert_eq!(s.layers[0].tensor_count, 3); // q, k, gate
     }
 }

@@ -72,7 +72,6 @@ members = [
   "crates/bitnet-testing-profile",
   "crates/bitnet-testing-scenarios",
   "crates/bitnet-testing-policy-core",
-  "crates/bitnet-testing-policy-snapshot-core", # SRP: policy snapshot resolution helpers
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-testing-scenarios-profile-core",
   "crates/bitnet-testing-policy", 
@@ -91,7 +90,6 @@ members = [
   "crates/bitnet-test-env",
   "crates/bitnet-test-fixtures-core",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-atomic-file-core", # SRP: shared atomic file write primitive
   "crates/bitnet-download-core", # SRP: core download validation and atomic file helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
   "crates/bitnet-download-core", # SRP: pure download utility helpers
@@ -162,7 +160,6 @@ default-members = [
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core",
   "crates/bitnet-testing-policy-core",
-  "crates/bitnet-testing-policy-snapshot-core", # SRP: policy snapshot resolution helpers
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-runtime-profile-core",
   # SRP microcrate extractions (phase-6)
@@ -226,7 +223,6 @@ version = "0.2.1-dev"
 bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
-bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
@@ -405,7 +401,6 @@ harness = false
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
-bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"
@@ -432,7 +427,7 @@ candle-transformers = { version = "0.9.1", default-features = false }
 
 # Serialization formats
 memmap2 = "0.9.9"
-safetensors = "0.7.0"
+safetensors = "0.6.2"
 
 # CLI and configuration
 clap = { version = "4.5.51", features = ["derive", "env"] }
@@ -476,7 +471,7 @@ cudarc = "0.17.8"
 
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
-proptest = ">=1.9.0, <1.10.0"
+proptest = "1.9.0"
 insta = { version = "1.43.2", features = ["yaml", "json", "redactions", "filters"] }
 tempfile = "3.23.0"
 serial_test = "3.2.0"

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave28.rs
-expression: "StopReason::UserStop.to_string()"
----
-user_stop

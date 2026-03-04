@@ -13,7 +13,7 @@ anyhow = "1.0.100"
 clap = { workspace = true, features = ["derive"] }
 bitnet-safetensors-ln = { path = "../bitnet-safetensors-ln", version = "0.2.1-dev" }
 walkdir = "2.5.0"
-safetensors = "0.7.0"
+safetensors = "0.6.2"
 half = "2.7.1"
 bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }
 serde_json.workspace = true

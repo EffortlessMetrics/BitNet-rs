@@ -21,10 +21,7 @@ mod mock;
 pub mod preprocessor;
 pub mod sp_tokenizer;
 pub mod spm_tokenizer;
-pub mod token_frequency;
-pub mod token_merge;
 pub mod token_validation;
-pub mod tokenizer_bench;
 pub mod universal;
 
 // New tokenizer discovery and auto-download modules
@@ -37,7 +34,6 @@ pub mod strategy;
 pub mod utils;
 pub mod vocab_analyzer;
 pub mod vocab_index;
-pub mod vocab_stats;
 pub mod vocabulary;
 
 use bitnet_common::{BitNetError, ModelError, Result};

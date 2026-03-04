@@ -4,21 +4,139 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
-### Wave 138 - OpenCL GPU Support (Continued)
+### Added — SLM (Small Language Model) Support
 
-- docs: add CHANGELOG entries for OpenCL waves 135-136 - PR #2614
-- feat(kernels): add OpenCL tensor statistics module (in progress)
-- feat(kernels): add OpenCL architecture registry module (in progress)
-- feat(kernels): add OpenCL logit processor module (in progress)
-- feat(kernels): add OpenCL prompt cache module (in progress)
+- **SafeTensors Reader** (`bitnet-models`): Direct loading of HuggingFace SafeTensors files with memory-mapped I/O, multi-shard support, and automatic BF16/F16→F32 conversion (#2317)
+- **Architecture Registry**: 19 model architecture variants (Phi-4, LLaMA-3, Qwen2.5, Gemma-2, Mistral, DeepSeek, StarCoder, Falcon, and more) with automatic detection from GGUF metadata and HF config.json (#2325, #2389)
+- **Weight Name Mapper**: Pattern-based HuggingFace↔GGUF weight name translation for 5 architectures (#2384)
+- **HuggingFace Model Loader**: Unified loader integrating SafeTensors + config detection + weight mapping for seamless HF model loading (#2395)
+- **Model Format Conversion Pipeline**: Convert between SafeTensors, GGUF, ONNX, and PyTorch formats with quantization support (F32/F16/BF16/Int8/Int4) (#2528)
+- **Dense Forward Pass** (`bitnet-inference`): Non-quantized inference path with DenseLinear, DenseFFN, DenseAttention, DenseTransformerBlock, DenseModel (#2413)
+- **Dense Generation Pipeline**: Token sampling with temperature, top-k/p, repetition penalty, and stop token detection (#2488)
+- **Int8 Quantization** (`bitnet-quantization`): Symmetric/asymmetric int8 with per-tensor/per-channel modes and 3 calibration methods (#2516)
+- **Int4 Quantization**: Group-wise int4 with NibblePacked storage (2 values per byte) for 4× compression (#2530)
+- **Memory Estimation**: KV cache and model memory planning with precomputed profiles for Phi-4, LLaMA, Qwen (#2515)
+- **Dense Cross-Validation Framework**: Token/logit comparison with configurable tolerances and golden fixtures (#2514)
+- **Model Validation Suite**: 8 issue types, 5 validation functions for weight shape/dtype/NaN/range checking (#2432)
+- **Tokenizer Discovery Expansion**: 15 SLM model entries covering Phi-4, Qwen, Gemma, Mistral, LLaMA families (#2351)
+- **HF Model Service** (`bitnet-server`): Server-side HF model loading state machine with typed API (#2485)
+- **Download-Model Expansion**: 9 known HF model registry entries with download manifests (#2396)
+- **CLI SLM Integration**: `--model-format` and `--architecture` flags for HF model loading (#2408)
+- **SLM Quickstart Guide**: Comprehensive documentation for getting started with SLM models (#2411)
+- **SLM Inference Benchmarks**: 13 Criterion benchmarks for SiLU, RMSNorm, matmul, attention, RoPE, softmax (#2433)
 
-### Wave 137 - OpenCL GPU Support (Continued)
+### Added — GPU / Hardware Support
 
-- feat(kernels): add OpenCL memory pool manager (best-fit, arena, slab allocators) - PR #2613
-- feat(kernels): add OpenCL tokenizer bridge (batch encoding/decoding, templates) - PR #2609
-- feat(kernels): add OpenCL weight compression (8 quantization strategies) - PR #2616
-- feat(kernels): add OpenCL buffer transfer manager (async, pinned, staging) - PR #2615
-- feat(kernels): add OpenCL kernel compilation manager (in progress)
+- **CUDA GPU Memory Pool**: Best-fit, buddy, and slab allocators for GPU memory management (#2455)
+- **OpenCL Layer Normalization**: LayerNorm, RMSNorm, GroupNorm, FusedNormLinear variants for Intel Arc A770 (#2460)
+
+### Fixed — SLM
+
+- **RMSNorm Precision**: Fixed f32→f64 accumulation in inference crate's RMSNorm for improved numerical stability (#2315)
+- **Formatting Regression**: Fixed cargo fmt check failures from GPU PR merges (#2483)
+
+### Testing — SLM
+
+- 900+ new tests across 30+ PRs covering CPU scalar parity, quantization round-trips, RoPE, attention, memory safety, tokenizer, GGUF loader, server handlers, model config, CLI parsing, BF16 conversion, GQA, 16K context, prompt templates, dense inference, E2E smoke tests
+
+### Added — OpenCL Compute Operations (Waves 127–128)
+
+- **OpenCL continuous batching**: Iteration-level continuous batching for OpenCL inference pipeline, 66 tests (#2450)
+- **OpenCL weight dequantization kernels**: 7 quantization format dequantization kernels for OpenCL, 82 tests (#2447)
+- **OpenCL numerical stability suite**: Numerical stability validation and tolerance testing for OpenCL kernels, 69 tests (#2443)
+- **OpenCL GPU memory allocator**: Buddy-system GPU memory allocator for OpenCL device memory management, 66 tests (#2441)
+- **OpenCL cross-backend verification**: Cross-backend numerical verification framework for OpenCL vs CPU results, 77 tests (#2457)
+- **OpenCL SwiGLU FFN with MoE router**: SwiGLU feed-forward network with mixture-of-experts routing for OpenCL, 79 tests (#2459)
+- **OpenCL layer normalization variants**: LayerNorm, RMSNorm, and GroupNorm implementations for OpenCL, 70 tests (#2460)
+- **OpenCL tensor reshape operations**: Transpose, permute, concat, and split tensor operations for OpenCL, 86 tests (#2456)
+- **OpenCL reduction operations**: 9 reduction operations with tree-reduction strategy for OpenCL, 106 tests (#2461)
+- **CHANGELOG waves 125–126**: Documentation of waves 125–126 OpenCL PRs (#2444)
+
+### Added — A770 OpenCL Runtime & Diagnostics (Waves 112–113)
+
+- **CHANGELOG Waves 110–111**: Documentation of waves 110–111 OpenCL engine and optimization PRs (#2138)
+- **Kernel Launcher**: Automatic work-size computation, subgroup selection, and batch launch for OpenCL kernels, 50 tests (#2155)
+- **Thread Pool**: CPU-GPU pipeline parallelism with priority queues for overlapped execution, 42 tests (#2156)
+- **Tensor Allocator**: GPU slab allocation with free-list caching for reduced allocation overhead, 54 tests (#2157)
+- **Pipeline Optimizer**: Compute/transfer overlap scheduling with double buffering for improved throughput, 53 tests (#2159)
+- **Event Synchronization**: Kernel execution ordering with barriers for correct dependency sequencing, 53 tests (#2169)
+- **Zero-Copy Buffer Sharing**: CPU-GPU memory mapping for reduced data transfer latency, 49 tests (#2170)
+- **Mixed Quantization Strategies**: Per-layer precision optimization for flexible model quantization, 58 tests (#2171)
+- **Shader Binary Cache**: Compiled program persistence with LRU/LFU eviction for faster kernel startup, 48 tests (#2175)
+- **GPU Health Check Suite**: Diagnostic validation with recommendations for device readiness, 47 tests (#2176)
+
+### Added — Intel Arc A770 / OpenCL GPU Backend (Waves 99–103)
+
+- **Capability Detection** (`bitnet-device-probe`): Enhanced Intel Arc A770 capability detection with tier-based classification (A770/A750/A580/A380/A310), PCI device ID matching, and 28 tests (#1913)
+- **Buffer Alignment**: A770 Xe-HPG cache-line-aligned buffer management with 64B alignment, DMA page alignment, buffer pool with reuse, 26 tests (#1912)
+- **Dispatch Sizing**: A770 workgroup constraint validation with Xe-HPG limits (1024 max workgroup, 64KB SLM, subgroups 8/16/32), 1D/2D dispatch optimization, 36 tests (#1918)
+- **Error Recovery**: OpenCL error recovery with configurable retry policies and automatic CPU fallback, 28 tests (#1916)
+- **SPIR-V Cache**: Filesystem-backed SPIR-V compilation cache with SHA-256 keying, LRU eviction, device fingerprinting, 28 tests (#1921)
+- **Kernel Profiling**: OpenCL kernel profiling framework with nanosecond timestamps, bandwidth/GFLOPS metrics, ASCII/JSON reports, 32 tests (#1922)
+- **Numerical Stability**: A770 OpenCL numerical stability regression harness with configurable tolerances and CPU reference implementations, 20 tests (#1914)
+
+### Added — OpenCL Compute Kernels (Waves 99–103)
+
+- **Activation Kernels** (`activations.cl`): SiLU, GELU, ReLU, fused SiLU×mul, elementwise ops, numerically stable softmax with tree reduction, 28 tests (#1919)
+- **Attention Kernel** (`attention.cl`): Scaled dot-product attention with float4 vectorization, causal masking, tree-reduction softmax, 27 tests (#1920)
+- **Normalization Kernels** (`normalization.cl`): RMSNorm and LayerNorm with tree-reduction, local memory optimization, 33 tests (#1927)
+- **RoPE Kernel** (`rope.cl`): Rotary Position Embedding with pre-computed frequency caching, 36 tests (#1924)
+
+### Fixed (Waves 99–103)
+
+- **PR #1063**: Closed destructive force-push that removed 813 lines from workspace config; superseded by fresh attention kernel (#1920)
+
+### Added — A770 OpenCL Advanced Infrastructure (Waves 108–109)
+
+- **SIMD-OpenCL Bridge**: Unified dispatch selecting best backend (CPU SIMD vs OpenCL GPU) with automatic fallback, 42 tests (#2048)
+- **Error Catalog**: Comprehensive OpenCL error types with diagnostic info and recovery suggestions, 42 tests (#2049)
+- **Model Weight Loader**: GGUF weight loading optimized for OpenCL buffer upload, 48 tests (#2063)
+- **Paged KV Cache**: vLLM-style paged attention for efficient long-sequence inference, 48 tests (#2070)
+- **Criterion Benchmarks v2**: Expanded performance benchmark suite for OpenCL kernels (#2071)
+- **Kernel Test Harness**: Reusable test infrastructure for OpenCL kernel validation, 43 tests (#2090)
+- **Context/Queue Pool**: Efficient resource pooling for multi-stream OpenCL execution, 46 tests (#2093)
+- **Speculative Decoding**: Draft-verify-accept speculative token generation for OpenCL backend, 43 tests (#2094)
+- **INT8 DP4A Kernels**: Intel Xe-HPG hardware-accelerated INT8 dot product kernels, 60 tests (#2095)
+
+### Testing — A770 OpenCL (Waves 108–109)
+
+- **Fuzz Proptest Targets**: Randomized property testing for OpenCL CPU reference implementations, 30+ tests (#2096)
+
+### Added — A770 OpenCL Engine & Optimization (Waves 110–111)
+
+- **CHANGELOG Waves 108–109**: Documentation of waves 108–109 OpenCL infrastructure PRs (#2098)
+- **Kernel Auto-Tuning**: Search-space generation with 4 strategies (exhaustive, random, simulated annealing, Bayesian), A770 workgroup optimization, 51 tests (#2111)
+- **Streaming Token Decoder**: Temperature/top-k/top-p/repetition penalty sampling with backpressure-aware streaming, 58 tests (#2112)
+- **Weight Preprocessing Pipeline**: Ternary/INT8 packing, tiling, alignment, and scale factor extraction for OpenCL buffer upload, 54 tests (#2113)
+- **Continuous Batching Engine**: vLLM-style dynamic batch management with preemption and priority scheduling, 56 tests (#2114)
+- **Memory Allocation Planner**: Lifetime-based buffer reuse with first-fit/best-fit strategies for reduced GPU memory pressure, 50 tests (#2130)
+
+### Added — A770 OpenCL Inference Pipeline (Waves 105–107)
+
+- **Batch Inference**: Padding, scheduling, and batched operations for OpenCL inference pipeline, 51 tests (#1985)
+- **Reduction Kernels** (`reduction.cl`): argmax, sum, mean, L2 norm, log-sum-exp with tree reduction, 48 tests (#1986)
+- **Tensor Operations**: transpose, permute, concat, broadcast, gather for OpenCL tensors, 43 tests (#1987)
+- **Multi-Device Discovery**: Intel GPU multi-device discovery and selection with priority-based ranking, 43 tests (#1988)
+- **Cross-Validation Harness**: OpenCL vs CPU golden-vector cross-validation framework, 46 tests (#1989)
+- **Optimized Tiled MatMul**: 16×16 tiles with float4 vectorization and batched dispatch, 56 tests (#2005)
+- **Flash Attention** (`flash_attention.cl`): Memory-efficient block-tiled attention for long sequences, 40 tests (#1991)
+- **Fused Operations**: norm+linear, SwiGLU, bias+activation fused kernels for reduced memory traffic, 58 tests (#1993)
+- **Autoregressive Generation**: Token generation loop with sampling strategies for OpenCL backend, 61 tests (#1995)
+
+### Testing — A770 OpenCL (Waves 105–107)
+
+- **Property-Based Tests**: Property-based tests for OpenCL CPU reference implementations, 77 tests (#1999)
+
+### Added — A770 OpenCL Infrastructure (Wave 104)
+
+- **Device Warmup**: OpenCL device warmup module with kernel pre-compilation and buffer pre-allocation, 43 tests (#1957)
+- **Telemetry/Metrics**: Telemetry and metrics collection for OpenCL kernel execution, 44 tests (#1958)
+- **Intel GPU Architecture Docs**: Intel GPU architecture documentation for Xe-HPG optimization guidelines (#1959)
+- **Work Scheduler**: DAG-based task scheduling with dependency resolution and priority dispatch, 46 tests (#1960)
+
+### Testing — A770 OpenCL (Wave 104)
+
+- **E2E Integration Tests**: End-to-end integration tests for OpenCL compute kernels, 41 tests (#1967)
 
 ### Wave 99: Intel GPU Integration & Documentation
 

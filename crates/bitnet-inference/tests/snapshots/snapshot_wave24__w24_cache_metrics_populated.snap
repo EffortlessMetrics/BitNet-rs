@@ -1,5 +1,0 @@
----
-source: crates/bitnet-inference/tests/snapshot_wave24.rs
-expression: "format!(\"hits={} misses={} memory_bytes={} evictions={} hit_rate={:.4}\",\nm.hits, m.misses, m.memory_bytes, m.evictions, m.hit_rate())"
----
-hits=9500 misses=500 memory_bytes=67108864 evictions=120 hit_rate=0.9500

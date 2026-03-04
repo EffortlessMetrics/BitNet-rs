@@ -6,11 +6,9 @@
 
 pub mod arch_registry;
 pub mod backend_selection;
-pub mod compute_pool;
 pub mod config;
 pub mod dtype_convert;
 pub mod error_catalog;
-pub mod error_context;
 
 pub use arch_registry::{ArchDefaults, ArchitectureRegistry};
 pub mod error;
@@ -20,16 +18,12 @@ pub mod memory_pool;
 pub mod op_pool;
 pub mod perf_profiler;
 pub mod runtime_diag;
-pub mod shape_inference;
 pub mod shape_validator;
 pub mod strict_mode;
 pub mod tensor;
 pub mod tensor_layout;
-pub mod tensor_math;
-pub mod tensor_pool;
 pub mod tensor_serde;
 pub mod tensor_validation;
-pub mod thread_config;
 pub mod token_ring;
 pub mod types;
 

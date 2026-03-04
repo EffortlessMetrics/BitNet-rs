@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_wave24.rs
-expression: "format!(\"numel={} nbytes={}\", t.numel(), t.nbytes())"
----
-numel=32 nbytes=64

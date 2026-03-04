@@ -1,7 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_wave28.rs
-expression: "Device::Cuda(0)"
----
-Cuda(
-    0,
-)
