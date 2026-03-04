@@ -33,8 +33,8 @@ Welcome to BitNet-rs! We appreciate your interest in contributing to our high-pe
    # Quick test with CPU features
    cargo test --workspace --no-default-features --features cpu
 
-   # Full test suite
-   ./scripts/test-all.sh
+   # CI-equivalent local smoke test
+   ./ci/local.sh
    ```
 
 ## Pre-Commit Hooks
@@ -587,15 +587,15 @@ Before submitting a PR, ensure:
    This verifies:
    - ✅ All GitHub Actions are SHA-pinned (no floating @v3, @main, etc.)
    - ✅ All action pins use 40-hex commit SHAs (immutable)
-   - ✅ MSRV consistency (1.89.0 only, no hardcoded 1.90.0)
+   - ✅ MSRV consistency (1.92.0 — see `rust-toolchain.toml`)
    - ✅ All cargo/cross commands use `--locked` flags
 
    **Why run this locally?** Catches CI blockers before push, saving CI minutes and iteration time.
 
 3. **Run Local Quality Gates** (Recommended - full validation)
    ```bash
-   # Comprehensive quality gates: fmt → clippy → tests → (bench) → verify-receipt
-   ./scripts/local_gates.sh
+   # CI-equivalent local smoke: fmt → clippy → build → test (core pkgs)
+   ./ci/local.sh
    ```
 
    Or run individual checks:
@@ -608,7 +608,9 @@ Before submitting a PR, ensure:
 
 5. **Run Full Test Suite**
    ```bash
-   ./scripts/test-all.sh
+   cargo nextest run --workspace --no-default-features --features cpu
+   # Or with cargo test
+   cargo test --workspace --no-default-features --features cpu
    ```
 
 6. **Verify Inference Receipt** (if you have ci/inference.json)
