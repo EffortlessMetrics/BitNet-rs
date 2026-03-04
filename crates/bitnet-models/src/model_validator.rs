@@ -1,298 +1,344 @@
-//! Model validator.
-//!
-//! Pre-flight validation of model files and configurations.
+//! Model validator for checking GGUF headers, tensor shapes, vocab size,
+//! hidden dimensions, layer counts, and weight dtypes.
 
-/// Validation severity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Info,
-    Warning,
-    Error,
-}
+/// GGUF magic number (`GGUF` in little-endian).
+pub const GGUF_MAGIC: u32 = 0x46475547;
 
-impl Severity {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Info => "info",
-            Self::Warning => "warning",
-            Self::Error => "error",
-        }
-    }
-}
+/// Minimum supported GGUF version.
+pub const GGUF_VERSION_MIN: u32 = 2;
 
-/// A validation finding.
+/// Maximum supported GGUF version.
+pub const GGUF_VERSION_MAX: u32 = 3;
+
+/// Result of a single validation check.
 #[derive(Debug, Clone)]
-pub struct Finding {
-    pub severity: Severity,
-    pub category: String,
+pub struct ValidationCheck {
+    pub name: String,
+    pub passed: bool,
     pub message: String,
 }
 
-/// Validation report.
+/// Aggregated result of running multiple validation checks.
 #[derive(Debug, Clone)]
-pub struct ValidationReport {
-    pub findings: Vec<Finding>,
+pub struct ValidationResult {
     pub passed: bool,
+    pub checks: Vec<ValidationCheck>,
+    pub warnings: Vec<String>,
+    pub errors: Vec<String>,
 }
 
-impl ValidationReport {
+/// Validates model file integrity and configuration.
+#[derive(Debug, Clone)]
+pub struct ModelValidator;
+
+impl ModelValidator {
     pub fn new() -> Self {
-        Self { findings: Vec::new(), passed: true }
+        Self
     }
 
-    pub fn add(&mut self, severity: Severity, category: &str, message: &str) {
-        if severity == Severity::Error {
-            self.passed = false;
+    /// Check that `magic` equals [`GGUF_MAGIC`] and `version` is within the
+    /// supported range.
+    pub fn validate_header(&self, magic: u32, version: u32) -> ValidationCheck {
+        if magic != GGUF_MAGIC {
+            return ValidationCheck {
+                name: "header".into(),
+                passed: false,
+                message: format!("invalid magic: expected {GGUF_MAGIC:#010X}, got {magic:#010X}"),
+            };
         }
-        self.findings.push(Finding {
-            severity,
-            category: category.to_string(),
-            message: message.to_string(),
-        });
+        if version < GGUF_VERSION_MIN || version > GGUF_VERSION_MAX {
+            return ValidationCheck {
+                name: "header".into(),
+                passed: false,
+                message: format!(
+                    "unsupported version {version} (expected {GGUF_VERSION_MIN}..={GGUF_VERSION_MAX})"
+                ),
+            };
+        }
+        ValidationCheck {
+            name: "header".into(),
+            passed: true,
+            message: format!("GGUF v{version} header OK"),
+        }
     }
 
-    pub fn errors(&self) -> Vec<&Finding> {
-        self.findings.iter().filter(|f| f.severity == Severity::Error).collect()
+    /// Check that `count` is within `[min, max]`.
+    pub fn validate_tensor_count(&self, count: usize, min: usize, max: usize) -> ValidationCheck {
+        let passed = count >= min && count <= max;
+        ValidationCheck {
+            name: "tensor_count".into(),
+            passed,
+            message: if passed {
+                format!("tensor count {count} within [{min}, {max}]")
+            } else {
+                format!("tensor count {count} outside [{min}, {max}]")
+            },
+        }
     }
 
-    pub fn warnings(&self) -> Vec<&Finding> {
-        self.findings.iter().filter(|f| f.severity == Severity::Warning).collect()
+    /// Check that `shape` has exactly `expected_dims` dimensions.
+    pub fn validate_tensor_shape(
+        &self,
+        name: &str,
+        shape: &[usize],
+        expected_dims: usize,
+    ) -> ValidationCheck {
+        let passed = shape.len() == expected_dims;
+        ValidationCheck {
+            name: format!("tensor_shape:{name}"),
+            passed,
+            message: if passed {
+                format!("{name}: shape has {expected_dims} dims OK")
+            } else {
+                format!("{name}: expected {expected_dims} dims, got {}", shape.len())
+            },
+        }
     }
 
-    pub fn error_count(&self) -> usize {
-        self.findings.iter().filter(|f| f.severity == Severity::Error).count()
+    /// Check that `size` is within `[expected - tolerance, expected + tolerance]`.
+    pub fn validate_vocab_size(
+        &self,
+        size: usize,
+        expected: usize,
+        tolerance: usize,
+    ) -> ValidationCheck {
+        let lo = expected.saturating_sub(tolerance);
+        let hi = expected.saturating_add(tolerance);
+        let passed = size >= lo && size <= hi;
+        ValidationCheck {
+            name: "vocab_size".into(),
+            passed,
+            message: if passed {
+                format!("vocab size {size} within tolerance of {expected} (±{tolerance})")
+            } else {
+                format!("vocab size {size} outside tolerance of {expected} (±{tolerance})")
+            },
+        }
     }
 
-    pub fn warning_count(&self) -> usize {
-        self.findings.iter().filter(|f| f.severity == Severity::Warning).count()
+    /// Check that `size` equals `expected`.
+    pub fn validate_hidden_size(&self, size: usize, expected: usize) -> ValidationCheck {
+        let passed = size == expected;
+        ValidationCheck {
+            name: "hidden_size".into(),
+            passed,
+            message: if passed {
+                format!("hidden size {size} matches expected")
+            } else {
+                format!("hidden size {size} != expected {expected}")
+            },
+        }
     }
 
-    pub fn merge(&mut self, other: ValidationReport) {
-        for f in other.findings {
-            if f.severity == Severity::Error {
-                self.passed = false;
+    /// Check that `count` equals `expected`.
+    pub fn validate_layer_count(&self, count: usize, expected: usize) -> ValidationCheck {
+        let passed = count == expected;
+        ValidationCheck {
+            name: "layer_count".into(),
+            passed,
+            message: if passed {
+                format!("layer count {count} matches expected")
+            } else {
+                format!("layer count {count} != expected {expected}")
+            },
+        }
+    }
+
+    /// Check that `dtype` is one of `allowed`.
+    pub fn validate_weight_dtype(
+        &self,
+        name: &str,
+        dtype: &str,
+        allowed: &[&str],
+    ) -> ValidationCheck {
+        let passed = allowed.contains(&dtype);
+        ValidationCheck {
+            name: format!("weight_dtype:{name}"),
+            passed,
+            message: if passed {
+                format!("{name}: dtype '{dtype}' is allowed")
+            } else {
+                format!("{name}: dtype '{dtype}' not in {allowed:?}")
+            },
+        }
+    }
+
+    /// Aggregate a list of checks into a [`ValidationResult`].
+    pub fn run_all_checks(&self, checks: Vec<ValidationCheck>) -> ValidationResult {
+        let mut warnings = Vec::new();
+        let mut errors = Vec::new();
+
+        for check in &checks {
+            if !check.passed {
+                errors.push(check.message.clone());
             }
-            self.findings.push(f);
         }
+
+        let passed = errors.is_empty();
+
+        // Non-critical checks could be promoted to warnings in the future;
+        // for now the warnings vec stays empty unless callers extend it.
+        let _ = &mut warnings;
+
+        ValidationResult { passed, checks, warnings, errors }
     }
 }
 
-impl Default for ValidationReport {
+impl Default for ModelValidator {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Model configuration to validate.
-#[derive(Debug, Clone)]
-pub struct ModelConfig {
-    pub hidden_size: usize,
-    pub num_layers: usize,
-    pub num_heads: usize,
-    pub num_kv_heads: usize,
-    pub vocab_size: usize,
-    pub max_context: usize,
-    pub intermediate_size: usize,
-}
-
-/// Validate a model configuration.
-pub fn validate_config(config: &ModelConfig) -> ValidationReport {
-    let mut report = ValidationReport::new();
-
-    // Hidden size must be positive
-    if config.hidden_size == 0 {
-        report.add(Severity::Error, "shape", "hidden_size must be > 0");
-    }
-
-    // Head dimension check
-    if config.num_heads > 0 && !config.hidden_size.is_multiple_of(config.num_heads) {
-        report.add(Severity::Error, "shape", "hidden_size must be divisible by num_heads");
-    }
-
-    // KV heads must divide num_heads
-    if config.num_kv_heads > 0 && !config.num_heads.is_multiple_of(config.num_kv_heads) {
-        report.add(Severity::Error, "gqa", "num_heads must be divisible by num_kv_heads");
-    }
-
-    // Layer count
-    if config.num_layers == 0 {
-        report.add(Severity::Error, "shape", "num_layers must be > 0");
-    } else if config.num_layers > 200 {
-        report.add(Severity::Warning, "shape", "unusually high layer count (>200)");
-    }
-
-    // Vocab size
-    if config.vocab_size == 0 {
-        report.add(Severity::Error, "vocab", "vocab_size must be > 0");
-    } else if config.vocab_size > 500_000 {
-        report.add(Severity::Warning, "vocab", "unusually large vocabulary (>500K)");
-    }
-
-    // Context length
-    if config.max_context == 0 {
-        report.add(Severity::Error, "context", "max_context must be > 0");
-    } else if config.max_context > 131_072 {
-        report.add(Severity::Warning, "context", "very large context (>128K)");
-    }
-
-    // Intermediate size
-    if config.intermediate_size == 0 {
-        report.add(Severity::Warning, "shape", "intermediate_size is 0");
-    }
-
-    report
-}
-
-/// Validate tensor shapes against config.
-pub fn validate_tensor_shape(
-    name: &str,
-    shape: &[usize],
-    config: &ModelConfig,
-) -> ValidationReport {
-    let mut report = ValidationReport::new();
-
-    if shape.is_empty() {
-        report.add(Severity::Error, "tensor", &format!("{name}: empty shape"));
-        return report;
-    }
-
-    // Check for zero dimensions
-    if shape.contains(&0) {
-        report.add(Severity::Error, "tensor", &format!("{name}: shape has zero dimension"));
-    }
-
-    // Embedding matrix check
-    if (name.contains("embed") || name.contains("wte"))
-        && shape.len() == 2
-        && shape[0] != config.vocab_size
-    {
-        report.add(
-            Severity::Warning,
-            "tensor",
-            &format!(
-                "{name}: expected vocab_size={} in dim 0, got {}",
-                config.vocab_size, shape[0]
-            ),
-        );
-    }
-
-    report
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn phi4_config() -> ModelConfig {
-        ModelConfig {
-            hidden_size: 5120,
-            num_layers: 40,
-            num_heads: 40,
-            num_kv_heads: 10,
-            vocab_size: 100352,
-            max_context: 16384,
-            intermediate_size: 13824,
-        }
+    #[test]
+    fn test_valid_gguf_header() {
+        let v = ModelValidator::new();
+        let c = v.validate_header(GGUF_MAGIC, 3);
+        assert!(c.passed);
+        assert!(c.message.contains("OK"));
     }
 
     #[test]
-    fn test_valid_config() {
-        let r = validate_config(&phi4_config());
-        assert!(r.passed);
-        assert_eq!(r.error_count(), 0);
+    fn test_invalid_magic_number() {
+        let v = ModelValidator::new();
+        let c = v.validate_header(0xDEADBEEF, 3);
+        assert!(!c.passed);
+        assert!(c.message.contains("invalid magic"));
     }
 
     #[test]
-    fn test_zero_hidden() {
-        let mut c = phi4_config();
-        c.hidden_size = 0;
-        let r = validate_config(&c);
-        assert!(!r.passed);
+    fn test_invalid_version_too_low() {
+        let v = ModelValidator::new();
+        let c = v.validate_header(GGUF_MAGIC, 1);
+        assert!(!c.passed);
+        assert!(c.message.contains("unsupported version"));
     }
 
     #[test]
-    fn test_head_divisibility() {
-        let mut c = phi4_config();
-        c.hidden_size = 5121; // not divisible by 40
-        let r = validate_config(&c);
-        assert!(!r.passed);
+    fn test_invalid_version_too_high() {
+        let v = ModelValidator::new();
+        let c = v.validate_header(GGUF_MAGIC, 4);
+        assert!(!c.passed);
+        assert!(c.message.contains("unsupported version"));
     }
 
     #[test]
-    fn test_kv_head_divisibility() {
-        let mut c = phi4_config();
-        c.num_kv_heads = 7; // 40 not divisible by 7
-        let r = validate_config(&c);
-        assert!(!r.passed);
+    fn test_tensor_count_in_range() {
+        let v = ModelValidator::new();
+        let c = v.validate_tensor_count(100, 10, 500);
+        assert!(c.passed);
     }
 
     #[test]
-    fn test_zero_layers() {
-        let mut c = phi4_config();
-        c.num_layers = 0;
-        let r = validate_config(&c);
-        assert!(!r.passed);
+    fn test_tensor_count_out_of_range() {
+        let v = ModelValidator::new();
+        let c = v.validate_tensor_count(5, 10, 500);
+        assert!(!c.passed);
+        assert!(c.message.contains("outside"));
     }
 
     #[test]
-    fn test_high_layers_warning() {
-        let mut c = phi4_config();
-        c.num_layers = 300;
-        let r = validate_config(&c);
-        assert!(r.passed); // warning, not error
-        assert!(r.warning_count() > 0);
+    fn test_shape_correct_dims() {
+        let v = ModelValidator::new();
+        let c = v.validate_tensor_shape("attn.weight", &[4096, 4096], 2);
+        assert!(c.passed);
     }
 
     #[test]
-    fn test_zero_vocab() {
-        let mut c = phi4_config();
-        c.vocab_size = 0;
-        let r = validate_config(&c);
-        assert!(!r.passed);
+    fn test_shape_wrong_dims() {
+        let v = ModelValidator::new();
+        let c = v.validate_tensor_shape("attn.weight", &[4096, 4096], 3);
+        assert!(!c.passed);
+        assert!(c.message.contains("expected 3 dims"));
     }
 
     #[test]
-    fn test_tensor_shape_valid() {
-        let c = phi4_config();
-        let r = validate_tensor_shape("layer.0.weight", &[5120, 5120], &c);
-        assert!(r.passed);
+    fn test_vocab_size_within_tolerance() {
+        let v = ModelValidator::new();
+        let c = v.validate_vocab_size(32001, 32000, 10);
+        assert!(c.passed);
     }
 
     #[test]
-    fn test_tensor_shape_empty() {
-        let c = phi4_config();
-        let r = validate_tensor_shape("bad", &[], &c);
-        assert!(!r.passed);
+    fn test_vocab_size_outside_tolerance() {
+        let v = ModelValidator::new();
+        let c = v.validate_vocab_size(40000, 32000, 10);
+        assert!(!c.passed);
     }
 
     #[test]
-    fn test_tensor_shape_zero_dim() {
-        let c = phi4_config();
-        let r = validate_tensor_shape("bad", &[0, 5120], &c);
-        assert!(!r.passed);
+    fn test_hidden_size_match() {
+        let v = ModelValidator::new();
+        let c = v.validate_hidden_size(4096, 4096);
+        assert!(c.passed);
     }
 
     #[test]
-    fn test_embed_shape_warning() {
-        let c = phi4_config();
-        let r = validate_tensor_shape("token_embed", &[32000, 5120], &c);
-        assert!(r.warning_count() > 0);
+    fn test_hidden_size_mismatch() {
+        let v = ModelValidator::new();
+        let c = v.validate_hidden_size(2048, 4096);
+        assert!(!c.passed);
+        assert!(c.message.contains("!="));
     }
 
     #[test]
-    fn test_report_merge() {
-        let mut r1 = ValidationReport::new();
-        r1.add(Severity::Warning, "a", "w1");
-        let mut r2 = ValidationReport::new();
-        r2.add(Severity::Error, "b", "e1");
-        r1.merge(r2);
-        assert!(!r1.passed);
-        assert_eq!(r1.findings.len(), 2);
+    fn test_layer_count_match() {
+        let v = ModelValidator::new();
+        let c = v.validate_layer_count(32, 32);
+        assert!(c.passed);
     }
 
     #[test]
-    fn test_severity_str() {
-        assert_eq!(Severity::Error.as_str(), "error");
-        assert_eq!(Severity::Warning.as_str(), "warning");
+    fn test_layer_count_mismatch() {
+        let v = ModelValidator::new();
+        let c = v.validate_layer_count(24, 32);
+        assert!(!c.passed);
+    }
+
+    #[test]
+    fn test_weight_dtype_allowed() {
+        let v = ModelValidator::new();
+        let c = v.validate_weight_dtype("layer.0", "f16", &["f16", "f32", "i2_s"]);
+        assert!(c.passed);
+    }
+
+    #[test]
+    fn test_weight_dtype_not_allowed() {
+        let v = ModelValidator::new();
+        let c = v.validate_weight_dtype("layer.0", "bf16", &["f16", "f32"]);
+        assert!(!c.passed);
+        assert!(c.message.contains("not in"));
+    }
+
+    #[test]
+    fn test_run_all_checks_all_pass() {
+        let v = ModelValidator::new();
+        let checks = vec![
+            v.validate_header(GGUF_MAGIC, 3),
+            v.validate_tensor_count(100, 10, 500),
+            v.validate_hidden_size(4096, 4096),
+        ];
+        let result = v.run_all_checks(checks);
+        assert!(result.passed);
+        assert_eq!(result.checks.len(), 3);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_run_all_checks_some_fail() {
+        let v = ModelValidator::new();
+        let checks = vec![
+            v.validate_header(GGUF_MAGIC, 3),
+            v.validate_hidden_size(2048, 4096),
+            v.validate_layer_count(24, 32),
+        ];
+        let result = v.run_all_checks(checks);
+        assert!(!result.passed);
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.checks.len(), 3);
     }
 }
