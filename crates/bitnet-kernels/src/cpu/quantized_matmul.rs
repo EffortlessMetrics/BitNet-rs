@@ -97,12 +97,38 @@ pub fn i2s_matmul_f32(
 
 // ── Block-oriented dequantize + matmul ─────────────────────────────────
 
-/// Dequantize an I2_S weight matrix and multiply against activations.
+/// Reusable buffer for [`dequantize_and_matmul_into`].
 ///
-/// This is a two-pass approach: first dequantize the full weight matrix
-/// to `f32`, then run a standard f32 GEMM.  Useful as a correctness oracle
-/// and for small matrices where the extra allocation is acceptable.
-pub fn dequantize_and_matmul(
+/// Holds the dequantized `k×n` f32 weight matrix that would otherwise be
+/// heap-allocated on every call.  For a 2B-parameter model's FFN layer
+/// (k=8192, n=22016) this avoids ~687 MB of allocation per matmul.
+pub struct DequantWorkspace {
+    weights_f32: Vec<f32>,
+}
+
+impl DequantWorkspace {
+    /// Create a workspace sized for the given weight dimensions.
+    pub fn new(k: usize, n: usize) -> Self {
+        Self { weights_f32: vec![0.0f32; k * n] }
+    }
+
+    /// Grow the internal buffer if needed.  Avoids reallocation when
+    /// the current capacity already covers the required size.
+    pub fn ensure_capacity(&mut self, k: usize, n: usize) {
+        let required = k * n;
+        if self.weights_f32.len() < required {
+            self.weights_f32.resize(required, 0.0);
+        }
+    }
+}
+
+/// Dequantize an I2_S weight matrix and multiply against activations,
+/// reusing a caller-provided [`DequantWorkspace`].
+///
+/// Semantically identical to [`dequantize_and_matmul`] but avoids a
+/// per-call heap allocation for the dequantized weight buffer.
+#[allow(clippy::too_many_arguments)]
+pub fn dequantize_and_matmul_into(
     activations: &[f32],
     weights_packed: &[u8],
     scales: &[f32],
@@ -111,14 +137,17 @@ pub fn dequantize_and_matmul(
     n: usize,
     k: usize,
     block_size: usize,
+    ws: &mut DequantWorkspace,
 ) -> Result<()> {
     validate_matmul_args(activations, weights_packed, scales, out, m, n, k, block_size)?;
+    ws.ensure_capacity(k, n);
 
     let packed_k = k.div_ceil(4);
     let num_blocks_k = k.div_ceil(block_size);
 
-    // Dequantize into a k×n f32 weight matrix (column of weights per output).
-    let mut weights_f32 = vec![0.0f32; k * n];
+    // Dequantize into the workspace buffer.
+    let weights_f32 = &mut ws.weights_f32[..k * n];
+    weights_f32.fill(0.0);
     for col in 0..n {
         for blk in 0..num_blocks_k {
             let blk_start = blk * block_size;
@@ -145,6 +174,39 @@ pub fn dequantize_and_matmul(
         }
     }
     Ok(())
+}
+
+/// Dequantize an I2_S weight matrix and multiply against activations.
+///
+/// This is a two-pass approach: first dequantize the full weight matrix
+/// to `f32`, then run a standard f32 GEMM.  Useful as a correctness oracle
+/// and for small matrices where the extra allocation is acceptable.
+///
+/// For repeated calls with the same dimensions, prefer
+/// [`dequantize_and_matmul_into`] with a [`DequantWorkspace`] to avoid
+/// per-call allocation.
+pub fn dequantize_and_matmul(
+    activations: &[f32],
+    weights_packed: &[u8],
+    scales: &[f32],
+    out: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    block_size: usize,
+) -> Result<()> {
+    let mut ws = DequantWorkspace::new(k, n);
+    dequantize_and_matmul_into(
+        activations,
+        weights_packed,
+        scales,
+        out,
+        m,
+        n,
+        k,
+        block_size,
+        &mut ws,
+    )
 }
 
 /// Block-based I2_S matmul that processes one block at a time.
@@ -765,5 +827,66 @@ mod tests {
             assert_close(&out1, &out2, 1e-4);
             assert_close(&out1, &out3, 1e-4);
         }
+    }
+
+    // ── DequantWorkspace tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_dequant_workspace_matches_allocating() {
+        let m = 4;
+        let n = 8;
+        let k = 16;
+        let bs = 32;
+        let w: Vec<i8> = (0..k * n).map(|i| [1, 0, -1, 0, 1, -1][i % 6]).collect();
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+        let act: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.1).sin()).collect();
+
+        let mut out_alloc = vec![0.0f32; m * n];
+        dequantize_and_matmul(&act, &packed, &scales, &mut out_alloc, m, n, k, bs).unwrap();
+
+        let mut out_ws = vec![0.0f32; m * n];
+        let mut ws = DequantWorkspace::new(k, n);
+        dequantize_and_matmul_into(&act, &packed, &scales, &mut out_ws, m, n, k, bs, &mut ws)
+            .unwrap();
+
+        assert_close(&out_alloc, &out_ws, 0.0);
+    }
+
+    #[test]
+    fn test_dequant_workspace_reuse_across_calls() {
+        let m = 2;
+        let n = 4;
+        let k = 8;
+        let bs = 32;
+        let w: Vec<i8> = (0..k * n).map(|i| [-1, 0, 1][i % 3]).collect();
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+
+        let mut ws = DequantWorkspace::new(k, n);
+
+        for iter in 0..3 {
+            let act: Vec<f32> = (0..m * k).map(|i| ((i + iter * 7) as f32 * 0.2).cos()).collect();
+
+            let mut out_alloc = vec![0.0f32; m * n];
+            dequantize_and_matmul(&act, &packed, &scales, &mut out_alloc, m, n, k, bs).unwrap();
+
+            let mut out_ws = vec![0.0f32; m * n];
+            dequantize_and_matmul_into(&act, &packed, &scales, &mut out_ws, m, n, k, bs, &mut ws)
+                .unwrap();
+
+            assert_close(&out_alloc, &out_ws, 0.0);
+        }
+    }
+
+    #[test]
+    fn test_dequant_workspace_ensure_capacity_grows() {
+        let mut ws = DequantWorkspace::new(4, 4);
+        assert!(ws.weights_f32.len() >= 16);
+
+        ws.ensure_capacity(8, 8);
+        assert!(ws.weights_f32.len() >= 64);
+
+        // Smaller dims should NOT shrink
+        ws.ensure_capacity(2, 2);
+        assert!(ws.weights_f32.len() >= 64);
     }
 }
