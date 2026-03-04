@@ -248,9 +248,12 @@ jobs:
             -p bitnet-sampling
 
   # Job 5: Clippy linting (macOS ARM64 / Apple Silicon)
+  # Non-blocking: reports status but does not gate merges until runners
+  # are confirmed available in the GitHub Actions pool.
   clippy-macos-arm64:
     name: Clippy (macOS ARM64)
     runs-on: macos-14
+    continue-on-error: true
     timeout-minutes: 15
     env:
       RUSTFLAGS: "-D warnings"
@@ -328,13 +331,19 @@ jobs:
         if: always()
         run: |
           bad=0
+          # Required jobs (must succeed)
           for r in "${{ needs.build-test-linux.result }}" \
                    "${{ needs.grid-check.result }}" \
                    "${{ needs.clippy.result }}" \
-                   "${{ needs.clippy-macos-arm64.result }}" \
                    "${{ needs.docs.result }}"; do
             [ "$r" = "success" ] || bad=1
           done
+          # Non-blocking jobs (report but don't gate)
+          arm64="${{ needs.clippy-macos-arm64.result }}"
+          echo "  Clippy ARM64 (non-blocking): ${arm64}"
+          if [ "${arm64}" != "success" ]; then
+            echo "⚠️  macOS ARM64 clippy did not succeed (${arm64}) — non-blocking"
+          fi
           if [ $bad -ne 0 ]; then
             echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi
