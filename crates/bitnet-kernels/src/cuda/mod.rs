@@ -219,6 +219,11 @@ pub use quantize::{
     QuantMethod, QuantizeConfig, calibrate_scales, dequantize_i2s_cpu, dequantize_ternary_cpu,
     quantize_i2s_cpu, quantize_ternary_cpu,
 };
+pub use quantized_gemm::{
+    AccumulatorType, GemmPerformanceMetrics, QuantizedGemmConfig, QuantizedGemmError, TileStrategy,
+    check_alignment, quantized_dequant_gemm, quantized_gemm_i2, quantized_gemm_i4,
+    quantized_gemm_mixed, select_tile_strategy, validate_gemm_inputs,
+};
 pub use quantized_matmul::{I2sMatmulConfig, i2s_matmul_cpu, i2s_matmul_forward, pack_i2s};
 pub use transpose::{
     CudaTransposeConfig, reshape_cpu, transpose_2d_cpu_fallback, transpose_2d_forward,
@@ -302,6 +307,11 @@ pub use batch_norm::{BATCH_NORM_INFERENCE_KERNEL_SRC, BATCH_NORM_TRAIN_KERNEL_SR
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use matmul::{launch_matmul, launch_matmul_f16};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub use quantized_gemm::{
+    QUANTIZED_GEMM_KERNEL_SRC, launch_quantized_dequant_gemm, launch_quantized_gemm_i2,
+    launch_quantized_gemm_i4, launch_quantized_gemm_mixed,
+};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use quantized_matmul::{I2S_MATMUL_KERNEL_SRC, launch_i2s_matmul};
 
