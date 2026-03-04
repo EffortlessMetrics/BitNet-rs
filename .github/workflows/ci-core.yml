@@ -25,6 +25,8 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
+      - 'COMPATIBILITY.md'
+      - 'THIRD_PARTY.md'
       - '.github/settings.yml'
       - 'fuzz/**'
   push:
@@ -46,6 +48,8 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
+      - 'COMPATIBILITY.md'
+      - 'THIRD_PARTY.md'
       - '.github/settings.yml'
       - 'fuzz/**'
   workflow_dispatch:
