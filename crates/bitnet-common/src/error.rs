@@ -82,8 +82,12 @@ pub enum KernelError {
     NoProvider,
     #[error("Kernel execution failed: {reason}")]
     ExecutionFailed { reason: String },
+    #[error("Kernel launch failed ({kernel}): {reason}")]
+    LaunchFailed { kernel: String, reason: String },
     #[error("Unsupported architecture: {arch}")]
     UnsupportedArchitecture { arch: String },
+    #[error("Device unavailable: {reason}")]
+    DeviceUnavailable { reason: String },
     #[error("GPU error: {reason}")]
     GpuError { reason: String },
     #[error("Unsupported hardware: required {required}, available {available}")]

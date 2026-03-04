@@ -118,6 +118,124 @@ pub fn validate_reshape(old: &[usize], new: &[usize]) -> Result<(), ShapeError> 
     Ok(())
 }
 
+/// Asserts that a shape's rank matches the expected rank.
+pub fn assert_rank(op: &str, shape: &[usize], expected: usize) -> Result<(), ShapeError> {
+    if shape.len() != expected {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("rank {expected}"),
+            got: format!("rank {}", shape.len()),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that two shapes are exactly equal.
+pub fn assert_shape_eq(op: &str, expected: &[usize], got: &[usize]) -> Result<(), ShapeError> {
+    if expected != got {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("{expected:?}"),
+            got: format!("{got:?}"),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that a specific dimension has the expected size.
+pub fn assert_dim(
+    op: &str,
+    shape: &[usize],
+    dim: usize,
+    expected: usize,
+) -> Result<(), ShapeError> {
+    if dim >= shape.len() {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("rank > {dim}"),
+            got: format!("rank {}", shape.len()),
+        });
+    }
+    if shape[dim] != expected {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("dim {dim} = {expected}"),
+            got: format!("dim {dim} = {}", shape[dim]),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that the total element count matches the expected count.
+pub fn assert_element_count(op: &str, shape: &[usize], expected: usize) -> Result<(), ShapeError> {
+    let count: usize = shape.iter().product();
+    if count != expected {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("{expected} elements"),
+            got: format!("{count} elements"),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that a dimension is divisible by the number of heads.
+pub fn assert_head_divisible(
+    op: &str,
+    dim_size: usize,
+    num_heads: usize,
+) -> Result<(), ShapeError> {
+    if !dim_size.is_multiple_of(num_heads) {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("divisible by {num_heads}"),
+            got: format!("{dim_size}"),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that two shapes are matmul compatible (inner dimensions match).
+pub fn assert_matmul_compat(op: &str, a: &[usize], b: &[usize]) -> Result<(), ShapeError> {
+    if a.is_empty() || b.is_empty() {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: "non-empty shapes".to_string(),
+            got: "empty shape".to_string(),
+        });
+    }
+    let a_inner = *a.last().unwrap();
+    let b_inner = if b.len() > 1 { b[b.len() - 2] } else { b[0] };
+    if a_inner != b_inner {
+        return Err(ShapeError {
+            op: op.to_string(),
+            expected: format!("inner dim match ({a_inner})"),
+            got: format!("{b_inner}"),
+        });
+    }
+    Ok(())
+}
+
+/// Asserts that two shapes are broadcastable.
+pub fn assert_broadcastable(op: &str, a: &[usize], b: &[usize]) -> Result<(), ShapeError> {
+    let max_len = std::cmp::max(a.len(), b.len());
+    let mut a_pad = vec![1; max_len - a.len()];
+    a_pad.extend_from_slice(a);
+    let mut b_pad = vec![1; max_len - b.len()];
+    b_pad.extend_from_slice(b);
+
+    for i in 0..max_len {
+        if a_pad[i] != b_pad[i] && a_pad[i] != 1 && b_pad[i] != 1 {
+            return Err(ShapeError {
+                op: op.to_string(),
+                expected: "broadcastable shapes".to_string(),
+                got: format!("{a:?} and {b:?}"),
+            });
+        }
+    }
+    Ok(())
+}
+
 /// Validate attention shapes: Q\[B,H,S,D\], K\[B,H,S,D\], V\[B,H,S,D\].
 pub fn validate_attention(q: &[usize], k: &[usize], v: &[usize]) -> Result<Vec<usize>, ShapeError> {
     if q.len() != 4 || k.len() != 4 || v.len() != 4 {
