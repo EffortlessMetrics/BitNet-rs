@@ -37,6 +37,7 @@ pub mod strategy;
 pub mod utils;
 pub mod vocab_analyzer;
 pub mod vocab_index;
+pub mod vocab_encoding;
 pub mod vocab_stats;
 pub mod vocabulary;
 
