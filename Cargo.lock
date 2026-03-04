@@ -1211,6 +1211,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-request-context-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-rocm"
 version = "0.2.1-dev"
 dependencies = [
@@ -1355,6 +1359,7 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-request-context-core",
  "bitnet-runtime-bootstrap",
  "bitnet-server-health-types-core",
  "bitnet-startup-contract-guard",
