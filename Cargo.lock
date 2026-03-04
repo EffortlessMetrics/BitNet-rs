@@ -430,6 +430,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-api-versioning-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-atomic-file-core"
 version = "0.2.1-dev"
 dependencies = [
@@ -1383,6 +1387,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-api-versioning-core",
  "bitnet-client-ip-core",
  "bitnet-common",
  "bitnet-device-config-core",
