@@ -21,7 +21,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 - **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
 - **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download); includes deterministic output, reproducibility (seed=42 identical tokens), kernel-ID recording, and receipt invariants. Separate `e2e_cpu_golden_path.rs` adds pinned-output regression guard [140,459,459,459] (#790)
-- **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
+- **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
 - **Nightly Fuzz Workflow** — 84 fuzz targets (45 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
@@ -194,7 +194,7 @@ cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 - `bitnet-gpu-hal`: Unified GPU hardware abstraction, backend selection, async runtime
 - `bitnet-opencl`: Intel Arc OpenCL backend with kernel registry
 
-**SRP Microcrates** (wired into CI): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
+**SRP Microcrates** (wired into CI): 42+ `-core` extraction crates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`, `bitnet-api-versioning-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
 
 Note: The workspace has 107+ total crates; the above lists user-facing and architecture-critical ones.
 
