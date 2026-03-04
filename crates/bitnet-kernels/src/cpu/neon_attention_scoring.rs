@@ -63,7 +63,7 @@ unsafe fn neon_dot_f32(a: *const f32, b: *const f32, len: usize) -> f32 {
     let chunks = len / LANES;
     let remainder = len % LANES;
 
-    let mut acc = unsafe { vdupq_n_f32(0.0) };
+    let mut acc = vdupq_n_f32(0.0);
 
     for i in 0..chunks {
         let offset = i * LANES;
@@ -74,7 +74,7 @@ unsafe fn neon_dot_f32(a: *const f32, b: *const f32, len: usize) -> f32 {
         }
     }
 
-    let mut sum = unsafe { vaddvq_f32(acc) };
+    let mut sum = vaddvq_f32(acc);
 
     let tail_start = chunks * LANES;
     for i in 0..remainder {
@@ -274,8 +274,8 @@ pub unsafe fn neon_clamp_attention_scores(scores: &mut [f32], min_val: f32, max_
     let remainder = len % LANES;
     let ptr = scores.as_mut_ptr();
 
-    let vmin = unsafe { vdupq_n_f32(min_val) };
-    let vmax = unsafe { vdupq_n_f32(max_val) };
+    let vmin = vdupq_n_f32(min_val);
+    let vmax = vdupq_n_f32(max_val);
 
     for i in 0..chunks {
         let offset = i * LANES;
@@ -313,7 +313,7 @@ pub unsafe fn neon_apply_attention_dropout(scores: &mut [f32], mask: &[f32], inv
 
     let s_ptr = scores.as_mut_ptr();
     let m_ptr = mask.as_ptr();
-    let v_scale = unsafe { vdupq_n_f32(inv_keep_prob) };
+    let v_scale = vdupq_n_f32(inv_keep_prob);
 
     for i in 0..chunks {
         let offset = i * LANES;
@@ -354,9 +354,9 @@ pub unsafe fn neon_generate_dropout_mask(
 
     let r_ptr = random_vals.as_ptr();
     let o_ptr = mask_out.as_mut_ptr();
-    let v_thresh = unsafe { vdupq_n_f32(keep_prob) };
-    let v_one = unsafe { vdupq_n_f32(1.0) };
-    let v_zero = unsafe { vdupq_n_f32(0.0) };
+    let v_thresh = vdupq_n_f32(keep_prob);
+    let v_one = vdupq_n_f32(1.0);
+    let v_zero = vdupq_n_f32(0.0);
 
     for i in 0..chunks {
         let offset = i * LANES;
