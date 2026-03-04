@@ -94,10 +94,11 @@ fn test_qk256_full_model_inference() { ... }
 ```
 
 ### TDD scaffolding
-~1070 `#[ignore]` tests across the workspace (all with justification strings) represent
-intentional scaffolding, not bugs. ~112 in core crates, ~129 in the integration test
-crate, ~652 in xtask, ~173 in crossval. Categories: real-model tests, CUDA tests, slow
-mock-inference tests, crossval tests, and TDD scaffolds for unimplemented features.
+~2,800 `#[ignore]` tests across the workspace (all with justification strings) represent
+intentional scaffolding, not bugs. ~1,900 in crates (mostly bitnet-kernels), ~44 in the
+integration test crate, ~665 in xtask, ~164 in crossval. Categories: real-model tests,
+CUDA tests, slow mock-inference tests, crossval tests, and TDD scaffolds for unimplemented
+features.
 
 ### Rate-limited logging
 Use `warn_once!` from `bitnet_common` for hot-path warnings that would otherwise spam logs:
