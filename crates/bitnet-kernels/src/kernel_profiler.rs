@@ -1,187 +1,155 @@
-//! Per-kernel execution profiling.
+//! Kernel execution profiling.
 //!
-//! Tracks execution time, call count, and throughput for
-//! individual kernel invocations (matmul, attention, norm, etc.).
+//! Provides [`KernelProfile`] for individual kernel measurements,
+//! [`KernelProfiler`] for collecting profiles, and [`KernelSummary`]
+//! for aggregated statistics by kernel name.
 
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 
-/// Identifier for a kernel type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum KernelId {
-    Matmul,
-    Attention,
-    LayerNorm,
-    RmsNorm,
-    SiLU,
-    ReLU,
-    Softmax,
-    RoPE,
-    Embedding,
-    Quantize,
-    Dequantize,
-    Custom(u32),
-}
-
-impl KernelId {
-    pub fn name(&self) -> &'static str {
-        match self {
-            KernelId::Matmul => "matmul",
-            KernelId::Attention => "attention",
-            KernelId::LayerNorm => "layer_norm",
-            KernelId::RmsNorm => "rms_norm",
-            KernelId::SiLU => "silu",
-            KernelId::ReLU => "relu",
-            KernelId::Softmax => "softmax",
-            KernelId::RoPE => "rope",
-            KernelId::Embedding => "embedding",
-            KernelId::Quantize => "quantize",
-            KernelId::Dequantize => "dequantize",
-            KernelId::Custom(_) => "custom",
-        }
-    }
-}
-
-/// Statistics for a single kernel.
+/// A single kernel execution profile.
 #[derive(Debug, Clone)]
-pub struct KernelStats {
-    pub call_count: u64,
-    pub total_time: Duration,
-    pub min_time: Duration,
-    pub max_time: Duration,
-    pub total_flops: u64,
+pub struct KernelProfile {
+    /// Name identifying the kernel (e.g. "matmul", "attention").
+    pub kernel_name: String,
+    /// Wall-clock execution time in microseconds.
+    pub execution_time_us: f64,
+    /// Number of input elements processed.
+    pub input_elements: usize,
+    /// Number of output elements produced.
+    pub output_elements: usize,
+    /// Estimated memory bytes touched during execution.
+    pub memory_bytes: usize,
 }
 
-impl KernelStats {
-    fn new() -> Self {
-        Self {
-            call_count: 0,
-            total_time: Duration::ZERO,
-            min_time: Duration::MAX,
-            max_time: Duration::ZERO,
-            total_flops: 0,
-        }
-    }
-
-    fn record(&mut self, elapsed: Duration, flops: u64) {
-        self.call_count += 1;
-        self.total_time += elapsed;
-        self.min_time = self.min_time.min(elapsed);
-        self.max_time = self.max_time.max(elapsed);
-        self.total_flops += flops;
-    }
-
-    pub fn avg_time(&self) -> Duration {
-        if self.call_count == 0 {
-            return Duration::ZERO;
-        }
-        self.total_time / self.call_count as u32
-    }
-
-    pub fn gflops_per_sec(&self) -> f64 {
-        let secs = self.total_time.as_secs_f64();
-        if secs == 0.0 {
+impl KernelProfile {
+    /// Rough FLOPS estimate based on total elements processed.
+    pub fn flops_estimate(&self) -> f64 {
+        let total_elems = (self.input_elements + self.output_elements) as f64;
+        let secs = self.execution_time_us / 1_000_000.0;
+        if secs <= 0.0 {
             return 0.0;
         }
-        self.total_flops as f64 / secs / 1e9
+        total_elems / secs
     }
 
-    pub fn calls_per_sec(&self) -> f64 {
-        let secs = self.total_time.as_secs_f64();
-        if secs == 0.0 {
+    /// Memory bandwidth in GB/s.
+    pub fn bandwidth_gbps(&self) -> f64 {
+        let secs = self.execution_time_us / 1_000_000.0;
+        if secs <= 0.0 {
             return 0.0;
         }
-        self.call_count as f64 / secs
+        self.memory_bytes as f64 / secs / 1e9
+    }
+
+    /// Elements processed per second (input + output).
+    pub fn elements_per_second(&self) -> f64 {
+        let total_elems = (self.input_elements + self.output_elements) as f64;
+        let secs = self.execution_time_us / 1_000_000.0;
+        if secs <= 0.0 {
+            return 0.0;
+        }
+        total_elems / secs
     }
 }
 
-/// Profiler that collects per-kernel statistics.
+/// Aggregated summary for all invocations of a given kernel name.
+#[derive(Debug, Clone)]
+pub struct KernelSummary {
+    pub kernel_name: String,
+    pub call_count: usize,
+    pub total_time_us: f64,
+    pub avg_time_us: f64,
+    pub max_time_us: f64,
+}
+
+/// Collects [`KernelProfile`] records and provides analysis helpers.
 #[derive(Debug)]
 pub struct KernelProfiler {
-    stats: HashMap<KernelId, KernelStats>,
+    profiles: Vec<KernelProfile>,
     enabled: bool,
 }
 
 impl KernelProfiler {
+    /// Create an enabled profiler.
     pub fn new() -> Self {
-        Self { stats: HashMap::new(), enabled: true }
+        Self { profiles: Vec::new(), enabled: true }
     }
 
+    /// Create a disabled (no-op) profiler.
     pub fn disabled() -> Self {
-        Self { stats: HashMap::new(), enabled: false }
+        Self { profiles: Vec::new(), enabled: false }
     }
 
-    pub fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
-    pub fn enable(&mut self) {
-        self.enabled = true;
-    }
-
-    pub fn disable(&mut self) {
-        self.enabled = false;
-    }
-
-    /// Start timing a kernel. Returns a guard that records on drop.
-    pub fn start(&self, kernel: KernelId) -> KernelTimer {
-        KernelTimer {
-            kernel,
-            start: if self.enabled { Some(Instant::now()) } else { None },
-            flops: 0,
-        }
-    }
-
-    /// Record a completed kernel execution.
-    pub fn record(&mut self, kernel: KernelId, elapsed: Duration, flops: u64) {
+    /// Record a kernel execution. Ignored when the profiler is disabled.
+    pub fn record(
+        &mut self,
+        name: &str,
+        time_us: f64,
+        input_elems: usize,
+        output_elems: usize,
+        mem_bytes: usize,
+    ) {
         if !self.enabled {
             return;
         }
-        self.stats.entry(kernel).or_insert_with(KernelStats::new).record(elapsed, flops);
+        self.profiles.push(KernelProfile {
+            kernel_name: name.to_string(),
+            execution_time_us: time_us,
+            input_elements: input_elems,
+            output_elements: output_elems,
+            memory_bytes: mem_bytes,
+        });
     }
 
-    /// Get stats for a specific kernel.
-    pub fn get(&self, kernel: KernelId) -> Option<&KernelStats> {
-        self.stats.get(&kernel)
+    /// All collected profiles.
+    pub fn get_profiles(&self) -> &[KernelProfile] {
+        &self.profiles
     }
 
-    /// Get all kernel stats.
-    pub fn all_stats(&self) -> &HashMap<KernelId, KernelStats> {
-        &self.stats
+    /// Sum of execution times across all profiles.
+    pub fn total_time_us(&self) -> f64 {
+        self.profiles.iter().map(|p| p.execution_time_us).sum()
     }
 
-    /// Total time across all kernels.
-    pub fn total_time(&self) -> Duration {
-        self.stats.values().map(|s| s.total_time).sum()
+    /// Profile with the highest execution time.
+    pub fn hottest_kernel(&self) -> Option<&KernelProfile> {
+        self.profiles.iter().max_by(|a, b| {
+            a.execution_time_us
+                .partial_cmp(&b.execution_time_us)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     }
 
-    /// Get the hottest kernel (most total time).
-    pub fn hottest(&self) -> Option<(KernelId, &KernelStats)> {
-        self.stats.iter().max_by_key(|(_, s)| s.total_time).map(|(&k, s)| (k, s))
-    }
-
-    /// Generate a sorted report (by total time, descending).
-    pub fn report(&self) -> Vec<(KernelId, KernelStats)> {
-        let mut entries: Vec<_> = self.stats.iter().map(|(&k, s)| (k, s.clone())).collect();
-        entries.sort_by(|a, b| b.1.total_time.cmp(&a.1.total_time));
-        entries
-    }
-
-    /// Reset all statistics.
-    pub fn reset(&mut self) {
-        self.stats.clear();
-    }
-
-    /// Merge another profiler's stats into this one.
-    pub fn merge(&mut self, other: &KernelProfiler) {
-        for (&k, other_stats) in &other.stats {
-            let entry = self.stats.entry(k).or_insert_with(KernelStats::new);
-            entry.call_count += other_stats.call_count;
-            entry.total_time += other_stats.total_time;
-            entry.min_time = entry.min_time.min(other_stats.min_time);
-            entry.max_time = entry.max_time.max(other_stats.max_time);
-            entry.total_flops += other_stats.total_flops;
+    /// Aggregate profiles by kernel name.
+    pub fn summary_by_kernel(&self) -> Vec<KernelSummary> {
+        let mut map: HashMap<&str, (usize, f64, f64)> = HashMap::new();
+        for p in &self.profiles {
+            let entry = map.entry(p.kernel_name.as_str()).or_insert((0, 0.0, 0.0));
+            entry.0 += 1;
+            entry.1 += p.execution_time_us;
+            if p.execution_time_us > entry.2 {
+                entry.2 = p.execution_time_us;
+            }
         }
+        let mut summaries: Vec<KernelSummary> = map
+            .into_iter()
+            .map(|(name, (count, total, max))| KernelSummary {
+                kernel_name: name.to_string(),
+                call_count: count,
+                total_time_us: total,
+                avg_time_us: if count > 0 { total / count as f64 } else { 0.0 },
+                max_time_us: max,
+            })
+            .collect();
+        summaries.sort_by(|a, b| {
+            b.total_time_us.partial_cmp(&a.total_time_us).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        summaries
+    }
+
+    /// Remove all recorded profiles.
+    pub fn clear(&mut self) {
+        self.profiles.clear();
     }
 }
 
@@ -191,131 +159,176 @@ impl Default for KernelProfiler {
     }
 }
 
-/// Timer returned by `KernelProfiler::start`.
-pub struct KernelTimer {
-    pub kernel: KernelId,
-    pub start: Option<Instant>,
-    pub flops: u64,
-}
-
-impl KernelTimer {
-    pub fn with_flops(mut self, flops: u64) -> Self {
-        self.flops = flops;
-        self
-    }
-
-    pub fn finish(self) -> Option<Duration> {
-        self.start.map(|s| s.elapsed())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_record_and_get() {
+    fn test_empty_profiler() {
+        let p = KernelProfiler::new();
+        assert!(p.get_profiles().is_empty());
+        assert_eq!(p.total_time_us(), 0.0);
+        assert!(p.hottest_kernel().is_none());
+        assert!(p.summary_by_kernel().is_empty());
+    }
+
+    #[test]
+    fn test_single_record() {
         let mut p = KernelProfiler::new();
-        p.record(KernelId::Matmul, Duration::from_millis(10), 1000);
-        let s = p.get(KernelId::Matmul).unwrap();
-        assert_eq!(s.call_count, 1);
+        p.record("matmul", 100.0, 1024, 512, 8192);
+        assert_eq!(p.get_profiles().len(), 1);
+        let prof = &p.get_profiles()[0];
+        assert_eq!(prof.kernel_name, "matmul");
+        assert_eq!(prof.execution_time_us, 100.0);
+        assert_eq!(prof.input_elements, 1024);
+        assert_eq!(prof.output_elements, 512);
+        assert_eq!(prof.memory_bytes, 8192);
     }
 
     #[test]
-    fn test_multiple_records() {
+    fn test_multiple_records_total_time() {
         let mut p = KernelProfiler::new();
-        p.record(KernelId::SiLU, Duration::from_millis(5), 100);
-        p.record(KernelId::SiLU, Duration::from_millis(15), 200);
-        let s = p.get(KernelId::SiLU).unwrap();
-        assert_eq!(s.call_count, 2);
-        assert_eq!(s.total_time, Duration::from_millis(20));
+        p.record("matmul", 100.0, 1024, 512, 8192);
+        p.record("attention", 50.0, 512, 512, 4096);
+        p.record("softmax", 25.0, 256, 256, 2048);
+        assert_eq!(p.get_profiles().len(), 3);
+        assert!((p.total_time_us() - 175.0).abs() < 1e-9);
     }
 
     #[test]
-    fn test_avg_time() {
-        let mut s = KernelStats::new();
-        s.record(Duration::from_millis(10), 0);
-        s.record(Duration::from_millis(30), 0);
-        assert_eq!(s.avg_time(), Duration::from_millis(20));
+    fn test_hottest_kernel() {
+        let mut p = KernelProfiler::new();
+        p.record("attention", 50.0, 512, 512, 4096);
+        p.record("matmul", 200.0, 1024, 512, 8192);
+        p.record("softmax", 25.0, 256, 256, 2048);
+        let hot = p.hottest_kernel().unwrap();
+        assert_eq!(hot.kernel_name, "matmul");
+        assert_eq!(hot.execution_time_us, 200.0);
     }
 
     #[test]
-    fn test_min_max() {
-        let mut s = KernelStats::new();
-        s.record(Duration::from_millis(5), 0);
-        s.record(Duration::from_millis(15), 0);
-        s.record(Duration::from_millis(10), 0);
-        assert_eq!(s.min_time, Duration::from_millis(5));
-        assert_eq!(s.max_time, Duration::from_millis(15));
+    fn test_hottest_kernel_single() {
+        let mut p = KernelProfiler::new();
+        p.record("norm", 42.0, 100, 100, 800);
+        let hot = p.hottest_kernel().unwrap();
+        assert_eq!(hot.kernel_name, "norm");
+    }
+
+    #[test]
+    fn test_summary_aggregation() {
+        let mut p = KernelProfiler::new();
+        p.record("matmul", 100.0, 1024, 512, 8192);
+        p.record("matmul", 200.0, 1024, 512, 8192);
+        p.record("attention", 50.0, 512, 512, 4096);
+        let summaries = p.summary_by_kernel();
+        assert_eq!(summaries.len(), 2);
+        // Sorted by total_time descending: matmul first
+        let mm = &summaries[0];
+        assert_eq!(mm.kernel_name, "matmul");
+        assert_eq!(mm.call_count, 2);
+        assert!((mm.total_time_us - 300.0).abs() < 1e-9);
+        assert!((mm.avg_time_us - 150.0).abs() < 1e-9);
+        assert!((mm.max_time_us - 200.0).abs() < 1e-9);
+        let attn = &summaries[1];
+        assert_eq!(attn.kernel_name, "attention");
+        assert_eq!(attn.call_count, 1);
     }
 
     #[test]
     fn test_disabled_profiler() {
         let mut p = KernelProfiler::disabled();
-        p.record(KernelId::Matmul, Duration::from_millis(10), 0);
-        assert!(p.get(KernelId::Matmul).is_none());
+        p.record("matmul", 100.0, 1024, 512, 8192);
+        p.record("attention", 50.0, 512, 512, 4096);
+        assert!(p.get_profiles().is_empty());
+        assert_eq!(p.total_time_us(), 0.0);
+        assert!(p.hottest_kernel().is_none());
     }
 
     #[test]
-    fn test_enable_disable() {
+    fn test_flops_estimate() {
+        let prof = KernelProfile {
+            kernel_name: "matmul".to_string(),
+            execution_time_us: 1_000_000.0, // 1 second
+            input_elements: 500,
+            output_elements: 500,
+            memory_bytes: 4000,
+        };
+        // 1000 elements / 1 second = 1000 FLOPS
+        assert!((prof.flops_estimate() - 1000.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_bandwidth_gbps() {
+        let prof = KernelProfile {
+            kernel_name: "matmul".to_string(),
+            execution_time_us: 1_000_000.0, // 1 second
+            input_elements: 1024,
+            output_elements: 1024,
+            memory_bytes: 1_000_000_000, // 1 GB
+        };
+        // 1 GB / 1 s = 1.0 GB/s
+        assert!((prof.bandwidth_gbps() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_elements_per_second() {
+        let prof = KernelProfile {
+            kernel_name: "norm".to_string(),
+            execution_time_us: 500_000.0, // 0.5 seconds
+            input_elements: 1000,
+            output_elements: 1000,
+            memory_bytes: 8000,
+        };
+        // 2000 elements / 0.5 s = 4000 elem/s
+        assert!((prof.elements_per_second() - 4000.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_zero_time_guards() {
+        let prof = KernelProfile {
+            kernel_name: "empty".to_string(),
+            execution_time_us: 0.0,
+            input_elements: 100,
+            output_elements: 100,
+            memory_bytes: 800,
+        };
+        assert_eq!(prof.flops_estimate(), 0.0);
+        assert_eq!(prof.bandwidth_gbps(), 0.0);
+        assert_eq!(prof.elements_per_second(), 0.0);
+    }
+
+    #[test]
+    fn test_clear_resets() {
         let mut p = KernelProfiler::new();
-        assert!(p.is_enabled());
-        p.disable();
-        assert!(!p.is_enabled());
-        p.enable();
-        assert!(p.is_enabled());
+        p.record("matmul", 100.0, 1024, 512, 8192);
+        p.record("attention", 50.0, 512, 512, 4096);
+        assert_eq!(p.get_profiles().len(), 2);
+        p.clear();
+        assert!(p.get_profiles().is_empty());
+        assert_eq!(p.total_time_us(), 0.0);
+        assert!(p.hottest_kernel().is_none());
     }
 
     #[test]
-    fn test_total_time() {
+    fn test_default_is_enabled() {
+        let p = KernelProfiler::default();
+        // default() delegates to new() which is enabled
+        p.get_profiles(); // should not panic
+        assert_eq!(p.total_time_us(), 0.0);
+    }
+
+    #[test]
+    fn test_summary_single_kernel_multiple_calls() {
         let mut p = KernelProfiler::new();
-        p.record(KernelId::Matmul, Duration::from_millis(10), 0);
-        p.record(KernelId::SiLU, Duration::from_millis(5), 0);
-        assert_eq!(p.total_time(), Duration::from_millis(15));
-    }
-
-    #[test]
-    fn test_hottest() {
-        let mut p = KernelProfiler::new();
-        p.record(KernelId::Matmul, Duration::from_millis(100), 0);
-        p.record(KernelId::SiLU, Duration::from_millis(5), 0);
-        let (k, _) = p.hottest().unwrap();
-        assert_eq!(k, KernelId::Matmul);
-    }
-
-    #[test]
-    fn test_report_sorted() {
-        let mut p = KernelProfiler::new();
-        p.record(KernelId::SiLU, Duration::from_millis(5), 0);
-        p.record(KernelId::Matmul, Duration::from_millis(100), 0);
-        let report = p.report();
-        assert_eq!(report[0].0, KernelId::Matmul); // most time first
-    }
-
-    #[test]
-    fn test_reset() {
-        let mut p = KernelProfiler::new();
-        p.record(KernelId::Matmul, Duration::from_millis(10), 0);
-        p.reset();
-        assert!(p.get(KernelId::Matmul).is_none());
-    }
-
-    #[test]
-    fn test_merge() {
-        let mut a = KernelProfiler::new();
-        a.record(KernelId::Matmul, Duration::from_millis(10), 100);
-        let mut b = KernelProfiler::new();
-        b.record(KernelId::Matmul, Duration::from_millis(20), 200);
-        a.merge(&b);
-        let s = a.get(KernelId::Matmul).unwrap();
-        assert_eq!(s.call_count, 2);
-        assert_eq!(s.total_flops, 300);
-    }
-
-    #[test]
-    fn test_kernel_id_name() {
-        assert_eq!(KernelId::Matmul.name(), "matmul");
-        assert_eq!(KernelId::RmsNorm.name(), "rms_norm");
-        assert_eq!(KernelId::Custom(42).name(), "custom");
+        p.record("softmax", 10.0, 64, 64, 512);
+        p.record("softmax", 30.0, 64, 64, 512);
+        p.record("softmax", 20.0, 64, 64, 512);
+        let summaries = p.summary_by_kernel();
+        assert_eq!(summaries.len(), 1);
+        let s = &summaries[0];
+        assert_eq!(s.call_count, 3);
+        assert!((s.total_time_us - 60.0).abs() < 1e-9);
+        assert!((s.avg_time_us - 20.0).abs() < 1e-9);
+        assert!((s.max_time_us - 30.0).abs() < 1e-9);
     }
 }
