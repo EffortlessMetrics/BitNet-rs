@@ -1,0 +1,74 @@
+    Blocking waiting for file lock on build directory
+   Compiling serde v1.0.228
+   Compiling tracing v0.1.44
+   Compiling tokio v1.50.0
+   Compiling darling_core v0.20.11
+   Compiling tempfile v3.26.0
+   Compiling monostate v0.1.18
+   Compiling sysinfo v0.37.2
+   Compiling serial_test v3.4.0
+   Compiling bitnet-warn-once v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-warn-once)
+   Compiling safetensors v0.7.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling candle-core v0.9.2
+   Compiling spm_precompiled v0.1.4
+   Compiling serde_yaml_ng v0.10.0
+   Compiling compact_str v0.9.0
+   Compiling tokio-util v0.7.18
+   Compiling h2 v0.4.13
+   Compiling tokio-native-tls v0.3.1
+   Compiling tower v0.5.3
+   Compiling tower-http v0.6.8
+   Compiling bitnet-gguf v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-gguf)
+   Compiling dary_heap v0.3.8
+   Compiling hyper v1.8.1
+   Compiling ahash v0.8.12
+   Compiling bitnet-generation-stop-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-generation-stop-core)
+   Compiling bitnet-generation-events-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-generation-events-core)
+   Compiling chrono v0.4.44
+   Compiling bitnet-common v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-common)
+   Compiling hyper-util v0.1.20
+   Compiling bitnet-quantization v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-quantization)
+   Compiling bitnet-qk256-dispatch v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-qk256-dispatch)
+   Compiling hyper-tls v0.6.0
+   Compiling candle-nn v0.9.2
+   Compiling reqwest v0.12.28
+   Compiling bitnet-tokenizer-model-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-tokenizer-model-core)
+   Compiling bitnet-device-probe v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-device-probe)
+   Compiling bitnet-transformer v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-transformer)
+   Compiling bitnet-receipts-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-receipts-core)
+   Compiling bitnet-models v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-models)
+   Compiling bitnet-generation v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-generation)
+   Compiling bitnet-receipts v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-receipts)
+   Compiling bitnet-engine-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-engine-core)
+   Compiling bitnet-kernels v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-kernels)
+   Compiling tokio-stream v0.1.18
+   Compiling bitnet-kv-cache-policy-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-kv-cache-policy-core)
+   Compiling bitnet-inference-metrics-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-inference-metrics-core)
+   Compiling ciborium v0.2.2
+   Compiling tinytemplate v1.2.1
+   Compiling darling_macro v0.20.11
+   Compiling rusty-fork v0.3.1
+   Compiling bitnet-sampling v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-sampling)
+   Compiling proptest v1.9.0
+   Compiling criterion v0.5.1
+   Compiling darling v0.20.11
+   Compiling derive_builder_core v0.20.2
+   Compiling tokio-test v0.4.5
+   Compiling derive_builder_macro v0.20.2
+   Compiling insta v1.46.3
+   Compiling derive_builder v0.20.2
+   Compiling tokenizers v0.22.2
+   Compiling bitnet-tokenizers v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-tokenizers)
+   Compiling bitnet-prompt-templates-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-prompt-templates-core)
+   Compiling bitnet-prompt-templates v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-prompt-templates)
+   Compiling bitnet-inference v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-inference)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18m 25s
+     Running tests\cpu_golden_path.rs (target\debug\deps\cpu_golden_path-19801489d9457a12.exe)
+test_cpu_golden_path_deterministic_output: test
+test_cpu_golden_path_kernel_ids_recorded: test
+test_cpu_golden_path_receipt_honest_compute: test
+test_cpu_golden_path_receipt_invariants: test
+test_cpu_golden_path_reproducible: test
+
+5 tests, 0 benchmarks

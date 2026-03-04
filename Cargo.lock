@@ -547,6 +547,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-client-ip-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-common"
 version = "0.2.1-dev"
 dependencies = [
@@ -1379,6 +1383,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-client-ip-core",
  "bitnet-common",
  "bitnet-device-config-core",
  "bitnet-eval-core",

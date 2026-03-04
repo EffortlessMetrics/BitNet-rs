@@ -7,6 +7,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use bitnet_client_ip_core::extract_client_ip as extract_client_ip_core;
 use bitnet_http_auth_core::bearer_token;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -348,25 +349,10 @@ fn extract_client_ip(request: &Request) -> Option<IpAddr> {
 
 /// Extract client IP from headers (shared utility)
 pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
-    // Try X-Forwarded-For header first (for reverse proxies)
-    if let Some(forwarded) = headers.get("x-forwarded-for")
-        && let Ok(forwarded_str) = forwarded.to_str()
-        && let Some(first_ip) = forwarded_str.split(',').next()
-        && let Ok(ip) = first_ip.trim().parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
+    let x_forwarded_for = headers.get("x-forwarded-for").and_then(|value| value.to_str().ok());
+    let x_real_ip = headers.get("x-real-ip").and_then(|value| value.to_str().ok());
 
-    // Try X-Real-IP header
-    if let Some(real_ip) = headers.get("x-real-ip")
-        && let Ok(ip_str) = real_ip.to_str()
-        && let Ok(ip) = ip_str.parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
-
-    // Fall back to connection info (would need to be passed from the server)
-    None
+    extract_client_ip_core(x_forwarded_for, x_real_ip)
 }
 
 /// CORS middleware configuration
