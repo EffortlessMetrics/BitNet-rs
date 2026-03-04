@@ -82,6 +82,10 @@ impl LruTracker {
         self.order.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.order.is_empty()
+    }
+
     pub fn is_full(&self) -> bool {
         self.order.len() >= self.max_size
     }
