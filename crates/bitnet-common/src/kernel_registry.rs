@@ -79,7 +79,7 @@ impl KernelBackend {
     /// Returns true if this backend is compiled in the current build.
     pub fn is_compiled(self) -> bool {
         match self {
-            KernelBackend::CpuRust => cfg!(feature = "cpu"),
+            KernelBackend::CpuRust => true,
             KernelBackend::Cuda => cfg!(feature = "cuda"),
             KernelBackend::Hip => cfg!(feature = "hip"),
             KernelBackend::OneApi => cfg!(feature = "oneapi"),
@@ -126,7 +126,7 @@ impl KernelCapabilities {
     /// `cuda_runtime` will be `false`; use [`Self::with_cuda_runtime`] to fill it in.
     pub fn from_compile_time() -> Self {
         KernelCapabilities {
-            cpu_rust: cfg!(feature = "cpu"),
+            cpu_rust: true,
             cuda_compiled: cfg!(feature = "cuda"),
             cuda_runtime: false, // requires runtime check
             hip_compiled: cfg!(feature = "hip"),
