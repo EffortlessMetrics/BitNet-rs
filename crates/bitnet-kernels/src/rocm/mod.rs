@@ -18,6 +18,7 @@
 //! | [`rmsnorm`] | *(planned)* | RMSNorm forward pass |
 
 pub mod attention;
+pub mod hip_kernels;
 pub mod qk256_gemv;
 pub mod rmsnorm;
 
