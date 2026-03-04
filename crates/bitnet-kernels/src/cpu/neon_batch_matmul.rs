@@ -57,11 +57,11 @@ unsafe fn neon_matmul_inner(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: us
         // Process 4 columns at a time
         for jc in 0..n_chunks {
             let j_base = jc * lanes;
-            let mut acc = unsafe { vdupq_n_f32(0.0) };
+            let mut acc = vdupq_n_f32(0.0);
             for p in 0..k {
-                let a_val = unsafe { vdupq_n_f32(a[i * k + p]) };
+                let a_val = vdupq_n_f32(a[i * k + p]);
                 let b_vec = unsafe { vld1q_f32(b.as_ptr().add(p * n + j_base)) };
-                acc = unsafe { vfmaq_f32(acc, a_val, b_vec) };
+                acc = vfmaq_f32(acc, a_val, b_vec);
             }
             unsafe {
                 vst1q_f32(c.as_mut_ptr().add(i * n + j_base), acc);
@@ -98,14 +98,14 @@ unsafe fn neon_matmul_transb_inner(
 
     for i in 0..m {
         for j in 0..n {
-            let mut acc = unsafe { vdupq_n_f32(0.0) };
+            let mut acc = vdupq_n_f32(0.0);
             for pc in 0..k_chunks {
                 let p_base = pc * lanes;
                 let a_vec = unsafe { vld1q_f32(a.as_ptr().add(i * k + p_base)) };
                 let b_vec = unsafe { vld1q_f32(b.as_ptr().add(j * k + p_base)) };
-                acc = unsafe { vfmaq_f32(acc, a_vec, b_vec) };
+                acc = vfmaq_f32(acc, a_vec, b_vec);
             }
-            let mut sum = unsafe { vaddvq_f32(acc) };
+            let mut sum = vaddvq_f32(acc);
             // Scalar tail for k
             for p in (k_chunks * lanes)..k {
                 sum += a[i * k + p] * b[j * k + p];
@@ -137,9 +137,9 @@ unsafe fn neon_matmul_accumulate_inner(
             let j_base = jc * lanes;
             let mut acc = unsafe { vld1q_f32(c.as_ptr().add(i * n + j_base)) };
             for p in 0..k {
-                let a_val = unsafe { vdupq_n_f32(a[i * k + p]) };
+                let a_val = vdupq_n_f32(a[i * k + p]);
                 let b_vec = unsafe { vld1q_f32(b.as_ptr().add(p * n + j_base)) };
-                acc = unsafe { vfmaq_f32(acc, a_val, b_vec) };
+                acc = vfmaq_f32(acc, a_val, b_vec);
             }
             unsafe {
                 vst1q_f32(c.as_mut_ptr().add(i * n + j_base), acc);
@@ -172,18 +172,18 @@ unsafe fn neon_matmul_scale_inner(
 ) {
     let lanes = 4usize;
     let n_chunks = n / lanes;
-    let alpha_vec = unsafe { vdupq_n_f32(alpha) };
+    let alpha_vec = vdupq_n_f32(alpha);
 
     for i in 0..m {
         for jc in 0..n_chunks {
             let j_base = jc * lanes;
-            let mut acc = unsafe { vdupq_n_f32(0.0) };
+            let mut acc = vdupq_n_f32(0.0);
             for p in 0..k {
-                let a_val = unsafe { vdupq_n_f32(a[i * k + p]) };
+                let a_val = vdupq_n_f32(a[i * k + p]);
                 let b_vec = unsafe { vld1q_f32(b.as_ptr().add(p * n + j_base)) };
-                acc = unsafe { vfmaq_f32(acc, a_val, b_vec) };
+                acc = vfmaq_f32(acc, a_val, b_vec);
             }
-            let scaled = unsafe { vmulq_f32(acc, alpha_vec) };
+            let scaled = vmulq_f32(acc, alpha_vec);
             unsafe {
                 vst1q_f32(c.as_mut_ptr().add(i * n + j_base), scaled);
             }
