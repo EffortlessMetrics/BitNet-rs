@@ -89,11 +89,20 @@ impl From<BitNetError> for BitNetCError {
                 bitnet_common::KernelError::ExecutionFailed { reason } => {
                     BitNetCError::InferenceFailed(format!("Kernel execution failed: {}", reason))
                 }
+                bitnet_common::KernelError::LaunchFailed { kernel, reason } => {
+                    BitNetCError::InferenceFailed(format!(
+                        "Kernel launch failed ({}): {}",
+                        kernel, reason
+                    ))
+                }
                 bitnet_common::KernelError::UnsupportedArchitecture { arch } => {
                     BitNetCError::UnsupportedOperation(format!(
                         "Unsupported architecture: {}",
                         arch
                     ))
+                }
+                bitnet_common::KernelError::DeviceUnavailable { reason } => {
+                    BitNetCError::UnsupportedOperation(format!("Device unavailable: {}", reason))
                 }
                 bitnet_common::KernelError::GpuError { reason } => {
                     BitNetCError::InferenceFailed(format!("GPU error: {}", reason))
