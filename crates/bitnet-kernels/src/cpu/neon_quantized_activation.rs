@@ -12,7 +12,7 @@ use std::arch::aarch64::*;
 
 /// √(2/π) used in GELU tanh approximation.
 #[cfg(target_arch = "aarch64")]
-const SQRT_2_OVER_PI: f32 = 0.797_884_56;
+const SQRT_2_OVER_PI: f32 = 0.797_884_6;
 
 /// Cubic coefficient in GELU tanh approximation.
 #[cfg(target_arch = "aarch64")]
@@ -28,42 +28,40 @@ const GELU_COEFF: f32 = 0.044_715;
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn neon_exp_f32x4(x: float32x4_t) -> float32x4_t {
-    unsafe {
-        let min_val = vdupq_n_f32(-87.0);
-        let max_val = vdupq_n_f32(87.0);
-        let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
+    let min_val = vdupq_n_f32(-87.0);
+    let max_val = vdupq_n_f32(87.0);
+    let x = vmaxq_f32(vminq_f32(x, max_val), min_val);
 
-        // Range reduction: x = n * ln2 + r, where n = round(x / ln2)
-        let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
-        let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
+    // Range reduction: x = n * ln2 + r, where n = round(x / ln2)
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let ln2 = vdupq_n_f32(std::f32::consts::LN_2);
 
-        let n = vrndnq_f32(vmulq_f32(x, log2e));
-        let r = vmlsq_f32(x, n, ln2); // r = x - n * ln2
+    let n = vrndnq_f32(vmulq_f32(x, log2e));
+    let r = vmlsq_f32(x, n, ln2); // r = x - n * ln2
 
-        // Degree-6 minimax polynomial for exp(r) on [0, ln2)
-        let c0 = vdupq_n_f32(1.0);
-        let c1 = vdupq_n_f32(1.0);
-        let c2 = vdupq_n_f32(0.500_000_0);
-        let c3 = vdupq_n_f32(0.166_666_7);
-        let c4 = vdupq_n_f32(0.041_666_67);
-        let c5 = vdupq_n_f32(0.008_333_334);
-        let c6 = vdupq_n_f32(0.001_388_889);
+    // Degree-6 minimax polynomial for exp(r) on [0, ln2)
+    let c0 = vdupq_n_f32(1.0);
+    let c1 = vdupq_n_f32(1.0);
+    let c2 = vdupq_n_f32(0.5);
+    let c3 = vdupq_n_f32(0.166_666_7);
+    let c4 = vdupq_n_f32(0.041_666_668);
+    let c5 = vdupq_n_f32(0.008_333_334);
+    let c6 = vdupq_n_f32(0.001_388_889);
 
-        // Horner evaluation: p = c0 + r*(c1 + r*(c2 + r*(c3 + r*(c4 + r*(c5 + r*c6)))))
-        let mut p = vmlaq_f32(c5, r, c6);
-        p = vmlaq_f32(c4, r, p);
-        p = vmlaq_f32(c3, r, p);
-        p = vmlaq_f32(c2, r, p);
-        p = vmlaq_f32(c1, r, p);
-        p = vmlaq_f32(c0, r, p);
+    // Horner evaluation: p = c0 + r*(c1 + r*(c2 + r*(c3 + r*(c4 + r*(c5 + r*c6)))))
+    let mut p = vmlaq_f32(c5, r, c6);
+    p = vmlaq_f32(c4, r, p);
+    p = vmlaq_f32(c3, r, p);
+    p = vmlaq_f32(c2, r, p);
+    p = vmlaq_f32(c1, r, p);
+    p = vmlaq_f32(c0, r, p);
 
-        // Reconstruct: exp(x) = p * 2^n
-        // Use integer bit manipulation for 2^n
-        let ni = vcvtq_s32_f32(n);
-        let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, vdupq_n_s32(127)), 23));
+    // Reconstruct: exp(x) = p * 2^n
+    // Use integer bit manipulation for 2^n
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, vdupq_n_s32(127)), 23));
 
-        vmulq_f32(p, pow2n)
-    }
+    vmulq_f32(p, pow2n)
 }
 
 /// Scalar fast exp approximation matching the NEON polynomial.
@@ -78,9 +76,9 @@ fn scalar_exp_fast(x: f32) -> f32 {
 
     let p = 1.0
         + r * (1.0
-            + r * (0.500_000_0
+            + r * (0.5
                 + r * (0.166_666_7
-                    + r * (0.041_666_67 + r * (0.008_333_334 + r * 0.001_388_889)))));
+                    + r * (0.041_666_668 + r * (0.008_333_334 + r * 0.001_388_889)))));
 
     let ni = n as i32;
     let pow2n = f32::from_bits(((ni + 127) as u32) << 23);
@@ -101,8 +99,7 @@ unsafe fn neon_sigmoid_vec(x: float32x4_t) -> float32x4_t {
         let denom = vaddq_f32(one, exp_neg);
         // reciprocal: use vrecpeq + Newton-Raphson step
         let recip = vrecpeq_f32(denom);
-        let recip = vmulq_f32(recip, vrecpsq_f32(denom, recip));
-        recip
+        vmulq_f32(recip, vrecpsq_f32(denom, recip))
     }
 }
 
@@ -179,6 +176,10 @@ fn scalar_gelu(x: f32) -> f32 {
 ///
 /// Processes 4 × f32 lanes at a time with scalar fallback for remainder.
 ///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+///
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
@@ -213,6 +214,10 @@ pub unsafe fn neon_relu_f32(input: &[f32], output: &mut [f32]) {
 /// Uses a degree-6 minimax polynomial for exp approximation, yielding
 /// max error < 1e-4 across the practical range.
 ///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+///
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
@@ -245,6 +250,10 @@ pub unsafe fn neon_sigmoid_f32(input: &[f32], output: &mut [f32]) {
 ///
 /// tanh(x) = (exp(2x) - 1) / (exp(2x) + 1)
 ///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+///
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
@@ -274,6 +283,10 @@ pub unsafe fn neon_tanh_f32(input: &[f32], output: &mut [f32]) {
 // ── SiLU / Swish ────────────────────────────────────────────────────
 
 /// Compute SiLU/Swish activation (x * sigmoid(x)) using NEON polynomial exp.
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
 ///
 /// # Panics
 ///
@@ -306,6 +319,10 @@ pub unsafe fn neon_silu_f32(input: &[f32], output: &mut [f32]) {
 
 /// Compute GELU activation using the tanh approximation:
 /// `0.5 * x * (1 + tanh(√(2/π) * (x + 0.044715 * x³)))`
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
 ///
 /// # Panics
 ///
@@ -341,6 +358,10 @@ pub unsafe fn neon_gelu_f32(input: &[f32], output: &mut [f32]) {
 /// This avoids the cubic term and tanh computation, trading a small
 /// accuracy reduction for higher throughput.
 ///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
+///
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
@@ -371,6 +392,7 @@ pub unsafe fn neon_fast_gelu_f32(input: &[f32], output: &mut [f32]) {
 }
 
 /// Scalar fast GELU reference.
+#[allow(dead_code)]
 #[inline(always)]
 fn scalar_fast_gelu(x: f32) -> f32 {
     x * scalar_sigmoid_fast(1.702 * x)
@@ -382,6 +404,10 @@ fn scalar_fast_gelu(x: f32) -> f32 {
 ///
 /// Commonly used in LLaMA-style FFN blocks where the gate and up
 /// projections are separate linear layers.
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
 ///
 /// # Panics
 ///
@@ -420,6 +446,10 @@ pub unsafe fn neon_swiglu_f32(gate: &[f32], up: &[f32], output: &mut [f32]) {
 ///
 /// Used in some transformer FFN variants where the gate projection
 /// passes through GELU before multiplying with the up projection.
+///
+/// # Safety
+///
+/// Caller must ensure the `neon` target feature is available at runtime.
 ///
 /// # Panics
 ///

@@ -165,34 +165,31 @@ pub fn neon_dequant_qk256_block(packed: &[u8], scale: f32) -> Vec<f32> {
 /// Panics if `fp16_bytes.len()` is odd.
 #[cfg(target_arch = "aarch64")]
 pub fn neon_dequant_fp16_to_f32(fp16_bytes: &[u8]) -> Vec<f32> {
-    assert!(fp16_bytes.len() % 2 == 0, "fp16 byte slice must have even length");
+    assert!(fp16_bytes.len().is_multiple_of(2), "fp16 byte slice must have even length");
 
     let count = fp16_bytes.len() / 2;
     let mut out = Vec::with_capacity(count);
 
-    // SAFETY: NEON FP16 conversion is available on AArch64.
-    unsafe {
-        // Process 4 FP16 values (8 bytes) at a time.
-        let full_chunks = count / 4;
-        for chunk in 0..full_chunks {
-            let base = chunk * 8;
-            let h0 = u16::from_le_bytes([fp16_bytes[base], fp16_bytes[base + 1]]);
-            let h1 = u16::from_le_bytes([fp16_bytes[base + 2], fp16_bytes[base + 3]]);
-            let h2 = u16::from_le_bytes([fp16_bytes[base + 4], fp16_bytes[base + 5]]);
-            let h3 = u16::from_le_bytes([fp16_bytes[base + 6], fp16_bytes[base + 7]]);
+    // Process 4 FP16 values (8 bytes) at a time.
+    let full_chunks = count / 4;
+    for chunk in 0..full_chunks {
+        let base = chunk * 8;
+        let h0 = u16::from_le_bytes([fp16_bytes[base], fp16_bytes[base + 1]]);
+        let h1 = u16::from_le_bytes([fp16_bytes[base + 2], fp16_bytes[base + 3]]);
+        let h2 = u16::from_le_bytes([fp16_bytes[base + 4], fp16_bytes[base + 5]]);
+        let h3 = u16::from_le_bytes([fp16_bytes[base + 6], fp16_bytes[base + 7]]);
 
-            out.push(fp16_to_f32(h0));
-            out.push(fp16_to_f32(h1));
-            out.push(fp16_to_f32(h2));
-            out.push(fp16_to_f32(h3));
-        }
+        out.push(fp16_to_f32(h0));
+        out.push(fp16_to_f32(h1));
+        out.push(fp16_to_f32(h2));
+        out.push(fp16_to_f32(h3));
+    }
 
-        // Scalar remainder using half::f16-compatible bit conversion.
-        for i in (full_chunks * 4)..count {
-            let base = i * 2;
-            let bits = u16::from_le_bytes([fp16_bytes[base], fp16_bytes[base + 1]]);
-            out.push(fp16_to_f32(bits));
-        }
+    // Scalar remainder using half::f16-compatible bit conversion.
+    for i in (full_chunks * 4)..count {
+        let base = i * 2;
+        let bits = u16::from_le_bytes([fp16_bytes[base], fp16_bytes[base + 1]]);
+        out.push(fp16_to_f32(bits));
     }
 
     out
@@ -214,7 +211,7 @@ pub fn neon_dequant_i8_symmetric(quantized: &[i8], scale: f32) -> Vec<f32> {
         let full_chunks = n / 8;
         for chunk in 0..full_chunks {
             let base = chunk * 8;
-            let ptr = quantized.as_ptr().add(base) as *const i8;
+            let ptr = quantized.as_ptr().add(base);
             let i8v = vld1_s8(ptr);
             let i16v = vmovl_s8(i8v);
 
@@ -236,8 +233,8 @@ pub fn neon_dequant_i8_symmetric(quantized: &[i8], scale: f32) -> Vec<f32> {
         }
 
         // Scalar remainder.
-        for i in (full_chunks * 8)..n {
-            out.push(quantized[i] as f32 * scale);
+        for val in &quantized[full_chunks * 8..n] {
+            out.push(*val as f32 * scale);
         }
     }
 
@@ -311,7 +308,7 @@ pub fn neon_dequant_i4_packed(packed: &[u8], scales: &[f32], block_size: usize) 
                 let global_idx = elem_start + i;
                 let byte_idx = global_idx / 2;
                 let b = packed[byte_idx];
-                let nibble = if global_idx % 2 == 0 { b & 0x0F } else { (b >> 4) & 0x0F };
+                let nibble = if global_idx.is_multiple_of(2) { b & 0x0F } else { (b >> 4) & 0x0F };
                 let signed = ((nibble as i8) << 4) >> 4;
                 out.push(signed as f32 * blk_scale);
             }

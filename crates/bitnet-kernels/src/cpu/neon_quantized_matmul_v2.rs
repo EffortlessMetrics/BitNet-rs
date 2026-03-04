@@ -143,8 +143,8 @@ unsafe fn neon_dot_i2s_f32(packed_row: &[u8], input: &[f32], k: usize) -> f32 {
 
     for (bi, &byte) in packed_row.iter().enumerate().take(full_bytes) {
         let vals = unpack_byte_f32(byte);
-        let w = vld1q_f32(vals.as_ptr());
-        let x = vld1q_f32(input.as_ptr().add(bi * 4));
+        let w = unsafe { vld1q_f32(vals.as_ptr()) };
+        let x = unsafe { vld1q_f32(input.as_ptr().add(bi * 4)) };
         // vfmaq_f32: acc = acc + w * x
         acc = vfmaq_f32(acc, w, x);
     }
@@ -220,7 +220,7 @@ impl NeonQuantizedMatmul {
     /// AArch64; falls back to scalar on other architectures.
     pub fn matmul_i2s_f32(&self, weights_i2s: &[u8], input: &[f32], output: &mut [f32]) {
         let QuantizedMatmulConfig { m, n, k, .. } = self.config;
-        let row_bytes = (k + 3) / 4;
+        let row_bytes = k.div_ceil(4);
 
         for row in 0..m {
             let packed_row =
@@ -248,7 +248,7 @@ impl NeonQuantizedMatmul {
     /// f32 before accumulation, and results are stored as f32.
     pub fn matmul_i2s_f16(&self, weights_i2s: &[u8], input: &[u16], output: &mut [f32]) {
         let QuantizedMatmulConfig { m, n, k, .. } = self.config;
-        let row_bytes = (k + 3) / 4;
+        let row_bytes = k.div_ceil(4);
 
         for row in 0..m {
             let packed_row =
@@ -321,7 +321,7 @@ fn f16_to_f32(bits: u16) -> f32 {
             e -= 1;
         }
         m &= 0x3FF;
-        let f32_exp = ((127 - 15 + 1) as i32 + e) as u32;
+        let f32_exp = (127_i32 - 15 + 1 + e) as u32;
         return f32::from_bits((sign << 31) | (f32_exp << 23) | (m << 13));
     }
     if exp == 0x1F {

@@ -14,6 +14,7 @@
 use std::arch::x86_64::*;
 
 const NEG_INF: f32 = f32::NEG_INFINITY;
+#[allow(dead_code)]
 const SIMD_WIDTH: usize = 8;
 
 // -- AVX2 helpers --------------------------------------------------------

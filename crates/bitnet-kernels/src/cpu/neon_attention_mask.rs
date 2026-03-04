@@ -91,7 +91,7 @@ pub fn neon_padding_mask_f32(scores: &mut [f32], mask: &[bool], seq_len: usize, 
 
     let neg_inf = f32::NEG_INFINITY;
     let chunks = kv_len / LANES;
-    let remainder = kv_len % LANES;
+    let _remainder = kv_len % LANES;
 
     for q in 0..seq_len {
         let row_start = q * kv_len;
@@ -158,7 +158,7 @@ pub fn neon_sliding_window_mask_f32(
 
         // Visible range: [win_start, win_end] inclusive
         let win_end = abs_pos; // causal: cannot see future
-        let win_start = if abs_pos + 1 >= window_size { abs_pos + 1 - window_size } else { 0 };
+        let win_start = (abs_pos + 1).saturating_sub(window_size);
 
         // Mask everything before win_start
         if win_start > 0 {
@@ -235,7 +235,7 @@ pub fn neon_alibi_mask_f32(
     let offset = kv_len.saturating_sub(seq_len);
 
     let chunks = kv_len / LANES;
-    let remainder = kv_len % LANES;
+    let _remainder = kv_len % LANES;
 
     for q in 0..seq_len {
         let row_start = q * kv_len;
@@ -306,7 +306,7 @@ pub fn neon_combined_mask_f32(
 
         // Determine visible range from causal + window
         let vis_start = if let Some(w) = window {
-            if abs_pos + 1 >= w { abs_pos + 1 - w } else { 0 }
+            (abs_pos + 1).saturating_sub(w)
         } else {
             0
         };

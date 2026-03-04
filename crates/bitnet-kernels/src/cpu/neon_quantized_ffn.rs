@@ -170,6 +170,7 @@ fn scalar_quantized_linear(
 }
 
 // Reference scalar implementation used by tests on all platforms.
+#[allow(dead_code)]
 fn scalar_quantized_linear_ref(
     input: &[f32],
     weights: &[i8],
@@ -234,6 +235,7 @@ fn scalar_swiglu(gate: &[f32], up: &[f32], output: &mut [f32], len: usize) {
     }
 }
 
+#[allow(dead_code)]
 fn scalar_swiglu_ref(gate: &[f32], up: &[f32], output: &mut [f32]) {
     let len = gate.len().min(up.len()).min(output.len());
     for i in 0..len {

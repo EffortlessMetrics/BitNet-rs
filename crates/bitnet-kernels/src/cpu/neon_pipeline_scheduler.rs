@@ -229,14 +229,14 @@ impl NeonPipeline {
                 // 2·m·n·k multiply-adds
                 PipelineOp::MatMul { m, n, k } => 2 * (*m as u64) * (*n as u64) * (*k as u64),
                 // mean + var + normalise  ≈ 5·dim per group
-                PipelineOp::LayerNorm { dim } => 5 * input_size as u64,
+                PipelineOp::LayerNorm { dim: _ } => 5 * input_size as u64,
                 // One op per element (approximate)
                 PipelineOp::Activation { kind } => match kind {
                     ActivationKind::ReLU => input_size as u64,
                     _ => 5 * input_size as u64,
                 },
                 // exp + sum + div  ≈ 5 per element
-                PipelineOp::Softmax { dim } => 5 * input_size as u64,
+                PipelineOp::Softmax { dim: _ } => 5 * input_size as u64,
                 PipelineOp::Add => input_size as u64,
                 PipelineOp::Scale { .. } => input_size as u64,
             };
