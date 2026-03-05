@@ -176,6 +176,7 @@ fn scalar_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Ve
 }
 
 /// Scalar scores·V → output `[seq_q, dim_v]` written into `out`.
+#[allow(dead_code)]
 fn scalar_sv_into(
     scores: &[f32],
     v: &[f32],
@@ -199,6 +200,7 @@ fn scalar_sv_into(
 }
 
 /// Scalar scores·V → output `[seq_q, dim_v]`.
+#[allow(dead_code)]
 fn scalar_sv(scores: &[f32], v: &[f32], seq_q: usize, seq_k: usize, dim_v: usize) -> Vec<f32> {
     let mut out = vec![0.0_f32; seq_q * dim_v];
     scalar_sv_into(scores, v, seq_q, seq_k, dim_v, &mut out);
@@ -292,6 +294,58 @@ fn neon_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<
     scores
 }
 
+/// NEON-accelerated scores·V → output `[seq_q, dim_v]` written into `out`.
+///
+/// Vectorises the inner `d` (dim_v) loop using `float32x4_t`, processing
+/// 4 elements per iteration with a scalar tail for non-multiple-of-4 dims.
+#[cfg(target_arch = "aarch64")]
+fn neon_sv_into(
+    scores: &[f32],
+    v: &[f32],
+    seq_q: usize,
+    seq_k: usize,
+    dim_v: usize,
+    out: &mut [f32],
+) {
+    use std::arch::aarch64::*;
+
+    debug_assert!(out.len() >= seq_q * dim_v);
+    for val in &mut out[..seq_q * dim_v] {
+        *val = 0.0;
+    }
+
+    let chunks = dim_v / 4;
+    let remainder = dim_v % 4;
+
+    for i in 0..seq_q {
+        for j in 0..seq_k {
+            let w = scores[i * seq_k + j];
+            let out_row = i * dim_v;
+            let v_row = j * dim_v;
+
+            // SAFETY: all pointer arithmetic stays within the slices validated by
+            // the debug_assert and the loop bounds derived from dim_v.
+            unsafe {
+                let w_vec = vdupq_n_f32(w);
+                for c in 0..chunks {
+                    let base = c * 4;
+                    let o = vld1q_f32(out.as_ptr().add(out_row + base));
+                    let vv = vld1q_f32(v.as_ptr().add(v_row + base));
+                    let r = vfmaq_f32(o, w_vec, vv);
+                    vst1q_f32(out.as_mut_ptr().add(out_row + base), r);
+                }
+            }
+
+            // scalar tail
+            let tail_start = chunks * 4;
+            for t in 0..remainder {
+                let d = tail_start + t;
+                out[out_row + d] += w * v[v_row + d];
+            }
+        }
+    }
+}
+
 // ── Dispatch helpers ───────────────────────────────────────────────
 
 /// Compute Q·K^T, choosing the best available SIMD path.
@@ -331,6 +385,36 @@ fn dispatch_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize
         }
         scalar_qk_into(q, k, seq_q, seq_k, dim, out);
     }
+}
+
+/// Compute scores·V, choosing the best available SIMD path.
+///
+/// - **aarch64 + NEON**: 128-bit vector FMA for scores·V accumulation
+/// - **x86_64 + AVX2/FMA**: TODO — planned AVX2 acceleration
+/// - **Fallback**: Scalar implementation on all other platforms
+fn dispatch_sv(scores: &[f32], v: &[f32], seq_q: usize, seq_k: usize, dim_v: usize) -> Vec<f32> {
+    let mut out = vec![0.0_f32; seq_q * dim_v];
+    dispatch_sv_into(scores, v, seq_q, seq_k, dim_v, &mut out);
+    out
+}
+
+/// Compute scores·V into a pre-allocated buffer.
+fn dispatch_sv_into(
+    scores: &[f32],
+    v: &[f32],
+    seq_q: usize,
+    seq_k: usize,
+    dim_v: usize,
+    out: &mut [f32],
+) {
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon_sv_into(scores, v, seq_q, seq_k, dim_v, out);
+        return;
+    }
+    // TODO(simd): add AVX2 SV fast-path here.
+    #[allow(unreachable_code)]
+    scalar_sv_into(scores, v, seq_q, seq_k, dim_v, out);
 }
 
 // ── Public API ─────────────────────────────────────────────────────
@@ -385,7 +469,7 @@ impl AttentionKernel {
         softmax_rows(&mut scores, seq_q, seq_k);
 
         // scores · V → [seq_q, head_dim]
-        Ok(scalar_sv(&scores, v, seq_q, seq_k, head_dim))
+        Ok(dispatch_sv(&scores, v, seq_q, seq_k, head_dim))
     }
 
     /// Multi-head attention.
@@ -646,7 +730,7 @@ impl AttentionKernel {
             softmax_rows(&mut ws.scores[..scores_len], seq_len, seq_len);
 
             // scores · V → head_out
-            scalar_sv_into(
+            dispatch_sv_into(
                 &ws.scores[..scores_len],
                 &ws.v_head[..head_buf],
                 seq_len,
@@ -718,7 +802,7 @@ impl CpuAttentionConfig {
 /// # SIMD Dispatch
 ///
 /// - **x86_64 + AVX2/FMA**: 256-bit vector dot products for Q·K^T
-/// - **aarch64 + NEON**: TODO — planned NEON acceleration for ARM targets
+/// - **aarch64 + NEON**: 128-bit vector FMA for Q·K^T and scores·V
 /// - **Fallback**: Scalar implementation on all other platforms
 ///
 /// # Example
@@ -2086,6 +2170,22 @@ mod tests {
         let scalar = scalar_qk(&q, &k, seq, seq, dim);
         let dispatched = dispatch_qk(&q, &k, seq, seq, dim);
         assert!(slices_approx_eq(&scalar, &dispatched), "scalar and dispatch diverge");
+    }
+
+    #[test]
+    fn dispatch_sv_matches_scalar() {
+        // Test a range of dimensions to exercise both NEON vector and scalar tail paths.
+        for dim in [1, 3, 4, 7, 8, 13, 16, 33, 64] {
+            let seq = 3;
+            let scores: Vec<f32> = (0..(seq * seq)).map(|i| (i as f32) * 0.1).collect();
+            let v: Vec<f32> = (0..(seq * dim)).map(|i| (i as f32) * 0.05).collect();
+            let scalar = scalar_sv(&scores, &v, seq, seq, dim);
+            let dispatched = dispatch_sv(&scores, &v, seq, seq, dim);
+            assert!(
+                slices_approx_eq(&scalar, &dispatched),
+                "scalar and dispatch SV diverge for dim_v={dim}"
+            );
+        }
     }
 
     // ── CpuAttentionConfig ─────────────────────────────────────────
