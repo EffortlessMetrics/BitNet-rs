@@ -27,7 +27,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
-- **Nightly Fuzz Workflow** — 117 fuzz targets (38 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
+- **Nightly Fuzz Workflow** — 109 fuzz targets (37 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
 - **macOS ARM64 CI** — Non-blocking `clippy-macos-arm64` job in `ci-core.yml` runs on `macos-14` with `continue-on-error: true`; reports Apple Silicon clippy status without gating merges
 - **Criterion Benchmarks** — 11 bench targets: `srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops`, `slm_inference`, `tokenizer_ops`, `quantization_bench`, `kernels`, `inference`, `avx2_vs_fallback` (#787)
@@ -36,7 +36,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **GPU HAL** — `bitnet-gpu-hal` unified hardware abstraction layer with backend selector, async runtime, checkpoint manager, and deployment manager (scaffold; backends not yet validated end-to-end)
 - **OpenCL / Intel Arc** — `bitnet-opencl` crate with built-in kernel registry and Intel Arc A770 work-size optimization (experimental; feature `opencl`)
 - **Production Tensor Validation** — runtime shape/dtype validation in `bitnet-common`
-- **Wave 9 Fuzz** — softmax stability, embedding lookup, memory layout targets (117 fuzz target files total)
+- **Wave 9 Fuzz** — softmax stability, embedding lookup, memory layout targets (109 fuzz target files total)
 - **Multi-Architecture Support** — 20 families in `ModelArchitecture` enum, 99+ `ArchitectureRegistry` entries
 - **GQA/MQA/MHA Attention** — `AttentionVariant` in CPU attention kernel
 - **SafeTensors Sharded Loading** — `SafeTensorsReader` in `bitnet-models`
