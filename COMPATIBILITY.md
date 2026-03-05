@@ -127,7 +127,7 @@ The FFI bridge ensures that:
   - For v3, invalid `data_offset` values (past EOF, misaligned, or backwards) fall back to `align_up(kv_end, alignment)`
   - Automatically detects format variant using header-only heuristics (bounded ASCII check with OOB guard, no tensor mmap needed)
   - **Enhanced Tensor Validation**: All tensor offsets validated against alignment, data section boundary checks, n_dims consistency verification
-  - **Superior GGUF v3 early variant handling**: Loads models with this specific format variant that crash the C++ implementation (proven with 1.2GB Microsoft BitNet model)
+  - **Superior GGUF v3 early variant handling**: Loads models with this specific format variant that crash the C++ implementation (demonstrated with 1.2GB Microsoft BitNet model in manual testing; no automated fixture test yet)
 
 ## 🧪 Test Coverage Requirements
 
@@ -183,11 +183,16 @@ While not breaking compatibility, we aim for:
 
 | Backend | Feature Flag | Min Hardware | Driver Requirements | Status |
 |---------|-------------|-------------|-------------------|--------|
-| NVIDIA CUDA | `gpu` / `cuda` | Compute 6.0+ (Pascal) | CUDA 12.0+ toolkit | 🔶 Alpha |
-| Intel OpenCL | `opencl` | Arc A-series (A770/A750) | Intel compute runtime + OpenCL ICD | 🧪 Experimental |
-| Apple Metal | `metal` | M1/M2/M3+ Apple Silicon | macOS 11+ (Big Sur) | 🧪 Scaffold |
-| Vulkan | `vulkan` | Any Vulkan 1.3 GPU | Vulkan 1.3 driver | 🧪 Scaffold |
-| AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Scaffold |
+| NVIDIA CUDA | `gpu` / `cuda` | Compute 6.0+ (Pascal) | CUDA 12.0+ toolkit | 🔶 Alpha (scaffolded; not validated end-to-end) |
+| Intel OpenCL | `opencl` | Arc A-series (A770/A750) | Intel compute runtime + OpenCL ICD | 🧪 Experimental (CPU reference impl; real OpenCL not validated) |
+| Apple Metal | `metal` | M1/M2/M3+ Apple Silicon | macOS 11+ (Big Sur) | 🧪 Scaffold (CPU reference stub only) |
+| Vulkan | `vulkan` | Any Vulkan 1.3 GPU | Vulkan 1.3 driver | 🧪 Scaffold (CPU reference stub only) |
+| AMD ROCm | `rocm` | RDNA 2+ (RX 6000+) | ROCm 5.0+ | 🧪 Scaffold (CPU reference stub only) |
+
+**Status definitions:**
+- 🔶 **Alpha**: Feature-gated code exists but is not validated end-to-end in CI. May produce incorrect results.
+- 🧪 **Experimental**: Has some functional code paths but needs significant testing and validation.
+- 🧪 **Scaffold**: CPU reference stub only — no actual GPU kernel execution. Exists for API shape and future implementation.
 
 **Backend selection** is controlled by `--device`:
 - `auto` (default): Selects CUDA if available, otherwise falls back to CPU. (Metal, Vulkan, OpenCL probe support is scaffolded but not yet wired into auto-detection.)
@@ -214,11 +219,11 @@ While not breaking compatibility, we aim for:
 
 | Backend | Feature Flag | Status | Hardware |
 |---------|-------------|--------|----------|
-| **CUDA** | `gpu` / `cuda` | 🔶 Alpha | NVIDIA Pascal+ (CC 6.0+) |
-| **OpenCL** | `opencl` | 🧪 Experimental | Intel Arc A-series |
-| **ROCm** | `rocm` | 🧪 Scaffold | AMD RDNA 3 / CDNA |
-| **Vulkan** | `vulkan` | 🧪 Scaffold | Cross-vendor |
-| **Metal** | `metal` | 🧪 Scaffold | Apple Silicon |
+| **CUDA** | `gpu` / `cuda` | 🔶 Alpha (not validated E2E) | NVIDIA Pascal+ (CC 6.0+) |
+| **OpenCL** | `opencl` | 🧪 Experimental (CPU ref impl) | Intel Arc A-series |
+| **ROCm** | `rocm` | 🧪 Scaffold (stub only) | AMD RDNA 3 / CDNA |
+| **Vulkan** | `vulkan` | 🧪 Scaffold (stub only) | Cross-vendor |
+| **Metal** | `metal` | 🧪 Scaffold (stub only) | Apple Silicon |
 
 For detailed hardware tables, feature support per backend, precision mode
 compatibility, and driver links see the
@@ -340,17 +345,17 @@ BitNet-rs provides these advantages while maintaining compatibility:
 
 ### Drop-in Replacement Validation (2025-08-22)
 
-BitNet-rs has been **validated as a superior drop-in replacement** for bitnet.cpp:
+BitNet-rs has been **tested for drop-in replacement compatibility** with bitnet.cpp (validation is ongoing; results below are from specific test scenarios, not exhaustive coverage):
 
 | Test | Result | Details |
 |------|--------|---------|
-| **Validation Framework** | ✅ Production-ready | Full parity test suite |
+| **Validation Framework** | ✅ Implemented | Full parity test suite (not yet run in CI) |
 | **Token-Weighted NLL** | ✅ Matches HF reference | Proper corpus perplexity |
 | **Tau-b Correlation** | ✅ Score-aware | Handles quantization ties |
 | **Deterministic Top-K** | ✅ Stable | Tie-breaking by token ID |
 | **Microsoft BitNet 1.2GB** | ✅ Rust loads / ❌ C++ crashes | GGUF v3 early variant support |
 | **Synthetic GGUF fixtures** | ✅ Both pass | Full compatibility |
-| **CI Acceptance Gate** | 91% pass rate | 11/12 tests passing |
+| **CI Acceptance Gate** | 91% pass rate | 11/12 tests passing (crossval framework; not part of CI-Core gate) |
 | **Memory safety** | ✅ No segfaults | Rust guarantees |
 | **Error handling** | ✅ Graceful failures | Better diagnostics |
 
@@ -386,18 +391,19 @@ BitNet-rs has been **validated as a superior drop-in replacement** for bitnet.cp
 
 ## 📅 Stability Timeline
 
-- **2024-01-01**: FFI API locked (v1.0.0)
-- **2024-01-01**: Python API locked (v1.0.0)
-- **2024-01-01**: Tokenizer compatibility locked (v1.0.0)
-- **Future**: Additional APIs may be added, existing ones won't break
+> **Note:** BitNet-rs is pre-alpha (v0.2.x). API stability is aspirational; breaking changes may occur before v1.0.0.
+
+- **Pre-v1.0**: APIs may change; compatibility is best-effort
+- **v1.0.0 (planned)**: FFI API locked, Python API locked, tokenizer compatibility locked
+- **Post-v1.0**: Additional APIs may be added; existing ones won't break
 
 ## 🤝 Commitment
 
-We commit to:
+We aim to (pre-alpha goals; not yet guarantees):
 
-1. **Never break existing code** that uses our compatibility layer
-2. **Always handle certain models** that llama.cpp fails on
-3. **Maintain or improve performance** vs bitnet.cpp
+1. **Minimize breaking changes** to the compatibility layer as APIs stabilize
+2. **Handle edge-case models** that llama.cpp fails on (GGUF v3 early variants)
+3. **Match or improve performance** vs bitnet.cpp for supported operations (benchmarking ongoing)
 4. **Keep tests passing** - CI blocks merges if compatibility breaks
 
 ## 📞 Contact
