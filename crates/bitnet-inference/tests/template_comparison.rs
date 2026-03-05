@@ -3,6 +3,7 @@
 //! Tests feature spec: docs/explanation/prompt-template-architecture.md#template-comparison
 //! Architecture: docs/reference/prompt-templates.md#template-formats
 //!
+//! Fast pure-logic tests (no model required) are in the `fast_template_logic_tests` module.
 //! This test suite validates prompt template behavior by comparing output quality
 //! across different templates (raw, instruct, llama3-chat) with the same prompt.
 //! Tests verify:
@@ -204,6 +205,119 @@ impl TemplateTestResult {
         eprintln!("Stop triggered: {}", if self.stop_triggered { "✓" } else { "-" });
     }
 }
+/// Fast pure-logic tests that run in CI without model files.
+/// These exercise template formatting and coherence detection —
+/// the extractable logic from the slow integration tests.
+#[cfg(test)]
+mod fast_template_logic_tests {
+    use super::*;
+
+    #[test]
+    fn test_raw_format_is_identity() {
+        let tc = TemplateConfig::raw();
+        assert_eq!(tc.format_prompt("hello world"), "hello world");
+        assert_eq!(tc.format_prompt(""), "");
+        assert_eq!(tc.format_prompt("multi\nline\nprompt"), "multi\nline\nprompt");
+    }
+
+    #[test]
+    fn test_instruct_format_wraps_correctly() {
+        let tc = TemplateConfig::instruct();
+        let result = tc.format_prompt("What is 2+2?");
+        assert!(result.starts_with("### Instruction:\n"));
+        assert!(result.contains("What is 2+2?"));
+        assert!(result.ends_with("### Response:\n"));
+    }
+
+    #[test]
+    fn test_llama3_chat_format_structure() {
+        let tc = TemplateConfig::llama3_chat("You are a math tutor");
+        let result = tc.format_prompt("What is 2+2?");
+        assert!(result.contains("<|begin_of_text|>"), "Missing begin_of_text");
+        assert!(result.contains("system<|end_header_id|>"), "Missing system header");
+        assert!(result.contains("You are a math tutor"), "Missing system prompt");
+        assert!(result.contains("user<|end_header_id|>"), "Missing user header");
+        assert!(result.contains("What is 2+2?"), "Missing user prompt");
+        assert!(result.contains("assistant<|end_header_id|>"), "Missing assistant header");
+    }
+
+    #[test]
+    fn test_llama3_chat_default_system_prompt() {
+        let tc = TemplateConfig {
+            name: "llama3-chat",
+            template: TemplateType::Llama3Chat,
+            system_prompt: None,
+            stop_sequences: vec![],
+        };
+        let result = tc.format_prompt("hi");
+        assert!(result.contains("You are a helpful assistant"), "Missing default system prompt");
+    }
+
+    #[test]
+    fn test_coherence_rejects_empty() {
+        assert!(!TemplateTestResult::check_coherence(""), "Empty string should not be coherent");
+        assert!(
+            !TemplateTestResult::check_coherence("   "),
+            "Whitespace-only should not be coherent"
+        );
+    }
+
+    #[test]
+    fn test_coherence_rejects_repeated_chars() {
+        assert!(
+            !TemplateTestResult::check_coherence("aaa"),
+            "Repeated single char word should not be coherent"
+        );
+        assert!(
+            !TemplateTestResult::check_coherence("aaaa bbb"),
+            "All repeated-char words should not be coherent"
+        );
+    }
+
+    #[test]
+    fn test_coherence_accepts_normal_text() {
+        assert!(TemplateTestResult::check_coherence("The capital of France is Paris."));
+        assert!(TemplateTestResult::check_coherence("Yes, that is correct."));
+        assert!(TemplateTestResult::check_coherence("The answer is 42, which is correct."));
+    }
+
+    #[test]
+    fn test_coherence_rejects_very_short_single_word() {
+        // Short output with single word is considered incoherent
+        assert!(
+            !TemplateTestResult::check_coherence("42"),
+            "Very short single-word output should not be coherent"
+        );
+        assert!(
+            !TemplateTestResult::check_coherence("no"),
+            "Very short single-word output should not be coherent"
+        );
+    }
+
+    #[test]
+    fn test_coherence_rejects_single_repeated_word() {
+        // Short output with single repeated word
+        assert!(
+            !TemplateTestResult::check_coherence("ok ok"),
+            "Single repeated word in short output should not be coherent"
+        );
+    }
+
+    #[test]
+    fn test_instruct_stop_sequences() {
+        let tc = TemplateConfig::instruct();
+        assert!(!tc.stop_sequences.is_empty());
+        assert!(tc.stop_sequences.contains(&"\n\nQ:".to_string()));
+        assert!(tc.stop_sequences.contains(&"\n\nHuman:".to_string()));
+    }
+
+    #[test]
+    fn test_raw_has_no_stop_sequences() {
+        let tc = TemplateConfig::raw();
+        assert!(tc.stop_sequences.is_empty());
+    }
+}
+
 #[cfg(test)]
 mod template_comparison_tests {
     use super::*;
