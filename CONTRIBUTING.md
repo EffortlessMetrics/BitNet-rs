@@ -206,9 +206,9 @@ This ensures local validation exactly matches CI, preventing surprise failures.
    cargo test --workspace --no-default-features --features cpu
    ```
 
-2. **Integration Tests**
+2. **Integration Tests** (CPU golden path)
    ```bash
-   cargo test --test integration --no-default-features --features cpu
+   cargo test -p bitnet-inference --test cpu_golden_path --no-default-features --features cpu
    ```
 
 3. **Cross-validation Tests**
@@ -247,7 +247,7 @@ BitNet-rs uses a **3-layer fixture architecture** for testing neural network ope
 
 3. **File-Based Fixtures** — External test data loaded from disk
    - **Use for**: Full GGUF models, real tokenizer files, reference data
-   - **Example**: `tests/fixtures/gguf/llama3-128k.gguf`
+   - **Example**: `models/test.gguf` (gated by `BITNET_GGUF` env var; not committed to repo)
 
 #### Using Generated Fixtures
 
