@@ -24,6 +24,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **AVX2 Parity Tests** — ~129 tests across 9 files verifying AVX2 dispatch matches scalar reference for CPU kernel modules (softmax, matmul, layer_norm, activations, reductions, attention, embedding, pooling, batch_norm, conv1d, RoPE, elementwise ops, cache matmul, quantized matmul, QK256 GEMV)
 - **Attention Buffer Reuse** — `AttentionWorkspace` and `QuantizedAttentionWorkspace` eliminate per-head allocations in MHA/GQA hot loops (O(seq_len²) savings per forward pass)
 - **Matmul Dequant Buffer Reuse** — `DequantWorkspace` eliminates per-call allocation of the k×n dequantized weight matrix in `dequantize_and_matmul` (~687 MB for 2B-model FFN layers)
+- **Dense Forward Zero-Alloc** — `BlockWorkspace` + ping-pong buffers eliminate 12 Vec allocations per transformer block per forward pass; `DenseLinear::forward_into`, `DenseFFN::forward_into`, `DenseAttention::forward_into` write into pre-allocated buffers
 - **SRP Microcrate Ecosystem** - 48+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
