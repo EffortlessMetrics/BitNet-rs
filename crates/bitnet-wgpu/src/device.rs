@@ -20,10 +20,19 @@ impl Default for WgpuDeviceConfig {
     fn default() -> Self {
         Self {
             power_preference: wgpu::PowerPreference::HighPerformance,
-            backend_bits: wgpu::Backends::VULKAN,
+            backend_bits: Self::platform_default_backends(),
             required_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::default(),
         }
+    }
+}
+
+impl WgpuDeviceConfig {
+    /// Returns the platform-appropriate default backend.
+    ///
+    /// macOS → Metal, everything else → Vulkan.
+    fn platform_default_backends() -> wgpu::Backends {
+        if cfg!(target_os = "macos") { wgpu::Backends::METAL } else { wgpu::Backends::VULKAN }
     }
 }
 
@@ -225,10 +234,14 @@ mod tests {
     // ── Non-GPU tests ────────────────────────────────────────────────
 
     #[test]
-    fn default_config_is_vulkan_high_perf() {
+    fn default_config_selects_platform_backend() {
         let cfg = WgpuDeviceConfig::default();
         assert_eq!(cfg.power_preference, wgpu::PowerPreference::HighPerformance);
-        assert!(cfg.backend_bits.contains(wgpu::Backends::VULKAN));
+        if cfg!(target_os = "macos") {
+            assert!(cfg.backend_bits.contains(wgpu::Backends::METAL));
+        } else {
+            assert!(cfg.backend_bits.contains(wgpu::Backends::VULKAN));
+        }
     }
 
     #[test]
