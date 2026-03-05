@@ -102,12 +102,16 @@ pub fn softmax(logits: &[f32]) -> Vec<f32> {
         return vec![];
     }
     let max = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-    let exps: Vec<f32> = logits.iter().map(|&v| (v - max).exp()).collect();
-    let sum: f32 = exps.iter().sum();
+    let mut probs: Vec<f32> = logits.iter().map(|&v| (v - max).exp()).collect();
+    let sum: f32 = probs.iter().sum();
     if sum == 0.0 {
-        return vec![0.0; logits.len()];
+        probs.fill(0.0);
+        return probs;
     }
-    exps.iter().map(|&e| e / sum).collect()
+    for p in &mut probs {
+        *p /= sum;
+    }
+    probs
 }
 
 /// Sample from probability distribution (deterministic with seed).
