@@ -24,7 +24,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **AVX2 Parity Tests** — ~99 tests across 7 files verifying AVX2 dispatch matches scalar reference for CPU kernel modules (softmax, matmul, layer_norm, activations, reductions, attention, embedding, pooling, batch_norm, conv1d, RoPE, elementwise ops, cache matmul)
 - **Attention Buffer Reuse** — `AttentionWorkspace` and `QuantizedAttentionWorkspace` eliminate per-head allocations in MHA/GQA hot loops (O(seq_len²) savings per forward pass)
 - **Matmul Dequant Buffer Reuse** — `DequantWorkspace` eliminates per-call allocation of the k×n dequantized weight matrix in `dequantize_and_matmul` (~687 MB for 2B-model FFN layers)
-- **SRP Microcrate Ecosystem** - 42+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
+- **SRP Microcrate Ecosystem** - 47+ `-core` microcrates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
 - **Nightly Fuzz Workflow** — 109 fuzz targets (37 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
@@ -198,7 +198,7 @@ cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 - `bitnet-gpu-hal`: Unified GPU hardware abstraction, backend selection, async runtime
 - `bitnet-opencl`: Intel Arc OpenCL backend with kernel registry
 
-**SRP Microcrates** (wired into CI): 42+ `-core` extraction crates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`, `bitnet-api-versioning-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
+**SRP Microcrates** (wired into CI): 47+ `-core` extraction crates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`, `bitnet-api-versioning-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
 
 Note: The workspace has 107+ total crates; the above lists user-facing and architecture-critical ones.
 
