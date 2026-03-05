@@ -481,7 +481,7 @@ impl FlashAttnStats {
         Self { flops, memory_saved_bytes, tile_count, time: None }
     }
 
-    /// Same as [`compute`] but for multi-head attention.
+    /// Same as [`Self::compute`] but for multi-head attention.
     pub fn compute_multi_head(
         seq_len: usize,
         head_dim: usize,

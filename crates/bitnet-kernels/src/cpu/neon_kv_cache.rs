@@ -272,7 +272,7 @@ pub fn kv_cache_clear_range(cache: &mut [f32], start_pos: usize, end_pos: usize,
 /// Logical → physical mapping:
 ///   logical_page = seq_pos / page_size
 ///   offset       = seq_pos % page_size
-///   physical_off = (page_table[logical_page] * page_size
+///   physical_off = (page_table\[logical_page] * page_size
 ///                   + offset) * head_dim
 pub fn kv_cache_paged_lookup(
     pages: &[f32],

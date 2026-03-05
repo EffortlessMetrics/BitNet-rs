@@ -28,7 +28,7 @@
 //!
 //! # CUDA kernel source
 //!
-//! [`COOPERATIVE_LAUNCH_KERNEL_SRC`] contains CUDA C kernels that use
+//! `COOPERATIVE_LAUNCH_KERNEL_SRC` contains CUDA C kernels that use
 //! cooperative launch APIs. Feature-gated behind
 //! `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 

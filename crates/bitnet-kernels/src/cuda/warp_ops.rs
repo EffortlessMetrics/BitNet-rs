@@ -29,7 +29,7 @@
 //!
 //! # CUDA kernel source
 //!
-//! [`WARP_OPS_KERNEL_SRC`] contains CUDA C kernels that use hardware
+//! `WARP_OPS_KERNEL_SRC` contains CUDA C kernels that use hardware
 //! warp intrinsics for the same operations. Feature-gated behind
 //! `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 

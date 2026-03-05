@@ -117,8 +117,8 @@ struct Bucket {
 
 /// Arena-style memory pool that recycles `f32` tensor buffers.
 ///
-/// Allocations are aligned to at least [`NEON_ALIGN`] bytes; pass
-/// `cache_line_aligned = true` at construction to use [`CACHE_LINE_ALIGN`]
+/// Allocations are aligned to at least `NEON_ALIGN` bytes; pass
+/// `cache_line_aligned = true` at construction to use `CACHE_LINE_ALIGN`
 /// instead.
 pub struct TensorPool {
     inner: Arc<PoolInner>,

@@ -47,7 +47,7 @@
 //!
 //! # CUDA kernel source
 //!
-//! [`WARP_PRIMITIVES_KERNEL_SRC`] contains CUDA C kernels using hardware
+//! `WARP_PRIMITIVES_KERNEL_SRC` contains CUDA C kernels using hardware
 //! warp intrinsics. Feature-gated behind
 //! `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 

@@ -3,27 +3,27 @@
 //! Provides basic vector operations: add, mul, dot product,
 //! reduction (sum, max, argmax), broadcasting, scaling.
 
-/// Elementwise addition: out[i] = a[i] + b[i].
+/// Elementwise addition: out\[i] = a\[i] + b\[i].
 pub fn vec_add(a: &[f32], b: &[f32]) -> Vec<f32> {
     a.iter().zip(b.iter()).map(|(x, y)| x + y).collect()
 }
 
-/// Elementwise multiplication: out[i] = a[i] * b[i].
+/// Elementwise multiplication: out\[i] = a\[i] * b\[i].
 pub fn vec_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
     a.iter().zip(b.iter()).map(|(x, y)| x * y).collect()
 }
 
-/// Scalar multiply: out[i] = a[i] * s.
+/// Scalar multiply: out\[i] = a\[i] * s.
 pub fn vec_scale(a: &[f32], s: f32) -> Vec<f32> {
     a.iter().map(|x| x * s).collect()
 }
 
-/// Elementwise subtract: out[i] = a[i] - b[i].
+/// Elementwise subtract: out\[i] = a\[i] - b\[i].
 pub fn vec_sub(a: &[f32], b: &[f32]) -> Vec<f32> {
     a.iter().zip(b.iter()).map(|(x, y)| x - y).collect()
 }
 
-/// Dot product: sum(a[i] * b[i]).
+/// Dot product: sum(a\[i] * b\[i]).
 pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
     a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
 }
