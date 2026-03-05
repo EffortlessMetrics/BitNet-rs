@@ -91,7 +91,7 @@ pub fn scalar_rope_batch_f32(
 /// Scalar NeoX-style RoPE (split-half layout).
 ///
 /// NeoX splits the vector into first-half and second-half instead of
-/// interleaved pairs: pairs are (x[i], x[i + half]).
+/// interleaved pairs: pairs are (x\[i], x\[i + half]).
 pub fn scalar_rope_neox_f32(
     input: &mut [f32],
     cos_table: &[f32],

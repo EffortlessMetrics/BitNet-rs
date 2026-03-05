@@ -90,7 +90,7 @@ pub fn silu_gate_mul(gate: &[f32], up: &[f32]) -> Vec<f32> {
     gate.iter().zip(up.iter()).map(|(&g, &u)| silu(g) * u).collect()
 }
 
-/// In-place gated activation: gate[i] = silu(gate[i]) * up[i].
+/// In-place gated activation: gate\[i] = silu(gate\[i]) * up\[i].
 pub fn silu_gate_mul_inplace(gate: &mut [f32], up: &[f32]) {
     for (g, &u) in gate.iter_mut().zip(up.iter()) {
         *g = silu(*g) * u;

@@ -293,7 +293,7 @@ pub fn deinterleave_multi_neon(
 /// Pad `data` to the next NEON-aligned `f32` count (multiple of 4).
 ///
 /// Returns a new `Vec<f32>` whose length is a multiple of
-/// [`NEON_ALIGN_F32`] (4). Trailing elements are filled with `pad_value`.
+/// `NEON_ALIGN_F32` (4). Trailing elements are filled with `pad_value`.
 pub fn pad_to_neon_alignment(data: &[f32], pad_value: f32) -> Vec<f32> {
     let aligned_len = data.len().div_ceil(NEON_ALIGN_F32) * NEON_ALIGN_F32;
     let mut out = Vec::with_capacity(aligned_len);

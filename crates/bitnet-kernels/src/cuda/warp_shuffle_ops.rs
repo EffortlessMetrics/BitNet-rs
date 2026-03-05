@@ -71,7 +71,7 @@
 //!
 //! # CUDA kernel source
 //!
-//! [`WARP_SHUFFLE_OPS_KERNEL_SRC`] contains CUDA C kernels that use hardware
+//! `WARP_SHUFFLE_OPS_KERNEL_SRC` contains CUDA C kernels that use hardware
 //! shuffle intrinsics. Feature-gated behind
 //! `#[cfg(any(feature = "gpu", feature = "cuda"))]`.
 

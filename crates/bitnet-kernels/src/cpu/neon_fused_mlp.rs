@@ -82,7 +82,7 @@ fn scalar_gelu(x: f32) -> f32 {
 
 /// Fast NEON sigmoid: 1 / (1 + exp(-x)).
 ///
-/// Uses [`neon_fast_exp`] polynomial approximation with NEON reciprocal
+/// Uses `neon_fast_exp` polynomial approximation with NEON reciprocal
 /// estimate + one Newton-Raphson refinement step for the division.
 ///
 /// # Safety
@@ -174,7 +174,7 @@ pub unsafe fn neon_silu_f32(input: &[f32], output: &mut [f32]) {
 ///
 /// The inner tanh is computed as:
 ///   tanh(a) = (exp(2a) - 1) / (exp(2a) + 1)
-/// using [`neon_fast_exp`] for the exponential.
+/// using `neon_fast_exp` for the exponential.
 ///
 /// # Safety
 ///
