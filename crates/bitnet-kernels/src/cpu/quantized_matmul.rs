@@ -10,6 +10,9 @@
 //!
 //! Encoding: bits `0b00` → 0, `0b01` → +1, `0b10` → unused, `0b11` → -1.
 
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
 use bitnet_common::{BitNetError, KernelError, Result};
 
 // ── Encoding helpers ───────────────────────────────────────────────────
@@ -261,6 +264,232 @@ pub fn i2s_matmul_blocked(
     Ok(())
 }
 
+// ── AVX2-accelerated matmul ────────────────────────────────────────────
+
+/// Decode 8 I2_S codes from 2 packed bytes into 8 f32 weights using AVX2.
+///
+/// Uses `vpsrlvd` variable shift to extract all 8 two-bit codes in parallel,
+/// then maps {00→0, 01→+1, 10→0, 11→-1} via bit arithmetic:
+///   low_bit = code & 1, high_bit = code >> 1
+///   weight = low_bit * (1 - 2*high_bit)
+///
+/// # Safety
+///
+/// Requires AVX2. Caller must verify via `is_x86_feature_detected!`.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+#[inline]
+unsafe fn decode_8_i2s_avx2(
+    byte0: u8,
+    byte1: u8,
+    shifts: __m256i,
+    mask_03: __m256i,
+    one: __m256i,
+) -> __m256 {
+    unsafe {
+        // Pack both bytes; lanes 0–3 extract from byte0, lanes 4–7 from byte1.
+        let packed = (byte0 as i32) | ((byte1 as i32) << 16);
+        let broadcast = _mm256_set1_epi32(packed);
+        let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
+
+        // low_bit ∈ {0,1}: whether the code is non-zero
+        let low_bit = _mm256_and_si256(codes, one);
+        // high_bit ∈ {0,1}: sign indicator (1 → negative)
+        let high_bit = _mm256_srli_epi32::<1>(codes);
+        // sign = 1 - 2*high_bit ∈ {-1, +1}
+        let sign = _mm256_sub_epi32(one, _mm256_slli_epi32::<1>(high_bit));
+        // weight = low_bit * sign ∈ {-1, 0, +1}
+        let weight = _mm256_mullo_epi32(low_bit, sign);
+        _mm256_cvtepi32_ps(weight)
+    }
+}
+
+/// AVX2-accelerated blocked I2_S matmul with FMA dot products.
+///
+/// Replaces the scalar unpack + dot product in [`i2s_matmul_blocked`] with:
+/// - AVX2 `decode_8_i2s_avx2` for 8-wide parallel code extraction
+/// - FMA `_mm256_fmadd_ps` for fused multiply-accumulate
+/// - 32-element unrolled inner loop (4 × 8-wide FMA)
+///
+/// Falls back to [`i2s_matmul_blocked`] if AVX2+FMA are not available.
+pub fn i2s_matmul_blocked_avx2(
+    activations: &[f32],
+    weights_packed: &[u8],
+    scales: &[f32],
+    out: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    block_size: usize,
+) -> Result<()> {
+    #[cfg(target_arch = "x86_64")]
+    {
+        // AVX2 decode requires byte-aligned blocks (block_size multiple of 4).
+        if is_x86_feature_detected!("avx2")
+            && is_x86_feature_detected!("fma")
+            && block_size % 4 == 0
+        {
+            // SAFETY: AVX2+FMA verified above; block alignment checked.
+            return unsafe {
+                i2s_matmul_blocked_avx2_inner(
+                    activations,
+                    weights_packed,
+                    scales,
+                    out,
+                    m,
+                    n,
+                    k,
+                    block_size,
+                )
+            };
+        }
+    }
+    // Fallback to scalar.
+    i2s_matmul_blocked(activations, weights_packed, scales, out, m, n, k, block_size)
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+#[allow(clippy::too_many_arguments)]
+unsafe fn i2s_matmul_blocked_avx2_inner(
+    activations: &[f32],
+    weights_packed: &[u8],
+    scales: &[f32],
+    out: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    block_size: usize,
+) -> Result<()> {
+    validate_matmul_args(activations, weights_packed, scales, out, m, n, k, block_size)?;
+
+    let packed_k = k.div_ceil(4);
+    let num_blocks_k = k.div_ceil(block_size);
+
+    out.fill(0.0);
+
+    unsafe {
+        // Hoisted AVX2 constants.
+        let shifts = _mm256_setr_epi32(0, 2, 4, 6, 16, 18, 20, 22);
+        let mask_03 = _mm256_set1_epi32(0x03);
+        let one_i = _mm256_set1_epi32(1);
+
+        for blk in 0..num_blocks_k {
+            let blk_start = blk * block_size;
+            let blk_end = (blk_start + block_size).min(k);
+            let blk_len = blk_end - blk_start;
+
+            debug_assert!(
+                blk_start % 4 == 0,
+                "AVX2 matmul requires byte-aligned blocks (block_size must be multiple of 4)"
+            );
+
+            for col in 0..n {
+                let scale = scales[col * num_blocks_k + blk];
+                let col_base = col * packed_k + blk_start / 4;
+
+                for row in 0..m {
+                    let a_base = row * k + blk_start;
+                    let a_ptr = activations.as_ptr().add(a_base);
+                    let w_ptr = weights_packed.as_ptr().add(col_base);
+
+                    let mut acc0 = _mm256_setzero_ps();
+                    let mut acc1 = _mm256_setzero_ps();
+                    let mut acc2 = _mm256_setzero_ps();
+                    let mut acc3 = _mm256_setzero_ps();
+                    let mut j = 0usize;
+
+                    // 32-element main loop: 8 packed bytes → 4 × 8-wide FMA
+                    while j + 32 <= blk_len {
+                        let pi = j / 4;
+                        let w0 = decode_8_i2s_avx2(
+                            *w_ptr.add(pi),
+                            *w_ptr.add(pi + 1),
+                            shifts,
+                            mask_03,
+                            one_i,
+                        );
+                        let w1 = decode_8_i2s_avx2(
+                            *w_ptr.add(pi + 2),
+                            *w_ptr.add(pi + 3),
+                            shifts,
+                            mask_03,
+                            one_i,
+                        );
+                        let w2 = decode_8_i2s_avx2(
+                            *w_ptr.add(pi + 4),
+                            *w_ptr.add(pi + 5),
+                            shifts,
+                            mask_03,
+                            one_i,
+                        );
+                        let w3 = decode_8_i2s_avx2(
+                            *w_ptr.add(pi + 6),
+                            *w_ptr.add(pi + 7),
+                            shifts,
+                            mask_03,
+                            one_i,
+                        );
+
+                        let x0 = _mm256_loadu_ps(a_ptr.add(j));
+                        let x1 = _mm256_loadu_ps(a_ptr.add(j + 8));
+                        let x2 = _mm256_loadu_ps(a_ptr.add(j + 16));
+                        let x3 = _mm256_loadu_ps(a_ptr.add(j + 24));
+
+                        acc0 = _mm256_fmadd_ps(w0, x0, acc0);
+                        acc1 = _mm256_fmadd_ps(w1, x1, acc1);
+                        acc2 = _mm256_fmadd_ps(w2, x2, acc2);
+                        acc3 = _mm256_fmadd_ps(w3, x3, acc3);
+
+                        j += 32;
+                    }
+
+                    // 8-element cleanup loop
+                    while j + 8 <= blk_len {
+                        let pi = j / 4;
+                        let w = decode_8_i2s_avx2(
+                            *w_ptr.add(pi),
+                            *w_ptr.add(pi + 1),
+                            shifts,
+                            mask_03,
+                            one_i,
+                        );
+                        let xv = _mm256_loadu_ps(a_ptr.add(j));
+                        acc0 = _mm256_fmadd_ps(w, xv, acc0);
+                        j += 8;
+                    }
+
+                    // Merge accumulators + horizontal sum
+                    let sum01 = _mm256_add_ps(acc0, acc1);
+                    let sum23 = _mm256_add_ps(acc2, acc3);
+                    let acc_v = _mm256_add_ps(sum01, sum23);
+
+                    let hi = _mm256_extractf128_ps(acc_v, 1);
+                    let lo = _mm256_castps256_ps128(acc_v);
+                    let sum128 = _mm_add_ps(hi, lo);
+                    let sum64 = _mm_hadd_ps(sum128, sum128);
+                    let sum32 = _mm_hadd_ps(sum64, sum64);
+                    let mut dot = _mm_cvtss_f32(sum32);
+
+                    // Scalar tail (< 8 elements)
+                    while j < blk_len {
+                        let byte_idx = col_base + j / 4;
+                        let bit_off = ((blk_start + j) % 4) * 2;
+                        let bits = (weights_packed[byte_idx] >> bit_off) & 0x03;
+                        let w = decode_i2s(bits) as f32;
+                        dot += activations[a_base + j] * w;
+                        j += 1;
+                    }
+
+                    // Apply scale and accumulate to output
+                    out[row * n + col] += dot * scale;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 // ── Validation ─────────────────────────────────────────────────────────
 
 fn validate_matmul_args(
@@ -396,6 +625,10 @@ mod tests {
         assert_close(&out, expected, tol);
 
         dequantize_and_matmul(act, packed, scales, &mut out, m, n, k, bs).unwrap();
+        assert_close(&out, expected, tol);
+
+        // AVX2 path (matches scalar on any platform; falls back if no AVX2).
+        i2s_matmul_blocked_avx2(act, packed, scales, &mut out, m, n, k, bs).unwrap();
         assert_close(&out, expected, tol);
     }
 
@@ -806,7 +1039,7 @@ mod tests {
     // ── cross-function consistency ────────────────────────────────────
 
     #[test]
-    fn test_all_three_kernels_agree_large() {
+    fn test_all_kernels_agree_large() {
         let m = 16;
         let n = 8;
         let k = 48;
@@ -819,13 +1052,95 @@ mod tests {
             let mut out1 = vec![0.0f32; m * n];
             let mut out2 = vec![0.0f32; m * n];
             let mut out3 = vec![0.0f32; m * n];
+            let mut out4 = vec![0.0f32; m * n];
 
             i2s_matmul_f32(&act, &packed, &scales, &mut out1, m, n, k, bs).unwrap();
             i2s_matmul_blocked(&act, &packed, &scales, &mut out2, m, n, k, bs).unwrap();
             dequantize_and_matmul(&act, &packed, &scales, &mut out3, m, n, k, bs).unwrap();
+            i2s_matmul_blocked_avx2(&act, &packed, &scales, &mut out4, m, n, k, bs).unwrap();
 
             assert_close(&out1, &out2, 1e-4);
             assert_close(&out1, &out3, 1e-4);
+            assert_close(&out1, &out4, 1e-4);
+        }
+    }
+
+    // ── AVX2 parity tests ─────────────────────────────────────────────
+
+    #[test]
+    fn test_avx2_matmul_parity_block256() {
+        let m = 4;
+        let n = 4;
+        let k = 256;
+        let bs = 256;
+        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1, -1, 0, 1, 0][i % 8]).collect();
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+        let act: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.01).cos()).collect();
+
+        let mut out_scalar = vec![0.0f32; m * n];
+        let mut out_avx2 = vec![0.0f32; m * n];
+
+        i2s_matmul_blocked(&act, &packed, &scales, &mut out_scalar, m, n, k, bs).unwrap();
+        i2s_matmul_blocked_avx2(&act, &packed, &scales, &mut out_avx2, m, n, k, bs).unwrap();
+
+        assert_close(&out_scalar, &out_avx2, 1e-5);
+    }
+
+    #[test]
+    fn test_avx2_matmul_parity_non_aligned_k() {
+        // k=37 is not a multiple of 8, 32, or 256 — tests all cleanup paths
+        let m = 3;
+        let n = 5;
+        let k = 37;
+        let bs = 32;
+        let w: Vec<i8> = (0..k * n).map(|i| [1, 0, -1][i % 3]).collect();
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+        let act: Vec<f32> = (0..m * k).map(|i| i as f32 * 0.1).collect();
+
+        let mut out_scalar = vec![0.0f32; m * n];
+        let mut out_avx2 = vec![0.0f32; m * n];
+
+        i2s_matmul_blocked(&act, &packed, &scales, &mut out_scalar, m, n, k, bs).unwrap();
+        i2s_matmul_blocked_avx2(&act, &packed, &scales, &mut out_avx2, m, n, k, bs).unwrap();
+
+        assert_close(&out_scalar, &out_avx2, 1e-5);
+    }
+
+    #[test]
+    fn test_avx2_matmul_parity_large_realistic() {
+        // Realistic-ish dimensions: 1×128 activations, 128×64 weights
+        let m = 1;
+        let n = 64;
+        let k = 128;
+        let bs = 32;
+        let w: Vec<i8> = (0..k * n).map(|i| [1, -1, 0, 1, -1, 0, 0, 1, -1, 1][i % 10]).collect();
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+        let act: Vec<f32> = (0..m * k).map(|i| (i as f32 * 0.05).sin()).collect();
+
+        let mut out_scalar = vec![0.0f32; m * n];
+        let mut out_avx2 = vec![0.0f32; m * n];
+
+        i2s_matmul_blocked(&act, &packed, &scales, &mut out_scalar, m, n, k, bs).unwrap();
+        i2s_matmul_blocked_avx2(&act, &packed, &scales, &mut out_avx2, m, n, k, bs).unwrap();
+
+        assert_close(&out_scalar, &out_avx2, 1e-4);
+    }
+
+    #[test]
+    fn test_avx2_matmul_all_zeros() {
+        let m = 2;
+        let n = 4;
+        let k = 32;
+        let bs = 32;
+        let w = vec![0i8; k * n];
+        let (packed, scales) = pack_weight_matrix(&w, k, n, bs);
+        let act: Vec<f32> = (0..m * k).map(|i| i as f32).collect();
+
+        let mut out = vec![0.0f32; m * n];
+        i2s_matmul_blocked_avx2(&act, &packed, &scales, &mut out, m, n, k, bs).unwrap();
+
+        for &v in &out {
+            assert!((v).abs() < 1e-7, "expected zero output, got {v}");
         }
     }
 
