@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal GPU LayerNorm / RMSNorm shader tests for Apple Silicon.
 //!
@@ -9,8 +10,6 @@
 //! implementation and compares against the wgpu/Metal compute shader output.
 //!
 //! All tests are `#[ignore]` because CI runs on Linux.
-
-#![cfg(target_os = "macos")]
 
 use wgpu::util::DeviceExt;
 

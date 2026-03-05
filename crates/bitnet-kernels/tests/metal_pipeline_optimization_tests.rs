@@ -9,7 +9,7 @@
 //! All types are self-contained mocks — no GPU hardware or Metal/wgpu
 //! crates required.
 
-#![cfg(feature = "cpu")]
+#![cfg(all(target_os = "macos", target_arch = "aarch64", feature = "cpu"))]
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};

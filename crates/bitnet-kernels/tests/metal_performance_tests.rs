@@ -1,5 +1,5 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
-#![cfg(target_os = "macos")]
 #![allow(
     clippy::manual_div_ceil,
     clippy::needless_range_loop,

@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::manual_div_ceil)]
 //! Metal kernel validation tests for Apple Silicon.
 //!

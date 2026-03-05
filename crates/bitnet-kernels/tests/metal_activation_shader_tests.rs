@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal activation function shader tests for Apple Silicon
 #![allow(
@@ -12,8 +13,6 @@
 //! No GPU/Metal/wgpu crates are imported — the goal is to validate the
 //! mathematical correctness of activation functions as they would be
 //! implemented in Metal shaders.
-
-#![cfg(target_os = "macos")]
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

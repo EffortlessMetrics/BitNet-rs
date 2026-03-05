@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::manual_div_ceil, clippy::manual_is_multiple_of)]
 //! Metal embedding shader tests for Apple Silicon.
 //!
@@ -7,8 +8,6 @@
 //! alignment, f16→f32 accumulation, and embedding gradient computation.
 //!
 //! All tests are `#[ignore]` because CI runs on Linux.
-
-#![cfg(target_os = "macos")]
 
 use half::f16;
 use wgpu::util::DeviceExt;
