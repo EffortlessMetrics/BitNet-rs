@@ -211,8 +211,8 @@ impl DenseAttention {
                     sum_exp += w;
                 }
                 let inv_sum = 1.0 / sum_exp;
-                for j in 0..=i {
-                    weights[j] *= inv_sum;
+                for w in &mut weights[..=i] {
+                    *w *= inv_sum;
                 }
 
                 // Weighted sum of V
