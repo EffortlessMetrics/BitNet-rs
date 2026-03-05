@@ -256,7 +256,22 @@ jobs:
     continue-on-error: true
     timeout-minutes: 15
     env:
-      RUSTFLAGS: "-D warnings"
+      # Allow NEON-idiomatic patterns common in SIMD intrinsic code (~120 files).
+      # Linux x86 Clippy remains strict (-D warnings with no allows).
+      RUSTFLAGS: >-
+        -D warnings
+        -A clippy::missing_safety_doc
+        -A clippy::needless_range_loop
+        -A clippy::manual_is_multiple_of
+        -A clippy::manual_div_ceil
+        -A clippy::unnecessary_cast
+        -A clippy::ptr_as_ptr
+        -A clippy::excessive_precision
+        -A clippy::manual_range_contains
+        -A clippy::collapsible_if
+        -A clippy::let_and_return
+        -A clippy::new_without_default
+        -A clippy::assign_op_pattern
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:

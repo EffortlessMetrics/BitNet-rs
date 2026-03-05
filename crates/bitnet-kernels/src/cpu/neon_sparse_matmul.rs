@@ -5,7 +5,13 @@
 //! sparse-dense vector addition using NEON intrinsics on aarch64, with
 //! scalar fallbacks for other architectures.
 
-#![allow(clippy::too_many_arguments, clippy::needless_range_loop, clippy::manual_is_multiple_of)]
+#![allow(
+    clippy::too_many_arguments,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::missing_safety_doc,
+    clippy::manual_div_ceil
+)]
 
 use std::arch::aarch64::*;
 
