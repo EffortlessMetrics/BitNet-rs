@@ -122,11 +122,13 @@ impl DenseFFN {
 
     /// Forward: `down(silu(gate(x)) * up(x))`
     pub fn forward(&self, x: &[f32]) -> Vec<f32> {
-        let gate = self.gate_proj.forward(x);
+        let mut gate = self.gate_proj.forward(x);
         let up = self.up_proj.forward(x);
-        // element-wise silu(gate) * up
-        let hidden: Vec<f32> = gate.iter().zip(up.iter()).map(|(&g, &u)| silu(g) * u).collect();
-        self.down_proj.forward(&hidden)
+        // element-wise silu(gate) * up, reusing gate buffer
+        for (g, &u) in gate.iter_mut().zip(up.iter()) {
+            *g = silu(*g) * u;
+        }
+        self.down_proj.forward(&gate)
     }
 }
 
