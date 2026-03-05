@@ -310,14 +310,12 @@ pub fn softmax_with_mask(input: &[f32], output: &mut [f32], mask: &[bool]) -> Re
         return Ok(());
     }
 
-    // Build a masked copy with NEG_INFINITY for masked positions.
-    let masked: Vec<f32> = input
-        .iter()
-        .zip(mask.iter())
-        .map(|(&x, &m)| if m { x } else { f32::NEG_INFINITY })
-        .collect();
+    // Write masked values directly into output, avoiding a temporary Vec.
+    for ((&x, &m), o) in input.iter().zip(mask.iter()).zip(output.iter_mut()) {
+        *o = if m { x } else { f32::NEG_INFINITY };
+    }
 
-    softmax_f32(&masked, output)?;
+    softmax_f32_inplace(output)?;
 
     // Ensure masked positions are exactly 0 (exp(-inf) may give tiny values).
     for (o, &m) in output.iter_mut().zip(mask.iter()) {
@@ -357,13 +355,22 @@ pub fn softmax_topk(input: &[f32], output: &mut [f32], k: usize) -> Result<()> {
         input[b].partial_cmp(&input[a]).unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let top_k_indices = &indices[..effective_k];
-    let mut mask = vec![false; input.len()];
-    for &idx in top_k_indices {
-        mask[idx] = true;
+    // Fill output with NEG_INFINITY, then copy top-k values into their positions.
+    // This avoids allocating a separate bool mask Vec.
+    output.fill(f32::NEG_INFINITY);
+    for &idx in &indices[..effective_k] {
+        output[idx] = input[idx];
     }
 
-    softmax_with_mask(input, output, &mask)
+    softmax_f32_inplace(output)?;
+
+    // Ensure non-top-k positions are exactly 0 (exp(-inf) may give tiny values).
+    for o in output.iter_mut() {
+        if *o < f32::MIN_POSITIVE {
+            *o = 0.0;
+        }
+    }
+    Ok(())
 }
 
 /// Online (streaming) softmax — single-pass numerically-stable algorithm.
