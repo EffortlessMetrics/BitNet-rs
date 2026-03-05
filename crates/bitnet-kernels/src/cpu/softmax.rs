@@ -310,14 +310,12 @@ pub fn softmax_with_mask(input: &[f32], output: &mut [f32], mask: &[bool]) -> Re
         return Ok(());
     }
 
-    // Build a masked copy with NEG_INFINITY for masked positions.
-    let masked: Vec<f32> = input
-        .iter()
-        .zip(mask.iter())
-        .map(|(&x, &m)| if m { x } else { f32::NEG_INFINITY })
-        .collect();
+    // Write masked values directly into output, avoiding a temporary Vec.
+    for ((&x, &m), o) in input.iter().zip(mask.iter()).zip(output.iter_mut()) {
+        *o = if m { x } else { f32::NEG_INFINITY };
+    }
 
-    softmax_f32(&masked, output)?;
+    softmax_f32_inplace(output)?;
 
     // Ensure masked positions are exactly 0 (exp(-inf) may give tiny values).
     for (o, &m) in output.iter_mut().zip(mask.iter()) {
