@@ -315,7 +315,7 @@ integration-tests = ["bitnet-tests/fixtures", "bitnet-tests/reporting", "bitnet-
 spm = []                                                                                                                        # for sentencepiece tokenizer tests
 
 # Core inference features
-cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inference/rocm", "bitnet-quantization/rocm"]
