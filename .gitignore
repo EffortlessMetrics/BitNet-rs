@@ -56,7 +56,6 @@ wheels/
 venv/
 env/
 
-=======
 # Environment variables
 .env
 .env.local
@@ -90,8 +89,9 @@ coverage/
 *.so
 *.dylib
 *.a
-*.lib# Exter
-nal dependency cache
+*.lib
+
+# External dependency cache
 .cache/
 **/bitnet_cpp/
 
@@ -186,6 +186,21 @@ mutants/
 
 # Rust compiler crash reports
 rustc-ice-*.txt
+
+# Compiled Rust binaries accidentally committed to root
+/check_avx512
+/test_avx512_intrinsics
+
+# Compiled Rust libraries in root
+*.rlib
+
+# One-off fix/patch scripts (use scripts/ or archive/ instead)
+/fix_*.py
+/patch_*.py
+/update_*.py
+/replace_*.py
+/manual_fix.py
+/reenable_*.py
 
 # Test executables and artifacts
 test_gguf
