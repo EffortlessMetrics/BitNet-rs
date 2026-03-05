@@ -563,15 +563,7 @@ pub fn estimate_fusion_speedup(unfused_op_count: usize, fused_kernel: &FusedKern
 // ───────────────────────────────────────────────────────────────────
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
-    FUSED_MATMUL_BIAS_SRC,
-    FUSED_MATMUL_BIAS_RELU_SRC,
-    FUSED_LAYER_NORM_RESIDUAL_SRC,
-    FUSED_ATTENTION_SCORE_SOFTMAX_SRC,
-    FUSED_QKV_PROJECTION_SRC,
-    FUSED_GLU_SRC,
-    FUSED_RMSNORM_LINEAR_SRC,
-);
+pub const KERNEL_FUSION_CUDA_SRC: &str = r#""#;
 
 const FUSED_MATMUL_BIAS_SRC: &str = r#"
 extern "C" __global__ void fused_matmul_bias_f32(

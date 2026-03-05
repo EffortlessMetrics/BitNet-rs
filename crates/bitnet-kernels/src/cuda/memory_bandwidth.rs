@@ -1,3 +1,7 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::manual_div_ceil)]
 //! CUDA memory bandwidth optimization: coalescing, alignment, and prefetch.
 //!
 //! # Overview

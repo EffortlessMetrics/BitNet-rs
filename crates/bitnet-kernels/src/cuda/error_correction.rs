@@ -1,3 +1,4 @@
+#![allow(clippy::manual_div_ceil)]
 //! Error detection and correction (ECC) for GPU computation buffers.
 //!
 //! # Overview

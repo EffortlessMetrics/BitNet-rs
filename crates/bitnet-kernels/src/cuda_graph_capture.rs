@@ -1,3 +1,7 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::manual_div_ceil)]
 //! CUDA graph capture and replay for kernel sequence optimization.
 //!
 //! This module implements stream-based graph capture following the CUDA

@@ -71,6 +71,8 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
     token_counts: HashMap<u32, usize>,
+    /// Pre-allocated buffer to avoid allocating on every generation step
+    logits_buffer: Vec<f32>,
 }
 
 impl SamplingStrategy {
@@ -94,7 +96,7 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new() }
+        Self { config, rng, token_counts: HashMap::new(), logits_buffer: Vec::new() }
     }
 
     /// Sample the next token from logits.
@@ -148,7 +150,11 @@ impl SamplingStrategy {
             return Err(anyhow::anyhow!("Empty logits slice"));
         }
 
-        let mut buf = logits.to_vec();
+        // Optimization: Use pre-allocated buffer instead of allocating `vocab_size` every time.
+        // We use std::mem::take to avoid borrow checker conflicts with `&mut self` later.
+        let mut buf = std::mem::take(&mut self.logits_buffer);
+        buf.clear();
+        buf.extend_from_slice(logits);
 
         // Count-aware penalty: applies penalty^count per token (distinct from
         // the flat single-occurrence version in bitnet-logits).
@@ -159,6 +165,8 @@ impl SamplingStrategy {
         if self.config.temperature == 0.0 {
             let token = greedy_sample(&buf)?;
             *self.token_counts.entry(token).or_insert(0) += 1;
+            // Restore buffer
+            self.logits_buffer = buf;
             return Ok(token);
         }
 
@@ -186,6 +194,9 @@ impl SamplingStrategy {
         let token = self.sample_from_distribution(&buf)?;
         *self.token_counts.entry(token).or_insert(0) += 1;
 
+        // Restore buffer
+        self.logits_buffer = buf;
+
         debug!("Sampled token: {}", token);
         Ok(token)
     }
@@ -198,23 +209,24 @@ impl SamplingStrategy {
     /// occurrence penalty.
     fn penalize_repeated_tokens(&self, logits: &mut [f32], context_tokens: &[u32]) {
         #[allow(clippy::float_cmp)]
-        if self.config.repetition_penalty == 1.0 {
+        if self.config.repetition_penalty == 1.0 || context_tokens.is_empty() {
             return;
         }
 
-        let mut counts: HashMap<u32, i32> = HashMap::new();
-        for &token in context_tokens {
-            *counts.entry(token).or_insert(0) += 1;
-        }
+        // Optimization: Iterating over context_tokens directly is mathematically equivalent
+        // to `logit /= penalty^count` because `logit / penalty / penalty` == `logit / (penalty^2)`.
+        // This avoids allocating a HashMap to count token occurrences.
+        // Also pre-calculate 1.0 / penalty to replace division with multiplication.
+        let penalty = self.config.repetition_penalty;
+        let inv_penalty = 1.0 / penalty;
 
-        for (&token, &count) in &counts {
+        for &token in context_tokens {
             let idx = token as usize;
-            if idx < logits.len() {
-                let penalty = self.config.repetition_penalty.powi(count);
-                if logits[idx] > 0.0 {
-                    logits[idx] /= penalty;
+            if let Some(logit) = logits.get_mut(idx) {
+                if *logit > 0.0 {
+                    *logit *= inv_penalty;
                 } else {
-                    logits[idx] *= penalty;
+                    *logit *= penalty;
                 }
             }
         }

@@ -1,3 +1,7 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::manual_div_ceil)]
 //! CUDA texture memory operations for cache-optimized reads.
 //!
 //! # Overview

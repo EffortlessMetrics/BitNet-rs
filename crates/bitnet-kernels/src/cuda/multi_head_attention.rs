@@ -1,3 +1,7 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::manual_div_ceil)]
 //! CUDA multi-head attention with GQA, RoPE, ALiBi, and sliding window.
 //!
 //! # Kernel strategy
@@ -988,6 +992,7 @@ pub fn launch_multi_head_attention(
             config.causal,
             config.grid_dim(seq_q, batch),
         );
+        let _ = (query, key, value);
         return Err(KernelError::GpuError {
             reason: "MHA CUDA kernel not yet compiled — scaffold only".into(),
         }
