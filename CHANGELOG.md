@@ -4,6 +4,30 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### CPU Kernel Optimization & AVX2 Parity Hardening
+
+- perf(kernels): eliminate per-head/per-block allocations in CPU attention - PR #3289
+  - `flash_attention_cpu`: replaced `Vec::with_capacity` with `[f32; BLOCK_SIZE]` stack array
+  - `multi_head_attention`, `grouped_query_attention`, `attention_forward`: reuse pre-allocated buffers via `extract_head_into`
+- perf(kernels): eliminate Vec allocation in `softmax_with_temperature` - PR #3284
+- fix(kernels): stabilize `batch_norm` prop test flake (narrowed inputs, widened tolerance) - PR #3282
+- test(quantization): add QK256 GEMV AVX2-vs-scalar parity tests (12 tests) - PR #3286
+- test(kernels): AVX2 KV cache SIMD parity tests (10 tests) - PR #3280
+- test(kernels): AVX2 elementwise + matmul/cache parity tests (26 tests) - PR #3278
+- test(kernels): AVX2 RoPE parity tests (19 tests) - PR #3277
+- fix(apple-silicon): fix ~100 test compilation warnings on aarch64 - PR #3283
+
+### CI & Docs Improvements
+
+- docs: README add `ci/local.sh` reference, fix stale test counts - PR #3288
+- docs: CLAUDE.md reality pass — fix fuzz targets (84→117), bench targets (6→11), skipped tests (~1600→~2800) - PR #3285
+- docs: CLAUDE.md update AVX2 parity test count, add macOS ARM64 CI entry - PR #3279
+- fix(docs): resolve 13 broken doc links in bitnet-kernels and bitnet-common - PR #3290
+- fix(clippy): resolve 14 clippy warnings in bitnet-request-context-core - PR #3287
+- fix(ci): repair macOS ARM64 clippy job (fix needs chain blocking) - PR #3148
+- fix(ci): tool-use-core clippy fix - PR #3276
+- test(fuzz): add wave 23 fuzz targets (6 new) - PR #2352
+
 ### Wave 138 - OpenCL GPU Support (Continued)
 
 - docs: add CHANGELOG entries for OpenCL waves 135-136 - PR #2614
