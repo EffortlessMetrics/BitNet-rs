@@ -71,7 +71,68 @@ This document describes all environment variables used throughout BitNet-rs for 
   - **Important**: This is an experimental diagnostic tool, not a production fix. Always prefer regenerating GGUF with correct LayerNorm weights.
 
 ### Performance and Parallelism
-- `RAYON_NUM_THREADS`: Control CPU parallelism
+- `RAYON_NUM_THREADS`: Control CPU parallelism (Rayon thread pool)
+- `BITNET_CPU_THREADS`: CPU thread count for inference (overrides CLI config)
+- `BITNET_NUM_THREADS`: Alternative thread count setting (used in some crates)
+
+### Device Selection
+- `BITNET_DEVICE`: Device for inference — `cpu`, `cuda`, `metal`, `vulkan` (default: `cpu`)
+- `BITNET_LOG_LEVEL`: Log level — `trace`, `debug`, `info`, `warn`, `error`
+
+### Model Configuration (Environment Overrides)
+These override CLI arguments and config file values:
+- `BITNET_MODEL_PATH`: Path to model file (GGUF or SafeTensors)
+- `BITNET_MODEL_FORMAT`: Model format — `gguf`, `safetensors`
+- `BITNET_ARCHITECTURE`: Model architecture hint — `bitnet`, `llama`, `phi`, etc.
+- `BITNET_HIDDEN_SIZE`: Hidden dimension size (e.g., `2560`)
+- `BITNET_NUM_LAYERS`: Number of transformer layers
+- `BITNET_NUM_HEADS`: Number of attention heads
+- `BITNET_VOCAB_SIZE`: Vocabulary size
+- `BITNET_BLOCK_SIZE`: Transformer block size
+- `BITNET_REQUIRE_LAYER_NORM_BIAS`: Require LayerNorm bias tensors (`1` to enable)
+
+### Generation Parameters
+- `BITNET_MAX_TOKENS`: Maximum number of tokens to generate
+- `BITNET_MAX_NEW_TOKENS`: Maximum new tokens (alias for `MAX_TOKENS` in some contexts)
+- `BITNET_MAX_LENGTH`: Maximum total sequence length
+- `BITNET_TEMPERATURE`: Sampling temperature (e.g., `0.7`)
+- `BITNET_TOP_K`: Top-k sampling parameter (e.g., `40`)
+- `BITNET_TOP_P`: Top-p (nucleus) sampling parameter (e.g., `0.9`)
+- `BITNET_BATCH_SIZE`: Batch size for inference
+
+### Tokenizer
+- `BITNET_TOKENIZER`: Path to tokenizer file (tokenizer.json)
+- `BITNET_OFFLINE`: Disable network access for tokenizer downloads (`1` to enable)
+- `BITNET_CACHE_DIR`: Cache directory for downloaded tokenizers
+
+### Quantization and Debug
+- `BITNET_QUANTIZATION_TYPE`: Force quantization type — `i2s`, `tl1`, `tl2`, `qk256`
+- `BITNET_IQ2S_IMPL`: I2S implementation selector
+- `BITNET_QUANT_SANITY`: Enable quantization sanity checks (`1` to enable)
+- `BITNET_DISABLE_MINIMAL_LOADER`: Disable minimal GGUF loader (`1` to disable)
+- `BITNET_PARITY`: Enable parity checking mode
+
+### Tracing and Debug Output
+- `BITNET_TRACE_DIR`: Directory for tensor activation trace output
+- `BITNET_TRACE_QUANT`: Enable quantization tracing (`1` to enable)
+- `BITNET_TRACE_RMS`: Enable RMS norm tracing
+- `BITNET_TRACE_TIMING`: Enable timing trace output
+- `BITNET_DEBUG_LOGITS`: Enable logits debugging output
+- `BITNET_DEBUG_ATTN_SCALE`: Debug attention scaling
+- `BITNET_DEBUG_GQA`: Debug grouped-query attention
+- `BITNET_DEBUG_MLP`: Debug MLP/FFN layer
+- `BITNET_DEBUG_RMSNORM`: Debug RMS normalization
+- `BITNET_DEBUG_ROPE`: Debug rotary position embeddings
+- `BITNET_DEBUG_TIMEOUT_SECS`: Debug timeout in seconds
+
+### GPU Configuration
+- `BITNET_USE_GPU`: Enable GPU acceleration (`1` to enable)
+- `BITNET_GPU_MEMORY_LIMIT`: GPU memory limit in bytes
+- `BITNET_GPU_CACHE`: GPU kernel cache directory
+- `BITNET_GPU_DEBUG`: Enable GPU debug output (`1` to enable)
+- `BITNET_ENABLE_NPU`: Enable NPU backend (`1` to enable)
+- `BITNET_NPU_BACKEND`: NPU backend selection
+- `BITNET_ENABLE_ROCM`: Enable ROCm backend (`1` to enable)
 
 ### GPU Feature Detection (Issue #439)
 - `BITNET_GPU_FAKE`: Override GPU detection for deterministic testing and device-aware fallback validation
@@ -216,6 +277,81 @@ export LD_LIBRARY_PATH=target/release
 # macOS FFI
 export DYLD_LIBRARY_PATH=target/release
 ```
+
+## Server Configuration
+
+Environment variables for `bitnet-server` (axum HTTP server). All are optional with sensible defaults.
+
+### Server Settings
+- `BITNET_SERVER_HOST`: Bind address (default: `0.0.0.0`)
+- `BITNET_SERVER_PORT`: Port number (default: `3000`)
+- `BITNET_SERVER_WORKERS`: Worker thread count (default: auto-detected)
+- `BITNET_REQUEST_TIMEOUT`: Request timeout in seconds (default: `30`)
+- `BITNET_DEFAULT_MODEL_PATH`: Default model file path
+- `BITNET_DEFAULT_TOKENIZER_PATH`: Default tokenizer file path
+- `BITNET_DEFAULT_DEVICE`: Default inference device — `cpu`, `cuda`
+
+### Model Manager
+- `BITNET_MAX_CONCURRENT_LOADS`: Maximum concurrent model loads (default: `2`)
+- `BITNET_MODEL_CACHE_SIZE`: Model cache capacity (default: `4`)
+- `BITNET_MEMORY_LIMIT_GB`: Memory limit in GB for model loading
+- `BITNET_MODEL_VALIDATION`: Enable model validation on load (`true`/`false`)
+
+### Execution Router
+- `BITNET_DEVICE_STRATEGY`: Device selection strategy — `auto`, `cpu`, `gpu`, `hybrid`
+- `BITNET_FALLBACK_ENABLED`: Enable CPU fallback when GPU fails (`true`/`false`)
+- `BITNET_BENCHMARK_ON_STARTUP`: Run benchmark on startup for routing decisions (`true`/`false`)
+
+### Batch Engine
+- `BITNET_MAX_BATCH_SIZE`: Maximum batch size (default: `32`)
+- `BITNET_BATCH_TIMEOUT_MS`: Batch collection timeout in milliseconds
+- `BITNET_MAX_CONCURRENT_BATCHES`: Maximum concurrent batch executions
+- `BITNET_ADAPTIVE_BATCHING`: Enable adaptive batch sizing (`true`/`false`)
+- `BITNET_QUANTIZATION_AWARE`: Enable quantization-aware batching (`true`/`false`)
+
+### Concurrency and Rate Limiting
+- `BITNET_MAX_CONCURRENT_REQUESTS`: Maximum concurrent requests
+- `BITNET_MAX_REQUESTS_PER_SECOND`: Rate limit (requests/second)
+- `BITNET_MAX_REQUESTS_PER_MINUTE`: Rate limit (requests/minute)
+- `BITNET_BACKPRESSURE_THRESHOLD`: Backpressure activation threshold
+- `BITNET_CIRCUIT_BREAKER_ENABLED`: Enable circuit breaker (`true`/`false`)
+- `BITNET_PER_IP_RATE_LIMIT`: Per-IP rate limit
+
+### Security
+- `BITNET_JWT_SECRET`: JWT signing secret for authentication
+- `BITNET_REQUIRE_AUTHENTICATION`: Require authentication (`true`/`false`)
+- `BITNET_MAX_PROMPT_LENGTH`: Maximum prompt length (characters)
+- `BITNET_MAX_TOKENS_PER_REQUEST`: Maximum tokens per request
+- `BITNET_ALLOWED_ORIGINS`: Allowed CORS origins (comma-separated)
+- `BITNET_BLOCKED_IPS`: Blocked IP addresses (comma-separated)
+- `BITNET_INPUT_SANITIZATION`: Enable input sanitization (`true`/`false`)
+- `BITNET_CONTENT_FILTERING`: Enable content filtering (`true`/`false`)
+- `BITNET_ALLOWED_MODEL_DIRECTORIES`: Allowed model directories (comma-separated)
+
+### Observability
+- `BITNET_PROMETHEUS_ENABLED`: Enable Prometheus metrics (`true`/`false`)
+- `BITNET_OPENTELEMETRY_ENABLED`: Enable OpenTelemetry tracing (`true`/`false`)
+- `BITNET_OTLP_ENDPOINT`: OTLP collector endpoint URL
+
+## Testing Variables
+
+- `BITNET_SKIP_SLOW_TESTS`: Skip slow tests — set to `1` (used in CI Core)
+- `BITNET_RUN_SLOW_TESTS`: Explicitly opt-in to slow tests
+- `BITNET_FAST_TESTS`: Run only fast tests
+- `BITNET_RUN_E2E`: Enable end-to-end tests
+- `BITNET_FORCE_GPU_TESTS`: Force GPU tests even without hardware
+- `BITNET_GENERATE_FIXTURES`: Generate test fixtures (`1` to enable)
+- `BITNET_QUIET_BACKEND`: Suppress backend output in tests
+- `BITNET_TEST_ENV`: Test environment identifier
+- `BITNET_TEST_SCENARIO`: Test scenario selector
+- `BITNET_MOCK_DETECTION_THRESHOLD`: Threshold for mock computation detection
+- `BITNET_VALIDATION_LEVEL`: Validation strictness level
+- `BITNET_VALIDATION_TOLERANCE`: Numerical validation tolerance
+
+### Cross-Validation
+- `BITNET_CROSSVAL_ENABLED`: Enable cross-validation against C++ reference
+- `BITNET_CROSSVAL_WEIGHTS`: Path to cross-validation weights
+- `BITNET_CPP_PATH`: Path to bitnet.cpp binary
 
 ## GPU Development Variables
 
