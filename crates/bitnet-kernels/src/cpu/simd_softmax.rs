@@ -60,6 +60,53 @@ fn fast_exp(x: f32) -> f32 {
     x.clamp(-88.0, 88.0).exp()
 }
 
+/// Vectorized exp(x) for 8×f32 using AVX2 (Cephes-style polynomial).
+///
+/// Uses the identity exp(x) = 2^(x * log2(e)) and splits into integer
+/// and fractional parts.  The fractional part is approximated with a
+/// degree-5 minimax polynomial (Cephes coefficients).
+///
+/// Accuracy: max relative error < 2e-7 over [-88, 88].
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+#[allow(clippy::excessive_precision)] // Cody-Waite constants need exact bit patterns
+#[inline]
+unsafe fn exp_avx2(x: __m256) -> __m256 {
+    let lo = _mm256_set1_ps(-88.376_26_f32);
+    let hi = _mm256_set1_ps(88.376_26_f32);
+    let x = _mm256_min_ps(_mm256_max_ps(x, lo), hi);
+
+    let log2e = _mm256_set1_ps(std::f32::consts::LOG2_E);
+    let t = _mm256_mul_ps(x, log2e);
+    let n = _mm256_round_ps(t, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+    let ln2_hi = _mm256_set1_ps(0.693_145_751_953_125_f32);
+    let ln2_lo = _mm256_set1_ps(1.428_606_765_330_187_e-6_f32);
+    let f = _mm256_sub_ps(_mm256_sub_ps(x, _mm256_mul_ps(n, ln2_hi)), _mm256_mul_ps(n, ln2_lo));
+
+    let c5 = _mm256_set1_ps(1.987_569_1e-4);
+    let c4 = _mm256_set1_ps(1.398_199_9e-3);
+    let c3 = _mm256_set1_ps(8.333_452e-3);
+    let c2 = _mm256_set1_ps(4.166_579_6e-2);
+    let c1 = _mm256_set1_ps(1.666_666_6e-1);
+    let c0 = _mm256_set1_ps(5.000_000_2e-1);
+    let one = _mm256_set1_ps(1.0);
+
+    let mut p = _mm256_fmadd_ps(c5, f, c4);
+    p = _mm256_fmadd_ps(p, f, c3);
+    p = _mm256_fmadd_ps(p, f, c2);
+    p = _mm256_fmadd_ps(p, f, c1);
+    p = _mm256_fmadd_ps(p, f, c0);
+    p = _mm256_fmadd_ps(p, _mm256_mul_ps(f, f), _mm256_add_ps(f, one));
+
+    let ni = _mm256_cvtps_epi32(n);
+    let pow2n =
+        _mm256_castsi256_ps(_mm256_slli_epi32(_mm256_add_epi32(ni, _mm256_set1_epi32(127)), 23));
+    _mm256_mul_ps(p, pow2n)
+}
+
 // ── Core scalar implementation ──────────────────────────────────────────
 
 /// Find max of a slice (scalar).
@@ -92,9 +139,9 @@ fn simd_softmax_scalar(input: &[f32], output: &mut [f32]) {
 /// Numerically-stable softmax using AVX2 intrinsics.
 ///
 /// # Safety
-/// Caller must ensure AVX2 is available (`is_x86_feature_detected!("avx2")`).
+/// Caller must ensure AVX2 + FMA are available at runtime.
 #[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2")]
+#[target_feature(enable = "avx2", enable = "fma")]
 unsafe fn simd_softmax_avx2(input: &[f32], output: &mut [f32]) {
     let n = input.len();
     if n == 0 {
@@ -123,13 +170,7 @@ unsafe fn simd_softmax_avx2(input: &[f32], output: &mut [f32]) {
     for i in 0..chunks {
         let v = _mm256_loadu_ps(inp.add(i * 8));
         let shifted = _mm256_sub_ps(v, vmax_bc);
-        // Per-lane scalar exp via buffer; compiler may auto-vectorize.
-        let mut buf = [0.0f32; 8];
-        _mm256_storeu_ps(buf.as_mut_ptr(), shifted);
-        for b in &mut buf {
-            *b = fast_exp(*b);
-        }
-        let exp_v = _mm256_loadu_ps(buf.as_ptr());
+        let exp_v = exp_avx2(shifted);
         _mm256_storeu_ps(outp.add(i * 8), exp_v);
         vsum = _mm256_add_ps(vsum, exp_v);
     }
@@ -154,12 +195,67 @@ unsafe fn simd_softmax_avx2(input: &[f32], output: &mut [f32]) {
     }
 }
 
+/// In-place numerically-stable softmax using AVX2 intrinsics.
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn simd_softmax_avx2_inplace(data: &mut [f32]) {
+    let n = data.len();
+    if n == 0 {
+        return;
+    }
+
+    let mut vmax = _mm256_set1_ps(f32::NEG_INFINITY);
+    let chunks = n / 8;
+    let ptr = data.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(ptr.add(i * 8));
+        vmax = _mm256_max_ps(vmax, v);
+    }
+    let mut max_val = hmax_avx2(vmax);
+    for i in (chunks * 8)..n {
+        max_val = max_val.max(*ptr.add(i));
+    }
+
+    let vmax_bc = _mm256_set1_ps(max_val);
+    let mut vsum = _mm256_setzero_ps();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(ptr.add(i * 8));
+        let shifted = _mm256_sub_ps(v, vmax_bc);
+        let exp_v = exp_avx2(shifted);
+        _mm256_storeu_ps(ptr.add(i * 8), exp_v);
+        vsum = _mm256_add_ps(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_avx2(vsum);
+    for i in (chunks * 8)..n {
+        let e = fast_exp(*ptr.add(i) - max_val);
+        *ptr.add(i) = e;
+        sum_exp += e;
+    }
+
+    if sum_exp > 0.0 {
+        let inv = _mm256_set1_ps(1.0 / sum_exp);
+        for i in 0..chunks {
+            let v = _mm256_loadu_ps(ptr.add(i * 8));
+            _mm256_storeu_ps(ptr.add(i * 8), _mm256_mul_ps(v, inv));
+        }
+        let inv_s = 1.0 / sum_exp;
+        for i in (chunks * 8)..n {
+            *ptr.add(i) *= inv_s;
+        }
+    }
+}
+
 /// Dispatch softmax to AVX2 or scalar.
 fn dispatch_softmax(input: &[f32], output: &mut [f32]) {
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") {
-            // SAFETY: feature detection above guarantees AVX2.
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: feature detection above guarantees AVX2 + FMA.
             unsafe { simd_softmax_avx2(input, output) };
             return;
         }
@@ -193,8 +289,16 @@ pub fn simd_softmax_inplace(data: &mut [f32]) -> Result<()> {
     if data.is_empty() {
         return Ok(());
     }
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: feature detection above guarantees AVX2 + FMA.
+            unsafe { simd_softmax_avx2_inplace(data) };
+            return Ok(());
+        }
+    }
     let input: Vec<f32> = data.to_vec();
-    dispatch_softmax(&input, data);
+    simd_softmax_scalar(&input, data);
     Ok(())
 }
 
