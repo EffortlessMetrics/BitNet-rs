@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::approx_constant, clippy::redundant_closure, clippy::manual_div_ceil)]
 //! Metal reduction shader tests for Apple Silicon.
 //!

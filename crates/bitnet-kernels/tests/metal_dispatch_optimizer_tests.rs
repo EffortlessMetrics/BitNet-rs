@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal dispatch optimizer tests for Apple Silicon GPU backend.
 //!
 //! Tests validate optimal workgroup sizing, thread occupancy,

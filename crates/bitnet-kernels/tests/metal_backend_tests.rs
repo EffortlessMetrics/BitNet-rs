@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal backend tests for Apple Silicon GPU support.
 //!
 //! Validates Metal device detection, capability probing, buffer alignment,

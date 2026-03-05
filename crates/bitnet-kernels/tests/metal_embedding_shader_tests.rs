@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::manual_div_ceil, clippy::manual_is_multiple_of)]
 //! Metal embedding shader tests for Apple Silicon.
 //!

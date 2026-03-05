@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal pooling operation shader validation tests.
 //! Tests average pooling, max pooling, adaptive pooling, global pooling,
 //! and attention pooling operations expected to run on Metal GPU.

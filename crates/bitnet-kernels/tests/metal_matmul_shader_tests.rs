@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::too_many_arguments, clippy::manual_div_ceil, unused_variables)]
 //! Tests for Metal matrix multiplication compute shaders on Apple Silicon.
 //!

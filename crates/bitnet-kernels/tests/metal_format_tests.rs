@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal texture format and buffer layout tests for Apple Silicon.
 //!
 //! Validates Metal data format handling, texture dimension constraints,

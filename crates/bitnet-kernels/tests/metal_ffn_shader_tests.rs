@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![cfg(target_os = "macos")]
 #![allow(
     dead_code,

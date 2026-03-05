@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal pipeline state management tests for Apple Silicon.
 //!
 //! Comprehensive test suite covering compute pipeline state creation, caching,

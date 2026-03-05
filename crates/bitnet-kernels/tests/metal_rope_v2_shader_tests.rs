@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal RoPE v2 shader validation tests for Apple Silicon.
 //!
 //! Comprehensive test suite validating rotary position embedding computations

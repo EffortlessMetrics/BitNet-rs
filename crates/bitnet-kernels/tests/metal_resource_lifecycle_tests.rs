@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal GPU resource lifecycle validation tests.
 //!
 //! Validates buffer/texture lifecycle state machines, heap management,

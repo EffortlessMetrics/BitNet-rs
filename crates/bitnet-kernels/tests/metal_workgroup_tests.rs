@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal workgroup optimization validation tests for Apple Silicon.
 //!
 //! Validates workgroup size selection, dispatch grid calculation,

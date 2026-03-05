@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal error recovery and resilience tests for Apple Silicon.
 //!
 //! Validates GPU error handling paths: memory allocation failures, shader

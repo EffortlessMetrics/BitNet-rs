@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal device capability detection tests for Apple Silicon.
 //!
 //! These tests validate the device detection and capability querying logic

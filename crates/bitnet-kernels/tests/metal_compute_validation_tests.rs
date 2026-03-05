@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::manual_div_ceil, clippy::assertions_on_constants)]
 //! Metal compute pipeline validation tests for Apple Silicon.
 //!

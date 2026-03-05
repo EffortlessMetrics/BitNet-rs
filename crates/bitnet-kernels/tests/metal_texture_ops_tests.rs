@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal texture operation tests using local mock types.
 //! No GPU hardware or external bitnet crate dependencies required.
 

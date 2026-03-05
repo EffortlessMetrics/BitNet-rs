@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal tokenizer and embedding shader tests for Apple Silicon.
 //!
 //! Tests GPU-side embedding lookup, positional encoding, and token processing.

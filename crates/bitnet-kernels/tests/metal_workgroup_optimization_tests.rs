@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal workgroup and threadgroup optimization tests for Apple Silicon.
 //!
 //! Validates threadgroup sizing heuristics, occupancy estimation, shared memory

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::manual_div_ceil)]
 //! Metal kernel validation tests for Apple Silicon.
 //!

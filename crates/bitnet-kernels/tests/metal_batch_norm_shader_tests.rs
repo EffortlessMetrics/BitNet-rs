@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal batch normalization shader validation tests.
 //! Tests BN operations expected to run on Metal GPU:
 //! forward pass, running stats, channel-wise normalization,

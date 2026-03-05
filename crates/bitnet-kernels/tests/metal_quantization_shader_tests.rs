@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal quantization shader tests for Apple Silicon.
 //!
 //! Validates I2_S (2-bit ternary) quantization, dequantization, matrix-vector

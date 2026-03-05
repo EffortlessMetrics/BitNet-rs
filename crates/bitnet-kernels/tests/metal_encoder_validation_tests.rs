@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal command encoder validation tests for Apple Silicon.
 //!
 //! Tests compute command encoder lifecycle, buffer binding, threadgroup

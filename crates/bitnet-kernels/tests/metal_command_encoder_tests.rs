@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal command encoder infrastructure tests for Apple Silicon.
 //!
 //! Validates command buffer lifecycle, compute/blit/render encoder

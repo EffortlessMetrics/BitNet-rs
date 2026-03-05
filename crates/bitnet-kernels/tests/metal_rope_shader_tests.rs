@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(clippy::manual_div_ceil, clippy::unnecessary_cast, clippy::needless_range_loop)]
 //! Metal RoPE (Rotary Position Embedding) shader tests for Apple Silicon.
 //!

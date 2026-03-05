@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal texture format compatibility tests for Apple Silicon.
 //!
 //! Validates texture pixel format properties, dimension limits, format

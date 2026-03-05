@@ -64,7 +64,7 @@ impl ComputePoolConfig {
         if self.num_threads == 0 {
             return total_items;
         }
-        ((total_items + self.num_threads - 1) / self.num_threads).max(1)
+        total_items.div_ceil(self.num_threads).max(1)
     }
 }
 
@@ -111,7 +111,7 @@ pub fn partition_work(total: usize, num_workers: usize) -> Vec<(usize, usize)> {
     if num_workers == 0 || total == 0 {
         return vec![];
     }
-    let chunk = (total + num_workers - 1) / num_workers;
+    let chunk = total.div_ceil(num_workers);
     let mut parts = Vec::new();
     let mut start = 0;
     while start < total {

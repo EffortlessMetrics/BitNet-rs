@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal shared memory (threadgroup memory) tests for Apple Silicon.
 //!
 //! Validates threadgroup memory allocation, bank conflict avoidance,

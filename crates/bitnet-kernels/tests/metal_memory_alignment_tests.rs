@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal memory alignment and buffer layout tests for Apple Silicon.
 //!
 //! Tests buffer alignment requirements, page sizes, storage mode

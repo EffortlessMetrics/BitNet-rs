@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal texture operation tests for Apple Silicon neural network inference.
 //!
 //! Validates texture creation, read/write, sampling, buffer copies, array ops,

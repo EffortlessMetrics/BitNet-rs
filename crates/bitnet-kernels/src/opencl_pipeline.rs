@@ -416,6 +416,11 @@ impl InferencePipeline {
     ///
     /// This is a convenience wrapper around [`Self::execute_single_token_cpu`].
     pub fn forward(&mut self, input_ids: &[u32]) -> Result<Vec<f32>, PipelineError> {
+        if self.diag.peak_sequence_len + input_ids.len() > self.config.max_seq_len {
+            return Err(PipelineError::InvalidConfig(format!(
+                "sequence exceeds max_seq_len {}", self.config.max_seq_len
+            )));
+        }
         let exec = self.execute_single_token_cpu(input_ids, 0)?;
         self.diag.total_forward_calls += 1;
         if input_ids.len() > self.diag.peak_sequence_len {

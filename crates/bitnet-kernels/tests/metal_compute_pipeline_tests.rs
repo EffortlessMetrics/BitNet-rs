@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![allow(dead_code, clippy::manual_div_ceil, clippy::manual_slice_size_calculation)]
 //! Metal compute pipeline integration tests for Apple Silicon.
 //!

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 #![cfg(all(target_os = "macos", feature = "cpu"))]
 #![allow(clippy::manual_div_ceil)]
 

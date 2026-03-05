@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types)]
 //! Metal resource binding tests for Apple Silicon.
 //!
 //! Validates wgpu/Metal resource binding behaviour including buffer creation,
