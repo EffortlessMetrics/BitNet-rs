@@ -1053,9 +1053,11 @@ mod tests {
                         )
                     })
                     .prop_filter("need non-constant channels", |(batch, features, input)| {
+                        // Threshold 0.1 (not 1e-6) avoids near-constant channels
+                        // where inv_std amplifies rounding into variance > 0.2 off 1.0.
                         (0..*features).all(|ch| {
                             let first = input[ch];
-                            (1..*batch).any(|b| (input[b * features + ch] - first).abs() > 1e-6)
+                            (1..*batch).any(|b| (input[b * features + ch] - first).abs() > 0.1)
                         })
                     })
             ) {
