@@ -1,8 +1,22 @@
 name: Guards
 on:
   pull_request:
+    paths:
+      - '.github/**'
+      - 'scripts/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   push:
     branches: [main]
+    paths:
+      - '.github/**'
+      - 'scripts/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
