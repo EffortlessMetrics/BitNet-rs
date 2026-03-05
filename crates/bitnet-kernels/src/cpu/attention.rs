@@ -367,14 +367,18 @@ impl AttentionKernel {
 
         // Split into per-head slices, attend, concatenate.
         let mut output = vec![0.0_f32; expected];
+        let head_len = seq_len * head_dim;
+        let mut q_buf = vec![0.0_f32; head_len];
+        let mut k_buf = vec![0.0_f32; head_len];
+        let mut v_buf = vec![0.0_f32; head_len];
 
         for h in 0..num_heads {
-            let q_head = extract_head(q, seq_len, num_heads, head_dim, h);
-            let k_head = extract_head(k, seq_len, num_heads, head_dim, h);
-            let v_head = extract_head(v, seq_len, num_heads, head_dim, h);
+            extract_head_into(q, seq_len, num_heads, head_dim, h, &mut q_buf);
+            extract_head_into(k, seq_len, num_heads, head_dim, h, &mut k_buf);
+            extract_head_into(v, seq_len, num_heads, head_dim, h, &mut v_buf);
 
             let head_out = Self::scaled_dot_product(
-                &q_head, &k_head, &v_head, mask_ref, scale, seq_len, seq_len, head_dim,
+                &q_buf, &k_buf, &v_buf, mask_ref, scale, seq_len, seq_len, head_dim,
             )?;
 
             scatter_head(&mut output, &head_out, seq_len, num_heads, head_dim, h);
@@ -424,19 +428,23 @@ impl AttentionKernel {
         let mask_ref = mask_vec.as_deref();
 
         let mut output = vec![0.0_f32; seq_len * q_dim];
+        let head_len = seq_len * head_dim;
+        let mut k_buf = vec![0.0_f32; head_len];
+        let mut v_buf = vec![0.0_f32; head_len];
+        let mut q_buf = vec![0.0_f32; head_len];
 
         for kv_h in 0..num_kv_heads {
-            let k_head = extract_head(k, seq_len, num_kv_heads, head_dim, kv_h);
-            let v_head = extract_head(v, seq_len, num_kv_heads, head_dim, kv_h);
+            extract_head_into(k, seq_len, num_kv_heads, head_dim, kv_h, &mut k_buf);
+            extract_head_into(v, seq_len, num_kv_heads, head_dim, kv_h, &mut v_buf);
 
             for g in 0..group_size {
                 let q_idx = kv_h * group_size + g;
-                let q_head = extract_head(q, seq_len, num_q_heads, head_dim, q_idx);
+                extract_head_into(q, seq_len, num_q_heads, head_dim, q_idx, &mut q_buf);
 
                 let head_out = Self::scaled_dot_product(
-                    &q_head,
-                    &k_head,
-                    &v_head,
+                    &q_buf,
+                    &k_buf,
+                    &v_buf,
                     mask_ref,
                     resolved_scale,
                     seq_len,
@@ -994,6 +1002,7 @@ fn rope_inplace(data: &mut [f32], positions: &[usize], head_dim: usize, cols: us
 
 /// Extract head `h` from an interleaved `[seq_len, num_heads * head_dim]`
 /// tensor into a contiguous `[seq_len, head_dim]` buffer.
+#[cfg(test)]
 fn extract_head(
     data: &[f32],
     seq_len: usize,
@@ -1281,14 +1290,18 @@ pub fn attention_forward(
     let mask_vec = if causal { Some(causal_mask(seq_len)) } else { None };
     let slopes = alibi_slopes(num_heads);
     let mut output = vec![0.0_f32; expected];
+    let head_len = seq_len * head_dim;
+    let mut q_buf = vec![0.0_f32; head_len];
+    let mut k_buf = vec![0.0_f32; head_len];
+    let mut v_buf = vec![0.0_f32; head_len];
 
     for (h, slope) in slopes.iter().enumerate().take(num_heads) {
-        let q_head = extract_head(q, seq_len, num_heads, head_dim, h);
-        let k_head = extract_head(k, seq_len, num_heads, head_dim, h);
-        let v_head = extract_head(v, seq_len, num_heads, head_dim, h);
+        extract_head_into(q, seq_len, num_heads, head_dim, h, &mut q_buf);
+        extract_head_into(k, seq_len, num_heads, head_dim, h, &mut k_buf);
+        extract_head_into(v, seq_len, num_heads, head_dim, h, &mut v_buf);
 
         // Compute scaled scores with SIMD dispatch.
-        let mut scores = dispatch_qk(&q_head, &k_head, seq_len, seq_len, head_dim);
+        let mut scores = dispatch_qk(&q_buf, &k_buf, seq_len, seq_len, head_dim);
         for s in &mut scores {
             *s *= scale;
         }
@@ -1303,7 +1316,7 @@ pub fn attention_forward(
 
         // Softmax + weighted sum.
         softmax_rows(&mut scores, seq_len, seq_len);
-        let head_out = scalar_sv(&scores, &v_head, seq_len, seq_len, head_dim);
+        let head_out = scalar_sv(&scores, &v_buf, seq_len, seq_len, head_dim);
         scatter_head(&mut output, &head_out, seq_len, num_heads, head_dim, h);
     }
 
@@ -1352,6 +1365,7 @@ pub fn flash_attention_cpu(
     let mut output = vec![0.0_f32; seq_q * head_dim];
     let mut row_max = vec![f32::NEG_INFINITY; seq_q];
     let mut row_sum = vec![0.0_f32; seq_q];
+    let mut block_scores = [0.0_f32; BLOCK_SIZE];
 
     // Process K/V in tiles of BLOCK_SIZE.
     for kv_start in (0..seq_k).step_by(BLOCK_SIZE) {
@@ -1362,19 +1376,19 @@ pub fn flash_attention_cpu(
             let q_row = &q[qi * head_dim..(qi + 1) * head_dim];
 
             // Compute scores for this Q row against the K tile.
-            let mut block_scores = Vec::with_capacity(block_k);
-            for kj in 0..block_k {
+            for (kj, score) in block_scores[..block_k].iter_mut().enumerate() {
                 let k_idx = kv_start + kj;
                 if causal && k_idx > qi {
-                    block_scores.push(f32::NEG_INFINITY);
+                    *score = f32::NEG_INFINITY;
                 } else {
                     let k_row = &k[k_idx * head_dim..(k_idx + 1) * head_dim];
-                    block_scores.push(scalar_dot(q_row, k_row) * scale);
+                    *score = scalar_dot(q_row, k_row) * scale;
                 }
             }
 
             // Online softmax update: re-scale previous accumulator.
-            let block_max = block_scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+            let block_max =
+                block_scores[..block_k].iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let new_max = row_max[qi].max(block_max);
 
             let correction = (row_max[qi] - new_max).exp();
@@ -1385,7 +1399,7 @@ pub fn flash_attention_cpu(
             row_sum[qi] *= correction;
 
             // Accumulate this tile's contribution.
-            for (kj, &score) in block_scores.iter().enumerate().take(block_k) {
+            for (kj, &score) in block_scores[..block_k].iter().enumerate() {
                 let w = (score - new_max).exp();
                 row_sum[qi] += w;
                 let k_idx = kv_start + kj;
