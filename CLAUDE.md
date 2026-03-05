@@ -41,7 +41,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **GQA/MQA/MHA Attention** — `AttentionVariant` in CPU attention kernel
 - **SafeTensors Sharded Loading** — `SafeTensorsReader` in `bitnet-models`
 - **Extended OpenCL Modules** — continuous batching, engine bridge, model converter, graph compiler in `bitnet-opencl`
-- **62+ Prompt Template Variants** — LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, and more
+- **59 Prompt Template Variants** — LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, and more
 
 ### Current Limitations
 
