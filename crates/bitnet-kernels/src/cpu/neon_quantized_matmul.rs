@@ -184,6 +184,8 @@ pub unsafe fn neon_i2s_matmul(
     assert!(b.len() >= k * n);
 
     let mut output = vec![0.0f32; m * n];
+    // Pre-allocate column gather buffer once, reused across all (row, col) iterations.
+    let mut col_buf = vec![0.0f32; k];
 
     // For each output row, compute dot products with each column of B.
     // We iterate row-of-A × col-of-B to produce output[row, col].
@@ -191,8 +193,7 @@ pub unsafe fn neon_i2s_matmul(
         let a_row_start = row * pk;
         let a_row = &a_packed[a_row_start..a_row_start + pk];
         for col in 0..n {
-            // Gather column `col` of B into a contiguous buffer for NEON.
-            let mut col_buf = vec![0.0f32; k];
+            // Gather column `col` of B into the reused buffer for NEON.
             for r in 0..k {
                 col_buf[r] = b[r * n + col];
             }
