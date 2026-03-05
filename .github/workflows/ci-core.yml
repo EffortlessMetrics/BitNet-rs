@@ -205,7 +205,7 @@ jobs:
           shared-key: ci-core-grid-check
 
       - name: Run BDD Grid Check (CPU cells)
-        run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only
+        run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only --verbose
 
   # Job 4: Clippy linting
   clippy:
