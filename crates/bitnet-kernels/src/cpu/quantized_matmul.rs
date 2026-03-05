@@ -286,22 +286,20 @@ unsafe fn decode_8_i2s_avx2(
     mask_03: __m256i,
     one: __m256i,
 ) -> __m256 {
-    unsafe {
-        // Pack both bytes; lanes 0–3 extract from byte0, lanes 4–7 from byte1.
-        let packed = (byte0 as i32) | ((byte1 as i32) << 16);
-        let broadcast = _mm256_set1_epi32(packed);
-        let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
+    // Pack both bytes; lanes 0–3 extract from byte0, lanes 4–7 from byte1.
+    let packed = (byte0 as i32) | ((byte1 as i32) << 16);
+    let broadcast = _mm256_set1_epi32(packed);
+    let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
 
-        // low_bit ∈ {0,1}: whether the code is non-zero
-        let low_bit = _mm256_and_si256(codes, one);
-        // high_bit ∈ {0,1}: sign indicator (1 → negative)
-        let high_bit = _mm256_srli_epi32::<1>(codes);
-        // sign = 1 - 2*high_bit ∈ {-1, +1}
-        let sign = _mm256_sub_epi32(one, _mm256_slli_epi32::<1>(high_bit));
-        // weight = low_bit * sign ∈ {-1, 0, +1}
-        let weight = _mm256_mullo_epi32(low_bit, sign);
-        _mm256_cvtepi32_ps(weight)
-    }
+    // low_bit ∈ {0,1}: whether the code is non-zero
+    let low_bit = _mm256_and_si256(codes, one);
+    // high_bit ∈ {0,1}: sign indicator (1 → negative)
+    let high_bit = _mm256_srli_epi32::<1>(codes);
+    // sign = 1 - 2*high_bit ∈ {-1, +1}
+    let sign = _mm256_sub_epi32(one, _mm256_slli_epi32::<1>(high_bit));
+    // weight = low_bit * sign ∈ {-1, 0, +1}
+    let weight = _mm256_mullo_epi32(low_bit, sign);
+    _mm256_cvtepi32_ps(weight)
 }
 
 /// AVX2-accelerated blocked I2_S matmul with FMA dot products.
@@ -327,7 +325,7 @@ pub fn i2s_matmul_blocked_avx2(
         // AVX2 decode requires byte-aligned blocks (block_size multiple of 4).
         if is_x86_feature_detected!("avx2")
             && is_x86_feature_detected!("fma")
-            && block_size % 4 == 0
+            && block_size.is_multiple_of(4)
         {
             // SAFETY: AVX2+FMA verified above; block alignment checked.
             return unsafe {
@@ -380,7 +378,7 @@ unsafe fn i2s_matmul_blocked_avx2_inner(
             let blk_len = blk_end - blk_start;
 
             debug_assert!(
-                blk_start % 4 == 0,
+                blk_start.is_multiple_of(4),
                 "AVX2 matmul requires byte-aligned blocks (block_size must be multiple of 4)"
             );
 
