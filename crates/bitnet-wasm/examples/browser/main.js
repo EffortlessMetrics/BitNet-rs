@@ -93,11 +93,16 @@ async function detectPlatformFeatures() {
 async function loadModel() {
     const fileInput = document.getElementById('model-file');
     const file = fileInput.files[0];
+    const loadButton = document.getElementById('load-model');
 
     if (!file) {
         updateStatus('Please select a model file', 'error');
         return;
     }
+
+    const originalText = loadButton.textContent;
+    loadButton.disabled = true;
+    loadButton.textContent = 'Loading...';
 
     try {
         updateStatus('Loading model...', 'loading');
@@ -139,23 +144,31 @@ async function loadModel() {
     } catch (error) {
         updateStatus(`Model loading failed: ${error.message}`, 'error');
         Logger.error(`Model loading error: ${error}`);
+    } finally {
+        loadButton.disabled = false;
+        loadButton.textContent = originalText;
     }
 }
 
 // Generate text
 async function generateText() {
+    const generateButton = document.getElementById('generate');
     if (!inference) {
         updateStatus('Please load a model first', 'error');
         return;
     }
 
-    try {
-        const prompt = document.getElementById('prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
+    const prompt = document.getElementById('prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
 
+    const originalText = generateButton.textContent;
+    generateButton.disabled = true;
+    generateButton.textContent = 'Generating...';
+
+    try {
         updateStatus('Generating text...', 'loading');
         const startTime = performance.now();
 
@@ -192,27 +205,34 @@ async function generateText() {
     } catch (error) {
         updateStatus(`Generation failed: ${error.message}`, 'error');
         Logger.error(`Generation error: ${error}`);
+    } finally {
+        generateButton.disabled = false;
+        generateButton.textContent = originalText;
     }
 }
 
 // Start streaming generation
 async function startStreaming() {
+    const startButton = document.getElementById('start-streaming');
+    const stopButton = document.getElementById('stop-streaming');
     if (!inference) {
         updateStatus('Please load a model first', 'error');
         return;
     }
 
+    const prompt = document.getElementById('streaming-prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
+
+    streamingActive = true;
+    const originalText = startButton.textContent;
+    startButton.disabled = true;
+    startButton.textContent = 'Generating...';
+    stopButton.disabled = false;
+
     try {
-        const prompt = document.getElementById('streaming-prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
-
-        streamingActive = true;
-        document.getElementById('start-streaming').disabled = true;
-        document.getElementById('stop-streaming').disabled = false;
-
         const outputEl = document.getElementById('streaming-output');
         outputEl.textContent = '';
 
@@ -252,19 +272,17 @@ async function startStreaming() {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
 
-        streamingActive = false;
-        document.getElementById('start-streaming').disabled = false;
-        document.getElementById('stop-streaming').disabled = true;
-
         updateStatus('Streaming completed!', 'success');
         Logger.info(`Streaming completed: ${tokenCount} tokens generated`);
 
     } catch (error) {
-        streamingActive = false;
-        document.getElementById('start-streaming').disabled = false;
-        document.getElementById('stop-streaming').disabled = true;
         updateStatus(`Streaming failed: ${error.message}`, 'error');
         Logger.error(`Streaming error: ${error}`);
+    } finally {
+        streamingActive = false;
+        startButton.disabled = false;
+        startButton.textContent = originalText;
+        stopButton.disabled = true;
     }
 }
 
@@ -365,10 +383,15 @@ function terminateWorker() {
 
 // Run all benchmarks
 async function runBenchmarks() {
+    const runBtn = document.getElementById('run-benchmarks');
     if (!benchmarkSuite) {
         updateStatus('Benchmark suite not initialized', 'error');
         return;
     }
+
+    const originalText = runBtn.textContent;
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running...';
 
     try {
         updateStatus('Running comprehensive benchmarks...', 'loading');
@@ -385,19 +408,25 @@ async function runBenchmarks() {
                 results.platform_info.estimated_gflops.toFixed(2);
         }
 
-        showBenchmarkProgress(false);
         updateStatus('Benchmarks completed successfully!', 'success');
         Logger.info('Comprehensive benchmarks completed');
 
     } catch (error) {
-        showBenchmarkProgress(false);
         updateStatus(`Benchmark failed: ${error.message}`, 'error');
         Logger.error(`Benchmark error: ${error}`);
+    } finally {
+        showBenchmarkProgress(false);
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
     }
 }
 
 // Run individual benchmark categories
 async function runKernelBenchmark() {
+    const btn = document.getElementById('kernel-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running kernel benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_kernels();
@@ -405,10 +434,17 @@ async function runKernelBenchmark() {
         updateStatus('Kernel benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Kernel benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function runMemoryBenchmark() {
+    const btn = document.getElementById('memory-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running memory benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_memory();
@@ -416,10 +452,17 @@ async function runMemoryBenchmark() {
         updateStatus('Memory benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Memory benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function runLoadingBenchmark() {
+    const btn = document.getElementById('loading-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running loading benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_loading();
@@ -427,6 +470,9 @@ async function runLoadingBenchmark() {
         updateStatus('Loading benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Loading benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
