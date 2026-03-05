@@ -37,7 +37,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **OpenCL / Intel Arc** — `bitnet-opencl` crate with built-in kernel registry and Intel Arc A770 work-size optimization (experimental; feature `opencl`)
 - **Production Tensor Validation** — runtime shape/dtype validation in `bitnet-common`
 - **Wave 9 Fuzz** — softmax stability, embedding lookup, memory layout targets (109 fuzz target files total)
-- **Multi-Architecture Support** — 20 families in `ModelArchitecture` enum, 99+ `ArchitectureRegistry` entries
+- **Multi-Architecture Support** — 19 named families in `ModelArchitecture` enum (+ `Unknown`), 99 `ArchitectureRegistry` string patterns
 - **GQA/MQA/MHA Attention** — `AttentionVariant` in CPU attention kernel
 - **SafeTensors Sharded Loading** — `SafeTensorsReader` in `bitnet-models`
 - **Extended OpenCL Modules** — continuous batching, engine bridge, model converter, graph compiler in `bitnet-opencl`
@@ -198,7 +198,7 @@ cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 - `bitnet-gpu-hal`: Unified GPU hardware abstraction, backend selection, async runtime
 - `bitnet-opencl`: Intel Arc OpenCL backend with kernel registry
 
-**SRP Microcrates** (wired into CI): 42+ `-core` extraction crates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`, `bitnet-api-versioning-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
+**SRP Microcrates** (wired into CI): 47+ `-core` extraction crates (e.g. `bitnet-engine-core`, `bitnet-cli-config-core`, `bitnet-kv-cache-policy-core`, `bitnet-api-versioning-core`) plus `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-prompt-templates`, `bitnet-receipts`, `bitnet-sampling`
 
 Note: The workspace has 107+ total crates; the above lists user-facing and architecture-critical ones.
 
@@ -861,7 +861,7 @@ Both backends available. Dual-backend cross-validation supported.
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]`
   pattern
 - Template auto-detection: If the wrong template is detected, override with
-  `--prompt-template` (62+ variants including raw, instruct, llama3-chat, phi-4, qwen, gemma, mistral, deepseek, and more). Check GGUF metadata with
+  `--prompt-template` (59 variants including raw, instruct, llama3-chat, phi-4, qwen, gemma, mistral, deepseek, and more). Check GGUF metadata with
   `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
   priority issues.
 - Backend selection: Use `--cpp-backend bitnet|llama` to explicitly select C++ reference implementation
