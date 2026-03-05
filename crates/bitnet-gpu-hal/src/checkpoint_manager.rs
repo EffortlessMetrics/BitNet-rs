@@ -1491,7 +1491,9 @@ mod tests {
         let mut mgr = memory_manager(cfg);
         let state = sample_state(5, 1);
         let _m1 = mgr.create_checkpoint(&state, "m").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
         let _m2 = mgr.create_checkpoint(&state, "m").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
         let m3 = mgr.create_checkpoint(&state, "m").unwrap();
 
         let list = mgr.list_checkpoints().unwrap();

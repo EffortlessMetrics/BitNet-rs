@@ -409,7 +409,7 @@ impl InferenceSession {
             SessionState::Paused => Ok(()),
             SessionState::Expired => Err(SessionError::Expired),
             SessionState::Terminated => Err(SessionError::Terminated),
-            _ => Err(SessionError::InvalidState {
+            SessionState::Created => Err(SessionError::InvalidState {
                 current: self.state,
                 expected: SessionState::Active,
             }),

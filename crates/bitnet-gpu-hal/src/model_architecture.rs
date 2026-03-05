@@ -133,10 +133,7 @@ pub struct ModelSpec {
 impl ModelSpec {
     /// Approximate total parameter count.
     pub fn param_count(&self) -> u64 {
-        let layer = match self.architecture.layers.first() {
-            Some(l) => l,
-            None => return 0,
-        };
+        let Some(layer) = self.architecture.layers.first() else { return 0 };
         let n = self.architecture.num_layers as u64;
         let h = layer.hidden_dim as u64;
         let ffn = layer.ffn_dim as u64;
@@ -259,11 +256,10 @@ impl ArchitectureDetector {
         for key in
             &["llama.block_count", "gpt2.block_count", "bert.block_count", "general.block_count"]
         {
-            if let Some(v) = metadata.get(*key) {
-                if let Ok(n) = v.parse::<usize>() {
+            if let Some(v) = metadata.get(*key)
+                && let Ok(n) = v.parse::<usize>() {
                     return Some(n);
                 }
-            }
         }
         None
     }
@@ -489,6 +485,7 @@ impl ArchitectureComparator {
 
 // ── Known architectures ──────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn make_spec(
     name: &str,
     arch_type: ArchitectureType,

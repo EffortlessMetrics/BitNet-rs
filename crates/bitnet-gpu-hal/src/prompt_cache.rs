@@ -94,7 +94,7 @@ struct CacheEntry {
 /// A trie node for efficient token-level prefix matching.
 #[derive(Debug, Clone)]
 struct TrieNode {
-    children: HashMap<u32, TrieNode>,
+    children: HashMap<u32, Self>,
     /// If `Some`, this node is the end of a cached prefix (entry id).
     entry_id: Option<u64>,
 }
