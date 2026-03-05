@@ -8,6 +8,7 @@ pub use bitnet_engine_state_core::{EngineState, EngineStateError, EngineStateTra
 pub use bitnet_generation::{
     GenerationConfig, GenerationStats, StopCriteria, StopReason, StreamEvent, TokenEvent,
 };
+pub use bitnet_session_config_core::{ConfigError, SessionConfig, VALID_BACKENDS};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -62,62 +63,6 @@ pub trait InferenceSession: Send + Sync {
 }
 
 // ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-/// Top-level configuration for creating an inference session.
-///
-/// # Examples
-///
-/// ```
-/// use bitnet_engine_core::SessionConfig;
-///
-/// let config = SessionConfig {
-///     model_path: "models/model.gguf".to_string(),
-///     tokenizer_path: "models/tokenizer.json".to_string(),
-///     backend: "cpu".to_string(),
-///     max_context: 4096,
-///     seed: Some(42),
-/// };
-/// assert_eq!(config.backend, "cpu");
-/// ```
-///
-/// Use [`Default`] for sensible defaults (CPU backend, 2 048-token context):
-///
-/// ```
-/// use bitnet_engine_core::SessionConfig;
-///
-/// let config = SessionConfig::default();
-/// assert_eq!(config.backend, "cpu");
-/// assert_eq!(config.max_context, 2048);
-/// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionConfig {
-    /// Filesystem path to the GGUF model file.
-    pub model_path: String,
-    /// Filesystem path to the tokenizer JSON file.
-    pub tokenizer_path: String,
-    /// Backend identifier (e.g. `"cpu"`, `"cuda"`, `"ffi"`).
-    pub backend: String,
-    /// Maximum context window in tokens (prompt + generation).
-    pub max_context: usize,
-    /// Optional random seed for reproducible sessions.
-    pub seed: Option<u64>,
-}
-
-impl Default for SessionConfig {
-    fn default() -> Self {
-        Self {
-            model_path: String::new(),
-            tokenizer_path: String::new(),
-            backend: "cpu".to_string(),
-            max_context: 2048,
-            seed: None,
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Backend info
 // ---------------------------------------------------------------------------
 
@@ -150,86 +95,6 @@ pub struct SessionMetrics {
     pub time_to_first_token_ms: f64,
     /// Total number of tokens generated in the session.
     pub total_tokens: usize,
-}
-
-// ---------------------------------------------------------------------------
-// Config validation
-// ---------------------------------------------------------------------------
-
-/// Accepted backend identifiers for [`SessionConfig`].
-pub const VALID_BACKENDS: &[&str] = &["cpu", "cuda", "gpu", "ffi"];
-
-/// Error returned by [`SessionConfig::validate`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConfigError {
-    /// `model_path` field is empty.
-    EmptyModelPath,
-    /// `tokenizer_path` field is empty.
-    EmptyTokenizerPath,
-    /// `backend` is not one of the recognised identifiers.
-    UnsupportedBackend(String),
-    /// `max_context` is zero; at least one token of context is required.
-    ZeroContextWindow,
-}
-
-impl std::fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::EmptyModelPath => write!(f, "model_path must not be empty"),
-            Self::EmptyTokenizerPath => write!(f, "tokenizer_path must not be empty"),
-            Self::UnsupportedBackend(b) => write!(f, "unsupported backend: {b:?}"),
-            Self::ZeroContextWindow => write!(f, "max_context must be greater than zero"),
-        }
-    }
-}
-
-impl std::error::Error for ConfigError {}
-
-impl SessionConfig {
-    /// Validate the configuration, returning the first error found.
-    ///
-    /// A config is valid when:
-    /// - `model_path` is non-empty
-    /// - `tokenizer_path` is non-empty
-    /// - `backend` is one of `"cpu"`, `"cuda"`, `"gpu"`, or `"ffi"`
-    /// - `max_context > 0`
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ConfigError`] describing the first invalid field.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bitnet_engine_core::{SessionConfig, ConfigError};
-    ///
-    /// let ok = SessionConfig {
-    ///     model_path: "m.gguf".into(),
-    ///     tokenizer_path: "t.json".into(),
-    ///     backend: "cpu".into(),
-    ///     max_context: 512,
-    ///     seed: None,
-    /// };
-    /// assert!(ok.validate().is_ok());
-    ///
-    /// let bad = SessionConfig { model_path: String::new(), ..ok.clone() };
-    /// assert_eq!(bad.validate(), Err(ConfigError::EmptyModelPath));
-    /// ```
-    pub fn validate(&self) -> std::result::Result<(), ConfigError> {
-        if self.model_path.is_empty() {
-            return Err(ConfigError::EmptyModelPath);
-        }
-        if self.tokenizer_path.is_empty() {
-            return Err(ConfigError::EmptyTokenizerPath);
-        }
-        if !VALID_BACKENDS.contains(&self.backend.as_str()) {
-            return Err(ConfigError::UnsupportedBackend(self.backend.clone()));
-        }
-        if self.max_context == 0 {
-            return Err(ConfigError::ZeroContextWindow);
-        }
-        Ok(())
-    }
 }
 
 // ---------------------------------------------------------------------------

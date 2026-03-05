@@ -712,6 +712,7 @@ dependencies = [
  "bitnet-engine-state-core",
  "bitnet-generation",
  "bitnet-logits",
+ "bitnet-session-config-core",
  "insta",
  "proptest",
  "serde",
@@ -1448,6 +1449,13 @@ version = "0.2.1-dev"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "bitnet-session-config-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
