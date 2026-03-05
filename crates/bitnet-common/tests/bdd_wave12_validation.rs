@@ -34,6 +34,7 @@ impl TestTensor {
         Self { shape, data: None, strides: None, alignment: 64 }
     }
 
+    #[allow(dead_code)]
     fn with_alignment(mut self, align: usize) -> Self {
         self.alignment = align;
         self

@@ -988,6 +988,7 @@ pub fn launch_multi_head_attention(
             config.causal,
             config.grid_dim(seq_q, batch),
         );
+        let _ = (query, key, value);
         return Err(KernelError::GpuError {
             reason: "MHA CUDA kernel not yet compiled — scaffold only".into(),
         }

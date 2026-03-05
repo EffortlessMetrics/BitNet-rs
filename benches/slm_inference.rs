@@ -141,7 +141,7 @@ fn bench_attention_gqa_40_10(c: &mut Criterion) {
         head_dim,
         seq_len,
         causal: true,
-        use_alibi: false,
+
         scale: None,
     };
 
