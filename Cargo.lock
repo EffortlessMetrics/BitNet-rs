@@ -397,6 +397,7 @@ dependencies = [
  "bitnet-quantization-bits",
  "bitnet-rope",
  "bitnet-tests",
+ "bitnet-tokenizer-text-core",
  "bitnet-tokenizers",
  "bitnet-transformer",
  "bitnet-warn-once",
@@ -861,6 +862,7 @@ name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-http-auth-core",
+ "bitnet-tokenizer-text-core",
  "insta",
  "log",
  "proptest",
@@ -1824,6 +1826,10 @@ version = "0.2.1-dev"
 dependencies = [
  "bitnet-common",
 ]
+
+[[package]]
+name = "bitnet-tokenizer-text-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-tokenizers"
