@@ -73,7 +73,7 @@ impl TransformerConfig {
         if self.num_layers == 0 {
             return Err("num_layers must be non-zero".into());
         }
-        if self.hidden_size % self.num_heads != 0 {
+        if !self.hidden_size.is_multiple_of(self.num_heads) {
             return Err(format!(
                 "hidden_size ({}) must be divisible by num_heads ({})",
                 self.hidden_size, self.num_heads

@@ -121,7 +121,7 @@ fn align_buffer_size(size: usize) -> usize {
 
 #[inline]
 fn is_aligned(offset: usize) -> bool {
-    offset % METAL_BUFFER_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_BUFFER_ALIGNMENT)
 }
 
 #[derive(Debug, Clone)]
@@ -365,15 +365,15 @@ fn compile_shader(source: &str) -> ShaderCompileResult {
     let mut warnings = vec![];
     for line in source.lines() {
         let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("fn ") {
-            if let Some(name) = rest.split('(').next() {
-                names.push(name.trim().to_string());
-            }
+        if let Some(rest) = trimmed.strip_prefix("fn ")
+            && let Some(name) = rest.split('(').next()
+        {
+            names.push(name.trim().to_string());
         }
-        if let Some(rest) = trimmed.strip_prefix("kernel ") {
-            if let Some(name) = rest.split('(').next() {
-                names.push(name.trim().to_string());
-            }
+        if let Some(rest) = trimmed.strip_prefix("kernel ")
+            && let Some(name) = rest.split('(').next()
+        {
+            names.push(name.trim().to_string());
         }
         if trimmed.contains("// WARNING:") {
             warnings.push(trimmed.to_string());

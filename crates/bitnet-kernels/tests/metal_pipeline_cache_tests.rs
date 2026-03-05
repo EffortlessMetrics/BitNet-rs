@@ -225,11 +225,11 @@ impl PipelineCache {
         let mut stats = self.stats.lock().unwrap();
         stats.misses += 1;
 
-        if map.len() >= self.capacity {
-            if let Some(evict_key) = map.keys().next().cloned() {
-                map.remove(&evict_key);
-                stats.evictions += 1;
-            }
+        if map.len() >= self.capacity
+            && let Some(evict_key) = map.keys().next().cloned()
+        {
+            map.remove(&evict_key);
+            stats.evictions += 1;
         }
 
         let id = PipelineId(self.next_id.fetch_add(1, Ordering::Relaxed));
@@ -344,7 +344,7 @@ fn align_to_256(size: usize) -> usize {
 }
 
 fn is_aligned(offset: usize) -> bool {
-    offset % METAL_BUFFER_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_BUFFER_ALIGNMENT)
 }
 
 fn validate_workgroup(x: u32, y: u32, z: u32) -> Result<(), PipelineError> {

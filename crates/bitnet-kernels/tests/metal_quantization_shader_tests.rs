@@ -454,7 +454,7 @@ mod tests {
         let scales = vec![1.0f32];
 
         // Simulate f16 round-trip for activations
-        let activation_f32 = vec![1.5, 2.5, 3.5, 4.5];
+        let activation_f32 = [1.5, 2.5, 3.5, 4.5];
         let activation_f16: Vec<f32> =
             activation_f32.iter().map(|&v| half::f16::from_f32(v).to_f32()).collect();
 
@@ -570,9 +570,9 @@ mod tests {
 
         let mut scales = vec![0.0f32; n * num_blocks];
         // Column 1, block 0 → index 1*2 + 0 = 2
-        scales[1 * num_blocks + 0] = 1.5;
+        scales[num_blocks] = 1.5;
         // Column 1, block 1 → index 1*2 + 1 = 3
-        scales[1 * num_blocks + 1] = 2.5;
+        scales[num_blocks + 1] = 2.5;
 
         assert_eq!(scales[2], 1.5);
         assert_eq!(scales[3], 2.5);
@@ -885,7 +885,7 @@ mod tests {
         let weights_packed = pack_i2s_vec(&vals);
 
         // Simulate F16 inline scale (stored with each block).
-        let scale_f32 = 0.123_456_789_f32;
+        let scale_f32 = 0.123_456_79_f32;
         let scale_f16 = half::f16::from_f32(scale_f32).to_f32();
 
         let scales = vec![scale_f16];

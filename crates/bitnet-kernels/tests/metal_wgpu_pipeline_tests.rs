@@ -45,16 +45,13 @@ fn validate_wgsl_compute_shader(source: &str) -> Result<WgslValidation, Vec<Stri
     // Check that binding declarations use valid group indices.
     for line in source.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("@group(") {
-            if let Some(rest) = trimmed.strip_prefix("@group(") {
-                if let Some(idx_str) = rest.split(')').next() {
-                    if let Ok(g) = idx_str.parse::<u32>() {
-                        if g >= MAX_BIND_GROUPS {
-                            errors.push(format!("bind group {g} exceeds max ({MAX_BIND_GROUPS})"));
-                        }
-                    }
-                }
-            }
+        if trimmed.starts_with("@group(")
+            && let Some(rest) = trimmed.strip_prefix("@group(")
+            && let Some(idx_str) = rest.split(')').next()
+            && let Ok(g) = idx_str.parse::<u32>()
+            && g >= MAX_BIND_GROUPS
+        {
+            errors.push(format!("bind group {g} exceeds max ({MAX_BIND_GROUPS})"));
         }
     }
 
@@ -163,12 +160,12 @@ impl PipelineLayout {
 
 fn ceil_div(total: u32, divisor: u32) -> u32 {
     assert_ne!(divisor, 0);
-    (total + divisor - 1) / divisor
+    total.div_ceil(divisor)
 }
 
 fn align_up(n: usize, align: usize) -> usize {
     assert!(align > 0);
-    (n + align - 1) / align * align
+    n.div_ceil(align) * align
 }
 
 /// Choose a 1-D workgroup size that is a multiple of SIMD_WIDTH and
@@ -177,7 +174,7 @@ fn optimal_workgroup_1d(total: u32) -> u32 {
     if total == 0 {
         return 0;
     }
-    let rounded = ((total + SIMD_WIDTH - 1) / SIMD_WIDTH) * SIMD_WIDTH;
+    let rounded = total.div_ceil(SIMD_WIDTH) * SIMD_WIDTH;
     rounded.min(MAX_THREADS_PER_THREADGROUP)
 }
 

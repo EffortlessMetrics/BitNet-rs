@@ -214,7 +214,7 @@ impl TextureLimits {
 /// Aligned row size in bytes (Metal requires ≥4-byte row alignment).
 fn aligned_row_bytes(width: u32, fmt: PixelFormat) -> usize {
     let bw = fmt.block_width();
-    let blocks_per_row = (width + bw - 1) / bw;
+    let blocks_per_row = width.div_ceil(bw);
     let raw = blocks_per_row as usize * fmt.byte_size();
     let align = fmt.row_alignment();
     (raw + align - 1) & !(align - 1)
@@ -223,7 +223,7 @@ fn aligned_row_bytes(width: u32, fmt: PixelFormat) -> usize {
 /// Total bytes needed for a 2-D texture (all rows, including alignment padding).
 fn texture_2d_bytes(width: u32, height: u32, fmt: PixelFormat) -> usize {
     let bh = fmt.block_height();
-    let block_rows = (height + bh - 1) / bh;
+    let block_rows = height.div_ceil(bh);
     aligned_row_bytes(width, fmt) * block_rows as usize
 }
 
@@ -259,7 +259,7 @@ fn textures_for_tensor(total_elements: usize, tile_size: u32, fmt: PixelFormat) 
     if elems_per_tex == 0 {
         return 0;
     }
-    ((total_elements + elems_per_tex - 1) / elems_per_tex) as u32
+    total_elements.div_ceil(elems_per_tex) as u32
 }
 
 /// Whether two formats are "blend-compatible" (same channel count and bit width).
@@ -1182,7 +1182,7 @@ mod apple_silicon_formats {
 
     #[test]
     fn max_texture_capacity_r8() {
-        let cap = 16384u64 * 16384 * 1; // 268 M elements
+        let cap = 16384u64 * 16384; // 268 M elements
         assert_eq!(cap, 268_435_456);
     }
 

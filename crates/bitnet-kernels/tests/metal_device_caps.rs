@@ -428,7 +428,7 @@ fn can_allocate_buffer(device: &MetalDeviceInfo, size_bytes: u64) -> bool {
 fn compute_dispatch_1d(device: &MetalDeviceInfo, total: u64) -> ([u64; 3], [u32; 3]) {
     let tg = optimal_threadgroup_size(device, total);
     let tg_width = tg[0] as u64;
-    let grid_x = (total + tg_width - 1) / tg_width;
+    let grid_x = total.div_ceil(tg_width);
     ([grid_x, 1, 1], tg)
 }
 

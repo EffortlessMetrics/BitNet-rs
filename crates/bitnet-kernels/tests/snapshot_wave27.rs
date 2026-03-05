@@ -46,7 +46,7 @@ fn snapshot_precision_support_display_all() {
 
 #[test]
 fn snapshot_support_level_display_variants() {
-    let levels = vec![
+    let levels = [
         SupportLevel::Full(0.95),
         SupportLevel::Full(1.0),
         SupportLevel::Partial("no FP16 native".into()),

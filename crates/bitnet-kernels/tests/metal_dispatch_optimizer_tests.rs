@@ -104,8 +104,8 @@ fn optimize_2d_dispatch(width: u32, height: u32, caps: &MetalGpuCapabilities) ->
     // Cap Y to actual height to avoid waste
     let tg_y = max_y.min(height).max(1);
 
-    let grid_x = (width + tg_x - 1) / tg_x;
-    let grid_y = (height + tg_y - 1) / tg_y;
+    let grid_x = width.div_ceil(tg_x);
+    let grid_y = height.div_ceil(tg_y);
 
     DispatchConfig {
         threadgroup_size: (tg_x, tg_y, 1),
@@ -133,7 +133,7 @@ fn optimize_reduction_dispatch(input_size: u32, caps: &MetalGpuCapabilities) -> 
     let smem = threads * 4; // sizeof(f32) == 4
     let smem = smem.min(caps.max_threadgroup_memory);
 
-    let groups = (input_size + threads - 1) / threads;
+    let groups = input_size.div_ceil(threads);
 
     DispatchConfig {
         threadgroup_size: (threads, 1, 1),
@@ -168,8 +168,8 @@ fn optimize_matmul_dispatch(
     let smem = (tile_m * k_tile + k_tile * tile_n) * 4; // f32
     let smem = smem.min(caps.max_threadgroup_memory);
 
-    let grid_x = (n + tile_n - 1) / tile_n;
-    let grid_y = (m + tile_m - 1) / tile_m;
+    let grid_x = n.div_ceil(tile_n);
+    let grid_y = m.div_ceil(tile_m);
 
     DispatchConfig {
         threadgroup_size: (tg_x, tg_y, 1),

@@ -238,7 +238,7 @@ mod causal_masking {
         apply_causal_mask(&mut scores, seq_len);
 
         // First token (i=0) should only attend to itself
-        assert_eq!(scores[0 * seq_len + 0], 1.0);
+        assert_eq!(scores[(0 * seq_len)], 1.0);
         for j in 1..seq_len {
             assert!(scores[0 * seq_len + j].is_infinite());
         }

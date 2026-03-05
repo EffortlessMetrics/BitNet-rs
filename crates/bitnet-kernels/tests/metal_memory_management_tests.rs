@@ -6,9 +6,7 @@
     clippy::manual_range_contains,
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::cast_precision_loss,
-    unused_imports,
-    dead_code
+    clippy::cast_precision_loss
 )]
 
 /// Helper struct simulating MTLBuffer with alignment tracking
@@ -61,10 +59,10 @@ impl BufferPool {
     fn allocate(&mut self, size: usize) -> usize {
         let aligned_size = align_up(size, self.alignment);
 
-        if let Some(idx) = self.available.pop() {
-            if self.buffers[idx].size() >= aligned_size {
-                return idx;
-            }
+        if let Some(idx) = self.available.pop()
+            && self.buffers[idx].size() >= aligned_size
+        {
+            return idx;
         }
 
         let buffer = GpuBuffer::new(aligned_size, self.alignment);

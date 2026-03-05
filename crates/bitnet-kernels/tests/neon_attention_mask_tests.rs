@@ -1,9 +1,10 @@
-#![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
 #![cfg(feature = "cpu")]
 #![allow(
     dead_code,
     unused_imports,
     unused_variables,
+    unused_unsafe,
+    unsafe_op_in_unsafe_fn,
     clippy::needless_range_loop,
     clippy::assertions_on_constants
 )]

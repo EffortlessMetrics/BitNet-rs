@@ -127,7 +127,7 @@ fn validate_alignment(buffer_size: usize, alignment_bytes: usize) -> Result<(), 
         ));
     }
 
-    if buffer_size % alignment_bytes != 0 {
+    if !buffer_size.is_multiple_of(alignment_bytes) {
         return Err(format!("Buffer size {} not aligned to {}", buffer_size, alignment_bytes));
     }
 
@@ -400,7 +400,7 @@ fn test_output_range_bounds() {
     assert!(validate_output_range(&data_low, 0.0, 1.0).is_err());
 
     // Boundary values
-    assert!(validate_output_range(&vec![0.0, 1.0], 0.0, 1.0).is_ok());
+    assert!(validate_output_range(&[0.0, 1.0], 0.0, 1.0).is_ok());
 }
 
 #[test]

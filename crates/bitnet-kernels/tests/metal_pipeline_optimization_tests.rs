@@ -72,10 +72,10 @@ impl PsoCache {
     }
 
     fn insert(&mut self, key: PipelineKey, id: PipelineId) {
-        if self.entries.len() >= self.capacity {
-            if let Some(evicted) = self.order.pop_front() {
-                self.entries.remove(&evicted);
-            }
+        if self.entries.len() >= self.capacity
+            && let Some(evicted) = self.order.pop_front()
+        {
+            self.entries.remove(&evicted);
         }
         self.entries.insert(key.clone(), id);
         self.order.push_back(key);
@@ -354,7 +354,7 @@ fn optimal_3d_threadgroup(x: u32, y: u32, z: u32) -> ThreadgroupSize {
 }
 
 fn dispatch_groups(workload: u32, threadgroup: u32) -> u32 {
-    (workload + threadgroup - 1) / threadgroup
+    workload.div_ceil(threadgroup)
 }
 
 #[test]
@@ -723,7 +723,7 @@ impl ArgumentBufferLayout {
         let offset = if let Some(last) = self.entries.last() {
             let raw = last.offset + last.size;
             // Align up
-            (raw + self.alignment - 1) / self.alignment * self.alignment
+            raw.div_ceil(self.alignment) * self.alignment
         } else {
             0
         };
@@ -733,7 +733,7 @@ impl ArgumentBufferLayout {
     fn total_size(&self) -> usize {
         self.entries.last().map_or(0, |e| {
             let raw = e.offset + e.size;
-            (raw + self.alignment - 1) / self.alignment * self.alignment
+            raw.div_ceil(self.alignment) * self.alignment
         })
     }
 
@@ -977,8 +977,8 @@ fn estimate_waves(total_threads: u32, threadgroup_size: u32, simd_width: u32) ->
     if threadgroup_size == 0 || simd_width == 0 {
         return 0;
     }
-    let groups = (total_threads + threadgroup_size - 1) / threadgroup_size;
-    let waves_per_group = (threadgroup_size + simd_width - 1) / simd_width;
+    let groups = total_threads.div_ceil(threadgroup_size);
+    let waves_per_group = threadgroup_size.div_ceil(simd_width);
     groups * waves_per_group
 }
 
@@ -986,7 +986,7 @@ fn schedule_workgroups(total: u32, group_size: u32, max_concurrent: u32) -> Vec<
     if group_size == 0 {
         return vec![];
     }
-    let groups = (total + group_size - 1) / group_size;
+    let groups = total.div_ceil(group_size);
     let mut batches = Vec::new();
     let mut remaining = groups;
     while remaining > 0 {
@@ -1031,7 +1031,7 @@ fn estimate_waves_basic() {
 
 #[test]
 fn estimate_waves_single_group() {
-    assert_eq!(estimate_waves(64, 256, 32), 1 * 8);
+    assert_eq!(estimate_waves(64, 256, 32), 8);
 }
 
 #[test]

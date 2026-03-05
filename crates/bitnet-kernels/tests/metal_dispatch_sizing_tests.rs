@@ -125,13 +125,13 @@ fn optimal_linear(n: u32) -> u32 {
     if n == 0 {
         return 0;
     }
-    let rounded = ((n + APPLE_EXECUTION_WIDTH - 1) / APPLE_EXECUTION_WIDTH) * APPLE_EXECUTION_WIDTH;
+    let rounded = n.div_ceil(APPLE_EXECUTION_WIDTH) * APPLE_EXECUTION_WIDTH;
     rounded.min(METAL_MAX_WORKGROUP_SIZE)
 }
 
 fn ceil_div(a: u32, b: u32) -> u32 {
     assert_ne!(b, 0);
-    (a + b - 1) / b
+    a.div_ceil(b)
 }
 
 fn align_buffer_size(size: usize) -> usize {
@@ -140,7 +140,7 @@ fn align_buffer_size(size: usize) -> usize {
 }
 
 fn is_aligned(offset: usize) -> bool {
-    offset % METAL_BUFFER_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_BUFFER_ALIGNMENT)
 }
 
 fn dispatch_for_matrix(

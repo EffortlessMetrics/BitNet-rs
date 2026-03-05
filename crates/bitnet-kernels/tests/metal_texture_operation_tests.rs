@@ -334,8 +334,7 @@ const METAL_BYTES_PER_ROW_ALIGNMENT: usize = 256;
 
 fn aligned_bytes_per_row(width: usize, bpp: usize) -> usize {
     let raw = width * bpp;
-    (raw + METAL_BYTES_PER_ROW_ALIGNMENT - 1) / METAL_BYTES_PER_ROW_ALIGNMENT
-        * METAL_BYTES_PER_ROW_ALIGNMENT
+    raw.div_ceil(METAL_BYTES_PER_ROW_ALIGNMENT) * METAL_BYTES_PER_ROW_ALIGNMENT
 }
 
 fn copy_texture_to_buffer(tex: &TextureData, bpp: usize) -> (Vec<u8>, usize) {
@@ -706,7 +705,7 @@ mod texture_sampling {
     fn test_anisotropy_compare_function_simulation() {
         // Simulate compare function (depth compare for shadow mapping):
         // compare(sample, ref) → 1.0 if sample < ref, else 0.0
-        let depth_texels = vec![0.3, 0.5, 0.7, 0.9];
+        let depth_texels = [0.3, 0.5, 0.7, 0.9];
         let reference = 0.6;
         let results: Vec<f32> =
             depth_texels.iter().map(|&d| if d < reference { 1.0 } else { 0.0 }).collect();
@@ -1280,8 +1279,8 @@ mod apple_silicon_texture_optimization {
         let uncompressed_bytes = width * height * uncompressed_bpp;
 
         let block_size = 4;
-        let blocks_x = (width + block_size - 1) / block_size;
-        let blocks_y = (height + block_size - 1) / block_size;
+        let blocks_x = width.div_ceil(block_size);
+        let blocks_y = height.div_ceil(block_size);
         let astc_block_bytes = 16;
         let compressed_bytes = blocks_x * blocks_y * astc_block_bytes;
 
@@ -1572,7 +1571,7 @@ mod texture_performance {
         // Verify worker boundaries
         assert_eq!(merged.read_pixel(0, 0)[0], 0.0);
         let worker1_start = rows_per_worker;
-        assert_eq!(merged.read_pixel(0, worker1_start)[0], (1 * 100) as f32);
+        assert_eq!(merged.read_pixel(0, worker1_start)[0], 100 as f32);
         let _ = &mut regions; // suppress unused-mut on some editions
     }
 

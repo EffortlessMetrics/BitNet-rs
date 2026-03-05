@@ -1007,7 +1007,7 @@ mod shared_memory_patterns {
         let data = vec![1.0, 2.0, 3.0, 4.0];
         let result = blelloch_scan(&data);
         assert_eq!(result.len(), 4);
-        let expected = vec![0.0, 1.0, 3.0, 6.0];
+        let expected = [0.0, 1.0, 3.0, 6.0];
         for (r, e) in result.iter().zip(expected.iter()) {
             assert!((r - e).abs() < 1e-6, "got {r}, expected {e}");
         }
@@ -1054,7 +1054,7 @@ mod shared_memory_patterns {
     fn inclusive_scan_basic() {
         let data = vec![1.0, 2.0, 3.0, 4.0];
         let result = inclusive_scan(&data);
-        let expected = vec![1.0, 3.0, 6.0, 10.0];
+        let expected = [1.0, 3.0, 6.0, 10.0];
         for (r, e) in result.iter().zip(expected.iter()) {
             assert!((r - e).abs() < 1e-6);
         }
