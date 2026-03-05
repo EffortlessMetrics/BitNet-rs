@@ -78,14 +78,19 @@ impl DenseLinear {
         Self { weight, bias, in_features, out_features }
     }
 
-    /// Forward pass: `output = x @ W^T + bias`
+    /// Forward pass writing into a pre-allocated output buffer.
     ///
-    /// `x` shape: `[..., in_features]` (flattened to 2-D internally).
-    /// Returns shape: `[..., out_features]`.
-    pub fn forward(&self, x: &[f32]) -> Vec<f32> {
+    /// `x` shape: `[batch, in_features]` row-major.
+    /// `out` must have length `≥ batch * out_features`.
+    pub fn forward_into(&self, x: &[f32], out: &mut [f32]) {
         assert_eq!(x.len() % self.in_features, 0, "input length must be a multiple of in_features");
         let batch = x.len() / self.in_features;
-        let mut out = vec![0.0f32; batch * self.out_features];
+        assert!(
+            out.len() >= batch * self.out_features,
+            "output buffer too small: need {}, got {}",
+            batch * self.out_features,
+            out.len()
+        );
 
         for b in 0..batch {
             let x_row = &x[b * self.in_features..(b + 1) * self.in_features];
@@ -101,6 +106,16 @@ impl DenseLinear {
                 out[b * self.out_features + o] = acc;
             }
         }
+    }
+
+    /// Forward pass: `output = x @ W^T + bias`
+    ///
+    /// `x` shape: `[..., in_features]` (flattened to 2-D internally).
+    /// Returns shape: `[..., out_features]`.
+    pub fn forward(&self, x: &[f32]) -> Vec<f32> {
+        let batch = x.len() / self.in_features;
+        let mut out = vec![0.0f32; batch * self.out_features];
+        self.forward_into(x, &mut out);
         out
     }
 }
@@ -118,6 +133,27 @@ pub struct DenseFFN {
 impl DenseFFN {
     pub fn new(gate_proj: DenseLinear, up_proj: DenseLinear, down_proj: DenseLinear) -> Self {
         Self { gate_proj, up_proj, down_proj }
+    }
+
+    /// Forward into pre-allocated buffers, eliminating 3 per-layer allocations.
+    ///
+    /// * `x`: input `[batch, hidden_size]`
+    /// * `out`: output buffer `[batch, hidden_size]`
+    /// * `gate_buf`: scratch `[batch, intermediate_size]`
+    /// * `up_buf`: scratch `[batch, intermediate_size]`
+    pub fn forward_into(
+        &self,
+        x: &[f32],
+        out: &mut [f32],
+        gate_buf: &mut [f32],
+        up_buf: &mut [f32],
+    ) {
+        self.gate_proj.forward_into(x, gate_buf);
+        self.up_proj.forward_into(x, up_buf);
+        for (g, &u) in gate_buf.iter_mut().zip(up_buf.iter()) {
+            *g = silu(*g) * u;
+        }
+        self.down_proj.forward_into(gate_buf, out);
     }
 
     /// Forward: `down(silu(gate(x)) * up(x))`
@@ -234,6 +270,28 @@ impl DenseAttention {
 
 // ── Dense Transformer Block ──────────────────────────────────────────────────
 
+/// Reusable workspace for [`DenseTransformerBlock::forward_into_ws`],
+/// eliminating per-layer FFN allocations.
+#[derive(Debug, Clone)]
+pub struct BlockWorkspace {
+    pub normed: Vec<f32>,
+    pub ffn_out: Vec<f32>,
+    pub ffn_gate: Vec<f32>,
+    pub ffn_up: Vec<f32>,
+}
+
+impl BlockWorkspace {
+    /// Create a workspace sized for the given dimensions.
+    pub fn new(seq_len: usize, hidden_size: usize, intermediate_size: usize) -> Self {
+        Self {
+            normed: vec![0.0f32; seq_len * hidden_size],
+            ffn_out: vec![0.0f32; seq_len * hidden_size],
+            ffn_gate: vec![0.0f32; seq_len * intermediate_size],
+            ffn_up: vec![0.0f32; seq_len * intermediate_size],
+        }
+    }
+}
+
 /// Pre-norm transformer block for dense (FP32) models.
 ///
 /// ```text
@@ -318,6 +376,54 @@ impl DenseTransformerBlock {
             *oi += fi;
         }
     }
+
+    /// Forward pass using a [`BlockWorkspace`] to eliminate FFN allocations.
+    ///
+    /// Semantically identical to [`forward_into`](Self::forward_into), but
+    /// reuses FFN scratch buffers from `ws` instead of allocating per call.
+    pub fn forward_into_ws(&self, x: &[f32], out: &mut [f32], ws: &mut BlockWorkspace) {
+        let seq_len = x.len() / self.hidden_size;
+        assert_eq!(x.len(), seq_len * self.hidden_size);
+        assert!(out.len() >= x.len());
+        assert!(ws.normed.len() >= x.len());
+        let dim = self.hidden_size;
+
+        // ── Attention sub-block ──────────────────────────────────────────
+        for t in 0..seq_len {
+            let start = t * dim;
+            let end = start + dim;
+            rms_norm_into(
+                &x[start..end],
+                &self.attn_norm_weight,
+                self.norm_eps,
+                &mut ws.normed[start..end],
+            );
+        }
+        let attn_out = self.attention.forward(&ws.normed);
+
+        // Residual: out = x + attn_out
+        for (oi, (xi, ai)) in out.iter_mut().zip(x.iter().zip(attn_out.iter())) {
+            *oi = xi + ai;
+        }
+
+        // ── FFN sub-block ────────────────────────────────────────────────
+        for t in 0..seq_len {
+            let start = t * dim;
+            let end = start + dim;
+            rms_norm_into(
+                &out[start..end],
+                &self.ffn_norm_weight,
+                self.norm_eps,
+                &mut ws.normed[start..end],
+            );
+        }
+        self.ffn.forward_into(&ws.normed, &mut ws.ffn_out, &mut ws.ffn_gate, &mut ws.ffn_up);
+
+        // Residual
+        for (oi, fi) in out.iter_mut().zip(ws.ffn_out.iter()) {
+            *oi += fi;
+        }
+    }
 }
 
 // ── Dense Model (multi-layer) ────────────────────────────────────────────────
@@ -347,35 +453,37 @@ impl DenseModel {
             buf_a.extend_from_slice(&self.tok_embeddings[tid * dim..(tid + 1) * dim]);
         }
 
-        // Pre-allocate ping-pong buffer and scratch for all blocks.
+        // Pre-allocate ping-pong buffer and block workspace for all blocks.
         let mut buf_b = vec![0.0f32; seq_len * dim];
-        let mut normed = vec![0.0f32; seq_len * dim];
+        let intermediate_size =
+            self.blocks.first().map(|b| b.ffn.gate_proj.out_features).unwrap_or(dim);
+        let mut ws = BlockWorkspace::new(seq_len, dim, intermediate_size);
 
         // Transformer blocks with ping-pong to avoid per-block allocation.
         for (i, block) in self.blocks.iter().enumerate() {
             if i % 2 == 0 {
-                block.forward_into(&buf_a, &mut buf_b, &mut normed);
+                block.forward_into_ws(&buf_a, &mut buf_b, &mut ws);
             } else {
-                block.forward_into(&buf_b, &mut buf_a, &mut normed);
+                block.forward_into_ws(&buf_b, &mut buf_a, &mut ws);
             }
         }
         // Result is in buf_b if even number of blocks processed last,
         // buf_a if odd.
-        let hidden = if self.blocks.len() % 2 == 0 { &buf_a } else { &buf_b };
+        let hidden = if self.blocks.len().is_multiple_of(2) { &buf_a } else { &buf_b };
 
-        // Final RMSNorm (reuse normed buffer)
+        // Final RMSNorm (reuse normed buffer from workspace)
         for t in 0..seq_len {
             let row = &hidden[t * dim..(t + 1) * dim];
             rms_norm_into(
                 row,
                 &self.final_norm_weight,
                 self.norm_eps,
-                &mut normed[t * dim..(t + 1) * dim],
+                &mut ws.normed[t * dim..(t + 1) * dim],
             );
         }
 
         // LM head (only last position for causal LM)
-        let last_hidden = &normed[(seq_len - 1) * dim..seq_len * dim];
+        let last_hidden = &ws.normed[(seq_len - 1) * dim..seq_len * dim];
         self.lm_head.forward(last_hidden)
     }
 }
@@ -845,5 +953,113 @@ mod tests {
         let logits1 = make_model(block1).forward(&[0, 2, 5]);
         let logits2 = make_model(block2).forward(&[0, 2, 5]);
         assert_vec_approx(&logits1, &logits2, 1e-6, "deterministic forward");
+    }
+
+    // ── DenseLinear::forward_into tests ─────────────────────────────────
+
+    #[test]
+    fn test_linear_forward_into_matches_forward() {
+        let dim = 8;
+        let out_dim = 4;
+        let w: Vec<f32> = (0..out_dim * dim).map(|i| (i as f32) * 0.01).collect();
+        let lin = DenseLinear::new(w, None, dim, out_dim);
+        let x: Vec<f32> = (0..dim).map(|i| i as f32).collect();
+
+        let expected = lin.forward(&x);
+        let mut got = vec![0.0f32; out_dim];
+        lin.forward_into(&x, &mut got);
+        assert_vec_approx(&expected, &got, 1e-7, "forward_into vs forward");
+    }
+
+    #[test]
+    fn test_linear_forward_into_batch() {
+        let dim = 4;
+        let out_dim = 3;
+        let w: Vec<f32> = (0..out_dim * dim).map(|i| (i as f32) * 0.1).collect();
+        let bias = Some(vec![0.1, 0.2, 0.3]);
+        let lin = DenseLinear::new(w, bias, dim, out_dim);
+        let x: Vec<f32> = (0..2 * dim).map(|i| i as f32 * 0.5).collect();
+
+        let expected = lin.forward(&x);
+        let mut got = vec![0.0f32; 2 * out_dim];
+        lin.forward_into(&x, &mut got);
+        assert_vec_approx(&expected, &got, 1e-7, "forward_into batch");
+    }
+
+    // ── DenseFFN::forward_into tests ────────────────────────────────────
+
+    #[test]
+    fn test_ffn_forward_into_matches_forward() {
+        let dim = 4;
+        let inter = 8;
+        let gate_w: Vec<f32> = (0..inter * dim).map(|i| (i as f32) * 0.01).collect();
+        let up_w: Vec<f32> = (0..inter * dim).map(|i| (i as f32) * 0.02 - 0.5).collect();
+        let down_w: Vec<f32> = (0..dim * inter).map(|i| (i as f32) * 0.01).collect();
+        let ffn = DenseFFN::new(
+            DenseLinear::new(gate_w, None, dim, inter),
+            DenseLinear::new(up_w, None, dim, inter),
+            DenseLinear::new(down_w, None, inter, dim),
+        );
+        let x: Vec<f32> = (0..dim).map(|i| i as f32 * 0.5).collect();
+
+        let expected = ffn.forward(&x);
+        let mut out = vec![0.0f32; dim];
+        let mut gate_buf = vec![0.0f32; inter];
+        let mut up_buf = vec![0.0f32; inter];
+        ffn.forward_into(&x, &mut out, &mut gate_buf, &mut up_buf);
+        assert_vec_approx(&expected, &out, 1e-7, "ffn forward_into vs forward");
+    }
+
+    // ── BlockWorkspace tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_forward_into_ws_matches_forward_into() {
+        let dim = 8;
+        let inter = 16;
+        let num_heads = 2;
+        let block = make_test_block(dim, inter, num_heads);
+        let x: Vec<f32> = (0..2 * dim).map(|i| (i as f32) * 0.1).collect();
+
+        // Reference via forward_into
+        let mut out_ref = vec![0.0f32; x.len()];
+        let mut normed_ref = vec![0.0f32; x.len()];
+        block.forward_into(&x, &mut out_ref, &mut normed_ref);
+
+        // Via workspace
+        let mut out_ws = vec![0.0f32; x.len()];
+        let mut ws = BlockWorkspace::new(2, dim, inter);
+        block.forward_into_ws(&x, &mut out_ws, &mut ws);
+
+        assert_vec_approx(&out_ref, &out_ws, 1e-6, "workspace vs plain forward_into");
+    }
+
+    #[test]
+    fn test_model_forward_uses_workspace() {
+        // Verify DenseModel::forward() (which now uses BlockWorkspace)
+        // produces deterministic results matching a second call.
+        let dim = 8;
+        let inter = 16;
+        let num_heads = 2;
+        let vocab = 10;
+
+        let tok_emb: Vec<f32> = (0..vocab * dim).map(|i| ((i % 13) as f32 - 6.0) * 0.1).collect();
+        let lm_w: Vec<f32> = (0..vocab * dim).map(|i| ((i % 11) as f32 - 5.0) * 0.05).collect();
+
+        let model = DenseModel {
+            blocks: vec![
+                make_test_block(dim, inter, num_heads),
+                make_test_block(dim, inter, num_heads),
+            ],
+            final_norm_weight: vec![1.0; dim],
+            norm_eps: EPS,
+            lm_head: DenseLinear::new(lm_w, None, dim, vocab),
+            tok_embeddings: tok_emb,
+            hidden_size: dim,
+            vocab_size: vocab,
+        };
+
+        let logits1 = model.forward(&[1, 3, 7]);
+        let logits2 = model.forward(&[1, 3, 7]);
+        assert_vec_approx(&logits1, &logits2, 1e-6, "model workspace determinism");
     }
 }
