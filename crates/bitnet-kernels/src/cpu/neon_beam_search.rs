@@ -165,8 +165,8 @@ pub fn neon_beam_prune(scores: &[f32], best_score: f32, threshold: f32) -> Vec<u
             let cmp = vcgeq_f32(s, cutoff_vec);
             // Extract comparison result per lane
             let mask: [u32; 4] = std::mem::transmute(cmp);
-            for j in 0..4 {
-                if mask[j] != 0 {
+            for (j, &mask_val) in mask.iter().enumerate() {
+                if mask_val != 0 {
                     survivors.push(base + j);
                 }
             }
@@ -261,7 +261,7 @@ pub fn neon_beam_merge(
             break;
         }
         let seq = hyp.token_ids.as_slice();
-        if !seen.iter().any(|s| *s == seq) {
+        if !seen.contains(&seq) {
             seen.push(seq);
             merged.push(hyp.clone());
         }

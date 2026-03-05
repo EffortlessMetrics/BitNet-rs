@@ -60,9 +60,7 @@ unsafe fn neon_copy_f32(src: &[f32], dst: &mut [f32]) {
         }
     }
 
-    for i in (chunks * 4)..n {
-        dst[i] = src[i];
-    }
+    dst[(chunks * 4)..n].copy_from_slice(&src[(chunks * 4)..n]);
 }
 
 /// Sinusoidal position encoding with NEON-accelerated computation.
@@ -77,8 +75,8 @@ pub fn neon_position_encoding(seq_len: usize, embed_dim: usize, base: f32) -> Ve
 
     // Precompute inverse frequencies: 1 / base^(2i / embed_dim).
     let mut inv_freq = vec![0.0f32; half_dim];
-    for i in 0..half_dim {
-        inv_freq[i] = 1.0 / base.powf(2.0 * i as f32 / embed_dim as f32);
+    for (i, freq) in inv_freq.iter_mut().enumerate().take(half_dim) {
+        *freq = 1.0 / base.powf(2.0 * i as f32 / embed_dim as f32);
     }
 
     for pos in 0..seq_len {
@@ -111,10 +109,10 @@ unsafe fn neon_sincos_row(pos: f32, inv_freq: &[f32], output: &mut [f32], half_d
 
             // Extract angles for scalar sin/cos (no native NEON sin/cos).
             let a: [f32; 4] = std::mem::transmute(angle);
-            for j in 0..4 {
+            for (j, &a_val) in a.iter().enumerate() {
                 let dim_idx = offset + j;
-                output[dim_idx * 2] = a[j].sin();
-                output[dim_idx * 2 + 1] = a[j].cos();
+                output[dim_idx * 2] = a_val.sin();
+                output[dim_idx * 2 + 1] = a_val.cos();
             }
         }
     }
@@ -223,8 +221,8 @@ unsafe fn neon_layernorm_token(token: &[f32], output: &mut [f32], eps: f32) {
         }
     }
     let mut sum = unsafe { vaddvq_f32(sum_vec) };
-    for i in (chunks * 4)..n {
-        sum += token[i];
+    for &t in token.iter().take(n).skip(chunks * 4) {
+        sum += t;
     }
     let mean = sum / n as f32;
 
@@ -239,8 +237,8 @@ unsafe fn neon_layernorm_token(token: &[f32], output: &mut [f32], eps: f32) {
         }
     }
     let mut var_sum = unsafe { vaddvq_f32(var_vec) };
-    for i in (chunks * 4)..n {
-        let d = token[i] - mean;
+    for &t in token.iter().take(n).skip(chunks * 4) {
+        let d = t - mean;
         var_sum += d * d;
     }
     let inv_std = 1.0 / (var_sum / n as f32 + eps).sqrt();

@@ -19,6 +19,11 @@ const LANES: usize = 4;
 /// - `keys`: shape `[num_keys * head_dim]` (row-major)
 /// - `scores_out`: shape `[num_keys]`
 ///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Input slices must have the documented minimum lengths.
+///
 /// # Panics
 ///
 /// Panics if `head_dim` is zero, `keys.len()` is not a multiple of
@@ -44,10 +49,10 @@ pub unsafe fn neon_scaled_dot_product_attention(
     let scale = 1.0_f32 / (head_dim as f32).sqrt();
     let q_ptr = query.as_ptr();
 
-    for k in 0..num_keys {
+    for (k, score) in scores_out.iter_mut().enumerate().take(num_keys) {
         let k_ptr = unsafe { keys.as_ptr().add(k * head_dim) };
         let dot = unsafe { neon_dot_f32(q_ptr, k_ptr, head_dim) };
-        scores_out[k] = dot * scale;
+        *score = dot * scale;
     }
 }
 
@@ -93,6 +98,11 @@ unsafe fn neon_dot_f32(a: *const f32, b: *const f32, len: usize) -> f32 {
 ///   each head's keys are contiguous)
 /// - `scores_out`: shape `[num_heads * num_keys]`
 ///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Input slices must have the documented minimum lengths.
+///
 /// # Panics
 ///
 /// Panics on dimension mismatches.
@@ -136,6 +146,11 @@ pub unsafe fn neon_multi_head_attention_scores(
 /// - `query_pos`: current query position in the sequence
 /// - `window_size`: number of positions visible (including self)
 /// - `scores_out`: shape `[seq_len]`
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Input slices must have the documented minimum lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_sliding_window_attention(
@@ -155,16 +170,16 @@ pub unsafe fn neon_sliding_window_attention(
     let scale = 1.0_f32 / (head_dim as f32).sqrt();
     let q_ptr = query.as_ptr();
 
-    let win_start = if query_pos + 1 >= window_size { query_pos + 1 - window_size } else { 0 };
+    let win_start = (query_pos + 1).saturating_sub(window_size);
     let win_end = (query_pos + 1).min(seq_len);
 
-    for i in 0..seq_len {
+    for (i, score) in scores_out.iter_mut().enumerate().take(seq_len) {
         if i >= win_start && i < win_end {
             let k_ptr = unsafe { keys.as_ptr().add(i * head_dim) };
             let dot = unsafe { neon_dot_f32(q_ptr, k_ptr, head_dim) };
-            scores_out[i] = dot * scale;
+            *score = dot * scale;
         } else {
-            scores_out[i] = f32::NEG_INFINITY;
+            *score = f32::NEG_INFINITY;
         }
     }
 }
@@ -180,6 +195,11 @@ pub unsafe fn neon_sliding_window_attention(
 ///   query_pos]` (local block)
 ///
 /// Unattended positions receive `f32::NEG_INFINITY`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Input slices must have the documented minimum lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_sparse_attention_scores(
@@ -201,19 +221,19 @@ pub unsafe fn neon_sparse_attention_scores(
     let scale = 1.0_f32 / (head_dim as f32).sqrt();
     let q_ptr = query.as_ptr();
 
-    let local_start = if query_pos + 1 >= local_size { query_pos + 1 - local_size } else { 0 };
+    let local_start = (query_pos + 1).saturating_sub(local_size);
     let local_end = (query_pos + 1).min(seq_len);
 
-    for i in 0..seq_len {
+    for (i, score) in scores_out.iter_mut().enumerate().take(seq_len) {
         let is_strided = i % stride == 0;
         let is_local = i >= local_start && i < local_end;
 
         if is_strided || is_local {
             let k_ptr = unsafe { keys.as_ptr().add(i * head_dim) };
             let dot = unsafe { neon_dot_f32(q_ptr, k_ptr, head_dim) };
-            scores_out[i] = dot * scale;
+            *score = dot * scale;
         } else {
-            scores_out[i] = f32::NEG_INFINITY;
+            *score = f32::NEG_INFINITY;
         }
     }
 }
@@ -225,6 +245,11 @@ pub unsafe fn neon_sparse_attention_scores(
 /// - `decoder_queries`: shape `[num_queries * head_dim]`
 /// - `encoder_keys`: shape `[num_enc_keys * head_dim]`
 /// - `scores_out`: shape `[num_queries * num_enc_keys]`
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Input slices must have the documented minimum lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_cross_attention_scores(
@@ -266,6 +291,10 @@ pub unsafe fn neon_cross_attention_scores(
 ///
 /// This prevents extreme logits from causing numerical issues in the
 /// subsequent softmax.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_clamp_attention_scores(scores: &mut [f32], min_val: f32, max_val: f32) {
@@ -303,6 +332,11 @@ pub unsafe fn neon_clamp_attention_scores(scores: &mut [f32], min_val: f32, max_
 /// # Panics
 ///
 /// Panics if `scores` and `mask` have different lengths.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `scores` and `mask` must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_apply_attention_dropout(scores: &mut [f32], mask: &[f32], inv_keep_prob: f32) {
@@ -340,6 +374,11 @@ pub unsafe fn neon_apply_attention_dropout(scores: &mut [f32], mask: &[f32], inv
 /// # Panics
 ///
 /// Panics if `mask_out` and `random_vals` have different lengths.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `random_vals` and `mask_out` must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_generate_dropout_mask(

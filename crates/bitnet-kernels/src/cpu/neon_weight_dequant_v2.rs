@@ -140,11 +140,11 @@ pub fn dequant_i2s_block_v2(packed: &[u8], scale: f32, block_size: usize, out: &
 
 /// Scalar implementation of I2_S block dequantization.
 pub fn dequant_i2s_block_scalar(packed: &[u8], scale: f32, block_size: usize, out: &mut [f32]) {
-    for i in 0..block_size {
+    for (i, out_val) in out.iter_mut().enumerate().take(block_size) {
         let byte_idx = i / 4;
         let bit_off = (i % 4) * 2;
         let bits = (packed[byte_idx] >> bit_off) & 0x03;
-        out[i] = decode_i2s_scalar(bits) as f32 * scale;
+        *out_val = decode_i2s_scalar(bits) as f32 * scale;
     }
 }
 
@@ -280,14 +280,14 @@ pub fn dequant_row_blocked(
     assert!(out.len() >= num_elements, "output too small: need {num_elements}, got {}", out.len());
 
     let bytes_per_block = block_size / 4;
-    for blk in 0..num_blocks {
+    for (blk, &scale) in scales.iter().enumerate().take(num_blocks) {
         let elem_start = blk * block_size;
         let elem_end = (elem_start + block_size).min(num_elements);
         let this_block_size = elem_end - elem_start;
         let byte_start = blk * bytes_per_block;
         dequant_i2s_block_v2(
             &packed[byte_start..],
-            scales[blk],
+            scale,
             this_block_size,
             &mut out[elem_start..],
         );
@@ -326,12 +326,12 @@ pub fn dequant_batch_rows(
     assert!(packed_rows.len() >= num_rows * bytes_per_row, "packed_rows too small");
     assert!(out.len() >= num_rows * row_elements, "output buffer too small");
 
-    for row in 0..num_rows {
+    for (row, &row_scales) in scales_per_row.iter().enumerate().take(num_rows) {
         let packed_start = row * bytes_per_row;
         let out_start = row * row_elements;
         dequant_row_blocked(
             &packed_rows[packed_start..packed_start + bytes_per_row],
-            scales_per_row[row],
+            row_scales,
             block_size,
             row_elements,
             &mut out[out_start..out_start + row_elements],
@@ -533,7 +533,7 @@ pub fn dequant_interleaved_4row(
     num_rows: usize,
     out: &mut [f32],
 ) {
-    assert!(num_rows % 4 == 0, "num_rows must be multiple of 4");
+    assert!(num_rows.is_multiple_of(4), "num_rows must be multiple of 4");
     assert!(out.len() >= num_rows * elements_per_row, "output too small");
 
     let blocks_per_row = elements_per_row.div_ceil(BLOCK_SIZE_32);
@@ -581,7 +581,7 @@ pub fn pack_interleaved_4row(
     elements_per_row: usize,
     num_rows: usize,
 ) -> Vec<u8> {
-    assert!(num_rows % 4 == 0, "num_rows must be multiple of 4");
+    assert!(num_rows.is_multiple_of(4), "num_rows must be multiple of 4");
     let bytes_per_row = elements_per_row.div_ceil(4);
     let mut interleaved = vec![0u8; num_rows * bytes_per_row];
 

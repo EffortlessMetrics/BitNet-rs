@@ -378,9 +378,9 @@ pub fn neon_find_lru_victim(entries: &[EvictionEntry]) -> Option<usize> {
 
     // Scalar tail.
     let tail_start = chunks * 4;
-    for i in tail_start..access.len() {
-        if access[i] < min_val {
-            min_val = access[i];
+    for (i, &acc) in access.iter().enumerate().skip(tail_start) {
+        if acc < min_val {
+            min_val = acc;
             min_idx = i;
         }
     }

@@ -163,7 +163,7 @@ pub unsafe fn neon_dequantize_symmetric(quantized: &[i8], scale: f32) -> Vec<f32
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_quantize_to_ternary(input: &[f32], threshold: f32) -> Vec<u8> {
     let len = input.len();
-    let out_bytes = (len + 3) / 4; // 4 values per byte
+    let out_bytes = len.div_ceil(4); // 4 values per byte
     let mut output = vec![0u8; out_bytes];
 
     let ptr_in = input.as_ptr();
@@ -172,7 +172,7 @@ pub unsafe fn neon_quantize_to_ternary(input: &[f32], threshold: f32) -> Vec<u8>
     let chunks = len / 4;
     let remainder = len % 4;
 
-    for i in 0..chunks {
+    for (i, out_val) in output.iter_mut().enumerate().take(chunks) {
         let v = vld1q_f32(ptr_in.add(i * 4));
 
         // Compare: pos_mask lanes where v > threshold, neg_mask where v < -threshold.
@@ -203,7 +203,7 @@ pub unsafe fn neon_quantize_to_ternary(input: &[f32], threshold: f32) -> Vec<u8>
             };
             byte |= bits << (j * 2);
         }
-        output[i] = byte;
+        *out_val = byte;
     }
 
     // Scalar tail.
@@ -245,7 +245,7 @@ pub unsafe fn neon_absmax_per_block(input: &[f32], block_size: usize) -> Vec<f32
         return Vec::new();
     }
 
-    let num_blocks = (len + block_size - 1) / block_size;
+    let num_blocks = len.div_ceil(block_size);
     let mut output = Vec::with_capacity(num_blocks);
     let ptr = input.as_ptr();
 
