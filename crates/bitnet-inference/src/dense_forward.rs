@@ -262,13 +262,25 @@ impl DenseTransformerBlock {
     /// `x`: `[seq_len, hidden_size]` row-major.
     /// Returns: `[seq_len, hidden_size]`.
     pub fn forward(&self, x: &[f32]) -> Vec<f32> {
+        let mut out = vec![0.0f32; x.len()];
+        let mut normed = vec![0.0f32; x.len()];
+        self.forward_into(x, &mut out, &mut normed);
+        out
+    }
+
+    /// Forward pass writing into pre-allocated buffers.
+    ///
+    /// `x`: `[seq_len, hidden_size]` row-major input.
+    /// `out`: `[seq_len, hidden_size]` output buffer (must be same length as `x`).
+    /// `normed`: `[seq_len, hidden_size]` scratch buffer for norm results.
+    ///
+    /// After return, `out` contains the block output.
+    pub fn forward_into(&self, x: &[f32], out: &mut [f32], normed: &mut [f32]) {
         let seq_len = x.len() / self.hidden_size;
         assert_eq!(x.len(), seq_len * self.hidden_size);
+        assert!(out.len() >= x.len());
+        assert!(normed.len() >= x.len());
         let dim = self.hidden_size;
-
-        // Two reusable buffers: normed (both norm passes) and h (residual)
-        let mut normed = vec![0.0f32; x.len()];
-        let mut h = vec![0.0f32; x.len()];
 
         // ── Attention sub-block ──────────────────────────────────────────
         for t in 0..seq_len {
@@ -281,11 +293,11 @@ impl DenseTransformerBlock {
                 &mut normed[start..end],
             );
         }
-        let attn_out = self.attention.forward(&normed);
+        let attn_out = self.attention.forward(normed);
 
-        // Residual: h = x + attn_out (in-place into pre-allocated h)
-        for (hi, (xi, ai)) in h.iter_mut().zip(x.iter().zip(attn_out.iter())) {
-            *hi = xi + ai;
+        // Residual: out = x + attn_out
+        for (oi, (xi, ai)) in out.iter_mut().zip(x.iter().zip(attn_out.iter())) {
+            *oi = xi + ai;
         }
 
         // ── FFN sub-block (reuse normed buffer) ─────────────────────────
@@ -293,20 +305,18 @@ impl DenseTransformerBlock {
             let start = t * dim;
             let end = start + dim;
             rms_norm_into(
-                &h[start..end],
+                &out[start..end],
                 &self.ffn_norm_weight,
                 self.norm_eps,
                 &mut normed[start..end],
             );
         }
-        let ffn_out = self.ffn.forward(&normed);
+        let ffn_out = self.ffn.forward(normed);
 
         // Residual
-        for (hi, fi) in h.iter_mut().zip(ffn_out.iter()) {
-            *hi += fi;
+        for (oi, fi) in out.iter_mut().zip(ffn_out.iter()) {
+            *oi += fi;
         }
-
-        h
     }
 }
 
@@ -331,19 +341,29 @@ impl DenseModel {
         let dim = self.hidden_size;
 
         // Embedding lookup
-        let mut hidden = Vec::with_capacity(seq_len * dim);
+        let mut buf_a = Vec::with_capacity(seq_len * dim);
         for &tid in token_ids {
             assert!(tid < self.vocab_size, "token_id {} >= vocab_size {}", tid, self.vocab_size);
-            hidden.extend_from_slice(&self.tok_embeddings[tid * dim..(tid + 1) * dim]);
+            buf_a.extend_from_slice(&self.tok_embeddings[tid * dim..(tid + 1) * dim]);
         }
 
-        // Transformer blocks
-        for block in &self.blocks {
-            hidden = block.forward(&hidden);
-        }
+        // Pre-allocate ping-pong buffer and scratch for all blocks.
+        let mut buf_b = vec![0.0f32; seq_len * dim];
+        let mut normed = vec![0.0f32; seq_len * dim];
 
-        // Final RMSNorm (reuse hidden buffer space via a single alloc)
-        let mut normed = vec![0.0f32; hidden.len()];
+        // Transformer blocks with ping-pong to avoid per-block allocation.
+        for (i, block) in self.blocks.iter().enumerate() {
+            if i % 2 == 0 {
+                block.forward_into(&buf_a, &mut buf_b, &mut normed);
+            } else {
+                block.forward_into(&buf_b, &mut buf_a, &mut normed);
+            }
+        }
+        // Result is in buf_b if even number of blocks processed last,
+        // buf_a if odd.
+        let hidden = if self.blocks.len() % 2 == 0 { &buf_a } else { &buf_b };
+
+        // Final RMSNorm (reuse normed buffer)
         for t in 0..seq_len {
             let row = &hidden[t * dim..(t + 1) * dim];
             rms_norm_into(
