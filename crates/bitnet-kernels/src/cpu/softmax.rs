@@ -355,13 +355,22 @@ pub fn softmax_topk(input: &[f32], output: &mut [f32], k: usize) -> Result<()> {
         input[b].partial_cmp(&input[a]).unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let top_k_indices = &indices[..effective_k];
-    let mut mask = vec![false; input.len()];
-    for &idx in top_k_indices {
-        mask[idx] = true;
+    // Fill output with NEG_INFINITY, then copy top-k values into their positions.
+    // This avoids allocating a separate bool mask Vec.
+    output.fill(f32::NEG_INFINITY);
+    for &idx in &indices[..effective_k] {
+        output[idx] = input[idx];
     }
 
-    softmax_with_mask(input, output, &mask)
+    softmax_f32_inplace(output)?;
+
+    // Ensure non-top-k positions are exactly 0 (exp(-inf) may give tiny values).
+    for o in output.iter_mut() {
+        if *o < f32::MIN_POSITIVE {
+            *o = 0.0;
+        }
+    }
+    Ok(())
 }
 
 /// Online (streaming) softmax — single-pass numerically-stable algorithm.
