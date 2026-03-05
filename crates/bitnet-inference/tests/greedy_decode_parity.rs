@@ -175,6 +175,31 @@ mod greedy_argmax_tests {
         );
         eprintln!("✓ Greedy argmax with negative logits passed");
     }
+
+    /// Greedy argmax with single element (vocab size 1 edge case)
+    #[test]
+    fn test_greedy_argmax_single_element() {
+        let logits = vec![42.0];
+        assert_eq!(greedy_argmax(&logits), 0);
+    }
+
+    /// Greedy argmax with large vocab (simulates realistic vocab_size ≈ 128k)
+    #[test]
+    fn test_greedy_argmax_large_vocab() {
+        let mut logits = vec![0.0f32; 128_000];
+        logits[99_999] = 1.0;
+        assert_eq!(greedy_argmax(&logits), 99_999);
+    }
+
+    /// Greedy argmax with extreme float values (inf, very large)
+    #[test]
+    fn test_greedy_argmax_extreme_values() {
+        let logits = vec![f32::NEG_INFINITY, 0.0, f32::NEG_INFINITY];
+        assert_eq!(greedy_argmax(&logits), 1);
+
+        let logits = vec![1e38, -1e38, 1e37];
+        assert_eq!(greedy_argmax(&logits), 0);
+    }
 }
 #[cfg(test)]
 mod deterministic_inference_tests {
