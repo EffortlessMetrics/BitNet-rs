@@ -157,6 +157,7 @@ fn scalar_dot(a: &[f32], b: &[f32]) -> f32 {
 }
 
 /// Scalar Q·K^T → scores `[seq_q, seq_k]` written into `out`.
+#[allow(dead_code)]
 fn scalar_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
     debug_assert!(out.len() >= seq_q * seq_k);
     for i in 0..seq_q {
@@ -167,6 +168,7 @@ fn scalar_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, 
 }
 
 /// Scalar Q·K^T → scores `[seq_q, seq_k]`.
+#[allow(dead_code)]
 fn scalar_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
     let mut scores = vec![0.0_f32; seq_q * seq_k];
     scalar_qk_into(q, k, seq_q, seq_k, dim, &mut scores);
@@ -252,41 +254,83 @@ fn avx2_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<
 
 // ── NEON implementations (aarch64 only) ─────────────────────────────
 
-// TODO(simd): Implement NEON-accelerated dot product for ARM targets.
-//
-// The NEON path should mirror `avx2_dot` using `float32x4_t` intrinsics:
-//   - `vld1q_f32` for aligned/unaligned loads
-//   - `vfmaq_f32` for fused multiply-add (ARMv8.2+)
-//   - `vaddvq_f32` for horizontal reduction
-//
-// Expected uplift: ~2-4× over scalar on Apple M-series and Cortex-A76+.
-// Gate behind `#[cfg(target_arch = "aarch64")]` with `#[target_feature(enable = "neon")]`.
+#[cfg(target_arch = "aarch64")]
+#[allow(unsafe_op_in_unsafe_fn)]
+unsafe fn neon_dot(a: &[f32], b: &[f32]) -> f32 {
+    use std::arch::aarch64::*;
+    let n = a.len();
+    let chunks = n / 4;
+    let mut acc = vdupq_n_f32(0.0);
+    for c in 0..chunks {
+        let va = vld1q_f32(a.as_ptr().add(c * 4));
+        let vb = vld1q_f32(b.as_ptr().add(c * 4));
+        acc = vfmaq_f32(acc, va, vb);
+    }
+    let mut result = vaddvq_f32(acc);
+    // scalar tail
+    for i in (chunks * 4)..n {
+        result += *a.get_unchecked(i) * *b.get_unchecked(i);
+    }
+    result
+}
+
+#[cfg(target_arch = "aarch64")]
+fn neon_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
+    debug_assert!(out.len() >= seq_q * seq_k);
+    for i in 0..seq_q {
+        for j in 0..seq_k {
+            out[i * seq_k + j] =
+                unsafe { neon_dot(&q[i * dim..(i + 1) * dim], &k[j * dim..(j + 1) * dim]) };
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+fn neon_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
+    let mut scores = vec![0.0_f32; seq_q * seq_k];
+    neon_qk_into(q, k, seq_q, seq_k, dim, &mut scores);
+    scores
+}
 
 // ── Dispatch helpers ───────────────────────────────────────────────
 
 /// Compute Q·K^T, choosing the best available SIMD path.
 fn dispatch_qk(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize) -> Vec<f32> {
-    #[cfg(target_arch = "x86_64")]
+    // NEON is always available on aarch64 (baseline ARMv8).
+    #[cfg(target_arch = "aarch64")]
     {
-        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
-            return avx2_qk(q, k, seq_q, seq_k, dim);
-        }
+        neon_qk(q, k, seq_q, seq_k, dim)
     }
-    // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
-    scalar_qk(q, k, seq_q, seq_k, dim)
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+                return avx2_qk(q, k, seq_q, seq_k, dim);
+            }
+        }
+        scalar_qk(q, k, seq_q, seq_k, dim)
+    }
 }
 
 /// Compute Q·K^T into a pre-allocated buffer.
 fn dispatch_qk_into(q: &[f32], k: &[f32], seq_q: usize, seq_k: usize, dim: usize, out: &mut [f32]) {
-    #[cfg(target_arch = "x86_64")]
+    // NEON is always available on aarch64 (baseline ARMv8).
+    #[cfg(target_arch = "aarch64")]
     {
-        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
-            avx2_qk_into(q, k, seq_q, seq_k, dim, out);
-            return;
-        }
+        neon_qk_into(q, k, seq_q, seq_k, dim, out);
     }
-    // TODO(simd): add `#[cfg(target_arch = "aarch64")]` NEON fast-path here.
-    scalar_qk_into(q, k, seq_q, seq_k, dim, out);
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+                avx2_qk_into(q, k, seq_q, seq_k, dim, out);
+                return;
+            }
+        }
+        scalar_qk_into(q, k, seq_q, seq_k, dim, out);
+    }
 }
 
 // ── Public API ─────────────────────────────────────────────────────
