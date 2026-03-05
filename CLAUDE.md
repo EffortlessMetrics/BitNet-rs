@@ -30,7 +30,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Nightly Fuzz Workflow** — 109 fuzz targets (37 in nightly CI matrix × 60 s each) with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); includes `rope_table_gen`, `tokenizer_encode`, softmax stability, embedding lookup, memory layout, and more
 - **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
 - **macOS ARM64 CI** — Non-blocking `clippy-macos-arm64` job in `ci-core.yml` runs on `macos-14` with `continue-on-error: true`; reports Apple Silicon clippy status without gating merges
-- **Criterion Benchmarks** — 13 bench targets across workspace: root (`srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops`, `slm_inference`, `tokenizer_ops`), crates (`kernel_benchmarks`, `dense_ops`, `template_ops`, `quantization`), crossval + example (`performance` ×2) (#787)
+- **Criterion Benchmarks** — 12 bench targets across workspace: root (`srp_ops`, `quantization_ops`, `kernel_ops`, `neon_simd`, `neon_ops`, `slm_inference`, `tokenizer_ops`), crates (`kernel_benchmarks`, `dense_ops`, `template_ops`, `quantization`), crossval (`performance`) (#787)
 - **KV Cache Optimization** — incremental inference module with paged cache and eviction policies (LRU, SlidingWindow, AttentionBased) in `kv_cache_optimized` (#1685)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 - **GPU HAL** — `bitnet-gpu-hal` unified hardware abstraction layer with backend selector, async runtime, checkpoint manager, and deployment manager (scaffold; backends not yet validated end-to-end)
