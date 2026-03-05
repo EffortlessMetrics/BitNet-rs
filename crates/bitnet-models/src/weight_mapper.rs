@@ -1,6 +1,6 @@
 use bitnet_common::Result;
 use candle_core::{DType, Device, Tensor};
-/// Weight mapping utilities for loading model weights from various formats
+// Weight mapping utilities for loading model weights from various formats
 use std::borrow::Cow;
 use std::collections::HashMap;
 
@@ -109,13 +109,13 @@ fn ensure_matrix_or_transpose(
     }
 }
 
-/// Canonical target schema:
-/// layers.{i}.attention.{q_proj|k_proj|v_proj|o_proj}.weight
-/// layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight
-/// layers.{i}.attention_norm.weight
-/// layers.{i}.post_attention_layernorm.weight
-
 /// Returns canonical key if `k` matches a known vendor pattern.
+///
+/// Canonical target schema:
+/// `layers.{i}.attention.{q_proj|k_proj|v_proj|o_proj}.weight`
+/// `layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight`
+/// `layers.{i}.attention_norm.weight`
+/// `layers.{i}.post_attention_layernorm.weight`
 pub fn normalize_vendor_key(k: &str) -> Option<String> {
     bitnet_weight_name_core::normalize_vendor_key(k)
 }

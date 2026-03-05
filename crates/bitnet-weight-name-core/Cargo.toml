@@ -9,6 +9,10 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "SRP core helpers for canonicalizing vendor weight tensor names"
+rust-version.workspace = true
 
 [dependencies]
 regex = "1.12.2"
+
+[lints]
+workspace = true

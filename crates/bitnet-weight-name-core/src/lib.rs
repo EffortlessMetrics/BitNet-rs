@@ -1,7 +1,7 @@
 //! Vendor weight-name canonicalization helpers.
 //!
 //! This crate owns the mapping from exporter-specific tensor names
-//! to the canonical BitNet transformer schema.
+//! to the canonical `BitNet` transformer schema.
 
 use regex::Regex;
 use std::sync::OnceLock;
