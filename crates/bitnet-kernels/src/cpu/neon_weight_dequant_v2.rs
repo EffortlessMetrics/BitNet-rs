@@ -1,3 +1,12 @@
+#![allow(
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop,
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments,
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 //! NEON-optimized weight dequantization for BitNet ternary weights.
 //!
 //! Implements high-throughput unpacking of I2_S (2-bit signed) packed weights

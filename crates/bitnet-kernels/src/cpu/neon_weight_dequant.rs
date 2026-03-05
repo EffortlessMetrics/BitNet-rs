@@ -1,4 +1,19 @@
-#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    dead_code,
+    unused_variables,
+    unused_assignments,
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop,
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments,
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::unnecessary_cast
+)]
 //! ARM NEON-optimized weight dequantization for Apple Silicon.
 //!
 //! Provides vectorized dequantization of various quantization formats
