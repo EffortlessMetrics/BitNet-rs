@@ -15,12 +15,27 @@ use bitnet_common::{BitNetTensor, Device, Tensor};
 /// Normalizes `x` to unit RMS then scales element-wise by `weight`.
 /// `rms_norm(x) = (x / sqrt(mean(x²) + eps)) * weight`
 pub fn rms_norm(x: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
+    let mut out = vec![0.0f32; x.len()];
+    rms_norm_into(x, weight, eps, &mut out);
+    out
+}
+
+/// Like [`rms_norm`] but writes into a pre-allocated `out` buffer,
+/// avoiding a heap allocation on every call.
+///
+/// # Panics
+///
+/// Panics if `x.len() != weight.len()` or `out.len() < x.len()`.
+pub fn rms_norm_into(x: &[f32], weight: &[f32], eps: f32, out: &mut [f32]) {
     assert_eq!(x.len(), weight.len(), "rms_norm: x.len() != weight.len()");
+    assert!(out.len() >= x.len(), "rms_norm_into: out buffer too small");
     let n = x.len() as f32;
     let sum_sq: f32 = x.iter().map(|v| v * v).sum();
     let rms = (sum_sq / n + eps).sqrt();
     let inv_rms = 1.0 / rms;
-    x.iter().zip(weight.iter()).map(|(xi, wi)| xi * inv_rms * wi).collect()
+    for (i, (xi, wi)) in x.iter().zip(weight.iter()).enumerate() {
+        out[i] = xi * inv_rms * wi;
+    }
 }
 
 // ── SiLU activation ──────────────────────────────────────────────────────────
@@ -164,12 +179,17 @@ impl DenseAttention {
         // Output: [seq_len, num_heads * head_dim]
         let mut attn_out = vec![0.0f32; seq_len * num_heads * head_dim];
 
+        // Pre-allocate score/weight buffers (reused across heads and positions)
+        let mut scores = vec![f32::NEG_INFINITY; seq_len];
+        let mut weights = vec![0.0f32; seq_len];
+
         for h in 0..num_heads {
             let kv_h = h / kv_group_size; // which KV head this query head maps to
 
             for i in 0..seq_len {
-                // Compute softmax of scores[0..=i] (causal)
-                let mut scores = vec![f32::NEG_INFINITY; seq_len];
+                // Reset scores to -inf for causal masking
+                scores[..seq_len].fill(f32::NEG_INFINITY);
+
                 for j in 0..=i {
                     let mut dot = 0.0f32;
                     for d in 0..head_dim {
@@ -183,14 +203,14 @@ impl DenseAttention {
                 // Numerically-stable softmax over [0..=i]
                 let max_score = scores[..=i].iter().copied().fold(f32::NEG_INFINITY, f32::max);
                 let mut sum_exp = 0.0f32;
-                let mut weights = vec![0.0f32; i + 1];
                 for j in 0..=i {
                     let w = (scores[j] - max_score).exp();
                     weights[j] = w;
                     sum_exp += w;
                 }
-                for w in weights.iter_mut() {
-                    *w /= sum_exp;
+                let inv_sum = 1.0 / sum_exp;
+                for j in 0..=i {
+                    weights[j] *= inv_sum;
                 }
 
                 // Weighted sum of V
@@ -244,24 +264,37 @@ impl DenseTransformerBlock {
         assert_eq!(x.len(), seq_len * self.hidden_size);
         let dim = self.hidden_size;
 
+        // Single allocation reused for both norm passes
+        let mut normed = vec![0.0f32; x.len()];
+
         // ── Attention sub-block ──────────────────────────────────────────
-        let mut normed = Vec::with_capacity(x.len());
         for t in 0..seq_len {
-            let row = &x[t * dim..(t + 1) * dim];
-            normed.extend(rms_norm(row, &self.attn_norm_weight, self.norm_eps));
+            let start = t * dim;
+            let end = start + dim;
+            rms_norm_into(
+                &x[start..end],
+                &self.attn_norm_weight,
+                self.norm_eps,
+                &mut normed[start..end],
+            );
         }
         let attn_out = self.attention.forward(&normed);
 
         // Residual
         let mut h: Vec<f32> = x.iter().zip(attn_out.iter()).map(|(a, b)| a + b).collect();
 
-        // ── FFN sub-block ────────────────────────────────────────────────
-        let mut normed_ffn = Vec::with_capacity(h.len());
+        // ── FFN sub-block (reuse normed buffer) ─────────────────────────
         for t in 0..seq_len {
-            let row = &h[t * dim..(t + 1) * dim];
-            normed_ffn.extend(rms_norm(row, &self.ffn_norm_weight, self.norm_eps));
+            let start = t * dim;
+            let end = start + dim;
+            rms_norm_into(
+                &h[start..end],
+                &self.ffn_norm_weight,
+                self.norm_eps,
+                &mut normed[start..end],
+            );
         }
-        let ffn_out = self.ffn.forward(&normed_ffn);
+        let ffn_out = self.ffn.forward(&normed);
 
         // Residual
         for (hi, fi) in h.iter_mut().zip(ffn_out.iter()) {
@@ -304,11 +337,16 @@ impl DenseModel {
             hidden = block.forward(&hidden);
         }
 
-        // Final RMSNorm
-        let mut normed = Vec::with_capacity(hidden.len());
+        // Final RMSNorm (reuse hidden buffer space via a single alloc)
+        let mut normed = vec![0.0f32; hidden.len()];
         for t in 0..seq_len {
             let row = &hidden[t * dim..(t + 1) * dim];
-            normed.extend(rms_norm(row, &self.final_norm_weight, self.norm_eps));
+            rms_norm_into(
+                row,
+                &self.final_norm_weight,
+                self.norm_eps,
+                &mut normed[t * dim..(t + 1) * dim],
+            );
         }
 
         // LM head (only last position for causal LM)
@@ -432,6 +470,16 @@ mod tests {
         // RMS = sqrt((9+16)/2 + eps) ≈ sqrt(12.5) ≈ 3.5355
         let rms = (12.5f32 + EPS).sqrt();
         assert_vec_approx(&out, &[3.0 / rms, 4.0 / rms], 1e-4, "rms_norm unit weight");
+    }
+
+    #[test]
+    fn test_rms_norm_into_matches_rms_norm() {
+        let x = vec![3.0, 4.0, -1.0, 2.0];
+        let w = vec![1.5, 0.5, 2.0, 1.0];
+        let allocating = rms_norm(&x, &w, EPS);
+        let mut buf = vec![0.0f32; x.len()];
+        rms_norm_into(&x, &w, EPS, &mut buf);
+        assert_vec_approx(&allocating, &buf, 1e-7, "rms_norm_into parity");
     }
 
     #[test]
