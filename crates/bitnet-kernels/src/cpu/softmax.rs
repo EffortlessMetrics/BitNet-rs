@@ -542,7 +542,69 @@ pub fn softmax_f32_inplace(data: &mut [f32]) -> Result<()> {
     Ok(())
 }
 
+/// AVX2+FMA numerically-stable log-softmax.
+///
+/// `log_softmax(x)_i = x_i - max - log(Σ exp(x_j - max))`
+///
+/// Uses vectorized exp and reduce for the sum-of-exp pass.
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn log_softmax_avx2(input: &[f32], output: &mut [f32]) {
+    let n = input.len();
+    if n == 0 {
+        return;
+    }
+
+    // ── pass 1: find max ────────────────────────────────────────────────
+    let mut vmax = _mm256_set1_ps(f32::NEG_INFINITY);
+    let chunks = n / 8;
+    let inp = input.as_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        vmax = _mm256_max_ps(vmax, v);
+    }
+    let mut max_val = hmax_avx2(vmax);
+    for i in (chunks * 8)..n {
+        max_val = max_val.max(*inp.add(i));
+    }
+
+    // ── pass 2: sum exp(x - max) ────────────────────────────────────────
+    let vmax_bc = _mm256_set1_ps(max_val);
+    let mut vsum = _mm256_setzero_ps();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        let shifted = _mm256_sub_ps(v, vmax_bc);
+        let exp_v = exp_avx2(shifted);
+        vsum = _mm256_add_ps(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_avx2(vsum);
+    for i in (chunks * 8)..n {
+        sum_exp += fast_exp(*inp.add(i) - max_val);
+    }
+
+    // ── pass 3: output[i] = input[i] - log_sum_exp ─────────────────────
+    let log_sum_exp = max_val + sum_exp.ln();
+    let vlse = _mm256_set1_ps(log_sum_exp);
+    let outp = output.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        _mm256_storeu_ps(outp.add(i * 8), _mm256_sub_ps(v, vlse));
+    }
+    for i in (chunks * 8)..n {
+        *outp.add(i) = *inp.add(i) - log_sum_exp;
+    }
+}
+
 /// Numerically-stable log-softmax: `log_softmax(x)_i = x_i - max - log(Σ exp(x_j - max))`.
+///
+/// On x86-64 with AVX2+FMA, uses vectorized exp and SIMD reduce.
+/// Falls back to scalar on all other targets.
 ///
 /// # Errors
 ///
@@ -555,6 +617,17 @@ pub fn log_softmax_f32(input: &[f32], output: &mut [f32]) -> Result<()> {
     }
     if input.is_empty() {
         return Ok(());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: AVX2+FMA verified above; lengths checked.
+            unsafe {
+                log_softmax_avx2(input, output);
+            }
+            return Ok(());
+        }
     }
 
     let max_val = scalar_max(input);
@@ -992,6 +1065,40 @@ mod tests {
         }
         let exp_sum: f32 = output.iter().map(|&x| x.exp()).sum();
         assert!((exp_sum - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_log_softmax_avx2_sized() {
+        // 32 elements: exercises the AVX2 8-wide path (4 full chunks).
+        let input: Vec<f32> = (0..32).map(|i| i as f32 * 0.3 - 4.0).collect();
+        let mut output = vec![0.0f32; 32];
+        log_softmax_f32(&input, &mut output).unwrap();
+
+        // All outputs must be ≤ 0.
+        for (i, &x) in output.iter().enumerate() {
+            assert!(x <= 0.0, "log_softmax[{i}] = {x} > 0");
+            assert!(x.is_finite(), "log_softmax[{i}] is not finite");
+        }
+        // exp(log_softmax) should sum to 1.
+        let exp_sum: f32 = output.iter().map(|&x| x.exp()).sum();
+        assert!((exp_sum - 1.0).abs() < 1e-4, "sum = {exp_sum}");
+    }
+
+    #[test]
+    fn test_log_softmax_matches_log_of_softmax() {
+        // Verify: log(softmax(x)) ≈ log_softmax(x) for a large vector.
+        let input: Vec<f32> = (0..64).map(|i| (i as f32 * 0.1).sin()).collect();
+        let mut sm = vec![0.0f32; 64];
+        let mut lsm = vec![0.0f32; 64];
+        softmax_f32(&input, &mut sm).unwrap();
+        log_softmax_f32(&input, &mut lsm).unwrap();
+        for (i, (&s, &l)) in sm.iter().zip(lsm.iter()).enumerate() {
+            let log_s = s.ln();
+            assert!(
+                (log_s - l).abs() < 1e-4,
+                "mismatch at [{i}]: log(softmax)={log_s} vs log_softmax={l}"
+            );
+        }
     }
 
     // ── Temperature ─────────────────────────────────────────────────────
