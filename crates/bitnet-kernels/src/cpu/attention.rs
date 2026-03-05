@@ -88,12 +88,23 @@ fn invalid_arg(reason: &str) -> BitNetError {
 /// `f32::NEG_INFINITY` when `j > i` (masked).
 pub fn causal_mask(seq_len: usize) -> Vec<f32> {
     let mut mask = vec![0.0_f32; seq_len * seq_len];
+    causal_mask_fill(&mut mask, seq_len);
+    mask
+}
+
+/// Fill a pre-allocated buffer with the causal mask for `seq_len`.
+///
+/// `buf` must have length ≥ `seq_len * seq_len`. Only the first
+/// `seq_len * seq_len` elements are written.
+pub fn causal_mask_fill(buf: &mut [f32], seq_len: usize) {
+    let n = seq_len * seq_len;
+    debug_assert!(buf.len() >= n, "buf.len()={} < seq_len²={n}", buf.len());
+    buf[..n].fill(0.0_f32);
     for i in 0..seq_len {
         for j in (i + 1)..seq_len {
-            mask[i * seq_len + j] = f32::NEG_INFINITY;
+            buf[i * seq_len + j] = f32::NEG_INFINITY;
         }
     }
-    mask
 }
 
 /// Apply an additive mask to pre-softmax scores (in-place).
@@ -480,6 +491,7 @@ pub struct AttentionWorkspace {
     v_head: Vec<f32>,
     scores: Vec<f32>,
     head_out: Vec<f32>,
+    mask: Vec<f32>,
 }
 
 impl AttentionWorkspace {
@@ -493,6 +505,7 @@ impl AttentionWorkspace {
             v_head: vec![0.0_f32; head_buf],
             scores: vec![0.0_f32; scores_buf],
             head_out: vec![0.0_f32; head_buf],
+            mask: Vec::new(),
         }
     }
 
@@ -544,12 +557,21 @@ impl AttentionKernel {
         ws.ensure_capacity(seq_len, head_dim);
 
         let scale = cfg.resolved_scale();
-        let mask_vec = if causal { Some(causal_mask(seq_len)) } else { None };
-        let mask_ref = mask_vec.as_deref();
+        let scores_len = seq_len * seq_len;
+
+        // Build causal mask into workspace buffer (zero-alloc reuse)
+        let mask_ref = if causal {
+            if ws.mask.len() < scores_len {
+                ws.mask.resize(scores_len, 0.0);
+            }
+            causal_mask_fill(&mut ws.mask, seq_len);
+            Some(&ws.mask[..scores_len])
+        } else {
+            None
+        };
 
         let mut output = vec![0.0_f32; expected];
         let head_buf = seq_len * head_dim;
-        let scores_len = seq_len * seq_len;
 
         for h in 0..num_heads {
             extract_head_into(q, seq_len, num_heads, head_dim, h, &mut ws.q_head);
