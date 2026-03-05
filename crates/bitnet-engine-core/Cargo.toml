@@ -15,6 +15,7 @@ rust-version.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
 bitnet-engine-state-core = { path = "../bitnet-engine-state-core", version = "0.2.1-dev" }
+bitnet-session-config-core = { path = "../bitnet-session-config-core", version = "0.2.1-dev" }
 anyhow.workspace = true
 serde.workspace = true
 
