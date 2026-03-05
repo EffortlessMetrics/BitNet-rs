@@ -7,7 +7,6 @@
 //! runs on Linux.
 
 #![cfg(target_os = "macos")]
-#![allow(dead_code)]
 
 use std::f32::consts::PI;
 
