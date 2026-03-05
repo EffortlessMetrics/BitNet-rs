@@ -90,7 +90,7 @@ mod basic_layernorm {
     #[test]
     fn test_layernorm_identity_preserves_mean_zero() {
         // Create input with mean=0 and variance=1
-        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let input = [-2.0, -1.0, 0.0, 1.0, 2.0];
         let mean = input.iter().sum::<f32>() / input.len() as f32;
         let variance = input.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / input.len() as f32;
 

@@ -237,7 +237,7 @@ fn dispatch_1d(work_items: u64, profile: &GpuProfile) -> DispatchConfig {
         profile.simd_width,
         profile.max_threads_per_threadgroup,
     );
-    let groups = ((work_items + tg as u64 - 1) / tg as u64) as u32;
+    let groups = (work_items).div_ceil(tg as u64) as u32;
     DispatchConfig {
         grid_size: (groups, 1, 1),
         threadgroup_size: (tg, 1, 1),
@@ -258,8 +258,8 @@ fn dispatch_2d(rows: u32, cols: u32, profile: &GpuProfile) -> DispatchConfig {
     while tg_x * 2 * tg_y <= max_tg && tg_x * 2 <= cols {
         tg_x *= 2;
     }
-    let grid_x = (cols + tg_x - 1) / tg_x;
-    let grid_y = (rows + tg_y - 1) / tg_y;
+    let grid_x = (cols as u64).div_ceil(tg_x as u64) as u32;
+    let grid_y = (rows as u64).div_ceil(tg_y as u64) as u32;
     DispatchConfig {
         grid_size: (grid_x, grid_y, 1),
         threadgroup_size: (tg_x, tg_y, 1),
@@ -279,9 +279,9 @@ fn dispatch_3d(dim_x: u32, dim_y: u32, dim_z: u32, profile: &GpuProfile) -> Disp
     while tg_x * tg_y * tg_z * 2 <= max_tg && tg_z * 2 <= dim_z {
         tg_z *= 2;
     }
-    let grid_x = (dim_x + tg_x - 1) / tg_x;
-    let grid_y = (dim_y + tg_y - 1) / tg_y;
-    let grid_z = (dim_z + tg_z - 1) / tg_z;
+    let grid_x = (dim_x as u64).div_ceil(tg_x as u64) as u32;
+    let grid_y = (dim_y as u64).div_ceil(tg_y as u64) as u32;
+    let grid_z = (dim_z as u64).div_ceil(tg_z as u64) as u32;
     DispatchConfig {
         grid_size: (grid_x, grid_y, grid_z),
         threadgroup_size: (tg_x, tg_y, tg_z),
@@ -301,7 +301,7 @@ fn estimate_occupancy(config: &DispatchConfig, profile: &GpuProfile) -> f64 {
     let simd = profile.simd_width as f64;
     // Occupancy: fraction of max threads that are actually utilised, weighted
     // by SIMD lane utilisation of the last warp.
-    let simd_util = if threads_per_tg % profile.simd_width as u64 == 0 {
+    let simd_util = if threads_per_tg.is_multiple_of(profile.simd_width as u64) {
         1.0
     } else {
         (threads_per_tg % profile.simd_width as u64) as f64 / simd

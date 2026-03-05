@@ -1,6 +1,12 @@
-#![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
+#![allow(
+    dead_code,
+    unused_imports,
+    unused_variables,
+    non_camel_case_types,
+    unused_mut,
+    clippy::manual_div_ceil
+)]
 #![cfg(feature = "cpu")]
-#![allow(dead_code, clippy::manual_div_ceil)]
 
 //! Comprehensive tests for Metal shader compilation patterns.
 //!
@@ -186,26 +192,26 @@ fn parse_buffer_params(source: &str) -> Vec<BufferParam> {
         // Look for `[[buffer(N)]]`
         if let Some(idx_start) = t.find("[[buffer(") {
             let after = &t[idx_start + 9..];
-            if let Some(idx_end) = after.find(")]]") {
-                if let Ok(idx) = after[..idx_end].parse::<u32>() {
-                    let addr = if t.contains("device ") {
-                        AddressSpace::Device
-                    } else if t.contains("constant ") {
-                        AddressSpace::Constant
-                    } else if t.contains("threadgroup ") {
-                        AddressSpace::Threadgroup
-                    } else {
-                        AddressSpace::Thread
-                    };
-                    let is_ptr = t.contains('*');
-                    let name = format!("param_{idx}");
-                    params.push(BufferParam {
-                        name,
-                        address_space: addr,
-                        binding_index: idx,
-                        is_pointer: is_ptr,
-                    });
-                }
+            if let Some(idx_end) = after.find(")]]")
+                && let Ok(idx) = after[..idx_end].parse::<u32>()
+            {
+                let addr = if t.contains("device ") {
+                    AddressSpace::Device
+                } else if t.contains("constant ") {
+                    AddressSpace::Constant
+                } else if t.contains("threadgroup ") {
+                    AddressSpace::Threadgroup
+                } else {
+                    AddressSpace::Thread
+                };
+                let is_ptr = t.contains('*');
+                let name = format!("param_{idx}");
+                params.push(BufferParam {
+                    name,
+                    address_space: addr,
+                    binding_index: idx,
+                    is_pointer: is_ptr,
+                });
             }
         }
     }
@@ -216,17 +222,14 @@ fn parse_buffer_params(source: &str) -> Vec<BufferParam> {
 fn validate_array_sizes(source: &str, max_elements: usize) -> Vec<String> {
     let mut errors = Vec::new();
     for (i, line) in source.lines().enumerate() {
-        if let Some(start) = line.find('[') {
-            if let Some(end) = line[start + 1..].find(']') {
-                let inner = line[start + 1..start + 1 + end].trim();
-                if let Ok(n) = inner.parse::<usize>() {
-                    if n > max_elements {
-                        errors.push(format!(
-                            "line {}: array size {n} exceeds max {max_elements}",
-                            i + 1
-                        ));
-                    }
-                }
+        if let Some(start) = line.find('[')
+            && let Some(end) = line[start + 1..].find(']')
+        {
+            let inner = line[start + 1..start + 1 + end].trim();
+            if let Ok(n) = inner.parse::<usize>()
+                && n > max_elements
+            {
+                errors.push(format!("line {}: array size {n} exceeds max {max_elements}", i + 1));
             }
         }
     }
@@ -456,7 +459,8 @@ fn validate_perf_config(cfg: &PerformanceConfig) -> Vec<String> {
             cfg.threadgroup_memory_bytes, METAL_MAX_THREADGROUP_MEMORY
         ));
     }
-    if cfg.simd_group_size != 0 && cfg.max_total_threads_per_threadgroup % cfg.simd_group_size != 0
+    if cfg.simd_group_size != 0
+        && !cfg.max_total_threads_per_threadgroup.is_multiple_of(cfg.simd_group_size)
     {
         errors.push("threads not divisible by SIMD group size".into());
     }
@@ -853,7 +857,7 @@ mod pipeline_state_object {
 
     #[test]
     fn specialization_constants_unique_indices() {
-        let constants = vec![
+        let constants = [
             SpecializationConstant { name: "TILE_M".into(), index: 0, default_value: 8.0 },
             SpecializationConstant { name: "TILE_N".into(), index: 1, default_value: 8.0 },
             SpecializationConstant { name: "TILE_K".into(), index: 2, default_value: 16.0 },

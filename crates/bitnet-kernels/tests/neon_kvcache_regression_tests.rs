@@ -339,8 +339,8 @@ fn test_range_query() {
     let values_in_range = cache.range_query_values(30, 60);
 
     // Since we append 8 heads per position, we get multiple entries per position
-    assert!(keys_in_range.len() > 0, "Range query returned no keys");
-    assert!(values_in_range.len() > 0, "Range query returned no values");
+    assert!(!keys_in_range.is_empty(), "Range query returned no keys");
+    assert!(!values_in_range.is_empty(), "Range query returned no values");
 }
 
 #[test]
@@ -594,7 +594,7 @@ fn test_typical_sequence_length_2048() {
     // Verify head layout is consistent
     for head_id in 0..32 {
         let (head_keys, head_values) = cache.get_head_layout(head_id);
-        assert!(head_keys.len() > 0, "Head {} should have cached keys", head_id);
+        assert!(!head_keys.is_empty(), "Head {} should have cached keys", head_id);
         assert_eq!(head_keys.len(), head_values.len(), "Head {} key/value count mismatch", head_id);
     }
 }
@@ -620,7 +620,7 @@ fn test_typical_sequence_length_4096() {
     let keys_in_window = cache.range_query_keys(window_start, window_end);
     let values_in_window = cache.range_query_values(window_start, window_end);
 
-    assert!(keys_in_window.len() > 0, "Should find keys in window");
+    assert!(!keys_in_window.is_empty(), "Should find keys in window");
     assert_eq!(keys_in_window.len(), values_in_window.len(), "Key/value count should match");
 }
 
@@ -645,7 +645,7 @@ fn test_multi_head_aggregate_operations() {
         let (head_keys, head_values) = cache.get_head_layout(head_id);
 
         // Verify we have consistent number of entries per head
-        assert!(head_keys.len() > 0, "Head {} should have entries", head_id);
+        assert!(!head_keys.is_empty(), "Head {} should have entries", head_id);
         assert_eq!(head_keys.len(), head_values.len(), "Head {} key/value mismatch", head_id);
 
         // Compute sum of norms (simple aggregate)

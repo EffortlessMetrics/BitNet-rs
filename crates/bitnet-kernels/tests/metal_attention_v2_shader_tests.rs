@@ -96,7 +96,7 @@ impl MhaConfig {
     }
 
     fn kv_head_ratio(&self) -> usize {
-        assert!(self.num_heads % self.num_kv_heads == 0);
+        assert!(self.num_heads.is_multiple_of(self.num_kv_heads));
         self.num_heads / self.num_kv_heads
     }
 
@@ -139,7 +139,7 @@ impl MhaConfig {
         if self.kv_seq_len == 0 {
             return Err("kv_seq_len must be > 0".into());
         }
-        if self.num_heads % self.num_kv_heads != 0 {
+        if !self.num_heads.is_multiple_of(self.num_kv_heads) {
             return Err("num_heads must be divisible by num_kv_heads".into());
         }
         if self.scale <= 0.0 || !self.scale.is_finite() {
@@ -197,7 +197,7 @@ fn is_power_of_two(n: usize) -> bool {
 }
 
 fn align_up(val: usize, alignment: usize) -> usize {
-    (val + alignment - 1) / alignment * alignment
+    val.div_ceil(alignment) * alignment
 }
 
 fn cpu_softmax(logits: &[f32]) -> Vec<f32> {
@@ -222,7 +222,7 @@ fn cpu_sliding_window_mask(seq_len: usize, kv_seq_len: usize, window: usize) -> 
     let mut mask = vec![false; seq_len * kv_seq_len];
     for q in 0..seq_len {
         for k in 0..kv_seq_len {
-            let dist = if q >= k { q - k } else { k - q };
+            let dist = q.abs_diff(k);
             mask[q * kv_seq_len + k] = dist < window;
         }
     }
@@ -251,7 +251,7 @@ fn det_rand(count: usize, seed: u64, lo: f32, hi: f32) -> Vec<f32> {
 }
 
 fn compute_flash_chunks(seq_len: usize, chunk_size: usize) -> usize {
-    (seq_len + chunk_size - 1) / chunk_size
+    seq_len.div_ceil(chunk_size)
 }
 
 fn flash_shared_mem(chunk_size: usize, head_dim: usize) -> usize {
@@ -266,7 +266,7 @@ fn flash_shared_mem(chunk_size: usize, head_dim: usize) -> usize {
 fn compute_threadgroup(num_heads: u32, seq_chunks: u32) -> ThreadgroupConfig {
     let threads = METAL_SIMD_GROUP_SIZE.min(METAL_MAX_THREADS_PER_THREADGROUP);
     let groups = num_heads * seq_chunks;
-    let simd = (threads + METAL_SIMD_GROUP_SIZE - 1) / METAL_SIMD_GROUP_SIZE;
+    let simd = threads.div_ceil(METAL_SIMD_GROUP_SIZE);
     ThreadgroupConfig {
         threads_per_threadgroup: threads,
         threadgroups_per_grid: groups,
@@ -363,7 +363,7 @@ fn mha_v2_output_element_count() {
 #[test]
 fn mha_v2_score_element_count() {
     let cfg = MhaConfig::new(1, 8, 8, 64, 16, 32, false);
-    assert_eq!(cfg.score_elements(), 1 * 8 * 16 * 32);
+    assert_eq!(cfg.score_elements(), 8 * 16 * 32);
 }
 
 #[test]
@@ -412,8 +412,8 @@ fn gqa_v2_rejects_non_divisible_heads() {
 fn gqa_v2_kv_elements_fewer_than_q() {
     let cfg = MhaConfig::new(1, 32, 8, 128, 64, 64, false);
     assert!(cfg.k_elements() < cfg.q_elements());
-    assert_eq!(cfg.k_elements(), 1 * 8 * 64 * 128);
-    assert_eq!(cfg.q_elements(), 1 * 32 * 64 * 128);
+    assert_eq!(cfg.k_elements(), 8 * 64 * 128);
+    assert_eq!(cfg.q_elements(), 32 * 64 * 128);
 }
 
 #[test]
@@ -462,7 +462,7 @@ fn mqa_v2_output_matches_mha_shape() {
 fn mqa_v2_batch_scaling() {
     let cfg = MhaConfig::new(4, 16, 1, 64, 32, 32, false);
     assert!(cfg.validate().is_ok());
-    assert_eq!(cfg.k_elements(), 4 * 1 * 32 * 64);
+    assert_eq!(cfg.k_elements(), 4 * 32 * 64);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -564,7 +564,7 @@ fn sliding_window_v2_causal_combined() {
     // Future positions masked
     assert!(!mask[2 * 8 + 5]);
     // Past beyond window masked
-    assert!(!mask[7 * 8 + 0]); // distance 7 > window 4
+    assert!(!mask[(7 * 8)]); // distance 7 > window 4
     // Within causal + window
     assert!(mask[5 * 8 + 3]); // distance 2 < window 4, and 3 <= 5
 }
@@ -855,7 +855,7 @@ fn bandwidth_v2_small_config() {
     let cfg = MhaConfig::new(1, 8, 8, 64, 32, 32, false);
     let bw = estimate_attention_bandwidth_bytes(&cfg);
     // Q + K + V + Out = 4 * (1 * 8 * 32 * 64) * 4 = 262144
-    assert_eq!(bw, 4 * 1 * 8 * 32 * 64 * F32_BYTES);
+    assert_eq!(bw, 4 * 8 * 32 * 64 * F32_BYTES);
 }
 
 #[test]
@@ -978,8 +978,8 @@ fn batch_v2_score_shape_depends_on_kv_len() {
     let short_kv = MhaConfig::new(1, 8, 8, 64, 32, 16, false);
     let long_kv = MhaConfig::new(1, 8, 8, 64, 32, 256, false);
     assert_ne!(short_kv.score_elements(), long_kv.score_elements());
-    assert_eq!(short_kv.score_elements(), 1 * 8 * 32 * 16);
-    assert_eq!(long_kv.score_elements(), 1 * 8 * 32 * 256);
+    assert_eq!(short_kv.score_elements(), 8 * 32 * 16);
+    assert_eq!(long_kv.score_elements(), 8 * 32 * 256);
 }
 
 #[test]
@@ -1113,7 +1113,7 @@ fn cross_attn_v2_different_seq_lengths() {
     // Encoder output = 256 tokens, decoder query = 32 tokens
     let cfg = MhaConfig::new(1, 8, 8, 64, 32, 256, false);
     assert!(cfg.validate().is_ok());
-    assert_eq!(cfg.score_elements(), 1 * 8 * 32 * 256);
+    assert_eq!(cfg.score_elements(), 8 * 32 * 256);
 }
 
 #[test]
@@ -1134,7 +1134,7 @@ fn cross_attn_v2_kv_from_encoder_longer_than_query() {
 fn cross_attn_v2_output_shape_follows_query() {
     let cfg = MhaConfig::new(1, 8, 8, 64, 16, 512, false);
     // Output follows Q dimensions, not KV
-    assert_eq!(cfg.output_elements(), 1 * 8 * 16 * 64);
+    assert_eq!(cfg.output_elements(), 8 * 16 * 64);
 }
 
 #[test]
