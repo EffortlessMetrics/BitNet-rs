@@ -9,9 +9,6 @@
 //! LayerNorm degenerate inputs).
 
 #![cfg(target_os = "macos")]
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 #![allow(clippy::manual_div_ceil)]
 #![allow(clippy::useless_vec)]
 #![allow(clippy::approx_constant)]

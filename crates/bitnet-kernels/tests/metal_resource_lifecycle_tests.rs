@@ -724,6 +724,7 @@ enum DependencyKind {
 
 /// Barrier type for synchronization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 enum BarrierType {
     BufferBarrier,
     TextureBarrier,

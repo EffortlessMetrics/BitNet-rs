@@ -1,0 +1,39 @@
+    Checking bitnet-common v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-common)
+    Checking bitnet-gguf v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-gguf)
+   Compiling bitnet v0.2.1-dev (C:\Code\Rust\BitNet-rs)
+    Checking bitnet-device-probe v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-device-probe)
+    Checking bitnet-tokenizer-model-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-tokenizer-model-core)
+    Checking bitnet-receipts-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-receipts-core)
+    Checking bitnet-engine-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-engine-core)
+    Checking bitnet-kernels v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-kernels)
+    Checking bitnet-receipts v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-receipts)
+    Checking bitnet-quantization v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-quantization)
+    Checking bitnet-qk256-dispatch v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-qk256-dispatch)
+    Checking bitnet-transformer v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-transformer)
+    Checking bitnet-models v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-models)
+    Checking bitnet-tokenizers v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-tokenizers)
+    Checking bitnet-compat-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-compat-core)
+    Checking bitnet-compat v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-compat)
+    Checking bitnet-prompt-templates-core v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-prompt-templates-core)
+    Checking bitnet-prompt-templates v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-prompt-templates)
+    Checking bitnet-inference v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-inference)
+    Checking bitnet-crossval v0.2.1-dev (C:\Code\Rust\BitNet-rs\crossval)
+    Checking bitnet-tests v0.2.1-dev (C:\Code\Rust\BitNet-rs\tests)
+error: this function has too many arguments (10/8)
+   --> crates\bitnet-kernels\tests\avx2_attention_parity_tests.rs:258:1
+    |
+258 | / fn reference_quant_sdpa(
+259 | |     q_i8: &[i8],
+260 | |     k_i8: &[i8],
+261 | |     v_i8: &[i8],
+...   |
+268 | |     causal: bool,
+269 | | ) -> Vec<f32> {
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: could not compile `bitnet-kernels` (test "avx2_attention_parity_tests") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

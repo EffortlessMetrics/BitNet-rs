@@ -11,8 +11,6 @@
 // Types and constants from `metal_compute` are duplicated here so this test
 // compiles without `--features metal`.
 
-#![allow(dead_code)]
-
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
