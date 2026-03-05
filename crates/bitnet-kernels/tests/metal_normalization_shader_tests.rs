@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 //! Metal normalization shader tests for Apple Silicon.
 #![allow(clippy::assertions_on_constants)]
@@ -8,8 +9,6 @@
 //! gradient flow through normalization shaders dispatched via wgpu on Metal.
 //!
 //! All tests are `#[ignore]` because CI runs on Linux.
-
-#![cfg(target_os = "macos")]
 
 use wgpu::util::DeviceExt;
 

@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::manual_div_ceil, clippy::assertions_on_constants)]
 //! Metal compute pipeline validation tests for Apple Silicon.
 //!
