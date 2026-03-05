@@ -266,8 +266,9 @@ impl DenseTransformerBlock {
         assert_eq!(x.len(), seq_len * self.hidden_size);
         let dim = self.hidden_size;
 
-        // Single allocation reused for both norm passes
+        // Two reusable buffers: normed (both norm passes) and h (residual)
         let mut normed = vec![0.0f32; x.len()];
+        let mut h = vec![0.0f32; x.len()];
 
         // ── Attention sub-block ──────────────────────────────────────────
         for t in 0..seq_len {
@@ -282,8 +283,10 @@ impl DenseTransformerBlock {
         }
         let attn_out = self.attention.forward(&normed);
 
-        // Residual
-        let mut h: Vec<f32> = x.iter().zip(attn_out.iter()).map(|(a, b)| a + b).collect();
+        // Residual: h = x + attn_out (in-place into pre-allocated h)
+        for (hi, (xi, ai)) in h.iter_mut().zip(x.iter().zip(attn_out.iter())) {
+            *hi = xi + ai;
+        }
 
         // ── FFN sub-block (reuse normed buffer) ─────────────────────────
         for t in 0..seq_len {
