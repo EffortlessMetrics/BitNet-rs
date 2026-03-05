@@ -1002,6 +1002,7 @@ fn rope_inplace(data: &mut [f32], positions: &[usize], head_dim: usize, cols: us
 
 /// Extract head `h` from an interleaved `[seq_len, num_heads * head_dim]`
 /// tensor into a contiguous `[seq_len, head_dim]` buffer.
+#[cfg(test)]
 fn extract_head(
     data: &[f32],
     seq_len: usize,
@@ -1375,13 +1376,13 @@ pub fn flash_attention_cpu(
             let q_row = &q[qi * head_dim..(qi + 1) * head_dim];
 
             // Compute scores for this Q row against the K tile.
-            for kj in 0..block_k {
+            for (kj, score) in block_scores[..block_k].iter_mut().enumerate() {
                 let k_idx = kv_start + kj;
                 if causal && k_idx > qi {
-                    block_scores[kj] = f32::NEG_INFINITY;
+                    *score = f32::NEG_INFINITY;
                 } else {
                     let k_row = &k[k_idx * head_dim..(k_idx + 1) * head_dim];
-                    block_scores[kj] = scalar_dot(q_row, k_row) * scale;
+                    *score = scalar_dot(q_row, k_row) * scale;
                 }
             }
 
