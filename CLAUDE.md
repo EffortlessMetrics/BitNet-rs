@@ -1023,11 +1023,45 @@ TDD scaffolds            — unblock by implementing the feature the test descri
 
 ### Inference Configuration
 
-- `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
+- `BITNET_DETERMINISTIC=1`: Enable deterministic mode (fixed RNG state)
+- `BITNET_SEED=42`: Set RNG seed for reproducible sampling
 - `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers
   `models/` if not set)
-- `RAYON_NUM_THREADS=1`: Single-threaded determinism
+- `CROSSVAL_GGUF`: Alternative model path (checked if `BITNET_GGUF` not set)
+- `BITNET_MODEL_PATH`: Default model path for CLI/server
+- `BITNET_TOKENIZER`: Tokenizer path override
+- `BITNET_TEMPERATURE`: Default sampling temperature
+- `BITNET_TOP_K`: Default top-k sampling parameter
+- `BITNET_TOP_P`: Default top-p (nucleus) sampling parameter
+- `BITNET_MAX_TOKENS`: Default maximum tokens to generate
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing
+- `BITNET_FORCE_SCALAR=1`: Force scalar kernels (skip AVX2/SIMD dispatch)
+- `BITNET_DISABLE_MINIMAL_LOADER=1`: Disable minimal GGUF loader fallback
+- `RAYON_NUM_THREADS=1`: Single-threaded determinism
+
+### Device & Threading
+
+- `BITNET_DEVICE=cpu|cuda`: Select compute device
+- `BITNET_DEFAULT_DEVICE=cpu|cuda`: Default device when not specified
+- `BITNET_CPU_THREADS`: Number of CPU threads for inference
+- `BITNET_NUM_THREADS`: Alternative thread count setting
+- `BITNET_DEVICE_STRATEGY`: Device selection strategy
+- `BITNET_MEMORY_LIMIT_GB`: Memory limit in gigabytes
+
+### Server Configuration
+
+- `BITNET_SERVER_HOST`: Server bind address (default: `0.0.0.0`)
+- `BITNET_SERVER_PORT`: Server listen port (default: `3000`)
+- `BITNET_SERVER_WORKERS`: Number of worker threads
+- `BITNET_MAX_CONCURRENT_REQUESTS`: Request concurrency limit
+- `BITNET_MAX_REQUESTS_PER_SECOND`: Rate limit (requests/sec)
+- `BITNET_REQUEST_TIMEOUT`: Request timeout in seconds
+- `BITNET_BATCH_SIZE`: Batch size for continuous batching
+- `BITNET_BATCH_TIMEOUT_MS`: Batch formation timeout (ms)
+- `BITNET_ADAPTIVE_BATCHING=1`: Enable adaptive batch sizing
+- `BITNET_JWT_SECRET`: JWT secret for authentication
+- `BITNET_REQUIRE_AUTHENTICATION=1`: Require auth for all endpoints
+- `BITNET_ALLOWED_ORIGINS`: CORS allowed origins (comma-separated)
 
 ### GPU Configuration
 
@@ -1041,15 +1075,27 @@ TDD scaffolds            — unblock by implementing the feature the test descri
   - **Requirements**: CUDA-capable GPU (compute ≥6.0), CUDA runtime, sufficient VRAM (~100-500MB per billion params)
   - **Note**: This applies only to C++ cross-validation backend (`BitnetSession::create`), not Rust inference
   - **See**: `docs/explanation/cpp-wrapper-gpu-layer-config.md` for detailed specification
+- `BITNET_GPU_MEMORY_LIMIT`: GPU memory limit
+- `BITNET_GPU_DEBUG=1`: Enable GPU debug logging
+- `BITNET_GPU_CACHE=1`: Enable GPU kernel caching
+- `BITNET_USE_GPU=1`: Enable GPU acceleration
+- `BITNET_ENABLE_ROCM=1`: Enable ROCm backend
+- `BITNET_ENABLE_NPU=1`: Enable NPU backend
 
-### Validation Configuration
+### Validation & Strict Mode
 
 - `BITNET_STRICT_MODE=1`: Enable strict validation (fails on LayerNorm/projection
   warnings, exit code 8)
+- `BITNET_STRICT_NO_FAKE_GPU=1`: Block `BITNET_GPU_FAKE` in strict mode
+- `BITNET_STRICT_FAIL_ON_MOCK=1`: Fail if mock inference is detected
+- `BITNET_STRICT_REQUIRE_QUANTIZATION=1`: Require quantized weights
+- `BITNET_STRICT_VALIDATE_PERFORMANCE=1`: Validate performance thresholds
+- `BITNET_STRICT_TOKENIZERS=1`: Strict tokenizer validation
 - `BITNET_VALIDATION_GATE=none|auto|policy`: Validation mode (default: `auto`)
 - `BITNET_VALIDATION_POLICY=/path/to/policy.yml`: Policy file for custom validation
   rules
 - `BITNET_VALIDATION_POLICY_KEY=arch:variant`: Policy key for rules lookup
+- `BITNET_MODEL_VALIDATION=1`: Enable model validation on load
 
 ### Correction Configuration (Development Only)
 
@@ -1058,9 +1104,36 @@ TDD scaffolds            — unblock by implementing the feature the test descri
 - `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models
   (CI blocks this flag)
 
+### Debug & Tracing
+
+- `BITNET_DEBUG_LOGITS=1`: Log raw logits during inference
+- `BITNET_DEBUG_RMSNORM=1`: Log RMSNorm intermediate values
+- `BITNET_DEBUG_ROPE=1`: Log RoPE computation details
+- `BITNET_DEBUG_GQA=1`: Log grouped-query attention details
+- `BITNET_DEBUG_MLP=1`: Log MLP/FFN intermediate values
+- `BITNET_DEBUG_ATTN_SCALE=1`: Log attention scale factors
+- `BITNET_TRACE_DIR`: Directory for tensor activation traces
+- `BITNET_TRACE_QUANT=1`: Trace quantization operations
+- `BITNET_TRACE_RMS=1`: Trace RMS normalization
+- `BITNET_TRACE_TIMING=1`: Trace operation timing
+- `BITNET_LOG_LEVEL`: Log level override (trace/debug/info/warn/error)
+
+### Cross-Validation
+
+- `BITNET_CPP_DIR`: Path to bitnet.cpp build directory
+- `BITNET_CPP_PATH`: Path to bitnet.cpp executable
+- `BITNET_CROSSVAL_ENABLED=1`: Enable cross-validation mode
+- `BITNET_CROSSVAL_WEIGHTS`: Cross-validation weight comparison mode
+- `BITNET_PARITY=1`: Enable parity checking against reference
+- `BITNET_GGML_COMMIT`: GGML commit hash for version tracking
+
 ### Test Configuration
 
 - `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
+- `BITNET_RUN_SLOW_TESTS=1`: Explicitly run slow tests
+- `BITNET_FAST_TESTS=1`: Run only fast tests
+- `BITNET_FORCE_GPU_TESTS=1`: Force GPU tests even without GPU hardware
+- `BITNET_GENERATE_FIXTURES=1`: Generate test fixture files
 - `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., real-model, CUDA, slow, or crossval tests)
 
 ### Test Isolation
