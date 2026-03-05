@@ -353,7 +353,7 @@ impl DenseModel {
 
         // Transformer blocks with ping-pong to avoid per-block allocation.
         for (i, block) in self.blocks.iter().enumerate() {
-            if i % 2 == 0 {
+            if i.is_multiple_of(2) {
                 block.forward_into(&buf_a, &mut buf_b, &mut normed);
             } else {
                 block.forward_into(&buf_b, &mut buf_a, &mut normed);
@@ -361,7 +361,7 @@ impl DenseModel {
         }
         // Result is in buf_b if even number of blocks processed last,
         // buf_a if odd.
-        let hidden = if self.blocks.len() % 2 == 0 { &buf_a } else { &buf_b };
+        let hidden = if self.blocks.len().is_multiple_of(2) { &buf_a } else { &buf_b };
 
         // Final RMSNorm (reuse normed buffer)
         for t in 0..seq_len {
