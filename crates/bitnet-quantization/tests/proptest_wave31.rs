@@ -5,13 +5,12 @@ use bitnet_common::{BitNetTensor, QuantizationType, Tensor};
 use bitnet_quantization::utils::{
     calculate_grouped_scales, calculate_scale, dequantize_value, quantize_value,
 };
-use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer};
+use bitnet_quantization::{I2SQuantizer, QuantizedTensor, QuantizerTrait, TL1Quantizer};
 use candle_core::{Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-#[allow(dead_code)]
 fn normal_f32_vec(len: usize) -> impl Strategy<Value = Vec<f32>> {
     prop::collection::vec(-10.0f32..10.0, len)
 }
