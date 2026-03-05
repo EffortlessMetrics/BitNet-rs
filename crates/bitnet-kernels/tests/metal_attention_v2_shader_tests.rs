@@ -564,7 +564,7 @@ fn sliding_window_v2_causal_combined() {
     // Future positions masked
     assert!(!mask[2 * 8 + 5]);
     // Past beyond window masked
-    assert!(!mask[(7 * 8)]); // distance 7 > window 4
+    assert!(!mask[7 * 8]); // distance 7 > window 4
     // Within causal + window
     assert!(mask[5 * 8 + 3]); // distance 2 < window 4, and 3 <= 5
 }
