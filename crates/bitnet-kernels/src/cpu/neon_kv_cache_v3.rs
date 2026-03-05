@@ -267,15 +267,15 @@ impl HeadCache {
         }
         let mut compacted: Vec<NeonCachePage> = Vec::new();
         for page in self.pages.drain(..) {
-            if let Some(last) = compacted.last_mut() {
-                if last.remaining() >= page.len() {
-                    // Merge page into last.
-                    for t in 0..page.len() {
-                        let slice = page.get_slice(t, 1).unwrap();
-                        last.append(slice).unwrap();
-                    }
-                    continue;
+            if let Some(last) = compacted.last_mut()
+                && last.remaining() >= page.len()
+            {
+                // Merge page into last.
+                for t in 0..page.len() {
+                    let slice = page.get_slice(t, 1).unwrap();
+                    last.append(slice).unwrap();
                 }
+                continue;
             }
             compacted.push(page);
         }

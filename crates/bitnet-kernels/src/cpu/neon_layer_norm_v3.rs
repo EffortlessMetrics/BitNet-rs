@@ -113,6 +113,11 @@ unsafe fn neon_sum_sq_dev(data: &[f32], center: f32) -> f32 {
 /// # Panics
 ///
 /// Panics if slice lengths are inconsistent.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All slices must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_layer_norm_f32(
@@ -176,6 +181,11 @@ pub unsafe fn neon_layer_norm_f32(
 /// # Panics
 ///
 /// Panics if slice lengths are inconsistent.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All slices must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_rms_norm_f32(input: &[f32], gamma: &[f32], output: &mut [f32], eps: f32) {
@@ -224,6 +234,11 @@ pub unsafe fn neon_rms_norm_f32(input: &[f32], gamma: &[f32], output: &mut [f32]
 /// # Panics
 ///
 /// Panics if `input.len()` is not divisible by `num_groups` or slice lengths mismatch.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All slices must have equal lengths and `input.len()` must be divisible by `num_groups`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_group_norm_f32(
@@ -302,6 +317,11 @@ pub unsafe fn neon_group_norm_f32(
 /// # Panics
 ///
 /// Panics if any slice length differs from `input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All slices must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_layer_norm_backward_f32(
@@ -428,6 +448,11 @@ pub unsafe fn neon_layer_norm_backward_f32(
 /// # Panics
 ///
 /// Panics if any slice length differs from `input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All slices must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_fused_layer_norm_residual_f32(

@@ -84,10 +84,10 @@ mod neon_impl {
         let out_len = out_len.min(output.len());
         let k_ptr = kernel.as_ptr();
 
-        for o in 0..out_len {
+        for (o, out_val) in output.iter_mut().enumerate().take(out_len) {
             let base = o * stride;
             let in_ptr = unsafe { input.as_ptr().add(base) };
-            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
+            *out_val = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
         }
     }
 
@@ -119,10 +119,10 @@ mod neon_impl {
         let out_len = out_len.min(output.len());
         let k_ptr = kernel.as_ptr();
 
-        for o in 0..out_len {
+        for (o, out_val) in output.iter_mut().enumerate().take(out_len) {
             let base = o * stride;
             let in_ptr = unsafe { input.as_ptr().add(base) };
-            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) } + bias;
+            *out_val = unsafe { neon_dot(in_ptr, k_ptr, k_len) } + bias;
         }
     }
 
@@ -202,11 +202,11 @@ mod neon_impl {
         let out_len = out_len.min(output.len());
         let k_ptr = kernel.as_ptr();
 
-        for o in 0..out_len {
+        for (o, out_val) in output.iter_mut().enumerate().take(out_len) {
             let base = o * stride;
             let in_ptr = unsafe { input.as_ptr().add(base) };
             let val = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
-            output[o] = if val > 0.0 { val } else { 0.0 };
+            *out_val = if val > 0.0 { val } else { 0.0 };
         }
     }
 
@@ -237,20 +237,20 @@ mod neon_impl {
         let out_len = in_len.min(output.len());
         let pad = k_len - 1;
 
-        for o in 0..out_len {
+        for (o, out_val) in output.iter_mut().enumerate().take(out_len) {
             // In the zero-padded view, position `o` maps to padded
             // index `o`. We only accumulate where the padded index
             // falls within the real input.
             let mut sum = 0.0f32;
-            for k in 0..k_len {
+            for (k, &kern_val) in kernel.iter().enumerate().take(k_len) {
                 // padded_pos = o + k, but with `pad` zeros prepended
                 // the real input index is: o + k - pad
                 let input_idx_signed = (o as isize) + (k as isize) - (pad as isize);
                 if input_idx_signed >= 0 && (input_idx_signed as usize) < in_len {
-                    sum += input[input_idx_signed as usize] * kernel[k];
+                    sum += input[input_idx_signed as usize] * kern_val;
                 }
             }
-            output[o] = sum;
+            *out_val = sum;
         }
     }
 
@@ -281,22 +281,22 @@ mod neon_impl {
         let k_ptr = kernel.as_ptr();
 
         // Phase 1: positions in the padding region (scalar, partial kernel).
-        for o in 0..pad.min(out_len) {
+        for (o, out_val) in output.iter_mut().enumerate().take(pad.min(out_len)) {
             let mut sum = 0.0f32;
-            for k in 0..k_len {
+            for (k, &kern_val) in kernel.iter().enumerate().take(k_len) {
                 let idx = (o as isize) + (k as isize) - (pad as isize);
                 if idx >= 0 && (idx as usize) < in_len {
-                    sum += input[idx as usize] * kernel[k];
+                    sum += input[idx as usize] * kern_val;
                 }
             }
-            output[o] = sum;
+            *out_val = sum;
         }
 
         // Phase 2: full-kernel positions — use NEON dot.
-        for o in pad..out_len {
+        for (o, out_val) in output.iter_mut().enumerate().take(out_len).skip(pad) {
             let start = o - pad; // first input element
             let in_ptr = unsafe { input.as_ptr().add(start) };
-            output[o] = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
+            *out_val = unsafe { neon_dot(in_ptr, k_ptr, k_len) };
         }
     }
 }

@@ -58,7 +58,7 @@ impl From<wgpu::BufferAsyncError> for RunnerError {
 /// with a given `group_size`.
 pub fn div_ceil(total: u32, group_size: u32) -> u32 {
     assert!(group_size > 0, "group_size must be > 0");
-    (total + group_size - 1) / group_size
+    total.div_ceil(group_size)
 }
 
 #[cfg(test)]

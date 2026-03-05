@@ -70,8 +70,8 @@ pub fn neon_rms_norm(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
         sum_sq = vaddvq_f32(vacc);
     }
 
-    for i in (chunks * 4)..n {
-        sum_sq += input[i] * input[i];
+    for &val in input.iter().take(n).skip(chunks * 4) {
+        sum_sq += val * val;
     }
 
     let mean_sq = sum_sq / n as f32;

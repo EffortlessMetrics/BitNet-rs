@@ -65,7 +65,7 @@ fuzz_target!(|input: ActivationChainInput| {
     let elu_alpha = (input.elu_alpha as f32 / 255.0) * 2.0 + 0.01;
     let swish_beta = (input.swish_beta as f32 / 255.0) * 3.0 + 0.1;
 
-    let chain_len = input.chain.len().min(6).max(1);
+    let chain_len = input.chain.len().clamp(1, 6);
 
     // Apply chain of activations using the allocating API.
     let mut current = values.clone();
@@ -116,7 +116,7 @@ fuzz_target!(|input: ActivationChainInput| {
         for (i, &val) in out.iter().enumerate() {
             if val.is_finite() {
                 assert!(
-                    val >= lo - 1e-6 && val <= hi + 1e-6,
+                    ((lo - 1e-6)..=(hi + 1e-6)).contains(&val),
                     "{act:?} out of range [{lo}, {hi}] at {i}: {val}"
                 );
             }

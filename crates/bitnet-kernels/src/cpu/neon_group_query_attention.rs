@@ -114,7 +114,7 @@ pub fn neon_gqa_attention(
     head_dim: usize,
     seq_len: usize,
 ) -> Vec<f32> {
-    assert!(num_kv_heads > 0 && num_q_heads % num_kv_heads == 0);
+    assert!(num_kv_heads > 0 && num_q_heads.is_multiple_of(num_kv_heads));
     assert_eq!(query.len(), num_q_heads * seq_len * head_dim);
     assert_eq!(key.len(), num_kv_heads * seq_len * head_dim);
     assert_eq!(value.len(), num_kv_heads * seq_len * head_dim);
@@ -130,12 +130,12 @@ pub fn neon_gqa_attention(
             let q_offset = (qh * seq_len + qi) * head_dim;
             let mut scores = vec![0.0f32; seq_len];
 
-            for ki in 0..seq_len {
+            for (ki, score) in scores.iter_mut().enumerate().take(seq_len) {
                 let k_offset = (kv_head * seq_len + ki) * head_dim;
                 let dot = unsafe {
                     neon_dot(query.as_ptr().add(q_offset), key.as_ptr().add(k_offset), head_dim)
                 };
-                scores[ki] = dot * scale;
+                *score = dot * scale;
             }
 
             // Softmax over scores.
@@ -145,9 +145,8 @@ pub fn neon_gqa_attention(
 
             // Weighted sum of value vectors.
             let out_offset = (qh * seq_len + qi) * head_dim;
-            for vi in 0..seq_len {
+            for (vi, &w) in scores.iter().enumerate().take(seq_len) {
                 let v_offset = (kv_head * seq_len + vi) * head_dim;
-                let w = scores[vi];
                 if w == 0.0 {
                     continue;
                 }
@@ -186,7 +185,7 @@ pub fn neon_gqa_scores(
     head_dim: usize,
     seq_len: usize,
 ) -> Vec<f32> {
-    assert!(num_kv_heads > 0 && num_q_heads % num_kv_heads == 0);
+    assert!(num_kv_heads > 0 && num_q_heads.is_multiple_of(num_kv_heads));
     assert_eq!(query.len(), num_q_heads * seq_len * head_dim);
     assert_eq!(key.len(), num_kv_heads * seq_len * head_dim);
 
@@ -224,7 +223,7 @@ pub fn neon_repeat_kv_heads(
     head_dim: usize,
     seq_len: usize,
 ) -> Vec<f32> {
-    assert!(num_kv_heads > 0 && num_q_heads % num_kv_heads == 0);
+    assert!(num_kv_heads > 0 && num_q_heads.is_multiple_of(num_kv_heads));
     assert_eq!(kv.len(), num_kv_heads * seq_len * head_dim);
 
     let group_size = num_q_heads / num_kv_heads;
@@ -271,7 +270,7 @@ pub fn neon_gqa_with_mask(
     head_dim: usize,
     seq_len: usize,
 ) -> Vec<f32> {
-    assert!(num_kv_heads > 0 && num_q_heads % num_kv_heads == 0);
+    assert!(num_kv_heads > 0 && num_q_heads.is_multiple_of(num_kv_heads));
     assert_eq!(query.len(), num_q_heads * seq_len * head_dim);
     assert_eq!(key.len(), num_kv_heads * seq_len * head_dim);
     assert_eq!(value.len(), num_kv_heads * seq_len * head_dim);
@@ -287,16 +286,16 @@ pub fn neon_gqa_with_mask(
             let q_offset = (qh * seq_len + qi) * head_dim;
             let mut scores = vec![0.0f32; seq_len];
 
-            for ki in 0..seq_len {
+            for (ki, score) in scores.iter_mut().enumerate().take(seq_len) {
                 if !mask[ki] {
-                    scores[ki] = -1e9;
+                    *score = -1e9;
                     continue;
                 }
                 let k_offset = (kv_head * seq_len + ki) * head_dim;
                 let dot = unsafe {
                     neon_dot(query.as_ptr().add(q_offset), key.as_ptr().add(k_offset), head_dim)
                 };
-                scores[ki] = dot * scale;
+                *score = dot * scale;
             }
 
             unsafe {
@@ -304,9 +303,8 @@ pub fn neon_gqa_with_mask(
             }
 
             let out_offset = (qh * seq_len + qi) * head_dim;
-            for vi in 0..seq_len {
+            for (vi, &w) in scores.iter().enumerate().take(seq_len) {
                 let v_offset = (kv_head * seq_len + vi) * head_dim;
-                let w = scores[vi];
                 if w == 0.0 {
                     continue;
                 }

@@ -143,7 +143,7 @@ pub fn find_scale_and_zero(block: &[f32], symmetric: bool) -> (f32, i8) {
 /// `vcvtq_s32_f32` (round-to-nearest) → narrow to `int8`.
 pub fn quantize_f32_to_i8(input: &[f32], config: &QuantizeConfig) -> Vec<QuantizedBlock> {
     let bs = config.block_size;
-    let n_blocks = (input.len() + bs - 1) / bs;
+    let n_blocks = input.len().div_ceil(bs);
     let mut blocks = Vec::with_capacity(n_blocks);
 
     for chunk in input.chunks(bs) {
@@ -195,7 +195,7 @@ pub fn quantize_per_channel(
     config: &QuantizeConfig,
 ) -> Vec<Vec<QuantizedBlock>> {
     assert!(channels > 0, "channels must be > 0");
-    assert!(tensor.len() % channels == 0, "tensor length must be divisible by channels");
+    assert!(tensor.len().is_multiple_of(channels), "tensor length must be divisible by channels");
     let elems_per_ch = tensor.len() / channels;
     (0..channels)
         .map(|ch| {

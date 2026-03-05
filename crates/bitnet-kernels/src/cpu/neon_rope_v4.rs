@@ -39,6 +39,11 @@ fn theta(position: usize, i: usize, head_dim: usize, base: f32) -> f32 {
 /// # Panics
 ///
 /// Panics if `head_dim` is odd, zero, or if slices are too short.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `q` and `k` must have length ≥ `head_dim`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_rope_apply_f32(
@@ -48,7 +53,7 @@ pub unsafe fn neon_rope_apply_f32(
     position: usize,
     base: f32,
 ) {
-    assert!(head_dim > 0 && head_dim % 2 == 0, "head_dim must be even and non-zero");
+    assert!(head_dim > 0 && head_dim.is_multiple_of(2), "head_dim must be even and non-zero");
     assert!(q.len() >= head_dim, "q too short");
     assert!(k.len() >= head_dim, "k too short");
 
@@ -119,7 +124,7 @@ pub fn neon_rope_build_cos_sin_cache(
     max_seq_len: usize,
     base: f32,
 ) -> (Vec<f32>, Vec<f32>) {
-    assert!(head_dim > 0 && head_dim % 2 == 0, "head_dim must be even and non-zero");
+    assert!(head_dim > 0 && head_dim.is_multiple_of(2), "head_dim must be even and non-zero");
 
     let half_dim = head_dim / 2;
     let total = max_seq_len * half_dim;
@@ -145,6 +150,11 @@ pub fn neon_rope_build_cos_sin_cache(
 ///
 /// Panics if `head_dim` is odd/zero, data is too short, or cache doesn't
 /// cover the requested position.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `data` must have length ≥ `head_dim` and caches must cover `position`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_rope_apply_cached_f32(
@@ -154,7 +164,7 @@ pub unsafe fn neon_rope_apply_cached_f32(
     position: usize,
     head_dim: usize,
 ) {
-    assert!(head_dim > 0 && head_dim % 2 == 0, "head_dim must be even and non-zero");
+    assert!(head_dim > 0 && head_dim.is_multiple_of(2), "head_dim must be even and non-zero");
     assert!(data.len() >= head_dim, "data too short");
 
     let half_dim = head_dim / 2;
@@ -215,6 +225,11 @@ pub unsafe fn neon_rope_apply_cached_f32(
 ///
 /// Panics if `data.len() < batch * num_heads * seq_len * head_dim` or
 /// caches are too small.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `data` must have length ≥ `batch * num_heads * seq_len * head_dim`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_rope_apply_batch_f32(
@@ -261,6 +276,11 @@ pub unsafe fn neon_rope_apply_batch_f32(
 ///
 /// Panics if `head_dim` is odd/zero, data is too short, or cache doesn't
 /// cover the requested position.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `data` must have length ≥ `head_dim` and caches must cover `position`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_rope_apply_neox_f32(
@@ -270,7 +290,7 @@ pub unsafe fn neon_rope_apply_neox_f32(
     position: usize,
     head_dim: usize,
 ) {
-    assert!(head_dim > 0 && head_dim % 2 == 0, "head_dim must be even and non-zero");
+    assert!(head_dim > 0 && head_dim.is_multiple_of(2), "head_dim must be even and non-zero");
     assert!(data.len() >= head_dim, "data too short");
 
     let half_dim = head_dim / 2;

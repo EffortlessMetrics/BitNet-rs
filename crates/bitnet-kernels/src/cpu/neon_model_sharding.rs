@@ -202,7 +202,7 @@ impl ShardManager {
         let utilization: Vec<f64> = lengths.iter().map(|&l| l as f64 / max_len as f64).collect();
 
         // Cross-shard transfer estimate: one activation tensor per boundary.
-        let boundaries = if n > 1 { n - 1 } else { 0 };
+        let boundaries = n.saturating_sub(1);
         let activation_bytes: usize = 4096 * 4; // 4K floats
         let transfer = boundaries * activation_bytes;
 

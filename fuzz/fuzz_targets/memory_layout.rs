@@ -91,7 +91,7 @@ impl TensorLayout {
 
     /// Compute the minimum buffer size needed for this layout.
     fn min_buffer_size(&self) -> usize {
-        if self.dims.iter().any(|&d| d == 0) {
+        if self.dims.contains(&0) {
             return 0;
         }
         self.dims

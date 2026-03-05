@@ -22,6 +22,11 @@ use std::arch::aarch64::*;
 /// `values` / `col_indices` / `row_ptrs` describe the sparse matrix (rows × cols).
 /// `dense` is column-major with `cols` rows and `dense_cols` columns.
 /// `output` is row-major with `rows` rows and `dense_cols` columns.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Index arrays must be in-bounds for the corresponding data slices.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sparse_matmul_csr_neon(
@@ -120,6 +125,11 @@ pub fn sparse_matmul_csr_neon(
 /// `values` / `row_indices` / `col_ptrs` describe the sparse matrix (rows × cols).
 /// `dense` is row-major with `cols` rows and `dense_cols` columns.
 /// `output` is row-major with `rows` rows and `dense_cols` columns.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Index arrays must be in-bounds for the corresponding data slices.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sparse_matmul_csc_neon(
@@ -219,6 +229,11 @@ pub fn sparse_matmul_csc_neon(
 /// Compute the dot product of two sparse vectors given in (value, index) form.
 ///
 /// Both vectors must be sorted by index. Runs a merge-intersection.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Each values/indices pair must have equal lengths.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sparse_dot_product_neon(
@@ -303,6 +318,11 @@ pub fn sparse_dot_product_neon(
 // ── Sparse-dense vector addition ───────────────────────────────────────
 
 /// Add a sparse vector to a dense vector in-place: `dense[indices[i]] += values[i]`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// All indices must be in-bounds for the `dense` slice.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sparse_dense_add_neon(values: &[f32], indices: &[usize], dense: &mut [f32]) {
@@ -356,6 +376,11 @@ pub fn sparse_dense_add_neon(values: &[f32], indices: &[usize], dense: &mut [f32
 ///
 /// `dense` is row-major with `cols` rows and `dense_cols` columns.
 /// `output` is row-major with `rows` rows and `dense_cols` columns.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// Index arrays must be in-bounds for the corresponding data slices.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sparse_matmul_block_neon(
@@ -369,7 +394,7 @@ pub unsafe fn sparse_matmul_block_neon(
     dense_cols: usize,
     block_size: usize,
 ) {
-    let block_rows = (rows + block_size - 1) / block_size;
+    let block_rows = rows.div_ceil(block_size);
     assert!(block_ptrs.len() > block_rows);
     assert!(output.len() >= rows * dense_cols);
 

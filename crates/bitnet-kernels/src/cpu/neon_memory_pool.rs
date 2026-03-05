@@ -297,7 +297,7 @@ impl PoolBuffer {
     ///
     /// Panics if `len` is not a multiple of 4.
     pub fn as_f32_mut(&mut self) -> &mut [f32] {
-        assert!(self.len % 4 == 0, "len must be a multiple of 4 for f32 cast");
+        assert!(self.len.is_multiple_of(4), "len must be a multiple of 4 for f32 cast");
         let ptr = self.buf.as_ref().expect("use after return").ptr.as_ptr();
         // SAFETY: alignment ≥ 16 satisfies f32 alignment (4); length is a multiple of 4.
         unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, self.len / 4) }
@@ -309,7 +309,7 @@ impl PoolBuffer {
     ///
     /// Panics if `len` is not a multiple of 4.
     pub fn as_f32(&self) -> &[f32] {
-        assert!(self.len % 4 == 0, "len must be a multiple of 4 for f32 cast");
+        assert!(self.len.is_multiple_of(4), "len must be a multiple of 4 for f32 cast");
         let ptr = self.buf.as_ref().expect("use after return").ptr.as_ptr();
         // SAFETY: alignment ≥ 16 satisfies f32 alignment (4); length is a multiple of 4.
         unsafe { std::slice::from_raw_parts(ptr as *const f32, self.len / 4) }

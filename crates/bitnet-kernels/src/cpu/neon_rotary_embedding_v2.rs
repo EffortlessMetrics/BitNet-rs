@@ -122,11 +122,11 @@ pub unsafe fn build_yarn_tables(cfg: &YarnConfig) -> (Vec<f32>, Vec<f32>) {
     let mut sin_t = Vec::with_capacity(cfg.max_seq * half);
 
     for pos in 0..cfg.max_seq {
-        for i in 0..half {
+        for (i, &ramp_val) in ramp.iter().enumerate().take(half) {
             let exp = -(2.0 * i as f32) / cfg.dim as f32;
             let theta_ntk = ntk_base.powf(exp);
             let theta_interp = cfg.base.powf(exp) / cfg.scale;
-            let theta = (1.0 - ramp[i]) * theta_ntk + ramp[i] * theta_interp;
+            let theta = (1.0 - ramp_val) * theta_ntk + ramp_val * theta_interp;
             let angle = pos as f32 * theta;
             cos_t.push(angle.cos());
             sin_t.push(angle.sin());
@@ -325,8 +325,7 @@ pub unsafe fn batched_rope_neon(
     assert_eq!(position_offsets.len(), batch_size, "need one offset per batch item");
     let stride_batch = num_heads * dim;
 
-    for b in 0..batch_size {
-        let pos = position_offsets[b];
+    for (b, &pos) in position_offsets.iter().enumerate().take(batch_size) {
         for h in 0..num_heads {
             let off = b * stride_batch + h * dim;
             unsafe {

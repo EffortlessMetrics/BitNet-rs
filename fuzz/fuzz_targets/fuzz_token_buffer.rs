@@ -38,16 +38,13 @@ fuzz_target!(|input: BufferInput| {
         }
 
         // Try decode at specified points
-        if input.decode_points.iter().any(|&p| p as usize == i) {
-            if let Some(text) = buffer.try_decode() {
-                // Invariant 3: Decoded text is valid UTF-8
-                assert!(
-                    text.is_ascii()
-                        || text.chars().all(|c| c != char::REPLACEMENT_CHARACTER)
-                        || true
-                ); // try_decode may produce replacement chars
-                total_decoded += text.len();
-            }
+        if input.decode_points.iter().any(|&p| p as usize == i)
+            && let Some(text) = buffer.try_decode()
+        {
+            // Invariant 3: Decoded text is valid UTF-8
+            // try_decode may produce replacement chars, so just check it's valid UTF-8
+            assert!(text.is_ascii() || text.chars().all(|c| c != char::REPLACEMENT_CHARACTER));
+            total_decoded += text.len();
         }
     }
 

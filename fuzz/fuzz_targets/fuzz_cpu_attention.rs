@@ -47,17 +47,16 @@ fuzz_target!(|input: CpuAttentionInput| {
             let k = &k[..k_elems];
             let v = &v[..k_elems];
 
-            if q.iter().chain(k.iter()).chain(v.iter()).all(|x| x.is_finite()) {
-                if let Ok(out) =
+            if q.iter().chain(k.iter()).chain(v.iter()).all(|x| x.is_finite())
+                && let Ok(out) =
                     scaled_dot_product_attention(q, k, v, seq_q, seq_k, head_dim, input.causal)
-                {
-                    assert_eq!(out.len(), seq_q * head_dim);
-                    for (i, &val) in out.iter().enumerate() {
-                        assert!(
-                            val.is_finite(),
-                            "sdpa non-finite at {i}: {val} (seq_q={seq_q}, seq_k={seq_k}, hd={head_dim})"
-                        );
-                    }
+            {
+                assert_eq!(out.len(), seq_q * head_dim);
+                for (i, &val) in out.iter().enumerate() {
+                    assert!(
+                        val.is_finite(),
+                        "sdpa non-finite at {i}: {val} (seq_q={seq_q}, seq_k={seq_k}, hd={head_dim})"
+                    );
                 }
             }
         }
@@ -76,14 +75,13 @@ fuzz_target!(|input: CpuAttentionInput| {
             let k = &k[..total];
             let v = &v[..total];
 
-            if q.iter().chain(k.iter()).chain(v.iter()).all(|x| x.is_finite()) {
-                if let Ok(out) =
+            if q.iter().chain(k.iter()).chain(v.iter()).all(|x| x.is_finite())
+                && let Ok(out) =
                     multi_head_attention_cpu(q, k, v, num_heads, head_dim, seq, input.causal)
-                {
-                    assert_eq!(out.len(), total);
-                    for (i, &val) in out.iter().enumerate() {
-                        assert!(val.is_finite(), "mha non-finite at {i}: {val}");
-                    }
+            {
+                assert_eq!(out.len(), total);
+                for (i, &val) in out.iter().enumerate() {
+                    assert!(val.is_finite(), "mha non-finite at {i}: {val}");
                 }
             }
         }

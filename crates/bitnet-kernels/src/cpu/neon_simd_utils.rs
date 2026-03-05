@@ -8,6 +8,10 @@
 use std::arch::aarch64::*;
 
 /// Horizontal sum of all 4 lanes of a `float32x4_t`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_horizontal_sum_f32(v: float32x4_t) -> f32 {
@@ -15,6 +19,10 @@ pub unsafe fn neon_horizontal_sum_f32(v: float32x4_t) -> f32 {
 }
 
 /// Horizontal maximum of all 4 lanes of a `float32x4_t`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_horizontal_max_f32(v: float32x4_t) -> f32 {
@@ -22,6 +30,10 @@ pub unsafe fn neon_horizontal_max_f32(v: float32x4_t) -> f32 {
 }
 
 /// Horizontal minimum of all 4 lanes of a `float32x4_t`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_horizontal_min_f32(v: float32x4_t) -> f32 {
@@ -29,6 +41,10 @@ pub unsafe fn neon_horizontal_min_f32(v: float32x4_t) -> f32 {
 }
 
 /// Broadcast a scalar `f32` to all 4 lanes of a `float32x4_t`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_broadcast_f32(val: f32) -> float32x4_t {
@@ -110,6 +126,10 @@ pub unsafe fn neon_store_partial_f32(ptr: *mut f32, v: float32x4_t, count: usize
 }
 
 /// Fused multiply-add: `a + b * c`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_fma_f32(a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
@@ -117,6 +137,10 @@ pub unsafe fn neon_fma_f32(a: float32x4_t, b: float32x4_t, c: float32x4_t) -> fl
 }
 
 /// Per-lane absolute value.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_abs_f32(v: float32x4_t) -> float32x4_t {
@@ -124,6 +148,10 @@ pub unsafe fn neon_abs_f32(v: float32x4_t) -> float32x4_t {
 }
 
 /// Per-lane clamp: `max(min_val, min(v, max_val))`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_clamp_f32(v: float32x4_t, min: float32x4_t, max: float32x4_t) -> float32x4_t {
@@ -132,6 +160,10 @@ pub unsafe fn neon_clamp_f32(v: float32x4_t, min: float32x4_t, max: float32x4_t)
 
 /// Bitwise select: for each bit position, choose from `a` where `mask` is 1,
 /// from `b` where `mask` is 0.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_select_f32(mask: uint32x4_t, a: float32x4_t, b: float32x4_t) -> float32x4_t {
@@ -142,6 +174,10 @@ pub unsafe fn neon_select_f32(mask: uint32x4_t, a: float32x4_t, b: float32x4_t) 
 ///
 /// Returns `(low, high)` where `low = [a0, b0, a1, b1]` and
 /// `high = [a2, b2, a3, b3]`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_interleave_f32(a: float32x4_t, b: float32x4_t) -> (float32x4_t, float32x4_t) {
@@ -156,6 +192,10 @@ pub unsafe fn neon_interleave_f32(a: float32x4_t, b: float32x4_t) -> (float32x4_
 ///
 /// Returns `(even, odd)` where `even = [a0, a2, b0, b2]` and
 /// `odd = [a1, a3, b1, b3]`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn neon_deinterleave_f32(a: float32x4_t, b: float32x4_t) -> (float32x4_t, float32x4_t) {
