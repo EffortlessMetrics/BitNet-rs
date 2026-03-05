@@ -78,7 +78,7 @@ required-features = ["bench"]
 
 [features]
 default = []
-cpu = ["bitnet-kernels/cpu-optimized"]
+cpu = ["bitnet-kernels/cpu", "bitnet-kernels/cpu-optimized"]
 cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]
 metal = ["bitnet-common/metal", "bitnet-models/metal"]

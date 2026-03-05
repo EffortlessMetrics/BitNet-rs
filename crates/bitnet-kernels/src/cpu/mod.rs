@@ -266,7 +266,7 @@ pub mod neon_matmul_tiling;
 pub mod neon_memory_layout;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_memory_pool;
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "cpu"))]
 pub mod neon_mixed_precision;
 #[cfg(target_arch = "aarch64")]
 pub mod neon_model_sharding;
