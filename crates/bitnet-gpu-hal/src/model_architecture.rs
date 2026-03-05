@@ -133,9 +133,8 @@ pub struct ModelSpec {
 impl ModelSpec {
     /// Approximate total parameter count.
     pub fn param_count(&self) -> u64 {
-        let layer = match self.architecture.layers.first() {
-            Some(l) => l,
-            None => return 0,
+        let Some(layer) = self.architecture.layers.first() else {
+            return 0;
         };
         let n = self.architecture.num_layers as u64;
         let h = layer.hidden_dim as u64;
@@ -259,10 +258,10 @@ impl ArchitectureDetector {
         for key in
             &["llama.block_count", "gpt2.block_count", "bert.block_count", "general.block_count"]
         {
-            if let Some(v) = metadata.get(*key) {
-                if let Ok(n) = v.parse::<usize>() {
-                    return Some(n);
-                }
+            if let Some(v) = metadata.get(*key)
+                && let Ok(n) = v.parse::<usize>()
+            {
+                return Some(n);
             }
         }
         None
@@ -470,9 +469,9 @@ impl ArchitectureComparator {
         let la = a.layers.first();
         let lb = b.layers.first();
 
-        let (h_a, f_a, hd_a) =
+        let (hidden_a, ffn_a, heads_a) =
             la.map(|l| (l.hidden_dim, l.ffn_dim, l.attention_heads)).unwrap_or((0, 0, 0));
-        let (h_b, f_b, hd_b) =
+        let (hidden_b, ffn_b, heads_b) =
             lb.map(|l| (l.hidden_dim, l.ffn_dim, l.attention_heads)).unwrap_or((0, 0, 0));
 
         ArchDiff {
@@ -480,15 +479,16 @@ impl ArchitectureComparator {
             name_b: b.name.clone(),
             type_matches: a.arch_type == b.arch_type,
             layer_count_diff: b.num_layers as i64 - a.num_layers as i64,
-            hidden_dim_diff: h_b as i64 - h_a as i64,
-            ffn_dim_diff: f_b as i64 - f_a as i64,
-            head_count_diff: hd_b as i64 - hd_a as i64,
+            hidden_dim_diff: hidden_b as i64 - hidden_a as i64,
+            ffn_dim_diff: ffn_b as i64 - ffn_a as i64,
+            head_count_diff: heads_b as i64 - heads_a as i64,
         }
     }
 }
 
 // ── Known architectures ──────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn make_spec(
     name: &str,
     arch_type: ArchitectureType,
@@ -541,7 +541,7 @@ pub fn known_specs() -> Vec<ModelSpec> {
             32,
             3200,
             8640,
-            100352,
+            100_352,
             4096,
             WeightDtype::I2S,
         ),

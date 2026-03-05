@@ -115,8 +115,8 @@ fuzz_target!(|input: BatchNormInput| {
     let zeros = vec![0.0f32; channels];
     let mut const_input = Vec::with_capacity(total);
     for _ in 0..batch_size {
-        for c in 0..channels {
-            const_input.push(mean[c]); // input == mean → normalized to 0
+        for val in &mean[..channels] {
+            const_input.push(*val); // input == mean → normalized to 0
         }
     }
     let const_out = batch_norm(&const_input, mean, &var_vals, &ones, &zeros, channels, eps);

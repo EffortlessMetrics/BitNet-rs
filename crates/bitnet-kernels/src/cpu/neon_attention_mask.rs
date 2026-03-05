@@ -159,7 +159,7 @@ pub fn neon_sliding_window_mask_f32(
 
         // Visible range: [win_start, win_end] inclusive
         let win_end = abs_pos; // causal: cannot see future
-        let win_start = if abs_pos + 1 >= window_size { abs_pos + 1 - window_size } else { 0 };
+        let win_start = (abs_pos + 1).saturating_sub(window_size);
 
         // Mask everything before win_start
         if win_start > 0 {
@@ -306,11 +306,7 @@ pub fn neon_combined_mask_f32(
         let abs_pos = q + offset;
 
         // Determine visible range from causal + window
-        let vis_start = if let Some(w) = window {
-            if abs_pos + 1 >= w { abs_pos + 1 - w } else { 0 }
-        } else {
-            0
-        };
+        let vis_start = if let Some(w) = window { (abs_pos + 1).saturating_sub(w) } else { 0 };
         let vis_end = if causal { abs_pos } else { kv_len.saturating_sub(1) };
 
         // Mask before visible start

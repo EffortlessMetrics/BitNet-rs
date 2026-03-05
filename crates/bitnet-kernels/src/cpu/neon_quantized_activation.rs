@@ -13,7 +13,7 @@ use std::arch::aarch64::*;
 
 /// √(2/π) used in GELU tanh approximation.
 #[cfg(target_arch = "aarch64")]
-const SQRT_2_OVER_PI: f32 = 0.797_884_56;
+const SQRT_2_OVER_PI: f32 = 0.797_884_6;
 
 /// Cubic coefficient in GELU tanh approximation.
 #[cfg(target_arch = "aarch64")]
@@ -44,7 +44,7 @@ unsafe fn neon_exp_f32x4(x: float32x4_t) -> float32x4_t {
         // Degree-6 minimax polynomial for exp(r) on [0, ln2)
         let c0 = vdupq_n_f32(1.0);
         let c1 = vdupq_n_f32(1.0);
-        let c2 = vdupq_n_f32(0.500_000_0);
+        let c2 = vdupq_n_f32(0.5);
         let c3 = vdupq_n_f32(0.166_666_7);
         let c4 = vdupq_n_f32(0.041_666_67);
         let c5 = vdupq_n_f32(0.008_333_334);
@@ -79,7 +79,7 @@ fn scalar_exp_fast(x: f32) -> f32 {
 
     let p = 1.0
         + r * (1.0
-            + r * (0.500_000_0
+            + r * (0.5
                 + r * (0.166_666_7
                     + r * (0.041_666_67 + r * (0.008_333_334 + r * 0.001_388_889)))));
 
@@ -102,8 +102,8 @@ unsafe fn neon_sigmoid_vec(x: float32x4_t) -> float32x4_t {
         let denom = vaddq_f32(one, exp_neg);
         // reciprocal: use vrecpeq + Newton-Raphson step
         let recip = vrecpeq_f32(denom);
-        let recip = vmulq_f32(recip, vrecpsq_f32(denom, recip));
-        recip
+
+        vmulq_f32(recip, vrecpsq_f32(denom, recip))
     }
 }
 
@@ -183,6 +183,11 @@ fn scalar_gelu(x: f32) -> f32 {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_relu_f32(input: &[f32], output: &mut [f32]) {
@@ -217,6 +222,11 @@ pub unsafe fn neon_relu_f32(input: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_sigmoid_f32(input: &[f32], output: &mut [f32]) {
@@ -249,6 +259,11 @@ pub unsafe fn neon_sigmoid_f32(input: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_tanh_f32(input: &[f32], output: &mut [f32]) {
@@ -279,6 +294,11 @@ pub unsafe fn neon_tanh_f32(input: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_silu_f32(input: &[f32], output: &mut [f32]) {
@@ -311,6 +331,11 @@ pub unsafe fn neon_silu_f32(input: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_gelu_f32(input: &[f32], output: &mut [f32]) {
@@ -345,6 +370,11 @@ pub unsafe fn neon_gelu_f32(input: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < input.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `output` must be at least as long as `input`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_fast_gelu_f32(input: &[f32], output: &mut [f32]) {
@@ -387,6 +417,11 @@ fn scalar_fast_gelu(x: f32) -> f32 {
 /// # Panics
 ///
 /// Panics if `output.len() < gate.len()` or `up.len() < gate.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `up` and `output` must be at least as long as `gate`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_swiglu_f32(gate: &[f32], up: &[f32], output: &mut [f32]) {
@@ -425,6 +460,11 @@ pub unsafe fn neon_swiglu_f32(gate: &[f32], up: &[f32], output: &mut [f32]) {
 /// # Panics
 ///
 /// Panics if `output.len() < gate.len()` or `up.len() < gate.len()`.
+///
+/// # Safety
+///
+/// Caller must ensure the target supports NEON instructions (aarch64).
+/// `up` and `output` must be at least as long as `gate`.
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_geglu_f32(gate: &[f32], up: &[f32], output: &mut [f32]) {

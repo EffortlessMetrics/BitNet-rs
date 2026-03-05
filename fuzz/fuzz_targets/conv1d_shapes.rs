@@ -97,7 +97,7 @@ fuzz_target!(|input: Conv1dInput| {
 
         // Invariant 3: Same-padding preserves ceil(input_width / stride).
         if matches!(input.padding, PaddingMode::Same) {
-            let expected_same = (input_width + stride - 1) / stride;
+            let expected_same = input_width.div_ceil(stride);
             assert_eq!(width, expected_same, "Same-padding: expected {expected_same}, got {width}");
         }
     }

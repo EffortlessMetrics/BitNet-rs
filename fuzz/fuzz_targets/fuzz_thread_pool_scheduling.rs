@@ -91,26 +91,25 @@ fuzz_target!(|input: ThreadPoolInput| {
                     && beta.len() >= dim
                     && gamma[..dim].iter().all(|x| x.is_finite())
                     && beta[..dim].iter().all(|x| x.is_finite())
-                {
-                    if let Ok(out) =
+                    && let Ok(out) =
                         batched_layer_norm(data, &gamma[..dim], &beta[..dim], batch, dim, 1e-5)
-                    {
-                        assert_eq!(out.len(), total);
-                        for (i, &v) in out.iter().enumerate() {
-                            assert!(!v.is_nan(), "batched_layer_norm NaN at {i}");
-                        }
+                {
+                    assert_eq!(out.len(), total);
+                    for (i, &v) in out.iter().enumerate() {
+                        assert!(!v.is_nan(), "batched_layer_norm NaN at {i}");
                     }
                 }
             }
             3 => {
                 // Batched add: must not panic.
                 let b_data = bytes_to_f32(&input.weights, total);
-                if b_data.len() >= total && b_data[..total].iter().all(|x| x.is_finite()) {
-                    if let Ok(out) = batched_add(data, &b_data[..total], batch, dim) {
-                        assert_eq!(out.len(), total);
-                        for (i, &v) in out.iter().enumerate() {
-                            assert!(v.is_finite(), "batched_add non-finite at {i}");
-                        }
+                if b_data.len() >= total
+                    && b_data[..total].iter().all(|x| x.is_finite())
+                    && let Ok(out) = batched_add(data, &b_data[..total], batch, dim)
+                {
+                    assert_eq!(out.len(), total);
+                    for (i, &v) in out.iter().enumerate() {
+                        assert!(v.is_finite(), "batched_add non-finite at {i}");
                     }
                 }
             }
@@ -119,14 +118,14 @@ fuzz_target!(|input: ThreadPoolInput| {
     }
 
     // Invariant: running the same operation twice yields identical results.
-    if let Ok(out1) = batched_softmax(data, batch, dim) {
-        if let Ok(out2) = batched_softmax(data, batch, dim) {
-            for (i, (&a, &b)) in out1.iter().zip(out2.iter()).enumerate() {
-                assert!(
-                    (a - b).abs() < 1e-7 || (a.is_nan() && b.is_nan()),
-                    "determinism violated at {i}: {a} vs {b}"
-                );
-            }
+    if let Ok(out1) = batched_softmax(data, batch, dim)
+        && let Ok(out2) = batched_softmax(data, batch, dim)
+    {
+        for (i, (&a, &b)) in out1.iter().zip(out2.iter()).enumerate() {
+            assert!(
+                (a - b).abs() < 1e-7 || (a.is_nan() && b.is_nan()),
+                "determinism violated at {i}: {a} vs {b}"
+            );
         }
     }
 });

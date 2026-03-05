@@ -127,7 +127,7 @@ fuzz_target!(|input: LayerNormInput| {
     }
 
     // Invariant 6: Constant input produces constant output (after normalization)
-    let constant_input = vec![3.14f32; dim];
+    let constant_input = vec![std::f32::consts::PI; dim];
     let ones = vec![1.0f32; dim];
     let zeros = vec![0.0f32; dim];
     let const_ln = layer_norm(&constant_input, &ones, &zeros, dim, eps_val);

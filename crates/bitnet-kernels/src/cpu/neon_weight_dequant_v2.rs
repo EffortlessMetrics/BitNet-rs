@@ -285,12 +285,7 @@ pub fn dequant_row_blocked(
         let elem_end = (elem_start + block_size).min(num_elements);
         let this_block_size = elem_end - elem_start;
         let byte_start = blk * bytes_per_block;
-        dequant_i2s_block_v2(
-            &packed[byte_start..],
-            scale,
-            this_block_size,
-            &mut out[elem_start..],
-        );
+        dequant_i2s_block_v2(&packed[byte_start..], scale, this_block_size, &mut out[elem_start..]);
     }
 }
 

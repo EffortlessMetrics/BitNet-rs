@@ -417,8 +417,8 @@ impl AttentionComputer {
         }
 
         for t in 0..seq {
-            for h in 0..num_heads {
-                output.extend_from_slice(&per_head_outputs[h][t * d..(t + 1) * d]);
+            for head_out in &per_head_outputs {
+                output.extend_from_slice(&head_out[t * d..(t + 1) * d]);
             }
         }
         output

@@ -9,7 +9,7 @@ use std::arch::aarch64::*;
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const SQRT_2_OVER_PI: f32 = 0.797_884_56; // sqrt(2/π)
+const SQRT_2_OVER_PI: f32 = 0.797_884_6; // sqrt(2/π)
 const GELU_COEFF: f32 = 0.044715;
 
 /// Approximate erf(x) using Horner form (Abramowitz & Stegun 7.1.26).
@@ -19,8 +19,8 @@ fn approx_erff(x: f32) -> f32 {
     let x = x.abs();
     let t = 1.0 / (1.0 + 0.3275911 * x);
     let poly = t
-        * (0.254829592
-            + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+        * (0.254_829_6
+            + t * (-0.284_496_72 + t * (1.421_413_8 + t * (-1.453_152_1 + t * 1.061_405_4))));
     sign * (1.0 - poly * (-x * x).exp())
 }
 
@@ -137,11 +137,11 @@ unsafe fn neon_erf_approx(x: float32x4_t) -> float32x4_t {
 
     // Abramowitz & Stegun constants for erf approximation
     let p = vdupq_n_f32(0.3275911);
-    let a1 = vdupq_n_f32(0.254829592);
-    let a2 = vdupq_n_f32(-0.284496736);
-    let a3 = vdupq_n_f32(1.421413741);
-    let a4 = vdupq_n_f32(-1.453152027);
-    let a5 = vdupq_n_f32(1.061405429);
+    let a1 = vdupq_n_f32(0.254_829_6);
+    let a2 = vdupq_n_f32(-0.284_496_72);
+    let a3 = vdupq_n_f32(1.421_413_8);
+    let a4 = vdupq_n_f32(-1.453_152_1);
+    let a5 = vdupq_n_f32(1.061_405_4);
 
     let t = {
         let denom = vfmaq_f32(one, p, abs_x); // 1 + p * |x|
