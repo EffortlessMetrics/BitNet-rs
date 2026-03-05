@@ -561,7 +561,7 @@ impl DenseModel {
 
         // Transformer blocks with ping-pong to avoid per-block allocation.
         for (i, block) in self.blocks.iter().enumerate() {
-            if i % 2 == 0 {
+            if i.is_multiple_of(2) {
                 block.forward_into_ws(&buf_a, &mut buf_b, &mut ws);
             } else {
                 block.forward_into_ws(&buf_b, &mut buf_a, &mut ws);
