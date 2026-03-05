@@ -1,0 +1,29 @@
+    Checking bitnet-common v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-common)
+error: redundant closure
+  --> crates\bitnet-common\tests\proptest_wave30_common.rs:30:30
+   |
+30 |         (0usize..8).prop_map(|i| Device::Cuda(i)),
+   |                              ^^^^^^^^^^^^^^^^^^^ help: replace the closure with the tuple variant itself: `Device::Cuda`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#redundant_closure
+   = note: `-D clippy::redundant-closure` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::redundant_closure)]`
+
+error: redundant closure
+  --> crates\bitnet-common\tests\proptest_wave30_common.rs:31:30
+   |
+31 |         (0usize..8).prop_map(|i| Device::Hip(i)),
+   |                              ^^^^^^^^^^^^^^^^^^ help: replace the closure with the tuple variant itself: `Device::Hip`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#redundant_closure
+
+error: redundant closure
+  --> crates\bitnet-common\tests\proptest_wave30_common.rs:34:30
+   |
+34 |         (0usize..8).prop_map(|i| Device::OpenCL(i)),
+   |                              ^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the tuple variant itself: `Device::OpenCL`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#redundant_closure
+
+error: could not compile `bitnet-common` (test "proptest_wave30_common") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...

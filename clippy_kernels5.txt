@@ -1,0 +1,45 @@
+   Compiling bitnet v0.2.1-dev (C:\Code\Rust\BitNet-rs)
+    Checking bitnet-tests v0.2.1-dev (C:\Code\Rust\BitNet-rs\tests)
+    Checking bitnet-kernels v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-kernels)
+error: duplicated attribute
+  --> crates\bitnet-kernels\tests\metal_error_recovery_tests.rs:14:10
+   |
+14 | #![allow(dead_code)]
+   |          ^^^^^^^^^
+   |
+note: first defined here
+  --> crates\bitnet-kernels\tests\metal_error_recovery_tests.rs:1:10
+   |
+ 1 | #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
+   |          ^^^^^^^^^
+help: remove this attribute
+  --> crates\bitnet-kernels\tests\metal_error_recovery_tests.rs:14:10
+   |
+14 | #![allow(dead_code)]
+   |          ^^^^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#duplicated_attributes
+   = note: `-D clippy::duplicated-attributes` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::duplicated_attributes)]`
+
+error: could not compile `bitnet-kernels` (test "metal_error_recovery_tests") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: approximate value of `f32::consts::PI` found
+   --> crates\bitnet-kernels\tests\metal_shared_memory.rs:993:25
+    |
+993 |         let data = vec![3.14f32; 64];
+    |                         ^^^^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#approx_constant
+    = note: `#[deny(clippy::approx_constant)]` on by default
+
+error: approximate value of `f{32, 64}::consts::PI` found
+   --> crates\bitnet-kernels\tests\metal_shared_memory.rs:994:50
+    |
+994 |         assert!((parallel_reduction_max(&data) - 3.14).abs() < 1e-6);
+    |                                                  ^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#approx_constant
+
+error: could not compile `bitnet-kernels` (test "metal_shared_memory") due to 2 previous errors

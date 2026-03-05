@@ -146,7 +146,7 @@ fn test_metal_workgroup_sizes_valid() {
     }
 
     // Invalid: not powers of 2 or exceed limits
-    let invalid_configs = vec![
+    let invalid_configs = [
         MetalKernelConfig {
             workgroup_size: [3, 1, 1],
             entry_point: "kernel1".to_string(),
@@ -313,7 +313,7 @@ fn test_metal_simd_group_size() {
     assert_ne!(inefficient_size % APPLE_SILICON_SIMD_GROUP_SIZE, 0);
 
     // Verify SIMD group size bounds
-    assert!(APPLE_SILICON_SIMD_GROUP_SIZE <= METAL_MAX_THREADS_PER_THREADGROUP);
+    const { assert!(APPLE_SILICON_SIMD_GROUP_SIZE <= METAL_MAX_THREADS_PER_THREADGROUP) };
 }
 
 /// Test: Test format enum coverage for common Metal pixel formats

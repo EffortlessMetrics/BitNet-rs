@@ -1,0 +1,43 @@
+   Compiling bitnet v0.2.1-dev (C:\Code\Rust\BitNet-rs)
+    Checking bitnet-tests v0.2.1-dev (C:\Code\Rust\BitNet-rs\tests)
+    Checking bitnet-kernels v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-kernels)
+error: duplicated attribute
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:9:10
+  |
+9 | #![allow(dead_code, unused_imports)]
+  |          ^^^^^^^^^
+  |
+note: first defined here
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:1:10
+  |
+1 | #![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
+  |          ^^^^^^^^^
+help: remove this attribute
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:9:10
+  |
+9 | #![allow(dead_code, unused_imports)]
+  |          ^^^^^^^^^
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#duplicated_attributes
+  = note: `-D clippy::duplicated-attributes` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::duplicated_attributes)]`
+
+error: duplicated attribute
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:9:21
+  |
+9 | #![allow(dead_code, unused_imports)]
+  |                     ^^^^^^^^^^^^^^
+  |
+note: first defined here
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:1:21
+  |
+1 | #![allow(dead_code, unused_imports, unused_variables, unused_unsafe, unsafe_op_in_unsafe_fn)]
+  |                     ^^^^^^^^^^^^^^
+help: remove this attribute
+ --> crates\bitnet-kernels\tests\neon_softmax_edge_tests.rs:9:21
+  |
+9 | #![allow(dead_code, unused_imports)]
+  |                     ^^^^^^^^^^^^^^
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#duplicated_attributes
+
+error: could not compile `bitnet-kernels` (test "neon_softmax_edge_tests") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

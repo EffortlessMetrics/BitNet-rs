@@ -255,6 +255,7 @@ fn reference_gqa(
 ///
 /// Q, K, V are `i8` tensors of shape `[seq_len, head_dim]` with per-tensor
 /// scales.  Returns f32 output `[seq_len, head_dim]`.
+#[allow(clippy::too_many_arguments)]
 fn reference_quant_sdpa(
     q_i8: &[i8],
     k_i8: &[i8],
