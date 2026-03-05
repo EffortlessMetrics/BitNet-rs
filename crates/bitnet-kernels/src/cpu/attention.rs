@@ -1386,10 +1386,8 @@ pub fn flash_attention_cpu(
             }
 
             // Online softmax update: re-scale previous accumulator.
-            let block_max = block_scores[..block_k]
-                .iter()
-                .copied()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let block_max =
+                block_scores[..block_k].iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let new_max = row_max[qi].max(block_max);
 
             let correction = (row_max[qi] - new_max).exp();
