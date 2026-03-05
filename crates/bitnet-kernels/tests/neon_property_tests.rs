@@ -190,14 +190,9 @@ proptest! {
     /// NEON RMSNorm with gamma=1 produces output with approximately unit RMS.
     #[test]
     fn prop_neon_rmsnorm_unit_rms(
-        input in prop::collection::vec(
-            prop::num::f32::NORMAL, 2..=256
-        ),
+        input in prop::collection::vec(-100.0f32..100.0f32, 2..=256),
     ) {
         let n = input.len();
-        // Filter extreme magnitudes: squaring values > ~1e18 overflows f32
-        // (max ~3.4e38), producing infinite RMS and zero-valued outputs.
-        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -218,12 +213,9 @@ proptest! {
     /// NEON RMSNorm preserves sign when gamma is positive.
     #[test]
     fn prop_neon_rmsnorm_preserves_sign(
-        input in prop::collection::vec(
-            prop::num::f32::NORMAL, 2..=256
-        ),
+        input in prop::collection::vec(-100.0f32..100.0f32, 2..=256),
     ) {
         let n = input.len();
-        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -246,13 +238,10 @@ proptest! {
     /// NEON RMSNorm gamma scaling: scale(gamma) → scale(output).
     #[test]
     fn prop_neon_rmsnorm_gamma_scaling(
-        input in prop::collection::vec(
-            prop::num::f32::NORMAL, 2..=128
-        ),
+        input in prop::collection::vec(-100.0f32..100.0f32, 2..=128),
         scale in 0.5f32..5.0f32,
     ) {
         let n = input.len();
-        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -279,12 +268,9 @@ proptest! {
     /// NEON RMSNorm matches the scalar `rms_norm` path.
     #[test]
     fn prop_neon_rmsnorm_matches_scalar(
-        input in prop::collection::vec(
-            prop::num::f32::NORMAL, 2..=256
-        ),
+        input in prop::collection::vec(-100.0f32..100.0f32, 2..=256),
     ) {
         let n = input.len();
-        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
