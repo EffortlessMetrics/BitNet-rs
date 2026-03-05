@@ -195,6 +195,9 @@ proptest! {
         ),
     ) {
         let n = input.len();
+        // Filter extreme magnitudes: squaring values > ~1e18 overflows f32
+        // (max ~3.4e38), producing infinite RMS and zero-valued outputs.
+        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -220,6 +223,7 @@ proptest! {
         ),
     ) {
         let n = input.len();
+        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -248,6 +252,7 @@ proptest! {
         scale in 0.5f32..5.0f32,
     ) {
         let n = input.len();
+        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
@@ -279,6 +284,7 @@ proptest! {
         ),
     ) {
         let n = input.len();
+        prop_assume!(input.iter().all(|&x| x.abs() < 1e18));
         let rms_in: f32 =
             (input.iter().map(|x| x * x).sum::<f32>() / n as f32).sqrt();
         prop_assume!(rms_in > 1e-6);
