@@ -1,4 +1,4 @@
-//! Reusable API versioning primitives for BitNet services.
+//! Reusable API versioning primitives for `BitNet` services.
 
 use std::fmt;
 
@@ -22,13 +22,14 @@ impl ApiVersion {
 
     /// Check if this version is compatible with another.
     /// Same major version and >= minor version means compatible.
-    pub fn is_compatible_with(&self, other: &Self) -> bool {
+    pub const fn is_compatible_with(&self, other: &Self) -> bool {
         self.major == other.major && self.minor >= other.minor
     }
 
     /// Check if this version is deprecated.
-    pub fn is_deprecated(&self, min_supported: &Self) -> bool {
-        self < min_supported
+    pub const fn is_deprecated(&self, min_supported: &Self) -> bool {
+        self.major < min_supported.major
+            || (self.major == min_supported.major && self.minor < min_supported.minor)
     }
 
     /// Parse from "v1.0" or "1.0" format.
@@ -67,7 +68,11 @@ pub struct VersionRange {
 }
 
 impl VersionRange {
-    pub fn new(versions: Vec<ApiVersion>, current: ApiVersion, min_supported: ApiVersion) -> Self {
+    pub const fn new(
+        versions: Vec<ApiVersion>,
+        current: ApiVersion,
+        min_supported: ApiVersion,
+    ) -> Self {
         Self { versions, current, min_supported }
     }
 
