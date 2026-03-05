@@ -359,13 +359,17 @@ impl DenseTokenSampler {
             return Vec::new();
         }
         let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let exps: Vec<f32> = logits.iter().map(|&l| (l - max).exp()).collect();
-        let sum: f32 = exps.iter().sum();
+        let mut probs: Vec<f32> = logits.iter().map(|&l| (l - max).exp()).collect();
+        let sum: f32 = probs.iter().sum();
         if sum == 0.0 {
             // All -inf logits → uniform over non-neg-inf entries.
-            return vec![0.0; logits.len()];
+            probs.fill(0.0);
+            return probs;
         }
-        exps.iter().map(|&e| e / sum).collect()
+        for p in &mut probs {
+            *p /= sum;
+        }
+        probs
     }
 
     /// Greedy mask: max element keeps its value, rest → NEG_INFINITY.
