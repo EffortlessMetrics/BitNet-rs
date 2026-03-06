@@ -1,7 +1,7 @@
 //! Core C API functions with exact signature compatibility
 //!
 //! This module implements the core C API functions that match the existing BitNet C++
-//! bindings exactly, providing a drop-in replacement with enhanced functionality.
+//! bindings, targeting API compatibility with enhanced functionality (CI validation pending).
 
 use crate::{
     BitNetCConfig, BitNetCError, BitNetCInferenceConfig, BitNetCModel, BitNetCPerformanceMetrics,

@@ -1,8 +1,8 @@
 //! C API bindings for BitNet
 //!
-//! This module provides a comprehensive C API that serves as a drop-in replacement
-//! for the existing BitNet C++ bindings. It maintains exact signature compatibility
-//! while providing enhanced error handling, thread safety, and performance monitoring.
+//! This module provides a C API compatible with the BitNet C++ bindings.
+//! It targets signature compatibility while providing enhanced error handling,
+//! thread safety, and performance monitoring. CI validation is pending.
 
 pub mod c_api;
 pub mod config;

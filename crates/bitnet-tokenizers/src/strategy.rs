@@ -1,6 +1,6 @@
-//! Production tokenizer strategy implementations with neural network model-specific optimizations
+//! Tokenizer strategy implementations with neural network model-specific optimizations
 //!
-//! This module provides production-ready tokenizer strategy implementations for LLaMA-2/3, GPT-2,
+//! This module provides tokenizer strategy implementations for LLaMA-2/3, GPT-2,
 //! and BitNet models with proper special token handling and neural network-specific configurations.
 
 use crate::{

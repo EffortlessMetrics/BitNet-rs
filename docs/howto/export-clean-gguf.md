@@ -2,7 +2,7 @@
 
 **Audience:** Developers and researchers who need to export BitNet models to GGUF format with correct LayerNorm preservation.
 
-**Goal:** Produce production-ready GGUF models that pass strict validation without policy corrections.
+**Goal:** Produce GGUF models that pass strict validation without policy corrections.
 
 ---
 
@@ -46,7 +46,7 @@ These keys are automatically extracted from `config.json` during conversion. If 
 
 ### Software Requirements
 
-- **Rust toolchain** (MSRV 1.90.0+)
+- **Rust toolchain** (MSRV 1.92.0+)
 - **Python 3.8+** with packages:
   - `safetensors`
   - `torch`

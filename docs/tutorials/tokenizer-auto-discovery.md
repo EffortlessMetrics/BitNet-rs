@@ -1,6 +1,6 @@
 # Getting Started with Tokenizer Auto-Discovery
 
-This tutorial will guide you through using bitnet-rs's intelligent tokenizer discovery system with real GGUF neural network models. You'll learn how to automatically find, download, and integrate tokenizers for production-ready neural network inference with actual trained weights.
+This tutorial will guide you through using bitnet-rs's intelligent tokenizer discovery system with real GGUF neural network models. You'll learn how to automatically find, download, and integrate tokenizers for neural network inference with actual trained weights.
 
 ## What You'll Learn
 
@@ -352,4 +352,4 @@ You've learned how to:
 - ✅ Troubleshoot common issues
 - ✅ Use advanced programmatic APIs
 
-The tokenizer discovery system makes bitnet-rs inference seamless across different neural network architectures while maintaining production-grade reliability and performance.
+The tokenizer discovery system makes bitnet-rs inference seamless across different neural network architectures while maintaining reliability and performance.

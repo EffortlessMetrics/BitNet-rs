@@ -12,7 +12,7 @@ Implementing real GGUF weight loading unlocks the complete BitNet-rs inference p
 - **Quantization**: Validate real I2_S, TL1, TL2 quantized weights against C++ reference implementation
 - **Inference**: Enable meaningful computations with trained parameters instead of zero weights
 - **Output**: Generate valid text and perform useful neural network tasks
-- **Performance**: Achieve production-ready inference with memory optimization and GPU acceleration
+- **Performance**: Achieve efficient inference with memory optimization and SIMD acceleration
 
 ## Scope
 

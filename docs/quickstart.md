@@ -104,9 +104,9 @@ RAYON_NUM_THREADS=1 RUST_LOG=warn \
 
 | Quantization Format | Status | CPU Performance | Use Case | Time for 128 tokens |
 |---------------------|--------|-----------------|----------|---------------------|
-| **I2_S BitNet32-F16** | ✅ Production | 10-20 tok/s | Recommended | ~6-13 seconds |
+| **I2_S BitNet32-F16** | ✅ Production | SIMD-optimised | Recommended | Hardware-dependent |
 | **I2_S QK256 (GGML)** | ⚠️ MVP Scalar | ~0.1 tok/s | Validation only | ~20 minutes |
-| **TL1/TL2** | 🚧 Experimental | 8-15 tok/s | Research | ~8-16 seconds |
+| **TL1/TL2** | 🚧 Experimental | SIMD-optimised | Research | Hardware-dependent |
 
 **The microsoft/bitnet-b1.58-2B-4T-gguf model uses QK256 format**, which is currently MVP-only with scalar kernels.
 
@@ -144,10 +144,9 @@ RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
 ```
 
 **Expected Performance:**
-- **I2_S BitNet32-F16**: 10-20 tok/s (production-ready)
+- **I2_S BitNet32-F16**: SIMD-optimised; performance varies by hardware
 - **I2_S QK256**: ~0.1 tok/s (MVP scalar kernels, validation only)
 - **Memory usage**: ~2GB for 2B parameter model
-- **Accuracy**: >99% retention with real transformer computation
 
 ## QK256 Strict Mode Validation
 

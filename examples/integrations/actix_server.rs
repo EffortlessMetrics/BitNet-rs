@@ -1,7 +1,7 @@
 //! # Actix-web Server Integration Example
 //!
 //! This example demonstrates how to integrate BitNet-rs with the Actix-web framework
-//! to create a robust, production-ready inference API server with middleware support.
+//! to create an inference API server with middleware support.
 
 use actix_web::{
     web, App, HttpServer, HttpResponse, Result as ActixResult, Error,

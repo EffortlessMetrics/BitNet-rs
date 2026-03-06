@@ -2,7 +2,7 @@
 
 **Audience:** Developers and researchers working with GGUF models who need to ensure model quality and catch quantization errors before deployment.
 
-**Goal:** Learn the complete 3-stage validation workflow to verify GGUF models are production-ready with correct LayerNorm weights and healthy projection weights.
+**Goal:** Learn the complete 3-stage validation workflow to verify GGUF models have correct LayerNorm weights and healthy projection weights.
 
 ---
 
@@ -358,7 +358,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 ### Workflow 1: Validate Existing GGUF
 
-**Scenario:** You have a GGUF model from Hugging Face or a third-party export tool and need to verify it's production-ready.
+**Scenario:** You have a GGUF model from Hugging Face or a third-party export tool and need to verify it's valid for inference.
 
 **Steps:**
 
@@ -801,7 +801,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 # Validation in CI (exit code check)
 ./scripts/validate_gguf.sh model.gguf tokenizer.json
 if [ $? -ne 0 ]; then
-  echo "Validation failed - model is not production-ready"
+  echo "Validation failed - model did not pass checks"
   exit 1
 fi
 ```

@@ -5,7 +5,7 @@
 
 ## Context
 
-BitNet-rs neural network inference currently requires manual tokenizer specification, creating friction for users and limiting production-ready model usage. The existing `auto.rs` provides basic co-location discovery, but lacks:
+BitNet-rs neural network inference currently requires manual tokenizer specification, creating friction for users and limiting practical model usage. The existing `auto.rs` provides basic co-location discovery, but lacks:
 
 - **Neural Network Scale**: Support for large vocabulary models (LLaMA-3: 128K tokens, LLaMA-2: 32K tokens)
 - **GGUF Integration**: Comprehensive metadata parsing for tokenizer discovery
@@ -184,4 +184,4 @@ BITNET_STRICT_TOKENIZERS=1 cargo run -p xtask -- infer --model model.gguf --prom
 
 This tokenizer discovery system provides a production-grade solution for automatic tokenizer resolution in BitNet-rs neural network inference. The architecture balances user experience (zero-configuration), performance (neural network scale optimization), and reliability (comprehensive fallback strategies).
 
-The system maintains backward compatibility while enabling advanced features like smart downloading, quantization-aware selection, and robust error handling. This foundation supports BitNet-rs evolution toward production-ready neural network inference with minimal user configuration overhead.
+The system maintains backward compatibility while enabling advanced features like smart downloading, quantization-aware selection, and robust error handling. This foundation supports BitNet-rs evolution toward robust neural network inference with minimal user configuration overhead.

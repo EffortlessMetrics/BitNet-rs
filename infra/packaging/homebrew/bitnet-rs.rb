@@ -3,11 +3,9 @@
 
 class BitnetRs < Formula
   desc "High-performance Rust implementation of BitNet 1-bit LLM inference"
-  homepage "https://github.com/microsoft/BitNet"
-  url "https://github.com/microsoft/BitNet/archive/v1.0.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"
+  homepage "https://github.com/EffortlessMetrics/BitNet-rs"
   license any_of: ["MIT", "Apache-2.0"]
-  head "https://github.com/microsoft/BitNet.git", branch: "main"
+  head "https://github.com/EffortlessMetrics/BitNet-rs.git", branch: "main"
 
   depends_on "rust" => :build
 

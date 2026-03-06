@@ -334,12 +334,12 @@ The architecture is designed to evolve with BitNet research:
 
 ## Conclusion
 
-The BitNet-rs production inference server architecture represents a fundamental shift from generic neural network serving to **quantization-native, device-aware, production-ready** neural network inference.
+The BitNet-rs inference server architecture is designed for **quantization-native, device-aware** neural network inference. The server is under active development (pre-alpha).
 
 **Key Architectural Strengths**:
 1. **Quantization Awareness**: Every component optimized for 1-bit neural networks
 2. **Device Intelligence**: Automatic optimization for available hardware
-3. **Production Ready**: Comprehensive monitoring, health checks, and operational features
+3. **Monitoring**: Health checks and operational features (inference endpoints incomplete)
 4. **Performance Optimized**: Architecture designed for <2s response times at scale
 5. **Reliability First**: Graceful degradation and fault tolerance throughout
 

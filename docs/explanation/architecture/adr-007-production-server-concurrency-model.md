@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 
-Issue #251 requires implementing a production-ready inference server capable of handling 100+ concurrent requests with sub-2-second response times while maintaining quantization accuracy and optimal resource utilization. The server must support quantization-aware batch processing, intelligent backpressure control, and device-aware execution routing.
+Issue #251 requires implementing an inference server capable of handling 100+ concurrent requests with sub-2-second response times while maintaining quantization accuracy and optimal resource utilization. The server must support quantization-aware batch processing, intelligent backpressure control, and device-aware execution routing.
 
 ### Current State
 The existing `bitnet-server` crate provides basic HTTP server functionality with:
@@ -320,4 +320,4 @@ export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval --concurrent-batches 10
 ```
 
-This ADR establishes the foundation for a production-ready concurrency model that optimizes BitNet-rs neural network inference while meeting enterprise performance and reliability requirements.
+This ADR establishes the foundation for a concurrency model that optimizes BitNet-rs neural network inference while meeting enterprise performance and reliability requirements.

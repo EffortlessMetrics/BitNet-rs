@@ -31,7 +31,7 @@ Welcome to BitNet-rs! We appreciate your interest in contributing to our high-pe
 3. **Run Tests**
    ```bash
    # Quick test with CPU features
-   cargo test --workspace --no-default-features --features cpu
+   cargo test --locked --workspace --no-default-features --features cpu
 
    # CI-equivalent local smoke test
    ./ci/local.sh
@@ -163,16 +163,18 @@ This ensures local validation exactly matches CI, preventing surprise failures.
    - Implement minimal code to pass tests
    - Refactor with safety
 
+See [ROADMAP.md](ROADMAP.md) for the project's current direction and priorities.
+
 3. **Use xtask Commands**
    ```bash
    # Download test models
-   cargo run -p xtask -- download-model
+   cargo run --locked -p xtask -- download-model
 
    # Verify implementation
-   cargo run -p xtask -- verify --model models/test.gguf
+   cargo run --locked -p xtask -- verify --model models/test.gguf
 
    # Cross-validate against C++ reference
-   cargo run -p xtask -- crossval
+   cargo run --locked -p xtask -- crossval
    ```
 
 ### Code Quality Standards
@@ -203,23 +205,23 @@ This ensures local validation exactly matches CI, preventing surprise failures.
 
 1. **Unit Tests**
    ```bash
-   cargo test --workspace --no-default-features --features cpu
+   cargo test --locked --workspace --no-default-features --features cpu
    ```
 
 2. **Integration Tests** (CPU golden path)
    ```bash
-   cargo test -p bitnet-inference --test cpu_golden_path --no-default-features --features cpu
+   cargo test --locked -p bitnet-inference --test cpu_golden_path --no-default-features --features cpu
    ```
 
 3. **Cross-validation Tests**
    ```bash
    export BITNET_GGUF="models/test.gguf"
-   cargo test --package crossval --no-default-features --features cpu
+   cargo test --locked --package crossval --no-default-features --features cpu
    ```
 
 4. **Property Tests**
    ```bash
-   cargo test property_ --no-default-features --features cpu
+   cargo test --locked property_ --no-default-features --features cpu
    ```
 
 5. **Mutation Tests** (CI only)
@@ -312,14 +314,14 @@ fn test_qk256_flavor_detection() {
 
 ```bash
 # Run all tests (includes fixture-based tests)
-cargo test --workspace --no-default-features --features cpu
+cargo test --locked --workspace --no-default-features --features cpu
 
 # Run specific fixture tests
-cargo test -p bitnet-models test_qk256_flavor_detection --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_gguf_fixture --no-default-features --features cpu
+cargo test --locked -p bitnet-models test_qk256_flavor_detection --no-default-features --features cpu
+cargo test --locked -p bitnet-tokenizers test_gguf_fixture --no-default-features --features cpu
 
 # Skip slow fixture-heavy tests (e.g., full model loading)
-BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+BITNET_SKIP_SLOW_TESTS=1 cargo test --locked --workspace --no-default-features --features cpu
 ```
 
 #### Adding New Fixtures
@@ -398,7 +400,7 @@ BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features
 
 ```bash
 # Requires CUDA toolkit
-cargo test --workspace --no-default-features --features gpu
+cargo test --locked --workspace --no-default-features --features gpu
 ```
 
 ### Environment Variable Testing
@@ -603,33 +605,33 @@ Before submitting a PR, ensure:
 4. **Format and Lint**
    ```bash
    cargo fmt --all
-   cargo clippy --all-targets --all-features -- -D warnings
+   cargo clippy --locked --all-targets --all-features -- -D warnings
    ```
 
 5. **Run Full Test Suite**
    ```bash
-   cargo nextest run --workspace --no-default-features --features cpu
+   cargo nextest run --locked --workspace --no-default-features --features cpu
    # Or with cargo test
-   cargo test --workspace --no-default-features --features cpu
+   cargo test --locked --workspace --no-default-features --features cpu
    ```
 
 6. **Verify Inference Receipt** (if you have ci/inference.json)
    ```bash
    # Verify CPU receipt
-   cargo run -p xtask -- verify-receipt --path ci/inference.json
+   cargo run --locked -p xtask -- verify-receipt --path ci/inference.json
 
    # Verify GPU receipt (requires GPU kernels)
-   cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+   cargo run --locked -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
    ```
 
 7. **Update Documentation**
    ```bash
-   cargo doc --workspace --no-default-features --features cpu --no-deps
+   cargo doc --locked --workspace --no-default-features --features cpu --no-deps
    ```
 
 8. **Cross-validate Changes** (optional, for inference changes)
    ```bash
-   cargo run -p xtask -- full-crossval
+   cargo run --locked -p xtask -- full-crossval
    ```
 
 ### PR Requirements
@@ -717,14 +719,14 @@ see the dedicated GPU guides:
 
 ```bash
 # Build and test without GPU hardware
-cargo build --no-default-features --features cpu
-cargo nextest run --workspace --no-default-features --features cpu
+cargo build --locked --no-default-features --features cpu
+cargo nextest run --locked --workspace --no-default-features --features cpu
 
 # Build with GPU support (requires CUDA toolkit)
-cargo build --no-default-features --features gpu
+cargo build --locked --no-default-features --features gpu
 
 # Test GPU code paths without hardware
-BITNET_GPU_FAKE=1 cargo test -p bitnet-kernels --no-default-features --features gpu
+BITNET_GPU_FAKE=1 cargo test --locked -p bitnet-kernels --no-default-features --features gpu
 ```
 
 GPU branches use the `intel-gpu/<feature-name>` naming convention. Add the `gpu` label

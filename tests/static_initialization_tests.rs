@@ -26,7 +26,7 @@
 //! - **AC5**: No performance regression (30k calls < 100ms baseline)
 //! - **AC6**: All tests pass (integration tests)
 //! - **AC7**: cargo-deny prevents reintroduction (dependency hygiene tests)
-//! - **AC8**: MSRV documented (1.90.0, OnceLock stable since 1.70.0)
+//! - **AC8**: MSRV documented (1.92.0, OnceLock stable since 1.70.0)
 //!
 //! # TDD Approach
 //!

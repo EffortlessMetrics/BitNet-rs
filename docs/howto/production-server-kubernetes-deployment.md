@@ -1,6 +1,6 @@
 # Deploy BitNet-rs Production Inference Server on Kubernetes
 
-This guide shows how to deploy the BitNet-rs production inference server on Kubernetes using Helm charts for scalable, production-ready deployments.
+This guide shows how to deploy the BitNet-rs inference server on Kubernetes using Helm charts. Note: BitNet-rs is pre-alpha; the server has health endpoints but inference endpoints are incomplete.
 
 ## Prerequisites
 

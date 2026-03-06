@@ -16,10 +16,10 @@ bitnet-tokenizers → bitnet-models (GGUF loader) → bitnet-quantization → bi
 ```
 
 ### Core Library
-- **`bitnet`** (root): Main library with unified public API and production-ready GGUF weight loading
+- **`bitnet`** (root): Main library with unified public API and GGUF weight loading
 - **`bitnet-common`**: Shared types, traits, utilities, and enhanced error types for GGUF operations
 - **`bitnet-models`**: **Enhanced model loading with real GGUF weight parsing** - replaces mock tensor initialization with comprehensive transformer layer weight loading (AC1), supporting all quantization formats with device-aware placement
-- **`bitnet-quantization`**: Real quantized computation with I2S (≥99.8%), TL1/TL2 (≥99.6%) accuracy validation vs FP32 baselines - **STRICT MODE ENFORCED** to prevent mock fallbacks
+- **`bitnet-quantization`**: Real quantized computation with I2S, TL1/TL2 accuracy validation vs FP32 baselines (target thresholds defined in test fixtures) - **STRICT MODE ENFORCED** to prevent mock fallbacks
 - **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal (#992), Vulkan (#993), ROCm (#995), Intel oneAPI (#986), and OpenGL/OpenCL probing
 - **`bitnet-inference`**: **Real neural network inference engine** ([Issue #254](explanation/issue-254-real-inference-spec.md)) with autoregressive generation, multi-head attention, quantized linear layers (I2S/TL1/TL2 GEMV), RoPE positional embeddings, GQA support, KV-cache optimization, deterministic generation, and receipt-backed performance validation - **compute_path="real"** enforced
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration, automatic discovery, and graceful fallback system
@@ -83,7 +83,7 @@ These small, single-responsibility crates reduce coupling in `bitnet-inference` 
 
 ### Compatibility Layer
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
-- **`bitnet-ffi`**: C API for llama.cpp drop-in replacement
+- **`bitnet-ffi`**: C API for llama.cpp-compatible API (validation pending)
 - **`bitnet-py`**: Python 3.12+ bindings compatible with llama-cpp-python (PyO3 ABI3-py312)
 - **`bitnet-wasm`**: WebAssembly bindings with enhanced browser/Node.js compatibility and optimized SIMD intrinsics
 
@@ -171,7 +171,7 @@ BitNet-rs has comprehensive test infrastructure spanning multiple strategies:
 | **CPU golden-path E2E** | `tests/` | 7 deterministic tests always in PR CI (no model download) |
 | **Criterion benchmarks** | `benches/srp_ops.rs` | logits pipeline, top-k, repetition penalty, argmax, RoPE, KV cache |
 
-## Production-Ready GGUF Weight Loading Architecture
+## GGUF Weight Loading Architecture
 
 BitNet-rs implements a comprehensive GGUF weight loading system that replaces mock tensor initialization with real neural network model parsing. This system represents a major architectural advancement enabling meaningful neural network inference.
 
@@ -223,7 +223,7 @@ pub fn load_gguf(
 - **Automatic Detection:** Loader inspects tensor sizes to identify format
 - **Transparent Dispatch:** Forwards automatically use appropriate kernel
 - Performance: 66+ Melem/s (CPU), 200+ Melem/s (GPU)
-- Accuracy: ≥99.8% vs FP32 baseline for both flavors
+- Accuracy: Target accuracy thresholds defined in test fixtures
 - **Pure-Rust Support:** Both formats run without FFI dependency
 
 **TL1/TL2 (Table Lookup Quantization):**
@@ -310,7 +310,7 @@ fn validate_tensor_completeness(
 - Memory-mapped model sharing across instances
 
 **Accuracy Guarantees:**
-- I2_S quantization: ≥99% accuracy vs FP32
+- I2_S quantization: Target accuracy thresholds defined in test fixtures
 - Cross-validation against C++ reference implementation
 - Systematic regression testing for accuracy preservation
 - Property-based testing for numerical stability
@@ -319,7 +319,7 @@ fn validate_tensor_completeness(
 
 ### `bitnet-server` Crate Overview
 
-The `bitnet-server` crate provides a production-ready HTTP/REST inference server built on the BitNet-rs inference engine. It serves as the application layer for deploying BitNet models in production environments.
+The `bitnet-server` crate provides an HTTP/REST inference server built on the BitNet-rs inference engine. It serves as the application layer for deploying BitNet models in production environments.
 
 **Key Components:**
 - **Inference Engine Integration**: Direct integration with `bitnet-inference` for autoregressive generation
@@ -393,7 +393,7 @@ For detailed deployment guides, see:
 10. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal (#992), Vulkan (#993), ROCm (#995), Intel oneAPI (#986), and OpenGL/OpenCL probing (#984/#985)
 11. **GPU Infrastructure Access**: Low-level CUDA context and module access for advanced GPU programming (PR #199), enabling custom kernel loading and device-specific optimization
 12. **Mixed Precision Computing**: Native CUDA kernels for FP16/BF16 operations with device-aware precision selection and automatic fallback (PR #202)
-13. **Production-Ready Server Architecture**: Scalable HTTP/REST inference server with comprehensive health monitoring, system metrics, and deployment automation (PR #422)
+13. **Server Architecture**: Scalable HTTP/REST inference server with comprehensive health monitoring, system metrics, and deployment automation (PR #422)
 
 ## Enhanced Quality Assurance Framework
 
@@ -450,7 +450,7 @@ BitNet-rs includes a comprehensive quality assurance system designed for product
 
 We maintain strict compatibility with llama.cpp while providing enhanced validation:
 - C API functions have exact signature matches
-- Python API is drop-in compatible
+- Python API is llama-cpp-python compatible
 - We handle models that llama.cpp fails on (e.g., GPT-2 without pre-tokenizer)
 - Enhanced GGUF parsing with tensor alignment validation for better error detection
 - Robust handling of malformed GGUF files with detailed error messages

@@ -43,7 +43,7 @@ cat ci/inference.json | jq '.kernels[]'
 ✓ Inference completes without strict mode errors
 ✓ Receipt shows `compute_path="real"`
 ✓ Kernels array contains quantized kernel IDs (not fallback IDs)
-✓ Performance matches baseline (I2S: 10-20 tok/s, TL1: 12-18 tok/s, TL2: 10-15 tok/s)
+✓ Performance matches baseline (SIMD-optimised; actual throughput is hardware-dependent)
 
 ### Common Issues
 
@@ -106,7 +106,7 @@ cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 ✓ Inference runs on GPU (not silently falling back to CPU)
 ✓ Receipt shows `backend="cuda"`
 ✓ Kernels include GPU prefixes: `gemm_*`, `i2s_gpu_*`, `wmma_*`
-✓ Performance matches GPU baseline (50-100 tok/s with mixed precision)
+✓ Performance matches GPU baseline (GPU-accelerated, alpha)
 
 ### Common Issues
 
@@ -476,10 +476,10 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 256
 4. **Document baseline expectations:**
    ```yaml
    # ci/baselines/README.md
-   CPU I2S: 10-20 tok/s (AVX2), 15-25 tok/s (AVX-512)
-   GPU I2S: 50-100 tok/s (mixed precision)
-   TL1: 12-18 tok/s (ARM NEON)
-   TL2: 10-15 tok/s (x86 AVX)
+   CPU I2S: SIMD-optimised (AVX2 / AVX-512), throughput hardware-dependent
+   GPU I2S: GPU-accelerated (alpha, mixed precision)
+   TL1: SIMD-optimised (ARM NEON), throughput hardware-dependent
+   TL2: SIMD-optimised (x86 AVX), throughput hardware-dependent
    ```
 
 ## Related Documentation

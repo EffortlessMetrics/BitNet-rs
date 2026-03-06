@@ -4,7 +4,7 @@ This document covers GPU/CUDA development practices, testing strategies, and tro
 
 ## GPU Backend Detection and Hardware Querying
 
-BitNet-rs provides comprehensive GPU detection utilities supporting multiple backends (CUDA, Metal, ROCm, WebGPU) alongside production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
+BitNet-rs provides GPU detection utilities supporting multiple backends (CUDA, Metal, ROCm, WebGPU) alongside CUDA device querying using the cudarc API to enable GPU acceleration and automatic fallback mechanisms. GPU backends are scaffolded (alpha).
 
 ### GPU Detection API
 
@@ -113,7 +113,7 @@ BITNET_MEMORY_LIMIT=512MB cargo test --no-default-features -p bitnet-kernels --n
 
 ## CUDA Device Querying and Hardware Detection
 
-BitNet-rs implements production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
+BitNet-rs implements CUDA device querying using the cudarc API to enable GPU acceleration and automatic fallback mechanisms.
 
 ### Device Information Available
 
@@ -201,7 +201,7 @@ if kernel.supports_bf16() {
 
 #### Memory Leak Detection with Stack Traces
 
-The enhanced memory pool provides production-ready leak detection:
+The enhanced memory pool provides leak detection:
 
 ```rust
 use std::time::Duration;

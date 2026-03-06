@@ -661,9 +661,9 @@ pub struct ValidationResults {
 }
 ```
 
-### Production-Ready Memory Health Checks
+### Memory Health Checks
 
-**Decision**: Provide lightweight memory health checking for production systems.
+**Decision**: Provide lightweight memory health checking.
 
 **Implementation**:
 ```rust
