@@ -271,7 +271,7 @@
 
             <div class="controls">
                 <button id="load-model" onclick="loadModel()">Load Model</button>
-                <button id="generate" onclick="generateText()" disabled>Generate Text</button>
+                <button id="generate" onclick="generateText()" disabled title="Please load a model first">Generate Text</button>
                 <button id="clear-output" onclick="clearOutput()">Clear Output</button>
             </div>
 
@@ -297,7 +297,7 @@
             <div class="input-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                     <label style="margin-bottom: 0;">Output:</label>
-                    <button id="copy-output" onclick="copyToClipboard()" disabled style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
+                    <button id="copy-output" onclick="copyToClipboard()" disabled title="No text generated yet" style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
                 </div>
                 <div id="output" class="output">Generated text will appear here...</div>
             </div>
@@ -316,7 +316,7 @@
 
             <div class="controls">
                 <button id="start-streaming" onclick="startStreaming()">Start Streaming</button>
-                <button id="stop-streaming" onclick="stopStreaming()" disabled>Stop Streaming</button>
+                <button id="stop-streaming" onclick="stopStreaming()" disabled title="Streaming is not active">Stop Streaming</button>
                 <button id="clear-streaming" onclick="clearStreaming()">Clear</button>
             </div>
 
@@ -349,13 +349,13 @@
 
             <div class="worker-status">
                 <div id="worker-indicator" class="worker-indicator"></div>
-                <span id="worker-status-text">Worker not initialized</span>
+                <span id="worker-status-text" role="status" aria-live="polite">Worker not initialized</span>
             </div>
 
             <div class="controls">
                 <button id="init-worker" onclick="initWorker()">Initialize Worker</button>
-                <button id="worker-generate" onclick="workerGenerate()" disabled>Generate in Worker</button>
-                <button id="terminate-worker" onclick="terminateWorker()" disabled>Terminate Worker</button>
+                <button id="worker-generate" onclick="workerGenerate()" disabled title="Initialize the worker first">Generate in Worker</button>
+                <button id="terminate-worker" onclick="terminateWorker()" disabled title="Worker is not running">Terminate Worker</button>
             </div>
 
             <div class="input-group">

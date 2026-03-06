@@ -129,12 +129,19 @@ async function loadModel() {
         // Update UI
         document.getElementById('model-size').textContent = MemoryUtils.format_bytes(file.size);
         document.getElementById('memory-usage').textContent = MemoryUtils.format_bytes(model.get_memory_usage());
-        document.getElementById('generate').disabled = false;
-        document.getElementById('start-streaming').disabled = false;
+
+        const generateBtn = document.getElementById('generate');
+        generateBtn.disabled = false;
+        generateBtn.removeAttribute('title');
+
+        const startStreamingBtn = document.getElementById('start-streaming');
+        startStreamingBtn.disabled = false;
+        startStreamingBtn.removeAttribute('title');
 
         // Reset copy button
         const copyBtn = document.getElementById('copy-output');
         copyBtn.disabled = true;
+        copyBtn.title = 'No text generated yet';
         copyBtn.style.backgroundColor = '#6c757d';
         copyBtn.style.cursor = 'not-allowed';
 
@@ -196,6 +203,7 @@ async function generateText() {
         // Enable copy button
         const copyBtn = document.getElementById('copy-output');
         copyBtn.disabled = false;
+        copyBtn.removeAttribute('title');
         copyBtn.style.backgroundColor = '#007bff';
         copyBtn.style.cursor = 'pointer';
 
@@ -231,6 +239,7 @@ async function startStreaming() {
     startButton.disabled = true;
     startButton.textContent = 'Generating...';
     stopButton.disabled = false;
+    stopButton.removeAttribute('title');
 
     try {
         const outputEl = document.getElementById('streaming-output');
@@ -290,7 +299,11 @@ async function startStreaming() {
 function stopStreaming() {
     streamingActive = false;
     document.getElementById('start-streaming').disabled = false;
-    document.getElementById('stop-streaming').disabled = true;
+
+    const stopBtn = document.getElementById('stop-streaming');
+    stopBtn.disabled = true;
+    stopBtn.title = 'Streaming is not active';
+
     updateStatus('Streaming stopped', 'success');
 }
 
@@ -314,8 +327,15 @@ function initWorker() {
                 case 'initialized':
                     document.getElementById('worker-indicator').classList.add('active');
                     document.getElementById('worker-status-text').textContent = 'Worker initialized';
-                    document.getElementById('worker-generate').disabled = false;
-                    document.getElementById('terminate-worker').disabled = false;
+
+                    const workerGenBtn = document.getElementById('worker-generate');
+                    workerGenBtn.disabled = false;
+                    workerGenBtn.removeAttribute('title');
+
+                    const terminateBtn = document.getElementById('terminate-worker');
+                    terminateBtn.disabled = false;
+                    terminateBtn.removeAttribute('title');
+
                     Logger.info('Web Worker initialized successfully');
                     break;
 
@@ -374,8 +394,14 @@ function terminateWorker() {
 
         document.getElementById('worker-indicator').classList.remove('active');
         document.getElementById('worker-status-text').textContent = 'Worker terminated';
-        document.getElementById('worker-generate').disabled = true;
-        document.getElementById('terminate-worker').disabled = true;
+
+        const workerGenBtn = document.getElementById('worker-generate');
+        workerGenBtn.disabled = true;
+        workerGenBtn.title = 'Initialize the worker first';
+
+        const terminateBtn = document.getElementById('terminate-worker');
+        terminateBtn.disabled = true;
+        terminateBtn.title = 'Worker is not running';
 
         Logger.info('Web Worker terminated');
     }
@@ -606,6 +632,7 @@ function clearOutput() {
     // Reset copy button
     const copyBtn = document.getElementById('copy-output');
     copyBtn.disabled = true;
+    copyBtn.title = 'No text generated yet';
     copyBtn.style.backgroundColor = '#6c757d';
     copyBtn.style.cursor = 'not-allowed';
 }
