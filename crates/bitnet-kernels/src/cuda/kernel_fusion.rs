@@ -34,6 +34,479 @@
 
 use std::fmt;
 
+macro_rules! FUSED_MATMUL_BIAS_SRC { () => { r#"
+extern "C" __global__ void fused_matmul_bias_f32(
+    const float* __restrict__ a,
+    const float* __restrict__ b,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int m, int n, int k)
+{
+    int row = blockIdx.x;
+    if (row >= m) return;
+    extern __shared__ float sdata[];
+    const float* a_row = a + (long long)row * k;
+    float acc = 0.0f;
+    for (int j = threadIdx.x; j < n; j += blockDim.x) {
+        float sum = 0.0f;
+        for (int p = 0; p < k; p++) {
+            sum += a_row[p] * b[(long long)p * n + j];
+        }
+        output[(long long)row * n + j] = sum + bias[j];
+    }
+}
+}"# } }
+
+macro_rules! FUSED_MATMUL_BIAS_RELU_SRC { () => { r#"
+extern "C" __global__ void fused_matmul_bias_relu_f32(
+    const float* __restrict__ a,
+    const float* __restrict__ b,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int m, int n, int k)
+{
+    int row = blockIdx.x;
+    if (row >= m) return;
+    const float* a_row = a + (long long)row * k;
+    for (int j = threadIdx.x; j < n; j += blockDim.x) {
+        float sum = 0.0f;
+        for (int p = 0; p < k; p++) {
+            sum += a_row[p] * b[(long long)p * n + j];
+        }
+        float val = sum + bias[j];
+        output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
+    }
+}
+}"# } }
+
+macro_rules! FUSED_LAYER_NORM_RESIDUAL_SRC { () => { r#"
+extern "C" __global__ void fused_layer_norm_residual_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ residual,
+    const float* __restrict__ gamma,
+    const float* __restrict__ beta,
+    float* __restrict__ output,
+    int n, float eps)
+{
+    extern __shared__ float sdata[];
+    // compute mean of (input + residual)
+    float local_sum = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        local_sum += input[i] + residual[i];
+    }
+    sdata[threadIdx.x] = local_sum;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float mean = sdata[0] / (float)n;
+    __syncthreads();
+
+    // compute variance
+    float local_var = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float d = (input[i] + residual[i]) - mean;
+        local_var += d * d;
+    }
+    sdata[threadIdx.x] = local_var;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float inv_std = rsqrtf(sdata[0] / (float)n + eps);
+
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float normed = ((input[i] + residual[i]) - mean) * inv_std;
+        output[i] = normed * gamma[i] + beta[i];
+    }
+}
+}"# } }
+
+macro_rules! FUSED_ATTENTION_SCORE_SOFTMAX_SRC { () => { r#"
+extern "C" __global__ void fused_attention_score_softmax_f32(
+    const float* __restrict__ q,
+    const float* __restrict__ k,
+    float* __restrict__ output,
+    int seq_len, int head_dim, float scale,
+    const float* __restrict__ mask)
+{
+    extern __shared__ float sdata[];
+    // simplified: single-head, q[head_dim], k[seq_len * head_dim]
+    // compute scores and softmax in one pass
+    int i = threadIdx.x;
+    if (i >= seq_len) return;
+    float score = 0.0f;
+    for (int d = 0; d < head_dim; d++) {
+        score += q[d] * k[(long long)i * head_dim + d];
+    }
+    score *= scale;
+    if (mask) score += mask[i];
+    sdata[i] = score;
+    __syncthreads();
+
+    // find max
+    float max_val = -1e30f;
+    for (int j = 0; j < seq_len; j++) {
+        if (sdata[j] > max_val) max_val = sdata[j];
+    }
+    float exp_val = expf(score - max_val);
+    sdata[i] = exp_val;
+    __syncthreads();
+
+    float sum = 0.0f;
+    for (int j = 0; j < seq_len; j++) sum += sdata[j];
+    output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
+}
+}"# } }
+
+macro_rules! FUSED_QKV_PROJECTION_SRC { () => { r#"
+extern "C" __global__ void fused_qkv_projection_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ wq,
+    const float* __restrict__ wk,
+    const float* __restrict__ wv,
+    float* __restrict__ q_out,
+    float* __restrict__ k_out,
+    float* __restrict__ v_out,
+    int n, int out_dim)
+{
+    int row = blockIdx.x; // 0=Q, 1=K, 2=V
+    if (row >= 3) return;
+    const float* w = (row == 0) ? wq : ((row == 1) ? wk : wv);
+    float* out = (row == 0) ? q_out : ((row == 1) ? k_out : v_out);
+    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
+        float acc = 0.0f;
+        for (int i = 0; i < n; i++) {
+            acc += input[i] * w[(long long)j * n + i];
+        }
+        out[j] = acc;
+    }
+}
+}"# } }
+
+macro_rules! FUSED_GLU_SRC { () => { r#"
+extern "C" __global__ void fused_glu_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ w_gate,
+    const float* __restrict__ w_up,
+    float* __restrict__ output,
+    int n, int out_dim)
+{
+    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
+        float gate_val = 0.0f;
+        float up_val = 0.0f;
+        for (int i = 0; i < n; i++) {
+            gate_val += input[i] * w_gate[(long long)j * n + i];
+            up_val   += input[i] * w_up[(long long)j * n + i];
+        }
+        // SiLU gate
+        float sigmoid_gate = 1.0f / (1.0f + expf(-gate_val));
+        output[j] = (gate_val * sigmoid_gate) * up_val;
+    }
+}
+}"# } }
+
+macro_rules! FUSED_RMSNORM_LINEAR_SRC { () => { r#"
+extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ gamma,
+    const float* __restrict__ weight,
+    float* __restrict__ output,
+    int n, int out_dim, float eps)
+{
+    int row = blockIdx.x;
+    if (row >= out_dim) return;
+    extern __shared__ float sdata[];
+    float local_ss = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float v = input[i];
+        local_ss += v * v;
+    }
+    sdata[threadIdx.x] = local_ss;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float inv_rms = rsqrtf(sdata[0] / (float)n + eps);
+    const float* w = weight + (long long)row * n;
+    float acc = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        acc += w[i] * (input[i] * gamma[i] * inv_rms);
+    }
+    sdata[threadIdx.x] = acc;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    if (threadIdx.x == 0) output[row] = sdata[0];
+}
+}"# } }
+
+// ───────────────────────────────────────────────────────────────────
+// CPU fallback: fused GEMM + bias
+// ───────────────────────────────────────────────────────────────────
+
+/// Fused GEMM + bias addition (CPU fallback).
+///
+/// Computes `output[i][j] = sum_p(a[i][p] * b[p][j]) + bias[j]`
+/// for `i in 0..m`, `j in 0..n`.
+///
+/// * `a` — `[m × k]` row-major
+/// * `b` — `[k × n]` row-major
+/// * `bias` — `[n]`
+/// * `output` — `[m × n]` (written)
+pub fn fused_matmul_bias(
+    a: &[f32],
+    b: &[f32],
+    bias: &[f32],
+    output: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+) -> Result<()> {
+    validate_matmul_args(a, b, bias, output, m, n, k)?;
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = 0.0f32;
+            for p in 0..k {
+                sum += a[i * k + p] * b[p * n + j];
+            }
+            output[i * n + j] = sum + bias[j];
+        }
+    }
+    Ok(())
+}
+
+/// Fused GEMM + bias + ReLU (CPU fallback).
+///
+/// Same as [`fused_matmul_bias`] but applies `max(0, x)` to each output.
+pub fn fused_matmul_bias_relu(
+    a: &[f32],
+    b: &[f32],
+    bias: &[f32],
+    output: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+) -> Result<()> {
+    validate_matmul_args(a, b, bias, output, m, n, k)?;
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = 0.0f32;
+            for p in 0..k {
+                sum += a[i * k + p] * b[p * n + j];
+            }
+            let val = sum + bias[j];
+            output[i * n + j] = val.max(0.0);
+        }
+    }
+    Ok(())
+}
+
+fn validate_matmul_args(
+    a: &[f32],
+    b: &[f32],
+    bias: &[f32],
+    output: &[f32],
+    m: usize,
+    n: usize,
+    k: usize,
+) -> Result<()> {
+    if m == 0 || n == 0 || k == 0 {
+        return Err(
+            KernelError::InvalidArguments { reason: "dimensions must be non-zero".into() }.into()
+        );
+    }
+    if a.len() < m * k {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("a length {} < m*k = {}", a.len(), m * k),
+        }
+        .into());
+    }
+    if b.len() < k * n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("b length {} < k*n = {}", b.len(), k * n),
+        }
+        .into());
+    }
+    if bias.len() < n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("bias length {} < n = {n}", bias.len()),
+        }
+        .into());
+    }
+    if output.len() < m * n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("output length {} < m*n = {}", output.len(), m * n),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+// ───────────────────────────────────────────────────────────────────
+// CPU fallback: fused LayerNorm + residual
+// ───────────────────────────────────────────────────────────────────
+
+/// Fused LayerNorm + residual addition (CPU fallback).
+///
+/// Computes `output[i] = gamma[i] * ((input[i] + residual[i] - mean) / std) + beta[i]`
+///
+/// * `input`, `residual` — `[n]`
+/// * `gamma`, `beta` — `[n]`
+/// * `output` — `[n]` (written)
+/// * `eps` — normalisation epsilon
+pub fn fused_layer_norm_residual(
+    input: &[f32],
+    residual: &[f32],
+    gamma: &[f32],
+    beta: &[f32],
+    output: &mut [f32],
+    eps: f32,
+) -> Result<()> {
+    let n = input.len();
+    if n == 0 {
+        return Err(
+            KernelError::InvalidArguments { reason: "input must be non-empty".into() }.into()
+        );
+    }
+    if residual.len() != n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("residual length {} != input length {n}", residual.len()),
+        }
+        .into());
+    }
+    if gamma.len() != n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("gamma length {} != input length {n}", gamma.len()),
+        }
+        .into());
+    }
+    if beta.len() != n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("beta length {} != input length {n}", beta.len()),
+        }
+        .into());
+    }
+    if output.len() < n {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("output length {} < n={n}", output.len()),
+        }
+        .into());
+    }
+
+    // Compute sum of (input + residual)
+    let sum: f32 = input.iter().zip(residual).map(|(&a, &b)| a + b).sum();
+    let mean = sum / n as f32;
+
+    // Compute variance
+    let var: f32 = input
+        .iter()
+        .zip(residual)
+        .map(|(&a, &b)| {
+            let d = (a + b) - mean;
+            d * d
+        })
+        .sum();
+    let inv_std = 1.0 / (var / n as f32 + eps).sqrt();
+
+    for i in 0..n {
+        let normed = ((input[i] + residual[i]) - mean) * inv_std;
+        output[i] = normed * gamma[i] + beta[i];
+    }
+    Ok(())
+}
+
+// ───────────────────────────────────────────────────────────────────
+// CPU fallback: fused attention score + softmax
+// ───────────────────────────────────────────────────────────────────
+
+/// Fused attention score computation + softmax (CPU fallback).
+///
+/// Computes `softmax(Q · K^T * scale + mask)` for a single head.
+///
+/// * `q` — `[head_dim]` query vector
+/// * `k` — `[seq_len × head_dim]` key matrix (row-major)
+/// * `scale` — attention scale factor (typically `1 / sqrt(head_dim)`)
+/// * `mask` — `[seq_len]` additive mask (0=keep, large-neg=mask out), or empty for no mask
+/// * `output` — `[seq_len]` (written)
+pub fn fused_attention_score_softmax(
+    q: &[f32],
+    k: &[f32],
+    scale: f32,
+    mask: &[f32],
+    output: &mut [f32],
+) -> Result<()> {
+    let head_dim = q.len();
+    if head_dim == 0 {
+        return Err(
+            KernelError::InvalidArguments { reason: "query must be non-empty".into() }.into()
+        );
+    }
+    if k.is_empty() || !k.len().is_multiple_of(head_dim) {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("key length {} not a multiple of head_dim={head_dim}", k.len()),
+        }
+        .into());
+    }
+    let seq_len = k.len() / head_dim;
+    if !mask.is_empty() && mask.len() != seq_len {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("mask length {} != seq_len={seq_len}", mask.len()),
+        }
+        .into());
+    }
+    if output.len() < seq_len {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("output length {} < seq_len={seq_len}", output.len()),
+        }
+        .into());
+    }
+
+    // Compute scores
+    let mut max_score = f32::NEG_INFINITY;
+    for i in 0..seq_len {
+        let mut dot = 0.0f32;
+        for d in 0..head_dim {
+            dot += q[d] * k[i * head_dim + d];
+        }
+        let mut score = dot * scale;
+        if !mask.is_empty() {
+            score += mask[i];
+        }
+        output[i] = score;
+        if score > max_score {
+            max_score = score;
+        }
+    }
+
+    // Softmax: exp and sum
+    let mut sum = 0.0f32;
+    for o in output[..seq_len].iter_mut() {
+        let e = (*o - max_score).exp();
+        *o = e;
+        sum += e;
+    }
+
+    // Normalize
+    if sum > 0.0 {
+        let inv = 1.0 / sum;
+        for o in output[..seq_len].iter_mut() {
+            *o *= inv;
+        }
+    }
+    Ok(())
+}
+
+// ───────────────────────────────────────────────────────────────────
+// CUDA launch stubs
+// ───────────────────────────────────────────────────────────────────
+
+/// Launch fused matmul + bias CUDA kernel.
 use bitnet_common::{KernelError, Result};
 
 // ───────────────────────────────────────────────────────────────────
@@ -522,13 +995,13 @@ pub fn apply_fusion(
 /// Generate CUDA C source for a fusion pattern.
 fn generate_cuda_source(pattern: FusionPattern) -> String {
     match pattern {
-        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC.to_string(),
-        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC.to_string(),
-        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC.to_string(),
-        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC.to_string(),
-        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC.to_string(),
-        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC.to_string(),
-        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC.to_string(),
+        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC!().to_string(),
+        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC!().to_string(),
+        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC!().to_string(),
+        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC!().to_string(),
+        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC!().to_string(),
+        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC!().to_string(),
+        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC!().to_string(),
     }
 }
 
@@ -562,490 +1035,8 @@ pub fn estimate_fusion_speedup(unfused_op_count: usize, fused_kernel: &FusedKern
 // CUDA kernel sources (inline C)
 // ───────────────────────────────────────────────────────────────────
 
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
-    FUSED_MATMUL_BIAS_SRC,
-    FUSED_MATMUL_BIAS_RELU_SRC,
-    FUSED_LAYER_NORM_RESIDUAL_SRC,
-    FUSED_ATTENTION_SCORE_SOFTMAX_SRC,
-    FUSED_QKV_PROJECTION_SRC,
-    FUSED_GLU_SRC,
-    FUSED_RMSNORM_LINEAR_SRC,
-);
 
-const FUSED_MATMUL_BIAS_SRC: &str = r#"
-extern "C" __global__ void fused_matmul_bias_f32(
-    const float* __restrict__ a,
-    const float* __restrict__ b,
-    const float* __restrict__ bias,
-    float* __restrict__ output,
-    int m, int n, int k)
-{
-    int row = blockIdx.x;
-    if (row >= m) return;
-    extern __shared__ float sdata[];
-    const float* a_row = a + (long long)row * k;
-    float acc = 0.0f;
-    for (int j = threadIdx.x; j < n; j += blockDim.x) {
-        float sum = 0.0f;
-        for (int p = 0; p < k; p++) {
-            sum += a_row[p] * b[(long long)p * n + j];
-        }
-        output[(long long)row * n + j] = sum + bias[j];
-    }
-}
-"#;
 
-const FUSED_MATMUL_BIAS_RELU_SRC: &str = r#"
-extern "C" __global__ void fused_matmul_bias_relu_f32(
-    const float* __restrict__ a,
-    const float* __restrict__ b,
-    const float* __restrict__ bias,
-    float* __restrict__ output,
-    int m, int n, int k)
-{
-    int row = blockIdx.x;
-    if (row >= m) return;
-    const float* a_row = a + (long long)row * k;
-    for (int j = threadIdx.x; j < n; j += blockDim.x) {
-        float sum = 0.0f;
-        for (int p = 0; p < k; p++) {
-            sum += a_row[p] * b[(long long)p * n + j];
-        }
-        float val = sum + bias[j];
-        output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
-    }
-}
-"#;
-
-const FUSED_LAYER_NORM_RESIDUAL_SRC: &str = r#"
-extern "C" __global__ void fused_layer_norm_residual_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ residual,
-    const float* __restrict__ gamma,
-    const float* __restrict__ beta,
-    float* __restrict__ output,
-    int n, float eps)
-{
-    extern __shared__ float sdata[];
-    // compute mean of (input + residual)
-    float local_sum = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        local_sum += input[i] + residual[i];
-    }
-    sdata[threadIdx.x] = local_sum;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float mean = sdata[0] / (float)n;
-    __syncthreads();
-
-    // compute variance
-    float local_var = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float d = (input[i] + residual[i]) - mean;
-        local_var += d * d;
-    }
-    sdata[threadIdx.x] = local_var;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float inv_std = rsqrtf(sdata[0] / (float)n + eps);
-
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float normed = ((input[i] + residual[i]) - mean) * inv_std;
-        output[i] = normed * gamma[i] + beta[i];
-    }
-}
-"#;
-
-const FUSED_ATTENTION_SCORE_SOFTMAX_SRC: &str = r#"
-extern "C" __global__ void fused_attention_score_softmax_f32(
-    const float* __restrict__ q,
-    const float* __restrict__ k,
-    float* __restrict__ output,
-    int seq_len, int head_dim, float scale,
-    const float* __restrict__ mask)
-{
-    extern __shared__ float sdata[];
-    // simplified: single-head, q[head_dim], k[seq_len * head_dim]
-    // compute scores and softmax in one pass
-    int i = threadIdx.x;
-    if (i >= seq_len) return;
-    float score = 0.0f;
-    for (int d = 0; d < head_dim; d++) {
-        score += q[d] * k[(long long)i * head_dim + d];
-    }
-    score *= scale;
-    if (mask) score += mask[i];
-    sdata[i] = score;
-    __syncthreads();
-
-    // find max
-    float max_val = -1e30f;
-    for (int j = 0; j < seq_len; j++) {
-        if (sdata[j] > max_val) max_val = sdata[j];
-    }
-    float exp_val = expf(score - max_val);
-    sdata[i] = exp_val;
-    __syncthreads();
-
-    float sum = 0.0f;
-    for (int j = 0; j < seq_len; j++) sum += sdata[j];
-    output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
-}
-"#;
-
-const FUSED_QKV_PROJECTION_SRC: &str = r#"
-extern "C" __global__ void fused_qkv_projection_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ wq,
-    const float* __restrict__ wk,
-    const float* __restrict__ wv,
-    float* __restrict__ q_out,
-    float* __restrict__ k_out,
-    float* __restrict__ v_out,
-    int n, int out_dim)
-{
-    int row = blockIdx.x; // 0=Q, 1=K, 2=V
-    if (row >= 3) return;
-    const float* w = (row == 0) ? wq : ((row == 1) ? wk : wv);
-    float* out = (row == 0) ? q_out : ((row == 1) ? k_out : v_out);
-    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
-        float acc = 0.0f;
-        for (int i = 0; i < n; i++) {
-            acc += input[i] * w[(long long)j * n + i];
-        }
-        out[j] = acc;
-    }
-}
-"#;
-
-const FUSED_GLU_SRC: &str = r#"
-extern "C" __global__ void fused_glu_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ w_gate,
-    const float* __restrict__ w_up,
-    float* __restrict__ output,
-    int n, int out_dim)
-{
-    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
-        float gate_val = 0.0f;
-        float up_val = 0.0f;
-        for (int i = 0; i < n; i++) {
-            gate_val += input[i] * w_gate[(long long)j * n + i];
-            up_val   += input[i] * w_up[(long long)j * n + i];
-        }
-        // SiLU gate
-        float sigmoid_gate = 1.0f / (1.0f + expf(-gate_val));
-        output[j] = (gate_val * sigmoid_gate) * up_val;
-    }
-}
-"#;
-
-const FUSED_RMSNORM_LINEAR_SRC: &str = r#"
-extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ gamma,
-    const float* __restrict__ weight,
-    float* __restrict__ output,
-    int n, int out_dim, float eps)
-{
-    int row = blockIdx.x;
-    if (row >= out_dim) return;
-    extern __shared__ float sdata[];
-    float local_ss = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float v = input[i];
-        local_ss += v * v;
-    }
-    sdata[threadIdx.x] = local_ss;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float inv_rms = rsqrtf(sdata[0] / (float)n + eps);
-    const float* w = weight + (long long)row * n;
-    float acc = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        acc += w[i] * (input[i] * gamma[i] * inv_rms);
-    }
-    sdata[threadIdx.x] = acc;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    if (threadIdx.x == 0) output[row] = sdata[0];
-}
-"#;
-
-// ───────────────────────────────────────────────────────────────────
-// CPU fallback: fused GEMM + bias
-// ───────────────────────────────────────────────────────────────────
-
-/// Fused GEMM + bias addition (CPU fallback).
-///
-/// Computes `output[i][j] = sum_p(a[i][p] * b[p][j]) + bias[j]`
-/// for `i in 0..m`, `j in 0..n`.
-///
-/// * `a` — `[m × k]` row-major
-/// * `b` — `[k × n]` row-major
-/// * `bias` — `[n]`
-/// * `output` — `[m × n]` (written)
-pub fn fused_matmul_bias(
-    a: &[f32],
-    b: &[f32],
-    bias: &[f32],
-    output: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) -> Result<()> {
-    validate_matmul_args(a, b, bias, output, m, n, k)?;
-    for i in 0..m {
-        for j in 0..n {
-            let mut sum = 0.0f32;
-            for p in 0..k {
-                sum += a[i * k + p] * b[p * n + j];
-            }
-            output[i * n + j] = sum + bias[j];
-        }
-    }
-    Ok(())
-}
-
-/// Fused GEMM + bias + ReLU (CPU fallback).
-///
-/// Same as [`fused_matmul_bias`] but applies `max(0, x)` to each output.
-pub fn fused_matmul_bias_relu(
-    a: &[f32],
-    b: &[f32],
-    bias: &[f32],
-    output: &mut [f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) -> Result<()> {
-    validate_matmul_args(a, b, bias, output, m, n, k)?;
-    for i in 0..m {
-        for j in 0..n {
-            let mut sum = 0.0f32;
-            for p in 0..k {
-                sum += a[i * k + p] * b[p * n + j];
-            }
-            let val = sum + bias[j];
-            output[i * n + j] = val.max(0.0);
-        }
-    }
-    Ok(())
-}
-
-fn validate_matmul_args(
-    a: &[f32],
-    b: &[f32],
-    bias: &[f32],
-    output: &[f32],
-    m: usize,
-    n: usize,
-    k: usize,
-) -> Result<()> {
-    if m == 0 || n == 0 || k == 0 {
-        return Err(
-            KernelError::InvalidArguments { reason: "dimensions must be non-zero".into() }.into()
-        );
-    }
-    if a.len() < m * k {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("a length {} < m*k = {}", a.len(), m * k),
-        }
-        .into());
-    }
-    if b.len() < k * n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("b length {} < k*n = {}", b.len(), k * n),
-        }
-        .into());
-    }
-    if bias.len() < n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("bias length {} < n = {n}", bias.len()),
-        }
-        .into());
-    }
-    if output.len() < m * n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("output length {} < m*n = {}", output.len(), m * n),
-        }
-        .into());
-    }
-    Ok(())
-}
-
-// ───────────────────────────────────────────────────────────────────
-// CPU fallback: fused LayerNorm + residual
-// ───────────────────────────────────────────────────────────────────
-
-/// Fused LayerNorm + residual addition (CPU fallback).
-///
-/// Computes `output[i] = gamma[i] * ((input[i] + residual[i] - mean) / std) + beta[i]`
-///
-/// * `input`, `residual` — `[n]`
-/// * `gamma`, `beta` — `[n]`
-/// * `output` — `[n]` (written)
-/// * `eps` — normalisation epsilon
-pub fn fused_layer_norm_residual(
-    input: &[f32],
-    residual: &[f32],
-    gamma: &[f32],
-    beta: &[f32],
-    output: &mut [f32],
-    eps: f32,
-) -> Result<()> {
-    let n = input.len();
-    if n == 0 {
-        return Err(
-            KernelError::InvalidArguments { reason: "input must be non-empty".into() }.into()
-        );
-    }
-    if residual.len() != n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("residual length {} != input length {n}", residual.len()),
-        }
-        .into());
-    }
-    if gamma.len() != n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("gamma length {} != input length {n}", gamma.len()),
-        }
-        .into());
-    }
-    if beta.len() != n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("beta length {} != input length {n}", beta.len()),
-        }
-        .into());
-    }
-    if output.len() < n {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("output length {} < n={n}", output.len()),
-        }
-        .into());
-    }
-
-    // Compute sum of (input + residual)
-    let sum: f32 = input.iter().zip(residual).map(|(&a, &b)| a + b).sum();
-    let mean = sum / n as f32;
-
-    // Compute variance
-    let var: f32 = input
-        .iter()
-        .zip(residual)
-        .map(|(&a, &b)| {
-            let d = (a + b) - mean;
-            d * d
-        })
-        .sum();
-    let inv_std = 1.0 / (var / n as f32 + eps).sqrt();
-
-    for i in 0..n {
-        let normed = ((input[i] + residual[i]) - mean) * inv_std;
-        output[i] = normed * gamma[i] + beta[i];
-    }
-    Ok(())
-}
-
-// ───────────────────────────────────────────────────────────────────
-// CPU fallback: fused attention score + softmax
-// ───────────────────────────────────────────────────────────────────
-
-/// Fused attention score computation + softmax (CPU fallback).
-///
-/// Computes `softmax(Q · K^T * scale + mask)` for a single head.
-///
-/// * `q` — `[head_dim]` query vector
-/// * `k` — `[seq_len × head_dim]` key matrix (row-major)
-/// * `scale` — attention scale factor (typically `1 / sqrt(head_dim)`)
-/// * `mask` — `[seq_len]` additive mask (0=keep, large-neg=mask out), or empty for no mask
-/// * `output` — `[seq_len]` (written)
-pub fn fused_attention_score_softmax(
-    q: &[f32],
-    k: &[f32],
-    scale: f32,
-    mask: &[f32],
-    output: &mut [f32],
-) -> Result<()> {
-    let head_dim = q.len();
-    if head_dim == 0 {
-        return Err(
-            KernelError::InvalidArguments { reason: "query must be non-empty".into() }.into()
-        );
-    }
-    if k.is_empty() || !k.len().is_multiple_of(head_dim) {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("key length {} not a multiple of head_dim={head_dim}", k.len()),
-        }
-        .into());
-    }
-    let seq_len = k.len() / head_dim;
-    if !mask.is_empty() && mask.len() != seq_len {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("mask length {} != seq_len={seq_len}", mask.len()),
-        }
-        .into());
-    }
-    if output.len() < seq_len {
-        return Err(KernelError::InvalidArguments {
-            reason: format!("output length {} < seq_len={seq_len}", output.len()),
-        }
-        .into());
-    }
-
-    // Compute scores
-    let mut max_score = f32::NEG_INFINITY;
-    for i in 0..seq_len {
-        let mut dot = 0.0f32;
-        for d in 0..head_dim {
-            dot += q[d] * k[i * head_dim + d];
-        }
-        let mut score = dot * scale;
-        if !mask.is_empty() {
-            score += mask[i];
-        }
-        output[i] = score;
-        if score > max_score {
-            max_score = score;
-        }
-    }
-
-    // Softmax: exp and sum
-    let mut sum = 0.0f32;
-    for o in output[..seq_len].iter_mut() {
-        let e = (*o - max_score).exp();
-        *o = e;
-        sum += e;
-    }
-
-    // Normalize
-    if sum > 0.0 {
-        let inv = 1.0 / sum;
-        for o in output[..seq_len].iter_mut() {
-            *o *= inv;
-        }
-    }
-    Ok(())
-}
-
-// ───────────────────────────────────────────────────────────────────
-// CUDA launch stubs
-// ───────────────────────────────────────────────────────────────────
-
-/// Launch fused matmul + bias CUDA kernel.
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_fused_matmul_bias_cuda(
     _a: &[f32],
@@ -2252,3 +2243,15 @@ mod tests {
         assert_eq!(fk.pattern, FusionPattern::RMSNormLinear);
     }
 }
+
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
+    FUSED_MATMUL_BIAS_SRC!(),
+    FUSED_MATMUL_BIAS_RELU_SRC!(),
+    FUSED_LAYER_NORM_RESIDUAL_SRC!(),
+    FUSED_ATTENTION_SCORE_SOFTMAX_SRC!(),
+    FUSED_QKV_PROJECTION_SRC!(),
+    FUSED_GLU_SRC!(),
+    FUSED_RMSNORM_LINEAR_SRC!(),
+);

@@ -525,13 +525,13 @@ impl GraphCapture {
     }
 
     fn validate_dims(grid: [u32; 3], block: [u32; 3]) -> Result<()> {
-        if grid.iter().any(|&d| d == 0) {
+        if grid.contains(&0) {
             return Err(KernelError::InvalidArguments {
                 reason: "grid dimensions must be non-zero".into(),
             }
             .into());
         }
-        if block.iter().any(|&d| d == 0) {
+        if block.contains(&0) {
             return Err(KernelError::InvalidArguments {
                 reason: "block dimensions must be non-zero".into(),
             }
@@ -634,14 +634,13 @@ impl GraphExec {
     ) -> Result<usize> {
         let mut updated = 0usize;
         for node in &mut self.graph.nodes {
-            if let CaptureNodeKind::Kernel { name, .. } = &node.kind {
-                if name == kernel_name {
+            if let CaptureNodeKind::Kernel { name, .. } = &node.kind
+                && name == kernel_name {
                     for (k, v) in params {
                         node.params.insert(k.clone(), *v);
                     }
                     updated += 1;
                 }
-            }
         }
         if updated == 0 {
             return Err(KernelError::InvalidArguments {
@@ -664,8 +663,8 @@ impl GraphExec {
         new_block: Option<[u32; 3]>,
     ) -> Result<()> {
         for node in &mut self.graph.nodes {
-            if let CaptureNodeKind::Kernel { name, grid, block, .. } = &mut node.kind {
-                if name == old_name {
+            if let CaptureNodeKind::Kernel { name, grid, block, .. } = &mut node.kind
+                && name == old_name {
                     *name = new_name.to_string();
                     if let Some(g) = new_grid {
                         *grid = g;
@@ -675,7 +674,6 @@ impl GraphExec {
                     }
                     return Ok(());
                 }
-            }
         }
         Err(KernelError::InvalidArguments {
             reason: format!("no kernel node named '{old_name}' found"),

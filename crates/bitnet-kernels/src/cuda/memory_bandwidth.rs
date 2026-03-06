@@ -608,7 +608,7 @@ pub fn launch_coalesced_copy(n: usize) -> Result<(u32, u32)> {
         return Err(KernelError::InvalidArguments { reason: "n must be non-zero".into() }.into());
     }
     let block_size = 256u32;
-    let grid_size = ((n as u32) + block_size - 1) / block_size;
+    let grid_size = (n as u32).div_ceil(block_size);
     Ok((grid_size, block_size))
 }
 
@@ -620,9 +620,9 @@ pub fn launch_vectorized_copy(n_elements: usize) -> Result<(u32, u32)> {
             KernelError::InvalidArguments { reason: "n_elements must be non-zero".into() }.into()
         );
     }
-    let n_vec = ((n_elements + 3) / 4) as u32;
+    let n_vec = n_elements.div_ceil(4) as u32;
     let block_size = 256u32;
-    let grid_size = (n_vec + block_size - 1) / block_size;
+    let grid_size = n_vec.div_ceil(block_size);
     Ok((grid_size, block_size))
 }
 
@@ -636,8 +636,8 @@ pub fn launch_transpose_coalesced(rows: usize, cols: usize) -> Result<(u32, u32,
         .into());
     }
     let tile = 32u32;
-    let grid_x = ((cols as u32) + tile - 1) / tile;
-    let grid_y = ((rows as u32) + tile - 1) / tile;
+    let grid_x = (cols as u32).div_ceil(tile);
+    let grid_y = (rows as u32).div_ceil(tile);
     Ok((grid_x, grid_y, tile, tile))
 }
 
