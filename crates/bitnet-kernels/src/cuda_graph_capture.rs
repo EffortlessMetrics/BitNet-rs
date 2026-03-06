@@ -635,12 +635,13 @@ impl GraphExec {
         let mut updated = 0usize;
         for node in &mut self.graph.nodes {
             if let CaptureNodeKind::Kernel { name, .. } = &node.kind
-                && name == kernel_name {
-                    for (k, v) in params {
-                        node.params.insert(k.clone(), *v);
-                    }
-                    updated += 1;
+                && name == kernel_name
+            {
+                for (k, v) in params {
+                    node.params.insert(k.clone(), *v);
                 }
+                updated += 1;
+            }
         }
         if updated == 0 {
             return Err(KernelError::InvalidArguments {
@@ -664,16 +665,17 @@ impl GraphExec {
     ) -> Result<()> {
         for node in &mut self.graph.nodes {
             if let CaptureNodeKind::Kernel { name, grid, block, .. } = &mut node.kind
-                && name == old_name {
-                    *name = new_name.to_string();
-                    if let Some(g) = new_grid {
-                        *grid = g;
-                    }
-                    if let Some(b) = new_block {
-                        *block = b;
-                    }
-                    return Ok(());
+                && name == old_name
+            {
+                *name = new_name.to_string();
+                if let Some(g) = new_grid {
+                    *grid = g;
                 }
+                if let Some(b) = new_block {
+                    *block = b;
+                }
+                return Ok(());
+            }
         }
         Err(KernelError::InvalidArguments {
             reason: format!("no kernel node named '{old_name}' found"),

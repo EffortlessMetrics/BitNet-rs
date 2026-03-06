@@ -34,7 +34,9 @@
 
 use std::fmt;
 
-macro_rules! FUSED_MATMUL_BIAS_SRC { () => { r#"
+macro_rules! FUSED_MATMUL_BIAS_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_matmul_bias_f32(
     const float* __restrict__ a,
     const float* __restrict__ b,
@@ -55,9 +57,13 @@ extern "C" __global__ void fused_matmul_bias_f32(
         output[(long long)row * n + j] = sum + bias[j];
     }
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_MATMUL_BIAS_RELU_SRC { () => { r#"
+macro_rules! FUSED_MATMUL_BIAS_RELU_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_matmul_bias_relu_f32(
     const float* __restrict__ a,
     const float* __restrict__ b,
@@ -77,9 +83,13 @@ extern "C" __global__ void fused_matmul_bias_relu_f32(
         output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
     }
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_LAYER_NORM_RESIDUAL_SRC { () => { r#"
+macro_rules! FUSED_LAYER_NORM_RESIDUAL_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_layer_norm_residual_f32(
     const float* __restrict__ input,
     const float* __restrict__ residual,
@@ -122,9 +132,13 @@ extern "C" __global__ void fused_layer_norm_residual_f32(
         output[i] = normed * gamma[i] + beta[i];
     }
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_ATTENTION_SCORE_SOFTMAX_SRC { () => { r#"
+macro_rules! FUSED_ATTENTION_SCORE_SOFTMAX_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_attention_score_softmax_f32(
     const float* __restrict__ q,
     const float* __restrict__ k,
@@ -159,9 +173,13 @@ extern "C" __global__ void fused_attention_score_softmax_f32(
     for (int j = 0; j < seq_len; j++) sum += sdata[j];
     output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_QKV_PROJECTION_SRC { () => { r#"
+macro_rules! FUSED_QKV_PROJECTION_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_qkv_projection_f32(
     const float* __restrict__ input,
     const float* __restrict__ wq,
@@ -184,9 +202,13 @@ extern "C" __global__ void fused_qkv_projection_f32(
         out[j] = acc;
     }
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_GLU_SRC { () => { r#"
+macro_rules! FUSED_GLU_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_glu_f32(
     const float* __restrict__ input,
     const float* __restrict__ w_gate,
@@ -206,9 +228,13 @@ extern "C" __global__ void fused_glu_f32(
         output[j] = (gate_val * sigmoid_gate) * up_val;
     }
 }
-}"# } }
+}"#
+    };
+}
 
-macro_rules! FUSED_RMSNORM_LINEAR_SRC { () => { r#"
+macro_rules! FUSED_RMSNORM_LINEAR_SRC {
+    () => {
+        r#"
 extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
     const float* __restrict__ input,
     const float* __restrict__ gamma,
@@ -244,7 +270,9 @@ extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
     }
     if (threadIdx.x == 0) output[row] = sdata[0];
 }
-}"# } }
+}"#
+    };
+}
 
 // ───────────────────────────────────────────────────────────────────
 // CPU fallback: fused GEMM + bias
@@ -1034,8 +1062,6 @@ pub fn estimate_fusion_speedup(unfused_op_count: usize, fused_kernel: &FusedKern
 // ───────────────────────────────────────────────────────────────────
 // CUDA kernel sources (inline C)
 // ───────────────────────────────────────────────────────────────────
-
-
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_fused_matmul_bias_cuda(
@@ -2243,7 +2269,6 @@ mod tests {
         assert_eq!(fk.pattern, FusionPattern::RMSNormLinear);
     }
 }
-
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
