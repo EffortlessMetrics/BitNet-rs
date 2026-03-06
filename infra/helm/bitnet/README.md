@@ -4,7 +4,7 @@ This Helm chart deploys bitnet-rs, the high-performance Rust implementation of 1
 
 ## Overview
 
-bitnet-rs is the **primary, production-ready implementation** of BitNet, offering:
+bitnet-rs is a **pre-alpha implementation** of BitNet, offering:
 
 - **Memory Safety**: Rust's ownership system prevents memory leaks and buffer overflows
 - **High Performance**: Zero-cost abstractions and SIMD optimizations

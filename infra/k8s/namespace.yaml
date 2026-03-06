@@ -5,4 +5,4 @@ metadata:
   labels:
     name: bitnet
     app.kubernetes.io/name: bitnet
-    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/version: "0.2.1-dev"

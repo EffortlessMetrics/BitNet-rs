@@ -2,23 +2,23 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>bitnet-rs</id>
-    <version>1.0.0</version>
-    <packageSourceUrl>https://github.com/microsoft/BitNet</packageSourceUrl>
-    <owners>Microsoft</owners>
+    <version>0.2.1-dev</version>
+    <packageSourceUrl>https://github.com/EffortlessMetrics/BitNet-rs</packageSourceUrl>
+    <owners>EffortlessMetrics</owners>
     <title>bitnet-rs</title>
     <authors>BitNet Contributors</authors>
-    <projectUrl>https://github.com/microsoft/BitNet</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/microsoft/BitNet/main/assets/logo.png</iconUrl>
-    <copyright>Copyright (c) Microsoft Corporation</copyright>
-    <licenseUrl>https://github.com/microsoft/BitNet/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/EffortlessMetrics/BitNet-rs</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/EffortlessMetrics/BitNet-rs/main/assets/logo.png</iconUrl>
+    <copyright>Copyright (c) EffortlessMetrics</copyright>
+    <licenseUrl>https://github.com/EffortlessMetrics/BitNet-rs/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <projectSourceUrl>https://github.com/microsoft/BitNet</projectSourceUrl>
+    <projectSourceUrl>https://github.com/EffortlessMetrics/BitNet-rs</projectSourceUrl>
     <docsUrl>https://docs.rs/bitnet</docsUrl>
-    <bugTrackerUrl>https://github.com/microsoft/BitNet/issues</bugTrackerUrl>
+    <bugTrackerUrl>https://github.com/EffortlessMetrics/BitNet-rs/issues</bugTrackerUrl>
     <tags>machine-learning llm inference rust bitnet quantization ai</tags>
     <summary>High-performance Rust implementation of BitNet 1-bit LLM inference</summary>
     <description>
-bitnet-rs is the primary, production-ready implementation of BitNet 1-bit Large Language Model inference engine, written in Rust for maximum performance and safety.
+bitnet-rs is a pre-alpha implementation of BitNet 1-bit Large Language Model inference engine, written in Rust for memory safety and SIMD-optimised CPU inference.
 
 ## Features
 
@@ -26,7 +26,7 @@ bitnet-rs is the primary, production-ready implementation of BitNet 1-bit Large 
 - **High Performance**: Zero-cost abstractions and SIMD optimizations
 - **Cross-platform**: Native support for Windows, Linux, and macOS
 - **Reliability**: Comprehensive error handling and graceful degradation
-- **GPU Support**: CUDA acceleration for NVIDIA GPUs
+- **GPU Support**: CUDA acceleration (alpha, not validated)
 - **Multiple Interfaces**: CLI, HTTP server, and library APIs
 
 ## Included Tools
@@ -52,15 +52,15 @@ bitnet-server --port 8080 --model path/to/model.gguf
 ## Documentation
 
 - API Documentation: https://docs.rs/bitnet
-- User Guide: https://github.com/microsoft/BitNet/blob/main/docs/
-- Installation Guide: https://github.com/microsoft/BitNet/blob/main/INSTALLATION.md
+- User Guide: https://github.com/EffortlessMetrics/BitNet-rs/blob/main/docs/
+- Installation Guide: https://github.com/EffortlessMetrics/BitNet-rs/blob/main/INSTALLATION.md
 
 ## Support
 
-- GitHub Issues: https://github.com/microsoft/BitNet/issues
-- Discussions: https://github.com/microsoft/BitNet/discussions
+- GitHub Issues: https://github.com/EffortlessMetrics/BitNet-rs/issues
+- Discussions: https://github.com/EffortlessMetrics/BitNet-rs/discussions
     </description>
-    <releaseNotes>https://github.com/microsoft/BitNet/releases</releaseNotes>
+    <releaseNotes>https://github.com/EffortlessMetrics/BitNet-rs/releases</releaseNotes>
     <dependencies>
       <dependency id="vcredist2019" version="14.0.0" />
     </dependencies>
