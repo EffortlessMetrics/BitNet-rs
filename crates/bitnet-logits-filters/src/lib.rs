@@ -37,7 +37,7 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
 /// Nucleus (top-p) filtering on a **probability** slice (post-softmax).
 ///
 /// Tokens are ranked by probability (descending). The smallest set whose
-/// cumulative probability ≥ `top_p` is kept; all others are zeroed.
+/// cumulative probability >= `top_p` is kept; all others are zeroed.
 pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
     if top_p >= 1.0 || probs.is_empty() {
         return;
@@ -72,8 +72,12 @@ pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
 
     let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
     let threshold = min_p * max_prob;
+
+    // Optimization: skip checking or mutating values that are already 0.0
+    // (highly common since min_p runs after top_k/top_p)
     for p in probs.iter_mut() {
-        if *p < threshold {
+        let val = *p;
+        if val > 0.0 && val < threshold {
             *p = 0.0;
         }
     }
@@ -89,22 +93,28 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
-    if indexed.is_empty() {
+    // Optimization: Fuse entropy calculation and deviation allocation into a single pass
+    // to avoid intermediate Vec allocations.
+    let mut entropy = 0.0f32;
+    let mut deviations: Vec<(usize, f32, f32)> = Vec::new();
+
+    for (i, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            entropy += -p * p.ln();
+            // Store deviation as 0.0 temporarily
+            deviations.push((i, p, 0.0));
+        }
+    }
+
+    if deviations.is_empty() {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
-
-    let mut deviations: Vec<(usize, f32, f32)> = indexed
-        .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
-        })
-        .collect();
+    // Fill in the actual deviation values now that entropy is fully calculated
+    for item in &mut deviations {
+        let surprise = -item.1.ln();
+        item.2 = (surprise - entropy).abs();
+    }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
