@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: err.to_string()
+---
+dimension mismatch: expected 2048 elements, got 1024

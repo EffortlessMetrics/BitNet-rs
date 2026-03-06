@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: src.source
+---
+__kernel void rope_forward(
+    __global float* x,
+    const int seq_len, const int head_dim,
+    const float theta_base)
+{
+    int pos = get_global_id(0);
+    int d = get_global_id(1);
+    if (pos >= seq_len || d >= head_dim / 2) return;
+    float freq = 1.0f / pow(theta_base,
+        2.0f * (float)d / (float)head_dim);
+    float angle = (float)pos * freq;
+    float cos_val = cos(angle);
+    float sin_val = sin(angle);
+    int idx0 = pos * head_dim + 2 * d;
+    int idx1 = idx0 + 1;
+    float x0 = x[idx0], x1 = x[idx1];
+    x[idx0] = x0 * cos_val - x1 * sin_val;
+    x[idx1] = x0 * sin_val + x1 * cos_val;
+}

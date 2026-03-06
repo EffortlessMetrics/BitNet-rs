@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: cfg
+---
+OpenClContextConfig {
+    platform_index: 0,
+    device_index: 0,
+    enable_profiling: true,
+    enable_out_of_order: false,
+    kernel_cache_dir: None,
+}

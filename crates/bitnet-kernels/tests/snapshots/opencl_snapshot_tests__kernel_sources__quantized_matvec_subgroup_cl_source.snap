@@ -1,0 +1,44 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "bitnet_kernels::opencl_quantized::QUANTIZED_MATVEC_SUBGROUP_CL"
+---
+#pragma OPENCL EXTENSION cl_intel_subgroups : enable
+
+__kernel void quantized_matvec_i2s_subgroup(
+    __global const uchar* weights,
+    __global const float* scales,
+    __global const float* x,
+    __global float* y,
+    const int rows,
+    const int cols,
+    const int block_size)
+{
+    int row = get_group_id(0);
+    if (row >= rows) return;
+
+    int lid = get_sub_group_local_id();
+    int sg_size = get_sub_group_size();
+    int packed_cols = (cols + 3) / 4;
+    int blocks_per_row = cols.div_ceil(block_size);
+
+    float partial = 0.0f;
+    for (int block = 0; block < blocks_per_row; block++) {
+        int block_start = block * block_size;
+        int block_end = min(block_start + block_size, cols);
+        float scale = scales[row * blocks_per_row + block];
+        float block_partial = 0.0f;
+        for (int col = block_start + lid; col < block_end; col += sg_size) {
+            int packed_idx = row * packed_cols + col / 4;
+            int bit_pos = (col % 4) * 2;
+            int val = (weights[packed_idx] >> bit_pos) & 0x03;
+            float ternary = (float)(val - 1);
+            block_partial += ternary * x[col];
+        }
+        partial += scale * block_partial;
+    }
+
+    float reduced = sub_group_reduce_add(partial);
+    if (lid == 0) {
+        y[row] = reduced;
+    }
+}

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: cfg
+---
+AttentionConfig {
+    num_heads: 32,
+    num_kv_heads: 8,
+    head_dim: 64,
+    max_seq_len: 4096,
+    causal: true,
+    scale: 0.125,
+}
