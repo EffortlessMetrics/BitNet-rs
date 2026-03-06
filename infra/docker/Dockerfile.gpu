@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y \
 
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Default compute capability for docker build (no nvidia-smi available).
+# Override: docker build --build-arg CUDA_COMPUTE_CAP=80 ...
+ARG CUDA_COMPUTE_CAP=75
+ENV CUDA_COMPUTE_CAP=${CUDA_COMPUTE_CAP}
+
 # Create app directory
 WORKDIR /app
 
