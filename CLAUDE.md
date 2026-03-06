@@ -84,6 +84,7 @@ bitnet-models  (GGUF loader, dual I2_S flavor detection) │
 Always use the unified GPU predicate:
 ```rust
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+fn gpu_only_function() { /* ... */ }
 ```
 
 ## Patterns and Conventions
@@ -103,8 +104,13 @@ Always use the unified GPU predicate:
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn gpu_function() { /* ... */ }
 
-// Runtime checks via bitnet_kernels::device_features
-bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}
+// Runtime checks
+if bitnet_kernels::device_features::gpu_compiled() {
+    // GPU support was compiled in
+}
+if bitnet_kernels::device_features::gpu_available_runtime() {
+    // GPU hardware is available
+}
 ```
 
 ### Key environment variables
