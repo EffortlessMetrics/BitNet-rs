@@ -1,17 +1,17 @@
 """
-BitNet.cpp Python bindings - High-performance 1-bit LLM inference library
+BitNet Python bindings - 1-bit LLM inference library (pre-alpha)
 
-This package provides Python bindings for the BitNet.cpp Rust implementation,
-offering significant performance improvements over the original Python implementation
-while maintaining API compatibility.
+This package provides Python bindings for the BitNet-rs Rust implementation.
+The bindings are scaffolded but not yet validated end-to-end in CI.
 
-Key Features:
-- Drop-in replacement for existing BitNet Python code
-- 2-10x performance improvement over Python baseline
-- Support for CPU and GPU inference
+Status: Pre-alpha. Do not depend on this API for production use.
+
+Key Features (implemented, validation pending):
+- llama-cpp-python compatible API (validation pending)
+- CPU inference support
+- GPU inference support (alpha, not validated)
 - Streaming generation with async support
-- Comprehensive model format support (GGUF, SafeTensors, HuggingFace)
-- Production-ready with proper error handling and logging
+- GGUF and SafeTensors model format support
 
 Basic Usage:
     >>> import bitnet_py as bitnet
@@ -54,7 +54,7 @@ Advanced Usage:
     ...     print(answer)
 
 Migration from Original Python:
-    The API is designed to be a drop-in replacement. Simply change:
+    The API is designed to be compatible. Simply change:
 
     ```python
     # Old

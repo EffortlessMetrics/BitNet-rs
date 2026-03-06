@@ -396,7 +396,7 @@ export RUSTFLAGS="-C target-cpu=native"
 BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --features cpu
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 
-# Production inference with strict mode (realistic performance: 10-20 tok/s CPU, 50-100 tok/s GPU)
+# Production inference with strict mode (SIMD-optimised CPU, GPU-accelerated alpha)
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
   --model models/bitnet-model.gguf \
   --prompt "Explain quantum computing" \
@@ -434,14 +434,14 @@ BITNET_STRICT_MODE=1 \
 cargo bench -p bitnet-kernels --bench mixed_precision_bench --features gpu
 
 # Realistic CPU performance baselines (Issue #261 - AC7)
-# Expected: I2S 10-20 tok/s, TL1 12-18 tok/s, TL2 10-15 tok/s
+# Expected: SIMD-optimised throughput (hardware-dependent)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
 cargo run -p xtask -- benchmark --features cpu --quantization i2s
 
 # Realistic GPU performance baselines (Issue #261 - AC8)
-# Expected: Mixed precision 50-100 tok/s, GPU utilization >80%
+# Expected: GPU-accelerated (alpha), GPU utilization >80%
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 cargo run -p xtask -- benchmark --features gpu --quantization i2s

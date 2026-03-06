@@ -46,7 +46,7 @@ This directory contains comprehensive Jupyter notebook examples for migrating fr
 
 - **Prerequisites:** Understanding of deployment concepts
 - **Time to complete:** 45-60 minutes
-- **Key takeaways:** Production-ready deployment strategies
+- **Key takeaways:** Deployment strategies and best practices
 
 ## Quick Start
 

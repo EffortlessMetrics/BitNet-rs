@@ -449,7 +449,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ✅ **Model-Specific**: LLaMA, GPT-2, and BitNet tokenizer configurations
 
-✅ **Production Ready**: Strict mode, offline mode, and deterministic inference
+✅ **Available**: Strict mode, offline mode, and deterministic inference
 
 ---
 

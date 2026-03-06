@@ -4,7 +4,7 @@ This document provides detailed compatibility information between BitNet-rs and 
 
 ## Overview
 
-BitNet-rs is designed to be the **primary, production-ready implementation** with memory safety and design optimizations for performance. Legacy implementations are maintained only for compatibility testing and migration purposes.
+BitNet-rs is designed to be the **primary implementation (pre-alpha)** with memory safety and design optimizations for performance. Legacy implementations are maintained only for compatibility testing and migration purposes.
 
 ⚠️ **Performance Claims**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](../GOALS_VS_REALITY_ANALYSIS.md), performance claims require verification through proper benchmarking infrastructure.
 
@@ -12,7 +12,7 @@ BitNet-rs is designed to be the **primary, production-ready implementation** wit
 
 | Aspect | BitNet-rs (Primary) | BitNet C++ (Legacy) | BitNet Python (Legacy) |
 |--------|---------------------|---------------------|-------------------------|
-| **Status** | ✅ Production Ready | ⚠️ Legacy/Testing Only | ⚠️ Deprecated |
+| **Status** | ✅ Active development (pre-alpha) | ⚠️ Legacy/Testing Only | ⚠️ Deprecated |
 | **Performance** | Designed for performance* | Baseline | Known slower |
 | **Memory Safety** | ✅ Guaranteed | ❌ Manual management | ❌ C++ dependencies |
 | **Maintenance** | ✅ Active development | ⚠️ Compatibility only | ❌ No longer maintained |
@@ -43,7 +43,7 @@ let model = BitNetModel::load("model.gguf", &Device::Cpu)?;
 
 #### To Rust C API (for C++ projects)
 ```cpp
-// Rust C API - drop-in replacement
+// Rust C API - llama.cpp-compatible API
 #include "bitnet_c.h"
 BitNetModel* model = bitnet_model_load("model.gguf");
 if (!model) {
@@ -139,7 +139,7 @@ Replace legacy implementations entirely with BitNet-rs:
 
 ### 2. Gradual Migration
 
-Use BitNet-rs C API as a drop-in replacement:
+Use BitNet-rs C API as a llama.cpp-compatible API:
 
 **Benefits:**
 - Minimal code changes
@@ -192,10 +192,10 @@ public:
 
 | Model Size | Legacy C++ | BitNet-rs (CPU) | BitNet-rs (GPU) | Notes |
 |------------|------------|------------------|------------------|-------|
-| **BitNet-1B** | ~15 tok/s | 10-20 tok/s | 50-100 tok/s | Real quantized computation |
-| **BitNet-3B** | ~8 tok/s | 8-15 tok/s | 40-80 tok/s | Device-aware I2S quantization |
-| **BitNet-7B** | ~4 tok/s | 5-12 tok/s | 30-70 tok/s | Mixed precision acceleration |
-| **BitNet-13B** | ~2 tok/s | 3-8 tok/s | 20-50 tok/s | Memory-efficient quantization |
+| **BitNet-1B** | ~15 tok/s | Varies by hardware | Varies by hardware | Real quantized computation |
+| **BitNet-3B** | ~8 tok/s | Varies by hardware | Varies by hardware | Device-aware I2S quantization |
+| **BitNet-7B** | ~4 tok/s | Varies by hardware | Varies by hardware | Mixed precision acceleration |
+| **BitNet-13B** | ~2 tok/s | Varies by hardware | Varies by hardware | Memory-efficient quantization |
 
 ### Memory Usage Improvements
 

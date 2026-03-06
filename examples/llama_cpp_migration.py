@@ -9,13 +9,13 @@ requiring only a single import change!
 # Original llama-cpp-python code:
 # from llama_cpp import Llama
 
-# bitnet-rs drop-in replacement (ONE LINE CHANGE!):
+# bitnet-rs llama-cpp-python compatible API (validation pending):
 from bitnet.llama_compat import Llama
 
 def main():
     """
-    This is EXACTLY the same code you would use with llama-cpp-python!
-    No other changes needed - bitnet-rs handles everything.
+    This is intended to work the same way as llama-cpp-python.
+    API compatibility is implemented but validation is ongoing.
     """
 
     # Load model - identical API

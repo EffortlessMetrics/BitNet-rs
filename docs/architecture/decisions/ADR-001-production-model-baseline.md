@@ -26,7 +26,7 @@ Two model options exist for baseline generation:
 ### Option 2: Production Model (`microsoft/bitnet-b1.58-2B-4T-gguf`)
 - **Size**: ~2GB (2B parameter model)
 - **Purpose**: Production inference, realistic benchmarking
-- **Pros**: Representative performance (10-20 tok/s CPU), comprehensive kernel coverage, honest compute evidence
+- **Pros**: Representative performance (SIMD-optimised CPU path), comprehensive kernel coverage, honest compute evidence
 - **Cons**: Requires download (~5-10 minutes), slower baseline generation (~2 minutes), ~2GB disk space
 
 ---
@@ -41,7 +41,7 @@ Two model options exist for baseline generation:
 
 ### 1. Realistic Performance Metrics
 - **MVP Baseline Requirement**: v0.1.0-mvp baseline should represent real-world production use cases
-- **User Expectations**: 10-20 tok/s CPU is achievable and representative of 2B model inference
+- **User Expectations**: SIMD-optimised CPU inference is representative of 2B model performance
 - **Test Model Inadequacy**: 224-byte model provides trivial computation, not neural network inference
 
 ### 2. Comprehensive Kernel Coverage
@@ -92,7 +92,7 @@ Two model options exist for baseline generation:
 ## Consequences
 
 ### Positive
-- ✅ **Realistic Baseline**: 10-20 tok/s CPU represents production performance
+- ✅ **Realistic Baseline**: SIMD-optimised CPU path represents real inference performance
 - ✅ **Comprehensive Coverage**: Full transformer pipeline exercised
 - ✅ **Honest Compute**: Receipt proves real neural network execution
 - ✅ **Cross-Validation**: Aligns with C++ reference baseline

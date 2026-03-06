@@ -1,6 +1,6 @@
 # Clean GGUF Export Scripts
 
-Production-ready scripts for exporting and validating BitNet models in GGUF format with LayerNorm preservation.
+Scripts for exporting and validating BitNet models in GGUF format with LayerNorm preservation.
 
 ---
 

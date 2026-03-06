@@ -233,7 +233,7 @@ Possible causes:
 ### Success Criteria
 
 ✓ GPU receipts have GPU kernel IDs (not CPU)
-✓ Performance metrics match GPU baseline (50-100 tok/s)
+✓ Performance metrics match GPU baseline (GPU-accelerated, alpha)
 ✓ `verify-receipt --require-gpu-kernels` passes
 
 ## Task 4: Validate Performance Metrics for Realism
@@ -246,11 +246,11 @@ Possible causes:
 
 | Configuration | Expected TPS | Suspicious if > |
 |---------------|--------------|-----------------|
-| CPU I2S | 10-20 tok/s | 40 tok/s |
-| CPU TL1 (ARM NEON) | 12-18 tok/s | 35 tok/s |
-| CPU TL2 (x86 AVX) | 10-15 tok/s | 30 tok/s |
-| GPU I2S (FP16) | 50-100 tok/s | 150 tok/s |
-| GPU I2S (BF16) | 60-110 tok/s | 180 tok/s |
+| CPU I2S | SIMD-optimised | TBD |
+| CPU TL1 (ARM NEON) | SIMD-optimised | TBD |
+| CPU TL2 (x86 AVX) | SIMD-optimised | TBD |
+| GPU I2S (FP16) | GPU-accelerated (alpha) | TBD |
+| GPU I2S (BF16) | GPU-accelerated (alpha) | TBD |
 
 ### Validation Commands
 

@@ -11,7 +11,7 @@
 use bitnet_common::{BitNetTensor, QuantizationType, Result};
 // Candle imports removed - not currently used
 
-// Enable accuracy validation tests for production-ready quantization
+// Accuracy validation tests for quantization
 pub mod accuracy_validation_tests;
 pub mod calibration;
 pub mod calibrator;

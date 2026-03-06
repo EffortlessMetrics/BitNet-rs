@@ -1,6 +1,6 @@
 # BitNet-rs Health Endpoints
 
-Production-ready health check endpoints for BitNet inference server with real system metrics.
+Health check endpoints for BitNet inference server with real system metrics.
 
 ## Overview
 
@@ -256,7 +256,7 @@ All endpoints include `Cache-Control: no-store` headers to prevent caching of st
 - **Startup Grace**: Liveness probe returns `Degraded` for first 5 seconds to allow initialization
 - **Component Isolation**: Individual component health tracked independently
 - **Thread-Safe**: Health checker is `Arc`-wrapped for concurrent access
-- **Production-Ready**: Used in production server with full integration
+- **Integrated**: Used in server with full integration
 
 ## See Also
 

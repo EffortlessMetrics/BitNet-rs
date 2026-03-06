@@ -135,7 +135,7 @@ Core functionality working: GGUF model loading, device-aware quantization, basic
 - Performance baselines documented with actual numbers (no claims)
 - CI regression testing functional with `xtask bench-compare`
 
-**Documentation (Complete):**
+**Documentation (Production-ready):**
 
 - Tokenizer architecture guide with copy-pasteable examples
 - SPM workflow documentation with fixture creation guide

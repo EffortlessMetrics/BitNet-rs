@@ -20,10 +20,10 @@ cargo run -p bitnet-cli --features cpu,full-cli -- compat-check model.gguf --ver
 
 | Quantization Format | CPU Performance | Status | Use Case |
 |---------------------|-----------------|--------|----------|
-| **I2_S BitNet32-F16** | 10-20 tok/s | ✅ Production | Recommended for all use cases |
-| **I2_S QK256 (GGML)** | ~0.1 tok/s | ⚠️ MVP Scalar | Validation only (NOT production) |
-| **TL1 (Table Lookup)** | 8-15 tok/s | 🚧 Experimental | Research/testing |
-| **TL2 (Table Lookup)** | 8-15 tok/s | 🚧 Experimental | Research/testing |
+| **I2_S BitNet32-F16** | SIMD-optimised | ✅ Primary path | Recommended for all use cases |
+| **I2_S QK256 (GGML)** | ~0.1 tok/s | ⚠️ MVP Scalar | Validation only (`--max-tokens 4-16`) |
+| **TL1 (Table Lookup)** | Experimental | 🚧 Experimental | Research/testing |
+| **TL2 (Table Lookup)** | Experimental | 🚧 Experimental | Research/testing |
 
 **Hardware reference:** Intel Core i7-12700K, 32GB RAM
 
@@ -128,7 +128,7 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
 
 #### Symptoms
 
-- Performance slower than baseline (10-20 tok/s for BitNet32-F16)
+- Performance slower than expected for BitNet32-F16
 - Receipt shows no native CPU features enabled
 - Release build not used
 
@@ -342,13 +342,12 @@ cargo run -p xtask -- download-model --id <bitnet32-repo>
 cargo run -p bitnet-cli --features cpu,full-cli -- run \
   --model models/bitnet32-model.gguf \
   --prompt "Test" \
-  --max-tokens 128  # 10-20 tok/s
+  --max-tokens 128  # SIMD-optimised path
 ```
 
 **Performance:**
-- CPU: 10-20 tok/s (2B models)
-- GPU: 50-100 tok/s (2B models)
-- Status: ✅ Production-ready
+- Performance varies by model and hardware; SIMD-optimised path
+- Status: Primary inference path (SIMD-optimised)
 
 ### TL1/TL2 (Experimental)
 
@@ -386,9 +385,9 @@ cat ci/inference.json | jq '{
 }'
 
 # Compare against baselines
-# - I2_S BitNet32-F16: 10-20 tok/s (CPU), 50-100 tok/s (GPU)
+# - I2_S BitNet32-F16: SIMD-optimised (primary path)
 # - I2_S QK256: ~0.1 tok/s (CPU scalar, MVP)
-# - TL1/TL2: 8-15 tok/s (CPU experimental)
+# - TL1/TL2: Experimental
 ```
 
 ### Optimization Checklist
@@ -414,7 +413,7 @@ cat ci/inference.json | jq '{
 ### Medium-term (v0.2.0)
 
 1. **QK256 SIMD:** ≥3× performance improvement with AVX2
-2. **Production-ready QK256:** 0.3+ tok/s for 2B models
+2. **Faster QK256:** 0.3+ tok/s target for 2B models
 3. **Cross-format conversion:** QK256 ↔ BitNet32-F16 tools
 
 ### Long-term (v0.3.0+)
@@ -463,7 +462,7 @@ When reporting performance issues, include:
 **Key takeaways:**
 
 1. **QK256 is slow by design** (~0.1 tok/s) in v0.1.0 MVP
-2. **Use I2_S BitNet32-F16** for production (10-20 tok/s)
+2. **Use I2_S BitNet32-F16** for best performance (SIMD-optimised)
 3. **Limit QK256 to 4-16 tokens** for quick validation
 4. **v0.2.0 will bring ≥3× QK256 improvement** with AVX2 SIMD
 5. **Always build with `--release`** and native CPU features

@@ -113,7 +113,7 @@ This indicates the AVX2 implementation is **not yet faster** than scalar (0.76×
 
 - **CPU**: x86_64 with AVX2 support
 - **OS**: Linux, macOS, or Windows
-- **Rust**: 1.90.0+ (MSRV)
+- **Rust**: 1.92.0+ (MSRV)
 
 To check AVX2 support:
 

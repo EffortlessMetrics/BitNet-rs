@@ -1,5 +1,5 @@
 # bitnet-rs Server Configuration
-# Production-ready configuration for inference service
+# Configuration for inference service
 
 [server]
 # Server binding configuration

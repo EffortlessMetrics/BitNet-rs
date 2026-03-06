@@ -182,7 +182,7 @@ impl PromptTemplateArg {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Download a GGUF model from Hugging Face with production-ready features
+    /// Download a GGUF model from Hugging Face
     ///
     /// Features:
     /// - Resumable downloads with Content-Range validation

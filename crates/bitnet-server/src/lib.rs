@@ -1,4 +1,4 @@
-//! Production-ready HTTP server for BitNet inference with comprehensive features
+//! HTTP server for BitNet inference (pre-alpha; inference endpoints incomplete)
 #![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
 pub mod api_versioning;
@@ -150,7 +150,7 @@ pub struct ServerStats {
     pub concurrency_stats: concurrency::ConcurrencyStats,
 }
 
-/// Production-ready BitNet server with comprehensive features
+/// BitNet inference server (pre-alpha; inference endpoints incomplete)
 pub struct BitNetServer {
     config: ServerConfig,
     model_manager: Arc<ModelManager>,
@@ -166,7 +166,7 @@ pub struct BitNetServer {
 }
 
 impl BitNetServer {
-    /// Create a new production-ready BitNet server
+    /// Create a new BitNet server instance
     pub async fn new(config: ServerConfig) -> Result<Self> {
         let start_time = Instant::now();
 

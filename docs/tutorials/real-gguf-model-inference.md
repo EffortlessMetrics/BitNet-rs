@@ -1,19 +1,19 @@
 # Getting Started with Real GGUF Model Inference
 
-This tutorial demonstrates bitnet-rs's production-ready GGUF weight loading capability, enabling meaningful neural network inference with actual trained model parameters. You'll learn how to load real GGUF models, perform quantized inference, and validate accuracy across different quantization formats.
+This tutorial demonstrates bitnet-rs's GGUF weight loading capability, enabling meaningful neural network inference with actual trained model parameters. You'll learn how to load real GGUF models, perform quantized inference, and validate accuracy across different quantization formats.
 
 ## What You'll Learn
 
-- **Real GGUF Weight Loading**: Replace mock tensor initialization with production-ready model weight parsing
-- **Quantization Support**: I2_S, TL1, TL2 quantization formats with ≥99% accuracy vs FP32
+- **Real GGUF Weight Loading**: Replace mock tensor initialization with model weight parsing
+- **Quantization Support**: I2_S, TL1, TL2 quantization formats
 - **Device-Aware Operations**: Automatic GPU acceleration with CPU fallback
 - **Security & Validation**: Input validation, bounds checking, and error handling
-- **Performance Baselines**: Realistic CPU 10-20 tok/s, GPU 50-100 tok/s with actual quantized computation
+- **Performance Baselines**: Performance varies by model and hardware, with actual quantized computation
 - **Cross-Validation**: Systematic comparison with C++ reference implementation
 
 ## Prerequisites
 
-- bitnet-rs workspace properly installed (MSRV: Rust 1.90.0)
+- bitnet-rs workspace properly installed (MSRV: Rust 1.92.0)
 - Basic understanding of neural network quantization concepts
 - CUDA Toolkit 11.0+ (optional, for GPU acceleration)
 - 2GB+ disk space for model downloads
@@ -78,7 +78,7 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer \
 ```
 ✓ GGUF header parsed successfully (version 3)
 ✓ 328 tensors loaded with real trained weights
-✓ I2_S quantization validated: 99.8% accuracy vs FP32
+✓ I2_S quantization validated (example output — actual accuracy depends on model)
 ✓ Attention tensors: Q, K, V, Output projections loaded
 ✓ Feed-forward tensors: Gate, Up, Down projections loaded
 ✓ Normalization layers: All attention and FFN norms loaded
@@ -224,7 +224,7 @@ cargo run -p xtask -- benchmark \
 
 # Expected performance targets:
 # Quantization: ≥66 Melem/s (CPU), ≥200 Melem/s (GPU)
-# Inference: 10-20 tok/s (CPU), 50-100 tok/s (GPU) - realistic performance with real quantization
+# Inference: Performance varies by model and hardware
 # Memory: <2GB RAM for 2B parameter model
 ```
 
@@ -465,24 +465,24 @@ Now that you understand real GGUF weight loading:
 
 You've learned how to:
 
-- ✅ Load real GGUF models with production-ready weight parsing
+- ✅ Load real GGUF models with weight parsing
 - ✅ Validate tensor completeness and accuracy against FP32 baselines
 - ✅ Use device-aware quantization for optimal performance
 - ✅ Implement security validation and error handling
 - ✅ Test cross-validation against C++ reference implementation
 - ✅ Troubleshoot common issues with real model inference
 
-The GGUF weight loading system enables meaningful neural network inference with bitnet-rs, moving beyond mock tensors to production-ready AI applications with 1-bit quantized neural networks.
+The GGUF weight loading system enables meaningful neural network inference with bitnet-rs, moving beyond mock tensors to real AI applications with 1-bit quantized neural networks.
 
 ## Performance Baselines
 
 With real GGUF weight loading, bitnet-rs achieves:
 
 - **Quantization Performance**: 66+ Melem/s (CPU), 200+ Melem/s (GPU)
-- **Inference Throughput**: 10-20 tok/s (CPU), 50-100 tok/s (GPU) with real quantized computation
+- **Inference Throughput**: Varies by model and hardware, with real quantized computation
 - **Memory Efficiency**: <2GB RAM for 2B parameter models
-- **Accuracy**: ≥99% vs FP32 baseline for I2_S quantization
+- **Accuracy**: Target accuracy thresholds defined in test fixtures
 - **Security**: Comprehensive validation and bounds checking
-- **Compatibility**: Drop-in replacement for C++ implementation
+- **Compatibility**: llama.cpp-compatible API
 
-These baselines demonstrate production-ready performance for real-world neural network inference applications.
+These baselines demonstrate performance characteristics for real-world neural network inference applications.

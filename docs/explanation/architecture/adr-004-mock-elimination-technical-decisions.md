@@ -152,7 +152,7 @@ impl QuantizedLinear {
 **Decision**: Implement realistic performance baselines with comprehensive metrics collection that distinguishes real computation from mock fallbacks.
 
 **Rationale**:
-- **Realistic Targets**: CPU 10-20 tok/s, GPU 50-100 tok/s based on quantization overhead analysis
+- **Realistic Targets**: CPU SIMD-optimised, GPU-accelerated (alpha) — target throughput TBD via benchmarking
 - **Mock Detection**: Automatic identification of suspiciously high performance indicating mock usage
 - **Comprehensive Breakdown**: Separate timing for quantization, kernel execution, and memory transfers
 - **Cross-Validation Integration**: Performance comparison framework against C++ reference
@@ -327,7 +327,7 @@ impl QuantizedLinear {
 
 ### Negative Consequences
 
-1. **Performance Reduction**: Real quantization will show lower throughput than mock (10-20 tok/s vs 200 tok/s)
+1. **Performance Reduction**: Real quantization will show lower throughput than mock (SIMD-optimised real vs unconstrained mock)
 2. **Complexity Increase**: Device-aware kernel selection adds implementation complexity
 3. **Build Dependencies**: GPU features require CUDA toolkit installation
 4. **Memory Requirements**: Optimized memory layouts may increase memory usage
@@ -367,7 +367,7 @@ impl QuantizedLinear {
 
 1. **Compilation**: 100% success for `cargo build --no-default-features --features cpu|gpu`
 2. **Accuracy**: >99% correlation with FP32 reference for all quantization types
-3. **Performance**: CPU 10-20 tok/s, GPU 50-100 tok/s sustained throughput
+3. **Performance**: CPU SIMD-optimised, GPU-accelerated (alpha) — sustained throughput targets TBD
 4. **Validation**: <5% performance difference from C++ reference
 5. **CI Integration**: Automated mock detection with <5% false positive rate
 

@@ -1210,7 +1210,7 @@ cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
 
 # Expected output (success):
 # ✓ Performance validation: PASS
-# tokens_per_second: 18.5 (within realistic range for CPU I2S: 10-20 tok/s)
+# tokens_per_second: 18.5 (within realistic range for SIMD-optimised CPU I2S)
 
 # Expected output (failure - suspicious performance):
 # ✗ Performance validation: FAIL
@@ -1522,7 +1522,7 @@ cargo test -p bitnet-models --no-default-features --features "cpu,crossval" \
 - **How-To:** [Verifying Receipt Honesty](../how-to/receipt-verification.md) - Detailed receipt validation guide
 - **How-To:** [Use QK256 Models](../howto/use-qk256-models.md) - QK256 GGML format usage guide
 - **Reference:** [Quantization Support](./quantization-support.md#strict-quantization-guards) - Strict mode technical details
-- **Reference:** [Quantization Support - I2S QK256](./quantization-support.md#i2s-qk256ggml---pure-rust-production-ready) - QK256 format specification
+- **Reference:** [Quantization Support - I2S QK256](./quantization-support.md#i2s-qk256ggml---pure-rust) - QK256 format specification
 - **Reference:** [Environment Variables](../environment-variables.md#strict-mode-variables) - Complete variable documentation
 - **Explanation:** [Strict Quantization Guards Specification](../explanation/strict-quantization-guards.md) - Complete feature specification
 - **Explanation:** [I2_S Dual-Flavor Architecture](../explanation/i2s-dual-flavor.md) - Detailed dual-flavor design

@@ -12,7 +12,7 @@ This document answers frequently asked questions about migrating from legacy Bit
 - **Memory safety guarantees** - no segfaults or memory leaks
 - **Efficient memory management** with zero-copy operations
 - **Active development** with regular updates and new features
-- **Production-ready** with comprehensive testing and monitoring
+- **Comprehensive testing** including property-based and snapshot tests
 - **Better error handling** with detailed error messages
 - **Cross-platform consistency** across Linux, macOS, and Windows
 
@@ -273,7 +273,7 @@ cargo xtask performance-report --compare-cpp
 
 ### Q: Is BitNet-rs production-ready?
 
-**A:** Yes! BitNet-rs is designed for production use:
+**A:** No — BitNet-rs is pre-alpha (v0.2.1-dev). It is under active development with:
 
 - ✅ **Comprehensive testing**: Extensive test coverage including property-based testing
 - ✅ **Memory safety**: Guaranteed by Rust's type system

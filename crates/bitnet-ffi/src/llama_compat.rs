@@ -1,4 +1,4 @@
-// llama.cpp compatible C API for drop-in replacement
+// llama.cpp compatible C API (CI validation pending)
 #![allow(non_camel_case_types)]
 
 use log::{debug, error, warn};
@@ -68,7 +68,7 @@ pub struct llama_context_params {
     pub offload_kqv: bool,
 }
 
-/// Load model from file - 100% compatible with llama_load_model_from_file
+/// Load model from file - llama.cpp compatible API (CI validation pending)
 ///
 /// # Safety
 /// This function dereferences raw pointers and must be called with valid arguments:

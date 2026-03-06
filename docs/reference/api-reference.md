@@ -603,7 +603,7 @@ if let Some(metrics) = response.metrics {
 
 ### BitNetModel
 
-The main model interface for loading and running BitNet models with production-ready GGUF weight loading and real neural network inference.
+The main model interface for loading and running BitNet models with GGUF weight loading and neural network inference.
 
 ```rust
 pub struct BitNetModel {

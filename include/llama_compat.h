@@ -1,9 +1,12 @@
 /*
  * llama.cpp Compatible C API for bitnet-rs
  *
- * This header provides a drop-in replacement for llama.cpp's C API.
- * Simply replace #include "llama.h" with #include "llama_compat.h"
- * and link against libbitnet_ffi instead of libllama.
+ * This header provides a llama.cpp-compatible C API for bitnet-rs.
+ * API signatures match llama.cpp but behavior parity is not yet
+ * validated in CI. Use #include "llama_compat.h" and link against
+ * libbitnet_ffi instead of libllama.
+ *
+ * Status: Implemented, CI validation pending. Pre-alpha (v0.2.x).
  */
 
 #ifndef LLAMA_COMPAT_H

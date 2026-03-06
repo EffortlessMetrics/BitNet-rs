@@ -1,6 +1,6 @@
 # Getting Started with BitNet Rust
 
-This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real quantized computation. BitNet-rs eliminates mock fallbacks and implements native I2S, TL1, and TL2 quantization kernels, enabling authentic neural network inference with realistic performance baselines.
+This guide will help you get up and running with BitNet Rust, a pre-alpha implementation of 1-bit neural network inference with real quantized computation. BitNet-rs implements native I2S, TL1, and TL2 quantization kernels for authentic neural network inference.
 
 ## Installation
 
@@ -8,7 +8,7 @@ This guide will help you get up and running with BitNet Rust, a production-ready
 
 - Rust 1.92.0 or later
 - CUDA 11.8+ (optional, for GPU acceleration)
-- Python 3.8+ (optional, for Python bindings)
+- Python 3.8+ (optional; Python bindings are scaffolded but not yet validated)
 
 ### Install from crates.io
 
@@ -39,13 +39,13 @@ BitNet Rust supports several feature flags for customization:
 
 ```bash
 # Build with CPU support
-cargo build --no-default-features --features cpu
+cargo build --locked --no-default-features --features cpu
 
 # Build with GPU support
-cargo build --no-default-features --features gpu
+cargo build --locked --no-default-features --features gpu
 
 # Build with both CPU and GPU
-cargo build --no-default-features --features "cpu,gpu"
+cargo build --locked --no-default-features --features "cpu,gpu"
 ```
 
 ## Quick Start
@@ -88,7 +88,7 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
     --stream
 
 # Performance measurement with realistic expectations
-# CPU: 10-20 tokens/sec, GPU: 50-100 tokens/sec
+# Performance varies by model and hardware; QK256 uses scalar kernels (~0.1 tok/s for 2B models)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
@@ -102,7 +102,7 @@ Add BitNet to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bitnet = "0.1.0"
+bitnet = "0.2"  # Check crates.io for latest version
 ```
 
 Real GGUF model loading with trained weights:
@@ -150,7 +150,7 @@ async fn main() -> Result<()> {
     println!("Generated: {}", response.text);
 
     // Access performance metrics from real quantized inference
-    // Realistic performance: CPU 10-20 tok/s, GPU 50-100 tok/s
+    // Performance varies by model, quantization format, and hardware
     if let Some(metrics) = response.metrics {
         println!("Inference time: {:.2}ms", metrics.timing.total);
         println!("Throughput: {:.1} tokens/sec", metrics.throughput.e2e);
@@ -269,9 +269,9 @@ BitNet Rust respects these environment variables:
 
 BitNet-rs provides realistic performance baselines based on real quantized computation without mock fallbacks:
 
-- **CPU Performance**: 10-20 tokens/sec with I2S quantization (real computation, not mock)
-- **GPU Performance**: 50-100 tokens/sec with mixed precision acceleration
-- **Quantization Accuracy**: I2S ≥99.8%, TL1/TL2 ≥99.6% correlation with FP32
+- **CPU Performance**: Varies by model and hardware. QK256 models use scalar kernels (~0.1 tok/s for 2B). I2_S BitNet32-F16 is significantly faster with SIMD optimization.
+- **GPU Performance**: GPU backends are alpha/scaffolded. Performance not yet measured.
+- **Quantization Accuracy**: Accuracy targets defined in test fixtures. Formal measurement infrastructure is pending.
 - **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent any mock fallbacks
 
 ### CPU Optimization
@@ -289,6 +289,8 @@ BITNET_STRICT_MODE=1 bitnet-cli inference --model model.gguf --prompt "Hello"
 ```
 
 ### GPU Optimization
+
+> **Note:** GPU backends are scaffolded (alpha). The examples below show the intended API.
 
 1. **Enable mixed precision with strict mode**:
 ```rust
@@ -332,7 +334,7 @@ let config = InferenceConfig {
    - Enable native CPU features with `RUSTFLAGS="-C target-cpu=native"`
    - Use GPU acceleration (compiled with gpu feature)
    - Adjust batch size and thread count
-   - Expect realistic performance with real quantization: CPU 10-20 tok/s, GPU 50-100 tok/s
+   - Performance depends on model, quantization format, and hardware
 
 ### Debug Mode
 

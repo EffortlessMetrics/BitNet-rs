@@ -74,7 +74,7 @@ The remaining sections of this document provide architectural context and design
 **Impact**:
 - Performance regressions masked (12 tok/s looks normal for "GPU")
 - Cross-validation false positives (comparing CPU perf to GPU baseline)
-- User confusion (expecting 50-100 tok/s, getting 10-20 tok/s)
+- User confusion (expecting GPU-accelerated throughput, getting CPU-level throughput)
 
 ## Architecture Decision
 
@@ -356,18 +356,18 @@ pub fn validate_performance_reasonable(receipt: &Receipt) -> Result<()> {
     if let Some(tps) = receipt.tokens_per_second {
         match receipt.backend.as_str() {
             "cpu" => {
-                // CPU baseline: 10-20 tok/s (allowing 5-30 tok/s variance)
+                // CPU baseline: SIMD-optimised (target throughput TBD)
                 ensure!(
-                    tps >= 5.0 && tps <= 30.0,
-                    "CPU performance {:.1} tok/s outside expected range 5-30 tok/s",
+                    tps >= 0.01 && tps <= 200.0,
+                    "CPU performance {:.1} tok/s outside plausible range",
                     tps
                 );
             }
             "cuda" | "gpu" => {
-                // GPU baseline: 50-100 tok/s (allowing 30-150 tok/s variance)
+                // GPU baseline: GPU-accelerated (alpha, target throughput TBD)
                 ensure!(
-                    tps >= 30.0 && tps <= 150.0,
-                    "GPU performance {:.1} tok/s outside expected range 30-150 tok/s",
+                    tps >= 0.01 && tps <= 500.0,
+                    "GPU performance {:.1} tok/s outside plausible range",
                     tps
                 );
             }
