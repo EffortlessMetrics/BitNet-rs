@@ -519,19 +519,6 @@ pub fn apply_fusion(
     })
 }
 
-/// Generate CUDA C source for a fusion pattern.
-fn generate_cuda_source(pattern: FusionPattern) -> String {
-    match pattern {
-        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC.to_string(),
-        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC.to_string(),
-        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC.to_string(),
-        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC.to_string(),
-        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC.to_string(),
-        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC.to_string(),
-        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC.to_string(),
-    }
-}
-
 /// Estimate speedup of a fused pattern relative to unfused execution.
 fn estimate_fusion_speedup_for_pattern(pattern: FusionPattern) -> f32 {
     match pattern {
@@ -562,18 +549,8 @@ pub fn estimate_fusion_speedup(unfused_op_count: usize, fused_kernel: &FusedKern
 // CUDA kernel sources (inline C)
 // ───────────────────────────────────────────────────────────────────
 
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
-    FUSED_MATMUL_BIAS_SRC,
-    FUSED_MATMUL_BIAS_RELU_SRC,
-    FUSED_LAYER_NORM_RESIDUAL_SRC,
-    FUSED_ATTENTION_SCORE_SOFTMAX_SRC,
-    FUSED_QKV_PROJECTION_SRC,
-    FUSED_GLU_SRC,
-    FUSED_RMSNORM_LINEAR_SRC,
-);
-
-const FUSED_MATMUL_BIAS_SRC: &str = r#"
+macro_rules! FUSED_MATMUL_BIAS_SRC {
+    () => { r#"
 extern "C" __global__ void fused_matmul_bias_f32(
     const float* __restrict__ a,
     const float* __restrict__ b,
@@ -594,9 +571,11 @@ extern "C" __global__ void fused_matmul_bias_f32(
         output[(long long)row * n + j] = sum + bias[j];
     }
 }
-"#;
+"# }
+}
 
-const FUSED_MATMUL_BIAS_RELU_SRC: &str = r#"
+macro_rules! FUSED_MATMUL_BIAS_RELU_SRC {
+    () => { r#"
 extern "C" __global__ void fused_matmul_bias_relu_f32(
     const float* __restrict__ a,
     const float* __restrict__ b,
@@ -616,9 +595,11 @@ extern "C" __global__ void fused_matmul_bias_relu_f32(
         output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
     }
 }
-"#;
+"# }
+}
 
-const FUSED_LAYER_NORM_RESIDUAL_SRC: &str = r#"
+macro_rules! FUSED_LAYER_NORM_RESIDUAL_SRC {
+    () => { r#"
 extern "C" __global__ void fused_layer_norm_residual_f32(
     const float* __restrict__ input,
     const float* __restrict__ residual,
@@ -661,9 +642,11 @@ extern "C" __global__ void fused_layer_norm_residual_f32(
         output[i] = normed * gamma[i] + beta[i];
     }
 }
-"#;
+"# }
+}
 
-const FUSED_ATTENTION_SCORE_SOFTMAX_SRC: &str = r#"
+macro_rules! FUSED_ATTENTION_SCORE_SOFTMAX_SRC {
+    () => { r#"
 extern "C" __global__ void fused_attention_score_softmax_f32(
     const float* __restrict__ q,
     const float* __restrict__ k,
@@ -698,9 +681,11 @@ extern "C" __global__ void fused_attention_score_softmax_f32(
     for (int j = 0; j < seq_len; j++) sum += sdata[j];
     output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
 }
-"#;
+"# }
+}
 
-const FUSED_QKV_PROJECTION_SRC: &str = r#"
+macro_rules! FUSED_QKV_PROJECTION_SRC {
+    () => { r#"
 extern "C" __global__ void fused_qkv_projection_f32(
     const float* __restrict__ input,
     const float* __restrict__ wq,
@@ -723,9 +708,11 @@ extern "C" __global__ void fused_qkv_projection_f32(
         out[j] = acc;
     }
 }
-"#;
+"# }
+}
 
-const FUSED_GLU_SRC: &str = r#"
+macro_rules! FUSED_GLU_SRC {
+    () => { r#"
 extern "C" __global__ void fused_glu_f32(
     const float* __restrict__ input,
     const float* __restrict__ w_gate,
@@ -745,9 +732,11 @@ extern "C" __global__ void fused_glu_f32(
         output[j] = (gate_val * sigmoid_gate) * up_val;
     }
 }
-"#;
+"# }
+}
 
-const FUSED_RMSNORM_LINEAR_SRC: &str = r#"
+macro_rules! FUSED_RMSNORM_LINEAR_SRC {
+    () => { r#"
 extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
     const float* __restrict__ input,
     const float* __restrict__ gamma,
@@ -783,7 +772,32 @@ extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
     }
     if (threadIdx.x == 0) output[row] = sdata[0];
 }
-"#;
+"# }
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
+    FUSED_MATMUL_BIAS_SRC!(),
+    FUSED_MATMUL_BIAS_RELU_SRC!(),
+    FUSED_LAYER_NORM_RESIDUAL_SRC!(),
+    FUSED_ATTENTION_SCORE_SOFTMAX_SRC!(),
+    FUSED_QKV_PROJECTION_SRC!(),
+    FUSED_GLU_SRC!(),
+    FUSED_RMSNORM_LINEAR_SRC!(),
+);
+
+/// Generate CUDA C source for a fusion pattern.
+fn generate_cuda_source(pattern: FusionPattern) -> String {
+    match pattern {
+        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC!().to_string(),
+        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC!().to_string(),
+        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC!().to_string(),
+        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC!().to_string(),
+        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC!().to_string(),
+        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC!().to_string(),
+        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC!().to_string(),
+    }
+}
 
 // ───────────────────────────────────────────────────────────────────
 // CPU fallback: fused GEMM + bias

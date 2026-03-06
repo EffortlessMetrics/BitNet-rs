@@ -966,9 +966,9 @@ pub fn attention_with_rope(
 /// Returns `KernelError::GpuError` when compiled with GPU features but
 /// no runtime kernel is loaded. Falls back to CPU otherwise.
 pub fn launch_multi_head_attention(
-    query: &[f32],
-    key: &[f32],
-    value: &[f32],
+    _query: &[f32],
+    _key: &[f32],
+    _value: &[f32],
     config: &MultiHeadAttentionConfig,
     seq_q: usize,
     seq_kv: usize,
