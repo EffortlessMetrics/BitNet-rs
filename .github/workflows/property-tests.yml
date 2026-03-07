@@ -40,6 +40,8 @@ jobs:
     name: Cargo Tests (smoke)
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    env:
+      CUDA_COMPUTE_CAP: 80,86,89,90
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 

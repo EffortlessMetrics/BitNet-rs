@@ -70,7 +70,6 @@ function updateStatus(message, type = 'loading') {
 function updateProgress(percent) {
     const progressEl = document.getElementById('progress');
     progressEl.style.width = `${percent}%`;
-    progressEl.parentElement.setAttribute('aria-valuenow', percent);
 }
 
 // Detect platform features
@@ -487,15 +486,12 @@ function showBenchmarkProgress(show) {
         const interval = setInterval(() => {
             progress += 2;
             document.getElementById('benchmark-progress-fill').style.width = `${progress}%`;
-            progressEl.setAttribute('aria-valuenow', progress);
             if (progress >= 100) {
                 clearInterval(interval);
             }
         }, 100);
     } else {
         progressEl.style.display = 'none';
-        progressEl.setAttribute('aria-valuenow', 0);
-        document.getElementById('benchmark-progress-fill').style.width = '0%';
     }
 }
 
@@ -615,10 +611,8 @@ function clearOutput() {
 }
 
 async function copyToClipboard() {
-    const copyBtn = document.getElementById('copy-output');
-    if (copyBtn.textContent === 'Copied!') return;
-
     const outputText = document.getElementById('output').textContent;
+    const copyBtn = document.getElementById('copy-output');
 
     try {
         await navigator.clipboard.writeText(outputText);

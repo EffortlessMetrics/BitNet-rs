@@ -65,6 +65,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
           push: false
+          build-args: |
+            CUDA_COMPUTE_CAP=80,86,89,90
           cache-from: type=gha,scope=${{ matrix.label }}
           cache-to: type=gha,mode=max,scope=${{ matrix.label }}
 
@@ -179,5 +181,7 @@ jobs:
           file: docker/Dockerfile.nvidia-gpu
           target: builder
           push: false
+          build-args: |
+            CUDA_COMPUTE_CAP=80,86,89,90
           cache-from: type=gha,scope=nvidia-gpu
           cache-to: type=gha,mode=max,scope=nvidia-gpu
