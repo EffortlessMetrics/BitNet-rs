@@ -463,261 +463,6 @@ pub fn estimate_register_pressure(pattern: FusionPattern) -> usize {
 }
 
 // ───────────────────────────────────────────────────────────────────
-// CUDA kernel sources (inline C)
-// ───────────────────────────────────────────────────────────────────
-
-macro_rules! FUSED_MATMUL_BIAS_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_matmul_bias_f32(
-    const float* __restrict__ a,
-    const float* __restrict__ b,
-    const float* __restrict__ bias,
-    float* __restrict__ output,
-    int m, int n, int k)
-{
-    int row = blockIdx.x;
-    if (row >= m) return;
-    extern __shared__ float sdata[];
-    const float* a_row = a + (long long)row * k;
-    float acc = 0.0f;
-    for (int j = threadIdx.x; j < n; j += blockDim.x) {
-        float sum = 0.0f;
-        for (int p = 0; p < k; p++) {
-            sum += a_row[p] * b[(long long)p * n + j];
-        }
-        output[(long long)row * n + j] = sum + bias[j];
-    }
-}
-"#
-    };
-}
-
-macro_rules! FUSED_MATMUL_BIAS_RELU_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_matmul_bias_relu_f32(
-    const float* __restrict__ a,
-    const float* __restrict__ b,
-    const float* __restrict__ bias,
-    float* __restrict__ output,
-    int m, int n, int k)
-{
-    int row = blockIdx.x;
-    if (row >= m) return;
-    const float* a_row = a + (long long)row * k;
-    for (int j = threadIdx.x; j < n; j += blockDim.x) {
-        float sum = 0.0f;
-        for (int p = 0; p < k; p++) {
-            sum += a_row[p] * b[(long long)p * n + j];
-        }
-        float val = sum + bias[j];
-        output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
-    }
-}
-"#
-    };
-}
-
-macro_rules! FUSED_LAYER_NORM_RESIDUAL_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_layer_norm_residual_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ residual,
-    const float* __restrict__ gamma,
-    const float* __restrict__ beta,
-    float* __restrict__ output,
-    int n, float eps)
-{
-    extern __shared__ float sdata[];
-    // compute mean of (input + residual)
-    float local_sum = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        local_sum += input[i] + residual[i];
-    }
-    sdata[threadIdx.x] = local_sum;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float mean = sdata[0] / (float)n;
-    __syncthreads();
-
-    // compute variance
-    float local_var = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float d = (input[i] + residual[i]) - mean;
-        local_var += d * d;
-    }
-    sdata[threadIdx.x] = local_var;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float inv_std = rsqrtf(sdata[0] / (float)n + eps);
-
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float normed = ((input[i] + residual[i]) - mean) * inv_std;
-        output[i] = normed * gamma[i] + beta[i];
-    }
-}
-"#
-    };
-}
-
-macro_rules! FUSED_ATTENTION_SCORE_SOFTMAX_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_attention_score_softmax_f32(
-    const float* __restrict__ q,
-    const float* __restrict__ k,
-    float* __restrict__ output,
-    int seq_len, int head_dim, float scale,
-    const float* __restrict__ mask)
-{
-    extern __shared__ float sdata[];
-    // simplified: single-head, q[head_dim], k[seq_len * head_dim]
-    // compute scores and softmax in one pass
-    int i = threadIdx.x;
-    if (i >= seq_len) return;
-    float score = 0.0f;
-    for (int d = 0; d < head_dim; d++) {
-        score += q[d] * k[(long long)i * head_dim + d];
-    }
-    score *= scale;
-    if (mask) score += mask[i];
-    sdata[i] = score;
-    __syncthreads();
-
-    // find max
-    float max_val = -1e30f;
-    for (int j = 0; j < seq_len; j++) {
-        if (sdata[j] > max_val) max_val = sdata[j];
-    }
-    float exp_val = expf(score - max_val);
-    sdata[i] = exp_val;
-    __syncthreads();
-
-    float sum = 0.0f;
-    for (int j = 0; j < seq_len; j++) sum += sdata[j];
-    output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
-}
-"#
-    };
-}
-
-macro_rules! FUSED_QKV_PROJECTION_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_qkv_projection_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ wq,
-    const float* __restrict__ wk,
-    const float* __restrict__ wv,
-    float* __restrict__ q_out,
-    float* __restrict__ k_out,
-    float* __restrict__ v_out,
-    int n, int out_dim)
-{
-    int row = blockIdx.x; // 0=Q, 1=K, 2=V
-    if (row >= 3) return;
-    const float* w = (row == 0) ? wq : ((row == 1) ? wk : wv);
-    float* out = (row == 0) ? q_out : ((row == 1) ? k_out : v_out);
-    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
-        float acc = 0.0f;
-        for (int i = 0; i < n; i++) {
-            acc += input[i] * w[(long long)j * n + i];
-        }
-        out[j] = acc;
-    }
-}
-"#
-    };
-}
-
-macro_rules! FUSED_GLU_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_glu_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ w_gate,
-    const float* __restrict__ w_up,
-    float* __restrict__ output,
-    int n, int out_dim)
-{
-    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
-        float gate_val = 0.0f;
-        float up_val = 0.0f;
-        for (int i = 0; i < n; i++) {
-            gate_val += input[i] * w_gate[(long long)j * n + i];
-            up_val   += input[i] * w_up[(long long)j * n + i];
-        }
-        // SiLU gate
-        float sigmoid_gate = 1.0f / (1.0f + expf(-gate_val));
-        output[j] = (gate_val * sigmoid_gate) * up_val;
-    }
-}
-"#
-    };
-}
-
-macro_rules! FUSED_RMSNORM_LINEAR_SRC {
-    () => {
-        r#"
-extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
-    const float* __restrict__ input,
-    const float* __restrict__ gamma,
-    const float* __restrict__ weight,
-    float* __restrict__ output,
-    int n, int out_dim, float eps)
-{
-    int row = blockIdx.x;
-    if (row >= out_dim) return;
-    extern __shared__ float sdata[];
-    float local_ss = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        float v = input[i];
-        local_ss += v * v;
-    }
-    sdata[threadIdx.x] = local_ss;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float inv_rms = rsqrtf(sdata[0] / (float)n + eps);
-    const float* w = weight + (long long)row * n;
-    float acc = 0.0f;
-    for (int i = threadIdx.x; i < n; i += blockDim.x) {
-        acc += w[i] * (input[i] * gamma[i] * inv_rms);
-    }
-    sdata[threadIdx.x] = acc;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    if (threadIdx.x == 0) output[row] = sdata[0];
-}
-"#
-    };
-}
-
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
-    FUSED_MATMUL_BIAS_SRC!(),
-    FUSED_MATMUL_BIAS_RELU_SRC!(),
-    FUSED_LAYER_NORM_RESIDUAL_SRC!(),
-    FUSED_ATTENTION_SCORE_SOFTMAX_SRC!(),
-    FUSED_QKV_PROJECTION_SRC!(),
-    FUSED_GLU_SRC!(),
-    FUSED_RMSNORM_LINEAR_SRC!(),
-);
-
-// ───────────────────────────────────────────────────────────────────
 // Fusion application
 // ───────────────────────────────────────────────────────────────────
 
@@ -777,13 +522,13 @@ pub fn apply_fusion(
 /// Generate CUDA C source for a fusion pattern.
 fn generate_cuda_source(pattern: FusionPattern) -> String {
     match pattern {
-        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC!().to_string(),
-        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC!().to_string(),
-        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC!().to_string(),
-        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC!().to_string(),
-        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC!().to_string(),
-        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC!().to_string(),
-        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC!().to_string(),
+        FusionPattern::MatMulBias => FUSED_MATMUL_BIAS_SRC.to_string(),
+        FusionPattern::MatMulBiasReLU => FUSED_MATMUL_BIAS_RELU_SRC.to_string(),
+        FusionPattern::LayerNormResidual => FUSED_LAYER_NORM_RESIDUAL_SRC.to_string(),
+        FusionPattern::AttentionScoreSoftmax => FUSED_ATTENTION_SCORE_SOFTMAX_SRC.to_string(),
+        FusionPattern::QKVProjection => FUSED_QKV_PROJECTION_SRC.to_string(),
+        FusionPattern::GatedLinearUnit => FUSED_GLU_SRC.to_string(),
+        FusionPattern::RMSNormLinear => FUSED_RMSNORM_LINEAR_SRC.to_string(),
     }
 }
 
@@ -813,6 +558,232 @@ pub fn estimate_fusion_speedup(unfused_op_count: usize, fused_kernel: &FusedKern
     base + bonus
 }
 
+// ───────────────────────────────────────────────────────────────────
+// CUDA kernel sources (inline C)
+// ───────────────────────────────────────────────────────────────────
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub const KERNEL_FUSION_CUDA_SRC: &str = concat!(
+    FUSED_MATMUL_BIAS_SRC,
+    FUSED_MATMUL_BIAS_RELU_SRC,
+    FUSED_LAYER_NORM_RESIDUAL_SRC,
+    FUSED_ATTENTION_SCORE_SOFTMAX_SRC,
+    FUSED_QKV_PROJECTION_SRC,
+    FUSED_GLU_SRC,
+    FUSED_RMSNORM_LINEAR_SRC,
+);
+
+const FUSED_MATMUL_BIAS_SRC: &str = r#"
+extern "C" __global__ void fused_matmul_bias_f32(
+    const float* __restrict__ a,
+    const float* __restrict__ b,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int m, int n, int k)
+{
+    int row = blockIdx.x;
+    if (row >= m) return;
+    extern __shared__ float sdata[];
+    const float* a_row = a + (long long)row * k;
+    float acc = 0.0f;
+    for (int j = threadIdx.x; j < n; j += blockDim.x) {
+        float sum = 0.0f;
+        for (int p = 0; p < k; p++) {
+            sum += a_row[p] * b[(long long)p * n + j];
+        }
+        output[(long long)row * n + j] = sum + bias[j];
+    }
+}
+"#;
+
+const FUSED_MATMUL_BIAS_RELU_SRC: &str = r#"
+extern "C" __global__ void fused_matmul_bias_relu_f32(
+    const float* __restrict__ a,
+    const float* __restrict__ b,
+    const float* __restrict__ bias,
+    float* __restrict__ output,
+    int m, int n, int k)
+{
+    int row = blockIdx.x;
+    if (row >= m) return;
+    const float* a_row = a + (long long)row * k;
+    for (int j = threadIdx.x; j < n; j += blockDim.x) {
+        float sum = 0.0f;
+        for (int p = 0; p < k; p++) {
+            sum += a_row[p] * b[(long long)p * n + j];
+        }
+        float val = sum + bias[j];
+        output[(long long)row * n + j] = (val > 0.0f) ? val : 0.0f;
+    }
+}
+"#;
+
+const FUSED_LAYER_NORM_RESIDUAL_SRC: &str = r#"
+extern "C" __global__ void fused_layer_norm_residual_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ residual,
+    const float* __restrict__ gamma,
+    const float* __restrict__ beta,
+    float* __restrict__ output,
+    int n, float eps)
+{
+    extern __shared__ float sdata[];
+    // compute mean of (input + residual)
+    float local_sum = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        local_sum += input[i] + residual[i];
+    }
+    sdata[threadIdx.x] = local_sum;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float mean = sdata[0] / (float)n;
+    __syncthreads();
+
+    // compute variance
+    float local_var = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float d = (input[i] + residual[i]) - mean;
+        local_var += d * d;
+    }
+    sdata[threadIdx.x] = local_var;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float inv_std = rsqrtf(sdata[0] / (float)n + eps);
+
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float normed = ((input[i] + residual[i]) - mean) * inv_std;
+        output[i] = normed * gamma[i] + beta[i];
+    }
+}
+"#;
+
+const FUSED_ATTENTION_SCORE_SOFTMAX_SRC: &str = r#"
+extern "C" __global__ void fused_attention_score_softmax_f32(
+    const float* __restrict__ q,
+    const float* __restrict__ k,
+    float* __restrict__ output,
+    int seq_len, int head_dim, float scale,
+    const float* __restrict__ mask)
+{
+    extern __shared__ float sdata[];
+    // simplified: single-head, q[head_dim], k[seq_len * head_dim]
+    // compute scores and softmax in one pass
+    int i = threadIdx.x;
+    if (i >= seq_len) return;
+    float score = 0.0f;
+    for (int d = 0; d < head_dim; d++) {
+        score += q[d] * k[(long long)i * head_dim + d];
+    }
+    score *= scale;
+    if (mask) score += mask[i];
+    sdata[i] = score;
+    __syncthreads();
+
+    // find max
+    float max_val = -1e30f;
+    for (int j = 0; j < seq_len; j++) {
+        if (sdata[j] > max_val) max_val = sdata[j];
+    }
+    float exp_val = expf(score - max_val);
+    sdata[i] = exp_val;
+    __syncthreads();
+
+    float sum = 0.0f;
+    for (int j = 0; j < seq_len; j++) sum += sdata[j];
+    output[i] = (sum > 0.0f) ? (exp_val / sum) : 0.0f;
+}
+"#;
+
+const FUSED_QKV_PROJECTION_SRC: &str = r#"
+extern "C" __global__ void fused_qkv_projection_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ wq,
+    const float* __restrict__ wk,
+    const float* __restrict__ wv,
+    float* __restrict__ q_out,
+    float* __restrict__ k_out,
+    float* __restrict__ v_out,
+    int n, int out_dim)
+{
+    int row = blockIdx.x; // 0=Q, 1=K, 2=V
+    if (row >= 3) return;
+    const float* w = (row == 0) ? wq : ((row == 1) ? wk : wv);
+    float* out = (row == 0) ? q_out : ((row == 1) ? k_out : v_out);
+    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
+        float acc = 0.0f;
+        for (int i = 0; i < n; i++) {
+            acc += input[i] * w[(long long)j * n + i];
+        }
+        out[j] = acc;
+    }
+}
+"#;
+
+const FUSED_GLU_SRC: &str = r#"
+extern "C" __global__ void fused_glu_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ w_gate,
+    const float* __restrict__ w_up,
+    float* __restrict__ output,
+    int n, int out_dim)
+{
+    for (int j = threadIdx.x; j < out_dim; j += blockDim.x) {
+        float gate_val = 0.0f;
+        float up_val = 0.0f;
+        for (int i = 0; i < n; i++) {
+            gate_val += input[i] * w_gate[(long long)j * n + i];
+            up_val   += input[i] * w_up[(long long)j * n + i];
+        }
+        // SiLU gate
+        float sigmoid_gate = 1.0f / (1.0f + expf(-gate_val));
+        output[j] = (gate_val * sigmoid_gate) * up_val;
+    }
+}
+"#;
+
+const FUSED_RMSNORM_LINEAR_SRC: &str = r#"
+extern "C" __global__ void fused_rmsnorm_linear_kf_f32(
+    const float* __restrict__ input,
+    const float* __restrict__ gamma,
+    const float* __restrict__ weight,
+    float* __restrict__ output,
+    int n, int out_dim, float eps)
+{
+    int row = blockIdx.x;
+    if (row >= out_dim) return;
+    extern __shared__ float sdata[];
+    float local_ss = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        float v = input[i];
+        local_ss += v * v;
+    }
+    sdata[threadIdx.x] = local_ss;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    float inv_rms = rsqrtf(sdata[0] / (float)n + eps);
+    const float* w = weight + (long long)row * n;
+    float acc = 0.0f;
+    for (int i = threadIdx.x; i < n; i += blockDim.x) {
+        acc += w[i] * (input[i] * gamma[i] * inv_rms);
+    }
+    sdata[threadIdx.x] = acc;
+    __syncthreads();
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+    if (threadIdx.x == 0) output[row] = sdata[0];
+}
+"#;
 
 // ───────────────────────────────────────────────────────────────────
 // CPU fallback: fused GEMM + bias
