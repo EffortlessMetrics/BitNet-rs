@@ -129,8 +129,7 @@ fn test_gemv_single_row_mixed_codes() {
     let cols = 256;
     let codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
     let x: Vec<f32> = (0..cols).map(|i| (i as f32) * 0.01).collect();
-    let rows = [codes.clone()];
-    let (qs, stride) = build_qs_data(&rows, cols);
+    let (qs, stride) = build_qs_data(std::slice::from_ref(&codes), cols);
 
     let expected = manual_dot(&codes, &x, cols);
     let scalar = gemv_qk256_row(&qs, &x, cols);
