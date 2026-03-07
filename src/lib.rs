@@ -1,6 +1,6 @@
 //! # bitnet-rs — 1-bit LLM Inference Engine
 //!
-//! Pre-alpha (v0.2.1-dev) Rust inference engine for BitNet 1-bit large language models.
+//! Pre-alpha (v0.2.1-dev) Rust inference engine for `BitNet` 1-bit large language models.
 //!
 //! ## Status
 //!
@@ -23,8 +23,8 @@
 //! The workspace contains ~200 crates. Key crates:
 //!
 //! - [`bitnet_common`]: Shared types, config, error types
-//! - [`bitnet_models`]: GGUF / SafeTensors model loading
-//! - [`bitnet_quantization`]: I2_S, TL1, TL2 quantization
+//! - [`bitnet_models`]: GGUF / `SafeTensors` model loading
+//! - [`bitnet_quantization`]: `I2_S`, TL1, TL2 quantization
 //! - [`bitnet_kernels`]: AVX2 / AVX-512 / NEON / CUDA compute kernels
 //! - [`bitnet_inference`]: Autoregressive generation engine
 //! - [`bitnet_tokenizers`]: Universal tokenizer with auto-discovery
