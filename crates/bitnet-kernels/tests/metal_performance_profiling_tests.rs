@@ -565,7 +565,7 @@ fn optimal_batch_size(
     if element_bytes == 0 || compute_per_element_us <= 0.0 {
         return 0;
     }
-    let max_by_memory = available_memory / element_bytes;
+    let max_by_memory = (available_memory / element_bytes).max(1);
     // Amortise launch overhead: batch_size * compute >= 10 * overhead
     let min_for_amortisation =
         ((10.0 * overhead_per_launch_us) / compute_per_element_us).ceil() as usize;

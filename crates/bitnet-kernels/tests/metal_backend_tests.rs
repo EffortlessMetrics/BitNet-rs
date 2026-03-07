@@ -365,8 +365,10 @@ mod metal_memory_estimation {
         use sysinfo::System;
         let sys = System::new_all();
         let total_gb = sys.total_memory() / (1024 * 1024 * 1024);
-        let in_ci = std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
-        let min_gb = if in_ci { 7 } else { METAL_MIN_UNIFIED_MEMORY_GB };
+        let hosted_github_macos_arm64 = std::env::var_os("GITHUB_ACTIONS").is_some()
+            && cfg!(target_os = "macos")
+            && cfg!(target_arch = "aarch64");
+        let min_gb = if hosted_github_macos_arm64 { 7 } else { METAL_MIN_UNIFIED_MEMORY_GB };
         assert!(total_gb >= min_gb, "Expected >= {min_gb} GB, got {total_gb} GB");
     }
 
