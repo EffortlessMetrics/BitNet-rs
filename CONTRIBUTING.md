@@ -177,6 +177,10 @@ See [ROADMAP.md](ROADMAP.md) for the project's current direction and priorities.
    cargo run --locked -p xtask -- crossval
    ```
 
+### Workflow Boundary
+
+New internal developer workflows belong in `xtask`. `bitnet-task` exists only as a compatibility facade for migrated `scripts/*.sh` entrypoints, so only add to it when preserving an existing shell contract during migration.
+
 ### Code Quality Standards
 
 - **MSRV**: See [`rust-toolchain.toml`](../rust-toolchain.toml) for the pinned toolchain version (Rust 2024 edition)
