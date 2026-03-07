@@ -2,8 +2,6 @@
 
 A collection of development automation tools for bitnet-rs, providing convenient commands for model downloads, cross-validation, and development workflows.
 
-`xtask` is the internal developer control plane. The separate `tools/bitnet-task` crate exists only as a compatibility facade for migrated `scripts/*.sh` entrypoints; new internal workflows should land in `xtask` unless they must preserve an existing shell interface.
-
 ## Installation
 
 The xtask is automatically available in the workspace. No additional installation required.

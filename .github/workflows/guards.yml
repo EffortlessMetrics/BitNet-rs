@@ -6,7 +6,6 @@ on:
     paths:
       - '.github/**'
       - 'scripts/**'
-      - 'tools/bitnet-task/**'
       - 'crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -20,22 +19,9 @@ jobs:
   guards:
     name: Guards
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    env:
-      CARGO_TERM_COLOR: always
-      CARGO_INCREMENTAL: "0"
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
-        with:
-          toolchain: "1.92.0"
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
-        with:
-          shared-key: guards-ubuntu
 
       - name: Ensure ripgrep exists
         run: |
@@ -46,13 +32,6 @@ jobs:
 
       # Ensure scripts are executable in fresh clones
       - run: chmod +x scripts/*.sh || true
-      - run: chmod +x scripts/tests/*.sh || true
-
-      - name: bitnet-task integration tests
-        run: cargo test --locked -p bitnet-task
-
-      - name: bitnet-task wrapper compatibility smoke
-        run: ./scripts/tests/bitnet-task-wrapper-help-smoke.sh
 
       - name: Guard - no floating action refs
         run: |

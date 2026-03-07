@@ -123,8 +123,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR:
 ./ci/local.sh   # or: cargo fmt --all && cargo clippy --locked ... && cargo nextest run --locked ...
 ```
 
-Developer workflow boundary: new internal maintenance commands go in `xtask`; `bitnet-task` exists only to preserve legacy `scripts/*.sh` entrypoints while the migration is in flight.
-
 See [ROADMAP.md](ROADMAP.md) for project direction.
 
 ## License
