@@ -241,7 +241,7 @@
             Initializing WebAssembly module...
         </div>
 
-        <div class="progress-bar">
+        <div class="progress-bar" role="progressbar" aria-label="Loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div id="progress" class="progress-fill"></div>
         </div>
     </div>
@@ -382,7 +382,7 @@
                 <button id="loading-bench" onclick="runLoadingBenchmark()">Loading Performance</button>
             </div>
 
-            <div id="benchmark-progress" class="progress-bar" style="display: none;">
+            <div id="benchmark-progress" class="progress-bar" style="display: none;" role="progressbar" aria-label="Benchmark progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <div id="benchmark-progress-fill" class="progress-fill"></div>
             </div>
 
