@@ -70,6 +70,7 @@ function updateStatus(message, type = 'loading') {
 function updateProgress(percent) {
     const progressEl = document.getElementById('progress');
     progressEl.style.width = `${percent}%`;
+    progressEl.parentElement.setAttribute('aria-valuenow', percent);
 }
 
 // Detect platform features
@@ -478,20 +479,21 @@ async function runLoadingBenchmark() {
 
 // Show/hide benchmark progress
 function showBenchmarkProgress(show) {
-    const progressEl = document.getElementById('benchmark-progress');
+    const progressContainer = document.getElementById('benchmark-progress');
     if (show) {
-        progressEl.style.display = 'block';
+        progressContainer.style.display = 'block';
         // Animate progress bar
         let progress = 0;
         const interval = setInterval(() => {
             progress += 2;
             document.getElementById('benchmark-progress-fill').style.width = `${progress}%`;
+            progressContainer.setAttribute('aria-valuenow', Math.min(progress, 100));
             if (progress >= 100) {
                 clearInterval(interval);
             }
         }, 100);
     } else {
-        progressEl.style.display = 'none';
+        progressContainer.style.display = 'none';
     }
 }
 
