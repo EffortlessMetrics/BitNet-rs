@@ -128,6 +128,7 @@ members = [
   "tests",
   "tests-new",
   "xtask",
+  "tools/bitnet-task",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
