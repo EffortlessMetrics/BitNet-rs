@@ -345,11 +345,7 @@ impl SamplerChain {
             Some(s) => ChaCha8Rng::seed_from_u64(s),
             None => ChaCha8Rng::from_rng(&mut rand::rng()),
         };
-        Self {
-            stages,
-            rng: std::cell::RefCell::new(rng),
-            buf: std::cell::RefCell::new(Vec::new()),
-        }
+        Self { stages, rng: std::cell::RefCell::new(rng), buf: std::cell::RefCell::new(Vec::new()) }
     }
 
     /// Start building a chain with a fluent API.
