@@ -481,6 +481,12 @@ impl SamplerChainBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use std::cell::RefCell;
+
+    fn logits(n: usize) -> Vec<f32> {
+        (0..n).map(|i| (i as f32) * 0.01 - 1.0).collect()
+    }
 
     // --- MinPSampler -------------------------------------------------------
 
@@ -588,6 +594,53 @@ mod tests {
     fn mirostat_empty_logits_errors() {
         let mut sampler = MirostatSampler::new(5.0, 0.1, Some(42));
         assert!(sampler.sample(&[]).is_err());
+    }
+
+    #[test]
+    fn mirostat_debug_omits_internal_scratch_buffer() {
+        let sampler = MirostatSampler {
+            tau: 5.0,
+            eta: 0.1,
+            mu: 10.0,
+            rng: ChaCha8Rng::seed_from_u64(7),
+            buf: vec![0.1, 0.2, 0.3],
+        };
+
+        let dbg = format!("{sampler:?}");
+
+        assert!(dbg.contains("MirostatSampler"));
+        assert!(dbg.contains("tau"));
+        assert!(dbg.contains("eta"));
+        assert!(dbg.contains("mu"));
+        assert!(!dbg.contains("buf"));
+        assert!(!dbg.contains("[0.1, 0.2, 0.3]"));
+    }
+
+    #[test]
+    fn mirostat_reuses_probability_buffer_across_calls() {
+        let mut sampler = MirostatSampler {
+            tau: 5.0,
+            eta: 0.1,
+            mu: 10.0,
+            rng: ChaCha8Rng::seed_from_u64(42),
+            buf: Vec::new(),
+        };
+
+        let first = logits(256);
+        let second = logits(64);
+
+        let token0 = sampler.sample(&first).unwrap();
+        assert!((token0 as usize) < first.len());
+
+        let first_capacity = sampler.buf.capacity();
+        assert_eq!(sampler.buf.len(), first.len());
+        assert!(first_capacity >= first.len());
+
+        let token1 = sampler.sample(&second).unwrap();
+        assert!((token1 as usize) < second.len());
+
+        assert_eq!(sampler.buf.len(), second.len());
+        assert!(sampler.buf.capacity() >= first_capacity);
     }
 
     // --- RepetitionPenaltyConfig -------------------------------------------
@@ -737,6 +790,35 @@ mod tests {
         let logits = vec![1.0f32];
         let token = chain.sample(&logits).unwrap();
         assert_eq!(token, 0);
+    }
+
+    #[test]
+    fn sampler_chain_returns_scratch_buffer_for_reuse() {
+        let chain = SamplerChain {
+            stages: vec![],
+            rng: RefCell::new(ChaCha8Rng::seed_from_u64(99)),
+            buf: RefCell::new(Vec::new()),
+        };
+
+        let first = logits(512);
+        let second = logits(32);
+
+        let token0 = chain.sample(&first).unwrap();
+        assert!((token0 as usize) < first.len());
+
+        let first_capacity = {
+            let buf = chain.buf.borrow();
+            assert_eq!(buf.len(), first.len());
+            assert!(buf.capacity() >= first.len());
+            buf.capacity()
+        };
+
+        let token1 = chain.sample(&second).unwrap();
+        assert!((token1 as usize) < second.len());
+
+        let buf = chain.buf.borrow();
+        assert_eq!(buf.len(), second.len());
+        assert!(buf.capacity() >= first_capacity);
     }
 }
 
