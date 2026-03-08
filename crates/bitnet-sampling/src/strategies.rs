@@ -11,6 +11,7 @@ use bitnet_logits::{
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use std::fmt;
 use tracing::debug;
 
 // ---------------------------------------------------------------------------
@@ -105,7 +106,7 @@ impl TypicalSampler {
 /// let token = sampler.sample(&logits).unwrap();
 /// assert!((token as usize) < logits.len());
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MirostatSampler {
     /// Target surprise (τ). Higher values allow more randomness.
     pub tau: f32,
@@ -114,6 +115,19 @@ pub struct MirostatSampler {
     /// Current surprise threshold, initialised to `2 * tau`.
     pub mu: f32,
     rng: ChaCha8Rng,
+    // Reused scratch space to avoid per-sample allocation.
+    buf: Vec<f32>,
+}
+
+impl fmt::Debug for MirostatSampler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MirostatSampler")
+            .field("tau", &self.tau)
+            .field("eta", &self.eta)
+            .field("mu", &self.mu)
+            .field("rng", &self.rng)
+            .finish()
+    }
 }
 
 impl MirostatSampler {
@@ -122,7 +136,7 @@ impl MirostatSampler {
             Some(s) => ChaCha8Rng::seed_from_u64(s),
             None => ChaCha8Rng::from_rng(&mut rand::rng()),
         };
-        Self { tau, eta, mu: 2.0 * tau, rng }
+        Self { tau, eta, mu: 2.0 * tau, rng, buf: Vec::new() }
     }
 
     /// Sample a token from logits using Mirostat v2 adaptive filtering.
@@ -133,8 +147,10 @@ impl MirostatSampler {
             return Err(anyhow::anyhow!("Empty logits slice"));
         }
 
-        // Convert logits to probabilities
-        let mut probs = logits.to_vec();
+        // Reuse buffer to avoid allocating on every sample.
+        let mut probs = std::mem::take(&mut self.buf);
+        probs.clear();
+        probs.extend_from_slice(logits);
         softmax_in_place(&mut probs);
 
         // Filter: keep tokens whose surprise <= mu
@@ -155,12 +171,14 @@ impl MirostatSampler {
             let token = argmax(logits) as u32;
             // Update mu towards tau
             let surprise = {
-                let mut orig = logits.to_vec();
-                softmax_in_place(&mut orig);
-                let p = orig[token as usize];
+                probs.clear();
+                probs.extend_from_slice(logits);
+                softmax_in_place(&mut probs);
+                let p = probs[token as usize];
                 if p > 0.0 { -p.ln() } else { self.tau }
             };
             self.mu -= self.eta * (surprise - self.tau);
+            self.buf = probs;
             return Ok(token);
         }
         let inv_sum = 1.0 / sum;
@@ -186,6 +204,7 @@ impl MirostatSampler {
         self.mu -= self.eta * (surprise - self.tau);
 
         debug!("Mirostat v2: token={}, surprise={:.3}, mu={:.3}", selected, surprise, self.mu);
+        self.buf = probs;
         Ok(selected as u32)
     }
 
@@ -299,6 +318,7 @@ impl RepetitionPenaltyConfig {
 pub struct SamplerChain {
     stages: Vec<SamplerStage>,
     rng: std::cell::RefCell<ChaCha8Rng>,
+    buf: std::cell::RefCell<Vec<f32>>,
 }
 
 /// Individual sampling stage in a [`SamplerChain`].
@@ -325,7 +345,11 @@ impl SamplerChain {
             Some(s) => ChaCha8Rng::seed_from_u64(s),
             None => ChaCha8Rng::from_rng(&mut rand::rng()),
         };
-        Self { stages, rng: std::cell::RefCell::new(rng) }
+        Self {
+            stages,
+            rng: std::cell::RefCell::new(rng),
+            buf: std::cell::RefCell::new(Vec::new()),
+        }
     }
 
     /// Start building a chain with a fluent API.
@@ -342,7 +366,9 @@ impl SamplerChain {
             return Err(anyhow::anyhow!("Empty logits slice"));
         }
 
-        let mut buf = logits.to_vec();
+        let mut buf = std::mem::take(&mut *self.buf.borrow_mut());
+        buf.clear();
+        buf.extend_from_slice(logits);
 
         // Partition stages: logit-domain first, then probability-domain
         let mut needs_softmax = false;
@@ -389,13 +415,16 @@ impl SamplerChain {
         // Sample
         let random_val: f32 = self.rng.borrow_mut().random();
         let mut cumulative = 0.0;
+        let mut selected = (buf.len() - 1) as u32;
         for (i, &p) in buf.iter().enumerate() {
             cumulative += p;
             if random_val <= cumulative {
-                return Ok(i as u32);
+                selected = i as u32;
+                break;
             }
         }
-        Ok((buf.len() - 1) as u32)
+        *self.buf.borrow_mut() = buf;
+        Ok(selected)
     }
 
     /// Get the list of stages.
