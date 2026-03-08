@@ -292,6 +292,16 @@ async fn test_security_header_strict_transport_security() {
     );
 }
 
+#[tokio::test]
+async fn test_security_header_cache_control() {
+    let headers = get_security_headers().await;
+    assert_eq!(
+        headers.get("cache-control").unwrap(),
+        "no-store",
+        "Cache-Control must be 'no-store'"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Request validation tests
 // ─────────────────────────────────────────────────────────────────────────────
