@@ -14,5 +14,6 @@ expression: cfg
   "blocked_ips": [],
   "rate_limit_by_ip": true,
   "input_sanitization": true,
-  "content_filtering": true
+  "content_filtering": true,
+  "trust_forwarded_headers": false
 }

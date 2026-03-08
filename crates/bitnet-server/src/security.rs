@@ -28,6 +28,8 @@ pub struct SecurityConfig {
     pub rate_limit_by_ip: bool,
     pub input_sanitization: bool,
     pub content_filtering: bool,
+    #[serde(default)]
+    pub trust_forwarded_headers: bool,
 }
 
 impl Default for SecurityConfig {
@@ -43,6 +45,7 @@ impl Default for SecurityConfig {
             rate_limit_by_ip: true,
             input_sanitization: true,
             content_filtering: true,
+            trust_forwarded_headers: false,
         }
     }
 }
@@ -329,7 +332,7 @@ pub async fn ip_blocking_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     // Extract client IP
-    let client_ip = extract_client_ip(&request);
+    let client_ip = extract_client_ip(&request, &config);
 
     // Check if IP is blocked
     if let Some(ip) = client_ip
@@ -343,8 +346,22 @@ pub async fn ip_blocking_middleware(
 }
 
 /// Extract client IP from request
-fn extract_client_ip(request: &Request) -> Option<IpAddr> {
-    extract_client_ip_from_headers(request.headers())
+fn extract_client_ip(request: &Request, config: &SecurityConfig) -> Option<IpAddr> {
+    let mut ip = None;
+
+    if config.trust_forwarded_headers {
+        ip = extract_client_ip_from_headers(request.headers());
+    }
+
+    if ip.is_none() {
+        if let Some(connect_info) =
+            request.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        {
+            ip = Some(connect_info.0.ip());
+        }
+    }
+
+    ip
 }
 
 /// Extract client IP from headers (shared utility)
@@ -540,6 +557,34 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_extract_client_ip_uses_connect_info_when_forwarded_headers_untrusted() {
+        let mut request = Request::builder()
+            .header("x-forwarded-for", "203.0.113.1")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        let config = SecurityConfig::default();
+        assert_eq!(extract_client_ip(&request, &config), Some(IpAddr::from([127, 0, 0, 1])));
+    }
+
+    #[test]
+    fn test_extract_client_ip_can_trust_forwarded_headers() {
+        let mut request = Request::builder()
+            .header("x-forwarded-for", "203.0.113.1")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        let config = SecurityConfig { trust_forwarded_headers: true, ..Default::default() };
+        assert_eq!(extract_client_ip(&request, &config), Some(IpAddr::from([203, 0, 113, 1])));
     }
 
     #[test]
