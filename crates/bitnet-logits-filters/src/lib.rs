@@ -18,7 +18,10 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
         return logits.len();
     }
 
-    let mut vals: Vec<f32> = logits.to_vec();
+    let mut vals: Vec<f32> = logits.iter().copied().filter(|&x| x > f32::NEG_INFINITY).collect();
+    if vals.len() <= top_k {
+        return vals.len();
+    }
     let partition_idx = vals.len() - top_k;
     vals.select_nth_unstable_by(partition_idx, |a, b| f32_ascending(*a, *b));
     let threshold = vals[partition_idx];
@@ -27,7 +30,7 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
     for l in logits.iter_mut() {
         if *l >= threshold && kept < top_k {
             kept += 1;
-        } else {
+        } else if *l > f32::NEG_INFINITY {
             *l = f32::NEG_INFINITY;
         }
     }
@@ -147,6 +150,18 @@ mod tests {
         assert!(logits[0].is_infinite());
         assert!(logits[2].is_infinite());
         assert!(logits[3].is_infinite());
+    }
+
+    #[test]
+    fn top_k_preserves_already_masked_logits_when_finite_count_is_within_k() {
+        let mut logits = vec![f32::NEG_INFINITY, 5.0, f32::NEG_INFINITY, 2.0, 4.0];
+        let kept = apply_top_k(&mut logits, 3);
+        assert_eq!(kept, 3);
+        assert!(logits[0].is_infinite());
+        assert!(logits[1].is_finite());
+        assert!(logits[2].is_infinite());
+        assert!(logits[3].is_finite());
+        assert!(logits[4].is_finite());
     }
 
     #[test]
