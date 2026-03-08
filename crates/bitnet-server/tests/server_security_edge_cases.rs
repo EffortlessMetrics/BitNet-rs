@@ -24,6 +24,7 @@ fn security_config_defaults() {
     assert!(cfg.rate_limit_by_ip);
     assert!(cfg.input_sanitization);
     assert!(cfg.content_filtering);
+    assert!(!cfg.trust_forwarded_headers);
 }
 
 #[test]
@@ -34,6 +35,25 @@ fn security_config_serde_roundtrip() {
     assert_eq!(cfg2.max_prompt_length, 8192);
     assert_eq!(cfg2.max_tokens_per_request, 2048);
     assert!(cfg2.rate_limit_by_ip);
+    assert!(!cfg2.trust_forwarded_headers);
+}
+
+#[test]
+fn security_config_serde_missing_trust_forwarded_headers_defaults_false() {
+    let json = r#"{
+        "jwt_secret": null,
+        "require_authentication": false,
+        "max_prompt_length": 8192,
+        "max_tokens_per_request": 2048,
+        "allowed_origins": ["*"],
+        "allowed_model_directories": [],
+        "blocked_ips": [],
+        "rate_limit_by_ip": true,
+        "input_sanitization": true,
+        "content_filtering": true
+    }"#;
+    let cfg: SecurityConfig = serde_json::from_str(json).unwrap();
+    assert!(!cfg.trust_forwarded_headers);
 }
 
 #[test]
@@ -59,9 +79,11 @@ fn security_config_custom_values() {
         rate_limit_by_ip: false,
         input_sanitization: false,
         content_filtering: false,
+        trust_forwarded_headers: true,
     };
     assert_eq!(cfg.max_prompt_length, 1024);
     assert!(!cfg.rate_limit_by_ip);
+    assert!(cfg.trust_forwarded_headers);
 }
 
 // ---------------------------------------------------------------------------
