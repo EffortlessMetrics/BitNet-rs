@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"per_layer={} total={}\", cfg.memory_per_layer(), cfg.total_memory())"
+---
+per_layer=67108864 total=1610612736

@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.92.0
 ENV PATH=/root/.cargo/bin:$PATH
+# Default compute capability for docker build (no nvidia-smi available).
+ARG CUDA_COMPUTE_CAP=80
+ENV CUDA_COMPUTE_CAP=${CUDA_COMPUTE_CAP}
 RUN cargo install cargo-chef --locked
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json

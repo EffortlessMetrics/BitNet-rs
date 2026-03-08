@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: err.to_string()
+---
+invalid pipeline config: num_layers must be > 0

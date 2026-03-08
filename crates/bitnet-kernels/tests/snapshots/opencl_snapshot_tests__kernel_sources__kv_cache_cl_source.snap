@@ -1,0 +1,44 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "bitnet_kernels::opencl_kv_cache::KV_CACHE_CL"
+---
+// kv_cache_append: copy a new K/V row into cache at `pos`.
+//
+// Global work size: (row_len,)
+// Arguments:
+//   cache    – [max_seq_len * row_len] buffer (key or value)
+//   new_row  – [row_len] input for the current token
+//   pos      – token position (0-based)
+//   row_len  – num_heads * head_dim
+__kernel void kv_cache_append(
+    __global float *cache,
+    __global const float *new_row,
+    const int pos,
+    const int row_len)
+{
+    int gid = get_global_id(0);
+    if (gid < row_len) {
+        cache[pos * row_len + gid] = new_row[gid];
+    }
+}
+
+// kv_cache_gather: gather cached rows [0, seq_len) into a contiguous output.
+//
+// Global work size: (seq_len * row_len,)
+// Arguments:
+//   cache   – source cache buffer
+//   output  – destination contiguous buffer [seq_len, row_len]
+//   seq_len – number of rows to gather
+//   row_len – elements per row
+__kernel void kv_cache_gather(
+    __global const float *cache,
+    __global float *output,
+    const int seq_len,
+    const int row_len)
+{
+    int gid = get_global_id(0);
+    int total = seq_len * row_len;
+    if (gid < total) {
+        output[gid] = cache[gid];
+    }
+}

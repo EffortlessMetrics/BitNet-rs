@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: cfg
+---
+TransformerLayerConfig {
+    hidden_size: 2048,
+    num_heads: 32,
+    num_kv_heads: 32,
+    head_dim: 64,
+    intermediate_size: 5632,
+    rms_norm_eps: 1e-5,
+    rope_theta: 10000.0,
+    max_seq_len: 4096,
+    use_gated_ffn: true,
+}

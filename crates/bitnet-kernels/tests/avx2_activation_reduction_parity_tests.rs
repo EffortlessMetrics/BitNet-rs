@@ -402,25 +402,25 @@ fn reduction_single_element() {
 /// Constant-valued input: all elements equal.
 #[test]
 fn reduction_constant_input() {
-    let data = vec![3.14f32; 33];
+    let data = vec![std::f32::consts::PI; 33];
 
     let sum = simd_horizontal_sum(&data).expect("sum const");
-    let expected_sum = 3.14 * 33.0;
+    let expected_sum = std::f32::consts::PI * 33.0;
     assert!(
         close(sum, expected_sum, REDUCTION_ABS_TOL, REDUCTION_REL_TOL),
-        "sum of 33 × 3.14: expected={expected_sum}, got={sum}"
+        "sum of 33 × PI: expected={expected_sum}, got={sum}"
     );
 
     let max = simd_horizontal_max(&data).expect("max const");
     assert!(
-        close(max, 3.14, REDUCTION_ABS_TOL, REDUCTION_REL_TOL),
-        "max of constant 3.14: got={max}"
+        close(max, std::f32::consts::PI, REDUCTION_ABS_TOL, REDUCTION_REL_TOL),
+        "max of constant PI: got={max}"
     );
 
     let min = simd_horizontal_min(&data).expect("min const");
     assert!(
-        close(min, 3.14, REDUCTION_ABS_TOL, REDUCTION_REL_TOL),
-        "min of constant 3.14: got={min}"
+        close(min, std::f32::consts::PI, REDUCTION_ABS_TOL, REDUCTION_REL_TOL),
+        "min of constant PI: got={min}"
     );
 
     // argmax/argmin should return index 0 for constant input (first occurrence)

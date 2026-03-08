@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "OpenClError::NoPlatform.to_string()"
+---
+No OpenCL platform found

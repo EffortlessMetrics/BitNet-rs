@@ -245,7 +245,7 @@ mod tests {
     fn test_total_times() {
         let mut suite = BenchSuite::new();
         suite.add(run_text_bench("a", "hello", 5));
-        assert!(suite.total_encode_time() > Duration::ZERO || true);
+        assert!(suite.total_encode_time() >= Duration::ZERO);
     }
 
     #[test]

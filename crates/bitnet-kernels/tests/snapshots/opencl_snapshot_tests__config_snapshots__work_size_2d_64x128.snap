@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: res
+---
+WorkSizeResult {
+    global_work_size: [
+        128,
+        64,
+    ],
+    local_work_size: Some(
+        [
+            16,
+            16,
+        ],
+    ),
+    total_work_items: 8192,
+    total_work_groups: 32,
+    efficiency: 1.0,
+}

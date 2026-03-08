@@ -28,6 +28,7 @@ const BUFFER_ALIGNMENT: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 enum GpuCounterKind {
     Timestamp,
     VertexInvocations,
@@ -326,9 +327,9 @@ fn optimal_threadgroup_3d(x: u32, y: u32, z: u32) -> (u32, u32, u32) {
     if x == 0 || y == 0 || z == 0 {
         return (0, 0, 0);
     }
-    let tx = x.min(8).max(1);
-    let ty = y.min(8).max(1);
-    let tz = z.min(4).max(1);
+    let tx = x.clamp(1, 8);
+    let ty = y.clamp(1, 8);
+    let tz = z.clamp(1, 4);
     let product = tx * ty * tz;
     if product > MAX_THREADS_PER_THREADGROUP {
         return (SIMD_WIDTH, 1, 1);
@@ -564,18 +565,19 @@ fn optimal_batch_size(
     if element_bytes == 0 || compute_per_element_us <= 0.0 {
         return 0;
     }
-    let max_by_memory = available_memory / element_bytes;
+    let max_by_memory = (available_memory / element_bytes).max(1);
     // Amortise launch overhead: batch_size * compute >= 10 * overhead
     let min_for_amortisation =
         ((10.0 * overhead_per_launch_us) / compute_per_element_us).ceil() as usize;
     // Saturate GPU cores
     let min_for_saturation = (gpu_cores as usize) * (SIMD_WIDTH as usize);
     let ideal = min_for_amortisation.max(min_for_saturation);
-    ideal.min(max_by_memory).max(1)
+    ideal.clamp(1, max_by_memory)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 enum ComputeRegime {
     MemoryBound,
     ComputeBound,

@@ -1,0 +1,36 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "bitnet_kernels::opencl_quantized::QUANTIZED_MATVEC_CL"
+---
+__kernel void quantized_matvec_i2s(
+    __global const uchar* weights,  // packed I2_S weights
+    __global const float* scales,   // per-block scales
+    __global const float* x,        // input vector
+    __global float* y,              // output vector
+    const int rows,
+    const int cols,
+    const int block_size)
+{
+    int row = get_global_id(0);
+    if (row >= rows) return;
+
+    int packed_cols = (cols + 3) / 4;
+    int blocks_per_row = cols.div_ceil(block_size);
+
+    float sum = 0.0f;
+    for (int block = 0; block < blocks_per_row; block++) {
+        int block_start = block * block_size;
+        int block_end = min(block_start + block_size, cols);
+        float scale = scales[row * blocks_per_row + block];
+        float block_sum = 0.0f;
+        for (int col = block_start; col < block_end; col++) {
+            int packed_idx = row * packed_cols + col / 4;
+            int bit_pos = (col % 4) * 2;
+            int val = (weights[packed_idx] >> bit_pos) & 0x03;
+            float ternary = (float)(val - 1);
+            block_sum += ternary * x[col];
+        }
+        sum += scale * block_sum;
+    }
+    y[row] = sum;
+}

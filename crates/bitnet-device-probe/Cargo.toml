@@ -30,7 +30,7 @@ proptest.workspace = true
 [features]
 default = []
 cpu = []
-gpu = ["cuda", "rocm"]
+gpu = ["cuda"]
 cuda = []
 rocm = []
 vulkan = ["dep:ash"]

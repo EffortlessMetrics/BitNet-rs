@@ -13,8 +13,8 @@ use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
 /// Pack 256 2-bit codes into 64 bytes (4 codes per byte, LSB first).
 fn pack_codes(codes: &[u8; 256]) -> [u8; 64] {
     let mut packed = [0u8; 64];
-    for i in 0..256 {
-        packed[i / 4] |= (codes[i] & 0x03) << ((i % 4) * 2);
+    for (i, &code) in codes.iter().enumerate() {
+        packed[i / 4] |= (code & 0x03) << ((i % 4) * 2);
     }
     packed
 }
@@ -27,10 +27,10 @@ fn build_qs_data(row_codes: &[Vec<u8>], cols: usize) -> (Vec<u8>, usize) {
     for (r, codes) in row_codes.iter().enumerate() {
         for blk in 0..blocks_per_row {
             let mut block_codes = [0u8; 256];
-            for j in 0..QK256_BLOCK {
+            for (j, bc) in block_codes.iter_mut().enumerate().take(QK256_BLOCK) {
                 let col = blk * QK256_BLOCK + j;
                 if col < cols {
-                    block_codes[j] = codes[col] & 0x03;
+                    *bc = codes[col] & 0x03;
                 }
             }
             let packed = pack_codes(&block_codes);
@@ -44,8 +44,8 @@ fn build_qs_data(row_codes: &[Vec<u8>], cols: usize) -> (Vec<u8>, usize) {
 /// Compute expected dot product manually from codes and x.
 fn manual_dot(codes: &[u8], x: &[f32], cols: usize) -> f32 {
     let mut acc = 0.0f32;
-    for i in 0..cols {
-        acc += code_to_f32(codes[i] & 0x03) * x[i];
+    for (&code, &xi) in codes[..cols].iter().zip(x[..cols].iter()) {
+        acc += code_to_f32(code & 0x03) * xi;
     }
     acc
 }
@@ -129,7 +129,7 @@ fn test_gemv_single_row_mixed_codes() {
     let cols = 256;
     let codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
     let x: Vec<f32> = (0..cols).map(|i| (i as f32) * 0.01).collect();
-    let (qs, stride) = build_qs_data(&[codes.clone()], cols);
+    let (qs, stride) = build_qs_data(std::slice::from_ref(&codes), cols);
 
     let expected = manual_dot(&codes, &x, cols);
     let scalar = gemv_qk256_row(&qs, &x, cols);
@@ -200,18 +200,14 @@ fn test_gemv_row_vs_full() {
 #[test]
 fn test_unpack_code_roundtrip() {
     let mut codes = [0u8; 256];
-    for i in 0..256 {
-        codes[i] = (i % 4) as u8;
+    for (i, code) in codes.iter_mut().enumerate() {
+        *code = (i % 4) as u8;
     }
     let packed = pack_codes(&codes);
     let mut unpacked = [0u8; QK256_BLOCK];
     unpack_qk256_block(<&[u8; QK256_PACKED_BYTES]>::try_from(&packed[..]).unwrap(), &mut unpacked);
-    for i in 0..256 {
-        assert_eq!(
-            unpacked[i], codes[i],
-            "mismatch at index {i}: expected {}, got {}",
-            codes[i], unpacked[i]
-        );
+    for (i, (&u, &c)) in unpacked.iter().zip(codes.iter()).enumerate() {
+        assert_eq!(u, c, "mismatch at index {i}: expected {c}, got {u}");
     }
 }
 

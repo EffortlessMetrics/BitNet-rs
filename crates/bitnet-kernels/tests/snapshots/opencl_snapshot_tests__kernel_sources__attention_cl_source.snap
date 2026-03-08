@@ -1,0 +1,134 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "bitnet_kernels::opencl_attention::ATTENTION_CL"
+---
+__kernel void scaled_dot_product_attention(
+    __global const float* Q,
+    __global const float* K,
+    __global const float* V,
+    __global float* output,
+    const int seq_len,
+    const int kv_len,
+    const int head_dim,
+    const float scale,
+    const int causal)
+{
+    int seq_idx = get_global_id(0);
+    if (seq_idx >= seq_len) return;
+
+    // --- Compute attention scores: Q[seq_idx] dot K[j] * scale -----------
+    // We use a local buffer on private memory (OpenCL C VLAs are optional,
+    // so we cap at a compile-time maximum and guard at runtime).
+    float scores[4096]; // max kv_len supported in this simple kernel
+    if (kv_len > 4096) return; // safety guard
+
+    for (int j = 0; j < kv_len; j++) {
+        float dot = 0.0f;
+        for (int d = 0; d < head_dim; d++) {
+            dot += Q[seq_idx * head_dim + d] * K[j * head_dim + d];
+        }
+        scores[j] = dot * scale;
+    }
+
+    // --- Causal mask: set future positions to -inf ---------------------
+    if (causal) {
+        for (int j = seq_idx + 1; j < kv_len; j++) {
+            scores[j] = -1e30f; // approximation of -inf for exp()
+        }
+    }
+
+    // --- Numerically-stable softmax -----------------------------------
+    float max_score = scores[0];
+    for (int j = 1; j < kv_len; j++) {
+        if (scores[j] > max_score) max_score = scores[j];
+    }
+
+    float sum_exp = 0.0f;
+    for (int j = 0; j < kv_len; j++) {
+        scores[j] = exp(scores[j] - max_score);
+        sum_exp += scores[j];
+    }
+
+    if (sum_exp > 0.0f) {
+        for (int j = 0; j < kv_len; j++) {
+            scores[j] /= sum_exp;
+        }
+    }
+
+    // --- Weighted sum of values: output = scores @ V -------------------
+    for (int d = 0; d < head_dim; d++) {
+        float acc = 0.0f;
+        for (int j = 0; j < kv_len; j++) {
+            acc += scores[j] * V[j * head_dim + d];
+        }
+        output[seq_idx * head_dim + d] = acc;
+    }
+}
+
+__kernel void multi_head_attention(
+    __global const float* Q,
+    __global const float* K,
+    __global const float* V,
+    __global float* output,
+    const int seq_len,
+    const int kv_len,
+    const int head_dim,
+    const int num_heads,
+    const int num_kv_heads,
+    const float scale,
+    const int causal)
+{
+    int seq_idx = get_global_id(0);
+    int head_idx = get_global_id(1);
+    if (seq_idx >= seq_len || head_idx >= num_heads) return;
+
+    int heads_per_group = num_heads / num_kv_heads;
+    int kv_head = head_idx / heads_per_group;
+
+    float scores[4096];
+    if (kv_len > 4096) return;
+
+    // Q offset: [seq_idx, head_idx, :] in [seq_len, num_heads, head_dim]
+    int q_offset = seq_idx * num_heads * head_dim + head_idx * head_dim;
+    // K offset: [j, kv_head, :] in [kv_len, num_kv_heads, head_dim]
+
+    for (int j = 0; j < kv_len; j++) {
+        float dot = 0.0f;
+        int k_offset = j * num_kv_heads * head_dim + kv_head * head_dim;
+        for (int d = 0; d < head_dim; d++) {
+            dot += Q[q_offset + d] * K[k_offset + d];
+        }
+        scores[j] = dot * scale;
+    }
+
+    if (causal) {
+        for (int j = seq_idx + 1; j < kv_len; j++) {
+            scores[j] = -1e30f;
+        }
+    }
+
+    float max_score = scores[0];
+    for (int j = 1; j < kv_len; j++) {
+        if (scores[j] > max_score) max_score = scores[j];
+    }
+    float sum_exp = 0.0f;
+    for (int j = 0; j < kv_len; j++) {
+        scores[j] = exp(scores[j] - max_score);
+        sum_exp += scores[j];
+    }
+    if (sum_exp > 0.0f) {
+        for (int j = 0; j < kv_len; j++) {
+            scores[j] /= sum_exp;
+        }
+    }
+
+    int out_offset = seq_idx * num_heads * head_dim + head_idx * head_dim;
+    for (int d = 0; d < head_dim; d++) {
+        float acc = 0.0f;
+        int v_base = kv_head * head_dim + d;
+        for (int j = 0; j < kv_len; j++) {
+            acc += scores[j] * V[j * num_kv_heads * head_dim + v_base];
+        }
+        output[out_offset + d] = acc;
+    }
+}

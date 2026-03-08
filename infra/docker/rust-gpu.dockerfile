@@ -19,6 +19,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Add Rust components
 RUN rustup component add clippy rustfmt
 
+# Default compute capability for docker build (no nvidia-smi available).
+# Override: docker build --build-arg CUDA_COMPUTE_CAP=80 ...
+ARG CUDA_COMPUTE_CAP=80
+ENV CUDA_COMPUTE_CAP=${CUDA_COMPUTE_CAP}
+
 # Set up CUDA environment
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}

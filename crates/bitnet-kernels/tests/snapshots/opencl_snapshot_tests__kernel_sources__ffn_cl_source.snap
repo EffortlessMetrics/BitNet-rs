@@ -1,0 +1,57 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "bitnet_kernels::opencl_ffn::FFN_CL"
+---
+// SiLU activation: x * sigmoid(x)
+float silu(float x) {
+    return x / (1.0f + exp(-x));
+}
+
+// Gated FFN: down_proj(silu(gate_proj(x)) * up_proj(x))
+//
+// Work-item layout: global_id(0) = intermediate column, global_id(1) = seq row.
+// Phase 1: compute gate and up projections.
+// Phase 2: apply SiLU to gate, multiply with up, store in temp_gate.
+// Phase 3: down projection from temp_gate to output.
+__kernel void gated_ffn(
+    __global const float* x,
+    __global const float* w_gate,
+    __global const float* w_up,
+    __global const float* w_down,
+    __global float* output,
+    __global float* temp_gate,
+    __global float* temp_up,
+    const int seq_len,
+    const int hidden_size,
+    const int intermediate_size)
+{
+    int col = get_global_id(0);
+    int row = get_global_id(1);
+
+    if (row >= seq_len || col >= intermediate_size) return;
+
+    // Gate projection: temp_gate[row, col] = sum_k x[row,k] * w_gate[k, col]
+    float gate_val = 0.0f;
+    float up_val = 0.0f;
+    for (int k = 0; k < hidden_size; k++) {
+        float xk = x[row * hidden_size + k];
+        gate_val += xk * w_gate[k * intermediate_size + col];
+        up_val   += xk * w_up[k * intermediate_size + col];
+    }
+
+    // SiLU activation on gate, element-wise multiply with up
+    float activated = silu(gate_val) * up_val;
+    temp_gate[row * intermediate_size + col] = activated;
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+    // Down projection: each thread computes one output element
+    if (col < hidden_size) {
+        float sum = 0.0f;
+        for (int k = 0; k < intermediate_size; k++) {
+            sum += temp_gate[row * intermediate_size + k]
+                 * w_down[k * hidden_size + col];
+        }
+        output[row * hidden_size + col] = sum;
+    }
+}
