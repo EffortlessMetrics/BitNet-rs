@@ -305,7 +305,7 @@ pub(crate) fn cmd_check_codeowners_teams(root: &Path) -> Result<()> {
 
 pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
     println!("=== BitNet-rs Strict Validation Suite ===");
-    println!("");
+    println!();
 
     println!("1. Building with CPU features...");
     let build = run_capture(
@@ -325,7 +325,7 @@ pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
     }
     println!("✓ Build successful");
 
-    println!("");
+    println!();
     println!("2. Testing tensor name mapping...");
     let mapper = run_capture(
         root,
@@ -349,7 +349,7 @@ pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
         println!("⚠ Mapper tests skipped (model not present)");
     }
 
-    println!("");
+    println!();
     println!("3. Testing SentencePiece tokenizer...");
     if env::var("SPM").is_ok() {
         let spm = run_capture(
@@ -368,7 +368,7 @@ pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
         println!("⚠ SPM env var not set, skipping tokenizer test");
     }
 
-    println!("");
+    println!();
     println!("4. Testing strict mode execution...");
     let model_path = env::var("BITNET_GGUF").unwrap_or_default();
     if !model_path.is_empty() && Path::new(&model_path).is_file() {
@@ -427,7 +427,7 @@ pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
         println!("⚠ BITNET_GGUF not set or file missing, skipping execution test");
     }
 
-    println!("");
+    println!();
     println!("5. A/B comparison if both models and C++ available");
     let model_path = env::var("BITNET_GGUF").unwrap_or_default();
     let cpp_bin = env::var("LLAMA_BIN").unwrap_or_else(|_| {
@@ -441,7 +441,7 @@ pub(crate) fn cmd_validate_strict(root: &Path) -> Result<()> {
         println!("⚠ C++ binary or model not available for A/B test");
     }
 
-    println!("");
+    println!();
     println!("=== Validation Summary ===");
     println!("Core validation checks:");
     println!("- Build: ✓");
@@ -534,14 +534,14 @@ pub(crate) fn cmd_validate_fixtures(root: &Path) -> Result<()> {
             }
         }
         let alignment = inspect_json.pointer("/tensors/0/alignment").and_then(Value::as_u64);
-        if version == 3 {
-            if let Some(value) = alignment {
-                if value != 0 && value != 32 {
-                    bail!(
-                        "::error::Fixture {name} has invalid tensor alignment: {value} (GGUF v3 requires 32-byte alignment)"
-                    );
-                }
-            }
+        if version == 3
+            && let Some(value) = alignment
+            && value != 0
+            && value != 32
+        {
+            bail!(
+                "::error::Fixture {name} has invalid tensor alignment: {value} (GGUF v3 requires 32-byte alignment)"
+            );
         }
         let tensor_count = inspect_json
             .pointer("/tensors")

@@ -558,6 +558,7 @@ fn require_tests(root: &Path, expr: &str, envs: &[(&str, &str)]) -> Result<usize
     Ok(count)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_inference_with_seed(
     root: &Path,
     binary: &Path,
@@ -585,6 +586,7 @@ fn run_inference_with_seed(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_inference_with_opts(
     root: &Path,
     binary: &Path,
@@ -765,10 +767,10 @@ fn has_shift_constant(s: &str, suffix: &str) -> bool {
         let token = &s[token_start..shift_pos];
         if !token.is_empty() {
             let mut chars = token.chars();
-            if chars.next().is_some_and(|c| c == '1') {
-                if chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
-                    return true;
-                }
+            if chars.next().is_some_and(|c| c == '1')
+                && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+            {
+                return true;
             }
         }
         index = shift_pos + suffix.len();

@@ -625,7 +625,7 @@ pub(crate) fn cmd_test_memory_validation(root: &Path) -> Result<()> {
 
 pub(crate) fn cmd_test_iq2s_backend(root: &Path) -> Result<()> {
     println!("=== Testing IQ2_S Backend Support ===");
-    println!("");
+    println!();
 
     println!("1. Testing default backend (should be Rust)...");
     let status = run_capture_with_env(
@@ -720,7 +720,7 @@ pub(crate) fn cmd_test_iq2s_backend(root: &Path) -> Result<()> {
     )?;
     println!("   ✓ All IQ2_S tests passed");
 
-    println!("");
+    println!();
     println!("=== IQ2_S Backend Testing Complete ===");
     Ok(())
 }
@@ -820,7 +820,7 @@ pub(crate) fn cmd_smoke_inference(root: &Path, model: &str, tokenizer: &str) -> 
         println!("   This may indicate mock computation or hardware issues");
     }
 
-    println!("");
+    println!();
     println!("✅ Smoke test passed!");
     Ok(())
 }
@@ -834,7 +834,7 @@ pub(crate) fn cmd_test_determinism(root: &Path) -> Result<()> {
     let seed: u64 = 12_345;
     let max_tokens = 32u32;
 
-    println!("");
+    println!();
     println!("Configuration:");
     println!("  Model: {model}");
     println!("  Tokenizer: {tokenizer}");
@@ -876,7 +876,7 @@ pub(crate) fn cmd_test_determinism(root: &Path) -> Result<()> {
     ];
 
     let mut failed = 0;
-    println!("");
+    println!();
     println!("Testing determinism...");
     println!("----------------------");
 
@@ -921,7 +921,7 @@ pub(crate) fn cmd_test_determinism(root: &Path) -> Result<()> {
         }
     }
 
-    println!("");
+    println!();
     println!("Testing greedy mode...");
     println!("----------------------");
     let greedy = env::temp_dir().join("greedy.json");
@@ -964,7 +964,7 @@ pub(crate) fn cmd_test_determinism(root: &Path) -> Result<()> {
         failed += 1;
     }
 
-    println!("");
+    println!();
     println!("===============================================");
     if failed == 0 {
         println!("✓ All determinism tests passed!");
@@ -978,10 +978,10 @@ pub(crate) fn cmd_test_determinism(root: &Path) -> Result<()> {
                     }
                 }
             }
-            if let Some(thru) = value.pointer("/throughput_tps").and_then(Value::as_object) {
-                if let Some(v) = thru.get("decode").and_then(Value::as_f64) {
-                    println!("  Decode TPS: {:.1}", v);
-                }
+            if let Some(thru) = value.pointer("/throughput_tps").and_then(Value::as_object)
+                && let Some(v) = thru.get("decode").and_then(Value::as_f64)
+            {
+                println!("  Decode TPS: {:.1}", v);
             }
         }
     } else {
@@ -1357,7 +1357,7 @@ pub(crate) fn cmd_test_optimizations(root: &Path) -> Result<()> {
     run_args.extend(tokenizer_arg.clone());
     let _ = run_capture(root, binary.to_string_lossy().as_ref(), &run_args, &[], true)?;
 
-    let report = root.join("/tmp/bitnet-test.json");
+    let report = PathBuf::from("/tmp/bitnet-test.json");
     if report.exists() {
         println!();
         println!("=== Timing Results ===");
