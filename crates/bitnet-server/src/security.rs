@@ -432,6 +432,9 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
         STRICT_TRANSPORT_SECURITY,
         HeaderValue::from_static("max-age=31536000; includeSubDomains"),
     );
+    if !headers.contains_key(axum::http::header::CACHE_CONTROL) {
+        headers.insert(axum::http::header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
 
     response
 }
