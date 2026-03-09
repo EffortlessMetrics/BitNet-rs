@@ -2,10 +2,10 @@
 # Xtask runner
 xtask = "run -p xtask --"
 
-# Coverage collection aliases
-cov = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --output-dir target/coverage"
-cov-all = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --out Html --output-dir target/coverage"
-cov-html = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Html --output-dir target/coverage"
+# Coverage collection aliases (cargo-llvm-cov)
+cov = "llvm-cov --workspace --no-default-features --features cpu --json --output-path coverage.json"
+cov-all = "llvm-cov --workspace --no-default-features --features cpu --html --output-dir target/llvm-cov/html"
+cov-html = "llvm-cov --workspace --no-default-features --features cpu --html --output-dir target/llvm-cov/html"
 
 # Testing aliases
 test-all = "test --workspace"
