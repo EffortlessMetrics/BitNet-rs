@@ -20,6 +20,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,7 +33,10 @@ jobs:
     timeout-minutes: 25
 
     # PRs: only run when explicitly labeled "coverage"
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'coverage')
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'coverage')
 
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
@@ -57,11 +61,11 @@ jobs:
           cargo llvm-cov report --text | tee coverage.txt
 
       - name: Install jq
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Enforce threshold on main (70%)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           perc=$(jq -r '.data[0].totals.lines.percent' coverage.json | awk '{print int($1+0.5)}')
           echo "Coverage: ${perc}%"
