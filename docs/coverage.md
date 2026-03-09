@@ -32,7 +32,6 @@ Defined in `.cargo/config.toml`:
 | Alias | Command | Output |
 |-------|---------|--------|
 | `cargo cov` | `cargo llvm-cov ... --json --output-path coverage.json` | `coverage.json` |
-| `cargo cov-all` | `cargo llvm-cov ... --html --output-dir target/llvm-cov/html` | HTML report |
 | `cargo cov-html` | `cargo llvm-cov ... --html --output-dir target/llvm-cov/html` | HTML report |
 
 All aliases use `--workspace --no-default-features --features cpu`.
@@ -48,13 +47,13 @@ instrumented build and generates HTML, JSON, and text reports.
 |---------|----------|
 | Push to `main` | Full run with 70% threshold enforcement |
 | PR with `coverage` label | Coverage collected, no threshold gate |
-| Manual dispatch | Full run with 70% threshold enforcement |
+| Manual dispatch | Coverage collected, no threshold gate |
 
 ### Threshold
 
-The CI enforces a **70%** line-coverage minimum on `main` and manual
-dispatch runs. PRs with the `coverage` label collect coverage without
-enforcing the threshold.
+The CI enforces a **70%** line-coverage minimum on pushes to `main` only.
+PRs with the `coverage` label and manual dispatch runs collect coverage
+without enforcing the threshold.
 
 ### Artifacts
 

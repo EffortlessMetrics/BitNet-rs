@@ -11,7 +11,7 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
     branches: [ main ]
     paths:
       - 'crates/**'
@@ -61,11 +61,11 @@ jobs:
           cargo llvm-cov report --text | tee coverage.txt
 
       - name: Install jq
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'push'
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Enforce threshold on main (70%)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'push'
         run: |
           perc=$(jq -r '.data[0].totals.lines.percent' coverage.json | awk '{print int($1+0.5)}')
           echo "Coverage: ${perc}%"
