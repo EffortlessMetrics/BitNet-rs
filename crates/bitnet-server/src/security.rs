@@ -15,9 +15,14 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::{debug, warn};
 
+const JWT_SECRET_BASE64_PREFIX: &str = "base64:";
+
 /// Security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityConfig {
+    /// Shared secret used for HS256 JWT validation.
+    /// Plain text secrets are accepted directly; prefix with `base64:` to decode
+    /// binary HMAC key material from configuration or tests.
     pub jwt_secret: Option<String>,
     pub require_authentication: bool,
     pub max_prompt_length: usize,
@@ -313,11 +318,19 @@ pub async fn auth_middleware(
     Ok(next.run(request).await)
 }
 
+fn decoding_key_for_secret(secret: &str) -> Result<jsonwebtoken::DecodingKey> {
+    if let Some(encoded) = secret.strip_prefix(JWT_SECRET_BASE64_PREFIX) {
+        return Ok(jsonwebtoken::DecodingKey::from_base64_secret(encoded)?);
+    }
+
+    Ok(jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()))
+}
+
 /// Validate JWT token
 fn validate_jwt_token(token: &str, secret: &str) -> Result<Claims> {
-    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+    use jsonwebtoken::{Algorithm, Validation, decode};
 
-    let decoding_key = DecodingKey::from_secret(secret.as_bytes());
+    let decoding_key = decoding_key_for_secret(secret)?;
     let validation = Validation::new(Algorithm::HS256);
 
     let token_data = decode::<Claims>(token, &decoding_key, &validation)?;
