@@ -44,15 +44,16 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
 
-      - name: Generate coverage (HTML + JSON + text)
+      - name: Generate coverage (single instrumented run)
         env:
           RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: "0"
         run: |
-          set -e
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --html --output-dir target/llvm-cov/html
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --json --output-path coverage.json
+          set -euo pipefail
+          cargo llvm-cov clean --workspace
+          cargo llvm-cov --workspace --locked --no-default-features --features cpu --no-report
+          cargo llvm-cov report --html --output-dir target/llvm-cov/html
+          cargo llvm-cov report --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
 
       - name: Install jq
