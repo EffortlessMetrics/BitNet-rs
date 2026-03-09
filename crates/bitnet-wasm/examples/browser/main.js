@@ -133,14 +133,20 @@ async function loadModel() {
         // Update UI
         document.getElementById('model-size').textContent = MemoryUtils.format_bytes(file.size);
         document.getElementById('memory-usage').textContent = MemoryUtils.format_bytes(model.get_memory_usage());
-        document.getElementById('generate').disabled = false;
-        document.getElementById('start-streaming').disabled = false;
+        const generateBtn = document.getElementById('generate');
+        generateBtn.disabled = false;
+        generateBtn.removeAttribute('title');
+
+        const startStreamingBtn = document.getElementById('start-streaming');
+        startStreamingBtn.disabled = false;
+        startStreamingBtn.removeAttribute('title');
 
         // Reset copy button
         const copyBtn = document.getElementById('copy-output');
         copyBtn.disabled = true;
         copyBtn.style.backgroundColor = '#6c757d';
         copyBtn.style.cursor = 'not-allowed';
+        copyBtn.title = "No text to copy";
 
         updateStatus('Model loaded successfully!', 'success');
         Logger.info('Model loaded and inference engine initialized');
@@ -200,6 +206,7 @@ async function generateText() {
         // Enable copy button
         const copyBtn = document.getElementById('copy-output');
         copyBtn.disabled = false;
+        copyBtn.removeAttribute('title');
         copyBtn.style.backgroundColor = '#007bff';
         copyBtn.style.cursor = 'pointer';
 
@@ -233,8 +240,10 @@ async function startStreaming() {
     streamingActive = true;
     const originalText = startButton.textContent;
     startButton.disabled = true;
+    startButton.title = 'Streaming in progress...';
     startButton.textContent = 'Generating...';
     stopButton.disabled = false;
+    stopButton.removeAttribute('title');
 
     try {
         const outputEl = document.getElementById('streaming-output');
@@ -285,16 +294,22 @@ async function startStreaming() {
     } finally {
         streamingActive = false;
         startButton.disabled = false;
+        startButton.removeAttribute('title');
         startButton.textContent = originalText;
         stopButton.disabled = true;
+        stopButton.title = 'Not streaming';
     }
 }
 
 // Stop streaming
 function stopStreaming() {
     streamingActive = false;
-    document.getElementById('start-streaming').disabled = false;
-    document.getElementById('stop-streaming').disabled = true;
+    const startButton = document.getElementById('start-streaming');
+    startButton.disabled = false;
+    startButton.removeAttribute('title');
+    const stopButton = document.getElementById('stop-streaming');
+    stopButton.disabled = true;
+    stopButton.title = 'Not streaming';
     updateStatus('Streaming stopped', 'success');
 }
 
@@ -318,8 +333,12 @@ function initWorker() {
                 case 'initialized':
                     document.getElementById('worker-indicator').classList.add('active');
                     document.getElementById('worker-status-text').textContent = 'Worker initialized';
-                    document.getElementById('worker-generate').disabled = false;
-                    document.getElementById('terminate-worker').disabled = false;
+                    const workerGenerateBtn = document.getElementById('worker-generate');
+                    workerGenerateBtn.disabled = false;
+                    workerGenerateBtn.removeAttribute('title');
+                    const terminateWorkerBtn = document.getElementById('terminate-worker');
+                    terminateWorkerBtn.disabled = false;
+                    terminateWorkerBtn.removeAttribute('title');
                     Logger.info('Web Worker initialized successfully');
                     break;
 
@@ -378,8 +397,12 @@ function terminateWorker() {
 
         document.getElementById('worker-indicator').classList.remove('active');
         document.getElementById('worker-status-text').textContent = 'Worker terminated';
-        document.getElementById('worker-generate').disabled = true;
-        document.getElementById('terminate-worker').disabled = true;
+        const workerGenerateBtn = document.getElementById('worker-generate');
+        workerGenerateBtn.disabled = true;
+        workerGenerateBtn.title = "Please initialize the worker first";
+        const terminateWorkerBtn = document.getElementById('terminate-worker');
+        terminateWorkerBtn.disabled = true;
+        terminateWorkerBtn.title = "Please initialize the worker first";
 
         Logger.info('Web Worker terminated');
     }
@@ -612,6 +635,7 @@ function clearOutput() {
     // Reset copy button
     const copyBtn = document.getElementById('copy-output');
     copyBtn.disabled = true;
+    copyBtn.title = "No text to copy";
     copyBtn.style.backgroundColor = '#6c757d';
     copyBtn.style.cursor = 'not-allowed';
 }
