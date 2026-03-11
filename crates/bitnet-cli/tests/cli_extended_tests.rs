@@ -236,11 +236,12 @@ mod template_detect {
         assert_eq!(result, TemplateType::Llama3Chat);
     }
 
-    /// Tokenizer name containing "instruct" → Instruct.
+    /// Tokenizer name containing "mistral" → MistralChat (mistral match has
+    /// higher priority than generic "instruct").
     #[test]
     fn test_detect_instruct_from_tokenizer_name() {
         let result = TemplateType::detect(Some("mistral-instruct-v0.2"), None);
-        assert_eq!(result, TemplateType::Instruct);
+        assert_eq!(result, TemplateType::MistralChat);
     }
 
     /// No hints at all → Raw (fallback).

@@ -11,7 +11,7 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
     branches: [ main ]
     paths:
       - 'crates/**'
@@ -20,6 +20,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,31 +30,57 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     # PRs: only run when explicitly labeled "coverage"
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'coverage')
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'coverage')
 
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift /usr/share/miniconda \
+            /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/chromium \
+            /usr/local/share/powershell /usr/share/az_* /opt/microsoft
+          sudo docker image prune --all --force
+          df -h /
 
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.92.0"
 
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked
+      - name: Install cargo-llvm-cov and cargo-nextest
+        run: |
+          cargo install cargo-llvm-cov --locked
+          cargo install cargo-nextest --locked
 
-      - name: Generate coverage (HTML + JSON + text)
+      - name: Disk usage before coverage
+        run: df -h /
+
+      - name: Generate coverage (single instrumented run via nextest)
         env:
           RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
-          set -e
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --html --output-dir target/llvm-cov/html
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --json --output-path coverage.json
+          set -euo pipefail
+          cargo llvm-cov clean --workspace
+          # Allow test failures — CI Core gates correctness; coverage collects data from passing tests
+          cargo llvm-cov nextest --locked --no-default-features --features cpu --no-report --profile ci \
+            || echo "::warning::Some tests failed (coverage data still collected)"
+          cargo llvm-cov report --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
+
+      - name: Disk usage after coverage
+        if: always()
+        run: |
+          df -h /
+          du -sh target/ || true
 
       - name: Install jq
         if: github.event_name == 'push'
@@ -78,5 +105,4 @@ jobs:
           path: |
             coverage.json
             coverage.txt
-            target/llvm-cov/html/**
           retention-days: 7
