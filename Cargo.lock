@@ -384,6 +384,7 @@ dependencies = [
  "async-trait",
  "bitnet-atomic-file-core",
  "bitnet-common",
+ "bitnet-cors-policy-core",
  "bitnet-cpu-activations",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
@@ -616,6 +617,10 @@ dependencies = [
  "tempfile",
  "tracing",
 ]
+
+[[package]]
+name = "bitnet-cors-policy-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-cpu-activations"
@@ -1403,6 +1408,7 @@ dependencies = [
  "bitnet-api-versioning-core",
  "bitnet-client-ip-core",
  "bitnet-common",
+ "bitnet-cors-policy-core",
  "bitnet-device-config-core",
  "bitnet-eval-core",
  "bitnet-http-auth-core",
