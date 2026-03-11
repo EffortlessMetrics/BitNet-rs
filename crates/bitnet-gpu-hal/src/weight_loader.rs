@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::{Duration, Instant};
 
+use bitnet_layer_index_core::extract_layer_index;
+
 // ── Weight format ───────────────────────────────────────────────────────────
 
 /// Supported weight serialisation formats.
@@ -447,16 +449,6 @@ impl PrefetchScheduler {
     pub const fn window_size(&self) -> usize {
         self.window_size
     }
-}
-
-/// Extract a layer index from a tensor name like `"layers.5.attention.wq"`.
-fn extract_layer_index(name: &str) -> Option<usize> {
-    for part in name.split('.') {
-        if let Ok(idx) = part.parse::<usize>() {
-            return Some(idx);
-        }
-    }
-    None
 }
 
 // ── Shard info ──────────────────────────────────────────────────────────────

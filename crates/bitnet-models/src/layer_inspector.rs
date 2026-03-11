@@ -179,15 +179,7 @@ impl Default for InspectionReport {
     }
 }
 
-/// Extract layer index from tensor name (e.g., "layers.5.attn.q_proj" → Some(5)).
-pub fn extract_layer_index(name: &str) -> Option<usize> {
-    for part in name.split('.') {
-        if let Ok(idx) = part.parse::<usize>() {
-            return Some(idx);
-        }
-    }
-    None
-}
+pub use bitnet_layer_index_core::extract_layer_index;
 
 #[cfg(test)]
 mod tests {

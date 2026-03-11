@@ -31,6 +31,7 @@ members = [
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
   "crates/bitnet-tokenizer-text-core", # SRP: tokenizer pre-tokenization/normalization primitives
   "crates/bitnet-weight-name-core", # SRP: vendor weight-name canonicalization helpers
+  "crates/bitnet-layer-index-core", # SRP: reusable layer-index extraction from tensor names
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
@@ -435,6 +436,7 @@ bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version =
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-thread-config-core = { path = "crates/bitnet-thread-config-core", version = "0.2.1-dev" }
 bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
+bitnet-layer-index-core = { path = "crates/bitnet-layer-index-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

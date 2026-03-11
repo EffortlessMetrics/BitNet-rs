@@ -12,6 +12,7 @@ description = "GPU hardware abstraction layer for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
+bitnet-layer-index-core = { workspace = true }
 bitnet-tokenizer-text-core = { path = "../bitnet-tokenizer-text-core", version = "0.2.1-dev" }
 bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
 tokio = { workspace = true }

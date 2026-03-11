@@ -869,6 +869,7 @@ name = "bitnet-gpu-hal"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-http-auth-core",
+ "bitnet-layer-index-core",
  "bitnet-tokenizer-text-core",
  "insta",
  "log",
@@ -977,6 +978,7 @@ dependencies = [
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-kv-cache-policy-core",
+ "bitnet-layer-index-core",
  "bitnet-quantization",
  "bitnet-simd",
  "bitnet-test-support",
@@ -1017,6 +1019,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-layer-index-core"
+version = "0.2.1-dev"
+
+[[package]]
 name = "bitnet-logits"
 version = "0.2.1-dev"
 dependencies = [
@@ -1051,6 +1057,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-gguf",
+ "bitnet-layer-index-core",
  "bitnet-quantization",
  "bitnet-st2gguf",
  "bitnet-test-fixtures-core",
