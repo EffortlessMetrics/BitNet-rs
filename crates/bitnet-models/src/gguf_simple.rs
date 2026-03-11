@@ -3,6 +3,7 @@ use crate::loader::MmapFile;
 use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
 use crate::quant::i2s_qk256::I2SQk256NoScale;
 use bitnet_common::{BitNetError, Device, QuantizationType, Result};
+use bitnet_layer_index_core::extract_prefixed_layer_index;
 use bitnet_quantization::{QuantizerTrait, TL1Quantizer, TL2Quantizer, qk256_tolerance_bytes};
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 use std::collections::HashMap;
@@ -799,33 +800,7 @@ fn discover_n_layers_from_tensors(reader: &GgufReader) -> Result<usize> {
 
 /// Extract layer index from tensor name supporting blk.<i>.* and layers.<i>.* patterns
 fn extract_layer_index(name: &str) -> Option<usize> {
-    // Look for "blk.123." or "layers.123." patterns
-    if let Some(pos) = name.find("blk.") {
-        let rest = &name[pos + 4..];
-        parse_usize_prefix(rest.as_bytes())
-    } else if let Some(pos) = name.find("layers.") {
-        let rest = &name[pos + 7..];
-        parse_usize_prefix(rest.as_bytes())
-    } else {
-        None
-    }
-}
-
-/// Parse unsigned integer from start of byte slice until first non-digit
-fn parse_usize_prefix(bytes: &[u8]) -> Option<usize> {
-    let mut value: usize = 0;
-    let mut found_any = false;
-
-    for &b in bytes {
-        if b.is_ascii_digit() {
-            value = value.checked_mul(10)?.checked_add((b - b'0') as usize)?;
-            found_any = true;
-        } else {
-            break;
-        }
-    }
-
-    found_any.then_some(value)
+    extract_prefixed_layer_index(name, &["blk.", "layers."])
 }
 
 /// AC3: Validate that all required transformer tensors are present

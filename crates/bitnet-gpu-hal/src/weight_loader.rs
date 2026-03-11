@@ -3,6 +3,7 @@
 //! Provides lazy loading, prefetch scheduling, multi-shard parallel loading,
 //! format detection, and conversion utilities for model weight tensors.
 
+use bitnet_layer_index_core::extract_first_numeric_segment;
 use std::collections::HashMap;
 use std::fmt;
 use std::time::{Duration, Instant};
@@ -451,12 +452,7 @@ impl PrefetchScheduler {
 
 /// Extract a layer index from a tensor name like `"layers.5.attention.wq"`.
 fn extract_layer_index(name: &str) -> Option<usize> {
-    for part in name.split('.') {
-        if let Ok(idx) = part.parse::<usize>() {
-            return Some(idx);
-        }
-    }
-    None
+    extract_first_numeric_segment(name)
 }
 
 // ── Shard info ──────────────────────────────────────────────────────────────

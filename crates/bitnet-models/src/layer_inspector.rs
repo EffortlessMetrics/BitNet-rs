@@ -3,6 +3,8 @@
 //! Enumerate, classify, and inspect transformer layers and their
 //! constituent tensors for debugging and validation.
 
+use bitnet_layer_index_core::extract_first_numeric_segment;
+
 /// Type of a transformer layer component.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComponentType {
@@ -181,12 +183,7 @@ impl Default for InspectionReport {
 
 /// Extract layer index from tensor name (e.g., "layers.5.attn.q_proj" → Some(5)).
 pub fn extract_layer_index(name: &str) -> Option<usize> {
-    for part in name.split('.') {
-        if let Ok(idx) = part.parse::<usize>() {
-            return Some(idx);
-        }
-    }
-    None
+    extract_first_numeric_segment(name)
 }
 
 #[cfg(test)]
