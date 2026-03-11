@@ -30,6 +30,7 @@ members = [
   "crates/bitnet-tokenizer-model-core", # SRP: tokenizer model/vocabulary detection helpers
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
   "crates/bitnet-tokenizer-text-core", # SRP: tokenizer pre-tokenization/normalization primitives
+  "crates/bitnet-layer-index-core", # SRP: reusable tensor-name layer index extraction helpers
   "crates/bitnet-weight-name-core", # SRP: vendor weight-name canonicalization helpers
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",

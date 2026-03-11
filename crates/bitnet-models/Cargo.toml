@@ -19,6 +19,7 @@ bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-transformer = { path = "../bitnet-transformer", version = "0.2.1-dev" }
 bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
+bitnet-layer-index-core = { path = "../bitnet-layer-index-core", version = "0.2.1-dev" }
 bitnet-weight-name-core = { path = "../bitnet-weight-name-core", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 bitnet-trace = { path = "../bitnet-trace", version = "0.2.1-dev", optional = true }
