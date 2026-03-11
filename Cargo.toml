@@ -56,6 +56,7 @@ members = [
   "crates/bitnet-client-ip-core", # SRP: reusable client IP extraction from forwarding headers
   "crates/bitnet-api-versioning-core", # SRP: reusable API version negotiation and routing helpers
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
+  "crates/bitnet-endpoint-registry-core", # SRP: reusable HTTP endpoint registry contracts + lookup helpers
   "crates/bitnet-request-context-core", # SRP: reusable request context metadata contracts
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
