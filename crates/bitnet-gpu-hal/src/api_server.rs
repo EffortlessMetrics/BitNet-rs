@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::{Duration, Instant};
 
+use bitnet_http_auth_core::bearer_token;
+
 // ---------------------------------------------------------------------------
 // ServerConfig
 // ---------------------------------------------------------------------------
@@ -547,7 +549,7 @@ impl AuthMiddleware {
 
     /// Parse a bearer token from an `Authorization` header value.
     pub fn parse_bearer(header: &str) -> Option<&str> {
-        header.strip_prefix("Bearer ")
+        bearer_token(header)
     }
 
     /// Authenticate from a raw `Authorization` header value.
@@ -1657,6 +1659,7 @@ mod tests {
     fn test_auth_parse_bearer() {
         assert_eq!(AuthMiddleware::parse_bearer("Bearer sk-abc"), Some("sk-abc"));
         assert_eq!(AuthMiddleware::parse_bearer("Token sk-abc"), None);
+        assert_eq!(AuthMiddleware::parse_bearer("Bearer "), None);
         assert_eq!(AuthMiddleware::parse_bearer(""), None);
     }
 
