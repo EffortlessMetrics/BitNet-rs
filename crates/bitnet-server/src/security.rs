@@ -353,12 +353,11 @@ fn extract_client_ip(request: &Request, config: &SecurityConfig) -> Option<IpAdd
         ip = extract_client_ip_from_headers(request.headers());
     }
 
-    if ip.is_none() {
-        if let Some(connect_info) =
+    if ip.is_none()
+        && let Some(connect_info) =
             request.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
-        {
-            ip = Some(connect_info.0.ip());
-        }
+    {
+        ip = Some(connect_info.0.ip());
     }
 
     ip
