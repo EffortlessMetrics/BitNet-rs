@@ -18,37 +18,8 @@ impl Default for RateLimitConfig {
     }
 }
 
-/// CORS configuration.
-#[derive(Debug, Clone)]
-pub struct CorsConfig {
-    pub allowed_origins: Vec<String>,
-    pub allow_credentials: bool,
-    pub max_age: Duration,
-}
-
-impl Default for CorsConfig {
-    fn default() -> Self {
-        Self {
-            allowed_origins: vec!["*".into()],
-            allow_credentials: false,
-            max_age: Duration::from_secs(3600),
-        }
-    }
-}
-
-impl CorsConfig {
-    pub fn restrictive(origins: Vec<String>) -> Self {
-        Self {
-            allowed_origins: origins,
-            allow_credentials: true,
-            max_age: Duration::from_secs(600),
-        }
-    }
-
-    pub fn is_wildcard(&self) -> bool {
-        self.allowed_origins.iter().any(|o| o == "*")
-    }
-}
+/// CORS configuration re-exported from `bitnet-cors-policy-core`.
+pub use bitnet_cors_policy_core::CorsPolicy as CorsConfig;
 
 /// Request validation config.
 #[derive(Debug, Clone)]
