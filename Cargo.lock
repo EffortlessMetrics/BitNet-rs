@@ -430,6 +430,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-api-key-auth-core"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-http-auth-core",
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-api-versioning-core"
 version = "0.2.1-dev"
 
@@ -1389,6 +1397,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "bitnet-api-key-auth-core",
  "bitnet-api-versioning-core",
  "bitnet-client-ip-core",
  "bitnet-common",

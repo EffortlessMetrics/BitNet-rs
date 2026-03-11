@@ -24,7 +24,6 @@ axum.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-device-config-core = { path = "../bitnet-device-config-core", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
-bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
@@ -32,6 +31,8 @@ bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 bitnet-request-context-core = { path = "../bitnet-request-context-core", version = "0.2.1-dev" }
 bitnet-api-versioning-core = { path = "../bitnet-api-versioning-core", version = "0.2.1-dev" }
+bitnet-api-key-auth-core = { path = "../bitnet-api-key-auth-core", version = "0.2.1-dev" }
+bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
 bitnet-server-health-types-core = { path = "../bitnet-server-health-types-core", version = "0.2.1-dev" }
 bitnet-client-ip-core = { path = "../bitnet-client-ip-core", version = "0.2.1-dev" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.2.1-dev" }

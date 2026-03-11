@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-api-key-auth-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP microcrate for API-key authentication and bearer-token extraction"
+
+[dependencies]
+bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
+
+[dev-dependencies]
+proptest.workspace = true

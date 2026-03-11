@@ -57,6 +57,7 @@ members = [
   "crates/bitnet-api-versioning-core", # SRP: reusable API version negotiation and routing helpers
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
   "crates/bitnet-request-context-core", # SRP: reusable request context metadata contracts
+  "crates/bitnet-api-key-auth-core", # SRP: reusable API-key auth policy and key-store primitives
   "crates/bitnet-server",
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli-config-core", # SRP: reusable CLI configuration contracts/validation
@@ -175,6 +176,7 @@ default-members = [
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server-health-types-core",
   "crates/bitnet-request-context-core",
+  "crates/bitnet-api-key-auth-core",
   "crates/bitnet-testing-policy-core",
   "crates/bitnet-testing-policy-snapshot-core", # SRP: policy snapshot resolution helpers
   "crates/bitnet-testing-scenarios-core",
