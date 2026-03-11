@@ -43,7 +43,10 @@ jobs:
 
       - name: Free disk space
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift /usr/share/miniconda \
+            /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/chromium \
+            /usr/local/share/powershell /usr/share/az_* /opt/microsoft
           sudo docker image prune --all --force
           df -h /
 
@@ -54,17 +57,26 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
 
+      - name: Disk usage before coverage
+        run: df -h /
+
       - name: Generate coverage (single instrumented run)
         env:
           RUST_BACKTRACE: 1
           CARGO_INCREMENTAL: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
           set -euo pipefail
           cargo llvm-cov clean --workspace
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu --no-report
-          cargo llvm-cov report --html --output-dir target/llvm-cov/html
+          cargo llvm-cov --locked --no-default-features --features cpu --no-report
           cargo llvm-cov report --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
+
+      - name: Disk usage after coverage
+        if: always()
+        run: |
+          df -h /
+          du -sh target/ || true
 
       - name: Install jq
         if: github.event_name == 'push'
@@ -89,5 +101,4 @@ jobs:
           path: |
             coverage.json
             coverage.txt
-            target/llvm-cov/html/**
           retention-days: 7

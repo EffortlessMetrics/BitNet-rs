@@ -39,7 +39,8 @@ All aliases use `--workspace --no-default-features --features cpu`.
 ## CI Workflow
 
 The coverage workflow (`.github/workflows/coverage.yml`) runs a single
-instrumented build and generates HTML, JSON, and text reports.
+instrumented build against workspace `default-members` (core inference
+crates) and generates JSON and text reports.
 
 ### Triggers
 
@@ -61,7 +62,6 @@ A single `coverage-report` artifact is uploaded on every run containing:
 
 - `coverage.json` — machine-readable JSON report
 - `coverage.txt` — text summary
-- `target/llvm-cov/html/**` — interactive HTML report
 
 Retention: **7 days**.
 
@@ -71,7 +71,7 @@ Retention: **7 days**.
 |------|-------------|
 | `coverage.json` | JSON report (workspace root) |
 | `coverage.txt` | Text summary (workspace root) |
-| `target/llvm-cov/html/index.html` | Interactive HTML report |
+| `target/llvm-cov/html/index.html` | Interactive HTML report (local only, via `cargo cov-html`) |
 
 ## Platform Support
 
