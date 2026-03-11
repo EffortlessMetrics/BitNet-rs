@@ -54,13 +54,15 @@ jobs:
         with:
           toolchain: "1.92.0"
 
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked
+      - name: Install cargo-llvm-cov and cargo-nextest
+        run: |
+          cargo install cargo-llvm-cov --locked
+          cargo install cargo-nextest --locked
 
       - name: Disk usage before coverage
         run: df -h /
 
-      - name: Generate coverage (single instrumented run)
+      - name: Generate coverage (single instrumented run via nextest)
         env:
           RUST_BACKTRACE: 1
           CARGO_INCREMENTAL: "0"
@@ -68,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo llvm-cov clean --workspace
-          cargo llvm-cov --locked --no-default-features --features cpu --no-report
+          cargo llvm-cov nextest --locked --no-default-features --features cpu --no-report --profile ci
           cargo llvm-cov report --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
 

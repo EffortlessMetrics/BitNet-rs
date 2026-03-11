@@ -97,7 +97,7 @@ impl Default for AC3TestConfig {
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates complete generation loop from prompt to output tokens
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
@@ -165,7 +165,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 /// cargo test test_ac3_temperature_sampling_validation --package bitnet-inference -- --ignored --nocapture
 /// ```
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_temperature_sampling_validation() -> Result<()> {
     if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
@@ -235,7 +235,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 /// cargo test test_ac3_top_k_sampling_validation --package bitnet-inference -- --ignored --nocapture
 /// ```
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_top_k_sampling_validation() -> Result<()> {
     if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
@@ -302,7 +302,7 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
 /// cargo test test_ac3_nucleus_sampling_validation --package bitnet-inference -- --ignored --nocapture
 /// ```
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
     if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
         eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
@@ -358,7 +358,7 @@ async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates deterministic seed support produces reproducible outputs
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     let config = AC3TestConfig::default();
     unsafe {
@@ -419,7 +419,7 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates proper handling of end-of-sequence tokens and early stopping
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;

@@ -40,7 +40,8 @@ All aliases use `--workspace --no-default-features --features cpu`.
 
 The coverage workflow (`.github/workflows/coverage.yml`) runs a single
 instrumented build against workspace `default-members` (core inference
-crates) and generates JSON and text reports.
+crates) using `cargo llvm-cov nextest` with the `ci` nextest profile,
+ensuring the same tests run under coverage as in CI.
 
 ### Triggers
 
