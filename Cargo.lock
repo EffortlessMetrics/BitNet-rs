@@ -1057,6 +1057,7 @@ dependencies = [
  "bitnet-test-support",
  "bitnet-trace",
  "bitnet-transformer",
+ "bitnet-weight-alias-core",
  "bitnet-weight-name-core",
  "bytemuck",
  "candle-core",
@@ -1988,6 +1989,10 @@ dependencies = [
  "wasm-bindgen-test",
  "web-sys",
 ]
+
+[[package]]
+name = "bitnet-weight-alias-core"
+version = "0.2.1-dev"
 
 [[package]]
 name = "bitnet-weight-name-core"

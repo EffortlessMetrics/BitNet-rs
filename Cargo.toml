@@ -31,6 +31,7 @@ members = [
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
   "crates/bitnet-tokenizer-text-core", # SRP: tokenizer pre-tokenization/normalization primitives
   "crates/bitnet-weight-name-core", # SRP: vendor weight-name canonicalization helpers
+  "crates/bitnet-weight-alias-core", # SRP: exporter alias drift normalization helpers
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
@@ -154,6 +155,7 @@ default-members = [
   "crates/bitnet-test-fixtures-core",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-weight-alias-core", # SRP: exporter alias drift normalization helpers
   "crates/bitnet-token-merge-core", # SRP: reusable token span merge/split primitives
   "crates/bitnet-tokenizer-model-core",
   "crates/bitnet-tokenizer-discovery-core",
