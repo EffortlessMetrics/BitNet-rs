@@ -1638,63 +1638,13 @@ impl InferenceCommand {
         }
     }
 
-    /// Auto-detect template type from model/tokenizer paths and metadata.
+    /// Auto-detect template type from model/tokenizer paths.
     /// Priority: model path hints → tokenizer path hints → fallback to Instruct
     fn auto_detect_template(&self) -> TemplateType {
-        // Check model path for hints
-        if let Some(model_path) = &self.model {
-            let path_str = model_path.to_string_lossy().to_lowercase();
-
-            // Positive detection: LLaMA-3
-            if path_str.contains("llama") && path_str.contains("3") {
-                info!("Auto-detected LLaMA-3 from model path");
-                return TemplateType::Llama3Chat;
-            }
-
-            // Positive detection: BitNet base models (complete rather than answer)
-            // Prefer Instruct template for better Q&A behavior
-            // Patterns: microsoft-bitnet, bitnet-b1.58, bitnet-1.58b, 1_58b
-            if path_str.contains("microsoft-bitnet")
-                || path_str.contains("bitnet-b1.58")
-                || path_str.contains("bitnet-1.58b")
-                || path_str.contains("bitnet-1_58b")
-                || path_str.contains("1.58b")
-                || path_str.contains("1_58b")
-                || (path_str.contains("bitnet") && !path_str.contains("instruct"))
-            {
-                info!(
-                    "Auto-detected BitNet base model from model path '{}', using Instruct template for Q&A",
-                    model_path.display()
-                );
-                return TemplateType::Instruct;
-            }
-
-            // Positive detection: Instruct/Chat models
-            if path_str.contains("instruct") || path_str.contains("chat") {
-                info!("Auto-detected Instruct template from model path");
-                return TemplateType::Instruct;
-            }
-        }
-
-        // Check tokenizer path for hints
-        if let Some(tok_path) = &self.tokenizer {
-            let path_str = tok_path.to_string_lossy().to_lowercase();
-
-            if path_str.contains("llama") && path_str.contains("3") {
-                info!("Auto-detected LLaMA-3 from tokenizer path");
-                return TemplateType::Llama3Chat;
-            }
-
-            if path_str.contains("instruct") {
-                info!("Auto-detected Instruct template from tokenizer path");
-                return TemplateType::Instruct;
-            }
-        }
-
-        // Fallback: Instruct is safer than Raw for most models
-        // Instruct adds Q&A formatting which works well for instruction-tuned models
-        info!("No specific template detected, defaulting to Instruct (safer than Raw)");
-        TemplateType::Instruct
+        let detected =
+            TemplateType::detect_from_paths(self.model.as_deref(), self.tokenizer.as_deref());
+        info!("Auto-detected prompt template from path hints: {:?}", detected);
+        detected
     }
 }
 
