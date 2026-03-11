@@ -65,31 +65,52 @@ jobs:
 
       - name: Build core crates (CPU)
         run: |
-          cargo build --locked \
-            -p bitnet-common \
-            -p bitnet-models \
-            -p bitnet-tokenizers \
-            -p bitnet-quantization \
-            -p bitnet-kernels \
-            --no-default-features --features cpu
+          export CARGO_HTTP_MULTIPLEXING=false
+          export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+          for i in 1 2 3; do
+            cargo build --locked \
+              -p bitnet-common \
+              -p bitnet-models \
+              -p bitnet-tokenizers \
+              -p bitnet-quantization \
+              -p bitnet-kernels \
+              --no-default-features --features cpu && break || {
+                if [ $i -eq 3 ]; then exit 1; fi
+                sleep 15
+              }
+          done
 
       - name: Run unit tests (CPU)
         run: |
-          cargo test --locked \
-            -p bitnet-common \
-            -p bitnet-models \
-            -p bitnet-tokenizers \
-            -p bitnet-quantization \
-            -p bitnet-kernels \
-            --lib \
-            --no-default-features --features cpu \
-            -- --nocapture
+          export CARGO_HTTP_MULTIPLEXING=false
+          export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+          for i in 1 2 3; do
+            cargo test --locked \
+              -p bitnet-common \
+              -p bitnet-models \
+              -p bitnet-tokenizers \
+              -p bitnet-quantization \
+              -p bitnet-kernels \
+              --lib \
+              --no-default-features --features cpu \
+              -- --nocapture && break || {
+                if [ $i -eq 3 ]; then exit 1; fi
+                sleep 15
+              }
+          done
 
       - name: Run CPU golden path E2E tests
         run: |
-          cargo test --locked \
-            -p bitnet-inference --test cpu_golden_path \
-            --no-default-features --features cpu
+          export CARGO_HTTP_MULTIPLEXING=false
+          export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+          for i in 1 2 3; do
+            cargo test --locked \
+              -p bitnet-inference --test cpu_golden_path \
+              --no-default-features --features cpu && break || {
+                if [ $i -eq 3 ]; then exit 1; fi
+                sleep 15
+              }
+          done
 
   # Job 2: Metal feature compilation check
   build-metal:
@@ -114,13 +135,20 @@ jobs:
 
       - name: Check Metal feature compiles
         run: |
-          cargo check --locked \
-            -p bitnet-common \
-            -p bitnet-models \
-            -p bitnet-metal \
-            -p bitnet-transformer \
-            -p bitnet-inference \
-            --no-default-features --features cpu,metal
+          export CARGO_HTTP_MULTIPLEXING=false
+          export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+          for i in 1 2 3; do
+            cargo check --locked \
+              -p bitnet-common \
+              -p bitnet-models \
+              -p bitnet-metal \
+              -p bitnet-transformer \
+              -p bitnet-inference \
+              --no-default-features --features cpu,metal && break || {
+                if [ $i -eq 3 ]; then exit 1; fi
+                sleep 15
+              }
+          done
 
   # Job 3: Clippy linting on macOS/arm64
   clippy:
