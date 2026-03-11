@@ -14,6 +14,11 @@
 **Learning:** This restricts valid payloads coming from environments (like Windows) or protocols (like HTTP standard format) that use CRLF for newlines, leading to unintentional denial of service for these valid requests.
 **Prevention:** Explicitly allow `\r` alongside `\n` and `\t` when filtering out control characters in text payloads.
 
+## 2026-03-11 - [Path Truncation Vulnerability via Null Bytes]
+**Vulnerability:** The `validate_model_request` function in `bitnet-server`'s security validator checked that the model path ended with `.gguf` or `.safetensors`, and didn't contain `..` or `~`. However, it did not check for null bytes (`\0`). An attacker could provide a path like `/etc/passwd\0.gguf` which would pass the validation but be truncated by the OS file system operations, allowing arbitrary file reading.
+**Learning:** Checking file extensions or validating specific characters is insufficient if the string can contain null bytes, which cause path truncation when passed to underlying OS or C-level APIs.
+**Prevention:** Always explicitly check for and reject null bytes (`\0`) in any user-provided string that will be used as a file path or passed to a C API.
+
 ## 2025-06-03 - [TOCTOU in RateLimitBucket leads to bypass via integer underflow]
 **Vulnerability:** The `try_consume` method in `RateLimitBucket` was vulnerable to a Time-of-Check to Time-of-Use (TOCTOU) bug because it used a separate `load` and `fetch_sub` when verifying and decrementing available tokens. Concurrently running tasks could observe a positive number of tokens, pass the conditional check, and subtract tokens simultaneously, leading to integer underflow and a bypass of the rate limiter. Additionally, the `refill` method was subject to a data race that could overwrite consumed tokens with a stale calculation.
 **Learning:** Separate read-then-write operations on atomics are inherently susceptible to race conditions under heavy concurrency.
