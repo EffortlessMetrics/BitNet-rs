@@ -10,6 +10,7 @@ on:
       - benches/**
       - benchmarks/**
       - docs/api/rust/**
+      - '!docs/generated/**'
       - scripts/ci/generate-phase1-artifacts.sh
       - .github/workflows/phase1-maintenance.yml
   push:
@@ -22,10 +23,9 @@ on:
       - benches/**
       - benchmarks/**
       - docs/api/rust/**
+      - '!docs/generated/**'
       - scripts/ci/generate-phase1-artifacts.sh
       - .github/workflows/phase1-maintenance.yml
-    paths-ignore:
-      - docs/generated/**
   schedule:
     - cron: '17 4 * * 1'
   release:

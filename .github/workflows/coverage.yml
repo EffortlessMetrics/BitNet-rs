@@ -70,9 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           cargo llvm-cov clean --workspace
-          # Allow test failures — CI Core gates correctness; coverage collects data from passing tests
           cargo llvm-cov nextest --locked --no-default-features --features cpu --no-report --profile ci \
-            || echo "::warning::Some tests failed (coverage data still collected)"
+            --ignore-run-fail
           cargo llvm-cov report --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
 
@@ -89,6 +88,12 @@ jobs:
       - name: Enforce threshold on main (70%)
         if: github.event_name == 'push'
         run: |
+          files=$(jq '.data[0].files | length // 0' coverage.json)
+          lines=$(jq '.data[0].totals.lines.count // 0' coverage.json)
+          if [ "$files" -eq 0 ] || [ "$lines" -eq 0 ]; then
+            echo "::error::coverage.json is empty (0 files / 0 lines); coverage collection is misconfigured"
+            exit 1
+          fi
           perc=$(jq -r '.data[0].totals.lines.percent' coverage.json | awk '{print int($1+0.5)}')
           echo "Coverage: ${perc}%"
           if [ -z "$perc" ]; then echo "No coverage data"; exit 1; fi
