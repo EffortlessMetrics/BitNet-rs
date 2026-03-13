@@ -74,8 +74,8 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo llvm-cov nextest --locked --no-default-features --features cpu --no-report --profile ci \
             --ignore-run-fail
-          cargo llvm-cov report --json --output-path coverage.json
-          cargo llvm-cov report --text | tee coverage.txt
+          cargo llvm-cov report --workspace --all-targets --json --output-path coverage.json
+          cargo llvm-cov report --workspace --all-targets --text | tee coverage.txt
 
       - name: Disk usage after coverage
         if: always()
