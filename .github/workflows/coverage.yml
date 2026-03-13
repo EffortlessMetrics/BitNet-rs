@@ -53,11 +53,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.92.0"
+          components: llvm-tools-preview
 
-      - name: Install cargo-llvm-cov and cargo-nextest
-        run: |
-          cargo install cargo-llvm-cov --locked
-          cargo install cargo-nextest --locked
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
 
       - name: Disk usage before coverage
         run: df -h /
