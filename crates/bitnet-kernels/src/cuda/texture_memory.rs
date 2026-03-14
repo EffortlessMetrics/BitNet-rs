@@ -409,7 +409,7 @@ extern "C" __global__ void texture_batch_lookup(
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_texture_fetch_1d(n: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let threads = 256u32;
-    let blocks = ((n as u32) + threads - 1) / threads;
+    let blocks = (n as u32).div_ceil(threads);
     ((blocks, 1, 1), (threads, 1, 1))
 }
 
@@ -418,8 +418,8 @@ pub fn launch_texture_fetch_1d(n: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
 pub fn launch_texture_fetch_2d(width: usize, height: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let tx = 16u32;
     let ty = 16u32;
-    let bx = ((width as u32) + tx - 1) / tx;
-    let by = ((height as u32) + ty - 1) / ty;
+    let bx = (width as u32).div_ceil(tx);
+    let by = (height as u32).div_ceil(ty);
     ((bx, by, 1), (tx, ty, 1))
 }
 
@@ -427,7 +427,7 @@ pub fn launch_texture_fetch_2d(width: usize, height: usize) -> ((u32, u32, u32),
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_texture_gather(n: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let threads = 256u32;
-    let blocks = ((n as u32) + threads - 1) / threads;
+    let blocks = (n as u32).div_ceil(threads);
     ((blocks, 1, 1), (threads, 1, 1))
 }
 
@@ -436,8 +436,8 @@ pub fn launch_texture_gather(n: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
 pub fn launch_texture_conv2d(width: usize, height: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let tx = 16u32;
     let ty = 16u32;
-    let bx = ((width as u32) + tx - 1) / tx;
-    let by = ((height as u32) + ty - 1) / ty;
+    let bx = (width as u32).div_ceil(tx);
+    let by = (height as u32).div_ceil(ty);
     ((bx, by, 1), (tx, ty, 1))
 }
 
@@ -445,7 +445,7 @@ pub fn launch_texture_conv2d(width: usize, height: usize) -> ((u32, u32, u32), (
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_texture_interpolate(n: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let threads = 256u32;
-    let blocks = ((n as u32) + threads - 1) / threads;
+    let blocks = (n as u32).div_ceil(threads);
     ((blocks, 1, 1), (threads, 1, 1))
 }
 
@@ -453,7 +453,7 @@ pub fn launch_texture_interpolate(n: usize) -> ((u32, u32, u32), (u32, u32, u32)
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_texture_batch_lookup(total: usize) -> ((u32, u32, u32), (u32, u32, u32)) {
     let threads = 256u32;
-    let blocks = ((total as u32) + threads - 1) / threads;
+    let blocks = (total as u32).div_ceil(threads);
     ((blocks, 1, 1), (threads, 1, 1))
 }
 
