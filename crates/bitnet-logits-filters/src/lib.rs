@@ -92,28 +92,35 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    // Calculate entropy and surprise in a single pass to avoid multiple allocations
+    // and recomputing expensive transcendental functions like `ln()`.
+    let mut entropy = 0.0f32;
+    let mut indexed: Vec<(usize, f32, f32)> = probs
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|&(_, p)| p > 0.0)
+        .map(|(i, p)| {
+            let surprise = -p.ln();
+            entropy += p * surprise;
+            (i, p, surprise)
+        })
+        .collect();
+
     if indexed.is_empty() {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
+    // Convert the cached surprise into the final deviation in-place
+    for item in &mut indexed {
+        item.2 = (item.2 - entropy).abs();
+    }
 
-    let mut deviations: Vec<(usize, f32, f32)> = indexed
-        .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
-        })
-        .collect();
-
-    deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
+    indexed.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
     let mut cumsum = 0.0f32;
-    let mut cutoff = deviations.len();
-    for (rank, &(_, p, _)) in deviations.iter().enumerate() {
+    let mut cutoff = indexed.len();
+    for (rank, &(_, p, _)) in indexed.iter().enumerate() {
         cumsum += p;
         if cumsum >= typical_p {
             cutoff = rank + 1;
@@ -121,7 +128,7 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         }
     }
 
-    for &(idx, _, _) in deviations.iter().skip(cutoff) {
+    for &(idx, _, _) in indexed.iter().skip(cutoff) {
         probs[idx] = 0.0;
     }
 }
