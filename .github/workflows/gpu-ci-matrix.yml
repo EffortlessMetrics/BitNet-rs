@@ -131,8 +131,12 @@ jobs:
         with:
           key: gpu-ci-cpu-test
 
+      - name: Free up runner disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+
       - name: Run CPU tests
         run: |
+          export CARGO_PROFILE_TEST_DEBUG=0
           cargo test --workspace --locked --no-default-features --features cpu \
             -- --skip "gpu" --skip "cuda" 2>&1 | tail -100
 
