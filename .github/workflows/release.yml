@@ -75,7 +75,7 @@ jobs:
         run: |
           echo "🔍 Running Rust quality checks..."
           cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets --features cpu -- -D warnings --locked
+cargo clippy --workspace --all-targets --features cpu --locked -- -D warnings
           cargo test --workspace --features cpu --locked
 
       - name: Run security audit
