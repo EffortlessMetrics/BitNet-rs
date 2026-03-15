@@ -6,7 +6,7 @@ use bitnet_vulkan_shaders::VulkanShaderSource;
 // Helper
 // ---------------------------------------------------------------------------
 
-fn all_shaders() -> &'static [VulkanShaderSource] {
+const fn all_shaders() -> &'static [VulkanShaderSource] {
     VulkanShaderSource::ALL
 }
 
@@ -209,9 +209,9 @@ fn all_variant_count_is_six() {
 
 #[test]
 fn all_names_unique() {
-    let names: Vec<&str> = all_shaders().iter().map(|s| s.name()).collect();
+    let names: Vec<&str> = all_shaders().iter().map(VulkanShaderSource::name).collect();
     let mut deduped = names.clone();
-    deduped.sort();
+    deduped.sort_unstable();
     deduped.dedup();
     assert_eq!(names.len(), deduped.len(), "duplicate shader names");
 }
