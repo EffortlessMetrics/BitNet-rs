@@ -15,6 +15,25 @@ use crate::cache::KVCache;
 const NPU_ENABLE_ENV: &str = "BITNET_ENABLE_NPU";
 const NPU_FALLBACK_ENV: &str = "BITNET_NPU_ALLOW_FALLBACK";
 
+fn forward_with_runtime_fallback(
+    model: Arc<dyn Model>,
+    input: ConcreteTensor,
+    cache: &mut KVCache,
+) -> Result<ConcreteTensor> {
+    match tokio::runtime::Handle::try_current().map(|handle| handle.runtime_flavor()) {
+        Ok(tokio::runtime::RuntimeFlavor::MultiThread) => {
+            Ok(tokio::task::block_in_place(move || {
+                let cache_any: &mut dyn std::any::Any = cache;
+                model.forward(&input, cache_any)
+            })?)
+        }
+        _ => {
+            let cache_any: &mut dyn std::any::Any = cache;
+            Ok(model.forward(&input, cache_any)?)
+        }
+    }
+}
+
 /// Trait for inference backends
 #[async_trait]
 pub trait Backend: Send + Sync {
@@ -101,13 +120,7 @@ impl Backend for CpuBackend {
         let model = self.model.clone();
         let input_tensor = input.clone();
 
-        // Use block_in_place to allow blocking the current thread with computation
-        // while properly passing the mutable cache reference.
-        // This avoids the 'static lifetime requirement of spawn_blocking.
-        let output = tokio::task::block_in_place(move || {
-            let cache_any: &mut dyn std::any::Any = cache;
-            model.forward(&input_tensor, cache_any)
-        })?;
+        let output = forward_with_runtime_fallback(model, input_tensor, cache)?;
 
         debug!("CPU forward pass completed");
         Ok(output)
@@ -271,10 +284,7 @@ impl Backend for NpuBackend {
         let npu_input = self.ensure_npu_tensor(input)?;
         let model = self.model.clone();
 
-        let output = tokio::task::block_in_place(move || {
-            let cache_any: &mut dyn std::any::Any = cache;
-            model.forward(&npu_input, cache_any)
-        })?;
+        let output = forward_with_runtime_fallback(model, npu_input, cache)?;
 
         debug!("NPU forward pass completed");
         Ok(output)
@@ -322,11 +332,7 @@ impl Backend for GpuBackend {
         let model = self.model.clone();
         let input_tensor = gpu_input;
 
-        // Use block_in_place for GPU backend as well to properly handle cache
-        let output = tokio::task::block_in_place(move || {
-            let cache_any: &mut dyn std::any::Any = cache;
-            model.forward(&input_tensor, cache_any)
-        })?;
+        let output = forward_with_runtime_fallback(model, input_tensor, cache)?;
 
         debug!("GPU forward pass completed");
         Ok(output)
