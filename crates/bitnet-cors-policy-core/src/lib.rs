@@ -23,7 +23,7 @@ impl Default for CorsPolicy {
 impl CorsPolicy {
     /// Restrictive profile allowing only explicit origins.
     #[must_use]
-    pub fn restrictive(origins: Vec<String>) -> Self {
+    pub const fn restrictive(origins: Vec<String>) -> Self {
         Self {
             allowed_origins: origins,
             allow_credentials: true,
