@@ -27,7 +27,7 @@ fn build_safetensors(tensors: &[(&str, Dtype, Vec<usize>, &[u8])]) -> Vec<u8> {
             (*name, TensorView::new(*dtype, shape.clone(), data).unwrap())
         })
         .collect();
-    safetensors::serialize(views.into_iter(), None).unwrap()
+    safetensors::serialize(views, None).unwrap()
 }
 
 // ---------------------------------------------------------------------------
