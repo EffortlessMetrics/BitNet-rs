@@ -18,7 +18,10 @@ pub fn extract_first_numeric_segment(name: &str) -> Option<usize> {
 #[must_use]
 pub fn extract_prefixed_layer_index(name: &str, prefixes: &[&str]) -> Option<usize> {
     prefixes.iter().find_map(|prefix| {
-        name.find(prefix).and_then(|pos| parse_usize_prefix(name[pos + prefix.len()..].as_bytes()))
+        name.find(prefix).and_then(|pos| {
+            let start = pos + prefix.len();
+            parse_usize_prefix(&name.as_bytes()[start..])
+        })
     })
 }
 
