@@ -39,15 +39,7 @@ pub fn extract_any_layer_index(name: &str) -> Option<usize> {
 ///
 /// Supports `blk.<i>.*` and `layers.<i>.*`.
 pub fn extract_structured_layer_index(name: &str) -> Option<usize> {
-    if let Some(pos) = name.find("blk.") {
-        let rest = &name[pos + 4..];
-        parse_usize_prefix(rest.as_bytes())
-    } else if let Some(pos) = name.find("layers.") {
-        let rest = &name[pos + 7..];
-        parse_usize_prefix(rest.as_bytes())
-    } else {
-        None
-    }
+    parse_prefix_layer_index(name, "blk.").or_else(|| parse_prefix_layer_index(name, "layers."))
 }
 
 /// Extract a `blk.<i>.*` block index.
@@ -56,6 +48,12 @@ pub fn extract_structured_layer_index(name: &str) -> Option<usize> {
 pub fn parse_block_index(name: &str) -> Option<usize> {
     let parts: Vec<&str> = name.split('.').collect();
     if parts.len() >= 2 && parts[0] == "blk" { parts[1].parse().ok() } else { None }
+}
+
+fn parse_prefix_layer_index(name: &str, prefix: &str) -> Option<usize> {
+    name.find(prefix)
+        .and_then(|pos| name.as_bytes().get(pos + prefix.len()..))
+        .and_then(parse_usize_prefix)
 }
 
 #[cfg(test)]
