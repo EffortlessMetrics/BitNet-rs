@@ -98,16 +98,21 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
-
+    // Fuse entropy calculation and surprise to avoid computing `ln()` twice and an intermediate allocation
+    let mut entropy = 0.0;
     let mut deviations: Vec<(usize, f32, f32)> = indexed
         .into_iter()
         .map(|(i, p)| {
             let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
+            entropy += p * surprise;
+            (i, p, surprise)
         })
         .collect();
+
+    // Now that entropy is calculated, mutate the stored surprise into deviation
+    for (_, _, surprise_or_dev) in &mut deviations {
+        *surprise_or_dev = (*surprise_or_dev - entropy).abs();
+    }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
