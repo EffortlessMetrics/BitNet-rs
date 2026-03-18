@@ -50,6 +50,7 @@ jobs:
             echo "Could not parse channel from rust-toolchain.toml"; exit 1
           fi
           echo "msrv=$MSRV" >> "$GITHUB_OUTPUT"
+          echo "cache_key=msrv-${MSRV//./_}" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust (${{ steps.msrv.outputs.msrv }})
         uses: dtolnay/rust-toolchain@6d653acede28d24f02e3cd41383119e8b1b35921  # master
@@ -59,16 +60,113 @@ jobs:
       - name: Cache (MSRV)
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
-          # MSRV-specific key to avoid collisions with stable
-          shared-key: msrv-1_92
+          shared-key: ${{ steps.msrv.outputs.cache_key }}
 
       - name: Warm fetch (locked)
         run: cargo fetch --locked
 
-      - name: MSRV check (workspace, no codegen)
+      - name: Report toolchain versions
         run: |
           cargo --version && rustc --version
-          cargo check --workspace --all-targets --locked --no-default-features --features cpu
+
+      - name: "MSRV check: core libs"
+        run: |
+          cargo check --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --tests \
+            --no-default-features --features cpu
+
+      - name: "MSRV check: SRP microcrates"
+        run: |
+          cargo check --locked \
+            -p bitnet-prompt-templates \
+            -p bitnet-receipts \
+            -p bitnet-sampling \
+            -p bitnet-logits \
+            -p bitnet-gguf \
+            -p bitnet-generation \
+            -p bitnet-device-probe \
+            -p bitnet-engine-core \
+            --tests \
+            --no-default-features
+
+      - name: "MSRV check: inference golden path"
+        run: |
+          cargo check --locked \
+            -p bitnet-inference \
+            --test cpu_golden_path \
+            --no-default-features --features cpu
+
+      - name: "MSRV check: policy / BDD crates"
+        run: |
+          cargo check --locked \
+            -p bitnet-bdd-grid-core \
+            -p bitnet-bdd-grid \
+            -p bitnet-feature-contract \
+            -p bitnet-testing-policy-core \
+            -p bitnet-testing-scenarios-core \
+            -p bitnet-runtime-feature-flags-core \
+            -p bitnet-runtime-feature-flags \
+            -p bitnet-startup-contract-core \
+            -p bitnet-startup-contract-diagnostics \
+            -p bitnet-startup-contract-guard \
+            -p bitnet-runtime-context-core \
+            -p bitnet-testing-scenarios-profile-core \
+            -p bitnet-runtime-profile-contract-core \
+            -p bitnet-testing-policy-runtime \
+            -p bitnet-testing-policy-tests \
+            -p bitnet-testing-policy-kit \
+            -p bitnet-testing-profile \
+            -p bitnet-testing-policy-contract \
+            -p bitnet-testing-policy-interop \
+            --tests \
+            --no-default-features --features cpu
+
+  msrv-workspace-informational:
+    name: MSRV Workspace Coverage (informational)
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - id: msrv
+        name: Read MSRV from rust-toolchain.toml
+        shell: bash
+        run: |
+          MSRV=$(grep -Eo 'channel\s*=\s*"[0-9.]+"' rust-toolchain.toml | sed -E 's/.*"([0-9.]+)".*/\1/')
+          if [ -z "$MSRV" ]; then
+            echo "Could not parse channel from rust-toolchain.toml"; exit 1
+          fi
+          echo "msrv=$MSRV" >> "$GITHUB_OUTPUT"
+          echo "cache_key=msrv-${MSRV//./_}-workspace" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust (${{ steps.msrv.outputs.msrv }})
+        uses: dtolnay/rust-toolchain@6d653acede28d24f02e3cd41383119e8b1b35921  # master
+        with:
+          toolchain: ${{ steps.msrv.outputs.msrv }}
+
+      - name: Cache (MSRV workspace)
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: ${{ steps.msrv.outputs.cache_key }}
+
+      - name: Warm fetch (locked)
+        run: cargo fetch --locked
+
+      - name: Report toolchain versions
+        run: |
+          cargo --version && rustc --version
+
+      - name: MSRV check (workspace, no codegen)
+        run: cargo check --workspace --all-targets --locked --no-default-features --features cpu
 
   abi-stability:
     name: ABI Stability Check

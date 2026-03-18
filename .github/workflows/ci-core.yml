@@ -100,7 +100,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Build core crates (libs, CPU features)
+      - name: Build core libs (CPU features)
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -109,15 +109,16 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --no-default-features --features cpu
-          # SRP microcrates (no feature flags required)
+
+      - name: Build SRP microcrates
+        run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
 
-      - name: Run unit tests (libs only, CPU features)
+      - name: "Run unit tests: core libs"
         run: |
-          # Target only the library crates to keep feedback fast.
           cargo test --locked \
             -p bitnet-common \
             -p bitnet-models \
@@ -127,16 +128,13 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
-          # SRP microcrates (unit tests + integration tests)
+
+      - name: "Run unit tests: SRP microcrates"
+        run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
-          # Phase 5: CPU golden path E2E (always-on, no model download)
-          cargo test --locked \
-            -p bitnet-inference --test cpu_golden_path \
-            --no-default-features --features cpu
-          # Phase 6 SRP microcrates (no feature flags required)
           cargo test --locked \
             -p bitnet-logits \
             -p bitnet-gguf \
@@ -144,7 +142,15 @@ jobs:
             -p bitnet-device-probe \
             -p bitnet-engine-core \
             --no-default-features
-          # BDD/policy/testing-infrastructure crates (cpu feature required for profile tests)
+
+      - name: "Run tests: inference golden path"
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
+      - name: "Run unit tests: policy / BDD crates"
+        run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
             -p bitnet-bdd-grid \
@@ -167,7 +173,7 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
-      - name: Run AVX2-targeted unit tests (x86_64 static +avx2)
+      - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
         if: runner.os == 'Linux' && runner.arch == 'X64'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
