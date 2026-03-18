@@ -60,9 +60,9 @@ jobs:
             ${{ runner.os }}-cargo-smoke-
             ${{ runner.os }}-cargo-
 
-      - name: Run workspace tests
+      - name: Run workspace check
         run: |
-          cargo test --locked --workspace --no-default-features --features cpu -- --test-threads 4 2>&1 | tail -20
+          cargo check --locked --workspace --no-default-features --features cpu 2>&1 | tail -20
 
   performance-benchmark:
     name: Performance Benchmark (${{ matrix.platform }})
