@@ -607,7 +607,7 @@ mod tests {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let mut out = [0.0f32; 8];
         reshape_strided_neon(&data, &[2, 2, 2], &[4, 2, 1], &[8], &mut out);
-        assert_eq!(out, data);
+        assert_eq!(out.to_vec(), data);
     }
 
     #[test]
@@ -685,7 +685,7 @@ mod tests {
         let mut out = [0.0f32; 8];
         let (s, _st) = squeeze_neon(&data, &[1, 8], &[8, 1], Some(&mut out));
         assert_eq!(s, vec![8]);
-        assert_eq!(out, data);
+        assert_eq!(out.to_vec(), data);
     }
 
     #[test]
@@ -725,7 +725,7 @@ mod tests {
         let data: Vec<f32> = (0..5).map(|x| x as f32).collect();
         let mut out = [0.0f32; 5];
         let _ = squeeze_neon(&data, &[1, 5], &[5, 1], Some(&mut out));
-        assert_eq!(out, data);
+        assert_eq!(out.to_vec(), data);
     }
 
     // ── unsqueeze_neon ────────────────────────────────────────────────
@@ -768,7 +768,7 @@ mod tests {
         let mut out = [0.0f32; 8];
         let (s, _) = unsqueeze_neon(&data, &[8], &[1], 0, Some(&mut out));
         assert_eq!(s, vec![1, 8]);
-        assert_eq!(out, data);
+        assert_eq!(out.to_vec(), data);
     }
 
     #[test]

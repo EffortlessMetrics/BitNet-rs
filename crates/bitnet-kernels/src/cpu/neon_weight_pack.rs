@@ -704,7 +704,7 @@ mod tests {
 
     #[test]
     fn test_pack_ternary_17_values() {
-        let mut w = [1.0f32; 16];
+        let mut w: Vec<f32> = vec![1.0f32; 16];
         w.push(-1.0);
         let mut p = [0u8; 5];
         pack_ternary_weights(&w, &mut p);

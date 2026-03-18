@@ -1296,7 +1296,7 @@ mod tests {
         let data = vec![1.0, -1.0, 0.0, 2.0, -2.0];
         let mut out = [0.0f32; 5];
         apply_scale(&data, 3.0, &mut out);
-        assert_eq!(out, vec![3.0, -3.0, 0.0, 6.0, -6.0]);
+        assert_eq!(out.to_vec(), vec![3.0, -3.0, 0.0, 6.0, -6.0]);
     }
 
     #[test]
