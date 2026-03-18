@@ -112,24 +112,29 @@ jobs:
           - crate: bitnet-server
             label: gpu
             flags: "--no-default-features --features gpu"
+            allow_failure: true
           - crate: bitnet-kernels
             label: cpu
             flags: "--no-default-features --features cpu"
           - crate: bitnet-kernels
             label: gpu
             flags: "--no-default-features --features gpu"
+            allow_failure: true
           - crate: bitnet-inference
             label: cpu
             flags: "--no-default-features --features cpu"
           - crate: bitnet-inference
             label: gpu
             flags: "--no-default-features --features gpu"
+            allow_failure: true
           - crate: bitnet-kernels
             label: oneapi
             flags: "--no-default-features --features oneapi"
+            allow_failure: true
           - crate: bitnet-device-probe
             label: oneapi
             flags: "--no-default-features --features oneapi"
+            allow_failure: true
 
     steps:
       - name: Checkout
@@ -146,4 +151,6 @@ jobs:
           key: crate-check-${{ matrix.crate }}-${{ matrix.label }}
 
       - name: cargo check -p ${{ matrix.crate }} (${{ matrix.label }})
+        # continue-on-error for GPU/oneapi checks that require CUDA/OpenCL runtime
+        continue-on-error: ${{ matrix.allow_failure == true }}
         run: cargo check -p ${{ matrix.crate }} --locked ${{ matrix.flags }}
