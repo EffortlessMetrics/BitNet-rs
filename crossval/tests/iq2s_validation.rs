@@ -37,7 +37,7 @@ fn test_iq2s_rust_ffi_parity() -> Result<()> {
             let block = &mut test_data[block_offset..block_offset + block_bytes];
 
             // Set scale (first 2 bytes as f16)
-            let scale = f16::from_f32(rng.random_range(0.1..2.0));
+            let scale = f16::from_f32(rng.gen_range(0.1..2.0));
             block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
             // Set quantized data (qs: 64 bytes starting at offset 2)
@@ -113,7 +113,7 @@ fn test_iq2s_quantization_roundtrip() -> Result<()> {
     let test_cases = vec![
         ("uniform", vec![1.0f32; 256]),
         ("ascending", (0..256).map(|i| i as f32 * 0.01).collect::<Vec<f32>>()),
-        ("random", (0..256).map(|_| rng.random_range(-2.0..2.0)).collect::<Vec<f32>>()),
+        ("random", (0..256).map(|_| rng.gen_range(-2.0..2.0)).collect::<Vec<f32>>()),
         ("sine_wave", (0..256).map(|i| ((i as f32) * 0.1).sin()).collect::<Vec<f32>>()),
     ];
 
@@ -255,7 +255,7 @@ fn test_iq2s_performance_comparison() -> Result<()> {
     let mut rng = rand::rngs::StdRng::seed_from_u64(789);
 
     for block in test_data.chunks_mut(block_bytes) {
-        let scale = f16::from_f32(rng.random_range(0.5..1.5));
+        let scale = f16::from_f32(rng.gen_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
         for i in &mut block[2..66] {
             *i = rng.random();

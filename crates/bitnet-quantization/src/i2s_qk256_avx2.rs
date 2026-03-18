@@ -392,7 +392,7 @@ mod tests {
         }
 
         // Generate random input vector
-        let x: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
+        let x: Vec<f32> = (0..cols).map(|_| rng.gen_range(-10.0..10.0)).collect();
 
         // Compute reference result using explicit scalar row kernel (no dispatch),
         // so this test always compares AVX2 against true scalar execution.
@@ -496,7 +496,7 @@ mod tests {
         }
 
         // Generate random input vector
-        let x: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
+        let x: Vec<f32> = (0..cols).map(|_| rng.gen_range(-10.0..10.0)).collect();
 
         // Warmup
         let mut y_warmup = vec![0.0f32; rows];

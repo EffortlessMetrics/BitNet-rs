@@ -49,7 +49,7 @@ fn test_qk256_dequant_correctness() {
     for byte in quantized.iter_mut() {
         *byte = rng.random();
     }
-    let scales: Vec<f32> = (0..num_blocks).map(|_| rng.random_range(0.5..5.0)).collect();
+    let scales: Vec<f32> = (0..num_blocks).map(|_| rng.gen_range(0.5..5.0)).collect();
     let result_avx2 =
         kernel.dequantize_qk256(&quantized, &scales, 256).expect("AVX2 dequantize should succeed");
     let result_scalar = kernel
@@ -134,7 +134,7 @@ fn test_qk256_deterministic_inference() -> Result<()> {
     for byte in quantized.iter_mut() {
         *byte = rng.random();
     }
-    let scales: Vec<f32> = (0..num_blocks).map(|_| rng.random_range(0.5..5.0)).collect();
+    let scales: Vec<f32> = (0..num_blocks).map(|_| rng.gen_range(0.5..5.0)).collect();
     let mut results = Vec::new();
     for _ in 0..5 {
         let result = kernel.dequantize_qk256(&quantized, &scales, 256)?;

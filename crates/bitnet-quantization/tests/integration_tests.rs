@@ -137,7 +137,7 @@ fn test_quantize_dequantize_round_trip_accuracy() {
     use rand::RngExt;
     use rand_core::SeedableRng as _;
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
-    let data: Vec<f32> = (0..64).map(|_| rng.random_range(-0.1f32..=0.1f32)).collect();
+    let data: Vec<f32> = (0..64).map(|_| rng.gen_range(-0.1f32..=0.1f32)).collect();
 
     let tensor = make_tensor(data.clone(), &[64]);
     let quantizer = I2SQuantizer::new();

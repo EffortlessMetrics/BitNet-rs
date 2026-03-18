@@ -1147,7 +1147,7 @@ mod tests {
         }
 
         // Generate random scales
-        let scales: Vec<f32> = (0..num_blocks).map(|_| rng.random_range(0.5..5.0)).collect();
+        let scales: Vec<f32> = (0..num_blocks).map(|_| rng.gen_range(0.5..5.0)).collect();
 
         // Compute AVX2 result
         let result_avx2 = kernel
