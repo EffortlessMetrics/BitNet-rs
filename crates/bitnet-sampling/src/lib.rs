@@ -246,7 +246,7 @@ impl SamplingStrategy {
         let sum: f32 = probabilities.iter().sum();
         if sum <= 0.0 {
             // Fallback to uniform distribution within valid vocab range
-            let idx = self.rng.gen_range(0..vocab_size);
+            let idx = self.rng.random_range(0..vocab_size);
             return Ok(idx as u32);
         }
 

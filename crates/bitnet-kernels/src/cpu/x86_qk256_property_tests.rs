@@ -55,7 +55,7 @@ fn test_avx2_dequantize_qk256_property_block_counts() {
         }
 
         // Generate random scales
-        let scales: Vec<f32> = (0..num_blocks).map(|_| rng.gen_range(0.1..10.0)).collect();
+        let scales: Vec<f32> = (0..num_blocks).map(|_| rng.random_range(0.1..10.0)).collect();
 
         // Compute AVX2 result
         let result_avx2 = kernel
@@ -256,7 +256,7 @@ fn test_avx2_dequantize_qk256_property_alignment() {
 
     for offset in offsets {
         let quantized = &padded_quantized[offset..offset + NUM_BLOCKS * QK256_PACKED_BYTES];
-        let scales: Vec<f32> = (0..NUM_BLOCKS).map(|_| rng.gen_range(0.5..5.0)).collect();
+        let scales: Vec<f32> = (0..NUM_BLOCKS).map(|_| rng.random_range(0.5..5.0)).collect();
 
         // Compute AVX2 result (should handle unaligned access)
         let result_avx2 = kernel

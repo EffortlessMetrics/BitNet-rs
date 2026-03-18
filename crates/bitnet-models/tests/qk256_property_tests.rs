@@ -210,7 +210,7 @@ proptest! {
         let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
         let total_codes = rows * cols;
 
-        let codes: Vec<u8> = (0..total_codes).map(|_| rng.gen_range(0..=3)).collect();
+        let codes: Vec<u8> = (0..total_codes).map(|_| rng.random_range(0..=3)).collect();
 
         // Pack codes into bytes
         let mut packed_data = vec![0u8; rows * row_stride_bytes];
@@ -239,7 +239,7 @@ proptest! {
         }
 
         // Generate random input vector
-        let input: Vec<f32> = (0..cols).map(|_| rng.gen_range(-10.0..10.0)).collect();
+        let input: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
 
         // Compute QK256 result
         let mut qk256_output = vec![0.0f32; rows];
@@ -415,7 +415,7 @@ proptest! {
         let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
 
         // Create random codes
-        let codes: Vec<u8> = (0..rows * cols).map(|_| rng.gen_range(0..=3)).collect();
+        let codes: Vec<u8> = (0..rows * cols).map(|_| rng.random_range(0..=3)).collect();
 
         // Pack codes
         let mut packed_data = vec![0u8; rows * row_stride_bytes];
@@ -440,7 +440,7 @@ proptest! {
         }
 
         // Generate random input
-        let input: Vec<f32> = (0..cols).map(|_| rng.gen_range(-5.0..5.0)).collect();
+        let input: Vec<f32> = (0..cols).map(|_| rng.random_range(-5.0..5.0)).collect();
 
         // Compute both versions
         let mut qk256_output = vec![0.0f32; rows];

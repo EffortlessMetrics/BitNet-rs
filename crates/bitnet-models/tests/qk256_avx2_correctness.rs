@@ -73,10 +73,10 @@ fn generate_random_quantized_data(num_bytes: usize, seed: u64) -> Vec<u8> {
 
     for _ in 0..num_bytes {
         // Generate 4 random codes (0..=3) and pack them into a byte
-        let c0 = rng.gen_range(0..4u8);
-        let c1 = rng.gen_range(0..4u8);
-        let c2 = rng.gen_range(0..4u8);
-        let c3 = rng.gen_range(0..4u8);
+        let c0 = rng.random_range(0..4u8);
+        let c1 = rng.random_range(0..4u8);
+        let c2 = rng.random_range(0..4u8);
+        let c3 = rng.random_range(0..4u8);
 
         let byte = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
         data.push(byte);
@@ -97,7 +97,7 @@ fn generate_random_quantized_data(num_bytes: usize, seed: u64) -> Vec<u8> {
 /// Vector of random f32 values in range [-10.0, 10.0]
 fn generate_random_input(len: usize, seed: u64) -> Vec<f32> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
-    (0..len).map(|_| rng.gen_range(-10.0..10.0)).collect()
+    (0..len).map(|_| rng.random_range(-10.0..10.0)).collect()
 }
 
 /// Test AVX2 matches scalar for single block (256 elements)

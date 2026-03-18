@@ -470,7 +470,7 @@ fn get_cpu_usage() -> f64 {
     // In practice, this would get actual CPU usage
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    rng.gen_range(10.0..80.0)
+    rng.random_range(10.0..80.0)
 }
 
 /// Get memory usage (mock implementation)
@@ -478,7 +478,7 @@ fn get_memory_usage() -> f64 {
     // In practice, this would get actual memory usage
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    rng.gen_range(1024.0 * 1024.0 * 100.0..1024.0 * 1024.0 * 1000.0) // 100MB - 1GB
+    rng.random_range(1024.0 * 1024.0 * 100.0..1024.0 * 1024.0 * 1000.0) // 100MB - 1GB
 }
 
 /// Get GPU utilization (mock implementation)
@@ -486,7 +486,7 @@ fn get_gpu_utilization() -> f64 {
     // In practice, this would get actual GPU utilization
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    rng.gen_range(0.0..100.0)
+    rng.random_range(0.0..100.0)
 }
 
 /// Mock model for demonstration

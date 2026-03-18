@@ -28,7 +28,7 @@ proptest! {
         use rand::SeedableRng;
         use rand::Rng;
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
-        let input: Vec<f32> = (0..len).map(|_| rng.gen_range(-10.0f32..10.0)).collect();
+        let input: Vec<f32> = (0..len).map(|_| rng.random_range(-10.0f32..10.0)).collect();
         let output = batched_softmax(&input, 1, len).unwrap();
         let sum: f32 = output.iter().sum();
         prop_assert!((sum - 1.0).abs() < 1e-5, "sum = {}", sum);
@@ -214,7 +214,7 @@ proptest! {
         use rand::SeedableRng;
         use rand::Rng;
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
-        let input: Vec<f32> = (0..batch * seq_len).map(|_| rng.gen_range(-10.0f32..10.0)).collect();
+        let input: Vec<f32> = (0..batch * seq_len).map(|_| rng.random_range(-10.0f32..10.0)).collect();
         let output = batched_softmax(&input, batch, seq_len).unwrap();
         for b in 0..batch {
             let row = &output[b * seq_len..(b + 1) * seq_len];
