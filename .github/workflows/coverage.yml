@@ -83,8 +83,9 @@ jobs:
             -e CARGO_INCREMENTAL \
             -e CARGO_PROFILE_TEST_DEBUG \
             "${{ env.RUST_CI_IMAGE }}" \
-            bash -lc '
+            bash -c '
               set -euo pipefail
+              export PATH="/usr/local/cargo/bin:${PATH}"
               cargo llvm-cov clean --workspace
               cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
                 --ignore-run-fail
