@@ -1053,7 +1053,7 @@ mod tests {
     #[test]
     fn test_popcount_17_bytes() {
         // 16 bytes of 0xFF + 1 byte of 0x0F
-        let mut data = [0xFFu8; 16];
+        let mut data: Vec<u8> = vec![0xFFu8; 16];
         data.push(0x0F); // 4 bits
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 128 + 4);

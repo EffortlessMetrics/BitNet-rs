@@ -517,7 +517,7 @@ mod tests {
         let input: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let mut out = [0.0f32; 3];
         max_pool1d_neon(&input, 8, 3, 2, &mut out);
-        assert_eq!(out, vec![2.0, 4.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 4.0, 6.0]);
     }
 
     #[test]
@@ -525,7 +525,7 @@ mod tests {
         let input = vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
         let mut out = [0.0f32; 6];
         max_pool1d_neon(&input, 8, 3, 1, &mut out);
-        assert_eq!(out, vec![4.0, 4.0, 5.0, 9.0, 9.0, 9.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 4.0, 5.0, 9.0, 9.0, 9.0]);
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod tests {
         let input = vec![1.0, 8.0, 3.0, 7.0, 2.0, 9.0, 0.0, 4.0, 6.0, 5.0];
         let mut out = [0.0f32; 2];
         max_pool1d_neon(&input, 10, 5, 3, &mut out);
-        assert_eq!(out, vec![8.0, 9.0]);
+        assert_eq!(out.to_vec(), vec![8.0, 9.0]);
     }
 
     #[test]
@@ -567,7 +567,7 @@ mod tests {
         let mut out = [0.0f32; 3];
         max_pool1d_neon(&input, 10, 2, 3, &mut out);
         // windows: [0,1]=1, [3,4]=4, [6,7]=7
-        assert_eq!(out, vec![1.0, 4.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 4.0, 7.0]);
     }
 
     #[test]
@@ -575,7 +575,7 @@ mod tests {
         let input = vec![-5.0, -3.0, -8.0, -1.0, -4.0];
         let mut out = [0.0f32; 4]; // (5-2)/1+1=4
         max_pool1d_neon(&input, 5, 2, 1, &mut out);
-        assert_eq!(out, vec![-3.0, -3.0, -1.0, -1.0]);
+        assert_eq!(out.to_vec(), vec![-3.0, -3.0, -1.0, -1.0]);
     }
 
     #[test]
@@ -583,7 +583,7 @@ mod tests {
         let input = [7.0; 8];
         let mut out = [0.0f32; 3]; // (8-4)/2+1=3
         max_pool1d_neon(&input, 8, 4, 2, &mut out);
-        assert_eq!(out, vec![7.0, 7.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![7.0, 7.0, 7.0]);
     }
 
     #[test]
@@ -591,7 +591,7 @@ mod tests {
         let input = vec![1.0, 4.0, 2.0, 3.0, 5.0, 0.0, 8.0, 6.0];
         let mut out = [0.0f32; 2];
         max_pool1d_neon(&input, 8, 4, 4, &mut out);
-        assert_eq!(out, vec![4.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 8.0]);
     }
 
     #[test]
@@ -608,7 +608,7 @@ mod tests {
         let mut out = [0.0f32; 2]; // (3-2)/1+1=2
         // input_len = 3 → only consider first 3 elements
         max_pool1d_neon(&input, 3, 2, 1, &mut out);
-        assert_eq!(out, vec![20.0, 30.0]);
+        assert_eq!(out.to_vec(), vec![20.0, 30.0]);
     }
 
     #[test]
@@ -803,7 +803,7 @@ mod tests {
         let input = vec![3.0, 7.0, 11.0];
         let mut out = [0.0f32; 3];
         global_avg_pool_neon(&input, 3, 1, &mut out);
-        assert_eq!(out, vec![3.0, 7.0, 11.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 7.0, 11.0]);
     }
 
     #[test]
@@ -837,7 +837,7 @@ mod tests {
         let input = [0.0f32; 16];
         let mut out = [1.0f32; 2];
         global_avg_pool_neon(&input, 2, 8, &mut out);
-        assert_eq!(out, vec![0.0, 0.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 0.0]);
     }
 
     #[test]
@@ -887,7 +887,7 @@ mod tests {
         let input: Vec<f32> = (0..15).map(|x| x as f32).collect();
         let mut out = [0.0f32; 3];
         global_max_pool_neon(&input, 3, 5, &mut out);
-        assert_eq!(out, vec![4.0, 9.0, 14.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 9.0, 14.0]);
     }
 
     #[test]
@@ -903,7 +903,7 @@ mod tests {
         let input = vec![3.0, 7.0, 11.0];
         let mut out = [0.0f32; 3];
         global_max_pool_neon(&input, 3, 1, &mut out);
-        assert_eq!(out, vec![3.0, 7.0, 11.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 7.0, 11.0]);
     }
 
     #[test]
@@ -919,7 +919,7 @@ mod tests {
         let input = [7.0; 8];
         let mut out = [0.0f32; 2];
         global_max_pool_neon(&input, 2, 4, &mut out);
-        assert_eq!(out, vec![7.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![7.0, 7.0]);
     }
 
     #[test]
@@ -944,7 +944,7 @@ mod tests {
         let input = vec![1.0, 9.0, 3.0, 4.0, 10.0, 2.0, 30.0, 5.0];
         let mut out = [0.0f32; 2];
         global_max_pool_neon(&input, 2, 4, &mut out);
-        assert_eq!(out, vec![9.0, 30.0]);
+        assert_eq!(out.to_vec(), vec![9.0, 30.0]);
     }
 
     #[test]
@@ -1010,7 +1010,7 @@ mod tests {
         let input = vec![2.0, 4.0, 6.0, 8.0];
         let mut out = [0.0f32; 4];
         adaptive_avg_pool1d_neon(&input, 4, 4, &mut out);
-        assert_eq!(out, vec![2.0, 4.0, 6.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 4.0, 6.0, 8.0]);
     }
 
     #[test]

@@ -1221,14 +1221,14 @@ mod tests {
         let mut data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let mask = [true, false, true, false, true];
         masked_fill(&mut data, &mask, -1.0);
-        assert_eq!(data, vec![-1.0, 2.0, -1.0, 4.0, -1.0]);
+        assert_eq!(data.to_vec(), vec![-1.0, 2.0, -1.0, 4.0, -1.0]);
     }
 
     #[test]
     fn test_masked_fill_all_true() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
         masked_fill(&mut data, &[true; 4], 0.0);
-        assert_eq!(data, vec![0.0; 4]);
+        assert_eq!(data.to_vec(), vec![0.0; 4]);
     }
 
     #[test]
@@ -1243,7 +1243,7 @@ mod tests {
     fn test_masked_fill_tail() {
         let mut data = vec![1.0, 2.0, 3.0];
         masked_fill(&mut data, &[false, true, false], 0.0);
-        assert_eq!(data, vec![1.0, 0.0, 3.0]);
+        assert_eq!(data.to_vec(), vec![1.0, 0.0, 3.0]);
     }
 
     #[test]
@@ -1317,13 +1317,13 @@ mod tests {
         let shape = [3, 4];
         let coords = [0, 0, 1, 2, 2, 3]; // 3 coord-pairs
         let flat = multi_index_map(&coords, &shape);
-        assert_eq!(flat, vec![0, 6, 11]);
+        assert_eq!(flat.to_vec(), vec![0, 6, 11]);
     }
 
     #[test]
     fn test_multi_index_map_single() {
         let flat = multi_index_map(&[2, 1], &[3, 4]);
-        assert_eq!(flat, vec![9]);
+        assert_eq!(flat.to_vec(), vec![9]);
     }
 
     #[test]
@@ -1430,7 +1430,7 @@ mod tests {
         fn test_masked_fill_exact_chunk() {
             let mut data = vec![1.0, 2.0, 3.0, 4.0];
             masked_fill(&mut data, &[true, false, true, false], 0.0);
-            assert_eq!(data, vec![0.0, 2.0, 0.0, 4.0]);
+            assert_eq!(data.to_vec(), vec![0.0, 2.0, 0.0, 4.0]);
         }
 
         #[test]
@@ -1455,7 +1455,7 @@ mod tests {
 
         #[test]
         fn test_scatter_rows_add_neon_path() {
-            let src: Vec<f32> = [2.0; 8]; // 1×8
+            let src: Vec<f32> = vec![2.0; 8]; // 1×8
             let indices = [0];
             let mut out = [1.0; 8]; // 1×8
             scatter_rows_add(&src, 8, &indices, &mut out);

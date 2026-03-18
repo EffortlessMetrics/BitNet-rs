@@ -277,7 +277,7 @@ mod tests {
         let indices = [4, 2, 0, 3, 1];
         let mut out = [0.0; 5];
         gather(&src, &indices, &mut out);
-        assert_eq!(out, vec![50.0, 30.0, 10.0, 40.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![50.0, 30.0, 10.0, 40.0, 20.0]);
     }
 
     #[test]
@@ -287,7 +287,7 @@ mod tests {
         let indices = [2, 0, 1];
         let mut out = [0.0; 3];
         gather(&src, &indices, &mut out);
-        assert_eq!(out, vec![3.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod tests {
         let indices = [0, 1, 2, 3, 4];
         let mut out = [10.0; 5];
         scatter_add(&src, &indices, &mut out);
-        assert_eq!(out, vec![11.0, 12.0, 13.0, 14.0, 15.0]);
+        assert_eq!(out.to_vec(), vec![11.0, 12.0, 13.0, 14.0, 15.0]);
     }
 
     #[test]
@@ -316,7 +316,7 @@ mod tests {
         let indices = [0, 0, 1, 1];
         let mut out = [0.0; 2];
         scatter_add(&src, &indices, &mut out);
-        assert_eq!(out, vec![3.0, 7.0]); // 1+2, 3+4
+        assert_eq!(out.to_vec(), vec![3.0, 7.0]); // 1+2, 3+4
     }
 
     #[test]
@@ -337,7 +337,7 @@ mod tests {
         let indices = [3, 0];
         let mut out = [0.0; 6];
         index_select(&src, 3, &indices, &mut out);
-        assert_eq!(out, vec![9.0, 10.0, 11.0, 0.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![9.0, 10.0, 11.0, 0.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -367,7 +367,7 @@ mod tests {
         let mut data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let mask = vec![true, false, true, false, true];
         masked_fill(&mut data, &mask, -1.0);
-        assert_eq!(data, vec![-1.0, 2.0, -1.0, 4.0, -1.0]);
+        assert_eq!(data.to_vec(), vec![-1.0, 2.0, -1.0, 4.0, -1.0]);
     }
 
     #[test]
@@ -375,7 +375,7 @@ mod tests {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
         let mask = [true; 4];
         masked_fill(&mut data, &mask, 0.0);
-        assert_eq!(data, vec![0.0; 4]);
+        assert_eq!(data.to_vec(), vec![0.0; 4]);
     }
 
     #[test]

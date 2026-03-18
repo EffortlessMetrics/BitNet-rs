@@ -812,7 +812,7 @@ mod tests {
 
     #[test]
     fn i8_dim_1() {
-        let table: Vec<i8> = [42];
+        let table: Vec<i8> = vec![42];
         let mut out = [0.0f32; 1];
         quant_embed_i8_lookup(&table, 1.0, 0, 1, 0, &mut out);
         assert!(vec_approx_eq(&out, &[42.0]));
@@ -925,7 +925,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim must be > 0")]
     fn batch_dim_zero() {
-        let table: Vec<f32> = [1.0];
+        let table: Vec<f32> = vec![1.0];
         let mut out = [0.0f32; 1];
         quant_embed_batch_lookup(&table, 0, &[0], &mut out);
     }
@@ -1006,7 +1006,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim must be > 0")]
     fn gather_sum_dim_zero() {
-        let table: Vec<f32> = [1.0];
+        let table: Vec<f32> = vec![1.0];
         let mut out = [0.0f32; 1];
         quant_embed_gather_sum(&table, 0, &[0], &mut out);
     }

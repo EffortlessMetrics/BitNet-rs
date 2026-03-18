@@ -958,7 +958,7 @@ mod tests {
     #[test]
     fn test_calibrate_clips_outlier() {
         // 99 values at 1.0, one outlier at 100.0
-        let mut input = [1.0; 99];
+        let mut input: Vec<f32> = vec![1.0; 99];
         input.push(100.0);
         let (_lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
         // At 99th percentile of 100 values, the clip index rounds to

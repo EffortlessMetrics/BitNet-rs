@@ -526,7 +526,7 @@ mod tests {
     fn test_rotate_scalar_basic() {
         let mut cache: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
         kv_cache_rotate_scalar(&mut cache, 1, 1, 1);
-        assert_eq!(cache, vec![2.0, 3.0, 4.0, 1.0]);
+        assert_eq!(cache.to_vec(), vec![2.0, 3.0, 4.0, 1.0]);
     }
 
     #[test]
@@ -534,7 +534,7 @@ mod tests {
         // 4 positions, head_dim=2, num_heads=1 → stride=2
         let mut cache: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         kv_cache_rotate_scalar(&mut cache, 2, 2, 1);
-        assert_eq!(cache, vec![5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(cache.to_vec(), vec![5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -564,7 +564,7 @@ mod tests {
     fn test_rotate_scalar_single_position() {
         let mut cache: Vec<f32> = vec![42.0, 43.0];
         kv_cache_rotate_scalar(&mut cache, 5, 2, 1);
-        assert_eq!(cache, vec![42.0, 43.0]);
+        assert_eq!(cache.to_vec(), vec![42.0, 43.0]);
     }
 
     #[test]
@@ -573,7 +573,10 @@ mod tests {
         let mut cache: Vec<f32> =
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
         kv_cache_rotate_scalar(&mut cache, 1, 2, 2);
-        assert_eq!(cache, vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(
+            cache.to_vec(),
+            vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 1.0, 2.0, 3.0, 4.0]
+        );
     }
 
     // ── Quantize / dequantize tests ─────────────────────────────────
@@ -857,14 +860,14 @@ mod tests {
         fn test_rotate_neon_basic() {
             let mut cache: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
             kv_cache_rotate_neon(&mut cache, 1, 1, 1);
-            assert_eq!(cache, vec![2.0, 3.0, 4.0, 1.0]);
+            assert_eq!(cache.to_vec(), vec![2.0, 3.0, 4.0, 1.0]);
         }
 
         #[test]
         fn test_rotate_neon_two_positions() {
             let mut cache: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             kv_cache_rotate_neon(&mut cache, 2, 2, 1);
-            assert_eq!(cache, vec![5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(cache.to_vec(), vec![5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0]);
         }
 
         #[test]
@@ -894,7 +897,7 @@ mod tests {
         fn test_rotate_neon_single_position() {
             let mut cache: Vec<f32> = vec![42.0, 43.0];
             kv_cache_rotate_neon(&mut cache, 5, 2, 1);
-            assert_eq!(cache, vec![42.0, 43.0]);
+            assert_eq!(cache.to_vec(), vec![42.0, 43.0]);
         }
 
         #[test]
@@ -902,7 +905,10 @@ mod tests {
             let mut cache: Vec<f32> =
                 vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
             kv_cache_rotate_neon(&mut cache, 1, 2, 2);
-            assert_eq!(cache, vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(
+                cache.to_vec(),
+                vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 1.0, 2.0, 3.0, 4.0]
+            );
         }
 
         // ── Rotate parity ───────────────────────────────────────────

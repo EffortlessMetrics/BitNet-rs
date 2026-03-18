@@ -623,16 +623,16 @@ mod tests {
     fn test_pad_batch_uniform() {
         let seqs = vec![vec![1, 2, 3], vec![4, 5, 6]];
         let (padded, mask) = pad_batch(&seqs, 3, 0);
-        assert_eq!(padded, vec![1, 2, 3, 4, 5, 6]);
-        assert_eq!(mask, vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(padded.to_vec(), vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(mask.to_vec(), vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]
     fn test_pad_batch_with_shorter_seq() {
         let seqs = vec![vec![1, 2], vec![3, 4, 5]];
         let (padded, mask) = pad_batch(&seqs, 3, 0);
-        assert_eq!(padded, vec![1, 2, 0, 3, 4, 5]);
-        assert_eq!(mask, vec![1.0, 1.0, 0.0, 1.0, 1.0, 1.0]);
+        assert_eq!(padded.to_vec(), vec![1, 2, 0, 3, 4, 5]);
+        assert_eq!(mask.to_vec(), vec![1.0, 1.0, 0.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]
@@ -647,8 +647,8 @@ mod tests {
     fn test_pad_batch_single_token() {
         let seqs = vec![vec![7]];
         let (padded, mask) = pad_batch(&seqs, 4, 99);
-        assert_eq!(padded, vec![7, 99, 99, 99]);
-        assert_eq!(mask, vec![1.0, 0.0, 0.0, 0.0]);
+        assert_eq!(padded.to_vec(), vec![7, 99, 99, 99]);
+        assert_eq!(mask.to_vec(), vec![1.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]
@@ -682,7 +682,7 @@ mod tests {
         let mut logits = vec![1.0, 2.0, 3.0, 4.0];
         let mask = vec![1.0, 1.0, 0.0, 0.0];
         apply_padding_mask(&mut logits, &mask);
-        assert_eq!(logits, vec![1.0, 2.0, 0.0, 0.0]);
+        assert_eq!(logits.to_vec(), vec![1.0, 2.0, 0.0, 0.0]);
     }
 
     #[test]
@@ -690,7 +690,7 @@ mod tests {
         let mut logits = [5.0; 8];
         let mask = [1.0; 8];
         apply_padding_mask(&mut logits, &mask);
-        assert_eq!(logits, vec![5.0; 8]);
+        assert_eq!(logits.to_vec(), vec![5.0; 8]);
     }
 
     #[test]
@@ -740,7 +740,7 @@ mod tests {
         let b = vec![2.0, 3.0, 4.0, 5.0];
         let mut out = [0.0; 4];
         neon_mul_f32(&a, &b, &mut out, 4);
-        assert_eq!(out, vec![2.0, 6.0, 12.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 6.0, 12.0, 20.0]);
     }
 
     #[test]
@@ -749,7 +749,7 @@ mod tests {
         let b = vec![2.0, 2.0, 2.0, 2.0, 2.0];
         let mut out = [0.0; 5];
         neon_mul_f32(&a, &b, &mut out, 5);
-        assert_eq!(out, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
@@ -758,7 +758,7 @@ mod tests {
         let b = [0.0; 8];
         let mut out = [9.0; 8];
         neon_mul_f32(&a, &b, &mut out, 8);
-        assert_eq!(out, vec![0.0; 8]);
+        assert_eq!(out.to_vec(), vec![0.0; 8]);
     }
 
     // -- BatchStatistics tests -------------------------------------------

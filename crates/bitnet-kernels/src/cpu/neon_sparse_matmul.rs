@@ -1620,7 +1620,7 @@ mod tests {
     #[test]
     fn test_csr_nine_nnz() {
         // 9 = 2×4 + 1
-        let values: Vec<f32> = [1.0; 9];
+        let values: Vec<f32> = vec![1.0; 9];
         let col_indices: Vec<usize> = (0..9).collect();
         let row_ptrs = vec![0, 9];
         let dense: Vec<f32> = (1..=9).map(|x| x as f32).collect();

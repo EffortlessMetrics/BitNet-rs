@@ -1221,7 +1221,7 @@ mod tests {
     fn test_batch_rows_4x8() {
         let packed = [0x55u8; 8]; // 4 rows × 2 bytes
         let s = [1.0f32, 1.0];
-        let scales: Vec<&[f32]> = [&s; 4];
+        let scales: Vec<&[f32]> = vec![&s; 4];
         let mut out = [0.0f32; 32];
         dequant_batch_rows(&packed, &scales, 4, 8, 4, &mut out);
         assert!(out.iter().all(|&v| (v - 1.0).abs() < 1e-6));

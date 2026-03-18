@@ -502,7 +502,7 @@ mod tests {
         let ids = [1, 0, 2];
         let mut out = [0.0f32; 3];
         embed_tokens_neon(&ids, &table, 1, &mut out);
-        assert_eq!(out, vec![20.0, 10.0, 30.0]);
+        assert_eq!(out.to_vec(), vec![20.0, 10.0, 30.0]);
     }
 
     #[test]
@@ -511,7 +511,7 @@ mod tests {
         let ids = [1, 0];
         let mut out = [0.0f32; 6];
         embed_tokens_neon(&ids, &table, 3, &mut out);
-        assert_eq!(out, vec![4.0, 5.0, 6.0, 1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 5.0, 6.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]
@@ -626,7 +626,7 @@ mod tests {
         let ids = [0];
         let mut out = [0.0f32; 4];
         embed_tokens_with_scale_neon(&ids, &table, 4, -0.5, &mut out);
-        assert_eq!(out, vec![-0.5, -1.0, -1.5, -2.0]);
+        assert_eq!(out.to_vec(), vec![-0.5, -1.0, -1.5, -2.0]);
     }
 
     #[test]
@@ -1281,7 +1281,7 @@ mod tests {
         let ids = [1, 0];
         let mut out = [0.0f32; 4];
         embed_tokens_neon(&ids, &table, 2, &mut out);
-        assert_eq!(out, vec![3.0, 4.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 4.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -1290,7 +1290,7 @@ mod tests {
         let ids = [0];
         let mut out = [0.0f32; 2];
         embed_tokens_with_scale_neon(&ids, &table, 2, 3.0, &mut out);
-        assert_eq!(out, vec![3.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 6.0]);
     }
 
     #[test]

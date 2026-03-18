@@ -519,7 +519,7 @@ mod tests {
         let data = [0.0, 0.0, 0.0];
         let mut out = [0i8; 3];
         quantize_symmetric_i8(&data, 1.0, &mut out);
-        assert_eq!(out, vec![0, 0, 0]);
+        assert_eq!(out.to_vec(), vec![0, 0, 0]);
     }
 
     #[test]
@@ -527,7 +527,7 @@ mod tests {
         let data = [1.0, 2.0];
         let mut out = [0i8; 2];
         quantize_symmetric_i8(&data, 0.0, &mut out);
-        assert_eq!(out, vec![0, 0]);
+        assert_eq!(out.to_vec(), vec![0, 0]);
     }
 
     #[test]
@@ -626,7 +626,7 @@ mod tests {
         let data = [0i8; 4];
         let mut out = [0.0f32; 4];
         dequantize_i8(&data, 0.5, &mut out);
-        assert_eq!(out, vec![0.0; 4]);
+        assert_eq!(out.to_vec(), vec![0.0; 4]);
     }
 
     #[test]
@@ -643,7 +643,7 @@ mod tests {
         let data = [0b01_11_00_01u8];
         let mut out = [0.0f32; 4];
         dequantize_i2(&data, 2.0, &mut out);
-        assert_eq!(out, vec![2.0, 0.0, -2.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 0.0, -2.0, 2.0]);
     }
 
     #[test]
@@ -651,7 +651,7 @@ mod tests {
         let data = [0x00u8];
         let mut out = [0.0f32; 4];
         dequantize_i2(&data, 1.0, &mut out);
-        assert_eq!(out, vec![0.0; 4]);
+        assert_eq!(out.to_vec(), vec![0.0; 4]);
     }
 
     #[test]
@@ -660,7 +660,7 @@ mod tests {
         let data = [0b00_11_01_00u8]; // elem0=0, elem1=+1, elem2=-1
         let mut out = [0.0f32; 3];
         dequantize_i2(&data, 1.0, &mut out);
-        assert_eq!(out, vec![0.0, 1.0, -1.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 1.0, -1.0]);
     }
 
     #[test]
@@ -727,7 +727,7 @@ mod tests {
     #[test]
     fn test_histogram_empty() {
         let hist = calibrate_histogram(&[], 10);
-        assert_eq!(hist, vec![0u64; 10]);
+        assert_eq!(hist.to_vec(), vec[0u64; 10]);
     }
 
     #[test]

@@ -912,7 +912,7 @@ mod tests {
 
     #[test]
     fn test_pack_binary_nine_values() {
-        let mut w = [1.0f32; 8];
+        let mut w: Vec<f32> = vec![1.0f32; 8];
         w.push(-1.0);
         let mut p = [0u8; 2];
         pack_binary_weights(&w, &mut p);

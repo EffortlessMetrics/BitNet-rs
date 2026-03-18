@@ -291,28 +291,28 @@ mod tests {
     fn test_quantize_single_element() {
         // 0.5 / 1.0 = 0.5 → banker's rounding → 0 (round to even)
         let result = quantize_f32_to_i8_neon(&[0.5], 1.0);
-        assert_eq!(result, vec![0]);
+        assert_eq!(result.to_vec(), vec![0]);
     }
 
     #[test]
     fn test_quantize_zeros() {
         let input = [0.0; 8];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![0i8; 8]);
+        assert_eq!(result.to_vec(), vec![0i8; 8]);
     }
 
     #[test]
     fn test_quantize_positive_values() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4]);
     }
 
     #[test]
     fn test_quantize_negative_values() {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![-1, -2, -3, -4]);
+        assert_eq!(result.to_vec(), vec![-1, -2, -3, -4]);
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod tests {
         let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0, 3.0, -3.0, 0.5];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
         // NEON vcvtnq uses banker's rounding: 0.5 → 0 (round-half-to-even)
-        assert_eq!(result, vec![-2, -1, 0, 1, 2, 3, -3, 0]);
+        assert_eq!(result.to_vec(), vec![-2, -1, 0, 1, 2, 3, -3, 0]);
     }
 
     #[test]
@@ -328,63 +328,63 @@ mod tests {
         let input = vec![0.0, 0.1, 0.2, 0.3];
         let scale = 0.1;
         let result = quantize_f32_to_i8_neon(&input, scale);
-        assert_eq!(result, vec![0, 1, 2, 3]);
+        assert_eq!(result.to_vec(), vec![0, 1, 2, 3]);
     }
 
     #[test]
     fn test_quantize_clamping_upper() {
         let input = vec![200.0, 300.0, 400.0, 500.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![127, 127, 127, 127]);
+        assert_eq!(result.to_vec(), vec![127, 127, 127, 127]);
     }
 
     #[test]
     fn test_quantize_clamping_lower() {
         let input = vec![-200.0, -300.0, -400.0, -500.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![-128, -128, -128, -128]);
+        assert_eq!(result.to_vec(), vec![-128, -128, -128, -128]);
     }
 
     #[test]
     fn test_quantize_at_i8_boundaries() {
         let input = vec![-128.0, 127.0, -128.0, 127.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![-128, 127, -128, 127]);
+        assert_eq!(result.to_vec(), vec![-128, 127, -128, 127]);
     }
 
     #[test]
     fn test_quantize_zero_scale_returns_zeros() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let result = quantize_f32_to_i8_neon(&input, 0.0);
-        assert_eq!(result, vec![0, 0, 0, 0]);
+        assert_eq!(result.to_vec(), vec![0, 0, 0, 0]);
     }
 
     #[test]
     fn test_quantize_non_aligned_length() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // 5 elements (not multiple of 4)
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![1, 2, 3, 4, 5]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
     fn test_quantize_1_element_tail() {
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
         let result = quantize_f32_to_i8_neon(&input, 10.0);
-        assert_eq!(result, vec![1, 2, 3, 4, 5]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
     fn test_quantize_2_element_tail() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     fn test_quantize_3_element_tail() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 5, 6, 7]);
     }
 
     #[test]
@@ -393,28 +393,28 @@ mod tests {
         // 1.5 → 2 (even), 2.5 → 2 (even), -1.5 → -2 (even), -2.5 → -2 (even)
         let input = vec![1.5, 2.5, -1.5, -2.5];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![2, 2, -2, -2]);
+        assert_eq!(result.to_vec(), vec![2, 2, -2, -2]);
     }
 
     #[test]
     fn test_quantize_large_scale() {
         let input = vec![100.0, 200.0, 300.0, 400.0];
         let result = quantize_f32_to_i8_neon(&input, 100.0);
-        assert_eq!(result, vec![1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4]);
     }
 
     #[test]
     fn test_quantize_small_scale() {
         let input = vec![0.001, 0.002, 0.003, 0.004];
         let result = quantize_f32_to_i8_neon(&input, 0.001);
-        assert_eq!(result, vec![1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4]);
     }
 
     #[test]
     fn test_quantize_negative_scale() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let result = quantize_f32_to_i8_neon(&input, -1.0);
-        assert_eq!(result, vec![-1, -2, -3, -4]);
+        assert_eq!(result.to_vec(), vec![-1, -2, -3, -4]);
     }
 
     // ── dequantize_i8_to_f32_neon tests ────────────────────────────
@@ -428,56 +428,56 @@ mod tests {
     #[test]
     fn test_dequantize_single_element() {
         let result = dequantize_i8_to_f32_neon(&[5], 2.0);
-        assert_eq!(result, vec![10.0]);
+        assert_eq!(result.to_vec(), vec![10.0]);
     }
 
     #[test]
     fn test_dequantize_zeros() {
         let input = [0i8; 8];
         let result = dequantize_i8_to_f32_neon(&input, 1.0);
-        assert_eq!(result, vec![0.0; 8]);
+        assert_eq!(result.to_vec(), vec![0.0; 8]);
     }
 
     #[test]
     fn test_dequantize_positive_values() {
         let input = vec![1i8, 2, 3, 4];
         let result = dequantize_i8_to_f32_neon(&input, 1.0);
-        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(result.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
     fn test_dequantize_negative_values() {
         let input = vec![-1i8, -2, -3, -4];
         let result = dequantize_i8_to_f32_neon(&input, 1.0);
-        assert_eq!(result, vec![-1.0, -2.0, -3.0, -4.0]);
+        assert_eq!(result.to_vec(), vec![-1.0, -2.0, -3.0, -4.0]);
     }
 
     #[test]
     fn test_dequantize_with_scale() {
         let input = vec![1i8, 2, 3, 4];
         let result = dequantize_i8_to_f32_neon(&input, 0.5);
-        assert_eq!(result, vec![0.5, 1.0, 1.5, 2.0]);
+        assert_eq!(result.to_vec(), vec![0.5, 1.0, 1.5, 2.0]);
     }
 
     #[test]
     fn test_dequantize_i8_min_max() {
         let input = vec![-128i8, 127, -128, 127];
         let result = dequantize_i8_to_f32_neon(&input, 1.0);
-        assert_eq!(result, vec![-128.0, 127.0, -128.0, 127.0]);
+        assert_eq!(result.to_vec(), vec![-128.0, 127.0, -128.0, 127.0]);
     }
 
     #[test]
     fn test_dequantize_non_aligned_length() {
         let input = vec![1i8, 2, 3, 4, 5];
         let result = dequantize_i8_to_f32_neon(&input, 2.0);
-        assert_eq!(result, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
+        assert_eq!(result.to_vec(), vec![2.0, 4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
     fn test_dequantize_zero_scale() {
         let input = vec![1i8, 2, 3, 4];
         let result = dequantize_i8_to_f32_neon(&input, 0.0);
-        assert_eq!(result, vec![0.0; 4]);
+        assert_eq!(result.to_vec(), vec![0.0; 4]);
     }
 
     // ── Round-trip tests ───────────────────────────────────────────
@@ -546,7 +546,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let scales = [1.0];
         let result = quantize_per_channel_neon(&input, &scales, 1);
-        assert_eq!(result, vec![1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4]);
     }
 
     #[test]
@@ -556,7 +556,7 @@ mod tests {
         let result = quantize_per_channel_neon(&input, &scales, 2);
         // Channel 0 (scale=1.0): [1,2,3,4]
         // Channel 1 (scale=10.0): [1,2,3,4]
-        assert_eq!(result, vec![1, 2, 3, 4, 1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 1, 2, 3, 4]);
     }
 
     #[test]
@@ -564,7 +564,7 @@ mod tests {
         let input = vec![10.0, 20.0, 30.0, 40.0, 5.0, 10.0, 15.0, 20.0];
         let scales = vec![10.0, 5.0];
         let result = quantize_per_channel_neon(&input, &scales, 2);
-        assert_eq!(result, vec![1, 2, 3, 4, 1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 1, 2, 3, 4]);
     }
 
     #[test]
@@ -573,7 +573,7 @@ mod tests {
         let input = vec![2.0, 4.0, 3.0, 6.0, 5.0, 10.0, 7.0, 14.0];
         let scales = vec![2.0, 3.0, 5.0, 7.0];
         let result = quantize_per_channel_neon(&input, &scales, 4);
-        assert_eq!(result, vec![1, 2, 1, 2, 1, 2, 1, 2]);
+        assert_eq!(result.to_vec(), vec![1, 2, 1, 2, 1, 2, 1, 2]);
     }
 
     #[test]
@@ -702,7 +702,7 @@ mod tests {
         let a = vec![3i8];
         let b = vec![4i8];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 1);
-        assert_eq!(result, vec![12]);
+        assert_eq!(result.to_vec(), vec![12]);
     }
 
     #[test]
@@ -712,7 +712,7 @@ mod tests {
         let a = vec![1i8, 2, 3, 4];
         let b = vec![5i8, 6, 7, 8];
         let result = i8_matmul_accumulate_neon(&a, &b, 2, 2, 2);
-        assert_eq!(result, vec![19, 22, 43, 50]);
+        assert_eq!(result.to_vec(), vec![19, 22, 43, 50]);
     }
 
     #[test]
@@ -724,7 +724,7 @@ mod tests {
         let a = vec![1i8, 2, 3, 4, 5, 6];
         let b = vec![7i8, 8, 9, 10, 11, 12];
         let result = i8_matmul_accumulate_neon(&a, &b, 2, 2, 3);
-        assert_eq!(result, vec![58, 64, 139, 154]);
+        assert_eq!(result.to_vec(), vec![58, 64, 139, 154]);
     }
 
     #[test]
@@ -733,7 +733,7 @@ mod tests {
         let a = vec![3i8, 7, -2, 5];
         let identity = vec![1i8, 0, 0, 1];
         let result = i8_matmul_accumulate_neon(&a, &identity, 2, 2, 2);
-        assert_eq!(result, vec![3, 7, -2, 5]);
+        assert_eq!(result.to_vec(), vec![3, 7, -2, 5]);
     }
 
     #[test]
@@ -741,7 +741,7 @@ mod tests {
         let a = vec![1i8, 2, 3, 4];
         let b = [0i8; 4];
         let result = i8_matmul_accumulate_neon(&a, &b, 2, 2, 2);
-        assert_eq!(result, vec![0, 0, 0, 0]);
+        assert_eq!(result.to_vec(), vec![0, 0, 0, 0]);
     }
 
     #[test]
@@ -749,7 +749,7 @@ mod tests {
         let a = vec![-1i8, -2, -3, -4];
         let b = vec![1i8, 0, 0, 1];
         let result = i8_matmul_accumulate_neon(&a, &b, 2, 2, 2);
-        assert_eq!(result, vec![-1, -2, -3, -4]);
+        assert_eq!(result.to_vec(), vec![-1, -2, -3, -4]);
     }
 
     #[test]
@@ -758,7 +758,7 @@ mod tests {
         let a = vec![1i8, 2, 3];
         let b = vec![4i8, 5, 6];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 3);
-        assert_eq!(result, vec![32]);
+        assert_eq!(result.to_vec(), vec![32]);
     }
 
     #[test]
@@ -767,7 +767,7 @@ mod tests {
         let a = vec![1i8, 2, 3];
         let b = vec![4i8, 5, 6];
         let result = i8_matmul_accumulate_neon(&a, &b, 3, 3, 1);
-        assert_eq!(result, vec![4, 5, 6, 8, 10, 12, 12, 15, 18]);
+        assert_eq!(result.to_vec(), vec![4, 5, 6, 8, 10, 12, 12, 15, 18]);
     }
 
     #[test]
@@ -777,25 +777,25 @@ mod tests {
         let b: Vec<i8> = (1..=10).map(|x| x as i8).collect();
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 10);
         // 1*1 + 2*2 + ... + 10*10 = 385
-        assert_eq!(result, vec![385]);
+        assert_eq!(result.to_vec(), vec![385]);
     }
 
     #[test]
     fn test_matmul_k_exactly_8() {
         let a: Vec<i8> = (1..=8).map(|x| x as i8).collect();
-        let b: Vec<i8> = [1i8; 8];
+        let b: Vec<i8> = vec![1i8; 8];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 8);
         // 1+2+...+8 = 36
-        assert_eq!(result, vec![36]);
+        assert_eq!(result.to_vec(), vec![36]);
     }
 
     #[test]
     fn test_matmul_k_16() {
         let a: Vec<i8> = (1..=16).map(|x| x as i8).collect();
-        let b: Vec<i8> = [1i8; 16];
+        let b: Vec<i8> = vec![1i8; 16];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 16);
         // 1+2+...+16 = 136
-        assert_eq!(result, vec![136]);
+        assert_eq!(result.to_vec(), vec![136]);
     }
 
     #[test]
@@ -804,7 +804,7 @@ mod tests {
         let b = vec![1i8, 1];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 2);
         // 127*1 + (-128)*1 = -1
-        assert_eq!(result, vec![-1]);
+        assert_eq!(result.to_vec(), vec![-1]);
     }
 
     #[test]
@@ -822,7 +822,7 @@ mod tests {
         // C[2,0] = 7*9 + 8*6 + 9*3 = 138
         // C[2,1] = 7*8 + 8*5 + 9*2 = 114
         // C[2,2] = 7*7 + 8*4 + 9*1 = 90
-        assert_eq!(result, vec![30, 24, 18, 84, 69, 54, 138, 114, 90]);
+        assert_eq!(result.to_vec(), vec![30, 24, 18, 84, 69, 54, 138, 114, 90]);
     }
 
     #[test]
@@ -882,7 +882,7 @@ mod tests {
         let b: Vec<i8> = vec![1i8; k];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, k);
         let expected: i32 = a.iter().map(|&x| x as i32).sum();
-        assert_eq!(result, vec![expected]);
+        assert_eq!(result.to_vec(), vec![expected]);
     }
 
     #[test]
@@ -981,7 +981,7 @@ mod tests {
     fn test_quantize_exactly_4_elements() {
         let input = vec![10.0, 20.0, 30.0, 40.0];
         let result = quantize_f32_to_i8_neon(&input, 10.0);
-        assert_eq!(result, vec![1, 2, 3, 4]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4]);
     }
 
     #[test]
@@ -996,7 +996,7 @@ mod tests {
     fn test_dequantize_exactly_4_elements() {
         let input = vec![1i8, 2, 3, 4];
         let result = dequantize_i8_to_f32_neon(&input, 3.0);
-        assert_eq!(result, vec![3.0, 6.0, 9.0, 12.0]);
+        assert_eq!(result.to_vec(), vec![3.0, 6.0, 9.0, 12.0]);
     }
 
     #[test]
@@ -1013,7 +1013,7 @@ mod tests {
         let a: Vec<i8> = vec![1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
         let b: Vec<i8> = vec![5, 6, 7, 8, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16];
         let result = i8_matmul_accumulate_neon(&a, &b, 4, 4, 4);
-        assert_eq!(result, vec![5, 6, 7, 8, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16]);
+        assert_eq!(result.to_vec(), vec![5, 6, 7, 8, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16]);
     }
 
     #[test]
@@ -1022,7 +1022,7 @@ mod tests {
         let input: Vec<f32> = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
         let scales: Vec<f32> = vec![10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0];
         let result = quantize_per_channel_neon(&input, &scales, 8);
-        assert_eq!(result, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(result.to_vec(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[test]
@@ -1040,7 +1040,7 @@ mod tests {
     #[test]
     fn test_matmul_k_zero() {
         let result = i8_matmul_accumulate_neon(&[], &[], 4, 4, 0);
-        assert_eq!(result, vec![0i32; 16]);
+        assert_eq!(result.to_vec(), vec![0i32; 16]);
     }
 
     #[test]
@@ -1048,7 +1048,7 @@ mod tests {
         // 0.4 / 1.0 → 0, 0.6 / 1.0 → 1
         let input = vec![0.4, 0.6, -0.4, -0.6];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
-        assert_eq!(result, vec![0, 1, 0, -1]);
+        assert_eq!(result.to_vec(), vec![0, 1, 0, -1]);
     }
 
     #[test]
@@ -1065,7 +1065,7 @@ mod tests {
         let a = [127i8; 16];
         let b = [127i8; 16];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 16);
-        assert_eq!(result, vec![127 * 127 * 16]);
+        assert_eq!(result.to_vec(), vec![127 * 127 * 16]);
     }
 
     #[test]

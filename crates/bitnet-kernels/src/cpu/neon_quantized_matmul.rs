@@ -541,7 +541,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_accum_exactly_8_elements() {
-        let vals: Vec<i8> = [1; 8];
+        let vals: Vec<i8> = vec![1; 8];
         let packed = pack_row_major(&vals, 1, 8);
         let input = [1.0f32; 8];
         let result = unsafe { neon_accumulate_i2s_chunk(&packed, &input, 8) };

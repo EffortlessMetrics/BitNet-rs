@@ -329,8 +329,8 @@ mod tests {
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
-        assert_eq!(out_a, vec![0.0, 2.0, 4.0, 6.0]);
-        assert_eq!(out_b, vec![1.0, 3.0, 5.0, 7.0]);
+        assert_eq!(out_a.to_vec(), vec![0.0, 2.0, 4.0, 6.0]);
+        assert_eq!(out_b.to_vec(), vec![1.0, 3.0, 5.0, 7.0]);
     }
 
     #[test]
@@ -341,8 +341,8 @@ mod tests {
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
-        assert_eq!(out_a, vec![0.0, 2.0, 4.0, 6.0, 8.0]);
-        assert_eq!(out_b, vec![1.0, 3.0, 5.0, 7.0, 9.0]);
+        assert_eq!(out_a.to_vec(), vec![0.0, 2.0, 4.0, 6.0, 8.0]);
+        assert_eq!(out_b.to_vec(), vec![1.0, 3.0, 5.0, 7.0, 9.0]);
     }
 
     #[test]
@@ -421,8 +421,8 @@ mod tests {
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
-        assert_eq!(out_a, vec![1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(out_b, vec![-1.0, -2.0, -3.0, -4.0]);
+        assert_eq!(out_a.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(out_b.to_vec(), vec![-1.0, -2.0, -3.0, -4.0]);
     }
 
     #[test]
@@ -446,7 +446,7 @@ mod tests {
         let scale = [1.0; 4];
         let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
-        assert_eq!(data, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(data.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -455,7 +455,7 @@ mod tests {
         let scale = [2.0; 4];
         let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
-        assert_eq!(data, vec![4.0, 6.0, 8.0, 10.0]);
+        assert_eq!(data.to_vec(), vec![4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
@@ -464,7 +464,7 @@ mod tests {
         let scale = [0.0; 4];
         let bias = [5.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
-        assert_eq!(data, vec![5.0, 5.0, 5.0, 5.0]);
+        assert_eq!(data.to_vec(), vec![5.0, 5.0, 5.0, 5.0]);
     }
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
         let scale = [-1.0; 4];
         let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
-        assert_eq!(data, vec![-1.0, 1.0, -2.0, 2.0]);
+        assert_eq!(data.to_vec(), vec![-1.0, 1.0, -2.0, 2.0]);
     }
 
     #[test]
@@ -527,7 +527,7 @@ mod tests {
         let scale = vec![1.0, -1.0, 1.0, -1.0, 1.0];
         let bias = [10.0; 5];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
-        assert_eq!(data, vec![11.0, 12.0, 13.0, 14.0, 15.0]);
+        assert_eq!(data.to_vec(), vec![11.0, 12.0, 13.0, 14.0, 15.0]);
     }
 
     #[test]
@@ -603,7 +603,7 @@ mod tests {
         let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // a*b + c*d: [1+1, -1-1, 1+1, -1-1]
-        assert_eq!(out, vec![2.0, -2.0, 2.0, -2.0]);
+        assert_eq!(out.to_vec(), vec![2.0, -2.0, 2.0, -2.0]);
     }
 
     #[test]
@@ -639,7 +639,7 @@ mod tests {
         let mut out = [0.0f32; 5];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // [5+1, 8+1, 9+1, 8+1, 5+1] = [6, 9, 10, 9, 6]
-        assert_eq!(out, vec![6.0, 9.0, 10.0, 9.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![6.0, 9.0, 10.0, 9.0, 6.0]);
     }
 
     #[test]
@@ -945,7 +945,7 @@ mod tests {
         let mut out_a = [0.0f32; 3];
         let mut out_b = [0.0f32; 3];
         unsafe { neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b) };
-        assert_eq!(out_a, vec![10.0, 30.0, 50.0]);
-        assert_eq!(out_b, vec![20.0, 40.0, 60.0]);
+        assert_eq!(out_a.to_vec(), vec![10.0, 30.0, 50.0]);
+        assert_eq!(out_b.to_vec(), vec![20.0, 40.0, 60.0]);
     }
 }

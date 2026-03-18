@@ -419,7 +419,7 @@ mod tests {
         for i in 0..4 {
             kv_cache_append(&mut cache, i, &[(i + 1) as f32], 1);
         }
-        assert_eq!(cache, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(cache.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     // ── kv_cache_gather ────────────────────────────────────────
@@ -429,7 +429,7 @@ mod tests {
         let cache = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let mut out = [0.0f32; 4];
         kv_cache_gather(&cache, &[1], 4, &mut out);
-        assert_eq!(out, vec![5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![5.0, 6.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -455,7 +455,7 @@ mod tests {
         let cache = vec![10.0, 20.0, 30.0, 40.0];
         let mut out = [0.0f32; 4];
         kv_cache_gather(&cache, &[0, 0], 2, &mut out);
-        assert_eq!(out, vec![10.0, 20.0, 10.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![10.0, 20.0, 10.0, 20.0]);
     }
 
     #[test]
@@ -463,7 +463,7 @@ mod tests {
         let cache = vec![5.0, 6.0, 7.0];
         let mut out = [0.0f32; 2];
         kv_cache_gather(&cache, &[2, 0], 1, &mut out);
-        assert_eq!(out, vec![7.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![7.0, 5.0]);
     }
 
     #[test]
@@ -471,7 +471,7 @@ mod tests {
         let cache: Vec<f32> = (0..9).map(|x| x as f32).collect();
         let mut out = [0.0f32; 3];
         kv_cache_gather(&cache, &[1], 3, &mut out);
-        assert_eq!(out, vec![3.0, 4.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 4.0, 5.0]);
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod tests {
         let cache = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let mut out = [0.0f32; 6];
         kv_cache_gather(&cache, &[0, 0, 0], 2, &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 1.0, 2.0, 1.0, 2.0]);
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
         let cache: Vec<f32> = (0..15).map(|x| x as f32).collect();
         let mut out = [0.0f32; 5];
         kv_cache_gather(&cache, &[1], 5, &mut out);
-        assert_eq!(out, vec![5.0, 6.0, 7.0, 8.0, 9.0]);
+        assert_eq!(out.to_vec(), vec![5.0, 6.0, 7.0, 8.0, 9.0]);
     }
 
     // ── kv_cache_rotate ────────────────────────────────────────
@@ -759,7 +759,7 @@ mod tests {
     fn clear_full_range() {
         let mut cache: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         kv_cache_clear_range(&mut cache, 0, 3, 4);
-        assert_eq!(cache, vec![0.0; 12]);
+        assert_eq!(cache.to_vec(), vec![0.0; 12]);
     }
 
     #[test]
@@ -821,7 +821,7 @@ mod tests {
     fn clear_head_dim_1() {
         let mut cache = vec![1.0, 2.0, 3.0, 4.0];
         kv_cache_clear_range(&mut cache, 1, 3, 1);
-        assert_eq!(cache, vec![1.0, 0.0, 0.0, 4.0]);
+        assert_eq!(cache.to_vec(), vec![1.0, 0.0, 0.0, 4.0]);
     }
 
     #[test]
@@ -836,7 +836,7 @@ mod tests {
     fn clear_already_zero() {
         let mut cache = [0.0f32; 16];
         kv_cache_clear_range(&mut cache, 0, 4, 4);
-        assert_eq!(cache, vec![0.0; 16]);
+        assert_eq!(cache.to_vec(), vec![0.0; 16]);
     }
 
     #[test]
@@ -855,7 +855,7 @@ mod tests {
         let page_table = [0];
         let mut out = [0.0f32; 2];
         kv_cache_paged_lookup(&pages, &page_table, &[2], 4, 2, &mut out);
-        assert_eq!(out, vec![5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![5.0, 6.0]);
     }
 
     #[test]
@@ -864,7 +864,7 @@ mod tests {
         let page_table = [0];
         let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[0, 3], 4, 2, &mut out);
-        assert_eq!(out, vec![10.0, 20.0, 70.0, 80.0]);
+        assert_eq!(out.to_vec(), vec![10.0, 20.0, 70.0, 80.0]);
     }
 
     #[test]
@@ -877,7 +877,7 @@ mod tests {
         // seq_pos 0 → page 0, offset 0 → phys[0*2+0]*2 = [1,2]
         // seq_pos 3 → page 1, offset 1 → phys[1*2+1]*2 = [7,8]
         kv_cache_paged_lookup(&pages, &page_table, &[0, 3], 2, 2, &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 7.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -890,7 +890,7 @@ mod tests {
         // seq_pos 1 → page 0, offset 1 → [4,5,6]
         // seq_pos 2 → page 1, offset 0 → [7,8,9]
         kv_cache_paged_lookup(&pages, &page_table, &[1, 2], 2, 3, &mut out);
-        assert_eq!(out, vec![4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
     }
 
     #[test]
@@ -899,7 +899,7 @@ mod tests {
         let page_table = vec![0, 1, 2, 3];
         let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[3, 0], 1, 2, &mut out);
-        assert_eq!(out, vec![6.0, 7.0, 0.0, 1.0]);
+        assert_eq!(out.to_vec(), vec![6.0, 7.0, 0.0, 1.0]);
     }
 
     #[test]
@@ -910,7 +910,7 @@ mod tests {
         let mut out = [0.0f32; 2];
         // seq_pos 5 → page 1, offset 1 → phys[1*4+1]*2 = idx 10
         kv_cache_paged_lookup(&pages, &page_table, &[5], 4, 2, &mut out);
-        assert_eq!(out, vec![10.0, 11.0]);
+        assert_eq!(out.to_vec(), vec![10.0, 11.0]);
     }
 
     #[test]
@@ -919,7 +919,7 @@ mod tests {
         let page_table = [0];
         let mut out = [0.0f32; 2];
         kv_cache_paged_lookup(&pages, &page_table, &[1, 3], 4, 1, &mut out);
-        assert_eq!(out, vec![20.0, 40.0]);
+        assert_eq!(out.to_vec(), vec![20.0, 40.0]);
     }
 
     #[test]
@@ -929,7 +929,7 @@ mod tests {
         let page_table = [0];
         let mut out = [0.0f32; 3];
         kv_cache_paged_lookup(&pages, &page_table, &[1], 2, 3, &mut out);
-        assert_eq!(out, vec![4.0, 5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -942,7 +942,7 @@ mod tests {
         kv_cache_paged_lookup(&pages, &page_table, &[0, 1], 1, 2, &mut out);
         // seq_pos 0 → page_table[0]=1 → phys[1*1+0]*2 = [30,40]
         // seq_pos 1 → page_table[1]=0 → phys[0*1+0]*2 = [10,20]
-        assert_eq!(out, vec![30.0, 40.0, 10.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![30.0, 40.0, 10.0, 20.0]);
     }
 
     #[test]
@@ -954,7 +954,7 @@ mod tests {
         // seq_pos 3 → page 1, offset 0 → phys[1*3+0]*2 = 6
         // seq_pos 1 → page 0, offset 1 → phys[0*3+1]*2 = 2
         // seq_pos 0 → page 0, offset 0 → phys[0*3+0]*2 = 0
-        assert_eq!(out, vec![6.0, 7.0, 2.0, 3.0, 0.0, 1.0],);
+        assert_eq!(out.to_vec(), vec![6.0, 7.0, 2.0, 3.0, 0.0, 1.0],);
     }
 
     #[test]
@@ -963,7 +963,7 @@ mod tests {
         let page_table = [0];
         let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[0, 0], 2, 2, &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 1.0, 2.0]);
     }
 
     // ── integration / cross-operation tests ────────────────────
@@ -1001,7 +1001,7 @@ mod tests {
         kv_cache_clear_range(&mut cache, 1, 3, 4);
         let mut out = [0.0f32; 8];
         kv_cache_gather(&cache, &[1, 2], 4, &mut out);
-        assert_eq!(out, vec![0.0; 8]);
+        assert_eq!(out.to_vec(), vec![0.0; 8]);
     }
 
     #[test]
@@ -1057,7 +1057,7 @@ mod tests {
         // Position 0 should now contain what was at position 1.
         let mut out = vec![0.0f32; head_dim];
         kv_cache_gather(&cache, &[0], head_dim, &mut out);
-        assert_eq!(out, vec![10.0, 11.0]);
+        assert_eq!(out.to_vec(), vec![10.0, 11.0]);
     }
 
     #[test]
@@ -1076,7 +1076,7 @@ mod tests {
         for b in 0..beam_width {
             let mut out = vec![0.0f32; head_dim];
             kv_cache_gather(&new_cache, &[b], head_dim, &mut out);
-            assert_eq!(out, vec![0.0, 1.0, 2.0, 3.0]);
+            assert_eq!(out.to_vec(), vec![0.0, 1.0, 2.0, 3.0]);
         }
     }
 
@@ -1124,7 +1124,7 @@ mod tests {
     fn clear_append_overwrite() {
         let mut cache = [9.0f32; 8];
         kv_cache_clear_range(&mut cache, 0, 2, 4);
-        assert_eq!(cache, vec![0.0; 8]);
+        assert_eq!(cache.to_vec(), vec![0.0; 8]);
         kv_cache_append(&mut cache, 0, &[1.0, 2.0, 3.0, 4.0], 4);
         assert_eq!(&cache[..4], &[1.0, 2.0, 3.0, 4.0]);
     }
@@ -1183,7 +1183,7 @@ mod tests {
         assert_eq!(out, data);
         kv_cache_clear_range(&mut cache, 0, 1, hd);
         kv_cache_gather(&cache, &[0], hd, &mut out);
-        assert_eq!(out, vec![0.0; hd]);
+        assert_eq!(out.to_vec(), vec![0.0; hd]);
     }
 
     #[test]
@@ -1214,7 +1214,7 @@ mod tests {
         let mut out = vec![0.0f32; page_size * hd];
         let positions: Vec<usize> = (0..page_size).collect();
         kv_cache_paged_lookup(&pages, &page_table, &positions, page_size, hd, &mut out);
-        assert_eq!(out, vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
     }
 
     #[test]

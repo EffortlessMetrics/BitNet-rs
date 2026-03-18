@@ -513,7 +513,7 @@ mod tests {
         let data = vec![42.0f32];
         let mut out = [0.0f32; 1];
         reshape_contiguous_neon(&data, &[1], &[1, 1, 1], &mut out);
-        assert_eq!(out, vec![42.0]);
+        assert_eq!(out.to_vec(), vec![42.0]);
     }
 
     #[test]
@@ -598,7 +598,7 @@ mod tests {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let mut out = [0.0f32; 4];
         reshape_strided_neon(&data, &[2, 2], &[4, 2], &[4], &mut out);
-        assert_eq!(out, vec![0.0, 2.0, 4.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 2.0, 4.0, 6.0]);
     }
 
     #[test]
@@ -617,7 +617,7 @@ mod tests {
         let mut out = [0.0f32; 6];
         reshape_strided_neon(&data, &[2, 3], &[1, 2], &[6], &mut out);
         // Reads: (0,0)→0, (0,1)→2, (0,2)→4, (1,0)→1, (1,1)→3, (1,2)→5
-        assert_eq!(out, vec![0.0, 2.0, 4.0, 1.0, 3.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 2.0, 4.0, 1.0, 3.0, 5.0]);
     }
 
     #[test]
@@ -625,7 +625,7 @@ mod tests {
         let data = vec![7.0f32];
         let mut out = [0.0f32; 1];
         reshape_strided_neon(&data, &[1], &[1], &[1, 1], &mut out);
-        assert_eq!(out, vec![7.0]);
+        assert_eq!(out.to_vec(), vec![7.0]);
     }
 
     #[test]
@@ -805,7 +805,7 @@ mod tests {
         let data = vec![3.0f32];
         let mut out = [0.0f32; 8];
         broadcast_expand_neon(&data, &[1], &[8], &mut out);
-        assert_eq!(out, vec![3.0; 8]);
+        assert_eq!(out.to_vec(), vec![3.0; 8]);
     }
 
     #[test]
@@ -851,7 +851,7 @@ mod tests {
         let data = vec![5.0f32, 7.0];
         let mut out = [0.0f32; 8];
         broadcast_expand_neon(&data, &[2, 1], &[2, 4], &mut out);
-        assert_eq!(out, vec![5.0, 5.0, 5.0, 5.0, 7.0, 7.0, 7.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![5.0, 5.0, 5.0, 5.0, 7.0, 7.0, 7.0, 7.0]);
     }
 
     #[test]
@@ -871,7 +871,7 @@ mod tests {
         let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
         let mut out = [0.0f32; 10];
         broadcast_expand_neon(&data, &[1, 5], &[2, 5], &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
     }
 
     #[test]
@@ -895,7 +895,7 @@ mod tests {
         let data = vec![1.0f32];
         let mut out = [0.0f32; 24];
         broadcast_expand_neon(&data, &[1, 1, 1], &[2, 3, 4], &mut out);
-        assert_eq!(out, vec![1.0; 24]);
+        assert_eq!(out.to_vec(), vec![1.0; 24]);
     }
 
     #[test]
@@ -1005,7 +1005,7 @@ mod tests {
         let data = vec![99.0f32];
         let mut out = [0.0f32; 1];
         permute_dims_neon(&data, &[1, 1], &[1, 0], &mut out);
-        assert_eq!(out, vec![99.0]);
+        assert_eq!(out.to_vec(), vec![99.0]);
     }
 
     #[test]

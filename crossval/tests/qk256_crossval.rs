@@ -248,9 +248,9 @@ fn test_qk256_accuracy_target_correlation() -> Result<()> {
     let total_codes = rows * cols;
 
     // Create realistic code distribution (based on quantization statistics)
-    use rand::{Rng, SeedableRng};
+    use rand::Rng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-    let codes: Vec<u8> = (0..total_codes).map(|_| rng.random_range(0..=3u8)).collect();
+    let codes: Vec<u8> = (0..total_codes).map(|_| rng.gen_range(0..=3u8)).collect();
 
     // Pack codes
     let blocks_per_row = cols.div_ceil(QK256_BLOCK);

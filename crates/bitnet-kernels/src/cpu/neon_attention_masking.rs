@@ -344,7 +344,7 @@ mod tests {
     fn causal_mask_size_1() {
         let mut s = [1.0];
         apply_causal(&mut s, 1, 1, NEG_INF);
-        assert_eq!(s, vec![1.0]); // diagonal kept
+        assert_eq!(s.to_vec(), vec![1.0]); // diagonal kept
     }
 
     #[test]
@@ -479,7 +479,7 @@ mod tests {
         let mut s = [1.0; 4];
         let pmask = vec![false, false];
         apply_padding(&mut s, &pmask, 2, 1, NEG_INF);
-        assert_eq!(s, vec![1.0; 4]);
+        assert_eq!(s.to_vec(), vec![1.0; 4]);
     }
 
     #[test]
@@ -818,7 +818,7 @@ mod tests {
         let b = [0.0; 4];
         let mut out = [999.0; 4];
         combine(&a, &b, &mut out);
-        assert_eq!(out, vec![0.0; 4]);
+        assert_eq!(out.to_vec(), vec![0.0; 4]);
     }
 
     #[test]
@@ -866,7 +866,7 @@ mod tests {
         let b = vec![0.0; n];
         let mut out = vec![999.0; n];
         combine(&a, &b, &mut out);
-        assert_eq!(out, vec![0.0; n]);
+        assert_eq!(out.to_vec(), vec![0.0; n]);
     }
 
     #[test]
@@ -876,7 +876,7 @@ mod tests {
         let b = [f32::INFINITY; 5];
         let mut out = [0.0; 5];
         combine(&a, &b, &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0]);
     }
 
     #[test]
@@ -1085,7 +1085,7 @@ mod tests {
         let b = vec![7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
         let mut out = [0.0; 7];
         combine(&a, &b, &mut out);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0]);
     }
 
     #[test]
@@ -1094,7 +1094,7 @@ mod tests {
         let mut s = vec![1.0, 2.0, 3.0];
         let mask = vec![true, true, true];
         masked_softmax(&mut s, &mask, 3);
-        assert_eq!(s, vec![0.0, 0.0, 0.0]);
+        assert_eq!(s.to_vec(), vec![0.0, 0.0, 0.0]);
     }
 
     #[test]
@@ -1153,7 +1153,7 @@ mod tests {
         let b = vec![-4.0, -3.0, -2.0, -1.0];
         let mut out = [0.0; 4];
         combine(&a, &b, &mut out);
-        assert_eq!(out, vec![-4.0, -3.0, -3.0, -4.0]);
+        assert_eq!(out.to_vec(), vec![-4.0, -3.0, -3.0, -4.0]);
     }
 
     #[test]
