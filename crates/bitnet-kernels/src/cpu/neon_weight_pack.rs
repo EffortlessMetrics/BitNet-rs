@@ -1049,7 +1049,7 @@ mod tests {
         let mut out = [0u8; 6];
         // 2 rows × 3 cols, tile_size=4 → not aligned → copy
         repack_for_simd(&packed, 2, 3, 4, &mut out);
-        assert_eq!(out, packed);
+        assert_eq!(out.to_vec(), packed);
     }
 
     #[test]
@@ -1057,7 +1057,7 @@ mod tests {
         let packed = vec![10, 20, 30, 40];
         let mut out = [0u8; 4];
         repack_for_simd(&packed, 1, 4, 4, &mut out);
-        assert_eq!(out, packed);
+        assert_eq!(out.to_vec(), packed);
     }
 
     #[test]
@@ -1068,7 +1068,7 @@ mod tests {
         let packed = vec![1, 2, 3, 4, 5, 6, 7, 8];
         let mut out = [0u8; 8];
         repack_for_simd(&packed, 2, 4, 4, &mut out);
-        assert_eq!(out, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(out.to_vec(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[test]
@@ -1080,7 +1080,7 @@ mod tests {
         let packed: Vec<u8> = (1..=16).collect();
         let mut out = [0u8; 16];
         repack_for_simd(&packed, 2, 8, 4, &mut out);
-        assert_eq!(out, vec![1, 2, 3, 4, 9, 10, 11, 12, 5, 6, 7, 8, 13, 14, 15, 16]);
+        assert_eq!(out.to_vec(), vec![1, 2, 3, 4, 9, 10, 11, 12, 5, 6, 7, 8, 13, 14, 15, 16]);
     }
 
     #[test]
@@ -1091,7 +1091,7 @@ mod tests {
         repack_for_simd(&packed, 4, 4, 2, &mut out);
         // tile_col 0: rows 0..3 → [0,1], [4,5], [8,9], [12,13]
         // tile_col 1: rows 0..3 → [2,3], [6,7], [10,11], [14,15]
-        assert_eq!(out, vec![0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15]);
+        assert_eq!(out.to_vec(), vec![0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15]);
     }
 
     #[test]
@@ -1102,7 +1102,7 @@ mod tests {
         repack_for_simd(&packed, 2, 3, 1, &mut out);
         // tile_col 0: [10, 40], tile_col 1: [20, 50],
         // tile_col 2: [30, 60]
-        assert_eq!(out, vec![10, 40, 20, 50, 30, 60]);
+        assert_eq!(out.to_vec(), vec![10, 40, 20, 50, 30, 60]);
     }
 
     #[test]

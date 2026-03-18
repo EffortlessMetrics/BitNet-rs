@@ -497,7 +497,7 @@ mod tests {
         let b = vec![10.0f32, 20.0, 30.0, 40.0, 50.0];
         let mut out = [0.0f32; 5];
         unsafe { neon_allreduce_sum(&[&a, &b], &mut out) };
-        assert_eq!(out, vec![11.0, 22.0, 33.0, 44.0, 55.0]);
+        assert_eq!(out.to_vec(), vec![11.0, 22.0, 33.0, 44.0, 55.0]);
     }
 
     #[test]
@@ -507,7 +507,7 @@ mod tests {
         let c = [3.0f32; 8];
         let mut out = [0.0f32; 8];
         unsafe { neon_allreduce_sum(&[&a, &b, &c], &mut out) };
-        assert_eq!(out, vec![6.0; 8]);
+        assert_eq!(out.to_vec(), vec![6.0; 8]);
     }
 
     #[test]
@@ -515,7 +515,7 @@ mod tests {
         let a = vec![7.0f32, 8.0, 9.0];
         let mut out = [0.0f32; 3];
         unsafe { neon_allreduce_sum(&[&a], &mut out) };
-        assert_eq!(out, vec![7.0, 8.0, 9.0]);
+        assert_eq!(out.to_vec(), vec![7.0, 8.0, 9.0]);
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod tests {
         let b = vec![4.0f32, 2.0, 6.0, 1.0, 8.0];
         let mut out = [0.0f32; 5];
         unsafe { neon_allreduce_max(&[&a, &b], &mut out) };
-        assert_eq!(out, vec![4.0, 5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 5.0, 6.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -542,7 +542,7 @@ mod tests {
         let b = vec![-4.0f32, -2.0, -6.0, -1.0];
         let mut out = [0.0f32; 4];
         unsafe { neon_allreduce_max(&[&a, &b], &mut out) };
-        assert_eq!(out, vec![-1.0, -2.0, -3.0, -1.0]);
+        assert_eq!(out.to_vec(), vec![-1.0, -2.0, -3.0, -1.0]);
     }
 
     #[test]
@@ -552,7 +552,7 @@ mod tests {
         let c = vec![5.0f32, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
         let mut out = [0.0f32; 8];
         unsafe { neon_allreduce_max(&[&a, &b, &c], &mut out) };
-        assert_eq!(out, vec![8.0, 9.0, 7.0, 5.0, 5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![8.0, 9.0, 7.0, 5.0, 5.0, 6.0, 7.0, 8.0]);
     }
 
     // ── Tensor Scatter tests ───────────────────────────────────────
@@ -564,8 +564,8 @@ mod tests {
         let mut p1 = [0.0f32; 3];
         let mut outputs: Vec<&mut [f32]> = vec![&mut p0, &mut p1];
         unsafe { neon_tensor_scatter(&input, &mut outputs, 2) };
-        assert_eq!(p0, vec![1.0, 2.0, 3.0]);
-        assert_eq!(p1, vec![4.0, 5.0, 6.0]);
+        assert_eq!(p0.to_vec(), vec![1.0, 2.0, 3.0]);
+        assert_eq!(p1.to_vec(), vec![4.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -577,10 +577,10 @@ mod tests {
         let mut p3 = [0.0f32; 4];
         let mut outputs: Vec<&mut [f32]> = vec![&mut p0, &mut p1, &mut p2, &mut p3];
         unsafe { neon_tensor_scatter(&input, &mut outputs, 4) };
-        assert_eq!(p0, vec![1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(p1, vec![5.0, 6.0, 7.0, 8.0]);
-        assert_eq!(p2, vec![9.0, 10.0, 11.0, 12.0]);
-        assert_eq!(p3, vec![13.0, 14.0, 15.0, 16.0]);
+        assert_eq!(p0.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(p1.to_vec(), vec![5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(p2.to_vec(), vec![9.0, 10.0, 11.0, 12.0]);
+        assert_eq!(p3.to_vec(), vec![13.0, 14.0, 15.0, 16.0]);
     }
 
     // ── Tensor Gather tests ────────────────────────────────────────
@@ -591,7 +591,7 @@ mod tests {
         let p1 = vec![4.0f32, 5.0, 6.0];
         let mut out = [0.0f32; 6];
         unsafe { neon_tensor_gather(&[&p0, &p1], &mut out) };
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -627,7 +627,7 @@ mod tests {
         unsafe {
             neon_column_parallel_linear(&input, &weight, None, &mut out, 1, 4, 0, 2);
         }
-        assert_eq!(out, vec![1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0]);
     }
 
     #[test]
@@ -642,7 +642,7 @@ mod tests {
         unsafe {
             neon_column_parallel_linear(&input, &weight, Some(&bias), &mut out, 1, 4, 0, 2);
         }
-        assert_eq!(out, vec![4.5, 9.0]);
+        assert_eq!(out.to_vec(), vec![4.5, 9.0]);
     }
 
     // ── Row-Parallel Linear tests ──────────────────────────────────
@@ -684,7 +684,7 @@ mod tests {
         }
         // out[0] = 1*1 + 2*0 + 3*1 + 4*0 = 4
         // out[1] = 1*0 + 2*1 + 3*0 + 4*1 = 6
-        assert_eq!(out, vec![4.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 6.0]);
     }
 
     // ── Pipeline Stage Boundary tests ──────────────────────────────
@@ -701,7 +701,7 @@ mod tests {
 
         let mut received = [0.0f32; 6];
         unsafe { buf.receive_into(&mut received) };
-        assert_eq!(received, activations);
+        assert_eq!(received.to_vec(), activations);
     }
 
     #[test]
