@@ -26,11 +26,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.92
+
 jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: read
 
     # PRs: only run when explicitly labeled "coverage"
     if: >-
@@ -50,32 +56,41 @@ jobs:
           sudo docker image prune --all --force
           df -h /
 
-      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3
         with:
-          toolchain: "1.92.0"
-          components: llvm-tools-preview
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
+      - name: Pull rust-ci image
+        run: docker pull "${{ env.RUST_CI_IMAGE }}"
 
       - name: Disk usage before coverage
         run: df -h /
 
-      - name: Generate coverage (single instrumented run via nextest)
+      - name: Generate coverage in rust-ci image
         env:
           RUST_BACKTRACE: 1
           CARGO_INCREMENTAL: "0"
           CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
           set -euo pipefail
-          cargo llvm-cov clean --workspace
-          cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
-            --ignore-run-fail
-          cargo llvm-cov report --json --output-path coverage.json
-          cargo llvm-cov report --text | tee coverage.txt
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e RUST_BACKTRACE \
+            -e CARGO_INCREMENTAL \
+            -e CARGO_PROFILE_TEST_DEBUG \
+            "${{ env.RUST_CI_IMAGE }}" \
+            bash -lc '
+              set -euo pipefail
+              cargo llvm-cov clean --workspace
+              cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
+                --ignore-run-fail
+              cargo llvm-cov report --json --output-path coverage.json
+              cargo llvm-cov report --text | tee coverage.txt
+            '
 
       - name: Disk usage after coverage
         if: always()
