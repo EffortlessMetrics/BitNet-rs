@@ -678,16 +678,16 @@ mod tests {
 
     #[test]
     fn test_pack_ternary_all_zeros() {
-        let w = vec![0.0f32; 16];
-        let mut p = vec![0u8; 4];
+        let w = [0.0f32; 16];
+        let mut p = [0u8; 4];
         pack_ternary_weights(&w, &mut p);
         assert!(p.iter().all(|&b| b == 0));
     }
 
     #[test]
     fn test_pack_ternary_all_positive() {
-        let w = vec![1.0f32; 16];
-        let mut p = vec![0u8; 4];
+        let w = [1.0f32; 16];
+        let mut p = [0u8; 4];
         pack_ternary_weights(&w, &mut p);
         // Each byte: 01_01_01_01 = 0x55
         assert!(p.iter().all(|&b| b == 0x55));
@@ -695,8 +695,8 @@ mod tests {
 
     #[test]
     fn test_pack_ternary_all_negative() {
-        let w = vec![-1.0f32; 16];
-        let mut p = vec![0u8; 4];
+        let w = [-1.0f32; 16];
+        let mut p = [0u8; 4];
         pack_ternary_weights(&w, &mut p);
         // Each byte: 11_11_11_11 = 0xFF
         assert!(p.iter().all(|&b| b == 0xFF));
@@ -704,9 +704,9 @@ mod tests {
 
     #[test]
     fn test_pack_ternary_17_values() {
-        let mut w = vec![1.0f32; 16];
+        let mut w = [1.0f32; 16];
         w.push(-1.0);
-        let mut p = vec![0u8; 5];
+        let mut p = [0u8; 5];
         pack_ternary_weights(&w, &mut p);
         assert!(p[..4].iter().all(|&b| b == 0x55));
         assert_eq!(p[4] & 0x03, 0b11);
@@ -747,24 +747,24 @@ mod tests {
 
     #[test]
     fn test_unpack_ternary_16_zeros() {
-        let p = vec![0u8; 4];
-        let mut o = vec![0.0f32; 16];
+        let p = [0u8; 4];
+        let mut o = [0.0f32; 16];
         unpack_ternary_weights(&p, 16, &mut o);
         assert!(o.iter().all(|&v| v == 0.0));
     }
 
     #[test]
     fn test_unpack_ternary_16_positive() {
-        let p = vec![0x55u8; 4]; // all +1
-        let mut o = vec![0.0f32; 16];
+        let p = [0x55u8; 4]; // all +1
+        let mut o = [0.0f32; 16];
         unpack_ternary_weights(&p, 16, &mut o);
         assert!(o.iter().all(|&v| v == 1.0));
     }
 
     #[test]
     fn test_unpack_ternary_16_negative() {
-        let p = vec![0xFFu8; 4]; // all -1
-        let mut o = vec![0.0f32; 16];
+        let p = [0xFFu8; 4]; // all -1
+        let mut o = [0.0f32; 16];
         unpack_ternary_weights(&p, 16, &mut o);
         assert!(o.iter().all(|&v| v == -1.0));
     }
@@ -886,16 +886,16 @@ mod tests {
 
     #[test]
     fn test_pack_binary_eight_positive() {
-        let w = vec![1.0f32; 8];
-        let mut p = vec![0u8; 1];
+        let w = [1.0f32; 8];
+        let mut p = [0u8; 1];
         pack_binary_weights(&w, &mut p);
         assert_eq!(p[0], 0xFF);
     }
 
     #[test]
     fn test_pack_binary_eight_negative() {
-        let w = vec![-1.0f32; 8];
-        let mut p = vec![0u8; 1];
+        let w = [-1.0f32; 8];
+        let mut p = [0u8; 1];
         pack_binary_weights(&w, &mut p);
         assert_eq!(p[0], 0x00);
     }
@@ -905,16 +905,16 @@ mod tests {
         // [+1, -1, +1, -1, +1, -1, +1, -1] → bits 10101010
         // LSB-first: bit0=1,bit1=0,... → 0b01010101 = 0x55
         let w: Vec<f32> = (0..8).map(|i| if i % 2 == 0 { 1.0 } else { -1.0 }).collect();
-        let mut p = vec![0u8; 1];
+        let mut p = [0u8; 1];
         pack_binary_weights(&w, &mut p);
         assert_eq!(p[0], 0x55);
     }
 
     #[test]
     fn test_pack_binary_nine_values() {
-        let mut w = vec![1.0f32; 8];
+        let mut w = [1.0f32; 8];
         w.push(-1.0);
-        let mut p = vec![0u8; 2];
+        let mut p = [0u8; 2];
         pack_binary_weights(&w, &mut p);
         assert_eq!(p[0], 0xFF);
         assert_eq!(p[1] & 1, 0);
@@ -922,8 +922,8 @@ mod tests {
 
     #[test]
     fn test_pack_binary_16_values() {
-        let w = vec![1.0f32; 16];
-        let mut p = vec![0u8; 2];
+        let w = [1.0f32; 16];
+        let mut p = [0u8; 2];
         pack_binary_weights(&w, &mut p);
         assert!(p.iter().all(|&b| b == 0xFF));
     }
@@ -956,7 +956,7 @@ mod tests {
     #[test]
     fn test_unpack_binary_eight_positive() {
         let p = [0xFFu8];
-        let mut o = vec![0.0f32; 8];
+        let mut o = [0.0f32; 8];
         unpack_binary_weights(&p, 8, &mut o);
         assert!(o.iter().all(|&v| v == 1.0));
     }
@@ -964,7 +964,7 @@ mod tests {
     #[test]
     fn test_unpack_binary_eight_negative() {
         let p = [0x00u8];
-        let mut o = vec![0.0f32; 8];
+        let mut o = [0.0f32; 8];
         unpack_binary_weights(&p, 8, &mut o);
         assert!(o.iter().all(|&v| v == -1.0));
     }
@@ -1046,7 +1046,7 @@ mod tests {
     #[test]
     fn test_repack_identity_when_non_aligned() {
         let packed = vec![1, 2, 3, 4, 5, 6];
-        let mut out = vec![0u8; 6];
+        let mut out = [0u8; 6];
         // 2 rows × 3 cols, tile_size=4 → not aligned → copy
         repack_for_simd(&packed, 2, 3, 4, &mut out);
         assert_eq!(out, packed);
@@ -1055,7 +1055,7 @@ mod tests {
     #[test]
     fn test_repack_single_row_aligned() {
         let packed = vec![10, 20, 30, 40];
-        let mut out = vec![0u8; 4];
+        let mut out = [0u8; 4];
         repack_for_simd(&packed, 1, 4, 4, &mut out);
         assert_eq!(out, packed);
     }
@@ -1066,7 +1066,7 @@ mod tests {
         // Row 0: [A,B,C,D], Row 1: [E,F,G,H]
         // Column-major tile order: tile(0,0), tile(1,0)
         let packed = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        let mut out = vec![0u8; 8];
+        let mut out = [0u8; 8];
         repack_for_simd(&packed, 2, 4, 4, &mut out);
         assert_eq!(out, vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
@@ -1078,7 +1078,7 @@ mod tests {
         // Output: tile(col0,row0), tile(col0,row1),
         //         tile(col1,row0), tile(col1,row1)
         let packed: Vec<u8> = (1..=16).collect();
-        let mut out = vec![0u8; 16];
+        let mut out = [0u8; 16];
         repack_for_simd(&packed, 2, 8, 4, &mut out);
         assert_eq!(out, vec![1, 2, 3, 4, 9, 10, 11, 12, 5, 6, 7, 8, 13, 14, 15, 16]);
     }
@@ -1087,7 +1087,7 @@ mod tests {
     fn test_repack_4x4_tile2() {
         // 4 rows × 4 cols, tile=2 → 2 tiles per row
         let packed: Vec<u8> = (0..16).collect();
-        let mut out = vec![0u8; 16];
+        let mut out = [0u8; 16];
         repack_for_simd(&packed, 4, 4, 2, &mut out);
         // tile_col 0: rows 0..3 → [0,1], [4,5], [8,9], [12,13]
         // tile_col 1: rows 0..3 → [2,3], [6,7], [10,11], [14,15]
@@ -1097,7 +1097,7 @@ mod tests {
     #[test]
     fn test_repack_tile_size_one() {
         let packed = vec![10, 20, 30, 40, 50, 60];
-        let mut out = vec![0u8; 6];
+        let mut out = [0u8; 6];
         // 2 rows × 3 cols, tile=1 → 3 tiles per row
         repack_for_simd(&packed, 2, 3, 1, &mut out);
         // tile_col 0: [10, 40], tile_col 1: [20, 50],
@@ -1108,24 +1108,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "tile_size must be > 0")]
     fn test_repack_zero_tile_panics() {
-        let packed = vec![0u8; 4];
-        let mut out = vec![0u8; 4];
+        let packed = [0u8; 4];
+        let mut out = [0u8; 4];
         repack_for_simd(&packed, 1, 4, 0, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "packed buffer too small")]
     fn test_repack_packed_too_small() {
-        let packed = vec![0u8; 2];
-        let mut out = vec![0u8; 8];
+        let packed = [0u8; 2];
+        let mut out = [0u8; 8];
         repack_for_simd(&packed, 2, 4, 4, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output buffer too small")]
     fn test_repack_output_too_small() {
-        let packed = vec![0u8; 8];
-        let mut out = vec![0u8; 4];
+        let packed = [0u8; 8];
+        let mut out = [0u8; 4];
         repack_for_simd(&packed, 2, 4, 4, &mut out);
     }
 
@@ -1137,7 +1137,7 @@ mod tests {
         let block_size = 4;
         let packed_per = ternary_packed_len(block_size);
         let mut packed = vec![0u8; packed_per];
-        let mut scales = vec![0.0f32; 1];
+        let mut scales = [0.0f32; 1];
         let nb = pack_with_scale(&w, block_size, 0.3, &mut packed, &mut scales);
         assert_eq!(nb, 1);
         assert!((scales[0] - 0.9).abs() < 1e-6);
@@ -1159,7 +1159,7 @@ mod tests {
 
     #[test]
     fn test_pack_with_scale_partial_last_block() {
-        let w = vec![1.0f32; 5]; // 5 values, block_size=4 → 2 blocks
+        let w = [1.0f32; 5]; // 5 values, block_size=4 → 2 blocks
         let block_size = 4;
         let num_blocks = 2;
         let packed_per = ternary_packed_len(block_size);
@@ -1173,7 +1173,7 @@ mod tests {
 
     #[test]
     fn test_pack_with_scale_all_zero() {
-        let w = vec![0.0f32; 8];
+        let w = [0.0f32; 8];
         let block_size = 4;
         let num_blocks = 2;
         let packed_per = ternary_packed_len(block_size);
@@ -1193,12 +1193,12 @@ mod tests {
         let block_size = 4;
         let packed_per = ternary_packed_len(block_size);
         let mut packed = vec![0u8; packed_per];
-        let mut scales = vec![0.0f32; 1];
+        let mut scales = [0.0f32; 1];
         let nb = pack_with_scale(&w, block_size, 0.6, &mut packed, &mut scales);
         assert_eq!(nb, 1);
         assert!((scales[0] - 2.0).abs() < 1e-6);
         // 2.0 → +1, -2.0 → -1, 1.0 → 0, -1.0 → 0
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unpack_ternary_weights(&packed, 4, &mut out);
         assert_eq!(out, [1.0, -1.0, 0.0, 0.0]);
     }
@@ -1215,26 +1215,26 @@ mod tests {
     #[test]
     #[should_panic(expected = "packed buffer too small")]
     fn test_pack_with_scale_packed_too_small() {
-        let w = vec![1.0f32; 8];
-        let mut packed = vec![0u8; 1]; // need 2
-        let mut scales = vec![0.0f32; 2];
+        let w = [1.0f32; 8];
+        let mut packed = [0u8; 1]; // need 2
+        let mut scales = [0.0f32; 2];
         pack_with_scale(&w, 4, 0.5, &mut packed, &mut scales);
     }
 
     #[test]
     #[should_panic(expected = "scales buffer too small")]
     fn test_pack_with_scale_scales_too_small() {
-        let w = vec![1.0f32; 8];
-        let mut packed = vec![0u8; 2];
-        let mut scales = vec![0.0f32; 1]; // need 2
+        let w = [1.0f32; 8];
+        let mut packed = [0u8; 2];
+        let mut scales = [0.0f32; 1]; // need 2
         pack_with_scale(&w, 4, 0.5, &mut packed, &mut scales);
     }
 
     #[test]
     fn test_pack_with_scale_block_size_one() {
         let w = [1.0, -1.0, 0.0f32];
-        let mut packed = vec![0u8; 3]; // 3 blocks × 1 byte
-        let mut scales = vec![0.0f32; 3];
+        let mut packed = [0u8; 3]; // 3 blocks × 1 byte
+        let mut scales = [0.0f32; 3];
         let nb = pack_with_scale(&w, 1, 0.5, &mut packed, &mut scales);
         assert_eq!(nb, 3);
         assert!((scales[0] - 1.0).abs() < 1e-6);
@@ -1248,7 +1248,7 @@ mod tests {
         let block_size = 64;
         let packed_per = ternary_packed_len(block_size);
         let mut packed = vec![0u8; packed_per];
-        let mut scales = vec![0.0f32; 1];
+        let mut scales = [0.0f32; 1];
         let nb = pack_with_scale(&w, block_size, 0.3, &mut packed, &mut scales);
         assert_eq!(nb, 1);
         assert!((scales[0] - 1.0).abs() < 1e-6);
@@ -1357,15 +1357,15 @@ mod tests {
     #[test]
     fn test_pack_ternary_oversized_buffer() {
         let w = [1.0, -1.0, 0.0, 1.0f32];
-        let mut p = vec![0u8; 16]; // much larger than needed
+        let mut p = [0u8; 16]; // much larger than needed
         pack_ternary_weights(&w, &mut p);
         assert_eq!(p[0], 0b01_00_11_01);
     }
 
     #[test]
     fn test_pack_binary_oversized_buffer() {
-        let w = vec![1.0f32; 8];
-        let mut p = vec![0u8; 16];
+        let w = [1.0f32; 8];
+        let mut p = [0u8; 16];
         pack_binary_weights(&w, &mut p);
         assert_eq!(p[0], 0xFF);
     }
@@ -1373,7 +1373,7 @@ mod tests {
     #[test]
     fn test_unpack_ternary_oversized_output() {
         let p = [0x55u8]; // all +1
-        let mut o = vec![0.0f32; 16];
+        let mut o = [0.0f32; 16];
         unpack_ternary_weights(&p, 4, &mut o);
         assert!(o[..4].iter().all(|&v| v == 1.0));
     }
@@ -1381,7 +1381,7 @@ mod tests {
     #[test]
     fn test_unpack_binary_oversized_output() {
         let p = [0xFFu8];
-        let mut o = vec![0.0f32; 16];
+        let mut o = [0.0f32; 16];
         unpack_binary_weights(&p, 8, &mut o);
         assert!(o[..8].iter().all(|&v| v == 1.0));
     }
@@ -1391,7 +1391,7 @@ mod tests {
     #[test]
     fn test_repack_preserves_data_4x8() {
         let packed: Vec<u8> = (0..32).collect();
-        let mut repacked = vec![0u8; 32];
+        let mut repacked = [0u8; 32];
         repack_for_simd(&packed, 4, 8, 4, &mut repacked);
         // Verify all bytes are present (permutation).
         let mut sorted_in = packed.clone();
@@ -1409,10 +1409,10 @@ mod tests {
         let block_size = 4;
         let packed_per = ternary_packed_len(block_size);
         let mut packed = vec![0u8; packed_per];
-        let mut scales = vec![0.0f32; 1];
+        let mut scales = [0.0f32; 1];
         pack_with_scale(&w, block_size, 0.3, &mut packed, &mut scales);
         // Reconstruct: unpack ternary, multiply by scale.
-        let mut quant = vec![0.0f32; 4];
+        let mut quant = [0.0f32; 4];
         unpack_ternary_weights(&packed, 4, &mut quant);
         let reconstructed: Vec<f32> = quant.iter().map(|&q| q * scales[0]).collect();
         // 0.8→+1*0.8=0.8, -0.8→-1*0.8=-0.8, 0.2→0*0.8=0.0
@@ -1428,10 +1428,10 @@ mod tests {
         let block_size = 4;
         let packed_per = ternary_packed_len(block_size);
         let mut packed = vec![0u8; packed_per];
-        let mut scales = vec![0.0f32; 1];
+        let mut scales = [0.0f32; 1];
         pack_with_scale(&w, block_size, 0.5, &mut packed, &mut scales);
         assert!((scales[0] - 3.0).abs() < 1e-6);
-        let mut quant = vec![0.0f32; 4];
+        let mut quant = [0.0f32; 4];
         unpack_ternary_weights(&packed, 4, &mut quant);
         // -3.0 > cutoff(1.5) in abs → -1
         // -2.0 > cutoff(1.5) in abs → -1

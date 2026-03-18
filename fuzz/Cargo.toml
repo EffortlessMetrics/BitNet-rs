@@ -9,10 +9,10 @@ license = "MIT OR Apache-2.0"
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4.10"
-serde_json = "1.0.145"
+libfuzzer-sys = "0.4.12"
+serde_json = "1.0.149"
 safetensors = "0.7.0"
-tempfile = "3"
+tempfile = "3.27.0"
 bitnet-quantization = { path = "../crates/bitnet-quantization", version = "0.2.1-dev" }
 bitnet-models = { path = "../crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev" }

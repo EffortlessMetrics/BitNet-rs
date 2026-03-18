@@ -66,7 +66,7 @@ proptest! {
 
 // ── BITNET_GPU_FAKE environment overrides ────────────────────────────────────
 
-/// Allowed BITNET_GPU_FAKE values that mean "GPU present".
+/// Allowed `BITNET_GPU_FAKE` values that mean "GPU present".
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 const GPU_FAKE_PRESENT: &[&str] = &["cuda", "CUDA", "rocm", "ROCM", "gpu", "GPU"];
 /// Values that mean "GPU absent" or unrecognised.

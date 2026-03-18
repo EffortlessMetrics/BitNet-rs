@@ -369,7 +369,7 @@ mod tests {
     fn test_qk256_known_block() {
         // Build a 64-byte packed block: first 4 values are [+1, -1, 0, +1],
         // rest are all zeros.
-        let mut packed = vec![0u8; 64];
+        let mut packed = [0u8; 64];
         packed[0] = pack4([1, -1, 0, 1]);
 
         let out = neon_dequant_qk256_block(&packed, 3.0);

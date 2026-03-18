@@ -545,8 +545,8 @@ mod tests {
 
         // Test with small input
         let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
-        let mut output = vec![0u8; 1]; // 4 values pack into 1 byte
-        let mut scales = vec![0.0f32; 1];
+        let mut output = [0u8; 1]; // 4 values pack into 1 byte
+        let mut scales = [0.0f32; 1];
 
         let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_ok());
@@ -561,9 +561,9 @@ mod tests {
             println!("Active provider: {}", quantizer.active_provider());
 
             // Test quantization
-            let input = vec![1.0f32; 1024];
-            let mut output = vec![0u8; 256]; // 1024/4 = 256 bytes
-            let mut scales = vec![0.0f32; 8]; // 1024/128 = 8 blocks
+            let input = [1.0f32; 1024];
+            let mut output = [0u8; 256]; // 1024/4 = 256 bytes
+            let mut scales = [0.0f32; 8]; // 1024/128 = 8 blocks
 
             let result =
                 quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
@@ -577,9 +577,9 @@ mod tests {
             }
 
             // Test matrix multiplication
-            let a = vec![1i8; 64];
-            let b = vec![255u8; 64];
-            let mut c = vec![0.0f32; 16];
+            let a = [1i8; 64];
+            let b = [255u8; 64];
+            let mut c = [0.0f32; 16];
 
             let result = quantizer.matmul_i2s(&a, &b, &mut c, 4, 4, 16);
             assert!(result.is_ok());
@@ -607,8 +607,8 @@ mod tests {
 
         // Perform some operations
         let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
-        let mut output = vec![0u8; 1];
-        let mut scales = vec![0.0f32; 1];
+        let mut output = [0u8; 1];
+        let mut scales = [0.0f32; 1];
 
         let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_ok());
@@ -667,8 +667,8 @@ mod tests {
 
         // Test that provider works
         let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
-        let mut output = vec![0u8; 1];
-        let mut scales = vec![0.0f32; 1];
+        let mut output = [0u8; 1];
+        let mut scales = [0.0f32; 1];
 
         let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_ok(), "Quantization with platform-specific kernel should succeed");

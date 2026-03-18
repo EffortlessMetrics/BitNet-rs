@@ -673,8 +673,8 @@ mod tests {
 
     #[test]
     fn test_residual_add_size_1024() {
-        let x = vec![1.0_f32; 1024];
-        let r = vec![2.0_f32; 1024];
+        let x = [1.0_f32; 1024];
+        let r = [2.0_f32; 1024];
         let out = residual_add(&x, &r).unwrap();
         assert!(out.iter().all(|&v| (v - 3.0).abs() < 1e-6));
     }
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn test_residual_add_size_8192() {
         let x: Vec<f32> = (0..8192).map(|i| ((i as f32) * 0.1).sin()).collect();
-        let r = vec![0.5_f32; 8192];
+        let r = [0.5_f32; 8192];
         let out = residual_add(&x, &r).unwrap();
         for (i, &v) in out.iter().enumerate() {
             assert!((v - (x[i] + 0.5)).abs() < 1e-6);
@@ -694,14 +694,14 @@ mod tests {
     #[test]
     fn test_residual_add_zero_residual_identity() {
         let x: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        let zero = vec![0.0_f32; 64];
+        let zero = [0.0_f32; 64];
         let out = residual_add(&x, &zero).unwrap();
         assert_eq!(out, x);
     }
 
     #[test]
     fn test_residual_add_zero_input_copies_residual() {
-        let zero = vec![0.0_f32; 64];
+        let zero = [0.0_f32; 64];
         let r: Vec<f32> = (0..64).map(|i| i as f32).collect();
         let out = residual_add(&zero, &r).unwrap();
         assert_eq!(out, r);
@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_residual_add_inplace_mismatched_err() {
-        let mut x = vec![1.0];
+        let mut x = [1.0];
         assert!(residual_add_inplace(&mut x, &[1.0, 2.0]).is_err());
     }
 
@@ -764,7 +764,7 @@ mod tests {
 
     #[test]
     fn test_scaled_alpha_half() {
-        let x = vec![0.0; 4];
+        let x = [0.0; 4];
         let r = vec![2.0, 4.0, 6.0, 8.0];
         let out = residual_add_scaled(&x, &r, 0.5).unwrap();
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
@@ -772,16 +772,16 @@ mod tests {
 
     #[test]
     fn test_scaled_negative_alpha() {
-        let x = vec![10.0; 3];
-        let r = vec![5.0; 3];
+        let x = [10.0; 3];
+        let r = [5.0; 3];
         let out = residual_add_scaled(&x, &r, -1.0).unwrap();
         assert!(out.iter().all(|&v| (v - 5.0).abs() < 1e-6));
     }
 
     #[test]
     fn test_scaled_large_alpha() {
-        let x = vec![1.0; 4];
-        let r = vec![0.001; 4];
+        let x = [1.0; 4];
+        let r = [0.001; 4];
         let out = residual_add_scaled(&x, &r, 1000.0).unwrap();
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-3));
     }
@@ -830,8 +830,8 @@ mod tests {
     #[test]
     fn test_post_norm_basic() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let sub = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
+        let sub = [0.0; 4];
+        let gamma = [1.0; 4];
         let out = post_norm_residual(&x, &sub, &gamma, 1e-5).unwrap();
         // norm(x + 0) = norm(x)
         let sq_sum: f32 = x.iter().map(|v| v * v).sum();
@@ -851,7 +851,7 @@ mod tests {
         let x = vec![1.0, 2.0, 3.0, 4.0];
         let sub = vec![0.5, 0.5, 0.5, 0.5];
         let pre = pre_norm_residual(&x, &sub).unwrap();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let post = post_norm_residual(&x, &sub, &gamma, 1e-5).unwrap();
         // pre and post should differ (post has normalization applied)
         assert!(pre != post, "pre_norm and post_norm should produce different results");
@@ -878,8 +878,8 @@ mod tests {
     #[test]
     fn test_gated_gate_zero() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let sub = vec![100.0; 4];
-        let gate = vec![0.0; 4];
+        let sub = [100.0; 4];
+        let gate = [0.0; 4];
         let out = gated_residual(&x, &sub, &gate).unwrap();
         assert_eq!(out, x, "gate=0 should pass through x unchanged");
     }
@@ -888,7 +888,7 @@ mod tests {
     fn test_gated_gate_one() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
         let sub = vec![10.0, 20.0, 30.0, 40.0];
-        let gate = vec![1.0; 4];
+        let gate = [1.0; 4];
         let out = gated_residual(&x, &sub, &gate).unwrap();
         let expected = residual_add(&x, &sub).unwrap();
         assert_eq!(out, expected, "gate=1 should equal plain residual add");
@@ -896,9 +896,9 @@ mod tests {
 
     #[test]
     fn test_gated_gate_half() {
-        let x = vec![0.0; 4];
+        let x = [0.0; 4];
         let sub = vec![2.0, 4.0, 6.0, 8.0];
-        let gate = vec![0.5; 4];
+        let gate = [0.5; 4];
         let out = gated_residual(&x, &sub, &gate).unwrap();
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -942,8 +942,8 @@ mod tests {
 
     #[test]
     fn test_stochastic_rescaling() {
-        let x = vec![0.0; 4];
-        let sub = vec![1.0; 4];
+        let x = [0.0; 4];
+        let sub = [1.0; 4];
         let out = stochastic_depth_residual(&x, &sub, 0.5, true).unwrap();
         // scale = 1/0.5 = 2.0, so output = 0 + 1*2 = 2
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -1030,7 +1030,7 @@ mod tests {
     fn test_skip_proj_identity_weight() {
         // in_dim == out_dim, weight = identity
         let x = vec![1.0, 2.0, 3.0];
-        let sub = vec![0.0; 3];
+        let sub = [0.0; 3];
         let weight = vec![
             1.0, 0.0, 0.0, // row 0
             0.0, 1.0, 0.0, // row 1
@@ -1060,7 +1060,7 @@ mod tests {
     #[test]
     fn test_skip_proj_with_bias() {
         let x = vec![1.0, 0.0];
-        let sub = vec![0.0; 2];
+        let sub = [0.0; 2];
         let weight = vec![1.0, 0.0, 0.0, 1.0]; // identity 2x2
         let bias = vec![10.0, 20.0];
         let out = skip_connection_with_projection(&x, &sub, &weight, Some(&bias), 2, 2).unwrap();
@@ -1082,7 +1082,7 @@ mod tests {
     #[test]
     fn test_skip_proj_batched() {
         let x = vec![1.0, 0.0, 0.0, 1.0]; // 2 rows x 2 cols
-        let sub = vec![0.0; 4];
+        let sub = [0.0; 4];
         let weight = vec![2.0, 0.0, 0.0, 2.0]; // 2*identity
         let out = skip_connection_with_projection(&x, &sub, &weight, None, 2, 2).unwrap();
         assert!((out[0] - 2.0).abs() < 1e-6);
@@ -1099,7 +1099,7 @@ mod tests {
     #[test]
     fn test_skip_proj_mismatched_sublayer_err() {
         let x = vec![1.0, 2.0];
-        let sub = vec![0.0; 3]; // wrong: should be 2
+        let sub = [0.0; 3]; // wrong: should be 2
         let weight = vec![1.0, 0.0, 0.0, 1.0];
         assert!(skip_connection_with_projection(&x, &sub, &weight, None, 2, 2).is_err());
     }
@@ -1107,17 +1107,17 @@ mod tests {
     #[test]
     fn test_skip_proj_short_weight_err() {
         let x = vec![1.0, 2.0];
-        let sub = vec![0.0; 2];
-        let weight = vec![1.0]; // too short
+        let sub = [0.0; 2];
+        let weight = [1.0]; // too short
         assert!(skip_connection_with_projection(&x, &sub, &weight, None, 2, 2).is_err());
     }
 
     #[test]
     fn test_skip_proj_short_bias_err() {
         let x = vec![1.0, 2.0];
-        let sub = vec![0.0; 2];
+        let sub = [0.0; 2];
         let weight = vec![1.0, 0.0, 0.0, 1.0];
-        let bias = vec![1.0]; // too short
+        let bias = [1.0]; // too short
         assert!(skip_connection_with_projection(&x, &sub, &weight, Some(&bias), 2, 2).is_err());
     }
 
@@ -1149,16 +1149,16 @@ mod tests {
 
     #[test]
     fn test_residual_add_large_values() {
-        let x = vec![1e30_f32; 8];
-        let r = vec![1e30_f32; 8];
+        let x = [1e30_f32; 8];
+        let r = [1e30_f32; 8];
         let out = residual_add(&x, &r).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
 
     #[test]
     fn test_residual_add_small_values() {
-        let x = vec![1e-30_f32; 8];
-        let r = vec![1e-30_f32; 8];
+        let x = [1e-30_f32; 8];
+        let r = [1e-30_f32; 8];
         let out = residual_add(&x, &r).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
         assert!(out.iter().all(|&v| v > 0.0));
@@ -1174,18 +1174,18 @@ mod tests {
 
     #[test]
     fn test_post_norm_large_values_stable() {
-        let x = vec![1e6_f32; 4];
-        let sub = vec![1e6_f32; 4];
-        let gamma = vec![1.0; 4];
+        let x = [1e6_f32; 4];
+        let sub = [1e6_f32; 4];
+        let gamma = [1.0; 4];
         let out = post_norm_residual(&x, &sub, &gamma, 1e-5).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
 
     #[test]
     fn test_gated_residual_large_gate() {
-        let x = vec![1.0; 4];
-        let sub = vec![1.0; 4];
-        let gate = vec![1e6; 4];
+        let x = [1.0; 4];
+        let sub = [1.0; 4];
+        let gate = [1e6; 4];
         let out = gated_residual(&x, &sub, &gate).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
@@ -1245,8 +1245,8 @@ mod tests {
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_residual_add_launch() {
-        let x = vec![1.0_f32; 4096];
-        let r = vec![2.0_f32; 4096];
+        let x = [1.0_f32; 4096];
+        let r = [2.0_f32; 4096];
         let result = residual_add_forward(&x, &r);
         assert!(result.is_ok());
     }

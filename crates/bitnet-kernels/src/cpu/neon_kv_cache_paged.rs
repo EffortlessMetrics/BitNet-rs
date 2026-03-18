@@ -771,8 +771,8 @@ mod tests {
     #[test]
     fn test_read_invalid_seq() {
         let mut pool = make_pool(4, 4, 4);
-        let mut k = vec![0.0; 4];
-        let mut v = vec![0.0; 4];
+        let mut k = [0.0; 4];
+        let mut v = [0.0; 4];
         let res = pool.read_cache(99, &mut k, &mut v);
         assert!(res.is_err());
     }
@@ -783,8 +783,8 @@ mod tests {
         let mut pool = make_pool(4, 4, hd);
         let seq = pool.add_sequence(1);
         pool.write_cache(seq, &[1.0; 4], &[2.0; 4]).unwrap();
-        let mut k = vec![0.0; 2]; // too small
-        let mut v = vec![0.0; 2];
+        let mut k = [0.0; 2]; // too small
+        let mut v = [0.0; 2];
         let res = pool.read_cache(seq, &mut k, &mut v);
         assert!(res.is_err());
     }
@@ -806,7 +806,7 @@ mod tests {
         pool.write_cache(seq, &keys, &vals).unwrap();
 
         let query = vec![1.0, 0.0, 0.0, 0.0];
-        let mut scores = vec![0.0f32; 2];
+        let mut scores = [0.0f32; 2];
         let n = pool.attention_scores(seq, &query, &mut scores).unwrap();
         assert_eq!(n, 2);
 
@@ -832,7 +832,7 @@ mod tests {
         pool.write_cache(seq, &keys, &vals).unwrap();
 
         let query = vec![1.0, 0.0, 0.0, 0.0];
-        let mut scores = vec![0.0f32; 3];
+        let mut scores = [0.0f32; 3];
         let n = pool.attention_scores(seq, &query, &mut scores).unwrap();
         assert_eq!(n, 3);
 
@@ -845,8 +845,8 @@ mod tests {
     #[test]
     fn test_attention_invalid_seq() {
         let mut pool = make_pool(4, 4, 4);
-        let q = vec![1.0; 4];
-        let mut s = vec![0.0; 1];
+        let q = [1.0; 4];
+        let mut s = [0.0; 1];
         assert!(pool.attention_scores(99, &q, &mut s).is_err());
     }
 
@@ -855,8 +855,8 @@ mod tests {
         let mut pool = make_pool(4, 4, 8);
         let seq = pool.add_sequence(1);
         pool.write_cache(seq, &vec![0.0; 8], &vec![0.0; 8]).unwrap();
-        let q = vec![1.0; 4]; // head_dim is 8
-        let mut s = vec![0.0; 1];
+        let q = [1.0; 4]; // head_dim is 8
+        let mut s = [0.0; 1];
         assert!(pool.attention_scores(seq, &q, &mut s).is_err());
     }
 
@@ -965,7 +965,7 @@ mod tests {
     #[test]
     fn test_neon_copy_aligned() {
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_copy_f32(&src, &mut dst);
         assert_eq!(src, dst);
     }
@@ -973,7 +973,7 @@ mod tests {
     #[test]
     fn test_neon_copy_unaligned_tail() {
         let src: Vec<f32> = (0..7).map(|i| i as f32).collect();
-        let mut dst = vec![0.0f32; 7];
+        let mut dst = [0.0f32; 7];
         neon_copy_f32(&src, &mut dst);
         assert_eq!(src, dst);
     }
@@ -989,8 +989,8 @@ mod tests {
 
     #[test]
     fn test_neon_dot_single_element() {
-        let a = vec![3.0];
-        let b = vec![4.0];
+        let a = [3.0];
+        let b = [4.0];
         let dot = neon_dot_f32(&a, &b, 1);
         assert!((dot - 12.0).abs() < 1e-5);
     }

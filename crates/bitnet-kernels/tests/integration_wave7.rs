@@ -23,7 +23,7 @@ use bitnet_kernels::cpu::pooling::{PoolConfig, PoolType, PoolingKernel};
 use bitnet_kernels::cpu::quantized_matmul::{i2s_matmul_f32, pack_i2s};
 use bitnet_kernels::cpu::rope::{RopeConfig, apply_rope, apply_rope_batch, compute_frequencies};
 use bitnet_kernels::cuda::conv1d::{Conv1dConfig, PaddingMode, conv1d_forward};
-use bitnet_kernels::cuda::softmax::{SoftmaxConfig, SoftmaxMode, softmax_cpu};
+use bitnet_kernels::cuda::softmax::{SoftmaxConfig, softmax_cpu};
 use bitnet_kernels::reduction::{ReductionOp, reduce_f32, reduce_rows_f32};
 
 // ── Helpers ────────────────────────────────────────────────────────

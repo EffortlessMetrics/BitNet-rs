@@ -22,11 +22,11 @@
 //! | InferenceCommand full config combo | cli_arg_validation_tests.rs (partial) | ✓ (with --seed, --deterministic) |
 
 use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 
-#[allow(deprecated)]
 fn bitnet() -> Command {
-    Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
+    cargo_bin_cmd!("bitnet")
 }
 
 // ============================================================================

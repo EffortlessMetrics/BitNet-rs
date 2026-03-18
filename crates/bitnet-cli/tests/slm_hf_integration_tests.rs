@@ -4,13 +4,13 @@
 //! subcommand, as well as auto-detection of directory-based HF models vs GGUF files.
 
 use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
-#[allow(deprecated)]
 fn bitnet() -> Command {
-    Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
+    cargo_bin_cmd!("bitnet")
 }
 
 // ============================================================================

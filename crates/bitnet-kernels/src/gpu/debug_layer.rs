@@ -355,9 +355,9 @@ mod tests {
     fn debug_layer_passes_identical_quantize() {
         let layer = DebugLayer::new(FallbackKernel);
         // I2S uses block_size=32, so 64 elements → 2 blocks → 2 scales
-        let input = vec![0.5f32; 64];
-        let mut output = vec![0u8; 16];
-        let mut scales = vec![0.0f32; 2];
+        let input = [0.5f32; 64];
+        let mut output = [0u8; 16];
+        let mut scales = [0.0f32; 2];
         layer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
     }
 
@@ -366,9 +366,9 @@ mod tests {
         let biased = BiasedKernel::new(0.5);
         let layer =
             DebugLayer::with_tolerance(biased, Tolerance { abs_epsilon: 1e-6, rel_epsilon: 1e-6 });
-        let input = vec![1.0f32; 64];
-        let mut output = vec![0u8; 16];
-        let mut scales = vec![0.0f32; 2];
+        let input = [1.0f32; 64];
+        let mut output = [0u8; 16];
+        let mut scales = [0.0f32; 2];
         // Mismatch on scales is logged, not returned as error.
         layer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
     }

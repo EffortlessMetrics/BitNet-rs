@@ -1004,7 +1004,7 @@ mod tests {
     #[test]
     fn test_batch_f16_to_f32_basic() {
         let input: Vec<u16> = [0.0f32, 1.0, -1.0, 0.5, 2.0].iter().map(|&v| to_f16(v)).collect();
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         f16_to_f32_avx2(&input, &mut output).unwrap();
 
         assert!(approx_eq(output[0], 0.0, 1e-4));
@@ -1016,14 +1016,14 @@ mod tests {
 
     #[test]
     fn test_batch_f16_to_f32_empty() {
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         f16_to_f32_avx2(&[], &mut output).unwrap();
     }
 
     #[test]
     fn test_batch_f16_to_f32_output_too_small() {
-        let input = vec![0u16; 10];
-        let mut output = vec![0.0f32; 5];
+        let input = [0u16; 10];
+        let mut output = [0.0f32; 5];
         assert!(f16_to_f32_avx2(&input, &mut output).is_err());
     }
 
@@ -1062,7 +1062,7 @@ mod tests {
     #[test]
     fn test_batch_f32_to_f16_basic() {
         let input = [0.0f32, 1.0, -1.0, 0.5, 2.0];
-        let mut output = vec![0u16; 5];
+        let mut output = [0u16; 5];
         f32_to_f16_avx2(&input, &mut output, RoundingMode::NearestEven).unwrap();
 
         for (i, &v) in input.iter().enumerate() {
@@ -1077,8 +1077,8 @@ mod tests {
 
     #[test]
     fn test_batch_f32_to_f16_output_too_small() {
-        let input = vec![0.0f32; 10];
-        let mut output = vec![0u16; 5];
+        let input = [0.0f32; 10];
+        let mut output = [0u16; 5];
         assert!(f32_to_f16_avx2(&input, &mut output, RoundingMode::NearestEven).is_err());
     }
 
@@ -1121,8 +1121,8 @@ mod tests {
     #[test]
     fn test_batch_f32_to_f16_truncate_mode() {
         let input = [1.4_f32, 2.6, -3.1];
-        let mut out_trunc = vec![0u16; 3];
-        let mut out_near = vec![0u16; 3];
+        let mut out_trunc = [0u16; 3];
+        let mut out_near = [0u16; 3];
         f32_to_f16_avx2(&input, &mut out_trunc, RoundingMode::Truncate).unwrap();
         f32_to_f16_avx2(&input, &mut out_near, RoundingMode::NearestEven).unwrap();
         // Just verify no panics and results are valid FP16.
@@ -1137,7 +1137,7 @@ mod tests {
     #[test]
     fn test_batch_bf16_to_f32_basic() {
         let input: Vec<u16> = [0.0f32, 1.0, -1.0, 42.0].iter().map(|&v| to_bf16(v)).collect();
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         bf16_to_f32(&input, &mut output).unwrap();
 
         assert!(approx_eq(output[0], 0.0, 1e-4));
@@ -1159,8 +1159,8 @@ mod tests {
 
     #[test]
     fn test_batch_bf16_to_f32_output_too_small() {
-        let input = vec![0u16; 8];
-        let mut output = vec![0.0f32; 4];
+        let input = [0u16; 8];
+        let mut output = [0.0f32; 4];
         assert!(bf16_to_f32(&input, &mut output).is_err());
     }
 
@@ -1182,10 +1182,10 @@ mod tests {
     #[test]
     fn test_batch_f32_to_bf16_basic() {
         let input = [0.0f32, 1.0, -1.0, 256.0];
-        let mut output = vec![0u16; 4];
+        let mut output = [0u16; 4];
         f32_to_bf16(&input, &mut output).unwrap();
 
-        let mut back = vec![0.0f32; 4];
+        let mut back = [0.0f32; 4];
         bf16_to_f32(&output, &mut back).unwrap();
         for i in 0..4 {
             let tol = input[i].abs() * 0.01 + 1e-4;
@@ -1200,8 +1200,8 @@ mod tests {
 
     #[test]
     fn test_batch_f32_to_bf16_output_too_small() {
-        let input = vec![0.0f32; 8];
-        let mut output = vec![0u16; 4];
+        let input = [0.0f32; 8];
+        let mut output = [0u16; 4];
         assert!(f32_to_bf16(&input, &mut output).is_err());
     }
 
@@ -1238,7 +1238,7 @@ mod tests {
     fn test_f16_roundtrip_batch() {
         let values: Vec<f32> = vec![
             0.0, 1.0, -1.0, 0.5, -0.5, 100.0, -100.0, 0.001, -0.001, 65504.0, -65504.0, 0.25,
-            0.125, 3.14, -2.718,
+            0.125, 1.5, -1.25,
         ];
         let mut f16_buf = vec![0u16; values.len()];
         let mut back = vec![0.0f32; values.len()];
@@ -1263,7 +1263,7 @@ mod tests {
         // 2×2 identity × [1,2; 3,4] = [1,2; 3,4]
         let a = [1.0, 0.0, 0.0, 1.0f32];
         let b = [1.0, 2.0, 3.0, 4.0f32];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         mixed_precision_matmul(&a, &b, &mut c, None, 2, 2, 2, OutputFormat::Fp32).unwrap();
         assert!(approx_eq(c[0], 1.0, 1e-5));
         assert!(approx_eq(c[1], 2.0, 1e-5));
@@ -1275,8 +1275,8 @@ mod tests {
     fn test_matmul_with_f16_output() {
         let a = [1.0, 2.0, 3.0, 4.0f32];
         let b = [1.0, 0.0, 0.0, 1.0f32];
-        let mut c_f32 = vec![0.0f32; 4];
-        let mut c_f16 = vec![0u16; 4];
+        let mut c_f32 = [0.0f32; 4];
+        let mut c_f16 = [0u16; 4];
         mixed_precision_matmul(&a, &b, &mut c_f32, Some(&mut c_f16), 2, 2, 2, OutputFormat::Fp16)
             .unwrap();
 
@@ -1295,8 +1295,8 @@ mod tests {
     fn test_matmul_with_bf16_output() {
         let a = [2.0, 0.0, 0.0, 3.0f32];
         let b = [1.0, 1.0, 1.0, 1.0f32];
-        let mut c_f32 = vec![0.0f32; 4];
-        let mut c_bf16 = vec![0u16; 4];
+        let mut c_f32 = [0.0f32; 4];
+        let mut c_bf16 = [0u16; 4];
         mixed_precision_matmul(&a, &b, &mut c_f32, Some(&mut c_bf16), 2, 2, 2, OutputFormat::Bf16)
             .unwrap();
 
@@ -1310,7 +1310,7 @@ mod tests {
     fn test_matmul_zero_dimension() {
         let a: &[f32] = &[];
         let b: &[f32] = &[];
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         assert!(mixed_precision_matmul(a, b, &mut c, None, 0, 1, 1, OutputFormat::Fp32).is_err());
     }
 
@@ -1318,7 +1318,7 @@ mod tests {
     fn test_matmul_a_too_small() {
         let a = [1.0f32];
         let b = [1.0, 2.0, 3.0, 4.0f32];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(mixed_precision_matmul(&a, &b, &mut c, None, 2, 2, 2, OutputFormat::Fp32).is_err());
     }
 
@@ -1326,7 +1326,7 @@ mod tests {
     fn test_matmul_b_too_small() {
         let a = [1.0, 2.0, 3.0, 4.0f32];
         let b = [1.0f32];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(mixed_precision_matmul(&a, &b, &mut c, None, 2, 2, 2, OutputFormat::Fp32).is_err());
     }
 
@@ -1334,7 +1334,7 @@ mod tests {
     fn test_matmul_c_too_small() {
         let a = [1.0, 2.0, 3.0, 4.0f32];
         let b = [1.0, 0.0, 0.0, 1.0f32];
-        let mut c = vec![0.0f32; 2];
+        let mut c = [0.0f32; 2];
         assert!(mixed_precision_matmul(&a, &b, &mut c, None, 2, 2, 2, OutputFormat::Fp32).is_err());
     }
 
@@ -1342,7 +1342,7 @@ mod tests {
     fn test_matmul_f16_missing_buffer() {
         let a = [1.0f32; 4];
         let b = [1.0f32; 4];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(mixed_precision_matmul(&a, &b, &mut c, None, 2, 2, 2, OutputFormat::Fp16).is_err());
     }
 
@@ -1351,7 +1351,7 @@ mod tests {
         // 2×3 × 3×1 = 2×1
         let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0f32];
         let b = [1.0, 1.0, 1.0f32];
-        let mut c = vec![0.0f32; 2];
+        let mut c = [0.0f32; 2];
         mixed_precision_matmul(&a, &b, &mut c, None, 2, 1, 3, OutputFormat::Fp32).unwrap();
         assert!(approx_eq(c[0], 6.0, 1e-5)); // 1+2+3
         assert!(approx_eq(c[1], 15.0, 1e-5)); // 4+5+6
@@ -1361,7 +1361,7 @@ mod tests {
     fn test_matmul_single_element() {
         let a = [3.0f32];
         let b = [4.0f32];
-        let mut c = vec![0.0f32; 1];
+        let mut c = [0.0f32; 1];
         mixed_precision_matmul(&a, &b, &mut c, None, 1, 1, 1, OutputFormat::Fp32).unwrap();
         assert!(approx_eq(c[0], 12.0, 1e-5));
     }
@@ -1431,8 +1431,8 @@ mod tests {
 
     #[test]
     fn test_dot_length_mismatch() {
-        let a = vec![to_f16(1.0); 3];
-        let b = vec![to_f16(1.0); 4];
+        let a = [to_f16(1.0); 3];
+        let b = [to_f16(1.0); 4];
         assert!(mixed_precision_dot(&a, &b).is_err());
     }
 
@@ -1590,7 +1590,7 @@ mod tests {
     fn test_f16_special_values_batch() {
         // Batch containing zeros, normals, and max.
         let input = vec![0x0000u16, 0x3C00, 0x7BFF, 0x8000, 0xBC00, 0xFBFF];
-        let mut output = vec![0.0f32; 6];
+        let mut output = [0.0f32; 6];
         f16_to_f32_avx2(&input, &mut output).unwrap();
         assert_eq!(output[0], 0.0);
         assert_eq!(output[1], 1.0);
@@ -1613,8 +1613,8 @@ mod tests {
     fn test_matmul_f16_buffer_too_small() {
         let a = [1.0f32; 4];
         let b = [1.0f32; 4];
-        let mut c_f32 = vec![0.0f32; 4];
-        let mut c_f16 = vec![0u16; 2]; // too small
+        let mut c_f32 = [0.0f32; 4];
+        let mut c_f16 = [0u16; 2]; // too small
         assert!(
             mixed_precision_matmul(
                 &a,
@@ -1634,7 +1634,7 @@ mod tests {
     fn test_matmul_bf16_missing_buffer() {
         let a = [1.0f32; 4];
         let b = [1.0f32; 4];
-        let mut c_f32 = vec![0.0f32; 4];
+        let mut c_f32 = [0.0f32; 4];
         assert!(
             mixed_precision_matmul(&a, &b, &mut c_f32, None, 2, 2, 2, OutputFormat::Bf16,).is_err()
         );

@@ -1509,7 +1509,7 @@ mod tests {
 
     #[test]
     fn soa_to_aos_wrong_length() {
-        let data = vec![1.0];
+        let data = [1.0];
         assert!(LayoutTransformer::soa_to_aos(&data, 3, 2).is_err());
     }
 
@@ -1531,7 +1531,7 @@ mod tests {
 
     #[test]
     fn aos_to_aosoa_wrong_length_err() {
-        let data = vec![1.0];
+        let data = [1.0];
         assert!(LayoutTransformer::aos_to_aosoa(&data, 2, 2, 2).is_err());
     }
 

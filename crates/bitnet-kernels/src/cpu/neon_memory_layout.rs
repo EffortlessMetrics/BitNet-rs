@@ -578,7 +578,7 @@ mod tests {
     fn test_transpose_4x4_identity_like() {
         // Row-major 4×4: [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]]
         let input = seq(16);
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
 
         #[rustfmt::skip]
@@ -594,8 +594,8 @@ mod tests {
     #[test]
     fn test_transpose_4x4_double_is_identity() {
         let input = seq(16);
-        let mut mid = vec![0.0f32; 16];
-        let mut back = vec![0.0f32; 16];
+        let mut mid = [0.0f32; 16];
+        let mut back = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut mid);
         transpose_4x4_neon(&mid, &mut back);
         assert_approx(&back, &input, 0.0);
@@ -603,16 +603,16 @@ mod tests {
 
     #[test]
     fn test_transpose_4x4_all_zeros() {
-        let input = vec![0.0f32; 16];
-        let mut output = vec![1.0f32; 16];
+        let input = [0.0f32; 16];
+        let mut output = [1.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
         assert_approx(&output, &input, 0.0);
     }
 
     #[test]
     fn test_transpose_4x4_all_same() {
-        let input = vec![42.0f32; 16];
-        let mut output = vec![0.0f32; 16];
+        let input = [42.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
         assert_approx(&output, &input, 0.0);
     }
@@ -620,10 +620,10 @@ mod tests {
     #[test]
     fn test_transpose_4x4_negative_values() {
         let input: Vec<f32> = (-8..8).map(|x| x as f32).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
         // Double-transpose should recover.
-        let mut back = vec![0.0f32; 16];
+        let mut back = [0.0f32; 16];
         transpose_4x4_neon(&output, &mut back);
         assert_approx(&back, &input, 0.0);
     }
@@ -637,7 +637,7 @@ mod tests {
             0.0, 0.0, 3.0, 0.0,
             0.0, 0.0, 0.0, 4.0,
         ];
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
         // Diagonal matrix is its own transpose.
         assert_approx(&output, &input, 0.0);
@@ -648,7 +648,7 @@ mod tests {
         // Extra elements beyond 16 should be untouched.
         let mut input = seq(20);
         input[16..].fill(99.0);
-        let mut output = vec![0.0f32; 20];
+        let mut output = [0.0f32; 20];
         transpose_4x4_neon(&input, &mut output);
         // Only first 16 should be transposed.
         assert_eq!(output[16], 0.0);
@@ -657,16 +657,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "input must have >= 16")]
     fn test_transpose_4x4_short_input_panics() {
-        let input = vec![0.0f32; 10];
-        let mut output = vec![0.0f32; 16];
+        let input = [0.0f32; 10];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
     }
 
     #[test]
     #[should_panic(expected = "output must have >= 16")]
     fn test_transpose_4x4_short_output_panics() {
-        let input = vec![0.0f32; 16];
-        let mut output = vec![0.0f32; 8];
+        let input = [0.0f32; 16];
+        let mut output = [0.0f32; 8];
         transpose_4x4_neon(&input, &mut output);
     }
 
@@ -675,10 +675,10 @@ mod tests {
     #[test]
     fn test_transpose_2d_4x4() {
         let input = seq(16);
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_2d_neon(&input, 4, 4, &mut output);
 
-        let mut expected = vec![0.0f32; 16];
+        let mut expected = [0.0f32; 16];
         for r in 0..4 {
             for c in 0..4 {
                 expected[c * 4 + r] = input[r * 4 + c];
@@ -690,7 +690,7 @@ mod tests {
     #[test]
     fn test_transpose_2d_8x8() {
         let input = seq(64);
-        let mut output = vec![0.0f32; 64];
+        let mut output = [0.0f32; 64];
         transpose_2d_neon(&input, 8, 8, &mut output);
 
         for r in 0..8 {
@@ -748,7 +748,7 @@ mod tests {
     #[test]
     fn test_transpose_2d_single_row() {
         let input = seq(5);
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         transpose_2d_neon(&input, 1, 5, &mut output);
         // 1×5 transposed is 5×1 (same data, column-major).
         assert_approx(&output, &input, 0.0);
@@ -757,7 +757,7 @@ mod tests {
     #[test]
     fn test_transpose_2d_single_col() {
         let input = seq(5);
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         transpose_2d_neon(&input, 5, 1, &mut output);
         assert_approx(&output, &input, 0.0);
     }
@@ -777,7 +777,7 @@ mod tests {
     #[test]
     fn test_transpose_2d_1x1() {
         let input = vec![7.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         transpose_2d_neon(&input, 1, 1, &mut output);
         assert_eq!(output[0], 7.0);
     }
@@ -788,7 +788,7 @@ mod tests {
     fn test_interleave_basic() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         interleave_neon(&a, &b, &mut out);
         assert_approx(&out, &[1.0, 10.0, 2.0, 20.0, 3.0, 30.0, 4.0, 40.0], 0.0);
     }
@@ -797,7 +797,7 @@ mod tests {
     fn test_interleave_8_elements() {
         let a: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let b: Vec<f32> = (100..108).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         interleave_neon(&a, &b, &mut out);
         for i in 0..8 {
             assert_eq!(out[i * 2], a[i]);
@@ -809,7 +809,7 @@ mod tests {
     fn test_interleave_non_multiple_of_4() {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let b = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0];
-        let mut out = vec![0.0f32; 14];
+        let mut out = [0.0f32; 14];
         interleave_neon(&a, &b, &mut out);
         for i in 0..7 {
             assert_eq!(out[i * 2], a[i]);
@@ -819,9 +819,9 @@ mod tests {
 
     #[test]
     fn test_interleave_single_element() {
-        let a = vec![3.14];
-        let b = vec![2.71];
-        let mut out = vec![0.0f32; 2];
+        let a = [3.14];
+        let b = [2.71];
+        let mut out = [0.0f32; 2];
         interleave_neon(&a, &b, &mut out);
         assert_approx(&out, &[3.14, 2.71], 1e-6);
     }
@@ -839,7 +839,7 @@ mod tests {
     fn test_interleave_mismatched_uses_min() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![10.0, 20.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         interleave_neon(&a, &b, &mut out);
         // count = min(3,2) = 2
         assert_approx(&out, &[1.0, 10.0, 2.0, 20.0], 0.0);
@@ -850,8 +850,8 @@ mod tests {
     #[test]
     fn test_deinterleave_basic() {
         let input = vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0, 4.0, 40.0];
-        let mut a = vec![0.0f32; 4];
-        let mut b = vec![0.0f32; 4];
+        let mut a = [0.0f32; 4];
+        let mut b = [0.0f32; 4];
         deinterleave_neon(&input, &mut a, &mut b);
         assert_approx(&a, &[1.0, 2.0, 3.0, 4.0], 0.0);
         assert_approx(&b, &[10.0, 20.0, 30.0, 40.0], 0.0);
@@ -860,8 +860,8 @@ mod tests {
     #[test]
     fn test_deinterleave_non_multiple_of_4() {
         let input = vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0];
-        let mut a = vec![0.0f32; 3];
-        let mut b = vec![0.0f32; 3];
+        let mut a = [0.0f32; 3];
+        let mut b = [0.0f32; 3];
         deinterleave_neon(&input, &mut a, &mut b);
         assert_approx(&a, &[1.0, 2.0, 3.0], 0.0);
         assert_approx(&b, &[10.0, 20.0, 30.0], 0.0);
@@ -870,8 +870,8 @@ mod tests {
     #[test]
     fn test_deinterleave_single_pair() {
         let input = vec![5.0, 6.0];
-        let mut a = vec![0.0f32; 1];
-        let mut b = vec![0.0f32; 1];
+        let mut a = [0.0f32; 1];
+        let mut b = [0.0f32; 1];
         deinterleave_neon(&input, &mut a, &mut b);
         assert_eq!(a[0], 5.0);
         assert_eq!(b[0], 6.0);
@@ -891,10 +891,10 @@ mod tests {
     fn test_interleave_deinterleave_roundtrip_4() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut interleaved = vec![0.0f32; 8];
+        let mut interleaved = [0.0f32; 8];
         interleave_neon(&a, &b, &mut interleaved);
-        let mut a2 = vec![0.0f32; 4];
-        let mut b2 = vec![0.0f32; 4];
+        let mut a2 = [0.0f32; 4];
+        let mut b2 = [0.0f32; 4];
         deinterleave_neon(&interleaved, &mut a2, &mut b2);
         assert_approx(&a2, &a, 0.0);
         assert_approx(&b2, &b, 0.0);
@@ -904,10 +904,10 @@ mod tests {
     fn test_interleave_deinterleave_roundtrip_9() {
         let a: Vec<f32> = (0..9).map(|x| x as f32).collect();
         let b: Vec<f32> = (100..109).map(|x| x as f32).collect();
-        let mut interleaved = vec![0.0f32; 18];
+        let mut interleaved = [0.0f32; 18];
         interleave_neon(&a, &b, &mut interleaved);
-        let mut a2 = vec![0.0f32; 9];
-        let mut b2 = vec![0.0f32; 9];
+        let mut a2 = [0.0f32; 9];
+        let mut b2 = [0.0f32; 9];
         deinterleave_neon(&interleaved, &mut a2, &mut b2);
         assert_approx(&a2, &a, 0.0);
         assert_approx(&b2, &b, 0.0);
@@ -920,7 +920,7 @@ mod tests {
         let ch0 = vec![1.0, 2.0, 3.0, 4.0];
         let ch1 = vec![10.0, 20.0, 30.0, 40.0];
         let inputs: Vec<&[f32]> = vec![&ch0, &ch1];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         interleave_multi_neon(&inputs, 2, 4, &mut out);
         assert_approx(&out, &[1.0, 10.0, 2.0, 20.0, 3.0, 30.0, 4.0, 40.0], 0.0);
     }
@@ -931,7 +931,7 @@ mod tests {
         let ch1 = vec![10.0, 20.0];
         let ch2 = vec![100.0, 200.0];
         let inputs: Vec<&[f32]> = vec![&ch0, &ch1, &ch2];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         interleave_multi_neon(&inputs, 3, 2, &mut out);
         assert_approx(&out, &[1.0, 10.0, 100.0, 2.0, 20.0, 200.0], 0.0);
     }
@@ -939,9 +939,9 @@ mod tests {
     #[test]
     fn test_deinterleave_multi_3ch() {
         let input = vec![1.0, 10.0, 100.0, 2.0, 20.0, 200.0];
-        let mut ch0 = vec![0.0f32; 2];
-        let mut ch1 = vec![0.0f32; 2];
-        let mut ch2 = vec![0.0f32; 2];
+        let mut ch0 = [0.0f32; 2];
+        let mut ch1 = [0.0f32; 2];
+        let mut ch2 = [0.0f32; 2];
         let mut outputs: Vec<&mut [f32]> = vec![&mut ch0, &mut ch1, &mut ch2];
         deinterleave_multi_neon(&input, 3, 2, &mut outputs);
         assert_approx(&ch0, &[1.0, 2.0], 0.0);
@@ -954,11 +954,11 @@ mod tests {
         let ch0: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let ch1: Vec<f32> = (100..108).map(|x| x as f32).collect();
         let inputs: Vec<&[f32]> = vec![&ch0, &ch1];
-        let mut interleaved = vec![0.0f32; 16];
+        let mut interleaved = [0.0f32; 16];
         interleave_multi_neon(&inputs, 2, 8, &mut interleaved);
 
-        let mut out0 = vec![0.0f32; 8];
-        let mut out1 = vec![0.0f32; 8];
+        let mut out0 = [0.0f32; 8];
+        let mut out1 = [0.0f32; 8];
         let mut outputs: Vec<&mut [f32]> = vec![&mut out0, &mut out1];
         deinterleave_multi_neon(&interleaved, 2, 8, &mut outputs);
         assert_approx(&out0, &ch0, 0.0);
@@ -992,7 +992,7 @@ mod tests {
 
     #[test]
     fn test_pad_one_element() {
-        let data = vec![42.0];
+        let data = [42.0];
         let padded = pad_to_neon_alignment(&data, 0.0);
         assert_eq!(padded.len(), 4);
         assert_approx(&padded, &[42.0, 0.0, 0.0, 0.0], 0.0);
@@ -1118,7 +1118,7 @@ mod tests {
     #[test]
     fn test_cache_copy_basic() {
         let src = seq(32);
-        let mut dst = vec![0.0f32; 32];
+        let mut dst = [0.0f32; 32];
         cache_aware_copy_neon(&src, &mut dst, 32);
         assert_approx(&dst, &src, 0.0);
     }
@@ -1126,7 +1126,7 @@ mod tests {
     #[test]
     fn test_cache_copy_non_aligned() {
         let src = seq(7);
-        let mut dst = vec![0.0f32; 7];
+        let mut dst = [0.0f32; 7];
         cache_aware_copy_neon(&src, &mut dst, 7);
         assert_approx(&dst, &src, 0.0);
     }
@@ -1140,8 +1140,8 @@ mod tests {
 
     #[test]
     fn test_cache_copy_single() {
-        let src = vec![3.14];
-        let mut dst = vec![0.0f32; 1];
+        let src = [3.14];
+        let mut dst = [0.0f32; 1];
         cache_aware_copy_neon(&src, &mut dst, 1);
         assert_approx(&dst, &src, 1e-6);
     }
@@ -1151,7 +1151,7 @@ mod tests {
     #[test]
     fn test_gather_stride_2() {
         let src = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         gather_stride_neon(&src, 2, 4, &mut dst);
         assert_approx(&dst, &[0.0, 2.0, 4.0, 6.0], 0.0);
     }
@@ -1159,7 +1159,7 @@ mod tests {
     #[test]
     fn test_gather_stride_3() {
         let src = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0];
-        let mut dst = vec![0.0f32; 3];
+        let mut dst = [0.0f32; 3];
         gather_stride_neon(&src, 3, 3, &mut dst);
         assert_approx(&dst, &[10.0, 40.0, 70.0], 0.0);
     }
@@ -1167,7 +1167,7 @@ mod tests {
     #[test]
     fn test_gather_stride_1() {
         let src = seq(5);
-        let mut dst = vec![0.0f32; 5];
+        let mut dst = [0.0f32; 5];
         gather_stride_neon(&src, 1, 5, &mut dst);
         assert_approx(&dst, &src, 0.0);
     }
@@ -1175,7 +1175,7 @@ mod tests {
     #[test]
     fn test_scatter_stride_2() {
         let src = vec![1.0, 2.0, 3.0, 4.0];
-        let mut dst = vec![0.0f32; 8];
+        let mut dst = [0.0f32; 8];
         scatter_stride_neon(&src, 2, 4, &mut dst);
         assert_approx(&dst, &[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0], 0.0);
     }
@@ -1183,9 +1183,9 @@ mod tests {
     #[test]
     fn test_gather_scatter_roundtrip() {
         let original = vec![10.0, 0.0, 20.0, 0.0, 30.0, 0.0, 40.0, 0.0];
-        let mut gathered = vec![0.0f32; 4];
+        let mut gathered = [0.0f32; 4];
         gather_stride_neon(&original, 2, 4, &mut gathered);
-        let mut scattered = vec![0.0f32; 8];
+        let mut scattered = [0.0f32; 8];
         scatter_stride_neon(&gathered, 2, 4, &mut scattered);
         // Even-index elements should match.
         for i in 0..4 {
@@ -1218,7 +1218,7 @@ mod tests {
             9.0, 10.0, 11.0, 12.0,
             13.0, 14.0, 15.0, 16.0,
         ];
-        let mut block = vec![0.0f32; 4];
+        let mut block = [0.0f32; 4];
         copy_block_neon(&src, 4, 1, 1, 2, 2, &mut block);
         assert_approx(&block, &[6.0, 7.0, 10.0, 11.0], 0.0);
     }
@@ -1226,7 +1226,7 @@ mod tests {
     #[test]
     fn test_copy_block_full() {
         let src = seq(16);
-        let mut block = vec![0.0f32; 16];
+        let mut block = [0.0f32; 16];
         copy_block_neon(&src, 4, 0, 0, 4, 4, &mut block);
         assert_approx(&block, &src, 0.0);
     }
@@ -1234,7 +1234,7 @@ mod tests {
     #[test]
     fn test_write_block_basic() {
         let block = vec![99.0, 98.0, 97.0, 96.0];
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         write_block_neon(&block, 2, 2, &mut dst, 4, 1, 1);
         assert_eq!(dst[5], 99.0);
         assert_eq!(dst[6], 98.0);
@@ -1245,9 +1245,9 @@ mod tests {
     #[test]
     fn test_copy_write_roundtrip() {
         let src = seq(64);
-        let mut block = vec![0.0f32; 16];
+        let mut block = [0.0f32; 16];
         copy_block_neon(&src, 8, 2, 3, 4, 4, &mut block);
-        let mut dst = vec![0.0f32; 64];
+        let mut dst = [0.0f32; 64];
         write_block_neon(&block, 4, 4, &mut dst, 8, 2, 3);
         // Verify the block region matches.
         for r in 0..4 {
@@ -1260,7 +1260,7 @@ mod tests {
     #[test]
     fn test_copy_block_single_row() {
         let src = seq(8);
-        let mut block = vec![0.0f32; 4];
+        let mut block = [0.0f32; 4];
         copy_block_neon(&src, 8, 0, 2, 1, 4, &mut block);
         assert_approx(&block, &[3.0, 4.0, 5.0, 6.0], 0.0);
     }
@@ -1270,7 +1270,7 @@ mod tests {
     #[test]
     fn test_neon_copy_large() {
         let src: Vec<f32> = (0..256).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 256];
+        let mut dst = [0.0f32; 256];
         cache_aware_copy_neon(&src, &mut dst, 256);
         assert_approx(&dst, &src, 0.0);
     }
@@ -1278,7 +1278,7 @@ mod tests {
     #[test]
     fn test_neon_copy_13_elements() {
         let src = seq(13);
-        let mut dst = vec![0.0f32; 13];
+        let mut dst = [0.0f32; 13];
         cache_aware_copy_neon(&src, &mut dst, 13);
         assert_approx(&dst, &src, 0.0);
     }
@@ -1324,7 +1324,7 @@ mod tests {
 
     #[test]
     fn test_tile_single_element() {
-        let input = vec![7.0];
+        let input = [7.0];
         let (tiled, ntr, ntc) = tile_data_neon(&input, 1, 1, 4, 4);
         assert_eq!(ntr, 1);
         assert_eq!(ntc, 1);
@@ -1336,7 +1336,7 @@ mod tests {
     #[test]
     fn test_cache_copy_partial() {
         let src = seq(32);
-        let mut dst = vec![0.0f32; 32];
+        let mut dst = [0.0f32; 32];
         cache_aware_copy_neon(&src, &mut dst, 10);
         assert_approx(&dst[..10], &src[..10], 0.0);
     }
@@ -1344,9 +1344,9 @@ mod tests {
     #[test]
     fn test_transpose_4x4_fractional_values() {
         let input: Vec<f32> = (0..16).map(|x| x as f32 * 0.1).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         transpose_4x4_neon(&input, &mut output);
-        let mut back = vec![0.0f32; 16];
+        let mut back = [0.0f32; 16];
         transpose_4x4_neon(&output, &mut back);
         assert_approx(&back, &input, 1e-6);
     }

@@ -500,7 +500,7 @@ mod tests {
     #[test]
     fn absmax_tail_elements() {
         // 11 elements: 8 SIMD + 3 tail
-        let input = vec![0.0; 11];
+        let input = [0.0; 11];
         let mut v = input;
         v[10] = -99.0;
         assert_eq!(absmax_scale_avx2(&v), 99.0);
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn i2s_roundtrip_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (packed, scales) = quantize_i2s_avx2(&input, 4);
         let out = dequantize_i2s_avx2(&packed, &scales, 4);
         assert_eq!(out.len(), 8);
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn i2s_roundtrip_ones() {
-        let input = vec![1.0; 4];
+        let input = [1.0; 4];
         let (packed, scales) = quantize_i2s_avx2(&input, 4);
         let out = dequantize_i2s_avx2(&packed, &scales, 4);
         for (a, b) in input.iter().zip(out.iter()) {
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn i2s_roundtrip_negative_ones() {
-        let input = vec![-1.0; 4];
+        let input = [-1.0; 4];
         let (packed, scales) = quantize_i2s_avx2(&input, 4);
         let out = dequantize_i2s_avx2(&packed, &scales, 4);
         for (a, b) in input.iter().zip(out.iter()) {
@@ -620,7 +620,7 @@ mod tests {
 
     #[test]
     fn i2s_all_same_value() {
-        let input = vec![5.0; 8];
+        let input = [5.0; 8];
         let (packed, scales) = quantize_i2s_avx2(&input, 4);
         let out = dequantize_i2s_avx2(&packed, &scales, 4);
         for v in &out {
@@ -630,7 +630,7 @@ mod tests {
 
     #[test]
     fn i2s_all_negative_same() {
-        let input = vec![-4.0; 4];
+        let input = [-4.0; 4];
         let (packed, scales) = quantize_i2s_avx2(&input, 4);
         let out = dequantize_i2s_avx2(&packed, &scales, 4);
         for v in &out {
@@ -735,7 +735,7 @@ mod tests {
 
     #[test]
     fn pack_unpack_single() {
-        let values = vec![1];
+        let values = [1];
         let packed = pack_ternary_bits(&values);
         assert_eq!(packed.len(), 1);
         let unpacked = unpack_ternary_bits(&packed, 1);
@@ -771,7 +771,7 @@ mod tests {
 
     #[test]
     fn pack_unpack_all_ones() {
-        let values = vec![1; 16];
+        let values = [1; 16];
         let packed = pack_ternary_bits(&values);
         let unpacked = unpack_ternary_bits(&packed, 16);
         assert_eq!(unpacked, values);
@@ -779,7 +779,7 @@ mod tests {
 
     #[test]
     fn pack_unpack_all_neg_ones() {
-        let values = vec![-1; 16];
+        let values = [-1; 16];
         let packed = pack_ternary_bits(&values);
         let unpacked = unpack_ternary_bits(&packed, 16);
         assert_eq!(unpacked, values);
@@ -787,7 +787,7 @@ mod tests {
 
     #[test]
     fn pack_unpack_all_zeros() {
-        let values = vec![0; 16];
+        let values = [0; 16];
         let packed = pack_ternary_bits(&values);
         let unpacked = unpack_ternary_bits(&packed, 16);
         assert_eq!(unpacked, values);
@@ -933,7 +933,7 @@ mod tests {
 
     #[test]
     fn absmax_9_elements() {
-        let mut input = vec![1.0; 9];
+        let mut input = [1.0; 9];
         input[8] = -20.0;
         assert_eq!(absmax_scale_avx2(&input), 20.0);
     }
@@ -970,7 +970,7 @@ mod proptests {
             while input.len() % 4 != 0 {
                 input.push(0.0);
             }
-            let gs = 4.min(input.len()).max(4);
+            let gs = 64; // group size for quantization
             let (packed, scales) = quantize_i2s_avx2(&input, gs);
             let out = dequantize_i2s_avx2(&packed, &scales, gs);
             for (i, (a, b)) in input.iter().zip(out.iter()).enumerate() {

@@ -1075,7 +1075,7 @@ mod tests {
 
     #[test]
     fn scatter_2d_basic() {
-        let mut data = vec![vec![0.0; 3]; 4];
+        let mut data: [Vec<f32>; 4] = std::array::from_fn(|_| vec![0.0; 3]);
         let values = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
         scatter_2d(&mut data, &[1, 3], &values).unwrap();
         assert_eq!(data[1], vec![1.0, 2.0, 3.0]);
@@ -1085,13 +1085,13 @@ mod tests {
 
     #[test]
     fn scatter_2d_oob() {
-        let mut data = vec![vec![0.0; 2]; 2];
+        let mut data: [Vec<f32>; 2] = std::array::from_fn(|_| vec![0.0; 2]);
         assert!(scatter_2d(&mut data, &[5], &[vec![1.0, 2.0]]).is_err());
     }
 
     #[test]
     fn scatter_2d_width_mismatch() {
-        let mut data = vec![vec![0.0; 3]; 2];
+        let mut data: [Vec<f32>; 2] = std::array::from_fn(|_| vec![0.0; 3]);
         assert!(scatter_2d(&mut data, &[0], &[vec![1.0, 2.0]]).is_err());
     }
 
@@ -1106,13 +1106,13 @@ mod tests {
 
     #[test]
     fn gather_2d_oob() {
-        let data = vec![vec![1.0]; 2];
+        let data: [Vec<f32>; 2] = std::array::from_fn(|_| vec![1.0]);
         assert!(gather_2d(&data, &[3]).is_err());
     }
 
     #[test]
     fn scatter_2d_then_gather_2d_roundtrip() {
-        let mut data = vec![vec![0.0; 2]; 4];
+        let mut data: [Vec<f32>; 4] = std::array::from_fn(|_| vec![0.0; 2]);
         let values = vec![vec![7.0, 8.0], vec![9.0, 10.0]];
         scatter_2d(&mut data, &[1, 3], &values).unwrap();
         let recovered = gather_2d(&data, &[1, 3]).unwrap();

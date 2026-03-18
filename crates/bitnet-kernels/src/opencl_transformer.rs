@@ -1012,7 +1012,7 @@ mod tests {
     fn test_kv_cache_size_mismatch_rejected() {
         let cfg = tiny_config();
         let mut cache = KvCacheState::new(&cfg);
-        let k = vec![1.0; 3]; // wrong size
+        let k = [1.0; 3]; // wrong size
         let v = vec![1.0; cfg.kv_size()];
         assert!(cache.append(&k, &v, 1).is_err());
     }
@@ -1045,8 +1045,8 @@ mod tests {
     fn test_inference_state_set_input() {
         let cfg = tiny_config();
         let mut state = InferenceState::new(cfg, 1).unwrap();
-        let hidden = vec![1.0_f32; 8];
-        state.set_input(hidden, 1).unwrap();
+        let hidden = [1.0_f32; 8];
+        state.set_input(hidden.to_vec(), 1).unwrap();
         assert_eq!(state.hidden.len(), 8);
     }
 
@@ -1054,8 +1054,8 @@ mod tests {
     fn test_inference_state_set_input_wrong_size() {
         let cfg = tiny_config();
         let mut state = InferenceState::new(cfg, 1).unwrap();
-        let hidden = vec![1.0_f32; 5]; // wrong
-        assert!(state.set_input(hidden, 1).is_err());
+        let hidden = [1.0_f32; 5]; // wrong
+        assert!(state.set_input(hidden.to_vec(), 1).is_err());
     }
 
     #[test]
@@ -1086,7 +1086,7 @@ mod tests {
     #[test]
     fn test_rms_norm_unit_weights() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let w = vec![1.0; 4];
+        let w = [1.0; 4];
         let y = rms_norm_ref(&x, &w, 1e-5);
         // RMS = sqrt((1+4+9+16)/4) = sqrt(7.5) ≈ 2.7386
         let rms = (30.0_f32 / 4.0 + 1e-5).sqrt();
@@ -1099,7 +1099,7 @@ mod tests {
     #[test]
     fn test_rms_norm_preserves_unit_rms() {
         let x = vec![3.0, 4.0];
-        let w = vec![1.0; 2];
+        let w = [1.0; 2];
         let y = rms_norm_ref(&x, &w, 1e-5);
         let y_rms: f32 = (y.iter().map(|v| v * v).sum::<f32>() / y.len() as f32).sqrt();
         assert!((y_rms - 1.0).abs() < 1e-4, "output RMS should be ~1.0, got {y_rms}");
@@ -1117,8 +1117,8 @@ mod tests {
 
     #[test]
     fn test_rms_norm_all_zeros() {
-        let x = vec![0.0; 4];
-        let w = vec![1.0; 4];
+        let x = [0.0; 4];
+        let w = [1.0; 4];
         let y = rms_norm_ref(&x, &w, 1e-5);
         // All zeros, RMS ≈ sqrt(eps), output ≈ 0
         for &yi in &y {
@@ -1133,7 +1133,7 @@ mod tests {
     #[test]
     fn test_residual_identity_sublayer() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let zeros = vec![0.0; 4];
+        let zeros = [0.0; 4];
         let out = ResidualConnection::forward(&x, &zeros).unwrap();
         assert_eq!(out, x, "x + 0 should equal x");
     }
@@ -1168,7 +1168,7 @@ mod tests {
     #[test]
     fn test_prenorm_identity_sublayer() {
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let w = vec![1.0; 4];
+        let w = [1.0; 4];
         let out = PreNormBlock::forward(&x, &w, 1e-5, |_normed| Ok(vec![0.0; 4])).unwrap();
         // sublayer returns 0 → residual should be x
         assert_eq!(out, x);
@@ -1177,7 +1177,7 @@ mod tests {
     #[test]
     fn test_prenorm_sublayer_receives_normalized_input() {
         let x = vec![3.0, 4.0];
-        let w = vec![1.0; 2];
+        let w = [1.0; 2];
         let mut received = Vec::new();
         let _ = PreNormBlock::forward(&x, &w, 1e-5, |normed| {
             received = normed.to_vec();
@@ -1191,7 +1191,7 @@ mod tests {
     #[test]
     fn test_prenorm_propagates_sublayer_error() {
         let x = vec![1.0, 2.0];
-        let w = vec![1.0; 2];
+        let w = [1.0; 2];
         let result = PreNormBlock::forward(&x, &w, 1e-5, |_| {
             Err(KernelError::InvalidArguments { reason: "test error".into() }.into())
         });
@@ -1220,7 +1220,7 @@ mod tests {
 
     #[test]
     fn test_softmax_single_element() {
-        let mut x = vec![42.0];
+        let mut x = [42.0];
         softmax_ref(&mut x);
         assert!((x[0] - 1.0).abs() < 1e-6);
     }
@@ -1294,7 +1294,7 @@ mod tests {
         let cfg = tiny_config();
         let w = seeded_weights(&cfg, 42);
         let mut kv = KvCacheState::new(&cfg);
-        let x = vec![0.1_f32; 3]; // wrong size
+        let x = [0.1_f32; 3]; // wrong size
         assert!(transformer_layer_forward_ref(&x, &w, &mut kv, 0, &cfg).is_err());
     }
 

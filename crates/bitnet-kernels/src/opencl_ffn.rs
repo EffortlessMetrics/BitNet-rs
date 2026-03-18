@@ -582,7 +582,7 @@ mod tests {
         let x = vec![1.0, 0.5];
         let w_up = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0]; // [2,3]
         let w_down = vec![1.0, 0.0, 0.0, 1.0, 0.0, 0.0]; // [3,2]
-        let mut output = vec![0.0_f32; 2];
+        let mut output = [0.0_f32; 2];
         ffn_forward_ref(&x, &w_up, &w_down, &mut output, 1, h, inter, ActivationType::ReLU)
             .unwrap();
         // up = [1.0, 0.5, 0.0], relu → [1.0, 0.5, 0.0]
@@ -627,9 +627,9 @@ mod tests {
 
     #[test]
     fn test_ffn_rejects_short_x() {
-        let w_up = vec![0.0_f32; 4];
-        let w_down = vec![0.0_f32; 4];
-        let mut output = vec![0.0_f32; 2];
+        let w_up = [0.0_f32; 4];
+        let w_down = [0.0_f32; 4];
+        let mut output = [0.0_f32; 2];
         let result =
             ffn_forward_ref(&[0.0], &w_up, &w_down, &mut output, 1, 2, 2, ActivationType::ReLU);
         assert!(result.is_err());
@@ -637,9 +637,9 @@ mod tests {
 
     #[test]
     fn test_ffn_rejects_short_w_up() {
-        let x = vec![0.0_f32; 4];
-        let w_down = vec![0.0_f32; 4];
-        let mut output = vec![0.0_f32; 4];
+        let x = [0.0_f32; 4];
+        let w_down = [0.0_f32; 4];
+        let mut output = [0.0_f32; 4];
         let result =
             ffn_forward_ref(&x, &[0.0], &w_down, &mut output, 2, 2, 2, ActivationType::ReLU);
         assert!(result.is_err());
@@ -647,18 +647,18 @@ mod tests {
 
     #[test]
     fn test_ffn_rejects_short_w_down() {
-        let x = vec![0.0_f32; 4];
-        let w_up = vec![0.0_f32; 4];
-        let mut output = vec![0.0_f32; 4];
+        let x = [0.0_f32; 4];
+        let w_up = [0.0_f32; 4];
+        let mut output = [0.0_f32; 4];
         let result = ffn_forward_ref(&x, &w_up, &[0.0], &mut output, 2, 2, 2, ActivationType::ReLU);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_ffn_rejects_short_output() {
-        let x = vec![0.0_f32; 4];
-        let w_up = vec![0.0_f32; 4];
-        let w_down = vec![0.0_f32; 4];
+        let x = [0.0_f32; 4];
+        let w_up = [0.0_f32; 4];
+        let w_down = [0.0_f32; 4];
         let result = ffn_forward_ref(&x, &w_up, &w_down, &mut [0.0], 2, 2, 2, ActivationType::ReLU);
         assert!(result.is_err());
     }
@@ -822,10 +822,10 @@ mod tests {
 
     #[test]
     fn test_gated_ffn_rejects_short_gate() {
-        let x = vec![0.0_f32; 4];
-        let w_up = vec![0.0_f32; 4];
-        let w_down = vec![0.0_f32; 4];
-        let mut output = vec![0.0_f32; 4];
+        let x = [0.0_f32; 4];
+        let w_up = [0.0_f32; 4];
+        let w_down = [0.0_f32; 4];
+        let mut output = [0.0_f32; 4];
         let result = gated_ffn_forward_ref(
             &x,
             &[0.0],
@@ -1220,9 +1220,9 @@ mod tests {
     fn test_matmul_ref_2x2() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0_f32; 4];
+        let mut c = [0.0_f32; 4];
         matmul_ref(&a, &b, &mut c, 2, 2, 2);
-        assert_eq!(c, vec![19.0, 22.0, 43.0, 50.0]);
+        assert_eq!(c.to_vec(), vec![19.0, 22.0, 43.0, 50.0]);
     }
 
     #[test]

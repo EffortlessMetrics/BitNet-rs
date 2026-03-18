@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn forward_uniform_input() {
-        let input = vec![5.0; 8];
+        let input = [5.0; 8];
         let cfg = BatchNormConfig { num_features: 2, eps: 1e-5, momentum: 0.1, training: true };
         let (out, _, _) =
             batch_norm_forward(&input, &[1.0; 2], &[0.0; 2], &[0.0; 2], &[1.0; 2], &cfg).unwrap();
@@ -735,7 +735,7 @@ mod tests {
     fn forward_all_zeros_input() {
         let c = 3;
         let cfg = BatchNormConfig { num_features: c, eps: 1e-5, momentum: 0.1, training: true };
-        let input = vec![0.0_f32; 12]; // batch=4, features=3
+        let input = [0.0_f32; 12]; // batch=4, features=3
         let (out, _, _) =
             batch_norm_forward(&input, &[1.0; 3], &[0.0; 3], &[0.0; 3], &[1.0; 3], &cfg).unwrap();
 
@@ -1168,10 +1168,10 @@ mod tests {
                     &cfg,
                 ).unwrap();
 
-                for ch in 0..features {
+                for (ch, &var) in uv.iter().enumerate().take(features) {
                     prop_assert!(
-                        uv[ch] >= 0.0 && uv[ch].is_finite(),
-                        "ch {}: running_var={} should be >= 0 and finite", ch, uv[ch]
+                        var >= 0.0 && var.is_finite(),
+                        "ch {}: running_var={} should be >= 0 and finite", ch, var
                     );
                 }
             }

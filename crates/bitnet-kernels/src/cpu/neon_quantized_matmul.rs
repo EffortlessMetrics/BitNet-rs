@@ -541,7 +541,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_accum_exactly_8_elements() {
-        let vals: Vec<i8> = vec![1; 8];
+        let vals: Vec<i8> = [1; 8];
         let packed = pack_row_major(&vals, 1, 8);
         let input = [1.0f32; 8];
         let result = unsafe { neon_accumulate_i2s_chunk(&packed, &input, 8) };
@@ -614,7 +614,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_matvec_identity_4x4() {
-        let mut w = vec![0i8; 16];
+        let mut w = [0i8; 16];
         for i in 0..4 {
             w[i * 4 + i] = 1;
         }
@@ -810,7 +810,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn test_matmul_2x3x2() {
         // A: 2×3 all +1, B: 3×2
-        let a = vec![1i8; 6];
+        let a = [1i8; 6];
         let a_packed = pack_row_major(&a, 2, 3);
         let b = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0]; // 3×2
         let out = unsafe { neon_i2s_matmul(&a_packed, &b, 2, 2, 3) };
@@ -1481,7 +1481,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_precision_small_values() {
-        let w = vec![1i8; 4];
+        let w = [1i8; 4];
         let packed = pack_row_major(&w, 1, 4);
         let input = [1e-7f32; 4];
         let out = unsafe { neon_i2s_matvec(&packed, &input, 1, 4) };
@@ -1491,7 +1491,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_precision_large_values() {
-        let w = vec![1i8; 4];
+        let w = [1i8; 4];
         let packed = pack_row_major(&w, 1, 4);
         let input = [1e6f32; 4];
         let out = unsafe { neon_i2s_matvec(&packed, &input, 1, 4) };

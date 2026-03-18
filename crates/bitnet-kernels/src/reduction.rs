@@ -444,7 +444,7 @@ pub fn launch_reduce_f32(data: &[f32], op: ReductionOp) -> Result<f32> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         let config = ReductionConfig::new(data.len(), 1, op)?;
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         match launch_reduce_rows_cuda(data, &mut output, &config) {
             Ok(()) => {
                 log::debug!("Reduction completed on CUDA (n={})", data.len());
@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn test_reduce_single_element() {
-        let data = vec![42.0];
+        let data = [42.0];
         assert!((reduce_f32(&data, ReductionOp::Sum) - 42.0).abs() < 1e-6);
         assert!((reduce_f32(&data, ReductionOp::Max) - 42.0).abs() < 1e-6);
         assert!((reduce_f32(&data, ReductionOp::Min) - 42.0).abs() < 1e-6);

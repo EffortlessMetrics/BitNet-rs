@@ -574,7 +574,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let config = make_config(1, 1, 4, 32);
         let proc = NeonQuantizedMatmul::new(config);
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         proc.matmul_i2s_f32(&packed, &input, &mut output);
         let expected = scalar_matmul(&w, &input, 1, 4, 1);
         assert_close(&output, &expected, 1e-5);
@@ -707,7 +707,7 @@ mod tests {
         let w = vec![1i8; 2 * 32];
         let input = vec![1.0f32; 32 * 2];
         let packed = pack_i2s(&w);
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         proc.matmul_i2s_f32(&packed, &input, &mut output);
         let expected = scalar_matmul(&w, &input, 2, 32, 2);
         assert_close(&output, &expected, 1e-4);
@@ -721,7 +721,7 @@ mod tests {
         let w: Vec<i8> = (0..256).map(|i| [1, -1, 0][i % 3]).collect();
         let input: Vec<f32> = (0..256).map(|i| i as f32 * 0.01).collect();
         let packed = pack_i2s(&w);
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         proc.matmul_i2s_f32(&packed, &input, &mut output);
         let expected = scalar_matmul(&w, &input, 1, 256, 1);
         assert_close(&output, &expected, 1e-3);
@@ -773,7 +773,7 @@ mod tests {
         let input_f16: Vec<u16> = vec![0; k];
         let config = make_config(m, n, k, 32);
         let proc = NeonQuantizedMatmul::new(config);
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         proc.matmul_i2s_f16(&packed, &input_f16, &mut output);
         assert_close(&output, &[0.0], 1e-6);
     }
@@ -827,7 +827,7 @@ mod tests {
         let packed = pack_i2s(&w);
         let config = make_config(m, n, k, 256);
         let proc = NeonQuantizedMatmul::new(config);
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         proc.matmul_i2s_f32(&packed, &input, &mut output);
         // sum of alternating +1,-1 with all 1.0 inputs = 0.0
         assert_close(&output, &[0.0], 1e-4);

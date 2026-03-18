@@ -1257,7 +1257,7 @@ mod tests {
 
     #[test]
     fn test_compression_lz4_roundtrip() {
-        let data = vec![0xABu8; 1000];
+        let data = [0xABu8; 1000];
         let c = CompressionCodec::Lz4.compress(&data);
         assert!(c.len() < data.len(), "LZ4 should compress repeated data");
         let d = CompressionCodec::Lz4.decompress(&c).unwrap();
@@ -1266,7 +1266,7 @@ mod tests {
 
     #[test]
     fn test_compression_zstd_low_level_roundtrip() {
-        let data = vec![0x42u8; 500];
+        let data = [0x42u8; 500];
         let codec = CompressionCodec::Zstd { level: 3 };
         let c = codec.compress(&data);
         let d = codec.decompress(&c).unwrap();
@@ -1275,7 +1275,7 @@ mod tests {
 
     #[test]
     fn test_compression_zstd_high_level_roundtrip() {
-        let data = vec![0x42u8; 500];
+        let data = [0x42u8; 500];
         let codec = CompressionCodec::Zstd { level: 15 };
         let c = codec.compress(&data);
         let d = codec.decompress(&c).unwrap();
@@ -1321,7 +1321,7 @@ mod tests {
 
     #[test]
     fn test_rle_all_marker_bytes() {
-        let data = vec![0xFFu8; 10];
+        let data = [0xFFu8; 10];
         let c = cpu_rle_compress(&data);
         let d = cpu_rle_decompress(&c).unwrap();
         assert_eq!(d, data);
@@ -1490,14 +1490,14 @@ mod tests {
 
     #[test]
     fn test_header_decode_invalid_dtype() {
-        let mut buf = vec![0u8; 64];
+        let mut buf = [0u8; 64];
         buf[0] = 99; // invalid dtype
         assert!(matches!(TensorHeader::decode(&buf), Err(SerdeError::InvalidDType(99))));
     }
 
     #[test]
     fn test_header_decode_invalid_byte_order() {
-        let mut buf = vec![0u8; 64];
+        let mut buf = [0u8; 64];
         buf[0] = 0; // F32
         buf[1] = 99; // invalid byte order
         assert!(matches!(TensorHeader::decode(&buf), Err(SerdeError::InvalidByteOrder(99))));
@@ -1505,7 +1505,7 @@ mod tests {
 
     #[test]
     fn test_header_decode_invalid_compression() {
-        let mut buf = vec![0u8; 64];
+        let mut buf = [0u8; 64];
         buf[0] = 0; // F32
         buf[1] = 0; // LE
         buf[2] = 99; // invalid compression
@@ -1514,7 +1514,7 @@ mod tests {
 
     #[test]
     fn test_header_decode_invalid_checksum() {
-        let mut buf = vec![0u8; 64];
+        let mut buf = [0u8; 64];
         buf[0] = 0; // F32
         buf[1] = 0; // LE
         buf[2] = 0; // None compression
@@ -1544,7 +1544,7 @@ mod tests {
 
     #[test]
     fn test_write_read_f32_lz4() {
-        let data = vec![0u8; 1024]; // highly compressible
+        let data = [0u8; 1024]; // highly compressible
         let tw = TensorWriter::new()
             .with_compression(CompressionCodec::Lz4)
             .with_checksum(ChecksumAlgorithm::Crc32);
@@ -1556,7 +1556,7 @@ mod tests {
 
     #[test]
     fn test_write_read_f32_zstd() {
-        let data = vec![0x42u8; 512];
+        let data = [0x42u8; 512];
         let tw = TensorWriter::new()
             .with_compression(CompressionCodec::Zstd { level: 3 })
             .with_checksum(ChecksumAlgorithm::XxHash64);
@@ -1578,7 +1578,7 @@ mod tests {
 
     #[test]
     fn test_write_read_u8() {
-        let data = vec![255u8; 64];
+        let data = [255u8; 64];
         let tw = TensorWriter::new();
         let (blob, _) = tw.write_to_vec(DType::U8, &[8, 8], &data).unwrap();
         let (_, raw, _) = TensorReader::read_from_slice(&blob).unwrap();
@@ -1598,7 +1598,7 @@ mod tests {
 
     #[test]
     fn test_write_read_f16() {
-        let data = vec![0u8; 32]; // 16 f16 elements
+        let data = [0u8; 32]; // 16 f16 elements
         let tw = TensorWriter::new();
         let (blob, _) = tw.write_to_vec(DType::F16, &[4, 4], &data).unwrap();
         let (hdr, raw, _) = TensorReader::read_from_slice(&blob).unwrap();
@@ -1608,7 +1608,7 @@ mod tests {
 
     #[test]
     fn test_write_read_bf16() {
-        let data = vec![0xABu8; 20];
+        let data = [0xABu8; 20];
         let tw = TensorWriter::new();
         let (blob, _) = tw.write_to_vec(DType::BF16, &[10], &data).unwrap();
         let (hdr, raw, _) = TensorReader::read_from_slice(&blob).unwrap();
@@ -1640,7 +1640,7 @@ mod tests {
 
     #[test]
     fn test_write_read_i2() {
-        let data = vec![0b10_01_00_11u8; 8]; // packed i2
+        let data = [0b10_01_00_11u8; 8]; // packed i2
         let tw = TensorWriter::new();
         let (blob, _) = tw.write_to_vec(DType::I2, &[32], &data).unwrap();
         let (hdr, raw, _) = TensorReader::read_from_slice(&blob).unwrap();
@@ -1730,7 +1730,7 @@ mod tests {
 
     #[test]
     fn test_mmap_reader_compressed() {
-        let data = vec![0x00u8; 512];
+        let data = [0x00u8; 512];
         let tw = TensorWriter::new().with_compression(CompressionCodec::Lz4);
         let (blob, _) = tw.write_to_vec(DType::U8, &[512], &data).unwrap();
         let mmr = MemoryMapReader::from_bytes(blob).unwrap();
@@ -1822,7 +1822,7 @@ mod tests {
 
     #[test]
     fn test_streaming_reader_returns_none_after_done() {
-        let data = vec![0u8; 4];
+        let data = [0u8; 4];
         let tw = TensorWriter::new()
             .with_compression(CompressionCodec::None)
             .with_checksum(ChecksumAlgorithm::None);
@@ -1868,13 +1868,13 @@ mod tests {
     #[test]
     fn test_bundle_multiple_tensors() {
         let w1 = sample_f32_data(8);
-        let w2 = vec![1u8; 16];
-        let w3 = vec![0u8; 32];
+        let w2 = [1u8; 16];
+        let w3 = [0u8; 32];
 
         let mut bundle = TensorBundle::new();
         bundle.add("layer.0.weight", DType::F32, vec![2, 4], w1.clone());
-        bundle.add("layer.0.bias", DType::I8, vec![16], w2.clone());
-        bundle.add("layer.1.weight", DType::U8, vec![4, 8], w3.clone());
+        bundle.add("layer.0.bias", DType::I8, vec![16], w2.to_vec());
+        bundle.add("layer.1.weight", DType::U8, vec![4, 8], w3.to_vec());
         assert_eq!(bundle.len(), 3);
 
         let (blob, _) = bundle.write_to_vec().unwrap();
@@ -1896,16 +1896,16 @@ mod tests {
 
     #[test]
     fn test_bundle_compressed() {
-        let data = vec![0u8; 1024];
+        let data = [0u8; 1024];
         let mut bundle = TensorBundle::new().with_compression(CompressionCodec::Lz4);
-        bundle.add("t", DType::U8, vec![1024], data.clone());
+        bundle.add("t", DType::U8, vec![1024], data.to_vec());
 
         let (blob, stats) = bundle.write_to_vec().unwrap();
         assert!(stats.compressed_bytes < stats.raw_bytes, "LZ4 should compress zeros");
 
         let (index, raw_blob) = TensorBundle::read_from_slice(&blob).unwrap();
         let (_, raw, _) = TensorBundle::read_tensor("t", &index, &raw_blob).unwrap();
-        assert_eq!(raw, data);
+        assert_eq!(raw, data.to_vec());
     }
 
     #[test]
@@ -2203,7 +2203,7 @@ mod tests {
 
     #[test]
     fn test_streaming_compressed_read_all() {
-        let data = vec![0xAAu8; 256];
+        let data = [0xAAu8; 256];
         let tw = TensorWriter::new()
             .with_compression(CompressionCodec::Lz4)
             .with_checksum(ChecksumAlgorithm::None);

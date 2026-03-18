@@ -1157,8 +1157,8 @@ mod tests {
         let mut state = KvCacheGpuState::new(cfg.clone());
         let (k, v) = make_kv(&cfg, 1.0);
         kv_cache_append(&mut state, 0, &k, &v).unwrap();
-        let mut k_out = vec![0.0f32; 1];
-        let mut v_out = vec![0.0f32; 1];
+        let mut k_out = [0.0f32; 1];
+        let mut v_out = [0.0f32; 1];
         assert!(kv_cache_paged_lookup(&mut state, 0, &mut k_out, &mut v_out).is_err());
     }
 

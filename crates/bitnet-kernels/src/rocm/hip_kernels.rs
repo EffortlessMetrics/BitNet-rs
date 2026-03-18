@@ -687,7 +687,7 @@ mod tests {
         // A = I₂, B = [[1,2],[3,4]]  → C = B
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![1.0, 2.0, 3.0, 4.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         k.execute(&a, &b, &mut c, 2, 2, 2).unwrap();
         assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -697,7 +697,7 @@ mod tests {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 3×2
         let b = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]; // 2×3
-        let mut c = vec![0.0; 9]; // 3×3
+        let mut c = [0.0; 9]; // 3×3
         k.execute(&a, &b, &mut c, 3, 3, 2).unwrap();
         assert_eq!(c, vec![27.0, 30.0, 33.0, 61.0, 68.0, 75.0, 95.0, 106.0, 117.0]);
     }
@@ -705,7 +705,7 @@ mod tests {
     #[test]
     fn matmul_mock_1x1() {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
-        let mut c = vec![0.0];
+        let mut c = [0.0];
         k.execute(&[3.0], &[5.0], &mut c, 1, 1, 1).unwrap();
         assert!((c[0] - 15.0).abs() < 1e-6);
     }
@@ -713,9 +713,9 @@ mod tests {
     #[test]
     fn matmul_mock_zeros() {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
-        let a = vec![0.0; 16];
-        let b = vec![1.0; 16];
-        let mut c = vec![999.0; 16];
+        let a = [0.0; 16];
+        let b = [1.0; 16];
+        let mut c = [999.0; 16];
         k.execute(&a, &b, &mut c, 4, 4, 4).unwrap();
         assert!(c.iter().all(|&x| x == 0.0));
     }
@@ -723,36 +723,36 @@ mod tests {
     #[test]
     fn matmul_stub_returns_err() {
         let k = HipMatmulKernel::new(HipMatmulConfig::default());
-        let a = vec![1.0; 4];
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 4];
+        let a = [1.0; 4];
+        let b = [1.0; 4];
+        let mut c = [0.0; 4];
         assert!(k.execute(&a, &b, &mut c, 2, 2, 2).is_err());
     }
 
     #[test]
     fn matmul_a_buffer_too_small() {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
-        let a = vec![1.0; 2]; // need 4
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 4];
+        let a = [1.0; 2]; // need 4
+        let b = [1.0; 4];
+        let mut c = [0.0; 4];
         assert!(k.execute(&a, &b, &mut c, 2, 2, 2).is_err());
     }
 
     #[test]
     fn matmul_b_buffer_too_small() {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
-        let a = vec![1.0; 4];
-        let b = vec![1.0; 2]; // need 4
-        let mut c = vec![0.0; 4];
+        let a = [1.0; 4];
+        let b = [1.0; 2]; // need 4
+        let mut c = [0.0; 4];
         assert!(k.execute(&a, &b, &mut c, 2, 2, 2).is_err());
     }
 
     #[test]
     fn matmul_c_buffer_too_small() {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
-        let a = vec![1.0; 4];
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 2]; // need 4
+        let a = [1.0; 4];
+        let b = [1.0; 4];
+        let mut c = [0.0; 2]; // need 4
         assert!(k.execute(&a, &b, &mut c, 2, 2, 2).is_err());
     }
 
@@ -775,7 +775,7 @@ mod tests {
         let k = HipMatmulKernel::new(HipMatmulConfig::mock());
         let a = vec![1.0, 2.0, 3.0, 4.0]; // 4×1
         let b = vec![2.0, 3.0, 4.0]; // 1×3
-        let mut c = vec![0.0; 12]; // 4×3
+        let mut c = [0.0; 12]; // 4×3
         k.execute(&a, &b, &mut c, 4, 3, 1).unwrap();
         assert_eq!(c, vec![2.0, 3.0, 4.0, 4.0, 6.0, 8.0, 6.0, 9.0, 12.0, 8.0, 12.0, 16.0]);
     }
@@ -786,7 +786,7 @@ mod tests {
     fn softmax_mock_single_row() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
         let input = vec![1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         k.execute(&input, &mut output, 1, 3).unwrap();
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5);
@@ -796,7 +796,7 @@ mod tests {
     fn softmax_mock_two_rows() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
         let input = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
-        let mut output = vec![0.0; 6];
+        let mut output = [0.0; 6];
         k.execute(&input, &mut output, 2, 3).unwrap();
         // Row of equal values → uniform distribution.
         for &v in &output[0..3] {
@@ -811,7 +811,7 @@ mod tests {
     fn softmax_mock_large_values_stable() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
         let input = vec![1000.0, 1001.0, 1002.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         k.execute(&input, &mut output, 1, 3).unwrap();
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5, "should be stable with large values");
@@ -822,7 +822,7 @@ mod tests {
     fn softmax_mock_negative_values() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
         let input = vec![-1.0, -2.0, -3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         k.execute(&input, &mut output, 1, 3).unwrap();
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5);
@@ -841,31 +841,31 @@ mod tests {
     #[test]
     fn softmax_stub_returns_err() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::default());
-        let input = vec![1.0; 3];
-        let mut output = vec![0.0; 3];
+        let input = [1.0; 3];
+        let mut output = [0.0; 3];
         assert!(k.execute(&input, &mut output, 1, 3).is_err());
     }
 
     #[test]
     fn softmax_input_too_small() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
-        let input = vec![1.0; 2]; // need 3
-        let mut output = vec![0.0; 3];
+        let input = [1.0; 2]; // need 3
+        let mut output = [0.0; 3];
         assert!(k.execute(&input, &mut output, 1, 3).is_err());
     }
 
     #[test]
     fn softmax_output_too_small() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
-        let input = vec![1.0; 3];
-        let mut output = vec![0.0; 2]; // need 3
+        let input = [1.0; 3];
+        let mut output = [0.0; 2]; // need 3
         assert!(k.execute(&input, &mut output, 1, 3).is_err());
     }
 
     #[test]
     fn softmax_inplace_buffer_too_small() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
-        let mut data = vec![1.0; 2]; // need 3
+        let mut data = [1.0; 2]; // need 3
         assert!(k.execute_inplace(&mut data, 1, 3).is_err());
     }
 
@@ -879,8 +879,8 @@ mod tests {
     #[test]
     fn softmax_mock_single_element() {
         let k = HipSoftmaxKernel::new(HipSoftmaxConfig::mock());
-        let input = vec![42.0];
-        let mut output = vec![0.0];
+        let input = [42.0];
+        let mut output = [0.0];
         k.execute(&input, &mut output, 1, 1).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-6);
     }
@@ -892,9 +892,9 @@ mod tests {
         let cfg = HipLayerNormConfig::mock(4);
         let k = HipLayerNormKernel::new(cfg);
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
-        let mut output = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let mut output = [0.0; 4];
         k.execute(&input, &gamma, &beta, &mut output, 1).unwrap();
         // Output should be zero-mean with unit variance (approx).
         let mean: f32 = output.iter().sum::<f32>() / 4.0;
@@ -906,9 +906,9 @@ mod tests {
         let cfg = HipLayerNormConfig::mock(3);
         let k = HipLayerNormKernel::new(cfg);
         let input = vec![5.0, 5.0, 5.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
-        let mut output = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
+        let mut output = [0.0; 3];
         k.execute(&input, &gamma, &beta, &mut output, 1).unwrap();
         // Constant input → zero after normalization.
         for &v in &output {
@@ -921,9 +921,9 @@ mod tests {
         let cfg = HipLayerNormConfig::mock(2);
         let k = HipLayerNormKernel::new(cfg);
         let input = vec![0.0, 0.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let beta = vec![3.0, 7.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         k.execute(&input, &gamma, &beta, &mut output, 1).unwrap();
         // All-zero input after norm → 0; + beta → beta.
         assert!((output[0] - 3.0).abs() < 1e-3);
@@ -935,9 +935,9 @@ mod tests {
         let cfg = HipLayerNormConfig::mock(3);
         let k = HipLayerNormKernel::new(cfg);
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
-        let mut output = vec![0.0; 6];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
+        let mut output = [0.0; 6];
         k.execute(&input, &gamma, &beta, &mut output, 2).unwrap();
         // Each row independently normalized.
         let mean0: f32 = output[0..3].iter().sum::<f32>() / 3.0;
@@ -950,10 +950,10 @@ mod tests {
     fn layer_norm_stub_returns_err() {
         let cfg = HipLayerNormConfig::new(4);
         let k = HipLayerNormKernel::new(cfg);
-        let input = vec![1.0; 4];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let mut output = [0.0; 4];
         assert!(k.execute(&input, &gamma, &beta, &mut output, 1).is_err());
     }
 
@@ -961,10 +961,10 @@ mod tests {
     fn layer_norm_gamma_too_small() {
         let cfg = HipLayerNormConfig::mock(4);
         let k = HipLayerNormKernel::new(cfg);
-        let input = vec![1.0; 4];
-        let gamma = vec![1.0; 2]; // need 4
-        let beta = vec![0.0; 4];
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 4];
+        let gamma = [1.0; 2]; // need 4
+        let beta = [0.0; 4];
+        let mut output = [0.0; 4];
         assert!(k.execute(&input, &gamma, &beta, &mut output, 1).is_err());
     }
 
@@ -972,10 +972,10 @@ mod tests {
     fn layer_norm_input_too_small() {
         let cfg = HipLayerNormConfig::mock(4);
         let k = HipLayerNormKernel::new(cfg);
-        let input = vec![1.0; 2]; // need 4
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 2]; // need 4
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let mut output = [0.0; 4];
         assert!(k.execute(&input, &gamma, &beta, &mut output, 1).is_err());
     }
 
@@ -1000,12 +1000,12 @@ mod tests {
         let k = HipLayerNormKernel::new(cfg);
         let input = vec![-1.0, 1.0];
         let gamma = vec![2.0, 2.0];
-        let beta = vec![0.0; 2];
-        let mut output_g2 = vec![0.0; 2];
+        let beta = [0.0; 2];
+        let mut output_g2 = [0.0; 2];
         k.execute(&input, &gamma, &beta, &mut output_g2, 1).unwrap();
 
         let gamma1 = vec![1.0, 1.0];
-        let mut output_g1 = vec![0.0; 2];
+        let mut output_g1 = [0.0; 2];
         k.execute(&input, &gamma1, &beta, &mut output_g1, 1).unwrap();
 
         // gamma=2 should double the normalized output.
@@ -1020,12 +1020,12 @@ mod tests {
     fn quant_mock_roundtrip_2bit() {
         let k = HipQuantKernel::new(HipQuantConfig::mock());
         let input = vec![0.5, -0.5, 0.0, 1.0];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         k.quantize(&input, &mut packed, &mut scales).unwrap();
         assert!(scales[0] > 0.0);
 
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         k.dequantize(&packed, &scales, &mut output).unwrap();
         // Roundtrip should preserve sign.
         assert!(output[0] > 0.0);
@@ -1035,11 +1035,11 @@ mod tests {
     #[test]
     fn quant_mock_zeros() {
         let k = HipQuantKernel::new(HipQuantConfig::mock());
-        let input = vec![0.0; 8];
-        let mut packed = vec![0u8; 8];
-        let mut scales = vec![0.0f32; 1];
+        let input = [0.0; 8];
+        let mut packed = [0u8; 8];
+        let mut scales = [0.0f32; 1];
         k.quantize(&input, &mut packed, &mut scales).unwrap();
-        let mut output = vec![999.0f32; 8];
+        let mut output = [999.0f32; 8];
         k.dequantize(&packed, &scales, &mut output).unwrap();
         for &v in &output[..8] {
             assert!(v.abs() < 1e-6);
@@ -1051,8 +1051,8 @@ mod tests {
         let cfg = HipQuantConfig::mock_with_bits(HipQuantBits::Four);
         let k = HipQuantKernel::new(cfg);
         let input = vec![3.5, -3.5, 0.0, 7.0];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         k.quantize(&input, &mut packed, &mut scales).unwrap();
         assert!(scales[0] > 0.0);
     }
@@ -1062,8 +1062,8 @@ mod tests {
         let cfg = HipQuantConfig::mock_with_bits(HipQuantBits::Eight);
         let k = HipQuantKernel::new(cfg);
         let input = vec![100.0, -50.0, 25.0, 0.0];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         k.quantize(&input, &mut packed, &mut scales).unwrap();
         assert!(scales[0] > 0.0);
     }
@@ -1071,27 +1071,27 @@ mod tests {
     #[test]
     fn quant_stub_returns_err() {
         let k = HipQuantKernel::new(HipQuantConfig::default());
-        let input = vec![1.0; 4];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let input = [1.0; 4];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         assert!(k.quantize(&input, &mut packed, &mut scales).is_err());
     }
 
     #[test]
     fn dequant_stub_returns_err() {
         let k = HipQuantKernel::new(HipQuantConfig::default());
-        let packed = vec![0u8; 4];
-        let scales = vec![1.0f32; 1];
-        let mut output = vec![0.0f32; 4];
+        let packed = [0u8; 4];
+        let scales = [1.0f32; 1];
+        let mut output = [0.0f32; 4];
         assert!(k.dequantize(&packed, &scales, &mut output).is_err());
     }
 
     #[test]
     fn quant_scales_too_small() {
         let k = HipQuantKernel::new(HipQuantConfig::mock());
-        let input = vec![1.0; 512]; // 2 blocks of 256
-        let mut packed = vec![0u8; 512];
-        let mut scales = vec![0.0f32; 1]; // need 2
+        let input = [1.0; 512]; // 2 blocks of 256
+        let mut packed = [0u8; 512];
+        let mut scales = [0.0f32; 1]; // need 2
         assert!(k.quantize(&input, &mut packed, &mut scales).is_err());
     }
 
@@ -1114,10 +1114,10 @@ mod tests {
     fn quant_mock_preserves_magnitude_order() {
         let k = HipQuantKernel::new(HipQuantConfig::mock_with_bits(HipQuantBits::Eight));
         let input = vec![10.0, 50.0, 100.0, 0.0];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         k.quantize(&input, &mut packed, &mut scales).unwrap();
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         k.dequantize(&packed, &scales, &mut output).unwrap();
         assert!(output[2] > output[1] && output[1] > output[0]);
     }
@@ -1125,9 +1125,9 @@ mod tests {
     #[test]
     fn quant_dequant_output_too_small() {
         let k = HipQuantKernel::new(HipQuantConfig::mock());
-        let packed = vec![0u8; 256];
-        let scales = vec![1.0f32; 1];
-        let mut output = vec![0.0f32; 100]; // need 256
+        let packed = [0u8; 256];
+        let scales = [1.0f32; 1];
+        let mut output = [0.0f32; 100]; // need 256
         assert!(k.dequantize(&packed, &scales, &mut output).is_err());
     }
 
@@ -1140,7 +1140,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 0.0];
         let kk = vec![1.0, 0.0, 0.0, 0.0];
         let v = vec![0.0, 1.0, 0.0, 0.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         k.execute(&q, &kk, &v, &mut out, 1).unwrap();
         // With seq_len=1 the output is just V (softmax of a single score = 1).
         assert!((out[1] - 1.0).abs() < 1e-5);
@@ -1154,7 +1154,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0]; // 2 tokens
         let kk = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         k.execute(&q, &kk, &v, &mut out, 2).unwrap();
         // First token can only attend to itself (causal).
         assert!((out[0] - 1.0).abs() < 1e-4);
@@ -1181,10 +1181,10 @@ mod tests {
     fn attention_stub_returns_err() {
         let cfg = HipAttentionKernelConfig::new(1, 4);
         let k = HipAttentionKernel::new(cfg);
-        let q = vec![1.0; 4];
-        let kk = vec![1.0; 4];
-        let v = vec![1.0; 4];
-        let mut out = vec![0.0; 4];
+        let q = [1.0; 4];
+        let kk = [1.0; 4];
+        let v = [1.0; 4];
+        let mut out = [0.0; 4];
         assert!(k.execute(&q, &kk, &v, &mut out, 1).is_err());
     }
 
@@ -1192,10 +1192,10 @@ mod tests {
     fn attention_input_size_mismatch() {
         let cfg = HipAttentionKernelConfig::mock(1, 4);
         let k = HipAttentionKernel::new(cfg);
-        let q = vec![1.0; 2]; // too small
-        let kk = vec![1.0; 4];
-        let v = vec![1.0; 4];
-        let mut out = vec![0.0; 4];
+        let q = [1.0; 2]; // too small
+        let kk = [1.0; 4];
+        let v = [1.0; 4];
+        let mut out = [0.0; 4];
         assert!(k.execute(&q, &kk, &v, &mut out, 1).is_err());
     }
 
@@ -1203,10 +1203,10 @@ mod tests {
     fn attention_output_size_mismatch() {
         let cfg = HipAttentionKernelConfig::mock(1, 4);
         let k = HipAttentionKernel::new(cfg);
-        let q = vec![1.0; 4];
-        let kk = vec![1.0; 4];
-        let v = vec![1.0; 4];
-        let mut out = vec![0.0; 2]; // too small
+        let q = [1.0; 4];
+        let kk = [1.0; 4];
+        let v = [1.0; 4];
+        let mut out = [0.0; 2]; // too small
         assert!(k.execute(&q, &kk, &v, &mut out, 1).is_err());
     }
 
@@ -1234,7 +1234,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0];
         let kk = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         // Non-causal: first token can attend to both tokens.
         k.execute(&q, &kk, &v, &mut out, 2).unwrap();
         // Score matrix without causal mask allows full attention.
@@ -1393,10 +1393,10 @@ mod tests {
 
         let a = vec![1.0, 0.0, 0.0, 1.0]; // I₂
         let b = vec![2.0, 3.0, 4.0, 5.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         mm.execute(&a, &b, &mut c, 2, 2, 2).unwrap();
 
-        let mut softmax_out = vec![0.0; 4];
+        let mut softmax_out = [0.0; 4];
         sm.execute(&c, &mut softmax_out, 2, 2).unwrap();
         // Each row sums to 1.
         let sum0: f32 = softmax_out[0..2].iter().sum();
@@ -1412,15 +1412,15 @@ mod tests {
 
         // Quantize → dequantize a small matrix.
         let orig = vec![1.0, 2.0, 3.0, 4.0];
-        let mut packed = vec![0u8; 4];
-        let mut scales = vec![0.0f32; 1];
+        let mut packed = [0u8; 4];
+        let mut scales = [0.0f32; 1];
         qk.quantize(&orig, &mut packed, &mut scales).unwrap();
-        let mut restored = vec![0.0f32; 4];
+        let mut restored = [0.0f32; 4];
         qk.dequantize(&packed, &scales, &mut restored).unwrap();
 
         // Use dequantized matrix in matmul (should not panic).
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 4];
+        let b = [1.0; 4];
+        let mut c = [0.0; 4];
         mk.execute(&restored, &b, &mut c, 2, 2, 2).unwrap();
         for &v in &c {
             assert!(v.is_finite());
@@ -1433,12 +1433,12 @@ mod tests {
         let att = HipAttentionKernel::new(HipAttentionKernelConfig::mock(1, 4));
 
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
-        let mut normed = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let mut normed = [0.0; 4];
         ln.execute(&input, &gamma, &beta, &mut normed, 1).unwrap();
 
-        let mut attn_out = vec![0.0; 4];
+        let mut attn_out = [0.0; 4];
         att.execute(&normed, &normed, &normed, &mut attn_out, 1).unwrap();
         for &v in &attn_out {
             assert!(v.is_finite());

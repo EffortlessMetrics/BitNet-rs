@@ -651,20 +651,20 @@ mod tests {
     #[test]
     fn test_activation_buffer_too_small() {
         let cfg = I2sMatmulConfig::for_shape(2, 2, 4, 32).unwrap();
-        let act = vec![1.0f32; 2]; // too small
-        let packed = vec![0u8; 4];
-        let scales = vec![1.0f32; 2];
-        let mut out = vec![0.0f32; 4];
+        let act = [1.0f32; 2]; // too small
+        let packed = [0u8; 4];
+        let scales = [1.0f32; 2];
+        let mut out = [0.0f32; 4];
         assert!(i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_output_buffer_too_small() {
         let cfg = I2sMatmulConfig::for_shape(2, 2, 2, 32).unwrap();
-        let act = vec![1.0f32; 4];
-        let packed = vec![0u8; 2];
-        let scales = vec![1.0f32; 2];
-        let mut out = vec![0.0f32; 1]; // too small
+        let act = [1.0f32; 4];
+        let packed = [0u8; 2];
+        let scales = [1.0f32; 2];
+        let mut out = [0.0f32; 1]; // too small
         assert!(i2s_matmul_cpu(&act, &packed, &scales, &mut out, &cfg).is_err());
     }
 
@@ -702,8 +702,8 @@ mod tests {
         let cfg = I2sMatmulConfig::for_shape(1, 512, 2048, 256).unwrap();
         let packed = vec![0u8; 2048 * 512 / 4];
         let scales = vec![1.0f32; 512 * (2048usize.div_ceil(256))];
-        let act = vec![1.0f32; 2048];
-        let mut output = vec![0.0f32; 512];
+        let act = [1.0f32; 2048];
+        let mut output = [0.0f32; 512];
         let result = i2s_matmul_forward(&act, &packed, &scales, &mut output, &cfg);
         assert!(result.is_ok(), "I2S matmul block256 launch failed: {result:?}");
     }

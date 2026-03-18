@@ -1403,11 +1403,11 @@ mod tests {
         let mut mgr = default_manager();
         let mut src = make_buffer(8);
         let mut dst = make_buffer(8);
-        src.as_mut_slice()[0] = 3.14;
+        src.as_mut_slice()[0] = 1.5;
         mgr.register(&src).unwrap();
         mgr.register(&dst).unwrap();
         let rec = mgr.unified_memcpy(&src, &mut dst, CopyKind::HostToDevice).unwrap();
-        assert_eq!(dst.peek()[0], 3.14);
+        assert_eq!(dst.peek()[0], 1.5);
         assert_eq!(rec.kind, CopyKind::HostToDevice);
         assert_eq!(rec.bytes, 8 * 4);
         assert_eq!(dst.current_device(), 0);

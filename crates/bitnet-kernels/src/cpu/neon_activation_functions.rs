@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_gelu_zeros() {
-        let mut data = vec![0.0_f32; 8];
+        let mut data = [0.0_f32; 8];
         unsafe { neon_gelu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, 0.0, EXACT_TOL, "gelu(0)");
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_gelu_ones() {
-        let mut data = vec![1.0_f32; 8];
+        let mut data = [1.0_f32; 8];
         unsafe { neon_gelu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, ref_gelu(1.0), APPROX_TOL, "gelu(1)");
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_gelu_negative() {
-        let mut data = vec![-1.0_f32; 8];
+        let mut data = [-1.0_f32; 8];
         unsafe { neon_gelu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, ref_gelu(-1.0), APPROX_TOL, "gelu(-1)");
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_silu_zeros() {
-        let mut data = vec![0.0_f32; 8];
+        let mut data = [0.0_f32; 8];
         unsafe { neon_silu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, 0.0, EXACT_TOL, "silu(0)");
@@ -536,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_silu_ones() {
-        let mut data = vec![1.0_f32; 8];
+        let mut data = [1.0_f32; 8];
         unsafe { neon_silu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, ref_silu(1.0), APPROX_TOL, "silu(1)");
@@ -545,7 +545,7 @@ mod tests {
 
     #[test]
     fn test_silu_negative() {
-        let mut data = vec![-1.0_f32; 8];
+        let mut data = [-1.0_f32; 8];
         unsafe { neon_silu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, ref_silu(-1.0), APPROX_TOL, "silu(-1)");
@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn test_relu_zeros() {
-        let mut data = vec![0.0_f32; 8];
+        let mut data = [0.0_f32; 8];
         unsafe { neon_relu_f32(&mut data) };
         for &v in &data {
             assert_approx_eq(v, 0.0, EXACT_TOL, "relu(0)");
@@ -666,7 +666,7 @@ mod tests {
 
     #[test]
     fn test_leaky_relu_zeros() {
-        let mut data = vec![0.0_f32; 8];
+        let mut data = [0.0_f32; 8];
         unsafe { neon_leaky_relu_f32(&mut data, 0.01) };
         for &v in &data {
             assert_approx_eq(v, 0.0, EXACT_TOL, "leaky_relu(0)");
@@ -774,9 +774,9 @@ mod tests {
 
     #[test]
     fn test_fused_zeros() {
-        let input = vec![0.0_f32; 8];
-        let mut gelu = vec![0.0_f32; 8];
-        let mut silu = vec![0.0_f32; 8];
+        let input = [0.0_f32; 8];
+        let mut gelu = [0.0_f32; 8];
+        let mut silu = [0.0_f32; 8];
         unsafe { neon_gelu_silu_fused_f32(&input, &mut gelu, &mut silu) };
         for i in 0..8 {
             assert_approx_eq(gelu[i], 0.0, EXACT_TOL, "fused gelu(0)");
@@ -787,8 +787,8 @@ mod tests {
     #[test]
     fn test_fused_mixed() {
         let input = vec![-2.0, -1.0, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0];
-        let mut gelu_out = vec![0.0_f32; 8];
-        let mut silu_out = vec![0.0_f32; 8];
+        let mut gelu_out = [0.0_f32; 8];
+        let mut silu_out = [0.0_f32; 8];
         unsafe { neon_gelu_silu_fused_f32(&input, &mut gelu_out, &mut silu_out) };
         for (i, &x) in input.iter().enumerate() {
             assert_approx_eq(gelu_out[i], ref_gelu(x), APPROX_TOL, &format!("fused gelu[{i}]"));
@@ -799,8 +799,8 @@ mod tests {
     #[test]
     fn test_fused_large() {
         let input = vec![10.0, -10.0, 20.0, -20.0];
-        let mut gelu_out = vec![0.0_f32; 4];
-        let mut silu_out = vec![0.0_f32; 4];
+        let mut gelu_out = [0.0_f32; 4];
+        let mut silu_out = [0.0_f32; 4];
         unsafe { neon_gelu_silu_fused_f32(&input, &mut gelu_out, &mut silu_out) };
         for (i, &x) in input.iter().enumerate() {
             assert_approx_eq(gelu_out[i], ref_gelu(x), APPROX_TOL, &format!("fused gelu lg[{i}]"));
@@ -835,9 +835,9 @@ mod tests {
     #[test]
     fn test_swiglu_identity_gate() {
         // When gate activates fully (large positive), output ≈ gate * up ≈ up * gate
-        let gate = vec![100.0_f32; 4];
+        let gate = [100.0_f32; 4];
         let up = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0_f32; 4];
+        let mut out = [0.0_f32; 4];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         // silu(100) ≈ 100; small polynomial error accumulates with large values
         for i in 0..4 {
@@ -853,9 +853,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_zero_gate() {
-        let gate = vec![0.0_f32; 4];
+        let gate = [0.0_f32; 4];
         let up = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0_f32; 4];
+        let mut out = [0.0_f32; 4];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         for &v in &out {
             assert_approx_eq(v, 0.0, EXACT_TOL, "swiglu(0,x)");
@@ -864,9 +864,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_ones() {
-        let gate = vec![1.0_f32; 8];
-        let up = vec![1.0_f32; 8];
-        let mut out = vec![0.0_f32; 8];
+        let gate = [1.0_f32; 8];
+        let up = [1.0_f32; 8];
+        let mut out = [0.0_f32; 8];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         let expected = ref_swiglu(1.0, 1.0);
         for &v in &out {
@@ -878,7 +878,7 @@ mod tests {
     fn test_swiglu_mixed() {
         let gate = vec![-2.0, -1.0, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0];
         let up = vec![1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0];
-        let mut out = vec![0.0_f32; 8];
+        let mut out = [0.0_f32; 8];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         for i in 0..8 {
             assert_approx_eq(
@@ -894,7 +894,7 @@ mod tests {
     fn test_swiglu_negative() {
         let gate = vec![-3.0, -2.0, -1.0, -0.5];
         let up = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0_f32; 4];
+        let mut out = [0.0_f32; 4];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         for i in 0..4 {
             assert_approx_eq(
@@ -910,7 +910,7 @@ mod tests {
     fn test_swiglu_large() {
         let gate = vec![10.0, -10.0, 50.0, -50.0];
         let up = vec![2.0, 3.0, 0.5, -1.0];
-        let mut out = vec![0.0_f32; 4];
+        let mut out = [0.0_f32; 4];
         unsafe { neon_swiglu_f32(&gate, &up, &mut out) };
         for i in 0..4 {
             assert_approx_eq(
@@ -1076,7 +1076,7 @@ mod tests {
 
     #[test]
     fn test_denormal_gelu() {
-        let mut data = vec![f32::MIN_POSITIVE / 2.0; 4];
+        let mut data = [f32::MIN_POSITIVE / 2.0; 4];
         let expected: Vec<f32> = data.iter().map(|&x| ref_gelu(x)).collect();
         unsafe { neon_gelu_f32(&mut data) };
         for (i, (&got, &exp)) in data.iter().zip(expected.iter()).enumerate() {
@@ -1086,7 +1086,7 @@ mod tests {
 
     #[test]
     fn test_denormal_silu() {
-        let mut data = vec![f32::MIN_POSITIVE / 2.0; 4];
+        let mut data = [f32::MIN_POSITIVE / 2.0; 4];
         let expected: Vec<f32> = data.iter().map(|&x| ref_silu(x)).collect();
         unsafe { neon_silu_f32(&mut data) };
         for (i, (&got, &exp)) in data.iter().zip(expected.iter()).enumerate() {

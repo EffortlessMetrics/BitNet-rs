@@ -957,8 +957,8 @@ mod tests {
     fn test_cuda_layer_norm_launch() {
         let cfg = LayerNormConfig::with_defaults();
         let input = vec![1.0_f32; 2048 * 4];
-        let gamma = vec![1.0_f32; 2048];
-        let beta = vec![0.0_f32; 2048];
+        let gamma = [1.0_f32; 2048];
+        let beta = [0.0_f32; 2048];
         let result = layer_norm_forward(&input, &gamma, &beta, 2048, &cfg);
         assert!(result.is_ok(), "LayerNorm forward failed: {result:?}");
     }
@@ -968,7 +968,7 @@ mod tests {
     fn test_cuda_rms_norm_launch() {
         let cfg = LayerNormConfig::with_defaults();
         let input = vec![1.0_f32; 2048 * 4];
-        let gamma = vec![1.0_f32; 2048];
+        let gamma = [1.0_f32; 2048];
         let result = rms_norm_forward(&input, &gamma, 2048, &cfg);
         assert!(result.is_ok(), "RMSNorm forward failed: {result:?}");
     }
@@ -980,8 +980,8 @@ mod tests {
         // Output of layer norm (no affine) should have ~0 mean and ~1 var
         let cfg = LayerNormConfig::new(1e-5, false).unwrap();
         let input: Vec<f32> = (0..256).map(|i| i as f32 * 0.1).collect();
-        let gamma = vec![1.0_f32; 256];
-        let beta = vec![0.0_f32; 256];
+        let gamma = [1.0_f32; 256];
+        let beta = [0.0_f32; 256];
         let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 256, &cfg).unwrap();
 
         let mean: f32 = output.iter().sum::<f32>() / 256.0;
@@ -1262,8 +1262,8 @@ mod tests {
     fn test_layer_norm_zero_variance_constant_row() {
         let cfg = LayerNormConfig::new(1e-5, false).unwrap();
         let input = [42.0_f32; 256];
-        let gamma = vec![1.0; 256];
-        let beta = vec![0.0; 256];
+        let gamma = [1.0; 256];
+        let beta = [0.0; 256];
         let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 256, &cfg).unwrap();
 
         // Constant input → zero variance → all outputs near zero
@@ -1342,8 +1342,8 @@ mod property_tests {
         #[test]
         fn prop_layer_norm_finite_output(input in vec_f32_fixed(64)) {
             let cfg = LayerNormConfig::with_defaults();
-            let gamma = vec![1.0_f32; 64];
-            let beta = vec![0.0_f32; 64];
+            let gamma = [1.0_f32; 64];
+            let beta = [0.0_f32; 64];
             let output = layer_norm_cpu_fallback(&input, &gamma, &beta, 64, &cfg).unwrap();
             prop_assert!(output.iter().all(|v| v.is_finite()));
         }
@@ -1352,7 +1352,7 @@ mod property_tests {
         #[test]
         fn prop_rms_norm_preserves_sign(input in vec_f32_fixed(64)) {
             let cfg = LayerNormConfig::with_defaults();
-            let gamma = vec![1.0_f32; 64];
+            let gamma = [1.0_f32; 64];
             let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
 
             for (i, (&inp, &out)) in input.iter().zip(output.iter()).enumerate() {
@@ -1374,7 +1374,7 @@ mod property_tests {
             scale in 0.1f32..10.0f32,
         ) {
             let cfg = LayerNormConfig::with_defaults();
-            let gamma = vec![1.0_f32; 64];
+            let gamma = [1.0_f32; 64];
 
             let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
             let scaled: Vec<f32> = input.iter().map(|x| x * scale).collect();
@@ -1394,7 +1394,7 @@ mod property_tests {
         #[test]
         fn prop_rms_norm_finite_output(input in vec_f32_fixed(64)) {
             let cfg = LayerNormConfig::with_defaults();
-            let gamma = vec![1.0_f32; 64];
+            let gamma = [1.0_f32; 64];
             let output = rms_norm_cpu_fallback(&input, &gamma, 64, &cfg).unwrap();
             prop_assert!(output.iter().all(|v| v.is_finite()));
         }
@@ -1403,8 +1403,8 @@ mod property_tests {
         #[test]
         fn prop_forward_matches_cpu(input in vec_f32_fixed(32)) {
             let cfg = LayerNormConfig::new(1e-5, false).unwrap();
-            let gamma = vec![1.0_f32; 32];
-            let beta = vec![0.0_f32; 32];
+            let gamma = [1.0_f32; 32];
+            let beta = [0.0_f32; 32];
 
             let fwd = layer_norm_forward(&input, &gamma, &beta, 32, &cfg).unwrap();
             let cpu = layer_norm_cpu_fallback(&input, &gamma, &beta, 32, &cfg).unwrap();
@@ -1415,7 +1415,7 @@ mod property_tests {
         #[test]
         fn prop_rms_forward_matches_cpu(input in vec_f32_fixed(32)) {
             let cfg = LayerNormConfig::with_defaults();
-            let gamma = vec![1.0_f32; 32];
+            let gamma = [1.0_f32; 32];
 
             let fwd = rms_norm_forward(&input, &gamma, 32, &cfg).unwrap();
             let cpu = rms_norm_cpu_fallback(&input, &gamma, 32, &cfg).unwrap();

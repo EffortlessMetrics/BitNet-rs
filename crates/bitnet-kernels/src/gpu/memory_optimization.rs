@@ -463,7 +463,7 @@ mod tests {
         assert_eq!(pattern, AccessPattern::Sequential);
 
         // Edge case: single element
-        let single = vec![42];
+        let single = [42];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&single);
         assert_eq!(pattern, AccessPattern::Sequential);
 

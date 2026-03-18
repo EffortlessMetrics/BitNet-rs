@@ -1,7 +1,7 @@
-//! OpenCL device detection via dynamic library loading.
+//! `OpenCL` device detection via dynamic library loading.
 //!
 //! Loads `OpenCL.dll` (Windows) or `libOpenCL.so` (Linux) at runtime so the
-//! code compiles and runs even when no OpenCL SDK is installed.  When the
+//! code compiles and runs even when no `OpenCL` SDK is installed.  When the
 //! library is absent every query returns an empty result instead of panicking.
 
 use std::fmt;
@@ -41,7 +41,7 @@ const CL_DEVICE_TYPE_ACCELERATOR: u64 = 1 << 3;
 
 // ── Public types ────────────────────────────────────────────────────────────
 
-/// The type of an OpenCL device.
+/// The type of an `OpenCL` device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OpenClDeviceType {
     Cpu,
@@ -62,7 +62,7 @@ impl fmt::Display for OpenClDeviceType {
 }
 
 impl OpenClDeviceType {
-    fn from_bits(bits: u64) -> Self {
+    const fn from_bits(bits: u64) -> Self {
         if bits & CL_DEVICE_TYPE_GPU != 0 {
             Self::Gpu
         } else if bits & CL_DEVICE_TYPE_CPU != 0 {
@@ -75,7 +75,7 @@ impl OpenClDeviceType {
     }
 }
 
-/// Information about an OpenCL platform.
+/// Information about an `OpenCL` platform.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenClPlatformInfo {
     pub name: String,
@@ -85,7 +85,7 @@ pub struct OpenClPlatformInfo {
     pub extensions: Vec<String>,
 }
 
-/// Information about an OpenCL device.
+/// Information about an `OpenCL` device.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenClDeviceInfo {
     pub name: String,
@@ -119,12 +119,12 @@ impl OpenClDeviceInfo {
     }
 }
 
-/// Aggregated result from an OpenCL probe.
+/// Aggregated result from an `OpenCL` probe.
 #[derive(Debug, Clone, Default)]
 pub struct OpenClProbeResult {
     pub platforms: Vec<OpenClPlatformInfo>,
     pub devices: Vec<OpenClDeviceInfo>,
-    /// `true` if the OpenCL runtime library was loaded successfully.
+    /// `true` if the `OpenCL` runtime library was loaded successfully.
     pub runtime_available: bool,
     /// Human-readable error if the probe failed.
     pub error: Option<String>,
@@ -147,7 +147,7 @@ impl OpenClProbeResult {
     }
 }
 
-/// Full probe result combining OpenCL with other probe sources.
+/// Full probe result combining `OpenCL` with other probe sources.
 #[derive(Debug, Clone)]
 pub struct ProbeResult {
     pub opencl: OpenClProbeResult,
@@ -185,7 +185,7 @@ impl IntelArcDetector {
 
 // ── Dynamic library loading ─────────────────────────────────────────────────
 
-/// Name of the OpenCL shared library per platform.
+/// Name of the `OpenCL` shared library per platform.
 #[cfg(target_os = "windows")]
 const OPENCL_LIB_NAME: &str = "OpenCL.dll";
 
@@ -204,7 +204,7 @@ type ClGetPlatformInfo = unsafe extern "C" fn(usize, u32, usize, *mut u8, *mut u
 type ClGetDeviceIDs = unsafe extern "C" fn(usize, u64, u32, *mut usize, *mut u32) -> i32;
 type ClGetDeviceInfo = unsafe extern "C" fn(usize, u32, usize, *mut u8, *mut usize) -> i32;
 
-/// Holds dynamically-loaded OpenCL function pointers.
+/// Holds dynamically-loaded `OpenCL` function pointers.
 struct OpenClFunctions {
     get_platform_ids: ClGetPlatformIDs,
     get_platform_info: ClGetPlatformInfo,
@@ -215,7 +215,7 @@ struct OpenClFunctions {
 }
 
 impl OpenClFunctions {
-    /// Try to load the OpenCL shared library and resolve symbols.
+    /// Try to load the `OpenCL` shared library and resolve symbols.
     fn load() -> Result<Self, String> {
         // SAFETY: We load a well-known system library and resolve standard
         // OpenCL ICD entry points.  The loaded functions are called with
@@ -244,13 +244,13 @@ impl OpenClFunctions {
     }
 }
 
-// ── Helper: query CL string info ────────────────────────────────────────────
+// ── Helper: query `CL` string info ────────────────────────────────────────────
 
 fn query_string(func: ClGetPlatformInfo, handle: usize, param: u32) -> String {
     let mut size: usize = 0;
     // SAFETY: Querying buffer size with null output pointer is allowed by the
-    // OpenCL spec.
-    let rc = unsafe { func(handle, param, 0, std::ptr::null_mut(), &mut size) };
+    // `OpenCL` spec.
+    let rc = unsafe { func(handle, param, 0, std::ptr::null_mut(), std::ptr::addr_of_mut!(size)) };
     if rc != CL_SUCCESS || size == 0 {
         return String::new();
     }
@@ -268,7 +268,7 @@ fn query_string(func: ClGetPlatformInfo, handle: usize, param: u32) -> String {
 
 fn query_device_string(func: ClGetDeviceInfo, handle: usize, param: u32) -> String {
     let mut size: usize = 0;
-    let rc = unsafe { func(handle, param, 0, std::ptr::null_mut(), &mut size) };
+    let rc = unsafe { func(handle, param, 0, std::ptr::null_mut(), std::ptr::addr_of_mut!(size)) };
     if rc != CL_SUCCESS || size == 0 {
         return String::new();
     }
@@ -290,11 +290,11 @@ fn query_device_u32(func: ClGetDeviceInfo, handle: usize, param: u32) -> u32 {
             handle,
             param,
             std::mem::size_of::<u32>(),
-            (&mut val as *mut u32).cast(),
+            std::ptr::addr_of_mut!(val).cast(),
             std::ptr::null_mut(),
         )
     };
-    if rc != CL_SUCCESS { 0 } else { val }
+    if rc == CL_SUCCESS { val } else { 0 }
 }
 
 fn query_device_u64(func: ClGetDeviceInfo, handle: usize, param: u32) -> u64 {
@@ -304,11 +304,11 @@ fn query_device_u64(func: ClGetDeviceInfo, handle: usize, param: u32) -> u64 {
             handle,
             param,
             std::mem::size_of::<u64>(),
-            (&mut val as *mut u64).cast(),
+            std::ptr::addr_of_mut!(val).cast(),
             std::ptr::null_mut(),
         )
     };
-    if rc != CL_SUCCESS { 0 } else { val }
+    if rc == CL_SUCCESS { val } else { 0 }
 }
 
 fn query_device_usize(func: ClGetDeviceInfo, handle: usize, param: u32) -> usize {
@@ -318,11 +318,11 @@ fn query_device_usize(func: ClGetDeviceInfo, handle: usize, param: u32) -> usize
             handle,
             param,
             std::mem::size_of::<usize>(),
-            (&mut val as *mut usize).cast(),
+            std::ptr::addr_of_mut!(val).cast(),
             std::ptr::null_mut(),
         )
     };
-    if rc != CL_SUCCESS { 0 } else { val }
+    if rc == CL_SUCCESS { val } else { 0 }
 }
 
 fn query_device_type(func: ClGetDeviceInfo, handle: usize) -> OpenClDeviceType {
@@ -332,11 +332,11 @@ fn query_device_type(func: ClGetDeviceInfo, handle: usize) -> OpenClDeviceType {
             handle,
             CL_DEVICE_TYPE,
             std::mem::size_of::<u64>(),
-            (&mut val as *mut u64).cast(),
+            std::ptr::addr_of_mut!(val).cast(),
             std::ptr::null_mut(),
         )
     };
-    if rc != CL_SUCCESS { OpenClDeviceType::Other(0) } else { OpenClDeviceType::from_bits(val) }
+    if rc == CL_SUCCESS { OpenClDeviceType::from_bits(val) } else { OpenClDeviceType::Other(0) }
 }
 
 fn parse_extensions(ext_string: &str) -> Vec<String> {
@@ -345,16 +345,98 @@ fn parse_extensions(ext_string: &str) -> Vec<String> {
 
 // ── Main probe function ─────────────────────────────────────────────────────
 
-/// Probe the system for OpenCL platforms and devices.
+/// Build an [`OpenClPlatformInfo`] by querying platform info strings.
+fn build_platform_info(funcs: &OpenClFunctions, plat_id: usize) -> OpenClPlatformInfo {
+    let name = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_NAME);
+    let vendor = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_VENDOR);
+    let version = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_VERSION);
+    let profile = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_PROFILE);
+    let ext_str = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_EXTENSIONS);
+    OpenClPlatformInfo { name, vendor, version, profile, extensions: parse_extensions(&ext_str) }
+}
+
+/// Build an [`OpenClDeviceInfo`] by querying device info.
+fn build_device_info(
+    funcs: &OpenClFunctions,
+    dev_id: usize,
+    platform_index: usize,
+) -> OpenClDeviceInfo {
+    let name = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_NAME);
+    let vendor = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_VENDOR);
+    let device_version = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_VERSION);
+    let driver_version = query_device_string(funcs.get_device_info, dev_id, CL_DRIVER_VERSION);
+    let ext_str = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_EXTENSIONS);
+    let compute_units =
+        query_device_u32(funcs.get_device_info, dev_id, CL_DEVICE_MAX_COMPUTE_UNITS);
+    let global_mem_bytes =
+        query_device_u64(funcs.get_device_info, dev_id, CL_DEVICE_GLOBAL_MEM_SIZE);
+    let max_workgroup_size =
+        query_device_usize(funcs.get_device_info, dev_id, CL_DEVICE_MAX_WORK_GROUP_SIZE);
+    let max_clock_mhz =
+        query_device_u32(funcs.get_device_info, dev_id, CL_DEVICE_MAX_CLOCK_FREQUENCY);
+    let device_type = query_device_type(funcs.get_device_info, dev_id);
+    OpenClDeviceInfo {
+        name,
+        vendor,
+        device_type,
+        device_version,
+        driver_version,
+        compute_units,
+        global_mem_bytes,
+        max_workgroup_size,
+        max_clock_mhz,
+        extensions: parse_extensions(&ext_str),
+        platform_index,
+    }
+}
+
+/// Enumerate and collect devices for a single platform.
+fn collect_platform_devices(
+    funcs: &OpenClFunctions,
+    plat_id: usize,
+    platform_index: usize,
+) -> Vec<OpenClDeviceInfo> {
+    let mut num_devices: u32 = 0;
+    let rc = unsafe {
+        (funcs.get_device_ids)(
+            plat_id,
+            CL_DEVICE_TYPE_ALL,
+            0,
+            std::ptr::null_mut(),
+            std::ptr::addr_of_mut!(num_devices),
+        )
+    };
+    if rc != CL_SUCCESS || num_devices == 0 {
+        return Vec::new();
+    }
+
+    let mut device_ids = vec![0usize; num_devices as usize];
+    let rc = unsafe {
+        (funcs.get_device_ids)(
+            plat_id,
+            CL_DEVICE_TYPE_ALL,
+            num_devices,
+            device_ids.as_mut_ptr(),
+            std::ptr::null_mut(),
+        )
+    };
+    if rc != CL_SUCCESS {
+        return Vec::new();
+    }
+
+    device_ids.iter().map(|&dev_id| build_device_info(funcs, dev_id, platform_index)).collect()
+}
+
+/// Probe the system for `OpenCL` platforms and devices.
 ///
 /// Returns an [`OpenClProbeResult`] that is always safe to inspect — if the
-/// OpenCL library is not installed the result will have `runtime_available =
+/// `OpenCL` library is not installed the result will have `runtime_available =
 /// false` and empty platform/device lists.
 pub fn probe_opencl() -> OpenClProbeResult {
     let funcs = match OpenClFunctions::load() {
         Ok(f) => f,
         Err(e) => {
-            log::debug!("OpenCL not available: {e}");
+            log::debug!("`OpenCL` not available: {e}");
             return OpenClProbeResult {
                 runtime_available: false,
                 error: Some(e),
@@ -364,8 +446,10 @@ pub fn probe_opencl() -> OpenClProbeResult {
     };
 
     let mut num_platforms: u32 = 0;
-    // SAFETY: Standard OpenCL ICD call with valid pointer.
-    let rc = unsafe { (funcs.get_platform_ids)(0, std::ptr::null_mut(), &mut num_platforms) };
+    // SAFETY: Standard `OpenCL` ICD call with valid pointer.
+    let rc = unsafe {
+        (funcs.get_platform_ids)(0, std::ptr::null_mut(), std::ptr::addr_of_mut!(num_platforms))
+    };
     if rc != CL_SUCCESS || num_platforms == 0 {
         return OpenClProbeResult {
             runtime_available: true,
@@ -390,99 +474,27 @@ pub fn probe_opencl() -> OpenClProbeResult {
     let mut all_devices = Vec::new();
 
     for (pidx, &plat_id) in platform_ids.iter().enumerate() {
-        let name = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_NAME);
-        let vendor = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_VENDOR);
-        let version = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_VERSION);
-        let profile = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_PROFILE);
-        let ext_str = query_string(funcs.get_platform_info, plat_id, CL_PLATFORM_EXTENSIONS);
-
-        platforms.push(OpenClPlatformInfo {
-            name,
-            vendor,
-            version,
-            profile,
-            extensions: parse_extensions(&ext_str),
-        });
-
-        // Enumerate devices on this platform
-        let mut num_devices: u32 = 0;
-        let rc = unsafe {
-            (funcs.get_device_ids)(
-                plat_id,
-                CL_DEVICE_TYPE_ALL,
-                0,
-                std::ptr::null_mut(),
-                &mut num_devices,
-            )
-        };
-        if rc != CL_SUCCESS || num_devices == 0 {
-            continue;
-        }
-
-        let mut device_ids = vec![0usize; num_devices as usize];
-        let rc = unsafe {
-            (funcs.get_device_ids)(
-                plat_id,
-                CL_DEVICE_TYPE_ALL,
-                num_devices,
-                device_ids.as_mut_ptr(),
-                std::ptr::null_mut(),
-            )
-        };
-        if rc != CL_SUCCESS {
-            continue;
-        }
-
-        for &dev_id in &device_ids {
-            let dev_name = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_NAME);
-            let dev_vendor = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_VENDOR);
-            let dev_version = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_VERSION);
-            let driver_version =
-                query_device_string(funcs.get_device_info, dev_id, CL_DRIVER_VERSION);
-            let ext_str = query_device_string(funcs.get_device_info, dev_id, CL_DEVICE_EXTENSIONS);
-            let compute_units =
-                query_device_u32(funcs.get_device_info, dev_id, CL_DEVICE_MAX_COMPUTE_UNITS);
-            let global_mem_bytes =
-                query_device_u64(funcs.get_device_info, dev_id, CL_DEVICE_GLOBAL_MEM_SIZE);
-            let max_workgroup_size =
-                query_device_usize(funcs.get_device_info, dev_id, CL_DEVICE_MAX_WORK_GROUP_SIZE);
-            let max_clock_mhz =
-                query_device_u32(funcs.get_device_info, dev_id, CL_DEVICE_MAX_CLOCK_FREQUENCY);
-            let device_type = query_device_type(funcs.get_device_info, dev_id);
-
-            all_devices.push(OpenClDeviceInfo {
-                name: dev_name,
-                vendor: dev_vendor,
-                device_type,
-                device_version: dev_version,
-                driver_version,
-                compute_units,
-                global_mem_bytes,
-                max_workgroup_size,
-                max_clock_mhz,
-                extensions: parse_extensions(&ext_str),
-                platform_index: pidx,
-            });
-        }
+        platforms.push(build_platform_info(&funcs, plat_id));
+        all_devices.extend(collect_platform_devices(&funcs, plat_id, pidx));
     }
 
     OpenClProbeResult { platforms, devices: all_devices, runtime_available: true, error: None }
 }
 
-/// Convenience: list all OpenCL devices found on this system.
+/// Convenience: list all `OpenCL` devices found on this system.
 pub fn list_opencl_devices() -> Vec<OpenClDeviceInfo> {
     probe_opencl().devices
 }
 
 /// Convenience: returns `true` if at least one Intel Arc GPU is found via
-/// OpenCL.
+/// `OpenCL`.
 pub fn is_intel_arc_available() -> bool {
-    probe_opencl().devices.iter().any(|d| d.is_intel_arc())
+    probe_opencl().devices.iter().any(OpenClDeviceInfo::is_intel_arc)
 }
 
 // ── Mock / fallback helpers (always available, useful for testing) ───────────
 
-/// Build an [`OpenClProbeResult`] representing a system with no OpenCL.
+/// Build an [`OpenClProbeResult`] representing a system with no `OpenCL`.
 pub fn mock_no_opencl() -> OpenClProbeResult {
     OpenClProbeResult {
         runtime_available: false,
@@ -526,7 +538,7 @@ pub fn mock_platform(name: &str, vendor: &str) -> OpenClPlatformInfo {
 }
 
 /// Build a mock probe result with the given platforms and devices.
-pub fn mock_probe_result(
+pub const fn mock_probe_result(
     platforms: Vec<OpenClPlatformInfo>,
     devices: Vec<OpenClDeviceInfo>,
 ) -> OpenClProbeResult {

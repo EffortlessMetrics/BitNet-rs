@@ -185,8 +185,8 @@ mod tests {
         let cfg = Qk256GemvConfig::for_shape(1, 2048, 2048).unwrap();
         let packed = vec![0u8; 2048 * 2048 / 4]; // 2 bits per weight
         let scales = vec![0u8; (2048 * 2048 / 256) * 2]; // f16 per block
-        let input = vec![1.0f32; 2048];
-        let mut output = vec![0.0f32; 2048];
+        let input = [1.0f32; 2048];
+        let mut output = [0.0f32; 2048];
         // When a real kernel is loaded this should succeed
         let result = launch_qk256_gemv(&packed, &scales, &input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA QK256 GEMV launch failed: {result:?}");

@@ -910,7 +910,7 @@ mod tests {
 
     #[test]
     fn test_row_col_roundtrip_1x1() {
-        let src = vec![42.0];
+        let src = [42.0];
         let col =
             LayoutConverter::convert(&src, 1, 1, TensorLayout::RowMajor, TensorLayout::ColumnMajor);
         assert_eq!(col, vec![42.0]);
@@ -1516,7 +1516,7 @@ mod tests {
     #[test]
     fn test_plan_execute_multi_step() {
         // Dequant → reorder → tile
-        let packed = vec![0x55u8; 2]; // 8 zeros
+        let packed = [0x55u8; 2]; // 8 zeros
         let plan = ConversionPlan::new(2, 4)
             .dequantize(QuantFormat::I2S)
             .reorder(TensorLayout::RowMajor, TensorLayout::ColumnMajor)

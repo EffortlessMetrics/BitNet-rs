@@ -1105,7 +1105,7 @@ mod tests {
         let a = [1.0, 2.0, 3.0, 4.0];
         let b = [5.0, 6.0, 7.0, 8.0];
         // [1*5+2*7, 1*6+2*8, 3*5+4*7, 3*6+4*8] = [19, 22, 43, 50]
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul(&a, &b, &mut c, 2, 2, 2, &MatmulConfig::default()).unwrap();
         assert_close(&c, &[19.0, 22.0, 43.0, 50.0], 1e-5);
     }
@@ -1215,7 +1215,7 @@ mod tests {
         // A = [[1,2],[3,4]], B^T = [[5,7],[6,8]] → B = [[5,6],[7,8]]
         let a = [1.0, 2.0, 3.0, 4.0];
         let b_t = [5.0, 7.0, 6.0, 8.0]; // rows of B^T
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_transposed(&a, &b_t, &mut c, 2, 2, 2, &MatmulConfig::default()).unwrap();
         assert_close(&c, &[19.0, 22.0, 43.0, 50.0], 1e-5);
     }
@@ -1357,7 +1357,7 @@ mod tests {
         let a = [1.0, 2.0, 3.0];
         let b = [4.0, 5.0];
         // [[4,5],[8,10],[12,15]]
-        let mut c = vec![0.0f32; 6];
+        let mut c = [0.0f32; 6];
         outer_product(&a, &b, &mut c, 3, 2).unwrap();
         assert_close(&c, &[4.0, 5.0, 8.0, 10.0, 12.0, 15.0], 1e-5);
     }
@@ -1522,7 +1522,7 @@ mod tests {
     #[test]
     fn test_transpose_out_of_place() {
         let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         matrix_transpose(&a, 2, 3, Some(&mut out)).unwrap();
         assert_close(&out, &[1.0, 4.0, 2.0, 5.0, 3.0, 6.0], 1e-6);
     }
@@ -1543,7 +1543,7 @@ mod tests {
 
     #[test]
     fn test_transpose_out_too_small() {
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         assert!(matrix_transpose(&[1.0; 6], 2, 3, Some(&mut out)).is_err());
     }
 
@@ -1713,7 +1713,7 @@ mod tests {
         // Weights: [+1, -1, 0, +1]
         let packed = vec![pack_i2s_values([1, -1, 0, 1])];
         let scales = vec![2.0f32];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         gemv_quantized(&x, &packed, &scales, &mut y, m, k, block_size).unwrap();
         // dot = 1*1 + (-1)*2 + 0*3 + 1*4 = 3; scaled = 2*3 = 6
         assert_close(&y, &[6.0], 1e-5);
@@ -1728,7 +1728,7 @@ mod tests {
         // All weights = +1 across two blocks.
         let packed = vec![0x55, 0x55]; // packed_k = 2
         let scales = vec![1.0, 2.0]; // block0 scale=1, block1 scale=2
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         gemv_quantized(&x, &packed, &scales, &mut y, m, k, block_size).unwrap();
         // block0: 4*1=4, block1: 4*2=8 → 12
         assert_close(&y, &[12.0], 1e-5);
@@ -1763,7 +1763,7 @@ mod tests {
         // Weights: [3, -2] → packed: lo=3 (0x03), hi=-2 (0x0E) → byte 0xE3
         let packed = vec![pack_int4_values(3, -2)];
         let scales = vec![1.0f32];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         gemv_quantized_int4(&x, &packed, &scales, &mut y, m, k, block_size).unwrap();
         // 3*1 + (-2)*2 = -1
         assert_close(&y, &[-1.0], 1e-5);
@@ -1778,7 +1778,7 @@ mod tests {
         // col0: [1, 1], col1: [2, -3]
         let packed = vec![pack_int4_values(1, 1), pack_int4_values(2, -3)];
         let scales = vec![1.0, 1.0];
-        let mut y = vec![0.0f32; 2];
+        let mut y = [0.0f32; 2];
         gemv_quantized_int4(&x, &packed, &scales, &mut y, m, k, block_size).unwrap();
         // col0: 1+1=2, col1: 2+(-3)=-1
         assert_close(&y, &[2.0, -1.0], 1e-5);

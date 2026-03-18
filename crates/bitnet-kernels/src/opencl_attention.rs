@@ -872,7 +872,7 @@ mod tests {
 
     #[test]
     fn test_softmax_single_element() {
-        let mut row = vec![42.0];
+        let mut row = [42.0];
         softmax_row(&mut row);
         assert!(approx_eq(row[0], 1.0, ATOL));
     }
@@ -895,7 +895,7 @@ mod tests {
 
     #[test]
     fn test_softmax_all_neg_inf() {
-        let mut row = vec![f32::NEG_INFINITY; 4];
+        let mut row = [f32::NEG_INFINITY; 4];
         softmax_row(&mut row);
         for v in &row {
             assert!(approx_eq(*v, 0.0, ATOL));
@@ -931,7 +931,7 @@ mod tests {
         let q = vec![1.0, 0.0];
         let k = vec![1.0, 0.0];
         let v = vec![3.0, 7.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 1, 2, 1.0, false);
         // softmax([1.0]) = [1.0], output = 1.0 * V = V
         assert_slices_close(&out, &v, ATOL);
@@ -979,7 +979,7 @@ mod tests {
         let q = vec![1.0, 2.0];
         let k = vec![1.0, 2.0];
         let v = vec![5.0, 6.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 1, 2, 1.0, true);
         assert_slices_close(&out, &v, ATOL);
     }
@@ -992,7 +992,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0];
         let k = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scaled_dot_product_attention_ref(
             &q, &k, &v, &mut out, seq_len, kv_len, head_dim, 1.0, true,
         );
@@ -1010,8 +1010,8 @@ mod tests {
         let k = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let v1 = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let v2 = vec![1.0, 2.0, 99.0, 99.0, 99.0, 99.0];
-        let mut out1 = vec![0.0; 6];
-        let mut out2 = vec![0.0; 6];
+        let mut out1 = [0.0; 6];
+        let mut out2 = [0.0; 6];
         scaled_dot_product_attention_ref(&q, &k, &v1, &mut out1, 3, 3, head_dim, 1.0, true);
         scaled_dot_product_attention_ref(&q, &k, &v2, &mut out2, 3, 3, head_dim, 1.0, true);
         // Token 0's output should be identical in both cases.
@@ -1024,8 +1024,8 @@ mod tests {
         let q = vec![2.0, 0.0];
         let k = vec![2.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out_s1 = vec![0.0; 2];
-        let mut out_s01 = vec![0.0; 2];
+        let mut out_s1 = [0.0; 2];
+        let mut out_s01 = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out_s1, 1, 2, 2, 1.0, false);
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out_s01, 1, 2, 2, 0.1, false);
         // With scale=1.0, dot with first key is 4.0, with scale=0.1 it's 0.4.
@@ -1041,7 +1041,7 @@ mod tests {
         let k: Vec<f32> = (0..kv_len).flat_map(|_| [1.0, 0.0, 0.0]).collect();
         let q = vec![1.0, 0.0, 0.0];
         let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, kv_len, head_dim, 1.0, false);
         // Uniform attention → mean of V columns.
         let expected: Vec<f32> = (0..head_dim)
@@ -1052,10 +1052,10 @@ mod tests {
 
     #[test]
     fn test_sdpa_head_dim_1() {
-        let q = vec![1.0];
+        let q = [1.0];
         let k = vec![1.0, 2.0];
         let v = vec![10.0, 20.0];
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 2, 1, 1.0, false);
         // scores = [1.0, 2.0], softmax → output is weighted sum of [10, 20].
         let e1 = 1.0f32.exp();
@@ -1070,7 +1070,7 @@ mod tests {
         let q = vec![0.5, 0.5, 0.5, 0.5];
         let k = vec![0.5, 0.5, 0.5, 0.5];
         let v = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 1, 4, 0.5, false);
         // Single KV → softmax([score]) = [1.0] → output = V
         assert_slices_close(&out, &v, ATOL);
@@ -1084,7 +1084,7 @@ mod tests {
         let q = vec![0.0, 0.0];
         let k = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, kv_len, head_dim, 1.0, false);
         let expected: Vec<f32> = (0..head_dim)
             .map(|d| (0..kv_len).map(|j| v[j * head_dim + d]).sum::<f32>() / kv_len as f32)
@@ -1098,7 +1098,7 @@ mod tests {
         let q = vec![100.0, 100.0];
         let k = vec![100.0, 100.0, -100.0, -100.0];
         let v = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 2, 2, 1.0, false);
         for val in &out {
             assert!(!val.is_nan(), "output contains NaN");
@@ -1108,10 +1108,10 @@ mod tests {
 
     #[test]
     fn test_sdpa_numerical_stability_very_large() {
-        let q = vec![500.0; 4];
-        let k = vec![500.0; 4];
+        let q = [500.0; 4];
+        let k = [500.0; 4];
         let v = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 1, 4, 0.01, false);
         for val in &out {
             assert!(!val.is_nan(), "NaN with very large values");
@@ -1219,7 +1219,7 @@ mod tests {
         cache.append(&k_prefill, &v_prefill).unwrap();
 
         let q_prefill = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out_prefill = vec![0.0; 4];
+        let mut out_prefill = [0.0; 4];
         scaled_dot_product_attention_ref(
             &q_prefill,
             cache.keys(),
@@ -1239,7 +1239,7 @@ mod tests {
         assert_eq!(cache.current_len, 3);
 
         let q_new = vec![1.0, 1.0];
-        let mut out_decode = vec![0.0; 2];
+        let mut out_decode = [0.0; 2];
         scaled_dot_product_attention_ref(
             &q_new,
             cache.keys(),
@@ -1288,7 +1288,7 @@ mod tests {
         let q = vec![1.0, 0.0];
         let k = vec![1.0, 0.0];
         let v = vec![5.0, 6.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         MultiHeadAttentionRef::forward(&cfg, &q, &k, &v, &mut out, 1, 1);
         assert_slices_close(&out, &v, ATOL);
     }
@@ -1302,7 +1302,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0];
         let k = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         MultiHeadAttentionRef::forward(&cfg, &q, &k, &v, &mut out, seq_len, kv_len);
         // Head 0: Q=[1,0], K=[1,0], V=[1,2] → output=[1,2]
         // Head 1: Q=[0,1], K=[0,1], V=[3,4] → output=[3,4]
@@ -1318,8 +1318,8 @@ mod tests {
 
         let q1 = vec![1.0, 0.0, 0.0, 1.0];
         let q2 = vec![99.0, 99.0, 0.0, 1.0]; // head 0 changed
-        let mut out1 = vec![0.0; 4];
-        let mut out2 = vec![0.0; 4];
+        let mut out1 = [0.0; 4];
+        let mut out2 = [0.0; 4];
         MultiHeadAttentionRef::forward(&cfg, &q1, &k, &v, &mut out1, 1, 1);
         MultiHeadAttentionRef::forward(&cfg, &q2, &k, &v, &mut out2, 1, 1);
         // Head 1 output should be identical.
@@ -1403,8 +1403,8 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0];
         let k = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out_mha = vec![0.0; 4];
-        let mut out_gqa = vec![0.0; 4];
+        let mut out_mha = [0.0; 4];
+        let mut out_gqa = [0.0; 4];
 
         let cfg = AttentionConfig::new(num_heads, head_dim, 4, false).unwrap();
         MultiHeadAttentionRef::forward(&cfg, &q, &k, &v, &mut out_mha, 1, 1);
@@ -1426,7 +1426,7 @@ mod tests {
 
     #[test]
     fn test_gqa_indivisible_error() {
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         assert!(
             GroupedQueryAttention::forward(
                 3, 2, 2, &[0.0; 6], &[0.0; 4], &[0.0; 4], &mut out, 1, 1, false,
@@ -1444,7 +1444,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0, -1.0, 0.0];
         let k = vec![1.0, 0.0];
         let v = vec![5.0, 6.0];
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         GroupedQueryAttention::forward(
             num_heads,
             num_kv_heads,
@@ -1524,7 +1524,7 @@ mod tests {
         let q = vec![1.0, 1.0];
         let k = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
         let v = vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out, 1, 3, head_dim, 1.0, false);
         for val in &out {
             assert!(*val >= 2.0 && *val <= 7.0, "output {val} out of V range");
@@ -1537,8 +1537,8 @@ mod tests {
         let q = vec![1.0, 2.0, 3.0, 4.0];
         let k = vec![4.0, 3.0, 2.0, 1.0, 1.0, 2.0, 3.0, 4.0];
         let v = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let mut out1 = vec![0.0; 4];
-        let mut out2 = vec![0.0; 4];
+        let mut out1 = [0.0; 4];
+        let mut out2 = [0.0; 4];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out1, 1, 2, 4, 0.5, false);
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out2, 1, 2, 4, 0.5, false);
         assert_slices_close(&out1, &out2, ATOL);
@@ -1550,8 +1550,8 @@ mod tests {
         let q = vec![1.0, 2.0];
         let k = vec![3.0, 4.0];
         let v = vec![5.0, 6.0];
-        let mut out_c = vec![0.0; 2];
-        let mut out_nc = vec![0.0; 2];
+        let mut out_c = [0.0; 2];
+        let mut out_nc = [0.0; 2];
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out_c, 1, 1, 2, 1.0, true);
         scaled_dot_product_attention_ref(&q, &k, &v, &mut out_nc, 1, 1, 2, 1.0, false);
         assert_slices_close(&out_c, &out_nc, ATOL);
@@ -1590,7 +1590,7 @@ mod tests {
         let full_v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
 
         // Full 3-token attention (non-causal, last token).
-        let mut full_out = vec![0.0; 6];
+        let mut full_out = [0.0; 6];
         scaled_dot_product_attention_ref(
             &full_q,
             &full_k,
@@ -1608,7 +1608,7 @@ mod tests {
         let mut cache = KVCacheEntry::new(head_dim, 8);
         cache.append(&full_k, &full_v).unwrap();
         let last_q = &full_q[4..6];
-        let mut cache_out = vec![0.0; 2];
+        let mut cache_out = [0.0; 2];
         scaled_dot_product_attention_ref(
             last_q,
             cache.keys(),

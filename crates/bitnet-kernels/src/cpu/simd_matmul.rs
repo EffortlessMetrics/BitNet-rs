@@ -940,7 +940,7 @@ mod tests {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
         let a = [1.0, 2.0, 3.0, 4.0];
         let b = [1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &[1.0, 2.0, 3.0, 4.0], 1e-6);
     }
@@ -949,11 +949,11 @@ mod tests {
     fn test_f32_identity_4x4() {
         let cfg = SimdMatmulConfig::new(4, 4, 4);
         let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut b = vec![0.0f32; 16];
+        let mut b = [0.0f32; 16];
         for i in 0..4 {
             b[i * 4 + i] = 1.0;
         }
-        let mut c = vec![0.0f32; 16];
+        let mut c = [0.0f32; 16];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &a, 1e-6);
     }
@@ -961,9 +961,9 @@ mod tests {
     #[test]
     fn test_f32_zero_matrix() {
         let cfg = SimdMatmulConfig::new(3, 3, 3);
-        let a = vec![1.0f32; 9];
-        let b = vec![0.0f32; 9];
-        let mut c = vec![0.0f32; 9];
+        let a = [1.0f32; 9];
+        let b = [0.0f32; 9];
+        let mut c = [0.0f32; 9];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &vec![0.0; 9], 1e-6);
     }
@@ -998,7 +998,7 @@ mod tests {
         cfg.alpha = 2.0;
         let a = [1.0, 0.0, 0.0, 1.0];
         let b = [3.0, 0.0, 0.0, 5.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &[6.0, 0.0, 0.0, 10.0], 1e-6);
     }
@@ -1009,7 +1009,7 @@ mod tests {
         cfg.beta = 1.0;
         let a = [1.0, 0.0, 0.0, 1.0];
         let b = [1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![10.0f32; 4];
+        let mut c = [10.0f32; 4];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         // C = 1.0*I*I + 1.0*[10,10,10,10] = [11,10,10,11]
         assert_close(&c, &[11.0, 10.0, 10.0, 11.0], 1e-6);
@@ -1023,7 +1023,7 @@ mod tests {
         cfg.transpose_a = true;
         let a_t = [1.0, 3.0, 2.0, 4.0]; // k=2, m=2 stored
         let b = [1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a_t, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &[1.0, 2.0, 3.0, 4.0], 1e-6);
     }
@@ -1035,7 +1035,7 @@ mod tests {
         let a = [1.0, 2.0, 3.0, 4.0];
         // B stored as n×k: [[1,0],[0,1]] → logical B = [[1,0],[0,1]]
         let b_t = [1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a, &b_t, &mut c, &cfg).unwrap();
         assert_close(&c, &[1.0, 2.0, 3.0, 4.0], 1e-6);
     }
@@ -1043,7 +1043,7 @@ mod tests {
     #[test]
     fn test_f32_1x1() {
         let cfg = SimdMatmulConfig::new(1, 1, 1);
-        let mut c = vec![0.0f32; 1];
+        let mut c = [0.0f32; 1];
         simd_matmul_f32(&[3.0], &[4.0], &mut c, &cfg).unwrap();
         assert_close(&c, &[12.0], 1e-6);
     }
@@ -1064,14 +1064,14 @@ mod tests {
     #[test]
     fn test_f32_dimension_zero_rejected() {
         let cfg = SimdMatmulConfig::new(0, 2, 2);
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(simd_matmul_f32(&[1.0; 4], &[1.0; 4], &mut c, &cfg).is_err());
     }
 
     #[test]
     fn test_f32_buffer_too_small() {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
-        let mut c = vec![0.0f32; 1]; // too small
+        let mut c = [0.0f32; 1]; // too small
         assert!(simd_matmul_f32(&[1.0; 4], &[1.0; 4], &mut c, &cfg).is_err());
     }
 
@@ -1083,7 +1083,7 @@ mod tests {
         let (packed, scales) = pack_weights(&w, 2, 2, 32);
         let act = [3.0f32, -2.0, 5.0, 7.0];
         let expected = naive_matmul(&act, &[1.0, 0.0, 0.0, 1.0], 2, 2, 2);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         simd_matmul_i2s(&act, &packed, &scales, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &expected, 1e-6);
     }
@@ -1145,7 +1145,7 @@ mod tests {
         let (packed, scales) = pack_weights(&w, k, n, bs);
         let act = [3.0f32, -2.0, 5.0, 7.0];
         let expected = naive_matmul(&act, &[1.0, 0.0, 0.0, 1.0], 2, 2, 2);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         simd_matmul_i2s(&act, &packed, &scales, &mut out, m, n, k, bs).unwrap();
         assert_close(&out, &expected, 1e-6);
     }
@@ -1154,7 +1154,7 @@ mod tests {
     fn test_i2s_1x1() {
         let w = vec![1i8];
         let (packed, scales) = pack_weights(&w, 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         simd_matmul_i2s(&[7.5], &packed, &scales, &mut out, 1, 1, 1, 32).unwrap();
         assert_close(&out, &[7.5], 1e-6);
     }
@@ -1175,13 +1175,13 @@ mod tests {
     #[test]
     fn test_i2s_dimension_zero_rejected() {
         let (packed, scales) = pack_weights(&[1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(simd_matmul_i2s(&[1.0], &packed, &scales, &mut out, 0, 1, 1, 32).is_err());
     }
 
     #[test]
     fn test_i2s_block_size_zero_rejected() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(simd_matmul_i2s(&[1.0], &[0], &[1.0], &mut out, 1, 1, 1, 0).is_err());
     }
 
@@ -1193,8 +1193,8 @@ mod tests {
         let eye = [1.0, 0.0, 0.0, 1.0];
         let a1 = [1.0f32, 2.0, 3.0, 4.0];
         let a2 = [5.0f32, 6.0, 7.0, 8.0];
-        let mut c1 = vec![0.0f32; 4];
-        let mut c2 = vec![0.0f32; 4];
+        let mut c1 = [0.0f32; 4];
+        let mut c2 = [0.0f32; 4];
 
         {
             let a_batch: Vec<&[f32]> = vec![&a1, &a2];
@@ -1212,7 +1212,7 @@ mod tests {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
         let a = [1.0f32; 4];
         let b = [1.0f32; 4];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         let a_batch: Vec<&[f32]> = vec![&a, &a];
         let b_batch: Vec<&[f32]> = vec![&b];
         let mut c_batch: Vec<&mut [f32]> = vec![&mut c];
@@ -1235,7 +1235,7 @@ mod tests {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
         let a = [1.0, 2.0, 3.0, 4.0];
         let b = [5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         // [1*5+2*7, 1*6+2*8, 3*5+4*7, 3*6+4*8]
         assert_close(&c, &[19.0, 22.0, 43.0, 50.0], 0.0);
@@ -1246,7 +1246,7 @@ mod tests {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
         let a = [-1.0, 2.0, 3.0, -4.0];
         let b = [1.0, -2.0, -3.0, 4.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         simd_matmul_f32(&a, &b, &mut c, &cfg).unwrap();
         // [-1+2*(-3), -1*(-2)+2*4, 3+(-4)*(-3), 3*(-2)+(-4)*4]
         assert_close(&c, &[-7.0, 10.0, 15.0, -22.0], 0.0);
@@ -1508,7 +1508,7 @@ mod tiled_tests {
     fn test_tiled_1x1() {
         let cfg = SimdMatmulConfig::new(1, 1, 1);
         let tiles = TileConfig::DEFAULT;
-        let mut c = vec![0.0f32; 1];
+        let mut c = [0.0f32; 1];
         simd_matmul_f32_tiled(&[5.0], &[3.0], &mut c, &cfg, &tiles).unwrap();
         assert_close(&c, &[15.0], 1e-6);
     }
@@ -1611,7 +1611,7 @@ mod tiled_tests {
     fn test_tiled_zero_tile_rejected() {
         let cfg = SimdMatmulConfig::new(2, 2, 2);
         let tiles = TileConfig::new(0, 4, 4);
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(simd_matmul_f32_tiled(&[1.0; 4], &[1.0; 4], &mut c, &cfg, &tiles).is_err());
     }
 
@@ -1619,7 +1619,7 @@ mod tiled_tests {
     fn test_tiled_zero_dim_rejected() {
         let cfg = SimdMatmulConfig::new(0, 2, 2);
         let tiles = TileConfig::DEFAULT;
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(simd_matmul_f32_tiled(&[1.0; 4], &[1.0; 4], &mut c, &cfg, &tiles).is_err());
     }
 

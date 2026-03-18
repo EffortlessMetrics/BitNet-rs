@@ -1071,36 +1071,36 @@ mod tests {
     fn test_coalesced_read_copies_data() {
         let ca = CoalescedAccess::default();
         let src = vec![1.0, 2.0, 3.0, 4.0];
-        let mut dst = vec![0.0; 4];
+        let mut dst = [0.0; 4];
         ca.coalesced_read(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
     fn test_strided_read_basic() {
         let ca = CoalescedAccess::default();
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 4];
+        let mut dst = [0.0f32; 4];
         ca.strided_read(&src, &mut dst, 4);
-        assert_eq!(dst, vec![0.0, 4.0, 8.0, 12.0]);
+        assert_eq!(dst.to_vec(), vec![0.0, 4.0, 8.0, 12.0]);
     }
 
     #[test]
     fn test_strided_read_out_of_bounds_zero_fills() {
         let ca = CoalescedAccess::default();
         let src = vec![1.0, 2.0];
-        let mut dst = vec![-1.0; 4];
+        let mut dst = [-1.0f32; 4];
         ca.strided_read(&src, &mut dst, 1);
-        assert_eq!(dst, vec![1.0, 2.0, 0.0, 0.0]);
+        assert_eq!(dst.to_vec(), vec![1.0, 2.0, 0.0, 0.0]);
     }
 
     #[test]
     fn test_strided_read_zero_stride_noop() {
         let ca = CoalescedAccess::default();
         let src = vec![1.0, 2.0];
-        let mut dst = vec![-1.0; 2];
+        let mut dst = [-1.0f32; 2];
         ca.strided_read(&src, &mut dst, 0);
-        assert_eq!(dst, vec![-1.0, -1.0]);
+        assert_eq!(dst.to_vec(), vec![-1.0, -1.0]);
     }
 
     // ── VectorizedLoad ─────────────────────────────────────────────────
@@ -1109,45 +1109,45 @@ mod tests {
     fn test_vectorized_load_float4_exact() {
         let vl = VectorizedLoad::new(VectorWidth::Float4);
         let src: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 8];
+        let mut dst = [0.0f32; 8];
         vl.load(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
     fn test_vectorized_load_float2_with_tail() {
         let vl = VectorizedLoad::new(VectorWidth::Float2);
         let src = vec![1.0, 2.0, 3.0]; // 1 full float2 + 1 tail
-        let mut dst = vec![0.0; 3];
+        let mut dst = [0.0f32; 3];
         vl.load(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
     fn test_vectorized_load_float8() {
         let vl = VectorizedLoad::new(VectorWidth::Float8);
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 16];
+        let mut dst = [0.0f32; 16];
         vl.load(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
     fn test_vectorized_load_float16() {
         let vl = VectorizedLoad::new(VectorWidth::Float16);
         let src: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 32];
+        let mut dst = [0.0f32; 32];
         vl.load(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
     fn test_vectorized_load_float1_is_scalar() {
         let vl = VectorizedLoad::new(VectorWidth::Float1);
         let src = vec![42.0, 99.0];
-        let mut dst = vec![0.0; 2];
+        let mut dst = [0.0f32; 2];
         vl.load(&src, &mut dst);
-        assert_eq!(dst, src);
+        assert_eq!(dst.to_vec(), src);
     }
 
     #[test]
@@ -1163,9 +1163,9 @@ mod tests {
     fn test_vectorized_load_dst_smaller_than_src() {
         let vl = VectorizedLoad::new(VectorWidth::Float4);
         let src: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 5]; // only 5 elements, not aligned to float4
+        let mut dst = [0.0f32; 5]; // only 5 elements, not aligned to float4
         vl.load(&src, &mut dst);
-        assert_eq!(dst, vec![0.0, 1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(dst.to_vec(), vec![0.0, 1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -1190,9 +1190,9 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let b = vec![2.0, 3.0, 4.0, 5.0, 6.0];
         let c = vec![0.5, 0.5, 0.5, 0.5, 0.5];
-        let mut dst = vec![0.0; 5];
+        let mut dst = [0.0f32; 5];
         vl.fma(&a, &b, &c, &mut dst);
-        assert_eq!(dst, vec![2.5, 6.5, 12.5, 20.5, 30.5]);
+        assert_eq!(dst.to_vec(), vec![2.5, 6.5, 12.5, 20.5, 30.5]);
     }
 
     #[test]
@@ -1246,9 +1246,9 @@ mod tests {
         // 2×2 identity multiply.
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0f32; 4];
         t.tiled_matmul(&a, &b, &mut c, 2, 2, 2);
-        assert_eq!(c, vec![5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(c.to_vec(), vec![5.0, 6.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -1266,7 +1266,7 @@ mod tests {
             6.0, 5.0, 4.0,
             3.0, 2.0, 1.0,
         ];
-        let mut c = vec![0.0; 9];
+        let mut c = [0.0; 9];
         t.tiled_matmul(&a, &b, &mut c, 3, 3, 3);
 
         // Expected: standard matmul result.
@@ -1282,11 +1282,11 @@ mod tests {
         // A: 2×3, B: 3×2 → C: 2×2
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let b = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0f32; 4];
         t.tiled_matmul(&a, &b, &mut c, 2, 3, 2);
         // [1*7+2*9+3*11, 1*8+2*10+3*12] = [58, 64]
         // [4*7+5*9+6*11, 4*8+5*10+6*12] = [139, 154]
-        assert_eq!(c, vec![58.0, 64.0, 139.0, 154.0]);
+        assert_eq!(c.to_vec(), vec![58.0, 64.0, 139.0, 154.0]);
     }
 
     #[test]
@@ -1294,9 +1294,9 @@ mod tests {
         let t = SharedMemoryTiler::new(32, A770_SLM_SIZE);
         let a = vec![2.0, 0.0, 0.0, 3.0];
         let b = vec![1.0, 1.0, 1.0, 1.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0f32; 4];
         t.tiled_matmul(&a, &b, &mut c, 2, 2, 2);
-        assert_eq!(c, vec![2.0, 2.0, 3.0, 3.0]);
+        assert_eq!(c.to_vec(), vec![2.0, 2.0, 3.0, 3.0]);
     }
 
     // ── PrefetchScheduler ──────────────────────────────────────────────

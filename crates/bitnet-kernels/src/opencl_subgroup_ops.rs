@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn inclusive_scan_s16() {
         let r = SubgroupReducer::new(SubgroupSize::S16);
-        let data = vec![1.0; 16];
+        let data = [1.0; 16];
         let scan = r.inclusive_scan_add(&data);
         let expected: Vec<f32> = (1..=16).map(|x| x as f32).collect();
         assert_eq!(scan, expected);
@@ -795,7 +795,7 @@ mod tests {
     #[test]
     fn inclusive_scan_s32() {
         let r = SubgroupReducer::new(SubgroupSize::S32);
-        let data = vec![2.0; 32];
+        let data = [2.0; 32];
         let scan = r.inclusive_scan_add(&data);
         assert_eq!(scan.len(), 32);
         assert_eq!(scan[0], 2.0);
@@ -823,7 +823,7 @@ mod tests {
     #[test]
     fn exclusive_scan_s16() {
         let r = SubgroupReducer::new(SubgroupSize::S16);
-        let data = vec![1.0; 16];
+        let data = [1.0; 16];
         let scan = r.exclusive_scan_add(&data);
         let expected: Vec<f32> = (0..16).map(|x| x as f32).collect();
         assert_eq!(scan, expected);
@@ -959,7 +959,7 @@ mod tests {
     #[test]
     fn ballot_all_true_s8() {
         let b = SubgroupBallot::new(SubgroupSize::S8);
-        let preds = vec![1; 8];
+        let preds = [1; 8];
         let result = b.ballot(&preds);
         assert_eq!(result.mask, 0xFF);
         assert_eq!(result.count_ones(), 8);
@@ -969,7 +969,7 @@ mod tests {
     #[test]
     fn ballot_all_false_s16() {
         let b = SubgroupBallot::new(SubgroupSize::S16);
-        let preds = vec![0; 16];
+        let preds = [0; 16];
         let result = b.ballot(&preds);
         assert_eq!(result.mask, 0);
         assert_eq!(result.count_ones(), 0);
@@ -987,7 +987,7 @@ mod tests {
     #[test]
     fn ballot_s32_sparse() {
         let b = SubgroupBallot::new(SubgroupSize::S32);
-        let mut preds = vec![0i32; 32];
+        let mut preds = [0i32; 32];
         preds[0] = 1;
         preds[31] = 1;
         let result = b.ballot(&preds);
@@ -1036,7 +1036,7 @@ mod tests {
     #[test]
     fn workgroup_reduce_add_four_subgroups() {
         let wr = WorkgroupReducer::new(SubgroupSize::S16);
-        let data = vec![1.0; 64]; // 4 subgroups of SG16
+        let data = [1.0; 64]; // 4 subgroups of SG16
         assert_eq!(wr.reduce_add(&data), 64.0);
     }
 
@@ -1051,7 +1051,7 @@ mod tests {
     #[test]
     fn workgroup_reduce_max_multi() {
         let wr = WorkgroupReducer::new(SubgroupSize::S8);
-        let mut data = vec![-1.0; 24]; // 3 subgroups
+        let mut data = [-1.0; 24]; // 3 subgroups
         data[20] = 99.0;
         assert_eq!(wr.reduce_max(&data), 99.0);
     }
@@ -1059,7 +1059,7 @@ mod tests {
     #[test]
     fn workgroup_reduce_min_multi() {
         let wr = WorkgroupReducer::new(SubgroupSize::S16);
-        let mut data = vec![50.0; 48]; // 3 subgroups
+        let mut data = [50.0; 48]; // 3 subgroups
         data[33] = -7.0;
         assert_eq!(wr.reduce_min(&data), -7.0);
     }

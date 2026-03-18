@@ -1094,7 +1094,7 @@ mod tests {
     fn attention_score_identity() {
         let seq_len = 1;
         let head_dim = 4;
-        let mut scores = vec![2.0];
+        let mut scores = [2.0];
         unsafe { neon_attention_score_f32(&mut scores, seq_len, head_dim) };
         let expected = 2.0 / (4.0f32).sqrt();
         assert!((scores[0] - expected).abs() < 1e-5);
@@ -1128,7 +1128,7 @@ mod tests {
     fn attention_score_scale_correctness() {
         let head_dim = 64;
         let seq_len = 1;
-        let mut scores = vec![8.0];
+        let mut scores = [8.0];
         unsafe { neon_attention_score_f32(&mut scores, seq_len, head_dim) };
         let expected = 8.0 / (64.0f32).sqrt();
         assert!((scores[0] - expected).abs() < 1e-5);
@@ -1220,7 +1220,7 @@ mod tests {
     fn weighted_sum_single_position() {
         let seq_len = 1;
         let head_dim = 4;
-        let weights = vec![1.0];
+        let weights = [1.0];
         let values = pack_slice(&[1, -1, 0, 1]);
         let result = unsafe { neon_weighted_sum_i2_f32(&weights, &values, 2.0, seq_len, head_dim) };
         assert!((result[0] - 2.0).abs() < 1e-5);
@@ -1258,7 +1258,7 @@ mod tests {
     fn weighted_sum_head_dim_8() {
         let seq_len = 1;
         let head_dim = 8;
-        let weights = vec![1.0];
+        let weights = [1.0];
         let vals: Vec<i8> = vec![1, 1, -1, -1, 1, 1, -1, -1];
         let values = pack_slice(&vals);
         let result = unsafe { neon_weighted_sum_i2_f32(&weights, &values, 0.5, seq_len, head_dim) };
@@ -1272,7 +1272,7 @@ mod tests {
     fn weighted_sum_head_dim_16() {
         let seq_len = 1;
         let head_dim = 16;
-        let weights = vec![1.0];
+        let weights = [1.0];
         let values = pack_slice(&vec![1i8; head_dim]);
         let result = unsafe { neon_weighted_sum_i2_f32(&weights, &values, 1.0, seq_len, head_dim) };
         for v in &result {
@@ -1284,7 +1284,7 @@ mod tests {
     fn weighted_sum_head_dim_32() {
         let seq_len = 1;
         let head_dim = 32;
-        let weights = vec![1.0];
+        let weights = [1.0];
         let values = pack_slice(&vec![-1i8; head_dim]);
         let result = unsafe { neon_weighted_sum_i2_f32(&weights, &values, 1.0, seq_len, head_dim) };
         for v in &result {
@@ -1454,9 +1454,9 @@ mod tests {
 
     #[test]
     fn kv_cache_single_append() {
-        let mut cache = vec![0x11; 4];
+        let mut cache = [0x11; 4];
         let mut cache_len = 4usize;
-        let new_data = vec![0x22; 2];
+        let new_data = [0x22; 2];
         unsafe { neon_kv_cache_append_i2(&mut cache, &new_data, &mut cache_len, 100) };
         assert_eq!(cache_len, 6);
         assert_eq!(cache[4], 0x22);
@@ -1468,7 +1468,7 @@ mod tests {
         let mut cache = Vec::new();
         let mut cache_len = 0usize;
         for i in 0..5 {
-            let data = vec![i as u8; 3];
+            let data = [i as u8; 3];
             unsafe { neon_kv_cache_append_i2(&mut cache, &data, &mut cache_len, 100) };
         }
         assert_eq!(cache_len, 15);
@@ -1481,20 +1481,20 @@ mod tests {
     fn kv_cache_max_len_boundary() {
         let mut cache = Vec::new();
         let mut cache_len = 0usize;
-        let data = vec![0xFF; 10];
+        let data = [0xFF; 10];
         unsafe { neon_kv_cache_append_i2(&mut cache, &data, &mut cache_len, 10) };
         assert_eq!(cache_len, 10);
         // Second append should be fully clipped
-        let data2 = vec![0xAA; 5];
+        let data2 = [0xAA; 5];
         unsafe { neon_kv_cache_append_i2(&mut cache, &data2, &mut cache_len, 10) };
         assert_eq!(cache_len, 10); // unchanged
     }
 
     #[test]
     fn kv_cache_overflow_handling() {
-        let mut cache = vec![0x11; 8];
+        let mut cache = [0x11; 8];
         let mut cache_len = 8usize;
-        let data = vec![0x22; 10];
+        let data = [0x22; 10];
         unsafe { neon_kv_cache_append_i2(&mut cache, &data, &mut cache_len, 12) };
         // Only 4 bytes fit
         assert_eq!(cache_len, 12);
@@ -1566,7 +1566,7 @@ mod tests {
     #[test]
     fn full_forward_numerical_precision() {
         // Large scale factors shouldn't produce NaN/Inf in final output
-        let queries = vec![100.0; 4];
+        let queries = [100.0; 4];
         let keys = pack_slice(&[1, 1, 1, 1]);
         let values = pack_slice(&[1, -1, 1, -1]);
         let result =
@@ -1709,14 +1709,14 @@ mod tests {
 
     #[test]
     fn softmax_row_all_neg_inf() {
-        let mut row = vec![f32::NEG_INFINITY; 4];
+        let mut row = [f32::NEG_INFINITY; 4];
         unsafe { neon_softmax_row(&mut row) };
         // NaN is acceptable for all-neg-inf input; just don't panic
     }
 
     #[test]
     fn softmax_row_single_element() {
-        let mut row = vec![5.0];
+        let mut row = [5.0];
         unsafe { neon_softmax_row(&mut row) };
         assert!((row[0] - 1.0).abs() < 1e-5);
     }
@@ -1725,7 +1725,7 @@ mod tests {
     fn kv_cache_large_append() {
         let mut cache = Vec::new();
         let mut cache_len = 0usize;
-        let data = vec![0xBB; 64];
+        let data = [0xBB; 64];
         unsafe { neon_kv_cache_append_i2(&mut cache, &data, &mut cache_len, 1000) };
         assert_eq!(cache_len, 64);
         for i in 0..64 {
@@ -1750,7 +1750,7 @@ mod tests {
     fn weighted_sum_non_aligned_head_dim() {
         let seq_len = 1;
         let head_dim = 5;
-        let weights = vec![1.0];
+        let weights = [1.0];
         let values = pack_slice(&[1, -1, 1, -1, 1]);
         let result = unsafe { neon_weighted_sum_i2_f32(&weights, &values, 1.0, seq_len, head_dim) };
         assert_eq!(result.len(), 5);
@@ -1761,7 +1761,7 @@ mod tests {
 
     #[test]
     fn attention_score_seq_len_1_no_mask() {
-        let mut scores = vec![5.0];
+        let mut scores = [5.0];
         unsafe { neon_attention_score_f32(&mut scores, 1, 4) };
         let expected = 5.0 / 2.0;
         assert!((scores[0] - expected).abs() < 1e-5);
@@ -1770,7 +1770,7 @@ mod tests {
     #[test]
     fn multi_head_scale_propagation() {
         // Verify that key_scale and value_scale affect output
-        let q = vec![1.0; 4];
+        let q = [1.0; 4];
         let k = pack_slice(&[1, 1, 1, 1]);
         let v = pack_slice(&[1, 1, 1, 1]);
         let r1 = unsafe { neon_multi_head_attention_i2(&q, &k, &v, 1.0, 1.0, 1, 1, 4) };
@@ -1836,9 +1836,9 @@ mod tests {
         let input = vec![1.0; hd];
         let w: Vec<i8> = vec![1; hd];
         let s = vec![0.5, 2.0, 3.0];
-        let mut q = vec![0.0];
-        let mut k = vec![0.0];
-        let mut v = vec![0.0];
+        let mut q = [0.0];
+        let mut k = [0.0];
+        let mut v = [0.0];
         unsafe {
             quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, od, &mut q, &mut k, &mut v);
         }
@@ -1849,12 +1849,12 @@ mod tests {
 
     #[test]
     fn projection_single_dim() {
-        let input = vec![3.0];
+        let input = [3.0];
         let w: Vec<i8> = vec![-1];
         let s = vec![1.0, 1.0, 1.0];
-        let mut q = vec![0.0];
-        let mut k = vec![0.0];
-        let mut v = vec![0.0];
+        let mut q = [0.0];
+        let mut k = [0.0];
+        let mut v = [0.0];
         unsafe {
             quantized_qkv_projection_neon(&input, &w, &w, &w, &s, 1, 1, &mut q, &mut k, &mut v);
         }
@@ -1885,9 +1885,9 @@ mod tests {
         let input = vec![2.0; hd];
         let w: Vec<i8> = vec![-1; hd];
         let s = vec![1.0, 1.0, 1.0];
-        let mut q = vec![0.0];
-        let mut k = vec![0.0];
-        let mut v = vec![0.0];
+        let mut q = [0.0];
+        let mut k = [0.0];
+        let mut v = [0.0];
         unsafe {
             quantized_qkv_projection_neon(&input, &w, &w, &w, &s, hd, 1, &mut q, &mut k, &mut v);
         }
@@ -1915,9 +1915,9 @@ mod tests {
 
     #[test]
     fn projection_empty_returns_early() {
-        let mut q = vec![99.0];
-        let mut k = vec![99.0];
-        let mut v = vec![99.0];
+        let mut q = [99.0];
+        let mut k = [99.0];
+        let mut v = [99.0];
         unsafe {
             quantized_qkv_projection_neon(
                 &[],
@@ -1941,7 +1941,7 @@ mod tests {
     fn scores_single_position() {
         let q = vec![1.0, 0.0, 0.0, 0.0];
         let k = vec![1.0, 0.0, 0.0, 0.0];
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         unsafe {
             attention_scores_neon(&q, &k, 1, 4, 1.0, &mut out);
         }
@@ -1952,7 +1952,7 @@ mod tests {
     fn scores_two_positions() {
         let q = vec![1.0, 0.0, 0.0, 1.0];
         let k = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe {
             attention_scores_neon(&q, &k, 2, 2, 1.0, &mut out);
         }
@@ -1964,9 +1964,9 @@ mod tests {
 
     #[test]
     fn scores_scale_applied() {
-        let q = vec![1.0; 4];
-        let k = vec![1.0; 4];
-        let mut out = vec![0.0];
+        let q = [1.0; 4];
+        let k = [1.0; 4];
+        let mut out = [0.0];
         unsafe {
             attention_scores_neon(&q, &k, 1, 4, 0.25, &mut out);
         }
@@ -1977,7 +1977,7 @@ mod tests {
     fn scores_matches_manual_dot() {
         let q = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let k = vec![0.5, -0.5, 1.0, 1.0, 1.0, 1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe {
             attention_scores_neon(&q, &k, 2, 3, 1.0, &mut out);
         }
@@ -1989,9 +1989,9 @@ mod tests {
 
     #[test]
     fn scores_non_aligned_dim() {
-        let q = vec![1.0; 5];
-        let k = vec![2.0; 5];
-        let mut out = vec![0.0];
+        let q = [1.0; 5];
+        let k = [2.0; 5];
+        let mut out = [0.0];
         unsafe {
             attention_scores_neon(&q, &k, 1, 5, 1.0, &mut out);
         }
@@ -2000,7 +2000,7 @@ mod tests {
 
     #[test]
     fn scores_empty_input() {
-        let mut out = vec![99.0];
+        let mut out = [99.0];
         unsafe {
             attention_scores_neon(&[], &[], 0, 4, 1.0, &mut out);
         }
@@ -2061,7 +2061,7 @@ mod tests {
 
     #[test]
     fn attn_softmax_single_element_rows() {
-        let mut scores = vec![42.0];
+        let mut scores = [42.0];
         unsafe { attention_softmax_neon(&mut scores, 1) };
         assert!((scores[0] - 1.0).abs() < 1e-5);
     }
@@ -2117,7 +2117,7 @@ mod tests {
     #[test]
     fn wsum_f32_single_pos() {
         let hd = 4;
-        let scores = vec![1.0];
+        let scores = [1.0];
         let v = vec![1.0, -1.0, 2.0, -2.0];
         let mut out = vec![0.0; hd];
         unsafe {
@@ -2147,7 +2147,7 @@ mod tests {
     #[test]
     fn wsum_f32_non_aligned() {
         let hd = 5;
-        let scores = vec![1.0];
+        let scores = [1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let mut out = vec![0.0; hd];
         unsafe {
@@ -2252,7 +2252,7 @@ mod tests {
 
     #[test]
     fn mha_f32_empty_returns_early() {
-        let mut out = vec![99.0; 4];
+        let mut out = [99.0; 4];
         unsafe {
             multi_head_attention_neon(&[], &[], &[], 0, 0, 4, 1.0, &mut out);
         }

@@ -566,7 +566,7 @@ mod tests {
     #[test]
     fn test_kv_prefix_copy_basic() {
         let src: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_kv_prefix_copy(&src, &mut dst, 16);
         assert_eq!(src, dst);
     }
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn test_kv_prefix_copy_partial() {
         let src = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut dst = vec![0.0f32; 10];
+        let mut dst = [0.0f32; 10];
         neon_kv_prefix_copy(&src, &mut dst, 5);
         assert_eq!(&dst[..5], &src[..5]);
         assert_eq!(dst[5], 0.0); // untouched
@@ -583,7 +583,7 @@ mod tests {
     #[test]
     fn test_kv_prefix_copy_unaligned_tail() {
         let src: Vec<f32> = (0..7).map(|i| i as f32).collect();
-        let mut dst = vec![-1.0f32; 7];
+        let mut dst = [-1.0f32; 7];
         neon_kv_prefix_copy(&src, &mut dst, 7);
         assert_eq!(src, dst);
     }

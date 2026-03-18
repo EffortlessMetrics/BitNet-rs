@@ -1237,7 +1237,7 @@ mod tests {
 
     #[test]
     fn test_all_zeros_sparse() {
-        let dense = vec![0.0; 9];
+        let dense = [0.0; 9];
         let mat = SparseMatrix::from_dense(&dense, 3, 3, 0.0).unwrap();
         assert_eq!(mat.nnz(), 0);
         assert_dense_eq(&mat.to_dense(), &dense, 1e-7);
@@ -1245,7 +1245,7 @@ mod tests {
 
     #[test]
     fn test_single_nonzero() {
-        let mut dense = vec![0.0; 16];
+        let mut dense = [0.0; 16];
         dense[7] = 42.0;
         let mat = SparseMatrix::from_dense(&dense, 4, 4, 0.0).unwrap();
         assert_eq!(mat.nnz(), 1);
@@ -1360,7 +1360,7 @@ mod tests {
         let mat = SparseMatrix::from_dense(&dense_a, 3, 3, 0.0).unwrap();
         let csr = mat.to_csr();
         let x = vec![1.0, 2.0, 3.0];
-        let mut y = vec![0.0; 3];
+        let mut y = [0.0; 3];
         SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).unwrap();
         let expected = dense_matvec(&dense_a, &x, 3, 3);
         assert_dense_eq(&y, &expected, 1e-6);
@@ -1374,7 +1374,7 @@ mod tests {
 
         let mat = SparseMatrix::from_dense(&dense_a, 3, 4, 0.0).unwrap();
         let csr = mat.to_csr();
-        let mut y = vec![0.0; 3];
+        let mut y = [0.0; 3];
         SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).unwrap();
         assert_dense_eq(&y, &expected, 1e-6);
     }
@@ -1384,7 +1384,7 @@ mod tests {
         let mat = SparseMatrix::new(3, 4).unwrap();
         let csr = mat.to_csr();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![99.0; 3];
+        let mut y = [99.0; 3];
         SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).unwrap();
         assert_dense_eq(&y, &[0.0, 0.0, 0.0], 1e-7);
     }
@@ -1394,7 +1394,7 @@ mod tests {
         let mat = SparseMatrix::new(3, 4).unwrap();
         let csr = mat.to_csr();
         let x = vec![1.0, 2.0]; // wrong length
-        let mut y = vec![0.0; 3];
+        let mut y = [0.0; 3];
         assert!(SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).is_err());
     }
 
@@ -1402,8 +1402,8 @@ mod tests {
     fn test_spmv_dimension_mismatch_y() {
         let mat = SparseMatrix::new(3, 4).unwrap();
         let csr = mat.to_csr();
-        let x = vec![1.0; 4];
-        let mut y = vec![0.0; 2]; // wrong length
+        let x = [1.0; 4];
+        let mut y = [0.0; 2]; // wrong length
         assert!(SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).is_err());
     }
 
@@ -1412,7 +1412,7 @@ mod tests {
         let dense_a = vec![1.0, 2.0, 0.0, 3.0, 0.0, 4.0];
         let mat = SparseMatrix::from_dense(&dense_a, 2, 3, 0.0).unwrap();
         let x = vec![1.0, 2.0, 3.0];
-        let mut y = vec![0.0; 2];
+        let mut y = [0.0; 2];
         SparseDenseMatmul::spmv(&mat, &x, &mut y).unwrap();
         let expected = dense_matvec(&dense_a, &x, 2, 3);
         assert_dense_eq(&y, &expected, 1e-6);
@@ -1427,7 +1427,7 @@ mod tests {
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let mat = SparseMatrix::from_dense(&dense_a, 3, 3, 0.0).unwrap();
         let csr = mat.to_csr();
-        let mut c = vec![0.0; 6];
+        let mut c = [0.0; 6];
         SparseDenseMatmul::spmm_csr(&csr, &b, 2, &mut c).unwrap();
         let expected = dense_matmul(&dense_a, &b, 3, 3, 2);
         assert_dense_eq(&c, &expected, 1e-6);
@@ -1437,8 +1437,8 @@ mod tests {
     fn test_spmm_dimension_mismatch() {
         let mat = SparseMatrix::new(3, 4).unwrap();
         let csr = mat.to_csr();
-        let b = vec![1.0; 6]; // 4×2 would be 8 elements
-        let mut c = vec![0.0; 6];
+        let b = [1.0; 6]; // 4×2 would be 8 elements
+        let mut c = [0.0; 6];
         assert!(SparseDenseMatmul::spmm_csr(&csr, &b, 2, &mut c).is_err());
     }
 
@@ -1446,8 +1446,8 @@ mod tests {
     fn test_spmm_output_dimension_mismatch() {
         let mat = SparseMatrix::new(3, 4).unwrap();
         let csr = mat.to_csr();
-        let b = vec![1.0; 8]; // 4×2
-        let mut c = vec![0.0; 4]; // wrong: should be 3×2=6
+        let b = [1.0; 8]; // 4×2
+        let mut c = [0.0; 4]; // wrong: should be 3×2=6
         assert!(SparseDenseMatmul::spmm_csr(&csr, &b, 2, &mut c).is_err());
     }
 
@@ -1504,7 +1504,7 @@ mod tests {
 
     #[test]
     fn test_detect_all_zeros() {
-        let data = vec![0.0; 10];
+        let data = [0.0; 10];
         let (mask, ratio) = SparsityDetector::detect(&data, 0.0);
         assert!(mask.iter().all(|&m| !m));
         assert!((ratio - 1.0).abs() < 1e-9);
@@ -1512,7 +1512,7 @@ mod tests {
 
     #[test]
     fn test_detect_all_nonzero() {
-        let data = vec![1.0; 10];
+        let data = [1.0; 10];
         let (mask, ratio) = SparsityDetector::detect(&data, 0.0);
         assert!(mask.iter().all(|&m| m));
         assert!(ratio.abs() < 1e-9);
@@ -1587,7 +1587,7 @@ mod tests {
 
     #[test]
     fn test_block_sparse_all_zero() {
-        let dense = vec![0.0; 16];
+        let dense = [0.0; 16];
         let bs = BlockSparse::from_dense(&dense, 4, 4, 2, 0.0).unwrap();
         assert_eq!(bs.num_blocks(), 0);
         assert_dense_eq(&bs.to_dense(), &dense, 1e-7);
@@ -1625,7 +1625,7 @@ mod tests {
             vec![1.0, 2.0, 0.0, 0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 5.0, 6.0, 0.0, 0.0, 7.0, 8.0];
         let bs = BlockSparse::from_dense(&dense_a, 4, 4, 2, 0.0).unwrap();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0; 4];
+        let mut y = [0.0; 4];
         bs.spmv(&x, &mut y).unwrap();
         let expected = dense_matvec(&dense_a, &x, 4, 4);
         assert_dense_eq(&y, &expected, 1e-6);
@@ -1633,19 +1633,19 @@ mod tests {
 
     #[test]
     fn test_block_sparse_spmv_dim_mismatch() {
-        let dense = vec![1.0; 4];
+        let dense = [1.0; 4];
         let bs = BlockSparse::from_dense(&dense, 2, 2, 2, 0.0).unwrap();
-        let x = vec![1.0]; // wrong
-        let mut y = vec![0.0; 2];
+        let x = [1.0]; // wrong
+        let mut y = [0.0; 2];
         assert!(bs.spmv(&x, &mut y).is_err());
     }
 
     #[test]
     fn test_block_sparse_spmv_y_dim_mismatch() {
-        let dense = vec![1.0; 4];
+        let dense = [1.0; 4];
         let bs = BlockSparse::from_dense(&dense, 2, 2, 2, 0.0).unwrap();
-        let x = vec![1.0; 2];
-        let mut y = vec![0.0; 1]; // wrong
+        let x = [1.0; 2];
+        let mut y = [0.0; 1]; // wrong
         assert!(bs.spmv(&x, &mut y).is_err());
     }
 
@@ -1760,7 +1760,7 @@ mod tests {
 
     #[test]
     fn test_pruning_all_kept() {
-        let data = vec![1.0; 4];
+        let data = [1.0; 4];
         let mask = PruningMask::generate(&data, 2, 2, 0.0, PruningStrategy::Unstructured).unwrap();
         assert_eq!(mask.kept(), 4);
         assert_eq!(mask.pruned(), 0);
@@ -1769,7 +1769,7 @@ mod tests {
 
     #[test]
     fn test_pruning_all_pruned() {
-        let data = vec![0.0; 4];
+        let data = [0.0; 4];
         let mask = PruningMask::generate(&data, 2, 2, 0.0, PruningStrategy::Unstructured).unwrap();
         assert_eq!(mask.kept(), 0);
         assert_eq!(mask.pruned(), 4);
@@ -1779,7 +1779,7 @@ mod tests {
     #[test]
     fn test_pruning_empty_mask_sparsity() {
         // Edge: generate mask on a 1x1 with zero value.
-        let data = vec![0.0];
+        let data = [0.0];
         let mask = PruningMask::generate(&data, 1, 1, 0.0, PruningStrategy::Unstructured).unwrap();
         assert!((mask.sparsity() - 1.0).abs() < 1e-9);
     }
@@ -1847,7 +1847,7 @@ mod tests {
 
     #[test]
     fn test_stats_all_zero() {
-        let data = vec![0.0; 9];
+        let data = [0.0; 9];
         let stats = SparseStats::from_dense(&data, 3, 3, 0.0);
         assert_eq!(stats.nnz, 0);
         assert!((stats.sparsity_ratio - 1.0).abs() < 1e-9);
@@ -1917,7 +1917,7 @@ mod tests {
         let x = vec![1.0, -1.0, 0.5, 2.0];
         let expected = dense_matvec(&dense_a, &x, 4, 4);
         let bs = BlockSparse::from_dense(&dense_a, 4, 4, 2, 0.0).unwrap();
-        let mut y = vec![0.0; 4];
+        let mut y = [0.0; 4];
         bs.spmv(&x, &mut y).unwrap();
         assert_dense_eq(&y, &expected, 1e-5);
     }
@@ -1991,7 +1991,7 @@ mod tests {
         let mat = SparseMatrix::from_dense(&dense_a, 2, 2, 0.0).unwrap();
         let csr = mat.to_csr();
         let x = vec![-1.0, 1.0];
-        let mut y = vec![0.0; 2];
+        let mut y = [0.0; 2];
         SparseDenseMatmul::spmv_csr(&csr, &x, &mut y).unwrap();
         let expected = dense_matvec(&dense_a, &x, 2, 2);
         assert_dense_eq(&y, &expected, 1e-6);

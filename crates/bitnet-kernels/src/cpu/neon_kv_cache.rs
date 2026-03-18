@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn append_single_vector() {
-        let mut cache = vec![0.0f32; 16];
+        let mut cache = [0.0f32; 16];
         let data = vec![1.0, 2.0, 3.0, 4.0];
         kv_cache_append(&mut cache, 0, &data, 4);
         assert_eq!(&cache[..4], &[1.0, 2.0, 3.0, 4.0]);
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn append_multiple_vectors() {
-        let mut cache = vec![0.0f32; 24];
+        let mut cache = [0.0f32; 24];
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         kv_cache_append(&mut cache, 0, &data, 3);
         assert_eq!(&cache[..6], &data[..]);
@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn append_at_nonzero_position() {
-        let mut cache = vec![0.0f32; 16];
+        let mut cache = [0.0f32; 16];
         let data = vec![9.0, 8.0, 7.0, 6.0];
         kv_cache_append(&mut cache, 2, &data, 4);
         assert_eq!(&cache[8..12], &[9.0, 8.0, 7.0, 6.0]);
@@ -352,14 +352,14 @@ mod tests {
 
     #[test]
     fn append_head_dim_1() {
-        let mut cache = vec![0.0f32; 8];
+        let mut cache = [0.0f32; 8];
         kv_cache_append(&mut cache, 3, &[42.0], 1);
         assert_eq!(cache[3], 42.0);
     }
 
     #[test]
     fn append_head_dim_3() {
-        let mut cache = vec![0.0f32; 12];
+        let mut cache = [0.0f32; 12];
         let data = vec![1.0, 2.0, 3.0];
         kv_cache_append(&mut cache, 1, &data, 3);
         assert_eq!(&cache[3..6], &[1.0, 2.0, 3.0]);
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn append_head_dim_8() {
-        let mut cache = vec![0.0f32; 32];
+        let mut cache = [0.0f32; 32];
         let data: Vec<f32> = (1..=8).map(|x| x as f32).collect();
         kv_cache_append(&mut cache, 0, &data, 8);
         approx_eq(&cache[..8], &data, 0.0);
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn append_head_dim_16() {
-        let mut cache = vec![0.0f32; 64];
+        let mut cache = [0.0f32; 64];
         let data: Vec<f32> = (1..=16).map(|x| x as f32).collect();
         kv_cache_append(&mut cache, 1, &data, 16);
         approx_eq(&cache[16..32], &data, 0.0);
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn append_empty_data() {
-        let mut cache = vec![1.0f32; 8];
+        let mut cache = [1.0f32; 8];
         let orig = cache.clone();
         kv_cache_append(&mut cache, 0, &[], 4);
         assert_eq!(cache, orig);
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn append_sequential_calls() {
-        let mut cache = vec![0.0f32; 12];
+        let mut cache = [0.0f32; 12];
         kv_cache_append(&mut cache, 0, &[1.0, 2.0, 3.0], 3);
         kv_cache_append(&mut cache, 1, &[4.0, 5.0, 6.0], 3);
         assert_eq!(&cache[..6], &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],);
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn append_preserves_prior_data() {
-        let mut cache = vec![0.0f32; 20];
+        let mut cache = [0.0f32; 20];
         kv_cache_append(&mut cache, 0, &[1.0, 2.0, 3.0, 4.0], 4);
         kv_cache_append(&mut cache, 2, &[9.0, 8.0, 7.0, 6.0], 4);
         assert_eq!(&cache[..4], &[1.0, 2.0, 3.0, 4.0]);
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn append_fills_exactly() {
-        let mut cache = vec![0.0f32; 8];
+        let mut cache = [0.0f32; 8];
         let data: Vec<f32> = (1..=8).map(|x| x as f32).collect();
         kv_cache_append(&mut cache, 0, &data, 4);
         approx_eq(&cache, &data, 0.0);
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn append_single_element_vectors() {
-        let mut cache = vec![0.0f32; 4];
+        let mut cache = [0.0f32; 4];
         for i in 0..4 {
             kv_cache_append(&mut cache, i, &[(i + 1) as f32], 1);
         }
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn gather_single_position() {
         let cache = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         kv_cache_gather(&cache, &[1], 4, &mut out);
         assert_eq!(out, vec![5.0, 6.0, 7.0, 8.0]);
     }
@@ -435,7 +435,7 @@ mod tests {
     #[test]
     fn gather_multiple_positions() {
         let cache: Vec<f32> = (1..=12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         kv_cache_gather(&cache, &[0, 2], 4, &mut out);
         assert_eq!(&out[..4], &[1.0, 2.0, 3.0, 4.0]);
         assert_eq!(&out[4..], &[9.0, 10.0, 11.0, 12.0]);
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn gather_out_of_order() {
         let cache: Vec<f32> = (1..=9).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         kv_cache_gather(&cache, &[2, 0], 3, &mut out);
         assert_eq!(&out[..3], &[7.0, 8.0, 9.0]);
         assert_eq!(&out[3..], &[1.0, 2.0, 3.0]);
@@ -453,7 +453,7 @@ mod tests {
     #[test]
     fn gather_duplicate_positions() {
         let cache = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         kv_cache_gather(&cache, &[0, 0], 2, &mut out);
         assert_eq!(out, vec![10.0, 20.0, 10.0, 20.0]);
     }
@@ -461,7 +461,7 @@ mod tests {
     #[test]
     fn gather_head_dim_1() {
         let cache = vec![5.0, 6.0, 7.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         kv_cache_gather(&cache, &[2, 0], 1, &mut out);
         assert_eq!(out, vec![7.0, 5.0]);
     }
@@ -469,7 +469,7 @@ mod tests {
     #[test]
     fn gather_head_dim_3() {
         let cache: Vec<f32> = (0..9).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         kv_cache_gather(&cache, &[1], 3, &mut out);
         assert_eq!(out, vec![3.0, 4.0, 5.0]);
     }
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn gather_head_dim_8() {
         let cache: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         kv_cache_gather(&cache, &[2], 8, &mut out);
         let expected: Vec<f32> = (16..24).map(|x| x as f32).collect();
         assert_eq!(out, expected);
@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn gather_all_same_position() {
         let cache = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         kv_cache_gather(&cache, &[0, 0, 0], 2, &mut out);
         assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0, 1.0, 2.0]);
     }
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn gather_reverse_order() {
         let cache: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         kv_cache_gather(&cache, &[2, 1, 0], 4, &mut out);
         assert_eq!(&out[..4], &[8.0, 9.0, 10.0, 11.0]);
         assert_eq!(&out[4..8], &[4.0, 5.0, 6.0, 7.0]);
@@ -504,7 +504,7 @@ mod tests {
     #[test]
     fn gather_single_from_large() {
         let cache: Vec<f32> = (0..100).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         kv_cache_gather(&cache, &[4], 5, &mut out);
         let expected: Vec<f32> = (20..25).map(|x| x as f32).collect();
         assert_eq!(out, expected);
@@ -521,7 +521,7 @@ mod tests {
     #[test]
     fn gather_head_dim_5() {
         let cache: Vec<f32> = (0..15).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         kv_cache_gather(&cache, &[1], 5, &mut out);
         assert_eq!(out, vec![5.0, 6.0, 7.0, 8.0, 9.0]);
     }
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn rotate_single_position() {
-        let mut cache = vec![0.0; 8];
+        let mut cache = [0.0; 8];
         cache[4] = 1.0; // place vector at position 1
         kv_cache_rotate(&mut cache, 1, 1, 4, 10000.0);
         // θ_0 = 1/10000^0 = 1.0 → cos(1),sin(1)
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn rotate_preserves_norm() {
-        let mut cache = vec![0.0f32; 24];
+        let mut cache = [0.0f32; 24];
         cache[20] = 3.0;
         cache[21] = 4.0;
         cache[22] = 1.0;
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn rotate_freq_base_10000() {
-        let mut cache = vec![0.0; 6];
+        let mut cache = [0.0; 6];
         cache[4] = 1.0; // position 2
         kv_cache_rotate(&mut cache, 2, 1, 2, 10000.0);
         let theta = 2.0 / 10000.0f32.powf(0.0);
@@ -586,7 +586,7 @@ mod tests {
 
     #[test]
     fn rotate_freq_base_1000() {
-        let mut cache = vec![0.0; 8];
+        let mut cache = [0.0; 8];
         cache[6] = 1.0; // position 3
         kv_cache_rotate(&mut cache, 3, 1, 2, 1000.0);
         let theta = 3.0 / 1000.0f32.powf(0.0);
@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn rotate_head_dim_8() {
-        let mut cache = vec![0.0f32; 16];
+        let mut cache = [0.0f32; 16];
         for i in 0..8 {
             cache[8 + i] = i as f32; // position 1
         }
@@ -618,7 +618,7 @@ mod tests {
 
     #[test]
     fn rotate_head_dim_64() {
-        let mut cache = vec![0.0f32; 256];
+        let mut cache = [0.0f32; 256];
         let off = 3 * 64;
         for (i, val) in cache[off..off + 64].iter_mut().enumerate() {
             *val = (i as f32) * 0.1;
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn rotate_all_zeros() {
-        let mut cache = vec![0.0f32; 48];
+        let mut cache = [0.0f32; 48];
         kv_cache_rotate(&mut cache, 5, 1, 8, 10000.0);
         // Rotation of zero vector is still zero.
         assert!(cache.iter().all(|&v| v == 0.0));
@@ -650,7 +650,7 @@ mod tests {
 
     #[test]
     fn rotate_sequential_positions() {
-        let mut cache = vec![0.0f32; 16];
+        let mut cache = [0.0f32; 16];
         for i in 0..4 {
             cache[i * 4] = 1.0;
         }
@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn copy_single_entry() {
         let src = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut dst = vec![0.0f32; 8];
+        let mut dst = [0.0f32; 8];
         kv_cache_copy(&src, &mut dst, &[1], &[0], 4);
         assert_eq!(&dst[..4], &[5.0, 6.0, 7.0, 8.0]);
     }
@@ -685,7 +685,7 @@ mod tests {
     #[test]
     fn copy_multiple_entries() {
         let src: Vec<f32> = (1..=12).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         kv_cache_copy(&src, &mut dst, &[0, 2], &[1, 0], 4);
         assert_eq!(&dst[..4], &[9.0, 10.0, 11.0, 12.0]);
         assert_eq!(&dst[4..8], &[1.0, 2.0, 3.0, 4.0]);
@@ -695,7 +695,7 @@ mod tests {
     fn copy_preserves_source() {
         let src = vec![1.0, 2.0, 3.0, 4.0];
         let orig = src.clone();
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         kv_cache_copy(&src, &mut dst, &[0], &[0], 4);
         assert_eq!(src, orig);
     }
@@ -703,7 +703,7 @@ mod tests {
     #[test]
     fn copy_head_dim_1() {
         let src = vec![10.0, 20.0, 30.0];
-        let mut dst = vec![0.0f32; 3];
+        let mut dst = [0.0f32; 3];
         kv_cache_copy(&src, &mut dst, &[2, 0], &[0, 1], 1);
         assert_eq!(&dst[..2], &[30.0, 10.0]);
     }
@@ -711,7 +711,7 @@ mod tests {
     #[test]
     fn copy_head_dim_3() {
         let src: Vec<f32> = (0..9).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 9];
+        let mut dst = [0.0f32; 9];
         kv_cache_copy(&src, &mut dst, &[1], &[2], 3);
         assert_eq!(&dst[6..9], &[3.0, 4.0, 5.0]);
     }
@@ -719,7 +719,7 @@ mod tests {
     #[test]
     fn copy_head_dim_8() {
         let src: Vec<f32> = (0..16).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         kv_cache_copy(&src, &mut dst, &[1], &[0], 8);
         let expected: Vec<f32> = (8..16).map(|x| x as f32).collect();
         assert_eq!(&dst[..8], &expected[..]);
@@ -728,7 +728,7 @@ mod tests {
     #[test]
     fn copy_reverse_mapping() {
         let src: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         kv_cache_copy(&src, &mut dst, &[0, 1, 2], &[2, 1, 0], 4);
         assert_eq!(&dst[..4], &[8.0, 9.0, 10.0, 11.0]);
         assert_eq!(&dst[4..8], &[4.0, 5.0, 6.0, 7.0]);
@@ -737,8 +737,8 @@ mod tests {
 
     #[test]
     fn copy_empty_positions() {
-        let src = vec![1.0; 8];
-        let mut dst = vec![0.0f32; 8];
+        let src = [1.0; 8];
+        let mut dst = [0.0f32; 8];
         let orig = dst.clone();
         kv_cache_copy(&src, &mut dst, &[], &[], 4);
         assert_eq!(dst, orig);
@@ -747,7 +747,7 @@ mod tests {
     #[test]
     fn copy_non_contiguous() {
         let src: Vec<f32> = (0..20).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 20];
+        let mut dst = [0.0f32; 20];
         kv_cache_copy(&src, &mut dst, &[0, 4], &[1, 3], 4);
         assert_eq!(&dst[4..8], &[0.0, 1.0, 2.0, 3.0]);
         assert_eq!(&dst[12..16], &[16.0, 17.0, 18.0, 19.0]);
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn clear_empty_range() {
-        let mut cache = vec![1.0f32; 8];
+        let mut cache = [1.0f32; 8];
         let orig = cache.clone();
         kv_cache_clear_range(&mut cache, 2, 2, 4);
         assert_eq!(cache, orig);
@@ -834,14 +834,14 @@ mod tests {
 
     #[test]
     fn clear_already_zero() {
-        let mut cache = vec![0.0f32; 16];
+        let mut cache = [0.0f32; 16];
         kv_cache_clear_range(&mut cache, 0, 4, 4);
         assert_eq!(cache, vec![0.0; 16]);
     }
 
     #[test]
     fn clear_large_range() {
-        let mut cache = vec![1.0f32; 1024];
+        let mut cache = [1.0f32; 1024];
         kv_cache_clear_range(&mut cache, 0, 256, 4);
         assert!(cache.iter().all(|&v| v == 0.0));
     }
@@ -852,8 +852,8 @@ mod tests {
     fn paged_single_page_single_pos() {
         // 1 page, page_size=4, head_dim=2
         let pages = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let page_table = vec![0];
-        let mut out = vec![0.0f32; 2];
+        let page_table = [0];
+        let mut out = [0.0f32; 2];
         kv_cache_paged_lookup(&pages, &page_table, &[2], 4, 2, &mut out);
         assert_eq!(out, vec![5.0, 6.0]);
     }
@@ -861,8 +861,8 @@ mod tests {
     #[test]
     fn paged_single_page_multi_pos() {
         let pages = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
-        let page_table = vec![0];
-        let mut out = vec![0.0f32; 4];
+        let page_table = [0];
+        let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[0, 3], 4, 2, &mut out);
         assert_eq!(out, vec![10.0, 20.0, 70.0, 80.0]);
     }
@@ -873,7 +873,7 @@ mod tests {
         // page 0: [1,2, 3,4]  page 1: [5,6, 7,8]
         let pages = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let page_table = vec![0, 1]; // identity mapping
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         // seq_pos 0 → page 0, offset 0 → phys[0*2+0]*2 = [1,2]
         // seq_pos 3 → page 1, offset 1 → phys[1*2+1]*2 = [7,8]
         kv_cache_paged_lookup(&pages, &page_table, &[0, 3], 2, 2, &mut out);
@@ -886,7 +886,7 @@ mod tests {
         // 2 pages × 2 entries × 3 dims = 12 elements
         let pages: Vec<f32> = (1..=12).map(|x| x as f32).collect();
         let page_table = vec![0, 1];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         // seq_pos 1 → page 0, offset 1 → [4,5,6]
         // seq_pos 2 → page 1, offset 0 → [7,8,9]
         kv_cache_paged_lookup(&pages, &page_table, &[1, 2], 2, 3, &mut out);
@@ -897,7 +897,7 @@ mod tests {
     fn paged_page_size_1() {
         let pages: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let page_table = vec![0, 1, 2, 3];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[3, 0], 1, 2, &mut out);
         assert_eq!(out, vec![6.0, 7.0, 0.0, 1.0]);
     }
@@ -907,7 +907,7 @@ mod tests {
         // 2 pages × 4 entries × 2 dims = 16 elements
         let pages: Vec<f32> = (0..16).map(|x| x as f32).collect();
         let page_table = vec![0, 1];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         // seq_pos 5 → page 1, offset 1 → phys[1*4+1]*2 = idx 10
         kv_cache_paged_lookup(&pages, &page_table, &[5], 4, 2, &mut out);
         assert_eq!(out, vec![10.0, 11.0]);
@@ -916,8 +916,8 @@ mod tests {
     #[test]
     fn paged_head_dim_1() {
         let pages = vec![10.0, 20.0, 30.0, 40.0];
-        let page_table = vec![0];
-        let mut out = vec![0.0f32; 2];
+        let page_table = [0];
+        let mut out = [0.0f32; 2];
         kv_cache_paged_lookup(&pages, &page_table, &[1, 3], 4, 1, &mut out);
         assert_eq!(out, vec![20.0, 40.0]);
     }
@@ -926,8 +926,8 @@ mod tests {
     fn paged_head_dim_3() {
         // 1 page, page_size=2, head_dim=3
         let pages: Vec<f32> = (1..=6).map(|x| x as f32).collect();
-        let page_table = vec![0];
-        let mut out = vec![0.0f32; 3];
+        let page_table = [0];
+        let mut out = [0.0f32; 3];
         kv_cache_paged_lookup(&pages, &page_table, &[1], 2, 3, &mut out);
         assert_eq!(out, vec![4.0, 5.0, 6.0]);
     }
@@ -938,7 +938,7 @@ mod tests {
         // page_size=1, head_dim=2
         let pages = vec![10.0, 20.0, 30.0, 40.0];
         let page_table = vec![1, 0]; // swap
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[0, 1], 1, 2, &mut out);
         // seq_pos 0 → page_table[0]=1 → phys[1*1+0]*2 = [30,40]
         // seq_pos 1 → page_table[1]=0 → phys[0*1+0]*2 = [10,20]
@@ -949,7 +949,7 @@ mod tests {
     fn paged_out_of_order() {
         let pages: Vec<f32> = (0..12).map(|x| x as f32).collect();
         let page_table = vec![0, 1];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         kv_cache_paged_lookup(&pages, &page_table, &[3, 1, 0], 3, 2, &mut out);
         // seq_pos 3 → page 1, offset 0 → phys[1*3+0]*2 = 6
         // seq_pos 1 → page 0, offset 1 → phys[0*3+1]*2 = 2
@@ -960,8 +960,8 @@ mod tests {
     #[test]
     fn paged_duplicate_positions() {
         let pages = vec![1.0, 2.0, 3.0, 4.0];
-        let page_table = vec![0];
-        let mut out = vec![0.0f32; 4];
+        let page_table = [0];
+        let mut out = [0.0f32; 4];
         kv_cache_paged_lookup(&pages, &page_table, &[0, 0], 2, 2, &mut out);
         assert_eq!(out, vec![1.0, 2.0, 1.0, 2.0]);
     }
@@ -970,12 +970,12 @@ mod tests {
 
     #[test]
     fn roundtrip_append_gather() {
-        let mut cache = vec![0.0f32; 32];
+        let mut cache = [0.0f32; 32];
         let v0 = vec![1.0, 2.0, 3.0, 4.0];
         let v1 = vec![5.0, 6.0, 7.0, 8.0];
         kv_cache_append(&mut cache, 0, &v0, 4);
         kv_cache_append(&mut cache, 1, &v1, 4);
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         kv_cache_gather(&cache, &[1, 0], 4, &mut out);
         assert_eq!(&out[..4], &[5.0, 6.0, 7.0, 8.0]);
         assert_eq!(&out[4..], &[1.0, 2.0, 3.0, 4.0]);
@@ -984,12 +984,12 @@ mod tests {
     #[test]
     fn append_copy_equivalence() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c1 = vec![0.0f32; 16];
-        let mut c2 = vec![0.0f32; 16];
+        let mut c1 = [0.0f32; 16];
+        let mut c2 = [0.0f32; 16];
         kv_cache_append(&mut c1, 0, &data, 4);
         // Replicate via copy from a pre-filled source.
         let src = data.clone();
-        let mut padded_src = vec![0.0f32; 16];
+        let mut padded_src = [0.0f32; 16];
         padded_src[..8].copy_from_slice(&src);
         kv_cache_copy(&padded_src, &mut c2, &[0, 1], &[0, 1], 4);
         assert_eq!(c1, c2);
@@ -999,7 +999,7 @@ mod tests {
     fn clear_then_verify_zeros() {
         let mut cache: Vec<f32> = (1..=16).map(|x| x as f32).collect();
         kv_cache_clear_range(&mut cache, 1, 3, 4);
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         kv_cache_gather(&cache, &[1, 2], 4, &mut out);
         assert_eq!(out, vec![0.0; 8]);
     }
@@ -1010,7 +1010,7 @@ mod tests {
         let flat: Vec<f32> = (0..20).map(|x| x as f32).collect();
         // Build pages that are identical to flat layout.
         // page_size=5, 1 page
-        let page_table = vec![0];
+        let page_table = [0];
         let mut flat_out = vec![0.0f32; hd];
         let mut paged_out = vec![0.0f32; hd];
         kv_cache_gather(&flat, &[3], hd, &mut flat_out);
@@ -1114,7 +1114,7 @@ mod tests {
         let hd = 4;
         let mut cache = vec![1.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
         kv_cache_rotate(&mut cache, 0, 2, hd, 10000.0);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         kv_cache_gather(&cache, &[0], hd, &mut out);
         // pos=0 → identity
         approx_eq(&out, &[1.0, 0.0, 0.0, 1.0], 1e-6);
@@ -1122,7 +1122,7 @@ mod tests {
 
     #[test]
     fn clear_append_overwrite() {
-        let mut cache = vec![9.0f32; 8];
+        let mut cache = [9.0f32; 8];
         kv_cache_clear_range(&mut cache, 0, 2, 4);
         assert_eq!(cache, vec![0.0; 8]);
         kv_cache_append(&mut cache, 0, &[1.0, 2.0, 3.0, 4.0], 4);
@@ -1200,7 +1200,7 @@ mod tests {
     #[test]
     fn copy_identity_mapping() {
         let src: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         kv_cache_copy(&src, &mut dst, &[0, 1, 2], &[0, 1, 2], 4);
         assert_eq!(dst, src);
     }

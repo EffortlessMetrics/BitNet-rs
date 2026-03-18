@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn test_sum_all_zeros() {
-        let data = vec![0.0f32; 33];
+        let data = [0.0f32; 33];
         let r = unsafe { neon_sum_f32(&data) };
         assert_eq!(r, 0.0);
     }
@@ -480,7 +480,7 @@ mod tests {
 
     #[test]
     fn test_sum_all_same() {
-        let data = vec![3.0f32; 17];
+        let data = [3.0f32; 17];
         let r = unsafe { neon_sum_f32(&data) };
         assert!(approx_eq(r, 51.0));
     }
@@ -535,7 +535,7 @@ mod tests {
 
     #[test]
     fn test_max_all_same() {
-        let data = vec![2.5f32; 16];
+        let data = [2.5f32; 16];
         let r = unsafe { neon_max_f32(&data) };
         assert!(approx_eq(r, 2.5));
     }
@@ -549,7 +549,7 @@ mod tests {
 
     #[test]
     fn test_max_all_zeros() {
-        let data = vec![0.0f32; 9];
+        let data = [0.0f32; 9];
         let r = unsafe { neon_max_f32(&data) };
         assert_eq!(r, 0.0);
     }
@@ -611,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_min_all_same() {
-        let data = vec![7.0f32; 15];
+        let data = [7.0f32; 15];
         let r = unsafe { neon_min_f32(&data) };
         assert!(approx_eq(r, 7.0));
     }
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn test_min_all_zeros() {
-        let data = vec![0.0f32; 11];
+        let data = [0.0f32; 11];
         let r = unsafe { neon_min_f32(&data) };
         assert_eq!(r, 0.0);
     }
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn test_argmax_all_same() {
-        let data = vec![4.0f32; 8];
+        let data = [4.0f32; 8];
         let r = unsafe { neon_argmax_f32(&data) };
         assert_eq!(r, 0);
     }
@@ -773,7 +773,7 @@ mod tests {
 
     #[test]
     fn test_argmin_all_same() {
-        let data = vec![4.0f32; 8];
+        let data = [4.0f32; 8];
         let r = unsafe { neon_argmin_f32(&data) };
         assert_eq!(r, 0);
     }
@@ -857,8 +857,8 @@ mod tests {
 
     #[test]
     fn test_dot_all_zeros() {
-        let a = vec![0.0f32; 17];
-        let b = vec![1.0f32; 17];
+        let a = [0.0f32; 17];
+        let b = [1.0f32; 17];
         let r = unsafe { neon_dot_product_f32(&a, &b) };
         assert_eq!(r, 0.0);
     }
@@ -925,7 +925,7 @@ mod tests {
 
     #[test]
     fn test_l2_norm_zero_vector() {
-        let data = vec![0.0f32; 16];
+        let data = [0.0f32; 16];
         let r = unsafe { neon_l2_norm_f32(&data) };
         assert_eq!(r, 0.0);
     }
@@ -981,14 +981,14 @@ mod tests {
 
     #[test]
     fn test_mean_all_same() {
-        let data = vec![5.0f32; 33];
+        let data = [5.0f32; 33];
         let r = unsafe { neon_mean_f32(&data) };
         assert!(approx_eq(r, 5.0));
     }
 
     #[test]
     fn test_mean_all_zeros() {
-        let data = vec![0.0f32; 16];
+        let data = [0.0f32; 16];
         let r = unsafe { neon_mean_f32(&data) };
         assert_eq!(r, 0.0);
     }
@@ -1047,14 +1047,14 @@ mod tests {
 
     #[test]
     fn test_variance_all_same() {
-        let data = vec![7.0f32; 16];
+        let data = [7.0f32; 16];
         let r = unsafe { neon_variance_f32(&data, 7.0) };
         assert!(approx_eq(r, 0.0));
     }
 
     #[test]
     fn test_variance_all_zeros() {
-        let data = vec![0.0f32; 8];
+        let data = [0.0f32; 8];
         let r = unsafe { neon_variance_f32(&data, 0.0) };
         assert_eq!(r, 0.0);
     }
@@ -1120,14 +1120,14 @@ mod tests {
 
     #[test]
     fn test_abs_max_all_zeros() {
-        let data = vec![0.0f32; 16];
+        let data = [0.0f32; 16];
         let r = unsafe { neon_abs_max_f32(&data) };
         assert_eq!(r, 0.0);
     }
 
     #[test]
     fn test_abs_max_all_same() {
-        let data = vec![-3.0f32; 9];
+        let data = [-3.0f32; 9];
         let r = unsafe { neon_abs_max_f32(&data) };
         assert!(approx_eq(r, 3.0));
     }

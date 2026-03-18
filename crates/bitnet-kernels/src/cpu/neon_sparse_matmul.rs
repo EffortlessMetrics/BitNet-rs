@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn test_csr_empty_matrix() {
         let row_ptrs = vec![0, 0, 0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csr(&[], &[], &row_ptrs, &[1.0, 2.0, 3.0, 4.0], &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -685,11 +685,11 @@ mod tests {
     #[test]
     fn test_csr_single_element() {
         // 1×1 sparse [[5.0]] × dense [[3.0]]
-        let values = vec![5.0];
-        let col_indices = vec![0];
+        let values = [5.0];
+        let col_indices = [0];
         let row_ptrs = vec![0, 1];
-        let dense = vec![3.0];
-        let mut out = vec![0.0f32; 1];
+        let dense = [3.0];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 1, 1);
         assert_slice_approx(&out, &[15.0]);
     }
@@ -701,7 +701,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[1.0, 2.0, 3.0, 4.0]);
     }
@@ -712,7 +712,7 @@ mod tests {
         let col_indices = vec![0, 1, 2];
         let row_ptrs = vec![0, 1, 2, 3];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
-        let mut out = vec![0.0f32; 9];
+        let mut out = [0.0f32; 9];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 3, 3, 3);
         assert_slice_approx(&out, &dense);
     }
@@ -723,7 +723,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 1, 2];
         let dense = vec![5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -736,7 +736,7 @@ mod tests {
         let row_ptrs = vec![0, 2, 3];
         // Dense 3×2: [[1,2],[3,4],[5,6]]
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 2, 3, 2);
         // row0: 1*[1,2] + 2*[5,6] = [11, 14]
         // row1: 3*[3,4] = [9, 12]
@@ -750,7 +750,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 2];
         let dense = vec![3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 2, 2);
         // -1*[3,4] + 2*[5,6] = [7,8]
         assert_slice_approx(&out, &[7.0, 8.0]);
@@ -763,7 +763,7 @@ mod tests {
         let col_indices = vec![0, 1, 2, 3];
         let row_ptrs = vec![0, 4];
         let dense = vec![1.0, 1.0, 1.0, 1.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 4, 1);
         assert_slice_approx(&out, &[10.0]);
     }
@@ -775,7 +775,7 @@ mod tests {
         let col_indices = vec![0, 1, 2, 3, 4];
         let row_ptrs = vec![0, 5];
         let dense = vec![1.0, 1.0, 1.0, 1.0, 1.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 5, 1);
         assert_slice_approx(&out, &[15.0]);
     }
@@ -786,8 +786,8 @@ mod tests {
         let values: Vec<f32> = (1..=7).map(|x| x as f32).collect();
         let col_indices: Vec<usize> = (0..7).collect();
         let row_ptrs = vec![0, 7];
-        let dense = vec![1.0; 7];
-        let mut out = vec![0.0f32; 1];
+        let dense = [1.0; 7];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 7, 1);
         assert_slice_approx(&out, &[28.0]);
     }
@@ -798,8 +798,8 @@ mod tests {
         let values: Vec<f32> = (1..=8).map(|x| x as f32).collect();
         let col_indices: Vec<usize> = (0..8).collect();
         let row_ptrs = vec![0, 8];
-        let dense = vec![2.0; 8];
-        let mut out = vec![0.0f32; 1];
+        let dense = [2.0; 8];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 8, 1);
         // sum(1..8)*2 = 36*2 = 72
         assert_slice_approx(&out, &[72.0]);
@@ -812,7 +812,7 @@ mod tests {
         let col_indices = vec![0, 1, 0, 1];
         let row_ptrs = vec![0, 2, 4];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 2, 2, 3);
         // row0: 1*[1,2,3] + 2*[4,5,6] = [9,12,15]
         // row1: 3*[1,2,3] + 4*[4,5,6] = [19,26,33]
@@ -826,7 +826,7 @@ mod tests {
         let col_indices = vec![0, 3];
         let row_ptrs = vec![0, 1, 1, 2];
         let dense = vec![5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 3, 4, 1);
         assert_slice_approx(&out, &[5.0, 0.0, 16.0]);
     }
@@ -837,7 +837,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 2];
         let dense = vec![1e6, 1e6];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 2, 1);
         assert_slice_approx(&out, &[2e12]);
     }
@@ -848,7 +848,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 2];
         let dense = vec![4.0, 8.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 2, 1);
         assert_slice_approx(&out, &[4.0]);
     }
@@ -858,18 +858,18 @@ mod tests {
     #[test]
     fn test_csc_empty_matrix() {
         let col_ptrs = vec![0, 0, 0];
-        let mut out = vec![99.0f32; 4];
+        let mut out = [99.0f32; 4];
         call_csc(&[], &[], &col_ptrs, &[1.0, 2.0, 3.0, 4.0], &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[0.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]
     fn test_csc_single_element() {
-        let values = vec![5.0];
-        let row_indices = vec![0];
+        let values = [5.0];
+        let row_indices = [0];
         let col_ptrs = vec![0, 1];
-        let dense = vec![3.0];
-        let mut out = vec![0.0f32; 1];
+        let dense = [3.0];
+        let mut out = [0.0f32; 1];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 1, 1, 1);
         assert_slice_approx(&out, &[15.0]);
     }
@@ -880,7 +880,7 @@ mod tests {
         let row_indices = vec![0, 1];
         let col_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[1.0, 2.0, 3.0, 4.0]);
     }
@@ -891,7 +891,7 @@ mod tests {
         let row_indices = vec![0, 1, 2];
         let col_ptrs = vec![0, 1, 2, 3];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
-        let mut out = vec![0.0f32; 9];
+        let mut out = [0.0f32; 9];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 3, 3, 3);
         assert_slice_approx(&out, &dense);
     }
@@ -902,7 +902,7 @@ mod tests {
         let row_indices = vec![0, 1];
         let col_ptrs = vec![0, 1, 2];
         let dense = vec![5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 2, 2, 2);
         assert_slice_approx(&out, &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -915,7 +915,7 @@ mod tests {
         let row_indices = vec![0, 1, 0];
         let col_ptrs = vec![0, 1, 2, 3];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 2, 3, 2);
         assert_slice_approx(&out, &[11.0, 14.0, 9.0, 12.0]);
     }
@@ -926,7 +926,7 @@ mod tests {
         let row_indices = vec![0, 0];
         let col_ptrs = vec![0, 1, 2];
         let dense = vec![3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 1, 2, 2);
         assert_slice_approx(&out, &[7.0, 8.0]);
     }
@@ -938,7 +938,7 @@ mod tests {
         let row_indices = vec![0, 1, 2, 0];
         let col_ptrs = vec![0, 3, 4];
         let dense = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 3, 2, 1);
         // col0: 1→row0, 2→row1, 3→row2; dense[0]=1
         // col1: 4→row0; dense[1]=2
@@ -952,19 +952,19 @@ mod tests {
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let row_indices = vec![0, 1, 2, 3, 4];
         let col_ptrs = vec![0, 5];
-        let dense = vec![2.0];
-        let mut out = vec![0.0f32; 5];
+        let dense = [2.0];
+        let mut out = [0.0f32; 5];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 5, 1, 1);
         assert_slice_approx(&out, &[2.0, 4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
     fn test_csc_empty_column() {
-        let values = vec![1.0];
-        let row_indices = vec![0];
+        let values = [1.0];
+        let row_indices = [0];
         let col_ptrs = vec![0, 0, 1]; // col 0 empty, col 1 has entry
         let dense = vec![5.0, 3.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 1, 2, 1);
         // col0: empty, col1: 1*3=3
         assert_slice_approx(&out, &[3.0]);
@@ -978,7 +978,7 @@ mod tests {
         let row_indices = vec![0, 1, 0, 1];
         let col_ptrs = vec![0, 2, 4];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 2, 2, 3);
         // row0: 1*[1,2,3]+3*[4,5,6]=[13,17,21]
         // row1: 2*[1,2,3]+4*[4,5,6]=[18,24,30]
@@ -996,8 +996,8 @@ mod tests {
         let csc_row_indices = vec![0, 1, 2];
         let csc_col_ptrs = vec![0, 1, 2, 3];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out_csr = vec![0.0f32; 6];
-        let mut out_csc = vec![0.0f32; 6];
+        let mut out_csr = [0.0f32; 6];
+        let mut out_csc = [0.0f32; 6];
         call_csr(&csr_values, &csr_col_indices, &csr_row_ptrs, &dense, &mut out_csr, 3, 3, 2);
         call_csc(&csc_values, &csc_row_indices, &csc_col_ptrs, &dense, &mut out_csc, 3, 3, 2);
         assert_slice_approx(&out_csr, &out_csc);
@@ -1015,8 +1015,8 @@ mod tests {
         let csc_ri = vec![0, 1, 0];
         let csc_cp = vec![0, 1, 2, 3];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out_csr = vec![0.0f32; 4];
-        let mut out_csc = vec![0.0f32; 4];
+        let mut out_csr = [0.0f32; 4];
+        let mut out_csc = [0.0f32; 4];
         call_csr(&csr_v, &csr_ci, &csr_rp, &dense, &mut out_csr, 2, 3, 2);
         call_csc(&csc_v, &csc_ri, &csc_cp, &dense, &mut out_csc, 2, 3, 2);
         assert_slice_approx(&out_csr, &out_csc);
@@ -1032,8 +1032,8 @@ mod tests {
         let csc_ri = vec![0, 1, 0, 1];
         let csc_cp = vec![0, 2, 4];
         let dense = vec![5.0, 6.0, 7.0, 8.0];
-        let mut out_csr = vec![0.0f32; 4];
-        let mut out_csc = vec![0.0f32; 4];
+        let mut out_csr = [0.0f32; 4];
+        let mut out_csc = [0.0f32; 4];
         call_csr(&csr_v, &csr_ci, &csr_rp, &dense, &mut out_csr, 2, 2, 2);
         call_csc(&csc_v, &csc_ri, &csc_cp, &dense, &mut out_csc, 2, 2, 2);
         assert_slice_approx(&out_csr, &out_csc);
@@ -1042,15 +1042,15 @@ mod tests {
     #[test]
     fn test_csr_csc_consistency_single_nnz() {
         // Sparse 3×3 with one nonzero at (1,2)=7
-        let csr_v = vec![7.0];
-        let csr_ci = vec![2];
+        let csr_v = [7.0];
+        let csr_ci = [2];
         let csr_rp = vec![0, 0, 1, 1];
-        let csc_v = vec![7.0];
-        let csc_ri = vec![1];
+        let csc_v = [7.0];
+        let csc_ri = [1];
         let csc_cp = vec![0, 0, 0, 1];
         let dense = vec![1.0, 2.0, 3.0];
-        let mut out_csr = vec![0.0f32; 3];
-        let mut out_csc = vec![0.0f32; 3];
+        let mut out_csr = [0.0f32; 3];
+        let mut out_csc = [0.0f32; 3];
         call_csr(&csr_v, &csr_ci, &csr_rp, &dense, &mut out_csr, 3, 3, 1);
         call_csc(&csc_v, &csc_ri, &csc_cp, &dense, &mut out_csc, 3, 3, 1);
         assert_slice_approx(&out_csr, &out_csc);
@@ -1169,7 +1169,7 @@ mod tests {
 
     #[test]
     fn test_add_all_indices() {
-        let mut dense = vec![0.0; 4];
+        let mut dense = [0.0; 4];
         call_add(&[1.0, 2.0, 3.0, 4.0], &[0, 1, 2, 3], &mut dense);
         assert_slice_approx(&dense, &[1.0, 2.0, 3.0, 4.0]);
     }
@@ -1183,14 +1183,14 @@ mod tests {
 
     #[test]
     fn test_add_five_elements() {
-        let mut dense = vec![0.0; 5];
+        let mut dense = [0.0; 5];
         call_add(&[1.0, 2.0, 3.0, 4.0, 5.0], &[0, 1, 2, 3, 4], &mut dense);
         assert_slice_approx(&dense, &[1.0, 2.0, 3.0, 4.0, 5.0]);
     }
 
     #[test]
     fn test_add_eight_elements() {
-        let mut dense = vec![1.0; 8];
+        let mut dense = [1.0; 8];
         let values: Vec<f32> = (0..8).map(|x| x as f32).collect();
         let indices: Vec<usize> = (0..8).collect();
         call_add(&values, &indices, &mut dense);
@@ -1207,9 +1207,9 @@ mod tests {
 
     #[test]
     fn test_add_non_contiguous_indices() {
-        let mut dense = vec![0.0; 10];
+        let mut dense = [0.0; 10];
         call_add(&[1.0, 2.0, 3.0], &[0, 5, 9], &mut dense);
-        let mut expected = vec![0.0; 10];
+        let mut expected = [0.0; 10];
         expected[0] = 1.0;
         expected[5] = 2.0;
         expected[9] = 3.0;
@@ -1219,7 +1219,7 @@ mod tests {
     #[test]
     fn test_add_duplicate_indices() {
         // Duplicate indices: both add to same slot
-        let mut dense = vec![0.0; 3];
+        let mut dense = [0.0; 3];
         call_add(&[1.0, 2.0], &[1, 1], &mut dense);
         assert_slice_approx(&dense, &[0.0, 3.0, 0.0]);
     }
@@ -1236,7 +1236,7 @@ mod tests {
     #[test]
     fn test_block_empty() {
         let block_ptrs = vec![0, 0];
-        let mut out = vec![99.0f32; 4];
+        let mut out = [99.0f32; 4];
         call_block(&[], &[], &block_ptrs, &[1.0, 2.0, 3.0, 4.0], &mut out, 2, 2, 2, 2);
         assert_slice_approx(&out, &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -1245,10 +1245,10 @@ mod tests {
     fn test_block_identity_2x2() {
         // 2×2 identity as one block
         let blocks = vec![1.0, 0.0, 0.0, 1.0];
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 2, 2);
         assert_slice_approx(&out, &[3.0, 4.0, 5.0, 6.0]);
     }
@@ -1259,8 +1259,8 @@ mod tests {
         let blocks = vec![2.0, 3.0];
         let block_indices = vec![0, 0];
         let block_ptrs = vec![0, 1, 2];
-        let dense = vec![5.0];
-        let mut out = vec![0.0f32; 2];
+        let dense = [5.0];
+        let mut out = [0.0f32; 2];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 1, 1, 1);
         assert_slice_approx(&out, &[10.0, 15.0]);
     }
@@ -1269,10 +1269,10 @@ mod tests {
     fn test_block_size_2() {
         // 2×2 block [[1,2],[3,4]] at block-col 0, dense 2×1 = [5,6]
         let blocks = vec![1.0, 2.0, 3.0, 4.0];
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![5.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 1, 2);
         // row0: 1*5+2*6=17, row1: 3*5+4*6=39
         assert_slice_approx(&out, &[17.0, 39.0]);
@@ -1281,14 +1281,14 @@ mod tests {
     #[test]
     fn test_block_size_4() {
         // 4×4 identity block
-        let mut blocks = vec![0.0f32; 16];
+        let mut blocks = [0.0f32; 16];
         for i in 0..4 {
             blocks[i * 4 + i] = 1.0;
         }
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 4, 1, 4);
         assert_slice_approx(&out, &[1.0, 2.0, 3.0, 4.0]);
     }
@@ -1296,11 +1296,11 @@ mod tests {
     #[test]
     fn test_block_size_4_general() {
         // 4×4 all-ones block × dense [1,2,3,4] = [10,10,10,10]
-        let blocks = vec![1.0; 16];
-        let block_indices = vec![0];
+        let blocks = [1.0; 16];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 4, 1, 4);
         assert_slice_approx(&out, &[10.0, 10.0, 10.0, 10.0]);
     }
@@ -1308,25 +1308,25 @@ mod tests {
     #[test]
     fn test_block_size_8() {
         // 8×8 identity
-        let mut blocks = vec![0.0f32; 64];
+        let mut blocks = [0.0f32; 64];
         for i in 0..8 {
             blocks[i * 8 + i] = 1.0;
         }
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense: Vec<f32> = (1..=8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 8, 8, 1, 8);
         assert_slice_approx(&out, &dense);
     }
 
     #[test]
     fn test_block_size_8_ones() {
-        let blocks = vec![1.0; 64];
-        let block_indices = vec![0];
+        let blocks = [1.0; 64];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense: Vec<f32> = (1..=8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 8, 8, 1, 8);
         // each row: sum(1..8)=36
         assert_slice_approx(&out, &[36.0; 8]);
@@ -1341,7 +1341,7 @@ mod tests {
         let block_indices = vec![0, 1];
         let block_ptrs = vec![0, 2, 2]; // block-row 0 has 2 blocks, row 1 has 0
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 4, 1, 2);
         // block-row0, block-col0: I₂ × [1,2]ᵀ = [1,2]
         // block-row0, block-col1: 2I₂ × [3,4]ᵀ = [6,8]
@@ -1353,10 +1353,10 @@ mod tests {
     #[test]
     fn test_block_multiple_dense_cols() {
         let blocks = vec![1.0, 2.0, 3.0, 4.0]; // one 2×2 block
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![1.0, 2.0, 3.0, 4.0]; // 2×2
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 2, 2);
         // row0: 1*[1,2]+2*[3,4]=[7,10]
         // row1: 3*[1,2]+4*[3,4]=[15,22]
@@ -1365,11 +1365,11 @@ mod tests {
 
     #[test]
     fn test_block_zero_block() {
-        let blocks = vec![0.0; 4];
-        let block_indices = vec![0];
+        let blocks = [0.0; 4];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![5.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 1, 2);
         assert_slice_approx(&out, &[0.0, 0.0]);
     }
@@ -1377,10 +1377,10 @@ mod tests {
     #[test]
     fn test_block_negative_values() {
         let blocks = vec![-1.0, 0.0, 0.0, -1.0];
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![3.0, 4.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 1, 2);
         assert_slice_approx(&out, &[-3.0, -4.0]);
     }
@@ -1394,7 +1394,7 @@ mod tests {
         let block_indices = vec![0, 0];
         let block_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 1.0, 2.0, 2.0]; // 2 rows × 2 dense_cols
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 2, 2, 2);
         // block-row0: [[1,1],[1,1]] × [[1,1],[2,2]] = [[3,3],[3,3]]
         // block-row1: [[2,2],[2,2]] × [[1,1],[2,2]] = [[6,6],[6,6]]
@@ -1410,7 +1410,7 @@ mod tests {
         let block_indices = vec![0, 1];
         let block_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 4, 1, 2);
         assert_slice_approx(&out, &[1.0, 2.0, 6.0, 8.0]);
     }
@@ -1418,11 +1418,11 @@ mod tests {
     #[test]
     fn test_block_size_4_with_remainder() {
         // 4×4 block but only 3 actual rows
-        let blocks = vec![1.0; 16];
-        let block_indices = vec![0];
+        let blocks = [1.0; 16];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![1.0, 1.0, 1.0, 1.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 3, 4, 1, 4);
         assert_slice_approx(&out, &[4.0, 4.0, 4.0]);
     }
@@ -1431,14 +1431,14 @@ mod tests {
 
     #[test]
     fn test_csr_1x1() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&[7.0], &[0], &[0, 1], &[3.0], &mut out, 1, 1, 1);
         assert_slice_approx(&out, &[21.0]);
     }
 
     #[test]
     fn test_csc_1x1() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csc(&[7.0], &[0], &[0, 1], &[3.0], &mut out, 1, 1, 1);
         assert_slice_approx(&out, &[21.0]);
     }
@@ -1449,7 +1449,7 @@ mod tests {
         let col_indices = vec![0, 1, 2, 3];
         let row_ptrs = vec![0, 1, 2, 3, 4];
         let dense = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 4, 4, 1);
         assert_slice_approx(&out, &[10.0, 40.0, 90.0, 160.0]);
     }
@@ -1460,7 +1460,7 @@ mod tests {
         let row_indices = vec![0, 1, 2, 3];
         let col_ptrs = vec![0, 1, 2, 3, 4];
         let dense = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 4, 4, 1);
         assert_slice_approx(&out, &[10.0, 40.0, 90.0, 160.0]);
     }
@@ -1470,7 +1470,7 @@ mod tests {
         // 9 overlapping elements = 2×4 + 1
         let va: Vec<f32> = (1..=9).map(|x| x as f32).collect();
         let ia: Vec<usize> = (0..9).collect();
-        let vb = vec![1.0; 9];
+        let vb = [1.0; 9];
         let ib: Vec<usize> = (0..9).collect();
         let r = call_dot(&va, &ia, &vb, &ib);
         assert!(approx_eq(r, 45.0));
@@ -1478,7 +1478,7 @@ mod tests {
 
     #[test]
     fn test_add_seven_elements() {
-        let mut dense = vec![0.0; 7];
+        let mut dense = [0.0; 7];
         let values: Vec<f32> = (1..=7).map(|x| x as f32).collect();
         let indices: Vec<usize> = (0..7).collect();
         call_add(&values, &indices, &mut dense);
@@ -1493,7 +1493,7 @@ mod tests {
         let col_indices = vec![1, 1, 1];
         let row_ptrs = vec![0, 1, 2, 3];
         let dense = vec![10.0, 20.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 3, 2, 1);
         assert_slice_approx(&out, &[20.0, 40.0, 60.0]);
     }
@@ -1504,7 +1504,7 @@ mod tests {
         let row_indices = vec![0, 1, 2];
         let col_ptrs = vec![0, 0, 3]; // col 0 empty, col 1 has all
         let dense = vec![10.0, 20.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 3, 2, 1);
         assert_slice_approx(&out, &[20.0, 40.0, 60.0]);
     }
@@ -1518,8 +1518,8 @@ mod tests {
         let csc_ri = vec![0, 1, 2, 3];
         let csc_cp = vec![0, 1, 2, 3, 4];
         let dense = vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
-        let mut out_csr = vec![0.0f32; 8];
-        let mut out_csc = vec![0.0f32; 8];
+        let mut out_csr = [0.0f32; 8];
+        let mut out_csc = [0.0f32; 8];
         call_csr(&csr_v, &csr_ci, &csr_rp, &dense, &mut out_csr, 4, 4, 2);
         call_csc(&csc_v, &csc_ri, &csc_cp, &dense, &mut out_csc, 4, 4, 2);
         assert_slice_approx(&out_csr, &out_csc);
@@ -1534,7 +1534,7 @@ mod tests {
         let block_indices = vec![0, 0];
         let block_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 2, 1, 2);
         // row0: 1+2=3, row1: 3+4=7, row2: 5+6=11, row3: 7+8=15
         assert_slice_approx(&out, &[3.0, 7.0, 11.0, 15.0]);
@@ -1554,7 +1554,7 @@ mod tests {
         let col_indices = vec![0, 1];
         let row_ptrs = vec![0, 2];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 2, 3);
         assert_slice_approx(&out, &[5.0, 7.0, 9.0]);
     }
@@ -1565,14 +1565,14 @@ mod tests {
         let row_indices = vec![0, 0];
         let col_ptrs = vec![0, 1, 2];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 1, 2, 3);
         assert_slice_approx(&out, &[5.0, 7.0, 9.0]);
     }
 
     #[test]
     fn test_add_to_large_dense() {
-        let mut dense = vec![100.0; 20];
+        let mut dense = [100.0; 20];
         call_add(&[1.0, 2.0, 3.0], &[0, 10, 19], &mut dense);
         assert!(approx_eq(dense[0], 101.0));
         assert!(approx_eq(dense[10], 102.0));
@@ -1585,7 +1585,7 @@ mod tests {
         // 4×8, block_size=4. One block-row with two blocks.
         // block0 at block-col 0: I₄
         // block1 at block-col 1: 2*I₄
-        let mut blocks = vec![0.0f32; 32]; // 2 blocks × 16
+        let mut blocks = [0.0f32; 32]; // 2 blocks × 16
         for i in 0..4 {
             blocks[i * 4 + i] = 1.0; // block 0 = I
             blocks[16 + i * 4 + i] = 2.0; // block 1 = 2I
@@ -1593,7 +1593,7 @@ mod tests {
         let block_indices = vec![0, 1];
         let block_ptrs = vec![0, 2];
         let dense: Vec<f32> = (1..=8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 4, 8, 1, 4);
         // row0: 1*1 + 2*5 = 11
         // row1: 1*2 + 2*6 = 14
@@ -1605,14 +1605,14 @@ mod tests {
     #[test]
     fn test_block_size_8_with_dense_cols_2() {
         // 8×8 identity block, dense 8×2
-        let mut blocks = vec![0.0f32; 64];
+        let mut blocks = [0.0f32; 64];
         for i in 0..8 {
             blocks[i * 8 + i] = 1.0;
         }
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 8, 8, 2, 8);
         assert_slice_approx(&out, &dense);
     }
@@ -1620,22 +1620,22 @@ mod tests {
     #[test]
     fn test_csr_nine_nnz() {
         // 9 = 2×4 + 1
-        let values: Vec<f32> = vec![1.0; 9];
+        let values: Vec<f32> = [1.0; 9];
         let col_indices: Vec<usize> = (0..9).collect();
         let row_ptrs = vec![0, 9];
         let dense: Vec<f32> = (1..=9).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         call_csr(&values, &col_indices, &row_ptrs, &dense, &mut out, 1, 9, 1);
         assert!(approx_eq(out[0], 45.0));
     }
 
     #[test]
     fn test_csc_nine_nnz_in_col() {
-        let values = vec![1.0; 9];
+        let values = [1.0; 9];
         let row_indices: Vec<usize> = (0..9).collect();
         let col_ptrs = vec![0, 9];
-        let dense = vec![2.0];
-        let mut out = vec![0.0f32; 9];
+        let dense = [2.0];
+        let mut out = [0.0f32; 9];
         call_csc(&values, &row_indices, &col_ptrs, &dense, &mut out, 9, 1, 1);
         assert_slice_approx(&out, &[2.0; 9]);
     }
@@ -1654,7 +1654,7 @@ mod tests {
 
     #[test]
     fn test_add_four_elements_exact() {
-        let mut dense = vec![10.0; 4];
+        let mut dense = [10.0; 4];
         call_add(&[1.0, 2.0, 3.0, 4.0], &[0, 1, 2, 3], &mut dense);
         assert_slice_approx(&dense, &[11.0, 12.0, 13.0, 14.0]);
     }
@@ -1662,10 +1662,10 @@ mod tests {
     #[test]
     fn test_block_size_2_with_dense_cols_3() {
         let blocks = vec![1.0, 0.0, 0.0, 1.0];
-        let block_indices = vec![0];
+        let block_indices = [0];
         let block_ptrs = vec![0, 1];
         let dense = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         call_block(&blocks, &block_indices, &block_ptrs, &dense, &mut out, 2, 2, 3, 2);
         assert_slice_approx(&out, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }

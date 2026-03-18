@@ -907,10 +907,10 @@ mod tests {
         let b = vec![4.0, 5.0];
         let sa = shape(&[3]);
         let sb = shape(&[2]);
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         let result = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 0, &mut out).unwrap();
         assert_eq!(result.dims, vec![5]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0]);
     }
 
     #[test]
@@ -920,10 +920,10 @@ mod tests {
         let b = iota_offset(3, 100.0); // 100,101,102
         let sa = shape(&[2, 3]);
         let sb = shape(&[1, 3]);
-        let mut out = vec![0.0; 9];
+        let mut out = [0.0; 9];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![3, 3]);
-        assert_eq!(out, vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 100.0, 101.0, 102.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 100.0, 101.0, 102.0]);
     }
 
     #[test]
@@ -933,7 +933,7 @@ mod tests {
         let b = iota_offset(12, 10.0);
         let sa = shape(&[1, 2, 3]);
         let sb = shape(&[2, 2, 3]);
-        let mut out = vec![0.0; 18];
+        let mut out = [0.0; 18];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![3, 2, 3]);
         assert_eq!(&out[..6], &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
@@ -949,10 +949,10 @@ mod tests {
         let b = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0]; // [[10,20,30],[40,50,60]]
         let sa = shape(&[2, 2]);
         let sb = shape(&[2, 3]);
-        let mut out = vec![0.0; 10];
+        let mut out = [0.0; 10];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 1, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 5]);
-        assert_eq!(out, vec![1.0, 2.0, 10.0, 20.0, 30.0, 3.0, 4.0, 40.0, 50.0, 60.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 10.0, 20.0, 30.0, 3.0, 4.0, 40.0, 50.0, 60.0]);
     }
 
     // ── Concat axis 2 ───────────────────────────────────────
@@ -964,7 +964,7 @@ mod tests {
         let b = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
         let sa = shape(&[2, 2, 1]);
         let sb = shape(&[2, 2, 2]);
-        let mut out = vec![0.0; 12];
+        let mut out = [0.0; 12];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 2, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 2, 3]);
         // Row 0,0: [1, 10, 20]
@@ -981,14 +981,14 @@ mod tests {
 
     #[test]
     fn concat_three_tensors_axis0() {
-        let a = vec![1.0];
-        let b = vec![2.0];
-        let c = vec![3.0];
+        let a = [1.0];
+        let b = [2.0];
+        let c = [3.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         let r = tensor_concat_ref(&[&a, &b, &c], &[&s, &s, &s], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![3]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
@@ -997,11 +997,11 @@ mod tests {
         let data: Vec<Vec<f32>> = (0..4).map(|i| vec![i as f32]).collect();
         let s = shape(&[1, 1]);
         let refs: Vec<&[f32]> = data.iter().map(|v| v.as_slice()).collect();
-        let shapes: Vec<&TensorShape> = vec![&s; 4];
-        let mut out = vec![0.0; 4];
+        let shapes: Vec<&TensorShape> = [&s; 4].to_vec();
+        let mut out = [0.0; 4];
         let r = tensor_concat_ref(&refs, &shapes, 1, &mut out).unwrap();
         assert_eq!(r.dims, vec![1, 4]);
-        assert_eq!(out, vec![0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 1.0, 2.0, 3.0]);
     }
 
     // ── Concat single tensor ────────────────────────────────
@@ -1010,17 +1010,17 @@ mod tests {
     fn concat_single_tensor() {
         let a = vec![1.0, 2.0];
         let s = shape(&[2]);
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         let r = tensor_concat_ref(&[&a], &[&s], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2]);
-        assert_eq!(out, vec![1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0]);
     }
 
     // ── Concat errors ───────────────────────────────────────
 
     #[test]
     fn concat_empty_inputs_error() {
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r = tensor_concat_ref(&[], &[], 0, &mut out);
         assert!(r.is_err());
     }
@@ -1031,7 +1031,7 @@ mod tests {
         let b = vec![3.0, 4.0, 5.0, 6.0];
         let sa = shape(&[2]);
         let sb = shape(&[2, 2]);
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 0, &mut out);
         assert!(r.is_err());
     }
@@ -1043,16 +1043,16 @@ mod tests {
         let b = iota(8);
         let sa = shape(&[2, 3]);
         let sb = shape(&[2, 4]);
-        let mut out = vec![0.0; 20];
+        let mut out = [0.0; 20];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 0, &mut out);
         assert!(r.is_err());
     }
 
     #[test]
     fn concat_axis_out_of_range_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r = tensor_concat_ref(&[&a], &[&s], 5, &mut out);
         assert!(r.is_err());
     }
@@ -1061,7 +1061,7 @@ mod tests {
     fn concat_output_too_small_error() {
         let a = vec![1.0, 2.0];
         let s = shape(&[2]);
-        let mut out = vec![0.0; 1]; // too small
+        let mut out = [0.0; 1]; // too small
         let r = tensor_concat_ref(&[&a, &a], &[&s, &s], 0, &mut out);
         assert!(r.is_err());
     }
@@ -1070,25 +1070,25 @@ mod tests {
     fn concat_data_shape_mismatch_error() {
         let a = vec![1.0, 2.0, 3.0]; // len 3 but shape says [2]
         let s = shape(&[2]);
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = tensor_concat_ref(&[&a], &[&s], 0, &mut out);
         assert!(r.is_err());
     }
 
     #[test]
     fn concat_scalar_tensors_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let s = TensorShape::new(vec![]);
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r = tensor_concat_ref(&[&a], &[&s], 0, &mut out);
         assert!(r.is_err());
     }
 
     #[test]
     fn concat_inputs_shapes_len_mismatch_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         let r = tensor_concat_ref(&[&a, &a], &[&s], 0, &mut out);
         assert!(r.is_err());
     }
@@ -1166,7 +1166,7 @@ mod tests {
         let part_shapes = tensor_split_ref(&data, &s, 0, 3, &mut parts).unwrap();
         let refs: Vec<&[f32]> = parts.iter().map(|v| v.as_slice()).collect();
         let shape_refs: Vec<&TensorShape> = part_shapes.iter().collect();
-        let mut recon = vec![0.0; 12];
+        let mut recon = [0.0; 12];
         tensor_concat_ref(&refs, &shape_refs, 0, &mut recon).unwrap();
         assert_eq!(data, recon);
     }
@@ -1179,7 +1179,7 @@ mod tests {
         let part_shapes = tensor_split_ref(&data, &s, 1, 3, &mut parts).unwrap();
         let refs: Vec<&[f32]> = parts.iter().map(|v| v.as_slice()).collect();
         let shape_refs: Vec<&TensorShape> = part_shapes.iter().collect();
-        let mut recon = vec![0.0; 24];
+        let mut recon = [0.0; 24];
         tensor_concat_ref(&refs, &shape_refs, 1, &mut recon).unwrap();
         assert_eq!(data, recon);
     }
@@ -1192,7 +1192,7 @@ mod tests {
         let part_shapes = tensor_split_ref(&data, &s, 2, 2, &mut parts).unwrap();
         let refs: Vec<&[f32]> = parts.iter().map(|v| v.as_slice()).collect();
         let shape_refs: Vec<&TensorShape> = part_shapes.iter().collect();
-        let mut recon = vec![0.0; 24];
+        let mut recon = [0.0; 24];
         tensor_concat_ref(&refs, &shape_refs, 2, &mut recon).unwrap();
         assert_eq!(data, recon);
     }
@@ -1252,7 +1252,7 @@ mod tests {
 
     #[test]
     fn chunk_single_element() {
-        let data = vec![42.0];
+        let data = [42.0];
         let s = shape(&[1]);
         let mut outs = Vec::new();
         let shapes = tensor_chunk_ref(&data, &s, 0, 1, &mut outs).unwrap();
@@ -1268,10 +1268,10 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
         let s = shape(&[3]);
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = tensor_stack_ref(&[&a, &b], &[&s, &s], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 3]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -1280,10 +1280,10 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
         let s = shape(&[3]);
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = tensor_stack_ref(&[&a, &b], &[&s, &s], 1, &mut out).unwrap();
         assert_eq!(r.dims, vec![3, 2]);
-        assert_eq!(out, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
     }
 
     #[test]
@@ -1292,7 +1292,7 @@ mod tests {
         let a = iota(6);
         let b = iota_offset(6, 10.0);
         let s = shape(&[2, 3]);
-        let mut out = vec![0.0; 12];
+        let mut out = [0.0; 12];
         let r = tensor_stack_ref(&[&a, &b], &[&s, &s], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 2, 3]);
         assert_eq!(&out[..6], &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
@@ -1301,19 +1301,19 @@ mod tests {
 
     #[test]
     fn stack_three_tensors() {
-        let a = vec![1.0];
-        let b = vec![2.0];
-        let c = vec![3.0];
+        let a = [1.0];
+        let b = [2.0];
+        let c = [3.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         let r = tensor_stack_ref(&[&a, &b, &c], &[&s, &s, &s], 0, &mut out).unwrap();
         assert_eq!(r.dims, vec![3, 1]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
     fn stack_empty_inputs_error() {
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r: Result<TensorShape> = tensor_stack_ref(&[], &[], 0, &mut out);
         assert!(r.is_err());
     }
@@ -1324,16 +1324,16 @@ mod tests {
         let b = vec![3.0, 4.0, 5.0];
         let sa = shape(&[2]);
         let sb = shape(&[3]);
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         let r = tensor_stack_ref(&[&a, &b], &[&sa, &sb], 0, &mut out);
         assert!(r.is_err());
     }
 
     #[test]
     fn stack_axis_out_of_range_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         // axis=2 for 1-d tensor (max allowed is 1)
         let r = tensor_stack_ref(&[&a], &[&s], 2, &mut out);
         assert!(r.is_err());
@@ -1384,7 +1384,7 @@ mod tests {
 
     #[test]
     fn unstack_scalar_error() {
-        let data = vec![1.0];
+        let data = [1.0];
         let s = TensorShape::new(vec![]);
         let mut outs = Vec::new();
         let r = tensor_unstack_ref(&data, &s, 0, &mut outs);
@@ -1398,7 +1398,7 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
         let s = shape(&[3]);
-        let mut stacked = vec![0.0; 6];
+        let mut stacked = [0.0; 6];
         let stacked_shape = tensor_stack_ref(&[&a, &b], &[&s, &s], 0, &mut stacked).unwrap();
         let mut unstacked = Vec::new();
         tensor_unstack_ref(&stacked, &stacked_shape, 0, &mut unstacked).unwrap();
@@ -1411,7 +1411,7 @@ mod tests {
         let a = vec![1.0, 2.0];
         let b = vec![3.0, 4.0];
         let s = shape(&[2]);
-        let mut stacked = vec![0.0; 4];
+        let mut stacked = [0.0; 4];
         let stacked_shape = tensor_stack_ref(&[&a, &b], &[&s, &s], 1, &mut stacked).unwrap();
         let mut unstacked = Vec::new();
         tensor_unstack_ref(&stacked, &stacked_shape, 1, &mut unstacked).unwrap();
@@ -1426,10 +1426,10 @@ mod tests {
         let data = iota(6);
         let s = shape(&[2, 3]);
         let specs = [SliceSpec::full(2), SliceSpec::full(3)];
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 3]);
-        assert_eq!(out, data);
+        assert_eq!(out.to_vec(), data);
     }
 
     #[test]
@@ -1438,10 +1438,10 @@ mod tests {
         let data = iota(6);
         let s = shape(&[6]);
         let specs = [SliceSpec::new(1, 4, 1)];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![3]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
@@ -1450,10 +1450,10 @@ mod tests {
         let data = iota(6);
         let s = shape(&[6]);
         let specs = [SliceSpec::new(0, 6, 2)];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![3]);
-        assert_eq!(out, vec![0.0, 2.0, 4.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 2.0, 4.0]);
     }
 
     #[test]
@@ -1462,12 +1462,12 @@ mod tests {
         let data = iota(12);
         let s = shape(&[3, 4]);
         let specs = [SliceSpec::new(0, 2, 1), SliceSpec::new(1, 3, 1)];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 2]);
         // row 0: [0,1,2,3] -> cols 1,2 -> [1,2]
         // row 1: [4,5,6,7] -> cols 1,2 -> [5,6]
-        assert_eq!(out, vec![1.0, 2.0, 5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -1476,11 +1476,11 @@ mod tests {
         let data = iota(16);
         let s = shape(&[4, 4]);
         let specs = [SliceSpec::new(0, 4, 2), SliceSpec::new(0, 4, 2)];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 2]);
         // (0,0)=0, (0,2)=2, (2,0)=8, (2,2)=10
-        assert_eq!(out, vec![0.0, 2.0, 8.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 2.0, 8.0, 10.0]);
     }
 
     #[test]
@@ -1499,7 +1499,7 @@ mod tests {
         let data = iota(4);
         let s = shape(&[4]);
         let specs = [SliceSpec::new(0, 4, 0)];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out);
         assert!(r.is_err());
     }
@@ -1509,7 +1509,7 @@ mod tests {
         let data = iota(4);
         let s = shape(&[4]);
         let specs = [SliceSpec::new(0, 5, 1)];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out);
         assert!(r.is_err());
     }
@@ -1519,7 +1519,7 @@ mod tests {
         let data = iota(6);
         let s = shape(&[2, 3]);
         let specs = [SliceSpec::full(2)]; // only 1 spec for 2-d tensor
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out);
         assert!(r.is_err());
     }
@@ -1533,10 +1533,10 @@ mod tests {
         let b = vec![4.0, 5.0, 6.0];
         let sa = shape(&[1, 3]);
         let sb = shape(&[1, 3]);
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         let r = padded_concat_ref(&[&a, &b], &[&sa, &sb], 0, 0.0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 3]);
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
@@ -1546,38 +1546,38 @@ mod tests {
         let b = vec![3.0, 4.0, 5.0];
         let sa = shape(&[1, 2]);
         let sb = shape(&[1, 3]);
-        let mut out = vec![-1.0; 6];
+        let mut out = [-1.0; 6];
         let r = padded_concat_ref(&[&a, &b], &[&sa, &sb], 0, 0.0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 3]);
         // row 0: [1, 2, pad=0]
         // row 1: [3, 4, 5]
-        assert_eq!(out, vec![1.0, 2.0, 0.0, 3.0, 4.0, 5.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 0.0, 3.0, 4.0, 5.0]);
     }
 
     #[test]
     fn padded_concat_custom_pad_value() {
-        let a = vec![1.0];
+        let a = [1.0];
         let b = vec![2.0, 3.0];
         let sa = shape(&[1, 1]);
         let sb = shape(&[1, 2]);
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = padded_concat_ref(&[&a, &b], &[&sa, &sb], 0, -999.0, &mut out).unwrap();
         assert_eq!(r.dims, vec![2, 2]);
-        assert_eq!(out, vec![1.0, -999.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![1.0, -999.0, 2.0, 3.0]);
     }
 
     #[test]
     fn padded_concat_empty_inputs_error() {
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r = padded_concat_ref(&[], &[], 0, 0.0, &mut out);
         assert!(r.is_err());
     }
 
     #[test]
     fn padded_concat_axis_out_of_range_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let s = shape(&[1]);
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         let r = padded_concat_ref(&[&a], &[&s], 5, 0.0, &mut out);
         assert!(r.is_err());
     }
@@ -1665,7 +1665,7 @@ mod tests {
         let b = iota(4); // [2,2]
         let sa = shape(&[2, 3]);
         let sb = shape(&[2, 2]);
-        let mut out = vec![0.0; 10];
+        let mut out = [0.0; 10];
         let r = tensor_concat_ref(&[&a, &b], &[&sa, &sb], 1, &mut out).unwrap();
         assert_eq!(r.dims[1], 3 + 2);
         assert_eq!(r.dims[0], 2);
@@ -1705,7 +1705,7 @@ mod tests {
     fn stack_adds_dimension() {
         let a = iota(4); // [4]
         let s = shape(&[4]);
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         let r = tensor_stack_ref(&[&a, &a], &[&s, &s], 0, &mut out).unwrap();
         assert_eq!(r.ndim(), 2);
         assert_eq!(r.dims[0], 2);
@@ -1775,13 +1775,13 @@ mod tests {
     #[test]
     fn padded_concat_three_different_sizes() {
         // [1,1] + [1,2] + [1,3] along axis 0 -> [3, 3] with padding
-        let a = vec![1.0];
+        let a = [1.0];
         let b = vec![2.0, 3.0];
         let c = vec![4.0, 5.0, 6.0];
         let sa = shape(&[1, 1]);
         let sb = shape(&[1, 2]);
         let sc = shape(&[1, 3]);
-        let mut out = vec![0.0; 9];
+        let mut out = [0.0; 9];
         let r = padded_concat_ref(&[&a, &b, &c], &[&sa, &sb, &sc], 0, 0.0, &mut out).unwrap();
         assert_eq!(r.dims, vec![3, 3]);
         // row 0: [1, 0, 0]
@@ -1794,11 +1794,11 @@ mod tests {
 
     #[test]
     fn padded_concat_ndim_mismatch_error() {
-        let a = vec![1.0];
+        let a = [1.0];
         let b = vec![2.0, 3.0];
         let sa = shape(&[1]);
         let sb = shape(&[1, 2]);
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = padded_concat_ref(&[&a, &b], &[&sa, &sb], 0, 0.0, &mut out);
         assert!(r.is_err());
     }
@@ -1809,11 +1809,11 @@ mod tests {
         let data = iota(24);
         let s = shape(&[2, 3, 4]);
         let specs = [SliceSpec::new(0, 1, 1), SliceSpec::new(1, 3, 1), SliceSpec::new(0, 4, 2)];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         let r = tensor_slice_ref(&data, &s, &specs, &mut out).unwrap();
         assert_eq!(r.dims, vec![1, 2, 2]);
         // row(0,1): [4,5,6,7] -> cols 0,2 -> [4,6]
         // row(0,2): [8,9,10,11] -> cols 0,2 -> [8,10]
-        assert_eq!(out, vec![4.0, 6.0, 8.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 6.0, 8.0, 10.0]);
     }
 }

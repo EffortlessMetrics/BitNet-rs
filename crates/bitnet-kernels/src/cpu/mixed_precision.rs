@@ -1137,29 +1137,29 @@ mod tests {
 
     #[test]
     fn test_batch_f16_length_mismatch() {
-        let src = vec![1.0; 4];
-        let mut dst = vec![0u16; 3];
+        let src = [1.0; 4];
+        let mut dst = [0u16; 3];
         assert!(f32_slice_to_f16(&src, &mut dst).is_err());
     }
 
     #[test]
     fn test_batch_bf16_length_mismatch() {
-        let src = vec![1.0; 4];
-        let mut dst = vec![0u16; 5];
+        let src = [1.0; 4];
+        let mut dst = [0u16; 5];
         assert!(f32_slice_to_bf16(&src, &mut dst).is_err());
     }
 
     #[test]
     fn test_batch_f16_to_f32_length_mismatch() {
-        let src = vec![0u16; 3];
-        let mut dst = vec![0.0f32; 2];
+        let src = [0u16; 3];
+        let mut dst = [0.0f32; 2];
         assert!(f16_slice_to_f32(&src, &mut dst).is_err());
     }
 
     #[test]
     fn test_batch_bf16_to_f32_length_mismatch() {
-        let src = vec![0u16; 3];
-        let mut dst = vec![0.0f32; 4];
+        let src = [0u16; 3];
+        let mut dst = [0.0f32; 4];
         assert!(bf16_slice_to_f32(&src, &mut dst).is_err());
     }
 
@@ -1214,11 +1214,11 @@ mod tests {
         // 2×2 identity in F16 weights
         let a = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
         let b_f32 = vec![1.0, 0.0, 0.0, 1.0]; // identity [2, 2]
-        let mut b_f16 = vec![0u16; 4];
+        let mut b_f16 = [0u16; 4];
         for (i, &v) in b_f32.iter().enumerate() {
             b_f16[i] = f32_to_f16(v);
         }
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_matmul(&a, &b_f16, &mut out, 2, 2, 2, &PrecisionConfig::DEFAULT).unwrap();
         for (o, e) in out.iter().zip(a.iter()) {
             assert!((o - e).abs() < 1e-3, "identity: got {o}, expected {e}");
@@ -1262,11 +1262,11 @@ mod tests {
     fn test_mixed_matmul_bf16() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b_f32 = vec![1.0, 0.0, 0.0, 1.0];
-        let mut b_bf16 = vec![0u16; 4];
+        let mut b_bf16 = [0u16; 4];
         for (i, &v) in b_f32.iter().enumerate() {
             b_bf16[i] = f32_to_bf16(v);
         }
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_matmul_bf16(&a, &b_bf16, &mut out, 2, 2, 2, &PrecisionConfig::BF16_MIXED).unwrap();
         for (o, e) in out.iter().zip(a.iter()) {
             assert!((o - e).abs() < 1e-2, "bf16 identity: {o} vs {e}");
@@ -1288,36 +1288,36 @@ mod tests {
     #[test]
     fn test_dynamic_loss_scaling_basic() {
         let grads = vec![1.0, 2.0, -3.0];
-        let mut scaled = vec![0.0; 3];
+        let mut scaled = [0.0; 3];
         dynamic_loss_scaling(&grads, &mut scaled, 2.0).unwrap();
-        assert_eq!(scaled, vec![2.0, 4.0, -6.0]);
+        assert_eq!(scaled.to_vec(), vec![2.0, 4.0, -6.0]);
     }
 
     #[test]
     fn test_dynamic_loss_scaling_length_mismatch() {
-        let grads = vec![1.0; 3];
-        let mut scaled = vec![0.0; 2];
+        let grads = [1.0; 3];
+        let mut scaled = [0.0; 2];
         assert!(dynamic_loss_scaling(&grads, &mut scaled, 1.0).is_err());
     }
 
     #[test]
     fn test_dynamic_loss_scaling_invalid_scale_zero() {
-        let grads = vec![1.0];
-        let mut scaled = vec![0.0];
+        let grads = [1.0];
+        let mut scaled = [0.0];
         assert!(dynamic_loss_scaling(&grads, &mut scaled, 0.0).is_err());
     }
 
     #[test]
     fn test_dynamic_loss_scaling_invalid_scale_negative() {
-        let grads = vec![1.0];
-        let mut scaled = vec![0.0];
+        let grads = [1.0];
+        let mut scaled = [0.0];
         assert!(dynamic_loss_scaling(&grads, &mut scaled, -1.0).is_err());
     }
 
     #[test]
     fn test_dynamic_loss_scaling_invalid_scale_nan() {
-        let grads = vec![1.0];
-        let mut scaled = vec![0.0];
+        let grads = [1.0];
+        let mut scaled = [0.0];
         assert!(dynamic_loss_scaling(&grads, &mut scaled, f32::NAN).is_err());
     }
 
@@ -1387,13 +1387,13 @@ mod tests {
 
     #[test]
     fn test_gradient_scaling_zero_scale_error() {
-        let mut grads = vec![1.0];
+        let mut grads = [1.0];
         assert!(gradient_scaling(&mut grads, 0.0).is_err());
     }
 
     #[test]
     fn test_gradient_scaling_nan_scale_error() {
-        let mut grads = vec![1.0];
+        let mut grads = [1.0];
         assert!(gradient_scaling(&mut grads, f32::NAN).is_err());
     }
 
@@ -1434,7 +1434,7 @@ mod tests {
     fn test_forward_identity_no_bias() {
         let input = vec![1.0, 2.0]; // [1, 2]
         let weights = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2] identity
-        let mut output = vec![0.0; 2]; // [1, 2]
+        let mut output = [0.0; 2]; // [1, 2]
         mixed_precision_forward(
             &input,
             &weights,
@@ -1455,7 +1455,7 @@ mod tests {
         let input = vec![1.0, 0.0]; // [1, 2]
         let weights = vec![2.0, 0.0, 0.0, 3.0]; // [2, 2]
         let bias = vec![10.0, 20.0]; // [2]
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         mixed_precision_forward(
             &input,
             &weights,
@@ -1475,7 +1475,7 @@ mod tests {
     fn test_forward_batched() {
         let input = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2]
         let weights = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2]
-        let mut output = vec![0.0; 4]; // [2, 2]
+        let mut output = [0.0; 4]; // [2, 2]
         mixed_precision_forward(
             &input,
             &weights,
@@ -1496,7 +1496,7 @@ mod tests {
     fn test_forward_bf16_storage() {
         let input = vec![1.0, 2.0];
         let weights = vec![1.0, 0.0, 0.0, 1.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         mixed_precision_forward(
             &input,
             &weights,
@@ -1514,9 +1514,9 @@ mod tests {
 
     #[test]
     fn test_forward_input_too_small() {
-        let input = vec![1.0]; // need 2
-        let weights = vec![1.0; 4];
-        let mut output = vec![0.0; 2];
+        let input = [1.0]; // need 2
+        let weights = [1.0; 4];
+        let mut output = [0.0; 2];
         assert!(
             mixed_precision_forward(
                 &input,
@@ -1534,9 +1534,9 @@ mod tests {
 
     #[test]
     fn test_forward_weights_too_small() {
-        let input = vec![1.0; 2];
-        let weights = vec![1.0; 3]; // need 4
-        let mut output = vec![0.0; 2];
+        let input = [1.0; 2];
+        let weights = [1.0; 3]; // need 4
+        let mut output = [0.0; 2];
         assert!(
             mixed_precision_forward(
                 &input,
@@ -1554,9 +1554,9 @@ mod tests {
 
     #[test]
     fn test_forward_output_too_small() {
-        let input = vec![1.0; 2];
-        let weights = vec![1.0; 4];
-        let mut output = vec![0.0; 1]; // need 2
+        let input = [1.0; 2];
+        let weights = [1.0; 4];
+        let mut output = [0.0; 1]; // need 2
         assert!(
             mixed_precision_forward(
                 &input,
@@ -1574,10 +1574,10 @@ mod tests {
 
     #[test]
     fn test_forward_bias_too_small() {
-        let input = vec![1.0; 2];
-        let weights = vec![1.0; 4];
-        let mut output = vec![0.0; 2];
-        let bias = vec![1.0]; // need 2
+        let input = [1.0; 2];
+        let weights = [1.0; 4];
+        let mut output = [0.0; 2];
+        let bias = [1.0]; // need 2
         assert!(
             mixed_precision_forward(
                 &input,
@@ -1598,7 +1598,7 @@ mod tests {
     #[test]
     fn test_auto_cast_f16() {
         let src = vec![1.0, -1.0, 0.5];
-        let mut dst = vec![0u16; 3];
+        let mut dst = [0u16; 3];
         auto_cast(&src, &mut dst, DType::F16).unwrap();
         assert_eq!(dst[0], f32_to_f16(1.0));
     }
@@ -1606,22 +1606,22 @@ mod tests {
     #[test]
     fn test_auto_cast_bf16() {
         let src = vec![1.0, -1.0];
-        let mut dst = vec![0u16; 2];
+        let mut dst = [0u16; 2];
         auto_cast(&src, &mut dst, DType::BF16).unwrap();
         assert_eq!(dst[0], f32_to_bf16(1.0));
     }
 
     #[test]
     fn test_auto_cast_f32_errors() {
-        let src = vec![1.0];
-        let mut dst = vec![0u16; 1];
+        let src = [1.0];
+        let mut dst = [0u16; 1];
         assert!(auto_cast(&src, &mut dst, DType::F32).is_err());
     }
 
     #[test]
     fn test_auto_cast_f64_errors() {
-        let src = vec![1.0];
-        let mut dst = vec![0u16; 1];
+        let src = [1.0];
+        let mut dst = [0u16; 1];
         assert!(auto_cast(&src, &mut dst, DType::F64).is_err());
     }
 
@@ -1629,7 +1629,7 @@ mod tests {
 
     #[test]
     fn test_precision_stats_f16_zeros() {
-        let data = vec![0.0; 10];
+        let data = [0.0; 10];
         let s = precision_stats_f16(&data);
         assert_eq!(s.max_abs_error, 0.0);
         assert_eq!(s.overflow_count, 0);

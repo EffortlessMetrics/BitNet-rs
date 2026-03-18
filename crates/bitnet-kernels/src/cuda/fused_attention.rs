@@ -1173,12 +1173,12 @@ mod tests {
     #[test]
     fn test_pattern_causal_mask() {
         let mask = AttentionPattern::Causal.generate_mask(4);
-        assert_eq!(mask[0 * 4 + 0], 0.0);
-        assert_eq!(mask[0 * 4 + 1], f32::NEG_INFINITY);
-        assert_eq!(mask[1 * 4 + 0], 0.0);
-        assert_eq!(mask[1 * 4 + 1], 0.0);
-        assert_eq!(mask[1 * 4 + 2], f32::NEG_INFINITY);
-        assert_eq!(mask[3 * 4 + 3], 0.0);
+        assert_eq!(mask[0], 0.0);
+        assert_eq!(mask[1], f32::NEG_INFINITY);
+        assert_eq!(mask[4], 0.0);
+        assert_eq!(mask[5], 0.0);
+        assert_eq!(mask[6], f32::NEG_INFINITY);
+        assert_eq!(mask[15], 0.0);
     }
 
     #[test]
@@ -1190,23 +1190,23 @@ mod tests {
     #[test]
     fn test_pattern_sliding_window_mask() {
         let mask = AttentionPattern::SlidingWindow { window_size: 1 }.generate_mask(4);
-        assert_eq!(mask[0 * 4 + 0], 0.0);
-        assert_eq!(mask[0 * 4 + 1], f32::NEG_INFINITY);
-        assert_eq!(mask[2 * 4 + 0], f32::NEG_INFINITY);
-        assert_eq!(mask[2 * 4 + 1], 0.0);
-        assert_eq!(mask[2 * 4 + 2], 0.0);
-        assert_eq!(mask[2 * 4 + 3], f32::NEG_INFINITY);
+        assert_eq!(mask[0], 0.0);
+        assert_eq!(mask[1], f32::NEG_INFINITY);
+        assert_eq!(mask[8], f32::NEG_INFINITY);
+        assert_eq!(mask[9], 0.0);
+        assert_eq!(mask[10], 0.0);
+        assert_eq!(mask[11], f32::NEG_INFINITY);
     }
 
     #[test]
     fn test_pattern_sparse_mask() {
         let mask = AttentionPattern::Sparse { block_size: 2 }.generate_mask(4);
-        assert_eq!(mask[0 * 4 + 0], 0.0);
-        assert_eq!(mask[0 * 4 + 1], 0.0);
-        assert_eq!(mask[0 * 4 + 2], f32::NEG_INFINITY);
-        assert_eq!(mask[0 * 4 + 3], f32::NEG_INFINITY);
-        assert_eq!(mask[2 * 4 + 2], 0.0);
-        assert_eq!(mask[2 * 4 + 3], 0.0);
+        assert_eq!(mask[0], 0.0);
+        assert_eq!(mask[1], 0.0);
+        assert_eq!(mask[2], f32::NEG_INFINITY);
+        assert_eq!(mask[3], f32::NEG_INFINITY);
+        assert_eq!(mask[10], 0.0);
+        assert_eq!(mask[11], 0.0);
     }
 
     #[test]
@@ -1329,16 +1329,16 @@ mod tests {
 
     #[test]
     fn test_scores_shape() {
-        let q = vec![0.1_f32; 12];
-        let k = vec![0.2_f32; 20];
+        let q = [0.1_f32; 12];
+        let k = [0.2_f32; 20];
         let scores = compute_attention_scores(&q, &k, 3, 5, 4).unwrap();
         assert_eq!(scores.len(), 15);
     }
 
     #[test]
     fn test_scores_scaling() {
-        let q = vec![1.0; 4];
-        let k = vec![1.0; 4];
+        let q = [1.0; 4];
+        let k = [1.0; 4];
         let scores = compute_attention_scores(&q, &k, 1, 1, 4).unwrap();
         assert!((scores[0] - 2.0).abs() < 1e-6);
     }
@@ -1350,15 +1350,15 @@ mod tests {
 
     #[test]
     fn test_scores_rejects_short_query() {
-        let q = vec![0.0_f32; 2];
-        let k = vec![0.0_f32; 4];
+        let q = [0.0_f32; 2];
+        let k = [0.0_f32; 4];
         assert!(compute_attention_scores(&q, &k, 2, 2, 2).is_err());
     }
 
     #[test]
     fn test_scores_rejects_short_key() {
-        let q = vec![0.0_f32; 4];
-        let k = vec![0.0_f32; 2];
+        let q = [0.0_f32; 4];
+        let k = [0.0_f32; 2];
         assert!(compute_attention_scores(&q, &k, 2, 2, 2).is_err());
     }
 
@@ -1402,7 +1402,7 @@ mod tests {
 
     #[test]
     fn test_alibi_self_position_zero_bias() {
-        let mut scores = vec![0.0_f32; 4];
+        let mut scores = [0.0_f32; 4];
         apply_alibi_bias(&mut scores, 2, 2, 0, 8).unwrap();
         assert!((scores[0]).abs() < 1e-6);
         assert!((scores[3]).abs() < 1e-6);
@@ -1410,16 +1410,16 @@ mod tests {
 
     #[test]
     fn test_alibi_future_positions_negative() {
-        let mut scores = vec![0.0_f32; 4];
+        let mut scores = [0.0_f32; 4];
         apply_alibi_bias(&mut scores, 2, 2, 0, 8).unwrap();
-        assert!((scores[0 * 2 + 1] - 0.5).abs() < 1e-6);
-        assert!((scores[1 * 2 + 0] - (-0.5)).abs() < 1e-6);
+        assert!((scores[1] - 0.5).abs() < 1e-6);
+        assert!((scores[2] - (-0.5)).abs() < 1e-6);
     }
 
     #[test]
     fn test_alibi_different_heads_different_slopes() {
-        let mut scores0 = vec![0.0_f32; 4];
-        let mut scores1 = vec![0.0_f32; 4];
+        let mut scores0 = [0.0_f32; 4];
+        let mut scores1 = [0.0_f32; 4];
         apply_alibi_bias(&mut scores0, 2, 2, 0, 4).unwrap();
         apply_alibi_bias(&mut scores1, 2, 2, 1, 4).unwrap();
         assert!((scores0[1] - scores1[1]).abs() > 1e-6);
@@ -1427,20 +1427,20 @@ mod tests {
 
     #[test]
     fn test_alibi_rejects_zero_heads() {
-        let mut scores = vec![0.0_f32; 4];
+        let mut scores = [0.0_f32; 4];
         assert!(apply_alibi_bias(&mut scores, 2, 2, 0, 0).is_err());
     }
 
     #[test]
     fn test_alibi_rejects_short_scores() {
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
         assert!(apply_alibi_bias(&mut scores, 2, 2, 0, 8).is_err());
     }
 
     #[test]
     fn test_alibi_slopes_decrease_with_head_index() {
-        let mut scores0 = vec![0.0_f32; 4];
-        let mut scores3 = vec![0.0_f32; 4];
+        let mut scores0 = [0.0_f32; 4];
+        let mut scores3 = [0.0_f32; 4];
         apply_alibi_bias(&mut scores0, 2, 2, 0, 8).unwrap();
         apply_alibi_bias(&mut scores3, 2, 2, 3, 8).unwrap();
         assert!(scores0[1].abs() > scores3[1].abs());
@@ -1504,16 +1504,16 @@ mod tests {
     #[test]
     fn test_fused_attn_rejects_short_query() {
         let cfg = FusedAttentionConfig::new(4, 2, 2, 128).unwrap();
-        let short = vec![0.0_f32; 4];
-        let ok = vec![0.0_f32; 32];
+        let short = [0.0_f32; 4];
+        let ok = [0.0_f32; 32];
         assert!(fused_attention_forward(&short, &ok, &ok, &cfg, 4).is_err());
     }
 
     #[test]
     fn test_fused_attn_rejects_short_key() {
         let cfg = FusedAttentionConfig::new(4, 2, 2, 128).unwrap();
-        let ok = vec![0.0_f32; 32];
-        let short = vec![0.0_f32; 4];
+        let ok = [0.0_f32; 32];
+        let short = [0.0_f32; 4];
         assert!(fused_attention_forward(&ok, &short, &ok, &cfg, 4).is_err());
     }
 
@@ -1682,7 +1682,7 @@ mod tests {
     #[test]
     fn test_gqa_rejects_short_query() {
         let cfg = FusedAttentionConfig::new(4, 4, 2, 128).unwrap();
-        let short = vec![0.0_f32; 4];
+        let short = [0.0_f32; 4];
         let ok_kv = vec![0.0_f32; 2 * 4 * 4];
         assert!(grouped_query_attention(&short, &ok_kv, &ok_kv, &cfg, 4).is_err());
     }
@@ -1788,9 +1788,9 @@ mod tests {
     #[test]
     fn test_single_head_single_position() {
         let cfg = FusedAttentionConfig::new(8, 1, 1, 1024).unwrap();
-        let q = vec![1.0_f32; 8];
-        let k = vec![0.5_f32; 8];
-        let v = vec![42.0_f32; 8];
+        let q = [1.0_f32; 8];
+        let k = [0.5_f32; 8];
+        let v = [42.0_f32; 8];
         let out = fused_attention_forward(&q, &k, &v, &cfg, 1).unwrap();
         for &val in &out {
             assert!((val - 42.0).abs() < 1e-5);

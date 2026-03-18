@@ -128,7 +128,7 @@ fn make_cpu_fallback() -> WgpuDeviceInfo {
 }
 
 /// Scoring function that mirrors `probe_best_wgpu_device` ranking logic.
-fn device_score(d: &WgpuDeviceInfo) -> (u32, u32) {
+const fn device_score(d: &WgpuDeviceInfo) -> (u32, u32) {
     let type_rank = match d.device_type {
         WgpuDeviceType::DiscreteGpu => 4,
         WgpuDeviceType::IntegratedGpu => 3,
@@ -138,8 +138,7 @@ fn device_score(d: &WgpuDeviceInfo) -> (u32, u32) {
     };
     let backend_rank = match d.backend {
         WgpuBackend::Vulkan => 3,
-        WgpuBackend::Metal => 2,
-        WgpuBackend::Dx12 => 2,
+        WgpuBackend::Metal | WgpuBackend::Dx12 => 2,
         WgpuBackend::Gl => 1,
         _ => 0,
     };
@@ -148,7 +147,7 @@ fn device_score(d: &WgpuDeviceInfo) -> (u32, u32) {
 
 /// Sort devices by the same ranking as `probe_best_wgpu_device` and return best.
 fn select_best(devices: Vec<WgpuDeviceInfo>) -> Option<WgpuDeviceInfo> {
-    devices.into_iter().max_by_key(|d| device_score(d))
+    devices.into_iter().max_by_key(device_score)
 }
 
 // ── 1. Apple Silicon Adapter Preference ──────────────────────────────────────
@@ -165,7 +164,7 @@ fn metal_preferred_over_vulkan_on_apple_silicon() {
     // Both are IntegratedGpu; Vulkan (rank 3) beats Metal (rank 2) in the
     // current scoring, which is correct for cross-platform — Vulkan is the
     // performance backend wgpu optimizes for even on macOS via MoltenVK.
-    let best = select_best(vec![metal.clone(), vulkan.clone()]).unwrap();
+    let best = select_best(vec![metal, vulkan]).unwrap();
     assert_eq!(best.backend, WgpuBackend::Vulkan);
 }
 
@@ -227,7 +226,7 @@ fn discrete_gpu_beats_apple_silicon_integrated() {
 
 #[test]
 fn filter_devices_by_f16_support() {
-    let devices = vec![
+    let devices = [
         make_apple_silicon(),    // shader_f16 = true
         make_intel_integrated(), // shader_f16 = false
         make_nvidia_discrete(),  // shader_f16 = true
@@ -239,31 +238,29 @@ fn filter_devices_by_f16_support() {
 
 #[test]
 fn filter_devices_by_compute_shader_support() {
-    let devices = vec![make_apple_silicon(), make_nvidia_discrete(), make_cpu_fallback()];
+    let devices = [make_apple_silicon(), make_nvidia_discrete(), make_cpu_fallback()];
     // All wgpu adapters expose compute shaders; filter by meaningful limits.
-    let compute_capable: Vec<_> =
-        devices.iter().filter(|d| d.limits.max_compute_invocations >= 256).collect();
-    assert_eq!(compute_capable.len(), 3);
+    let compute_capable = devices.iter().filter(|d| d.limits.max_compute_invocations >= 256);
+    assert_eq!(compute_capable.count(), 3);
 }
 
 #[test]
 fn filter_devices_by_storage_buffer_count() {
-    let devices = vec![make_apple_silicon(), make_intel_integrated(), make_nvidia_discrete()];
-    let high_storage: Vec<_> =
-        devices.iter().filter(|d| d.limits.max_storage_buffers >= 16).collect();
+    let devices = [make_apple_silicon(), make_intel_integrated(), make_nvidia_discrete()];
+    let high_storage = devices.iter().filter(|d| d.limits.max_storage_buffers >= 16);
     // Apple Silicon (31) and NVIDIA (16) pass; Intel (8) doesn't.
-    assert_eq!(high_storage.len(), 2);
+    assert_eq!(high_storage.count(), 2);
 }
 
 #[test]
 fn filter_devices_requiring_subgroup_support() {
-    let devices = vec![
+    let devices = [
         make_apple_silicon(),    // subgroup_size = 32
         make_intel_integrated(), // subgroup_size = 8
         make_cpu_fallback(),     // subgroup_size = 0
     ];
-    let subgroup_devices: Vec<_> = devices.iter().filter(|d| d.limits.subgroup_size > 0).collect();
-    assert_eq!(subgroup_devices.len(), 2);
+    let subgroup_devices = devices.iter().filter(|d| d.limits.subgroup_size > 0);
+    assert_eq!(subgroup_devices.count(), 2);
 }
 
 // ── 4. Multiple Adapter Enumeration and Scoring ──────────────────────────────

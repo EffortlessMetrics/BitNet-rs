@@ -1306,8 +1306,8 @@ mod tests {
     fn test_gather_linear_midpoint() {
         let d = vec![10.0, 20.0, 30.0, 40.0];
         let tex = make_2d_linear(&d, 2, 2);
-        let cx = vec![1.0];
-        let cy = vec![0.5];
+        let cx = [1.0];
+        let cy = [0.5];
         let out = texture_gather(&tex, &cx, &cy).unwrap();
         assert!((out[0] - 15.0).abs() < 1e-4, "got {}", out[0]);
     }
@@ -1332,9 +1332,9 @@ mod tests {
 
     #[test]
     fn test_conv2d_constant_kernel() {
-        let d = vec![1.0; 9];
+        let d = [1.0; 9];
         let tex = make_2d(&d, 3, 3);
-        let k = vec![1.0; 9];
+        let k = [1.0; 9];
         let out = texture_conv2d(&tex, &k, 3, 3).unwrap();
         assert_eq!(out[4], 9.0);
     }
@@ -1353,9 +1353,9 @@ mod tests {
 
     #[test]
     fn test_conv2d_border_mode_zeros_oob() {
-        let d = vec![1.0; 4];
+        let d = [1.0; 4];
         let tex = make_2d_with_mode(&d, 2, 2, AddressMode::Border);
-        let k = vec![1.0; 9];
+        let k = [1.0; 9];
         let out = texture_conv2d(&tex, &k, 3, 3).unwrap();
         assert_eq!(out[0], 4.0);
     }
@@ -1387,8 +1387,8 @@ mod tests {
     fn test_interpolate_midpoint() {
         let d = vec![0.0, 10.0, 0.0, 10.0];
         let tex = make_2d(&d, 2, 2);
-        let cx = vec![1.0];
-        let cy = vec![1.0];
+        let cx = [1.0];
+        let cy = [1.0];
         let out = texture_interpolate(&tex, &cx, &cy).unwrap();
         assert!((out[0] - 5.0).abs() < 1e-4, "got {}", out[0]);
     }

@@ -950,7 +950,7 @@ mod tests {
     #[test]
     fn test_ternary_all_zeros() {
         let tq = TernaryQuantizer::default();
-        let weights = vec![0.0; 64];
+        let weights = [0.0; 64];
         let result = tq.quantize(&weights);
         assert!(result.values.iter().all(|&v| v == 0));
         assert_eq!(result.scale, 0.0);
@@ -1007,7 +1007,7 @@ mod tests {
     #[test]
     fn test_ternary_uniform_positive() {
         let tq = TernaryQuantizer::new(0.5);
-        let weights = vec![1.0; 32];
+        let weights = [1.0; 32];
         let result = tq.quantize(&weights);
         assert!(result.values.iter().all(|&v| v == 1));
     }
@@ -1092,7 +1092,7 @@ mod tests {
     #[test]
     fn test_group_quant_all_zeros() {
         let gq = GroupQuantizer::new(32, 2);
-        let weights = vec![0.0f32; 64];
+        let weights = [0.0f32; 64];
         let result = gq.quantize(&weights);
         let recon = GroupQuantizer::dequantize(&result);
         for &r in &recon {
@@ -1156,11 +1156,11 @@ mod tests {
         let awq = AwqQuantizer::new(32, 4, 1.0);
         let weights = linspace(-1.0, 1.0, 64);
 
-        let uniform_imp = vec![1.0f32; 64];
+        let uniform_imp = [1.0f32; 64];
         let result_uniform = awq.quantize(&weights, &uniform_imp);
         let recon_uniform = AwqQuantizer::dequantize(&result_uniform);
 
-        let mut varied_imp = vec![0.1f32; 64];
+        let mut varied_imp = [0.1f32; 64];
         // Make first half high importance
         for imp in varied_imp.iter_mut().take(32) {
             *imp = 10.0;
@@ -1195,7 +1195,7 @@ mod tests {
         // alpha=0 means importance has no effect (all scales become 1.0)
         let awq = AwqQuantizer::new(32, 4, 0.0);
         let weights = gaussian_weights(64, 22);
-        let importance = vec![5.0f32; 64];
+        let importance = [5.0f32; 64];
         let result = awq.quantize(&weights, &importance);
         // All importance scales should be ~epsilon (imp^0 = 1.0, but clamped)
         for &s in &result.importance_scales {
@@ -1216,7 +1216,7 @@ mod tests {
     fn test_gptq_basic() {
         let gptq = GptqRoundtrip::new(32, 4, 0.01);
         let weights = gaussian_weights(128, 30);
-        let hessian = vec![1.0f32; 128];
+        let hessian = [1.0f32; 128];
         let result = gptq.quantize(&weights, &hessian);
         assert_eq!(result.values.len(), 128);
         assert!(result.total_error >= 0.0);
@@ -1226,7 +1226,7 @@ mod tests {
     fn test_gptq_roundtrip_quality() {
         let gptq = GptqRoundtrip::new(32, 4, 0.01);
         let weights = gaussian_weights(128, 31);
-        let hessian = vec![1.0f32; 128];
+        let hessian = [1.0f32; 128];
         let result = gptq.quantize(&weights, &hessian);
         let recon = GptqRoundtrip::dequantize(&result);
         assert_eq!(recon.len(), weights.len());
@@ -1241,7 +1241,7 @@ mod tests {
         // naive quantization for non-uniform hessians
         let gptq = GptqRoundtrip::new(32, 4, 0.01);
         let weights = gaussian_weights(64, 32);
-        let hessian_uniform = vec![1.0f32; 64];
+        let hessian_uniform = [1.0f32; 64];
         let result = gptq.quantize(&weights, &hessian_uniform);
         assert!(result.total_error.is_finite());
     }
@@ -1250,7 +1250,7 @@ mod tests {
     fn test_gptq_2bit() {
         let gptq = GptqRoundtrip::new(32, 2, 0.01);
         let weights = gaussian_weights(64, 33);
-        let hessian = vec![1.0f32; 64];
+        let hessian = [1.0f32; 64];
         let result = gptq.quantize(&weights, &hessian);
         for &v in &result.values {
             assert!(v >= -2 && v <= 1, "2-bit GPTQ value out of range: {v}");
@@ -1260,8 +1260,8 @@ mod tests {
     #[test]
     fn test_gptq_all_zeros() {
         let gptq = GptqRoundtrip::new(32, 4, 0.01);
-        let weights = vec![0.0f32; 64];
-        let hessian = vec![1.0f32; 64];
+        let weights = [0.0f32; 64];
+        let hessian = [1.0f32; 64];
         let result = gptq.quantize(&weights, &hessian);
         let recon = GptqRoundtrip::dequantize(&result);
         for &r in &recon {
@@ -1331,7 +1331,7 @@ mod tests {
     #[test]
     fn test_cluster_uniform_weights() {
         let wc = WeightClustering::new(2, 100);
-        let weights = vec![0.5f32; 64];
+        let weights = [0.5f32; 64];
         let result = wc.cluster(&weights);
         // All assignments should be the same centroid
         let first = result.assignments[0];
@@ -1453,10 +1453,10 @@ mod tests {
     #[test]
     fn test_bitpack_2bit_all_same() {
         let bp = BitPacker::new(2);
-        let values = vec![0i8; 16];
+        let values = [0i8; 16];
         let packed = bp.pack(&values);
         let unpacked = bp.unpack(&packed, 16);
-        assert_eq!(values, unpacked);
+        assert_eq!(values.to_vec(), unpacked);
     }
 
     // ── Decompression kernel tests ──────────────────────────────────────
@@ -1526,8 +1526,8 @@ mod tests {
         let total = 8;
         let group_size = 4;
         let packed: Vec<u8> = vec![0b01_01_01_01, 0b01_01_01_01]; // all 1s (raw)
-        let scales = vec![2.0f32; 2];
-        let zeros = vec![1.0f32; 2];
+        let scales = [2.0f32; 2];
+        let zeros = [1.0f32; 2];
         let mut out = vec![0.0f32; total];
 
         DecompressionKernel::decompress_2bit(&packed, &scales, &zeros, &mut out, total, group_size);
@@ -1543,8 +1543,8 @@ mod tests {
         let total = 4;
         let group_size = 4;
         let packed: Vec<u8> = vec![0x55, 0x55]; // low=5, high=5 for both
-        let scales = vec![1.0f32; 1];
-        let zeros = vec![5.0f32; 1];
+        let scales = [1.0f32; 1];
+        let zeros = [5.0f32; 1];
         let mut out = vec![0.0f32; total];
 
         DecompressionKernel::decompress_4bit(&packed, &scales, &zeros, &mut out, total, group_size);
@@ -1591,7 +1591,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_compression_ratio() {
-        let orig = vec![1.0; 8];
+        let orig = [1.0; 8];
         let recon = orig.clone();
         let m2 = CompressionAnalyzer::analyze(&orig, &recon, 2.0);
         let m4 = CompressionAnalyzer::analyze(&orig, &recon, 4.0);

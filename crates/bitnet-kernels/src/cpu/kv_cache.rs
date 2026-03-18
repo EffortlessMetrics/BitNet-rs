@@ -409,8 +409,8 @@ mod tests {
     fn test_append_bad_alignment() {
         let cfg = default_config();
         let mut cache = KvCache::new(cfg).unwrap();
-        let k = vec![0.0; 5]; // not a multiple of token_elements (32)
-        let v = vec![0.0; 5];
+        let k = [0.0; 5]; // not a multiple of token_elements (32)
+        let v = [0.0; 5];
         assert!(kv_cache_append(&mut cache, 0, &k, &v).is_err());
     }
 

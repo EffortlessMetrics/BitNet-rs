@@ -496,7 +496,7 @@ mod tests {
     fn test_quant_i8_basic() {
         let data = [0.0, 1.0, -1.0, 0.5];
         let scale = 1.0 / 127.0;
-        let mut out = vec![0i8; 4];
+        let mut out = [0i8; 4];
         quantize_symmetric_i8(&data, scale, &mut out);
         assert_eq!(out[0], 0);
         assert_eq!(out[1], 127);
@@ -508,7 +508,7 @@ mod tests {
     fn test_quant_i8_clamp() {
         let data = [200.0, -200.0];
         let scale = 1.0;
-        let mut out = vec![0i8; 2];
+        let mut out = [0i8; 2];
         quantize_symmetric_i8(&data, scale, &mut out);
         assert_eq!(out[0], 127);
         assert_eq!(out[1], -128);
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn test_quant_i8_zeros() {
         let data = [0.0, 0.0, 0.0];
-        let mut out = vec![0i8; 3];
+        let mut out = [0i8; 3];
         quantize_symmetric_i8(&data, 1.0, &mut out);
         assert_eq!(out, vec![0, 0, 0]);
     }
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn test_quant_i8_zero_scale() {
         let data = [1.0, 2.0];
-        let mut out = vec![0i8; 2];
+        let mut out = [0i8; 2];
         quantize_symmetric_i8(&data, 0.0, &mut out);
         assert_eq!(out, vec![0, 0]);
     }
@@ -543,7 +543,7 @@ mod tests {
         // 4 values → 1 byte
         let data = [0.0, 1.0, 0.0, -1.0];
         let scale = 1.0;
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, scale, &mut out);
         // elem0=0→0b00, elem1=+1→0b01, elem2=0→0b00, elem3=-1→0b11
         // byte = 0b11_00_01_00 = 0xC4
@@ -553,7 +553,7 @@ mod tests {
     #[test]
     fn test_quant_i2_all_positive() {
         let data = [1.0, 1.0, 1.0, 1.0];
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, 1.0, &mut out);
         // all +1 → 0b01_01_01_01 = 0x55
         assert_eq!(out[0], 0x55);
@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn test_quant_i2_all_negative() {
         let data = [-1.0, -1.0, -1.0, -1.0];
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, 1.0, &mut out);
         // all -1 → 0b11_11_11_11 = 0xFF
         assert_eq!(out[0], 0xFF);
@@ -571,7 +571,7 @@ mod tests {
     #[test]
     fn test_quant_i2_all_zeros() {
         let data = [0.0, 0.0, 0.0, 0.0];
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, 1.0, &mut out);
         assert_eq!(out[0], 0x00);
     }
@@ -580,7 +580,7 @@ mod tests {
     fn test_quant_i2_partial_byte() {
         // 3 values → still needs 1 byte, 4th slot should be 0
         let data = [1.0, -1.0, 0.0];
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, 1.0, &mut out);
         // elem0=+1→0b01, elem1=-1→0b11, elem2=0→0b00, pad→0b00
         assert_eq!(out[0], 0b00_00_11_01);
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn test_quant_i2_two_bytes() {
         let data = [1.0, 0.0, -1.0, 1.0, -1.0, -1.0, 0.0, 0.0];
-        let mut out = vec![0u8; 2];
+        let mut out = [0u8; 2];
         quantize_symmetric_i2(&data, 1.0, &mut out);
         // byte0: +1=01, 0=00, -1=11, +1=01 → 0b01_11_00_01
         assert_eq!(out[0], 0b01_11_00_01);
@@ -602,7 +602,7 @@ mod tests {
         // scale=0.5 → values mapped: 0.6/0.5=1.2→+1, -0.3/0.5=-0.6→-1
         let data = [0.6, -0.3, 0.0, 0.0];
         let scale = 0.5;
-        let mut out = vec![0u8; 1];
+        let mut out = [0u8; 1];
         quantize_symmetric_i2(&data, scale, &mut out);
         // round(0.6/0.5)=1→+1=01, round(-0.3/0.5)=-1→-1=11, 0, 0
         assert_eq!(out[0], 0b00_00_11_01);
@@ -614,7 +614,7 @@ mod tests {
     fn test_dequant_i8_basic() {
         let data = [0i8, 127, -127, 64];
         let scale = 1.0 / 127.0;
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantize_i8(&data, scale, &mut out);
         assert!((out[0] - 0.0).abs() < 1e-6);
         assert!((out[1] - 1.0).abs() < 1e-6);
@@ -624,7 +624,7 @@ mod tests {
     #[test]
     fn test_dequant_i8_zeros() {
         let data = [0i8; 4];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantize_i8(&data, 0.5, &mut out);
         assert_eq!(out, vec![0.0; 4]);
     }
@@ -641,7 +641,7 @@ mod tests {
     fn test_dequant_i2_basic() {
         // byte: elem0=+1(01), elem1=0(00), elem2=-1(11), elem3=+1(01)
         let data = [0b01_11_00_01u8];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantize_i2(&data, 2.0, &mut out);
         assert_eq!(out, vec![2.0, 0.0, -2.0, 2.0]);
     }
@@ -649,7 +649,7 @@ mod tests {
     #[test]
     fn test_dequant_i2_all_zeros() {
         let data = [0x00u8];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantize_i2(&data, 1.0, &mut out);
         assert_eq!(out, vec![0.0; 4]);
     }
@@ -658,7 +658,7 @@ mod tests {
     fn test_dequant_i2_partial() {
         // only 3 output elements from 1 byte
         let data = [0b00_11_01_00u8]; // elem0=0, elem1=+1, elem2=-1
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         dequantize_i2(&data, 1.0, &mut out);
         assert_eq!(out, vec![0.0, 1.0, -1.0]);
     }
@@ -667,7 +667,7 @@ mod tests {
     fn test_dequant_i2_encoding_0b10() {
         // 0b10 maps to 0 (unspecified encoding treated as zero)
         let data = [0b10u8]; // elem0 = 0b10
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         dequantize_i2(&data, 1.0, &mut out);
         assert_eq!(out[0], 0.0);
     }
@@ -695,7 +695,7 @@ mod tests {
         // Values that map exactly to {-1, 0, +1}
         let original = [1.0, -1.0, 0.0, 1.0, -1.0, 0.0, 0.0, 1.0];
         let scale = 1.0;
-        let mut quantized = vec![0u8; 2];
+        let mut quantized = [0u8; 2];
         quantize_symmetric_i2(&original, scale, &mut quantized);
         let mut restored = vec![0.0f32; original.len()];
         dequantize_i2(&quantized, scale, &mut restored);
@@ -706,9 +706,9 @@ mod tests {
     fn test_roundtrip_i2_with_scale() {
         let scale = 3.0;
         let original = [3.0, -3.0, 0.0, 3.0];
-        let mut quantized = vec![0u8; 1];
+        let mut quantized = [0u8; 1];
         quantize_symmetric_i2(&original, scale, &mut quantized);
-        let mut restored = vec![0.0f32; 4];
+        let mut restored = [0.0f32; 4];
         dequantize_i2(&quantized, scale, &mut restored);
         assert_eq!(restored, original);
     }
@@ -951,7 +951,7 @@ mod tests {
     fn test_quant_i8_very_large_values() {
         let data = [1e10, -1e10];
         let scale = compute_absmax(&data) / 127.0;
-        let mut out = vec![0i8; 2];
+        let mut out = [0i8; 2];
         quantize_symmetric_i8(&data, scale, &mut out);
         assert_eq!(out[0], 127);
         assert_eq!(out[1], -127);
@@ -961,7 +961,7 @@ mod tests {
     fn test_quant_i8_very_small_values() {
         let data = [1e-10, -1e-10, 0.0];
         let scale = compute_absmax(&data) / 127.0;
-        let mut out = vec![0i8; 3];
+        let mut out = [0i8; 3];
         quantize_symmetric_i8(&data, scale, &mut out);
         assert_eq!(out[0], 127);
         assert_eq!(out[1], -127);

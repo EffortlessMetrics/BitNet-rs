@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn test_4x4_basic() {
         let src = make_matrix(4, 4);
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 4);
         assert_eq!(dst, scalar_transpose(&src, 4, 4));
     }
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn test_4x4_8x8() {
         let src = make_matrix(8, 8);
-        let mut dst = vec![0.0f32; 64];
+        let mut dst = [0.0f32; 64];
         neon_transpose_4x4_f32(&src, &mut dst, 8, 8);
         assert_eq!(dst, scalar_transpose(&src, 8, 8));
     }
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn test_4x4_non_square_4x8() {
         let src = make_matrix(4, 8);
-        let mut dst = vec![0.0f32; 32];
+        let mut dst = [0.0f32; 32];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 8);
         assert_eq!(dst, scalar_transpose(&src, 4, 8));
     }
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn test_4x4_non_square_8x4() {
         let src = make_matrix(8, 4);
-        let mut dst = vec![0.0f32; 32];
+        let mut dst = [0.0f32; 32];
         neon_transpose_4x4_f32(&src, &mut dst, 8, 4);
         assert_eq!(dst, scalar_transpose(&src, 8, 4));
     }
@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn test_4x4_12x8() {
         let src = make_matrix(12, 8);
-        let mut dst = vec![0.0f32; 96];
+        let mut dst = [0.0f32; 96];
         neon_transpose_4x4_f32(&src, &mut dst, 12, 8);
         assert_eq!(dst, scalar_transpose(&src, 12, 8));
     }
@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn test_4x4_16x16() {
         let src = make_matrix(16, 16);
-        let mut dst = vec![0.0f32; 256];
+        let mut dst = [0.0f32; 256];
         neon_transpose_4x4_f32(&src, &mut dst, 16, 16);
         assert_eq!(dst, scalar_transpose(&src, 16, 16));
     }
@@ -427,15 +427,15 @@ mod tests {
         // 4×4 identity matrix should transpose to itself.
         let src =
             vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 4);
         assert_eq!(dst, src);
     }
 
     #[test]
     fn test_4x4_all_zeros() {
-        let src = vec![0.0f32; 64];
-        let mut dst = vec![1.0f32; 64];
+        let src = [0.0f32; 64];
+        let mut dst = [1.0f32; 64];
         neon_transpose_4x4_f32(&src, &mut dst, 8, 8);
         assert!(dst.iter().all(|&x| x == 0.0));
     }
@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn test_4x4_negative_values() {
         let src: Vec<f32> = (0..16).map(|i| -((i + 1) as f32)).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 4);
         assert_eq!(dst, scalar_transpose(&src, 4, 4));
     }
@@ -451,8 +451,8 @@ mod tests {
     #[test]
     fn test_4x4_double_transpose_is_identity() {
         let src = make_matrix(8, 12);
-        let mut t1 = vec![0.0f32; 96];
-        let mut t2 = vec![0.0f32; 96];
+        let mut t1 = [0.0f32; 96];
+        let mut t2 = [0.0f32; 96];
         neon_transpose_4x4_f32(&src, &mut t1, 8, 12);
         neon_transpose_4x4_f32(&t1, &mut t2, 12, 8);
         assert_eq!(t2, src);
@@ -462,7 +462,7 @@ mod tests {
     #[should_panic(expected = "rows must be a multiple of 4")]
     fn test_4x4_rejects_unaligned_rows() {
         let src = make_matrix(3, 4);
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         neon_transpose_4x4_f32(&src, &mut dst, 3, 4);
     }
 
@@ -470,23 +470,23 @@ mod tests {
     #[should_panic(expected = "cols must be a multiple of 4")]
     fn test_4x4_rejects_unaligned_cols() {
         let src = make_matrix(4, 5);
-        let mut dst = vec![0.0f32; 20];
+        let mut dst = [0.0f32; 20];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 5);
     }
 
     #[test]
     #[should_panic(expected = "src length")]
     fn test_4x4_rejects_short_src() {
-        let src = vec![0.0f32; 10];
-        let mut dst = vec![0.0f32; 16];
+        let src = [0.0f32; 10];
+        let mut dst = [0.0f32; 16];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 4);
     }
 
     #[test]
     #[should_panic(expected = "dst length")]
     fn test_4x4_rejects_short_dst() {
-        let src = vec![0.0f32; 16];
-        let mut dst = vec![0.0f32; 10];
+        let src = [0.0f32; 16];
+        let mut dst = [0.0f32; 10];
         neon_transpose_4x4_f32(&src, &mut dst, 4, 4);
     }
 
@@ -495,7 +495,7 @@ mod tests {
     #[test]
     fn test_general_4x4() {
         let src = make_matrix(4, 4);
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_transpose_f32(&src, &mut dst, 4, 4);
         assert_eq!(dst, scalar_transpose(&src, 4, 4));
     }
@@ -503,7 +503,7 @@ mod tests {
     #[test]
     fn test_general_8x8() {
         let src = make_matrix(8, 8);
-        let mut dst = vec![0.0f32; 64];
+        let mut dst = [0.0f32; 64];
         neon_transpose_f32(&src, &mut dst, 8, 8);
         assert_eq!(dst, scalar_transpose(&src, 8, 8));
     }
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_general_3x5() {
         let src = make_matrix(3, 5);
-        let mut dst = vec![0.0f32; 15];
+        let mut dst = [0.0f32; 15];
         neon_transpose_f32(&src, &mut dst, 3, 5);
         assert_eq!(dst, scalar_transpose(&src, 3, 5));
     }
@@ -519,7 +519,7 @@ mod tests {
     #[test]
     fn test_general_7x3() {
         let src = make_matrix(7, 3);
-        let mut dst = vec![0.0f32; 21];
+        let mut dst = [0.0f32; 21];
         neon_transpose_f32(&src, &mut dst, 7, 3);
         assert_eq!(dst, scalar_transpose(&src, 7, 3));
     }
@@ -527,7 +527,7 @@ mod tests {
     #[test]
     fn test_general_5x8() {
         let src = make_matrix(5, 8);
-        let mut dst = vec![0.0f32; 40];
+        let mut dst = [0.0f32; 40];
         neon_transpose_f32(&src, &mut dst, 5, 8);
         assert_eq!(dst, scalar_transpose(&src, 5, 8));
     }
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn test_general_2x2() {
         let src = make_matrix(2, 2);
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         neon_transpose_f32(&src, &mut dst, 2, 2);
         assert_eq!(dst, scalar_transpose(&src, 2, 2));
     }
@@ -569,7 +569,7 @@ mod tests {
     #[test]
     fn test_general_2x3() {
         let src = make_matrix(2, 3);
-        let mut dst = vec![0.0f32; 6];
+        let mut dst = [0.0f32; 6];
         neon_transpose_f32(&src, &mut dst, 2, 3);
         assert_eq!(dst, scalar_transpose(&src, 2, 3));
     }
@@ -577,7 +577,7 @@ mod tests {
     #[test]
     fn test_general_5x5() {
         let src = make_matrix(5, 5);
-        let mut dst = vec![0.0f32; 25];
+        let mut dst = [0.0f32; 25];
         neon_transpose_f32(&src, &mut dst, 5, 5);
         assert_eq!(dst, scalar_transpose(&src, 5, 5));
     }
@@ -585,7 +585,7 @@ mod tests {
     #[test]
     fn test_general_6x10() {
         let src = make_matrix(6, 10);
-        let mut dst = vec![0.0f32; 60];
+        let mut dst = [0.0f32; 60];
         neon_transpose_f32(&src, &mut dst, 6, 10);
         assert_eq!(dst, scalar_transpose(&src, 6, 10));
     }
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn test_general_9x9() {
         let src = make_matrix(9, 9);
-        let mut dst = vec![0.0f32; 81];
+        let mut dst = [0.0f32; 81];
         neon_transpose_f32(&src, &mut dst, 9, 9);
         assert_eq!(dst, scalar_transpose(&src, 9, 9));
     }
@@ -617,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_general_empty() {
-        let mut dst = vec![0.0f32; 0];
+        let mut dst = [0.0f32; 0];
         neon_transpose_f32(&[], &mut dst, 0, 0);
         assert!(dst.is_empty());
     }
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn test_general_negative_values() {
         let src: Vec<f32> = (0..35).map(|i| -((i + 1) as f32) * 0.5).collect();
-        let mut dst = vec![0.0f32; 35];
+        let mut dst = [0.0f32; 35];
         neon_transpose_f32(&src, &mut dst, 5, 7);
         assert_eq!(dst, scalar_transpose(&src, 5, 7));
     }
@@ -655,8 +655,8 @@ mod tests {
     #[test]
     fn test_general_agrees_with_4x4_on_aligned() {
         let src = make_matrix(8, 12);
-        let mut dst_gen = vec![0.0f32; 96];
-        let mut dst_blk = vec![0.0f32; 96];
+        let mut dst_gen = [0.0f32; 96];
+        let mut dst_blk = [0.0f32; 96];
         neon_transpose_f32(&src, &mut dst_gen, 8, 12);
         neon_transpose_4x4_f32(&src, &mut dst_blk, 8, 12);
         assert_eq!(dst_gen, dst_blk);
@@ -665,7 +665,7 @@ mod tests {
     #[test]
     fn test_general_1x4() {
         let src = make_matrix(1, 4);
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         neon_transpose_f32(&src, &mut dst, 1, 4);
         assert_eq!(dst, scalar_transpose(&src, 1, 4));
     }
@@ -673,7 +673,7 @@ mod tests {
     #[test]
     fn test_general_4x1() {
         let src = make_matrix(4, 1);
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         neon_transpose_f32(&src, &mut dst, 4, 1);
         assert_eq!(dst, scalar_transpose(&src, 4, 1));
     }
@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_general_3x4() {
         let src = make_matrix(3, 4);
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         neon_transpose_f32(&src, &mut dst, 3, 4);
         assert_eq!(dst, scalar_transpose(&src, 3, 4));
     }
@@ -689,7 +689,7 @@ mod tests {
     #[test]
     fn test_general_4x3() {
         let src = make_matrix(4, 3);
-        let mut dst = vec![0.0f32; 12];
+        let mut dst = [0.0f32; 12];
         neon_transpose_f32(&src, &mut dst, 4, 3);
         assert_eq!(dst, scalar_transpose(&src, 4, 3));
     }
@@ -842,7 +842,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "data length")]
     fn test_inplace_rejects_short_data() {
-        let mut data = vec![0.0f32; 10];
+        let mut data = [0.0f32; 10];
         neon_transpose_inplace_f32(&mut data, 4);
     }
 
@@ -851,7 +851,7 @@ mod tests {
     #[test]
     fn test_batch_single() {
         let src = make_matrix(3, 5);
-        let mut dst = vec![0.0f32; 15];
+        let mut dst = [0.0f32; 15];
         neon_transpose_batch_f32(&src, &mut dst, 1, 3, 5);
         assert_eq!(dst, scalar_transpose(&src, 3, 5));
     }
@@ -860,7 +860,7 @@ mod tests {
     fn test_batch_two_4x4() {
         let src = make_matrix(4, 4);
         let combined: Vec<f32> = src.iter().chain(src.iter()).copied().collect();
-        let mut dst = vec![0.0f32; 32];
+        let mut dst = [0.0f32; 32];
         neon_transpose_batch_f32(&combined, &mut dst, 2, 4, 4);
         let expected = scalar_transpose(&src, 4, 4);
         assert_eq!(&dst[..16], &expected[..]);
@@ -904,7 +904,7 @@ mod tests {
 
     #[test]
     fn test_batch_zero() {
-        let mut dst = vec![0.0f32; 0];
+        let mut dst = [0.0f32; 0];
         neon_transpose_batch_f32(&[], &mut dst, 0, 3, 5);
         assert!(dst.is_empty());
     }
@@ -912,7 +912,7 @@ mod tests {
     #[test]
     fn test_batch_1x1_matrices() {
         let src = vec![1.0, 2.0, 3.0f32];
-        let mut dst = vec![0.0f32; 3];
+        let mut dst = [0.0f32; 3];
         neon_transpose_batch_f32(&src, &mut dst, 3, 1, 1);
         assert_eq!(dst, src);
     }
@@ -935,16 +935,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "src length")]
     fn test_batch_rejects_short_src() {
-        let src = vec![0.0f32; 10];
-        let mut dst = vec![0.0f32; 30];
+        let src = [0.0f32; 10];
+        let mut dst = [0.0f32; 30];
         neon_transpose_batch_f32(&src, &mut dst, 2, 3, 5);
     }
 
     #[test]
     #[should_panic(expected = "dst length")]
     fn test_batch_rejects_short_dst() {
-        let src = vec![0.0f32; 30];
-        let mut dst = vec![0.0f32; 10];
+        let src = [0.0f32; 30];
+        let mut dst = [0.0f32; 10];
         neon_transpose_batch_f32(&src, &mut dst, 2, 3, 5);
     }
 
@@ -953,7 +953,7 @@ mod tests {
     #[test]
     fn test_add_basic_4x4() {
         let src = make_matrix(4, 4);
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_transpose_add_f32(&src, &mut dst, 4, 4);
         assert_eq!(dst, scalar_transpose(&src, 4, 4));
     }
@@ -961,7 +961,7 @@ mod tests {
     #[test]
     fn test_add_accumulates() {
         let src = make_matrix(4, 4);
-        let mut dst = vec![1.0f32; 16];
+        let mut dst = [1.0f32; 16];
         neon_transpose_add_f32(&src, &mut dst, 4, 4);
         let t = scalar_transpose(&src, 4, 4);
         let expected: Vec<f32> = t.iter().map(|&x| x + 1.0).collect();
@@ -971,7 +971,7 @@ mod tests {
     #[test]
     fn test_add_non_aligned_3x5() {
         let src = make_matrix(3, 5);
-        let mut dst = vec![0.0f32; 15];
+        let mut dst = [0.0f32; 15];
         neon_transpose_add_f32(&src, &mut dst, 3, 5);
         assert_eq!(dst, scalar_transpose(&src, 3, 5));
     }
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn test_add_non_aligned_7x3() {
         let src = make_matrix(7, 3);
-        let mut dst = vec![0.0f32; 21];
+        let mut dst = [0.0f32; 21];
         neon_transpose_add_f32(&src, &mut dst, 7, 3);
         assert_eq!(dst, scalar_transpose(&src, 7, 3));
     }
@@ -1012,7 +1012,7 @@ mod tests {
 
     #[test]
     fn test_add_empty() {
-        let mut dst = vec![0.0f32; 0];
+        let mut dst = [0.0f32; 0];
         neon_transpose_add_f32(&[], &mut dst, 0, 0);
         assert!(dst.is_empty());
     }
@@ -1028,8 +1028,8 @@ mod tests {
     #[test]
     fn test_add_negative_src() {
         let src: Vec<f32> = (0..20).map(|i| -((i + 1) as f32)).collect();
-        let mut dst = vec![100.0f32; 20];
-        let mut expected = vec![100.0f32; 20];
+        let mut dst = [100.0f32; 20];
+        let mut expected = [100.0f32; 20];
         scalar_transpose_add(&src, &mut expected, 4, 5);
         neon_transpose_add_f32(&src, &mut dst, 4, 5);
         assert_eq!(dst, expected);

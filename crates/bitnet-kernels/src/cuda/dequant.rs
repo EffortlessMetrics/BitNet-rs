@@ -910,7 +910,7 @@ mod tests {
     fn int2_f32_single_element() {
         // +1 encoded as 0b01
         let packed = vec![0b01u8];
-        let scales = vec![2.0];
+        let scales = [2.0];
         let result = dequantize_int2_to_f32(&packed, &scales, 1, 1).unwrap();
         assert_close(&result, &[2.0], 1e-6);
     }
@@ -919,7 +919,7 @@ mod tests {
     fn int2_f32_all_ternary_values() {
         // +1, -1, 0, +1 → bits: 01 11 00 01 = 0b01_00_11_01 = 0x4D
         let packed = pack_int2(&[1, -1, 0, 1]);
-        let scales = vec![3.0];
+        let scales = [3.0];
         let result = dequantize_int2_to_f32(&packed, &scales, 4, 4).unwrap();
         assert_close(&result, &[3.0, -3.0, 0.0, 3.0], 1e-6);
     }
@@ -938,7 +938,7 @@ mod tests {
             })
             .collect();
         let packed = pack_int2(&values);
-        let scales = vec![1.5];
+        let scales = [1.5];
         let result = dequantize_int2_to_f32(&packed, &scales, 32, 32).unwrap();
         assert_eq!(result.len(), 32);
         assert_close(&result[0..1], &[1.5], 1e-6); // i=0: +1
@@ -948,7 +948,7 @@ mod tests {
 
     #[test]
     fn int2_f32_multiple_blocks() {
-        let values = vec![1_i8; 8];
+        let values = [1_i8; 8];
         let packed = pack_int2(&values);
         let scales = vec![1.0, 2.0];
         let result = dequantize_int2_to_f32(&packed, &scales, 4, 8).unwrap();
@@ -958,9 +958,9 @@ mod tests {
 
     #[test]
     fn int2_f32_large_256() {
-        let values = vec![1_i8; 256];
+        let values = [1_i8; 256];
         let packed = pack_int2(&values);
-        let scales = vec![0.5];
+        let scales = [0.5];
         let result = dequantize_int2_to_f32(&packed, &scales, 256, 256).unwrap();
         assert_eq!(result.len(), 256);
         for &v in &result {
@@ -972,16 +972,16 @@ mod tests {
     fn int2_f32_large_1024() {
         let values: Vec<i8> = (0..1024).map(|i| [1, -1, 0, 1][i % 4]).collect();
         let packed = pack_int2(&values);
-        let scales = vec![1.0; 4];
+        let scales = [1.0; 4];
         let result = dequantize_int2_to_f32(&packed, &scales, 256, 1024).unwrap();
         assert_eq!(result.len(), 1024);
     }
 
     #[test]
     fn int2_f32_large_65536() {
-        let values = vec![1_i8; 65536];
+        let values = [1_i8; 65536];
         let packed = pack_int2(&values);
-        let scales = vec![1.0; 256];
+        let scales = [1.0; 256];
         let result = dequantize_int2_to_f32(&packed, &scales, 256, 65536).unwrap();
         assert_eq!(result.len(), 65536);
     }
@@ -990,7 +990,7 @@ mod tests {
     fn int2_f32_non_aligned_size() {
         let values = vec![1_i8, -1, 0];
         let packed = pack_int2(&values);
-        let scales = vec![2.0];
+        let scales = [2.0];
         let result = dequantize_int2_to_f32(&packed, &scales, 4, 3).unwrap();
         assert_close(&result, &[2.0, -2.0, 0.0], 1e-6);
     }
@@ -998,7 +998,7 @@ mod tests {
     #[test]
     fn int2_f32_zero_scale() {
         let packed = pack_int2(&[1, -1, 0, 1]);
-        let scales = vec![0.0];
+        let scales = [0.0];
         let result = dequantize_int2_to_f32(&packed, &scales, 4, 4).unwrap();
         assert_close(&result, &[0.0, 0.0, 0.0, 0.0], 1e-6);
     }
@@ -1030,7 +1030,7 @@ mod tests {
     #[test]
     fn int2_f16_single_element() {
         let packed = pack_int2(&[1]);
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int2_to_f16(&packed, &scales, 1, 1).unwrap();
         let f32_val = f16_to_f32(result[0]);
         assert!((f32_val - 1.0).abs() < 0.01);
@@ -1039,7 +1039,7 @@ mod tests {
     #[test]
     fn int2_f16_ternary_values() {
         let packed = pack_int2(&[1, -1, 0, 1]);
-        let scales = vec![2.0];
+        let scales = [2.0];
         let result = dequantize_int2_to_f16(&packed, &scales, 4, 4).unwrap();
         let f32_vals: Vec<f32> = result.iter().map(|&b| f16_to_f32(b)).collect();
         assert_close(&f32_vals, &[2.0, -2.0, 0.0, 2.0], 0.01);
@@ -1048,7 +1048,7 @@ mod tests {
     #[test]
     fn int2_f16_large_256() {
         let packed = pack_int2(&vec![1_i8; 256]);
-        let scales = vec![0.5];
+        let scales = [0.5];
         let result = dequantize_int2_to_f16(&packed, &scales, 256, 256).unwrap();
         assert_eq!(result.len(), 256);
         for &bits in &result {
@@ -1081,7 +1081,7 @@ mod tests {
     fn int4_f32_single_element() {
         // Value 3 in low nibble
         let packed = vec![0x03u8];
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 1, 1).unwrap();
         assert_close(&result, &[3.0], 1e-6);
     }
@@ -1090,7 +1090,7 @@ mod tests {
     fn int4_f32_two_values_per_byte() {
         // Low nibble=5, high nibble=0xD (13 → -3 in signed 4-bit)
         let packed = vec![0xD5u8];
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 2, 2).unwrap();
         assert_close(&result, &[5.0, -3.0], 1e-6);
     }
@@ -1099,7 +1099,7 @@ mod tests {
     fn int4_f32_negative_values() {
         // 0xF = 15 → signed = -1, 0x8 = 8 → signed = -8
         let packed = vec![0x8Fu8]; // low=0xF(-1), high=0x8(-8)
-        let scales = vec![2.0];
+        let scales = [2.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 2, 2).unwrap();
         assert_close(&result, &[-2.0, -16.0], 1e-6);
     }
@@ -1109,7 +1109,7 @@ mod tests {
         // Test values -8 through 7
         let values: Vec<i8> = (-8..=7).collect();
         let packed = pack_int4(&values);
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 16, 16).unwrap();
         let expected: Vec<f32> = values.iter().map(|&v| v as f32).collect();
         assert_close(&result, &expected, 1e-6);
@@ -1119,7 +1119,7 @@ mod tests {
     fn int4_f32_block_size_32() {
         let values: Vec<i8> = (0..32).map(|i| (i % 8) as i8 - 4).collect();
         let packed = pack_int4(&values);
-        let scales = vec![1.5];
+        let scales = [1.5];
         let result = dequantize_int4_to_f32(&packed, &scales, 32, 32).unwrap();
         assert_eq!(result.len(), 32);
     }
@@ -1138,7 +1138,7 @@ mod tests {
     fn int4_f32_large_1024() {
         let values: Vec<i8> = (0..1024).map(|i| (i % 16) as i8 - 8).collect();
         let packed = pack_int4(&values);
-        let scales = vec![1.0; 4];
+        let scales = [1.0; 4];
         let result = dequantize_int4_to_f32(&packed, &scales, 256, 1024).unwrap();
         assert_eq!(result.len(), 1024);
     }
@@ -1147,7 +1147,7 @@ mod tests {
     fn int4_f32_non_aligned_size() {
         let values: Vec<i8> = vec![2, -3, 5];
         let packed = pack_int4(&values);
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 4, 3).unwrap();
         assert_close(&result, &[2.0, -3.0, 5.0], 1e-6);
     }
@@ -1173,7 +1173,7 @@ mod tests {
     #[test]
     fn int4_f16_basic() {
         let packed = pack_int4(&[3, -2]);
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f16(&packed, &scales, 2, 2).unwrap();
         let f32_vals: Vec<f32> = result.iter().map(|&b| f16_to_f32(b)).collect();
         assert_close(&f32_vals, &[3.0, -2.0], 0.01);
@@ -1203,7 +1203,7 @@ mod tests {
     #[test]
     fn int8_f32_single_element() {
         let data = vec![42_i8];
-        let scales = vec![0.1];
+        let scales = [0.1];
         let result = dequantize_int8_to_f32(&data, &scales, 1, 1).unwrap();
         assert_close(&result, &[4.2], 1e-6);
     }
@@ -1211,7 +1211,7 @@ mod tests {
     #[test]
     fn int8_f32_positive_and_negative() {
         let data = vec![127_i8, -128, 0, 1, -1];
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int8_to_f32(&data, &scales, 8, 5).unwrap();
         assert_close(&result, &[127.0, -128.0, 0.0, 1.0, -1.0], 1e-6);
     }
@@ -1219,14 +1219,14 @@ mod tests {
     #[test]
     fn int8_f32_with_scale() {
         let data = vec![100_i8, -50, 25];
-        let scales = vec![0.01];
+        let scales = [0.01];
         let result = dequantize_int8_to_f32(&data, &scales, 4, 3).unwrap();
         assert_close(&result, &[1.0, -0.5, 0.25], 1e-6);
     }
 
     #[test]
     fn int8_f32_multiple_blocks() {
-        let data = vec![10_i8; 8];
+        let data = [10_i8; 8];
         let scales = vec![1.0, 0.5];
         let result = dequantize_int8_to_f32(&data, &scales, 4, 8).unwrap();
         assert_close(&result[0..4], &[10.0; 4], 1e-6);
@@ -1236,7 +1236,7 @@ mod tests {
     #[test]
     fn int8_f32_block_size_256() {
         let data: Vec<i8> = (0..256).map(|i| (i % 256) as i8).collect();
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int8_to_f32(&data, &scales, 256, 256).unwrap();
         assert_eq!(result.len(), 256);
     }
@@ -1244,15 +1244,15 @@ mod tests {
     #[test]
     fn int8_f32_large_1024() {
         let data: Vec<i8> = (0..1024).map(|i| (i % 256) as i8).collect();
-        let scales = vec![0.1; 4];
+        let scales = [0.1; 4];
         let result = dequantize_int8_to_f32(&data, &scales, 256, 1024).unwrap();
         assert_eq!(result.len(), 1024);
     }
 
     #[test]
     fn int8_f32_large_65536() {
-        let data = vec![1_i8; 65536];
-        let scales = vec![1.0; 256];
+        let data = [1_i8; 65536];
+        let scales = [1.0; 256];
         let result = dequantize_int8_to_f32(&data, &scales, 256, 65536).unwrap();
         assert_eq!(result.len(), 65536);
         for &v in &result {
@@ -1263,7 +1263,7 @@ mod tests {
     #[test]
     fn int8_f32_zero_scale() {
         let data = vec![100_i8, -50];
-        let scales = vec![0.0];
+        let scales = [0.0];
         let result = dequantize_int8_to_f32(&data, &scales, 4, 2).unwrap();
         assert_close(&result, &[0.0, 0.0], 1e-6);
     }
@@ -1294,7 +1294,7 @@ mod tests {
     #[test]
     fn int8_f16_basic() {
         let data = vec![10_i8, -20, 0];
-        let scales = vec![0.5];
+        let scales = [0.5];
         let result = dequantize_int8_to_f16(&data, &scales, 4, 3).unwrap();
         let f32_vals: Vec<f32> = result.iter().map(|&b| f16_to_f32(b)).collect();
         assert_close(&f32_vals, &[5.0, -10.0, 0.0], 0.1);
@@ -1323,12 +1323,12 @@ mod tests {
     #[test]
     fn qk256_f32_single_block() {
         // One QK256 block: 64 bytes = 256 ternary values, all +1
-        let mut packed = vec![0u8; 64];
+        let mut packed = [0u8; 64];
         for byte in &mut packed {
             // 01 01 01 01 = 0x55 (four +1 values)
             *byte = 0x55;
         }
-        let scales = vec![3.0];
+        let scales = [3.0];
         let result = dequantize_qk256_to_f32(&packed, &scales).unwrap();
         assert_eq!(result.len(), 256);
         for &v in &result {
@@ -1338,7 +1338,7 @@ mod tests {
 
     #[test]
     fn qk256_f32_two_blocks() {
-        let mut packed = vec![0x55u8; 128]; // Two blocks, all +1
+        let mut packed = [0x55u8; 128]; // Two blocks, all +1
         // Second block: all -1 (0b11 11 11 11 = 0xFF)
         for byte in &mut packed[64..128] {
             *byte = 0xFF;
@@ -1358,17 +1358,17 @@ mod tests {
 
     #[test]
     fn qk256_f32_mixed_values() {
-        let mut packed = vec![0u8; 64];
+        let mut packed = [0u8; 64];
         // First byte: +1, -1, 0, +1 → 01 11 00 01 = 0b01_00_11_01 = 0x4D
         packed[0] = 0x4D;
-        let scales = vec![5.0];
+        let scales = [5.0];
         let result = dequantize_qk256_to_f32(&packed, &scales).unwrap();
         assert_close(&result[0..4], &[5.0, -5.0, 0.0, 5.0], 1e-6);
     }
 
     #[test]
     fn qk256_f32_large_4_blocks() {
-        let packed = vec![0x55u8; 256]; // 4 blocks
+        let packed = [0x55u8; 256]; // 4 blocks
         let scales = vec![1.0, 2.0, 3.0, 4.0];
         let result = dequantize_qk256_to_f32(&packed, &scales).unwrap();
         assert_eq!(result.len(), 1024);
@@ -1386,8 +1386,8 @@ mod tests {
 
     #[test]
     fn qk256_f16_single_block() {
-        let packed = vec![0x55u8; 64]; // all +1
-        let scales = vec![1.0];
+        let packed = [0x55u8; 64]; // all +1
+        let scales = [1.0];
         let result = dequantize_qk256_to_f16(&packed, &scales).unwrap();
         assert_eq!(result.len(), 256);
         for &bits in &result {
@@ -1398,9 +1398,9 @@ mod tests {
 
     #[test]
     fn qk256_f16_accuracy_vs_f32() {
-        let mut packed = vec![0u8; 64];
+        let mut packed = [0u8; 64];
         packed[0] = 0x4D; // +1, -1, 0, +1
-        let scales = vec![2.5];
+        let scales = [2.5];
         let f32_result = dequantize_qk256_to_f32(&packed, &scales).unwrap();
         let f16_result = dequantize_qk256_to_f16(&packed, &scales).unwrap();
         for i in 0..4 {
@@ -1427,7 +1427,7 @@ mod tests {
 
     #[test]
     fn per_channel_int2_basic() {
-        let values = vec![1_i8; 8];
+        let values = [1_i8; 8];
         let packed = pack_int2(&values);
         let channel_scales = vec![1.0, 2.0];
         let result = dequantize_int2_per_channel_f32(&packed, &channel_scales, 4, 2).unwrap();
@@ -1459,7 +1459,7 @@ mod tests {
     fn max_absolute_error_int4_f32() {
         let values: Vec<i8> = (-8..=7).collect();
         let packed = pack_int4(&values);
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = dequantize_int4_to_f32(&packed, &scales, 16, 16).unwrap();
         let expected: Vec<f32> = values.iter().map(|&v| v as f32).collect();
         let max_err =
@@ -1470,7 +1470,7 @@ mod tests {
     #[test]
     fn max_absolute_error_int8_f32() {
         let data: Vec<i8> = (-128..=127).map(|v| v as i8).collect();
-        let scales = vec![0.01];
+        let scales = [0.01];
         let result = dequantize_int8_to_f32(&data, &scales, 256, 256).unwrap();
         let expected: Vec<f32> = data.iter().map(|&v| v as f32 * 0.01).collect();
         let max_err =
@@ -1481,7 +1481,7 @@ mod tests {
     #[test]
     fn relative_error_int8_f32() {
         let data: Vec<i8> = (1..=127).map(|v| v as i8).collect();
-        let scales = vec![0.1];
+        let scales = [0.1];
         let result = dequantize_int8_to_f32(&data, &scales, 128, 127).unwrap();
         for (i, (&actual, &q)) in result.iter().zip(data.iter()).enumerate() {
             let expected = q as f32 * 0.1;
@@ -1568,8 +1568,8 @@ mod tests {
     fn batch_int2_basic() {
         let p1 = pack_int2(&[1, -1, 0, 1]);
         let p2 = pack_int2(&[-1, 1, 1, 0]);
-        let s1 = vec![2.0];
-        let s2 = vec![3.0];
+        let s1 = [2.0];
+        let s2 = [3.0];
         let result = batch_dequantize_int2_to_f32(
             &[p1.as_slice(), p2.as_slice()],
             &[s1.as_slice(), s2.as_slice()],

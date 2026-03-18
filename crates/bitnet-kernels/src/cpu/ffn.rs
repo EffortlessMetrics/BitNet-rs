@@ -444,8 +444,8 @@ mod tests {
         // gate = [2.0], up = [2.0]
         // silu(2) * 2 → (2/(1+exp(-2))) * 2
         let cfg = FfnConfig::new(1, 1, FfnActivation::SiLU).unwrap();
-        let w = vec![1.0];
-        let input = vec![2.0];
+        let w = [1.0];
+        let input = [2.0];
         let out = gated_ffn_forward(&input, &w, &w, &w, &cfg).unwrap();
         let silu_2 = 2.0f32 / (1.0 + (-2.0f32).exp());
         let expected = silu_2 * 2.0; // activation(gate) * up
@@ -459,8 +459,8 @@ mod tests {
         // input = [1.0]
         // gate=1, up=1 → gelu(1)*1 → down → gelu(1)
         let cfg = FfnConfig::new(1, 1, FfnActivation::GeLU).unwrap();
-        let w = vec![1.0];
-        let input = vec![1.0];
+        let w = [1.0];
+        let input = [1.0];
         let out = gated_ffn_forward(&input, &w, &w, &w, &cfg).unwrap();
         let gelu_1 = activate(1.0, FfnActivation::GeLU);
         assert!((out[0] - gelu_1).abs() < 1e-5, "got {}, expected {}", out[0], gelu_1);
@@ -496,7 +496,7 @@ mod tests {
         let cfg_gelu = FfnConfig::new(1, 1, FfnActivation::GeLU).unwrap();
         let cfg_silu = FfnConfig::new(1, 1, FfnActivation::SiLU).unwrap();
 
-        let w = vec![1.0];
+        let w = [1.0];
         let input = vec![-1.0];
 
         let out_relu = ffn_forward(&input, &w, &w, &cfg_relu).unwrap();
@@ -613,55 +613,55 @@ mod tests {
     #[test]
     fn test_ffn_input_too_small() {
         let cfg = FfnConfig::new(4, 8, FfnActivation::ReLU).unwrap();
-        let input = vec![1.0f32; 2]; // needs 4
-        let w_up = vec![0.1f32; 32];
-        let w_down = vec![0.1f32; 32];
+        let input = [1.0f32; 2]; // needs 4
+        let w_up = [0.1f32; 32];
+        let w_down = [0.1f32; 32];
         assert!(ffn_forward(&input, &w_up, &w_down, &cfg).is_err());
     }
 
     #[test]
     fn test_ffn_w_up_too_small() {
         let cfg = FfnConfig::new(2, 4, FfnActivation::SiLU).unwrap();
-        let input = vec![1.0f32; 2];
-        let w_up = vec![0.1f32; 4]; // needs 8
-        let w_down = vec![0.1f32; 8];
+        let input = [1.0f32; 2];
+        let w_up = [0.1f32; 4]; // needs 8
+        let w_down = [0.1f32; 8];
         assert!(ffn_forward(&input, &w_up, &w_down, &cfg).is_err());
     }
 
     #[test]
     fn test_ffn_w_down_too_small() {
         let cfg = FfnConfig::new(2, 4, FfnActivation::GeLU).unwrap();
-        let input = vec![1.0f32; 2];
-        let w_up = vec![0.1f32; 8];
-        let w_down = vec![0.1f32; 4]; // needs 8
+        let input = [1.0f32; 2];
+        let w_up = [0.1f32; 8];
+        let w_down = [0.1f32; 4]; // needs 8
         assert!(ffn_forward(&input, &w_up, &w_down, &cfg).is_err());
     }
 
     #[test]
     fn test_gated_ffn_w_gate_too_small() {
         let cfg = FfnConfig::new(2, 4, FfnActivation::SiLU).unwrap();
-        let input = vec![1.0f32; 2];
-        let w_gate = vec![0.1f32; 4]; // needs 8
-        let w_up = vec![0.1f32; 8];
-        let w_down = vec![0.1f32; 8];
+        let input = [1.0f32; 2];
+        let w_gate = [0.1f32; 4]; // needs 8
+        let w_up = [0.1f32; 8];
+        let w_down = [0.1f32; 8];
         assert!(gated_ffn_forward(&input, &w_gate, &w_up, &w_down, &cfg).is_err());
     }
 
     #[test]
     fn test_batched_zero_batch_rejected() {
         let cfg = FfnConfig::new(2, 4, FfnActivation::ReLU).unwrap();
-        let input = vec![1.0f32; 2];
-        let w_up = vec![0.1f32; 8];
-        let w_down = vec![0.1f32; 8];
+        let input = [1.0f32; 2];
+        let w_up = [0.1f32; 8];
+        let w_down = [0.1f32; 8];
         assert!(ffn_forward_batched(&input, &w_up, &w_down, &cfg, 0).is_err());
     }
 
     #[test]
     fn test_batched_input_too_small_for_batch() {
         let cfg = FfnConfig::new(2, 4, FfnActivation::ReLU).unwrap();
-        let input = vec![1.0f32; 2]; // needs 4 for batch=2
-        let w_up = vec![0.1f32; 8];
-        let w_down = vec![0.1f32; 8];
+        let input = [1.0f32; 2]; // needs 4 for batch=2
+        let w_up = [0.1f32; 8];
+        let w_down = [0.1f32; 8];
         assert!(ffn_forward_batched(&input, &w_up, &w_down, &cfg, 2).is_err());
     }
 
@@ -670,10 +670,10 @@ mod tests {
     #[test]
     fn test_zero_input_zero_output() {
         let cfg = FfnConfig::new(3, 4, FfnActivation::ReLU).unwrap();
-        let input = vec![0.0f32; 3];
-        let w_up = vec![0.5f32; 12];
+        let input = [0.0f32; 3];
+        let w_up = [0.5f32; 12];
         // For ReLU: act(0) = 0, so down-project on zeros → zeros
-        let w_down = vec![0.5f32; 12];
+        let w_down = [0.5f32; 12];
         let out = ffn_forward(&input, &w_up, &w_down, &cfg).unwrap();
         assert_close(&out, &[0.0, 0.0, 0.0], 1e-7);
     }
@@ -686,9 +686,9 @@ mod tests {
         // but for ReLU: relu(0)=0, so output = 0 regardless of W_up
         let cfg = FfnConfig::new(2, 3, FfnActivation::ReLU).unwrap();
         let input = vec![5.0, 10.0];
-        let w_gate = vec![0.0f32; 6]; // zero gate
-        let w_up = vec![1.0f32; 6];
-        let w_down = vec![1.0f32; 6];
+        let w_gate = [0.0f32; 6]; // zero gate
+        let w_up = [1.0f32; 6];
+        let w_down = [1.0f32; 6];
         let out = gated_ffn_forward(&input, &w_gate, &w_up, &w_down, &cfg).unwrap();
         assert_close(&out, &[0.0, 0.0], 1e-7);
     }

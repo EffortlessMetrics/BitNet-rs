@@ -918,8 +918,8 @@ mod tests {
     #[test]
     fn bias_broadcast() {
         let bias = vec![1.0, 2.0, 3.0, 4.0];
-        let data = vec![0.0; 16]; // 4 reps of bias
-        let mut out = vec![0.0f32; 16];
+        let data = [0.0; 16]; // 4 reps of bias
+        let mut out = [0.0f32; 16];
         unsafe { neon_add_bias_f32(&data, &bias, &mut out) };
         let expected = ref_add_bias(&data, &bias);
         assert_close(&out, &expected, 1e-7);
@@ -929,7 +929,7 @@ mod tests {
     fn bias_broadcast_multi() {
         let bias = vec![10.0, 20.0];
         let data: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_add_bias_f32(&data, &bias, &mut out) };
         let expected = ref_add_bias(&data, &bias);
         assert_close(&out, &expected, 1e-7);
@@ -973,7 +973,7 @@ mod tests {
         // Simulates [batch=3, hidden=4] with bias of [hidden=4]
         let bias = vec![0.1, 0.2, 0.3, 0.4];
         let data: Vec<f32> = (0..12).map(|i| (i as f32) * 0.5).collect(); // 3×4
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         unsafe { neon_add_bias_f32(&data, &bias, &mut out) };
         let expected = ref_add_bias(&data, &bias);
         assert_close(&out, &expected, 1e-6);

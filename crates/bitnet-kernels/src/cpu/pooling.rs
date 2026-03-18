@@ -861,7 +861,7 @@ mod tests {
 
     #[test]
     fn max_pool_single_element() {
-        let input = vec![42.0];
+        let input = [42.0];
         let cfg = PoolConfig::new(PoolType::Max, 1, 1, 0);
         let out = PoolingKernel::apply(&input, &cfg).unwrap();
         assert!(approx_eq(&out, &[42.0], TOL));
@@ -903,7 +903,7 @@ mod tests {
 
     #[test]
     fn avg_pool_single_element() {
-        let input = vec![7.0];
+        let input = [7.0];
         let cfg = PoolConfig::new(PoolType::Average, 1, 1, 0);
         let out = PoolingKernel::apply(&input, &cfg).unwrap();
         assert!(approx_eq(&out, &[7.0], TOL));
@@ -1189,7 +1189,7 @@ mod tests {
 
     #[test]
     fn pool_2d_single_element() {
-        let input = vec![42.0];
+        let input = [42.0];
         let cfg = PoolConfig::new(PoolType::Max, 1, 1, 0);
         let (out, oh, ow) = pool_2d(&input, 1, 1, &cfg).unwrap();
         assert_eq!((oh, ow), (1, 1));
@@ -1419,7 +1419,7 @@ mod tests {
 
     #[test]
     fn max_pool1d_single_element_index() {
-        let input = vec![42.0];
+        let input = [42.0];
         let cfg = PoolConfig::new(PoolType::Max, 1, 1, 0);
         let (vals, idxs) = max_pool1d(&input, &cfg).unwrap();
         assert!(approx_eq(&vals, &[42.0], TOL));
@@ -1428,7 +1428,7 @@ mod tests {
 
     #[test]
     fn max_pool1d_all_same_values() {
-        let input = vec![5.0; 8];
+        let input = [5.0; 8];
         let cfg = PoolConfig::new(PoolType::Max, 3, 1, 0);
         let (vals, idxs) = max_pool1d(&input, &cfg).unwrap();
         assert_eq!(vals.len(), 6);
@@ -2138,7 +2138,7 @@ mod tests {
 
     #[test]
     fn max_pool1d_all_inf() {
-        let input = vec![f32::NEG_INFINITY; 4];
+        let input = [f32::NEG_INFINITY; 4];
         let cfg = PoolConfig::new(PoolType::Max, 2, 1, 0);
         let (vals, _) = max_pool1d(&input, &cfg).unwrap();
         for &v in &vals {
@@ -2148,7 +2148,7 @@ mod tests {
 
     #[test]
     fn avg_pool1d_zeros() {
-        let input = vec![0.0; 10];
+        let input = [0.0; 10];
         let cfg = PoolConfig::new(PoolType::Average, 3, 1, 0);
         let out = avg_pool1d(&input, &cfg).unwrap();
         for &v in &out {
@@ -2158,7 +2158,7 @@ mod tests {
 
     #[test]
     fn lp_pool1d_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let cfg = PoolConfig::new(PoolType::Max, 2, 1, 0);
         let out = lp_pool1d(&input, 2.0, &cfg).unwrap();
         for &v in &out {

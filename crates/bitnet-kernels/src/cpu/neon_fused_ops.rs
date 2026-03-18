@@ -533,10 +533,10 @@ mod tests {
     #[test]
     fn test_ln_res_aligned_8() {
         let x: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let g = vec![1.0; 8];
-        let b = vec![0.0; 8];
-        let r = vec![0.5; 8];
-        let mut out = vec![0.0; 8];
+        let g = [1.0; 8];
+        let b = [0.0; 8];
+        let r = [0.5; 8];
+        let mut out = [0.0; 8];
         fused_layernorm_residual(&x, &g, &b, &r, &mut out, EPS);
         let exp = ref_layernorm_residual(&x, &g, &b, &r, EPS);
         assert_approx(&out, &exp, TOL);
@@ -557,10 +557,10 @@ mod tests {
     #[test]
     fn test_ln_res_unaligned_7() {
         let x: Vec<f32> = (1..=7).map(|i| i as f32 * 0.3).collect();
-        let g = vec![0.5; 7];
-        let b = vec![0.1; 7];
-        let r = vec![-0.1; 7];
-        let mut out = vec![0.0; 7];
+        let g = [0.5; 7];
+        let b = [0.1; 7];
+        let r = [-0.1; 7];
+        let mut out = [0.0; 7];
         fused_layernorm_residual(&x, &g, &b, &r, &mut out, EPS);
         let exp = ref_layernorm_residual(&x, &g, &b, &r, EPS);
         assert_approx(&out, &exp, TOL);
@@ -644,10 +644,10 @@ mod tests {
     #[test]
     fn test_ln_res_large_16() {
         let x: Vec<f32> = (0..16).map(|i| (i as f32 * 0.7).sin()).collect();
-        let g = vec![1.0; 16];
-        let b = vec![0.0; 16];
+        let g = [1.0; 16];
+        let b = [0.0; 16];
         let r: Vec<f32> = (0..16).map(|i| (i as f32 * 0.3).cos()).collect();
-        let mut out = vec![0.0; 16];
+        let mut out = [0.0; 16];
         fused_layernorm_residual(&x, &g, &b, &r, &mut out, EPS);
         let exp = ref_layernorm_residual(&x, &g, &b, &r, EPS);
         assert_approx(&out, &exp, TOL);
@@ -668,10 +668,10 @@ mod tests {
     #[test]
     fn test_ln_res_large_128() {
         let x: Vec<f32> = (0..128).map(|i| i as f32 * 0.01).collect();
-        let g = vec![1.0; 128];
-        let b = vec![0.0; 128];
-        let r = vec![0.5; 128];
-        let mut out = vec![0.0; 128];
+        let g = [1.0; 128];
+        let b = [0.0; 128];
+        let r = [0.5; 128];
+        let mut out = [0.0; 128];
         fused_layernorm_residual(&x, &g, &b, &r, &mut out, EPS);
         let exp = ref_layernorm_residual(&x, &g, &b, &r, EPS);
         assert_approx(&out, &exp, TOL);
@@ -701,8 +701,8 @@ mod tests {
     #[test]
     fn test_gelu_mul_aligned_8() {
         let x: Vec<f32> = (0..8).map(|i| i as f32 - 4.0).collect();
-        let g = vec![1.0; 8];
-        let mut out = vec![0.0; 8];
+        let g = [1.0; 8];
+        let mut out = [0.0; 8];
         fused_gelu_mul(&x, &g, &mut out);
         let exp = ref_gelu_mul(&x, &g);
         assert_approx(&out, &exp, TOL);
@@ -805,8 +805,8 @@ mod tests {
     #[test]
     fn test_gelu_mul_large_16() {
         let x: Vec<f32> = (0..16).map(|i| (i as f32 - 8.0) * 0.5).collect();
-        let g = vec![1.0; 16];
-        let mut out = vec![0.0; 16];
+        let g = [1.0; 16];
+        let mut out = [0.0; 16];
         fused_gelu_mul(&x, &g, &mut out);
         let exp = ref_gelu_mul(&x, &g);
         assert_approx(&out, &exp, TOL);
@@ -830,7 +830,7 @@ mod tests {
     fn test_scale_add_aligned_8() {
         let a: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let b: Vec<f32> = (1..=8).map(|i| i as f32 * 0.5).collect();
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         fused_scale_add(&a, &b, 1.0, 1.0, &mut out);
         let exp = ref_scale_add(&a, &b, 1.0, 1.0);
         assert_approx(&out, &exp, TOL);
@@ -915,7 +915,7 @@ mod tests {
     fn test_scale_add_large_64() {
         let a: Vec<f32> = (0..64).map(|i| i as f32 * 0.1).collect();
         let b: Vec<f32> = (0..64).map(|i| (i as f32 * 0.2).sin()).collect();
-        let mut out = vec![0.0; 64];
+        let mut out = [0.0; 64];
         fused_scale_add(&a, &b, 1.5, 0.3, &mut out);
         let exp = ref_scale_add(&a, &b, 1.5, 0.3);
         assert_approx(&out, &exp, TOL);
@@ -939,9 +939,9 @@ mod tests {
     #[test]
     fn test_rms_mul_aligned_8() {
         let x: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let w = vec![1.0; 8];
-        let m = vec![2.0; 8];
-        let mut out = vec![0.0; 8];
+        let w = [1.0; 8];
+        let m = [2.0; 8];
+        let mut out = [0.0; 8];
         fused_rms_norm_mul(&x, &w, &m, &mut out, EPS);
         let exp = ref_rms_norm_mul(&x, &w, &m, EPS);
         assert_approx(&out, &exp, TOL);
@@ -1029,9 +1029,9 @@ mod tests {
     #[test]
     fn test_rms_mul_large_32() {
         let x: Vec<f32> = (0..32).map(|i| (i as f32 * 0.3).sin()).collect();
-        let w = vec![1.0; 32];
+        let w = [1.0; 32];
         let m: Vec<f32> = (0..32).map(|i| (i as f32 * 0.1).cos()).collect();
-        let mut out = vec![0.0; 32];
+        let mut out = [0.0; 32];
         fused_rms_norm_mul(&x, &w, &m, &mut out, EPS);
         let exp = ref_rms_norm_mul(&x, &w, &m, EPS);
         assert_approx(&out, &exp, TOL);
@@ -1072,8 +1072,8 @@ mod tests {
     #[test]
     fn test_bias_relu_aligned_8() {
         let x: Vec<f32> = (0..8).map(|i| i as f32 - 4.0).collect();
-        let b = vec![0.0; 8];
-        let mut out = vec![0.0; 8];
+        let b = [0.0; 8];
+        let mut out = [0.0; 8];
         fused_bias_relu(&x, &b, &mut out);
         let exp = ref_bias_relu(&x, &b);
         assert_approx(&out, &exp, TOL);
@@ -1157,8 +1157,8 @@ mod tests {
     #[test]
     fn test_bias_relu_large_32() {
         let x: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.5).collect();
-        let b = vec![1.0; 32];
-        let mut out = vec![0.0; 32];
+        let b = [1.0; 32];
+        let mut out = [0.0; 32];
         fused_bias_relu(&x, &b, &mut out);
         let exp = ref_bias_relu(&x, &b);
         assert_approx(&out, &exp, TOL);
@@ -1189,7 +1189,7 @@ mod tests {
     #[test]
     fn test_softmax_scale_aligned_8() {
         let x: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         fused_softmax_scale(&x, 0.5, &mut out);
         let exp = ref_softmax_scale(&x, 0.5);
         assert_approx(&out, &exp, TOL);
@@ -1292,7 +1292,7 @@ mod tests {
     #[test]
     fn test_softmax_scale_large_16() {
         let x: Vec<f32> = (0..16).map(|i| (i as f32 * 0.5).sin()).collect();
-        let mut out = vec![0.0; 16];
+        let mut out = [0.0; 16];
         fused_softmax_scale(&x, 1.0, &mut out);
         let exp = ref_softmax_scale(&x, 1.0);
         assert_approx(&out, &exp, TOL);

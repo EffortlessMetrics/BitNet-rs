@@ -844,7 +844,7 @@ mod tests {
     fn test_verify_draft_tokens_temperature_scaling() {
         let vocab_size = 8;
         let draft_tokens = vec![2u32];
-        let draft_probs = vec![0.5];
+        let draft_probs = [0.5];
         // One token much higher than others.
         let mut logits = vec![0.0f32; vocab_size];
         logits[2] = 5.0;
@@ -1005,7 +1005,7 @@ mod tests {
 
         // Sequence 2: draft matches target peak.
         let tokens2 = vec![5u32];
-        let probs2 = vec![0.99];
+        let probs2 = [0.99];
         let logits2 = peaked_logits(vocab_size, 1, 5);
 
         let result = neon_batch_verify(

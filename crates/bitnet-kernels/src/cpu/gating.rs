@@ -374,7 +374,7 @@ mod tests {
         // ReLU(gate) >= 0, so if up >= 0, output >= 0
         let gate: Vec<f32> = (-50..50).map(|i| i as f32 * 0.1).collect();
         let up: Vec<f32> = (0..100).map(|i| i as f32 * 0.5).collect();
-        let mut out = vec![0.0f32; 100];
+        let mut out = [0.0f32; 100];
         reglu(&gate, &up, &mut out).unwrap();
         for (i, &v) in out.iter().enumerate() {
             assert!(v >= 0.0, "reglu output[{i}] = {v} should be >= 0");
@@ -386,7 +386,7 @@ mod tests {
         // |SiLU(x)| <= |x| for all x, so |SwiGLU| <= |gate| * |up|
         let gate: Vec<f32> = (-20..20).map(|i| i as f32 * 0.5).collect();
         let up: Vec<f32> = (0..40).map(|i| (i as f32 - 20.0) * 0.3).collect();
-        let mut out = vec![0.0f32; 40];
+        let mut out = [0.0f32; 40];
         swiglu(&gate, &up, &mut out).unwrap();
         for i in 0..40 {
             let bound = gate[i].abs() * up[i].abs();

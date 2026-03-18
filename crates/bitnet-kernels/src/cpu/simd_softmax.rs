@@ -763,7 +763,7 @@ mod tests {
     #[test]
     fn test_simd_softmax_basic() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-6);
         assert_non_negative(&output);
@@ -776,7 +776,7 @@ mod tests {
     #[test]
     fn test_simd_softmax_single_element() {
         let input = [42.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         simd_softmax(&input, &mut output).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
     }
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn test_simd_softmax_all_same() {
         let input = [5.0; 8];
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-6);
         for &x in &output {
@@ -802,14 +802,14 @@ mod tests {
     #[test]
     fn test_simd_softmax_length_mismatch() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_simd_softmax_large_positive() {
         let input = [1000.0, 1001.0, 1002.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         for &x in &output {
@@ -820,7 +820,7 @@ mod tests {
     #[test]
     fn test_simd_softmax_large_negative() {
         let input = [-1000.0, -999.0, -998.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         assert_non_negative(&output);
@@ -829,7 +829,7 @@ mod tests {
     #[test]
     fn test_simd_softmax_mixed_extreme() {
         let input = [-1000.0, 0.0, 1000.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         assert!(output[2] > 0.99);
@@ -838,7 +838,7 @@ mod tests {
     #[test]
     fn test_softmax_stability_no_nan() {
         let input = [f32::MAX / 2.0, f32::MAX / 2.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         simd_softmax(&input, &mut output).unwrap();
         for &x in &output {
             assert!(!x.is_nan(), "NaN in output");
@@ -849,7 +849,7 @@ mod tests {
     #[test]
     fn test_softmax_zeros() {
         let input = [0.0; 5];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-6);
         for &x in &output {
@@ -860,7 +860,7 @@ mod tests {
     #[test]
     fn test_softmax_negative_values() {
         let input = [-3.0, -2.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-6);
         assert!(output[2] > output[1]);
@@ -870,7 +870,7 @@ mod tests {
     #[test]
     fn test_softmax_identical_large() {
         let input = [100.0; 16];
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         for &x in &output {
@@ -881,7 +881,7 @@ mod tests {
     #[test]
     fn test_softmax_alternating_extreme() {
         let input = [-88.0, 88.0, -88.0, 88.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         assert!(output[0] < 1e-10);
@@ -891,7 +891,7 @@ mod tests {
     #[test]
     fn test_softmax_gradual_range() {
         let input: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let mut output = vec![0.0; 32];
+        let mut output = [0.0; 32];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         for i in 1..32 {
@@ -904,9 +904,9 @@ mod tests {
     #[test]
     fn test_simd_vs_scalar_small() {
         let input = [0.5, -1.0, 2.0, 0.0, 1.5];
-        let mut scalar_out = vec![0.0; 5];
+        let mut scalar_out = [0.0; 5];
         simd_softmax_scalar(&input, &mut scalar_out);
-        let mut simd_out = vec![0.0; 5];
+        let mut simd_out = [0.0; 5];
         simd_softmax(&input, &mut simd_out).unwrap();
         for (a, b) in scalar_out.iter().zip(simd_out.iter()) {
             assert!((a - b).abs() < 1e-6, "scalar={a}, simd={b}");
@@ -917,9 +917,9 @@ mod tests {
     fn test_simd_vs_scalar_exact_8() {
         // Exactly 8 elements — single AVX2 pass with no tail.
         let input = [1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0];
-        let mut scalar_out = vec![0.0; 8];
+        let mut scalar_out = [0.0; 8];
         simd_softmax_scalar(&input, &mut scalar_out);
-        let mut simd_out = vec![0.0; 8];
+        let mut simd_out = [0.0; 8];
         simd_softmax(&input, &mut simd_out).unwrap();
         for (a, b) in scalar_out.iter().zip(simd_out.iter()) {
             assert!((a - b).abs() < 1e-6, "scalar={a}, simd={b}");
@@ -929,9 +929,9 @@ mod tests {
     #[test]
     fn test_simd_vs_scalar_large() {
         let input: Vec<f32> = (0..100).map(|i| (i as f32 * 0.1) - 5.0).collect();
-        let mut scalar_out = vec![0.0; 100];
+        let mut scalar_out = [0.0; 100];
         simd_softmax_scalar(&input, &mut scalar_out);
-        let mut simd_out = vec![0.0; 100];
+        let mut simd_out = [0.0; 100];
         simd_softmax(&input, &mut simd_out).unwrap();
         for (i, (a, b)) in scalar_out.iter().zip(simd_out.iter()).enumerate() {
             assert!((a - b).abs() < 1e-5, "index {i}: scalar={a}, simd={b}");
@@ -956,7 +956,7 @@ mod tests {
     #[test]
     fn test_inplace_matches_out_of_place() {
         let input = vec![0.5, -1.0, 2.0, 0.0, 1.5];
-        let mut out1 = vec![0.0; 5];
+        let mut out1 = [0.0; 5];
         simd_softmax(&input, &mut out1).unwrap();
         let mut out2 = input.clone();
         simd_softmax_inplace(&mut out2).unwrap();
@@ -967,7 +967,7 @@ mod tests {
 
     #[test]
     fn test_inplace_single() {
-        let mut data = vec![99.0];
+        let mut data = [99.0];
         simd_softmax_inplace(&mut data).unwrap();
         assert!((data[0] - 1.0).abs() < 1e-7);
     }
@@ -977,7 +977,7 @@ mod tests {
     #[test]
     fn test_online_basic() {
         let input = [1.0, 2.0, 3.0];
-        let mut out_online = vec![0.0; 3];
+        let mut out_online = [0.0; 3];
         simd_softmax_online(&input, &mut out_online).unwrap();
         assert_sums_to_one(&out_online, 1e-5);
         assert_non_negative(&out_online);
@@ -986,9 +986,9 @@ mod tests {
     #[test]
     fn test_online_matches_standard() {
         let input = [0.5, -1.0, 2.0, 0.0, 1.5, -0.5, 3.0, 1.0];
-        let mut std_out = vec![0.0; 8];
+        let mut std_out = [0.0; 8];
         simd_softmax(&input, &mut std_out).unwrap();
-        let mut online_out = vec![0.0; 8];
+        let mut online_out = [0.0; 8];
         simd_softmax_online(&input, &mut online_out).unwrap();
         for (i, (a, b)) in std_out.iter().zip(online_out.iter()).enumerate() {
             assert!((a - b).abs() < 1e-5, "index {i}: standard={a}, online={b}");
@@ -1005,7 +1005,7 @@ mod tests {
     #[test]
     fn test_online_single_element() {
         let input = [7.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         simd_softmax_online(&input, &mut output).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
     }
@@ -1013,14 +1013,14 @@ mod tests {
     #[test]
     fn test_online_length_mismatch() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax_online(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_online_all_same() {
         let input = [3.0; 4];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_online(&input, &mut output).unwrap();
         for &x in &output {
             assert!((x - 0.25).abs() < 1e-5);
@@ -1030,7 +1030,7 @@ mod tests {
     #[test]
     fn test_online_large_values() {
         let input = [500.0, 501.0, 502.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_online(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-4);
         for &x in &output {
@@ -1043,9 +1043,9 @@ mod tests {
     #[test]
     fn test_temperature_one_is_identity() {
         let input = [1.0, 2.0, 3.0];
-        let mut out_t1 = vec![0.0; 3];
+        let mut out_t1 = [0.0; 3];
         simd_softmax_temperature(&input, &mut out_t1, 1.0).unwrap();
-        let mut out_plain = vec![0.0; 3];
+        let mut out_plain = [0.0; 3];
         simd_softmax(&input, &mut out_plain).unwrap();
         for (a, b) in out_t1.iter().zip(out_plain.iter()) {
             assert!((a - b).abs() < 1e-6);
@@ -1055,7 +1055,7 @@ mod tests {
     #[test]
     fn test_temperature_zero_is_argmax() {
         let input = [1.0, 5.0, 3.0, 2.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_temperature(&input, &mut output, 0.0).unwrap();
         assert!((output[1] - 1.0).abs() < 1e-7, "argmax should be 1.0");
         assert!(output[0].abs() < 1e-7);
@@ -1066,7 +1066,7 @@ mod tests {
     #[test]
     fn test_temperature_high_approaches_uniform() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_temperature(&input, &mut output, 1e6).unwrap();
         let expected = 1.0 / 4.0;
         for &x in &output {
@@ -1077,7 +1077,7 @@ mod tests {
     #[test]
     fn test_temperature_low_sharpens() {
         let input = [1.0, 2.0, 3.0];
-        let mut out_sharp = vec![0.0; 3];
+        let mut out_sharp = [0.0; 3];
         simd_softmax_temperature(&input, &mut out_sharp, 0.1).unwrap();
         // With low temperature, the largest element dominates.
         assert!(out_sharp[2] > 0.99);
@@ -1086,7 +1086,7 @@ mod tests {
     #[test]
     fn test_temperature_negative_error() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(simd_softmax_temperature(&input, &mut output, -1.0).is_err());
     }
 
@@ -1100,14 +1100,14 @@ mod tests {
     #[test]
     fn test_temperature_length_mismatch() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax_temperature(&input, &mut output, 1.0).is_err());
     }
 
     #[test]
     fn test_temperature_preserves_order() {
         let input = [1.0, 3.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_temperature(&input, &mut output, 0.5).unwrap();
         assert!(output[1] > output[2]);
         assert!(output[2] > output[0]);
@@ -1116,11 +1116,11 @@ mod tests {
     #[test]
     fn test_temperature_moderate_value() {
         let input = [1.0, 2.0, 3.0];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         simd_softmax_temperature(&input, &mut out, 2.0).unwrap();
         assert_sums_to_one(&out, 1e-6);
         // Higher temperature → more uniform → smaller gap.
-        let mut out_t1 = vec![0.0; 3];
+        let mut out_t1 = [0.0; 3];
         simd_softmax_temperature(&input, &mut out_t1, 1.0).unwrap();
         let gap_t2 = out[2] - out[0];
         let gap_t1 = out_t1[2] - out_t1[0];
@@ -1130,7 +1130,7 @@ mod tests {
     #[test]
     fn test_temperature_with_large_input() {
         let input = [500.0, 501.0, 502.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_temperature(&input, &mut output, 0.5).unwrap();
         assert_sums_to_one(&output, 1e-5);
         for &x in &output {
@@ -1143,7 +1143,7 @@ mod tests {
     #[test]
     fn test_topk_basic() {
         let input = [1.0, 4.0, 2.0, 3.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_topk(&input, &mut output, 2).unwrap();
         // Elements at index 1 (4.0) and 3 (3.0) should be non-zero.
         assert!(output[1] > 0.0);
@@ -1157,7 +1157,7 @@ mod tests {
     #[test]
     fn test_topk_k_equals_n() {
         let input = [1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_topk(&input, &mut output, 3).unwrap();
         assert_sums_to_one(&output, 1e-6);
         assert_non_negative(&output);
@@ -1166,7 +1166,7 @@ mod tests {
     #[test]
     fn test_topk_k_greater_than_n() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         simd_softmax_topk(&input, &mut output, 10).unwrap();
         assert_sums_to_one(&output, 1e-6);
     }
@@ -1174,7 +1174,7 @@ mod tests {
     #[test]
     fn test_topk_k_is_one() {
         let input = [1.0, 5.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_topk(&input, &mut output, 1).unwrap();
         assert!((output[1] - 1.0).abs() < 1e-7);
         assert!(output[0].abs() < 1e-10);
@@ -1184,7 +1184,7 @@ mod tests {
     #[test]
     fn test_topk_k_zero_error() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(simd_softmax_topk(&input, &mut output, 0).is_err());
     }
 
@@ -1198,14 +1198,14 @@ mod tests {
     #[test]
     fn test_topk_length_mismatch() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax_topk(&input, &mut output, 1).is_err());
     }
 
     #[test]
     fn test_topk_single_element() {
         let input = [5.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         simd_softmax_topk(&input, &mut output, 1).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
     }
@@ -1213,7 +1213,7 @@ mod tests {
     #[test]
     fn test_topk_with_ties() {
         let input = [3.0, 3.0, 3.0, 1.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_topk(&input, &mut output, 2).unwrap();
         // Exactly 2 elements should be non-zero.
         let nonzero: usize = output.iter().filter(|&&x| x > 1e-10).count();
@@ -1228,7 +1228,7 @@ mod tests {
     fn test_masked_basic() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, false, true, false];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_masked(&input, &mut output, &mask).unwrap();
         assert!((output[1]).abs() < 1e-10, "masked position should be 0");
         assert!((output[3]).abs() < 1e-10, "masked position should be 0");
@@ -1242,7 +1242,7 @@ mod tests {
     fn test_masked_all_true() {
         let input = [1.0, 2.0, 3.0];
         let mask = [true, true, true];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_masked(&input, &mut output, &mask).unwrap();
         assert_sums_to_one(&output, 1e-6);
     }
@@ -1251,7 +1251,7 @@ mod tests {
     fn test_masked_all_false() {
         let input = [1.0, 2.0, 3.0];
         let mask = [false, false, false];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_masked(&input, &mut output, &mask).unwrap();
         for &x in &output {
             assert!(x.abs() < 1e-10);
@@ -1270,7 +1270,7 @@ mod tests {
     fn test_masked_length_mismatch() {
         let input = [1.0, 2.0];
         let mask = [true];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(simd_softmax_masked(&input, &mut output, &mask).is_err());
     }
 
@@ -1278,7 +1278,7 @@ mod tests {
     fn test_masked_single_visible() {
         let input = [1.0, 5.0, 3.0];
         let mask = [false, true, false];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_softmax_masked(&input, &mut output, &mask).unwrap();
         assert!((output[1] - 1.0).abs() < 1e-7);
         assert!(output[0].abs() < 1e-10);
@@ -1290,7 +1290,7 @@ mod tests {
     #[test]
     fn test_causal_1x1() {
         let input = [5.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         simd_softmax_causal(&input, &mut output, 1).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
     }
@@ -1300,7 +1300,7 @@ mod tests {
         // Row 0: only col 0 visible → [1.0, 0.0]
         // Row 1: both visible → softmax([3, 4])
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softmax_causal(&input, &mut output, 2).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
         assert!(output[1].abs() < 1e-10);
@@ -1309,8 +1309,8 @@ mod tests {
 
     #[test]
     fn test_causal_3x3() {
-        let input = vec![0.0; 9];
-        let mut output = vec![0.0; 9];
+        let input = [0.0; 9];
+        let mut output = [0.0; 9];
         simd_softmax_causal(&input, &mut output, 3).unwrap();
         // Row 0: 1 visible → [1.0, 0, 0]
         assert!((output[0] - 1.0).abs() < 1e-7);
@@ -1329,14 +1329,14 @@ mod tests {
     #[test]
     fn test_causal_dim_mismatch() {
         let input = [1.0, 2.0, 3.0]; // length 3 ≠ 2*2
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax_causal(&input, &mut output, 2).is_err());
     }
 
     #[test]
     fn test_causal_future_tokens_zero() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         simd_softmax_causal(&input, &mut output, 4).unwrap();
         // Verify future tokens are zero.
         for row in 0..4 {
@@ -1352,8 +1352,8 @@ mod tests {
 
     #[test]
     fn test_causal_uniform_input() {
-        let input = vec![1.0; 9];
-        let mut output = vec![0.0; 9];
+        let input = [1.0; 9];
+        let mut output = [0.0; 9];
         simd_softmax_causal(&input, &mut output, 3).unwrap();
         // Row 0: [1.0, 0, 0]
         assert!((output[0] - 1.0).abs() < 1e-5);
@@ -1366,8 +1366,8 @@ mod tests {
 
     #[test]
     fn test_multi_head_basic() {
-        let input = vec![1.0; 8]; // 2 heads × 2×2
-        let mut output = vec![0.0; 8];
+        let input = [1.0; 8]; // 2 heads × 2×2
+        let mut output = [0.0; 8];
         simd_softmax_multi_head(&input, &mut output, 2, 2).unwrap();
         for row_start in (0..8).step_by(2) {
             assert_sums_to_one(&output[row_start..row_start + 2], 1e-5);
@@ -1377,13 +1377,13 @@ mod tests {
     #[test]
     fn test_multi_head_independent_heads() {
         // Two heads with different values should produce independent results.
-        let mut input = vec![0.0; 8];
+        let mut input = [0.0; 8];
         // Head 0: [[1,2],[3,4]]
         input[0..4].copy_from_slice(&[1.0, 2.0, 3.0, 4.0]);
         // Head 1: [[5,6],[7,8]]
         input[4..8].copy_from_slice(&[5.0, 6.0, 7.0, 8.0]);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         simd_softmax_multi_head(&input, &mut output, 2, 2).unwrap();
 
         // Head 0 row 0
@@ -1398,16 +1398,16 @@ mod tests {
 
     #[test]
     fn test_multi_head_size_mismatch() {
-        let input = vec![1.0; 10];
-        let mut output = vec![0.0; 10];
+        let input = [1.0; 10];
+        let mut output = [0.0; 10];
         // 2 heads × 2×2 = 8 ≠ 10
         assert!(simd_softmax_multi_head(&input, &mut output, 2, 2).is_err());
     }
 
     #[test]
     fn test_multi_head_zero_heads_error() {
-        let input = vec![1.0; 4];
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 4];
+        let mut output = [0.0; 4];
         assert!(simd_softmax_multi_head(&input, &mut output, 0, 2).is_err());
     }
 
@@ -1422,8 +1422,8 @@ mod tests {
 
     #[test]
     fn test_multi_head_causal_basic() {
-        let input = vec![0.0; 8]; // 2 heads × 2×2
-        let mut output = vec![0.0; 8];
+        let input = [0.0; 8]; // 2 heads × 2×2
+        let mut output = [0.0; 8];
         simd_softmax_multi_head_causal(&input, &mut output, 2, 2).unwrap();
         // Row 0 of each head: [1.0, 0.0]
         assert!((output[0] - 1.0).abs() < 1e-5);
@@ -1434,8 +1434,8 @@ mod tests {
 
     #[test]
     fn test_multi_head_causal_size_mismatch() {
-        let input = vec![1.0; 5];
-        let mut output = vec![0.0; 5];
+        let input = [1.0; 5];
+        let mut output = [0.0; 5];
         assert!(simd_softmax_multi_head_causal(&input, &mut output, 1, 2).is_err());
     }
 
@@ -1443,12 +1443,12 @@ mod tests {
     fn test_multi_head_causal_matches_per_head() {
         // Multi-head causal should equal applying causal per-head.
         let input: Vec<f32> = (0..18).map(|i| i as f32 * 0.1).collect(); // 2 heads × 3×3
-        let mut mh_out = vec![0.0; 18];
+        let mut mh_out = [0.0; 18];
         simd_softmax_multi_head_causal(&input, &mut mh_out, 2, 3).unwrap();
 
-        let mut h0_out = vec![0.0; 9];
+        let mut h0_out = [0.0; 9];
         simd_softmax_causal(&input[0..9], &mut h0_out, 3).unwrap();
-        let mut h1_out = vec![0.0; 9];
+        let mut h1_out = [0.0; 9];
         simd_softmax_causal(&input[9..18], &mut h1_out, 3).unwrap();
 
         for (a, b) in mh_out[0..9].iter().zip(h0_out.iter()) {
@@ -1464,7 +1464,7 @@ mod tests {
     #[test]
     fn test_log_softmax_basic() {
         let input = [1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_log_softmax(&input, &mut output).unwrap();
         for &x in &output {
             assert!(x <= 0.0, "log_softmax value {x} > 0");
@@ -1476,11 +1476,11 @@ mod tests {
     #[test]
     fn test_log_softmax_identity() {
         let input = [0.5, -1.0, 2.0, 0.0];
-        let mut sm = vec![0.0; 4];
+        let mut sm = [0.0; 4];
         simd_softmax(&input, &mut sm).unwrap();
         let log_sm: Vec<f32> = sm.iter().map(|&x| x.ln()).collect();
 
-        let mut lsm = vec![0.0; 4];
+        let mut lsm = [0.0; 4];
         simd_log_softmax(&input, &mut lsm).unwrap();
 
         for (a, b) in log_sm.iter().zip(lsm.iter()) {
@@ -1498,14 +1498,14 @@ mod tests {
     #[test]
     fn test_log_softmax_length_mismatch() {
         let input = [1.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(simd_log_softmax(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_log_softmax_single() {
         let input = [5.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         simd_log_softmax(&input, &mut output).unwrap();
         assert!((output[0]).abs() < 1e-7, "log_softmax of single element should be 0");
     }
@@ -1513,7 +1513,7 @@ mod tests {
     #[test]
     fn test_log_softmax_large_values() {
         let input = [1000.0, 1001.0, 1002.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_log_softmax(&input, &mut output).unwrap();
         for &x in &output {
             assert!(x.is_finite(), "non-finite log_softmax with large inputs");
@@ -1527,7 +1527,7 @@ mod tests {
     #[test]
     fn test_log_softmax_inplace_basic() {
         let input = [1.0, 2.0, 3.0];
-        let mut out1 = vec![0.0; 3];
+        let mut out1 = [0.0; 3];
         simd_log_softmax(&input, &mut out1).unwrap();
 
         let mut data = input.to_vec();
@@ -1559,7 +1559,7 @@ mod tests {
     #[test]
     fn test_diagnostics_basic() {
         let input = [1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-6);
         assert!(!diag.has_nan);
@@ -1581,7 +1581,7 @@ mod tests {
     #[test]
     fn test_diagnostics_nan_input() {
         let input = [1.0, f32::NAN, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!(diag.has_nan);
     }
@@ -1589,7 +1589,7 @@ mod tests {
     #[test]
     fn test_diagnostics_inf_input() {
         let input = [1.0, f32::INFINITY, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!(diag.has_inf);
     }
@@ -1597,7 +1597,7 @@ mod tests {
     #[test]
     fn test_diagnostics_neg_inf_input() {
         let input = [1.0, f32::NEG_INFINITY, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!(diag.has_inf);
     }
@@ -1605,7 +1605,7 @@ mod tests {
     #[test]
     fn test_diagnostics_entropy_uniform() {
         let input = [0.0; 4];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         // Uniform: entropy = log(4) ≈ 1.386
         let expected = (4.0f32).ln();
@@ -1619,7 +1619,7 @@ mod tests {
     #[test]
     fn test_diagnostics_entropy_peaked() {
         let input = [0.0, 0.0, 100.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         // Peaked: entropy should be near 0.
         assert!(
@@ -1632,7 +1632,7 @@ mod tests {
     #[test]
     fn test_diagnostics_max_prob() {
         let input = [0.0, 0.0, 100.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!((diag.max_prob - 1.0).abs() < 1e-5, "max_prob should be ~1.0");
     }
@@ -1640,7 +1640,7 @@ mod tests {
     #[test]
     fn test_diagnostics_min_prob() {
         let input = [0.0; 4];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!((diag.min_prob - 0.25).abs() < 1e-5, "min_prob should be 0.25 for uniform");
     }
@@ -1648,7 +1648,7 @@ mod tests {
     #[test]
     fn test_diagnostics_logit_range() {
         let input = [-10.0, 0.0, 10.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!((diag.logit_range - 20.0).abs() < 1e-7, "logit_range should be 20");
     }
@@ -1656,14 +1656,14 @@ mod tests {
     #[test]
     fn test_diagnostics_length_mismatch() {
         let input = [1.0, 2.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         assert!(simd_softmax_with_diagnostics(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_diagnostics_single_element() {
         let input = [42.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         let diag = simd_softmax_with_diagnostics(&input, &mut output).unwrap();
         assert!((output[0] - 1.0).abs() < 1e-7);
         assert!((diag.entropy).abs() < 1e-7, "single element → entropy = 0");
@@ -1676,7 +1676,7 @@ mod tests {
     fn test_simd_softmax_non_multiple_of_8() {
         // 13 elements: 1 full AVX2 chunk + 5 tail.
         let input: Vec<f32> = (0..13).map(|i| i as f32).collect();
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
         assert_non_negative(&output);
@@ -1686,7 +1686,7 @@ mod tests {
     fn test_simd_softmax_exact_16() {
         // 16 elements: exactly 2 AVX2 chunks, no tail.
         let input: Vec<f32> = (0..16).map(|i| (i as f32) * 0.5 - 4.0).collect();
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         simd_softmax(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
     }
@@ -1695,9 +1695,9 @@ mod tests {
     fn test_online_matches_simd_standard() {
         // Online and standard should produce very close results.
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.3 - 3.0).collect();
-        let mut std_out = vec![0.0; 20];
+        let mut std_out = [0.0; 20];
         simd_softmax(&input, &mut std_out).unwrap();
-        let mut online_out = vec![0.0; 20];
+        let mut online_out = [0.0; 20];
         simd_softmax_online(&input, &mut online_out).unwrap();
         for (i, (a, b)) in std_out.iter().zip(online_out.iter()).enumerate() {
             assert!((a - b).abs() < 1e-5, "index {i}: standard={a}, online={b}");

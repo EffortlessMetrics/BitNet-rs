@@ -53,6 +53,8 @@ fn test_serialization_with_all_types() {
             rope_theta: Some(10000.0),
             rope_scaling: None,
             rms_norm_eps: None,
+            norm_type: NormType::LayerNorm,
+            activation_type: ActivationType::Silu,
             tokenizer: TokenizerConfig::default(),
         },
         inference: InferenceConfig {

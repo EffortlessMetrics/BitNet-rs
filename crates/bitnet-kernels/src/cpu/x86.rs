@@ -819,11 +819,11 @@ mod tests {
         // Test 2x2 * 2x2 matrix multiplication
         let a = vec![1i8, 2, 3, 4];
         let b = vec![1u8, 0, 0, 1];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
 
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
-        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -839,8 +839,8 @@ mod tests {
         // Test 8x8 * 8x8 matrix multiplication for better coverage
         let a = (0..64i32).map(|i| (i % 127) as i8).collect::<Vec<_>>();
         let b = (0..64i32).map(|i| (i % 255) as u8).collect::<Vec<_>>();
-        let mut c_avx512 = vec![0.0f32; 64];
-        let mut c_avx2 = vec![0.0f32; 64];
+        let mut c_avx512 = [0.0f32; 64];
+        let mut c_avx2 = [0.0f32; 64];
 
         avx512_kernel.matmul_i2s(&a, &b, &mut c_avx512, 8, 8, 8).unwrap();
         avx2_kernel.matmul_i2s(&a, &b, &mut c_avx2, 8, 8, 8).unwrap();
@@ -904,13 +904,13 @@ mod tests {
         }
 
         // Create test input with 128 elements (1 block)
-        let mut input = vec![0.0f32; 128];
+        let mut input = [0.0f32; 128];
         for (i, item) in input.iter_mut().enumerate() {
             *item = ((i as f32) / 20.0).sin() * 3.0;
         }
 
-        let mut output = vec![0u8; 32];
-        let mut scales = vec![0.0f32; 1];
+        let mut output = [0u8; 32];
+        let mut scales = [0.0f32; 1];
 
         kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL2).unwrap();
 
@@ -931,11 +931,11 @@ mod tests {
         // Test 2x2 * 2x2 matrix multiplication
         let a = vec![1i8, 2, 3, 4];
         let b = vec![1u8, 0, 0, 1];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
 
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
-        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -1006,8 +1006,8 @@ mod tests {
         }
 
         let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
-        let mut output = vec![0u8; 32]; // 128 values / 4 per byte = 32 bytes
-        let mut scales = vec![0.0f32; 1]; // 128 values / 128 per block = 1 block
+        let mut output = [0u8; 32]; // 128 values / 4 per byte = 32 bytes
+        let mut scales = [0.0f32; 1]; // 128 values / 128 per block = 1 block
 
         kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL2).unwrap();
 
@@ -1027,15 +1027,15 @@ mod tests {
         let fallback = FallbackKernel;
 
         // Create test input with 256 elements (2 blocks)
-        let mut input = vec![0.0f32; 256];
+        let mut input = [0.0f32; 256];
         for (i, item) in input.iter_mut().enumerate() {
             *item = ((i as f32) / 10.0).sin() * 5.0;
         }
 
-        let mut output_avx = vec![0u8; 64];
-        let mut output_fb = vec![0u8; 64];
-        let mut scales_avx = vec![0.0f32; 2];
-        let mut scales_fb = vec![0.0f32; 2];
+        let mut output_avx = [0u8; 64];
+        let mut output_fb = [0u8; 64];
+        let mut scales_avx = [0.0f32; 2];
+        let mut scales_fb = [0.0f32; 2];
 
         kernel.quantize(&input, &mut output_avx, &mut scales_avx, QuantizationType::TL2).unwrap();
         fallback.quantize(&input, &mut output_fb, &mut scales_fb, QuantizationType::TL2).unwrap();
@@ -1237,7 +1237,7 @@ mod tests {
 
         // Test 1: Wrong block size
         {
-            let quantized = vec![0i8; 64];
+            let quantized = [0i8; 64];
             let scales = vec![1.0f32];
             let result = kernel.dequantize_qk256(&quantized, &scales, 128);
             assert!(result.is_err(), "Should fail with wrong block size");
@@ -1251,7 +1251,7 @@ mod tests {
         // For 2 blocks: expected = 2 * 64 = 128 bytes
         // Tolerance = 128 bytes, so anything outside [0, 256] fails
         {
-            let quantized = vec![0i8; 300]; // Way too large: 300 > 128 + 128 = 256
+            let quantized = [0i8; 300]; // Way too large: 300 > 128 + 128 = 256
             let scales = vec![1.0f32, 1.0f32]; // 2 blocks
             let result = kernel.dequantize_qk256(&quantized, &scales, 256);
             // Both AVX2 and scalar paths should reject sizes outside tolerance

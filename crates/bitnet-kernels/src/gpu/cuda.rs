@@ -581,9 +581,9 @@ mod tests {
             match CudaKernel::new() {
                 Ok(kernel) => {
                     // Test small operation
-                    let a = vec![1i8; 16];
-                    let b = vec![1u8; 16];
-                    let mut c = vec![0.0f32; 16];
+                    let a = [1i8; 16];
+                    let b = [1u8; 16];
+                    let mut c = [0.0f32; 16];
 
                     if let Err(e) = kernel.matmul_i2s(&a, &b, &mut c, 4, 4, 4) {
                         println!("Iteration {}: CUDA operation failed: {}", i, e);

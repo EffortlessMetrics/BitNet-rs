@@ -324,8 +324,8 @@ mod tests {
     fn interleaved_load_aligned_4_pairs() {
         // 4 pairs = 8 elements → exactly one NEON chunk
         let data: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out_a = vec![0.0f32; 4];
-        let mut out_b = vec![0.0f32; 4];
+        let mut out_a = [0.0f32; 4];
+        let mut out_b = [0.0f32; 4];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
@@ -336,8 +336,8 @@ mod tests {
     #[test]
     fn interleaved_load_unaligned_5_pairs() {
         let data: Vec<f32> = (0..10).map(|i| i as f32).collect();
-        let mut out_a = vec![0.0f32; 5];
-        let mut out_b = vec![0.0f32; 5];
+        let mut out_a = [0.0f32; 5];
+        let mut out_b = [0.0f32; 5];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
@@ -349,8 +349,8 @@ mod tests {
     fn interleaved_load_stride_2() {
         // stride=2: pairs at offsets (0, 2), (4, 6)
         let data = [10.0f32, 0.0, 20.0, 0.0, 30.0, 0.0, 40.0, 0.0];
-        let mut out_a = vec![0.0f32; 2];
-        let mut out_b = vec![0.0f32; 2];
+        let mut out_a = [0.0f32; 2];
+        let mut out_b = [0.0f32; 2];
         unsafe {
             neon_interleaved_load_f32(&data, 2, &mut out_a, &mut out_b);
         }
@@ -363,8 +363,8 @@ mod tests {
     #[test]
     fn interleaved_load_stride_3() {
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out_a = vec![0.0f32; 1];
-        let mut out_b = vec![0.0f32; 1];
+        let mut out_a = [0.0f32; 1];
+        let mut out_b = [0.0f32; 1];
         unsafe {
             neon_interleaved_load_f32(&data, 3, &mut out_a, &mut out_b);
         }
@@ -389,9 +389,9 @@ mod tests {
 
     #[test]
     fn interleaved_load_zeros() {
-        let data = vec![0.0f32; 16];
-        let mut out_a = vec![1.0f32; 8];
-        let mut out_b = vec![1.0f32; 8];
+        let data = [0.0f32; 16];
+        let mut out_a = [1.0f32; 8];
+        let mut out_b = [1.0f32; 8];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
@@ -402,8 +402,8 @@ mod tests {
     #[test]
     fn interleaved_load_negative() {
         let data = [-1.0f32, -2.0, -3.0, -4.0];
-        let mut out_a = vec![0.0f32; 2];
-        let mut out_b = vec![0.0f32; 2];
+        let mut out_a = [0.0f32; 2];
+        let mut out_b = [0.0f32; 2];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
@@ -416,8 +416,8 @@ mod tests {
     #[test]
     fn interleaved_load_mixed_sign() {
         let data = [1.0f32, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0];
-        let mut out_a = vec![0.0f32; 4];
-        let mut out_b = vec![0.0f32; 4];
+        let mut out_a = [0.0f32; 4];
+        let mut out_b = [0.0f32; 4];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
@@ -443,8 +443,8 @@ mod tests {
     #[test]
     fn fused_scale_bias_identity() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let scale = vec![1.0; 4];
-        let bias = vec![0.0; 4];
+        let scale = [1.0; 4];
+        let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         assert_eq!(data, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -452,17 +452,17 @@ mod tests {
     #[test]
     fn fused_scale_bias_zero_bias() {
         let mut data = vec![2.0, 3.0, 4.0, 5.0];
-        let scale = vec![2.0; 4];
-        let bias = vec![0.0; 4];
+        let scale = [2.0; 4];
+        let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         assert_eq!(data, vec![4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
     fn fused_scale_bias_zero_scale() {
-        let mut data = vec![100.0; 4];
-        let scale = vec![0.0; 4];
-        let bias = vec![5.0; 4];
+        let mut data = [100.0; 4];
+        let scale = [0.0; 4];
+        let bias = [5.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         assert_eq!(data, vec![5.0, 5.0, 5.0, 5.0]);
     }
@@ -470,8 +470,8 @@ mod tests {
     #[test]
     fn fused_scale_bias_negative() {
         let mut data = vec![1.0, -1.0, 2.0, -2.0];
-        let scale = vec![-1.0; 4];
-        let bias = vec![0.0; 4];
+        let scale = [-1.0; 4];
+        let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         assert_eq!(data, vec![-1.0, 1.0, -2.0, 2.0]);
     }
@@ -490,9 +490,9 @@ mod tests {
 
     #[test]
     fn fused_scale_bias_ones() {
-        let mut data = vec![1.0; 8];
-        let scale = vec![1.0; 8];
-        let bias = vec![1.0; 8];
+        let mut data = [1.0; 8];
+        let scale = [1.0; 8];
+        let bias = [1.0; 8];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         for &v in &data {
             assert!(approx_eq(v, 2.0));
@@ -502,8 +502,8 @@ mod tests {
     #[test]
     fn fused_scale_bias_alternating() {
         let mut data = vec![1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
-        let scale = vec![2.0; 8];
-        let bias = vec![0.5; 8];
+        let scale = [2.0; 8];
+        let bias = [0.5; 8];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         let expected = vec![2.5, 0.5, 2.5, 0.5, 2.5, 0.5, 2.5, 0.5];
         assert_eq!(data, expected);
@@ -512,8 +512,8 @@ mod tests {
     #[test]
     fn fused_scale_bias_precision() {
         let mut data = vec![0.1, 0.2, 0.3, 0.4];
-        let scale = vec![10.0; 4];
-        let bias = vec![0.0; 4];
+        let scale = [10.0; 4];
+        let bias = [0.0; 4];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         for (i, &v) in data.iter().enumerate() {
             let expected = (i + 1) as f32 * 0.1 * 10.0;
@@ -525,7 +525,7 @@ mod tests {
     fn fused_scale_bias_mixed_sign() {
         let mut data = vec![1.0, -2.0, 3.0, -4.0, 5.0];
         let scale = vec![1.0, -1.0, 1.0, -1.0, 1.0];
-        let bias = vec![10.0; 5];
+        let bias = [10.0; 5];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         assert_eq!(data, vec![11.0, 12.0, 13.0, 14.0, 15.0]);
     }
@@ -543,16 +543,16 @@ mod tests {
 
     #[test]
     fn dual_accumulate_zeros() {
-        let z = vec![0.0f32; 8];
-        let mut out = vec![99.0f32; 8];
+        let z = [0.0f32; 8];
+        let mut out = [99.0f32; 8];
         unsafe { neon_dual_accumulate_f32(&z, &z, &z, &z, &mut out) };
         assert!(out.iter().all(|&x| x == 0.0));
     }
 
     #[test]
     fn dual_accumulate_ones() {
-        let o = vec![1.0f32; 8];
-        let mut out = vec![0.0f32; 8];
+        let o = [1.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_dual_accumulate_f32(&o, &o, &o, &o, &mut out) };
         // 1*1 + 1*1 = 2
         assert!(out.iter().all(|&x| approx_eq(x, 2.0)));
@@ -560,22 +560,22 @@ mod tests {
 
     #[test]
     fn dual_accumulate_identity() {
-        let a = vec![3.0f32; 4];
-        let b = vec![1.0f32; 4];
-        let c = vec![0.0f32; 4];
-        let d = vec![0.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let a = [3.0f32; 4];
+        let b = [1.0f32; 4];
+        let c = [0.0f32; 4];
+        let d = [0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         assert!(out.iter().all(|&x| approx_eq(x, 3.0)));
     }
 
     #[test]
     fn dual_accumulate_negative() {
-        let a = vec![-1.0f32; 4];
-        let b = vec![2.0f32; 4];
-        let c = vec![3.0f32; 4];
-        let d = vec![-1.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let a = [-1.0f32; 4];
+        let b = [2.0f32; 4];
+        let c = [3.0f32; 4];
+        let d = [-1.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // -1*2 + 3*(-1) = -5
         assert!(out.iter().all(|&x| approx_eq(x, -5.0)));
@@ -597,10 +597,10 @@ mod tests {
     #[test]
     fn dual_accumulate_alternating() {
         let a = vec![1.0, -1.0, 1.0, -1.0];
-        let b = vec![1.0; 4];
-        let c = vec![1.0; 4];
+        let b = [1.0; 4];
+        let c = [1.0; 4];
         let d = vec![1.0, -1.0, 1.0, -1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // a*b + c*d: [1+1, -1-1, 1+1, -1-1]
         assert_eq!(out, vec![2.0, -2.0, 2.0, -2.0]);
@@ -608,11 +608,11 @@ mod tests {
 
     #[test]
     fn dual_accumulate_precision() {
-        let a = vec![0.1f32; 4];
-        let b = vec![0.2f32; 4];
-        let c = vec![0.3f32; 4];
-        let d = vec![0.4f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let a = [0.1f32; 4];
+        let b = [0.2f32; 4];
+        let c = [0.3f32; 4];
+        let d = [0.4f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // 0.1*0.2 + 0.3*0.4 = 0.02 + 0.12 = 0.14
         for &v in &out {
@@ -622,10 +622,10 @@ mod tests {
 
     #[test]
     fn dual_accumulate_overflow_safe() {
-        let big = vec![1e18f32; 4];
-        let one = vec![1.0f32; 4];
-        let z = vec![0.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let big = [1e18f32; 4];
+        let one = [1.0f32; 4];
+        let z = [0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_dual_accumulate_f32(&big, &one, &z, &z, &mut out) };
         assert!(out.iter().all(|&x| approx_eq(x, 1e18)));
     }
@@ -634,9 +634,9 @@ mod tests {
     fn dual_accumulate_mixed() {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let b = vec![5.0, 4.0, 3.0, 2.0, 1.0];
-        let c = vec![0.5; 5];
-        let d = vec![2.0; 5];
-        let mut out = vec![0.0f32; 5];
+        let c = [0.5; 5];
+        let d = [2.0; 5];
+        let mut out = [0.0f32; 5];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // [5+1, 8+1, 9+1, 8+1, 5+1] = [6, 9, 10, 9, 6]
         assert_eq!(out, vec![6.0, 9.0, 10.0, 9.0, 6.0]);
@@ -689,21 +689,21 @@ mod tests {
 
     #[test]
     fn pipelined_reduce_16_elements() {
-        let data = vec![1.0f32; 16];
+        let data = [1.0f32; 16];
         let result = unsafe { neon_pipelined_reduce_f32(&data) };
         assert!(approx_eq(result, 16.0));
     }
 
     #[test]
     fn pipelined_reduce_32_elements() {
-        let data = vec![0.5f32; 32];
+        let data = [0.5f32; 32];
         let result = unsafe { neon_pipelined_reduce_f32(&data) };
         assert!(approx_eq(result, 16.0));
     }
 
     #[test]
     fn pipelined_reduce_negative() {
-        let data = vec![-1.0f32; 4];
+        let data = [-1.0f32; 4];
         let result = unsafe { neon_pipelined_reduce_f32(&data) };
         assert!(approx_eq(result, -4.0));
     }
@@ -743,23 +743,23 @@ mod tests {
     #[test]
     fn prefetch_load_basic() {
         let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_prefetch_load_f32(&data, 8, &mut out) };
         assert_eq!(data, out);
     }
 
     #[test]
     fn prefetch_load_zero_offset() {
-        let data = vec![10.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let data = [10.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_prefetch_load_f32(&data, 0, &mut out) };
         assert_eq!(data, out);
     }
 
     #[test]
     fn prefetch_load_large_offset() {
-        let data = vec![3.14f32; 8];
-        let mut out = vec![0.0f32; 8];
+        let data = [3.14f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_prefetch_load_f32(&data, 1000, &mut out) };
         assert_eq!(data, out);
     }
@@ -767,7 +767,7 @@ mod tests {
     #[test]
     fn prefetch_load_aligned() {
         let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         unsafe { neon_prefetch_load_f32(&data, 16, &mut out) };
         assert_eq!(data, out);
     }
@@ -775,7 +775,7 @@ mod tests {
     #[test]
     fn prefetch_load_unaligned() {
         let data: Vec<f32> = (0..7).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 7];
+        let mut out = [0.0f32; 7];
         unsafe { neon_prefetch_load_f32(&data, 4, &mut out) };
         assert_eq!(data, out);
     }
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn prefetch_load_sequential() {
         let data: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         unsafe { neon_prefetch_load_f32(&data, 4, &mut out) };
         assert_eq!(data, out);
     }
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn prefetch_load_boundary() {
         let data = vec![f32::MAX, f32::MIN, 0.0, f32::EPSILON];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_prefetch_load_f32(&data, 2, &mut out) };
         assert_eq!(data, out);
     }
@@ -805,8 +805,8 @@ mod tests {
 
     #[test]
     fn prefetch_load_ones() {
-        let data = vec![1.0f32; 17];
-        let mut out = vec![0.0f32; 17];
+        let data = [1.0f32; 17];
+        let mut out = [0.0f32; 17];
         unsafe { neon_prefetch_load_f32(&data, 8, &mut out) };
         assert_eq!(data, out);
     }
@@ -814,7 +814,7 @@ mod tests {
     #[test]
     fn prefetch_load_pattern() {
         let data: Vec<f32> = (0..20).map(|i| (i * i) as f32).collect();
-        let mut out = vec![0.0f32; 20];
+        let mut out = [0.0f32; 20];
         unsafe { neon_prefetch_load_f32(&data, 4, &mut out) };
         assert_eq!(data, out);
     }
@@ -825,13 +825,13 @@ mod tests {
     fn integration_interleave_then_scale_bias() {
         // Deinterleave then fuse scale+bias on one stream.
         let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut out_a = vec![0.0f32; 8];
-        let mut out_b = vec![0.0f32; 8];
+        let mut out_a = [0.0f32; 8];
+        let mut out_b = [0.0f32; 8];
         unsafe {
             neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b);
         }
-        let scale = vec![2.0f32; 8];
-        let bias = vec![1.0f32; 8];
+        let scale = [2.0f32; 8];
+        let bias = [1.0f32; 8];
         unsafe {
             neon_fused_scale_bias_f32(&mut out_a, &scale, &bias);
         }
@@ -842,11 +842,11 @@ mod tests {
 
     #[test]
     fn integration_dual_accumulate_then_reduce() {
-        let a = vec![1.0f32; 8];
-        let b = vec![2.0f32; 8];
-        let c = vec![3.0f32; 8];
-        let d = vec![4.0f32; 8];
-        let mut acc = vec![0.0f32; 8];
+        let a = [1.0f32; 8];
+        let b = [2.0f32; 8];
+        let c = [3.0f32; 8];
+        let d = [4.0f32; 8];
+        let mut acc = [0.0f32; 8];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut acc) };
         // Each element = 1*2 + 3*4 = 14
         let sum = unsafe { neon_pipelined_reduce_f32(&acc) };
@@ -856,7 +856,7 @@ mod tests {
     #[test]
     fn integration_prefetch_then_reduce() {
         let data: Vec<f32> = (1..=16).map(|i| i as f32).collect();
-        let mut buf = vec![0.0f32; 16];
+        let mut buf = [0.0f32; 16];
         unsafe { neon_prefetch_load_f32(&data, 8, &mut buf) };
         let sum = unsafe { neon_pipelined_reduce_f32(&buf) };
         assert!(approx_eq(sum, 136.0)); // sum 1..=16
@@ -868,22 +868,22 @@ mod tests {
         let raw: Vec<f32> = (0..32).map(|i| i as f32).collect();
 
         // 1. Prefetch load
-        let mut fetched = vec![0.0f32; 32];
+        let mut fetched = [0.0f32; 32];
         unsafe { neon_prefetch_load_f32(&raw, 8, &mut fetched) };
 
         // 2. Deinterleave
-        let mut stream_a = vec![0.0f32; 16];
-        let mut stream_b = vec![0.0f32; 16];
+        let mut stream_a = [0.0f32; 16];
+        let mut stream_b = [0.0f32; 16];
         unsafe { neon_interleaved_load_f32(&fetched, 1, &mut stream_a, &mut stream_b) };
 
         // 3. Scale+bias on stream_a
-        let scale = vec![1.0f32; 16];
-        let bias = vec![0.5f32; 16];
+        let scale = [1.0f32; 16];
+        let bias = [0.5f32; 16];
         unsafe { neon_fused_scale_bias_f32(&mut stream_a, &scale, &bias) };
 
         // 4. Dual-accumulate: stream_a*1 + stream_b*1
-        let ones = vec![1.0f32; 16];
-        let mut combined = vec![0.0f32; 16];
+        let ones = [1.0f32; 16];
+        let mut combined = [0.0f32; 16];
         unsafe {
             neon_dual_accumulate_f32(&stream_a, &ones, &stream_b, &ones, &mut combined);
         }
@@ -907,8 +907,8 @@ mod tests {
     #[test]
     fn integration_scale_bias_then_reduce() {
         let mut data: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let scale = vec![2.0f32; 8];
-        let bias = vec![-1.0f32; 8];
+        let scale = [2.0f32; 8];
+        let bias = [-1.0f32; 8];
         unsafe { neon_fused_scale_bias_f32(&mut data, &scale, &bias) };
         let sum = unsafe { neon_pipelined_reduce_f32(&data) };
         // Each element: i*2 - 1 → 1,3,5,7,9,11,13,15 → sum = 64
@@ -927,9 +927,9 @@ mod tests {
     fn dual_accumulate_sequential_values() {
         let a: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let b: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let c = vec![0.0f32; 8];
-        let d = vec![0.0f32; 8];
-        let mut out = vec![0.0f32; 8];
+        let c = [0.0f32; 8];
+        let d = [0.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_dual_accumulate_f32(&a, &b, &c, &d, &mut out) };
         // out[i] = (i+1)^2
         for i in 0..8 {
@@ -942,8 +942,8 @@ mod tests {
     fn interleaved_load_3_pairs() {
         // 3 pairs = 6 elements → not a multiple of 4, exercises tail
         let data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0f32];
-        let mut out_a = vec![0.0f32; 3];
-        let mut out_b = vec![0.0f32; 3];
+        let mut out_a = [0.0f32; 3];
+        let mut out_b = [0.0f32; 3];
         unsafe { neon_interleaved_load_f32(&data, 1, &mut out_a, &mut out_b) };
         assert_eq!(out_a, vec![10.0, 30.0, 50.0]);
         assert_eq!(out_b, vec![20.0, 40.0, 60.0]);

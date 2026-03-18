@@ -535,7 +535,7 @@ mod tests {
             10.0, 11.0, 12.0, // 3
         ];
         let table = EmbeddingTable::new(weight, cfg).unwrap();
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         table.lookup(&[2, 0], &mut out).unwrap();
         assert_eq!(&out[0..3], &[7.0, 8.0, 9.0]);
         assert_eq!(&out[3..6], &[1.0, 2.0, 3.0]);
@@ -550,7 +550,7 @@ mod tests {
             5.0, 6.0, // 2
         ];
         let table = EmbeddingTable::new(weight, cfg).unwrap();
-        let mut out = vec![99.0; 6];
+        let mut out = [99.0; 6];
         table.lookup(&[0, 1, 2], &mut out).unwrap();
         assert_eq!(&out[0..2], &[1.0, 2.0]);
         assert_eq!(&out[2..4], &[0.0, 0.0]); // padding → zero
@@ -566,25 +566,25 @@ mod tests {
             0.3, 0.4, // token 1
             0.5, 0.6, // token 2
         ];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0f32; 2];
         embedding_lookup_ref(&[1], &weight, &mut out, 3, 2, None).unwrap();
-        assert_eq!(out, vec![0.3, 0.4]);
+        assert_eq!(out.to_vec(), vec![0.3, 0.4]);
     }
 
     #[test]
     fn lookup_ref_oov_returns_zero() {
-        let weight = vec![1.0; 6]; // vocab=3, dim=2
-        let mut out = vec![99.0; 2];
+        let weight = [1.0; 6]; // vocab=3, dim=2
+        let mut out = [99.0f32; 2];
         embedding_lookup_ref(&[5], &weight, &mut out, 3, 2, None).unwrap();
-        assert_eq!(out, vec![0.0, 0.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 0.0]);
     }
 
     #[test]
     fn lookup_ref_oov_u32_max() {
-        let weight = vec![1.0; 4]; // vocab=2, dim=2
-        let mut out = vec![99.0; 2];
+        let weight = [1.0; 4]; // vocab=2, dim=2
+        let mut out = [99.0f32; 2];
         embedding_lookup_ref(&[u32::MAX], &weight, &mut out, 2, 2, None).unwrap();
-        assert_eq!(out, vec![0.0, 0.0]);
+        assert_eq!(out.to_vec(), vec![0.0, 0.0]);
     }
 
     #[test]
@@ -593,7 +593,7 @@ mod tests {
             1.0, 2.0, // 0 (padding)
             3.0, 4.0, // 1
         ];
-        let mut out = vec![99.0; 4];
+        let mut out = [99.0; 4];
         embedding_lookup_ref(&[0, 1], &weight, &mut out, 2, 2, Some(0)).unwrap();
         assert_eq!(&out[0..2], &[0.0, 0.0]);
         assert_eq!(&out[2..4], &[3.0, 4.0]);
@@ -601,26 +601,26 @@ mod tests {
 
     #[test]
     fn lookup_ref_single_token() {
-        let weight = vec![42.0];
-        let mut out = vec![0.0];
+        let weight = [42.0f32];
+        let mut out = [0.0f32];
         embedding_lookup_ref(&[0], &weight, &mut out, 1, 1, None).unwrap();
-        assert_eq!(out, vec![42.0]);
+        assert_eq!(out.to_vec(), vec![42.0]);
     }
 
     #[test]
     fn lookup_ref_vocab_size_one() {
         let weight = vec![1.0, 2.0, 3.0];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0f32; 3];
         embedding_lookup_ref(&[0], &weight, &mut out, 1, 3, None).unwrap();
-        assert_eq!(out, vec![1.0, 2.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
     fn lookup_ref_embedding_dim_one() {
         let weight = vec![10.0, 20.0, 30.0];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0f32; 3];
         embedding_lookup_ref(&[2, 0, 1], &weight, &mut out, 3, 1, None).unwrap();
-        assert_eq!(out, vec![30.0, 10.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![30.0, 10.0, 20.0]);
     }
 
     #[test]
@@ -629,7 +629,7 @@ mod tests {
             1.0, 2.0, // 0
             3.0, 4.0, // 1
         ];
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         embedding_lookup_ref(&[1, 1, 0, 1], &weight, &mut out, 2, 2, None).unwrap();
         assert_eq!(&out[0..2], &[3.0, 4.0]);
         assert_eq!(&out[2..4], &[3.0, 4.0]);
@@ -640,15 +640,15 @@ mod tests {
     #[test]
     fn lookup_ref_same_token_same_vector() {
         let weight: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let mut out = vec![0.0; 12];
+        let mut out = [0.0; 12];
         embedding_lookup_ref(&[3, 1, 3], &weight, &mut out, 5, 4, None).unwrap();
         assert_eq!(&out[0..4], &out[8..12]); // token 3 == token 3
     }
 
     #[test]
     fn lookup_ref_all_oov_zeroed() {
-        let weight = vec![99.0; 12]; // vocab=3, dim=4
-        let mut out = vec![1.0; 12];
+        let weight = [99.0; 12]; // vocab=3, dim=4
+        let mut out = [1.0; 12];
         embedding_lookup_ref(&[100, u32::MAX, 3], &weight, &mut out, 3, 4, None).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -659,7 +659,7 @@ mod tests {
             1.0, 2.0, // 0
             3.0, 4.0, // 1
         ];
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         embedding_lookup_ref(&[0, 999, 1], &weight, &mut out, 2, 2, None).unwrap();
         assert_eq!(&out[0..2], &[1.0, 2.0]);
         assert_eq!(&out[2..4], &[0.0, 0.0]);
@@ -668,20 +668,20 @@ mod tests {
 
     #[test]
     fn lookup_ref_rejects_short_weight() {
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         assert!(embedding_lookup_ref(&[0], &[1.0], &mut out, 2, 2, None).is_err());
     }
 
     #[test]
     fn lookup_ref_rejects_short_output() {
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 1]; // too small
+        let weight = [1.0; 4];
+        let mut out = [0.0; 1]; // too small
         assert!(embedding_lookup_ref(&[0], &weight, &mut out, 2, 2, None).is_err());
     }
 
     #[test]
     fn lookup_ref_empty_tokens() {
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let mut out = vec![];
         embedding_lookup_ref(&[], &weight, &mut out, 2, 2, None).unwrap();
     }
@@ -707,9 +707,9 @@ mod tests {
             1.0, 0.0, // vocab 0
             0.0, 1.0, // vocab 1
         ];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0f32; 2];
         output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).unwrap();
-        assert_eq!(out, vec![1.0, 0.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 0.0]);
     }
 
     #[test]
@@ -723,9 +723,9 @@ mod tests {
             0.0, 0.0, 1.0, // vocab 2
             1.0, 1.0, 1.0, // vocab 3
         ];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0f32; 4];
         output_projection_ref(&hidden, &weight, &mut out, 1, 3, 4).unwrap();
-        assert_eq!(out, vec![1.0, 2.0, 3.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 6.0]);
     }
 
     #[test]
@@ -734,7 +734,7 @@ mod tests {
         // logits: [[1,1],[1,-1]]
         let hidden = vec![1.0, 0.0, 0.0, 1.0];
         let weight = vec![1.0, 1.0, 1.0, -1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         output_projection_ref(&hidden, &weight, &mut out, 2, 2, 2).unwrap();
         assert!((out[0] - 1.0).abs() < 1e-6);
         assert!((out[1] - 1.0).abs() < 1e-6);
@@ -744,40 +744,40 @@ mod tests {
 
     #[test]
     fn projection_ref_single_element() {
-        let hidden = vec![3.0]; // seq=1, hidden=1
-        let weight = vec![2.0]; // vocab=1, hidden=1
-        let mut out = vec![0.0; 1];
+        let hidden = [3.0]; // seq=1, hidden=1
+        let weight = [2.0]; // vocab=1, hidden=1
+        let mut out = [0.0f32; 1];
         output_projection_ref(&hidden, &weight, &mut out, 1, 1, 1).unwrap();
-        assert_eq!(out, vec![6.0]);
+        assert_eq!(out.to_vec(), vec![6.0]);
     }
 
     #[test]
     fn projection_ref_rejects_short_hidden() {
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 2];
+        let weight = [1.0; 4];
+        let mut out = [0.0; 2];
         assert!(output_projection_ref(&[1.0], &weight, &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
     fn projection_ref_rejects_short_weight() {
-        let hidden = vec![1.0; 2];
-        let mut out = vec![0.0; 2];
+        let hidden = [1.0; 2];
+        let mut out = [0.0; 2];
         assert!(output_projection_ref(&hidden, &[1.0], &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
     fn projection_ref_rejects_short_output() {
-        let hidden = vec![1.0; 2];
-        let weight = vec![1.0; 4];
-        let mut out = vec![0.0; 1]; // too small
+        let hidden = [1.0; 2];
+        let weight = [1.0; 4];
+        let mut out = [0.0; 1]; // too small
         assert!(output_projection_ref(&hidden, &weight, &mut out, 1, 2, 2).is_err());
     }
 
     #[test]
     fn projection_ref_zero_hidden() {
-        let hidden = vec![0.0; 4]; // seq=2, hidden=2
-        let weight = vec![1.0; 6]; // vocab=3, hidden=2
-        let mut out = vec![99.0; 6];
+        let hidden = [0.0; 4]; // seq=2, hidden=2
+        let weight = [1.0; 6]; // vocab=3, hidden=2
+        let mut out = [99.0; 6];
         output_projection_ref(&hidden, &weight, &mut out, 2, 2, 3).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -793,9 +793,9 @@ mod tests {
     fn output_projection_struct_forward() {
         let weight = vec![1.0, 0.0, 0.0, 1.0]; // 2×2 identity
         let proj = OutputProjection::new(weight, 2, 2).unwrap();
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0f32; 2];
         proj.forward(&[3.0, 7.0], &mut out, 1).unwrap();
-        assert_eq!(out, vec![3.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 7.0]);
     }
 
     // ── TiedEmbedding ────────────────────────────────────────
@@ -816,8 +816,8 @@ mod tests {
         let tied = TiedEmbedding::new(weight.clone(), cfg.clone()).unwrap();
         let table = EmbeddingTable::new(weight, cfg).unwrap();
 
-        let mut out_tied = vec![0.0; 4];
-        let mut out_table = vec![0.0; 4];
+        let mut out_tied = [0.0; 4];
+        let mut out_table = [0.0; 4];
         tied.lookup(&[0, 1], &mut out_tied).unwrap();
         table.lookup(&[0, 1], &mut out_table).unwrap();
         assert_eq!(out_tied, out_table);
@@ -833,14 +833,14 @@ mod tests {
         let tied = TiedEmbedding::new(weight.clone(), cfg).unwrap();
 
         // Lookup token 0 → [1, 0]
-        let mut emb = vec![0.0; 2];
+        let mut emb = [0.0f32; 2];
         tied.lookup(&[0], &mut emb).unwrap();
-        assert_eq!(emb, vec![1.0, 0.0]);
+        assert_eq!(emb.to_vec(), vec![1.0, 0.0]);
 
         // Project [1, 0] back → logits should be [1, 0]
-        let mut logits = vec![0.0; 2];
+        let mut logits = [0.0f32; 2];
         tied.project(&emb, &mut logits, 1).unwrap();
-        assert_eq!(logits, vec![1.0, 0.0]);
+        assert_eq!(logits.to_vec(), vec![1.0, 0.0]);
     }
 
     #[test]
@@ -863,13 +863,13 @@ mod tests {
         let cfg = EmbeddingConfig::new(3, 3);
         let tied = TiedEmbedding::new(weight, cfg).unwrap();
 
-        let mut emb = vec![0.0; 3];
+        let mut emb = [0.0f32; 3];
         tied.lookup(&[1], &mut emb).unwrap();
-        assert_eq!(emb, vec![0.0, 1.0, 0.0]);
+        assert_eq!(emb.to_vec(), vec![0.0, 1.0, 0.0]);
 
-        let mut logits = vec![0.0; 3];
+        let mut logits = [0.0f32; 3];
         tied.project(&emb, &mut logits, 1).unwrap();
-        assert_eq!(logits, vec![0.0, 1.0, 0.0]);
+        assert_eq!(logits.to_vec(), vec![0.0, 1.0, 0.0]);
     }
 
     // ── PositionEmbedding ────────────────────────────────────
@@ -910,17 +910,17 @@ mod tests {
 
     #[test]
     fn position_embedding_rejects_overflow() {
-        let pos_weight = vec![0.0; 4];
+        let pos_weight = vec![0.0f32; 4];
         let pos = PositionEmbedding::new(pos_weight, 2, 2).unwrap();
-        let mut emb = vec![0.0; 4];
+        let mut emb = [0.0; 4];
         assert!(pos.add_to(&mut emb, 2, 1).is_err()); // 1+2 > 2
     }
 
     #[test]
     fn position_embedding_rejects_short_embeddings() {
-        let pos_weight = vec![0.0; 4];
+        let pos_weight = vec![0.0f32; 4];
         let pos = PositionEmbedding::new(pos_weight, 2, 2).unwrap();
-        let mut emb = vec![0.0; 2]; // too small for 2 tokens
+        let mut emb = [0.0; 2]; // too small for 2 tokens
         assert!(pos.add_to(&mut emb, 2, 0).is_err());
     }
 
@@ -933,7 +933,7 @@ mod tests {
             50.0, 60.0, // pos 2
         ];
         let pos = PositionEmbedding::new(pos_weight, 3, 2).unwrap();
-        let mut emb = vec![0.0; 6]; // 3 tokens, zero base
+        let mut emb = [0.0; 6]; // 3 tokens, zero base
         pos.add_to(&mut emb, 3, 0).unwrap();
         assert_eq!(&emb[0..2], &[10.0, 20.0]);
         assert_eq!(&emb[2..4], &[30.0, 40.0]);
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn norm_rejects_short_data() {
         let norm = EmbeddingNorm::new(4, 1e-6);
-        let mut data = vec![1.0; 3];
+        let mut data = [1.0; 3];
         assert!(norm.normalize(&mut data, 1).is_err());
     }
 
@@ -1012,10 +1012,10 @@ mod tests {
         let norm = EmbeddingNorm::new(2, 1e-6);
         let proj = OutputProjection::new(weight, 2, 2).unwrap();
 
-        let mut emb = vec![0.0; 2];
+        let mut emb = [0.0; 2];
         table.lookup(&[1], &mut emb).unwrap(); // [0, 1]
         norm.normalize(&mut emb, 1).unwrap();
-        let mut logits = vec![0.0; 2];
+        let mut logits = [0.0; 2];
         proj.forward(&emb, &mut logits, 1).unwrap();
         // Token 1 should get highest logit at index 1
         assert!(logits[1] > logits[0]);
@@ -1027,7 +1027,7 @@ mod tests {
         let cfg = EmbeddingConfig::new(10, 50);
         let table = EmbeddingTable::new(weight, cfg).unwrap();
         let ids: Vec<u32> = (0..10).collect();
-        let mut out = vec![f32::NAN; 500];
+        let mut out = [f32::NAN; 500];
         table.lookup(&ids, &mut out).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
@@ -1036,7 +1036,7 @@ mod tests {
     fn projection_output_finite() {
         let hidden: Vec<f32> = (0..64).map(|i| (i as f32) * 0.01).collect();
         let weight: Vec<f32> = (0..640).map(|i| (i as f32) * 0.001).collect();
-        let mut out = vec![f32::NAN; 10];
+        let mut out = [f32::NAN; 10];
         output_projection_ref(&hidden, &weight, &mut out, 1, 64, 10).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
@@ -1054,9 +1054,9 @@ mod tests {
         let tied = TiedEmbedding::new(weight, cfg).unwrap();
 
         for token_id in 0..4u32 {
-            let mut emb = vec![0.0; 4];
+            let mut emb = [0.0; 4];
             tied.lookup(&[token_id], &mut emb).unwrap();
-            let mut logits = vec![0.0; 4];
+            let mut logits = [0.0; 4];
             tied.project(&emb, &mut logits, 1).unwrap();
             // Argmax of logits should be token_id
             let argmax =

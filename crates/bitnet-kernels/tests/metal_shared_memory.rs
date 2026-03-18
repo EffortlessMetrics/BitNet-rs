@@ -990,8 +990,8 @@ mod shared_memory_patterns {
 
     #[test]
     fn reduction_max_all_same() {
-        let data = vec![3.14f32; 64];
-        assert!((parallel_reduction_max(&data) - 3.14).abs() < 1e-6);
+        let data = vec![1.234f32; 64]; // arbitrary value (avoid clippy approx_constant)
+        assert!((parallel_reduction_max(&data) - 1.234).abs() < 1e-6);
     }
 
     #[test]

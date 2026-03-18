@@ -687,8 +687,8 @@ mod tests {
 
     #[test]
     fn test_apply_padding_mask_all_real() {
-        let mut logits = vec![5.0; 8];
-        let mask = vec![1.0; 8];
+        let mut logits = [5.0; 8];
+        let mask = [1.0; 8];
         apply_padding_mask(&mut logits, &mask);
         assert_eq!(logits, vec![5.0; 8]);
     }
@@ -738,7 +738,7 @@ mod tests {
     fn test_neon_mul_basic() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         neon_mul_f32(&a, &b, &mut out, 4);
         assert_eq!(out, vec![2.0, 6.0, 12.0, 20.0]);
     }
@@ -747,16 +747,16 @@ mod tests {
     fn test_neon_mul_with_remainder() {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let b = vec![2.0, 2.0, 2.0, 2.0, 2.0];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         neon_mul_f32(&a, &b, &mut out, 5);
         assert_eq!(out, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
     }
 
     #[test]
     fn test_neon_mul_zeros() {
-        let a = vec![1.0; 8];
-        let b = vec![0.0; 8];
-        let mut out = vec![9.0; 8];
+        let a = [1.0; 8];
+        let b = [0.0; 8];
+        let mut out = [9.0; 8];
         neon_mul_f32(&a, &b, &mut out, 8);
         assert_eq!(out, vec![0.0; 8]);
     }

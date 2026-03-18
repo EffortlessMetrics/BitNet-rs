@@ -759,7 +759,7 @@ mod tests {
 
     #[test]
     fn test_scale_all_zeros() {
-        let w = vec![0.0; 16];
+        let w = [0.0; 16];
         let s = ScaleEstimator::compute(&w, 4, 4, true, 0);
         assert!(s.iter().all(|&x| x == 0.0));
     }
@@ -835,7 +835,7 @@ mod tests {
 
     #[test]
     fn test_ternary_all_zeros() {
-        let w = vec![0.0; 8];
+        let w = [0.0; 8];
         let (packed, scales) = TernaryQuantizer::quantize(&w, 1, 8, false);
         // All-zero input → scale=0, all mapped to 0
         assert_eq!(scales[0], 0.0);
@@ -845,7 +845,7 @@ mod tests {
 
     #[test]
     fn test_ternary_all_positive() {
-        let w = vec![1.0; 4];
+        let w = [1.0; 4];
         let (packed, scales) = TernaryQuantizer::quantize(&w, 1, 4, false);
         assert!(scales[0] > 0.0);
         let unpacked = TernaryQuantizer::unpack_i2s(&packed, 4);
@@ -854,7 +854,7 @@ mod tests {
 
     #[test]
     fn test_ternary_all_negative() {
-        let w = vec![-1.0; 4];
+        let w = [-1.0; 4];
         let (packed, _scales) = TernaryQuantizer::quantize(&w, 1, 4, false);
         let unpacked = TernaryQuantizer::unpack_i2s(&packed, 4);
         assert!(unpacked.iter().all(|&v| v == -1));
@@ -928,7 +928,7 @@ mod tests {
 
     #[test]
     fn test_ternary_single_element() {
-        let w = vec![5.0];
+        let w = [5.0];
         let (packed, scales) = TernaryQuantizer::quantize(&w, 1, 1, false);
         let deq = TernaryQuantizer::dequantize(&packed, &scales, 1, 1, false);
         assert_eq!(deq.len(), 1);
@@ -1054,7 +1054,7 @@ mod tests {
 
     #[test]
     fn test_quantize_ternary_all_same_value() {
-        let w = vec![5.0; 16];
+        let w = [5.0; 16];
         let cfg = QuantConfig::default();
         let result = WeightQuantizer::quantize(&w, 4, 4, &cfg);
         // All same positive → all quantize to +1
@@ -1115,7 +1115,7 @@ mod tests {
 
     #[test]
     fn test_edge_single_weight_i8() {
-        let w = vec![0.5];
+        let w = [0.5];
         let cfg = QuantConfig {
             target_format: WeightFormat::I8,
             symmetric: true,
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[test]
     fn test_edge_all_zeros_i8() {
-        let w = vec![0.0; 16];
+        let w = [0.0; 16];
         let cfg = QuantConfig {
             target_format: WeightFormat::I8,
             symmetric: true,
@@ -1141,7 +1141,7 @@ mod tests {
 
     #[test]
     fn test_edge_all_zeros_ternary() {
-        let w = vec![0.0; 16];
+        let w = [0.0; 16];
         let cfg = QuantConfig::default();
         let result = WeightQuantizer::quantize(&w, 4, 4, &cfg);
         assert_eq!(result.error_stats.mse, 0.0);
@@ -1149,7 +1149,7 @@ mod tests {
 
     #[test]
     fn test_edge_all_same_value_i4() {
-        let w = vec![3.14; 8];
+        let w = [1.5; 8];
         let cfg = QuantConfig {
             target_format: WeightFormat::I4,
             symmetric: true,

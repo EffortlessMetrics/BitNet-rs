@@ -925,7 +925,7 @@ mod tests {
     fn test_cuda_silu_launch() {
         let cfg = ActivationConfig::new(4096, ActivationType::SiLU).unwrap();
         let input: Vec<f32> = (0..4096).map(|i| (i as f32) * 0.01 - 20.0).collect();
-        let mut output = vec![0.0f32; 4096];
+        let mut output = [0.0f32; 4096];
         let result = launch_activation(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA SiLU launch failed: {result:?}");
     }
@@ -935,7 +935,7 @@ mod tests {
     fn test_cuda_gelu_launch() {
         let cfg = ActivationConfig::new(4096, ActivationType::GELU).unwrap();
         let input: Vec<f32> = (0..4096).map(|i| (i as f32) * 0.01 - 20.0).collect();
-        let mut output = vec![0.0f32; 4096];
+        let mut output = [0.0f32; 4096];
         let result = launch_activation(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA GELU launch failed: {result:?}");
     }
@@ -944,9 +944,9 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_silu_gate_launch() {
         let cfg = SiluGateConfig::new(2048).unwrap();
-        let input = vec![1.0f32; 2048];
-        let gate = vec![0.5f32; 2048];
-        let mut output = vec![0.0f32; 2048];
+        let input = [1.0f32; 2048];
+        let gate = [0.5f32; 2048];
+        let mut output = [0.0f32; 2048];
         let result = launch_silu_gate(&input, &gate, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA SiLU-gate launch failed: {result:?}");
     }

@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn test_conv1d_single_element_kernel() {
         let input = vec![2.0, 4.0, 6.0, 8.0];
-        let kernel = vec![3.0];
+        let kernel = [3.0];
         let expected = ref_conv1d(&input, &kernel, 1);
         let mut output = vec![0.0f32; expected.len()];
         unsafe { neon_conv1d(&input, &kernel, 1, &mut output) };
@@ -353,7 +353,7 @@ mod tests {
         // Auto-correlation peak at position 0
         let signal = vec![1.0, 0.0, -1.0, 0.0, 1.0];
         let pattern = vec![1.0, 0.0, -1.0];
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         unsafe { neon_cross_correlation(&signal, &pattern, &mut output) };
         // Position 0: 1*1 + 0*0 + (-1)*(-1) = 2.0
         assert!((output[0] - 2.0).abs() < 1e-5);

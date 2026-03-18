@@ -1022,6 +1022,7 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     fn test_gpu_cpu_parity() {
+        let quantizer = DeviceAwareQuantizer::default();
         let test_data = vec![1.0, -0.5, 0.3, -0.8, 0.0, 0.7];
 
         let result = quantizer.validate_gpu_cpu_parity(&test_data);

@@ -1884,7 +1884,7 @@ mod tests {
         let mut u = GraphUpdater::new(2.0);
         let old = GraphShapeKey { batch_size: 1, seq_len: 64, hidden_dim: 512, num_heads: 8 };
         let shape = ShapeUpdate { batch_size: None, seq_len: Some(96), hidden_dim: None };
-        let mut params = vec![HashMap::new(); 3];
+        let mut params: Vec<HashMap<String, f64>> = (0..3).map(|_| HashMap::new()).collect();
         let result = u.apply_shape_update(&old, &shape, &mut params).unwrap();
         assert!(!result.required_recapture);
         assert_eq!(result.nodes_updated, 3);
@@ -1896,7 +1896,7 @@ mod tests {
         let mut u = GraphUpdater::new(2.0);
         let old = GraphShapeKey { batch_size: 1, seq_len: 64, hidden_dim: 512, num_heads: 8 };
         let shape = ShapeUpdate { batch_size: None, seq_len: Some(512), hidden_dim: None };
-        let mut params = vec![HashMap::new(); 3];
+        let mut params: Vec<HashMap<String, f64>> = (0..3).map(|_| HashMap::new()).collect();
         let result = u.apply_shape_update(&old, &shape, &mut params).unwrap();
         assert!(result.required_recapture);
         assert_eq!(u.total_recaptures(), 1);

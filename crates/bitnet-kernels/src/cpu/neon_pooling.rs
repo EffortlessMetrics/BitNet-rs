@@ -515,7 +515,7 @@ mod tests {
     #[test]
     fn max_pool1d_basic() {
         let input: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         max_pool1d_neon(&input, 8, 3, 2, &mut out);
         assert_eq!(out, vec![2.0, 4.0, 6.0]);
     }
@@ -523,7 +523,7 @@ mod tests {
     #[test]
     fn max_pool1d_stride_1() {
         let input = vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         max_pool1d_neon(&input, 8, 3, 1, &mut out);
         assert_eq!(out, vec![4.0, 4.0, 5.0, 9.0, 9.0, 9.0]);
     }
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn max_pool1d_large_kernel() {
         let input = vec![1.0, 8.0, 3.0, 7.0, 2.0, 9.0, 0.0, 4.0, 6.0, 5.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         max_pool1d_neon(&input, 10, 5, 3, &mut out);
         assert_eq!(out, vec![8.0, 9.0]);
     }
@@ -539,7 +539,7 @@ mod tests {
     #[test]
     fn max_pool1d_pool_equals_input() {
         let input = vec![5.0, 1.0, 3.0, 9.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 4, 4, 1, &mut out);
         assert_eq!(out[0], 9.0);
     }
@@ -547,7 +547,7 @@ mod tests {
     #[test]
     fn max_pool1d_pool_larger_than_input() {
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 2, 5, 1, &mut out);
         // out_len == 0 → no output written
         assert_eq!(out[0], 0.0);
@@ -555,8 +555,8 @@ mod tests {
 
     #[test]
     fn max_pool1d_single_element() {
-        let input = vec![42.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [42.0];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 1, 1, 1, &mut out);
         assert_eq!(out[0], 42.0);
     }
@@ -564,7 +564,7 @@ mod tests {
     #[test]
     fn max_pool1d_stride_larger_than_pool() {
         let input: Vec<f32> = (0..10).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         max_pool1d_neon(&input, 10, 2, 3, &mut out);
         // windows: [0,1]=1, [3,4]=4, [6,7]=7
         assert_eq!(out, vec![1.0, 4.0, 7.0]);
@@ -573,15 +573,15 @@ mod tests {
     #[test]
     fn max_pool1d_negative_values() {
         let input = vec![-5.0, -3.0, -8.0, -1.0, -4.0];
-        let mut out = vec![0.0f32; 4]; // (5-2)/1+1=4
+        let mut out = [0.0f32; 4]; // (5-2)/1+1=4
         max_pool1d_neon(&input, 5, 2, 1, &mut out);
         assert_eq!(out, vec![-3.0, -3.0, -1.0, -1.0]);
     }
 
     #[test]
     fn max_pool1d_all_same() {
-        let input = vec![7.0; 8];
-        let mut out = vec![0.0f32; 3]; // (8-4)/2+1=3
+        let input = [7.0; 8];
+        let mut out = [0.0f32; 3]; // (8-4)/2+1=3
         max_pool1d_neon(&input, 8, 4, 2, &mut out);
         assert_eq!(out, vec![7.0, 7.0, 7.0]);
     }
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn max_pool1d_kernel_4_exact_neon_chunk() {
         let input = vec![1.0, 4.0, 2.0, 3.0, 5.0, 0.0, 8.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         max_pool1d_neon(&input, 8, 4, 4, &mut out);
         assert_eq!(out, vec![4.0, 8.0]);
     }
@@ -597,7 +597,7 @@ mod tests {
     #[test]
     fn max_pool1d_kernel_5_neon_plus_remainder() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 5, 5, 1, &mut out);
         assert_eq!(out[0], 5.0);
     }
@@ -605,7 +605,7 @@ mod tests {
     #[test]
     fn max_pool1d_input_len_less_than_slice() {
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let mut out = vec![0.0f32; 2]; // (3-2)/1+1=2
+        let mut out = [0.0f32; 2]; // (3-2)/1+1=2
         // input_len = 3 → only consider first 3 elements
         max_pool1d_neon(&input, 3, 2, 1, &mut out);
         assert_eq!(out, vec![20.0, 30.0]);
@@ -614,7 +614,7 @@ mod tests {
     #[test]
     fn max_pool1d_large_input() {
         let input: Vec<f32> = (0..64).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         max_pool1d_neon(&input, 64, 4, 4, &mut out);
         for (i, v) in out.iter().enumerate() {
             assert_eq!(*v, (i * 4 + 3) as f32);
@@ -624,7 +624,7 @@ mod tests {
     #[test]
     fn max_pool1d_inf_values() {
         let input = vec![f32::NEG_INFINITY, 0.0, f32::INFINITY, 1.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 4, 4, 1, &mut out);
         assert_eq!(out[0], f32::INFINITY);
     }
@@ -632,24 +632,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "pool_size must be > 0")]
     fn max_pool1d_zero_pool_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 1, 0, 1, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "stride must be > 0")]
     fn max_pool1d_zero_stride_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         max_pool1d_neon(&input, 1, 1, 0, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn max_pool1d_output_too_small_panics() {
-        let input = vec![1.0; 8];
-        let mut out = vec![0.0f32; 1]; // need 3
+        let input = [1.0; 8];
+        let mut out = [0.0f32; 1]; // need 3
         max_pool1d_neon(&input, 8, 3, 2, &mut out);
     }
 
@@ -658,7 +658,7 @@ mod tests {
     #[test]
     fn avg_pool1d_basic() {
         let input: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         avg_pool1d_neon(&input, 8, 3, 2, &mut out);
         assert_approx_slice(&out, &[1.0, 3.0, 5.0]);
     }
@@ -666,7 +666,7 @@ mod tests {
     #[test]
     fn avg_pool1d_stride_1() {
         let input = vec![2.0, 4.0, 6.0, 8.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         avg_pool1d_neon(&input, 4, 3, 1, &mut out);
         assert_approx_slice(&out, &[4.0, 6.0]);
     }
@@ -674,7 +674,7 @@ mod tests {
     #[test]
     fn avg_pool1d_pool_equals_input() {
         let input = vec![2.0, 4.0, 6.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 3, 3, 1, &mut out);
         assert!(approx_eq(out[0], 4.0));
     }
@@ -682,15 +682,15 @@ mod tests {
     #[test]
     fn avg_pool1d_pool_larger_than_input() {
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 2, 5, 1, &mut out);
         assert_eq!(out[0], 0.0); // no windows
     }
 
     #[test]
     fn avg_pool1d_single_element() {
-        let input = vec![42.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [42.0];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 1, 1, 1, &mut out);
         assert!(approx_eq(out[0], 42.0));
     }
@@ -698,7 +698,7 @@ mod tests {
     #[test]
     fn avg_pool1d_stride_larger_than_pool() {
         let input: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         avg_pool1d_neon(&input, 12, 2, 4, &mut out);
         // windows: (0+1)/2=0.5, (4+5)/2=4.5, (8+9)/2=8.5
         assert_approx_slice(&out, &[0.5, 4.5, 8.5]);
@@ -707,15 +707,15 @@ mod tests {
     #[test]
     fn avg_pool1d_negative_values() {
         let input = vec![-4.0, -2.0, -6.0, -8.0];
-        let mut out = vec![0.0f32; 3]; // (4-2)/1+1=3
+        let mut out = [0.0f32; 3]; // (4-2)/1+1=3
         avg_pool1d_neon(&input, 4, 2, 1, &mut out);
         assert_approx_slice(&out, &[-3.0, -4.0, -7.0]);
     }
 
     #[test]
     fn avg_pool1d_all_same() {
-        let input = vec![5.0; 8];
-        let mut out = vec![0.0f32; 2];
+        let input = [5.0; 8];
+        let mut out = [0.0f32; 2];
         avg_pool1d_neon(&input, 8, 4, 3, &mut out);
         assert_approx_slice(&out, &[5.0, 5.0]);
     }
@@ -723,7 +723,7 @@ mod tests {
     #[test]
     fn avg_pool1d_kernel_4_exact_chunk() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         avg_pool1d_neon(&input, 8, 4, 4, &mut out);
         assert_approx_slice(&out, &[2.5, 6.5]);
     }
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn avg_pool1d_kernel_5_remainder() {
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 5, 5, 1, &mut out);
         assert!(approx_eq(out[0], 30.0));
     }
@@ -740,7 +740,7 @@ mod tests {
     fn avg_pool1d_large_input() {
         let n = 64;
         let input: Vec<f32> = (0..n).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         avg_pool1d_neon(&input, n, 4, 4, &mut out);
         for (i, v) in out.iter().enumerate() {
             let expected = (i * 4) as f32 + 1.5;
@@ -751,7 +751,7 @@ mod tests {
     #[test]
     fn avg_pool1d_input_len_less_than_slice() {
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let mut out = vec![0.0f32; 3]; // input_len=4, (4-2)/1+1=3
+        let mut out = [0.0f32; 3]; // input_len=4, (4-2)/1+1=3
         avg_pool1d_neon(&input, 4, 2, 1, &mut out);
         assert_approx_slice(&out, &[15.0, 25.0, 35.0]);
     }
@@ -759,24 +759,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "pool_size must be > 0")]
     fn avg_pool1d_zero_pool_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 1, 0, 1, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "stride must be > 0")]
     fn avg_pool1d_zero_stride_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 1, 1, 0, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn avg_pool1d_output_too_small_panics() {
-        let input = vec![1.0; 8];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0; 8];
+        let mut out = [0.0f32; 1];
         avg_pool1d_neon(&input, 8, 3, 2, &mut out);
     }
 
@@ -785,7 +785,7 @@ mod tests {
     #[test]
     fn global_avg_pool_multi_channel() {
         let input: Vec<f32> = (0..15).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         global_avg_pool_neon(&input, 3, 5, &mut out);
         assert_approx_slice(&out, &[2.0, 7.0, 12.0]);
     }
@@ -793,7 +793,7 @@ mod tests {
     #[test]
     fn global_avg_pool_single_channel() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 1, 8, &mut out);
         assert!(approx_eq(out[0], 4.5));
     }
@@ -801,7 +801,7 @@ mod tests {
     #[test]
     fn global_avg_pool_single_element_channels() {
         let input = vec![3.0, 7.0, 11.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         global_avg_pool_neon(&input, 3, 1, &mut out);
         assert_eq!(out, vec![3.0, 7.0, 11.0]);
     }
@@ -810,7 +810,7 @@ mod tests {
     fn global_avg_pool_large_spatial() {
         let spatial = 64;
         let input: Vec<f32> = (0..spatial).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 1, spatial, &mut out);
         let expected = (spatial - 1) as f32 / 2.0;
         assert!(approx_eq(out[0], expected));
@@ -819,7 +819,7 @@ mod tests {
     #[test]
     fn global_avg_pool_negative_values() {
         let input = vec![-2.0, -4.0, -6.0, -8.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 1, 4, &mut out);
         assert!(approx_eq(out[0], -5.0));
     }
@@ -827,15 +827,15 @@ mod tests {
     #[test]
     fn global_avg_pool_two_channels() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         global_avg_pool_neon(&input, 2, 4, &mut out);
         assert_approx_slice(&out, &[2.5, 25.0]);
     }
 
     #[test]
     fn global_avg_pool_all_zeros() {
-        let input = vec![0.0f32; 16];
-        let mut out = vec![1.0f32; 2];
+        let input = [0.0f32; 16];
+        let mut out = [1.0f32; 2];
         global_avg_pool_neon(&input, 2, 8, &mut out);
         assert_eq!(out, vec![0.0, 0.0]);
     }
@@ -843,7 +843,7 @@ mod tests {
     #[test]
     fn global_avg_pool_spatial_5_remainder() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 1, 5, &mut out);
         assert!(approx_eq(out[0], 3.0));
     }
@@ -851,16 +851,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "channels must be > 0")]
     fn global_avg_pool_zero_channels_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 0, 1, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "spatial_size must be > 0")]
     fn global_avg_pool_zero_spatial_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 1, 0, &mut out);
     }
 
@@ -868,15 +868,15 @@ mod tests {
     #[should_panic(expected = "input too short")]
     fn global_avg_pool_input_too_short_panics() {
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         global_avg_pool_neon(&input, 2, 4, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn global_avg_pool_output_too_small_panics() {
-        let input = vec![1.0; 8];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0; 8];
+        let mut out = [0.0f32; 1];
         global_avg_pool_neon(&input, 2, 4, &mut out);
     }
 
@@ -885,7 +885,7 @@ mod tests {
     #[test]
     fn global_max_pool_multi_channel() {
         let input: Vec<f32> = (0..15).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         global_max_pool_neon(&input, 3, 5, &mut out);
         assert_eq!(out, vec![4.0, 9.0, 14.0]);
     }
@@ -893,7 +893,7 @@ mod tests {
     #[test]
     fn global_max_pool_single_channel() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 8, &mut out);
         assert_eq!(out[0], 8.0);
     }
@@ -901,7 +901,7 @@ mod tests {
     #[test]
     fn global_max_pool_single_element_channels() {
         let input = vec![3.0, 7.0, 11.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         global_max_pool_neon(&input, 3, 1, &mut out);
         assert_eq!(out, vec![3.0, 7.0, 11.0]);
     }
@@ -909,15 +909,15 @@ mod tests {
     #[test]
     fn global_max_pool_negative_values() {
         let input = vec![-5.0, -3.0, -8.0, -1.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 4, &mut out);
         assert_eq!(out[0], -1.0);
     }
 
     #[test]
     fn global_max_pool_all_same() {
-        let input = vec![7.0; 8];
-        let mut out = vec![0.0f32; 2];
+        let input = [7.0; 8];
+        let mut out = [0.0f32; 2];
         global_max_pool_neon(&input, 2, 4, &mut out);
         assert_eq!(out, vec![7.0, 7.0]);
     }
@@ -925,7 +925,7 @@ mod tests {
     #[test]
     fn global_max_pool_with_inf() {
         let input = vec![1.0, f32::INFINITY, 3.0, 4.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 4, &mut out);
         assert_eq!(out[0], f32::INFINITY);
     }
@@ -934,7 +934,7 @@ mod tests {
     fn global_max_pool_large_spatial() {
         let spatial = 64;
         let input: Vec<f32> = (0..spatial).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, spatial, &mut out);
         assert_eq!(out[0], (spatial - 1) as f32);
     }
@@ -942,7 +942,7 @@ mod tests {
     #[test]
     fn global_max_pool_two_channels() {
         let input = vec![1.0, 9.0, 3.0, 4.0, 10.0, 2.0, 30.0, 5.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         global_max_pool_neon(&input, 2, 4, &mut out);
         assert_eq!(out, vec![9.0, 30.0]);
     }
@@ -950,15 +950,15 @@ mod tests {
     #[test]
     fn global_max_pool_spatial_5_remainder() {
         let input = vec![1.0, 5.0, 3.0, 4.0, 2.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 5, &mut out);
         assert_eq!(out[0], 5.0);
     }
 
     #[test]
     fn global_max_pool_all_neg_inf() {
-        let input = vec![f32::NEG_INFINITY; 4];
-        let mut out = vec![0.0f32; 1];
+        let input = [f32::NEG_INFINITY; 4];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 4, &mut out);
         assert_eq!(out[0], f32::NEG_INFINITY);
     }
@@ -966,16 +966,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "channels must be > 0")]
     fn global_max_pool_zero_channels_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 0, 1, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "spatial_size must be > 0")]
     fn global_max_pool_zero_spatial_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 1, 0, &mut out);
     }
 
@@ -983,15 +983,15 @@ mod tests {
     #[should_panic(expected = "input too short")]
     fn global_max_pool_input_too_short_panics() {
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         global_max_pool_neon(&input, 2, 4, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn global_max_pool_output_too_small_panics() {
-        let input = vec![1.0; 8];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0; 8];
+        let mut out = [0.0f32; 1];
         global_max_pool_neon(&input, 2, 4, &mut out);
     }
 
@@ -1000,7 +1000,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_halve() {
         let input = vec![1.0, 3.0, 5.0, 7.0, 9.0, 11.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         adaptive_avg_pool1d_neon(&input, 6, 3, &mut out);
         assert_approx_slice(&out, &[2.0, 6.0, 10.0]);
     }
@@ -1008,7 +1008,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_identity() {
         let input = vec![2.0, 4.0, 6.0, 8.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         adaptive_avg_pool1d_neon(&input, 4, 4, &mut out);
         assert_eq!(out, vec![2.0, 4.0, 6.0, 8.0]);
     }
@@ -1016,15 +1016,15 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_to_one() {
         let input = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         adaptive_avg_pool1d_neon(&input, 4, 1, &mut out);
         assert!(approx_eq(out[0], 25.0));
     }
 
     #[test]
     fn adaptive_avg_pool1d_single_input() {
-        let input = vec![99.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [99.0];
+        let mut out = [0.0f32; 1];
         adaptive_avg_pool1d_neon(&input, 1, 1, &mut out);
         assert!(approx_eq(out[0], 99.0));
     }
@@ -1032,7 +1032,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_6_to_2() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         adaptive_avg_pool1d_neon(&input, 6, 2, &mut out);
         // bins: [0..3)=avg(1,2,3)=2, [3..6)=avg(4,5,6)=5
         assert_approx_slice(&out, &[2.0, 5.0]);
@@ -1041,7 +1041,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_8_to_4() {
         let input: Vec<f32> = (1..=8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         adaptive_avg_pool1d_neon(&input, 8, 4, &mut out);
         // bins: [0,2)=1.5, [2,4)=3.5, [4,6)=5.5, [6,8)=7.5
         assert_approx_slice(&out, &[1.5, 3.5, 5.5, 7.5]);
@@ -1050,7 +1050,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_negative_values() {
         let input = vec![-4.0, -2.0, -6.0, -8.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         adaptive_avg_pool1d_neon(&input, 4, 2, &mut out);
         // bins: [-4,-2]/2=-3, [-6,-8]/2=-7
         assert_approx_slice(&out, &[-3.0, -7.0]);
@@ -1058,8 +1058,8 @@ mod tests {
 
     #[test]
     fn adaptive_avg_pool1d_all_same() {
-        let input = vec![5.0; 16];
-        let mut out = vec![0.0f32; 4];
+        let input = [5.0; 16];
+        let mut out = [0.0f32; 4];
         adaptive_avg_pool1d_neon(&input, 16, 4, &mut out);
         assert_approx_slice(&out, &[5.0, 5.0, 5.0, 5.0]);
     }
@@ -1068,7 +1068,7 @@ mod tests {
     fn adaptive_avg_pool1d_large_input() {
         let n = 64;
         let input: Vec<f32> = (0..n).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         adaptive_avg_pool1d_neon(&input, n, 4, &mut out);
         // Each bin of 16 elements
         for (i, v) in out.iter().enumerate() {
@@ -1081,7 +1081,7 @@ mod tests {
     #[test]
     fn adaptive_avg_pool1d_input_len_limits_slice() {
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         // input_len=4 → only first 4 elements used
         adaptive_avg_pool1d_neon(&input, 4, 2, &mut out);
         assert_approx_slice(&out, &[15.0, 35.0]);
@@ -1091,7 +1091,7 @@ mod tests {
     fn adaptive_avg_pool1d_uneven_bins() {
         // 7 elements → 3 bins: sizes 2, 2, 3 (PyTorch bin formula)
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         adaptive_avg_pool1d_neon(&input, 7, 3, &mut out);
         // bin0: [0..2)=avg(1,2)=1.5
         // bin1: [2..4)=avg(3,4)=3.5  (floor(2*7/3)=4)
@@ -1111,8 +1111,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "output_len must be > 0")]
     fn adaptive_avg_pool1d_zero_output_panics() {
-        let input = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0];
+        let mut out = [0.0f32; 1];
         adaptive_avg_pool1d_neon(&input, 1, 0, &mut out);
     }
 
@@ -1120,15 +1120,15 @@ mod tests {
     #[should_panic(expected = "output_len")]
     fn adaptive_avg_pool1d_output_exceeds_input_panics() {
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         adaptive_avg_pool1d_neon(&input, 2, 5, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn adaptive_avg_pool1d_output_too_small_panics() {
-        let input = vec![1.0; 8];
-        let mut out = vec![0.0f32; 1];
+        let input = [1.0; 8];
+        let mut out = [0.0f32; 1];
         adaptive_avg_pool1d_neon(&input, 8, 4, &mut out);
     }
 
@@ -1137,8 +1137,8 @@ mod tests {
     #[test]
     fn global_avg_matches_avg_pool_full_window() {
         let input: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut avg_out = vec![0.0f32; 1];
-        let mut global_out = vec![0.0f32; 1];
+        let mut avg_out = [0.0f32; 1];
+        let mut global_out = [0.0f32; 1];
         avg_pool1d_neon(&input, 8, 8, 1, &mut avg_out);
         global_avg_pool_neon(&input, 1, 8, &mut global_out);
         assert!(approx_eq(avg_out[0], global_out[0]));
@@ -1147,8 +1147,8 @@ mod tests {
     #[test]
     fn global_max_matches_max_pool_full_window() {
         let input = vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
-        let mut max_out = vec![0.0f32; 1];
-        let mut global_out = vec![0.0f32; 1];
+        let mut max_out = [0.0f32; 1];
+        let mut global_out = [0.0f32; 1];
         max_pool1d_neon(&input, 8, 8, 1, &mut max_out);
         global_max_pool_neon(&input, 1, 8, &mut global_out);
         assert_eq!(max_out[0], global_out[0]);
@@ -1157,7 +1157,7 @@ mod tests {
     #[test]
     fn adaptive_identity_matches_input() {
         let input = vec![5.0, 10.0, 15.0, 20.0, 25.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         adaptive_avg_pool1d_neon(&input, 5, 5, &mut out);
         assert_eq!(out, input);
     }
@@ -1165,8 +1165,8 @@ mod tests {
     #[test]
     fn adaptive_to_one_matches_global_avg() {
         let input: Vec<f32> = (1..=12).map(|x| x as f32).collect();
-        let mut adaptive_out = vec![0.0f32; 1];
-        let mut global_out = vec![0.0f32; 1];
+        let mut adaptive_out = [0.0f32; 1];
+        let mut global_out = [0.0f32; 1];
         adaptive_avg_pool1d_neon(&input, 12, 1, &mut adaptive_out);
         global_avg_pool_neon(&input, 1, 12, &mut global_out);
         assert!(approx_eq(adaptive_out[0], global_out[0]));
@@ -1176,7 +1176,7 @@ mod tests {
     fn max_pool_preserves_global_max() {
         let input = vec![3.0, 1.0, 9.0, 2.0, 7.0, 5.0];
         let global_max = input.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         max_pool1d_neon(&input, 6, 3, 3, &mut out);
         let pool_max = out.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         assert_eq!(pool_max, global_max);
@@ -1189,7 +1189,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let pool_size = 3;
         let stride = 3;
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         avg_pool1d_neon(&input, 6, pool_size, stride, &mut out);
         let total: f32 = out.iter().map(|v| v * pool_size as f32).sum();
         let expected: f32 = input.iter().sum();

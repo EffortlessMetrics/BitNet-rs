@@ -10,7 +10,7 @@ use uuid::Uuid;
 use super::CachingConfig;
 
 /// Batched inference request
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BatchedRequest {
     /// Request identifier
     pub id: String,
@@ -199,7 +199,8 @@ impl RequestBatcher {
 
             tokio::spawn(async move {
                 while let Some(batch) = batch_receiver.recv().await {
-                    let permit = processing_semaphore.acquire().await.unwrap();
+                    // Use acquire_owned() to get an OwnedSemaphorePermit that can be moved into the spawned task
+                    let permit = processing_semaphore.clone().acquire_owned().await.unwrap();
                     let statistics = statistics.clone();
 
                     tokio::spawn(async move {

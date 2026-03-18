@@ -718,7 +718,7 @@ mod tests {
     #[test]
     fn test_simd_gelu_basic() {
         let input = vec![0.0, 1.0, -1.0, 2.0, -2.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_gelu(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_gelu_fast(x), 1e-4, "gelu basic");
@@ -735,7 +735,7 @@ mod tests {
     #[test]
     fn test_simd_gelu_non_aligned() {
         let input: Vec<f32> = (0..13).map(|i| i as f32 * 0.1 - 0.6).collect();
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         simd_gelu(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_gelu_fast(x), 1e-4, "gelu non-aligned");
@@ -744,8 +744,8 @@ mod tests {
 
     #[test]
     fn test_simd_gelu_length_mismatch() {
-        let input = vec![1.0; 5];
-        let mut output = vec![0.0; 3];
+        let input = [1.0; 5];
+        let mut output = [0.0; 3];
         assert!(simd_gelu(&input, &mut output).is_err());
     }
 
@@ -770,7 +770,7 @@ mod tests {
     #[test]
     fn test_simd_gelu_extreme_values() {
         let input = vec![-100.0, -50.0, 50.0, 100.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_gelu(&input, &mut output).unwrap();
         assert!(output[0].abs() < 1.0);
         assert!(output[1].abs() < 1.0);
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn test_simd_gelu_tanh_basic() {
         let input = vec![0.0, 1.0, -1.0, 2.0, -2.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_gelu_tanh(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_gelu_tanh(x), 1e-3, "gelu_tanh basic");
@@ -799,7 +799,7 @@ mod tests {
     #[test]
     fn test_simd_gelu_tanh_non_aligned() {
         let input: Vec<f32> = (0..11).map(|i| i as f32 * 0.2 - 1.0).collect();
-        let mut output = vec![0.0; 11];
+        let mut output = [0.0; 11];
         simd_gelu_tanh(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_gelu_tanh(x), 1e-3, "gelu_tanh non-aligned");
@@ -808,8 +808,8 @@ mod tests {
 
     #[test]
     fn test_simd_gelu_tanh_length_mismatch() {
-        let input = vec![1.0; 4];
-        let mut output = vec![0.0; 7];
+        let input = [1.0; 4];
+        let mut output = [0.0; 7];
         assert!(simd_gelu_tanh(&input, &mut output).is_err());
     }
 
@@ -834,7 +834,7 @@ mod tests {
     #[test]
     fn test_simd_silu_basic() {
         let input = vec![0.0, 1.0, -1.0, 3.0, -3.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_silu(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_silu(x), 1e-4, "silu basic");
@@ -850,7 +850,7 @@ mod tests {
     #[test]
     fn test_simd_silu_non_aligned() {
         let input: Vec<f32> = (0..9).map(|i| i as f32 - 4.0).collect();
-        let mut output = vec![0.0; 9];
+        let mut output = [0.0; 9];
         simd_silu(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_silu(x), 1e-4, "silu non-aligned");
@@ -873,7 +873,7 @@ mod tests {
     #[test]
     fn test_simd_mish_basic() {
         let input = vec![0.0, 1.0, -1.0, 2.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_mish(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_mish(x), 0.15, "mish basic");
@@ -889,7 +889,7 @@ mod tests {
     #[test]
     fn test_simd_mish_non_aligned() {
         let input: Vec<f32> = (0..10).map(|i| i as f32 * 0.5 - 2.5).collect();
-        let mut output = vec![0.0; 10];
+        let mut output = [0.0; 10];
         simd_mish(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_mish(x), 0.15, "mish non-aligned");
@@ -912,7 +912,7 @@ mod tests {
     #[test]
     fn test_simd_softplus_basic() {
         let input = vec![0.0, 1.0, -1.0, 25.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softplus(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_softplus(x), 0.15, "softplus basic");
@@ -928,7 +928,7 @@ mod tests {
     #[test]
     fn test_simd_softplus_large_input_passthrough() {
         let input = vec![25.0, 30.0, 50.0, 100.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         simd_softplus(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], x, 0.2, "softplus large");
@@ -950,7 +950,7 @@ mod tests {
     #[test]
     fn test_simd_sigmoid_basic() {
         let input = vec![0.0, 1.0, -1.0, 5.0, -5.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_sigmoid(&input, &mut output).unwrap();
         for (i, &x) in input.iter().enumerate() {
             assert_close(output[i], reference_sigmoid(x), 1e-4, "sigmoid basic");
@@ -966,7 +966,7 @@ mod tests {
     #[test]
     fn test_simd_sigmoid_range_01() {
         let input: Vec<f32> = (0..100).map(|i| (i as f32 - 50.0) * 0.2).collect();
-        let mut output = vec![0.0; 100];
+        let mut output = [0.0; 100];
         simd_sigmoid(&input, &mut output).unwrap();
         for &o in &output {
             assert!((0.0..=1.0).contains(&o), "sigmoid out of [0,1]: {o}");
@@ -1076,7 +1076,7 @@ mod tests {
     fn test_simd_swiglu_basic() {
         let gate = vec![1.0, -1.0, 0.5, 2.0, 0.0];
         let up = vec![1.0, 1.0, 2.0, 0.5, 3.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         simd_swiglu(&gate, &up, &mut output).unwrap();
         for i in 0..gate.len() {
             let expected = reference_silu(gate[i]) * up[i];
@@ -1168,7 +1168,7 @@ mod tests {
     #[test]
     fn test_quantize_zero_point() {
         let params = QuantizationParams { scale: 0.1, zero_point: 10 };
-        let input = vec![0.0];
+        let input = [0.0];
         let q = quantize_f32_to_i8(&input, &params);
         assert_eq!(q[0], 10);
     }
@@ -1224,9 +1224,9 @@ mod tests {
     #[test]
     fn test_dispatch_gelu() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::Gelu).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_gelu(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch gelu");
@@ -1236,9 +1236,9 @@ mod tests {
     #[test]
     fn test_dispatch_gelu_tanh() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::GeluTanh).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_gelu_tanh(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch gelu_tanh");
@@ -1248,9 +1248,9 @@ mod tests {
     #[test]
     fn test_dispatch_silu() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::Silu).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_silu(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch silu");
@@ -1260,9 +1260,9 @@ mod tests {
     #[test]
     fn test_dispatch_mish() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::Mish).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_mish(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch mish");
@@ -1272,9 +1272,9 @@ mod tests {
     #[test]
     fn test_dispatch_softplus() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::Softplus).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_softplus(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch softplus");
@@ -1284,9 +1284,9 @@ mod tests {
     #[test]
     fn test_dispatch_sigmoid() {
         let input = vec![0.0, 1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         simd_activation_dispatch(&input, &mut output, SimdActivationType::Sigmoid).unwrap();
-        let mut expected = vec![0.0; 3];
+        let mut expected = [0.0; 3];
         simd_sigmoid(&input, &mut expected).unwrap();
         for i in 0..3 {
             assert_close(output[i], expected[i], 1e-6, "dispatch sigmoid");
@@ -1305,7 +1305,7 @@ mod tests {
         ] {
             let input = vec![0.5, -0.5, 1.0, -1.0];
             let mut via_dispatch = input.clone();
-            let mut via_oop = vec![0.0; 4];
+            let mut via_oop = [0.0; 4];
             simd_activation_dispatch(&input, &mut via_oop, ty).unwrap();
             simd_activation_dispatch_inplace(&mut via_dispatch, ty).unwrap();
             for i in 0..4 {
@@ -1333,7 +1333,7 @@ mod tests {
 
     #[test]
     fn test_batched_dimension_mismatch() {
-        let mut data = vec![0.0; 10];
+        let mut data = [0.0; 10];
         assert!(simd_activation_batched(&mut data, 3, 4, SimdActivationType::Gelu).is_err());
     }
 
@@ -1396,21 +1396,21 @@ mod tests {
     #[test]
     fn test_gelu_symmetry_approx() {
         // GeLU(0) = 0 should hold
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         simd_gelu(&[0.0], &mut out).unwrap();
         assert_close(out[0], 0.0, 1e-6, "gelu(0)==0");
     }
 
     #[test]
     fn test_silu_zero() {
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         simd_silu(&[0.0], &mut out).unwrap();
         assert_close(out[0], 0.0, 1e-6, "silu(0)==0");
     }
 
     #[test]
     fn test_mish_zero() {
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         simd_mish(&[0.0], &mut out).unwrap();
         assert_close(out[0], 0.0, 1e-6, "mish(0)==0");
     }
@@ -1488,8 +1488,8 @@ mod tests {
 
     #[test]
     fn test_exact_8_elements() {
-        let input = vec![1.0; 8];
-        let mut output = vec![0.0; 8];
+        let input = [1.0; 8];
+        let mut output = [0.0; 8];
         simd_gelu(&input, &mut output).unwrap();
         for &o in &output {
             assert!(o > 0.0);
@@ -1498,8 +1498,8 @@ mod tests {
 
     #[test]
     fn test_exact_16_elements() {
-        let input = vec![-0.5; 16];
-        let mut output = vec![0.0; 16];
+        let input = [-0.5; 16];
+        let mut output = [0.0; 16];
         simd_silu(&input, &mut output).unwrap();
         for &o in &output {
             assert!(o < 0.0);
@@ -1508,7 +1508,7 @@ mod tests {
 
     #[test]
     fn test_exact_1_element() {
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         simd_sigmoid(&[0.0], &mut out).unwrap();
         assert_close(out[0], 0.5, 1e-4, "single sigmoid");
     }
@@ -1518,7 +1518,7 @@ mod tests {
     #[test]
     fn test_sigmoid_inf() {
         let input = vec![f32::INFINITY, f32::NEG_INFINITY];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         simd_sigmoid(&input, &mut output).unwrap();
         assert!((output[0] - 1.0).abs() < 0.01 || output[0].is_finite());
         assert!(output[1].abs() < 0.01 || output[1].is_finite());
@@ -1527,7 +1527,7 @@ mod tests {
     #[test]
     fn test_silu_nan_produces_nan() {
         let input = vec![f32::NAN];
-        let mut output = vec![0.0];
+        let mut output = [0.0];
         simd_silu(&input, &mut output).unwrap();
         assert!(output[0].is_nan());
     }
@@ -1536,9 +1536,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_zeros() {
-        let gate = vec![0.0; 16];
-        let up = vec![1.0; 16];
-        let mut output = vec![0.0; 16];
+        let gate = [0.0; 16];
+        let up = [1.0; 16];
+        let mut output = [0.0; 16];
         simd_swiglu(&gate, &up, &mut output).unwrap();
         for &o in &output {
             assert_close(o, 0.0, 1e-6, "swiglu gate=0");
@@ -1547,9 +1547,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_up_zeros() {
-        let gate = vec![1.0; 16];
-        let up = vec![0.0; 16];
-        let mut output = vec![0.0; 16];
+        let gate = [1.0; 16];
+        let up = [0.0; 16];
+        let mut output = [0.0; 16];
         simd_swiglu(&gate, &up, &mut output).unwrap();
         for &o in &output {
             assert_close(o, 0.0, 1e-6, "swiglu up=0");

@@ -665,14 +665,14 @@ mod tests {
     #[test]
     fn test_cpu_binary_mismatched_lengths() {
         let a = vec![1.0, 2.0, 3.0];
-        let b = vec![1.0];
+        let b = [1.0];
         assert!(elementwise_cpu_fallback(&a, &b, ElementwiseOp::Add).is_err());
     }
 
     #[test]
     fn test_cpu_binary_rejects_unary_op() {
-        let a = vec![1.0];
-        let b = vec![1.0];
+        let a = [1.0];
+        let b = [1.0];
         assert!(elementwise_cpu_fallback(&a, &b, ElementwiseOp::Relu).is_err());
     }
 
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn test_fused_mismatched_bias_length() {
         let input = vec![1.0, 2.0, 3.0];
-        let bias = vec![0.5];
+        let bias = [0.5];
         let scale = vec![2.0, 2.0, 2.0];
         assert!(fused_elementwise_cpu(&input, &bias, &scale).is_err());
     }
@@ -716,7 +716,7 @@ mod tests {
     fn test_fused_mismatched_scale_length() {
         let input = vec![1.0, 2.0, 3.0];
         let bias = vec![0.5, 0.5, 0.5];
-        let scale = vec![2.0];
+        let scale = [2.0];
         assert!(fused_elementwise_cpu(&input, &bias, &scale).is_err());
     }
 
@@ -881,7 +881,7 @@ mod tests {
     #[test]
     fn test_launch_unary_sigmoid() {
         let cfg = ElementwiseConfig::new(1, ElementwiseOp::Sigmoid).unwrap();
-        let input = vec![0.0];
+        let input = [0.0];
         let out = launch_elementwise_unary(&input, &cfg).unwrap();
         assert!((out[0] - 0.5).abs() < 1e-6);
     }
@@ -892,8 +892,8 @@ mod tests {
 
     #[test]
     fn test_single_element_all_binary_ops() {
-        let a = vec![4.0];
-        let b = vec![2.0];
+        let a = [4.0];
+        let b = [2.0];
         for (op, expected) in [
             (ElementwiseOp::Add, 6.0),
             (ElementwiseOp::Sub, 2.0),

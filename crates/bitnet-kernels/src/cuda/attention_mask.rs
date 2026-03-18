@@ -1308,7 +1308,7 @@ mod tests {
     #[test]
     fn test_apply_mask_to_scores_length_mismatch() {
         let mut scores = vec![1.0, 2.0];
-        let mask = vec![1.0];
+        let mask = [1.0];
         let result = apply_mask_to_scores(&mut scores, &mask);
         assert!(result.is_err());
     }
@@ -1326,7 +1326,7 @@ mod tests {
 
     #[test]
     fn test_apply_mask_additive_length_mismatch() {
-        let mut scores = vec![1.0];
+        let mut scores = [1.0];
         let mask = vec![1.0, 0.0];
         let result = apply_mask_additive(&mut scores, &mask);
         assert!(result.is_err());
@@ -1360,7 +1360,7 @@ mod tests {
     #[test]
     fn test_apply_mask_multiplicative_length_mismatch() {
         let mut scores = vec![1.0, 2.0, 3.0];
-        let mask = vec![1.0];
+        let mask = [1.0];
         let result = apply_mask_multiplicative(&mut scores, &mask);
         assert!(result.is_err());
     }
@@ -1473,7 +1473,7 @@ mod tests {
 
     #[test]
     fn test_masked_scores_neg_inf_value() {
-        let mut scores = vec![1.0; 4];
+        let mut scores = [1.0; 4];
         let mask = vec![1.0, 0.0, 1.0, 0.0];
         apply_mask_to_scores(&mut scores, &mask).unwrap();
         assert_eq!(scores[1], NEG_INF);

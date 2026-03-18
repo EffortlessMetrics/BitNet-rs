@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_zero_input_symmetric() {
-        let input = vec![0.0_f32; 64];
+        let input = [0.0_f32; 64];
         let cfg = sym_config(64);
         let blocks = quantize_f32_to_i8(&input, &cfg);
         let recon = dequantize_i8_to_f32(&blocks);
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_zero_input_asymmetric() {
-        let input = vec![0.0_f32; 32];
+        let input = [0.0_f32; 32];
         let cfg = asym_config(32);
         let blocks = quantize_f32_to_i8(&input, &cfg);
         let recon = dequantize_i8_to_f32(&blocks);
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_constant_input() {
-        let input = vec![42.0_f32; 64];
+        let input = [42.0_f32; 64];
         let cfg = sym_config(64);
         let blocks = quantize_f32_to_i8(&input, &cfg);
         // All quantized values should be identical.
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_scale_zero_range() {
-        let block = vec![5.0_f32; 10];
+        let block = [5.0_f32; 10];
         let (scale, _) = find_scale_and_zero(&block, true);
         // absmax = 5, scale = 5/127
         assert!((scale - 5.0 / 127.0).abs() < 1e-6);
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_per_channel_scales_differ() {
         // Two channels with very different ranges.
-        let mut tensor = vec![0.0_f32; 128];
+        let mut tensor = [0.0_f32; 128];
         for i in 0..64 {
             tensor[i] = i as f32; // range [0, 63]
         }
@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_extreme_large_values() {
-        let input = vec![1e6_f32; 32];
+        let input = [1e6_f32; 32];
         let cfg = sym_config(32);
         let blocks = quantize_f32_to_i8(&input, &cfg);
         let recon = dequantize_i8_to_f32(&blocks);
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_round_trip_error_zero_input() {
-        let input = vec![0.0_f32; 64];
+        let input = [0.0_f32; 64];
         let cfg = sym_config(64);
         assert_eq!(round_trip_error(&input, &cfg), 0.0);
     }
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn test_power_of_two_exact() {
         // 0.5 should round-trip exactly when absmax = 0.5 (scale = 0.5/127).
-        let input = vec![0.5_f32; 32];
+        let input = [0.5_f32; 32];
         let cfg = sym_config(32);
         let blocks = quantize_f32_to_i8(&input, &cfg);
         // All elements have value 0.5, so q = 0.5 / (0.5/127) = 127

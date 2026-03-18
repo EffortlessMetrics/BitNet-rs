@@ -88,10 +88,10 @@ mod tests {
     #[test]
     fn qk256_gemv_returns_err() {
         let cfg = Qk256GemvConfig::default();
-        let weights = vec![0u8; 64];
-        let scales = vec![1.0f32; 1];
-        let input = vec![1.0f32; 256];
-        let mut output = vec![0.0f32; 1];
+        let weights = [0u8; 64];
+        let scales = [1.0f32; 1];
+        let input = [1.0f32; 256];
+        let mut output = [0.0f32; 1];
         assert!(qk256_gemv_hip(&weights, &scales, &input, &mut output, 1, 1, 256, &cfg).is_err());
     }
 

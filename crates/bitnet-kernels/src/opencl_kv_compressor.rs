@@ -871,7 +871,7 @@ mod tests {
     #[test]
     fn int8_roundtrip_zeros() {
         let quantizer = KvQuantizer::new(QuantFormat::Int8);
-        let data = vec![0.0f32; 32];
+        let data = [0.0f32; 32];
         let (q, scales) = quantizer.quantize_tensor(&data, 2, 4, 4);
         let deq = quantizer.dequantize_tensor(&q, &scales, 2, 4, 4);
         assert_eq!(deq, data);
@@ -954,7 +954,7 @@ mod tests {
     #[test]
     fn int4_roundtrip_zeros() {
         let quantizer = KvQuantizer::new(QuantFormat::Int4);
-        let data = vec![0.0f32; 32];
+        let data = [0.0f32; 32];
         let (q, scales) = quantizer.quantize_tensor(&data, 2, 4, 4);
         let deq = quantizer.dequantize_tensor(&q, &scales, 2, 4, 4);
         assert_eq!(deq, data);
@@ -979,7 +979,7 @@ mod tests {
     fn int4_packed_byte_count() {
         let quantizer = KvQuantizer::new(QuantFormat::Int4);
         // 16 elements → 8 packed bytes per head, 2 heads
-        let data = vec![1.0f32; 32];
+        let data = [1.0f32; 32];
         let (q, _) = quantizer.quantize_tensor(&data, 2, 4, 4);
         assert_eq!(q.len(), 2 * 8, "INT4 packed length mismatch");
     }

@@ -370,13 +370,13 @@ mod tests {
     #[test]
     fn test_batch_norm_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
-        let mean = vec![0.0; 8];
-        let variance = vec![1.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
+        let mean = [0.0; 8];
+        let variance = [1.0; 8];
         let expected = scalar_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS, &mut output) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -390,7 +390,7 @@ mod tests {
         let variance = vec![0.5, 1.0, 2.0, 0.1, 4.0, 0.3, 1.5, 0.8];
         let expected = scalar_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS, &mut output) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -399,26 +399,26 @@ mod tests {
     fn test_batch_norm_non_aligned() {
         // 13 elements → 3 NEON chunks + 1 scalar remainder.
         let input: Vec<f32> = (0..13).map(|i| i as f32 * 0.5).collect();
-        let gamma = vec![1.0; 13];
-        let beta = vec![0.0; 13];
+        let gamma = [1.0; 13];
+        let beta = [0.0; 13];
         let mean: Vec<f32> = (0..13).map(|i| i as f32 * 0.3).collect();
-        let variance = vec![2.0; 13];
+        let variance = [2.0; 13];
         let expected = scalar_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS);
 
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         unsafe { neon_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS, &mut output) };
         assert_approx_eq(&output, &expected, TOL);
     }
 
     #[test]
     fn test_batch_norm_zero_variance() {
-        let input = vec![5.0; 8];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
-        let mean = vec![5.0; 8];
-        let variance = vec![0.0; 8];
+        let input = [5.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
+        let mean = [5.0; 8];
+        let variance = [0.0; 8];
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS, &mut output) };
 
         // (5 - 5) / sqrt(0 + eps) = 0 → output ≈ beta = 0.
@@ -437,7 +437,7 @@ mod tests {
         let mean = vec![1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
         let variance = vec![0.5, 1.0, 2.0, 0.1, 4.0, 0.3, 1.5, 0.8, 1.0];
 
-        let mut out_separate = vec![0.0; 9];
+        let mut out_separate = [0.0; 9];
         unsafe { neon_batch_norm(&input, &gamma, &beta, &mean, &variance, EPS, &mut out_separate) };
 
         let mut data = input.clone();
@@ -457,7 +457,7 @@ mod tests {
         let beta = vec![0.0, 0.0];
         let expected = scalar_instance_norm(&input, channels, h, w, &gamma, &beta, EPS);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_instance_norm(&input, channels, h, w, &gamma, &beta, EPS, &mut output) };
         assert_approx_eq(&output, &expected, TOL);
     }

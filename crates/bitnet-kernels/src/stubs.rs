@@ -121,8 +121,8 @@ mod tests {
     #[test]
     fn test_neon_stub_dequantize_qk256_returns_error() {
         let kernel = NeonKernel;
-        let quantized = vec![0i8; 64];
-        let scales = vec![1.0f32; 1];
+        let quantized = [0i8; 64];
+        let scales = [1.0f32; 1];
         assert!(kernel.dequantize_qk256(&quantized, &scales, 256).is_err());
         assert!(kernel.dequantize_qk256_scalar(&quantized, &scales, 256).is_err());
     }

@@ -1769,27 +1769,27 @@ mod tests {
     #[test]
     fn test_gemm_buffer_too_small_a() {
         let cfg = TensorCoreGemmConfig::for_shape(16, 16, 16).unwrap();
-        let a = vec![0.0f32; 10]; // too small
-        let b = vec![0.0f32; 256];
-        let mut out = vec![0.0f32; 256];
+        let a = [0.0f32; 10]; // too small
+        let b = [0.0f32; 256];
+        let mut out = [0.0f32; 256];
         assert!(tensor_core_gemm_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_gemm_buffer_too_small_b() {
         let cfg = TensorCoreGemmConfig::for_shape(16, 16, 16).unwrap();
-        let a = vec![0.0f32; 256];
-        let b = vec![0.0f32; 10]; // too small
-        let mut out = vec![0.0f32; 256];
+        let a = [0.0f32; 256];
+        let b = [0.0f32; 10]; // too small
+        let mut out = [0.0f32; 256];
         assert!(tensor_core_gemm_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_gemm_buffer_too_small_out() {
         let cfg = TensorCoreGemmConfig::for_shape(16, 16, 16).unwrap();
-        let a = vec![0.0f32; 256];
-        let b = vec![0.0f32; 256];
-        let mut out = vec![0.0f32; 10]; // too small
+        let a = [0.0f32; 256];
+        let b = [0.0f32; 256];
+        let mut out = [0.0f32; 10]; // too small
         assert!(tensor_core_gemm_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
@@ -1867,9 +1867,9 @@ mod tests {
     #[test]
     fn test_f16_gemm_buffer_too_small() {
         let cfg = TensorCoreGemmConfig::for_shape(16, 16, 16).unwrap();
-        let a = vec![0u16; 10];
-        let b = vec![0u16; 256];
-        let mut out = vec![0.0f32; 256];
+        let a = [0u16; 10];
+        let b = [0u16; 256];
+        let mut out = [0.0f32; 256];
         assert!(tensor_core_gemm_f16_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
@@ -1945,9 +1945,9 @@ mod tests {
     #[test]
     fn test_mixed_input_gemm_buffer_too_small() {
         let cfg = TensorCoreGemmConfig::for_shape(4, 4, 4).unwrap();
-        let act = vec![0u16; 4]; // too small
-        let wt = vec![0i8; 16];
-        let mut out = vec![0.0f32; 16];
+        let act = [0u16; 4]; // too small
+        let wt = [0i8; 16];
+        let mut out = [0.0f32; 16];
         assert!(mixed_input_gemm_cpu(&act, &wt, &mut out, &cfg).is_err());
     }
 

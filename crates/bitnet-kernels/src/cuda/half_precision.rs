@@ -985,7 +985,7 @@ mod tests {
 
     #[test]
     fn test_f16_roundtrip_many_values() {
-        let values = [0.1, 0.25, 0.75, 1.5, 3.14, 42.0, 255.0, 1024.0, 65504.0];
+        let values = [0.1, 0.25, 0.75, 1.5, 2.5, 42.0, 255.0, 1024.0, 65504.0];
         for &v in &values {
             let bits = f32_to_f16_bits(v);
             let back = f16_bits_to_f32(bits);
@@ -1059,7 +1059,7 @@ mod tests {
 
     #[test]
     fn test_bf16_roundtrip_many() {
-        let values = [0.1, 0.5, 1.5, 3.14, 42.0, 1024.0, 65504.0];
+        let values = [0.1, 0.5, 1.5, 2.5, 42.0, 1024.0, 65504.0];
         for &v in &values {
             let bits = f32_to_bf16_bits(v);
             let back = bf16_bits_to_f32(bits);
@@ -1073,7 +1073,7 @@ mod tests {
     #[test]
     fn test_f32_to_f16_batch_basic() {
         let input = [1.0f32, 2.0, 0.5, -1.0];
-        let mut output = vec![0u16; 4];
+        let mut output = [0u16; 4];
         f32_to_f16_batch(&input, &mut output).unwrap();
         for (i, &v) in input.iter().enumerate() {
             let back = f16_bits_to_f32(output[i]);
@@ -1085,7 +1085,7 @@ mod tests {
     fn test_f16_to_f32_batch_basic() {
         let f16_vals: Vec<u16> =
             [1.0f32, 2.0, 0.5, -1.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         f16_to_f32_batch(&f16_vals, &mut output).unwrap();
         assert_eq!(output, [1.0, 2.0, 0.5, -1.0]);
     }
@@ -1093,7 +1093,7 @@ mod tests {
     #[test]
     fn test_f32_to_bf16_batch_basic() {
         let input = [1.0f32, -1.0, 0.0];
-        let mut output = vec![0u16; 3];
+        let mut output = [0u16; 3];
         f32_to_bf16_batch(&input, &mut output).unwrap();
         for (i, &v) in input.iter().enumerate() {
             let back = bf16_bits_to_f32(output[i]);
@@ -1105,7 +1105,7 @@ mod tests {
     fn test_bf16_to_f32_batch_basic() {
         let bf16_vals: Vec<u16> =
             [1.0f32, -1.0, 0.0].iter().map(|&v| f32_to_bf16_bits(v)).collect();
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         bf16_to_f32_batch(&bf16_vals, &mut output).unwrap();
         assert_eq!(output, [1.0, -1.0, 0.0]);
     }
@@ -1113,28 +1113,28 @@ mod tests {
     #[test]
     fn test_batch_length_mismatch_f16() {
         let input = [1.0f32];
-        let mut output = vec![0u16; 2];
+        let mut output = [0u16; 2];
         assert!(f32_to_f16_batch(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_batch_length_mismatch_bf16() {
         let input = [1.0f32, 2.0];
-        let mut output = vec![0u16; 1];
+        let mut output = [0u16; 1];
         assert!(f32_to_bf16_batch(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_f16_to_f32_batch_length_mismatch() {
-        let input = vec![0u16; 3];
-        let mut output = vec![0.0f32; 2];
+        let input = [0u16; 3];
+        let mut output = [0.0f32; 2];
         assert!(f16_to_f32_batch(&input, &mut output).is_err());
     }
 
     #[test]
     fn test_bf16_to_f32_batch_length_mismatch() {
-        let input = vec![0u16; 1];
-        let mut output = vec![0.0f32; 5];
+        let input = [0u16; 1];
+        let mut output = [0.0f32; 5];
         assert!(bf16_to_f32_batch(&input, &mut output).is_err());
     }
 
@@ -1144,7 +1144,7 @@ mod tests {
     fn test_f16_add_basic() {
         let a: Vec<u16> = [1.0f32, 2.0, 3.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let b: Vec<u16> = [4.0f32, 5.0, 6.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 3];
+        let mut out = [0u16; 3];
         f16_add(&a, &b, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [5.0, 7.0, 9.0]);
@@ -1152,9 +1152,9 @@ mod tests {
 
     #[test]
     fn test_f16_add_length_mismatch() {
-        let a = vec![0u16; 3];
-        let b = vec![0u16; 2];
-        let mut out = vec![0u16; 3];
+        let a = [0u16; 3];
+        let b = [0u16; 2];
+        let mut out = [0u16; 3];
         assert!(f16_add(&a, &b, &mut out).is_err());
     }
 
@@ -1162,7 +1162,7 @@ mod tests {
     fn test_f16_add_with_negatives() {
         let a: Vec<u16> = [1.0, -2.0f32].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let b: Vec<u16> = [-1.0, 2.0f32].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 2];
+        let mut out = [0u16; 2];
         f16_add(&a, &b, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [0.0, 0.0]);
@@ -1171,7 +1171,7 @@ mod tests {
     #[test]
     fn test_f16_scale_basic() {
         let input: Vec<u16> = [1.0f32, 2.0, 4.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 3];
+        let mut out = [0u16; 3];
         f16_scale(&input, 0.5, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [0.5, 1.0, 2.0]);
@@ -1180,7 +1180,7 @@ mod tests {
     #[test]
     fn test_f16_scale_zero() {
         let input: Vec<u16> = [1.0f32, 2.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 2];
+        let mut out = [0u16; 2];
         f16_scale(&input, 0.0, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [0.0, 0.0]);
@@ -1188,8 +1188,8 @@ mod tests {
 
     #[test]
     fn test_f16_scale_length_mismatch() {
-        let input = vec![0u16; 2];
-        let mut out = vec![0u16; 3];
+        let input = [0u16; 2];
+        let mut out = [0u16; 3];
         assert!(f16_scale(&input, 1.0, &mut out).is_err());
     }
 
@@ -1199,7 +1199,7 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 3.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let b: Vec<u16> = [2.0f32, 4.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let c: Vec<u16> = [10.0f32, 20.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 2];
+        let mut out = [0u16; 2];
         f16_fma(&a, &b, &c, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [12.0, 32.0]);
@@ -1211,7 +1211,7 @@ mod tests {
         let a: Vec<u16> = [3.5f32, -2.0].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let ones: Vec<u16> = [1.0f32; 2].iter().map(|&v| f32_to_f16_bits(v)).collect();
         let zeros: Vec<u16> = [0.0f32; 2].iter().map(|&v| f32_to_f16_bits(v)).collect();
-        let mut out = vec![0u16; 2];
+        let mut out = [0u16; 2];
         f16_fma(&a, &ones, &zeros, &mut out).unwrap();
         let result: Vec<f32> = out.iter().map(|&bits| f16_bits_to_f32(bits)).collect();
         assert_eq!(result, [3.5, -2.0]);
@@ -1219,10 +1219,10 @@ mod tests {
 
     #[test]
     fn test_f16_fma_length_mismatch() {
-        let a = vec![0u16; 2];
-        let b = vec![0u16; 3];
-        let c = vec![0u16; 2];
-        let mut out = vec![0u16; 2];
+        let a = [0u16; 2];
+        let b = [0u16; 3];
+        let c = [0u16; 2];
+        let mut out = [0u16; 2];
         assert!(f16_fma(&a, &b, &c, &mut out).is_err());
     }
 
@@ -1247,8 +1247,8 @@ mod tests {
 
     #[test]
     fn test_mixed_precision_dot_length_mismatch() {
-        let a = vec![0u16; 3];
-        let b = vec![0u16; 2];
+        let a = [0u16; 3];
+        let b = [0u16; 2];
         assert!(mixed_precision_dot(&a, &b).is_err());
     }
 
@@ -1284,15 +1284,15 @@ mod tests {
 
     #[test]
     fn test_mixed_precision_matvec_size_mismatch_matrix() {
-        let mat = vec![0u16; 5]; // Not 2×3 = 6
-        let vec_data = vec![0u16; 3];
+        let mat = [0u16; 5]; // Not 2×3 = 6
+        let vec_data = [0u16; 3];
         assert!(mixed_precision_matvec(&mat, &vec_data, 2, 3).is_err());
     }
 
     #[test]
     fn test_mixed_precision_matvec_size_mismatch_vector() {
-        let mat = vec![0u16; 6]; // 2×3
-        let vec_data = vec![0u16; 2]; // Should be 3
+        let mat = [0u16; 6]; // 2×3
+        let vec_data = [0u16; 2]; // Should be 3
         assert!(mixed_precision_matvec(&mat, &vec_data, 2, 3).is_err());
     }
 
@@ -1427,7 +1427,7 @@ mod tests {
 
     #[test]
     fn test_f16_approx_eq_exact() {
-        let a = f32_to_f16_bits(3.14);
+        let a = f32_to_f16_bits(1.5);
         assert!(f16_approx_eq(a, a, 0));
     }
 

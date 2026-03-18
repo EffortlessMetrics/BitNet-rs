@@ -496,7 +496,7 @@ mod tests {
         let gamma = ones(5);
         let beta = zeros(5);
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -512,7 +512,7 @@ mod tests {
         let gamma = ones(4);
         let beta = zeros(4);
         let expected = scalar_layer_norm(&input, &gamma, &beta, eps);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, eps, &mut output) };
         assert_approx(&output, &expected, 1e-3);
     }
@@ -524,7 +524,7 @@ mod tests {
         let gamma = ones(4);
         let beta = zeros(4);
         let expected = scalar_layer_norm(&input, &gamma, &beta, eps);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, eps, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -536,7 +536,7 @@ mod tests {
         let gamma = ones(4);
         let beta = zeros(4);
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, 1e-3);
     }
@@ -547,7 +547,7 @@ mod tests {
         let gamma = ones(8);
         let beta = zeros(8);
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, 1e-3);
     }
@@ -599,7 +599,7 @@ mod tests {
         let mean_sq = input.iter().map(|x| x * x).sum::<f32>() / 4.0;
         let rms = (mean_sq + EPS).sqrt();
         let expected: Vec<f32> = input.iter().map(|&x| x / rms).collect();
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut output) };
         assert_close(&output, &expected, TOL);
     }
@@ -610,8 +610,8 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let gamma = ones(8);
         let beta = zeros(8);
-        let mut ln_out = vec![0.0; 8];
-        let mut rms_out = vec![0.0; 8];
+        let mut ln_out = [0.0; 8];
+        let mut rms_out = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut ln_out) };
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut rms_out) };
         // They should not be identical.
@@ -624,7 +624,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let gamma = vec![0.5, 1.0, 1.5, 2.0, 0.1];
         let expected = scalar_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -634,7 +634,7 @@ mod tests {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let gamma = ones(4);
         let expected = scalar_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -680,7 +680,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let gamma = vec![0.5, 1.0, 1.5, 2.0, 0.1];
         let beta = vec![0.1, -0.1, 0.0, 0.5, -0.5];
-        let mut out_of_place = vec![0.0; 5];
+        let mut out_of_place = [0.0; 5];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut out_of_place) };
         let mut inplace = input.clone();
         unsafe { neon_layer_norm_inplace(&mut inplace, &gamma, &beta, EPS) };
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn mean_var_uniform() {
-        let data = vec![5.0; 16];
+        let data = [5.0; 16];
         let (mean, var) = unsafe { neon_compute_mean_var(&data) };
         assert!((mean - 5.0).abs() < TOL);
         assert!(var.abs() < TOL);
@@ -772,10 +772,10 @@ mod tests {
     #[test]
     fn layernorm_negative_gamma() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![-1.0; 4];
+        let gamma = [-1.0; 4];
         let beta = zeros(4);
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -784,9 +784,9 @@ mod tests {
     fn layernorm_large_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let gamma = ones(4);
-        let beta = vec![100.0; 4];
+        let beta = [100.0; 4];
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -795,8 +795,8 @@ mod tests {
     fn layernorm_zero_gamma() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let gamma = zeros(4);
-        let beta = vec![5.0; 4];
-        let mut output = vec![0.0; 4];
+        let beta = [5.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         // gamma=0 → output = beta.
         assert_close(&output, &beta, TOL);
@@ -817,7 +817,7 @@ mod tests {
     fn rmsnorm_zero_gamma() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let gamma = zeros(4);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut output) };
         for &v in &output {
             assert!(v.abs() < TOL, "gamma=0 should yield 0, got {v}");
@@ -862,7 +862,7 @@ mod tests {
         // With gamma=1 the sign of output should match sign of input.
         let input = vec![-5.0, -1.0, 0.0, 1.0, 5.0, -3.0, 3.0, 0.0];
         let gamma = ones(8);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_rms_norm_f32(&input, &gamma, EPS, &mut output) };
         for (i, (&inp, &out)) in input.iter().zip(output.iter()).enumerate() {
             if inp.abs() > TOL {
@@ -1015,7 +1015,7 @@ mod tests {
         let gamma = ones(16);
         let beta = zeros(16);
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -1080,7 +1080,7 @@ mod tests {
         let gamma = vec![1.0, 1.0];
         let beta = vec![0.0, 0.0];
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }
@@ -1091,7 +1091,7 @@ mod tests {
         let gamma = vec![2.0, 2.0, 2.0];
         let beta = vec![0.5, 0.5, 0.5];
         let expected = scalar_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, EPS, &mut output) };
         assert_approx(&output, &expected, TOL);
     }

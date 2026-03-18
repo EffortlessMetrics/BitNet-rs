@@ -665,7 +665,7 @@ mod tests {
     #[test]
     fn test_cpu_position_short_pos_table() {
         let pos_cfg = PositionEmbeddingConfig::new(4, 3, 2).unwrap();
-        let mut emb = vec![0.0; 6];
+        let mut emb = [0.0; 6];
         let pos_table = vec![0.1, 0.2, 0.3]; // only 1 row
         assert!(embedding_with_position_cpu(&mut emb, &pos_table, &pos_cfg).is_err());
     }
@@ -707,7 +707,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu"]
     fn test_cuda_embedding_lookup_launch() {
         let table = vec![0.0_f32; 32000 * 768];
-        let ids = vec![0_u32; 128];
+        let ids = [0_u32; 128];
         let mut output = vec![0.0_f32; 128 * 768];
         let cfg = EmbeddingKernelConfig::new(32000, 768, 128).unwrap();
         let result = launch_embedding_lookup(&table, &ids, &mut output, &cfg);

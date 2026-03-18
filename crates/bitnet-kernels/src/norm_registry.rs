@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn test_layer_norm() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         layer_norm(&mut data, &weight, None, 1e-5);
         // Mean = 2.5, after norm: close to [-1.34, -0.45, 0.45, 1.34]
         assert!(data[0] < 0.0);
@@ -143,8 +143,8 @@ mod tests {
     #[test]
     fn test_layer_norm_with_bias() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0; 4];
-        let bias = vec![10.0; 4];
+        let weight = [1.0; 4];
+        let bias = [10.0; 4];
         layer_norm(&mut data, &weight, Some(&bias), 1e-5);
         // All shifted by +10
         assert!(data.iter().all(|&v| v > 5.0));
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_rms_norm() {
         let mut data = vec![1.0, 1.0, 1.0, 1.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         rms_norm(&mut data, &weight, 1e-5);
         // RMS of [1,1,1,1] = 1, so output ≈ [1,1,1,1]
         for &v in &data {
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn test_rms_norm_varied() {
         let mut data = vec![2.0, 0.0, 2.0, 0.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         rms_norm(&mut data, &weight, 1e-5);
         // RMS = sqrt((4+0+4+0)/4) = sqrt(2) ≈ 1.414
         let expected = 2.0 / (2.0f32).sqrt();

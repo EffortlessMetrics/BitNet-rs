@@ -1067,7 +1067,7 @@ mod tests {
 
     #[test]
     fn h2d_upload_creates_exact_buffer() {
-        let data = vec![42u8; 128];
+        let data = [42u8; 128];
         let dev = HostToDevice::upload(&data);
         assert_eq!(dev.len(), 128);
         assert_eq!(dev.as_bytes(), &data[..]);
@@ -1075,7 +1075,7 @@ mod tests {
 
     #[test]
     fn h2d_transfer_range_roundtrip() {
-        let src = vec![0xAA; 32];
+        let src = [0xAA; 32];
         let mut dev = DeviceBuffer::allocate(64);
         HostToDevice::transfer_range(&src, &mut dev, 16, 32).unwrap();
         let back = DeviceToHost::download(&dev).unwrap();
@@ -1115,7 +1115,7 @@ mod tests {
     #[test]
     fn d2h_transfer_into_existing_buffer() {
         let dev = DeviceBuffer::from_data(&[5u8; 8]);
-        let mut host = vec![0u8; 16];
+        let mut host = [0u8; 16];
         let n = DeviceToHost::transfer(&dev, &mut host).unwrap();
         assert_eq!(n, 8);
         assert_eq!(&host[..8], &[5u8; 8]);
@@ -1125,7 +1125,7 @@ mod tests {
 
     #[test]
     fn h2d_destination_too_small() {
-        let src = vec![0u8; 128];
+        let src = [0u8; 128];
         let mut dev = DeviceBuffer::allocate(64);
         let err = HostToDevice::transfer(&src, &mut dev).unwrap_err();
         assert!(matches!(err, TransferError::DestinationTooSmall { .. }));
@@ -1134,14 +1134,14 @@ mod tests {
     #[test]
     fn d2h_destination_too_small() {
         let dev = DeviceBuffer::from_data(&[0u8; 64]);
-        let mut host = vec![0u8; 32];
+        let mut host = [0u8; 32];
         let err = DeviceToHost::transfer(&dev, &mut host).unwrap_err();
         assert!(matches!(err, TransferError::DestinationTooSmall { .. }));
     }
 
     #[test]
     fn h2d_transfer_range_source_too_small() {
-        let src = vec![0u8; 4];
+        let src = [0u8; 4];
         let mut dev = DeviceBuffer::allocate(64);
         let err = HostToDevice::transfer_range(&src, &mut dev, 0, 10).unwrap_err();
         assert!(matches!(err, TransferError::SourceTooSmall { .. }));
@@ -1149,7 +1149,7 @@ mod tests {
 
     #[test]
     fn h2d_transfer_range_dst_overflow() {
-        let src = vec![0u8; 32];
+        let src = [0u8; 32];
         let mut dev = DeviceBuffer::allocate(16);
         let err = HostToDevice::transfer_range(&src, &mut dev, 0, 32).unwrap_err();
         assert!(matches!(err, TransferError::DestinationTooSmall { .. }));
@@ -1234,7 +1234,7 @@ mod tests {
 
     #[test]
     fn d2d_duplicate() {
-        let data = vec![0xBB; 48];
+        let data = [0xBB; 48];
         let src = DeviceBuffer::from_data(&data);
         let dup = DeviceToDevice::duplicate(&src).unwrap();
         assert_eq!(dup.as_bytes(), src.as_bytes());
@@ -1287,7 +1287,7 @@ mod tests {
 
     #[test]
     fn pinned_buffer_roundtrip() {
-        let data = vec![0xCC; 64];
+        let data = [0xCC; 64];
         let pinned = PinnedBuffer::from_data(&data);
         assert!(pinned.is_pinned());
         assert_eq!(pinned.len(), 64);
@@ -1344,7 +1344,7 @@ mod tests {
 
     #[test]
     fn async_h2d_completes_immediately() {
-        let data = vec![7u8; 32];
+        let data = [7u8; 32];
         let mut dev = DeviceBuffer::allocate(32);
         let xfer = AsyncTransfer::host_to_device(&data, &mut dev).unwrap();
         assert!(xfer.is_complete());
@@ -1492,7 +1492,7 @@ mod tests {
     #[test]
     fn scheduler_submit_and_read() {
         let mut sched = TransferScheduler::new(SchedulerConfig { slot_size: 64 }).unwrap();
-        let data = vec![0xDD; 64];
+        let data = [0xDD; 64];
         sched.submit(&data).unwrap();
         // After submit, active flipped — the data is now in the active slot.
         let active = sched.read_active().unwrap();
@@ -1502,8 +1502,8 @@ mod tests {
     #[test]
     fn scheduler_double_buffer_swap() {
         let mut sched = TransferScheduler::new(SchedulerConfig { slot_size: 32 }).unwrap();
-        let batch_a = vec![0xAA; 32];
-        let batch_b = vec![0xBB; 32];
+        let batch_a = [0xAA; 32];
+        let batch_b = [0xBB; 32];
 
         sched.submit(&batch_a).unwrap();
         assert_eq!(sched.active_slot_index(), 1); // flipped to B
@@ -1645,7 +1645,7 @@ mod tests {
 
     #[test]
     fn zero_copy_from_host_data() {
-        let data = vec![10u8; 20];
+        let data = [10u8; 20];
         let zc = ZeroCopyBuffer::from_host_data(&data).unwrap();
         assert_eq!(zc.host_read().unwrap(), &data[..]);
     }
@@ -1681,7 +1681,7 @@ mod tests {
 
     #[test]
     fn zero_copy_to_device_buffer() {
-        let data = vec![0xEE; 32];
+        let data = [0xEE; 32];
         let zc = ZeroCopyBuffer::from_host_data(&data).unwrap();
         let dev = zc.to_device_buffer().unwrap();
         assert_eq!(dev.as_bytes(), &data[..]);

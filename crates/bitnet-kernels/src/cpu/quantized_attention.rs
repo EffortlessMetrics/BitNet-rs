@@ -979,15 +979,15 @@ mod tests {
 
     #[test]
     fn dot_i8_zeros() {
-        let a = vec![0i8; 64];
-        let b = vec![127i8; 64];
+        let a = [0i8; 64];
+        let b = [127i8; 64];
         assert_eq!(dot_i8(&a, &b), 0);
     }
 
     #[test]
     fn dot_i8_extremes() {
-        let a = vec![127i8; 32];
-        let b = vec![-128i8; 32];
+        let a = [127i8; 32];
+        let b = [-128i8; 32];
         let expected: i32 = 32 * (127 * -128);
         assert_eq!(dot_i8(&a, &b), expected);
     }
@@ -1005,14 +1005,14 @@ mod tests {
 
     #[test]
     fn softmax_single() {
-        let mut v = vec![42.0];
+        let mut v = [42.0];
         softmax_inplace(&mut v);
         assert!(approx_eq(v[0], 1.0, EPS));
     }
 
     #[test]
     fn softmax_uniform() {
-        let mut v = vec![5.0; 4];
+        let mut v = [5.0; 4];
         softmax_inplace(&mut v);
         for &x in &v {
             assert!(approx_eq(x, 0.25, EPS));
@@ -1063,7 +1063,7 @@ mod tests {
         let q: Vec<i8> = vec![10, 0, 0, 0, 0, 10, 0, 0];
         let k: Vec<i8> = vec![10, 0, 0, 0, 0, 10, 0, 0];
         let v: Vec<i8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         // Output should be valid f32 with reasonable values.
         assert!(out.iter().all(|x| x.is_finite()));
@@ -1072,10 +1072,10 @@ mod tests {
     #[test]
     fn qda_causal_mask() {
         let cfg = make_config(1, 4, 3, true);
-        let q = vec![1i8; 12];
-        let k = vec![1i8; 12];
-        let v = vec![1i8; 12];
-        let mut out = vec![0.0f32; 12];
+        let q = [1i8; 12];
+        let k = [1i8; 12];
+        let v = [1i8; 12];
+        let mut out = [0.0f32; 12];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         assert!(out.iter().all(|x| x.is_finite()));
     }
@@ -1083,10 +1083,10 @@ mod tests {
     #[test]
     fn qda_input_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let q = vec![0i8; 4]; // need 8
-        let k = vec![0i8; 8];
-        let v = vec![0i8; 8];
-        let mut out = vec![0.0f32; 8];
+        let q = [0i8; 4]; // need 8
+        let k = [0i8; 8];
+        let v = [0i8; 8];
+        let mut out = [0.0f32; 8];
         assert!(
             quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out,).is_err()
         );
@@ -1095,10 +1095,10 @@ mod tests {
     #[test]
     fn qda_output_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let q = vec![0i8; 8];
-        let k = vec![0i8; 8];
-        let v = vec![0i8; 8];
-        let mut out = vec![0.0f32; 4]; // need 8
+        let q = [0i8; 8];
+        let k = [0i8; 8];
+        let v = [0i8; 8];
+        let mut out = [0.0f32; 4]; // need 8
         assert!(
             quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out,).is_err()
         );
@@ -1152,7 +1152,7 @@ mod tests {
             v_data: vec![0i8; 16],
             v_scales: vec![1.0; 2],
         };
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         assert!(quantized_multi_head_attention(&cfg, &qkv, &mut out).is_err());
     }
 
@@ -1179,7 +1179,7 @@ mod tests {
     fn gqa_shared_heads_match() {
         // With 4 heads and 2 kv heads, heads 0&1 share kv[0], 2&3 share kv[1].
         let cfg = make_gqa_config(4, 2, 4, 1);
-        let he = 1 * 4;
+        let he = 4;
         let qkv = QuantizedQKV {
             q_data: vec![1i8; 4 * he],
             q_scales: vec![1.0; 4],
@@ -1266,13 +1266,13 @@ mod tests {
         let mut scores = vec![0.0f32; seq * seq];
         quantized_attention_scores(&cfg, &q, &k, 1.0, 1.0, &mut scores).unwrap();
         // Upper triangle should be -inf.
-        assert_eq!(scores[0 * seq + 1], f32::NEG_INFINITY);
-        assert_eq!(scores[0 * seq + 2], f32::NEG_INFINITY);
-        assert_eq!(scores[1 * seq + 2], f32::NEG_INFINITY);
+        assert_eq!(scores[1], f32::NEG_INFINITY);
+        assert_eq!(scores[2], f32::NEG_INFINITY);
+        assert_eq!(scores[seq + 2], f32::NEG_INFINITY);
         // Diagonal and below should be finite.
-        assert!(scores[0 * seq + 0].is_finite());
-        assert!(scores[1 * seq + 0].is_finite());
-        assert!(scores[1 * seq + 1].is_finite());
+        assert!(scores[0].is_finite());
+        assert!(scores[seq].is_finite());
+        assert!(scores[seq + 1].is_finite());
     }
 
     #[test]
@@ -1290,9 +1290,9 @@ mod tests {
     #[test]
     fn scores_buffer_too_small() {
         let cfg = make_config(1, 4, 3, false);
-        let q = vec![0i8; 12];
-        let k = vec![0i8; 12];
-        let mut scores = vec![0.0f32; 4]; // need 9
+        let q = [0i8; 12];
+        let k = [0i8; 12];
+        let mut scores = [0.0f32; 4]; // need 9
         assert!(quantized_attention_scores(&cfg, &q, &k, 1.0, 1.0, &mut scores).is_err());
     }
 
@@ -1316,9 +1316,9 @@ mod tests {
     #[test]
     fn softmax_attn_v_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let mut scores = vec![0.0f32; 4];
-        let v = vec![0i8; 2]; // too small
-        let mut out = vec![0.0f32; 8];
+        let mut scores = [0.0f32; 4];
+        let v = [0i8; 2]; // too small
+        let mut out = [0.0f32; 8];
         assert!(quantized_softmax_attention(&cfg, &mut scores, &v, 1.0, &mut out).is_err());
     }
 
@@ -1354,7 +1354,7 @@ mod tests {
 
     #[test]
     fn kv_cache_zero_dim() {
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         assert!(
             quantized_kv_cache_attention(0, 1, &[], &[], &[], 1.0, 1.0, 1.0, &mut out,).is_err()
         );
@@ -1362,7 +1362,7 @@ mod tests {
 
     #[test]
     fn kv_cache_zero_cache() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             quantized_kv_cache_attention(4, 0, &[1; 4], &[], &[], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1371,7 +1371,7 @@ mod tests {
 
     #[test]
     fn kv_cache_q_too_small() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             quantized_kv_cache_attention(4, 2, &[1; 2], &[1; 8], &[1; 8], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1462,8 +1462,8 @@ mod tests {
     #[test]
     fn flash_zero_block_size() {
         let cfg = make_config(1, 4, 2, false);
-        let d = vec![0i8; 8];
-        let mut out = vec![0.0f32; 8];
+        let d = [0i8; 8];
+        let mut out = [0.0f32; 8];
         assert!(
             quantized_flash_attention_approx(&cfg, &d, &d, &d, 1.0, 1.0, 1.0, 0, &mut out,)
                 .is_err()
@@ -1549,7 +1549,7 @@ mod tests {
         let q = vec![100i8];
         let k = vec![50i8];
         let v = vec![10i8];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         // Single token: softmax of one element = 1.0 → out = V * v_scale.
         assert!(approx_eq(out[0], 10.0, EPS));
@@ -1558,10 +1558,10 @@ mod tests {
     #[test]
     fn all_zeros_input() {
         let cfg = make_config(1, 4, 2, false);
-        let q = vec![0i8; 8];
-        let k = vec![0i8; 8];
-        let v = vec![0i8; 8];
-        let mut out = vec![0.0f32; 8];
+        let q = [0i8; 8];
+        let k = [0i8; 8];
+        let v = [0i8; 8];
+        let mut out = [0.0f32; 8];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         // All-zero Q/K → all scores 0 → uniform softmax → mean(V)=0.
         for &x in &out {
@@ -1580,10 +1580,10 @@ mod tests {
             quant_bits: QuantBits::Int8,
             scale: Some(0.0),
         };
-        let q = vec![1i8; 8];
-        let k = vec![1i8; 8];
-        let v = vec![1i8; 8];
-        let mut out = vec![0.0f32; 8];
+        let q = [1i8; 8];
+        let k = [1i8; 8];
+        let v = [1i8; 8];
+        let mut out = [0.0f32; 8];
         // scale=0 → all scores 0 → uniform softmax → should not panic.
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         assert!(out.iter().all(|x| x.is_finite()));
@@ -1635,7 +1635,7 @@ mod tests {
     #[test]
     fn deq_attend_input_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         assert!(
             dequantize_and_attend(&cfg, &[0i8; 4], &[0i8; 8], &[0i8; 8], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1645,7 +1645,7 @@ mod tests {
     #[test]
     fn flash_attn_input_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         assert!(
             quantized_flash_attention_approx(
                 &cfg, &[0i8; 4], &[0i8; 8], &[0i8; 8], 1.0, 1.0, 1.0, 2, &mut out,
@@ -1662,7 +1662,7 @@ mod tests {
         let q: Vec<i8> = vec![100, 0, 0, 0, 0, 100, 0, 0];
         let k: Vec<i8> = vec![100, 0, 0, 0, 0, 100, 0, 0];
         let v: Vec<i8> = vec![10, 20, 30, 40, 50, 60, 70, 80];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 0.01, 0.01, 1.0, &mut out).unwrap();
         assert!(out[0] < out[4], "row 0 should lean toward V[0]");
     }
@@ -1692,10 +1692,10 @@ mod tests {
             quant_bits: QuantBits::Int8,
             scale: Some(-1.0),
         };
-        let q = vec![1i8; 8];
-        let k = vec![1i8; 8];
-        let v = vec![1i8; 8];
-        let mut out = vec![0.0f32; 8];
+        let q = [1i8; 8];
+        let k = [1i8; 8];
+        let v = [1i8; 8];
+        let mut out = [0.0f32; 8];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut out).unwrap();
         assert!(out.iter().all(|x| x.is_finite()));
     }
@@ -1703,21 +1703,21 @@ mod tests {
     #[test]
     fn mha_single_head_matches_dot_product() {
         let cfg = make_config(1, 4, 2, false);
-        let q = vec![3i8; 8];
-        let k = vec![2i8; 8];
-        let v = vec![5i8; 8];
+        let q = [3i8; 8];
+        let k = [2i8; 8];
+        let v = [5i8; 8];
         let qkv = QuantizedQKV {
-            q_data: q.clone(),
+            q_data: q.to_vec(),
             q_scales: vec![1.0],
-            k_data: k.clone(),
+            k_data: k.to_vec(),
             k_scales: vec![1.0],
-            v_data: v.clone(),
+            v_data: v.to_vec(),
             v_scales: vec![1.0],
         };
-        let mut mha_out = vec![0.0f32; 8];
+        let mut mha_out = [0.0f32; 8];
         quantized_multi_head_attention(&cfg, &qkv, &mut mha_out).unwrap();
 
-        let mut dp_out = vec![0.0f32; 8];
+        let mut dp_out = [0.0f32; 8];
         quantized_dot_product_attention(&cfg, &q, &k, &v, 1.0, 1.0, 1.0, &mut dp_out).unwrap();
         assert_close(&mha_out, &dp_out, EPS);
     }
@@ -1752,9 +1752,9 @@ mod tests {
             quant_bits: QuantBits::Int8,
             scale: Some(2.0),
         };
-        let q = vec![1i8; 4];
-        let k = vec![1i8; 4];
-        let mut scores = vec![0.0f32; 1];
+        let q = [1i8; 4];
+        let k = [1i8; 4];
+        let mut scores = [0.0f32; 1];
         quantized_attention_scores(&cfg, &q, &k, 1.0, 1.0, &mut scores).unwrap();
         assert!(approx_eq(scores[0], 8.0, EPS));
     }
@@ -1786,7 +1786,7 @@ mod tests {
 
     #[test]
     fn kv_cache_output_too_small() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(
             quantized_kv_cache_attention(4, 1, &[1; 4], &[1; 4], &[1; 4], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1814,7 +1814,7 @@ mod tests {
     #[test]
     fn deq_attend_output_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             dequantize_and_attend(&cfg, &[0i8; 8], &[0i8; 8], &[0i8; 8], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1824,7 +1824,7 @@ mod tests {
     #[test]
     fn flash_output_too_small() {
         let cfg = make_config(1, 4, 2, false);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             quantized_flash_attention_approx(
                 &cfg, &[0i8; 8], &[0i8; 8], &[0i8; 8], 1.0, 1.0, 1.0, 2, &mut out,
@@ -1835,8 +1835,8 @@ mod tests {
 
     #[test]
     fn dot_i8_length_mismatch_uses_min() {
-        let a = vec![1i8; 10];
-        let b = vec![2i8; 5];
+        let a = [1i8; 10];
+        let b = [2i8; 5];
         assert_eq!(dot_i8(&a, &b), 10);
     }
 
@@ -1856,7 +1856,7 @@ mod tests {
 
     #[test]
     fn kv_cache_k_too_small() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             quantized_kv_cache_attention(4, 2, &[1; 4], &[1; 4], &[1; 8], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()
@@ -1865,7 +1865,7 @@ mod tests {
 
     #[test]
     fn kv_cache_v_too_small() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             quantized_kv_cache_attention(4, 2, &[1; 4], &[1; 8], &[1; 4], 1.0, 1.0, 1.0, &mut out,)
                 .is_err()

@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn apply_rope_f32_zero_input() {
         let ft = build_frequency_table(&RoPEConfig::new(8, 16));
-        let mut data = vec![0.0f32; 8];
+        let mut data = [0.0f32; 8];
         apply_rope_f32(&mut data, &ft, 7, 8);
         assert!(data.iter().all(|v| v.abs() < 1e-10));
     }
@@ -948,7 +948,7 @@ mod tests {
     #[test]
     fn inverse_zero_input() {
         let ft = build_frequency_table(&RoPEConfig::new(4, 4));
-        let mut data = vec![0.0f32; 4];
+        let mut data = [0.0f32; 4];
         inverse_rope(&mut data, &ft, 2, 4);
         assert!(data.iter().all(|v| v.abs() < 1e-10));
     }
@@ -1080,7 +1080,7 @@ mod tests {
     #[test]
     fn edge_zero_vector() {
         let ft = build_frequency_table(&RoPEConfig::new(64, 16));
-        let mut data = vec![0.0f32; 64];
+        let mut data = [0.0f32; 64];
         apply_rope_dispatch(&mut data, &ft, 10, 64);
         assert!(data.iter().all(|v| v.abs() < 1e-10));
     }
@@ -1099,7 +1099,7 @@ mod tests {
     #[test]
     fn edge_all_ones() {
         let ft = build_frequency_table(&RoPEConfig::new(8, 4));
-        let mut data = vec![1.0f32; 8];
+        let mut data = [1.0f32; 8];
         apply_rope_dispatch(&mut data, &ft, 2, 8);
         assert!(data.iter().all(|v| v.is_finite()));
     }
@@ -1504,7 +1504,7 @@ mod tests {
     #[test]
     fn half_rotated_zero_input() {
         let ft = build_frequency_table(&RoPEConfig::new(8, 4));
-        let mut data = vec![0.0f32; 8];
+        let mut data = [0.0f32; 8];
         apply_rope_half_rotated(&mut data, &ft, 2);
         assert!(data.iter().all(|v| v.abs() < 1e-10));
     }
@@ -1523,7 +1523,7 @@ mod tests {
     #[test]
     fn inverse_preserves_zero() {
         let ft = build_frequency_table(&RoPEConfig::new(16, 8));
-        let mut data = vec![0.0f32; 16];
+        let mut data = [0.0f32; 16];
         inverse_rope(&mut data, &ft, 5, 16);
         assert!(data.iter().all(|v| v.abs() < 1e-10));
     }

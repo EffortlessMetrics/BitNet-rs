@@ -129,30 +129,30 @@ pub fn is_vulkan_backend(info: &WgpuDeviceInfo) -> bool {
 }
 
 /// Check whether a probed device advertises `shader-f16` support.
-pub fn supports_f16(info: &WgpuDeviceInfo) -> bool {
+pub const fn supports_f16(info: &WgpuDeviceInfo) -> bool {
     info.shader_f16
 }
 
 // ── wgpu backend conversion helpers ──────────────────────────────────────────
 
-fn convert_backend(b: wgpu::Backend) -> WgpuBackend {
+const fn convert_backend(b: wgpu::Backend) -> WgpuBackend {
     match b {
         wgpu::Backend::Vulkan => WgpuBackend::Vulkan,
         wgpu::Backend::Metal => WgpuBackend::Metal,
         wgpu::Backend::Dx12 => WgpuBackend::Dx12,
         wgpu::Backend::Gl => WgpuBackend::Gl,
         wgpu::Backend::BrowserWebGpu => WgpuBackend::BrowserWebGpu,
-        _ => WgpuBackend::Other,
+        wgpu::Backend::Empty => WgpuBackend::Other,
     }
 }
 
-fn convert_device_type(dt: wgpu::DeviceType) -> WgpuDeviceType {
+const fn convert_device_type(dt: wgpu::DeviceType) -> WgpuDeviceType {
     match dt {
         wgpu::DeviceType::DiscreteGpu => WgpuDeviceType::DiscreteGpu,
         wgpu::DeviceType::IntegratedGpu => WgpuDeviceType::IntegratedGpu,
         wgpu::DeviceType::Cpu => WgpuDeviceType::Cpu,
         wgpu::DeviceType::VirtualGpu => WgpuDeviceType::VirtualGpu,
-        _ => WgpuDeviceType::Other,
+        wgpu::DeviceType::Other => WgpuDeviceType::Other,
     }
 }
 
@@ -162,12 +162,12 @@ fn adapter_to_info(adapter: &wgpu::Adapter) -> WgpuDeviceInfo {
     let features = adapter.features();
 
     WgpuDeviceInfo {
-        name: info.name.clone(),
+        name: info.name,
         vendor: info.vendor,
         backend: convert_backend(info.backend),
         device_type: convert_device_type(info.device_type),
-        driver: info.driver.clone(),
-        driver_info: info.driver_info.clone(),
+        driver: info.driver,
+        driver_info: info.driver_info,
         limits: WgpuLimits {
             max_buffer_size: limits.max_buffer_size,
             max_storage_buffers: limits.max_storage_buffers_per_shader_stage,
@@ -197,7 +197,7 @@ pub fn probe_wgpu_devices() -> Vec<WgpuDeviceInfo> {
         });
 
         let adapters = instance.enumerate_adapters(wgpu::Backends::all());
-        adapters.iter().map(|a| adapter_to_info(a)).collect()
+        adapters.iter().map(adapter_to_info).collect()
     })
 }
 
@@ -212,7 +212,7 @@ pub fn probe_best_wgpu_device() -> Option<WgpuDeviceInfo> {
     }
 
     devices.sort_by(|a, b| {
-        fn type_rank(dt: &WgpuDeviceType) -> u32 {
+        const fn type_rank(dt: WgpuDeviceType) -> u32 {
             match dt {
                 WgpuDeviceType::DiscreteGpu => 4,
                 WgpuDeviceType::IntegratedGpu => 3,
@@ -221,20 +221,19 @@ pub fn probe_best_wgpu_device() -> Option<WgpuDeviceInfo> {
                 WgpuDeviceType::Other => 0,
             }
         }
-        fn backend_rank(b: &WgpuBackend) -> u32 {
+        const fn backend_rank(b: WgpuBackend) -> u32 {
             match b {
                 WgpuBackend::Vulkan => 3,
-                WgpuBackend::Metal => 2,
-                WgpuBackend::Dx12 => 2,
+                WgpuBackend::Metal | WgpuBackend::Dx12 => 2,
                 WgpuBackend::Gl => 1,
-                _ => 0,
+                WgpuBackend::BrowserWebGpu | WgpuBackend::Other => 0,
             }
         }
-        let cmp = type_rank(&b.device_type).cmp(&type_rank(&a.device_type));
+        let cmp = type_rank(b.device_type).cmp(&type_rank(a.device_type));
         if cmp != std::cmp::Ordering::Equal {
             return cmp;
         }
-        backend_rank(&b.backend).cmp(&backend_rank(&a.backend))
+        backend_rank(b.backend).cmp(&backend_rank(a.backend))
     });
 
     devices.into_iter().next()

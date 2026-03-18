@@ -1712,7 +1712,7 @@ mod tests {
     #[test]
     fn apply_mask_length_mismatch() {
         let mut scores = vec![1.0, 2.0];
-        let mask = vec![0.0];
+        let mask = [0.0];
         assert!(apply_mask(&mut scores, &mask).is_err());
     }
 
@@ -1762,7 +1762,7 @@ mod tests {
 
     #[test]
     fn softmax_single_element() {
-        let mut row = vec![42.0];
+        let mut row = [42.0];
         softmax_row(&mut row);
         assert!(approx_eq(row[0], 1.0));
     }
@@ -1785,7 +1785,7 @@ mod tests {
         for r in 0..seq_len {
             let row = &out[r * head_dim..(r + 1) * head_dim];
             for &val in row {
-                assert!(val >= 1.0 && val <= 4.0, "out of convex range: {val}");
+                assert!((1.0..=4.0).contains(&val), "out of convex range: {val}");
             }
         }
     }
@@ -1877,8 +1877,8 @@ mod tests {
             use_alibi: false,
             scale: None,
         };
-        let q = vec![1.0; 8];
-        let k = vec![1.0; 8];
+        let q = [1.0; 8];
+        let k = [1.0; 8];
         let v: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let mha = AttentionKernel::multi_head_attention(&q, &k, &v, &cfg).unwrap();
         let sdp = AttentionKernel::scaled_dot_product(
@@ -1949,8 +1949,8 @@ mod tests {
             use_alibi: false,
             scale: None,
         };
-        let wrong_len = vec![0.0; 10]; // wrong size
-        let correct = vec![0.0; 24];
+        let wrong_len = [0.0; 10]; // wrong size
+        let correct = [0.0; 24];
         assert!(
             AttentionKernel::multi_head_attention(&wrong_len, &correct, &correct, &cfg).is_err()
         );
@@ -2235,7 +2235,7 @@ mod tests {
 
     #[test]
     fn apply_causal_mask_basic() {
-        let mut scores = vec![1.0; 9]; // 3×3
+        let mut scores = [1.0; 9]; // 3×3
         apply_causal_mask(&mut scores, 3).unwrap();
         // Diagonal and below unchanged (1.0 + 0.0)
         assert_eq!(scores[0], 1.0);
@@ -2249,7 +2249,7 @@ mod tests {
 
     #[test]
     fn apply_causal_mask_length_mismatch() {
-        let mut scores = vec![1.0; 5];
+        let mut scores = [1.0; 5];
         assert!(apply_causal_mask(&mut scores, 3).is_err());
     }
 
@@ -2413,7 +2413,7 @@ mod tests {
 
     #[test]
     fn softmax_all_neg_infinity() {
-        let mut row = vec![f32::NEG_INFINITY; 4];
+        let mut row = [f32::NEG_INFINITY; 4];
         softmax_row(&mut row);
         // All -inf → exp(-inf)=0 → sum=0 → values remain 0
         for &v in &row {
@@ -2566,7 +2566,7 @@ mod tests {
             use_alibi: false,
             scale: None,
         };
-        let v = vec![5.0; 4];
+        let v = [5.0; 4];
         let out = causal_attention(&[1.0; 4], &[1.0; 4], &v, &cfg).unwrap();
         assert!(slices_approx_eq(&out, &v));
     }
@@ -2639,8 +2639,8 @@ mod tests {
 
     #[test]
     fn rope_rejects_odd_head_dim() {
-        let mut q = vec![1.0; 3];
-        let mut k = vec![1.0; 3];
+        let mut q = [1.0; 3];
+        let mut k = [1.0; 3];
         assert!(apply_rotary_embedding(&mut q, &mut k, &[0], 3).is_err());
     }
 
@@ -2677,8 +2677,8 @@ mod tests {
 
     #[test]
     fn rope_dimension_mismatch() {
-        let mut q = vec![1.0; 5]; // not divisible by head_dim=4
-        let mut k = vec![1.0; 4];
+        let mut q = [1.0; 5]; // not divisible by head_dim=4
+        let mut k = [1.0; 4];
         assert!(apply_rotary_embedding(&mut q, &mut k, &[0], 4).is_err());
     }
 
@@ -2836,7 +2836,7 @@ mod tests {
             causal_mask: true,
         })
         .unwrap();
-        let v = vec![5.0; 4];
+        let v = [5.0; 4];
         let out = attn.forward(&[1.0; 4], &[1.0; 4], &v).unwrap();
         assert!(slices_approx_eq(&out, &v));
     }
@@ -2877,8 +2877,8 @@ mod tests {
             causal_mask: false,
         })
         .unwrap();
-        let correct = vec![0.0; 24];
-        let wrong = vec![0.0; 10];
+        let correct = [0.0; 24];
+        let wrong = [0.0; 10];
         assert!(attn.forward(&wrong, &correct, &correct).is_err());
     }
 
@@ -2893,8 +2893,8 @@ mod tests {
             causal_mask: false,
         })
         .unwrap();
-        let correct = vec![0.0; 24];
-        let wrong = vec![0.0; 10];
+        let correct = [0.0; 24];
+        let wrong = [0.0; 10];
         assert!(attn.forward(&correct, &wrong, &correct).is_err());
     }
 
@@ -2909,8 +2909,8 @@ mod tests {
             causal_mask: false,
         })
         .unwrap();
-        let correct = vec![0.0; 24];
-        let wrong = vec![0.0; 10];
+        let correct = [0.0; 24];
+        let wrong = [0.0; 10];
         assert!(attn.forward(&correct, &correct, &wrong).is_err());
     }
 
@@ -2940,7 +2940,7 @@ mod tests {
             causal_mask: false,
         })
         .unwrap();
-        let v = vec![7.0; 4];
+        let v = [7.0; 4];
         let out = attn.forward_single_head(&[1.0; 4], &[1.0; 4], &v, 1, 1).unwrap();
         assert!(slices_approx_eq(&out, &v));
     }
@@ -3155,8 +3155,8 @@ mod tests {
 
     #[test]
     fn compute_qkv_zero_input() {
-        let input = vec![0.0; 6];
-        let w = vec![1.0; 6];
+        let input = [0.0; 6];
+        let w = [1.0; 6];
         let (q, k, v) = compute_qkv(&input, &w, &w, &w, 2, 3, 1, 1, 2).unwrap();
         assert!(q.iter().all(|&x| x == 0.0));
         assert!(k.iter().all(|&x| x == 0.0));
@@ -3165,16 +3165,16 @@ mod tests {
 
     #[test]
     fn compute_qkv_rejects_input_mismatch() {
-        let input = vec![0.0; 5]; // wrong size
-        let w = vec![0.0; 6];
+        let input = [0.0; 5]; // wrong size
+        let w = [0.0; 6];
         assert!(compute_qkv(&input, &w, &w, &w, 2, 3, 1, 1, 2).is_err());
     }
 
     #[test]
     fn compute_qkv_rejects_wq_mismatch() {
-        let input = vec![0.0; 6];
-        let wq = vec![0.0; 5]; // wrong
-        let wk = vec![0.0; 6];
+        let input = [0.0; 6];
+        let wq = [0.0; 5]; // wrong
+        let wk = [0.0; 6];
         assert!(compute_qkv(&input, &wq, &wk, &wk, 2, 3, 1, 1, 2).is_err());
     }
 
@@ -3240,7 +3240,7 @@ mod tests {
 
     #[test]
     fn softmax_attn_uniform() {
-        let mut scores = vec![1.0; 6]; // 2 rows × 3 cols
+        let mut scores = [1.0; 6]; // 2 rows × 3 cols
         softmax_attention(&mut scores, 2, 3).unwrap();
         for r in 0..2 {
             let row_sum: f32 = scores[r * 3..(r + 1) * 3].iter().sum();
@@ -3250,7 +3250,7 @@ mod tests {
 
     #[test]
     fn softmax_attn_rejects_mismatch() {
-        let mut scores = vec![1.0; 5];
+        let mut scores = [1.0; 5];
         assert!(softmax_attention(&mut scores, 2, 3).is_err());
     }
 
@@ -3265,8 +3265,8 @@ mod tests {
 
     #[test]
     fn causal_mask_apply_matches_original() {
-        let mut s1 = vec![1.0; 9];
-        let mut s2 = vec![1.0; 9];
+        let mut s1 = [1.0; 9];
+        let mut s2 = [1.0; 9];
         causal_mask_apply(&mut s1, 3).unwrap();
         apply_causal_mask(&mut s2, 3).unwrap();
         assert!(slices_approx_eq(&s1, &s2));
@@ -3274,7 +3274,7 @@ mod tests {
 
     #[test]
     fn causal_mask_apply_rejects_bad_len() {
-        let mut s = vec![1.0; 5];
+        let mut s = [1.0; 5];
         assert!(causal_mask_apply(&mut s, 3).is_err());
     }
 
@@ -3357,7 +3357,7 @@ mod tests {
 
     #[test]
     fn alibi_bias_off_diagonal() {
-        let mut scores = vec![0.0; 4]; // 2×2
+        let mut scores = [0.0; 4]; // 2×2
         apply_alibi_bias(&mut scores, 2, 2, 1.0).unwrap();
         // (0,0)=0, (0,1)=-1, (1,0)=-1, (1,1)=0
         assert!(approx_eq(scores[0], 0.0));
@@ -3368,8 +3368,8 @@ mod tests {
 
     #[test]
     fn alibi_bias_slope_scaling() {
-        let mut s1 = vec![0.0; 4];
-        let mut s2 = vec![0.0; 4];
+        let mut s1 = [0.0; 4];
+        let mut s2 = [0.0; 4];
         apply_alibi_bias(&mut s1, 2, 2, 0.5).unwrap();
         apply_alibi_bias(&mut s2, 2, 2, 1.0).unwrap();
         // s2 should have 2× the bias of s1
@@ -3378,7 +3378,7 @@ mod tests {
 
     #[test]
     fn alibi_bias_rejects_mismatch() {
-        let mut scores = vec![0.0; 5];
+        let mut scores = [0.0; 5];
         assert!(apply_alibi_bias(&mut scores, 2, 3, 0.5).is_err());
     }
 
@@ -3555,7 +3555,7 @@ mod tests {
             scale: None,
         };
         let n = cfg.seq_len * cfg.num_heads * cfg.head_dim;
-        let wrong = vec![0.0; 10];
+        let wrong = [0.0; 10];
         let correct = vec![0.0; n];
         assert!(attention_forward(&wrong, &correct, &correct, &cfg).is_err());
     }
@@ -3570,7 +3570,7 @@ mod tests {
             use_alibi: true,
             scale: None,
         };
-        let v = vec![5.0; 4];
+        let v = [5.0; 4];
         let out = attention_forward(&[1.0; 4], &[1.0; 4], &v, &cfg).unwrap();
         // Single token → attention weight = 1 → output = v
         assert!(slices_approx_eq(&out, &v));

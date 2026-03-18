@@ -946,7 +946,7 @@ mod tests {
         let mut buf = GradBuffer::new(3, "s");
         buf.accumulate(&[2.0, 4.0, 6.0]);
         buf.scale(0.5);
-        assert_eq!(buf.data(), &[1.0, 2.0, 3.0]);
+        assert_eq!(buf.data(), &vec![1.0, 2.0, 3.0]);
     }
 
     #[test]
@@ -1223,7 +1223,7 @@ mod tests {
 
     #[test]
     fn test_fp32_to_fp16_roundtrip() {
-        let data = vec![1.0f32, 0.5, -0.25, 0.0, 100.0];
+        let data = [1.0f32, 0.5, -0.25, 0.0, 100.0];
         let fp16 = MixedPrecisionGrad::fp32_to_fp16(&data);
         let back = MixedPrecisionGrad::fp16_to_fp32(&fp16);
         for (i, (&orig, &rt)) in data.iter().zip(back.iter()).enumerate() {
@@ -1242,9 +1242,9 @@ mod tests {
 
     #[test]
     fn test_accumulate_fp16_into_fp32() {
-        let grads_f32 = vec![1.0f32, 2.0, 3.0];
+        let grads_f32 = [1.0f32, 2.0, 3.0];
         let fp16 = MixedPrecisionGrad::fp32_to_fp16(&grads_f32);
-        let mut accum = vec![0.0f32; 3];
+        let mut accum = [0.0f32; 3];
         MixedPrecisionGrad::accumulate_fp16_into_fp32(&mut accum, &fp16);
         for (i, (&a, &e)) in accum.iter().zip(grads_f32.iter()).enumerate() {
             assert!((a - e).abs() < 0.01, "element {i}: {a} != {e}");
@@ -1253,7 +1253,7 @@ mod tests {
 
     #[test]
     fn test_apply_as_fp16() {
-        let mut weights = vec![10.0f32, 20.0, 30.0];
+        let mut weights = [10.0f32, 20.0, 30.0];
         let grads = vec![1.0, 2.0, 3.0];
         MixedPrecisionGrad::apply_as_fp16(&mut weights, &grads, 0.1);
         // w -= lr * round(g)
@@ -1273,7 +1273,7 @@ mod tests {
     #[test]
     fn test_fp16_small_values() {
         // Very small values that survive FP16
-        let data = vec![0.001, 0.0001, -0.001];
+        let data = [0.001, 0.0001, -0.001];
         let rt = MixedPrecisionGrad::roundtrip(&data);
         for (i, (&orig, &r)) in data.iter().zip(rt.iter()).enumerate() {
             assert!((orig - r).abs() < 0.001, "element {i}: {orig} != {r}");
@@ -1283,12 +1283,12 @@ mod tests {
     #[test]
     fn test_fp16_zero() {
         let rt = MixedPrecisionGrad::roundtrip(&[0.0]);
-        assert_eq!(rt, vec![0.0]);
+        assert_eq!(rt, [0.0]);
     }
 
     #[test]
     fn test_fp16_negative() {
-        let data = vec![-1.0, -2.0, -3.0];
+        let data = [-1.0, -2.0, -3.0];
         let rt = MixedPrecisionGrad::roundtrip(&data);
         for (i, (&orig, &r)) in data.iter().zip(rt.iter()).enumerate() {
             assert!((orig - r).abs() < 0.01, "element {i}");
@@ -1466,7 +1466,7 @@ mod tests {
         let mut acc2 = GradAccumulator::new(1);
         GradCheckpointer::load(&ckpt, &mut acc2, None);
         assert!(acc2.buffer("existing").is_some());
-        assert_eq!(acc2.buffer("existing").unwrap().data(), &[1.0, 2.0]);
+        assert_eq!(acc2.buffer("existing").unwrap().data(), &vec![1.0, 2.0]);
     }
 
     #[test]
@@ -1531,7 +1531,7 @@ mod tests {
 
     #[test]
     fn test_stats_display() {
-        let stats = GradStats::from_slice(&[1.0, 2.0, 3.0]);
+        let stats = GradStats::from_slice(&vec![1.0, 2.0, 3.0]);
         let s = format!("{stats}");
         assert!(s.contains("l2="));
         assert!(s.contains("sparsity="));
@@ -1616,7 +1616,7 @@ mod tests {
     fn test_scaler_scale_unscale_cancel() {
         // scale then unscale should recover original values (if no overflow)
         let scaler = GradScaler::new(128.0);
-        let original = vec![1.0, -0.5, 0.25];
+        let original = [1.0, -0.5, 0.25];
         let mut buf = GradBuffer::new(3, "su");
         // Simulate: loss * scale → backward → grads * scale
         for (i, &v) in original.iter().enumerate() {
@@ -1631,8 +1631,8 @@ mod tests {
 
     #[test]
     fn test_mixed_precision_accumulate_multiple() {
-        let mut accum = vec![0.0f32; 2];
-        let g1 = MixedPrecisionGrad::fp32_to_fp16(&[1.0, 2.0]);
+        let mut accum = [0.0f32; 2];
+        let g1 = MixedPrecisionGrad::fp32_to_fp16(&vec![1.0, 2.0]);
         let g2 = MixedPrecisionGrad::fp32_to_fp16(&[3.0, 4.0]);
         MixedPrecisionGrad::accumulate_fp16_into_fp32(&mut accum, &g1);
         MixedPrecisionGrad::accumulate_fp16_into_fp32(&mut accum, &g2);

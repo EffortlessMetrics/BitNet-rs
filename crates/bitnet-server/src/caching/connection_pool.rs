@@ -337,7 +337,9 @@ pub struct ConnectionDetails {
     pub id: String,
     pub client_ip: String,
     pub state: ConnectionState,
+    #[serde(skip)]
     pub established_at: Instant,
+    #[serde(skip)]
     pub last_activity: Instant,
     pub request_count: u64,
     pub duration_seconds: u64,

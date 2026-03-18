@@ -1057,7 +1057,7 @@ mod tests {
             // Should fail for unsupported precision modes
             let a = vec![1.0, 2.0];
             let b = vec![1.0, 2.0];
-            let mut c = vec![0.0; 2];
+            let mut c = [0.0; 2];
 
             let _result = kernel.matmul_fp16(&a, &b, &mut c, 1, 2, 1);
             // In actual test environment, this might fail for different reasons

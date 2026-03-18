@@ -363,32 +363,32 @@ impl FusionPattern {
 
     /// Common pattern: MatMul → BiasAdd.
     pub fn linear() -> Self {
-        Self::new("linear", vec![OpType::MatMul, OpType::BiasAdd])
+        Self::new("linear", [OpType::MatMul, OpType::BiasAdd].to_vec())
     }
 
     /// Common pattern: MatMul → BiasAdd → ReLU.
     pub fn linear_relu() -> Self {
-        Self::new("linear_relu", vec![OpType::MatMul, OpType::BiasAdd, OpType::ReLU])
+        Self::new("linear_relu", [OpType::MatMul, OpType::BiasAdd, OpType::ReLU].to_vec())
     }
 
     /// Common pattern: MatMul → BiasAdd → SiLU.
     pub fn linear_silu() -> Self {
-        Self::new("linear_silu", vec![OpType::MatMul, OpType::BiasAdd, OpType::SiLU])
+        Self::new("linear_silu", [OpType::MatMul, OpType::BiasAdd, OpType::SiLU].to_vec())
     }
 
     /// Common pattern: MatMul → BiasAdd → GELU.
     pub fn linear_gelu() -> Self {
-        Self::new("linear_gelu", vec![OpType::MatMul, OpType::BiasAdd, OpType::GELU])
+        Self::new("linear_gelu", [OpType::MatMul, OpType::BiasAdd, OpType::GELU].to_vec())
     }
 
     /// LayerNorm → Scale.
     pub fn norm_scale() -> Self {
-        Self::new("norm_scale", vec![OpType::LayerNorm, OpType::Scale])
+        Self::new("norm_scale", [OpType::LayerNorm, OpType::Scale].to_vec())
     }
 
     /// RMSNorm → Scale.
     pub fn rmsnorm_scale() -> Self {
-        Self::new("rmsnorm_scale", vec![OpType::RMSNorm, OpType::Scale])
+        Self::new("rmsnorm_scale", [OpType::RMSNorm, OpType::Scale].to_vec())
     }
 
     /// Length of the pattern chain.
@@ -685,7 +685,7 @@ pub fn detect_qkv_combine(graph: &OpGraph) -> Vec<FusedKernel> {
             }
             results.push(FusedKernel {
                 name: "qkv_combine".into(),
-                original_ops: vec![OpType::MatMul, OpType::MatMul, OpType::MatMul],
+                original_ops: [OpType::MatMul, OpType::MatMul, OpType::MatMul].to_vec(),
                 original_node_ids: qkv,
                 output_shape,
                 total_flops,
@@ -1007,7 +1007,7 @@ mod tests {
         let a = g.add_node(OpType::MatMul, "a", shape(&[4, 128]));
         let b = g.add_node(OpType::BiasAdd, "b", shape(&[4, 128]));
         g.add_edge(a, b).unwrap();
-        assert_eq!(g.predecessors(b), vec![a]);
+        assert_eq!(g.predecessors(b), [a]);
         assert!(g.predecessors(a).is_empty());
     }
 
@@ -1017,7 +1017,7 @@ mod tests {
         let a = g.add_node(OpType::MatMul, "a", shape(&[4, 128]));
         let b = g.add_node(OpType::BiasAdd, "b", shape(&[4, 128]));
         g.add_edge(a, b).unwrap();
-        assert_eq!(g.successors(a), vec![b]);
+        assert_eq!(g.successors(a), [b]);
         assert!(g.successors(b).is_empty());
     }
 
@@ -1037,7 +1037,7 @@ mod tests {
     fn test_graph_topological_sort_linear() {
         let g = build_matmul_bias_graph();
         let topo = g.topological_sort().unwrap();
-        assert_eq!(topo, vec![0, 1]);
+        assert_eq!(topo, [0, 1]);
     }
 
     #[test]
@@ -1087,7 +1087,7 @@ mod tests {
     #[test]
     fn test_pattern_linear() {
         let p = FusionPattern::linear();
-        assert_eq!(p.ops, vec![OpType::MatMul, OpType::BiasAdd]);
+        assert_eq!(p.ops, [OpType::MatMul, OpType::BiasAdd]);
         assert_eq!(p.len(), 2);
         assert!(!p.is_empty());
     }
@@ -1095,13 +1095,13 @@ mod tests {
     #[test]
     fn test_pattern_linear_relu() {
         let p = FusionPattern::linear_relu();
-        assert_eq!(p.ops, vec![OpType::MatMul, OpType::BiasAdd, OpType::ReLU]);
+        assert_eq!(p.ops, [OpType::MatMul, OpType::BiasAdd, OpType::ReLU]);
     }
 
     #[test]
     fn test_pattern_norm_scale() {
         let p = FusionPattern::norm_scale();
-        assert_eq!(p.ops, vec![OpType::LayerNorm, OpType::Scale]);
+        assert_eq!(p.ops, [OpType::LayerNorm, OpType::Scale]);
     }
 
     #[test]
@@ -1176,7 +1176,7 @@ mod tests {
         let fused = opt.find_fusions(&g).unwrap();
         assert_eq!(fused.len(), 1);
         assert_eq!(fused[0].name, "linear");
-        assert_eq!(fused[0].original_ops, vec![OpType::MatMul, OpType::BiasAdd]);
+        assert_eq!(fused[0].original_ops, [OpType::MatMul, OpType::BiasAdd]);
     }
 
     #[test]
@@ -1394,7 +1394,7 @@ mod tests {
     fn test_qkv_combine_output_shape() {
         let g = build_qkv_graph();
         let qkv = detect_qkv_combine(&g);
-        assert_eq!(qkv[0].output_shape, vec![4, 384]); // 128 * 3
+        assert_eq!(qkv[0].output_shape, [4, 384]); // 128 * 3
     }
 
     #[test]
@@ -1561,22 +1561,22 @@ mod tests {
 
     #[test]
     fn test_cpu_ref_relu() {
-        let input = vec![-1.0, 0.0, 1.0, 2.0];
+        let input = [-1.0, 0.0, 1.0, 2.0];
         let out = cpu_ref_execute(OpType::ReLU, &input, None);
-        assert_eq!(out, vec![0.0, 0.0, 1.0, 2.0]);
+        assert_eq!(out, [0.0, 0.0, 1.0, 2.0]);
     }
 
     #[test]
     fn test_cpu_ref_bias_add() {
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let bias = vec![0.5, -0.5, 0.5, -0.5];
+        let input = [1.0, 2.0, 3.0, 4.0];
+        let bias = [0.5, -0.5, 0.5, -0.5];
         let out = cpu_ref_execute(OpType::BiasAdd, &input, Some(&bias));
-        assert_eq!(out, vec![1.5, 1.5, 3.5, 3.5]);
+        assert_eq!(out, [1.5, 1.5, 3.5, 3.5]);
     }
 
     #[test]
     fn test_cpu_ref_silu() {
-        let input = vec![0.0, 1.0];
+        let input = [0.0, 1.0];
         let out = cpu_ref_execute(OpType::SiLU, &input, None);
         assert!((out[0] - 0.0).abs() < 1e-6);
         // SiLU(1) = 1 / (1 + exp(-1)) ≈ 0.7311
@@ -1585,7 +1585,7 @@ mod tests {
 
     #[test]
     fn test_cpu_ref_gelu() {
-        let input = vec![0.0, 1.0];
+        let input = [0.0, 1.0];
         let out = cpu_ref_execute(OpType::GELU, &input, None);
         assert!((out[0] - 0.0).abs() < 1e-6);
         // GELU(1) ≈ 0.8412
@@ -1594,31 +1594,31 @@ mod tests {
 
     #[test]
     fn test_cpu_ref_scale() {
-        let input = vec![1.0, 2.0, 3.0];
-        let scale = vec![2.0];
+        let input = [1.0, 2.0, 3.0];
+        let scale = [2.0];
         let out = cpu_ref_execute(OpType::Scale, &input, Some(&scale));
-        assert_eq!(out, vec![2.0, 4.0, 6.0]);
+        assert_eq!(out, [2.0, 4.0, 6.0]);
     }
 
     #[test]
     fn test_cpu_ref_elementwise_mul() {
-        let input = vec![1.0, 2.0, 3.0];
-        let other = vec![2.0, 3.0, 4.0];
+        let input = [1.0, 2.0, 3.0];
+        let other = [2.0, 3.0, 4.0];
         let out = cpu_ref_execute(OpType::ElementwiseMul, &input, Some(&other));
-        assert_eq!(out, vec![2.0, 6.0, 12.0]);
+        assert_eq!(out, [2.0, 6.0, 12.0]);
     }
 
     #[test]
     fn test_cpu_ref_elementwise_add() {
-        let input = vec![1.0, 2.0, 3.0];
-        let other = vec![10.0, 20.0, 30.0];
+        let input = [1.0, 2.0, 3.0];
+        let other = [10.0, 20.0, 30.0];
         let out = cpu_ref_execute(OpType::ElementwiseAdd, &input, Some(&other));
-        assert_eq!(out, vec![11.0, 22.0, 33.0]);
+        assert_eq!(out, [11.0, 22.0, 33.0]);
     }
 
     #[test]
     fn test_cpu_ref_passthrough() {
-        let input = vec![1.0, 2.0];
+        let input = [1.0, 2.0];
         let out = cpu_ref_execute(OpType::Reshape, &input, None);
         assert_eq!(out, input);
     }
@@ -1626,36 +1626,36 @@ mod tests {
     #[test]
     fn test_cpu_ref_matmul() {
         // 2×2 identity times [1,2; 3,4]
-        let a = vec![1.0, 0.0, 0.0, 1.0];
-        let b = vec![1.0, 2.0, 3.0, 4.0];
+        let a = [1.0, 0.0, 0.0, 1.0];
+        let b = [1.0, 2.0, 3.0, 4.0];
         let c = cpu_ref_matmul(&a, &b, 2, 2, 2);
-        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c, [1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
     fn test_cpu_ref_matmul_nonsquare() {
         // [1,2,3] × [1; 2; 3] = [14]
-        let a = vec![1.0, 2.0, 3.0];
-        let b = vec![1.0, 2.0, 3.0];
+        let a = [1.0, 2.0, 3.0];
+        let b = [1.0, 2.0, 3.0];
         let c = cpu_ref_matmul(&a, &b, 1, 3, 1);
         assert!((c[0] - 14.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_cpu_ref_matmul_bias_act_relu() {
-        let a = vec![1.0, 0.0, 0.0, 1.0];
-        let b = vec![-1.0, 2.0, 3.0, -4.0];
-        let bias = vec![0.0, 0.0];
+        let a = [1.0, 0.0, 0.0, 1.0];
+        let b = [-1.0, 2.0, 3.0, -4.0];
+        let bias = [0.0, 0.0];
         let c = cpu_ref_matmul_bias_act(&a, &b, &bias, 2, 2, 2, Some(OpType::ReLU));
         // matmul: [-1, 2, 3, -4], relu: [0, 2, 3, 0]
-        assert_eq!(c, vec![0.0, 2.0, 3.0, 0.0]);
+        assert_eq!(c, [0.0, 2.0, 3.0, 0.0]);
     }
 
     #[test]
     fn test_cpu_ref_matmul_bias_act_none() {
-        let a = vec![1.0, 2.0];
-        let b = vec![3.0, 4.0];
-        let bias = vec![1.0];
+        let a = [1.0, 2.0];
+        let b = [3.0, 4.0];
+        let bias = [1.0];
         let c = cpu_ref_matmul_bias_act(&a, &b, &bias, 1, 2, 1, None);
         // matmul: [11], bias: [12]
         assert!((c[0] - 12.0).abs() < 1e-6);
@@ -1663,8 +1663,8 @@ mod tests {
 
     #[test]
     fn test_cpu_ref_layernorm_scale() {
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let scale = vec![1.0, 1.0, 1.0, 1.0];
+        let input = [1.0, 2.0, 3.0, 4.0];
+        let scale = [1.0, 1.0, 1.0, 1.0];
         let out = cpu_ref_layernorm_scale(&input, &scale, 1e-5);
         // Mean=2.5, var=1.25, check normalized values sum ≈ 0.
         let sum: f32 = out.iter().sum();
@@ -1673,8 +1673,8 @@ mod tests {
 
     #[test]
     fn test_cpu_ref_layernorm_scale_with_gamma() {
-        let input = vec![1.0, 3.0];
-        let scale = vec![2.0, 2.0];
+        let input = [1.0, 3.0];
+        let scale = [2.0, 2.0];
         let out = cpu_ref_layernorm_scale(&input, &scale, 1e-5);
         // Mean=2, var=1, inv_std=1, normed=[-1,1], scaled=[-2,2].
         assert!((out[0] - (-2.0)).abs() < 1e-4);
@@ -1691,8 +1691,8 @@ mod tests {
 
     #[test]
     fn test_fused_vs_unfused_bias_relu() {
-        let input = vec![-2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
-        let bias = vec![0.5, -0.5, 0.1, 0.2, -0.3, 0.4];
+        let input = [-2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        let bias = [0.5, -0.5, 0.1, 0.2, -0.3, 0.4];
         // Unfused: bias then relu.
         let after_bias = cpu_ref_execute(OpType::BiasAdd, &input, Some(&bias));
         let unfused = cpu_ref_execute(OpType::ReLU, &after_bias, None);
@@ -1709,8 +1709,8 @@ mod tests {
 
     #[test]
     fn test_fused_vs_unfused_scale_silu() {
-        let input = vec![0.5, 1.0, -0.5, 2.0];
-        let scale = vec![2.0];
+        let input = [0.5, 1.0, -0.5, 2.0];
+        let scale = [2.0];
         let after_scale = cpu_ref_execute(OpType::Scale, &input, Some(&scale));
         let unfused = cpu_ref_execute(OpType::SiLU, &after_scale, None);
         // In fused chain: first op is Scale, second is SiLU.
@@ -1732,9 +1732,9 @@ mod tests {
 
     #[test]
     fn test_fused_matmul_bias_relu_matches_separate() {
-        let a = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
-        let b = vec![0.5, -0.5, 1.0, 0.0]; // [2, 2]
-        let bias = vec![0.1, -0.1];
+        let a = [1.0, 2.0, 3.0, 4.0]; // [2, 2]
+        let b = [0.5, -0.5, 1.0, 0.0]; // [2, 2]
+        let bias = [0.1, -0.1];
 
         let fused = cpu_ref_matmul_bias_act(&a, &b, &bias, 2, 2, 2, Some(OpType::ReLU));
 
@@ -1838,7 +1838,7 @@ mod tests {
         )]);
         let fused = opt.find_fusions(&g).unwrap();
         let fk = &fused[0];
-        assert_eq!(fk.output_shape, vec![4, 128]);
+        assert_eq!(fk.output_shape, [4, 128]);
         assert_eq!(fk.original_node_ids.len(), 2);
         assert!(fk.total_flops > 0);
         assert!(fk.memory_saved_bytes > 0);

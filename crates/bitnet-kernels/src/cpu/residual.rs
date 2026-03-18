@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn add_residual_length_mismatch() {
         let mut output = vec![1.0, 2.0];
-        let residual = vec![1.0];
+        let residual = [1.0];
         assert!(add_residual(&mut output, &residual).is_err());
     }
 
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn add_residual_scaled_linearity() {
         // scale * (a + b) == scale * a + scale * b
-        let base = vec![0.0_f32; 4];
+        let base = [0.0_f32; 4];
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
         let scale = 0.3;
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn add_residual_scaled_length_mismatch() {
-        let mut output = vec![1.0];
+        let mut output = [1.0];
         assert!(add_residual_scaled(&mut output, &[1.0, 2.0], 1.0).is_err());
     }
 

@@ -927,7 +927,7 @@ mod tests {
 
     #[test]
     fn test_parity_deterministic() {
-        let v = 3.14f32;
+        let v = 1.5f32;
         assert_eq!(compute_parity(v), compute_parity(v));
     }
 
@@ -964,7 +964,7 @@ mod tests {
     #[test]
     fn test_detect_errors_length_mismatch() {
         let data = [1.0f32, 2.0, 3.0, 4.0];
-        let parity = vec![0u8; 2];
+        let parity = [0u8; 2];
         let errs = detect_errors(&data, &parity);
         assert!(errs <= 2);
     }
@@ -1474,7 +1474,7 @@ mod tests {
         #[test]
         fn test_launch_parity_stub() {
             let data = [1.0, 2.0f32];
-            let mut out = vec![0u32; 2];
+            let mut out = [0u32; 2];
             let cfg = launch_compute_parity(&data, &mut out, 2).unwrap();
             assert_eq!(cfg.n, 2);
         }

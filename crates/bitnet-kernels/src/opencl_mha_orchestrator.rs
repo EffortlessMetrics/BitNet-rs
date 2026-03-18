@@ -1367,7 +1367,7 @@ mod tests {
     fn test_qkv_proj_gqa_sizes() {
         let cfg = MhaConfig::new_gqa(4, 2, 2, 10000.0, 64).unwrap();
         let proj = QkvProjection::zeros(&cfg);
-        let input = vec![0.0; 8]; // [1, 8]
+        let input = [0.0; 8]; // [1, 8]
         let (q, k, v) = proj.forward(&input, 1, &cfg).unwrap();
         assert_eq!(q.len(), 8); // num_heads * head_dim = 8
         assert_eq!(k.len(), 4); // num_kv_heads * head_dim = 4
@@ -1464,7 +1464,7 @@ mod tests {
 
     #[test]
     fn test_head_splitter_scatter() {
-        let mut output = vec![0.0f32; 8]; // [2, 4] for 2 heads, dim=2
+        let mut output = [0.0f32; 8]; // [2, 4] for 2 heads, dim=2
         let h0_data = vec![1.0, 2.0, 5.0, 6.0]; // [2, 2]
         let h1_data = vec![3.0, 4.0, 7.0, 8.0];
         HeadSplitter::scatter_head(&mut output, &h0_data, 2, 2, 2, 0);
@@ -1577,7 +1577,7 @@ mod tests {
     fn test_rope_all_heads_overflow_rejected() {
         let cfg = MhaConfig::new(2, 4, 8).unwrap();
         let rope = RoPEApplier::new(&cfg);
-        let mut data = vec![0.0; 16]; // [2, 8]
+        let mut data = [0.0; 16]; // [2, 8]
         assert!(rope.apply_all_heads(&mut data, 2, 2, 7).is_err());
     }
 
@@ -1628,7 +1628,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_seq1() {
-        let mut scores = vec![5.0]; // [1, 1]
+        let mut scores = [5.0]; // [1, 1]
         AttentionScorer::apply_causal_mask(&mut scores, 1, 1, 0);
         assert_eq!(scores[0], 5.0); // pos 0 can attend to j=0
     }
@@ -1667,9 +1667,9 @@ mod tests {
     #[test]
     fn test_apply_single_kv() {
         // Single KV position → output = V regardless of weights (weight=1.0)
-        let weights = vec![1.0]; // [1, 1]
+        let weights = [1.0]; // [1, 1]
         let v = vec![3.0, 7.0]; // [1, 2]
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         AttentionApplier::apply(&weights, &v, &mut out, 1, 1, 2);
         assert_slices_close(&out, &[3.0, 7.0], ATOL);
     }
@@ -1678,7 +1678,7 @@ mod tests {
     fn test_apply_weighted_average() {
         let weights = vec![0.5, 0.5]; // [1, 2] uniform
         let v = vec![2.0, 4.0, 6.0, 8.0]; // [2, 2]
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         AttentionApplier::apply(&weights, &v, &mut out, 1, 2, 2);
         assert_slices_close(&out, &[4.0, 6.0], ATOL);
     }
@@ -1688,7 +1688,7 @@ mod tests {
         let q = vec![1.0, 0.0];
         let k = vec![1.0, 0.0, 0.0, 1.0];
         let v = vec![10.0, 20.0, 30.0, 40.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         AttentionApplier::full_attention(&q, &k, &v, &mut out, 1, 2, 2, 1.0, false, 0);
         // Softmax of [1.0, 0.0] → [e^1/(e^1+e^0), e^0/(e^1+e^0)]
         let e1 = 1.0f32.exp();
@@ -1703,8 +1703,8 @@ mod tests {
         let q = vec![1.0, 2.0];
         let k = vec![3.0, 4.0];
         let v = vec![5.0, 6.0];
-        let mut out_c = vec![0.0; 2];
-        let mut out_nc = vec![0.0; 2];
+        let mut out_c = [0.0; 2];
+        let mut out_nc = [0.0; 2];
         AttentionApplier::full_attention(&q, &k, &v, &mut out_c, 1, 1, 2, 1.0, true, 0);
         AttentionApplier::full_attention(&q, &k, &v, &mut out_nc, 1, 1, 2, 1.0, false, 0);
         // With seq_len=kv_len=1, causal doesn't change anything
@@ -1717,7 +1717,7 @@ mod tests {
         let q = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2]
         let k = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2]
         let v = vec![10.0, 20.0, 30.0, 40.0]; // [2, 2]
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         AttentionApplier::full_attention(&q, &k, &v, &mut out, 2, 2, 2, 1.0, true, 0);
         // First query (pos 0) can only attend to pos 0 → output = V[0]
         assert_slices_close(&out[0..2], &[10.0, 20.0], ATOL);
@@ -1732,7 +1732,7 @@ mod tests {
         let cfg = MhaConfig::new(2, 2, 64).unwrap();
         let proj = OutputProjection::identity(&cfg);
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         proj.forward(&input, &mut out, 1, &cfg).unwrap();
         assert_slices_close(&out, &input, ATOL);
     }
@@ -1742,7 +1742,7 @@ mod tests {
         let cfg = MhaConfig::new(2, 2, 64).unwrap();
         let proj = OutputProjection::zeros(&cfg);
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         proj.forward(&input, &mut out, 1, &cfg).unwrap();
         for val in &out {
             assert_close(*val, 0.0, ATOL);
@@ -1756,7 +1756,7 @@ mod tests {
         let bo = vec![10.0, 20.0];
         let proj = OutputProjection::with_bias(wo, bo);
         let input = vec![1.0, 2.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         proj.forward(&input, &mut out, 1, &cfg).unwrap();
         assert_slices_close(&out, &[11.0, 22.0], ATOL);
     }
@@ -1794,7 +1794,7 @@ mod tests {
     fn test_orchestrator_forward_basic() {
         let orch = make_small_orchestrator(2, 2, 2);
         let input = vec![1.0, 0.0, 0.0, 1.0]; // [1, 4]
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         let stats = orch.forward(&input, &mut output, 1, 1, 0, false).unwrap();
         assert_eq!(stats.batch_size, 1);
         assert_eq!(stats.seq_len, 1);
@@ -1812,7 +1812,7 @@ mod tests {
             1.0, 0.0, 0.0, 1.0, // t=0
             0.0, 1.0, 1.0, 0.0, // t=1
         ];
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         let stats = orch.forward(&input, &mut output, 1, 2, 0, false).unwrap();
         assert_eq!(stats.seq_len, 2);
         for val in &output {
@@ -1824,7 +1824,7 @@ mod tests {
     fn test_orchestrator_forward_causal() {
         let orch = make_small_orchestrator(1, 1, 2);
         let input = vec![1.0, 0.0, 0.0, 1.0]; // [2, 2]
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         orch.forward(&input, &mut output, 1, 2, 0, true).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -1834,8 +1834,8 @@ mod tests {
     #[test]
     fn test_orchestrator_gqa_mode() {
         let orch = make_small_orchestrator(4, 2, 2);
-        let input = vec![0.1; 8]; // [1, 8] = 4 heads * 2 dim
-        let mut output = vec![0.0; 8];
+        let input = [0.1; 8]; // [1, 8] = 4 heads * 2 dim
+        let mut output = [0.0; 8];
         orch.forward(&input, &mut output, 1, 1, 0, false).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -1845,8 +1845,8 @@ mod tests {
     #[test]
     fn test_orchestrator_mqa_mode() {
         let orch = make_small_orchestrator(4, 1, 2);
-        let input = vec![0.1; 8];
-        let mut output = vec![0.0; 8];
+        let input = [0.1; 8];
+        let mut output = [0.0; 8];
         orch.forward(&input, &mut output, 1, 1, 0, false).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -1877,7 +1877,7 @@ mod tests {
             1.0, 2.0, 3.0, 4.0, // batch 0
             1.0, 2.0, 3.0, 4.0, // batch 1
         ];
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         orch.forward(&input, &mut output, 2, 1, 0, false).unwrap();
         assert_slices_close(&output[0..h], &output[h..2 * h], 1e-4);
     }
@@ -1885,16 +1885,16 @@ mod tests {
     #[test]
     fn test_orchestrator_wrong_input_size() {
         let orch = make_small_orchestrator(2, 2, 2);
-        let input = vec![1.0; 3]; // wrong size
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 3]; // wrong size
+        let mut output = [0.0; 4];
         assert!(orch.forward(&input, &mut output, 1, 1, 0, false).is_err());
     }
 
     #[test]
     fn test_orchestrator_wrong_output_size() {
         let orch = make_small_orchestrator(2, 2, 2);
-        let input = vec![1.0; 4];
-        let mut output = vec![0.0; 3]; // wrong size
+        let input = [1.0; 4];
+        let mut output = [0.0; 3]; // wrong size
         assert!(orch.forward(&input, &mut output, 1, 1, 0, false).is_err());
     }
 
@@ -1902,7 +1902,7 @@ mod tests {
     fn test_orchestrator_forward_no_rope() {
         let orch = make_small_orchestrator(2, 2, 2);
         let input = vec![1.0, 0.0, 0.0, 1.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         orch.forward_no_rope(&input, &mut output, 1, false).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -1913,7 +1913,7 @@ mod tests {
     fn test_orchestrator_seq_len_1() {
         let orch = make_small_orchestrator(2, 2, 2);
         let input = vec![0.5, 0.5, 0.5, 0.5];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         orch.forward(&input, &mut output, 1, 1, 0, true).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -1947,7 +1947,7 @@ mod tests {
         let out_proj = OutputProjection::new(wo);
         let orch = MhaOrchestrator::new(cfg, qkv, out_proj).unwrap();
         let input = vec![1.0, 2.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         orch.forward(&input, &mut output, 1, 1, 0, false).unwrap();
         for val in &output {
             assert!(!val.is_nan());
@@ -2005,8 +2005,8 @@ mod tests {
     #[test]
     fn test_stats_from_orchestrator() {
         let orch = make_small_orchestrator(2, 2, 2);
-        let input = vec![1.0; 4];
-        let mut output = vec![0.0; 4];
+        let input = [1.0; 4];
+        let mut output = [0.0; 4];
         let stats = orch.forward(&input, &mut output, 1, 1, 0, false).unwrap();
         assert_eq!(stats.batch_size, 1);
         assert_eq!(stats.seq_len, 1);
@@ -2096,8 +2096,8 @@ mod tests {
     fn test_orchestrator_deterministic() {
         let orch = make_small_orchestrator(2, 2, 2);
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // [2, 4]
-        let mut out1 = vec![0.0; 8];
-        let mut out2 = vec![0.0; 8];
+        let mut out1 = [0.0; 8];
+        let mut out2 = [0.0; 8];
         orch.forward(&input, &mut out1, 1, 2, 0, true).unwrap();
         orch.forward(&input, &mut out2, 1, 2, 0, true).unwrap();
         assert_slices_close(&out1, &out2, ATOL);
@@ -2184,7 +2184,7 @@ mod tests {
     fn test_matmul_ref_identity() {
         let a = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
         let b = vec![1.0, 0.0, 0.0, 1.0]; // identity
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         matmul_ref(&a, &b, &mut c, 2, 2, 2);
         assert_slices_close(&c, &a, ATOL);
     }
@@ -2193,7 +2193,7 @@ mod tests {
     fn test_matmul_ref_rectangular() {
         let a = vec![1.0, 2.0, 3.0]; // [1, 3]
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // [3, 2]
-        let mut c = vec![0.0; 2]; // [1, 2]
+        let mut c = [0.0; 2]; // [1, 2]
         matmul_ref(&a, &b, &mut c, 1, 3, 2);
         // 1*1+2*3+3*5 = 22, 1*2+2*4+3*6 = 28
         assert_slices_close(&c, &[22.0, 28.0], ATOL);
@@ -2222,7 +2222,7 @@ mod tests {
 
     #[test]
     fn test_softmax_row_single() {
-        let mut row = vec![5.0];
+        let mut row = [5.0];
         softmax_row(&mut row);
         assert_close(row[0], 1.0, ATOL);
     }

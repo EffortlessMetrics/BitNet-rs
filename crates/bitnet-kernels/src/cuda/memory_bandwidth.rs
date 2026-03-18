@@ -790,7 +790,7 @@ mod tests {
     #[test]
     fn test_coalesced_copy_basic() {
         let src: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        let mut dst = vec![0.0f32; 64];
+        let mut dst = [0.0f32; 64];
         let cfg = BandwidthConfig::default();
         let txns = coalesced_copy(&src, &mut dst, &cfg).unwrap();
         assert_eq!(src, dst);
@@ -806,8 +806,8 @@ mod tests {
 
     #[test]
     fn test_coalesced_copy_smaller_dst() {
-        let src = vec![1.0f32; 100];
-        let mut dst = vec![0.0f32; 50];
+        let src = [1.0f32; 100];
+        let mut dst = [0.0f32; 50];
         let cfg = BandwidthConfig::default();
         coalesced_copy(&src, &mut dst, &cfg).unwrap();
         assert!(dst.iter().all(|&v| v == 1.0));
@@ -816,8 +816,8 @@ mod tests {
     #[test]
     fn test_coalesced_copy_transactions() {
         // 128-byte alignment = 32 f32 per txn.
-        let src = vec![0.0f32; 64];
-        let mut dst = vec![0.0f32; 64];
+        let src = [0.0f32; 64];
+        let mut dst = [0.0f32; 64];
         let cfg = BandwidthConfig { alignment: 128, ..Default::default() };
         let txns = coalesced_copy(&src, &mut dst, &cfg).unwrap();
         assert_eq!(txns, 2);
@@ -825,8 +825,8 @@ mod tests {
 
     #[test]
     fn test_coalesced_copy_unaligned_len() {
-        let src = vec![1.0f32; 33];
-        let mut dst = vec![0.0f32; 33];
+        let src = [1.0f32; 33];
+        let mut dst = [0.0f32; 33];
         let cfg = BandwidthConfig { alignment: 128, ..Default::default() };
         let txns = coalesced_copy(&src, &mut dst, &cfg).unwrap();
         assert_eq!(txns, 2); // 32 + 1
@@ -846,7 +846,7 @@ mod tests {
 
     #[test]
     fn test_vectorized_load_remainder() {
-        let data = vec![1.0f32; 7];
+        let data = [1.0f32; 7];
         let cfg = BandwidthConfig { vectorize_width: 4, ..Default::default() };
         let (_, ops) = vectorized_load(&data, &cfg).unwrap();
         assert_eq!(ops, 2); // 1 full + 1 remainder
@@ -862,7 +862,7 @@ mod tests {
 
     #[test]
     fn test_vectorized_load_width_1() {
-        let data = vec![1.0f32; 5];
+        let data = [1.0f32; 5];
         let cfg = BandwidthConfig { vectorize_width: 1, ..Default::default() };
         let (_, ops) = vectorized_load(&data, &cfg).unwrap();
         assert_eq!(ops, 5);
@@ -870,7 +870,7 @@ mod tests {
 
     #[test]
     fn test_vectorized_load_width_2() {
-        let data = vec![1.0f32; 5];
+        let data = [1.0f32; 5];
         let cfg = BandwidthConfig { vectorize_width: 2, ..Default::default() };
         let (_, ops) = vectorized_load(&data, &cfg).unwrap();
         assert_eq!(ops, 3); // 2 full + 1 remainder
@@ -881,10 +881,10 @@ mod tests {
     #[test]
     fn test_vectorized_store_basic() {
         let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         let cfg = BandwidthConfig::default();
         let ops = vectorized_store(&data, &mut dst, &cfg).unwrap();
-        assert_eq!(dst, data);
+        assert_eq!(dst.to_vec(), data);
         assert_eq!(ops, 4);
     }
 
@@ -897,8 +897,8 @@ mod tests {
 
     #[test]
     fn test_vectorized_store_partial_dst() {
-        let data = vec![1.0f32; 10];
-        let mut dst = vec![0.0f32; 5];
+        let data = [1.0f32; 10];
+        let mut dst = [0.0f32; 5];
         let cfg = BandwidthConfig { vectorize_width: 4, ..Default::default() };
         let ops = vectorized_store(&data, &mut dst, &cfg).unwrap();
         assert_eq!(ops, 2); // 1 full + 1 remainder
@@ -945,7 +945,7 @@ mod tests {
     #[test]
     fn test_align_buffer_already_aligned() {
         let cfg = BandwidthConfig { alignment: 16, ..Default::default() };
-        let data = vec![1.0f32; 4]; // 4 elems × 4 bytes = 16 bytes
+        let data = [1.0f32; 4]; // 4 elems × 4 bytes = 16 bytes
         let (buf, pad) = align_buffer(&data, &cfg).unwrap();
         assert_eq!(pad, 0);
         assert_eq!(buf, data);
@@ -954,7 +954,7 @@ mod tests {
     #[test]
     fn test_align_buffer_needs_padding() {
         let cfg = BandwidthConfig { alignment: 128, ..Default::default() };
-        let data = vec![1.0f32; 5]; // 20 bytes → needs padding to 128 bytes (32 elems)
+        let data = [1.0f32; 5]; // 20 bytes → needs padding to 128 bytes (32 elems)
         let (buf, pad) = align_buffer(&data, &cfg).unwrap();
         assert_eq!(buf.len(), 32);
         assert_eq!(pad, 27);

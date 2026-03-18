@@ -309,12 +309,12 @@ mod tests {
         // Test 2x2 * 2x2 matrix multiplication
         let a = vec![1i8, 2, 3, 4]; // 2x2 matrix
         let b = vec![1u8, 0, 0, 1]; // 2x2 identity matrix
-        let mut c = vec![0.0f32; 4]; // 2x2 result
+        let mut c = [0.0f32; 4]; // 2x2 result
 
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
         // Expected result: A * I = A
-        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -323,7 +323,7 @@ mod tests {
 
         let a = vec![1i8, 2];
         let b = vec![1u8, 0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
 
         // Wrong dimensions should fail
         let result = kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2);
@@ -335,8 +335,8 @@ mod tests {
         let kernel = FallbackKernel;
 
         let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1];
-        let mut output = vec![0u8; 2]; // 8 values / 4 per byte = 2 bytes
-        let mut scales = vec![0.0f32; 1]; // 8 values / 32 per block = 1 block
+        let mut output = [0u8; 2]; // 8 values / 4 per byte = 2 bytes
+        let mut scales = [0.0f32; 1]; // 8 values / 32 per block = 1 block
 
         kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
 
@@ -351,9 +351,9 @@ mod tests {
     fn test_quantize_buffer_size_validation() {
         let kernel = FallbackKernel;
 
-        let input = vec![1.0; 32];
-        let mut output = vec![0u8; 1]; // Too small
-        let mut scales = vec![0.0f32; 1];
+        let input = [1.0; 32];
+        let mut output = [0u8; 1]; // Too small
+        let mut scales = [0.0f32; 1];
 
         let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_err());

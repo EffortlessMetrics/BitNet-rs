@@ -614,7 +614,7 @@ mod tests {
     #[test]
     fn i2s_basic_all_zeros() {
         let table = vec![pack_i2s([0, 0, 0, 0])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 0.0, 0.0]));
     }
@@ -622,7 +622,7 @@ mod tests {
     #[test]
     fn i2s_basic_all_ones() {
         let table = vec![pack_i2s([1, 1, 1, 1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 1.0, 1.0, 1.0]));
     }
@@ -630,7 +630,7 @@ mod tests {
     #[test]
     fn i2s_basic_all_neg_ones() {
         let table = vec![pack_i2s([-1, -1, -1, -1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[-1.0, -1.0, -1.0, -1.0]));
     }
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn i2s_mixed_values() {
         let table = vec![pack_i2s([1, 0, -1, 1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 0.0, -1.0, 1.0]));
     }
@@ -646,7 +646,7 @@ mod tests {
     #[test]
     fn i2s_with_scale() {
         let table = vec![pack_i2s([1, -1, 0, 1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 0.5, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.5, -0.5, 0.0, 0.5]));
     }
@@ -654,7 +654,7 @@ mod tests {
     #[test]
     fn i2s_zero_scale() {
         let table = vec![pack_i2s([1, -1, 1, -1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 0.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 0.0, 0.0]));
     }
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn i2s_multiple_rows() {
         let table = vec![pack_i2s([1, 0, 0, 0]), pack_i2s([0, 1, 0, 0]), pack_i2s([0, 0, -1, 0])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
 
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 0.0, 0.0, 0.0]));
@@ -678,7 +678,7 @@ mod tests {
     fn i2s_large_dim() {
         // dim = 16 → 4 bytes per row
         let row: Vec<u8> = (0..4).map(|_| pack_i2s([1, -1, 1, -1])).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         quant_embed_i2s_lookup(&row, 2.0, 16, 0, &mut out);
         let expected: Vec<f32> = (0..16).map(|i| if i % 2 == 0 { 2.0 } else { -2.0 }).collect();
         assert!(vec_approx_eq(&out, &expected));
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn i2s_negative_scale() {
         let table = vec![pack_i2s([1, -1, 0, 1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, -1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[-1.0, 1.0, 0.0, -1.0]));
     }
@@ -695,8 +695,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim must be a multiple of 4")]
     fn i2s_dim_not_multiple_of_4() {
-        let table = vec![0u8; 3];
-        let mut out = vec![0.0f32; 5];
+        let table = [0u8; 3];
+        let mut out = [0.0f32; 5];
         quant_embed_i2s_lookup(&table, 1.0, 5, 0, &mut out);
     }
 
@@ -704,30 +704,30 @@ mod tests {
     #[should_panic(expected = "dim must be > 0")]
     fn i2s_dim_zero() {
         let table = vec![0u8];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 0, 0, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn i2s_token_oob() {
-        let table = vec![0u8; 2]; // vocab=2, dim=4
-        let mut out = vec![0.0f32; 4];
+        let table = [0u8; 2]; // vocab=2, dim=4
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 5, &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too small")]
     fn i2s_output_too_small() {
-        let table = vec![0u8; 1];
-        let mut out = vec![0.0f32; 2];
+        let table = [0u8; 1];
+        let mut out = [0.0f32; 2];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut out);
     }
 
     #[test]
     fn i2s_dim_8_two_bytes() {
         let table = vec![pack_i2s([1, 0, -1, 0]), pack_i2s([-1, 1, 0, 1])];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_i2s_lookup(&table, 1.0, 8, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 0.0, -1.0, 0.0, -1.0, 1.0, 0.0, 1.0]));
     }
@@ -735,7 +735,7 @@ mod tests {
     #[test]
     fn i2s_large_scale() {
         let table = vec![pack_i2s([1, -1, 1, -1])];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1000.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1000.0, -1000.0, 1000.0, -1000.0]));
     }
@@ -745,7 +745,7 @@ mod tests {
     #[test]
     fn i8_basic_identity() {
         let table: Vec<i8> = vec![0, 1, 2, 3];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0]));
     }
@@ -753,7 +753,7 @@ mod tests {
     #[test]
     fn i8_with_scale() {
         let table: Vec<i8> = vec![0, 2, 4, 6];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 0.5, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0]));
     }
@@ -761,7 +761,7 @@ mod tests {
     #[test]
     fn i8_with_zero_point() {
         let table: Vec<i8> = vec![10, 11, 12, 13];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 10, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0]));
     }
@@ -769,7 +769,7 @@ mod tests {
     #[test]
     fn i8_scale_and_zero_point() {
         let table: Vec<i8> = vec![100, 102, 104, 106];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 0.5, 100, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0]));
     }
@@ -777,7 +777,7 @@ mod tests {
     #[test]
     fn i8_negative_values() {
         let table: Vec<i8> = vec![-4, -3, -2, -1];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[-4.0, -3.0, -2.0, -1.0]));
     }
@@ -785,7 +785,7 @@ mod tests {
     #[test]
     fn i8_multiple_rows() {
         let table: Vec<i8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
 
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 2.0, 3.0, 4.0]));
@@ -797,7 +797,7 @@ mod tests {
     #[test]
     fn i8_dim_not_multiple_of_4() {
         let table: Vec<i8> = vec![1, 2, 3, 4, 5, 6];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         quant_embed_i8_lookup(&table, 1.0, 0, 6, 0, &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]));
     }
@@ -805,15 +805,15 @@ mod tests {
     #[test]
     fn i8_zero_scale() {
         let table: Vec<i8> = vec![10, 20, 30, 40];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 0.0, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 0.0, 0.0]));
     }
 
     #[test]
     fn i8_dim_1() {
-        let table: Vec<i8> = vec![42];
-        let mut out = vec![0.0f32; 1];
+        let table: Vec<i8> = [42];
+        let mut out = [0.0f32; 1];
         quant_embed_i8_lookup(&table, 1.0, 0, 1, 0, &mut out);
         assert!(vec_approx_eq(&out, &[42.0]));
     }
@@ -832,7 +832,7 @@ mod tests {
     #[should_panic(expected = "dim must be > 0")]
     fn i8_dim_zero() {
         let table: Vec<i8> = vec![];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 0, 0, 0, &mut out);
     }
 
@@ -840,7 +840,7 @@ mod tests {
     #[should_panic(expected = "out of bounds")]
     fn i8_token_oob() {
         let table: Vec<i8> = vec![1, 2, 3, 4];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 5, &mut out);
     }
 
@@ -848,14 +848,14 @@ mod tests {
     #[should_panic(expected = "output too small")]
     fn i8_output_too_small() {
         let table: Vec<i8> = vec![1, 2, 3, 4];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 0, &mut out);
     }
 
     #[test]
     fn i8_negative_zero_point() {
         let table: Vec<i8> = vec![0, 1, 2, 3];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, -10, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[10.0, 11.0, 12.0, 13.0]));
     }
@@ -865,7 +865,7 @@ mod tests {
     #[test]
     fn batch_single_token() {
         let table: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_batch_lookup(&table, 4, &[1], &mut out);
         assert!(vec_approx_eq(&out, &[4.0, 5.0, 6.0, 7.0]));
     }
@@ -873,7 +873,7 @@ mod tests {
     #[test]
     fn batch_multiple_tokens() {
         let table: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[0, 2], &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0, 8.0, 9.0, 10.0, 11.0]));
     }
@@ -881,7 +881,7 @@ mod tests {
     #[test]
     fn batch_empty_tokens() {
         let table: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         quant_embed_batch_lookup(&table, 4, &[], &mut out);
         assert!(out.is_empty());
     }
@@ -889,7 +889,7 @@ mod tests {
     #[test]
     fn batch_duplicate_tokens() {
         let table: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[1, 1], &mut out);
         assert!(vec_approx_eq(&out, &[4.0, 5.0, 6.0, 7.0, 4.0, 5.0, 6.0, 7.0]));
     }
@@ -897,7 +897,7 @@ mod tests {
     #[test]
     fn batch_all_tokens() {
         let table: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[0, 1], &mut out);
         assert!(vec_approx_eq(&out, &table));
     }
@@ -906,7 +906,7 @@ mod tests {
     fn batch_dim_not_aligned() {
         let dim = 5;
         let table: Vec<f32> = (0..15).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         quant_embed_batch_lookup(&table, dim, &[2], &mut out);
         assert!(vec_approx_eq(&out, &[10.0, 11.0, 12.0, 13.0, 14.0]));
     }
@@ -925,8 +925,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim must be > 0")]
     fn batch_dim_zero() {
-        let table: Vec<f32> = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let table: Vec<f32> = [1.0];
+        let mut out = [0.0f32; 1];
         quant_embed_batch_lookup(&table, 0, &[0], &mut out);
     }
 
@@ -934,14 +934,14 @@ mod tests {
     #[should_panic(expected = "out of bounds")]
     fn batch_token_oob() {
         let table: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_batch_lookup(&table, 4, &[5], &mut out);
     }
 
     #[test]
     fn batch_reversed_order() {
         let table: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[2, 0], &mut out);
         assert!(vec_approx_eq(&out, &[8.0, 9.0, 10.0, 11.0, 0.0, 1.0, 2.0, 3.0]));
     }
@@ -951,7 +951,7 @@ mod tests {
     #[test]
     fn gather_sum_single() {
         let table: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[0], &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 1.0, 2.0, 3.0]));
     }
@@ -959,7 +959,7 @@ mod tests {
     #[test]
     fn gather_sum_two_rows() {
         let table: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[0, 1], &mut out);
         // [0+4, 1+5, 2+6, 3+7] = [4, 6, 8, 10]
         assert!(vec_approx_eq(&out, &[4.0, 6.0, 8.0, 10.0]));
@@ -968,7 +968,7 @@ mod tests {
     #[test]
     fn gather_sum_duplicate_indices() {
         let table = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[0, 0, 0], &mut out);
         assert!(vec_approx_eq(&out, &[3.0, 6.0, 9.0, 12.0]));
     }
@@ -976,7 +976,7 @@ mod tests {
     #[test]
     fn gather_sum_empty() {
         let table = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[], &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 0.0, 0.0]));
     }
@@ -1006,8 +1006,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim must be > 0")]
     fn gather_sum_dim_zero() {
-        let table: Vec<f32> = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let table: Vec<f32> = [1.0];
+        let mut out = [0.0f32; 1];
         quant_embed_gather_sum(&table, 0, &[0], &mut out);
     }
 
@@ -1015,7 +1015,7 @@ mod tests {
     #[should_panic(expected = "out of bounds")]
     fn gather_sum_token_oob() {
         let table = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[5], &mut out);
     }
 
@@ -1245,7 +1245,7 @@ mod tests {
     #[test]
     fn i2s_then_positional_add() {
         let table = vec![pack_i2s([1, -1, 1, -1])];
-        let mut emb = vec![0.0f32; 4];
+        let mut emb = [0.0f32; 4];
         quant_embed_i2s_lookup(&table, 1.0, 4, 0, &mut emb);
         let pos = vec![0.5, 0.5, 0.5, 0.5];
         quant_embed_positional_add(&mut emb, &pos, 4, 0);
@@ -1255,7 +1255,7 @@ mod tests {
     #[test]
     fn i8_then_norm() {
         let table_i8: Vec<i8> = vec![3, 4, 0, 0];
-        let mut emb = vec![0.0f32; 4];
+        let mut emb = [0.0f32; 4];
         quant_embed_i8_lookup(&table_i8, 1.0, 0, 4, 0, &mut emb);
         quant_embed_table_norm(&mut emb, 4);
         assert!(vec_approx_eq(&emb, &[0.6, 0.8, 0.0, 0.0]));
@@ -1264,11 +1264,11 @@ mod tests {
     #[test]
     fn batch_then_gather_sum() {
         let table: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let mut batch_out = vec![0.0f32; 8];
+        let mut batch_out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[0, 2], &mut batch_out);
         // batch_out = [0,1,2,3, 8,9,10,11]
         // Now gather-sum both rows of batch_out
-        let mut sum_out = vec![0.0f32; 4];
+        let mut sum_out = [0.0f32; 4];
         quant_embed_gather_sum(&batch_out, 4, &[0, 1], &mut sum_out);
         assert!(vec_approx_eq(&sum_out, &[8.0, 10.0, 12.0, 14.0]));
     }
@@ -1279,7 +1279,7 @@ mod tests {
             3.0f32, 0.0, 0.0, 0.0, // row 0
             0.0, 4.0, 0.0, 0.0, // row 1
         ];
-        let mut sum_out = vec![0.0f32; 4];
+        let mut sum_out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[0, 1], &mut sum_out);
         // sum = [3.0, 4.0, 0.0, 0.0]
         quant_embed_table_norm(&mut sum_out, 4);
@@ -1292,7 +1292,7 @@ mod tests {
             2.0f32, 0.0, 0.0, 0.0, // row 0
             0.0, 2.0, 0.0, 0.0, // row 1
         ];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quant_embed_batch_lookup(&table, 4, &[0, 1], &mut out);
         let pos = vec![
             1.0, 0.0, 0.0, 0.0, // pos 0
@@ -1310,7 +1310,7 @@ mod tests {
     fn i2s_unused_bits_treated_as_zero() {
         // 0b11 encoding should decode as 0
         let byte = 0b11_11_11_11u8; // all four values = 0b11
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&[byte], 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 0.0, 0.0]));
     }
@@ -1320,7 +1320,7 @@ mod tests {
         // Test all 4 possible 2-bit encodings in one byte
         // 0b10_01_00_11 = val3=-1, val2=1, val1=0, val0=0b11→0
         let byte = 0b10_01_00_11u8;
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i2s_lookup(&[byte], 1.0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[0.0, 0.0, 1.0, -1.0]));
     }
@@ -1328,7 +1328,7 @@ mod tests {
     #[test]
     fn i8_extreme_values() {
         let table: Vec<i8> = vec![127, -128, 0, 1];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_i8_lookup(&table, 1.0, 0, 4, 0, &mut out);
         assert!(vec_approx_eq(&out, &[127.0, -128.0, 0.0, 1.0]));
     }
@@ -1336,7 +1336,7 @@ mod tests {
     #[test]
     fn batch_single_dim() {
         let table = vec![10.0f32, 20.0, 30.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         quant_embed_batch_lookup(&table, 1, &[1, 2], &mut out);
         assert!(vec_approx_eq(&out, &[20.0, 30.0]));
     }
@@ -1344,7 +1344,7 @@ mod tests {
     #[test]
     fn gather_sum_single_index() {
         let table = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quant_embed_gather_sum(&table, 4, &[0], &mut out);
         assert!(vec_approx_eq(&out, &[1.0, 2.0, 3.0, 4.0]));
     }

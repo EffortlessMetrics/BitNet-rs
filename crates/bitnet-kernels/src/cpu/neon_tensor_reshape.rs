@@ -479,7 +479,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_1d_to_2d() {
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         reshape_contiguous_neon(&data, &[12], &[3, 4], &mut out);
         assert_eq!(out, data);
     }
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_2d_to_3d() {
         let data: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         reshape_contiguous_neon(&data, &[4, 6], &[2, 3, 4], &mut out);
         assert_eq!(out, data);
     }
@@ -495,7 +495,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_3d_to_1d() {
         let data: Vec<f32> = (0..60).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 60];
+        let mut out = [0.0f32; 60];
         reshape_contiguous_neon(&data, &[3, 4, 5], &[60], &mut out);
         assert_eq!(out, data);
     }
@@ -503,7 +503,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_identity() {
         let data: Vec<f32> = (0..16).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         reshape_contiguous_neon(&data, &[4, 4], &[4, 4], &mut out);
         assert_eq!(out, data);
     }
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_single_element() {
         let data = vec![42.0f32];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         reshape_contiguous_neon(&data, &[1], &[1, 1, 1], &mut out);
         assert_eq!(out, vec![42.0]);
     }
@@ -520,7 +520,7 @@ mod tests {
     fn test_reshape_contiguous_tail_elements() {
         // 5 elements: 1 NEON chunk of 4 + 1 scalar tail.
         let data: Vec<f32> = (0..5).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         reshape_contiguous_neon(&data, &[5], &[1, 5], &mut out);
         assert_eq!(out, data);
     }
@@ -528,7 +528,7 @@ mod tests {
     #[test]
     fn test_reshape_contiguous_exact_neon_multiple() {
         let data: Vec<f32> = (0..16).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         reshape_contiguous_neon(&data, &[16], &[2, 8], &mut out);
         assert_eq!(out, data);
     }
@@ -545,23 +545,23 @@ mod tests {
     #[test]
     #[should_panic(expected = "element count mismatch")]
     fn test_reshape_contiguous_size_mismatch() {
-        let data = vec![1.0f32; 12];
-        let mut out = vec![0.0f32; 12];
+        let data = [1.0f32; 12];
+        let mut out = [0.0f32; 12];
         reshape_contiguous_neon(&data, &[12], &[3, 5], &mut out);
     }
 
     #[test]
     #[should_panic(expected = "output too short")]
     fn test_reshape_contiguous_output_too_short() {
-        let data = vec![1.0f32; 12];
-        let mut out = vec![0.0f32; 6];
+        let data = [1.0f32; 12];
+        let mut out = [0.0f32; 6];
         reshape_contiguous_neon(&data, &[12], &[3, 4], &mut out);
     }
 
     #[test]
     fn test_reshape_contiguous_oversized_output() {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![99.0f32; 16];
+        let mut out = [99.0f32; 16];
         reshape_contiguous_neon(&data, &[8], &[2, 4], &mut out);
         assert_eq!(&out[..8], &data[..]);
         // Trailing elements untouched.
@@ -574,7 +574,7 @@ mod tests {
     fn test_strided_contiguous_fast_path() {
         // Contiguous strides → should take the fast path.
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         reshape_strided_neon(&data, &[3, 4], &[4, 1], &[12], &mut out);
         assert_eq!(out, data);
     }
@@ -585,7 +585,7 @@ mod tests {
         // data[r][c] = r*4+c
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
         // Read with strides [1, 3] = column-major of a 4×3 view.
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         reshape_strided_neon(&data, &[4, 3], &[1, 4], &[12], &mut out);
         // Expected: column-major traversal of 3×4 matrix.
         let expected: Vec<f32> = vec![0.0, 4.0, 8.0, 1.0, 5.0, 9.0, 2.0, 6.0, 10.0, 3.0, 7.0, 11.0];
@@ -596,7 +596,7 @@ mod tests {
     fn test_strided_skip_rows() {
         // Stride 2 in innermost dim → gather every other element.
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         reshape_strided_neon(&data, &[2, 2], &[4, 2], &[4], &mut out);
         assert_eq!(out, vec![0.0, 2.0, 4.0, 6.0]);
     }
@@ -605,7 +605,7 @@ mod tests {
     fn test_strided_3d() {
         // 2×2×2 with strides [4,2,1] (contiguous) → should fast-path.
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         reshape_strided_neon(&data, &[2, 2, 2], &[4, 2, 1], &[8], &mut out);
         assert_eq!(out, data);
     }
@@ -614,7 +614,7 @@ mod tests {
     fn test_strided_inner_non_unit() {
         // 2×3 with inner stride=2, outer stride=1 (a peculiar view).
         let data: Vec<f32> = (0..6).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         reshape_strided_neon(&data, &[2, 3], &[1, 2], &[6], &mut out);
         // Reads: (0,0)→0, (0,1)→2, (0,2)→4, (1,0)→1, (1,1)→3, (1,2)→5
         assert_eq!(out, vec![0.0, 2.0, 4.0, 1.0, 3.0, 5.0]);
@@ -623,7 +623,7 @@ mod tests {
     #[test]
     fn test_strided_single_element() {
         let data = vec![7.0f32];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         reshape_strided_neon(&data, &[1], &[1], &[1, 1], &mut out);
         assert_eq!(out, vec![7.0]);
     }
@@ -640,16 +640,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "element count mismatch")]
     fn test_strided_count_mismatch() {
-        let data = vec![0.0f32; 12];
-        let mut out = vec![0.0f32; 6];
+        let data = [0.0f32; 12];
+        let mut out = [0.0f32; 6];
         reshape_strided_neon(&data, &[3, 4], &[4, 1], &[3, 3], &mut out);
     }
 
     #[test]
     #[should_panic(expected = "shape/strides ndim mismatch")]
     fn test_strided_ndim_mismatch() {
-        let data = vec![0.0f32; 6];
-        let mut out = vec![0.0f32; 6];
+        let data = [0.0f32; 6];
+        let mut out = [0.0f32; 6];
         reshape_strided_neon(&data, &[2, 3], &[3], &[6], &mut out);
     }
 
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn test_squeeze_with_copy() {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         let (s, _st) = squeeze_neon(&data, &[1, 8], &[8, 1], Some(&mut out));
         assert_eq!(s, vec![8]);
         assert_eq!(out, data);
@@ -706,7 +706,7 @@ mod tests {
 
     #[test]
     fn test_squeeze_interleaved_ones() {
-        let data = vec![0.0f32; 24];
+        let data = [0.0f32; 24];
         let (s, st) = squeeze_neon(&data, &[2, 1, 3, 1, 4], &[12, 12, 4, 4, 1], None);
         assert_eq!(s, vec![2, 3, 4]);
         assert_eq!(st, vec![12, 4, 1]);
@@ -715,7 +715,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "ndim mismatch")]
     fn test_squeeze_ndim_mismatch() {
-        let data = vec![0.0f32; 6];
+        let data = [0.0f32; 6];
         squeeze_neon(&data, &[2, 3], &[3, 1, 1], None);
     }
 
@@ -723,7 +723,7 @@ mod tests {
     fn test_squeeze_neon_copy_tail() {
         // 5 elements: ensures the tail scalar copy in neon_copy works.
         let data: Vec<f32> = (0..5).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         let _ = squeeze_neon(&data, &[1, 5], &[5, 1], Some(&mut out));
         assert_eq!(out, data);
     }
@@ -765,7 +765,7 @@ mod tests {
     #[test]
     fn test_unsqueeze_with_copy() {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         let (s, _) = unsqueeze_neon(&data, &[8], &[1], 0, Some(&mut out));
         assert_eq!(s, vec![1, 8]);
         assert_eq!(out, data);
@@ -784,7 +784,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "dim 3 out of range")]
     fn test_unsqueeze_out_of_range() {
-        let data = vec![0.0f32; 6];
+        let data = [0.0f32; 6];
         unsqueeze_neon(&data, &[2, 3], &[3, 1], 3, None);
     }
 
@@ -803,7 +803,7 @@ mod tests {
     #[test]
     fn test_broadcast_scalar_to_vector() {
         let data = vec![3.0f32];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         broadcast_expand_neon(&data, &[1], &[8], &mut out);
         assert_eq!(out, vec![3.0; 8]);
     }
@@ -811,7 +811,7 @@ mod tests {
     #[test]
     fn test_broadcast_row_to_matrix() {
         let data = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         broadcast_expand_neon(&data, &[1, 4], &[3, 4], &mut out);
         let expected = vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0];
         assert_eq!(out, expected);
@@ -820,7 +820,7 @@ mod tests {
     #[test]
     fn test_broadcast_col_to_matrix() {
         let data = vec![10.0f32, 20.0, 30.0];
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         broadcast_expand_neon(&data, &[3, 1], &[3, 4], &mut out);
         let expected = vec![10.0, 10.0, 10.0, 10.0, 20.0, 20.0, 20.0, 20.0, 30.0, 30.0, 30.0, 30.0];
         assert_eq!(out, expected);
@@ -829,7 +829,7 @@ mod tests {
     #[test]
     fn test_broadcast_no_expansion() {
         let data: Vec<f32> = (0..6).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         broadcast_expand_neon(&data, &[2, 3], &[2, 3], &mut out);
         assert_eq!(out, data);
     }
@@ -838,7 +838,7 @@ mod tests {
     fn test_broadcast_3d() {
         // (1,1,4) → (2,3,4)
         let data = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         broadcast_expand_neon(&data, &[1, 1, 4], &[2, 3, 4], &mut out);
         for chunk in out.chunks(4) {
             assert_eq!(chunk, &[1.0, 2.0, 3.0, 4.0]);
@@ -849,7 +849,7 @@ mod tests {
     fn test_broadcast_inner_dim_only() {
         // (2,1) → (2,4): broadcast along dim-1 only.
         let data = vec![5.0f32, 7.0];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         broadcast_expand_neon(&data, &[2, 1], &[2, 4], &mut out);
         assert_eq!(out, vec![5.0, 5.0, 5.0, 5.0, 7.0, 7.0, 7.0, 7.0]);
     }
@@ -858,7 +858,7 @@ mod tests {
     fn test_broadcast_outer_dim_only() {
         // (1,4) → (3,4): broadcast along dim-0.
         let data: Vec<f32> = (1..=4).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         broadcast_expand_neon(&data, &[1, 4], &[3, 4], &mut out);
         for chunk in out.chunks(4) {
             assert_eq!(chunk, &[1.0, 2.0, 3.0, 4.0]);
@@ -869,7 +869,7 @@ mod tests {
     fn test_broadcast_non_aligned_tail() {
         // (1,5) → (2,5): inner dim not a multiple of 4.
         let data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0f32; 10];
+        let mut out = [0.0f32; 10];
         broadcast_expand_neon(&data, &[1, 5], &[2, 5], &mut out);
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
     }
@@ -877,23 +877,23 @@ mod tests {
     #[test]
     #[should_panic(expected = "ndim mismatch")]
     fn test_broadcast_ndim_mismatch() {
-        let data = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 12];
+        let data = [1.0f32; 4];
+        let mut out = [0.0f32; 12];
         broadcast_expand_neon(&data, &[4], &[3, 4], &mut out);
     }
 
     #[test]
     #[should_panic(expected = "incompatible")]
     fn test_broadcast_incompatible_dim() {
-        let data = vec![1.0f32; 6];
-        let mut out = vec![0.0f32; 8];
+        let data = [1.0f32; 6];
+        let mut out = [0.0f32; 8];
         broadcast_expand_neon(&data, &[2, 3], &[2, 4], &mut out);
     }
 
     #[test]
     fn test_broadcast_scalar_to_3d() {
         let data = vec![1.0f32];
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         broadcast_expand_neon(&data, &[1, 1, 1], &[2, 3, 4], &mut out);
         assert_eq!(out, vec![1.0; 24]);
     }
@@ -902,7 +902,7 @@ mod tests {
     fn test_broadcast_large_inner() {
         // (1,64) → (4,64): broadcast 64-element row.
         let data: Vec<f32> = (0..64).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 256];
+        let mut out = [0.0f32; 256];
         broadcast_expand_neon(&data, &[1, 64], &[4, 64], &mut out);
         for row in 0..4 {
             let start = row * 64;
@@ -915,7 +915,7 @@ mod tests {
     #[test]
     fn test_permute_identity() {
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[0, 1], &mut out);
         assert_eq!(out, data);
     }
@@ -924,7 +924,7 @@ mod tests {
     fn test_permute_transpose_2d() {
         // 3×4 → 4×3
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[1, 0], &mut out);
         // Expected column-major read of 3×4.
         let expected = vec![0.0, 4.0, 8.0, 1.0, 5.0, 9.0, 2.0, 6.0, 10.0, 3.0, 7.0, 11.0];
@@ -935,11 +935,11 @@ mod tests {
     fn test_permute_3d_021() {
         // (2,3,4) → (2,4,3): swap last two dims.
         let data: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         permute_dims_neon(&data, &[2, 3, 4], &[0, 2, 1], &mut out);
 
         // Verify by computing expected output element by element.
-        let mut expected = vec![0.0f32; 24];
+        let mut expected = [0.0f32; 24];
         for i in 0..2 {
             for j in 0..4 {
                 for k in 0..3 {
@@ -956,10 +956,10 @@ mod tests {
     fn test_permute_3d_120() {
         // (2,3,4) → (4,2,3): full cycle permutation.
         let data: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         permute_dims_neon(&data, &[2, 3, 4], &[1, 2, 0], &mut out);
 
-        let mut expected = vec![0.0f32; 24];
+        let mut expected = [0.0f32; 24];
         for i in 0..3 {
             for j in 0..4 {
                 for k in 0..2 {
@@ -976,10 +976,10 @@ mod tests {
     fn test_permute_3d_210() {
         // (2,3,4) → (4,3,2): full reversal.
         let data: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         permute_dims_neon(&data, &[2, 3, 4], &[2, 1, 0], &mut out);
 
-        let mut expected = vec![0.0f32; 24];
+        let mut expected = [0.0f32; 24];
         for i in 0..4 {
             for j in 0..3 {
                 for k in 0..2 {
@@ -995,7 +995,7 @@ mod tests {
     #[test]
     fn test_permute_1d() {
         let data: Vec<f32> = (0..8).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         permute_dims_neon(&data, &[8], &[0], &mut out);
         assert_eq!(out, data);
     }
@@ -1003,7 +1003,7 @@ mod tests {
     #[test]
     fn test_permute_single_element() {
         let data = vec![99.0f32];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         permute_dims_neon(&data, &[1, 1], &[1, 0], &mut out);
         assert_eq!(out, vec![99.0]);
     }
@@ -1012,10 +1012,10 @@ mod tests {
     fn test_permute_large_aligned() {
         // 4×16 → 16×4: NEON-aligned inner dimension.
         let data: Vec<f32> = (0..64).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 64];
+        let mut out = [0.0f32; 64];
         permute_dims_neon(&data, &[4, 16], &[1, 0], &mut out);
 
-        let mut expected = vec![0.0f32; 64];
+        let mut expected = [0.0f32; 64];
         for i in 0..16 {
             for j in 0..4 {
                 expected[i * 4 + j] = data[j * 16 + i];
@@ -1027,24 +1027,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "perm.len()")]
     fn test_permute_wrong_perm_len() {
-        let data = vec![0.0f32; 12];
-        let mut out = vec![0.0f32; 12];
+        let data = [0.0f32; 12];
+        let mut out = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[0, 1, 2], &mut out);
     }
 
     #[test]
     #[should_panic(expected = "duplicate perm")]
     fn test_permute_duplicate_perm() {
-        let data = vec![0.0f32; 12];
-        let mut out = vec![0.0f32; 12];
+        let data = [0.0f32; 12];
+        let mut out = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[0, 0], &mut out);
     }
 
     #[test]
     #[should_panic(expected = "out of range")]
     fn test_permute_perm_out_of_range() {
-        let data = vec![0.0f32; 12];
-        let mut out = vec![0.0f32; 12];
+        let data = [0.0f32; 12];
+        let mut out = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[0, 5], &mut out);
     }
 
@@ -1091,7 +1091,7 @@ mod tests {
     #[test]
     fn test_neon_copy_exact() {
         let src: Vec<f32> = (0..16).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         neon_copy(&src, &mut dst);
         assert_eq!(dst, src);
     }
@@ -1099,7 +1099,7 @@ mod tests {
     #[test]
     fn test_neon_copy_with_tail() {
         let src: Vec<f32> = (0..7).map(|x| x as f32).collect();
-        let mut dst = vec![0.0f32; 7];
+        let mut dst = [0.0f32; 7];
         neon_copy(&src, &mut dst);
         assert_eq!(dst, src);
     }
@@ -1111,7 +1111,7 @@ mod tests {
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
         let (sq_shape, _) = squeeze_neon(&data, &[1, 3, 1, 4], &[12, 4, 4, 1], None);
         assert_eq!(sq_shape, vec![3, 4]);
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         reshape_contiguous_neon(&data, &sq_shape, &[6, 2], &mut out);
         assert_eq!(out, data);
     }
@@ -1121,7 +1121,7 @@ mod tests {
         let data: Vec<f32> = (0..4).map(|x| x as f32).collect();
         let (us_shape, _) = unsqueeze_neon(&data, &[4], &[1], 0, None);
         assert_eq!(us_shape, vec![1, 4]);
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         broadcast_expand_neon(&data, &us_shape, &[3, 4], &mut out);
         for row in out.chunks(4) {
             assert_eq!(row, &[0.0, 1.0, 2.0, 3.0]);
@@ -1132,9 +1132,9 @@ mod tests {
     fn test_permute_then_reshape() {
         // Permute (3,4) → (4,3), then reshape to (12,).
         let data: Vec<f32> = (0..12).map(|x| x as f32).collect();
-        let mut permuted = vec![0.0f32; 12];
+        let mut permuted = [0.0f32; 12];
         permute_dims_neon(&data, &[3, 4], &[1, 0], &mut permuted);
-        let mut flat = vec![0.0f32; 12];
+        let mut flat = [0.0f32; 12];
         reshape_contiguous_neon(&permuted, &[4, 3], &[12], &mut flat);
         assert_eq!(flat, permuted);
     }
@@ -1143,10 +1143,10 @@ mod tests {
     fn test_broadcast_then_permute() {
         // (1,4) → (2,4) → permute (4,2)
         let data = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut broad = vec![0.0f32; 8];
+        let mut broad = [0.0f32; 8];
         broadcast_expand_neon(&data, &[1, 4], &[2, 4], &mut broad);
 
-        let mut perm_out = vec![0.0f32; 8];
+        let mut perm_out = [0.0f32; 8];
         permute_dims_neon(&broad, &[2, 4], &[1, 0], &mut perm_out);
 
         let expected = vec![1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0];
@@ -1157,11 +1157,11 @@ mod tests {
     fn test_reshape_preserves_data_integrity() {
         // Chain of reshapes should preserve all data exactly.
         let data: Vec<f32> = (0..120).map(|x| x as f32).collect();
-        let mut a = vec![0.0f32; 120];
+        let mut a = [0.0f32; 120];
         reshape_contiguous_neon(&data, &[120], &[2, 3, 4, 5], &mut a);
-        let mut b = vec![0.0f32; 120];
+        let mut b = [0.0f32; 120];
         reshape_contiguous_neon(&a, &[2, 3, 4, 5], &[10, 12], &mut b);
-        let mut c = vec![0.0f32; 120];
+        let mut c = [0.0f32; 120];
         reshape_contiguous_neon(&b, &[10, 12], &[120], &mut c);
         assert_eq!(c, data);
     }
@@ -1171,8 +1171,8 @@ mod tests {
         // A contiguous tensor should produce identical output whether
         // copied via reshape_contiguous_neon or reshape_strided_neon.
         let data: Vec<f32> = (0..32).map(|x| x as f32).collect();
-        let mut out_c = vec![0.0f32; 32];
-        let mut out_s = vec![0.0f32; 32];
+        let mut out_c = [0.0f32; 32];
+        let mut out_s = [0.0f32; 32];
         reshape_contiguous_neon(&data, &[4, 8], &[32], &mut out_c);
         reshape_strided_neon(&data, &[4, 8], &[8, 1], &[32], &mut out_s);
         assert_eq!(out_c, out_s);
@@ -1182,7 +1182,7 @@ mod tests {
     fn test_broadcast_col_non_aligned() {
         // (3,1) → (3,5): inner broadcast with non-aligned size.
         let data = vec![1.0f32, 2.0, 3.0];
-        let mut out = vec![0.0f32; 15];
+        let mut out = [0.0f32; 15];
         broadcast_expand_neon(&data, &[3, 1], &[3, 5], &mut out);
         let expected =
             vec![1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 3.0];
@@ -1193,11 +1193,11 @@ mod tests {
     fn test_permute_4d() {
         // (2,3,2,2) with perm [0,2,1,3] — swap dims 1 and 2.
         let data: Vec<f32> = (0..24).map(|x| x as f32).collect();
-        let mut out = vec![0.0f32; 24];
+        let mut out = [0.0f32; 24];
         permute_dims_neon(&data, &[2, 3, 2, 2], &[0, 2, 1, 3], &mut out);
 
         let shape = [2usize, 3, 2, 2];
-        let mut expected = vec![0.0f32; 24];
+        let mut expected = [0.0f32; 24];
         for a in 0..shape[0] {
             for b in 0..shape[2] {
                 for c in 0..shape[1] {

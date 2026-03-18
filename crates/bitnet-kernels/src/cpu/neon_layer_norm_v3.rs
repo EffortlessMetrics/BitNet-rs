@@ -636,11 +636,11 @@ mod tests {
 
     #[test]
     fn test_layer_norm_dim_1() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
-        let beta = vec![1.0];
+        let input = [42.0];
+        let gamma = [2.0];
+        let beta = [1.0];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -648,10 +648,10 @@ mod tests {
     #[test]
     fn test_layer_norm_dim_4() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -659,10 +659,10 @@ mod tests {
     #[test]
     fn test_layer_norm_dim_8() {
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -673,7 +673,7 @@ mod tests {
         let gamma = make_gamma(16);
         let beta = make_beta(16);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -684,7 +684,7 @@ mod tests {
         let gamma = make_gamma(128);
         let beta = make_beta(128);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -692,10 +692,10 @@ mod tests {
     #[test]
     fn test_layer_norm_dim_1024() {
         let input = make_input(1024);
-        let gamma = vec![1.0; 1024];
-        let beta = vec![0.0; 1024];
+        let gamma = [1.0; 1024];
+        let beta = [0.0; 1024];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 1024];
+        let mut output = [0.0; 1024];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL_LARGE);
     }
@@ -706,7 +706,7 @@ mod tests {
         let gamma = vec![0.5, 1.0, 1.5, 2.0, 0.1];
         let beta = vec![0.1, -0.1, 0.0, 0.5, -0.5];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -714,10 +714,10 @@ mod tests {
     #[test]
     fn test_layer_norm_non_aligned_13() {
         let input = make_input(13);
-        let gamma = vec![1.0; 13];
-        let beta = vec![0.0; 13];
+        let gamma = [1.0; 13];
+        let beta = [0.0; 13];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -728,17 +728,17 @@ mod tests {
         let gamma = make_gamma(137);
         let beta = make_beta(137);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 137];
+        let mut output = [0.0; 137];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
 
     #[test]
     fn test_layer_norm_zero_variance() {
-        let input = vec![3.0; 8];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
-        let mut output = vec![0.0; 8];
+        let input = [3.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         for &v in &output {
             assert!(v.abs() < TOL, "expected ~0, got {v}");
@@ -748,9 +748,9 @@ mod tests {
     #[test]
     fn test_layer_norm_identity_gamma_zero_beta() {
         let input = make_input(32);
-        let gamma = vec![1.0; 32];
-        let beta = vec![0.0; 32];
-        let mut output = vec![0.0; 32];
+        let gamma = [1.0; 32];
+        let beta = [0.0; 32];
+        let mut output = [0.0; 32];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         let sum: f32 = output.iter().sum();
         assert!(sum.abs() < 1e-3, "normalized output should have ~0 mean, got {sum}");
@@ -769,10 +769,10 @@ mod tests {
     #[test]
     fn test_layer_norm_small_eps() {
         let input = vec![1e-7, 2e-7, 3e-7, 4e-7];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let expected = naive_layer_norm(&input, &gamma, &beta, 1e-12);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, 1e-12) };
         approx_eq(&output, &expected, TOL);
     }
@@ -780,10 +780,10 @@ mod tests {
     #[test]
     fn test_layer_norm_large_values() {
         let input = vec![1e6, 2e6, 3e6, 4e6, 5e6, 6e6, 7e6, 8e6];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -791,10 +791,10 @@ mod tests {
     #[test]
     fn test_layer_norm_negative_values() {
         let input = vec![-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -802,10 +802,10 @@ mod tests {
     #[test]
     fn test_layer_norm_affine_scaling() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![2.0; 4];
-        let beta = vec![1.0; 4];
+        let gamma = [2.0; 4];
+        let beta = [1.0; 4];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -816,10 +816,10 @@ mod tests {
 
     #[test]
     fn test_rms_norm_dim_1() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
+        let input = [42.0];
+        let gamma = [2.0];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -827,9 +827,9 @@ mod tests {
     #[test]
     fn test_rms_norm_dim_4() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -837,9 +837,9 @@ mod tests {
     #[test]
     fn test_rms_norm_dim_8() {
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 8];
+        let gamma = [1.0; 8];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -849,7 +849,7 @@ mod tests {
         let input = make_input(16);
         let gamma = make_gamma(16);
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -859,7 +859,7 @@ mod tests {
         let input = make_input(128);
         let gamma = make_gamma(128);
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -867,9 +867,9 @@ mod tests {
     #[test]
     fn test_rms_norm_dim_1024() {
         let input = make_input(1024);
-        let gamma = vec![1.0; 1024];
+        let gamma = [1.0; 1024];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 1024];
+        let mut output = [0.0; 1024];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL_LARGE);
     }
@@ -879,7 +879,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let gamma = vec![0.5, 1.0, 1.5, 2.0, 0.1];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -887,9 +887,9 @@ mod tests {
     #[test]
     fn test_rms_norm_non_aligned_13() {
         let input = make_input(13);
-        let gamma = vec![1.0; 13];
+        let gamma = [1.0; 13];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -899,7 +899,7 @@ mod tests {
         let input = make_input(137);
         let gamma = make_gamma(137);
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 137];
+        let mut output = [0.0; 137];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -916,9 +916,9 @@ mod tests {
     #[test]
     fn test_rms_norm_small_eps() {
         let input = vec![1e-7, 2e-7, 3e-7, 4e-7];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let expected = naive_rms_norm(&input, &gamma, 1e-12);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, 1e-12) };
         approx_eq(&output, &expected, TOL);
     }
@@ -926,9 +926,9 @@ mod tests {
     #[test]
     fn test_rms_norm_large_values() {
         let input = vec![1e6, 2e6, 3e6, 4e6];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -938,7 +938,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let gamma = vec![2.0, 0.5, 3.0, 0.1];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -969,7 +969,7 @@ mod tests {
         let gamma = make_gamma(8);
         let beta = make_beta(8);
         let expected = naive_group_norm(&input, &gamma, &beta, 1, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 1, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -982,7 +982,7 @@ mod tests {
         let ln = naive_layer_norm(&input, &gamma, &beta, EPS);
         let gn = naive_group_norm(&input, &gamma, &beta, 1, EPS);
         approx_eq(&ln, &gn, TOL);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 1, EPS) };
         approx_eq(&output, &ln, TOL);
     }
@@ -993,7 +993,7 @@ mod tests {
         let gamma = make_gamma(8);
         let beta = make_beta(8);
         let expected = naive_group_norm(&input, &gamma, &beta, 2, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 2, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1004,7 +1004,7 @@ mod tests {
         let gamma = make_gamma(16);
         let beta = make_beta(16);
         let expected = naive_group_norm(&input, &gamma, &beta, 4, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 4, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1015,7 +1015,7 @@ mod tests {
         let gamma = make_gamma(128);
         let beta = make_beta(128);
         let expected = naive_group_norm(&input, &gamma, &beta, 8, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 8, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1026,7 +1026,7 @@ mod tests {
         let gamma = make_gamma(1024);
         let beta = make_beta(1024);
         let expected = naive_group_norm(&input, &gamma, &beta, 16, EPS);
-        let mut output = vec![0.0; 1024];
+        let mut output = [0.0; 1024];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 16, EPS) };
         approx_eq(&output, &expected, TOL_LARGE);
     }
@@ -1035,9 +1035,9 @@ mod tests {
     fn test_group_norm_n_groups_equals_n() {
         // Each element is its own group → variance=0, output ≈ beta
         let input = make_input(4);
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.5; 4];
-        let mut output = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.5; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 4, EPS) };
         for &v in &output {
             assert!((v - 0.5).abs() < TOL, "single-element groups should yield ~beta");
@@ -1051,7 +1051,7 @@ mod tests {
         let gamma = make_gamma(15);
         let beta = make_beta(15);
         let expected = naive_group_norm(&input, &gamma, &beta, 3, EPS);
-        let mut output = vec![0.0; 15];
+        let mut output = [0.0; 15];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 3, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1072,7 +1072,7 @@ mod tests {
         let gamma = make_gamma(128);
         let beta = make_beta(128);
         let expected = naive_group_norm(&input, &gamma, &beta, 32, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 32, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1080,10 +1080,10 @@ mod tests {
     #[test]
     fn test_group_norm_small_eps() {
         let input = vec![1e-7, 2e-7, 3e-7, 4e-7, 5e-7, 6e-7, 7e-7, 8e-7];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_group_norm(&input, &gamma, &beta, 2, 1e-12);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 2, 1e-12) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1127,14 +1127,14 @@ mod tests {
     #[test]
     fn test_backward_dim_4() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let grad_output = vec![0.1, 0.2, 0.3, 0.4];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 4];
-        let mut grad_gamma = vec![0.0; 4];
-        let mut grad_beta = vec![0.0; 4];
+        let mut grad_input = [0.0; 4];
+        let mut grad_gamma = [0.0; 4];
+        let mut grad_beta = [0.0; 4];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1160,9 +1160,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 8];
-        let mut grad_gamma = vec![0.0; 8];
-        let mut grad_beta = vec![0.0; 8];
+        let mut grad_input = [0.0; 8];
+        let mut grad_gamma = [0.0; 8];
+        let mut grad_beta = [0.0; 8];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1188,9 +1188,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 16];
-        let mut grad_gamma = vec![0.0; 16];
-        let mut grad_beta = vec![0.0; 16];
+        let mut grad_input = [0.0; 16];
+        let mut grad_gamma = [0.0; 16];
+        let mut grad_beta = [0.0; 16];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1216,9 +1216,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 128];
-        let mut grad_gamma = vec![0.0; 128];
-        let mut grad_beta = vec![0.0; 128];
+        let mut grad_input = [0.0; 128];
+        let mut grad_gamma = [0.0; 128];
+        let mut grad_beta = [0.0; 128];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1244,9 +1244,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 5];
-        let mut grad_gamma = vec![0.0; 5];
-        let mut grad_beta = vec![0.0; 5];
+        let mut grad_input = [0.0; 5];
+        let mut grad_gamma = [0.0; 5];
+        let mut grad_beta = [0.0; 5];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1272,9 +1272,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 137];
-        let mut grad_gamma = vec![0.0; 137];
-        let mut grad_beta = vec![0.0; 137];
+        let mut grad_input = [0.0; 137];
+        let mut grad_gamma = [0.0; 137];
+        let mut grad_beta = [0.0; 137];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1295,14 +1295,14 @@ mod tests {
     #[test]
     fn test_backward_accumulates_grad_gamma() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let grad_output = vec![0.1, 0.2, 0.3, 0.4];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
 
         // Pre-fill grad_gamma to verify accumulation
-        let mut grad_gamma = vec![1.0; 4];
-        let mut grad_beta = vec![0.0; 4];
-        let mut grad_input = vec![0.0; 4];
+        let mut grad_gamma = [1.0; 4];
+        let mut grad_beta = [0.0; 4];
+        let mut grad_input = [0.0; 4];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1324,13 +1324,13 @@ mod tests {
     #[test]
     fn test_backward_accumulates_grad_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let grad_output = vec![0.1, 0.2, 0.3, 0.4];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
 
-        let mut grad_gamma = vec![0.0; 4];
-        let mut grad_beta = vec![2.0; 4];
-        let mut grad_input = vec![0.0; 4];
+        let mut grad_gamma = [0.0; 4];
+        let mut grad_beta = [2.0; 4];
+        let mut grad_input = [0.0; 4];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1371,15 +1371,15 @@ mod tests {
 
     #[test]
     fn test_backward_dim_1() {
-        let input = vec![5.0];
-        let gamma = vec![2.0];
-        let grad_output = vec![1.0];
+        let input = [5.0];
+        let gamma = [2.0];
+        let grad_output = [1.0];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 1];
-        let mut grad_gamma = vec![0.0; 1];
-        let mut grad_beta = vec![0.0; 1];
+        let mut grad_input = [0.0; 1];
+        let mut grad_gamma = [0.0; 1];
+        let mut grad_beta = [0.0; 1];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1405,9 +1405,9 @@ mod tests {
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 1024];
-        let mut grad_gamma = vec![0.0; 1024];
-        let mut grad_beta = vec![0.0; 1024];
+        let mut grad_input = [0.0; 1024];
+        let mut grad_gamma = [0.0; 1024];
+        let mut grad_beta = [0.0; 1024];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1433,10 +1433,10 @@ mod tests {
     fn test_fused_residual_dim_4() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let residual = vec![0.1, -0.1, 0.2, -0.2];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1447,10 +1447,10 @@ mod tests {
     fn test_fused_residual_dim_8() {
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let residual: Vec<f32> = (0..8).map(|i| (i as f32 - 4.0) * 0.1).collect();
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1464,7 +1464,7 @@ mod tests {
         let gamma = make_gamma(16);
         let beta = make_beta(16);
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1478,7 +1478,7 @@ mod tests {
         let gamma = make_gamma(128);
         let beta = make_beta(128);
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1489,10 +1489,10 @@ mod tests {
     fn test_fused_residual_dim_1024() {
         let input = make_input(1024);
         let residual: Vec<f32> = (0..1024).map(|i| ((i * 7) % 30) as f32 * 0.05).collect();
-        let gamma = vec![1.0; 1024];
-        let beta = vec![0.0; 1024];
+        let gamma = [1.0; 1024];
+        let beta = [0.0; 1024];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 1024];
+        let mut output = [0.0; 1024];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1506,7 +1506,7 @@ mod tests {
         let gamma = vec![1.0, 2.0, 0.5, 1.5, 0.8];
         let beta = vec![0.0, 0.1, -0.1, 0.2, -0.2];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1517,10 +1517,10 @@ mod tests {
     fn test_fused_residual_non_aligned_13() {
         let input = make_input(13);
         let residual: Vec<f32> = (0..13).map(|i| i as f32 * 0.1).collect();
-        let gamma = vec![1.0; 13];
-        let beta = vec![0.0; 13];
+        let gamma = [1.0; 13];
+        let beta = [0.0; 13];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1534,7 +1534,7 @@ mod tests {
         let gamma = make_gamma(137);
         let beta = make_beta(137);
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 137];
+        let mut output = [0.0; 137];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1545,11 +1545,11 @@ mod tests {
     fn test_fused_residual_zero_residual() {
         // Zero residual should equal plain LayerNorm
         let input = make_input(16);
-        let residual = vec![0.0; 16];
+        let residual = [0.0; 16];
         let gamma = make_gamma(16);
         let beta = make_beta(16);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1571,12 +1571,12 @@ mod tests {
 
     #[test]
     fn test_fused_residual_dim_1() {
-        let input = vec![3.0];
-        let residual = vec![2.0];
-        let gamma = vec![1.5];
-        let beta = vec![0.5];
+        let input = [3.0];
+        let residual = [2.0];
+        let gamma = [1.5];
+        let beta = [0.5];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1596,7 +1596,7 @@ mod tests {
         let expected = naive_layer_norm(&combined, &gamma, &beta, EPS);
 
         // Fused
-        let mut output = vec![0.0; 64];
+        let mut output = [0.0; 64];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1610,10 +1610,10 @@ mod tests {
     #[test]
     fn test_layer_norm_stability_tiny_eps() {
         let input = vec![0.0001, 0.0002, 0.0003, 0.0004];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let expected = naive_layer_norm(&input, &gamma, &beta, 1e-12);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, 1e-12) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1621,9 +1621,9 @@ mod tests {
     #[test]
     fn test_rms_norm_stability_tiny_eps() {
         let input = vec![0.0001, 0.0002, 0.0003, 0.0004];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let expected = naive_rms_norm(&input, &gamma, 1e-12);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, 1e-12) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1631,10 +1631,10 @@ mod tests {
     #[test]
     fn test_layer_norm_stability_mixed_magnitudes() {
         let input = vec![1e-6, 1e6, -1e-6, -1e6, 0.5, -0.5, 100.0, -100.0];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, 1e-3);
     }
@@ -1643,13 +1643,13 @@ mod tests {
     fn test_backward_stability_uniform_grad() {
         // Uniform grad_output → grad_input should be ~0 (since we subtract mean contribution)
         let input = make_input(8);
-        let gamma = vec![1.0; 8];
-        let grad_output = vec![1.0; 8];
+        let gamma = [1.0; 8];
+        let grad_output = [1.0; 8];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
 
-        let mut grad_input = vec![0.0; 8];
-        let mut grad_gamma = vec![0.0; 8];
-        let mut grad_beta = vec![0.0; 8];
+        let mut grad_input = [0.0; 8];
+        let mut grad_gamma = [0.0; 8];
+        let mut grad_beta = [0.0; 8];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1668,11 +1668,11 @@ mod tests {
 
     #[test]
     fn test_fused_residual_stability_large_residual() {
-        let input = vec![1.0; 8];
-        let residual = vec![1e6; 8];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
-        let mut output = vec![0.0; 8];
+        let input = [1.0; 8];
+        let residual = [1e6; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
+        let mut output = [0.0; 8];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1743,10 +1743,10 @@ mod tests {
     #[test]
     fn test_layer_norm_dim_2() {
         let input = vec![10.0, -10.0];
-        let gamma = vec![1.0; 2];
-        let beta = vec![0.0; 2];
+        let gamma = [1.0; 2];
+        let beta = [0.0; 2];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1754,10 +1754,10 @@ mod tests {
     #[test]
     fn test_layer_norm_dim_3() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1768,7 +1768,7 @@ mod tests {
         let gamma = make_gamma(7);
         let beta = make_beta(7);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 7];
+        let mut output = [0.0; 7];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1779,7 +1779,7 @@ mod tests {
         let gamma = make_gamma(33);
         let beta = make_beta(33);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 33];
+        let mut output = [0.0; 33];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1790,7 +1790,7 @@ mod tests {
         let gamma = make_gamma(64);
         let beta = make_beta(64);
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 64];
+        let mut output = [0.0; 64];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1798,9 +1798,9 @@ mod tests {
     #[test]
     fn test_rms_norm_dim_2() {
         let input = vec![3.0, -3.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1808,9 +1808,9 @@ mod tests {
     #[test]
     fn test_rms_norm_dim_3() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1820,7 +1820,7 @@ mod tests {
         let input = make_input(33);
         let gamma = make_gamma(33);
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 33];
+        let mut output = [0.0; 33];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1830,7 +1830,7 @@ mod tests {
         let input = make_input(64);
         let gamma = make_gamma(64);
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 64];
+        let mut output = [0.0; 64];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1838,9 +1838,9 @@ mod tests {
     #[test]
     fn test_rms_norm_negative_values() {
         let input = vec![-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 8];
+        let gamma = [1.0; 8];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1851,7 +1851,7 @@ mod tests {
         let gamma = make_gamma(16);
         let beta = make_beta(16);
         let expected = naive_group_norm(&input, &gamma, &beta, 2, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 2, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1862,7 +1862,7 @@ mod tests {
         let gamma = make_gamma(128);
         let beta = make_beta(128);
         let expected = naive_group_norm(&input, &gamma, &beta, 4, EPS);
-        let mut output = vec![0.0; 128];
+        let mut output = [0.0; 128];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 4, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1873,7 +1873,7 @@ mod tests {
         let gamma = make_gamma(1024);
         let beta = make_beta(1024);
         let expected = naive_group_norm(&input, &gamma, &beta, 64, EPS);
-        let mut output = vec![0.0; 1024];
+        let mut output = [0.0; 1024];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 64, EPS) };
         approx_eq(&output, &expected, TOL_LARGE);
     }
@@ -1882,12 +1882,12 @@ mod tests {
     fn test_backward_zero_grad_output() {
         let input = make_input(8);
         let gamma = make_gamma(8);
-        let grad_output = vec![0.0; 8];
+        let grad_output = [0.0; 8];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
 
-        let mut grad_input = vec![0.0; 8];
-        let mut grad_gamma = vec![0.0; 8];
-        let mut grad_beta = vec![0.0; 8];
+        let mut grad_input = [0.0; 8];
+        let mut grad_gamma = [0.0; 8];
+        let mut grad_beta = [0.0; 8];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,
@@ -1915,10 +1915,10 @@ mod tests {
     fn test_fused_residual_negative_residual() {
         let input = vec![5.0, 6.0, 7.0, 8.0];
         let residual = vec![-5.0, -6.0, -7.0, -8.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1932,7 +1932,7 @@ mod tests {
         let gamma = make_gamma(256);
         let beta = make_beta(256);
         let expected = naive_fused_ln_residual(&input, &residual, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 256];
+        let mut output = [0.0; 256];
         unsafe {
             neon_fused_layer_norm_residual_f32(&input, &residual, &gamma, &beta, &mut output, EPS);
         }
@@ -1942,20 +1942,20 @@ mod tests {
     #[test]
     fn test_layer_norm_all_negative() {
         let input = vec![-10.0, -20.0, -30.0, -40.0, -50.0, -60.0, -70.0, -80.0];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = naive_layer_norm(&input, &gamma, &beta, EPS);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_layer_norm_f32(&input, &gamma, &beta, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
 
     #[test]
     fn test_rms_norm_all_ones() {
-        let input = vec![1.0; 16];
-        let gamma = vec![1.0; 16];
+        let input = [1.0; 16];
+        let gamma = [1.0; 16];
         let expected = naive_rms_norm(&input, &gamma, EPS);
-        let mut output = vec![0.0; 16];
+        let mut output = [0.0; 16];
         unsafe { neon_rms_norm_f32(&input, &gamma, &mut output, EPS) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1966,7 +1966,7 @@ mod tests {
         let gamma = make_gamma(8);
         let beta = make_beta(8);
         let expected = naive_group_norm(&input, &gamma, &beta, 2, 1.0);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { neon_group_norm_f32(&input, &gamma, &beta, &mut output, 2, 1.0) };
         approx_eq(&output, &expected, TOL);
     }
@@ -1974,14 +1974,14 @@ mod tests {
     #[test]
     fn test_backward_large_gamma() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![100.0; 4];
+        let gamma = [100.0; 4];
         let grad_output = vec![0.01, 0.02, 0.03, 0.04];
         let (mean, inv_std) = compute_mean_inv_std(&input, EPS);
         let (exp_gi, exp_gg, exp_gb) = naive_backward(&grad_output, &input, &gamma, mean, inv_std);
 
-        let mut grad_input = vec![0.0; 4];
-        let mut grad_gamma = vec![0.0; 4];
-        let mut grad_beta = vec![0.0; 4];
+        let mut grad_input = [0.0; 4];
+        let mut grad_gamma = [0.0; 4];
+        let mut grad_beta = [0.0; 4];
         unsafe {
             neon_layer_norm_backward_f32(
                 &grad_output,

@@ -1067,16 +1067,16 @@ mod tests {
 
     #[test]
     fn apply_mask_all_zero() {
-        let mut scores = vec![1.0; 16];
-        let mask = vec![0.0; 16];
+        let mut scores = [1.0; 16];
+        let mask = [0.0; 16];
         simd_apply_mask(&mut scores, &mask, 16);
         assert!(scores.iter().all(|&v| v == 1.0));
     }
 
     #[test]
     fn apply_mask_all_neg_inf() {
-        let mut scores = vec![1.0; 16];
-        let mask = vec![INF; 16];
+        let mut scores = [1.0; 16];
+        let mask = [INF; 16];
         simd_apply_mask(&mut scores, &mask, 16);
         assert!(scores.iter().all(|&v| is_neg_inf(v)));
     }
@@ -1084,16 +1084,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "too short")]
     fn apply_mask_scores_too_short() {
-        let mut scores = vec![1.0; 3];
-        let mask = vec![0.0; 8];
+        let mut scores = [1.0; 3];
+        let mask = [0.0; 8];
         simd_apply_mask(&mut scores, &mask, 8);
     }
 
     #[test]
     #[should_panic(expected = "too short")]
     fn apply_mask_mask_too_short() {
-        let mut scores = vec![1.0; 8];
-        let mask = vec![0.0; 3];
+        let mut scores = [1.0; 8];
+        let mask = [0.0; 3];
         simd_apply_mask(&mut scores, &mask, 8);
     }
 
@@ -1295,8 +1295,8 @@ mod tests {
 
     #[test]
     fn combine_both_open() {
-        let a = vec![0.0; 16];
-        let b = vec![0.0; 16];
+        let a = [0.0; 16];
+        let b = [0.0; 16];
         let c = simd_combine_masks(&a, &b, 16);
         assert!(c.iter().all(|&v| v == 0.0));
     }

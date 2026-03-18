@@ -811,11 +811,11 @@ mod tests {
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_gather_launch() {
-        let src = vec![1.0_f32; 1024];
-        let indices = vec![0_usize; 256];
+        let src = [1.0_f32; 1024];
+        let indices = [0_usize; 256];
         let kernel = ScatterGatherKernel::new(4, 256).unwrap();
         let config = GatherConfig::new(0, (1, 256), true).unwrap();
-        let mut output = vec![0.0_f32; 256];
+        let mut output = [0.0_f32; 256];
         let result = gather_forward(&src, &indices, &mut output, &kernel, &config);
         assert!(result.is_ok(), "CUDA gather launch failed: {result:?}");
     }
@@ -823,10 +823,10 @@ mod tests {
     #[test]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_scatter_launch() {
-        let src = vec![1.0_f32; 256];
-        let indices = vec![0_usize; 256];
+        let src = [1.0_f32; 256];
+        let indices = [0_usize; 256];
         let config = GatherConfig::new(0, (1, 256), true).unwrap();
-        let mut dst = vec![0.0_f32; 1024];
+        let mut dst = [0.0_f32; 1024];
         let result = scatter_forward(&src, &indices, &mut dst, (4, 256), &config, ScatterMode::Add);
         assert!(result.is_ok(), "CUDA scatter launch failed: {result:?}");
     }

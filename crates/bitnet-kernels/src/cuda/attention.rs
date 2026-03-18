@@ -917,9 +917,9 @@ mod tests {
     #[test]
     fn test_cpu_attention_output_shape() {
         let cfg = AttentionConfig::new(1, 4, 8, false).unwrap();
-        let q = vec![0.1_f32; 32];
-        let k = vec![0.2_f32; 32];
-        let v = vec![0.3_f32; 32];
+        let q = [0.1_f32; 32];
+        let k = [0.2_f32; 32];
+        let v = [0.3_f32; 32];
         let out = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
         assert_eq!(out.len(), 32); // seq_len * head_dim
     }
@@ -965,8 +965,8 @@ mod tests {
     #[test]
     fn test_cpu_attention_rejects_short_tensors() {
         let cfg = AttentionConfig::new(1, 4, 8, false).unwrap();
-        let short = vec![0.0_f32; 16]; // need 32
-        let ok = vec![0.0_f32; 32];
+        let short = [0.0_f32; 16]; // need 32
+        let ok = [0.0_f32; 32];
         assert!(attention_cpu_fallback(&short, &ok, &ok, &cfg).is_err());
         assert!(attention_cpu_fallback(&ok, &short, &ok, &cfg).is_err());
         assert!(attention_cpu_fallback(&ok, &ok, &short, &cfg).is_err());
@@ -1020,8 +1020,8 @@ mod tests {
     fn test_cpu_attention_causal_monotonic_context() {
         // Under causal masking, later tokens have more context
         let cfg = AttentionConfig::new(1, 2, 4, true).unwrap();
-        let q = vec![1.0; 8];
-        let k = vec![1.0; 8];
+        let q = [1.0; 8];
+        let k = [1.0; 8];
         let v: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let out = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
         // Each row's output[0] should increase (more context, higher-indexed V)
@@ -1038,7 +1038,7 @@ mod tests {
         let q = vec![1.0, 0.5, 0.5, 1.0, 0.0, 1.0];
         let k = vec![0.5, 0.5, 1.0, 0.0, 0.0, 1.0];
         let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let zero_mask = vec![0.0_f32; 9]; // 3×3 zero mask
+        let zero_mask = [0.0_f32; 9]; // 3×3 zero mask
 
         let out_unmasked = attention_cpu_fallback(&q, &k, &v, &cfg).unwrap();
         let out_masked = masked_attention_cpu_fallback(&q, &k, &v, &zero_mask, &cfg).unwrap();
@@ -1082,8 +1082,8 @@ mod tests {
     #[test]
     fn test_masked_attention_rejects_short_mask() {
         let cfg = AttentionConfig::new(1, 2, 4, false).unwrap();
-        let t = vec![0.0_f32; 8];
-        let short_mask = vec![0.0_f32; 8]; // need 16
+        let t = [0.0_f32; 8];
+        let short_mask = [0.0_f32; 8]; // need 16
         assert!(masked_attention_cpu_fallback(&t, &t, &t, &short_mask, &cfg).is_err());
     }
 
@@ -1093,7 +1093,7 @@ mod tests {
         let q = vec![1000.0, -1000.0, 0.0, 0.0];
         let k = vec![1000.0, -1000.0, 0.0, 0.0];
         let v = vec![1.0, 0.0, 0.0, 1.0];
-        let mask = vec![0.0_f32; 4];
+        let mask = [0.0_f32; 4];
         let out = masked_attention_cpu_fallback(&q, &k, &v, &mask, &cfg).unwrap();
         assert!(out.iter().all(|v| v.is_finite()), "non-finite with large values");
     }
@@ -1166,8 +1166,8 @@ mod tests {
     #[test]
     fn test_multi_head_rejects_short_tensors() {
         let cfg = AttentionConfig::new(4, 4, 4, false).unwrap();
-        let short = vec![0.0_f32; 32]; // need 64
-        let ok = vec![0.0_f32; 64];
+        let short = [0.0_f32; 32]; // need 64
+        let ok = [0.0_f32; 64];
         assert!(multi_head_attention_cpu_fallback(&short, &ok, &ok, &cfg).is_err());
     }
 
@@ -1176,9 +1176,9 @@ mod tests {
     #[test]
     fn test_attention_forward_cpu_single_head() {
         let cfg = AttentionConfig::new(1, 4, 2, false).unwrap();
-        let q = vec![1.0_f32; 8];
-        let k = vec![1.0_f32; 8];
-        let v = vec![2.0_f32; 8];
+        let q = [1.0_f32; 8];
+        let k = [1.0_f32; 8];
+        let v = [2.0_f32; 8];
         let out = attention_forward(&q, &k, &v, &cfg).unwrap();
         assert_eq!(out.len(), 8);
         // Uniform Q,K,V → output == V
@@ -1279,9 +1279,9 @@ mod tests {
     #[test]
     fn test_attention_forward_cpu_single() {
         let cfg = AttentionConfig::new(1, 4, 2, false).unwrap();
-        let q = vec![1.0_f32; 8];
-        let k = vec![1.0_f32; 8];
-        let v = vec![2.0_f32; 8];
+        let q = [1.0_f32; 8];
+        let k = [1.0_f32; 8];
+        let v = [2.0_f32; 8];
         let out = attention_forward_cpu(&q, &k, &v, &cfg).unwrap();
         assert_eq!(out.len(), 8);
         for &val in &out {
@@ -1322,7 +1322,7 @@ mod tests {
     #[test]
     fn test_chunked_matches_standard_causal() {
         let cfg = AttentionConfig::new(1, 2, 6, true).unwrap();
-        let q = vec![1.0_f32; 12];
+        let q = [1.0_f32; 12];
         let k: Vec<f32> = (0..12).map(|i| i as f32 * 0.1).collect();
         let v: Vec<f32> = (0..12).map(|i| i as f32).collect();
 
@@ -1338,9 +1338,9 @@ mod tests {
     fn test_chunked_default_chunk_size() {
         // chunk_size=0 should use default and still produce correct results
         let cfg = AttentionConfig::new(1, 2, 4, false).unwrap();
-        let q = vec![1.0_f32; 8];
-        let k = vec![1.0_f32; 8];
-        let v = vec![3.0_f32; 8];
+        let q = [1.0_f32; 8];
+        let k = [1.0_f32; 8];
+        let v = [3.0_f32; 8];
         let out = chunked_attention_cpu(&q, &k, &v, &cfg, 0).unwrap();
         for &val in &out {
             assert!((val - 3.0).abs() < 1e-5);
@@ -1362,8 +1362,8 @@ mod tests {
     #[test]
     fn test_chunked_rejects_short_tensors() {
         let cfg = AttentionConfig::new(1, 4, 8, false).unwrap();
-        let short = vec![0.0_f32; 16]; // need 32
-        let ok = vec![0.0_f32; 32];
+        let short = [0.0_f32; 16]; // need 32
+        let ok = [0.0_f32; 32];
         assert!(chunked_attention_cpu(&short, &ok, &ok, &cfg, 4).is_err());
     }
 
@@ -1372,9 +1372,9 @@ mod tests {
     #[test]
     fn test_batch_attention_single_batch() {
         let cfg = AttentionConfig::new(1, 2, 3, false).unwrap();
-        let q = vec![1.0_f32; 6];
-        let k = vec![1.0_f32; 6];
-        let v = vec![5.0_f32; 6];
+        let q = [1.0_f32; 6];
+        let k = [1.0_f32; 6];
+        let v = [5.0_f32; 6];
 
         let single = attention_forward_cpu(&q, &k, &v, &cfg).unwrap();
         let batched = batch_attention_cpu(&q, &k, &v, &cfg, 1).unwrap();
@@ -1409,14 +1409,14 @@ mod tests {
     #[test]
     fn test_batch_attention_rejects_zero_batch() {
         let cfg = AttentionConfig::new(1, 2, 2, false).unwrap();
-        let t = vec![0.0_f32; 4];
+        let t = [0.0_f32; 4];
         assert!(batch_attention_cpu(&t, &t, &t, &cfg, 0).is_err());
     }
 
     #[test]
     fn test_batch_attention_rejects_short_tensors() {
         let cfg = AttentionConfig::new(1, 2, 2, false).unwrap();
-        let short = vec![0.0_f32; 4]; // need 8 for batch=2
+        let short = [0.0_f32; 4]; // need 8 for batch=2
         assert!(batch_attention_cpu(&short, &short, &short, &cfg, 2).is_err());
     }
 

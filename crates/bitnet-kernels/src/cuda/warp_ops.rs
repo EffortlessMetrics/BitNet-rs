@@ -660,7 +660,7 @@ mod tests {
     #[test]
     fn test_reduce_sum_all_active() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         for i in 0..32 {
             data[i] = (i + 1) as f32;
         }
@@ -674,7 +674,7 @@ mod tests {
     #[test]
     fn test_reduce_sum_partial_mask() {
         let cfg = WarpConfig::with_mask(0x0000_000F).unwrap(); // lanes 0–3
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 1.0;
         data[1] = 2.0;
         data[2] = 3.0;
@@ -689,7 +689,7 @@ mod tests {
     #[test]
     fn test_reduce_sum_single_lane() {
         let cfg = WarpConfig::with_mask(1).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 42.0;
         warp_reduce_sum(&mut data, &cfg).unwrap();
         assert!((data[0] - 42.0).abs() < 1e-5);
@@ -698,14 +698,14 @@ mod tests {
     #[test]
     fn test_reduce_sum_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 16]; // too short
+        let mut data = [1.0f32; 16]; // too short
         assert!(warp_reduce_sum(&mut data, &cfg).is_err());
     }
 
     #[test]
     fn test_reduce_sum_zeros() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         warp_reduce_sum(&mut data, &cfg).unwrap();
         for &v in &data {
             assert!(v.abs() < 1e-7);
@@ -715,7 +715,7 @@ mod tests {
     #[test]
     fn test_reduce_sum_negative_values() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         for i in 0..32 {
             data[i] = -(i as f32);
         }
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn test_reduce_max_all_active() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         for i in 0..32 {
             data[i] = (i as f32) * 0.5;
         }
@@ -745,7 +745,7 @@ mod tests {
     #[test]
     fn test_reduce_max_partial_mask() {
         let cfg = WarpConfig::with_mask(0b1010).unwrap(); // lanes 1, 3
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 999.0; // inactive
         data[1] = 3.0;
         data[3] = 7.0;
@@ -766,7 +766,7 @@ mod tests {
     #[test]
     fn test_reduce_max_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 10];
+        let mut data = [1.0f32; 10];
         assert!(warp_reduce_max(&mut data, &cfg).is_err());
     }
 
@@ -787,7 +787,7 @@ mod tests {
     #[test]
     fn test_reduce_min_partial_mask() {
         let cfg = WarpConfig::with_mask(0b1100).unwrap(); // lanes 2, 3
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = -999.0; // inactive
         data[2] = 5.0;
         data[3] = 2.0;
@@ -800,7 +800,7 @@ mod tests {
     #[test]
     fn test_reduce_min_single_element() {
         let cfg = WarpConfig::with_mask(1 << 5).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[5] = 77.0;
         warp_reduce_min(&mut data, &cfg).unwrap();
         assert!((data[5] - 77.0).abs() < 1e-5);
@@ -809,7 +809,7 @@ mod tests {
     #[test]
     fn test_reduce_min_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 4];
+        let mut data = [1.0f32; 4];
         assert!(warp_reduce_min(&mut data, &cfg).is_err());
     }
 
@@ -820,7 +820,7 @@ mod tests {
     #[test]
     fn test_broadcast_from_lane_zero() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 42.0;
         warp_broadcast(&mut data, 0, &cfg).unwrap();
         for &v in &data {
@@ -841,7 +841,7 @@ mod tests {
     #[test]
     fn test_broadcast_partial_mask() {
         let cfg = WarpConfig::with_mask(0b1111).unwrap(); // lanes 0–3
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[2] = 10.0;
         data[10] = 99.0; // inactive, should stay
         warp_broadcast(&mut data, 2, &cfg).unwrap();
@@ -853,14 +853,14 @@ mod tests {
     #[test]
     fn test_broadcast_inactive_source_rejected() {
         let cfg = WarpConfig::with_mask(0b0001).unwrap(); // only lane 0
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         assert!(warp_broadcast(&mut data, 1, &cfg).is_err());
     }
 
     #[test]
     fn test_broadcast_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 8];
+        let mut data = [1.0f32; 8];
         assert!(warp_broadcast(&mut data, 0, &cfg).is_err());
     }
 
@@ -903,15 +903,15 @@ mod tests {
     #[test]
     fn test_shuffle_src_lanes_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
-        let src = vec![0u32; 16]; // too short
+        let mut data = [0.0f32; 32];
+        let src = [0u32; 16]; // too short
         assert!(warp_shuffle(&mut data, &src, &cfg).is_err());
     }
 
     #[test]
     fn test_shuffle_inactive_source_rejected() {
         let cfg = WarpConfig::with_mask(0b0011).unwrap(); // lanes 0, 1
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 1.0;
         data[1] = 2.0;
         // Lane 0 tries to read from lane 5 (inactive) → error
@@ -939,7 +939,7 @@ mod tests {
     #[test]
     fn test_prefix_sum_sequential() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         warp_prefix_sum(&mut data, &cfg).unwrap();
         for i in 0..32 {
             assert!((data[i] - (i + 1) as f32).abs() < 1e-5);
@@ -962,7 +962,7 @@ mod tests {
     fn test_prefix_sum_partial_mask() {
         // Only lanes 0, 2, 4 active
         let cfg = WarpConfig::with_mask(0b10101).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 1.0;
         data[1] = 999.0; // inactive
         data[2] = 2.0;
@@ -977,7 +977,7 @@ mod tests {
     #[test]
     fn test_prefix_sum_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 2];
+        let mut data = [1.0f32; 2];
         assert!(warp_prefix_sum(&mut data, &cfg).is_err());
     }
 
@@ -988,7 +988,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_ones() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         warp_exclusive_scan(&mut data, &cfg).unwrap();
         for i in 0..32 {
             assert!((data[i] - i as f32).abs() < 1e-5);
@@ -1006,7 +1006,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_partial_mask() {
         let cfg = WarpConfig::with_mask(0b111).unwrap(); // lanes 0, 1, 2
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         data[1] = 20.0;
         data[2] = 30.0;
@@ -1021,7 +1021,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 3];
+        let mut data = [1.0f32; 3];
         assert!(warp_exclusive_scan(&mut data, &cfg).is_err());
     }
 
@@ -1032,7 +1032,7 @@ mod tests {
     #[test]
     fn test_ballot_all_true() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         let result = warp_ballot(&preds, &cfg).unwrap();
         assert_eq!(result, 0xFFFF_FFFF);
     }
@@ -1040,7 +1040,7 @@ mod tests {
     #[test]
     fn test_ballot_all_false() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         let result = warp_ballot(&preds, &cfg).unwrap();
         assert_eq!(result, 0);
     }
@@ -1056,7 +1056,7 @@ mod tests {
     #[test]
     fn test_ballot_partial_mask() {
         let cfg = WarpConfig::with_mask(0x0000_00FF).unwrap(); // lanes 0–7
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         let result = warp_ballot(&preds, &cfg).unwrap();
         assert_eq!(result, 0x0000_00FF);
     }
@@ -1064,7 +1064,7 @@ mod tests {
     #[test]
     fn test_ballot_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 16];
+        let preds = [true; 16];
         assert!(warp_ballot(&preds, &cfg).is_err());
     }
 
@@ -1075,14 +1075,14 @@ mod tests {
     #[test]
     fn test_warp_all_true() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert!(warp_all(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn test_warp_all_one_false() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![true; 32];
+        let mut preds = [true; 32];
         preds[15] = false;
         assert!(!warp_all(&preds, &cfg).unwrap());
     }
@@ -1090,7 +1090,7 @@ mod tests {
     #[test]
     fn test_warp_all_partial_mask_ignores_inactive() {
         let cfg = WarpConfig::with_mask(0b11).unwrap(); // lanes 0, 1
-        let mut preds = vec![false; 32]; // inactive lanes false
+        let mut preds = [false; 32]; // inactive lanes false
         preds[0] = true;
         preds[1] = true;
         assert!(warp_all(&preds, &cfg).unwrap());
@@ -1099,14 +1099,14 @@ mod tests {
     #[test]
     fn test_warp_any_all_false() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert!(!warp_any(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn test_warp_any_one_true() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[31] = true;
         assert!(warp_any(&preds, &cfg).unwrap());
     }
@@ -1114,7 +1114,7 @@ mod tests {
     #[test]
     fn test_warp_any_partial_mask_ignores_inactive() {
         let cfg = WarpConfig::with_mask(0b01).unwrap(); // only lane 0
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[1] = true; // inactive lane — not counted
         assert!(!warp_any(&preds, &cfg).unwrap());
     }
@@ -1122,14 +1122,14 @@ mod tests {
     #[test]
     fn test_warp_all_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 10];
+        let preds = [true; 10];
         assert!(warp_all(&preds, &cfg).is_err());
     }
 
     #[test]
     fn test_warp_any_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 10];
+        let preds = [true; 10];
         assert!(warp_any(&preds, &cfg).is_err());
     }
 
@@ -1140,7 +1140,7 @@ mod tests {
     #[test]
     fn test_match_all_same() {
         let cfg = WarpConfig::new();
-        let data = vec![7.0f32; 32];
+        let data = [7.0f32; 32];
         let masks = warp_match(&data, &cfg).unwrap();
         for &m in &masks {
             assert_eq!(m, 0xFFFF_FFFF);
@@ -1160,7 +1160,7 @@ mod tests {
     #[test]
     fn test_match_groups() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         // Group A: lanes 0–7 = 1.0, Group B: lanes 8–15 = 2.0, rest = 3.0
         for i in 0..8 {
             data[i] = 1.0;
@@ -1180,7 +1180,7 @@ mod tests {
     #[test]
     fn test_match_partial_mask() {
         let cfg = WarpConfig::with_mask(0b1111).unwrap();
-        let data = vec![5.0f32; 32];
+        let data = [5.0f32; 32];
         let masks = warp_match(&data, &cfg).unwrap();
         assert_eq!(masks[0], 0b1111); // only active lanes match
         assert_eq!(masks[4], 0); // inactive lane → 0
@@ -1189,7 +1189,7 @@ mod tests {
     #[test]
     fn test_match_data_too_short() {
         let cfg = WarpConfig::new();
-        let data = vec![0.0f32; 10];
+        let data = [0.0f32; 10];
         assert!(warp_match(&data, &cfg).is_err());
     }
 
@@ -1206,14 +1206,14 @@ mod tests {
 
     #[test]
     fn test_block_reduce_sum_multiple_warps() {
-        let data = vec![1.0f32; 128]; // 4 warps
+        let data = [1.0f32; 128]; // 4 warps
         let sum = block_reduce_sum(&data).unwrap();
         assert!((sum - 128.0).abs() < 1e-3);
     }
 
     #[test]
     fn test_block_reduce_sum_partial_last_warp() {
-        let data = vec![1.0f32; 50]; // 1 full warp + 18 leftover
+        let data = [1.0f32; 50]; // 1 full warp + 18 leftover
         let sum = block_reduce_sum(&data).unwrap();
         assert!((sum - 50.0).abs() < 1e-3);
     }
@@ -1233,7 +1233,7 @@ mod tests {
 
     #[test]
     fn test_block_reduce_sum_large_block() {
-        let data = vec![0.5f32; 1024]; // 32 warps
+        let data = [0.5f32; 1024]; // 32 warps
         let sum = block_reduce_sum(&data).unwrap();
         assert!((sum - 512.0).abs() < 1e-1);
     }
@@ -1251,7 +1251,7 @@ mod tests {
 
     #[test]
     fn test_block_reduce_max_multiple_warps() {
-        let mut data = vec![0.0f32; 128];
+        let mut data = [0.0f32; 128];
         data[65] = 100.0;
         let max = block_reduce_max(&data).unwrap();
         assert!((max - 100.0).abs() < 1e-5);
@@ -1284,7 +1284,7 @@ mod tests {
     #[test]
     fn test_softmax_single_row() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         cooperative_softmax(&input, &mut output, 1, 4).unwrap();
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5);
@@ -1296,8 +1296,8 @@ mod tests {
 
     #[test]
     fn test_softmax_uniform() {
-        let input = vec![1.0f32; 8];
-        let mut output = vec![0.0f32; 8];
+        let input = [1.0f32; 8];
+        let mut output = [0.0f32; 8];
         cooperative_softmax(&input, &mut output, 1, 8).unwrap();
         for &v in &output {
             assert!((v - 0.125).abs() < 1e-5);
@@ -1307,7 +1307,7 @@ mod tests {
     #[test]
     fn test_softmax_multiple_rows() {
         let input = vec![1.0, 2.0, 3.0, 0.0, 0.0, 0.0];
-        let mut output = vec![0.0f32; 6];
+        let mut output = [0.0f32; 6];
         cooperative_softmax(&input, &mut output, 2, 3).unwrap();
         // Each row sums to 1
         let sum1: f32 = output[0..3].iter().sum();
@@ -1324,7 +1324,7 @@ mod tests {
     fn test_softmax_numerical_stability() {
         // Large values that would overflow naive exp
         let input = vec![1000.0, 1001.0, 1002.0, 999.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         cooperative_softmax(&input, &mut output, 1, 4).unwrap();
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4);
@@ -1333,38 +1333,38 @@ mod tests {
 
     #[test]
     fn test_softmax_zero_rows_rejected() {
-        let input = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         assert!(cooperative_softmax(&input, &mut output, 0, 4).is_err());
     }
 
     #[test]
     fn test_softmax_zero_cols_rejected() {
-        let input = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         assert!(cooperative_softmax(&input, &mut output, 4, 0).is_err());
     }
 
     #[test]
     fn test_softmax_input_too_short() {
-        let input = vec![1.0f32; 3];
-        let mut output = vec![0.0f32; 8];
+        let input = [1.0f32; 3];
+        let mut output = [0.0f32; 8];
         assert!(cooperative_softmax(&input, &mut output, 2, 4).is_err());
     }
 
     #[test]
     fn test_softmax_output_too_short() {
-        let input = vec![1.0f32; 8];
-        let mut output = vec![0.0f32; 3];
+        let input = [1.0f32; 8];
+        let mut output = [0.0f32; 3];
         assert!(cooperative_softmax(&input, &mut output, 2, 4).is_err());
     }
 
     #[test]
     fn test_softmax_peaked_distribution() {
         // One very large value should dominate
-        let mut input = vec![0.0f32; 32];
+        let mut input = [0.0f32; 32];
         input[10] = 50.0;
-        let mut output = vec![0.0f32; 32];
+        let mut output = [0.0f32; 32];
         cooperative_softmax(&input, &mut output, 1, 32).unwrap();
         assert!(output[10] > 0.99);
     }
@@ -1407,7 +1407,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_shift_of_inclusive() {
         let cfg = WarpConfig::new();
-        let values = vec![2.0f32; 32];
+        let values = [2.0f32; 32];
         let mut inclusive = values.clone();
         warp_prefix_sum(&mut inclusive, &cfg).unwrap();
         let mut exclusive = values;
@@ -1421,7 +1421,7 @@ mod tests {
     #[test]
     fn test_ballot_matches_all_any() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         let ballot = warp_ballot(&preds, &cfg).unwrap();
         let all = warp_all(&preds, &cfg).unwrap();
         let any = warp_any(&preds, &cfg).unwrap();
@@ -1433,7 +1433,7 @@ mod tests {
     #[test]
     fn test_ballot_empty_matches_all_any() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         let ballot = warp_ballot(&preds, &cfg).unwrap();
         let all = warp_all(&preds, &cfg).unwrap();
         let any = warp_any(&preds, &cfg).unwrap();
@@ -1445,7 +1445,7 @@ mod tests {
     #[test]
     fn test_broadcast_is_idempotent() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 5.0;
         warp_broadcast(&mut data, 0, &cfg).unwrap();
         let after_first = data.clone();

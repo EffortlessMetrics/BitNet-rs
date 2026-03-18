@@ -578,7 +578,7 @@ mod tests {
     fn test_forward_single_stage_sequential() {
         let cfg =
             PipelineConfig::new(vec![PipelineStage::new(0, 2)], 4, PipelineSchedule::Sequential);
-        let input = vec![1.0; 8]; // 4 rows × 2 dims
+        let input = [1.0; 8]; // 4 rows × 2 dims
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert_eq!(out.len(), 8);
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -587,7 +587,7 @@ mod tests {
     #[test]
     fn test_forward_single_stage_gpipe() {
         let cfg = PipelineConfig::new(vec![PipelineStage::new(0, 3)], 2, PipelineSchedule::GPipe);
-        let input = vec![2.0; 6];
+        let input = [2.0; 6];
         let out = pipeline_forward(&input, 3, 2, &cfg).unwrap();
         // 2.0 * 3 layers = 6.0
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_sequential() {
         let cfg = two_stage_config(PipelineSchedule::Sequential);
-        let input = vec![1.0; 8]; // 4×2
+        let input = [1.0; 8]; // 4×2
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         // stage0: *2, stage1: *3 → total *6
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_gpipe() {
         let cfg = two_stage_config(PipelineSchedule::GPipe);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -619,7 +619,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_pipedream() {
         let cfg = two_stage_config(PipelineSchedule::PipeDream);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -627,7 +627,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_interleaved() {
         let cfg = two_stage_config(PipelineSchedule::Interleaved);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -639,7 +639,7 @@ mod tests {
             2,
             PipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = pipeline_forward(&input, 3, 2, &cfg).unwrap();
         // 1 * 2 * 2 * 3 = 12
         assert!(out.iter().all(|&v| (v - 12.0).abs() < 1e-6));
@@ -657,7 +657,7 @@ mod tests {
             1,
             PipelineSchedule::Sequential,
         );
-        let input = vec![2.0; 4]; // 2×2
+        let input = [2.0; 4]; // 2×2
         let out = pipeline_forward(&input, 2, 2, &cfg).unwrap();
         // 2 * 1 * 1 * 1 * 1 = 2
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -699,7 +699,7 @@ mod tests {
             4,
             PipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 128]; // 64×2
+        let input = [1.0; 128]; // 64×2
         let out = pipeline_forward(&input, 64, 2, &cfg).unwrap();
         assert_eq!(out.len(), 128);
         assert!(out.iter().all(|&v| (v - 1.0).abs() < 1e-6));
@@ -709,7 +709,7 @@ mod tests {
     fn test_forward_large_dim() {
         let cfg =
             PipelineConfig::new(vec![PipelineStage::new(0, 3)], 1, PipelineSchedule::Sequential);
-        let input = vec![2.0; 256]; // 1×256
+        let input = [2.0; 256]; // 1×256
         let out = pipeline_forward(&input, 1, 256, &cfg).unwrap();
         assert_eq!(out.len(), 256);
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
@@ -718,7 +718,7 @@ mod tests {
     #[test]
     fn test_forward_micro_batch_equals_batch() {
         let cfg = PipelineConfig::new(vec![PipelineStage::new(0, 2)], 4, PipelineSchedule::GPipe);
-        let input = vec![1.0; 8]; // 4×2
+        let input = [1.0; 8]; // 4×2
         let out = pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert_eq!(out.len(), 8);
     }
@@ -730,7 +730,7 @@ mod tests {
             1,
             PipelineSchedule::PipeDream,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = pipeline_forward(&input, 3, 2, &cfg).unwrap();
         // 1 * 2 * 2 = 4
         assert!(out.iter().all(|&v| (v - 4.0).abs() < 1e-6));
@@ -833,7 +833,7 @@ mod tests {
     #[test]
     fn test_all_schedules_same_result() {
         let stages = vec![PipelineStage::new(0, 2), PipelineStage::new(2, 5)];
-        let input = vec![1.0; 12]; // 6×2
+        let input = [1.0; 12]; // 6×2
         let mut results = Vec::new();
         for sched in [
             PipelineSchedule::Sequential,
@@ -874,7 +874,7 @@ mod tests {
             3,
             PipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 30]; // 10×3
+        let input = [1.0; 30]; // 10×3
         let out = pipeline_forward(&input, 10, 3, &cfg).unwrap();
         assert_eq!(out.len(), 30);
     }
@@ -943,7 +943,7 @@ mod tests {
 
     #[test]
     fn test_split_batch_of_one_with_large_micro() {
-        let input = vec![42.0; 4]; // 1×4
+        let input = [42.0; 4]; // 1×4
         let batches = micro_batch_split(&input, 1, 4, 100).unwrap();
         assert_eq!(batches.len(), 1);
         assert_eq!(batches[0], input);
@@ -959,7 +959,7 @@ mod tests {
             2,
             PipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = pipeline_forward(&input, 3, 2, &cfg).unwrap();
         // 1 * 1 * 9 = 9
         assert!(out.iter().all(|&v| (v - 9.0).abs() < 1e-6));

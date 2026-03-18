@@ -1024,8 +1024,8 @@ mod tests {
     #[test]
     fn test_softplus_known_points() {
         let k = ActivationKind::Softplus(1.0);
-        // softplus(0) = ln(2) ≈ 0.6931
-        assert_close(k.apply(0.0), 0.6931, 1e-3, "Softplus(0)");
+        // softplus(0) = ln(1 + e^0) = ln(2) ≈ 0.693
+        assert_close(k.apply(0.0), 0.693, 1e-3, "Softplus(0)");
         // Large x → x
         assert_close(k.apply(100.0), 100.0, 0.1, "Softplus(100)");
     }
@@ -1371,7 +1371,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0];
         // Identity-like weight [1, 3] → one output per batch
         let weight = vec![1.0, 0.0, 0.0];
-        let mut output = vec![0.0_f32; 1];
+        let mut output = [0.0_f32; 1];
         fused.apply_fused_ref(&input, &weight, &[], &mut output, 1, 3, 1).unwrap();
         assert_close(output[0], 1.0, 1e-6, "fused no bias");
     }
@@ -1386,9 +1386,9 @@ mod tests {
     #[test]
     fn test_fused_error_on_short_output() {
         let fused = FusedActivation::new(ActivationKind::ReLU);
-        let input = vec![1.0; 4];
-        let weight = vec![1.0; 4];
-        let mut output = vec![0.0_f32; 1]; // too short for batch=2, out=2
+        let input = [1.0; 4];
+        let weight = [1.0; 4];
+        let mut output = [0.0_f32; 1]; // too short for batch=2, out=2
         let result = fused.apply_fused_ref(&input, &weight, &[], &mut output, 2, 2, 2);
         assert!(result.is_err());
     }
@@ -1671,9 +1671,9 @@ mod tests {
     fn test_kernel_apply_ref() {
         let kernel = ActivationKernel::new(ActivationKind::ReLU);
         let input = vec![-1.0, 0.0, 1.0, -0.5, 2.0];
-        let mut output = vec![0.0_f32; 5];
+        let mut output = [0.0_f32; 5];
         kernel.apply_ref(&input, &mut output).unwrap();
-        assert_eq!(output, vec![0.0, 0.0, 1.0, 0.0, 2.0]);
+        assert_eq!(output.to_vec(), vec![0.0, 0.0, 1.0, 0.0, 2.0]);
     }
 
     #[test]
@@ -1688,7 +1688,7 @@ mod tests {
     fn test_kernel_apply_ref_error_short_output() {
         let kernel = ActivationKernel::new(ActivationKind::ReLU);
         let input = vec![1.0, 2.0, 3.0];
-        let mut output = vec![0.0_f32; 2]; // too short
+        let mut output = [0.0_f32; 2]; // too short
         assert!(kernel.apply_ref(&input, &mut output).is_err());
     }
 
@@ -1707,7 +1707,7 @@ mod tests {
     fn test_derivative_ref_api() {
         let d = ActivationDerivative::new(ActivationKind::ReLU);
         let input = vec![-1.0, 0.0, 1.0];
-        let mut output = vec![0.0_f32; 3];
+        let mut output = [0.0_f32; 3];
         d.derivative_ref(&input, &mut output).unwrap();
         assert_eq!(output[0], 0.0);
         assert_eq!(output[1], 1.0);
@@ -1717,8 +1717,8 @@ mod tests {
     #[test]
     fn test_derivative_ref_error_short() {
         let d = ActivationDerivative::new(ActivationKind::Sigmoid);
-        let input = vec![1.0; 5];
-        let mut output = vec![0.0_f32; 3];
+        let input = [1.0; 5];
+        let mut output = [0.0_f32; 3];
         assert!(d.derivative_ref(&input, &mut output).is_err());
     }
 
@@ -1744,7 +1744,7 @@ mod tests {
     #[test]
     fn test_stats_nan_detection() {
         let input = vec![f32::NAN, 1.0, f32::NEG_INFINITY];
-        let mut output = vec![0.0_f32; 3];
+        let mut output = [0.0_f32; 3];
         let stats =
             ActivationStats::apply_and_collect(ActivationKind::SiLU, &input, &mut output).unwrap();
         assert!(stats.nan_count >= 1, "should detect NaN");
@@ -1764,7 +1764,7 @@ mod tests {
     #[test]
     fn test_stats_has_numerical_issues() {
         let input = vec![0.0, 1.0, 2.0];
-        let mut output = vec![0.0_f32; 3];
+        let mut output = [0.0_f32; 3];
         let stats =
             ActivationStats::apply_and_collect(ActivationKind::ReLU, &input, &mut output).unwrap();
         assert!(!stats.has_numerical_issues());
@@ -1781,8 +1781,8 @@ mod tests {
 
     #[test]
     fn test_stats_error_short_output() {
-        let input = vec![1.0; 5];
-        let mut output = vec![0.0_f32; 2];
+        let input = [1.0; 5];
+        let mut output = [0.0_f32; 2];
         assert!(
             ActivationStats::apply_and_collect(ActivationKind::ReLU, &input, &mut output,).is_err()
         );
@@ -2040,7 +2040,7 @@ mod tests {
         for kind in all_kinds() {
             let kernel = ActivationKernel::new(kind);
             let input = vec![-1.0, 0.0, 1.0];
-            let mut output = vec![0.0_f32; 3];
+            let mut output = [0.0_f32; 3];
             kernel.apply_ref(&input, &mut output).unwrap();
             for (i, (&x, &y)) in input.iter().zip(output.iter()).enumerate() {
                 assert_eq!(y, kind.apply(x), "{kind:?} kernel mismatch at [{i}]");
@@ -2053,7 +2053,7 @@ mod tests {
         for kind in all_kinds() {
             let d = ActivationDerivative::new(kind);
             let input = vec![-1.0, 0.0, 1.0];
-            let mut output = vec![0.0_f32; 3];
+            let mut output = [0.0_f32; 3];
             d.derivative_ref(&input, &mut output).unwrap();
             for (i, (&x, &y)) in input.iter().zip(output.iter()).enumerate() {
                 assert_eq!(y, kind.derivative(x), "{kind:?} derivative mismatch at [{i}]");
@@ -2064,8 +2064,8 @@ mod tests {
     #[test]
     fn test_approx_error_short_output() {
         let approx = ApproximateActivation::new(ActivationKind::GELU);
-        let input = vec![1.0; 5];
-        let mut output = vec![0.0_f32; 3];
+        let input = [1.0; 5];
+        let mut output = [0.0_f32; 3];
         assert!(approx.apply_approx_ref(&input, &mut output).is_err());
     }
 }

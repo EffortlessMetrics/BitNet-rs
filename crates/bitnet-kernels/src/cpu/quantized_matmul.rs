@@ -766,10 +766,10 @@ mod tests {
 
     #[test]
     fn test_dimension_zero_rejected() {
-        let act = vec![1.0f32; 4];
-        let packed = vec![0u8; 4];
-        let scales = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let act = [1.0f32; 4];
+        let packed = [0u8; 4];
+        let scales = [1.0f32; 4];
+        let mut out = [0.0f32; 4];
 
         assert!(i2s_matmul_f32(&act, &packed, &scales, &mut out, 0, 2, 2, 32).is_err());
         assert!(i2s_matmul_f32(&act, &packed, &scales, &mut out, 2, 0, 2, 32).is_err());
@@ -778,28 +778,28 @@ mod tests {
 
     #[test]
     fn test_block_size_zero_rejected() {
-        let act = vec![1.0f32; 4];
-        let packed = vec![0u8; 2];
-        let scales = vec![1.0f32; 2];
-        let mut out = vec![0.0f32; 4];
+        let act = [1.0f32; 4];
+        let packed = [0u8; 2];
+        let scales = [1.0f32; 2];
+        let mut out = [0.0f32; 4];
         assert!(i2s_matmul_f32(&act, &packed, &scales, &mut out, 2, 2, 2, 0).is_err());
     }
 
     #[test]
     fn test_activation_buffer_too_small() {
-        let act = vec![1.0f32; 2]; // too small for 2×4
-        let packed = vec![0u8; 4];
-        let scales = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 4];
+        let act = [1.0f32; 2]; // too small for 2×4
+        let packed = [0u8; 4];
+        let scales = [1.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(i2s_matmul_f32(&act, &packed, &scales, &mut out, 2, 2, 4, 32).is_err());
     }
 
     #[test]
     fn test_output_buffer_too_small() {
-        let act = vec![1.0f32; 4];
-        let packed = vec![0u8; 2];
-        let scales = vec![1.0f32; 2];
-        let mut out = vec![0.0f32; 1]; // too small for 2×2
+        let act = [1.0f32; 4];
+        let packed = [0u8; 2];
+        let scales = [1.0f32; 2];
+        let mut out = [0.0f32; 1]; // too small for 2×2
         assert!(i2s_matmul_f32(&act, &packed, &scales, &mut out, 2, 2, 2, 32).is_err());
     }
 

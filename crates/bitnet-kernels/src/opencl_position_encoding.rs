@@ -1291,7 +1291,7 @@ mod tests {
     fn test_sinusoidal_position_zero() {
         let cfg = EncodingConfig::new(16, 4).unwrap();
         let mut enc = SinusoidalEncoding::new(cfg);
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         enc.encode(1, &mut out).unwrap();
         // pos=0 → all angles are 0 → sin(0)=0, cos(0)=1
         assert!(approx_eq(out[0], 0.0)); // sin(0)
@@ -1393,7 +1393,7 @@ mod tests {
     fn test_sinusoidal_output_too_small() {
         let cfg = EncodingConfig::new(16, 4).unwrap();
         let mut enc = SinusoidalEncoding::new(cfg);
-        let mut out = vec![0.0; 2]; // too small for 1 * 4
+        let mut out = [0.0; 2]; // too small for 1 * 4
         assert!(enc.encode(1, &mut out).is_err());
     }
 
@@ -1401,7 +1401,7 @@ mod tests {
     fn test_sinusoidal_seq_exceeds_max() {
         let cfg = EncodingConfig::new(8, 4).unwrap();
         let mut enc = SinusoidalEncoding::new(cfg);
-        let mut out = vec![0.0; 100];
+        let mut out = [0.0; 100];
         assert!(enc.encode(10, &mut out).is_err());
     }
 
@@ -1476,41 +1476,41 @@ mod tests {
     #[test]
     fn test_learned_weight_mismatch_err() {
         let cfg = EncodingConfig::new(8, 4).unwrap();
-        let weight = vec![0.0; 10]; // wrong size
+        let weight = vec![0.0f32; 10]; // wrong size
         assert!(LearnedEncoding::new(cfg, weight).is_err());
     }
 
     #[test]
     fn test_learned_seq_exceeds_max() {
         let cfg = EncodingConfig::new(4, 2).unwrap();
-        let weight = vec![0.0; 8];
+        let weight = vec![0.0f32; 8];
         let mut enc = LearnedEncoding::new(cfg, weight).unwrap();
-        let mut out = vec![0.0; 20];
+        let mut out = [0.0; 20];
         assert!(enc.encode(5, &mut out).is_err());
     }
 
     #[test]
     fn test_learned_lookup_out_of_range() {
         let cfg = EncodingConfig::new(4, 2).unwrap();
-        let weight = vec![0.0; 8];
+        let weight = vec![0.0f32; 8];
         let enc = LearnedEncoding::new(cfg, weight).unwrap();
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         assert!(enc.lookup(4, &mut out).is_err());
     }
 
     #[test]
     fn test_learned_output_too_small() {
         let cfg = EncodingConfig::new(4, 4).unwrap();
-        let weight = vec![0.0; 16];
+        let weight = vec![0.0f32; 16];
         let mut enc = LearnedEncoding::new(cfg, weight).unwrap();
-        let mut out = vec![0.0; 3]; // too small for 1 position
+        let mut out = [0.0; 3]; // too small for 1 position
         assert!(enc.encode(1, &mut out).is_err());
     }
 
     #[test]
     fn test_learned_config_accessor() {
         let cfg = EncodingConfig::new(16, 8).unwrap();
-        let weight = vec![0.0; 128];
+        let weight = vec![0.0f32; 128];
         let enc = LearnedEncoding::new(cfg, weight).unwrap();
         assert_eq!(enc.config().dim, 8);
     }
@@ -1518,9 +1518,9 @@ mod tests {
     #[test]
     fn test_learned_lookup_output_too_small() {
         let cfg = EncodingConfig::new(4, 4).unwrap();
-        let weight = vec![0.0; 16];
+        let weight = vec![0.0f32; 16];
         let enc = LearnedEncoding::new(cfg, weight).unwrap();
-        let mut out = vec![0.0; 2]; // too small
+        let mut out = [0.0; 2]; // too small
         assert!(enc.lookup(0, &mut out).is_err());
     }
 
@@ -1614,7 +1614,7 @@ mod tests {
     fn test_rope_odd_head_dim_err() {
         let cfg = EncodingConfig::new(16, 4).unwrap();
         let mut rope = RotaryEncoding::new(cfg);
-        let mut data = vec![0.0; 3];
+        let mut data = [0.0; 3];
         assert!(rope.apply(&mut data, 1, 1, 3, 0).is_err());
     }
 
@@ -1622,7 +1622,7 @@ mod tests {
     fn test_rope_data_too_small_err() {
         let cfg = EncodingConfig::new(16, 4).unwrap();
         let mut rope = RotaryEncoding::new(cfg);
-        let mut data = vec![0.0; 2]; // need 4
+        let mut data = [0.0; 2]; // need 4
         assert!(rope.apply(&mut data, 1, 1, 4, 0).is_err());
     }
 
@@ -1748,14 +1748,14 @@ mod tests {
     #[test]
     fn test_alibi_output_too_small() {
         let mut enc = ALiBiEncoding::new(2).unwrap();
-        let mut out = vec![0.0; 3]; // need 2 * 2 * 2 = 8
+        let mut out = [0.0; 3]; // need 2 * 2 * 2 = 8
         assert!(enc.compute_bias(2, 2, &mut out).is_err());
     }
 
     #[test]
     fn test_alibi_single_position() {
         let mut enc = ALiBiEncoding::new(1).unwrap();
-        let mut bias = vec![0.0; 1];
+        let mut bias = [0.0; 1];
         enc.compute_bias(1, 1, &mut bias).unwrap();
         assert!(approx_eq(bias[0], 0.0)); // distance = 0
     }
@@ -1860,7 +1860,7 @@ mod tests {
     #[test]
     fn test_relative_buckets_output_too_small() {
         let mut enc = RelativeEncoding::new(32, 128, true).unwrap();
-        let mut out = vec![0usize; 3]; // need 2 * 2 = 4
+        let mut out = [0usize; 3]; // need 2 * 2 = 4
         assert!(enc.compute_buckets(2, 2, &mut out).is_err());
     }
 
@@ -1932,7 +1932,7 @@ mod tests {
     fn test_ntk_apply_odd_dim_err() {
         let cfg = EncodingConfig::new(4096, 4).unwrap();
         let mut ntk = DynamicNTKRoPE::new(cfg, 2048);
-        let mut data = vec![0.0; 3];
+        let mut data = [0.0; 3];
         assert!(ntk.apply(&mut data, 1, 1, 3, 0).is_err());
     }
 
@@ -2041,7 +2041,7 @@ mod tests {
     fn test_yarn_apply_odd_dim_err() {
         let cfg = EncodingConfig::new(8192, 4).unwrap();
         let mut yarn = YaRNRoPE::new(cfg, 2048);
-        let mut data = vec![0.0; 3];
+        let mut data = [0.0; 3];
         assert!(yarn.apply(&mut data, 1, 1, 3, 0).is_err());
     }
 
@@ -2109,7 +2109,7 @@ mod tests {
     fn test_pi_odd_dim_err() {
         let cfg = EncodingConfig::new(8192, 4).unwrap();
         let mut pi = PositionInterpolation::new(cfg, 2048);
-        let mut data = vec![0.0; 5];
+        let mut data = [0.0; 5];
         assert!(pi.apply_rope(&mut data, 1, 1, 5, 0).is_err());
     }
 
@@ -2204,8 +2204,8 @@ mod tests {
         enc.compute_bias(4, 4, &mut bias).unwrap();
 
         // Compare head 0 and head 1 at same position pair
-        let h0_bias = bias[0 * 16 + 0 * 4 + 3]; // head 0, q=0, k=3
-        let h1_bias = bias[1 * 16 + 0 * 4 + 3]; // head 1, q=0, k=3
+        let h0_bias = bias[3]; // head 0, q=0, k=3
+        let h1_bias = bias[19]; // head 1, q=0, k=3
         assert!((h0_bias - h1_bias).abs() > 1e-6, "different heads should have different biases",);
     }
 
@@ -2224,12 +2224,12 @@ mod tests {
         let cfg = EncodingConfig::new(16, 4).unwrap();
 
         let mut sin_enc = SinusoidalEncoding::new(cfg.clone());
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         sin_enc.encode(1, &mut out).unwrap();
 
-        let weight = vec![0.0; 64];
+        let weight = vec![0.0f32; 64];
         let mut learn = LearnedEncoding::new(cfg.clone(), weight).unwrap();
-        let mut out2 = vec![0.0; 4];
+        let mut out2 = [0.0; 4];
         learn.encode(1, &mut out2).unwrap();
 
         let mut rope = RotaryEncoding::new(cfg.clone());
@@ -2237,11 +2237,11 @@ mod tests {
         rope.apply(&mut data, 1, 1, 4, 0).unwrap();
 
         let mut alibi = ALiBiEncoding::new(1).unwrap();
-        let mut bias = vec![0.0; 1];
+        let mut bias = [0.0; 1];
         alibi.compute_bias(1, 1, &mut bias).unwrap();
 
         let mut rel = RelativeEncoding::new(32, 128, true).unwrap();
-        let mut buckets = vec![0usize; 1];
+        let mut buckets = [0usize; 1];
         rel.compute_buckets(1, 1, &mut buckets).unwrap();
     }
 

@@ -1069,8 +1069,8 @@ mod tests {
 
     #[test]
     fn test_ema_update_convergence() {
-        let mut running = vec![0.0];
-        let batch = vec![10.0];
+        let mut running = [0.0];
+        let batch = [10.0];
         for _ in 0..100 {
             running = ema_update(&running, &batch, 0.1);
         }

@@ -637,27 +637,27 @@ mod tests {
 
     #[test]
     fn test_scalar_empty_seq() {
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         flash_attention_scalar(&[], &[], &[], &mut output, 0, 4, 1.0);
         assert!(output.is_empty());
     }
 
     #[test]
     fn test_scalar_zero_head_dim() {
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         flash_attention_scalar(&[], &[], &[], &mut output, 4, 0, 1.0);
     }
 
     #[test]
     fn test_causal_scalar_empty_seq() {
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         flash_attention_causal_scalar(&[], &[], &[], &mut output, 0, 4, 1.0);
         assert!(output.is_empty());
     }
 
     #[test]
     fn test_multihead_scalar_empty() {
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         flash_attention_multihead_scalar(&[], &[], &[], &mut output, 0, 0, 4, 1.0);
     }
 
@@ -665,10 +665,10 @@ mod tests {
 
     #[test]
     fn test_scalar_single_element() {
-        let q = vec![1.0f32; 4];
-        let k = vec![1.0f32; 4];
+        let q = [1.0f32; 4];
+        let k = [1.0f32; 4];
         let v = vec![2.0, 3.0, 4.0, 5.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         flash_attention_scalar(&q, &k, &v, &mut output, 1, 4, 0.5);
         // Single element: softmax of one score = 1.0, so output = v.
         assert_close(&output, &v, STRICT_ATOL, "single element");
@@ -676,10 +676,10 @@ mod tests {
 
     #[test]
     fn test_causal_scalar_single_element() {
-        let q = vec![1.0f32; 4];
-        let k = vec![1.0f32; 4];
+        let q = [1.0f32; 4];
+        let k = [1.0f32; 4];
         let v = vec![2.0, 3.0, 4.0, 5.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         flash_attention_causal_scalar(&q, &k, &v, &mut output, 1, 4, 0.5);
         assert_close(&output, &v, STRICT_ATOL, "causal single element");
     }
@@ -882,10 +882,10 @@ mod tests {
 
     #[test]
     fn test_scalar_seq1_dim1() {
-        let q = vec![0.5];
-        let k = vec![0.5];
-        let v = vec![3.0];
-        let mut output = vec![0.0f32; 1];
+        let q = [0.5];
+        let k = [0.5];
+        let v = [3.0];
+        let mut output = [0.0f32; 1];
         flash_attention_scalar(&q, &k, &v, &mut output, 1, 1, 1.0);
         assert_close(&output, &[3.0], STRICT_ATOL, "1x1");
     }
@@ -895,7 +895,7 @@ mod tests {
         let q = vec![1.0, 1.0];
         let k = vec![1.0, 1.0];
         let v = vec![2.0, 4.0];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         flash_attention_scalar(&q, &k, &v, &mut output, 2, 1, 1.0);
         // Uniform attention → mean of v = 3.0.
         assert_close(&output, &[3.0, 3.0], ATOL, "2x1 uniform");
@@ -1593,7 +1593,7 @@ mod tests {
 
         #[test]
         fn test_neon_empty_seq() {
-            let mut output = vec![0.0f32; 0];
+            let mut output = [0.0f32; 0];
             unsafe {
                 flash_attention_neon(&[], &[], &[], &mut output, 0, 4, 1.0);
             }
@@ -1602,10 +1602,10 @@ mod tests {
 
         #[test]
         fn test_neon_single_element() {
-            let q = vec![1.0f32; 4];
-            let k = vec![1.0f32; 4];
+            let q = [1.0f32; 4];
+            let k = [1.0f32; 4];
             let v = vec![2.0, 3.0, 4.0, 5.0];
-            let mut output = vec![0.0f32; 4];
+            let mut output = [0.0f32; 4];
             unsafe {
                 flash_attention_neon(&q, &k, &v, &mut output, 1, 4, 0.5);
             }

@@ -293,11 +293,11 @@ mod tests {
     #[test]
     fn test_layernorm_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
         let expected = scalar_layernorm(&input, &gamma, &beta, EPS);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { layernorm_neon(&input, &mut output, &gamma, &beta, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -309,18 +309,18 @@ mod tests {
         let beta = vec![0.1, -0.1, 0.0, 0.5, -0.5];
         let expected = scalar_layernorm(&input, &gamma, &beta, EPS);
 
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { layernorm_neon(&input, &mut output, &gamma, &beta, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
 
     #[test]
     fn test_layernorm_zero_variance() {
-        let input = vec![3.0; 8];
-        let gamma = vec![1.0; 8];
-        let beta = vec![0.0; 8];
+        let input = [3.0; 8];
+        let gamma = [1.0; 8];
+        let beta = [0.0; 8];
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { layernorm_neon(&input, &mut output, &gamma, &beta, EPS) };
 
         // All values identical → zero variance → output ≈ beta.
@@ -331,12 +331,12 @@ mod tests {
 
     #[test]
     fn test_layernorm_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
-        let beta = vec![1.0];
+        let input = [42.0];
+        let gamma = [2.0];
+        let beta = [1.0];
         let expected = scalar_layernorm(&input, &gamma, &beta, EPS);
 
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         unsafe { layernorm_neon(&input, &mut output, &gamma, &beta, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -358,11 +358,11 @@ mod tests {
     fn test_layernorm_non_aligned_length() {
         // 13 elements → 3 NEON chunks + 1 scalar remainder.
         let input: Vec<f32> = (0..13).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 13];
-        let beta = vec![0.0; 13];
+        let gamma = [1.0; 13];
+        let beta = [0.0; 13];
         let expected = scalar_layernorm(&input, &gamma, &beta, EPS);
 
-        let mut output = vec![0.0; 13];
+        let mut output = [0.0; 13];
         unsafe { layernorm_neon(&input, &mut output, &gamma, &beta, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -372,10 +372,10 @@ mod tests {
     #[test]
     fn test_rmsnorm_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let gamma = vec![1.0; 8];
+        let gamma = [1.0; 8];
         let expected = scalar_rmsnorm(&input, &gamma, EPS);
 
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { rmsnorm_neon(&input, &mut output, &gamma, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
@@ -386,18 +386,18 @@ mod tests {
         let gamma = vec![0.5, 1.0, 1.5, 2.0, 0.1];
         let expected = scalar_rmsnorm(&input, &gamma, EPS);
 
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         unsafe { rmsnorm_neon(&input, &mut output, &gamma, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }
 
     #[test]
     fn test_rmsnorm_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
+        let input = [42.0];
+        let gamma = [2.0];
         let expected = scalar_rmsnorm(&input, &gamma, EPS);
 
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         unsafe { rmsnorm_neon(&input, &mut output, &gamma, EPS) };
         assert_approx_eq(&output, &expected, TOL);
     }

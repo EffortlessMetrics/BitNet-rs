@@ -500,7 +500,7 @@ mod tests {
     fn reduce_product_simple() {
         let cfg = WarpConfig::with_active_mask(0x07).unwrap(); // lanes 0-2
         let r = WarpReducer::new(cfg);
-        let mut d = vec![0.0f32; 32];
+        let mut d = [0.0f32; 32];
         d[0] = 2.0;
         d[1] = 3.0;
         d[2] = 5.0;
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn reduce_butterfly_custom_op() {
         let r = full_reducer();
-        let mut d = vec![1.0f32; 32];
+        let mut d = [1.0f32; 32];
         d[0] = 5.0;
         r.reduce_butterfly(&mut d, f32::NEG_INFINITY, f32::max).unwrap();
         assert!((d[15] - 5.0).abs() < 1e-4);
@@ -520,7 +520,7 @@ mod tests {
     #[test]
     fn reduce_sum_too_short() {
         let r = full_reducer();
-        let mut d = vec![0.0f32; 16];
+        let mut d = [0.0f32; 16];
         assert!(r.reduce_sum(&mut d).is_err());
     }
 
@@ -531,14 +531,14 @@ mod tests {
     #[test]
     fn ballot_all_true() {
         let r = full_reducer();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert_eq!(r.ballot(&preds).unwrap(), 0xFFFF_FFFF);
     }
 
     #[test]
     fn ballot_none_true() {
         let r = full_reducer();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert_eq!(r.ballot(&preds).unwrap(), 0);
     }
 
@@ -553,14 +553,14 @@ mod tests {
     #[test]
     fn vote_all_true() {
         let r = full_reducer();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert!(r.vote_all(&preds).unwrap());
     }
 
     #[test]
     fn vote_all_with_one_false() {
         let r = full_reducer();
-        let mut preds = vec![true; 32];
+        let mut preds = [true; 32];
         preds[17] = false;
         assert!(!r.vote_all(&preds).unwrap());
     }
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     fn vote_any_one_true() {
         let r = full_reducer();
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[31] = true;
         assert!(r.vote_any(&preds).unwrap());
     }
@@ -580,7 +580,7 @@ mod tests {
     #[test]
     fn inclusive_scan_ones() {
         let r = full_reducer();
-        let mut d = vec![1.0f32; 32];
+        let mut d = [1.0f32; 32];
         r.inclusive_scan(&mut d).unwrap();
         for i in 0..32 {
             assert!((d[i] - (i + 1) as f32).abs() < 1e-4);
@@ -590,7 +590,7 @@ mod tests {
     #[test]
     fn exclusive_scan_ones() {
         let r = full_reducer();
-        let mut d = vec![1.0f32; 32];
+        let mut d = [1.0f32; 32];
         r.exclusive_scan(&mut d).unwrap();
         for i in 0..32 {
             assert!((d[i] - i as f32).abs() < 1e-4);
@@ -673,7 +673,7 @@ mod tests {
     fn broadcast_requires_lane0_active() {
         let cfg = WarpConfig::with_active_mask(0xFFFF_FFFE).unwrap(); // lane 0 off
         let s = WarpShuffle::new(cfg);
-        let mut d = vec![0.0f32; 32];
+        let mut d = [0.0f32; 32];
         assert!(s.broadcast(&mut d).is_err());
     }
 
@@ -695,14 +695,14 @@ mod tests {
     fn all_to_all_out_too_small() {
         let s = full_shuffle();
         let d = iota32();
-        let mut out = vec![0.0f32; 31];
+        let mut out = [0.0f32; 31];
         assert!(s.all_to_all(&d, &mut out).is_err());
     }
 
     #[test]
     fn shuffle_down_data_too_short() {
         let s = full_shuffle();
-        let mut d = vec![0.0f32; 8];
+        let mut d = [0.0f32; 8];
         assert!(s.shuffle_down(&mut d, 1).is_err());
     }
 }

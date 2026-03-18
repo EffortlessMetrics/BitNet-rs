@@ -1136,7 +1136,7 @@ mod tests {
 
     #[test]
     fn int8_zero_row() {
-        let weight = vec![0.0f32; 8];
+        let weight = [0.0f32; 8];
         let table = QuantizedEmbeddingTable::quantize(&weight, 2, 4, QuantPrecision::Int8).unwrap();
         let deq = table.dequantize_row(0).unwrap();
         assert!(deq.iter().all(|&v| v == 0.0));
@@ -1206,7 +1206,7 @@ mod tests {
 
     #[test]
     fn int4_zero_row() {
-        let weight = vec![0.0f32; 8];
+        let weight = [0.0f32; 8];
         let table = QuantizedEmbeddingTable::quantize(&weight, 2, 4, QuantPrecision::Int4).unwrap();
         let deq = table.dequantize_row(0).unwrap();
         assert!(deq.iter().all(|&v| v == 0.0));
@@ -1385,7 +1385,7 @@ mod tests {
 
     #[test]
     fn binary_all_positive() {
-        let weight = vec![1.0; 8]; // 2 rows of dim 4
+        let weight = [1.0; 8]; // 2 rows of dim 4
         let be = BinaryEmbedding::from_float(&weight, 2, 4).unwrap();
         assert_eq!(be.hamming_distance(0, 1).unwrap(), 0);
     }
@@ -1395,7 +1395,7 @@ mod tests {
     #[test]
     fn adaptive_high_uses_int8_quality() {
         let weight = make_weight(4, 16);
-        let importance = vec![RowImportance::High; 4];
+        let importance = [RowImportance::High; 4];
         let aq = AdaptiveQuant::new(&weight, 4, 16, &importance).unwrap();
         for row in 0..4 {
             let orig = &weight[row * 16..(row + 1) * 16];
@@ -1407,7 +1407,7 @@ mod tests {
     #[test]
     fn adaptive_medium_uses_int4_quality() {
         let weight = make_weight(4, 16);
-        let importance = vec![RowImportance::Medium; 4];
+        let importance = [RowImportance::Medium; 4];
         let aq = AdaptiveQuant::new(&weight, 4, 16, &importance).unwrap();
         for row in 0..4 {
             let orig = &weight[row * 16..(row + 1) * 16];
@@ -1419,7 +1419,7 @@ mod tests {
     #[test]
     fn adaptive_low_uses_binary() {
         let weight = make_weight(4, 16);
-        let importance = vec![RowImportance::Low; 4];
+        let importance = [RowImportance::Low; 4];
         let aq = AdaptiveQuant::new(&weight, 4, 16, &importance).unwrap();
         let deq = aq.dequantize_row(0).unwrap();
         // Binary: all values should be -1.0 or 1.0
@@ -1440,7 +1440,7 @@ mod tests {
 
     #[test]
     fn adaptive_rejects_wrong_size() {
-        let imp = vec![RowImportance::High; 2];
+        let imp = [RowImportance::High; 2];
         assert!(AdaptiveQuant::new(&[0.0; 5], 2, 4, &imp).is_err());
     }
 
@@ -1462,7 +1462,7 @@ mod tests {
         let weight = make_weight(8, 16);
         let table =
             QuantizedEmbeddingTable::quantize(&weight, 8, 16, QuantPrecision::Int8).unwrap();
-        let mut out = vec![0.0; 32]; // 2 tokens
+        let mut out = [0.0; 32]; // 2 tokens
         EmbeddingLookup::lookup_quantized(&table, &[3, 5], &mut out).unwrap();
         // Check row 3
         let orig = &weight[3 * 16..4 * 16];
@@ -1474,7 +1474,7 @@ mod tests {
         let table =
             QuantizedEmbeddingTable::quantize(&make_weight(4, 8), 4, 8, QuantPrecision::Int8)
                 .unwrap();
-        let mut out = vec![99.0; 8];
+        let mut out = [99.0; 8];
         EmbeddingLookup::lookup_quantized(&table, &[100], &mut out).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -1484,7 +1484,7 @@ mod tests {
         let table =
             QuantizedEmbeddingTable::quantize(&make_weight(4, 8), 4, 8, QuantPrecision::Int8)
                 .unwrap();
-        let mut out = vec![0.0; 4]; // too short for dim=8
+        let mut out = [0.0; 4]; // too short for dim=8
         assert!(EmbeddingLookup::lookup_quantized(&table, &[0], &mut out).is_err());
     }
 
@@ -1493,7 +1493,7 @@ mod tests {
         let codebook = vec![1.0, 0.0, 0.0, 1.0, 0.5, 0.5, -0.5, 0.5];
         let codes = vec![0, 0, 1, 1];
         let pq = ProductQuantizer::new(codebook, codes, 2, 2, 2, 2).unwrap();
-        let mut out = vec![0.0; 8]; // 2 tokens × dim 4
+        let mut out = [0.0; 8]; // 2 tokens × dim 4
         EmbeddingLookup::lookup_pq(&pq, &[0, 1], &mut out).unwrap();
         assert_eq!(&out[0..4], &[1.0, 0.0, 0.5, 0.5]);
         assert_eq!(&out[4..8], &[0.0, 1.0, -0.5, 0.5]);
@@ -1502,7 +1502,7 @@ mod tests {
     #[test]
     fn lookup_pq_oov_zeroed() {
         let pq = ProductQuantizer::new(vec![0.0; 4], vec![0; 1], 1, 2, 2, 1).unwrap();
-        let mut out = vec![99.0; 2];
+        let mut out = [99.0; 2];
         EmbeddingLookup::lookup_pq(&pq, &[5], &mut out).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -1510,9 +1510,9 @@ mod tests {
     #[test]
     fn lookup_adaptive_basic() {
         let weight = make_weight(4, 16);
-        let importance = vec![RowImportance::High; 4];
+        let importance = [RowImportance::High; 4];
         let aq = AdaptiveQuant::new(&weight, 4, 16, &importance).unwrap();
-        let mut out = vec![0.0; 16];
+        let mut out = [0.0; 16];
         EmbeddingLookup::lookup_adaptive(&aq, &[2], &mut out).unwrap();
         let orig = &weight[2 * 16..3 * 16];
         assert!(cos_sim(orig, &out) > 0.99);
@@ -1521,7 +1521,7 @@ mod tests {
     #[test]
     fn lookup_adaptive_oov_zeroed() {
         let aq = AdaptiveQuant::new(&[0.0; 8], 2, 4, &[RowImportance::High; 2]).unwrap();
-        let mut out = vec![99.0; 4];
+        let mut out = [99.0; 4];
         EmbeddingLookup::lookup_adaptive(&aq, &[10], &mut out).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -1628,10 +1628,10 @@ mod tests {
 
     #[test]
     fn single_embedding_int8() {
-        let weight = vec![3.14f32];
+        let weight = vec![1.5f32];
         let table = QuantizedEmbeddingTable::quantize(&weight, 1, 1, QuantPrecision::Int8).unwrap();
         let deq = table.dequantize_row(0).unwrap();
-        assert!((deq[0] - 3.14).abs() < 0.05);
+        assert!((deq[0] - 1.5).abs() < 0.05);
     }
 
     #[test]
@@ -1650,7 +1650,7 @@ mod tests {
     #[test]
     fn uniform_weight_int4() {
         // All same value should quantize/dequantize without NaN
-        let weight = vec![0.42f32; 64]; // 4 rows × dim 16
+        let weight = [0.42f32; 64]; // 4 rows × dim 16
         let table =
             QuantizedEmbeddingTable::quantize(&weight, 4, 16, QuantPrecision::Int4).unwrap();
         for row in 0..4 {
@@ -1711,7 +1711,7 @@ mod tests {
         EmbeddingLookup::lookup_quantized(&table, &ids, &mut batch_out).unwrap();
 
         for (t, &id) in ids.iter().enumerate() {
-            let mut single_out = vec![0.0; 16];
+            let mut single_out = [0.0; 16];
             EmbeddingLookup::lookup_quantized(&table, &[id], &mut single_out).unwrap();
             assert_eq!(&batch_out[t * 16..(t + 1) * 16], &single_out[..]);
         }
@@ -1807,7 +1807,7 @@ mod tests {
         let table =
             QuantizedEmbeddingTable::quantize(&make_weight(8, 16), 8, 16, QuantPrecision::Int8)
                 .unwrap();
-        let mut out = vec![0.0; 48]; // 3 tokens
+        let mut out = [0.0; 48]; // 3 tokens
         EmbeddingLookup::lookup_quantized(&table, &[3, 5, 3], &mut out).unwrap();
         assert_eq!(&out[0..16], &out[32..48]);
     }

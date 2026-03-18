@@ -3,6 +3,7 @@
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
 
 use bitnet_common::{BitNetError, Result};
+#[allow(unused_imports)]
 use bitnet_tests::support::env_guard::EnvScope;
 use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
 #[allow(unused_imports)]

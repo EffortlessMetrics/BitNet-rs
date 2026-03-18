@@ -895,8 +895,8 @@ mod tests {
     #[test]
     fn test_flash_attn_seq1_single_token() {
         // Single token: output == v (softmax of single score = 1)
-        let q = vec![0.5; 4];
-        let k = vec![0.5; 4];
+        let q = [0.5; 4];
+        let k = [0.5; 4];
         let v = vec![1.0, 2.0, 3.0, 4.0];
         let out = flash_attention_forward_neon(&q, &k, &v, 1, 4, 1);
         assert_vec_close(&out, &v, 1e-4, "single_token");
@@ -1011,7 +1011,7 @@ mod tests {
 
     #[test]
     fn test_tiled_softmax_uniform() {
-        let scores = vec![1.0; 8];
+        let scores = [1.0; 8];
         let (sm, _rm, _rs) = tiled_softmax_neon(&scores, 1, 8);
         for &val in &sm {
             assert_close(val, 0.125, 1e-4, "uniform_sm");
@@ -1077,7 +1077,7 @@ mod tests {
 
     #[test]
     fn test_tiled_softmax_single_element() {
-        let scores = vec![42.0];
+        let scores = [42.0];
         let (sm, rm, rs) = tiled_softmax_neon(&scores, 1, 1);
         assert_close(sm[0], 1.0, 1e-6, "single_elem");
         assert_close(rm[0], 42.0, 1e-6, "single_rm");
@@ -1105,7 +1105,7 @@ mod tests {
 
     #[test]
     fn test_tiled_softmax_all_zeros() {
-        let scores = vec![0.0; 8];
+        let scores = [0.0; 8];
         let (sm, _rm, _rs) = tiled_softmax_neon(&scores, 2, 4);
         for &v in &sm[0..4] {
             assert_close(v, 0.25, 1e-4, "zero_row0");
@@ -1171,8 +1171,8 @@ mod tests {
 
     #[test]
     fn test_matmul_1x1() {
-        let a = vec![3.0];
-        let b = vec![5.0];
+        let a = [3.0];
+        let b = [5.0];
         let c = blocked_matmul_neon(&a, &b, 1, 1, 1, 1);
         assert_close(c[0], 15.0, 1e-5, "1x1");
     }
@@ -1237,7 +1237,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_4x4() {
-        let mut scores = vec![1.0; 16];
+        let mut scores = [1.0; 16];
         causal_mask_scores_neon(&mut scores, 4, -1e9);
         // Check diagonal and below are preserved
         for row in 0..4 {
@@ -1253,7 +1253,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_1x1() {
-        let mut scores = vec![5.0];
+        let mut scores = [5.0];
         causal_mask_scores_neon(&mut scores, 1, f32::NEG_INFINITY);
         assert_close(scores[0], 5.0, 1e-6, "1x1_keep");
     }
@@ -1269,7 +1269,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_upper_triangle_masked() {
-        let mut scores = vec![1.0; 9];
+        let mut scores = [1.0; 9];
         causal_mask_scores_neon(&mut scores, 3, f32::NEG_INFINITY);
         // Upper triangle: (0,1), (0,2), (1,2)
         assert_eq!(scores[1], f32::NEG_INFINITY);
@@ -1279,7 +1279,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_lower_triangle_preserved() {
-        let mut scores = vec![7.0; 9];
+        let mut scores = [7.0; 9];
         causal_mask_scores_neon(&mut scores, 3, f32::NEG_INFINITY);
         // Lower triangle + diagonal: (0,0), (1,0), (1,1), (2,0), (2,1), (2,2)
         assert_close(scores[0], 7.0, 1e-6, "00");
@@ -1292,14 +1292,14 @@ mod tests {
 
     #[test]
     fn test_causal_mask_custom_neg_inf() {
-        let mut scores = vec![1.0; 4];
+        let mut scores = [1.0; 4];
         causal_mask_scores_neon(&mut scores, 2, -999.0);
         assert_close(scores[1], -999.0, 1e-3, "custom_neg");
     }
 
     #[test]
     fn test_causal_mask_8x8() {
-        let mut scores = vec![1.0; 64];
+        let mut scores = [1.0; 64];
         causal_mask_scores_neon(&mut scores, 8, f32::NEG_INFINITY);
         for row in 0..8 {
             for col in 0..8 {
@@ -1473,7 +1473,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_then_softmax() {
-        let mut scores = vec![1.0; 16];
+        let mut scores = [1.0; 16];
         causal_mask_scores_neon(&mut scores, 4, f32::NEG_INFINITY);
         let (sm, _rm, _rs) = tiled_softmax_neon(&scores, 4, 4);
         // Row 0: only (0,0) is valid → softmax = [1, 0, 0, 0]
@@ -1536,7 +1536,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_count_masked() {
-        let mut scores = vec![1.0; 25]; // 5×5
+        let mut scores = [1.0; 25]; // 5×5
         causal_mask_scores_neon(&mut scores, 5, f32::NEG_INFINITY);
         let masked_count = scores.iter().filter(|&&v| v == f32::NEG_INFINITY).count();
         // Upper triangle count = n*(n-1)/2 = 10
@@ -1547,9 +1547,9 @@ mod tests {
     fn test_flash_attn_scale_factor() {
         // Verify scale = 1/√d is applied correctly
         // With dim=1 and single token, score = q*k*scale = q*k/1 = q*k
-        let q = vec![2.0];
-        let k = vec![3.0];
-        let v = vec![5.0];
+        let q = [2.0];
+        let k = [3.0];
+        let v = [5.0];
         let out = flash_attention_forward_neon(&q, &k, &v, 1, 1, 1);
         // Single token → output = v regardless of score
         assert_close(out[0], 5.0, 1e-4, "scale_single");
@@ -1613,7 +1613,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_3x3() {
-        let mut scores = vec![1.0; 9];
+        let mut scores = [1.0; 9];
         causal_mask_scores_neon(&mut scores, 3, -1.0e30);
         // Expected: lower triangle + diagonal preserved
         let expected = vec![1.0, -1.0e30, -1.0e30, 1.0, 1.0, -1.0e30, 1.0, 1.0, 1.0];
@@ -1644,7 +1644,7 @@ mod tests {
     #[test]
     fn test_tiled_softmax_max_dominates() {
         // One very large value → softmax ≈ [0, ..., 1, ..., 0]
-        let mut scores = vec![0.0; 8];
+        let mut scores = [0.0; 8];
         scores[3] = 50.0;
         let (sm, _rm, _rs) = tiled_softmax_neon(&scores, 1, 8);
         assert!(sm[3] > 0.99, "dominant value should be near 1.0");
@@ -1696,8 +1696,8 @@ mod tests {
 
     #[test]
     fn test_causal_mask_idempotent() {
-        let mut s1 = vec![1.0; 16];
-        let mut s2 = vec![1.0; 16];
+        let mut s1 = [1.0; 16];
+        let mut s2 = [1.0; 16];
         causal_mask_scores_neon(&mut s1, 4, f32::NEG_INFINITY);
         causal_mask_scores_neon(&mut s2, 4, f32::NEG_INFINITY);
         causal_mask_scores_neon(&mut s2, 4, f32::NEG_INFINITY);
@@ -1769,7 +1769,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_6x6() {
-        let mut scores = vec![1.0; 36];
+        let mut scores = [1.0; 36];
         causal_mask_scores_neon(&mut scores, 6, f32::NEG_INFINITY);
         let masked = scores.iter().filter(|&&v| v == f32::NEG_INFINITY).count();
         // Upper triangle: 6*5/2 = 15

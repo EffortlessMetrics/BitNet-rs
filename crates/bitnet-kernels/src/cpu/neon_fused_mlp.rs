@@ -439,7 +439,7 @@ mod tests {
     #[test]
     fn test_sigmoid_zero() {
         let input = [0.0];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         assert!(approx_eq(output[0], 0.5, TOLERANCE), "sigmoid(0) should be 0.5");
     }
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn test_sigmoid_large_positive() {
         let input = [10.0, 20.0, 50.0, 88.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for &v in &output {
             assert!(v > 0.999, "sigmoid(large) should be ~1.0, got {v}");
@@ -457,7 +457,7 @@ mod tests {
     #[test]
     fn test_sigmoid_large_negative() {
         let input = [-10.0, -20.0, -50.0, -88.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for &v in &output {
             assert!(v < 0.001, "sigmoid(large neg) should be ~0.0, got {v}");
@@ -685,7 +685,7 @@ mod tests {
     fn test_fused_gate_up_zero_gate() {
         let gate = [0.0; 8];
         let up = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut output = vec![999.0f32; 8];
+        let mut output = [999.0f32; 8];
         unsafe { neon_fused_gate_up_f32(&gate, &up, &mut output) };
         for (i, &v) in output.iter().enumerate() {
             assert!(approx_eq(v, 0.0, 1e-7), "zero gate should zero output, got {v} at {i}");
@@ -697,7 +697,7 @@ mod tests {
         // SiLU(0) = 0, so gate * SiLU(0) = 0
         let gate = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let up = [0.0; 8];
-        let mut output = vec![999.0f32; 8];
+        let mut output = [999.0f32; 8];
         unsafe { neon_fused_gate_up_f32(&gate, &up, &mut output) };
         for (i, &v) in output.iter().enumerate() {
             assert!(approx_eq(v, 0.0, 1e-7), "SiLU(0)=0 so output should be 0, got {v} at {i}");
@@ -710,7 +710,7 @@ mod tests {
         let gate = [1.0; 8];
         let up = [0.5, -0.5, 1.0, -1.0, 2.0, -2.0, 3.0, -3.0];
         let expected: Vec<f32> = up.iter().map(|&u| ref_silu(u)).collect();
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_fused_gate_up_f32(&gate, &up, &mut output) };
         assert_approx_slice(&output, &expected, TOLERANCE, "fused_gate_up_identity");
     }
@@ -722,12 +722,12 @@ mod tests {
         let up: Vec<f32> = (0..32).map(|i| (i as f32 - 8.0) * 0.2).collect();
 
         // Separate computation
-        let mut silu_out = vec![0.0f32; 32];
+        let mut silu_out = [0.0f32; 32];
         unsafe { neon_silu_f32(&up, &mut silu_out) };
         let expected: Vec<f32> = gate.iter().zip(silu_out.iter()).map(|(g, s)| g * s).collect();
 
         // Fused computation
-        let mut fused_out = vec![0.0f32; 32];
+        let mut fused_out = [0.0f32; 32];
         unsafe { neon_fused_gate_up_f32(&gate, &up, &mut fused_out) };
 
         assert_approx_slice(&fused_out, &expected, 1e-6, "fused_vs_separate");
@@ -1223,7 +1223,7 @@ mod tests {
         let gate: Vec<f32> = (0..16).map(|i| (i as f32 - 8.0) * 0.3).collect();
         let up: Vec<f32> = (0..16).map(|i| (i as f32 - 4.0) * 0.2).collect();
 
-        let mut sig_of_up = vec![0.0f32; 16];
+        let mut sig_of_up = [0.0f32; 16];
         unsafe { neon_sigmoid_f32(&up, &mut sig_of_up) };
 
         let expected: Vec<f32> = gate
@@ -1233,7 +1233,7 @@ mod tests {
             .map(|((&g, &u), &s)| g * u * s)
             .collect();
 
-        let mut fused_out = vec![0.0f32; 16];
+        let mut fused_out = [0.0f32; 16];
         unsafe { neon_fused_gate_up_f32(&gate, &up, &mut fused_out) };
 
         assert_approx_slice(&fused_out, &expected, TOLERANCE, "fused_sigmoid_consistency");

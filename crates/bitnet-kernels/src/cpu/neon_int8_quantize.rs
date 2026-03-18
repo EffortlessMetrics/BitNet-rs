@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_quantize_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let result = quantize_f32_to_i8_neon(&input, 1.0);
         assert_eq!(result, vec![0i8; 8]);
     }
@@ -433,7 +433,7 @@ mod tests {
 
     #[test]
     fn test_dequantize_zeros() {
-        let input = vec![0i8; 8];
+        let input = [0i8; 8];
         let result = dequantize_i8_to_f32_neon(&input, 1.0);
         assert_eq!(result, vec![0.0; 8]);
     }
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_roundtrip_preserves_zeros() {
-        let input = vec![0.0; 16];
+        let input = [0.0; 16];
         let quantized = quantize_f32_to_i8_neon(&input, 1.0);
         let dequantized = dequantize_i8_to_f32_neon(&quantized, 1.0);
         assert_eq!(dequantized, input);
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_per_channel_single_channel() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let scales = vec![1.0];
+        let scales = [1.0];
         let result = quantize_per_channel_neon(&input, &scales, 1);
         assert_eq!(result, vec![1, 2, 3, 4]);
     }
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_range_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (quantized, scale) = quantize_dynamic_range_neon(&input);
         assert_eq!(scale, 1.0);
         assert_eq!(quantized, vec![0i8; 8]);
@@ -739,7 +739,7 @@ mod tests {
     #[test]
     fn test_matmul_zeros() {
         let a = vec![1i8, 2, 3, 4];
-        let b = vec![0i8; 4];
+        let b = [0i8; 4];
         let result = i8_matmul_accumulate_neon(&a, &b, 2, 2, 2);
         assert_eq!(result, vec![0, 0, 0, 0]);
     }
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn test_matmul_k_exactly_8() {
         let a: Vec<i8> = (1..=8).map(|x| x as i8).collect();
-        let b: Vec<i8> = vec![1i8; 8];
+        let b: Vec<i8> = [1i8; 8];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 8);
         // 1+2+...+8 = 36
         assert_eq!(result, vec![36]);
@@ -792,7 +792,7 @@ mod tests {
     #[test]
     fn test_matmul_k_16() {
         let a: Vec<i8> = (1..=16).map(|x| x as i8).collect();
-        let b: Vec<i8> = vec![1i8; 16];
+        let b: Vec<i8> = [1i8; 16];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 16);
         // 1+2+...+16 = 136
         assert_eq!(result, vec![136]);
@@ -1062,8 +1062,8 @@ mod tests {
     #[test]
     fn test_matmul_accumulation_no_overflow_i32() {
         // 127 * 127 * 16 = 258064, well within i32
-        let a = vec![127i8; 16];
-        let b = vec![127i8; 16];
+        let a = [127i8; 16];
+        let b = [127i8; 16];
         let result = i8_matmul_accumulate_neon(&a, &b, 1, 1, 16);
         assert_eq!(result, vec![127 * 127 * 16]);
     }

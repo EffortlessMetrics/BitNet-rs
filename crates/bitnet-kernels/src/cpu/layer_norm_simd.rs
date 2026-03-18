@@ -899,9 +899,9 @@ mod tests {
 
     #[test]
     fn scalar_ln_uniform_input() {
-        let input = vec![2.0; 4];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let input = [2.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         for &v in &out {
@@ -912,8 +912,8 @@ mod tests {
     #[test]
     fn scalar_ln_known_values() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let gamma = vec![1.0; 5];
-        let beta = vec![0.0; 5];
+        let gamma = [1.0; 5];
+        let beta = [0.0; 5];
         let config = LayerNormSimdConfig::new(vec![5]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -934,7 +934,7 @@ mod tests {
     #[test]
     fn scalar_ln_no_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -944,11 +944,11 @@ mod tests {
     #[test]
     fn scalar_ln_affine_disabled() {
         let input = vec![1.0, 3.0, 5.0];
-        let gamma = vec![999.0; 3];
+        let gamma = [999.0; 3];
         let mut config = LayerNormSimdConfig::new(vec![3]);
         config.elementwise_affine = false;
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
-        let ones = vec![1.0; 3];
+        let ones = [1.0; 3];
         let expected = reference_layer_norm(&input, &ones, None, 1e-5);
         assert!(approx_eq(&out, &expected, TOL));
     }
@@ -969,7 +969,7 @@ mod tests {
     #[test]
     fn scalar_ln_output_zero_mean() {
         let input = vec![10.0, 20.0, 30.0, 40.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         let mean: f32 = out.iter().sum::<f32>() / out.len() as f32;
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn scalar_ln_output_unit_variance() {
         let input: Vec<f32> = (0..128).map(|i| i as f32 * 0.1).collect();
-        let gamma = vec![1.0; 128];
+        let gamma = [1.0; 128];
         let config = LayerNormSimdConfig::new(vec![128]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         let mean = out.iter().sum::<f32>() / 128.0;
@@ -990,8 +990,8 @@ mod tests {
     #[test]
     fn scalar_ln_negative_inputs() {
         let input = vec![-5.0, -3.0, -1.0, 1.0, 3.0, 5.0];
-        let gamma = vec![1.0; 6];
-        let beta = vec![0.0; 6];
+        let gamma = [1.0; 6];
+        let beta = [0.0; 6];
         let config = LayerNormSimdConfig::new(vec![6]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1003,7 +1003,7 @@ mod tests {
     #[test]
     fn scalar_ln_large_values() {
         let input = vec![1e6, 1e6 + 1.0, 1e6 + 2.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1016,7 +1016,7 @@ mod tests {
     #[test]
     fn scalar_ln_tiny_variance() {
         let input = vec![1.0, 1.0 + 1e-7, 1.0 - 1e-7];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -1027,7 +1027,7 @@ mod tests {
     #[test]
     fn scalar_ln_no_nan_or_inf() {
         let input = vec![1e10, -1e10, 0.0, 1e-10];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -1067,7 +1067,7 @@ mod tests {
     #[test]
     fn scalar_ln_custom_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormSimdConfig::new(vec![3]);
         config.eps = 1e-3;
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1078,7 +1078,7 @@ mod tests {
     #[test]
     fn scalar_ln_large_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormSimdConfig::new(vec![3]);
         config.eps = 1.0;
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1089,7 +1089,7 @@ mod tests {
     #[test]
     fn scalar_ln_tiny_eps() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let mut config = LayerNormSimdConfig::new(vec![4]);
         config.eps = 1e-12;
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1102,8 +1102,8 @@ mod tests {
     #[test]
     fn scalar_ln_batch_two() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1114,7 +1114,7 @@ mod tests {
     fn scalar_ln_batch_independence() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
 
         let out_a = layer_norm_f32(&a, &gamma, None, &config).unwrap();
@@ -1130,8 +1130,8 @@ mod tests {
     #[test]
     fn scalar_ln_batch_four() {
         let input: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 5];
-        let beta = vec![0.5; 5];
+        let gamma = [1.0; 5];
+        let beta = [0.5; 5];
         let config = LayerNormSimdConfig::new(vec![5]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1141,8 +1141,8 @@ mod tests {
     #[test]
     fn scalar_ln_2d_normalized_shape() {
         let input: Vec<f32> = (1..=12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 6];
-        let beta = vec![0.0; 6];
+        let gamma = [1.0; 6];
+        let beta = [0.0; 6];
         let config = LayerNormSimdConfig::new(vec![2, 3]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1154,7 +1154,7 @@ mod tests {
     #[test]
     fn scalar_rms_known_values() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = RMSNormConfig::new(vec![4]);
         let out = rms_norm_f32(&input, &gamma, &config).unwrap();
         let expected = reference_rms_norm(&input, &gamma, 1e-5);
@@ -1173,8 +1173,8 @@ mod tests {
 
     #[test]
     fn scalar_rms_uniform() {
-        let input = vec![3.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [3.0; 4];
+        let gamma = [1.0; 4];
         let config = RMSNormConfig::new(vec![4]);
         let out = rms_norm_f32(&input, &gamma, &config).unwrap();
         for &v in &out {
@@ -1185,7 +1185,7 @@ mod tests {
     #[test]
     fn scalar_rms_batch() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = RMSNormConfig::new(vec![3]);
         let out = rms_norm_f32(&input, &gamma, &config).unwrap();
         let expected = reference_rms_norm(&input, &gamma, 1e-5);
@@ -1196,7 +1196,7 @@ mod tests {
     fn scalar_rms_batch_independence() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = RMSNormConfig::new(vec![3]);
 
         let out_a = rms_norm_f32(&a, &gamma, &config).unwrap();
@@ -1212,7 +1212,7 @@ mod tests {
     #[test]
     fn scalar_rms_no_nan_or_inf() {
         let input = vec![1e10, -1e10, 0.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = RMSNormConfig::new(vec![3]);
         let out = rms_norm_f32(&input, &gamma, &config).unwrap();
         for &v in &out {
@@ -1223,7 +1223,7 @@ mod tests {
     #[test]
     fn scalar_rms_custom_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = RMSNormConfig { normalized_shape: vec![3], eps: 0.1 };
         let out = rms_norm_f32(&input, &gamma, &config).unwrap();
         let expected = reference_rms_norm(&input, &gamma, 0.1);
@@ -1233,7 +1233,7 @@ mod tests {
     #[test]
     fn scalar_ln_and_rms_differ() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let ln_config = LayerNormSimdConfig::new(vec![4]);
         let rms_config = RMSNormConfig::new(vec![4]);
         let ln = layer_norm_f32(&input, &gamma, None, &ln_config).unwrap();
@@ -1246,8 +1246,8 @@ mod tests {
     #[test]
     fn avx2_ln_matches_scalar() {
         let input: Vec<f32> = (0..64).map(|i| i as f32 * 0.1 - 3.2).collect();
-        let gamma = vec![1.0; 64];
-        let beta = vec![0.0; 64];
+        let gamma = [1.0; 64];
+        let beta = [0.0; 64];
         let config = LayerNormSimdConfig::new(vec![64]);
 
         let scalar = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
@@ -1270,7 +1270,7 @@ mod tests {
     #[test]
     fn avx2_ln_matches_scalar_no_affine() {
         let input: Vec<f32> = (0..48).map(|i| (i as f32 * 0.3).cos()).collect();
-        let gamma = vec![1.0; 48];
+        let gamma = [1.0; 48];
         let mut config = LayerNormSimdConfig::new(vec![48]);
         config.elementwise_affine = false;
 
@@ -1283,8 +1283,8 @@ mod tests {
     fn avx2_ln_remainder_elements() {
         // 13 elements: 1 chunk of 8 + 5 remainder
         let input: Vec<f32> = (0..13).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 13];
-        let beta = vec![0.0; 13];
+        let gamma = [1.0; 13];
+        let beta = [0.0; 13];
         let config = LayerNormSimdConfig::new(vec![13]);
 
         let scalar = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
@@ -1296,7 +1296,7 @@ mod tests {
     fn avx2_ln_small_input() {
         // Fewer than 8 elements: all scalar remainder.
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
 
         let scalar = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1307,8 +1307,8 @@ mod tests {
     #[test]
     fn avx2_ln_batched() {
         let input: Vec<f32> = (0..96).map(|i| (i as f32 * 0.7).sin()).collect();
-        let gamma = vec![1.0; 32];
-        let beta = vec![0.5; 32];
+        let gamma = [1.0; 32];
+        let beta = [0.5; 32];
         let config = LayerNormSimdConfig::new(vec![32]);
 
         let scalar = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
@@ -1319,7 +1319,7 @@ mod tests {
     #[test]
     fn avx2_rms_matches_scalar() {
         let input: Vec<f32> = (0..64).map(|i| i as f32 * 0.1 - 3.2).collect();
-        let gamma = vec![1.0; 64];
+        let gamma = [1.0; 64];
         let config = RMSNormConfig::new(vec![64]);
 
         let scalar = rms_norm_f32(&input, &gamma, &config).unwrap();
@@ -1341,7 +1341,7 @@ mod tests {
     #[test]
     fn avx2_rms_remainder_elements() {
         let input: Vec<f32> = (0..17).map(|i| i as f32 * 0.2).collect();
-        let gamma = vec![1.0; 17];
+        let gamma = [1.0; 17];
         let config = RMSNormConfig::new(vec![17]);
 
         let scalar = rms_norm_f32(&input, &gamma, &config).unwrap();
@@ -1352,7 +1352,7 @@ mod tests {
     #[test]
     fn avx2_rms_batched() {
         let input: Vec<f32> = (0..96).map(|i| (i as f32 * 0.5).cos()).collect();
-        let gamma = vec![1.0; 32];
+        let gamma = [1.0; 32];
         let config = RMSNormConfig::new(vec![32]);
 
         let scalar = rms_norm_f32(&input, &gamma, &config).unwrap();
@@ -1364,7 +1364,7 @@ mod tests {
     fn avx2_ln_large_values() {
         let input =
             vec![1e6, 1e6 + 1.0, 1e6 + 2.0, 1e6 + 3.0, 1e6 + 4.0, 1e6 + 5.0, 1e6 + 6.0, 1e6 + 7.0];
-        let gamma = vec![1.0; 8];
+        let gamma = [1.0; 8];
         let config = LayerNormSimdConfig::new(vec![8]);
 
         let scalar = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1380,8 +1380,8 @@ mod tests {
     #[test]
     fn group_norm_basic() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let out = group_norm(&input, &gamma, Some(&beta), 2, 4, 3, 1e-5).unwrap();
         for &v in &out {
             assert!(v.is_finite());
@@ -1402,7 +1402,7 @@ mod tests {
     #[test]
     fn group_norm_no_beta() {
         let input: Vec<f32> = (0..6).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let out = group_norm(&input, &gamma, None, 1, 2, 3, 1e-5).unwrap();
         for &v in &out {
             assert!(v.is_finite());
@@ -1412,8 +1412,8 @@ mod tests {
     #[test]
     fn group_norm_uniform_within_group() {
         let input = vec![5.0, 5.0, 5.0, 5.0, 3.0, 3.0, 3.0, 3.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let out = group_norm(&input, &gamma, Some(&beta), 2, 4, 2, 1e-5).unwrap();
         for &v in &out {
             assert!(v.abs() < TOL, "expected ~0, got {v}");
@@ -1423,7 +1423,7 @@ mod tests {
     #[test]
     fn group_norm_batch_two() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let out = group_norm(&input, &gamma, None, 2, 4, 2, 1e-5).unwrap();
         assert_eq!(out.len(), 16);
         for &v in &out {
@@ -1440,30 +1440,30 @@ mod tests {
 
     #[test]
     fn group_norm_channels_not_divisible_error() {
-        let input = vec![1.0; 6];
-        let gamma = vec![1.0; 3];
+        let input = [1.0; 6];
+        let gamma = [1.0; 3];
         assert!(group_norm(&input, &gamma, None, 2, 3, 2, 1e-5).is_err());
     }
 
     #[test]
     fn group_norm_gamma_mismatch_error() {
-        let input = vec![1.0; 8];
-        let gamma = vec![1.0; 3];
+        let input = [1.0; 8];
+        let gamma = [1.0; 3];
         assert!(group_norm(&input, &gamma, None, 2, 4, 2, 1e-5).is_err());
     }
 
     #[test]
     fn group_norm_beta_mismatch_error() {
-        let input = vec![1.0; 8];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 3];
+        let input = [1.0; 8];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 3];
         assert!(group_norm(&input, &gamma, Some(&beta), 2, 4, 2, 1e-5).is_err());
     }
 
     #[test]
     fn group_norm_zero_eps_error() {
-        let input = vec![1.0; 4];
-        let gamma = vec![1.0; 2];
+        let input = [1.0; 4];
+        let gamma = [1.0; 2];
         assert!(group_norm(&input, &gamma, None, 1, 2, 2, 0.0).is_err());
     }
 
@@ -1472,7 +1472,7 @@ mod tests {
     #[test]
     fn instance_norm_basic() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let out = instance_norm(&input, &gamma, None, 3, 4, 1e-5).unwrap();
         assert_eq!(out.len(), 12);
         for &v in &out {
@@ -1483,8 +1483,8 @@ mod tests {
     #[test]
     fn instance_norm_uniform_channel() {
         let input = vec![7.0, 7.0, 7.0, 3.0, 3.0, 3.0];
-        let gamma = vec![1.0; 2];
-        let beta = vec![0.0; 2];
+        let gamma = [1.0; 2];
+        let beta = [0.0; 2];
         let out = instance_norm(&input, &gamma, Some(&beta), 2, 3, 1e-5).unwrap();
         for &v in &out {
             assert!(v.abs() < TOL, "expected ~0, got {v}");
@@ -1497,7 +1497,7 @@ mod tests {
     fn backward_gradient_shapes() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let grad = vec![0.1, 0.2, 0.3, 0.4];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let (dx, dg, db) = layer_norm_backward(&grad, &input, &gamma, &config).unwrap();
@@ -1510,7 +1510,7 @@ mod tests {
     fn backward_d_beta_is_sum_of_grads() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let grad = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
 
         let (_, _, db) = layer_norm_backward(&grad, &input, &gamma, &config).unwrap();
@@ -1522,9 +1522,9 @@ mod tests {
 
     #[test]
     fn backward_uniform_input_zero_d_input() {
-        let input = vec![5.0; 4];
-        let grad = vec![1.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [5.0; 4];
+        let grad = [1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let (dx, _, _) = layer_norm_backward(&grad, &input, &gamma, &config).unwrap();
@@ -1537,14 +1537,14 @@ mod tests {
     fn backward_length_mismatch_error() {
         let input = vec![1.0, 2.0, 3.0];
         let grad = vec![0.1, 0.2];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_backward(&grad, &input, &gamma, &config).is_err());
     }
 
     #[test]
     fn backward_empty_error() {
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_backward(&[], &[], &gamma, &config).is_err());
     }
@@ -1553,7 +1553,7 @@ mod tests {
     fn backward_finite_outputs() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
         let grad: Vec<f32> = (0..16).map(|i| (i as f32 * 0.1).sin()).collect();
-        let gamma = vec![1.0; 16];
+        let gamma = [1.0; 16];
         let config = LayerNormSimdConfig::new(vec![16]);
 
         let (dx, dg, db) = layer_norm_backward(&grad, &input, &gamma, &config).unwrap();
@@ -1568,8 +1568,8 @@ mod tests {
     fn fused_residual_matches_manual() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let residual = vec![0.5, -0.5, 1.0, -1.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let fused =
@@ -1585,7 +1585,7 @@ mod tests {
     fn fused_residual_batched() {
         let input: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let residual: Vec<f32> = (0..8).map(|i| -(i as f32) * 0.5).collect();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let fused = fused_layer_norm_residual(&input, &residual, &gamma, None, &config).unwrap();
@@ -1599,7 +1599,7 @@ mod tests {
     fn fused_residual_length_mismatch_error() {
         let input = vec![1.0, 2.0, 3.0];
         let residual = vec![0.5, -0.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(fused_layer_norm_residual(&input, &residual, &gamma, None, &config).is_err());
     }
@@ -1624,7 +1624,7 @@ mod tests {
 
     #[test]
     fn fp16_roundtrip_normal() {
-        let vals = [0.0f32, 1.0, -1.0, 0.5, 65504.0, -65504.0, 0.00006103515625];
+        let vals = [0.0f32, 1.0, -1.0, 0.5, 65504.0, -65504.0, 0.000_061_035_156];
         for &v in &vals {
             let h = f32_to_fp16(v);
             let back = fp16_to_f32(h);
@@ -1648,8 +1648,8 @@ mod tests {
     fn fp16_layer_norm_basic() {
         let input_f32 = vec![1.0f32, 2.0, 3.0, 4.0];
         let input_fp16: Vec<u16> = input_f32.iter().map(|&v| f32_to_fp16(v)).collect();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let out = layer_norm_fp16(&input_fp16, &gamma, Some(&beta), &config).unwrap();
@@ -1664,7 +1664,7 @@ mod tests {
     fn fp16_layer_norm_matches_f32_approx() {
         let input_f32 = vec![1.0, 2.0, 3.0, 4.0];
         let input_fp16: Vec<u16> = input_f32.iter().map(|&v| f32_to_fp16(v)).collect();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormSimdConfig::new(vec![4]);
 
         let fp16_result = layer_norm_fp16(&input_fp16, &gamma, None, &config).unwrap();
@@ -1679,7 +1679,7 @@ mod tests {
 
     #[test]
     fn fp16_empty_error() {
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_fp16(&[], &gamma, None, &config).is_err());
     }
@@ -1690,7 +1690,7 @@ mod tests {
     fn batch_ln_matches_individual() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
 
         let individual_a = layer_norm_avx2(&a, &gamma, None, &config).unwrap();
@@ -1704,7 +1704,7 @@ mod tests {
 
     #[test]
     fn batch_ln_empty() {
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         let inputs: Vec<&[f32]> = vec![];
         let batched = batch_layer_norm(&inputs, &gamma, None, &config).unwrap();
@@ -1715,7 +1715,7 @@ mod tests {
     fn batch_ln_propagates_error() {
         let good = vec![1.0, 2.0, 3.0];
         let bad = vec![1.0, 2.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(batch_layer_norm(&[&good, &bad], &gamma, None, &config).is_err());
     }
@@ -1737,7 +1737,7 @@ mod tests {
     #[test]
     fn scalar_ln_zero_eps_error() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormSimdConfig::new(vec![3]);
         config.eps = 0.0;
         assert!(layer_norm_f32(&input, &gamma, None, &config).is_err());
@@ -1746,7 +1746,7 @@ mod tests {
     #[test]
     fn scalar_ln_negative_eps_error() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let mut config = LayerNormSimdConfig::new(vec![2]);
         config.eps = -1e-5;
         assert!(layer_norm_f32(&input, &gamma, None, &config).is_err());
@@ -1755,7 +1755,7 @@ mod tests {
     #[test]
     fn scalar_ln_inf_eps_error() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let mut config = LayerNormSimdConfig::new(vec![2]);
         config.eps = f32::INFINITY;
         assert!(layer_norm_f32(&input, &gamma, None, &config).is_err());
@@ -1764,7 +1764,7 @@ mod tests {
     #[test]
     fn scalar_ln_gamma_mismatch_error() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_f32(&input, &gamma, None, &config).is_err());
     }
@@ -1772,8 +1772,8 @@ mod tests {
     #[test]
     fn scalar_ln_beta_mismatch_error() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 2];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 2];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_f32(&input, &gamma, Some(&beta), &config).is_err());
     }
@@ -1781,7 +1781,7 @@ mod tests {
     #[test]
     fn scalar_ln_input_not_multiple_error() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormSimdConfig::new(vec![3]);
         assert!(layer_norm_f32(&input, &gamma, None, &config).is_err());
     }
@@ -1789,7 +1789,7 @@ mod tests {
     #[test]
     fn scalar_rms_gamma_mismatch_error() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = RMSNormConfig::new(vec![3]);
         assert!(rms_norm_f32(&input, &gamma, &config).is_err());
     }
@@ -1811,9 +1811,9 @@ mod tests {
 
     #[test]
     fn scalar_ln_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
-        let beta = vec![1.0];
+        let input = [42.0];
+        let gamma = [2.0];
+        let beta = [1.0];
         let config = LayerNormSimdConfig::new(vec![1]);
         let out = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         assert!((out[0] - 1.0).abs() < TOL, "expected 1.0, got {}", out[0]);
@@ -1822,7 +1822,7 @@ mod tests {
     #[test]
     fn scalar_ln_two_elements() {
         let input = vec![0.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = LayerNormSimdConfig::new(vec![2]);
         let out = layer_norm_f32(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1831,9 +1831,9 @@ mod tests {
 
     #[test]
     fn avx2_ln_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
-        let beta = vec![1.0];
+        let input = [42.0];
+        let gamma = [2.0];
+        let beta = [1.0];
         let config = LayerNormSimdConfig::new(vec![1]);
         let out = layer_norm_avx2(&input, &gamma, Some(&beta), &config).unwrap();
         assert!((out[0] - 1.0).abs() < TOL);
@@ -1842,7 +1842,7 @@ mod tests {
     #[test]
     fn avx2_ln_exactly_8_elements() {
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 8];
+        let gamma = [1.0; 8];
         let config = LayerNormSimdConfig::new(vec![8]);
 
         let scalar = layer_norm_f32(&input, &gamma, None, &config).unwrap();
@@ -1853,8 +1853,8 @@ mod tests {
     #[test]
     fn avx2_ln_exactly_16_elements() {
         let input: Vec<f32> = (1..=16).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 16];
-        let beta = vec![0.5; 16];
+        let gamma = [1.0; 16];
+        let beta = [0.5; 16];
         let config = LayerNormSimdConfig::new(vec![16]);
 
         let scalar = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
@@ -1864,8 +1864,8 @@ mod tests {
 
     #[test]
     fn avx2_rms_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![1.0];
+        let input = [42.0];
+        let gamma = [1.0];
         let config = RMSNormConfig::new(vec![1]);
 
         let scalar = rms_norm_f32(&input, &gamma, &config).unwrap();

@@ -1,0 +1,19 @@
+{
+  // Markdownlint-cli2 configuration for bitnet-rs
+  // Excludes auto-generated directories from linting
+  "config": ".markdownlint.jsonc",
+  "ignores": [
+    ".agent/**",
+    ".claude/**",
+    ".copilot/**",
+    ".github/review-workflows/**",
+    ".jules/**",
+    ".kiro/**",
+    "archive/**",
+    "baselines/**",
+    "benchmarks/**",
+    "ci/**",
+    "coverage/**",
+    "**/.venv/**"
+  ]
+}

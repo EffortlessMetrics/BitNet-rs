@@ -535,7 +535,7 @@ mod tests {
 
     #[test]
     fn test_symmetric_zeros() {
-        let input = vec![0.0; 16];
+        let input = [0.0; 16];
         let (q, s) = dynamic_quantize_symmetric_neon(&input);
         assert_eq!(s, 0.0);
         assert!(q.iter().all(|&v| v == 0));
@@ -624,7 +624,7 @@ mod tests {
 
     #[test]
     fn test_symmetric_identical_values() {
-        let input = vec![5.0; 8];
+        let input = [5.0; 8];
         let (q, s) = dynamic_quantize_symmetric_neon(&input);
         assert!(approx_eq(s, 5.0 / 127.0, 1e-6));
         assert!(q.iter().all(|&v| v == 127));
@@ -700,7 +700,7 @@ mod tests {
 
     #[test]
     fn test_asymmetric_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (q, s, _) = dynamic_quantize_asymmetric_neon(&input);
         assert_eq!(s, 0.0);
         assert!(q.iter().all(|&v| v == 0));
@@ -776,7 +776,7 @@ mod tests {
 
     #[test]
     fn test_asymmetric_identical_values() {
-        let input = vec![3.0; 8];
+        let input = [3.0; 8];
         let (q, s, _) = dynamic_quantize_asymmetric_neon(&input);
         assert_eq!(s, 0.0);
         assert!(q.iter().all(|&v| v == 0));
@@ -878,7 +878,7 @@ mod tests {
     #[test]
     fn test_per_token_independent_scales() {
         // Each token has a very different magnitude
-        let mut input = vec![0.0f32; 16];
+        let mut input = [0.0f32; 16];
         input[0] = 100.0; // token 0 absmax = 100
         input[4] = 0.01; // token 1 absmax = 0.01
         input[8] = 50.0; // token 2 absmax = 50
@@ -958,7 +958,7 @@ mod tests {
     #[test]
     fn test_calibrate_clips_outlier() {
         // 99 values at 1.0, one outlier at 100.0
-        let mut input = vec![1.0; 99];
+        let mut input = [1.0; 99];
         input.push(100.0);
         let (_lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
         // At 99th percentile of 100 values, the clip index rounds to
@@ -985,7 +985,7 @@ mod tests {
 
     #[test]
     fn test_calibrate_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
         assert_eq!(lo, 0.0);
         assert_eq!(hi, 0.0);
@@ -1038,7 +1038,7 @@ mod tests {
     #[test]
     fn test_smooth_identity_factor() {
         let input = vec![1.0, -1.0, 0.5, -0.5];
-        let factor = vec![1.0; 4];
+        let factor = [1.0; 4];
         let (q1, s1) = smooth_quantize_neon(&input, &factor);
         let (q2, s2) = dynamic_quantize_symmetric_neon(&input);
         assert_eq!(q1, q2);
@@ -1048,7 +1048,7 @@ mod tests {
     #[test]
     fn test_smooth_zero_factor() {
         let input = vec![100.0, -200.0, 300.0, -400.0];
-        let factor = vec![0.0; 4];
+        let factor = [0.0; 4];
         let (q, s) = smooth_quantize_neon(&input, &factor);
         assert_eq!(s, 0.0);
         assert!(q.iter().all(|&v| v == 0));
@@ -1084,7 +1084,7 @@ mod tests {
     #[test]
     fn test_smooth_non_aligned() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let factor = vec![1.0; 7];
+        let factor = [1.0; 7];
         let (q, s) = smooth_quantize_neon(&input, &factor);
         assert_eq!(q.len(), 7);
         assert!(approx_eq(s, 7.0 / 127.0, 1e-5));
@@ -1093,7 +1093,7 @@ mod tests {
     #[test]
     fn test_smooth_preserves_sign() {
         let input = vec![-3.0, 2.0, -1.0, 4.0, -5.0, 6.0, -7.0, 8.0];
-        let factor = vec![1.0; 8];
+        let factor = [1.0; 8];
         let (q, _) = smooth_quantize_neon(&input, &factor);
         for (i, &v) in input.iter().enumerate() {
             if v > 0.0 {
@@ -1107,7 +1107,7 @@ mod tests {
     #[test]
     fn test_smooth_large_factor() {
         let input = vec![0.001, -0.001, 0.002, -0.002];
-        let factor = vec![1000.0; 4];
+        let factor = [1000.0; 4];
         // smoothed = [1, -1, 2, -2]
         let (q, s) = smooth_quantize_neon(&input, &factor);
         assert!(approx_eq(s, 2.0 / 127.0, 1e-4));
@@ -1118,7 +1118,7 @@ mod tests {
     #[test]
     fn test_smooth_negative_factor() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let factor = vec![-1.0; 4];
+        let factor = [-1.0; 4];
         // smoothed = [-1, -2, -3, -4]
         let (q, s) = smooth_quantize_neon(&input, &factor);
         assert!(s > 0.0);
@@ -1129,7 +1129,7 @@ mod tests {
     #[test]
     fn test_smooth_roundtrip() {
         let input = vec![0.5, -0.3, 0.7, -0.1, 0.9, -0.8, 0.2, -0.6];
-        let factor = vec![2.0; 8];
+        let factor = [2.0; 8];
         let (q, s) = smooth_quantize_neon(&input, &factor);
         for (i, &orig) in input.iter().enumerate() {
             let smoothed = orig * factor[i];
@@ -1156,7 +1156,7 @@ mod tests {
     #[test]
     fn test_symmetric_vs_smooth_identity() {
         let input: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.1).collect();
-        let identity = vec![1.0f32; 32];
+        let identity = [1.0f32; 32];
         let (qs, ss) = dynamic_quantize_symmetric_neon(&input);
         let (qm, sm) = smooth_quantize_neon(&input, &identity);
         assert!(approx_eq(ss, sm, 1e-6));
@@ -1186,7 +1186,7 @@ mod tests {
 
     #[test]
     fn test_symmetric_nan_free() {
-        let input = vec![0.0; 4];
+        let input = [0.0; 4];
         let (q, s) = dynamic_quantize_symmetric_neon(&input);
         assert!(!s.is_nan());
         assert!(q.iter().all(|&v| v == 0));
@@ -1194,7 +1194,7 @@ mod tests {
 
     #[test]
     fn test_asymmetric_nan_free() {
-        let input = vec![0.0; 4];
+        let input = [0.0; 4];
         let (_, s, zp) = dynamic_quantize_asymmetric_neon(&input);
         assert!(!s.is_nan());
         assert!(!zp.is_nan());
@@ -1202,8 +1202,8 @@ mod tests {
 
     #[test]
     fn test_smooth_nan_free() {
-        let input = vec![0.0; 4];
-        let factor = vec![0.0; 4];
+        let input = [0.0; 4];
+        let factor = [0.0; 4];
         let (q, s) = smooth_quantize_neon(&input, &factor);
         assert!(!s.is_nan());
         assert!(q.iter().all(|&v| v == 0));
@@ -1228,7 +1228,7 @@ mod tests {
 
     #[test]
     fn test_per_token_all_zeros_input() {
-        let input = vec![0.0f32; 32];
+        let input = [0.0f32; 32];
         let (q, s) = dynamic_quantize_per_token_neon(&input, 4, 8);
         assert!(s.iter().all(|&v| v == 0.0));
         assert!(q.iter().all(|&v| v == 0));
@@ -1236,7 +1236,7 @@ mod tests {
 
     #[test]
     fn test_calibrate_all_same() {
-        let input = vec![3.0; 16];
+        let input = [3.0; 16];
         let (lo, hi) = calibrate_quantization_range_neon(&input, 0.99);
         assert!(approx_eq(hi, 3.0, 1e-6));
         assert!(approx_eq(lo, -3.0, 1e-6));

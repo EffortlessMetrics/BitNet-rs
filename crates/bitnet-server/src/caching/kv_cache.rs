@@ -1140,8 +1140,7 @@ mod tests {
         use crate::caching::receipts::test_helpers::ChannelSink;
 
         let (sink, mut rx) = ChannelSink::channel(4);
-        let mut cfg = CachingConfig::default();
-        cfg.enable_receipts = true;
+        let cfg = CachingConfig { enable_receipts: true, ..Default::default() };
 
         let manager = KVCacheManager::with_receipt_sink(cfg, Some(Arc::new(sink)))?;
 
@@ -1173,8 +1172,10 @@ mod tests {
         use tokio::sync::mpsc::error::TryRecvError;
 
         let (sink, mut rx) = ChannelSink::channel(1);
-        let mut cfg = CachingConfig::default();
-        cfg.enable_receipts = false; // explicitly off
+        let cfg = CachingConfig {
+            enable_receipts: false, // explicitly off
+            ..Default::default()
+        };
 
         let manager = KVCacheManager::with_receipt_sink(cfg, Some(Arc::new(sink)))?;
 

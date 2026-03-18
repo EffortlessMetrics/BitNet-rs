@@ -1085,14 +1085,14 @@ mod tests {
 
     #[test]
     fn test_result_percentile_p95() {
-        let samples: Vec<Duration> = (1..=100).map(|i| Duration::from_millis(i)).collect();
+        let samples: Vec<Duration> = (1..=100).map(Duration::from_millis).collect();
         let r = BenchResult::new("pct", samples);
         assert_eq!(r.p95(), Duration::from_millis(95));
     }
 
     #[test]
     fn test_result_percentile_p99() {
-        let samples: Vec<Duration> = (1..=100).map(|i| Duration::from_millis(i)).collect();
+        let samples: Vec<Duration> = (1..=100).map(Duration::from_millis).collect();
         let r = BenchResult::new("pct99", samples);
         assert_eq!(r.p99(), Duration::from_millis(99));
     }
@@ -1354,17 +1354,17 @@ mod tests {
         // 2×2 identity × [1,2,3,4] = [1,2,3,4]
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![1.0, 2.0, 3.0, 4.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         naive_matmul(&a, &b, &mut c, 2, 2, 2);
-        assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
     fn test_naive_matmul_ones() {
         // 2×3 ones × 3×2 ones → each element = 3
-        let a = vec![1.0f32; 6];
-        let b = vec![1.0f32; 6];
-        let mut c = vec![0.0f32; 4];
+        let a = [1.0f32; 6];
+        let b = [1.0f32; 6];
+        let mut c = [0.0f32; 4];
         naive_matmul(&a, &b, &mut c, 2, 3, 2);
         assert!(c.iter().all(|&v| (v - 3.0).abs() < 1e-6));
     }

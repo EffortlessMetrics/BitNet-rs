@@ -858,7 +858,7 @@ mod tests {
 
     #[test]
     fn analyse_broadcast_same_address() {
-        let offsets = vec![256; 32];
+        let offsets = [256; 32];
         let report = analyse_bank_conflicts(&offsets).unwrap();
         assert!(report.is_broadcast);
     }

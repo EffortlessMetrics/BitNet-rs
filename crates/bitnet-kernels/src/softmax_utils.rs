@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_softmax_uniform() {
-        let mut logits = vec![0.0; 4];
+        let mut logits = [0.0; 4];
         softmax_f32(&mut logits);
         for &v in &logits {
             assert!((v - 0.25).abs() < 1e-5);
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_entropy() {
-        let uniform = vec![0.25f32; 4];
+        let uniform = [0.25f32; 4];
         let peaked = vec![0.97f32, 0.01, 0.01, 0.01];
         assert!(entropy(&uniform) > entropy(&peaked));
     }

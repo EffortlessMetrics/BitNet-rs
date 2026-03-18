@@ -748,7 +748,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_hmin_min_in_tail() {
-        let mut data = vec![10.0; 9];
+        let mut data = [10.0; 9];
         data[8] = -1.0;
         assert_close(simd_horizontal_min(&data).unwrap(), -1.0, 1e-6);
     }
@@ -1086,7 +1086,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_argmax_larger_than_8() {
-        let mut data = vec![0.0; 16];
+        let mut data = [0.0; 16];
         data[12] = 99.0;
         let r = simd_argmax(&data).unwrap();
         assert_close(r.value, 99.0, 1e-6);
@@ -1095,7 +1095,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_argmax_max_in_tail() {
-        let mut data = vec![0.0; 10];
+        let mut data = [0.0; 10];
         data[9] = 50.0;
         let r = simd_argmax(&data).unwrap();
         assert_close(r.value, 50.0, 1e-6);
@@ -1146,7 +1146,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_argmin_larger_than_8() {
-        let mut data = vec![100.0; 20];
+        let mut data = [100.0; 20];
         data[15] = -1.0;
         let r = simd_argmin(&data).unwrap();
         assert_close(r.value, -1.0, 1e-6);
@@ -1155,7 +1155,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_argmin_min_in_tail() {
-        let mut data = vec![100.0; 11];
+        let mut data = [100.0; 11];
         data[10] = 0.5;
         let r = simd_argmin(&data).unwrap();
         assert_close(r.value, 0.5, 1e-6);
@@ -1179,7 +1179,7 @@ mod tests {
 
     #[test]
     fn test_simd_reduction_kahan_single() {
-        assert_close(kahan_sum(&[3.14]).unwrap(), 3.14, 1e-6);
+        assert_close(kahan_sum(&[1.5]).unwrap(), 1.5, 1e-6);
     }
 
     #[test]

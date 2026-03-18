@@ -400,7 +400,7 @@ mod tests {
     fn gemv_basic_single_col() {
         let (m, n) = (4, 1);
         let mat = vec![2.0, 3.0, 4.0, 5.0];
-        let v = vec![3.0];
+        let v = [3.0];
         let mut out = vec![0.0; m];
         unsafe { neon_gemv_f32(&mat, &v, &mut out, m, n) };
         assert_vec_close(&out, &[6.0, 9.0, 12.0, 15.0], 1e-6);
@@ -763,7 +763,7 @@ mod tests {
     fn edge_1x1() {
         let mat = vec![3.0f32];
         let v = vec![5.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_f32(&mat, &v, &mut out, 1, 1) };
         assert_vec_close(&out, &[15.0], 1e-6);
     }
@@ -773,7 +773,7 @@ mod tests {
         let n = 7;
         let mat: Vec<f32> = (1..=7).map(|x| x as f32).collect();
         let v = vec![1.0; n];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_f32(&mat, &v, &mut out, 1, n) };
         let expected = reference_gemv(&mat, &v, 1, n);
         assert_vec_close(&out, &expected, 1e-5);
@@ -783,7 +783,7 @@ mod tests {
     fn edge_mx1() {
         let m = 7;
         let mat: Vec<f32> = (1..=7).map(|x| x as f32).collect();
-        let v = vec![2.0];
+        let v = [2.0];
         let mut out = vec![0.0; m];
         unsafe { neon_gemv_f32(&mat, &v, &mut out, m, 1) };
         let expected = reference_gemv(&mat, &v, m, 1);
@@ -890,7 +890,7 @@ mod tests {
     fn gemv_transposed_1x1() {
         let mat = vec![3.0f32];
         let v = vec![5.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_transposed_f32(&mat, &v, &mut out, 1, 1) };
         assert_vec_close(&out, &[15.0], 1e-6);
     }
@@ -915,7 +915,7 @@ mod tests {
         let mat = vec![2.0f32];
         let v = vec![3.0f32];
         let bias = vec![10.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_bias_f32(&mat, &v, &bias, &mut out, 1, 1) };
         assert_vec_close(&out, &[16.0], 1e-6);
     }
@@ -940,7 +940,7 @@ mod tests {
     fn gemv_relu_1x1_positive() {
         let mat = vec![2.0f32];
         let v = vec![3.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_relu_f32(&mat, &v, &mut out, 1, 1) };
         assert_vec_close(&out, &[6.0], 1e-6);
     }
@@ -949,7 +949,7 @@ mod tests {
     fn gemv_relu_1x1_negative() {
         let mat = vec![-2.0f32];
         let v = vec![3.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_relu_f32(&mat, &v, &mut out, 1, 1) };
         assert_vec_close(&out, &[0.0], 1e-6);
     }
@@ -973,7 +973,7 @@ mod tests {
     fn gemv_i8_1x1() {
         let mat = vec![5i8];
         let v = vec![2.0f32];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         unsafe { neon_gemv_i8_f32(&mat, &v, 1.0, &mut out, 1, 1) };
         assert_vec_close(&out, &[10.0], 1e-5);
     }
@@ -1053,7 +1053,7 @@ mod tests {
         let v = vec![1.0, 2.0, 3.0, 4.0];
 
         // Compute transpose(mat) manually
-        let mut mat_t = vec![0.0f32; 16];
+        let mut mat_t = [0.0f32; 16];
         for i in 0..n {
             for j in 0..n {
                 mat_t[j * n + i] = mat[i * n + j];

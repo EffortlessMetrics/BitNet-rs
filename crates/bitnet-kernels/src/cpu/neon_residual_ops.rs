@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn test_rms_norm_unit_weights() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let eps = 1e-5;
         let out = neon_rms_norm(&input, &weight, eps);
 
@@ -219,7 +219,7 @@ mod tests {
     fn test_pre_norm_residual() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let residual = vec![0.5, 0.5, 0.5, 0.5];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let eps = 1e-5;
 
         let (normalized, combined) = neon_pre_norm_residual(&input, &residual, &weight, eps);

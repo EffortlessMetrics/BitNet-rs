@@ -55,7 +55,7 @@ fn align_up(value: usize, alignment: usize) -> usize {
 }
 
 fn is_aligned(value: usize, alignment: usize) -> bool {
-    value % alignment == 0
+    value.is_multiple_of(alignment)
 }
 
 fn compute_buffer_layout(
@@ -97,9 +97,9 @@ fn compute_threadgroup_for_coalescing(tensor_width: u32, tensor_height: u32) -> 
 
 fn compute_dispatch(tensor_dims: [u32; 3], tg: &ThreadgroupConfig) -> DispatchConfig {
     let grid = [
-        (tensor_dims[0] + tg.width - 1) / tg.width,
-        (tensor_dims[1] + tg.height - 1) / tg.height,
-        (tensor_dims[2] + tg.depth - 1) / tg.depth,
+        tensor_dims[0].div_ceil(tg.width),
+        tensor_dims[1].div_ceil(tg.height),
+        tensor_dims[2].div_ceil(tg.depth),
     ];
     DispatchConfig { grid, threadgroup: [tg.width, tg.height, tg.depth] }
 }
@@ -122,9 +122,8 @@ fn coalescing_efficiency_row_major(width: usize, threads_per_row: usize) -> f32 
 fn coalescing_efficiency_column_major(height: usize, stride: usize, threads_in_simd: usize) -> f32 {
     // Column-major: consecutive threads hit different rows → each
     // thread touches a different cache line → worst case.
-    let distinct_lines: usize = threads_in_simd
-        .min(height)
-        .min((stride * 4 + METAL_CACHE_LINE_BYTES - 1) / METAL_CACHE_LINE_BYTES);
+    let distinct_lines: usize =
+        threads_in_simd.min(height).min((stride * 4).div_ceil(METAL_CACHE_LINE_BYTES));
     let useful_bytes = threads_in_simd * 4;
     let transferred_bytes = distinct_lines * METAL_CACHE_LINE_BYTES;
     if transferred_bytes == 0 {
@@ -142,7 +141,7 @@ fn bank_conflict_count(stride_elements: u32, threads: u32) -> u32 {
         let bank = addr % METAL_THREADGROUP_MEMORY_BANKS;
         bank_hits[bank as usize] += 1;
     }
-    bank_hits.iter().map(|&h| if h > 1 { h - 1 } else { 0 }).sum()
+    bank_hits.iter().map(|&h| h.saturating_sub(1)).sum()
 }
 
 fn threadgroup_memory_padded_stride(width: u32, element_bytes: u32) -> u32 {
@@ -150,7 +149,7 @@ fn threadgroup_memory_padded_stride(width: u32, element_bytes: u32) -> u32 {
     let bank_width = 4u32; // 4 bytes per bank
     let banks = METAL_THREADGROUP_MEMORY_BANKS;
     let stride_in_banks = raw_stride / bank_width;
-    if stride_in_banks % banks == 0 {
+    if stride_in_banks.is_multiple_of(banks) {
         // Add 1 bank of padding to break conflicts
         raw_stride + bank_width
     } else {
@@ -177,7 +176,7 @@ fn analyse_access_pattern(offsets: &[usize]) -> CoalescingMetrics {
         let bank = (bo / 4) as u32 % METAL_THREADGROUP_MEMORY_BANKS;
         bank_hits[bank as usize] += 1;
     }
-    let bank_conflicts = bank_hits.iter().map(|&h| if h > 1 { h - 1 } else { 0 }).sum();
+    let bank_conflicts = bank_hits.iter().map(|&h| h.saturating_sub(1)).sum();
 
     CoalescingMetrics { efficiency, bank_conflicts, transactions }
 }
@@ -187,7 +186,7 @@ fn reduction_coalescing_efficiency(input_len: usize, threadgroup_size: usize) ->
     // contiguous.  Subsequent tree-reduction passes touch threadgroup
     // memory only.
     let elements_per_line = METAL_CACHE_LINE_BYTES / 4;
-    let lines_needed = (threadgroup_size + elements_per_line - 1) / elements_per_line;
+    let lines_needed = threadgroup_size.div_ceil(elements_per_line);
     let useful = threadgroup_size.min(input_len) as f32 * 4.0;
     let transferred = lines_needed as f32 * METAL_CACHE_LINE_BYTES as f32;
     if transferred == 0.0 { 0.0 } else { (useful / transferred).min(1.0) }
@@ -202,13 +201,13 @@ fn batch_matmul_transactions(
     tile_k: u32,
     batch: u32,
 ) -> u32 {
-    let tiles_m = (m + tile_m - 1) / tile_m;
-    let tiles_n = (n + tile_n - 1) / tile_n;
-    let tiles_k = (k + tile_k - 1) / tile_k;
+    let tiles_m = m.div_ceil(tile_m);
+    let tiles_n = n.div_ceil(tile_n);
+    let tiles_k = k.div_ceil(tile_k);
     // Per tile: load tile_m*tile_k from A + tile_k*tile_n from B
     let loads_per_tile = tile_m * tile_k + tile_k * tile_n;
     let elements_per_line = (METAL_CACHE_LINE_BYTES / 4) as u32;
-    let transactions_per_tile = (loads_per_tile + elements_per_line - 1) / elements_per_line;
+    let transactions_per_tile = loads_per_tile.div_ceil(elements_per_line);
     batch * tiles_m * tiles_n * tiles_k * transactions_per_tile
 }
 
@@ -651,8 +650,8 @@ mod buffer_binding {
     #[test]
     fn test_i2_packed_buffer_layout() {
         // 4 i2 values per byte
-        let num_elements = 1024;
-        let bytes = (num_elements + 3) / 4;
+        let num_elements: usize = 1024;
+        let bytes = num_elements.div_ceil(4);
         let layout = compute_buffer_layout(bytes, 1, METAL_OPTIMAL_ALIGNMENT);
         assert!(is_aligned(layout.size, METAL_OPTIMAL_ALIGNMENT));
         assert_eq!(layout.size, 256);
@@ -946,8 +945,7 @@ mod access_pattern_analysis {
     #[test]
     fn test_transpose_small_matrix_coalesced_read() {
         // 32-wide matrix: reading 32 consecutive col elements = 1 line
-        let cols = 32usize;
-        let offsets: Vec<usize> = (0..32).map(|c| 0 * cols + c).collect();
+        let offsets: Vec<usize> = (0..32).collect();
         let m = analyse_access_pattern(&offsets);
         assert_eq!(m.transactions, 1);
     }
@@ -956,7 +954,7 @@ mod access_pattern_analysis {
     fn test_transpose_output_column_scattered() {
         // Writing column 0 of a 256-wide output → very scattered
         let cols = 256usize;
-        let offsets: Vec<usize> = (0..32).map(|r| r * cols + 0).collect();
+        let offsets: Vec<usize> = (0..32).map(|r| r * cols).collect();
         let m = analyse_access_pattern(&offsets);
         assert!(m.transactions >= 16);
     }

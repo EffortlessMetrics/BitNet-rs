@@ -678,8 +678,8 @@ mod tests {
     #[test]
     fn layer_norm_uniform_input() {
         let input = vec![2.0, 2.0, 2.0, 2.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         for &v in &out {
@@ -690,8 +690,8 @@ mod tests {
     #[test]
     fn layer_norm_known_values() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let gamma = vec![1.0; 5];
-        let beta = vec![0.0; 5];
+        let gamma = [1.0; 5];
+        let beta = [0.0; 5];
         let config = LayerNormConfig::new(vec![5]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -712,7 +712,7 @@ mod tests {
     #[test]
     fn layer_norm_no_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -722,11 +722,11 @@ mod tests {
     #[test]
     fn layer_norm_affine_disabled() {
         let input = vec![1.0, 3.0, 5.0];
-        let gamma = vec![999.0; 3]; // should be ignored
+        let gamma = [999.0; 3]; // should be ignored
         let mut config = LayerNormConfig::new(vec![3]);
         config.elementwise_affine = false;
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
-        let ones = vec![1.0; 3];
+        let ones = [1.0; 3];
         let expected = reference_layer_norm(&input, &ones, None, 1e-5);
         assert!(approx_eq(&out, &expected, TOL));
     }
@@ -734,7 +734,7 @@ mod tests {
     #[test]
     fn layer_norm_output_zero_mean() {
         let input = vec![10.0, 20.0, 30.0, 40.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         let mean: f32 = out.iter().sum::<f32>() / out.len() as f32;
@@ -744,7 +744,7 @@ mod tests {
     #[test]
     fn layer_norm_output_unit_variance() {
         let input: Vec<f32> = (0..128).map(|i| i as f32 * 0.1).collect();
-        let gamma = vec![1.0; 128];
+        let gamma = [1.0; 128];
         let config = LayerNormConfig::new(vec![128]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         let mean = out.iter().sum::<f32>() / 128.0;
@@ -755,8 +755,8 @@ mod tests {
     #[test]
     fn layer_norm_negative_inputs() {
         let input = vec![-5.0, -3.0, -1.0, 1.0, 3.0, 5.0];
-        let gamma = vec![1.0; 6];
-        let beta = vec![0.0; 6];
+        let gamma = [1.0; 6];
+        let beta = [0.0; 6];
         let config = LayerNormConfig::new(vec![6]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -768,7 +768,7 @@ mod tests {
     #[test]
     fn layer_norm_large_values() {
         let input = vec![1e6, 1e6 + 1.0, 1e6 + 2.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -781,7 +781,7 @@ mod tests {
     #[test]
     fn layer_norm_tiny_variance() {
         let input = vec![1.0, 1.0 + 1e-7, 1.0 - 1e-7];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -792,7 +792,7 @@ mod tests {
     #[test]
     fn layer_norm_no_nan_or_inf() {
         let input = vec![1e10, -1e10, 0.0, 1e-10];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -805,7 +805,7 @@ mod tests {
     #[test]
     fn layer_norm_custom_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormConfig::new(vec![3]);
         config.eps = 1e-3;
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
@@ -816,7 +816,7 @@ mod tests {
     #[test]
     fn layer_norm_large_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormConfig::new(vec![3]);
         config.eps = 1.0;
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
@@ -827,7 +827,7 @@ mod tests {
     #[test]
     fn layer_norm_tiny_eps() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let mut config = LayerNormConfig::new(vec![4]);
         config.eps = 1e-12;
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
@@ -840,8 +840,8 @@ mod tests {
     #[test]
     fn layer_norm_batch_two_sequences() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -852,7 +852,7 @@ mod tests {
     fn layer_norm_batch_independence() {
         let input_a = vec![1.0, 2.0, 3.0];
         let input_b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
 
         let out_a = layer_norm(&input_a, &gamma, None, &config).unwrap();
@@ -868,8 +868,8 @@ mod tests {
     #[test]
     fn layer_norm_batch_four_sequences() {
         let input: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 5];
-        let beta = vec![0.5; 5];
+        let gamma = [1.0; 5];
+        let beta = [0.5; 5];
         let config = LayerNormConfig::new(vec![5]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -892,7 +892,7 @@ mod tests {
     #[test]
     fn rms_norm_known_values() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = rms_norm(&input, &gamma, &config).unwrap();
         let expected = reference_rms_norm(&input, &gamma, 1e-5);
@@ -912,7 +912,7 @@ mod tests {
     #[test]
     fn rms_norm_uniform_input() {
         let input = vec![3.0, 3.0, 3.0, 3.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let out = rms_norm(&input, &gamma, &config).unwrap();
         for &v in &out {
@@ -923,7 +923,7 @@ mod tests {
     #[test]
     fn rms_norm_batch() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let out = rms_norm(&input, &gamma, &config).unwrap();
         let expected = reference_rms_norm(&input, &gamma, 1e-5);
@@ -934,7 +934,7 @@ mod tests {
     fn rms_norm_batch_independence() {
         let input_a = vec![1.0, 2.0, 3.0];
         let input_b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
 
         let out_a = rms_norm(&input_a, &gamma, &config).unwrap();
@@ -950,7 +950,7 @@ mod tests {
     #[test]
     fn rms_norm_no_nan_or_inf() {
         let input = vec![1e10, -1e10, 0.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let out = rms_norm(&input, &gamma, &config).unwrap();
         for &v in &out {
@@ -961,7 +961,7 @@ mod tests {
     #[test]
     fn rms_norm_custom_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormConfig::new(vec![3]);
         config.eps = 0.1;
         let out = rms_norm(&input, &gamma, &config).unwrap();
@@ -974,7 +974,7 @@ mod tests {
     #[test]
     fn layer_norm_and_rms_norm_differ() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
         let ln = layer_norm(&input, &gamma, None, &config).unwrap();
         let rms = rms_norm(&input, &gamma, &config).unwrap();
@@ -985,9 +985,9 @@ mod tests {
 
     #[test]
     fn layer_norm_single_element() {
-        let input = vec![42.0];
-        let gamma = vec![2.0];
-        let beta = vec![1.0];
+        let input = [42.0];
+        let gamma = [2.0];
+        let beta = [1.0];
         let config = LayerNormConfig::new(vec![1]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         // Single element: zero variance, so (42-42)/sqrt(eps)*2 + 1 = 1.0
@@ -997,7 +997,7 @@ mod tests {
     #[test]
     fn layer_norm_two_elements() {
         let input = vec![0.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = LayerNormConfig::new(vec![2]);
         let out = layer_norm(&input, &gamma, None, &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1019,7 +1019,7 @@ mod tests {
     #[test]
     fn layer_norm_zero_eps_returns_error() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = LayerNormConfig::new(vec![3]);
         config.eps = 0.0;
         assert!(layer_norm(&input, &gamma, None, &config).is_err());
@@ -1028,7 +1028,7 @@ mod tests {
     #[test]
     fn layer_norm_negative_eps_returns_error() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let mut config = LayerNormConfig::new(vec![2]);
         config.eps = -1e-5;
         assert!(layer_norm(&input, &gamma, None, &config).is_err());
@@ -1037,7 +1037,7 @@ mod tests {
     #[test]
     fn layer_norm_inf_eps_returns_error() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let mut config = LayerNormConfig::new(vec![2]);
         config.eps = f32::INFINITY;
         assert!(layer_norm(&input, &gamma, None, &config).is_err());
@@ -1046,7 +1046,7 @@ mod tests {
     #[test]
     fn layer_norm_gamma_length_mismatch() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 2]; // wrong length
+        let gamma = [1.0; 2]; // wrong length
         let config = LayerNormConfig::new(vec![3]);
         assert!(layer_norm(&input, &gamma, None, &config).is_err());
     }
@@ -1054,8 +1054,8 @@ mod tests {
     #[test]
     fn layer_norm_beta_length_mismatch() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 2]; // wrong length
+        let gamma = [1.0; 3];
+        let beta = [0.0; 2]; // wrong length
         let config = LayerNormConfig::new(vec![3]);
         assert!(layer_norm(&input, &gamma, Some(&beta), &config).is_err());
     }
@@ -1063,7 +1063,7 @@ mod tests {
     #[test]
     fn layer_norm_input_not_multiple_of_norm_size() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // 5 % 3 != 0
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         assert!(layer_norm(&input, &gamma, None, &config).is_err());
     }
@@ -1071,7 +1071,7 @@ mod tests {
     #[test]
     fn rms_norm_gamma_length_mismatch() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 4]; // wrong length
+        let gamma = [1.0; 4]; // wrong length
         let config = LayerNormConfig::new(vec![3]);
         assert!(rms_norm(&input, &gamma, &config).is_err());
     }
@@ -1091,8 +1091,8 @@ mod tests {
     fn layer_norm_2d_normalized_shape() {
         // normalized_shape [2, 3] means norm_size = 6
         let input: Vec<f32> = (1..=12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 6];
-        let beta = vec![0.0; 6];
+        let gamma = [1.0; 6];
+        let beta = [0.0; 6];
         let config = LayerNormConfig::new(vec![2, 3]);
         let out = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1172,8 +1172,8 @@ mod tests {
     fn group_norm_basic() {
         // 1 batch, 4 channels, 2 groups, spatial=3
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = GroupNormConfig::new(2, 4, 3);
         let out = group_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_group_norm(&input, &gamma, Some(&beta), 2, 4, 3, 1e-5);
@@ -1194,7 +1194,7 @@ mod tests {
     #[test]
     fn group_norm_no_beta() {
         let input: Vec<f32> = (0..6).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = GroupNormConfig::new(1, 2, 3);
         let out = group_norm(&input, &gamma, None, &config).unwrap();
         let expected = reference_group_norm(&input, &gamma, None, 1, 2, 3, 1e-5);
@@ -1204,11 +1204,11 @@ mod tests {
     #[test]
     fn group_norm_affine_disabled() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let gamma = vec![999.0; 4]; // ignored
+        let gamma = [999.0; 4]; // ignored
         let mut config = GroupNormConfig::new(2, 4, 3);
         config.elementwise_affine = false;
         let out = group_norm(&input, &gamma, None, &config).unwrap();
-        let ones = vec![1.0; 4];
+        let ones = [1.0; 4];
         let expected = reference_group_norm(&input, &ones, None, 2, 4, 3, 1e-5);
         assert!(approx_eq(&out, &expected, TOL));
     }
@@ -1217,7 +1217,7 @@ mod tests {
     fn group_norm_single_group_matches_layer_norm() {
         // 1 group over all channels is equivalent to normalizing all elements
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 6];
+        let gamma = [1.0; 6];
         let gn_config = GroupNormConfig::new(1, 6, 1);
         let gn = group_norm(&input, &gamma, None, &gn_config).unwrap();
 
@@ -1230,8 +1230,8 @@ mod tests {
     fn group_norm_batched_two() {
         // 2 batches, 4 channels, 2 groups, spatial=2
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = GroupNormConfig::new(2, 4, 2);
         let out = group_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_group_norm(&input, &gamma, Some(&beta), 2, 4, 2, 1e-5);
@@ -1242,7 +1242,7 @@ mod tests {
     fn group_norm_batch_independence() {
         let a: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let b: Vec<f32> = (10..22).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = GroupNormConfig::new(2, 4, 3);
 
         let out_a = group_norm(&a, &gamma, None, &config).unwrap();
@@ -1258,7 +1258,7 @@ mod tests {
     #[test]
     fn group_norm_custom_eps() {
         let input: Vec<f32> = (0..6).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut config = GroupNormConfig::new(1, 3, 2);
         config.eps = 0.1;
         let out = group_norm(&input, &gamma, None, &config).unwrap();
@@ -1269,7 +1269,7 @@ mod tests {
     #[test]
     fn group_norm_large_values() {
         let input = vec![1e6, 1e6 + 1.0, 1e6 + 2.0, 1e6 + 3.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = GroupNormConfig::new(1, 2, 2);
         let out = group_norm(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -1280,8 +1280,8 @@ mod tests {
     #[test]
     fn group_norm_negative_inputs() {
         let input = vec![-3.0, -1.0, 1.0, 3.0, -2.0, 0.0, 2.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = GroupNormConfig::new(2, 4, 2);
         let out = group_norm(&input, &gamma, Some(&beta), &config).unwrap();
         let expected = reference_group_norm(&input, &gamma, Some(&beta), 2, 4, 2, 1e-5);
@@ -1292,8 +1292,8 @@ mod tests {
     fn group_norm_uniform_within_group() {
         // All values within each group are identical ⇒ normalized to 0
         let input = vec![5.0, 5.0, 5.0, 5.0, 3.0, 3.0, 3.0, 3.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = GroupNormConfig::new(2, 4, 2);
         let out = group_norm(&input, &gamma, Some(&beta), &config).unwrap();
         for &v in &out {
@@ -1304,7 +1304,7 @@ mod tests {
     #[test]
     fn group_norm_no_nan_or_inf() {
         let input = vec![1e10, -1e10, 0.0, 1e-10, 42.0, -42.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = GroupNormConfig::new(1, 3, 2);
         let out = group_norm(&input, &gamma, None, &config).unwrap();
         for &v in &out {
@@ -1322,33 +1322,33 @@ mod tests {
 
     #[test]
     fn group_norm_channels_not_divisible_error() {
-        let input = vec![1.0; 6];
-        let gamma = vec![1.0; 3];
+        let input = [1.0; 6];
+        let gamma = [1.0; 3];
         let config = GroupNormConfig::new(2, 3, 2); // 3 % 2 != 0
         assert!(group_norm(&input, &gamma, None, &config).is_err());
     }
 
     #[test]
     fn group_norm_gamma_length_mismatch_error() {
-        let input = vec![1.0; 8];
-        let gamma = vec![1.0; 3]; // should be 4
+        let input = [1.0; 8];
+        let gamma = [1.0; 3]; // should be 4
         let config = GroupNormConfig::new(2, 4, 2);
         assert!(group_norm(&input, &gamma, None, &config).is_err());
     }
 
     #[test]
     fn group_norm_beta_length_mismatch_error() {
-        let input = vec![1.0; 8];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 3]; // should be 4
+        let input = [1.0; 8];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 3]; // should be 4
         let config = GroupNormConfig::new(2, 4, 2);
         assert!(group_norm(&input, &gamma, Some(&beta), &config).is_err());
     }
 
     #[test]
     fn group_norm_zero_eps_error() {
-        let input = vec![1.0; 4];
-        let gamma = vec![1.0; 2];
+        let input = [1.0; 4];
+        let gamma = [1.0; 2];
         let mut config = GroupNormConfig::new(1, 2, 2);
         config.eps = 0.0;
         assert!(group_norm(&input, &gamma, None, &config).is_err());
@@ -1356,16 +1356,16 @@ mod tests {
 
     #[test]
     fn group_norm_input_length_mismatch_error() {
-        let input = vec![1.0; 7]; // 7 % (4 * 2) != 0
-        let gamma = vec![1.0; 4];
+        let input = [1.0; 7]; // 7 % (4 * 2) != 0
+        let gamma = [1.0; 4];
         let config = GroupNormConfig::new(2, 4, 2);
         assert!(group_norm(&input, &gamma, None, &config).is_err());
     }
 
     #[test]
     fn group_norm_zero_groups_error() {
-        let input = vec![1.0; 4];
-        let gamma = vec![1.0; 2];
+        let input = [1.0; 4];
+        let gamma = [1.0; 2];
         let config = GroupNormConfig {
             num_groups: 0,
             num_channels: 2,
@@ -1382,8 +1382,8 @@ mod tests {
     fn instance_norm_basic() {
         // 1 batch, 3 channels, spatial=4 (each channel normalized independently)
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let config = GroupNormConfig::new(3, 3, 4);
         let out = instance_norm(&input, &gamma, Some(&beta), &config).unwrap();
         // instance_norm(ng=nc) ≡ group_norm(ng=nc)
@@ -1408,7 +1408,7 @@ mod tests {
         // doesn't affect another.
         let input_a = vec![1.0, 2.0, 3.0, 100.0, 200.0, 300.0];
         let input_b = vec![1.0, 2.0, 3.0, 0.0, 0.0, 0.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let config = GroupNormConfig::new(2, 2, 3);
         let out_a = instance_norm(&input_a, &gamma, None, &config).unwrap();
         let out_b = instance_norm(&input_b, &gamma, None, &config).unwrap();
@@ -1418,8 +1418,8 @@ mod tests {
 
     #[test]
     fn instance_norm_rejects_wrong_groups() {
-        let input = vec![1.0; 12];
-        let gamma = vec![1.0; 4];
+        let input = [1.0; 12];
+        let gamma = [1.0; 4];
         let config = GroupNormConfig::new(2, 4, 3); // ng != nc
         assert!(instance_norm(&input, &gamma, None, &config).is_err());
     }
@@ -1428,8 +1428,8 @@ mod tests {
     fn instance_norm_uniform_channel() {
         // Uniform within each channel ⇒ output is 0 (+ beta)
         let input = vec![7.0, 7.0, 7.0, 3.0, 3.0, 3.0];
-        let gamma = vec![1.0; 2];
-        let beta = vec![0.0; 2];
+        let gamma = [1.0; 2];
+        let beta = [0.0; 2];
         let config = GroupNormConfig::new(2, 2, 3);
         let out = instance_norm(&input, &gamma, Some(&beta), &config).unwrap();
         for &v in &out {
@@ -1441,8 +1441,8 @@ mod tests {
     fn instance_norm_single_spatial() {
         // spatial_size=1 ⇒ variance=0, output = beta
         let input = vec![42.0, 99.0];
-        let gamma = vec![2.0; 2];
-        let beta = vec![5.0; 2];
+        let gamma = [2.0; 2];
+        let beta = [5.0; 2];
         let config = GroupNormConfig::new(2, 2, 1);
         let out = instance_norm(&input, &gamma, Some(&beta), &config).unwrap();
         for &v in &out {
@@ -1456,7 +1456,7 @@ mod tests {
     fn batch_layer_norm_matches_individual() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
 
         let individual_a = layer_norm(&a, &gamma, None, &config).unwrap();
@@ -1470,7 +1470,7 @@ mod tests {
 
     #[test]
     fn batch_layer_norm_empty_batch() {
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let result: Vec<&[f32]> = vec![];
         let batched = batch_layer_norm(&result, &gamma, None, &config).unwrap();
@@ -1481,7 +1481,7 @@ mod tests {
     fn batch_rms_norm_matches_individual() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
 
         let individual_a = rms_norm(&a, &gamma, &config).unwrap();
@@ -1495,7 +1495,7 @@ mod tests {
 
     #[test]
     fn batch_rms_norm_empty_batch() {
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         let result: Vec<&[f32]> = vec![];
         let batched = batch_rms_norm(&result, &gamma, &config).unwrap();
@@ -1506,7 +1506,7 @@ mod tests {
     fn batch_group_norm_matches_individual() {
         let a: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let b: Vec<f32> = (10..18).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = GroupNormConfig::new(2, 4, 2);
 
         let individual_a = group_norm(&a, &gamma, None, &config).unwrap();
@@ -1522,7 +1522,7 @@ mod tests {
     fn batch_instance_norm_matches_individual() {
         let a: Vec<f32> = (0..6).map(|i| i as f32).collect();
         let b: Vec<f32> = (10..16).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = GroupNormConfig::new(3, 3, 2);
 
         let individual_a = instance_norm(&a, &gamma, None, &config).unwrap();
@@ -1538,7 +1538,7 @@ mod tests {
     fn batch_layer_norm_propagates_error() {
         let good = vec![1.0, 2.0, 3.0];
         let bad = vec![1.0, 2.0]; // not a multiple of norm_size=3
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let config = LayerNormConfig::new(vec![3]);
         assert!(batch_layer_norm(&[&good, &bad], &gamma, None, &config).is_err());
     }
@@ -1560,23 +1560,23 @@ mod tests {
     #[test]
     fn layer_norm_into_matches_allocating() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let config = LayerNormConfig::new(vec![4]);
 
         let expected = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         layer_norm_into(&input, &gamma, Some(&beta), &config, &mut output).unwrap();
 
-        assert_eq!(output, expected);
+        assert_eq!(output.to_vec(), expected);
     }
 
     #[test]
     fn layer_norm_into_rejects_wrong_output_len() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
-        let mut output = vec![0.0f32; 3]; // wrong length
+        let mut output = [0.0f32; 3]; // wrong length
 
         assert!(layer_norm_into(&input, &gamma, None, &config, &mut output).is_err());
     }
@@ -1584,22 +1584,22 @@ mod tests {
     #[test]
     fn rms_norm_into_matches_allocating() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
 
         let expected = rms_norm(&input, &gamma, &config).unwrap();
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         rms_norm_into(&input, &gamma, &config, &mut output).unwrap();
 
-        assert_eq!(output, expected);
+        assert_eq!(output.to_vec(), expected);
     }
 
     #[test]
     fn rms_norm_into_rejects_wrong_output_len() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let config = LayerNormConfig::new(vec![4]);
-        let mut output = vec![0.0f32; 5]; // wrong length
+        let mut output = [0.0f32; 5]; // wrong length
 
         assert!(rms_norm_into(&input, &gamma, &config, &mut output).is_err());
     }
@@ -1607,15 +1607,15 @@ mod tests {
     #[test]
     fn layer_norm_into_batch_matches_allocating() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.5; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.5; 4];
         let config = LayerNormConfig::new(vec![4]);
 
         let expected = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         layer_norm_into(&input, &gamma, Some(&beta), &config, &mut output).unwrap();
 
-        assert_eq!(output, expected);
+        assert_eq!(output.to_vec(), expected);
     }
 
     // ── NEON parity tests ──────────────────────────────────────────

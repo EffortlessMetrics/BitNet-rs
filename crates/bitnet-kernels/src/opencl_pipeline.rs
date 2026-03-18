@@ -967,9 +967,9 @@ mod tests {
     #[test]
     fn test_execute_total_time_positive() {
         let mut p = tiny_pipeline();
-        let exec = p.execute_single_token_cpu(&[1], 0).unwrap();
+        let _exec = p.execute_single_token_cpu(&[1], 0).unwrap();
         // total_time_ns may be 0 on very fast systems, but should be non-negative
-        assert!(exec.total_time_ns <= u64::MAX);
+        // Removed: trivial assertion (u64 always <= u64::MAX)
     }
 
     #[test]

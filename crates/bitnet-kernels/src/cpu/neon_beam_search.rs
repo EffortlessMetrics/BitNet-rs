@@ -579,7 +579,7 @@ mod tests {
 
     #[test]
     fn test_early_stop_large() {
-        let tokens = vec![99u32; 1024];
+        let tokens = [99u32; 1024];
         assert!(neon_beam_early_stop(&tokens, 99));
     }
 }

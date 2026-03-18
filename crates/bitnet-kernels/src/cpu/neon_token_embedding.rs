@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn embed_empty_tokens() {
         let table = make_table(4, 8);
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         embed_tokens_neon(&[], &table, 8, &mut out);
         // No panic, no output.
     }
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn embed_zero_dim() {
         let ids = [0, 1];
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         embed_tokens_neon(&ids, &[], 0, &mut out);
     }
 
@@ -460,7 +460,7 @@ mod tests {
     fn embed_single_token() {
         let table = make_table(10, 4);
         let ids = [5];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_neon(&ids, &table, 4, &mut out);
         assert!(out.iter().all(|&v| v == 6.0));
     }
@@ -469,7 +469,7 @@ mod tests {
     fn embed_oob_clamped_to_last() {
         let table = make_table(3, 4);
         let ids = [100];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_neon(&ids, &table, 4, &mut out);
         // Clamped to last row (index 2) → value 3.0
         assert!(out.iter().all(|&v| v == 3.0));
@@ -479,7 +479,7 @@ mod tests {
     fn embed_oob_u32_max() {
         let table = make_table(2, 4);
         let ids = [u32::MAX];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_neon(&ids, &table, 4, &mut out);
         assert!(out.iter().all(|&v| v == 2.0));
     }
@@ -500,7 +500,7 @@ mod tests {
     fn embed_dim_1() {
         let table = vec![10.0, 20.0, 30.0];
         let ids = [1, 0, 2];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         embed_tokens_neon(&ids, &table, 1, &mut out);
         assert_eq!(out, vec![20.0, 10.0, 30.0]);
     }
@@ -509,7 +509,7 @@ mod tests {
     fn embed_dim_3() {
         let table = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let ids = [1, 0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         embed_tokens_neon(&ids, &table, 3, &mut out);
         assert_eq!(out, vec![4.0, 5.0, 6.0, 1.0, 2.0, 3.0]);
     }
@@ -570,7 +570,7 @@ mod tests {
     fn embed_repeated_tokens() {
         let table = make_table(4, 4);
         let ids = [2, 2, 2];
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         embed_tokens_neon(&ids, &table, 4, &mut out);
         assert!(out.iter().all(|&v| v == 3.0));
     }
@@ -603,7 +603,7 @@ mod tests {
     fn scaled_zero() {
         let table = make_table(3, 4);
         let ids = [0, 1, 2];
-        let mut out = vec![999.0f32; 12];
+        let mut out = [999.0f32; 12];
         embed_tokens_with_scale_neon(&ids, &table, 4, 0.0, &mut out);
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -624,7 +624,7 @@ mod tests {
     fn scaled_negative() {
         let table = vec![1.0, 2.0, 3.0, 4.0];
         let ids = [0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_with_scale_neon(&ids, &table, 4, -0.5, &mut out);
         assert_eq!(out, vec![-0.5, -1.0, -1.5, -2.0]);
     }
@@ -632,7 +632,7 @@ mod tests {
     #[test]
     fn scaled_empty_tokens() {
         let table = make_table(4, 4);
-        let mut out = vec![0.0; 0];
+        let mut out = [0.0; 0];
         embed_tokens_with_scale_neon(&[], &table, 4, 2.0, &mut out);
     }
 
@@ -640,7 +640,7 @@ mod tests {
     fn scaled_oob_clamped() {
         let table = make_table(3, 4); // rows: 1,2,3
         let ids = [999];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_with_scale_neon(&ids, &table, 4, 3.0, &mut out);
         // row 2 → 3.0, scaled by 3 → 9.0
         assert!(out.iter().all(|&v| (v - 9.0).abs() < 1e-6));
@@ -698,8 +698,8 @@ mod tests {
 
     #[test]
     fn add_pos_zero_seq() {
-        let mut tok = vec![1.0f32; 8];
-        let pos = vec![0.0f32; 8];
+        let mut tok = [1.0f32; 8];
+        let pos = [0.0f32; 8];
         add_position_embeddings_neon(&mut tok, &pos, 0, 4);
         assert!(tok.iter().all(|&v| v == 1.0)); // unchanged
     }
@@ -782,8 +782,8 @@ mod tests {
     #[test]
     fn combined_empty() {
         let table = make_table(4, 4);
-        let pos = vec![0.0f32; 0];
-        let mut out = vec![0.0f32; 0];
+        let pos = [0.0f32; 0];
+        let mut out = [0.0f32; 0];
         embed_and_add_positions_neon(&[], &table, &pos, 4, &mut out);
     }
 
@@ -868,7 +868,7 @@ mod tests {
     #[test]
     fn norm_unit_vector() {
         let input = vec![1.0, 0.0, 0.0, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         assert!((out[0] - 1.0).abs() < 1e-6);
         assert!(out[1..].iter().all(|&v| v.abs() < 1e-6));
@@ -877,7 +877,7 @@ mod tests {
     #[test]
     fn norm_produces_unit_length() {
         let input = vec![3.0, 4.0, 0.0, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         let len: f32 = out.iter().map(|v| v * v).sum::<f32>().sqrt();
         assert!((len - 1.0).abs() < 1e-5, "L2 norm should be 1.0, got {len}");
@@ -886,7 +886,7 @@ mod tests {
     #[test]
     fn norm_preserves_direction() {
         let input = vec![3.0, 4.0, 0.0, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         assert!((out[0] - 0.6).abs() < 1e-5);
         assert!((out[1] - 0.8).abs() < 1e-5);
@@ -894,8 +894,8 @@ mod tests {
 
     #[test]
     fn norm_zero_vector() {
-        let input = vec![0.0; 8];
-        let mut out = vec![999.0f32; 8];
+        let input = [0.0; 8];
+        let mut out = [999.0f32; 8];
         embedding_norm_neon(&input, 8, &mut out);
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -906,7 +906,7 @@ mod tests {
             3.0, 4.0, 0.0, 0.0, // row 0: norm=5
             0.0, 0.0, 1.0, 0.0, // row 1: already unit
         ];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         embedding_norm_neon(&input, 4, &mut out);
         // Row 0
         let n0: f32 = out[..4].iter().map(|v| v * v).sum::<f32>().sqrt();
@@ -928,8 +928,8 @@ mod tests {
 
     #[test]
     fn norm_dim_1() {
-        let input = vec![5.0];
-        let mut out = vec![0.0f32; 1];
+        let input = [5.0];
+        let mut out = [0.0f32; 1];
         embedding_norm_neon(&input, 1, &mut out);
         assert!((out[0] - 1.0).abs() < 1e-6);
     }
@@ -937,7 +937,7 @@ mod tests {
     #[test]
     fn norm_dim_3() {
         let input = vec![1.0, 2.0, 3.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         embedding_norm_neon(&input, 3, &mut out);
         let n: f32 = out.iter().map(|v| v * v).sum::<f32>().sqrt();
         assert!((n - 1.0).abs() < 1e-5);
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn norm_negative_values() {
         let input = vec![-3.0, -4.0, 0.0, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         let n: f32 = out.iter().map(|v| v * v).sum::<f32>().sqrt();
         assert!((n - 1.0).abs() < 1e-5);
@@ -1279,7 +1279,7 @@ mod tests {
     fn embed_dim_2() {
         let table = vec![1.0, 2.0, 3.0, 4.0];
         let ids = [1, 0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embed_tokens_neon(&ids, &table, 2, &mut out);
         assert_eq!(out, vec![3.0, 4.0, 1.0, 2.0]);
     }
@@ -1288,7 +1288,7 @@ mod tests {
     fn scaled_dim_2() {
         let table = vec![1.0, 2.0, 3.0, 4.0];
         let ids = [0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         embed_tokens_with_scale_neon(&ids, &table, 2, 3.0, &mut out);
         assert_eq!(out, vec![3.0, 6.0]);
     }
@@ -1306,7 +1306,7 @@ mod tests {
         let table = vec![1.0, 2.0, 3.0, 4.0];
         let pos = vec![0.1, 0.2];
         let ids = [1];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         embed_and_add_positions_neon(&ids, &table, &pos, 2, &mut out);
         assert!((out[0] - 3.1).abs() < 1e-6);
         assert!((out[1] - 4.2).abs() < 1e-6);
@@ -1315,7 +1315,7 @@ mod tests {
     #[test]
     fn norm_dim_2() {
         let input = vec![3.0, 4.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         embedding_norm_neon(&input, 2, &mut out);
         assert!((out[0] - 0.6).abs() < 1e-5);
         assert!((out[1] - 0.8).abs() < 1e-5);
@@ -1326,7 +1326,7 @@ mod tests {
     #[test]
     fn norm_tiny_values() {
         let input = vec![1e-20, 1e-20, 1e-20, 1e-20];
-        let mut out = vec![999.0f32; 4];
+        let mut out = [999.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         // Near-zero → treated as zero.
         assert!(out.iter().all(|&v| v == 0.0));
@@ -1335,7 +1335,7 @@ mod tests {
     #[test]
     fn norm_very_large_values() {
         let input = vec![1e18, 1e18, 0.0, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         embedding_norm_neon(&input, 4, &mut out);
         let n: f32 = out.iter().map(|v| v * v).sum::<f32>().sqrt();
         assert!((n - 1.0).abs() < 1e-4);

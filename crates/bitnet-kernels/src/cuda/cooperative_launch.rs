@@ -1904,7 +1904,7 @@ mod tests {
 
     #[test]
     fn test_multi_grid_four_devices() {
-        let caps = vec![default_caps(); 4];
+        let caps: Vec<_> = (0..4).map(|_| default_caps()).collect();
         let cfg =
             MultiGridLaunchConfig::new(4096, 256, &caps, MultiGridSyncMode::Independent).unwrap();
         assert_eq!(cfg.num_devices(), 4);
@@ -1934,7 +1934,7 @@ mod tests {
 
     #[test]
     fn test_multi_grid_pipeline_sync() {
-        let caps = vec![default_caps(); 2];
+        let caps: Vec<_> = (0..2).map(|_| default_caps()).collect();
         let cfg =
             MultiGridLaunchConfig::new(2048, 256, &caps, MultiGridSyncMode::PipelineSync).unwrap();
         assert_eq!(cfg.sync_mode, MultiGridSyncMode::PipelineSync);
@@ -1961,7 +1961,7 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_identity() {
         let config = CooperativeLaunchConfig::new_1d(1, 256).unwrap();
-        let mut data = vec![42.0; 100];
+        let mut data = [42.0; 100];
         grid_stride_loop(&mut data, &config, |v, _| v).unwrap();
         assert!(data.iter().all(|&v| (v - 42.0).abs() < 1e-6));
     }
@@ -1969,7 +1969,7 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_with_index() {
         let config = CooperativeLaunchConfig::new_1d(1, 4).unwrap();
-        let mut data = vec![0.0; 8];
+        let mut data = [0.0; 8];
         grid_stride_loop(&mut data, &config, |_, i| i as f32).unwrap();
         for (i, &v) in data.iter().enumerate() {
             assert!((v - i as f32).abs() < 1e-6);
@@ -1979,7 +1979,7 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_large_data_small_grid() {
         let config = CooperativeLaunchConfig::new_1d(1, 2).unwrap();
-        let mut data = vec![1.0; 100];
+        let mut data = [1.0; 100];
         grid_stride_loop(&mut data, &config, |v, _| v + 1.0).unwrap();
         assert!(data.iter().all(|&v| (v - 2.0).abs() < 1e-6));
     }
@@ -1994,7 +1994,7 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_single_element() {
         let config = CooperativeLaunchConfig::new_1d(1, 256).unwrap();
-        let mut data = vec![5.0];
+        let mut data = [5.0];
         grid_stride_loop(&mut data, &config, |v, _| v * 3.0).unwrap();
         assert!((data[0] - 15.0).abs() < 1e-6);
     }
@@ -2004,7 +2004,7 @@ mod tests {
     #[test]
     fn test_grid_stride_2d_basic() {
         let config = CooperativeLaunchConfig::new_2d([2, 2], [2, 2]).unwrap();
-        let mut data = vec![1.0; 16];
+        let mut data = [1.0; 16];
         grid_stride_loop_2d(&mut data, 4, 4, &config, |v, _r, _c| v + 1.0).unwrap();
         assert!(data.iter().all(|&v| (v - 2.0).abs() < 1e-6));
     }
@@ -2012,7 +2012,7 @@ mod tests {
     #[test]
     fn test_grid_stride_2d_with_coords() {
         let config = CooperativeLaunchConfig::new_2d([1, 1], [4, 4]).unwrap();
-        let mut data = vec![0.0; 16];
+        let mut data = [0.0; 16];
         grid_stride_loop_2d(&mut data, 4, 4, &config, |_, r, c| (r * 4 + c) as f32).unwrap();
         for i in 0..16 {
             assert!((data[i] - i as f32).abs() < 1e-6);
@@ -2029,7 +2029,7 @@ mod tests {
     #[test]
     fn test_grid_stride_2d_dimension_mismatch() {
         let config = CooperativeLaunchConfig::new_2d([1, 1], [1, 1]).unwrap();
-        let mut data = vec![1.0; 10];
+        let mut data = [1.0; 10];
         assert!(grid_stride_loop_2d(&mut data, 3, 4, &config, |v, _, _| v).is_err());
     }
 
@@ -2054,7 +2054,7 @@ mod tests {
     #[test]
     fn test_launch_cooperative_with_barrier() {
         let config = CooperativeLaunchConfig::new_1d(2, 256).unwrap();
-        let mut data = vec![1.0; 8];
+        let mut data = [1.0; 8];
         let result = launch_cooperative_kernel(&mut data, &config, |d, barrier| {
             // Phase 1: scale
             for v in d.iter_mut() {
@@ -2084,8 +2084,8 @@ mod tests {
     #[test]
     fn test_launch_id_increments() {
         let config = CooperativeLaunchConfig::new_1d(1, 256).unwrap();
-        let mut d1 = vec![1.0];
-        let mut d2 = vec![1.0];
+        let mut d1 = [1.0];
+        let mut d2 = [1.0];
         let r1 = launch_cooperative_kernel(&mut d1, &config, |_, _| {}).unwrap();
         let r2 = launch_cooperative_kernel(&mut d2, &config, |_, _| {}).unwrap();
         assert_ne!(r1.id, r2.id);
@@ -2094,7 +2094,7 @@ mod tests {
     #[test]
     fn test_launch_id_display() {
         let config = CooperativeLaunchConfig::new_1d(1, 256).unwrap();
-        let mut data = vec![1.0];
+        let mut data = [1.0];
         let result = launch_cooperative_kernel(&mut data, &config, |_, _| {}).unwrap();
         let s = format!("{}", result.id);
         assert!(s.starts_with("coop-launch-"));
@@ -2117,9 +2117,9 @@ mod tests {
 
     #[test]
     fn test_multi_grid_launch_basic() {
-        let caps = vec![default_caps(); 2];
+        let caps: Vec<_> = (0..2).map(|_| default_caps()).collect();
         let multi = MultiGridLaunchConfig::new(8, 4, &caps, MultiGridSyncMode::FullSync).unwrap();
-        let mut data = vec![1.0; 8];
+        let mut data = [1.0; 8];
         let results = launch_multi_grid_cooperative(&mut data, &multi, |slice, device_id| {
             for v in slice.iter_mut() {
                 *v += device_id as f32;
@@ -2151,7 +2151,7 @@ mod tests {
             }],
             sync_mode: MultiGridSyncMode::FullSync,
         };
-        let mut data = vec![1.0; 10];
+        let mut data = [1.0; 10];
         assert!(launch_multi_grid_cooperative(&mut data, &multi, |_, _| {}).is_err());
     }
 
@@ -2201,7 +2201,7 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_non_divisible() {
         let config = CooperativeLaunchConfig::new_1d(1, 3).unwrap();
-        let mut data = vec![1.0; 10];
+        let mut data = [1.0; 10];
         grid_stride_loop(&mut data, &config, |v, _| v + 1.0).unwrap();
         assert!(data.iter().all(|&v| (v - 2.0).abs() < 1e-6));
     }
@@ -2234,7 +2234,7 @@ mod tests {
 
     #[test]
     fn test_multi_grid_uneven_distribution() {
-        let caps = vec![default_caps(); 3];
+        let caps: Vec<_> = (0..3).map(|_| default_caps()).collect();
         let cfg = MultiGridLaunchConfig::new(10, 4, &caps, MultiGridSyncMode::Independent).unwrap();
         let total: usize = cfg.device_configs.iter().map(|e| e.data_range.1).sum();
         assert_eq!(total, 10);
@@ -2267,9 +2267,9 @@ mod tests {
     #[test]
     fn test_grid_stride_loop_exact_stride() {
         let config = CooperativeLaunchConfig::new_1d(2, 2).unwrap();
-        let mut data = vec![0.0; 4];
+        let mut data = [0.0f32; 4];
         grid_stride_loop(&mut data, &config, |_, i| i as f32).unwrap();
-        assert_eq!(data, vec![0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(data.to_vec(), vec![0.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]

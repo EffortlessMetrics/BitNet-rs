@@ -1041,9 +1041,9 @@ mod tests {
     #[test]
     fn rmsnorm_linear_matches_ref() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let weight = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_rmsnorm_linear_cpu(&input, &weight, &gamma, &mut out, EPS).unwrap();
         let exp = ref_rmsnorm_linear(&input, &weight, &gamma, EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1051,7 +1051,7 @@ mod tests {
 
     #[test]
     fn rmsnorm_linear_single() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         fused_rmsnorm_linear_cpu(&[3.0], &[2.0], &[1.0], &mut out, EPS).unwrap();
         let exp = ref_rmsnorm_linear(&[3.0], &[2.0], &[1.0], EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1059,13 +1059,13 @@ mod tests {
 
     #[test]
     fn rmsnorm_linear_empty() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_rmsnorm_linear_cpu(&[], &[1.0], &[], &mut out, EPS).is_err());
     }
 
     #[test]
     fn rmsnorm_linear_gamma_mismatch() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(fused_rmsnorm_linear_cpu(&[1.0, 2.0], &[1.0; 4], &[1.0], &mut out, EPS,).is_err());
     }
 
@@ -1089,7 +1089,7 @@ mod tests {
         let inp = vec![1.0, -1.0, 0.5, -0.5];
         let w = vec![0.2, 0.3, 0.4, 0.5, -0.1, 0.6, 0.7, -0.2];
         let bias = vec![0.01, -0.01];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_gelu_linear_cpu(&inp, &w, &bias, &mut out).unwrap();
         let exp = ref_gelu_linear(&inp, &w, &bias);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1099,7 +1099,7 @@ mod tests {
     fn gelu_linear_no_bias() {
         let inp = vec![1.0, 2.0];
         let w = vec![0.5, 0.5, -0.5, -0.5];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_gelu_linear_cpu(&inp, &w, &[], &mut out).unwrap();
         let exp = ref_gelu_linear(&inp, &w, &[]);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1107,10 +1107,10 @@ mod tests {
 
     #[test]
     fn gelu_linear_zero_input() {
-        let inp = vec![0.0; 4];
-        let w = vec![1.0; 8];
+        let inp = [0.0; 4];
+        let w = [1.0; 8];
         let bias = vec![0.5, 0.5];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_gelu_linear_cpu(&inp, &w, &bias, &mut out).unwrap();
         for (v, b) in out.iter().zip(&bias) {
             assert!((v - b).abs() < TOL, "{v} vs {b}");
@@ -1119,13 +1119,13 @@ mod tests {
 
     #[test]
     fn gelu_linear_empty() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_gelu_linear_cpu(&[], &[], &[], &mut out).is_err());
     }
 
     #[test]
     fn gelu_linear_bias_mismatch() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_gelu_linear_cpu(&[1.0], &[1.0], &[1.0, 2.0], &mut out,).is_err());
     }
 
@@ -1135,7 +1135,7 @@ mod tests {
     fn softmax_mask_matches_ref() {
         let sc = vec![1.0, 2.0, 3.0, 4.0];
         let m = vec![0.0, 0.0, -1e9, 0.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         fused_softmax_mask_cpu(&sc, &m, &mut out, 0.5).unwrap();
         let exp = ref_softmax_mask(&sc, &m, 0.5);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1144,8 +1144,8 @@ mod tests {
     #[test]
     fn softmax_mask_sums_to_one() {
         let sc = vec![2.0, 1.0, 0.5, 3.0];
-        let m = vec![0.0; 4];
-        let mut out = vec![0.0f32; 4];
+        let m = [0.0; 4];
+        let mut out = [0.0f32; 4];
         fused_softmax_mask_cpu(&sc, &m, &mut out, 1.0).unwrap();
         let sum: f32 = out.iter().sum();
         assert!((sum - 1.0).abs() < TOL, "sum = {sum}");
@@ -1154,36 +1154,36 @@ mod tests {
     #[test]
     fn softmax_mask_fully_masked() {
         let sc = vec![1.0, 2.0, 3.0];
-        let m = vec![-1e30; 3];
-        let mut out = vec![0.0f32; 3];
+        let m = [-1e30; 3];
+        let mut out = [0.0f32; 3];
         fused_softmax_mask_cpu(&sc, &m, &mut out, 1.0).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
     }
 
     #[test]
     fn softmax_mask_single() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         fused_softmax_mask_cpu(&[5.0], &[0.0], &mut out, 1.0).unwrap();
         assert!((out[0] - 1.0).abs() < TOL);
     }
 
     #[test]
     fn softmax_mask_empty() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_softmax_mask_cpu(&[], &[], &mut out, 1.0).is_err());
     }
 
     #[test]
     fn softmax_mask_dim_mismatch() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(fused_softmax_mask_cpu(&[1.0, 2.0], &[0.0], &mut out, 1.0,).is_err());
     }
 
     #[test]
     fn softmax_mask_numerical_stability() {
         let sc = vec![1000.0, 1001.0, 1002.0];
-        let m = vec![0.0; 3];
-        let mut out = vec![0.0f32; 3];
+        let m = [0.0; 3];
+        let mut out = [0.0f32; 3];
         fused_softmax_mask_cpu(&sc, &m, &mut out, 1.0).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
         let sum: f32 = out.iter().sum();
@@ -1196,8 +1196,8 @@ mod tests {
     fn add_rmsnorm_matches_ref() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![0.5, -0.5, 0.25, -0.25];
-        let g = vec![1.0; 4];
-        let mut out = vec![0.0f32; 4];
+        let g = [1.0; 4];
+        let mut out = [0.0f32; 4];
         fused_add_rmsnorm_cpu(&a, &b, &g, &mut out, EPS).unwrap();
         let exp = ref_add_rmsnorm(&a, &b, &g, EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1205,7 +1205,7 @@ mod tests {
 
     #[test]
     fn add_rmsnorm_single() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         fused_add_rmsnorm_cpu(&[3.0], &[1.0], &[1.0], &mut out, EPS).unwrap();
         let exp = ref_add_rmsnorm(&[3.0], &[1.0], &[1.0], EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1214,9 +1214,9 @@ mod tests {
     #[test]
     fn add_rmsnorm_zero_residual() {
         let a = vec![1.0, 2.0, 3.0];
-        let b = vec![0.0; 3];
-        let g = vec![1.0; 3];
-        let mut out = vec![0.0f32; 3];
+        let b = [0.0; 3];
+        let g = [1.0; 3];
+        let mut out = [0.0f32; 3];
         fused_add_rmsnorm_cpu(&a, &b, &g, &mut out, EPS).unwrap();
         let exp = ref_add_rmsnorm(&a, &b, &g, EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1224,19 +1224,19 @@ mod tests {
 
     #[test]
     fn add_rmsnorm_empty() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_add_rmsnorm_cpu(&[], &[], &[], &mut out, EPS).is_err());
     }
 
     #[test]
     fn add_rmsnorm_b_mismatch() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(fused_add_rmsnorm_cpu(&[1.0, 2.0], &[1.0], &[1.0, 2.0], &mut out, EPS,).is_err());
     }
 
     #[test]
     fn add_rmsnorm_gamma_mismatch() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_add_rmsnorm_cpu(&[1.0], &[1.0], &[1.0, 2.0], &mut out, EPS,).is_err());
     }
 
@@ -1246,7 +1246,7 @@ mod tests {
     fn scale_add_basic() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         fused_scale_add_cpu(&a, &b, &mut out, 0.5).unwrap();
         assert!(max_abs_err(&out, &[3.0, 4.5, 6.0]) < TOL);
     }
@@ -1255,7 +1255,7 @@ mod tests {
     fn scale_add_zero_scale() {
         let a = vec![1.0, 2.0];
         let b = vec![100.0, 200.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_scale_add_cpu(&a, &b, &mut out, 0.0).unwrap();
         assert!(max_abs_err(&out, &a) < TOL);
     }
@@ -1264,27 +1264,27 @@ mod tests {
     fn scale_add_negative() {
         let a = vec![10.0, 20.0];
         let b = vec![10.0, 20.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_scale_add_cpu(&a, &b, &mut out, -1.0).unwrap();
         assert!(max_abs_err(&out, &[0.0, 0.0]) < TOL);
     }
 
     #[test]
     fn scale_add_single() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         fused_scale_add_cpu(&[3.0], &[4.0], &mut out, 2.0).unwrap();
         assert!((out[0] - 11.0).abs() < TOL);
     }
 
     #[test]
     fn scale_add_empty() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_scale_add_cpu(&[], &[], &mut out, 1.0).is_err());
     }
 
     #[test]
     fn scale_add_dim_mismatch() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(fused_scale_add_cpu(&[1.0, 2.0], &[1.0], &mut out, 1.0).is_err());
     }
 
@@ -1304,9 +1304,9 @@ mod tests {
     #[test]
     fn dispatch_rmsnorm_linear() {
         let inp = vec![1.0, 2.0, 3.0, 4.0];
-        let g = vec![1.0; 4];
+        let g = [1.0; 4];
         let w = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_rmsnorm_linear(&inp, &w, &g, &mut out, EPS).unwrap();
         let exp = ref_rmsnorm_linear(&inp, &w, &g, EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1317,7 +1317,7 @@ mod tests {
         let inp = vec![1.0, -1.0, 0.5, -0.5];
         let w = vec![0.2, 0.3, 0.4, 0.5, -0.1, 0.6, 0.7, -0.2];
         let bias = vec![0.01, -0.01];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         fused_gelu_linear(&inp, &w, &bias, &mut out).unwrap();
         let exp = ref_gelu_linear(&inp, &w, &bias);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1326,8 +1326,8 @@ mod tests {
     #[test]
     fn dispatch_softmax_mask() {
         let sc = vec![1.0, 2.0, 3.0, 4.0];
-        let m = vec![0.0; 4];
-        let mut out = vec![0.0f32; 4];
+        let m = [0.0; 4];
+        let mut out = [0.0f32; 4];
         fused_softmax_mask(&sc, &m, &mut out, 1.0).unwrap();
         let sum: f32 = out.iter().sum();
         assert!((sum - 1.0).abs() < TOL);
@@ -1337,8 +1337,8 @@ mod tests {
     fn dispatch_add_rmsnorm() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![0.5, -0.5, 0.25];
-        let g = vec![1.0; 3];
-        let mut out = vec![0.0f32; 3];
+        let g = [1.0; 3];
+        let mut out = [0.0f32; 3];
         fused_add_rmsnorm(&a, &b, &g, &mut out, EPS).unwrap();
         let exp = ref_add_rmsnorm(&a, &b, &g, EPS);
         assert!(max_abs_err(&out, &exp) < TOL);
@@ -1348,7 +1348,7 @@ mod tests {
     fn dispatch_scale_add() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         fused_scale_add(&a, &b, &mut out, 0.5).unwrap();
         assert!(max_abs_err(&out, &[3.0, 4.5, 6.0]) < TOL);
     }
@@ -1359,10 +1359,10 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_rmsnorm_linear_launch() {
-        let inp = vec![1.0f32; 128];
-        let g = vec![1.0f32; 128];
+        let inp = [1.0f32; 128];
+        let g = [1.0f32; 128];
         let w = vec![0.01f32; 64 * 128];
-        let mut out = vec![0.0f32; 64];
+        let mut out = [0.0f32; 64];
         let cfg = FusedMatmulLaunchConfig::new(128, 64).unwrap();
         let r = launch_fused_rmsnorm_linear_cuda(&inp, &w, &g, &mut out, &cfg, 1e-5);
         assert!(r.is_ok(), "launch failed: {r:?}");
@@ -1372,10 +1372,10 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_gelu_linear_launch() {
-        let inp = vec![1.0f32; 128];
+        let inp = [1.0f32; 128];
         let w = vec![0.01f32; 64 * 128];
-        let bias = vec![0.0f32; 64];
-        let mut out = vec![0.0f32; 64];
+        let bias = [0.0f32; 64];
+        let mut out = [0.0f32; 64];
         let cfg = FusedMatmulLaunchConfig::new(128, 64).unwrap();
         let r = launch_fused_gelu_linear_cuda(&inp, &w, &bias, &mut out, &cfg);
         assert!(r.is_ok(), "launch failed: {r:?}");
@@ -1385,9 +1385,9 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_softmax_mask_launch() {
-        let sc = vec![1.0f32; 256];
-        let m = vec![0.0f32; 256];
-        let mut out = vec![0.0f32; 256];
+        let sc = [1.0f32; 256];
+        let m = [0.0f32; 256];
+        let mut out = [0.0f32; 256];
         let cfg = FusedElementwiseLaunchConfig::new(256).unwrap();
         let r = launch_fused_softmax_mask_cuda(&sc, &m, &mut out, &cfg, 1.0);
         assert!(r.is_ok(), "launch failed: {r:?}");
@@ -1397,10 +1397,10 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_add_rmsnorm_launch() {
-        let a = vec![1.0f32; 256];
-        let b = vec![0.5f32; 256];
-        let g = vec![1.0f32; 256];
-        let mut out = vec![0.0f32; 256];
+        let a = [1.0f32; 256];
+        let b = [0.5f32; 256];
+        let g = [1.0f32; 256];
+        let mut out = [0.0f32; 256];
         let cfg = FusedElementwiseLaunchConfig::new(256).unwrap();
         let r = launch_fused_add_rmsnorm_cuda(&a, &b, &g, &mut out, &cfg, 1e-5);
         assert!(r.is_ok(), "launch failed: {r:?}");
@@ -1410,9 +1410,9 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_fused_scale_add_launch() {
-        let a = vec![1.0f32; 256];
-        let b = vec![2.0f32; 256];
-        let mut out = vec![0.0f32; 256];
+        let a = [1.0f32; 256];
+        let b = [2.0f32; 256];
+        let mut out = [0.0f32; 256];
         let cfg = FusedElementwiseLaunchConfig::new(256).unwrap();
         let r = launch_fused_scale_add_cuda(&a, &b, &mut out, &cfg, 0.5);
         assert!(r.is_ok(), "launch failed: {r:?}");

@@ -1067,7 +1067,7 @@ mod tests {
 
     #[test]
     fn test_reduce_single_element() {
-        let input = vec![42.0];
+        let input = [42.0];
         let result =
             cooperative_reduce(&input, CooperativeReduceOp::Sum, &default_config()).unwrap();
         assert_eq!(result.len(), 1);
@@ -1134,7 +1134,7 @@ mod tests {
     #[test]
     fn test_scan_single_element() {
         let cfg = CooperativeGroupConfig::new(4).unwrap();
-        let mut data = vec![7.0];
+        let mut data = [7.0];
         cooperative_scan(&mut data, &cfg).unwrap();
         assert!((data[0] - 7.0).abs() < 1e-6);
     }
@@ -1215,7 +1215,7 @@ mod tests {
     #[test]
     fn test_broadcast_single_element() {
         let cfg = CooperativeGroupConfig::new(4).unwrap();
-        let mut data = vec![42.0];
+        let mut data = [42.0];
         cooperative_broadcast(&mut data, 0, &cfg).unwrap();
         assert!((data[0] - 42.0).abs() < 1e-6);
     }
@@ -1249,9 +1249,9 @@ mod tests {
     #[test]
     fn test_sort_single_element() {
         let cfg = default_config();
-        let mut data = vec![42.0];
+        let mut data = [42.0f32];
         cooperative_sort(&mut data, &cfg).unwrap();
-        assert_eq!(data, vec![42.0]);
+        assert_eq!(data.to_vec(), vec![42.0]);
     }
 
     #[test]
@@ -1305,9 +1305,9 @@ mod tests {
     #[test]
     fn test_sort_all_same() {
         let cfg = default_config();
-        let mut data = vec![5.0; 6];
+        let mut data = [5.0f32; 6];
         cooperative_sort(&mut data, &cfg).unwrap();
-        assert_eq!(data, vec![5.0; 6]);
+        assert_eq!(data.to_vec(), vec![5.0; 6]);
     }
 
     #[test]
@@ -1402,7 +1402,7 @@ mod tests {
     #[test]
     fn test_histogram_large_bins() {
         let cfg = default_config();
-        let input = vec![999];
+        let input = [999];
         let hist = cooperative_histogram(&input, 1000, &cfg).unwrap();
         assert_eq!(hist[999], 1);
         assert_eq!(hist.iter().sum::<u32>(), 1);
@@ -1461,7 +1461,7 @@ mod tests {
     #[test]
     fn test_matmul_zero_result() {
         let cfg = default_config();
-        let a = vec![0.0; 4];
+        let a = [0.0; 4];
         let b = vec![1.0, 2.0, 3.0, 4.0];
         let c = cooperative_matmul(&a, &b, 2, 2, 2, &cfg).unwrap();
         assert!(c.iter().all(|&v| v.abs() < 1e-6));
@@ -1524,7 +1524,7 @@ mod tests {
     fn test_matmul_larger() {
         let cfg = default_config();
         // 4x4 identity
-        let mut a = vec![0.0f32; 16];
+        let mut a = [0.0f32; 16];
         for i in 0..4 {
             a[i * 4 + i] = 1.0;
         }
@@ -1577,7 +1577,7 @@ mod tests {
     #[test]
     fn test_config_single_thread_group() {
         let cfg = CooperativeGroupConfig::new(1).unwrap();
-        let input = vec![42.0];
+        let input = [42.0];
         let result = cooperative_reduce(&input, CooperativeReduceOp::Sum, &cfg).unwrap();
         assert!((result[0] - 42.0).abs() < 1e-6);
     }

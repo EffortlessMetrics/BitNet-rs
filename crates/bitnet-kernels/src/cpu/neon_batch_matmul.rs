@@ -667,26 +667,26 @@ mod tests {
 
     #[test]
     fn test_batch_matmul_empty_batch() {
-        let mut c = vec![999.0f32; 4];
+        let mut c = [999.0f32; 4];
         neon_batch_matmul_f32(&[], &[], &mut c, 0, 2, 2, 2);
         // Output unchanged (batch=0, no output to write)
     }
 
     #[test]
     fn test_batch_matmul_zero_m() {
-        let mut c = vec![999.0f32; 0];
+        let mut c = [999.0f32; 0];
         neon_batch_matmul_f32(&[], &[1.0, 2.0], &mut c, 1, 0, 2, 1);
     }
 
     #[test]
     fn test_batch_matmul_zero_n() {
-        let mut c = vec![999.0f32; 0];
+        let mut c = [999.0f32; 0];
         neon_batch_matmul_f32(&[1.0, 2.0], &[], &mut c, 1, 2, 0, 1);
     }
 
     #[test]
     fn test_batch_matmul_zero_k() {
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         neon_batch_matmul_f32(&[], &[], &mut c, 1, 2, 2, 0);
         approx_eq(&c, &[0.0; 4], TOL);
     }
@@ -894,7 +894,7 @@ mod tests {
 
     #[test]
     fn test_transb_empty() {
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         neon_batch_matmul_transb_f32(&[], &[], &mut c, 0, 2, 2, 2);
     }
 
@@ -1024,7 +1024,7 @@ mod tests {
 
     #[test]
     fn test_accumulate_empty() {
-        let mut c = vec![5.0f32; 4];
+        let mut c = [5.0f32; 4];
         neon_batch_matmul_accumulate_f32(&[], &[], &mut c, 0, 2, 2, 2);
         // batch=0 → nothing happens
         approx_eq(&c, &[5.0; 4], TOL);
@@ -1216,7 +1216,7 @@ mod tests {
 
     #[test]
     fn test_scale_empty() {
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         neon_batch_matmul_scale_f32(&[], &[], &mut c, 0, 2, 2, 2, 5.0);
     }
 
@@ -1333,7 +1333,7 @@ mod tests {
 
     #[test]
     fn test_strided_empty() {
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         neon_strided_batch_matmul_f32(&[], &[], &mut c, 0, 2, 2, 2, 4, 4, 4);
     }
 
@@ -1668,21 +1668,21 @@ mod tests {
 
     #[test]
     fn test_strided_zero_k() {
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         neon_strided_batch_matmul_f32(&[], &[], &mut c, 1, 2, 2, 0, 0, 0, 4);
         approx_eq(&c, &[0.0; 4], TOL);
     }
 
     #[test]
     fn test_transb_zero_k() {
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         neon_batch_matmul_transb_f32(&[], &[], &mut c, 1, 2, 2, 0);
         approx_eq(&c, &[0.0; 4], TOL);
     }
 
     #[test]
     fn test_scale_zero_k() {
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         neon_batch_matmul_scale_f32(&[], &[], &mut c, 1, 2, 2, 0, 5.0);
         approx_eq(&c, &[0.0; 4], TOL);
     }

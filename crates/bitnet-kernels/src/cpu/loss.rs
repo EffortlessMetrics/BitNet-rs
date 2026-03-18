@@ -1054,7 +1054,7 @@ mod tests {
 
     #[test]
     fn grad_accumulate_multiple_steps() {
-        let mut acc = vec![0.0; 3];
+        let mut acc = [0.0; 3];
         for _ in 0..4 {
             gradient_accumulate(&mut acc, &[1.0, 2.0, 3.0]).unwrap();
         }
@@ -1133,7 +1133,7 @@ mod tests {
 
     #[test]
     fn grad_clip_norm_single_element() {
-        let mut grads = vec![10.0];
+        let mut grads = [10.0];
         gradient_clip_norm(&mut grads, 3.0).unwrap();
         assert!(approx(grads[0], 3.0), "got {}", grads[0]);
     }

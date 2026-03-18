@@ -584,8 +584,8 @@ mod tests {
     fn test_append_sequential_positions() {
         let mut buf = make_buffer(1, 1, 2, 16);
         for pos in 0..4 {
-            let k = vec![pos as f32; 2];
-            let v = vec![(pos as f32) * 10.0; 2];
+            let k = [pos as f32; 2];
+            let v = [(pos as f32) * 10.0; 2];
             buf.append_kv(0, pos, &k, &v).unwrap();
         }
         assert_eq!(buf.layer_len(0).unwrap(), 4);
@@ -680,7 +680,7 @@ mod tests {
     fn test_rotation_identity_at_position_zero() {
         let mut buf = make_buffer(1, 1, 4, 8);
         let k = vec![1.0, 2.0, 3.0, 4.0];
-        let v = vec![0.0; 4];
+        let v = [0.0; 4];
         buf.append_kv(0, 0, &k, &v).unwrap();
 
         // Position 0 → all angles are 0 → cos=1, sin=0 → no change.
@@ -733,8 +733,8 @@ mod tests {
     fn test_rotation_rejects_odd_head_dim() {
         let cfg = KvCacheConfig::new(1, 1, 3, 8, CacheDtype::F32).unwrap();
         let mut buf = KvCacheBuffer::new(cfg);
-        let k = vec![1.0; 3];
-        let v = vec![0.0; 3];
+        let k = [1.0; 3];
+        let v = [0.0; 3];
         buf.append_kv(0, 0, &k, &v).unwrap();
         assert!(buf.rotate_kv(0, &[0]).is_err());
     }

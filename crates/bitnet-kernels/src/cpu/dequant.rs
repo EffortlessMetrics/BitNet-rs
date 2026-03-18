@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_dequant_i2s_block_all_zeros() {
-        let packed = vec![0u8; 2]; // 8 zeros
+        let packed = [0u8; 2]; // 8 zeros
         let out = dequant_i2s_block(&packed, 5.0, 8).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
         assert_eq!(out.len(), 8);
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_pack_ternary_all_zeros() {
-        let values = vec![0.0; 8];
+        let values = [0.0; 8];
         let (packed, scale) = pack_ternary(&values, 0.1);
         assert!(packed.iter().all(|&b| b == 0));
         // Scale defaults to 1.0 when all zero.
@@ -324,14 +324,14 @@ mod tests {
 
     #[test]
     fn test_dequant_i2s_row_block_size_zero() {
-        let packed = vec![0u8; 4];
+        let packed = [0u8; 4];
         let err = dequant_i2s_row(&packed, &[1.0], 0);
         assert!(err.is_err());
     }
 
     #[test]
     fn test_dequant_i2s_row_insufficient_scales() {
-        let packed = vec![0u8; 4]; // 16 elements
+        let packed = [0u8; 4]; // 16 elements
         // block_size=4 → needs 4 scales, only providing 2
         let err = dequant_i2s_row(&packed, &[1.0, 2.0], 4);
         assert!(err.is_err());

@@ -432,7 +432,7 @@ mod tests {
         let head_dim = 8;
         let query = vec![1.0_f32; head_dim];
         let keys = vec![1.0_f32; head_dim * 3]; // 3 keys
-        let mut scores = vec![0.0_f32; 3];
+        let mut scores = [0.0_f32; 3];
 
         unsafe {
             neon_scaled_dot_product_attention(&query, &keys, head_dim, &mut scores);
@@ -449,7 +449,7 @@ mod tests {
         let head_dim = 4;
         let query = [1.0, 2.0, 3.0, 4.0];
         let keys = [4.0, 3.0, 2.0, 1.0, 0.5, 0.5, 0.5, 0.5];
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
 
         unsafe {
             neon_scaled_dot_product_attention(&query, &keys, head_dim, &mut scores);
@@ -468,7 +468,7 @@ mod tests {
         let head_dim = 5;
         let query = vec![1.0_f32; head_dim];
         let keys = vec![2.0_f32; head_dim * 2];
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
 
         unsafe {
             neon_scaled_dot_product_attention(&query, &keys, head_dim, &mut scores);
@@ -516,7 +516,7 @@ mod tests {
         let head_dim = 4;
         let queries = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
         let keys = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
 
         unsafe {
             neon_multi_head_attention_scores(
@@ -681,7 +681,7 @@ mod tests {
             1.0, 0.0, 0.0, 0.0, // enc key 0
             0.0, 1.0, 0.0, 0.0, // enc key 1
         ];
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
 
         unsafe {
             neon_cross_attention_scores(&dec_q, &enc_k, head_dim, &mut scores);
@@ -730,7 +730,7 @@ mod tests {
     fn test_generate_dropout_mask() {
         let random = [0.1, 0.9, 0.3, 0.8, 0.5, 0.05, 0.99, 0.4];
         let keep_prob = 0.5;
-        let mut mask = vec![0.0_f32; 8];
+        let mut mask = [0.0_f32; 8];
 
         unsafe {
             neon_generate_dropout_mask(&random, keep_prob, &mut mask);
@@ -744,7 +744,7 @@ mod tests {
     fn test_generate_dropout_mask_remainder() {
         let random = [0.1, 0.9, 0.3, 0.8, 0.2];
         let keep_prob = 0.5;
-        let mut mask = vec![0.0_f32; 5];
+        let mut mask = [0.0_f32; 5];
 
         unsafe {
             neon_generate_dropout_mask(&random, keep_prob, &mut mask);
@@ -793,7 +793,7 @@ mod tests {
         const DIM: usize = 4;
         let query = [2.0_f32; DIM];
         let keys = [3.0_f32; DIM];
-        let mut scores = vec![0.0_f32; 1];
+        let mut scores = [0.0_f32; 1];
 
         unsafe {
             neon_scaled_dot_product_attention(&query, &keys, DIM, &mut scores);
@@ -809,7 +809,7 @@ mod tests {
         let head_dim = 128;
         let query = vec![0.1_f32; head_dim];
         let keys = vec![0.1_f32; head_dim * 2];
-        let mut scores = vec![0.0_f32; 2];
+        let mut scores = [0.0_f32; 2];
 
         unsafe {
             neon_scaled_dot_product_attention(&query, &keys, head_dim, &mut scores);

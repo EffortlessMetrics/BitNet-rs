@@ -1274,7 +1274,7 @@ mod tests {
 
     #[test]
     fn learned_position_oob() {
-        let table = vec![0.0; 6];
+        let table = [0.0; 6];
         assert!(learned_position_embedding(&table, &[3], 3, 2).is_err());
     }
 
@@ -1287,7 +1287,7 @@ mod tests {
 
     #[test]
     fn learned_position_empty() {
-        let table = vec![0.0; 6];
+        let table = [0.0; 6];
         let out = learned_position_embedding(&table, &[], 3, 2).unwrap();
         assert!(out.is_empty());
     }
@@ -1389,7 +1389,7 @@ mod tests {
 
     #[test]
     fn norm_short_buffer_err() {
-        let mut emb = vec![1.0];
+        let mut emb = [1.0];
         assert!(embedding_norm(&mut emb, 1, 2, 1.0, 2.0).is_err());
     }
 
@@ -1446,8 +1446,8 @@ mod tests {
     fn fused_ln_basic() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let out = fused_embedding_layernorm(&t, &[0], &gamma, &beta, 1e-5, &cfg).unwrap();
         assert_eq!(out.len(), 3);
         // LayerNorm of [1,2,3]: mean=2, var=2/3 → each normalised
@@ -1459,8 +1459,8 @@ mod tests {
     fn fused_ln_with_affine() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![2.0; 3];
-        let beta = vec![1.0; 3];
+        let gamma = [2.0; 3];
+        let beta = [1.0; 3];
         let out = fused_embedding_layernorm(&t, &[0], &gamma, &beta, 1e-5, &cfg).unwrap();
         // After LN with gamma=2, beta=1 the mean should be ~1.0
         let mean: f32 = out.iter().sum::<f32>() / 3.0;
@@ -1471,8 +1471,8 @@ mod tests {
     fn fused_ln_multiple_tokens() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let out = fused_embedding_layernorm(&t, &[0, 1, 2, 3], &gamma, &beta, 1e-5, &cfg).unwrap();
         assert_eq!(out.len(), 12);
         // Each group of 3 should have mean ≈ 0.
@@ -1486,8 +1486,8 @@ mod tests {
     fn fused_ln_oob_index() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         assert!(fused_embedding_layernorm(&t, &[4], &gamma, &beta, 1e-5, &cfg).is_err());
     }
 
@@ -1509,8 +1509,8 @@ mod tests {
     fn fused_ln_empty_indices() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let out = fused_embedding_layernorm(&t, &[], &gamma, &beta, 1e-5, &cfg).unwrap();
         assert!(out.is_empty());
     }
@@ -1518,11 +1518,11 @@ mod tests {
     #[test]
     fn fused_ln_constant_embedding() {
         // All-same values → variance = 0 → output = beta
-        let weights = vec![5.0; 12]; // all 5s
+        let weights = vec![5.0f32; 12]; // all 5s
         let t = EmbeddingTable::new(weights, 4, 3).unwrap();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![7.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [7.0; 3];
         let out = fused_embedding_layernorm(&t, &[0], &gamma, &beta, 1e-5, &cfg).unwrap();
         for &v in &out {
             assert!((v - 7.0).abs() < 1e-3, "constant input → output ≈ beta: {v}");
@@ -1678,15 +1678,15 @@ mod tests {
     fn fused_ln_matches_separate_ops() {
         let t = sample_table();
         let cfg = sample_config();
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
 
         // Fused path.
         let fused = fused_embedding_layernorm(&t, &[0, 1], &gamma, &beta, 1e-5, &cfg).unwrap();
 
         // Separate path: lookup then LN.
         let emb = embedding_lookup(&t, &[0, 1], &cfg).unwrap();
-        let mut separate = vec![0.0_f32; 6];
+        let mut separate = [0.0_f32; 6];
         for tok in 0..2 {
             let s = &emb[tok * 3..(tok + 1) * 3];
             let mean: f32 = s.iter().sum::<f32>() / 3.0;

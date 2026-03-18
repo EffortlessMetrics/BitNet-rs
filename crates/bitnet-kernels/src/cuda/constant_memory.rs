@@ -1063,7 +1063,7 @@ mod tests {
     #[test]
     fn find_luts_by_kind() {
         let mut pool = ConstantMemoryPool::new(default_config()).unwrap();
-        let data = vec![1.0; 4];
+        let data = [1.0; 4];
         pool.load_lut(LutKind::QuantizationScales, &data, "s1").unwrap();
         pool.load_lut(LutKind::QuantizationScales, &data, "s2").unwrap();
         pool.load_lut(LutKind::RopeCosTable, &data, "cos").unwrap();
@@ -1076,7 +1076,7 @@ mod tests {
     #[test]
     fn lut_deallocated_with_slot() {
         let mut pool = ConstantMemoryPool::new(default_config()).unwrap();
-        let data = vec![1.0; 4];
+        let data = [1.0; 4];
         let entry = pool.load_lut(LutKind::Custom, &data, "tmp").unwrap();
         let id = entry.slot_id;
         pool.deallocate(id).unwrap();

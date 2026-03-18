@@ -931,7 +931,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act: Vec<i8> = vec![3, -2, 5, 7];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         int2_int8_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -978,7 +978,7 @@ mod tests {
     #[test]
     fn test_int2_int8_1x1() {
         let (packed, scales) = pack_i2s_weights(&[1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         int2_int8_matmul(&[7], &packed, &scales, &mut out, 1, 1, 1, 32).unwrap();
         assert_close(&out, &[7.0], 1e-6);
     }
@@ -1036,20 +1036,20 @@ mod tests {
 
     #[test]
     fn test_int2_int8_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(int2_int8_matmul(&[1], &[0], &[1.0], &mut out, 0, 1, 1, 32).is_err());
     }
 
     #[test]
     fn test_int2_int8_block_size_zero_rejected() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(int2_int8_matmul(&[1], &[0], &[1.0], &mut out, 1, 1, 1, 0).is_err());
     }
 
     #[test]
     fn test_int2_int8_output_too_small() {
         let (packed, scales) = pack_i2s_weights(&[1, 0, 0, 1], 2, 2, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(int2_int8_matmul(&[1, 2, 3, 4], &packed, &scales, &mut out, 2, 2, 2, 32).is_err());
     }
 
@@ -1062,7 +1062,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_int4_weights(&w, 2, 2, 32);
         let act: Vec<i8> = vec![3, -2, 5, 7];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         int4_int8_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1106,7 +1106,7 @@ mod tests {
     #[test]
     fn test_int4_int8_1x1() {
         let (packed, scales) = pack_int4_weights(&[3], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         int4_int8_matmul(&[4], &packed, &scales, &mut out, 1, 1, 1, 32).unwrap();
         assert_close(&out, &[12.0], 1e-6);
     }
@@ -1156,13 +1156,13 @@ mod tests {
 
     #[test]
     fn test_int4_int8_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(int4_int8_matmul(&[1], &[0], &[1.0], &mut out, 0, 1, 1, 32).is_err());
     }
 
     #[test]
     fn test_int4_int8_block_size_zero_rejected() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(int4_int8_matmul(&[1], &[0], &[1.0], &mut out, 1, 1, 1, 0).is_err());
     }
 
@@ -1192,7 +1192,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         block_quantized_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1237,7 +1237,7 @@ mod tests {
     #[test]
     fn test_block_quantized_1x1() {
         let (packed, scales) = pack_i2s_weights(&[-1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         block_quantized_matmul(&[5.0], &packed, &scales, &mut out, 1, 1, 1, 32).unwrap();
         assert_close(&out, &[-5.0], 1e-6);
     }
@@ -1296,7 +1296,7 @@ mod tests {
 
     #[test]
     fn test_block_quantized_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(block_quantized_matmul(&[1.0], &[0], &[1.0], &mut out, 0, 1, 1, 32).is_err());
     }
 
@@ -1309,7 +1309,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         fused_dequant_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1354,7 +1354,7 @@ mod tests {
     #[test]
     fn test_fused_1x1() {
         let (packed, scales) = pack_i2s_weights(&[1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         fused_dequant_matmul(&[7.5], &packed, &scales, &mut out, 1, 1, 1, 32).unwrap();
         assert_close(&out, &[7.5], 1e-6);
     }
@@ -1396,20 +1396,20 @@ mod tests {
 
     #[test]
     fn test_fused_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(fused_dequant_matmul(&[1.0], &[0], &[1.0], &mut out, 0, 1, 1, 32).is_err());
     }
 
     #[test]
     fn test_fused_block_size_zero_rejected() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_dequant_matmul(&[1.0], &[0], &[1.0], &mut out, 1, 1, 1, 0).is_err());
     }
 
     #[test]
     fn test_fused_output_too_small() {
         let (packed, scales) = pack_i2s_weights(&[1, 0, 0, 1], 2, 2, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(fused_dequant_matmul(&[1.0; 4], &packed, &scales, &mut out, 2, 2, 2, 32).is_err());
     }
 
@@ -1422,7 +1422,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         let tiles = QuantizedTileConfig::DEFAULT;
         tiled_quantized_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 32, &tiles).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
@@ -1488,7 +1488,7 @@ mod tests {
     #[test]
     fn test_tiled_zero_tile_rejected() {
         let (packed, scales) = pack_i2s_weights(&[1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         let tiles = QuantizedTileConfig::new(0, 1);
         assert!(
             tiled_quantized_matmul(&[1.0], &packed, &scales, &mut out, 1, 1, 1, 32, &tiles)
@@ -1498,7 +1498,7 @@ mod tests {
 
     #[test]
     fn test_tiled_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         let tiles = QuantizedTileConfig::DEFAULT;
         assert!(
             tiled_quantized_matmul(&[1.0], &[0], &[1.0], &mut out, 0, 1, 1, 32, &tiles).is_err()
@@ -1528,7 +1528,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_precision_matmul(&act, &packed, &scales, None, &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1539,7 +1539,7 @@ mod tests {
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
         let bias = vec![10.0f32, 20.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_precision_matmul(&act, &packed, &scales, Some(&bias), &mut out, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[13.0, 18.0, 15.0, 27.0], 1e-6);
     }
@@ -1573,7 +1573,7 @@ mod tests {
     fn test_mixed_precision_bias_too_small() {
         let (packed, scales) = pack_i2s_weights(&[1, 0, 0, 1], 2, 2, 32);
         let bias = vec![1.0f32];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             mixed_precision_matmul(&[1.0; 4], &packed, &scales, Some(&bias), &mut out, 2, 2, 2, 32)
                 .is_err()
@@ -1601,7 +1601,7 @@ mod tests {
 
     #[test]
     fn test_mixed_precision_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(mixed_precision_matmul(&[1.0], &[0], &[1.0], None, &mut out, 0, 1, 1, 32).is_err());
     }
 
@@ -1614,7 +1614,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = pack_i2s_weights(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         batched_quantized_matmul(&act, &packed, &scales, &mut out, 1, 2, 2, 2, 32).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1665,8 +1665,8 @@ mod tests {
     #[test]
     fn test_batched_activations_too_small() {
         let (packed, scales) = pack_i2s_weights(&[1, 0, 0, 1], 2, 2, 32);
-        let act = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 8];
+        let act = [1.0f32; 4];
+        let mut out = [0.0f32; 8];
         assert!(
             batched_quantized_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 2, 32).is_err()
         );
@@ -1675,8 +1675,8 @@ mod tests {
     #[test]
     fn test_batched_output_too_small() {
         let (packed, scales) = pack_i2s_weights(&[1, 0, 0, 1], 2, 2, 32);
-        let act = vec![1.0f32; 8];
-        let mut out = vec![0.0f32; 4];
+        let act = [1.0f32; 8];
+        let mut out = [0.0f32; 4];
         assert!(
             batched_quantized_matmul(&act, &packed, &scales, &mut out, 2, 2, 2, 2, 32).is_err()
         );
@@ -1684,7 +1684,7 @@ mod tests {
 
     #[test]
     fn test_batched_dim_zero_rejected() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(batched_quantized_matmul(&[1.0], &[0], &[1.0], &mut out, 1, 0, 1, 1, 32).is_err());
     }
 
@@ -1697,7 +1697,7 @@ mod tests {
         let w: Vec<i8> = vec![1, 0, 0, 1];
         let sparse = make_sparse(&w, 2, 2, 32);
         let act = vec![3.0f32, -2.0, 5.0, 7.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         sparse_quantized_matmul(&act, &sparse, &mut out, 2).unwrap();
         assert_close(&out, &[3.0, -2.0, 5.0, 7.0], 1e-6);
     }
@@ -1742,7 +1742,7 @@ mod tests {
     #[test]
     fn test_sparse_1x1() {
         let sparse = make_sparse(&[-1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         sparse_quantized_matmul(&[5.0], &sparse, &mut out, 1).unwrap();
         assert_close(&out, &[-5.0], 1e-6);
     }
@@ -1777,21 +1777,21 @@ mod tests {
     #[test]
     fn test_sparse_dim_zero_rejected() {
         let sparse = make_sparse(&[1], 1, 1, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(sparse_quantized_matmul(&[], &sparse, &mut out, 0).is_err());
     }
 
     #[test]
     fn test_sparse_activations_too_small() {
         let sparse = make_sparse(&[1, 0, 0, 1], 2, 2, 32);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(sparse_quantized_matmul(&[1.0], &sparse, &mut out, 2).is_err());
     }
 
     #[test]
     fn test_sparse_output_too_small() {
         let sparse = make_sparse(&[1, 0, 0, 1], 2, 2, 32);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(sparse_quantized_matmul(&[1.0; 4], &sparse, &mut out, 2).is_err());
     }
 
@@ -1799,7 +1799,7 @@ mod tests {
     fn test_sparse_bad_row_ptrs() {
         let mut sparse = make_sparse(&[1], 1, 1, 32);
         sparse.row_ptrs = vec![0];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         assert!(sparse_quantized_matmul(&[1.0], &sparse, &mut out, 1).is_err());
     }
 

@@ -909,8 +909,8 @@ mod tests {
     fn test_append_bad_key_alignment() {
         let cfg = small_config();
         let mut cache = create_kv_cache(cfg.clone(), EvictionPolicy::LRU).unwrap();
-        let k = vec![0.0; 5]; // Not a multiple of 32.
-        let v = vec![0.0; 5];
+        let k = [0.0; 5]; // Not a multiple of 32.
+        let v = [0.0; 5];
         assert!(append_kv(&mut cache, 0, &k, &v).is_err());
     }
 
@@ -1365,7 +1365,7 @@ mod tests {
     #[test]
     fn test_simd_copy_small() {
         let src = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut dst = vec![0.0; 5];
+        let mut dst = [0.0; 5];
         simd_copy_f32(&src, &mut dst);
         assert_eq!(src, dst);
     }
@@ -1373,7 +1373,7 @@ mod tests {
     #[test]
     fn test_simd_copy_avx2_aligned() {
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 16];
+        let mut dst = [0.0; 16];
         simd_copy_f32(&src, &mut dst);
         assert_eq!(src, dst);
     }
@@ -1381,7 +1381,7 @@ mod tests {
     #[test]
     fn test_simd_copy_avx2_with_tail() {
         let src: Vec<f32> = (0..19).map(|i| i as f32).collect();
-        let mut dst = vec![0.0; 19];
+        let mut dst = [0.0; 19];
         simd_copy_f32(&src, &mut dst);
         assert_eq!(src, dst);
     }
@@ -1396,8 +1396,8 @@ mod tests {
 
     #[test]
     fn test_simd_copy_single() {
-        let src = vec![42.0];
-        let mut dst = vec![0.0];
+        let src = [42.0];
+        let mut dst = [0.0];
         simd_copy_f32(&src, &mut dst);
         assert_eq!(dst[0], 42.0);
     }
@@ -1431,8 +1431,8 @@ mod tests {
 
     #[test]
     fn test_simd_dot_zeros() {
-        let a = vec![0.0; 32];
-        let b = vec![1.0; 32];
+        let a = [0.0; 32];
+        let b = [1.0; 32];
         assert!((simd_dot_f32(&a, &b)).abs() < f32::EPSILON);
     }
 

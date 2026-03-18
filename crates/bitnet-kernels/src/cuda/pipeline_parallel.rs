@@ -1252,7 +1252,7 @@ mod tests {
             4,
             GpuPipelineSchedule::Sequential,
         );
-        let input = vec![1.0; 8]; // 4 rows × 2 dims
+        let input = [1.0; 8]; // 4 rows × 2 dims
         let out = gpu_pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert_eq!(out.len(), 8);
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -1265,7 +1265,7 @@ mod tests {
             2,
             GpuPipelineSchedule::GPipe,
         );
-        let input = vec![2.0; 6];
+        let input = [2.0; 6];
         let out = gpu_pipeline_forward(&input, 3, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -1283,7 +1283,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_sequential() {
         let cfg = two_stage_config(GpuPipelineSchedule::Sequential);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = gpu_pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -1291,7 +1291,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_gpipe() {
         let cfg = two_stage_config(GpuPipelineSchedule::GPipe);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = gpu_pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -1299,7 +1299,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_1f1b() {
         let cfg = two_stage_config(GpuPipelineSchedule::OneF1B);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = gpu_pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -1307,7 +1307,7 @@ mod tests {
     #[test]
     fn test_forward_two_stage_interleaved() {
         let cfg = two_stage_config(GpuPipelineSchedule::Interleaved);
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let out = gpu_pipeline_forward(&input, 4, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 6.0).abs() < 1e-6));
     }
@@ -1323,7 +1323,7 @@ mod tests {
             2,
             GpuPipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = gpu_pipeline_forward(&input, 3, 2, &cfg).unwrap();
         // 1 * 2 * 2 * 3 = 12
         assert!(out.iter().all(|&v| (v - 12.0).abs() < 1e-6));
@@ -1341,7 +1341,7 @@ mod tests {
             1,
             GpuPipelineSchedule::Sequential,
         );
-        let input = vec![2.0; 4]; // 2×2
+        let input = [2.0; 4]; // 2×2
         let out = gpu_pipeline_forward(&input, 2, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 2.0).abs() < 1e-6));
     }
@@ -1394,7 +1394,7 @@ mod tests {
             4,
             GpuPipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 128]; // 64×2
+        let input = [1.0; 128]; // 64×2
         let out = gpu_pipeline_forward(&input, 64, 2, &cfg).unwrap();
         assert_eq!(out.len(), 128);
         assert!(out.iter().all(|&v| (v - 1.0).abs() < 1e-6));
@@ -1407,7 +1407,7 @@ mod tests {
             1,
             GpuPipelineSchedule::OneF1B,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = gpu_pipeline_forward(&input, 3, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 4.0).abs() < 1e-6));
     }
@@ -1417,7 +1417,7 @@ mod tests {
     #[test]
     fn test_all_schedules_same_result() {
         let stages = vec![GpuPipelineStage::new(0, 2), GpuPipelineStage::new(2, 5)];
-        let input = vec![1.0; 12]; // 6×2
+        let input = [1.0; 12]; // 6×2
         let mut results = Vec::new();
         for sched in [
             GpuPipelineSchedule::Sequential,
@@ -1440,7 +1440,7 @@ mod tests {
             3,
             GpuPipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 30]; // 10×3
+        let input = [1.0; 30]; // 10×3
         let out = gpu_pipeline_forward(&input, 10, 3, &cfg).unwrap();
         assert_eq!(out.len(), 30);
     }
@@ -1455,7 +1455,7 @@ mod tests {
             2,
             GpuPipelineSchedule::GPipe,
         );
-        let input = vec![1.0; 6]; // 3×2
+        let input = [1.0; 6]; // 3×2
         let out = gpu_pipeline_forward(&input, 3, 2, &cfg).unwrap();
         assert!(out.iter().all(|&v| (v - 9.0).abs() < 1e-6));
     }

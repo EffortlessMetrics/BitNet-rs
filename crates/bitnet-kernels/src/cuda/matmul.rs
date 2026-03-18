@@ -788,14 +788,14 @@ mod tests {
 
     #[test]
     fn test_identity_2x2() {
-        let a = vec![3.0, -2.0, 5.0, 7.0];
+        let a = [3.0, -2.0, 5.0, 7.0];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             1.0, 0.0,
             0.0, 1.0,
         ];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -804,14 +804,14 @@ mod tests {
     fn test_identity_4x4() {
         let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             1.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0,
         ];
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -820,22 +820,22 @@ mod tests {
 
     #[test]
     fn test_zero_a_produces_zero() {
-        let a = vec![0.0f32; 12];
+        let a = [0.0f32; 12];
         let b: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let cfg = MatmulConfig::for_shape(3, 4, 3).unwrap();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
-        assert_close(&out, &vec![0.0f32; 12], 1e-6);
+        assert_close(&out, &[0.0f32; 12], 1e-6);
     }
 
     #[test]
     fn test_zero_b_produces_zero() {
         let a: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let b = vec![0.0f32; 12];
+        let b = [0.0f32; 12];
         let cfg = MatmulConfig::for_shape(3, 4, 3).unwrap();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
-        assert_close(&out, &vec![0.0f32; 12], 1e-6);
+        assert_close(&out, &[0.0f32; 12], 1e-6);
     }
 
     // ── known product ─────────────────────────────────────────────
@@ -843,20 +843,20 @@ mod tests {
     #[test]
     fn test_known_2x3_times_3x2() {
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             1.0, 2.0, 3.0,
             4.0, 5.0, 6.0,
         ];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             7.0, 8.0,
             9.0, 10.0,
             11.0, 12.0,
         ];
         // Expected: [[58, 64], [139, 154]]
-        let expected = vec![58.0, 64.0, 139.0, 154.0];
+        let expected = [58.0, 64.0, 139.0, 154.0];
         let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &expected, 1e-5);
     }
@@ -878,9 +878,9 @@ mod tests {
     #[test]
     fn test_1x1_matmul() {
         let cfg = MatmulConfig::for_shape(1, 1, 1).unwrap();
-        let a = vec![3.0f32];
-        let b = vec![5.0f32];
-        let mut out = vec![0.0f32; 1];
+        let a = [3.0f32];
+        let b = [5.0f32];
+        let mut out = [0.0f32; 1];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[15.0], 1e-6);
     }
@@ -889,10 +889,10 @@ mod tests {
 
     #[test]
     fn test_alpha_scaling() {
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 2.0, 3.0, 4.0];
+        let b = [1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(2.0, 0.0);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         // C = 2 * A * I = 2 * A
         assert_close(&out, &[2.0, 4.0, 6.0, 8.0], 1e-6);
@@ -900,10 +900,10 @@ mod tests {
 
     #[test]
     fn test_beta_accumulate() {
-        let a = vec![1.0, 0.0, 0.0, 1.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 0.0, 0.0, 1.0];
+        let b = [1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(1.0, 1.0);
-        let mut out = vec![10.0, 20.0, 30.0, 40.0];
+        let mut out = [10.0, 20.0, 30.0, 40.0];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         // C = I + old_C
         assert_close(&out, &[11.0, 20.0, 30.0, 41.0], 1e-6);
@@ -914,27 +914,27 @@ mod tests {
     #[test]
     fn test_a_buffer_too_small() {
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let a = vec![1.0f32; 8]; // need 16
-        let b = vec![1.0f32; 16];
-        let mut out = vec![0.0f32; 16];
+        let a = [1.0f32; 8]; // need 16
+        let b = [1.0f32; 16];
+        let mut out = [0.0f32; 16];
         assert!(matmul_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_b_buffer_too_small() {
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let a = vec![1.0f32; 16];
-        let b = vec![1.0f32; 8]; // need 16
-        let mut out = vec![0.0f32; 16];
+        let a = [1.0f32; 16];
+        let b = [1.0f32; 8]; // need 16
+        let mut out = [0.0f32; 16];
         assert!(matmul_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_output_buffer_too_small() {
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let a = vec![1.0f32; 16];
-        let b = vec![1.0f32; 16];
-        let mut out = vec![0.0f32; 8]; // need 16
+        let a = [1.0f32; 16];
+        let b = [1.0f32; 16];
+        let mut out = [0.0f32; 8]; // need 16
         assert!(matmul_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
@@ -945,19 +945,19 @@ mod tests {
         // A stored as [k=3, m=2] (transposed), B as [k=3, n=2]
         // op(A) = A^T = [2, 3], B = [3, 2] → C = [2, 2]
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             1.0, 4.0, // col 0 of A^T → row of A^T
             2.0, 5.0,
             3.0, 6.0,
         ];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             7.0, 8.0,
             9.0, 10.0,
             11.0, 12.0,
         ];
         let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap().with_transpose(true, false);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         // A^T = [[1,2,3],[4,5,6]], B = [[7,8],[9,10],[11,12]]
         // C = [[58,64],[139,154]]
@@ -968,17 +968,17 @@ mod tests {
     fn test_transpose_b() {
         // A as [m=2, k=3], B stored as [n=2, k=3] (transposed)
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             1.0, 2.0, 3.0,
             4.0, 5.0, 6.0,
         ];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             7.0, 9.0, 11.0,  // row 0 of B^T
             8.0, 10.0, 12.0, // row 1 of B^T
         ];
         let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap().with_transpose(false, true);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[58.0, 64.0, 139.0, 154.0], 1e-5);
     }
@@ -987,18 +987,18 @@ mod tests {
     fn test_transpose_both() {
         // A stored as [k=3, m=2], B stored as [n=2, k=3]
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             1.0, 4.0,
             2.0, 5.0,
             3.0, 6.0,
         ];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             7.0, 9.0, 11.0,
             8.0, 10.0, 12.0,
         ];
         let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap().with_transpose(true, true);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[58.0, 64.0, 139.0, 154.0], 1e-5);
     }
@@ -1009,7 +1009,7 @@ mod tests {
     fn test_batch_matmul_2_batches() {
         let (m, n, k) = (2, 2, 2);
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             // batch 0
             1.0, 2.0,
             3.0, 4.0,
@@ -1017,9 +1017,9 @@ mod tests {
             5.0, 6.0,
             7.0, 8.0,
         ];
-        let b = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+        let b = [1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(m, n, k).unwrap().with_batch_size(2).unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         // Both batches multiply by identity
         assert_close(&out, &a, 1e-6);
@@ -1028,16 +1028,16 @@ mod tests {
     #[test]
     fn test_batch_matmul_different_weights() {
         let (m, n, k) = (2, 2, 2);
-        let a = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             // batch 0: scale by 2
             2.0, 0.0, 0.0, 2.0,
             // batch 1: scale by 3
             3.0, 0.0, 0.0, 3.0,
         ];
         let cfg = MatmulConfig::for_shape(m, n, k).unwrap().with_batch_size(2).unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         matmul_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[2.0, 0.0, 0.0, 2.0, 3.0, 0.0, 0.0, 3.0], 1e-6);
     }
@@ -1077,19 +1077,19 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 0.0, 0.0, 1.0].iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = [3.0f32, 7.0, -2.0, 5.0].iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_dtype(MatmulDtype::F16);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[3.0, 7.0, -2.0, 5.0], 0.1);
     }
 
     #[test]
     fn test_f16_matmul_known() {
-        let a_f32 = vec![1.0f32, 2.0, 3.0, 4.0];
-        let b_f32 = vec![5.0f32, 6.0, 7.0, 8.0];
+        let a_f32 = [1.0f32, 2.0, 3.0, 4.0];
+        let b_f32 = [5.0f32, 6.0, 7.0, 8.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_dtype(MatmulDtype::F16);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
         // [[1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8]] = [[19,22],[43,50]]
         assert_close(&out, &[19.0, 22.0, 43.0, 50.0], 0.5);
@@ -1098,9 +1098,9 @@ mod tests {
     #[test]
     fn test_f16_buffer_too_small() {
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let a = vec![0u16; 8];
-        let b = vec![0u16; 16];
-        let mut out = vec![0.0f32; 16];
+        let a = [0u16; 8];
+        let b = [0u16; 16];
+        let mut out = [0.0f32; 16];
         assert!(matmul_f16_cpu(&a, &b, &mut out, &cfg).is_err());
     }
 
@@ -1108,10 +1108,10 @@ mod tests {
 
     #[test]
     fn test_forward_dispatches_cpu() {
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 2.0, 3.0, 4.0];
+        let b = [1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_forward(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -1137,7 +1137,7 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 0.0, 0.0, 1.0].iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = [2.0f32, 3.0, 4.0, 5.0].iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_f16_forward(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[2.0, 3.0, 4.0, 5.0], 0.1);
     }
@@ -1148,9 +1148,9 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn test_cuda_matmul_launch() {
         let cfg = MatmulConfig::for_shape(64, 128, 256).unwrap();
-        let a = vec![1.0f32; 64 * 256];
-        let b = vec![1.0f32; 256 * 128];
-        let mut out = vec![0.0f32; 64 * 128];
+        let a = [1.0; 64 * 256];
+        let b = [1.0; 256 * 128];
+        let mut out = [0.0; 64 * 128];
         let result = matmul_forward(&a, &b, &mut out, &cfg);
         assert!(result.is_ok(), "CUDA matmul launch failed: {result:?}");
     }
@@ -1248,14 +1248,14 @@ mod tests {
     fn test_tiled_identity_4x4() {
         let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             1.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0,
         ];
         let cfg = MatmulConfig::for_shape(4, 4, 4).unwrap();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -1286,20 +1286,20 @@ mod tests {
 
     #[test]
     fn test_tiled_alpha_scaling() {
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 2.0, 3.0, 4.0];
+        let b = [1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(3.0, 0.0);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[3.0, 6.0, 9.0, 12.0], 1e-6);
     }
 
     #[test]
     fn test_tiled_beta_accumulate() {
-        let a = vec![1.0, 0.0, 0.0, 1.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 0.0, 0.0, 1.0];
+        let b = [1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(2, 2, 2).unwrap().with_alpha_beta(1.0, 2.0);
-        let mut out = vec![5.0, 10.0, 15.0, 20.0];
+        let mut out = [5.0, 10.0, 15.0, 20.0];
         matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
         // C = 1*I + 2*old = I + [10,20,30,40]
         assert_close(&out, &[11.0, 20.0, 30.0, 41.0], 1e-6);
@@ -1308,20 +1308,20 @@ mod tests {
     #[test]
     fn test_tiled_delegates_transpose() {
         #[rustfmt::skip]
-        let a = vec![
+        let a = [
             1.0, 4.0,
             2.0, 5.0,
             3.0, 6.0,
         ];
         #[rustfmt::skip]
-        let b = vec![
+        let b = [
             7.0, 8.0,
             9.0, 10.0,
             11.0, 12.0,
         ];
         let cfg = MatmulConfig::for_shape(2, 2, 3).unwrap().with_transpose(true, false);
-        let mut out_tiled = vec![0.0f32; 4];
-        let mut out_cpu = vec![0.0f32; 4];
+        let mut out_tiled = [0.0f32; 4];
+        let mut out_cpu = [0.0f32; 4];
         matmul_tiled_cpu(&a, &b, &mut out_tiled, &cfg).unwrap();
         matmul_cpu(&a, &b, &mut out_cpu, &cfg).unwrap();
         assert_close(&out_tiled, &out_cpu, 1e-6);
@@ -1330,11 +1330,11 @@ mod tests {
     #[test]
     fn test_tiled_delegates_batch() {
         let (m, n, k) = (2, 2, 2);
-        let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let b = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
+        let a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let b = [1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let cfg = MatmulConfig::for_shape(m, n, k).unwrap().with_batch_size(2).unwrap();
-        let mut out_tiled = vec![0.0f32; 8];
-        let mut out_cpu = vec![0.0f32; 8];
+        let mut out_tiled = [0.0f32; 8];
+        let mut out_cpu = [0.0f32; 8];
         matmul_tiled_cpu(&a, &b, &mut out_tiled, &cfg).unwrap();
         matmul_cpu(&a, &b, &mut out_cpu, &cfg).unwrap();
         assert_close(&out_tiled, &out_cpu, 1e-6);
@@ -1343,9 +1343,9 @@ mod tests {
     #[test]
     fn test_tiled_1x1() {
         let cfg = MatmulConfig::for_shape(1, 1, 1).unwrap();
-        let a = vec![7.0f32];
-        let b = vec![3.0f32];
-        let mut out = vec![0.0f32; 1];
+        let a = [7.0f32];
+        let b = [3.0f32];
+        let mut out = [0.0f32; 1];
         matmul_tiled_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out, &[21.0], 1e-6);
     }
@@ -1484,8 +1484,8 @@ mod tests {
 
     #[test]
     fn test_f16_batch_matmul() {
-        let a_f32 = vec![1.0f32, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
-        let b_f32 = vec![3.0f32, 4.0, 5.0, 6.0, 3.0, 4.0, 5.0, 6.0];
+        let a_f32 = [1.0f32, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0];
+        let b_f32 = [3.0f32, 4.0, 5.0, 6.0, 3.0, 4.0, 5.0, 6.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2)
@@ -1493,7 +1493,7 @@ mod tests {
             .with_dtype(MatmulDtype::F16)
             .with_batch_size(2)
             .unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
         assert_close(&out[0..4], &[3.0, 4.0, 5.0, 6.0], 0.5);
         assert_close(&out[4..8], &[6.0, 8.0, 10.0, 12.0], 0.5);
@@ -1502,15 +1502,15 @@ mod tests {
     #[test]
     fn test_f16_transpose_a() {
         // A stored as [k=2, m=2] (transposed)
-        let a_f32 = vec![1.0f32, 3.0, 2.0, 4.0];
-        let b_f32 = vec![1.0f32, 0.0, 0.0, 1.0];
+        let a_f32 = [1.0f32, 3.0, 2.0, 4.0];
+        let b_f32 = [1.0f32, 0.0, 0.0, 1.0];
         let a: Vec<u16> = a_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = b_f32.iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = MatmulConfig::for_shape(2, 2, 2)
             .unwrap()
             .with_dtype(MatmulDtype::F16)
             .with_transpose(true, false);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         matmul_f16_cpu(&a, &b, &mut out, &cfg).unwrap();
         // A^T = [[1,2],[3,4]], I → [[1,2],[3,4]]
         assert_close(&out, &[1.0, 2.0, 3.0, 4.0], 0.5);

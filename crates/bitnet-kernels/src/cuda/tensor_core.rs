@@ -1288,7 +1288,7 @@ mod tests {
 
     #[test]
     fn test_wmma_load_buffer_too_small() {
-        let src = vec![1.0f32; 4];
+        let src = [1.0f32; 4];
         let mut frag = WmmaFragment::new(FragmentType::MatrixA, FragmentLayout::RowMajor, 4, 4);
         assert!(wmma_load(&src, &mut frag, 0, 4).is_err());
     }
@@ -1301,7 +1301,7 @@ mod tests {
                 frag.set(i, j, (i * 3 + j) as f32);
             }
         }
-        let mut dst = vec![0.0f32; 6];
+        let mut dst = [0.0f32; 6];
         wmma_store(&mut dst, &frag, 0, 3).unwrap();
         let expected: Vec<f32> = (0..6).map(|i| i as f32).collect();
         assert_close(&dst, &expected, 1e-6);
@@ -1314,7 +1314,7 @@ mod tests {
         frag.set(0, 1, 2.0);
         frag.set(1, 0, 3.0);
         frag.set(1, 1, 4.0);
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         wmma_store(&mut dst, &frag, 5, 4).unwrap();
         assert_eq!(dst[5], 1.0);
         assert_eq!(dst[6], 2.0);
@@ -1325,7 +1325,7 @@ mod tests {
     #[test]
     fn test_wmma_store_buffer_too_small() {
         let frag = WmmaFragment::new(FragmentType::Accumulator, FragmentLayout::RowMajor, 4, 4);
-        let mut dst = vec![0.0f32; 8];
+        let mut dst = [0.0f32; 8];
         assert!(wmma_store(&mut dst, &frag, 0, 4).is_err());
     }
 
@@ -1334,7 +1334,7 @@ mod tests {
         let src: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
         let mut frag = WmmaFragment::new(FragmentType::MatrixA, FragmentLayout::RowMajor, 4, 4);
         wmma_load(&src, &mut frag, 0, 4).unwrap();
-        let mut dst = vec![0.0f32; 16];
+        let mut dst = [0.0f32; 16];
         wmma_store(&mut dst, &frag, 0, 4).unwrap();
         assert_close(&dst, &src, 1e-6);
     }
@@ -1471,7 +1471,7 @@ mod tests {
         let a = vec![3.0, -2.0, 5.0, 7.0];
         let b = vec![1.0, 0.0, 0.0, 1.0];
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         tensor_core_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -1484,7 +1484,7 @@ mod tests {
         let b = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
         let expected = vec![58.0, 64.0, 139.0, 154.0];
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 3).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         tensor_core_matmul(&a, &b, &mut out, 2, 2, 3, &cfg).unwrap();
         assert_close(&out, &expected, 1e-5);
     }
@@ -1492,17 +1492,17 @@ mod tests {
     #[test]
     fn test_tc_matmul_1x1() {
         let cfg = TensorCoreConfig::default().with_fragment_size(1, 1, 1).unwrap();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         tensor_core_matmul(&[3.0], &[5.0], &mut out, 1, 1, 1, &cfg).unwrap();
         assert_close(&out, &[15.0], 1e-6);
     }
 
     #[test]
     fn test_tc_matmul_zero_a() {
-        let a = vec![0.0f32; 9];
+        let a = [0.0f32; 9];
         let b: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let cfg = TensorCoreConfig::default().with_fragment_size(4, 4, 4).unwrap();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         tensor_core_matmul(&a, &b, &mut out, 3, 4, 3, &cfg).unwrap();
         assert!(out.iter().all(|&v| v.abs() < 1e-6));
     }
@@ -1546,7 +1546,7 @@ mod tests {
     #[test]
     fn test_tc_matmul_rejects_zero_dims() {
         let cfg = TensorCoreConfig::default();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(tensor_core_matmul(&[1.0; 4], &[1.0; 4], &mut out, 0, 2, 2, &cfg).is_err());
         assert!(tensor_core_matmul(&[1.0; 4], &[1.0; 4], &mut out, 2, 0, 2, &cfg).is_err());
         assert!(tensor_core_matmul(&[1.0; 4], &[1.0; 4], &mut out, 2, 2, 0, &cfg).is_err());
@@ -1555,21 +1555,21 @@ mod tests {
     #[test]
     fn test_tc_matmul_buffer_too_small_a() {
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(tensor_core_matmul(&[1.0; 2], &[1.0; 4], &mut out, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_tc_matmul_buffer_too_small_b() {
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(tensor_core_matmul(&[1.0; 4], &[1.0; 2], &mut out, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_tc_matmul_buffer_too_small_out() {
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         assert!(tensor_core_matmul(&[1.0; 4], &[1.0; 4], &mut out, 2, 2, 2, &cfg).is_err());
     }
 
@@ -1580,7 +1580,7 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 0.0, 0.0, 1.0].iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = [3.0f32, 7.0, -2.0, 5.0].iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_precision_tc_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &[3.0, 7.0, -2.0, 5.0], 0.1);
     }
@@ -1590,7 +1590,7 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 2.0, 3.0, 4.0].iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = [5.0f32, 6.0, 7.0, 8.0].iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         mixed_precision_tc_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &[19.0, 22.0, 43.0, 50.0], 0.5);
     }
@@ -1598,7 +1598,7 @@ mod tests {
     #[test]
     fn test_mixed_precision_rejects_zero_dims() {
         let cfg = TensorCoreConfig::fp16_fp32();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             mixed_precision_tc_matmul(&[0u16; 4], &[0u16; 4], &mut out, 0, 2, 2, &cfg).is_err()
         );
@@ -1607,7 +1607,7 @@ mod tests {
     #[test]
     fn test_mixed_precision_buffer_too_small() {
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(
             mixed_precision_tc_matmul(&[0u16; 2], &[0u16; 4], &mut out, 2, 2, 2, &cfg).is_err()
         );
@@ -1620,7 +1620,7 @@ mod tests {
         let a: Vec<i8> = vec![1, 0, 0, 1];
         let b: Vec<i8> = vec![3, 7, -2, 5];
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         int8_tc_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close_i32(&out, &[3, 7, -2, 5]);
     }
@@ -1630,7 +1630,7 @@ mod tests {
         let a: Vec<i8> = vec![1, 2, 3, 4];
         let b: Vec<i8> = vec![5, 6, 7, 8];
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         int8_tc_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close_i32(&out, &[19, 22, 43, 50]);
     }
@@ -1652,7 +1652,7 @@ mod tests {
         let a: Vec<i8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
         let b: Vec<i8> = vec![0; 9];
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(3, 3, 3).unwrap();
-        let mut out = vec![0i32; 9];
+        let mut out = [0i32; 9];
         int8_tc_matmul(&a, &b, &mut out, 3, 3, 3, &cfg).unwrap();
         assert!(out.iter().all(|&v| v == 0));
     }
@@ -1660,21 +1660,21 @@ mod tests {
     #[test]
     fn test_int8_rejects_zero_dims() {
         let cfg = TensorCoreConfig::int8_int32();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         assert!(int8_tc_matmul(&[0i8; 4], &[0i8; 4], &mut out, 0, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_int8_buffer_too_small() {
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         assert!(int8_tc_matmul(&[0i8; 2], &[0i8; 4], &mut out, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_int8_1x1() {
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(1, 1, 1).unwrap();
-        let mut out = vec![0i32; 1];
+        let mut out = [0i32; 1];
         int8_tc_matmul(&[3i8], &[7i8], &mut out, 1, 1, 1, &cfg).unwrap();
         assert_close_i32(&out, &[21]);
     }
@@ -1684,7 +1684,7 @@ mod tests {
         let a: Vec<i8> = vec![-1, -2, -3, -4];
         let b: Vec<i8> = vec![1, 2, 3, 4];
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         int8_tc_matmul(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         // [[-1,-2],[-3,-4]] · [[1,2],[3,4]] = [[-7,-10],[-15,-22]]
         assert_close_i32(&out, &[-7, -10, -15, -22]);
@@ -1697,7 +1697,7 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // 2 batches × 2×2
         let b = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         batched_tc_matmul(&a, &b, &mut out, 2, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &a, 1e-6);
     }
@@ -1707,7 +1707,7 @@ mod tests {
         let a = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let b = vec![2.0, 0.0, 0.0, 2.0, 3.0, 0.0, 0.0, 3.0];
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         batched_tc_matmul(&a, &b, &mut out, 2, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &[2.0, 0.0, 0.0, 2.0, 3.0, 0.0, 0.0, 3.0], 1e-6);
     }
@@ -1733,21 +1733,21 @@ mod tests {
     #[test]
     fn test_batched_rejects_zero_batch() {
         let cfg = TensorCoreConfig::default();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(batched_tc_matmul(&[1.0; 4], &[1.0; 4], &mut out, 0, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_batched_rejects_zero_dims() {
         let cfg = TensorCoreConfig::default();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(batched_tc_matmul(&[1.0; 4], &[1.0; 4], &mut out, 1, 0, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_batched_buffer_too_small() {
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4]; // need 8 for batch=2
+        let mut out = [0.0f32; 4]; // need 8 for batch=2
         assert!(batched_tc_matmul(&[1.0; 8], &[1.0; 8], &mut out, 2, 2, 2, 2, &cfg).is_err());
     }
 
@@ -1875,7 +1875,7 @@ mod tests {
         let a: Vec<u16> = [1.0f32, 0.0, 0.0, 1.0].iter().map(|&v| f32_to_f16(v)).collect();
         let b: Vec<u16> = [2.0f32, 3.0, 4.0, 5.0].iter().map(|&v| f32_to_f16(v)).collect();
         let cfg = TensorCoreConfig::default().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         tc_matmul_forward(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close(&out, &[2.0, 3.0, 4.0, 5.0], 0.1);
     }
@@ -1885,7 +1885,7 @@ mod tests {
         let a: Vec<i8> = vec![1, 0, 0, 1];
         let b: Vec<i8> = vec![2, 3, 4, 5];
         let cfg = TensorCoreConfig::int8_int32().with_fragment_size(2, 2, 2).unwrap();
-        let mut out = vec![0i32; 4];
+        let mut out = [0i32; 4];
         int8_tc_matmul_forward(&a, &b, &mut out, 2, 2, 2, &cfg).unwrap();
         assert_close_i32(&out, &[2, 3, 4, 5]);
     }

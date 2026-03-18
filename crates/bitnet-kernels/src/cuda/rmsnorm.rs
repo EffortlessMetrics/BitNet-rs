@@ -153,7 +153,7 @@ mod tests {
     fn test_cuda_rmsnorm_launch() {
         let cfg = RmsNormConfig::for_shape(2048, 4).unwrap();
         let input = vec![1.0f32; 2048 * 4];
-        let gamma = vec![1.0f32; 2048];
+        let gamma = [1.0f32; 2048];
         let mut output = vec![0.0f32; 2048 * 4];
         let result = launch_rmsnorm(&input, &gamma, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA RMSNorm launch failed: {result:?}");

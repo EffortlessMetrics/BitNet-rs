@@ -275,7 +275,7 @@ mod tests {
     fn test_gather_basic() {
         let src = [10.0, 20.0, 30.0, 40.0, 50.0];
         let indices = [4, 2, 0, 3, 1];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         gather(&src, &indices, &mut out);
         assert_eq!(out, vec![50.0, 30.0, 10.0, 40.0, 20.0]);
     }
@@ -285,7 +285,7 @@ mod tests {
         // Length not divisible by 4 — exercises scalar tail.
         let src = [1.0, 2.0, 3.0];
         let indices = [2, 0, 1];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         gather(&src, &indices, &mut out);
         assert_eq!(out, vec![3.0, 1.0, 2.0]);
     }
@@ -295,7 +295,7 @@ mod tests {
     fn test_gather_oob() {
         let src = [1.0, 2.0];
         let indices = [5];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         gather(&src, &indices, &mut out);
     }
 
@@ -305,7 +305,7 @@ mod tests {
     fn test_scatter_add_basic() {
         let src = [1.0, 2.0, 3.0, 4.0, 5.0];
         let indices = [0, 1, 2, 3, 4];
-        let mut out = vec![10.0; 5];
+        let mut out = [10.0; 5];
         scatter_add(&src, &indices, &mut out);
         assert_eq!(out, vec![11.0, 12.0, 13.0, 14.0, 15.0]);
     }
@@ -314,7 +314,7 @@ mod tests {
     fn test_scatter_add_duplicate_indices() {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 0, 1, 1];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scatter_add(&src, &indices, &mut out);
         assert_eq!(out, vec![3.0, 7.0]); // 1+2, 3+4
     }
@@ -324,7 +324,7 @@ mod tests {
     fn test_scatter_add_oob() {
         let src = [1.0];
         let indices = [10];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scatter_add(&src, &indices, &mut out);
     }
 
@@ -335,7 +335,7 @@ mod tests {
         // 4 rows × 3 cols
         let src: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let indices = [3, 0];
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         index_select(&src, 3, &indices, &mut out);
         assert_eq!(out, vec![9.0, 10.0, 11.0, 0.0, 1.0, 2.0]);
     }
@@ -345,7 +345,7 @@ mod tests {
         // Exercises the NEON copy path (dim_size ≥ 4).
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let indices = [1]; // row 1 of 2×8
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         index_select(&src, 8, &indices, &mut out);
         let expected: Vec<f32> = (8..16).map(|i| i as f32).collect();
         assert_eq!(out, expected);
@@ -354,9 +354,9 @@ mod tests {
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn test_index_select_oob() {
-        let src = vec![0.0; 8]; // 2 rows × 4
+        let src = [0.0; 8]; // 2 rows × 4
         let indices = [5]; // invalid
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         index_select(&src, 4, &indices, &mut out);
     }
 
@@ -373,7 +373,7 @@ mod tests {
     #[test]
     fn test_masked_fill_all_true() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let mask = vec![true; 4];
+        let mask = [true; 4];
         masked_fill(&mut data, &mask, 0.0);
         assert_eq!(data, vec![0.0; 4]);
     }
@@ -382,7 +382,7 @@ mod tests {
     fn test_masked_fill_all_false() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
         let original = data.clone();
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         masked_fill(&mut data, &mask, 99.0);
         assert_eq!(data, original);
     }
@@ -392,7 +392,7 @@ mod tests {
         // Verify multi-chunk + tail on a larger input.
         let src: Vec<f32> = (0..100).map(|i| i as f32).collect();
         let indices: Vec<usize> = (0..100).rev().collect();
-        let mut out = vec![0.0; 100];
+        let mut out = [0.0; 100];
         gather(&src, &indices, &mut out);
         let expected: Vec<f32> = (0..100).rev().map(|i| i as f32).collect();
         assert_eq!(out, expected);

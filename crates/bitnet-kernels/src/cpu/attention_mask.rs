@@ -233,8 +233,8 @@ mod tests {
 
     #[test]
     fn apply_mask_seq_len_1() {
-        let mut scores = vec![5.0];
-        let mask = vec![0.0];
+        let mut scores = [5.0];
+        let mask = [0.0];
         apply_mask(&mut scores, &mask, 1);
         assert_eq!(scores[0], 5.0);
     }
@@ -242,8 +242,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "too short")]
     fn apply_mask_scores_too_short() {
-        let mut scores = vec![1.0];
-        let mask = vec![0.0; 4];
+        let mut scores = [1.0];
+        let mask = [0.0; 4];
         apply_mask(&mut scores, &mask, 2);
     }
 
@@ -259,8 +259,8 @@ mod tests {
         for i in 0..seq {
             let row = &scores[i * seq..(i + 1) * seq];
             let probs = softmax(row);
-            for j in (i + 1)..seq {
-                assert!(probs[j] < 1e-6, "row {i} col {j}: prob {:.8} should be ~0", probs[j],);
+            for (j, &prob) in probs.iter().enumerate().skip(i + 1).take(seq - (i + 1)) {
+                assert!(prob < 1e-6, "row {i} col {j}: prob {:.8} should be ~0", prob);
             }
         }
     }
@@ -330,8 +330,8 @@ mod tests {
 
     #[test]
     fn combine_both_open() {
-        let a = vec![0.0; 4];
-        let b = vec![0.0; 4];
+        let a = [0.0; 4];
+        let b = [0.0; 4];
         let c = combine_masks(&a, &b, 2);
         assert!(c.iter().all(|&v| v == 0.0));
     }
@@ -349,8 +349,8 @@ mod tests {
 
     #[test]
     fn combine_both_block_same_position() {
-        let a = vec![NEG_INF; 4];
-        let b = vec![NEG_INF; 4];
+        let a = [NEG_INF; 4];
+        let b = [NEG_INF; 4];
         let c = combine_masks(&a, &b, 2);
         assert!(c.iter().all(|&v| is_neg_inf(v)));
     }
@@ -361,7 +361,7 @@ mod tests {
         let causal = create_causal_mask(3);
         // "Broadcast" a per-row padding mask into [seq, seq] shape:
         // row 0: all open, row 1: all open, row 2: col 2 blocked.
-        let mut pad = vec![0.0_f32; 9];
+        let mut pad = [0.0_f32; 9];
         pad[2 * 3 + 2] = NEG_INF;
 
         let combined = combine_masks(&causal, &pad, 3);
@@ -374,8 +374,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "too short")]
     fn combine_masks_too_short() {
-        let a = vec![0.0; 2];
-        let b = vec![0.0; 4];
+        let a = [0.0; 2];
+        let b = [0.0; 4];
         combine_masks(&a, &b, 2);
     }
 

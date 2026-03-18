@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn cpu_identity_conv() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let weight = vec![1.0];
+        let weight = [1.0];
         let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, false);
         let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
         assert!(approx_eq(&out, &input, TOL));
@@ -535,8 +535,8 @@ mod tests {
     #[test]
     fn cpu_bias() {
         let input = vec![1.0, 2.0, 3.0];
-        let weight = vec![1.0];
-        let bias = vec![10.0];
+        let weight = [1.0];
+        let bias = [10.0];
         let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, true);
         let out = conv1d_cpu(&input, &weight, Some(&bias), &c).unwrap();
         assert!(approx_eq(&out, &[11.0, 12.0, 13.0], TOL));
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn error_bias_mismatch() {
         let c = cfg(1, 2, 1, 1, PaddingMode::Zero(0), 1, 1, true);
-        let bad_bias = vec![1.0];
+        let bad_bias = [1.0];
         assert!(conv1d_cpu(&[1.0], &[1.0, 2.0], Some(&bad_bias), &c).is_err());
     }
 
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn forward_dispatches_to_cpu() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let weight = vec![1.0];
+        let weight = [1.0];
         let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, false);
         let out = conv1d_forward(&input, &weight, None, &c).unwrap();
         assert!(approx_eq(&out, &input, TOL));
@@ -680,7 +680,7 @@ mod tests {
         let c = cfg(32, 64, 3, 2, PaddingMode::Zero(1), 1, 1, true);
         let input = vec![1.0f32; 32 * 128];
         let weight = vec![0.01f32; 64 * 32 * 3];
-        let bias = vec![0.5f32; 64];
+        let bias = [0.5f32; 64];
         let result = launch_conv1d(&input, &weight, Some(&bias), &c, 128);
         assert!(result.is_ok(), "CUDA strided conv1d failed: {result:?}");
     }
@@ -699,8 +699,8 @@ mod tests {
 
     #[test]
     fn cpu_single_element_input() {
-        let input = vec![42.0];
-        let weight = vec![2.0];
+        let input = [42.0];
+        let weight = [2.0];
         let c = cfg(1, 1, 1, 1, PaddingMode::Zero(0), 1, 1, false);
         let out = conv1d_cpu(&input, &weight, None, &c).unwrap();
         assert!(approx_eq(&out, &[84.0], TOL));

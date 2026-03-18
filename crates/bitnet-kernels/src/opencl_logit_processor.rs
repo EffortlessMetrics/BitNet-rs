@@ -830,7 +830,7 @@ mod tests {
 
     #[test]
     fn bias_multiple_tokens() {
-        let mut logits = vec![0.0; 10];
+        let mut logits = [0.0; 10];
         let bias = LogitBias::from_pairs([(0, 1.0), (5, 2.0), (9, 3.0)]);
         bias.warp(&mut logits, &[], 0);
         assert!((logits[0] - 1.0).abs() < 1e-6);
@@ -843,7 +843,7 @@ mod tests {
 
     #[test]
     fn ngram_blocks_repeated_bigram() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         // History: [3, 5, 7, 3, 5] — bigram [3,5] appeared, so 7 should be banned
         let token_ids = vec![3, 5, 7, 3, 5];
         NoRepeatNgramWarper::new(2).warp(&mut logits, &token_ids, 0);
@@ -861,7 +861,7 @@ mod tests {
 
     #[test]
     fn ngram_blocks_repeated_trigram() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         // History: [1, 2, 3, 1, 2] — trigram [1,2,3] appeared, suffix=[1,2], ban 3
         let token_ids = vec![1, 2, 3, 1, 2];
         NoRepeatNgramWarper::new(3).warp(&mut logits, &token_ids, 0);
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn ngram_no_repeat_found_is_noop() {
-        let original = vec![1.0; 10];
+        let original = [1.0; 10];
         let mut logits = original.clone();
         // All unique tokens.
         let token_ids = vec![1, 2, 3, 4, 5];
@@ -898,7 +898,7 @@ mod tests {
 
     #[test]
     fn ngram_multiple_continuations_banned() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         // History: [5, 3, 5, 7, 5] — suffix=[5], after 5 we saw 3 and 7.
         let token_ids = vec![5, 3, 5, 7, 5];
         NoRepeatNgramWarper::new(2).warp(&mut logits, &token_ids, 0);
@@ -908,7 +908,7 @@ mod tests {
 
     #[test]
     fn ngram_does_not_ban_unrelated_tokens() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         let token_ids = vec![1, 2, 3, 1, 2];
         NoRepeatNgramWarper::new(3).warp(&mut logits, &token_ids, 0);
         // Only 3 should be banned (trigram [1,2,3] repeat).
@@ -1130,7 +1130,7 @@ mod tests {
 
     #[test]
     fn stats_single_token() {
-        let logits = vec![5.0];
+        let logits = [5.0];
         let stats = LogitStats::compute(&logits);
         assert!((stats.entropy - 0.0).abs() < 1e-5);
         assert!((stats.top1_confidence - 1.0).abs() < 1e-5);
@@ -1184,7 +1184,7 @@ mod tests {
 
     #[test]
     fn all_same_logits_topk() {
-        let mut logits = vec![2.0; 5];
+        let mut logits = [2.0; 5];
         TopKWarper::new(3).warp(&mut logits, &[], 0);
         let finite = logits.iter().filter(|v| v.is_finite()).count();
         assert!(finite >= 3);
@@ -1192,7 +1192,7 @@ mod tests {
 
     #[test]
     fn all_same_logits_temperature() {
-        let mut logits = vec![2.0; 5];
+        let mut logits = [2.0; 5];
         TemperatureWarper::new(0.5).warp(&mut logits, &[], 0);
         // All should be 4.0.
         for l in &logits {
@@ -1202,7 +1202,7 @@ mod tests {
 
     #[test]
     fn single_logit_temperature_zero() {
-        let mut logits = vec![3.0];
+        let mut logits = [3.0];
         TemperatureWarper::new(0.0).warp(&mut logits, &[], 0);
         // Single token stays finite.
         assert!(logits[0].is_finite());
@@ -1334,7 +1334,7 @@ mod tests {
 
     #[test]
     fn property_ngram_idempotent() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         let token_ids = vec![1, 2, 3, 1, 2];
         let warper = NoRepeatNgramWarper::new(3);
 

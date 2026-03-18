@@ -461,7 +461,7 @@ mod tests {
     #[test]
     fn rmsnorm_linear_matches_reference() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         // 2×4 weight matrix → out_dim = 2
         let weight = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
         let fused = fused_rmsnorm_linear(&input, &weight, &gamma, EPS).unwrap();
@@ -471,9 +471,9 @@ mod tests {
 
     #[test]
     fn rmsnorm_linear_single_element() {
-        let input = vec![3.0];
-        let gamma = vec![1.0];
-        let weight = vec![2.0];
+        let input = [3.0];
+        let gamma = [1.0];
+        let weight = [2.0];
         let fused = fused_rmsnorm_linear(&input, &weight, &gamma, EPS).unwrap();
         let reference = reference_rmsnorm_linear(&input, &weight, &gamma, EPS);
         assert!(max_abs_error(&fused, &reference) < TOL);
@@ -481,9 +481,9 @@ mod tests {
 
     #[test]
     fn rmsnorm_linear_zero_input() {
-        let input = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
-        let weight = vec![1.0; 8];
+        let input = [0.0; 4];
+        let gamma = [1.0; 4];
+        let weight = [1.0; 8];
         let fused = fused_rmsnorm_linear(&input, &weight, &gamma, EPS).unwrap();
         // All zeros normed → all zeros output.
         for &v in &fused {
@@ -538,8 +538,8 @@ mod tests {
 
     #[test]
     fn gelu_linear_zero_input() {
-        let input = vec![0.0; 4];
-        let weight = vec![1.0; 8];
+        let input = [0.0; 4];
+        let weight = [1.0; 8];
         let bias = vec![0.5, 0.5];
         let fused = fused_gelu_linear(&input, &weight, &bias).unwrap();
         // GELU(0) = 0 → output = bias
@@ -550,9 +550,9 @@ mod tests {
 
     #[test]
     fn gelu_linear_single_element() {
-        let input = vec![2.0];
-        let weight = vec![1.0];
-        let bias = vec![0.0];
+        let input = [2.0];
+        let weight = [1.0];
+        let bias = [0.0];
         let fused = fused_gelu_linear(&input, &weight, &bias).unwrap();
         let expected = gelu(2.0);
         assert!((fused[0] - expected).abs() < TOL);
@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn softmax_mask_sums_to_one() {
         let scores = vec![2.0, 1.0, 0.5, 3.0];
-        let mask = vec![0.0; 4];
+        let mask = [0.0; 4];
         let result = fused_softmax_mask(&scores, &mask, 1.0).unwrap();
         let sum: f32 = result.iter().sum();
         assert!((sum - 1.0).abs() < TOL, "softmax sum = {sum}");
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn softmax_mask_fully_masked() {
         let scores = vec![1.0, 2.0, 3.0];
-        let mask = vec![-1e30; 3];
+        let mask = [-1e30; 3];
         let result = fused_softmax_mask(&scores, &mask, 1.0).unwrap();
         // All masked → uniform after softmax (all exp(-big) ≈ 0 → 0/0 guarded).
         for &v in &result {
@@ -622,7 +622,7 @@ mod tests {
     fn softmax_mask_numerical_stability() {
         // Large values that would overflow without max-subtraction.
         let scores = vec![1000.0, 1001.0, 1002.0];
-        let mask = vec![0.0; 3];
+        let mask = [0.0; 3];
         let result = fused_softmax_mask(&scores, &mask, 1.0).unwrap();
         assert!(result.iter().all(|v| v.is_finite()), "must be finite: {result:?}");
         let sum: f32 = result.iter().sum();
@@ -635,7 +635,7 @@ mod tests {
     fn add_normalize_matches_reference() {
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![0.5, -0.5, 0.25, -0.25];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let fused = fused_add_normalize(&a, &b, &gamma, EPS).unwrap();
         let reference = reference_add_normalize(&a, &b, &gamma, EPS);
         assert!(max_abs_error(&fused, &reference) < TOL, "fused {fused:?} vs ref {reference:?}");
@@ -651,8 +651,8 @@ mod tests {
     #[test]
     fn add_normalize_zero_residual() {
         let a = vec![1.0, 2.0, 3.0];
-        let b = vec![0.0; 3];
-        let gamma = vec![1.0; 3];
+        let b = [0.0; 3];
+        let gamma = [1.0; 3];
         let fused = fused_add_normalize(&a, &b, &gamma, EPS).unwrap();
         let reference = reference_add_normalize(&a, &b, &gamma, EPS);
         assert!(max_abs_error(&fused, &reference) < TOL);

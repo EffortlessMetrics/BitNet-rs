@@ -869,7 +869,7 @@ mod tests {
     #[test]
     fn test_stochastic_identical_distributions() {
         // When draft ≈ target, acceptance should be very high.
-        let logits = vec![1.0f32; 4];
+        let logits = [1.0f32; 4];
         let probs = cpu_softmax(&logits);
         let draft_lp = probs[0].ln();
         let mut accepted = 0;
@@ -899,7 +899,7 @@ mod tests {
         // Uniform logits → entropy = ln(10). Token prob = 0.1, surprise = ln(10).
         // deviation = |ln(10) - ln(10)| / ln(10) = 0 → accepted actually.
         // Use skewed distribution instead.
-        let mut logits = vec![0.0f32; 10];
+        let mut logits = [0.0f32; 10];
         logits[0] = 10.0; // peaked at 0
         // Token 5 has very low prob under this distribution.
         let accepted = v.verify_position(5, -10.0, &logits, 10);
@@ -961,7 +961,7 @@ mod tests {
         let mut dec = SpeculativeDecoder::new(cfg, 42);
         let draft = DraftProposal::new(vec![1, 2, 3, 4], vec![-0.1; 4]);
         // Target argmax is 0 everywhere → no match.
-        let target = vec![logits_with_max(10, 0); 5];
+        let target: Vec<Vec<f32>> = (0..5).map(|_| logits_with_max(10, 0)).collect();
         let res = dec.step(&draft, &target, 10, 1.0, 2.0);
         assert_eq!(res.accepted_count, 0);
         assert_eq!(res.first_rejected_pos, Some(0));
@@ -1043,7 +1043,7 @@ mod tests {
         let cfg = SpecConfig::new("d", 2, AcceptanceMethod::Greedy);
         let mut dec = SpeculativeDecoder::new(cfg, 1);
         let draft = DraftProposal::new(vec![0, 0], vec![-0.1; 2]);
-        let target = vec![logits_with_max(4, 0); 3];
+        let target: Vec<Vec<f32>> = (0..3).map(|_| logits_with_max(4, 0)).collect();
         dec.step(&draft, &target, 4, 1.0, 1.0);
         assert!(dec.stats().total_steps > 0);
         dec.reset_stats();
@@ -1070,7 +1070,7 @@ mod tests {
 
         // Step 2: none accepted.
         let draft2 = DraftProposal::new(vec![9, 8, 7, 6], vec![-0.1; 4]);
-        let target2 = vec![logits_with_max(10, 0); 5];
+        let target2: Vec<Vec<f32>> = (0..5).map(|_| logits_with_max(10, 0)).collect();
         dec.step(&draft2, &target2, 10, 3.0, 8.0);
 
         assert_eq!(dec.stats().total_steps, 2);
@@ -1196,7 +1196,7 @@ mod tests {
     #[test]
     fn test_cpu_verify_batch_greedy_all_match() {
         let draft_tokens = vec![1, 2, 3];
-        let draft_lps = vec![-0.1; 3];
+        let draft_lps = [-0.1; 3];
         let target = vec![logits_with_max(10, 1), logits_with_max(10, 2), logits_with_max(10, 3)];
         let mask =
             cpu_verify_batch(&draft_tokens, &draft_lps, &target, 10, AcceptanceMethod::Greedy, 42);
@@ -1206,8 +1206,8 @@ mod tests {
     #[test]
     fn test_cpu_verify_batch_greedy_none_match() {
         let draft_tokens = vec![1, 2, 3];
-        let draft_lps = vec![-0.1; 3];
-        let target = vec![logits_with_max(10, 0); 3];
+        let draft_lps = [-0.1; 3];
+        let target: Vec<Vec<f32>> = (0..3).map(|_| logits_with_max(10, 0)).collect();
         let mask =
             cpu_verify_batch(&draft_tokens, &draft_lps, &target, 10, AcceptanceMethod::Greedy, 42);
         assert_eq!(mask, vec![false, false, false]);
@@ -1216,7 +1216,7 @@ mod tests {
     #[test]
     fn test_cpu_verify_batch_partial() {
         let draft_tokens = vec![1, 2, 3];
-        let draft_lps = vec![-0.1; 3];
+        let draft_lps = [-0.1; 3];
         let target = vec![
             logits_with_max(10, 1), // match
             logits_with_max(10, 0), // mismatch
@@ -1267,7 +1267,7 @@ mod tests {
         let mut dec = SpeculativeDecoder::new(cfg, 42);
         // vocab_size=1: only token 0 exists.
         let draft = DraftProposal::new(vec![0, 0], vec![0.0; 2]);
-        let target = vec![vec![5.0]; 3]; // three rows, each with single logit
+        let target: Vec<Vec<f32>> = (0..3).map(|_| vec![5.0]).collect(); // three rows, each with single logit
         let res = dec.step(&draft, &target, 1, 1.0, 1.0);
         assert_eq!(res.accepted_count, 2);
         assert_eq!(res.output_tokens, vec![0, 0, 0]);
@@ -1288,7 +1288,7 @@ mod tests {
     #[test]
     fn test_identical_distributions_stochastic() {
         // When draft and target are identical, acceptance rate → 100%.
-        let logits = vec![1.0f32; 8];
+        let logits = [1.0f32; 8];
         let prob = cpu_softmax(&logits);
         let draft_lp = prob[0].ln();
         let cfg = SpecConfig::new("draft", 1, AcceptanceMethod::Stochastic);
@@ -1296,7 +1296,7 @@ mod tests {
         for seed in 1..=50u64 {
             let mut dec = SpeculativeDecoder::new(cfg.clone(), seed);
             let draft = DraftProposal::new(vec![0], vec![draft_lp]);
-            let target = vec![logits.clone(), logits.clone()];
+            let target: Vec<Vec<f32>> = vec![logits.to_vec(), logits.to_vec()];
             let res = dec.step(&draft, &target, 8, 0.0, 0.0);
             accepted_total += res.accepted_count;
         }

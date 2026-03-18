@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn ternary_all_zeros() {
-        let input = vec![0.0; 16];
+        let input = [0.0; 16];
         let cfg = QuantizeConfig { block_size: 8, method: QuantMethod::AbsMax };
         let (q, scale) = quantize_ternary_cpu(&input, &cfg).unwrap();
         assert!(q.iter().all(|&v| v == 0));
@@ -655,7 +655,7 @@ mod tests {
 
     #[test]
     fn i2s_all_zeros() {
-        let input = vec![0.0; 16];
+        let input = [0.0; 16];
         let (packed, scales) = quantize_i2s_cpu(&input, 8).unwrap();
         assert!(packed.iter().all(|&b| b == 0));
         assert!(scales.iter().all(|&s| s == 0.0));

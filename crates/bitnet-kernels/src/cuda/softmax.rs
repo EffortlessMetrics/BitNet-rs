@@ -1061,7 +1061,7 @@ mod tests {
         let n = 4;
         let cfg = SoftmaxConfig::for_shape(n, n).unwrap().with_causal_mask();
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         softmax_cpu(&input, &mut output, &cfg).unwrap();
 
         let sum_last: f32 = output[12..16].iter().sum();
@@ -1074,7 +1074,7 @@ mod tests {
         let n = 5;
         let cfg = SoftmaxConfig::for_shape(n, n).unwrap().with_causal_mask();
         let input: Vec<f32> = (0..25).map(|i| (i as f32) * 0.1).collect();
-        let mut output = vec![0.0_f32; 25];
+        let mut output = [0.0_f32; 25];
         softmax_cpu(&input, &mut output, &cfg).unwrap();
 
         for row in 0..n {
@@ -1250,12 +1250,12 @@ mod tests {
     #[test]
     fn test_batched_softmax_rejects_short_slices() {
         let cfg = BatchedSoftmaxConfig::new(2, 2, 4).unwrap();
-        let short = vec![0.0_f32; 10]; // need 64
-        let mut out = vec![0.0_f32; 64];
+        let short = [0.0_f32; 10]; // need 64
+        let mut out = [0.0_f32; 64];
         assert!(batched_softmax_cpu(&short, &mut out, &cfg).is_err());
 
-        let full = vec![0.0_f32; 64];
-        let mut short_out = vec![0.0_f32; 10];
+        let full = [0.0_f32; 64];
+        let mut short_out = [0.0_f32; 10];
         assert!(batched_softmax_cpu(&full, &mut short_out, &cfg).is_err());
     }
 
@@ -1372,8 +1372,8 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu"]
     fn test_cuda_softmax_with_temperature() {
         let cfg = SoftmaxConfig::for_shape(32000, 1).unwrap().with_temperature(0.7).unwrap();
-        let input = vec![0.0_f32; 32000];
-        let mut output = vec![0.0_f32; 32000];
+        let input = [0.0_f32; 32000];
+        let mut output = [0.0_f32; 32000];
         let result = launch_softmax(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA softmax launch failed: {result:?}");
     }
@@ -1392,8 +1392,8 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu"]
     fn test_cuda_log_softmax() {
         let cfg = SoftmaxConfig::for_shape(32000, 1).unwrap().with_log_softmax();
-        let input = vec![1.0_f32; 32000];
-        let mut output = vec![0.0_f32; 32000];
+        let input = [1.0_f32; 32000];
+        let mut output = [0.0_f32; 32000];
         let result = launch_softmax(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA log-softmax failed: {result:?}");
     }
@@ -1448,8 +1448,8 @@ mod tests {
         let n = 4;
         let cfg = SoftmaxConfig::for_shape(n, n).unwrap().with_causal_mask();
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut out_online = vec![0.0_f32; 16];
-        let mut out_std = vec![0.0_f32; 16];
+        let mut out_online = [0.0_f32; 16];
+        let mut out_std = [0.0_f32; 16];
         online_softmax_cpu(&input, &mut out_online, &cfg).unwrap();
         softmax_cpu(&input, &mut out_std, &cfg).unwrap();
 

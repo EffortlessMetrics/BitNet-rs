@@ -1111,7 +1111,7 @@ mod tests {
         assert_eq!(sparse.format, SparseFormat::CSR);
         assert_eq!(sparse.nnz(), 5);
 
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1123,7 +1123,7 @@ mod tests {
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 4);
 
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1138,7 +1138,7 @@ mod tests {
         assert_eq!(sparse.format, SparseFormat::CSC);
         assert_eq!(sparse.nnz(), 5);
 
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1150,7 +1150,7 @@ mod tests {
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 4);
 
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1165,7 +1165,7 @@ mod tests {
         assert_eq!(sparse.format, SparseFormat::COO);
         assert_eq!(sparse.nnz(), 5);
 
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1179,7 +1179,7 @@ mod tests {
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.format, SparseFormat::BSR);
 
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1190,7 +1190,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::BSR, 3, 4).unwrap().with_block_size(2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
 
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1202,7 +1202,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::Block, 4, 4).unwrap().with_block_size(2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
 
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1240,7 +1240,7 @@ mod tests {
         let dense = identity_4x4();
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-        let mut out = vec![0.0f32; 8]; // need 16
+        let mut out = [0.0f32; 8]; // need 16
         assert!(sparse_to_dense(&sparse, &mut out).is_err());
     }
 
@@ -1248,19 +1248,19 @@ mod tests {
 
     #[test]
     fn test_all_zero_matrix_csr() {
-        let dense = vec![0.0f32; 12];
+        let dense = [0.0f32; 12];
         let cfg = SparseConfig::new(SparseFormat::CSR, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 0);
 
-        let mut out = vec![1.0f32; 12];
+        let mut out = [1.0f32; 12];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
 
     #[test]
     fn test_all_zero_matrix_csc() {
-        let dense = vec![0.0f32; 6];
+        let dense = [0.0f32; 6];
         let cfg = SparseConfig::new(SparseFormat::CSC, 2, 3).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 0);
@@ -1268,7 +1268,7 @@ mod tests {
 
     #[test]
     fn test_all_zero_matrix_coo() {
-        let dense = vec![0.0f32; 6];
+        let dense = [0.0f32; 6];
         let cfg = SparseConfig::new(SparseFormat::COO, 2, 3).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 0);
@@ -1283,7 +1283,7 @@ mod tests {
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 6);
 
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1296,7 +1296,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 3];
+        let mut y = [0.0f32; 3];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         let expected = naive_matvec(&dense, &x, 3, 4);
         assert_close(&y, &expected, 1e-6);
@@ -1308,7 +1308,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSC, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 3];
+        let mut y = [0.0f32; 3];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         let expected = naive_matvec(&dense, &x, 3, 4);
         assert_close(&y, &expected, 1e-6);
@@ -1320,7 +1320,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::COO, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 3];
+        let mut y = [0.0f32; 3];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         let expected = naive_matvec(&dense, &x, 3, 4);
         assert_close(&y, &expected, 1e-6);
@@ -1332,7 +1332,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::BSR, 4, 4).unwrap().with_block_size(2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![10.0, 20.0, 30.0, 40.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         assert_close(&y, &x, 1e-6);
     }
@@ -1347,7 +1347,7 @@ mod tests {
                 cfg = cfg.with_block_size(2).unwrap();
             }
             let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-            let mut y = vec![0.0f32; 4];
+            let mut y = [0.0f32; 4];
             sparse_matvec(&sparse, &x, &mut y).unwrap();
             assert_close(&y, &x, 1e-6);
         }
@@ -1359,7 +1359,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![1.0, 2.0]; // too small
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         assert!(sparse_matvec(&sparse, &x, &mut y).is_err());
     }
 
@@ -1369,7 +1369,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 2]; // too small
+        let mut y = [0.0f32; 2]; // too small
         assert!(sparse_matvec(&sparse, &x, &mut y).is_err());
     }
 
@@ -1381,7 +1381,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // 4×2
-        let mut c = vec![0.0f32; 6]; // 3×2
+        let mut c = [0.0f32; 6]; // 3×2
         sparse_matmul(&sparse, &b, &mut c, 2).unwrap();
         let expected = naive_matmul(&dense_a, &b, 3, 4, 2);
         assert_close(&c, &expected, 1e-5);
@@ -1393,7 +1393,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSC, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 6];
+        let mut c = [0.0f32; 6];
         sparse_matmul(&sparse, &b, &mut c, 2).unwrap();
         let expected = naive_matmul(&dense_a, &b, 3, 4, 2);
         assert_close(&c, &expected, 1e-5);
@@ -1405,7 +1405,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::COO, 3, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 6];
+        let mut c = [0.0f32; 6];
         sparse_matmul(&sparse, &b, &mut c, 2).unwrap();
         let expected = naive_matmul(&dense_a, &b, 3, 4, 2);
         assert_close(&c, &expected, 1e-5);
@@ -1423,7 +1423,7 @@ mod tests {
             7.0, 8.0, 9.0,
             10.0, 11.0, 12.0,
         ];
-        let mut c = vec![0.0f32; 12];
+        let mut c = [0.0f32; 12];
         sparse_matmul(&sparse, &b, &mut c, 3).unwrap();
         // Identity × B = B
         assert_close(&c, &b, 1e-5);
@@ -1440,7 +1440,7 @@ mod tests {
                 cfg = cfg.with_block_size(2).unwrap();
             }
             let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
-            let mut c = vec![0.0f32; 8];
+            let mut c = [0.0f32; 8];
             sparse_matmul(&sparse, &b, &mut c, 2).unwrap();
             assert_close(&c, &expected, 1e-5);
         }
@@ -1452,7 +1452,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
         let b = vec![1.0, 2.0]; // too small for 4×2
-        let mut c = vec![0.0f32; 8];
+        let mut c = [0.0f32; 8];
         assert!(sparse_matmul(&sparse, &b, &mut c, 2).is_err());
     }
 
@@ -1462,7 +1462,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4]; // need 8
+        let mut c = [0.0f32; 4]; // need 8
         assert!(sparse_matmul(&sparse, &b, &mut c, 2).is_err());
     }
 
@@ -1471,7 +1471,7 @@ mod tests {
         let dense_a = identity_4x4();
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense_a, &cfg).unwrap();
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         assert!(sparse_matmul(&sparse, &[], &mut c, 0).is_err());
     }
 
@@ -1567,7 +1567,7 @@ mod tests {
 
     #[test]
     fn test_sparsity_ratio_all_zero() {
-        let data = vec![0.0; 10];
+        let data = [0.0; 10];
         let ratio = sparsity_ratio(&data, 0.0);
         assert!((ratio - 1.0).abs() < 1e-10);
     }
@@ -1665,7 +1665,7 @@ mod tests {
 
         // A is 2×4
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 8]; // 2×4
+        let mut c = [0.0f32; 8]; // 2×4
         block_sparse_matmul(&a, &sparse_w, &mut c, 2).unwrap();
         assert_close(&c, &a, 1e-5);
     }
@@ -1678,7 +1678,7 @@ mod tests {
 
         // A is 1×3 (one row, k=3 = sparse_w.rows)
         let a = vec![1.0, 2.0, 3.0];
-        let mut c = vec![0.0f32; 4]; // 1×4
+        let mut c = [0.0f32; 4]; // 1×4
         block_sparse_matmul(&a, &sparse_w, &mut c, 1).unwrap();
 
         let expected = naive_matmul(&a, &dense_w, 1, 3, 4);
@@ -1690,8 +1690,8 @@ mod tests {
         let dense = identity_4x4();
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-        let a = vec![1.0; 16];
-        let mut c = vec![0.0f32; 16];
+        let a = [1.0; 16];
+        let mut c = [0.0f32; 16];
         assert!(block_sparse_matmul(&a, &sparse, &mut c, 4).is_err());
     }
 
@@ -1701,7 +1701,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::BSR, 4, 4).unwrap().with_block_size(2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let a = vec![1.0, 2.0]; // need 4
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(block_sparse_matmul(&a, &sparse, &mut c, 1).is_err());
     }
 
@@ -1710,8 +1710,8 @@ mod tests {
         let dense = identity_4x4();
         let cfg = SparseConfig::new(SparseFormat::BSR, 4, 4).unwrap().with_block_size(2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-        let a = vec![1.0; 4];
-        let mut c = vec![0.0f32; 2]; // need 4
+        let a = [1.0; 4];
+        let mut c = [0.0f32; 2]; // need 4
         assert!(block_sparse_matmul(&a, &sparse, &mut c, 1).is_err());
     }
 
@@ -1723,7 +1723,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let x = vec![10.0, 20.0, 30.0, 40.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         sparse_matvec_forward(&sparse, &x, &mut y).unwrap();
         assert_close(&y, &x, 1e-6);
     }
@@ -1734,7 +1734,7 @@ mod tests {
         let cfg = SparseConfig::new(SparseFormat::CSR, 4, 4).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
         let b = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 8];
+        let mut c = [0.0f32; 8];
         sparse_matmul_forward(&sparse, &b, &mut c, 2).unwrap();
         assert_close(&c, &b, 1e-5);
     }
@@ -1757,7 +1757,7 @@ mod tests {
         assert!((ratio - 0.5).abs() < 1e-10);
 
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 3];
+        let mut y = [0.0f32; 3];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         let expected = naive_matvec(&dense, &x, 3, 4);
         assert_close(&y, &expected, 1e-6);
@@ -1776,7 +1776,7 @@ mod tests {
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
 
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         let expected = naive_matvec(&dense, &x, 4, 4);
         assert_close(&y, &expected, 1e-6);
@@ -1851,13 +1851,13 @@ mod tests {
             }
             let sparse = dense_to_sparse(&dense, &cfg).unwrap();
 
-            let mut out = vec![0.0f32; 1];
+            let mut out = [0.0f32; 1];
             sparse_to_dense(&sparse, &mut out).unwrap();
             assert_close(&out, &dense, 0.0);
 
             // SpMV
             let x = vec![2.0f32];
-            let mut y = vec![0.0f32; 1];
+            let mut y = [0.0f32; 1];
             sparse_matvec(&sparse, &x, &mut y).unwrap();
             assert_close(&y, &[84.0], 1e-6);
         }
@@ -1871,7 +1871,7 @@ mod tests {
         assert_eq!(sparse.nnz(), 0);
 
         let x = vec![5.0f32];
-        let mut y = vec![999.0f32; 1];
+        let mut y = [999.0f32; 1];
         sparse_matvec(&sparse, &x, &mut y).unwrap();
         assert_close(&y, &[0.0], 0.0);
     }
@@ -1887,7 +1887,7 @@ mod tests {
                 cfg = cfg.with_block_size(1).unwrap();
             }
             let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-            let mut out = vec![0.0f32; 4];
+            let mut out = [0.0f32; 4];
             sparse_to_dense(&sparse, &mut out).unwrap();
             assert_close(&out, &dense, 0.0);
         }
@@ -1905,8 +1905,8 @@ mod tests {
         let sparse_bsr = dense_to_sparse(&dense, &cfg_bsr).unwrap();
 
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y_csr = vec![0.0f32; 3];
-        let mut y_bsr = vec![0.0f32; 3];
+        let mut y_csr = [0.0f32; 3];
+        let mut y_bsr = [0.0f32; 3];
         sparse_matvec(&sparse_csr, &x, &mut y_csr).unwrap();
         sparse_matvec(&sparse_bsr, &x, &mut y_bsr).unwrap();
         assert_close(&y_csr, &y_bsr, 1e-6);
@@ -1919,7 +1919,7 @@ mod tests {
         let dense: Vec<f32> = (0..16).map(|i| if i % 3 == 0 { i as f32 } else { 0.0 }).collect();
         let cfg = SparseConfig::new(SparseFormat::CSR, 2, 8).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1929,7 +1929,7 @@ mod tests {
         let dense: Vec<f32> = (0..16).map(|i| if i % 5 == 0 { i as f32 } else { 0.0 }).collect();
         let cfg = SparseConfig::new(SparseFormat::COO, 8, 2).unwrap();
         let sparse = dense_to_sparse(&dense, &cfg).unwrap();
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &dense, 0.0);
     }
@@ -1944,7 +1944,7 @@ mod tests {
         let sparse = dense_to_sparse(&data, &cfg).unwrap();
         assert_eq!(sparse.nnz(), 3); // 0.5, 1.0, -2.0
 
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         sparse_to_dense(&sparse, &mut out).unwrap();
         assert_close(&out, &data, 0.0);
     }

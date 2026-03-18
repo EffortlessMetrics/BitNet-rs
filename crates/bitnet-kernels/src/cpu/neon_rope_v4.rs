@@ -519,7 +519,7 @@ mod tests {
         let mut q1 = make_data(32);
         let mut k1 = make_data(32);
         let mut q2 = q1.clone();
-        let mut k2 = vec![99.0; 32];
+        let mut k2 = [99.0; 32];
         unsafe { neon_rope_apply_f32(&mut q1, &mut k1, 32, 5, BASE) };
         unsafe { neon_rope_apply_f32(&mut q2, &mut k2, 32, 5, BASE) };
         assert!(vecs_approx_eq(&q1, &q2, EPS));
@@ -1213,8 +1213,8 @@ mod tests {
 
     #[test]
     fn test_zeros_stay_zero_direct() {
-        let mut q = vec![0.0f32; 64];
-        let mut k = vec![0.0f32; 64];
+        let mut q = [0.0f32; 64];
+        let mut k = [0.0f32; 64];
         unsafe { neon_rope_apply_f32(&mut q, &mut k, 64, 5, BASE) };
         assert!(q.iter().all(|&x| x.abs() < EPS));
         assert!(k.iter().all(|&x| x.abs() < EPS));
@@ -1462,7 +1462,7 @@ mod tests {
         let b = 5usize;
 
         let mut twice = vec![1.0f32, 2.0];
-        let mut k_dummy = vec![0.0; 2];
+        let mut k_dummy = [0.0; 2];
         unsafe { neon_rope_apply_f32(&mut twice, &mut k_dummy, head_dim, a, BASE) };
         unsafe { neon_rope_apply_f32(&mut twice, &mut k_dummy, head_dim, b, BASE) };
 

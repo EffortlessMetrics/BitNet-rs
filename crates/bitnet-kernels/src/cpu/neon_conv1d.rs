@@ -628,8 +628,8 @@ mod tests {
     #[test]
     fn test_conv1d_identity_kernel() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 5];
+        let kernel = [1.0];
+        let mut output = [0.0; 5];
         conv1d_neon(&input, &kernel, 5, 1, 1, &mut output);
         approx_eq(&output, &input, 1e-6);
     }
@@ -638,7 +638,7 @@ mod tests {
     fn test_conv1d_simple_3tap() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![1.0, 1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_neon(&input, &kernel, 5, 3, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -648,7 +648,7 @@ mod tests {
     fn test_conv1d_stride2() {
         let input: Vec<f32> = (0..10).map(|i| i as f32).collect();
         let kernel = vec![1.0, 0.5];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         conv1d_neon(&input, &kernel, 10, 2, 2, &mut output);
         let expected = reference_conv1d(&input, &kernel, 2);
         approx_eq(&output, &expected, 1e-6);
@@ -658,7 +658,7 @@ mod tests {
     fn test_conv1d_stride3() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let kernel = vec![1.0, -1.0, 0.5];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         conv1d_neon(&input, &kernel, 12, 3, 3, &mut output);
         let expected = reference_conv1d(&input, &kernel, 3);
         approx_eq(&output, &expected, 1e-6);
@@ -668,7 +668,7 @@ mod tests {
     fn test_conv1d_kernel_equals_input() {
         let input = vec![1.0, 2.0, 3.0];
         let kernel = vec![0.5, 0.5, 0.5];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         conv1d_neon(&input, &kernel, 3, 3, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -678,7 +678,7 @@ mod tests {
     fn test_conv1d_kernel_longer_than_input() {
         let input = vec![1.0, 2.0];
         let kernel = vec![1.0, 1.0, 1.0];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         conv1d_neon(&input, &kernel, 2, 3, 1, &mut output);
         // No output produced; buffer untouched.
         assert_eq!(output[0], 99.0);
@@ -687,8 +687,8 @@ mod tests {
     #[test]
     fn test_conv1d_empty_input() {
         let input: Vec<f32> = vec![];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 1];
+        let kernel = [1.0];
+        let mut output = [0.0; 1];
         conv1d_neon(&input, &kernel, 0, 1, 1, &mut output);
         assert_eq!(output[0], 0.0);
     }
@@ -697,7 +697,7 @@ mod tests {
     fn test_conv1d_empty_kernel() {
         let input = vec![1.0, 2.0, 3.0];
         let kernel: Vec<f32> = vec![];
-        let mut output = vec![99.0; 3];
+        let mut output = [99.0; 3];
         conv1d_neon(&input, &kernel, 3, 0, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -705,17 +705,17 @@ mod tests {
     #[test]
     fn test_conv1d_zero_stride() {
         let input = vec![1.0, 2.0, 3.0];
-        let kernel = vec![1.0];
-        let mut output = vec![99.0; 3];
+        let kernel = [1.0];
+        let mut output = [99.0; 3];
         conv1d_neon(&input, &kernel, 3, 1, 0, &mut output);
         assert_eq!(output[0], 99.0);
     }
 
     #[test]
     fn test_conv1d_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let kernel = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 6];
+        let mut output = [99.0; 6];
         conv1d_neon(&input, &kernel, 8, 3, 1, &mut output);
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -726,7 +726,7 @@ mod tests {
     fn test_conv1d_negative_values() {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_neon(&input, &kernel, 4, 2, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -734,9 +734,9 @@ mod tests {
 
     #[test]
     fn test_conv1d_single_element_input_and_kernel() {
-        let input = vec![3.0];
-        let kernel = vec![2.0];
-        let mut output = vec![0.0; 1];
+        let input = [3.0];
+        let kernel = [2.0];
+        let mut output = [0.0; 1];
         conv1d_neon(&input, &kernel, 1, 1, 1, &mut output);
         assert!((output[0] - 6.0).abs() < 1e-6);
     }
@@ -744,8 +744,8 @@ mod tests {
     #[test]
     fn test_conv1d_large_kernel_4_aligned() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let kernel = vec![0.25; 4];
-        let mut output = vec![0.0; 13];
+        let kernel = [0.25; 4];
+        let mut output = [0.0; 13];
         conv1d_neon(&input, &kernel, 16, 4, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-5);
@@ -755,7 +755,7 @@ mod tests {
     fn test_conv1d_large_kernel_5_unaligned() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let kernel = vec![0.1, 0.2, 0.3, 0.2, 0.1];
-        let mut output = vec![0.0; 12];
+        let mut output = [0.0; 12];
         conv1d_neon(&input, &kernel, 16, 5, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-5);
@@ -764,8 +764,8 @@ mod tests {
     #[test]
     fn test_conv1d_large_kernel_8() {
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.1).collect();
-        let kernel = vec![1.0; 8];
-        let mut output = vec![0.0; 13];
+        let kernel = [1.0; 8];
+        let mut output = [0.0; 13];
         conv1d_neon(&input, &kernel, 20, 8, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-4);
@@ -775,7 +775,7 @@ mod tests {
     fn test_conv1d_large_kernel_9_unaligned() {
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.1).collect();
         let kernel: Vec<f32> = (0..9).map(|i| (i as f32) * 0.1).collect();
-        let mut output = vec![0.0; 12];
+        let mut output = [0.0; 12];
         conv1d_neon(&input, &kernel, 20, 9, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-4);
@@ -785,7 +785,7 @@ mod tests {
     fn test_conv1d_output_buffer_larger() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![99.0; 10];
+        let mut output = [99.0; 10];
         conv1d_neon(&input, &kernel, 4, 2, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output[..3], &expected, 1e-6);
@@ -797,7 +797,7 @@ mod tests {
     fn test_conv1d_input_len_less_than_slice() {
         let input = vec![1.0, 2.0, 3.0, 99.0, 99.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         // Only use first 3 elements of the input slice.
         conv1d_neon(&input, &kernel, 3, 2, 1, &mut output);
         let expected = reference_conv1d(&input[..3], &kernel, 1);
@@ -808,7 +808,7 @@ mod tests {
     fn test_conv1d_kernel_len_less_than_slice() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let kernel = vec![1.0, 0.5, 99.0, 99.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_neon(&input, &kernel, 4, 2, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel[..2], 1);
         approx_eq(&output, &expected, 1e-6);
@@ -821,7 +821,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![1.0, 1.0, 1.0];
         let bias = 10.0;
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_bias_neon(&input, &kernel, bias, 5, 3, 1, &mut output);
         let expected: Vec<f32> =
             reference_conv1d(&input, &kernel, 1).iter().map(|&v| v + bias).collect();
@@ -831,8 +831,8 @@ mod tests {
     #[test]
     fn test_conv1d_bias_zero() {
         let input = vec![1.0, 2.0, 3.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 3];
+        let kernel = [1.0];
+        let mut output = [0.0; 3];
         conv1d_bias_neon(&input, &kernel, 0.0, 3, 1, 1, &mut output);
         approx_eq(&output, &input, 1e-6);
     }
@@ -840,9 +840,9 @@ mod tests {
     #[test]
     fn test_conv1d_bias_negative() {
         let input = vec![5.0, 10.0, 15.0];
-        let kernel = vec![1.0];
+        let kernel = [1.0];
         let bias = -5.0;
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_bias_neon(&input, &kernel, bias, 3, 1, 1, &mut output);
         approx_eq(&output, &[0.0, 5.0, 10.0], 1e-6);
     }
@@ -852,7 +852,7 @@ mod tests {
         let input: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let kernel = vec![1.0, 1.0];
         let bias = 100.0;
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         conv1d_bias_neon(&input, &kernel, bias, 8, 2, 2, &mut output);
         let expected: Vec<f32> =
             reference_conv1d(&input, &kernel, 2).iter().map(|&v| v + bias).collect();
@@ -863,16 +863,16 @@ mod tests {
     fn test_conv1d_bias_empty_kernel() {
         let input = vec![1.0, 2.0];
         let kernel: Vec<f32> = vec![];
-        let mut output = vec![99.0; 2];
+        let mut output = [99.0; 2];
         conv1d_bias_neon(&input, &kernel, 5.0, 2, 0, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
 
     #[test]
     fn test_conv1d_bias_kernel_longer() {
-        let input = vec![1.0];
+        let input = [1.0];
         let kernel = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         conv1d_bias_neon(&input, &kernel, 5.0, 1, 3, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -880,9 +880,9 @@ mod tests {
     #[test]
     fn test_conv1d_bias_large_kernel() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let kernel = vec![0.25; 8];
+        let kernel = [0.25; 8];
         let bias = 1.0;
-        let mut output = vec![0.0; 9];
+        let mut output = [0.0; 9];
         conv1d_bias_neon(&input, &kernel, bias, 16, 8, 1, &mut output);
         let expected: Vec<f32> =
             reference_conv1d(&input, &kernel, 1).iter().map(|&v| v + bias).collect();
@@ -891,10 +891,10 @@ mod tests {
 
     #[test]
     fn test_conv1d_bias_all_zeros() {
-        let input = vec![0.0; 6];
+        let input = [0.0; 6];
         let kernel = vec![1.0, 2.0];
         let bias = 3.0;
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         conv1d_bias_neon(&input, &kernel, bias, 6, 2, 1, &mut output);
         for &v in &output {
             assert!((v - bias).abs() < 1e-6);
@@ -907,7 +907,7 @@ mod tests {
     fn test_depthwise_single_channel() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![1.0, 1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         depthwise_conv1d_neon(&input, &kernel, 1, 5, 3, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -919,7 +919,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         // ch0 kernel: [1,1], ch1 kernel: [0.5, 0.5]
         let kernels = vec![1.0, 1.0, 0.5, 0.5];
-        let mut output = vec![0.0; 6]; // 3 per channel
+        let mut output = [0.0; 6]; // 3 per channel
         depthwise_conv1d_neon(&input, &kernels, 2, 4, 2, 1, &mut output);
         let e0 = reference_conv1d(&input[0..4], &kernels[0..2], 1);
         let e1 = reference_conv1d(&input[4..8], &kernels[2..4], 1);
@@ -932,7 +932,7 @@ mod tests {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let kernels = vec![1.0, 1.0, 1.0, 1.0]; // 2 ch × k=2
         // out_per_ch = (8 - 2) / 2 + 1 = 4
-        let mut output = vec![0.0; 8]; // 4 per channel
+        let mut output = [0.0; 8]; // 4 per channel
         depthwise_conv1d_neon(&input, &kernels, 2, 8, 2, 2, &mut output);
         let e0 = reference_conv1d(&input[0..8], &kernels[0..2], 2);
         let e1 = reference_conv1d(&input[8..16], &kernels[2..4], 2);
@@ -943,8 +943,8 @@ mod tests {
     #[test]
     fn test_depthwise_zero_channels() {
         let input = vec![1.0, 2.0];
-        let kernel = vec![1.0];
-        let mut output = vec![99.0; 2];
+        let kernel = [1.0];
+        let mut output = [99.0; 2];
         depthwise_conv1d_neon(&input, &kernel, 0, 2, 1, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -952,8 +952,8 @@ mod tests {
     #[test]
     fn test_depthwise_zero_stride() {
         let input = vec![1.0, 2.0];
-        let kernel = vec![1.0];
-        let mut output = vec![99.0; 2];
+        let kernel = [1.0];
+        let mut output = [99.0; 2];
         depthwise_conv1d_neon(&input, &kernel, 1, 2, 1, 0, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -962,7 +962,7 @@ mod tests {
     fn test_depthwise_kernel_longer_than_input() {
         let input = vec![1.0, 2.0];
         let kernel = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         depthwise_conv1d_neon(&input, &kernel, 1, 2, 3, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -975,7 +975,7 @@ mod tests {
             0.5, 0.5, 0.5, // ch1 k=3
             -1.0, 1.0, -1.0, // ch2 k=3
         ];
-        let mut output = vec![0.0; 9]; // 3 per channel
+        let mut output = [0.0; 9]; // 3 per channel
         depthwise_conv1d_neon(&input, &kernels, 3, 5, 3, 1, &mut output);
         for ch in 0..3 {
             let in_slice = &input[ch * 5..(ch + 1) * 5];
@@ -988,8 +988,8 @@ mod tests {
     #[test]
     fn test_depthwise_large_kernel() {
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.1).collect();
-        let kernels = vec![0.125; 8]; // 1 ch × k=8
-        let mut output = vec![0.0; 13];
+        let kernels = [0.125; 8]; // 1 ch × k=8
+        let mut output = [0.0; 13];
         depthwise_conv1d_neon(&input, &kernels, 1, 20, 8, 1, &mut output);
         let expected = reference_conv1d(&input, &kernels[..8], 1);
         approx_eq(&output, &expected, 1e-4);
@@ -1000,7 +1000,7 @@ mod tests {
         // Output buffer too small → graceful no-op.
         let input = vec![1.0, 2.0, 3.0, 4.0]; // 2 ch × 2
         let kernels = vec![1.0, 1.0]; // 2 ch × k=1
-        let mut output = vec![99.0; 1]; // needs 4, has 1
+        let mut output = [99.0; 1]; // needs 4, has 1
         depthwise_conv1d_neon(&input, &kernels, 2, 2, 1, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -1011,7 +1011,7 @@ mod tests {
     fn test_conv1d_relu_positive() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![1.0, 1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_relu_neon(&input, &kernel, 5, 3, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -1021,7 +1021,7 @@ mod tests {
     fn test_conv1d_relu_negative_clipped() {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![99.0; 3];
+        let mut output = [99.0; 3];
         conv1d_relu_neon(&input, &kernel, 4, 2, 1, &mut output);
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -1032,7 +1032,7 @@ mod tests {
     fn test_conv1d_relu_mixed() {
         let input = vec![-2.0, 3.0, -1.0, 4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_relu_neon(&input, &kernel, 4, 2, 1, &mut output);
         let ref_out = reference_conv1d(&input, &kernel, 1);
         let expected: Vec<f32> = ref_out.iter().map(|&v| v.max(0.0)).collect();
@@ -1042,8 +1042,8 @@ mod tests {
     #[test]
     fn test_conv1d_relu_zero_output() {
         let input = vec![-5.0, -5.0, -5.0];
-        let kernel = vec![1.0];
-        let mut output = vec![99.0; 3];
+        let kernel = [1.0];
+        let mut output = [99.0; 3];
         conv1d_relu_neon(&input, &kernel, 3, 1, 1, &mut output);
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -1054,7 +1054,7 @@ mod tests {
     fn test_conv1d_relu_stride2() {
         let input: Vec<f32> = vec![-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         conv1d_relu_neon(&input, &kernel, 8, 2, 2, &mut output);
         let ref_out = reference_conv1d(&input, &kernel, 2);
         let expected: Vec<f32> = ref_out.iter().map(|&v| v.max(0.0)).collect();
@@ -1063,18 +1063,18 @@ mod tests {
 
     #[test]
     fn test_conv1d_relu_empty_kernel() {
-        let input = vec![1.0];
+        let input = [1.0];
         let kernel: Vec<f32> = vec![];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         conv1d_relu_neon(&input, &kernel, 1, 0, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
 
     #[test]
     fn test_conv1d_relu_kernel_longer() {
-        let input = vec![1.0];
+        let input = [1.0];
         let kernel = vec![1.0, 2.0];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         conv1d_relu_neon(&input, &kernel, 1, 2, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -1082,8 +1082,8 @@ mod tests {
     #[test]
     fn test_conv1d_relu_large_kernel() {
         let input: Vec<f32> = (0..16).map(|i| (i as f32) - 8.0).collect();
-        let kernel = vec![0.5; 4];
-        let mut output = vec![0.0; 13];
+        let kernel = [0.5; 4];
+        let mut output = [0.0; 13];
         conv1d_relu_neon(&input, &kernel, 16, 4, 1, &mut output);
         let ref_out = reference_conv1d(&input, &kernel, 1);
         let expected: Vec<f32> = ref_out.iter().map(|&v| v.max(0.0)).collect();
@@ -1092,9 +1092,9 @@ mod tests {
 
     #[test]
     fn test_conv1d_relu_all_zeros_input() {
-        let input = vec![0.0; 6];
+        let input = [0.0; 6];
         let kernel = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 4];
+        let mut output = [99.0; 4];
         conv1d_relu_neon(&input, &kernel, 6, 3, 1, &mut output);
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -1106,7 +1106,7 @@ mod tests {
         // Conv result is exactly zero → stays zero.
         let input = vec![1.0, -1.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![99.0; 1];
+        let mut output = [99.0; 1];
         conv1d_relu_neon(&input, &kernel, 2, 2, 1, &mut output);
         assert_eq!(output[0], 0.0);
     }
@@ -1116,8 +1116,8 @@ mod tests {
     #[test]
     fn test_causal_conv1d_identity() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 5];
+        let kernel = [1.0];
+        let mut output = [0.0; 5];
         causal_conv1d_neon(&input, &kernel, 5, 1, &mut output);
         approx_eq(&output, &input, 1e-6);
     }
@@ -1126,7 +1126,7 @@ mod tests {
     fn test_causal_conv1d_2tap() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         causal_conv1d_neon(&input, &kernel, 4, 2, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1136,7 +1136,7 @@ mod tests {
     fn test_causal_conv1d_3tap() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![0.5, 0.3, 0.2];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         causal_conv1d_neon(&input, &kernel, 5, 3, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-5);
@@ -1144,9 +1144,9 @@ mod tests {
 
     #[test]
     fn test_causal_conv1d_output_length() {
-        let input = vec![1.0; 10];
-        let kernel = vec![1.0; 4];
-        let mut output = vec![0.0; 10];
+        let input = [1.0; 10];
+        let kernel = [1.0; 4];
+        let mut output = [0.0; 10];
         causal_conv1d_neon(&input, &kernel, 10, 4, &mut output);
         assert_eq!(output.len(), 10);
     }
@@ -1155,7 +1155,7 @@ mod tests {
     fn test_causal_conv1d_first_elements_padded() {
         let input = vec![10.0, 20.0, 30.0, 40.0];
         let kernel = vec![1.0, 0.0, 0.0]; // 3-tap, pad=2
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         causal_conv1d_neon(&input, &kernel, 4, 3, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1164,8 +1164,8 @@ mod tests {
     #[test]
     fn test_causal_conv1d_empty_input() {
         let input: Vec<f32> = vec![];
-        let kernel = vec![1.0];
-        let mut output = vec![99.0; 1];
+        let kernel = [1.0];
+        let mut output = [99.0; 1];
         causal_conv1d_neon(&input, &kernel, 0, 1, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -1174,7 +1174,7 @@ mod tests {
     fn test_causal_conv1d_empty_kernel() {
         let input = vec![1.0, 2.0];
         let kernel: Vec<f32> = vec![];
-        let mut output = vec![99.0; 2];
+        let mut output = [99.0; 2];
         causal_conv1d_neon(&input, &kernel, 2, 0, &mut output);
         assert_eq!(output[0], 99.0);
     }
@@ -1185,7 +1185,7 @@ mod tests {
         // with real input contribute.
         let input = vec![5.0, 10.0];
         let kernel = vec![1.0, 1.0, 1.0, 1.0]; // pad = 3
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         causal_conv1d_neon(&input, &kernel, 2, 4, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1193,18 +1193,18 @@ mod tests {
 
     #[test]
     fn test_causal_conv1d_single_element() {
-        let input = vec![7.0];
-        let kernel = vec![3.0];
-        let mut output = vec![0.0; 1];
+        let input = [7.0];
+        let kernel = [3.0];
+        let mut output = [0.0; 1];
         causal_conv1d_neon(&input, &kernel, 1, 1, &mut output);
         assert!((output[0] - 21.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_causal_conv1d_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let kernel = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 8];
+        let mut output = [99.0; 8];
         causal_conv1d_neon(&input, &kernel, 8, 3, &mut output);
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -1215,7 +1215,7 @@ mod tests {
     fn test_causal_conv1d_negative_values() {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         causal_conv1d_neon(&input, &kernel, 4, 2, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1224,8 +1224,8 @@ mod tests {
     #[test]
     fn test_causal_conv1d_large_kernel() {
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.1).collect();
-        let kernel = vec![0.125; 8];
-        let mut output = vec![0.0; 20];
+        let kernel = [0.125; 8];
+        let mut output = [0.0; 20];
         causal_conv1d_neon(&input, &kernel, 20, 8, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-4);
@@ -1234,10 +1234,10 @@ mod tests {
     #[test]
     fn test_causal_conv1d_impulse_response() {
         // Delta at position 0 → output is the kernel itself.
-        let mut input = vec![0.0; 8];
+        let mut input = [0.0; 8];
         input[0] = 1.0;
         let kernel = vec![0.5, 0.3, 0.2];
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         causal_conv1d_neon(&input, &kernel, 8, 3, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1249,8 +1249,8 @@ mod tests {
     fn test_bias_zero_equals_basic() {
         let input: Vec<f32> = (0..10).map(|i| i as f32).collect();
         let kernel = vec![0.5, -0.5, 0.25];
-        let mut out_basic = vec![0.0; 8];
-        let mut out_bias = vec![0.0; 8];
+        let mut out_basic = [0.0; 8];
+        let mut out_bias = [0.0; 8];
         conv1d_neon(&input, &kernel, 10, 3, 1, &mut out_basic);
         conv1d_bias_neon(&input, &kernel, 0.0, 10, 3, 1, &mut out_bias);
         approx_eq(&out_basic, &out_bias, 1e-6);
@@ -1261,8 +1261,8 @@ mod tests {
         // All positive results → ReLU should match basic.
         let input = vec![10.0, 20.0, 30.0, 40.0, 50.0];
         let kernel = vec![1.0, 1.0];
-        let mut out_basic = vec![0.0; 4];
-        let mut out_relu = vec![0.0; 4];
+        let mut out_basic = [0.0; 4];
+        let mut out_relu = [0.0; 4];
         conv1d_neon(&input, &kernel, 5, 2, 1, &mut out_basic);
         conv1d_relu_neon(&input, &kernel, 5, 2, 1, &mut out_relu);
         approx_eq(&out_basic, &out_relu, 1e-6);
@@ -1272,8 +1272,8 @@ mod tests {
     fn test_depthwise_1ch_equals_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let kernel = vec![1.0, -1.0];
-        let mut out_basic = vec![0.0; 4];
-        let mut out_dw = vec![0.0; 4];
+        let mut out_basic = [0.0; 4];
+        let mut out_dw = [0.0; 4];
         conv1d_neon(&input, &kernel, 5, 2, 1, &mut out_basic);
         depthwise_conv1d_neon(&input, &kernel, 1, 5, 2, 1, &mut out_dw);
         approx_eq(&out_basic, &out_dw, 1e-6);
@@ -1284,7 +1284,7 @@ mod tests {
         // For positions ≥ pad, causal conv should match basic conv.
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let kernel = vec![1.0, 1.0, 1.0]; // pad = 2
-        let mut causal_out = vec![0.0; 8];
+        let mut causal_out = [0.0; 8];
         causal_conv1d_neon(&input, &kernel, 8, 3, &mut causal_out);
         let basic = reference_conv1d(&input, &kernel, 1);
         // causal_out[2..8] should match basic[0..6]
@@ -1386,8 +1386,8 @@ mod tests {
     #[test]
     fn test_conv1d_stride_larger_than_input() {
         let input = vec![1.0, 2.0, 3.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 1];
+        let kernel = [1.0];
+        let mut output = [0.0; 1];
         // stride=5, input=3, kernel=1 → only 1 output
         conv1d_neon(&input, &kernel, 3, 1, 5, &mut output);
         assert!((output[0] - 1.0).abs() < 1e-6);
@@ -1396,8 +1396,8 @@ mod tests {
     #[test]
     fn test_conv1d_stride_equals_input() {
         let input = vec![1.0, 2.0, 3.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 1];
+        let kernel = [1.0];
+        let mut output = [0.0; 1];
         conv1d_neon(&input, &kernel, 3, 1, 3, &mut output);
         assert!((output[0] - 1.0).abs() < 1e-6);
     }
@@ -1405,9 +1405,9 @@ mod tests {
     #[test]
     fn test_conv1d_kernel_all_ones() {
         // Moving average.
-        let input = vec![2.0; 10];
-        let kernel = vec![1.0; 3];
-        let mut output = vec![0.0; 8];
+        let input = [2.0; 10];
+        let kernel = [1.0; 3];
+        let mut output = [0.0; 8];
         conv1d_neon(&input, &kernel, 10, 3, 1, &mut output);
         for &v in &output {
             assert!((v - 6.0).abs() < 1e-6);
@@ -1418,7 +1418,7 @@ mod tests {
     fn test_conv1d_alternating_signs() {
         let input: Vec<f32> = (0..8).map(|i| if i % 2 == 0 { 1.0 } else { -1.0 }).collect();
         let kernel = vec![1.0, 1.0];
-        let mut output = vec![0.0; 7];
+        let mut output = [0.0; 7];
         conv1d_neon(&input, &kernel, 8, 2, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-6);
@@ -1439,9 +1439,9 @@ mod tests {
 
     #[test]
     fn test_conv1d_very_small_values() {
-        let input = vec![1e-10; 6];
-        let kernel = vec![1e-10; 3];
-        let mut output = vec![0.0; 4];
+        let input = [1e-10; 6];
+        let kernel = [1e-10; 3];
+        let mut output = [0.0; 4];
         conv1d_neon(&input, &kernel, 6, 3, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-18);
@@ -1449,9 +1449,9 @@ mod tests {
 
     #[test]
     fn test_conv1d_large_values() {
-        let input = vec![1e6; 4];
-        let kernel = vec![1e6; 2];
-        let mut output = vec![0.0; 3];
+        let input = [1e6; 4];
+        let kernel = [1e6; 2];
+        let mut output = [0.0; 3];
         conv1d_neon(&input, &kernel, 4, 2, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1.0); // f32 precision
@@ -1461,7 +1461,7 @@ mod tests {
     fn test_depthwise_output_buffer_exact() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3
         let kernels = vec![1.0, 1.0, 1.0, 1.0]; // 2× k=2
-        let mut output = vec![0.0; 4]; // exactly 2×2
+        let mut output = [0.0; 4]; // exactly 2×2
         depthwise_conv1d_neon(&input, &kernels, 2, 3, 2, 1, &mut output);
         let e0 = reference_conv1d(&input[0..3], &kernels[0..2], 1);
         let e1 = reference_conv1d(&input[3..6], &kernels[2..4], 1);
@@ -1472,8 +1472,8 @@ mod tests {
     #[test]
     fn test_conv1d_relu_all_positive_input() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let kernel = vec![1.0];
-        let mut output = vec![0.0; 5];
+        let kernel = [1.0];
+        let mut output = [0.0; 5];
         conv1d_relu_neon(&input, &kernel, 5, 1, 1, &mut output);
         approx_eq(&output, &input, 1e-6);
     }
@@ -1481,9 +1481,9 @@ mod tests {
     #[test]
     fn test_conv1d_bias_matches_manual() {
         let input = vec![2.0, 4.0, 6.0];
-        let kernel = vec![0.5];
+        let kernel = [0.5];
         let bias = 1.0;
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         conv1d_bias_neon(&input, &kernel, bias, 3, 1, 1, &mut output);
         approx_eq(&output, &[2.0, 3.0, 4.0], 1e-6);
     }
@@ -1493,7 +1493,7 @@ mod tests {
         // Step function: zeros then ones.
         let input = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0];
         let kernel = vec![1.0, 1.0, 1.0]; // pad = 2
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         causal_conv1d_neon(&input, &kernel, 8, 3, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1504,7 +1504,7 @@ mod tests {
         // Exercises exactly one NEON 4-wide chunk.
         let input: Vec<f32> = (0..8).map(|i| (i + 1) as f32).collect();
         let kernel = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         conv1d_neon(&input, &kernel, 8, 4, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-5);
@@ -1515,7 +1515,7 @@ mod tests {
         // 1 NEON chunk + 3 scalar tail.
         let input: Vec<f32> = (0..12).map(|i| (i + 1) as f32).collect();
         let kernel: Vec<f32> = (0..7).map(|i| (i as f32) * 0.1).collect();
-        let mut output = vec![0.0; 6];
+        let mut output = [0.0; 6];
         conv1d_neon(&input, &kernel, 12, 7, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-4);
@@ -1526,7 +1526,7 @@ mod tests {
         // 3 NEON chunks + 1 scalar tail.
         let input: Vec<f32> = (0..20).map(|i| (i as f32) * 0.05).collect();
         let kernel: Vec<f32> = (0..13).map(|i| (i as f32) * 0.05).collect();
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         conv1d_neon(&input, &kernel, 20, 13, 1, &mut output);
         let expected = reference_conv1d(&input, &kernel, 1);
         approx_eq(&output, &expected, 1e-3);
@@ -1535,8 +1535,8 @@ mod tests {
     #[test]
     fn test_conv1d_kernel_size_1_many_outputs() {
         let input: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let kernel = vec![2.0];
-        let mut output = vec![0.0; 32];
+        let kernel = [2.0];
+        let mut output = [0.0; 32];
         conv1d_neon(&input, &kernel, 32, 1, 1, &mut output);
         let expected: Vec<f32> = input.iter().map(|&v| v * 2.0).collect();
         approx_eq(&output, &expected, 1e-5);
@@ -1545,8 +1545,8 @@ mod tests {
     #[test]
     fn test_causal_conv1d_large_kernel_small_input() {
         let input = vec![1.0, 2.0, 3.0];
-        let kernel = vec![1.0; 8]; // pad = 7
-        let mut output = vec![0.0; 3];
+        let kernel = [1.0; 8]; // pad = 7
+        let mut output = [0.0; 3];
         causal_conv1d_neon(&input, &kernel, 3, 8, &mut output);
         let expected = reference_causal_conv1d(&input, &kernel);
         approx_eq(&output, &expected, 1e-6);
@@ -1557,7 +1557,7 @@ mod tests {
         let input: Vec<f32> = (0..15).map(|i| i as f32).collect();
         let kernel = vec![1.0, -1.0, 0.5];
         let bias = 7.0;
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         conv1d_bias_neon(&input, &kernel, bias, 15, 3, 3, &mut output);
         let expected: Vec<f32> =
             reference_conv1d(&input, &kernel, 3).iter().map(|&v| v + bias).collect();

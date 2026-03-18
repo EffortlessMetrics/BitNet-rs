@@ -593,8 +593,8 @@ mod tests {
 
     #[test]
     fn test_qk_scaling() {
-        let q = vec![2.0; 4];
-        let k = vec![2.0; 4];
+        let q = [2.0; 4];
+        let k = [2.0; 4];
         let scores = sliding_window_qk_neon(&q, &k, 1, 4, 1, 0.5);
         // dot = 2*2*4 = 16, scaled by 0.5 → 8
         assert!(approx_eq(scores[0], 8.0, 1e-5));
@@ -693,7 +693,7 @@ mod tests {
     #[test]
     fn test_softmax_single_valid() {
         // Only one valid entry → weight = 1.0
-        let scores = vec![5.0];
+        let scores = [5.0];
         let out = sliding_window_softmax_neon(&scores, 1, 1);
         assert!(approx_eq(out[0], 1.0, 1e-5));
     }
@@ -746,7 +746,7 @@ mod tests {
     #[test]
     fn test_softmax_equal_scores_uniform() {
         // 4 tokens, window=4 (full causal), equal scores → row i has uniform 1/(i+1)
-        let mut scores = vec![f32::NEG_INFINITY; 16];
+        let mut scores = [f32::NEG_INFINITY; 16];
         for i in 0..4 {
             for j in 0..=i {
                 scores[i * 4 + j] = 0.0;
@@ -832,8 +832,8 @@ mod tests {
     fn test_attn_window1_diagonal() {
         // window=1 → each query only attends to itself → output[i] = v[i]
         let v = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // 4 tokens, hd=2
-        let q = vec![1.0; 8];
-        let k = vec![1.0; 8];
+        let q = [1.0; 8];
+        let k = [1.0; 8];
         let out = sliding_window_attention_neon(&q, &k, &v, 4, 2, 1);
         assert_slices_approx(&out, &v, 1e-4, "window1_diag");
     }
@@ -905,9 +905,9 @@ mod tests {
     #[test]
     fn test_attn_head_dim_not_multiple_of_lanes() {
         // head_dim = 3 (not multiple of 4)
-        let q = vec![1.0; 6]; // 2 tokens × hd=3
-        let k = vec![1.0; 6];
-        let v = vec![2.0; 6];
+        let q = [1.0; 6]; // 2 tokens × hd=3
+        let k = [1.0; 6];
+        let v = [2.0; 6];
         let out = sliding_window_attention_neon(&q, &k, &v, 2, 3, 10);
         for &x in &out {
             assert!(approx_eq(x, 2.0, 1e-4));
@@ -1096,9 +1096,9 @@ mod tests {
     #[test]
     fn test_seq_len_1_any_window() {
         for ws in [1, 2, 5, 100] {
-            let q = vec![1.0; 4];
-            let k = vec![1.0; 4];
-            let v = vec![42.0; 4];
+            let q = [1.0; 4];
+            let k = [1.0; 4];
+            let v = [42.0; 4];
             let out = sliding_window_attention_neon(&q, &k, &v, 1, 4, ws);
             assert_slices_approx(&out, &v, 1e-5, &format!("seq1_ws{ws}"));
         }
@@ -1118,8 +1118,8 @@ mod tests {
     #[test]
     fn test_zero_q_produces_uniform_weights() {
         // Q = 0 → all valid scores = 0 → uniform softmax
-        let q = vec![0.0; 12]; // 3 tokens × hd=4
-        let k = vec![1.0; 12];
+        let q = [0.0; 12]; // 3 tokens × hd=4
+        let k = [1.0; 12];
         let v: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let out = sliding_window_attention_neon(&q, &k, &v, 3, 4, 10);
         // Row 0: only position 0 → v[0..4] = [0,1,2,3]
@@ -1220,16 +1220,16 @@ mod tests {
 
     #[test]
     fn test_qk_scale_zero() {
-        let q = vec![1.0; 4];
-        let k = vec![1.0; 4];
+        let q = [1.0; 4];
+        let k = [1.0; 4];
         let scores = sliding_window_qk_neon(&q, &k, 1, 4, 1, 0.0);
         assert!(approx_eq(scores[0], 0.0, 1e-6));
     }
 
     #[test]
     fn test_qk_scale_negative() {
-        let q = vec![1.0; 4];
-        let k = vec![1.0; 4];
+        let q = [1.0; 4];
+        let k = [1.0; 4];
         let scores = sliding_window_qk_neon(&q, &k, 1, 4, 1, -1.0);
         // dot=4, scale=-1 → -4
         assert!(approx_eq(scores[0], -4.0, 1e-5));
@@ -1369,14 +1369,14 @@ mod tests {
 
     #[test]
     fn test_scalar_softmax_single() {
-        let mut data = vec![42.0];
+        let mut data = [42.0];
         scalar_softmax_inplace(&mut data);
         assert!(approx_eq(data[0], 1.0, 1e-6));
     }
 
     #[test]
     fn test_scalar_softmax_all_neg_inf() {
-        let mut data = vec![f32::NEG_INFINITY; 4];
+        let mut data = [f32::NEG_INFINITY; 4];
         scalar_softmax_inplace(&mut data);
         // Should not NaN – early exit
         for &x in &data {
@@ -1414,7 +1414,7 @@ mod tests {
     #[test]
     fn test_softmax_window_boundary_exact() {
         // 4 tokens, window=2: row 2 should only have weights at (2,1) and (2,2).
-        let mut scores = vec![f32::NEG_INFINITY; 16];
+        let mut scores = [f32::NEG_INFINITY; 16];
         for i in 0..4 {
             let start = if i >= 2 { i - 1 } else { 0 };
             for j in start..=i {
@@ -1561,8 +1561,8 @@ mod tests {
     fn test_attn_sequential_v_accumulation() {
         // 4 tokens, hd=1, window=4 (full causal), Q=K=ones
         // Row i: uniform weights 1/(i+1) over v[0..=i]
-        let q = vec![1.0; 4];
-        let k = vec![1.0; 4];
+        let q = [1.0; 4];
+        let k = [1.0; 4];
         let v = vec![0.0, 4.0, 8.0, 12.0];
         let out = sliding_window_attention_neon(&q, &k, &v, 4, 1, 4);
         // row 0: avg(0) = 0

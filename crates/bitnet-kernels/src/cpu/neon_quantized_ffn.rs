@@ -383,16 +383,16 @@ mod tests {
     fn test_linear_identity_weights() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let weights: Vec<i8> = vec![1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 4);
         assert_slices_approx(&output, &[1.0, 2.0, 3.0, 4.0], EPS);
     }
 
     #[test]
     fn test_linear_all_ones() {
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let weights = vec![1i8; 8 * 4];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 8, 4);
         for v in &output {
             assert!(approx_eq(*v, 8.0, EPS));
@@ -401,9 +401,9 @@ mod tests {
 
     #[test]
     fn test_linear_scale_factor() {
-        let input = vec![1.0; 4];
+        let input = [1.0; 4];
         let weights = vec![1i8; 4 * 2];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         quantized_linear_neon(&input, &weights, 0.5, &mut output, 4, 2);
         for v in &output {
             assert!(approx_eq(*v, 2.0, EPS));
@@ -413,17 +413,17 @@ mod tests {
     #[test]
     fn test_linear_negative_weights() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weights = vec![-1i8; 4];
-        let mut output = vec![0.0f32; 1];
+        let weights = [-1i8; 4];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 1);
         assert!(approx_eq(output[0], -10.0, EPS));
     }
 
     #[test]
     fn test_linear_zero_weights() {
-        let input = vec![5.0; 4];
+        let input = [5.0; 4];
         let weights = vec![0i8; 4 * 2];
-        let mut output = vec![99.0f32; 2];
+        let mut output = [99.0f32; 2];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 2);
         for v in &output {
             assert!(approx_eq(*v, 0.0, EPS));
@@ -432,9 +432,9 @@ mod tests {
 
     #[test]
     fn test_linear_zero_input() {
-        let input = vec![0.0f32; 4];
+        let input = [0.0f32; 4];
         let weights = vec![1i8; 4 * 2];
-        let mut output = vec![99.0f32; 2];
+        let mut output = [99.0f32; 2];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 2);
         for v in &output {
             assert!(approx_eq(*v, 0.0, EPS));
@@ -445,7 +445,7 @@ mod tests {
     fn test_linear_single_element() {
         let input = vec![3.0f32];
         let weights = vec![2i8];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 1, 1);
         assert!(approx_eq(output[0], 6.0, EPS));
     }
@@ -454,7 +454,7 @@ mod tests {
     fn test_linear_non_multiple_of_4() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let weights: Vec<i8> = vec![1, 1, 1, 1, 1];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 5, 1);
         assert!(approx_eq(output[0], 15.0, EPS));
     }
@@ -463,8 +463,8 @@ mod tests {
     fn test_linear_matches_scalar() {
         let input = vec![0.5, -1.0, 2.0, 0.3, -0.7, 1.5, 0.0, -2.0];
         let weights: Vec<i8> = vec![1, -1, 0, 1, -1, 1, 1, 0, 0, 1, -1, 1, -1, 0, 1, -1];
-        let mut neon_out = vec![0.0f32; 2];
-        let mut scalar_out = vec![0.0f32; 2];
+        let mut neon_out = [0.0f32; 2];
+        let mut scalar_out = [0.0f32; 2];
         quantized_linear_neon(&input, &weights, 0.75, &mut neon_out, 8, 2);
         scalar_quantized_linear_ref(&input, &weights, 0.75, &mut scalar_out, 8, 2);
         assert_slices_approx(&neon_out, &scalar_out, EPS);
@@ -485,18 +485,18 @@ mod tests {
 
     #[test]
     fn test_linear_zero_scale() {
-        let input = vec![1.0; 4];
-        let weights = vec![1i8; 4];
-        let mut output = vec![99.0f32; 1];
+        let input = [1.0; 4];
+        let weights = [1i8; 4];
+        let mut output = [99.0f32; 1];
         quantized_linear_neon(&input, &weights, 0.0, &mut output, 4, 1);
         assert!(approx_eq(output[0], 0.0, EPS));
     }
 
     #[test]
     fn test_linear_negative_scale() {
-        let input = vec![1.0; 4];
-        let weights = vec![1i8; 4];
-        let mut output = vec![0.0f32; 1];
+        let input = [1.0; 4];
+        let weights = [1i8; 4];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, -2.0, &mut output, 4, 1);
         assert!(approx_eq(output[0], -8.0, EPS));
     }
@@ -505,7 +505,7 @@ mod tests {
     fn test_linear_mixed_signs() {
         let input = vec![1.0, -1.0, 1.0, -1.0];
         let weights: Vec<i8> = vec![1, 1, -1, -1];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 1);
         // 1*1 + (-1)*1 + 1*(-1) + (-1)*(-1) = 1 - 1 - 1 + 1 = 0
         assert!(approx_eq(output[0], 0.0, EPS));
@@ -513,9 +513,9 @@ mod tests {
 
     #[test]
     fn test_linear_dim_7() {
-        let input = vec![1.0; 7];
+        let input = [1.0; 7];
         let weights = vec![1i8; 7 * 3];
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 7, 3);
         for v in &output {
             assert!(approx_eq(*v, 7.0, EPS));
@@ -524,18 +524,18 @@ mod tests {
 
     #[test]
     fn test_linear_max_weight_values() {
-        let input = vec![1.0; 4];
-        let weights = vec![127i8; 4];
-        let mut output = vec![0.0f32; 1];
+        let input = [1.0; 4];
+        let weights = [127i8; 4];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 1);
         assert!(approx_eq(output[0], 508.0, EPS));
     }
 
     #[test]
     fn test_linear_min_weight_values() {
-        let input = vec![1.0; 4];
-        let weights = vec![-128i8; 4];
-        let mut output = vec![0.0f32; 1];
+        let input = [1.0; 4];
+        let weights = [-128i8; 4];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 1);
         assert!(approx_eq(output[0], -512.0, EPS));
     }
@@ -544,9 +544,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_zeros() {
-        let gate = vec![0.0f32; 8];
-        let up = vec![1.0f32; 8];
-        let mut output = vec![0.0f32; 8];
+        let gate = [0.0f32; 8];
+        let up = [1.0f32; 8];
+        let mut output = [0.0f32; 8];
         quantized_swiglu_neon(&gate, &up, &mut output);
         // silu(0) = 0 * sigmoid(0) = 0 * 0.5 = 0
         for v in &output {
@@ -556,9 +556,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_positive_gate() {
-        let gate = vec![2.0f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [2.0f32; 4];
+        let up = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         let expected = scalar_silu(2.0);
         for v in &output {
@@ -568,9 +568,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_negative_gate() {
-        let gate = vec![-3.0f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [-3.0f32; 4];
+        let up = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         let expected = scalar_silu(-3.0);
         for v in &output {
@@ -580,9 +580,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_up_scaling() {
-        let gate = vec![1.0f32; 4];
-        let up = vec![3.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [1.0f32; 4];
+        let up = [3.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         let expected = scalar_silu(1.0) * 3.0;
         for v in &output {
@@ -594,8 +594,8 @@ mod tests {
     fn test_swiglu_matches_scalar() {
         let gate = vec![0.5, -1.0, 2.0, -0.3, 0.7, -2.0, 1.5, 0.0];
         let up = vec![1.0, 2.0, -1.0, 0.5, -0.5, 3.0, -2.0, 1.0];
-        let mut neon_out = vec![0.0f32; 8];
-        let mut scalar_out = vec![0.0f32; 8];
+        let mut neon_out = [0.0f32; 8];
+        let mut scalar_out = [0.0f32; 8];
         quantized_swiglu_neon(&gate, &up, &mut neon_out);
         scalar_swiglu_ref(&gate, &up, &mut scalar_out);
         assert_slices_approx(&neon_out, &scalar_out, EPS);
@@ -604,8 +604,8 @@ mod tests {
     #[test]
     fn test_swiglu_non_multiple_of_4() {
         let gate = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let up = vec![1.0; 5];
-        let mut output = vec![0.0f32; 5];
+        let up = [1.0; 5];
+        let mut output = [0.0f32; 5];
         quantized_swiglu_neon(&gate, &up, &mut output);
         for (i, &g) in gate.iter().enumerate() {
             assert!(approx_eq(output[i], scalar_silu(g), EPS));
@@ -616,16 +616,16 @@ mod tests {
     fn test_swiglu_single_element() {
         let gate = vec![1.5f32];
         let up = vec![2.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_swiglu_neon(&gate, &up, &mut output);
         assert!(approx_eq(output[0], scalar_silu(1.5) * 2.0, EPS));
     }
 
     #[test]
     fn test_swiglu_large_positive() {
-        let gate = vec![10.0f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [10.0f32; 4];
+        let up = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         // silu(10) ≈ 10.0 (sigmoid(10) ≈ 1.0)
         for v in &output {
@@ -635,9 +635,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_large_negative() {
-        let gate = vec![-10.0f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [-10.0f32; 4];
+        let up = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         // silu(-10) ≈ 0.0
         for v in &output {
@@ -647,9 +647,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_both_negative() {
-        let gate = vec![-1.0f32; 4];
-        let up = vec![-2.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [-1.0f32; 4];
+        let up = [-2.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         let expected = scalar_silu(-1.0) * (-2.0);
         for v in &output {
@@ -659,11 +659,11 @@ mod tests {
 
     #[test]
     fn test_swiglu_symmetry() {
-        let gate_pos = vec![2.0f32; 4];
-        let gate_neg = vec![-2.0f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut out_pos = vec![0.0f32; 4];
-        let mut out_neg = vec![0.0f32; 4];
+        let gate_pos = [2.0f32; 4];
+        let gate_neg = [-2.0f32; 4];
+        let up = [1.0f32; 4];
+        let mut out_pos = [0.0f32; 4];
+        let mut out_neg = [0.0f32; 4];
         quantized_swiglu_neon(&gate_pos, &up, &mut out_pos);
         quantized_swiglu_neon(&gate_neg, &up, &mut out_neg);
         // silu is NOT symmetric but we can check relationship
@@ -675,9 +675,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_zero_up() {
-        let gate = vec![5.0f32; 4];
-        let up = vec![0.0f32; 4];
-        let mut output = vec![99.0f32; 4];
+        let gate = [5.0f32; 4];
+        let up = [0.0f32; 4];
+        let mut output = [99.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         for v in &output {
             assert!(approx_eq(*v, 0.0, EPS));
@@ -688,8 +688,8 @@ mod tests {
     fn test_swiglu_16_elements() {
         let gate: Vec<f32> = (0..16).map(|i| (i as f32) * 0.25 - 2.0).collect();
         let up: Vec<f32> = (0..16).map(|i| (i as f32) * 0.1 + 0.5).collect();
-        let mut neon_out = vec![0.0f32; 16];
-        let mut scalar_out = vec![0.0f32; 16];
+        let mut neon_out = [0.0f32; 16];
+        let mut scalar_out = [0.0f32; 16];
         quantized_swiglu_neon(&gate, &up, &mut neon_out);
         scalar_swiglu_ref(&gate, &up, &mut scalar_out);
         assert_slices_approx(&neon_out, &scalar_out, EPS);
@@ -701,7 +701,7 @@ mod tests {
     fn test_residual_alpha_one() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
         let ffn = vec![0.5, 0.5, 0.5, 0.5];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         assert_slices_approx(&output, &[1.5, 2.5, 3.5, 4.5], EPS);
     }
@@ -709,17 +709,17 @@ mod tests {
     #[test]
     fn test_residual_alpha_zero() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let ffn = vec![10.0; 4];
-        let mut output = vec![0.0f32; 4];
+        let ffn = [10.0; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 0.0);
         assert_slices_approx(&output, &input, EPS);
     }
 
     #[test]
     fn test_residual_alpha_half() {
-        let input = vec![2.0; 4];
-        let ffn = vec![4.0; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [2.0; 4];
+        let ffn = [4.0; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 0.5);
         // 2.0 + 0.5 * 4.0 = 4.0
         for v in &output {
@@ -729,9 +729,9 @@ mod tests {
 
     #[test]
     fn test_residual_negative_alpha() {
-        let input = vec![3.0; 4];
-        let ffn = vec![1.0; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [3.0; 4];
+        let ffn = [1.0; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, -1.0);
         for v in &output {
             assert!(approx_eq(*v, 2.0, EPS));
@@ -740,9 +740,9 @@ mod tests {
 
     #[test]
     fn test_residual_non_multiple_of_4() {
-        let input = vec![1.0; 7];
-        let ffn = vec![2.0; 7];
-        let mut output = vec![0.0f32; 7];
+        let input = [1.0; 7];
+        let ffn = [2.0; 7];
+        let mut output = [0.0f32; 7];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         for v in &output {
             assert!(approx_eq(*v, 3.0, EPS));
@@ -751,9 +751,9 @@ mod tests {
 
     #[test]
     fn test_residual_zeros() {
-        let input = vec![0.0; 8];
-        let ffn = vec![0.0; 8];
-        let mut output = vec![99.0f32; 8];
+        let input = [0.0; 8];
+        let ffn = [0.0; 8];
+        let mut output = [99.0f32; 8];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         for v in &output {
             assert!(approx_eq(*v, 0.0, EPS));
@@ -764,7 +764,7 @@ mod tests {
     fn test_residual_single_element() {
         let input = vec![5.0f32];
         let ffn = vec![3.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 2.0);
         assert!(approx_eq(output[0], 11.0, EPS));
     }
@@ -773,16 +773,16 @@ mod tests {
     fn test_residual_negative_values() {
         let input = vec![-1.0, -2.0, -3.0, -4.0];
         let ffn = vec![-1.0, -1.0, -1.0, -1.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         assert_slices_approx(&output, &[-2.0, -3.0, -4.0, -5.0], EPS);
     }
 
     #[test]
     fn test_residual_large_alpha() {
-        let input = vec![1.0; 4];
-        let ffn = vec![0.001; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0; 4];
+        let ffn = [0.001; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1000.0);
         for v in &output {
             assert!(approx_eq(*v, 2.0, EPS));
@@ -793,7 +793,7 @@ mod tests {
     fn test_residual_16_elements() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let ffn: Vec<f32> = (0..16).map(|i| (i as f32) * 0.1).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         for i in 0..16 {
             let expected = input[i] + ffn[i];
@@ -804,10 +804,10 @@ mod tests {
     #[test]
     fn test_residual_in_place_semantics() {
         // Verify output doesn't depend on its initial value
-        let input = vec![1.0; 4];
-        let ffn = vec![2.0; 4];
-        let mut out1 = vec![0.0f32; 4];
-        let mut out2 = vec![999.0f32; 4];
+        let input = [1.0; 4];
+        let ffn = [2.0; 4];
+        let mut out1 = [0.0f32; 4];
+        let mut out2 = [999.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut out1, 1.0);
         quantized_ffn_residual_neon(&input, &ffn, &mut out2, 1.0);
         assert_slices_approx(&out1, &out2, EPS);
@@ -815,9 +815,9 @@ mod tests {
 
     #[test]
     fn test_residual_dim_5() {
-        let input = vec![1.0; 5];
-        let ffn = vec![1.0; 5];
-        let mut output = vec![0.0f32; 5];
+        let input = [1.0; 5];
+        let ffn = [1.0; 5];
+        let mut output = [0.0f32; 5];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 0.5);
         for v in &output {
             assert!(approx_eq(*v, 1.5, EPS));
@@ -1212,11 +1212,11 @@ mod tests {
 
     #[test]
     fn test_double_residual() {
-        let input = vec![1.0; 8];
-        let ffn1 = vec![0.5; 8];
-        let ffn2 = vec![0.25; 8];
-        let mut mid = vec![0.0f32; 8];
-        let mut out = vec![0.0f32; 8];
+        let input = [1.0; 8];
+        let ffn1 = [0.5; 8];
+        let ffn2 = [0.25; 8];
+        let mut mid = [0.0f32; 8];
+        let mut out = [0.0f32; 8];
         quantized_ffn_residual_neon(&input, &ffn1, &mut mid, 1.0);
         quantized_ffn_residual_neon(&mid, &ffn2, &mut out, 1.0);
         for v in &out {
@@ -1260,7 +1260,7 @@ mod tests {
     fn test_linear_dim_1() {
         let input = vec![7.0f32];
         let weights = vec![3i8];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 2.0, &mut output, 1, 1);
         assert!(approx_eq(output[0], 42.0, EPS));
     }
@@ -1269,7 +1269,7 @@ mod tests {
     fn test_swiglu_dim_3() {
         let gate = vec![1.0, 2.0, 3.0];
         let up = vec![1.0, 1.0, 1.0];
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         quantized_swiglu_neon(&gate, &up, &mut output);
         for (i, &g) in gate.iter().enumerate() {
             assert!(approx_eq(output[i], scalar_silu(g), EPS));
@@ -1280,7 +1280,7 @@ mod tests {
     fn test_residual_dim_3() {
         let input = vec![1.0, 2.0, 3.0];
         let ffn = vec![0.1, 0.2, 0.3];
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         assert_slices_approx(&output, &[1.1, 2.2, 3.3], EPS);
     }
@@ -1291,7 +1291,7 @@ mod tests {
         let w_gate = vec![1i8];
         let w_up = vec![1i8];
         let w_down = vec![1i8];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_ffn_forward_neon(
             &input,
             &w_gate,
@@ -1310,9 +1310,9 @@ mod tests {
 
     #[test]
     fn test_linear_alternating_weights() {
-        let input = vec![1.0; 8];
+        let input = [1.0; 8];
         let weights: Vec<i8> = (0..8).map(|i| if i % 2 == 0 { 1 } else { -1 }).collect();
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 8, 1);
         // sum = 1-1+1-1+1-1+1-1 = 0
         assert!(approx_eq(output[0], 0.0, EPS));
@@ -1320,9 +1320,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_gate_one_up_zero() {
-        let gate = vec![1.0f32; 4];
-        let up = vec![0.0f32; 4];
-        let mut output = vec![99.0f32; 4];
+        let gate = [1.0f32; 4];
+        let up = [0.0f32; 4];
+        let mut output = [99.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         for v in &output {
             assert!(approx_eq(*v, 0.0, EPS));
@@ -1333,7 +1333,7 @@ mod tests {
     fn test_residual_with_mixed_signs() {
         let input = vec![1.0, -1.0, 2.0, -2.0];
         let ffn = vec![-1.0, 1.0, -2.0, 2.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         assert_slices_approx(&output, &[0.0, 0.0, 0.0, 0.0], EPS);
     }
@@ -1344,8 +1344,8 @@ mod tests {
     fn test_linear_deterministic() {
         let input: Vec<f32> = (0..16).map(|i| (i as f32) * 0.1).collect();
         let weights: Vec<i8> = (0..16 * 4).map(|i| (i % 3) as i8 - 1).collect();
-        let mut out1 = vec![0.0f32; 4];
-        let mut out2 = vec![0.0f32; 4];
+        let mut out1 = [0.0f32; 4];
+        let mut out2 = [0.0f32; 4];
         quantized_linear_neon(&input, &weights, 0.5, &mut out1, 16, 4);
         quantized_linear_neon(&input, &weights, 0.5, &mut out2, 16, 4);
         assert_slices_approx(&out1, &out2, 0.0);
@@ -1355,8 +1355,8 @@ mod tests {
     fn test_swiglu_deterministic() {
         let gate: Vec<f32> = (0..12).map(|i| (i as f32) * 0.3 - 1.5).collect();
         let up: Vec<f32> = (0..12).map(|i| (i as f32) * 0.2 + 0.1).collect();
-        let mut out1 = vec![0.0f32; 12];
-        let mut out2 = vec![0.0f32; 12];
+        let mut out1 = [0.0f32; 12];
+        let mut out2 = [0.0f32; 12];
         quantized_swiglu_neon(&gate, &up, &mut out1);
         quantized_swiglu_neon(&gate, &up, &mut out2);
         assert_slices_approx(&out1, &out2, 0.0);
@@ -1366,8 +1366,8 @@ mod tests {
     fn test_residual_deterministic() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let ffn: Vec<f32> = (0..12).map(|i| (i as f32) * 0.5).collect();
-        let mut out1 = vec![0.0f32; 12];
-        let mut out2 = vec![0.0f32; 12];
+        let mut out1 = [0.0f32; 12];
+        let mut out2 = [0.0f32; 12];
         quantized_ffn_residual_neon(&input, &ffn, &mut out1, 0.7);
         quantized_ffn_residual_neon(&input, &ffn, &mut out2, 0.7);
         assert_slices_approx(&out1, &out2, 0.0);
@@ -1411,8 +1411,8 @@ mod tests {
     fn test_swiglu_32_elements() {
         let gate: Vec<f32> = (0..32).map(|i| (i as f32) * 0.1 - 1.6).collect();
         let up: Vec<f32> = (0..32).map(|i| (i as f32) * 0.05 + 0.1).collect();
-        let mut neon_out = vec![0.0f32; 32];
-        let mut scalar_out = vec![0.0f32; 32];
+        let mut neon_out = [0.0f32; 32];
+        let mut scalar_out = [0.0f32; 32];
         quantized_swiglu_neon(&gate, &up, &mut neon_out);
         scalar_swiglu_ref(&gate, &up, &mut scalar_out);
         assert_slices_approx(&neon_out, &scalar_out, EPS);
@@ -1422,7 +1422,7 @@ mod tests {
     fn test_residual_32_elements() {
         let input: Vec<f32> = (0..32).map(|i| i as f32).collect();
         let ffn: Vec<f32> = (0..32).map(|i| (i as f32) * 0.1).collect();
-        let mut output = vec![0.0f32; 32];
+        let mut output = [0.0f32; 32];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 2.0);
         for i in 0..32 {
             let expected = input[i] + 2.0 * ffn[i];
@@ -1433,8 +1433,8 @@ mod tests {
     #[test]
     fn test_linear_fractional_input() {
         let input = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let weights = vec![1i8; 8];
-        let mut output = vec![0.0f32; 1];
+        let weights = [1i8; 8];
+        let mut output = [0.0f32; 1];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 8, 1);
         let expected: f32 = input.iter().sum();
         assert!(approx_eq(output[0], expected, EPS));
@@ -1456,9 +1456,9 @@ mod tests {
 
     #[test]
     fn test_swiglu_near_zero_gate() {
-        let gate = vec![1e-6f32; 4];
-        let up = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let gate = [1e-6f32; 4];
+        let up = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         // silu(~0) ≈ 0
         for v in &output {
@@ -1468,9 +1468,9 @@ mod tests {
 
     #[test]
     fn test_residual_large_values() {
-        let input = vec![1e6f32; 4];
-        let ffn = vec![1e6f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [1e6f32; 4];
+        let ffn = [1e6f32; 4];
+        let mut output = [0.0f32; 4];
         quantized_ffn_residual_neon(&input, &ffn, &mut output, 1.0);
         for v in &output {
             assert!(approx_eq(*v, 2e6, 1.0));
@@ -1521,9 +1521,9 @@ mod tests {
 
     #[test]
     fn test_linear_output_overwrites() {
-        let input = vec![1.0; 4];
+        let input = [1.0; 4];
         let weights = vec![1i8; 4 * 2];
-        let mut output = vec![12345.0f32; 2];
+        let mut output = [12345.0f32; 2];
         quantized_linear_neon(&input, &weights, 1.0, &mut output, 4, 2);
         // Output should be overwritten, not accumulated
         for v in &output {
@@ -1534,9 +1534,9 @@ mod tests {
     #[test]
     fn test_swiglu_mismatched_shorter_output() {
         // Output shorter than gate/up — should only fill output.len()
-        let gate = vec![1.0; 8];
-        let up = vec![1.0; 8];
-        let mut output = vec![0.0f32; 4];
+        let gate = [1.0; 8];
+        let up = [1.0; 8];
+        let mut output = [0.0f32; 4];
         quantized_swiglu_neon(&gate, &up, &mut output);
         assert_eq!(output.len(), 4);
         for v in &output {

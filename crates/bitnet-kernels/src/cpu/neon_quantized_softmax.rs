@@ -535,7 +535,7 @@ mod tests {
     #[test]
     fn softmax_single() {
         let input = [42.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         neon_softmax_f32(&input, &mut output);
         assert!((output[0] - 1.0).abs() < 1e-5);
     }
@@ -543,7 +543,7 @@ mod tests {
     #[test]
     fn softmax_two_elements() {
         let input = [1.0f32, 2.0];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_two");
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     fn softmax_four_elements_exact_lane() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_4");
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn softmax_eight_elements() {
         let input = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_8");
@@ -570,7 +570,7 @@ mod tests {
     #[test]
     fn softmax_non_lane_aligned() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_5");
@@ -579,7 +579,7 @@ mod tests {
     #[test]
     fn softmax_sixteen_elements() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_16");
@@ -588,7 +588,7 @@ mod tests {
     #[test]
     fn softmax_100_elements() {
         let input: Vec<f32> = (0..100).map(|i| (i as f32) * 0.01).collect();
-        let mut output = vec![0.0f32; 100];
+        let mut output = [0.0f32; 100];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-3, "softmax_100");
@@ -597,7 +597,7 @@ mod tests {
     #[test]
     fn softmax_1000_elements() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.001).collect();
-        let mut output = vec![0.0f32; 1000];
+        let mut output = [0.0f32; 1000];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-3, "softmax_1000");
@@ -606,7 +606,7 @@ mod tests {
     #[test]
     fn softmax_sums_to_one() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut output = vec![0.0f32; 7];
+        let mut output = [0.0f32; 7];
         neon_softmax_f32(&input, &mut output);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4, "sum = {sum}");
@@ -615,7 +615,7 @@ mod tests {
     #[test]
     fn softmax_all_same_values() {
         let input = [5.0f32; 8];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_f32(&input, &mut output);
         for &v in &output {
             assert!((v - 0.125).abs() < 1e-5, "expected uniform 1/8, got {v}");
@@ -625,7 +625,7 @@ mod tests {
     #[test]
     fn softmax_all_zeros() {
         let input = [0.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         for &v in &output {
             assert!((v - 0.25).abs() < 1e-5);
@@ -635,7 +635,7 @@ mod tests {
     #[test]
     fn softmax_negative_values() {
         let input = [-1.0, -2.0, -3.0, -4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_neg");
@@ -644,7 +644,7 @@ mod tests {
     #[test]
     fn softmax_mixed_signs() {
         let input = [-5.0, 0.0, 5.0, 10.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_mixed");
@@ -655,7 +655,7 @@ mod tests {
     #[test]
     fn softmax_large_values_stability() {
         let input = [1000.0, 1001.0, 1002.0, 1003.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4, "sum = {sum}");
@@ -667,7 +667,7 @@ mod tests {
     #[test]
     fn softmax_very_large_values() {
         let input = [1e30, 1e30 + 1.0, 1e30 - 1.0, 1e30];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-3, "sum = {sum}");
@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn softmax_very_small_values() {
         let input = [-1000.0, -999.0, -998.0, -997.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-3, "sum = {sum}");
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn softmax_extreme_range() {
         let input = [-100.0, 0.0, 100.0, -100.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         // The 100.0 element should dominate.
         assert!(output[2] > 0.99, "max element prob = {}", output[2]);
@@ -700,7 +700,7 @@ mod tests {
         // We check it doesn't panic or produce NaN in a harmful way;
         // output may be NaN by IEEE rules (0/0) which is mathematically correct.
         let input = [f32::NEG_INFINITY; 4];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         // No panic is the primary assertion.
     }
@@ -708,7 +708,7 @@ mod tests {
     #[test]
     fn softmax_preserves_ordering() {
         let input = [1.0, 5.0, 3.0, 2.0, 4.0, 6.0, 0.0, 7.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_f32(&input, &mut output);
         // Softmax preserves strict ordering.
         assert!(output[7] > output[5]); // 7 > 6
@@ -719,7 +719,7 @@ mod tests {
     #[test]
     fn softmax_all_positive() {
         let input: Vec<f32> = (1..=10).map(|x| x as f32).collect();
-        let mut output = vec![0.0f32; 10];
+        let mut output = [0.0f32; 10];
         neon_softmax_f32(&input, &mut output);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4);
@@ -745,7 +745,7 @@ mod tests {
     #[test]
     fn inplace_matches_out_of_place() {
         let input = [2.0, 4.0, 6.0, 8.0, 1.0];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         neon_softmax_f32(&input, &mut output);
 
         let mut inplace = input.to_vec();
@@ -800,7 +800,7 @@ mod tests {
     #[test]
     fn log_softmax_single() {
         let input = [0.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         neon_log_softmax_f32(&input, &mut output);
         assert!(output[0].abs() < 1e-5, "log(1.0) should be ~0");
     }
@@ -808,7 +808,7 @@ mod tests {
     #[test]
     fn log_softmax_four() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-3, "log_softmax_4");
@@ -817,7 +817,7 @@ mod tests {
     #[test]
     fn log_softmax_eight() {
         let input = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-3, "log_softmax_8");
@@ -826,7 +826,7 @@ mod tests {
     #[test]
     fn log_softmax_non_aligned() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut output = vec![0.0f32; 7];
+        let mut output = [0.0f32; 7];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-3, "log_softmax_7");
@@ -835,7 +835,7 @@ mod tests {
     #[test]
     fn log_softmax_all_values_nonpositive() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_log_softmax_f32(&input, &mut output);
         // log-softmax values must be ≤ 0.
         for &v in &output {
@@ -846,8 +846,8 @@ mod tests {
     #[test]
     fn log_softmax_exp_matches_softmax() {
         let input = [2.0, 4.0, 6.0, 8.0];
-        let mut log_out = vec![0.0f32; 4];
-        let mut sm_out = vec![0.0f32; 4];
+        let mut log_out = [0.0f32; 4];
+        let mut sm_out = [0.0f32; 4];
         neon_log_softmax_f32(&input, &mut log_out);
         neon_softmax_f32(&input, &mut sm_out);
         // exp(log_softmax) ≈ softmax
@@ -860,7 +860,7 @@ mod tests {
     #[test]
     fn log_softmax_large_values() {
         let input = [1000.0, 1001.0, 1002.0, 1003.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_log_softmax_f32(&input, &mut output);
         assert!(output.iter().all(|&v| v.is_finite()));
         // Max element should have least negative log-softmax.
@@ -870,7 +870,7 @@ mod tests {
     #[test]
     fn log_softmax_100_elements() {
         let input: Vec<f32> = (0..100).map(|i| i as f32 * 0.1).collect();
-        let mut output = vec![0.0f32; 100];
+        let mut output = [0.0f32; 100];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-2, "log_softmax_100");
@@ -879,7 +879,7 @@ mod tests {
     #[test]
     fn log_softmax_negative_inputs() {
         let input = [-10.0, -5.0, -1.0, 0.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-3, "log_softmax_neg");
@@ -898,7 +898,7 @@ mod tests {
     #[test]
     fn temperature_single() {
         let input = [7.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         neon_softmax_with_temperature_f32(&input, &mut output, 2.0);
         assert!((output[0] - 1.0).abs() < 1e-5);
     }
@@ -906,8 +906,8 @@ mod tests {
     #[test]
     fn temperature_one_is_standard() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut t1_out = vec![0.0f32; 4];
-        let mut sm_out = vec![0.0f32; 4];
+        let mut t1_out = [0.0f32; 4];
+        let mut sm_out = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut t1_out, 1.0);
         neon_softmax_f32(&input, &mut sm_out);
         assert_close(&t1_out, &sm_out, 1e-5, "temp_1_vs_standard");
@@ -916,7 +916,7 @@ mod tests {
     #[test]
     fn temperature_near_zero_argmax() {
         let input = [1.0, 5.0, 3.0, 2.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut output, 1e-10);
         assert!((output[1] - 1.0).abs() < 1e-5, "argmax at idx 1");
         assert!(output[0].abs() < 1e-5);
@@ -927,7 +927,7 @@ mod tests {
     #[test]
     fn temperature_zero_exact() {
         let input = [3.0, 1.0, 4.0, 1.0, 5.0];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         neon_softmax_with_temperature_f32(&input, &mut output, 0.0);
         assert!((output[4] - 1.0).abs() < 1e-5, "argmax at idx 4");
         assert!(output[..4].iter().all(|&v| v.abs() < 1e-5));
@@ -936,7 +936,7 @@ mod tests {
     #[test]
     fn temperature_high_approaches_uniform() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut output, 1000.0);
         for &v in &output {
             assert!((v - 0.25).abs() < 0.01, "high temp should be ~uniform, got {v}");
@@ -946,8 +946,8 @@ mod tests {
     #[test]
     fn temperature_low_sharpens() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut low_out = vec![0.0f32; 4];
-        let mut std_out = vec![0.0f32; 4];
+        let mut low_out = [0.0f32; 4];
+        let mut std_out = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut low_out, 0.1);
         neon_softmax_f32(&input, &mut std_out);
         // Low temperature should make the max-element probability higher.
@@ -957,7 +957,7 @@ mod tests {
     #[test]
     fn temperature_sums_to_one() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_with_temperature_f32(&input, &mut output, 0.5);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4, "sum = {sum}");
@@ -967,7 +967,7 @@ mod tests {
     fn temperature_negative_temp_handled() {
         // Negative temperature inverts ordering; still should produce valid probs.
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut output, -1.0);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4);
@@ -978,7 +978,7 @@ mod tests {
     #[test]
     fn temperature_eight_elements() {
         let input = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_with_temperature_f32(&input, &mut output, 2.0);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4);
@@ -999,9 +999,9 @@ mod tests {
     fn masked_softmax_none_masked() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [false, false, false, false];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_masked_softmax_f32(&input, &mask, &mut output);
-        let mut expected = vec![0.0f32; 4];
+        let mut expected = [0.0f32; 4];
         neon_softmax_f32(&input, &mut expected);
         assert_close(&output, &expected, 1e-5, "mask_none");
     }
@@ -1010,7 +1010,7 @@ mod tests {
     fn masked_softmax_all_masked() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, true, true, true];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         for &v in &output {
             assert!(v.abs() < 1e-10, "all masked → all zeros");
@@ -1021,7 +1021,7 @@ mod tests {
     fn masked_softmax_partial_mask() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, false, true, false];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         // Masked positions should be ≈ 0.
         assert!(output[0] < 1e-5);
@@ -1035,7 +1035,7 @@ mod tests {
     fn masked_softmax_single_unmasked() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, true, false, true];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         assert!((output[2] - 1.0).abs() < 1e-4);
         assert!(output[0] < 1e-5);
@@ -1047,7 +1047,7 @@ mod tests {
     fn masked_softmax_eight_elements() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let mask = [true, false, true, false, true, false, true, false];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         // Masked positions should be ≈ 0.
         assert!(output[0] < 1e-5);
@@ -1062,7 +1062,7 @@ mod tests {
     fn masked_softmax_preserves_unmasked_order() {
         let input = [3.0, 1.0, 4.0, 1.0, 5.0];
         let mask = [false, true, false, true, false];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         assert!(output[4] > output[2]); // 5 > 4
         assert!(output[2] > output[0]); // 4 > 3
@@ -1072,7 +1072,7 @@ mod tests {
     fn masked_softmax_non_aligned() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let mask = [false, false, true, false, false];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         assert!(output[2] < 1e-5);
         let sum: f32 = output.iter().sum();
@@ -1092,7 +1092,7 @@ mod tests {
     #[test]
     fn top_k_zero() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_top_k_softmax_f32(&input, &mut output, 0);
         for &v in &output {
             assert!(v.abs() < 1e-10);
@@ -1102,7 +1102,7 @@ mod tests {
     #[test]
     fn top_k_one() {
         let input = [1.0, 5.0, 3.0, 2.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_top_k_softmax_f32(&input, &mut output, 1);
         assert!((output[1] - 1.0).abs() < 1e-5, "top-1 at idx 1");
         assert!(output[0].abs() < 1e-10);
@@ -1113,8 +1113,8 @@ mod tests {
     #[test]
     fn top_k_equals_len() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut top_out = vec![0.0f32; 4];
-        let mut full_out = vec![0.0f32; 4];
+        let mut top_out = [0.0f32; 4];
+        let mut full_out = [0.0f32; 4];
         neon_top_k_softmax_f32(&input, &mut top_out, 4);
         neon_softmax_f32(&input, &mut full_out);
         assert_close(&top_out, &full_out, 1e-5, "top_k_full");
@@ -1123,8 +1123,8 @@ mod tests {
     #[test]
     fn top_k_exceeds_len() {
         let input = [1.0, 2.0, 3.0];
-        let mut top_out = vec![0.0f32; 3];
-        let mut full_out = vec![0.0f32; 3];
+        let mut top_out = [0.0f32; 3];
+        let mut full_out = [0.0f32; 3];
         neon_top_k_softmax_f32(&input, &mut top_out, 100);
         neon_softmax_f32(&input, &mut full_out);
         assert_close(&top_out, &full_out, 1e-5, "top_k_exceed");
@@ -1133,7 +1133,7 @@ mod tests {
     #[test]
     fn top_k_two_of_four() {
         let input = [1.0, 4.0, 2.0, 3.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_top_k_softmax_f32(&input, &mut output, 2);
         // Top-2 are indices 1 (val=4) and 3 (val=3).
         assert!(output[0].abs() < 1e-10);
@@ -1147,7 +1147,7 @@ mod tests {
     #[test]
     fn top_k_three_of_eight() {
         let input = [1.0, 8.0, 3.0, 6.0, 2.0, 7.0, 4.0, 5.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_top_k_softmax_f32(&input, &mut output, 3);
         // Top-3 values: 8 (idx1), 7 (idx5), 6 (idx3).
         assert!(output[1] > 0.0);
@@ -1164,7 +1164,7 @@ mod tests {
     #[test]
     fn top_k_single_element() {
         let input = [42.0f32];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         neon_top_k_softmax_f32(&input, &mut output, 1);
         assert!((output[0] - 1.0).abs() < 1e-5);
     }
@@ -1172,7 +1172,7 @@ mod tests {
     #[test]
     fn top_k_preserves_relative_probs() {
         let input = [1.0, 10.0, 5.0, 2.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_top_k_softmax_f32(&input, &mut output, 2);
         // Top-2 are idx1 (10) and idx2 (5); idx1 should have higher prob.
         assert!(output[1] > output[2]);
@@ -1192,7 +1192,7 @@ mod tests {
     fn backward_single() {
         let output = [1.0f32];
         let grad_output = [1.0f32];
-        let mut grad_input = vec![0.0f32; 1];
+        let mut grad_input = [0.0f32; 1];
         neon_softmax_backward_f32(&output, &grad_output, &mut grad_input);
         // y*(g - y*g) = 1*(1 - 1) = 0
         assert!(grad_input[0].abs() < 1e-6);
@@ -1201,10 +1201,10 @@ mod tests {
     #[test]
     fn backward_four_elements() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [1.0, 0.0, 0.0, 0.0];
-        let mut grad_in = vec![0.0f32; 4];
+        let mut grad_in = [0.0f32; 4];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
 
         // Reference: dot = y[0]*1 = y[0]
@@ -1223,10 +1223,10 @@ mod tests {
     #[test]
     fn backward_gradient_sums_to_zero() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut y = vec![0.0f32; 5];
+        let mut y = [0.0f32; 5];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [0.1, 0.2, 0.3, 0.4, 0.5];
-        let mut grad_in = vec![0.0f32; 5];
+        let mut grad_in = [0.0f32; 5];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
 
         // The Jacobian of softmax has the property that
@@ -1238,10 +1238,10 @@ mod tests {
     #[test]
     fn backward_eight_elements() {
         let input = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-        let mut y = vec![0.0f32; 8];
+        let mut y = [0.0f32; 8];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [1.0, -1.0, 0.5, -0.5, 0.0, 1.0, -1.0, 0.5];
-        let mut grad_in = vec![0.0f32; 8];
+        let mut grad_in = [0.0f32; 8];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
 
         let dot: f32 = y.iter().zip(grad_out.iter()).map(|(a, b)| a * b).sum();
@@ -1254,10 +1254,10 @@ mod tests {
     #[test]
     fn backward_non_aligned() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        let mut y = vec![0.0f32; 7];
+        let mut y = [0.0f32; 7];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
-        let mut grad_in = vec![0.0f32; 7];
+        let mut grad_in = [0.0f32; 7];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
         let sum: f32 = grad_in.iter().sum();
         assert!(sum.abs() < 1e-4, "grad sum = {sum}");
@@ -1267,10 +1267,10 @@ mod tests {
     fn backward_uniform_grad_gives_zero() {
         // If grad_output is uniform, backward should be all zeros.
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [1.0, 1.0, 1.0, 1.0];
-        let mut grad_in = vec![0.0f32; 4];
+        let mut grad_in = [0.0f32; 4];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
         // dot = Σ y[i]*1 = 1.0; grad_in[i] = y[i]*(1 - 1) = 0
         for (i, &g) in grad_in.iter().enumerate() {
@@ -1281,10 +1281,10 @@ mod tests {
     #[test]
     fn backward_100_elements() {
         let input: Vec<f32> = (0..100).map(|i| i as f32 * 0.1).collect();
-        let mut y = vec![0.0f32; 100];
+        let mut y = [0.0f32; 100];
         neon_softmax_f32(&input, &mut y);
         let grad_out: Vec<f32> = (0..100).map(|i| (i as f32 - 50.0) * 0.01).collect();
-        let mut grad_in = vec![0.0f32; 100];
+        let mut grad_in = [0.0f32; 100];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
         let sum: f32 = grad_in.iter().sum();
         assert!(sum.abs() < 1e-3, "grad sum = {sum}");
@@ -1295,8 +1295,8 @@ mod tests {
     #[test]
     fn log_softmax_consistency_with_softmax() {
         let input = [1.0, 3.0, 5.0, 7.0, 2.0, 4.0, 6.0, 8.0];
-        let mut sm = vec![0.0f32; 8];
-        let mut lsm = vec![0.0f32; 8];
+        let mut sm = [0.0f32; 8];
+        let mut lsm = [0.0f32; 8];
         neon_softmax_f32(&input, &mut sm);
         neon_log_softmax_f32(&input, &mut lsm);
         for i in 0..8 {
@@ -1309,11 +1309,11 @@ mod tests {
     fn temp_scaled_matches_manual_scale() {
         let input = [2.0, 4.0, 6.0, 8.0];
         let temp = 2.0f32;
-        let mut temp_out = vec![0.0f32; 4];
+        let mut temp_out = [0.0f32; 4];
         neon_softmax_with_temperature_f32(&input, &mut temp_out, temp);
 
         let scaled: Vec<f32> = input.iter().map(|&x| x / temp).collect();
-        let mut manual_out = vec![0.0f32; 4];
+        let mut manual_out = [0.0f32; 4];
         neon_softmax_f32(&scaled, &mut manual_out);
         assert_close(&temp_out, &manual_out, 1e-5, "temp_manual");
     }
@@ -1321,7 +1321,7 @@ mod tests {
     #[test]
     fn top_k_subset_sums_correctly() {
         let input: Vec<f32> = (0..16).map(|i| i as f32).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         neon_top_k_softmax_f32(&input, &mut output, 5);
         let nonzero: Vec<f32> = output.iter().copied().filter(|&v| v > 0.0).collect();
         assert_eq!(nonzero.len(), 5, "should have exactly 5 nonzero");
@@ -1332,7 +1332,7 @@ mod tests {
     #[test]
     fn softmax_monotonically_increasing_input() {
         let input: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let mut output = vec![0.0f32; 12];
+        let mut output = [0.0f32; 12];
         neon_softmax_f32(&input, &mut output);
         for i in 1..12 {
             assert!(
@@ -1347,7 +1347,7 @@ mod tests {
     #[test]
     fn softmax_symmetry() {
         let input = [1.0, 2.0, 1.0, 2.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_softmax_f32(&input, &mut output);
         assert!((output[0] - output[2]).abs() < 1e-6, "symmetric 0 vs 2");
         assert!((output[1] - output[3]).abs() < 1e-6, "symmetric 1 vs 3");
@@ -1356,7 +1356,7 @@ mod tests {
     #[test]
     fn softmax_three_elements() {
         let input = [1.0, 2.0, 3.0];
-        let mut output = vec![0.0f32; 3];
+        let mut output = [0.0f32; 3];
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output, &expected, 1e-4, "softmax_3");
@@ -1374,7 +1374,7 @@ mod tests {
     #[test]
     fn log_softmax_sixteen() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         neon_log_softmax_f32(&input, &mut output);
         let expected = reference_log_softmax(&input);
         assert_close(&output, &expected, 1e-2, "log_softmax_16");
@@ -1383,7 +1383,7 @@ mod tests {
     #[test]
     fn temperature_1000_elements() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.001).collect();
-        let mut output = vec![0.0f32; 1000];
+        let mut output = [0.0f32; 1000];
         neon_softmax_with_temperature_f32(&input, &mut output, 0.5);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-3, "sum = {sum}");
@@ -1393,7 +1393,7 @@ mod tests {
     fn masked_softmax_1000_elements() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.001).collect();
         let mask: Vec<bool> = (0..1000).map(|i| i % 3 == 0).collect();
-        let mut output = vec![0.0f32; 1000];
+        let mut output = [0.0f32; 1000];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         // Masked positions (every 3rd) should be ≈ 0.
         for (i, &v) in output.iter().enumerate() {
@@ -1408,10 +1408,10 @@ mod tests {
     #[test]
     fn backward_1000_elements_sum_zero() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.001).collect();
-        let mut y = vec![0.0f32; 1000];
+        let mut y = [0.0f32; 1000];
         neon_softmax_f32(&input, &mut y);
         let grad_out: Vec<f32> = (0..1000).map(|i| (i as f32 - 500.0) * 0.001).collect();
-        let mut grad_in = vec![0.0f32; 1000];
+        let mut grad_in = [0.0f32; 1000];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
         let sum: f32 = grad_in.iter().sum();
         assert!(sum.abs() < 0.1, "grad sum = {sum}");
@@ -1420,7 +1420,7 @@ mod tests {
     #[test]
     fn top_k_1000_elements() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.01).collect();
-        let mut output = vec![0.0f32; 1000];
+        let mut output = [0.0f32; 1000];
         neon_top_k_softmax_f32(&input, &mut output, 10);
         let nonzero_count = output.iter().filter(|&&v| v > 0.0).count();
         assert_eq!(nonzero_count, 10);
@@ -1431,7 +1431,7 @@ mod tests {
     #[test]
     fn softmax_all_nonnegative() {
         let input = [-5.0, -3.0, 0.0, 3.0, 5.0, 10.0, -10.0, 1.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_f32(&input, &mut output);
         for &v in &output {
             assert!(v >= 0.0, "negative probability: {v}");
@@ -1441,7 +1441,7 @@ mod tests {
     #[test]
     fn log_softmax_1000_elements() {
         let input: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.001).collect();
-        let mut output = vec![0.0f32; 1000];
+        let mut output = [0.0f32; 1000];
         neon_log_softmax_f32(&input, &mut output);
         // All log-softmax values should be ≤ 0.
         for (i, &v) in output.iter().enumerate() {
@@ -1463,10 +1463,10 @@ mod tests {
         // For the argmax position with grad=1, others grad=0:
         // grad_input[argmax] > 0, grad_input[others] < 0
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         neon_softmax_f32(&input, &mut y);
         let grad_out = [0.0, 0.0, 0.0, 1.0]; // one-hot at argmax
-        let mut grad_in = vec![0.0f32; 4];
+        let mut grad_in = [0.0f32; 4];
         neon_softmax_backward_f32(&y, &grad_out, &mut grad_in);
         assert!(grad_in[3] > 0.0, "argmax grad should be positive");
         for i in 0..3 {
@@ -1477,7 +1477,7 @@ mod tests {
     #[test]
     fn softmax_output_buffer_larger_than_input() {
         let input = [1.0, 2.0, 3.0];
-        let mut output = vec![0.0f32; 10]; // larger buffer
+        let mut output = [0.0f32; 10]; // larger buffer
         neon_softmax_f32(&input, &mut output);
         let expected = reference_softmax(&input);
         assert_close(&output[..3], &expected, 1e-4, "larger_buffer");
@@ -1487,7 +1487,7 @@ mod tests {
     fn masked_softmax_last_unmasked() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, true, true, false];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         neon_masked_softmax_f32(&input, &mask, &mut output);
         assert!((output[3] - 1.0).abs() < 1e-4, "only unmasked");
     }
@@ -1495,7 +1495,7 @@ mod tests {
     #[test]
     fn temperature_fractional() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         neon_softmax_with_temperature_f32(&input, &mut output, 0.3);
         let sum: f32 = output.iter().sum();
         assert!((sum - 1.0).abs() < 1e-4);

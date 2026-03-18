@@ -1158,8 +1158,8 @@ mod tests {
         // kernel_size=1, identity weight => output == input
         let cfg = Conv1dConfig::simple(1).unwrap();
         let input = vec![1.0, 2.0, 3.0, 4.0]; // [1, 1, 4]
-        let weight = vec![1.0]; // [1, 1, 1]
-        let mut output = vec![0.0; 4];
+        let weight = [1.0]; // [1, 1, 1]
+        let mut output = [0.0; 4];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 4, 1).unwrap();
         assert_close(&output, &[1.0, 2.0, 3.0, 4.0], 1e-6);
     }
@@ -1168,9 +1168,9 @@ mod tests {
     fn conv1d_kernel1_with_bias() {
         let cfg = Conv1dConfig::simple(1).unwrap();
         let input = vec![1.0, 2.0, 3.0]; // [1, 1, 3]
-        let weight = vec![2.0]; // [1, 1, 1]
-        let bias = vec![0.5];
-        let mut output = vec![0.0; 3];
+        let weight = [2.0]; // [1, 1, 1]
+        let bias = [0.5];
+        let mut output = [0.0; 3];
         Conv1dKernel::forward(&input, &weight, Some(&bias), &mut output, &cfg, 1, 1, 3, 1).unwrap();
         assert_close(&output, &[2.5, 4.5, 6.5], 1e-6);
     }
@@ -1184,7 +1184,7 @@ mod tests {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // [1, 1, 5]
         let weight = vec![1.0, 1.0, 1.0]; // [1, 1, 3]
-        let mut output = vec![0.0; 3]; // out_len = 3
+        let mut output = [0.0; 3]; // out_len = 3
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         assert_close(&output, &[6.0, 9.0, 12.0], 1e-6);
     }
@@ -1194,7 +1194,7 @@ mod tests {
         let cfg = Conv1dConfig::new(3, 1, 1, 1, 1).unwrap();
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // [1, 1, 5]
         let weight = vec![1.0, 1.0, 1.0]; // [1, 1, 3]
-        let mut output = vec![0.0; 5]; // same-padding
+        let mut output = [0.0; 5]; // same-padding
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         // pad(0,1,2,3,4,5,0)
         assert_close(&output, &[3.0, 6.0, 9.0, 12.0, 9.0], 1e-6);
@@ -1224,8 +1224,8 @@ mod tests {
     fn conv1d_kernel5_no_padding() {
         let cfg = Conv1dConfig::simple(5).unwrap();
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect(); // [1, 1, 8]
-        let weight = vec![1.0; 5]; // [1, 1, 5]
-        let mut output = vec![0.0; 4]; // out_len = 4
+        let weight = [1.0; 5]; // [1, 1, 5]
+        let mut output = [0.0; 4]; // out_len = 4
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 8, 1).unwrap();
         // [1+2+3+4+5, 2+3+4+5+6, 3+4+5+6+7, 4+5+6+7+8]
         assert_close(&output, &[15.0, 20.0, 25.0, 30.0], 1e-6);
@@ -1235,8 +1235,8 @@ mod tests {
     fn conv1d_kernel5_with_padding() {
         let cfg = Conv1dConfig::new(5, 1, 2, 1, 1).unwrap();
         let input: Vec<f32> = (1..=5).map(|i| i as f32).collect(); // [1, 1, 5]
-        let weight = vec![1.0; 5];
-        let mut output = vec![0.0; 5]; // same-padding
+        let weight = [1.0; 5];
+        let mut output = [0.0; 5]; // same-padding
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         let expected = naive_conv1d_ref(&input, &weight, None, 1, 1, 5, 1, 5, 1, 2, 1, 1);
         assert_close(&output, &expected, 1e-6);
@@ -1250,8 +1250,8 @@ mod tests {
     fn conv1d_kernel7_no_padding() {
         let cfg = Conv1dConfig::simple(7).unwrap();
         let input: Vec<f32> = (0..10).map(|i| i as f32).collect();
-        let weight = vec![1.0; 7];
-        let mut output = vec![0.0; 4]; // out_len = 10-7+1 = 4
+        let weight = [1.0; 7];
+        let mut output = [0.0; 4]; // out_len = 10-7+1 = 4
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).unwrap();
         let expected = naive_conv1d_ref(&input, &weight, None, 1, 1, 10, 1, 7, 1, 0, 1, 1);
         assert_close(&output, &expected, 1e-6);
@@ -1277,7 +1277,7 @@ mod tests {
     fn conv1d_stride3_padding1() {
         let cfg = Conv1dConfig::new(3, 3, 1, 1, 1).unwrap();
         let input: Vec<f32> = (0..9).map(|i| i as f32).collect();
-        let weight = vec![0.5; 3];
+        let weight = [0.5; 3];
         let out_len = cfg.output_length(9);
         let mut output = vec![0.0; out_len];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 9, 1).unwrap();
@@ -1304,7 +1304,7 @@ mod tests {
     fn conv1d_dilation3_padding2() {
         let cfg = Conv1dConfig::new(3, 1, 2, 3, 1).unwrap();
         let input: Vec<f32> = (0..10).map(|i| i as f32).collect();
-        let weight = vec![1.0; 3];
+        let weight = [1.0; 3];
         let out_len = cfg.output_length(10);
         let mut output = vec![0.0; out_len];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).unwrap();
@@ -1417,7 +1417,7 @@ mod tests {
         // groups == in_channels == out_channels => depthwise
         let cfg = Conv1dConfig::new(3, 1, 1, 1, 3).unwrap();
         let input: Vec<f32> = (0..15).map(|i| i as f32).collect(); // [1, 3, 5]
-        let weight = vec![1.0; 9]; // [3, 1, 3]
+        let weight = [1.0; 9]; // [3, 1, 3]
         let out_len = cfg.output_length(5);
         let mut output = vec![0.0; 3 * out_len]; // [1, 3, 5]
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 3, 5, 3).unwrap();
@@ -1444,9 +1444,9 @@ mod tests {
     #[test]
     fn depthwise_rejects_wrong_groups() {
         let cfg = Conv1dConfig::new(3, 1, 0, 1, 2).unwrap();
-        let input = vec![0.0; 20];
-        let weight = vec![0.0; 6];
-        let mut output = vec![0.0; 12];
+        let input = [0.0; 20];
+        let weight = [0.0; 6];
+        let mut output = [0.0; 12];
         assert!(
             DepthwiseConv1d::forward(&input, &weight, None, &mut output, &cfg, 1, 4, 5).is_err()
         );
@@ -1456,7 +1456,7 @@ mod tests {
     fn depthwise_with_bias() {
         let cfg = Conv1dConfig::new(3, 1, 1, 1, 2).unwrap();
         let input: Vec<f32> = vec![1.0; 10]; // [1, 2, 5]
-        let weight = vec![1.0; 6]; // [2, 1, 3]
+        let weight = [1.0; 6]; // [2, 1, 3]
         let bias = vec![10.0, -10.0];
         let out_len = cfg.output_length(5);
         let mut output = vec![0.0; 2 * out_len];
@@ -1473,7 +1473,7 @@ mod tests {
     fn causal_no_future_leakage_kernel3() {
         let cfg = Conv1dConfig::simple(3).unwrap();
         // Place a spike at position 4, verify positions 0..=3 are unaffected.
-        let mut input = vec![0.0_f32; 8]; // [1, 1, 8]
+        let mut input = [0.0_f32; 8]; // [1, 1, 8]
         input[4] = 1.0;
         let weight = vec![1.0, 1.0, 1.0]; // [1, 1, 3]
         let out_len = causal_output_length(8, &cfg);
@@ -1490,9 +1490,9 @@ mod tests {
     #[test]
     fn causal_no_future_leakage_kernel5() {
         let cfg = Conv1dConfig::simple(5).unwrap();
-        let mut input = vec![0.0_f32; 10];
+        let mut input = [0.0_f32; 10];
         input[6] = 1.0;
-        let weight = vec![1.0; 5];
+        let weight = [1.0; 5];
         let out_len = causal_output_length(10, &cfg);
         let mut output = vec![0.0; out_len];
         CausalConv1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).unwrap();
@@ -1549,7 +1549,7 @@ mod tests {
         let in_len = 10;
         let mut input = vec![0.0_f32; in_len];
         input[7] = 1.0;
-        let weight = vec![1.0; 3];
+        let weight = [1.0; 3];
         let out_len = causal_output_length(in_len, &cfg);
         let mut output = vec![0.0; out_len];
         CausalConv1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, in_len, 1).unwrap();
@@ -1612,7 +1612,7 @@ mod tests {
         let cfg = Conv1dConfig::new(3, 1, 0, 1, 1).unwrap();
         let input = vec![1.0, 1.0]; // [1, 1, 2]
         let weight = vec![1.0, 0.0, 1.0]; // [1, 1, 3]
-        let bias = vec![0.5];
+        let bias = [0.5];
         let out_len = transpose_output_length(2, &cfg); // (2-1)*1+2+1=4
         let mut output = vec![0.0; out_len];
         Conv1dTranspose::forward(&input, &weight, Some(&bias), &mut output, &cfg, 1, 1, 2, 1)
@@ -1744,9 +1744,9 @@ mod tests {
     #[test]
     fn winograd_rejects_kernel_size_5() {
         let cfg = Conv1dConfig::simple(5).unwrap();
-        let input = vec![0.0; 10];
-        let weight = vec![0.0; 5];
-        let mut output = vec![0.0; 6];
+        let input = [0.0; 10];
+        let weight = [0.0; 5];
+        let mut output = [0.0; 6];
         assert!(
             WinoGrad1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).is_err()
         );
@@ -1755,18 +1755,18 @@ mod tests {
     #[test]
     fn winograd_rejects_stride2() {
         let cfg = Conv1dConfig::new(3, 2, 0, 1, 1).unwrap();
-        let input = vec![0.0; 6];
-        let weight = vec![0.0; 3];
-        let mut output = vec![0.0; 2];
+        let input = [0.0; 6];
+        let weight = [0.0; 3];
+        let mut output = [0.0; 2];
         assert!(WinoGrad1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 6, 1).is_err());
     }
 
     #[test]
     fn winograd_rejects_dilation2() {
         let cfg = Conv1dConfig::new(3, 1, 0, 2, 1).unwrap();
-        let input = vec![0.0; 7];
-        let weight = vec![0.0; 3];
-        let mut output = vec![0.0; 3];
+        let input = [0.0; 7];
+        let weight = [0.0; 3];
+        let mut output = [0.0; 3];
         assert!(WinoGrad1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 7, 1).is_err());
     }
 
@@ -1777,9 +1777,9 @@ mod tests {
     #[test]
     fn single_element_input() {
         let cfg = Conv1dConfig::simple(1).unwrap();
-        let input = vec![42.0];
-        let weight = vec![2.0];
-        let mut output = vec![0.0; 1];
+        let input = [42.0];
+        let weight = [2.0];
+        let mut output = [0.0; 1];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 1, 1).unwrap();
         assert_close(&output, &[84.0], 1e-6);
     }
@@ -1787,9 +1787,9 @@ mod tests {
     #[test]
     fn single_element_with_kernel3_padded() {
         let cfg = Conv1dConfig::new(3, 1, 1, 1, 1).unwrap();
-        let input = vec![5.0]; // [1, 1, 1]
+        let input = [5.0]; // [1, 1, 1]
         let weight = vec![1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 1]; // out_len = 1
+        let mut output = [0.0; 1]; // out_len = 1
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 1, 1).unwrap();
         // Only the center weight (2.0) sees the input
         assert_close(&output, &[10.0], 1e-6);
@@ -1799,7 +1799,7 @@ mod tests {
     fn error_on_zero_batch() {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input = vec![];
-        let weight = vec![1.0; 3];
+        let weight = [1.0; 3];
         let mut output = vec![];
         assert!(
             Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 0, 1, 5, 1).is_err()
@@ -1809,9 +1809,9 @@ mod tests {
     #[test]
     fn error_on_wrong_output_size() {
         let cfg = Conv1dConfig::simple(3).unwrap();
-        let input = vec![0.0; 5];
-        let weight = vec![0.0; 3];
-        let mut output = vec![0.0; 10]; // wrong size
+        let input = [0.0; 5];
+        let weight = [0.0; 3];
+        let mut output = [0.0; 10]; // wrong size
         assert!(
             Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).is_err()
         );
@@ -1820,9 +1820,9 @@ mod tests {
     #[test]
     fn error_on_channels_not_divisible_by_groups() {
         let cfg = Conv1dConfig::new(3, 1, 0, 1, 3).unwrap();
-        let input = vec![0.0; 20]; // 4 channels, groups=3 doesn't divide
-        let weight = vec![0.0; 3];
-        let mut output = vec![0.0; 6];
+        let input = [0.0; 20]; // 4 channels, groups=3 doesn't divide
+        let weight = [0.0; 3];
+        let mut output = [0.0; 6];
         assert!(
             Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 4, 5, 4).is_err()
         );
@@ -1831,10 +1831,10 @@ mod tests {
     #[test]
     fn error_on_wrong_bias_size() {
         let cfg = Conv1dConfig::simple(3).unwrap();
-        let input = vec![0.0; 5];
-        let weight = vec![0.0; 3];
-        let bias = vec![0.0; 5]; // wrong: should be 1
-        let mut output = vec![0.0; 3];
+        let input = [0.0; 5];
+        let weight = [0.0; 3];
+        let bias = [0.0; 5]; // wrong: should be 1
+        let mut output = [0.0; 3];
         assert!(
             Conv1dKernel::forward(&input, &weight, Some(&bias), &mut output, &cfg, 1, 1, 5, 1)
                 .is_err()
@@ -1848,7 +1848,7 @@ mod tests {
     #[test]
     fn property_zero_input_gives_zero_output() {
         let cfg = Conv1dConfig::new(3, 1, 1, 1, 1).unwrap();
-        let input = vec![0.0; 20]; // [1, 2, 10]
+        let input = [0.0; 20]; // [1, 2, 10]
         let weight: Vec<f32> = (0..12).map(|i| i as f32).collect(); // [2, 2, 3]
         let out_len = cfg.output_length(10);
         let mut output = vec![0.0; 2 * out_len];
@@ -1860,8 +1860,8 @@ mod tests {
     fn property_zero_weight_gives_zero_output() {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input: Vec<f32> = (0..5).map(|i| i as f32).collect();
-        let weight = vec![0.0; 3];
-        let mut output = vec![0.0; 3];
+        let weight = [0.0; 3];
+        let mut output = [0.0; 3];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         assert!(output.iter().all(|&v| v.abs() < 1e-6));
     }
@@ -1870,8 +1870,8 @@ mod tests {
     fn property_identity_kernel_copies_input() {
         let cfg = Conv1dConfig::simple(1).unwrap();
         let input: Vec<f32> = (0..10).map(|i| i as f32 * 0.7).collect();
-        let weight = vec![1.0];
-        let mut output = vec![0.0; 10];
+        let weight = [1.0];
+        let mut output = [0.0; 10];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).unwrap();
         assert_close(&output, &input, 1e-6);
     }
@@ -1923,7 +1923,7 @@ mod tests {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input: Vec<f32> = (0..5).map(|i| i as f32).collect();
         let weight = vec![1.0, 1.0, 1.0];
-        let bias = vec![100.0];
+        let bias = [100.0];
         let out_len = cfg.output_length(5);
 
         let mut out_no_bias = vec![0.0; out_len];
@@ -2035,8 +2035,8 @@ mod tests {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input = vec![1.0, 2.0, 3.0, 4.0]; // out_len = 2
         let weight = vec![1.0, 0.0, -1.0];
-        let mut out_naive = vec![0.0; 2];
-        let mut out_wino = vec![0.0; 2];
+        let mut out_naive = [0.0; 2];
+        let mut out_wino = [0.0; 2];
 
         Conv1dKernel::forward(&input, &weight, None, &mut out_naive, &cfg, 1, 1, 4, 1).unwrap();
         WinoGrad1d::forward(&input, &weight, None, &mut out_wino, &cfg, 1, 1, 4, 1).unwrap();
@@ -2049,8 +2049,8 @@ mod tests {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input = vec![1.0, 2.0, 3.0]; // out_len = 1
         let weight = vec![1.0, 1.0, 1.0];
-        let mut out_naive = vec![0.0; 1];
-        let mut out_wino = vec![0.0; 1];
+        let mut out_naive = [0.0; 1];
+        let mut out_wino = [0.0; 1];
 
         Conv1dKernel::forward(&input, &weight, None, &mut out_naive, &cfg, 1, 1, 3, 1).unwrap();
         WinoGrad1d::forward(&input, &weight, None, &mut out_wino, &cfg, 1, 1, 3, 1).unwrap();
@@ -2073,8 +2073,8 @@ mod tests {
     fn causal_constant_input() {
         // Constant input with uniform weights => constant output
         let cfg = Conv1dConfig::simple(3).unwrap();
-        let input = vec![1.0; 10];
-        let weight = vec![1.0; 3];
+        let input = [1.0; 10];
+        let weight = [1.0; 3];
         let out_len = causal_output_length(10, &cfg);
         let mut output = vec![0.0; out_len];
         CausalConv1d::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 10, 1).unwrap();
@@ -2090,9 +2090,9 @@ mod tests {
     #[test]
     fn conv1d_negative_weights() {
         let cfg = Conv1dConfig::simple(3).unwrap();
-        let input = vec![1.0; 5];
+        let input = [1.0; 5];
         let weight = vec![-1.0, -1.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         assert_close(&output, &[-3.0, -3.0, -3.0], 1e-6);
     }
@@ -2102,7 +2102,7 @@ mod tests {
         let cfg = Conv1dConfig::simple(3).unwrap();
         let input = vec![0.0, 0.0, 1.0, 0.0, 0.0]; // impulse at position 2
         let weight = vec![1.0, 2.0, 3.0]; // asymmetric
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 5, 1).unwrap();
         // pos0: inp[0]*1+inp[1]*2+inp[2]*3 = 3
         // pos1: inp[1]*1+inp[2]*2+inp[3]*3 = 2
@@ -2116,7 +2116,7 @@ mod tests {
         let input = vec![1.0, 2.0, 3.0]; // [1, 1, 3]
         // [4, 1, 1] weight — 4 output channels from 1 input channel
         let weight = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 12]; // [1, 4, 3]
+        let mut output = [0.0; 12]; // [1, 4, 3]
         Conv1dKernel::forward(&input, &weight, None, &mut output, &cfg, 1, 1, 3, 4).unwrap();
         // oc=0: [1,2,3], oc=1: [2,4,6], oc=2: [3,6,9], oc=3: [4,8,12]
         assert_close(&output, &[1.0, 2.0, 3.0, 2.0, 4.0, 6.0, 3.0, 6.0, 9.0, 4.0, 8.0, 12.0], 1e-6);

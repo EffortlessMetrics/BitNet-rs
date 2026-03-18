@@ -1373,8 +1373,8 @@ mod tests {
     fn test_layer_norm_identity() {
         // gamma=1, beta=0 with uniform data → mean-centered, unit-variance
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).unwrap();
         let mean: f32 = data.iter().sum::<f32>() / 4.0;
         assert!((mean).abs() < 1e-5, "mean = {mean}");
@@ -1383,8 +1383,8 @@ mod tests {
     #[test]
     fn test_layer_norm_with_beta() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![10.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [10.0; 4];
         embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).unwrap();
         let mean: f32 = data.iter().sum::<f32>() / 4.0;
         assert!((mean - 10.0).abs() < 1e-4, "mean = {mean}");
@@ -1393,8 +1393,8 @@ mod tests {
     #[test]
     fn test_layer_norm_with_gamma() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![2.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [2.0; 4];
+        let beta = [0.0; 4];
         embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).unwrap();
         let var: f32 = data.iter().map(|&x| x * x).sum::<f32>() / 4.0;
         // After LN with gamma=2, variance should be ~4 (gamma²)
@@ -1404,8 +1404,8 @@ mod tests {
     #[test]
     fn test_layer_norm_multi_row() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).unwrap();
         // Each row should have mean ~0
         let mean1: f32 = data[0..4].iter().sum::<f32>() / 4.0;
@@ -1417,24 +1417,24 @@ mod tests {
     #[test]
     fn test_layer_norm_bad_gamma_len() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 4];
         assert!(embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).is_err());
     }
 
     #[test]
     fn test_layer_norm_bad_beta_len() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 3];
         assert!(embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).is_err());
     }
 
     #[test]
     fn test_layer_norm_empty() {
         let mut data: Vec<f32> = vec![];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         embedding_layer_norm(&mut data, &gamma, &beta, 4, 1e-5).unwrap();
     }
 
@@ -1450,7 +1450,7 @@ mod tests {
     #[test]
     fn test_rms_norm_identity_gamma() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let original = data.clone();
         embedding_rms_norm(&mut data, &gamma, 4, 1e-5).unwrap();
         let rms = (original.iter().map(|&x| x * x).sum::<f32>() / 4.0).sqrt();
@@ -1462,14 +1462,14 @@ mod tests {
     #[test]
     fn test_rms_norm_bad_gamma() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         assert!(embedding_rms_norm(&mut data, &gamma, 4, 1e-5).is_err());
     }
 
     #[test]
     fn test_rms_norm_empty() {
         let mut data: Vec<f32> = vec![];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         embedding_rms_norm(&mut data, &gamma, 4, 1e-5).unwrap();
     }
 
@@ -1510,7 +1510,7 @@ mod tests {
     #[test]
     fn test_vocab_projection_shape_error_table() {
         let hidden = vec![1.0, 2.0];
-        let table = vec![1.0]; // too small
+        let table = [1.0]; // too small
         assert!(vocab_projection(&hidden, &table, 1, 2, 2).is_err());
     }
 
@@ -1672,8 +1672,8 @@ mod tests {
     fn test_embedding_pipeline_sinusoidal() {
         let table = sample_table_4x4();
         let cfg = sample_config();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let result =
             embedding_pipeline(&table, &[0, 1], &cfg, None, None, &gamma, &beta, 0).unwrap();
         // Should have 2 rows of dim 4
@@ -1687,9 +1687,9 @@ mod tests {
     fn test_embedding_pipeline_with_types() {
         let table = sample_table_4x4();
         let cfg = sample_config();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
-        let type_emb = vec![0.01; 8]; // 2 rows × 4 dim
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
+        let type_emb = [0.01; 8]; // 2 rows × 4 dim
         let result =
             embedding_pipeline(&table, &[0, 1], &cfg, None, Some(&type_emb), &gamma, &beta, 0)
                 .unwrap();
@@ -1702,8 +1702,8 @@ mod tests {
         let mut cfg = sample_config();
         cfg.position_type = PositionEmbeddingType::Absolute;
         let pos_table = vec![0.1; 4 * 4]; // 4 positions × 4 dim
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let result =
             embedding_pipeline(&table, &[0, 1], &cfg, Some(&pos_table), None, &gamma, &beta, 0)
                 .unwrap();
@@ -1739,7 +1739,7 @@ mod tests {
     #[test]
     fn test_rms_norm_multi_row() {
         let mut data = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         embedding_rms_norm(&mut data, &gamma, 4, 1e-5).unwrap();
         // Each row should have RMS ≈ 1.0 after normalization.
         let rms1 = (data[0..4].iter().map(|&x| x * x).sum::<f32>() / 4.0).sqrt();

@@ -1593,7 +1593,7 @@ mod tests {
         let cfg = TcBatchedGemm::new(2, 2, 2, 1).unwrap();
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &[1.0, 0.0, 0.0, 1.0], 1e-6);
     }
@@ -1603,7 +1603,7 @@ mod tests {
         let cfg = TcBatchedGemm::new(2, 3, 2, 1).unwrap();
         let a = vec![1.0, 2.0, 3.0, 4.0]; // 2×2
         let b = vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0]; // 2×3
-        let mut c = vec![0.0f32; 6];
+        let mut c = [0.0f32; 6];
         tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 3, 2);
         assert_close(&c, &expected, 1e-5);
@@ -1613,8 +1613,8 @@ mod tests {
     fn test_batched_gemm_multiple_batches() {
         let cfg = TcBatchedGemm::new(2, 2, 2, 3).unwrap();
         let a = vec![1.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0, 3.0, 0.0, 0.0, 3.0];
-        let b = vec![1.0; 12]; // all ones
-        let mut c = vec![0.0f32; 12];
+        let b = [1.0; 12]; // all ones
+        let mut c = [0.0f32; 12];
         tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         // batch 0: I * ones = [1,1; 1,1]
         assert_close(&c[0..4], &[1.0, 1.0, 1.0, 1.0], 1e-6);
@@ -1639,7 +1639,7 @@ mod tests {
         // A stored column-major for transpose
         let a = vec![1.0, 3.0, 2.0, 4.0]; // A^T = [[1,2],[3,4]]
         let b = vec![1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         assert_close(&c, &[1.0, 2.0, 3.0, 4.0], 1e-6);
     }
@@ -1690,27 +1690,27 @@ mod tests {
     #[test]
     fn test_batched_gemm_buffer_too_small_a() {
         let cfg = TcBatchedGemm::new(4, 4, 4, 1).unwrap();
-        let a = vec![0.0f32; 8]; // need 16
-        let b = vec![0.0f32; 16];
-        let mut c = vec![0.0f32; 16];
+        let a = [0.0f32; 8]; // need 16
+        let b = [0.0f32; 16];
+        let mut c = [0.0f32; 16];
         assert!(tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
     #[test]
     fn test_batched_gemm_buffer_too_small_b() {
         let cfg = TcBatchedGemm::new(4, 4, 4, 1).unwrap();
-        let a = vec![0.0f32; 16];
-        let b = vec![0.0f32; 8]; // need 16
-        let mut c = vec![0.0f32; 16];
+        let a = [0.0f32; 16];
+        let b = [0.0f32; 8]; // need 16
+        let mut c = [0.0f32; 16];
         assert!(tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
     #[test]
     fn test_batched_gemm_buffer_too_small_c() {
         let cfg = TcBatchedGemm::new(4, 4, 4, 1).unwrap();
-        let a = vec![0.0f32; 16];
-        let b = vec![0.0f32; 16];
-        let mut c = vec![0.0f32; 8]; // need 16
+        let a = [0.0f32; 16];
+        let b = [0.0f32; 16];
+        let mut c = [0.0f32; 8]; // need 16
         assert!(tc_batched_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
@@ -1719,7 +1719,7 @@ mod tests {
         let cfg = TcBatchedGemm::new(2, 2, 2, 1).unwrap();
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_batched_gemm(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 2);
         assert_close(&c, &expected, 1e-5);
@@ -1818,8 +1818,8 @@ mod tests {
         // 1 batch, 1 in, 1 out, 3×3 input, 3×3 kernel → 1×1 output
         let cfg = TcConvolution::new(1, 1, 1, 3, 3, 3, 3).unwrap();
         let input: Vec<f32> = (1..=9).map(|x| x as f32).collect();
-        let weight = vec![1.0f32; 9];
-        let mut output = vec![0.0f32; 1];
+        let weight = [1.0f32; 9];
+        let mut output = [0.0f32; 1];
         tc_convolution_cpu(&input, &weight, &mut output, &cfg).unwrap();
         assert!((output[0] - 45.0).abs() < 1e-5);
     }
@@ -1827,9 +1827,9 @@ mod tests {
     #[test]
     fn test_conv_with_padding_3x3() {
         let cfg = TcConvolution::new(1, 1, 1, 3, 3, 3, 3).unwrap().with_params(1, 1, 1).unwrap();
-        let input = vec![1.0f32; 9];
-        let weight = vec![1.0f32; 9];
-        let mut output = vec![0.0f32; 9]; // 3×3 output with padding=1
+        let input = [1.0f32; 9];
+        let weight = [1.0f32; 9];
+        let mut output = [0.0f32; 9]; // 3×3 output with padding=1
         tc_convolution_cpu(&input, &weight, &mut output, &cfg).unwrap();
         // center pixel sees all 9 inputs → 9.0
         assert!((output[4] - 9.0).abs() < 1e-5);
@@ -1840,9 +1840,9 @@ mod tests {
     #[test]
     fn test_conv_buffer_too_small() {
         let cfg = TcConvolution::new(1, 1, 1, 4, 4, 3, 3).unwrap();
-        let input = vec![0.0f32; 4]; // too small
-        let weight = vec![0.0f32; 9];
-        let mut output = vec![0.0f32; 4];
+        let input = [0.0f32; 4]; // too small
+        let weight = [0.0f32; 9];
+        let mut output = [0.0f32; 4];
         assert!(tc_convolution_cpu(&input, &weight, &mut output, &cfg).is_err());
     }
 
@@ -1851,7 +1851,7 @@ mod tests {
         let cfg = TcConvolution::new(1, 2, 1, 2, 2, 1, 1).unwrap();
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]; // [1,2,2,2]
         let weight = vec![1.0, 1.0]; // [1, 2, 1, 1]
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         tc_convolution_cpu(&input, &weight, &mut output, &cfg).unwrap();
         // pixel (0,0) = 1*1 + 5*1 = 6
         assert!((output[0] - 6.0).abs() < 1e-5);
@@ -1885,9 +1885,9 @@ mod tests {
         let cfg = TcQuantizedGemm::new(2, 2, 2, TcQuantBits::Int8).unwrap();
         // Weight matrix = identity as INT8
         let weights = vec![1u8, 0u8, 0u8, 1u8]; // row-major per col
-        let scales = vec![1.0f32; 2];
+        let scales = [1.0f32; 2];
         let a = vec![1.0, 0.0, 0.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert_close(&out, &[1.0, 0.0, 0.0, 1.0], 1e-5);
     }
@@ -1898,8 +1898,8 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0, 4.0]; // 1×4
         // col 0: [1,1,1,1], col 1: [2,2,2,2]
         let weights = vec![1u8, 1, 1, 1, 2, 2, 2, 2];
-        let scales = vec![1.0f32; 2];
-        let mut out = vec![0.0f32; 2];
+        let scales = [1.0f32; 2];
+        let mut out = [0.0f32; 2];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         // col 0: 1+2+3+4=10, col 1: 2+4+6+8=20
         assert_close(&out, &[10.0, 20.0], 1e-5);
@@ -1908,11 +1908,11 @@ mod tests {
     #[test]
     fn test_tc_quant_gemm_int4_simple() {
         let cfg = TcQuantizedGemm::new(1, 1, 4, TcQuantBits::Int4).unwrap();
-        let a = vec![1.0f32; 4];
+        let a = [1.0f32; 4];
         // Pack 4 nibbles: [1, 2, 3, 4] → 2 bytes
         let weights = vec![0x21u8, 0x43]; // nibble 0=1, 1=2, 2=3, 3=4
         let scales = vec![1.0f32];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert!((out[0] - 10.0).abs() < 1e-5);
     }
@@ -1923,7 +1923,7 @@ mod tests {
         let a = vec![1.0, 1.0];
         let weights = vec![1u8, 1, 1, 1]; // col0=[1,1], col1=[1,1]
         let scales = vec![2.0f32, 3.0]; // scale col 0 by 2, col 1 by 3
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert_close(&out, &[4.0, 6.0], 1e-5);
     }
@@ -1934,7 +1934,7 @@ mod tests {
         let a = vec![1.0, 1.0];
         let weights = vec![1u8, 1, 1, 1];
         let scales = vec![];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert_close(&out, &[2.0, 2.0], 1e-5);
     }
@@ -1959,7 +1959,7 @@ mod tests {
         let a = vec![1.0, 1.0, 2.0, 2.0]; // 2 batches
         let weights = vec![1u8, 1, 1, 1];
         let scales = vec![1.0f32, 1.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         tc_quantized_gemm_cpu(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert_close(&out, &[2.0, 4.0], 1e-5);
     }
@@ -1997,7 +1997,7 @@ mod tests {
         let a = vec![1.0, 1.0];
         let weights = vec![3u8, 3];
         let scales = vec![1.0f32];
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         tc_quantized_gemm(&a, &weights, &scales, &mut out, &cfg).unwrap();
         assert!((out[0] - 6.0).abs() < 1e-5);
     }
@@ -2005,10 +2005,10 @@ mod tests {
     #[test]
     fn test_tc_quant_gemm_buffer_too_small() {
         let cfg = TcQuantizedGemm::new(4, 4, 4, TcQuantBits::Int8).unwrap();
-        let a = vec![0.0f32; 4]; // need 16
-        let w = vec![0u8; 16];
-        let s = vec![1.0f32; 4];
-        let mut out = vec![0.0f32; 16];
+        let a = [0.0f32; 4]; // need 16
+        let w = [0u8; 16];
+        let s = [1.0f32; 4];
+        let mut out = [0.0f32; 16];
         assert!(tc_quantized_gemm_cpu(&a, &w, &s, &mut out, &cfg).is_err());
     }
 
@@ -2019,7 +2019,7 @@ mod tests {
         let cfg = TcGroupedGemm::new(2, 2, 2, 1).unwrap();
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_grouped_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 2);
         assert_close(&c, &expected, 1e-5);
@@ -2073,9 +2073,9 @@ mod tests {
     #[test]
     fn test_grouped_gemm_buffer_too_small() {
         let cfg = TcGroupedGemm::new(4, 4, 4, 2).unwrap();
-        let a = vec![0.0f32; 16]; // need 32
-        let b = vec![0.0f32; 32];
-        let mut c = vec![0.0f32; 32];
+        let a = [0.0f32; 16]; // need 32
+        let b = [0.0f32; 32];
+        let mut c = [0.0f32; 32];
         assert!(tc_grouped_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
@@ -2086,7 +2086,7 @@ mod tests {
         let cfg = TcSplitK::new(4, 4, 16, 4).unwrap();
         let a: Vec<f32> = (0..64).map(|i| (i % 5) as f32).collect();
         let b: Vec<f32> = (0..64).map(|i| (i % 3) as f32).collect();
-        let mut c = vec![0.0f32; 16];
+        let mut c = [0.0f32; 16];
         tc_split_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 4, 4, 16);
         assert_close(&c, &expected, 1e-4);
@@ -2095,9 +2095,9 @@ mod tests {
     #[test]
     fn test_split_k_single_split() {
         let cfg = TcSplitK::new(2, 2, 4, 1).unwrap();
-        let a = vec![1.0f32; 8];
-        let b = vec![0.5f32; 8];
-        let mut c = vec![0.0f32; 4];
+        let a = [1.0f32; 8];
+        let b = [0.5f32; 8];
+        let mut c = [0.0f32; 4];
         tc_split_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 4);
         assert_close(&c, &expected, 1e-5);
@@ -2106,9 +2106,9 @@ mod tests {
     #[test]
     fn test_split_k_alpha_beta() {
         let cfg = TcSplitK::new(2, 2, 4, 2).unwrap().with_alpha_beta(2.0, 1.0);
-        let a = vec![1.0f32; 8];
-        let b = vec![1.0f32; 8];
-        let mut c = vec![1.0f32; 4];
+        let a = [1.0f32; 8];
+        let b = [1.0f32; 8];
+        let mut c = [1.0f32; 4];
         tc_split_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         // naive result = 4.0 per element, alpha=2 → 8.0, + beta*1 = 9.0
         for v in &c {
@@ -2145,9 +2145,9 @@ mod tests {
     #[test]
     fn test_split_k_buffer_too_small() {
         let cfg = TcSplitK::new(4, 4, 4, 2).unwrap();
-        let a = vec![0.0f32; 8]; // need 16
-        let b = vec![0.0f32; 16];
-        let mut c = vec![0.0f32; 16];
+        let a = [0.0f32; 8]; // need 16
+        let b = [0.0f32; 16];
+        let mut c = [0.0f32; 16];
         assert!(tc_split_k_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
@@ -2157,7 +2157,7 @@ mod tests {
         let cfg = TcSplitK::new(2, 2, 7, 3).unwrap();
         let a: Vec<f32> = (0..14).map(|i| i as f32).collect();
         let b: Vec<f32> = (0..14).map(|i| (i % 3) as f32).collect();
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_split_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 7);
         assert_close(&c, &expected, 1e-4);
@@ -2170,7 +2170,7 @@ mod tests {
         let cfg = TcStreamK::new(4, 4, 8, 4).unwrap();
         let a: Vec<f32> = (0..32).map(|i| (i % 4) as f32).collect();
         let b: Vec<f32> = (0..32).map(|i| (i % 3) as f32).collect();
-        let mut c = vec![0.0f32; 16];
+        let mut c = [0.0f32; 16];
         tc_stream_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 4, 4, 8);
         assert_close(&c, &expected, 1e-4);
@@ -2181,7 +2181,7 @@ mod tests {
         let cfg = TcStreamK::new(2, 2, 2, 1).unwrap();
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_stream_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 2);
         assert_close(&c, &expected, 1e-5);
@@ -2192,7 +2192,7 @@ mod tests {
         let cfg = TcStreamK::new(2, 2, 2, 2).unwrap().with_alpha_beta(0.5, 2.0);
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![1.0, 0.0, 0.0, 1.0];
-        let mut c = vec![1.0f32; 4];
+        let mut c = [1.0f32; 4];
         tc_stream_k_gemm_cpu(&a, &b, &mut c, &cfg).unwrap();
         // 0.5*I + 2*ones = [2.5, 2.0, 2.0, 2.5]
         assert_close(&c, &[2.5, 2.0, 2.0, 2.5], 1e-5);
@@ -2238,9 +2238,9 @@ mod tests {
     #[test]
     fn test_stream_k_buffer_too_small() {
         let cfg = TcStreamK::new(4, 4, 4, 2).unwrap();
-        let a = vec![0.0f32; 8]; // need 16
-        let b = vec![0.0f32; 16];
-        let mut c = vec![0.0f32; 16];
+        let a = [0.0f32; 8]; // need 16
+        let b = [0.0f32; 16];
+        let mut c = [0.0f32; 16];
         assert!(tc_stream_k_gemm_cpu(&a, &b, &mut c, &cfg).is_err());
     }
 
@@ -2249,7 +2249,7 @@ mod tests {
         let cfg = TcStreamK::new(2, 2, 2, 2).unwrap();
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         tc_stream_k_gemm(&a, &b, &mut c, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 2);
         assert_close(&c, &expected, 1e-5);
@@ -2275,8 +2275,8 @@ mod tests {
         let bcfg = TcBatchedGemm::new(m, n, k, 1).unwrap();
         let gcfg = TcGroupedGemm::new(m, n, k, 1).unwrap();
 
-        let mut c_batch = vec![0.0f32; 16];
-        let mut c_group = vec![0.0f32; 16];
+        let mut c_batch = [0.0f32; 16];
+        let mut c_group = [0.0f32; 16];
         tc_batched_gemm_cpu(&a, &b, &mut c_batch, &bcfg).unwrap();
         tc_grouped_gemm_cpu(&a, &b, &mut c_group, &gcfg).unwrap();
         assert_close(&c_batch, &c_group, 1e-5);
@@ -2293,8 +2293,8 @@ mod tests {
         let sk_cfg = TcSplitK::new(m, n, k, 4).unwrap();
         let stk_cfg = TcStreamK::new(m, n, k, 4).unwrap();
 
-        let mut c_sk = vec![0.0f32; 16];
-        let mut c_stk = vec![0.0f32; 16];
+        let mut c_sk = [0.0f32; 16];
+        let mut c_stk = [0.0f32; 16];
         tc_split_k_gemm_cpu(&a, &b, &mut c_sk, &sk_cfg).unwrap();
         tc_stream_k_gemm_cpu(&a, &b, &mut c_stk, &stk_cfg).unwrap();
         assert_close(&c_sk, &c_stk, 1e-4);
@@ -2311,25 +2311,25 @@ mod tests {
 
         // Batched
         let bcfg = TcBatchedGemm::new(m, n, k, 1).unwrap();
-        let mut c1 = vec![0.0f32; 15];
+        let mut c1 = [0.0f32; 15];
         tc_batched_gemm_cpu(&a, &b, &mut c1, &bcfg).unwrap();
         assert_close(&c1, &expected, 1e-3);
 
         // Grouped
         let gcfg = TcGroupedGemm::new(m, n, k, 1).unwrap();
-        let mut c2 = vec![0.0f32; 15];
+        let mut c2 = [0.0f32; 15];
         tc_grouped_gemm_cpu(&a, &b, &mut c2, &gcfg).unwrap();
         assert_close(&c2, &expected, 1e-3);
 
         // Split-K
         let sk_cfg = TcSplitK::new(m, n, k, 3).unwrap();
-        let mut c3 = vec![0.0f32; 15];
+        let mut c3 = [0.0f32; 15];
         tc_split_k_gemm_cpu(&a, &b, &mut c3, &sk_cfg).unwrap();
         assert_close(&c3, &expected, 1e-3);
 
         // Stream-K
         let stk_cfg = TcStreamK::new(m, n, k, 4).unwrap();
-        let mut c4 = vec![0.0f32; 15];
+        let mut c4 = [0.0f32; 15];
         tc_stream_k_gemm_cpu(&a, &b, &mut c4, &stk_cfg).unwrap();
         assert_close(&c4, &expected, 1e-3);
     }

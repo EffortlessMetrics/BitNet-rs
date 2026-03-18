@@ -543,7 +543,7 @@ mod tests {
     fn step_two_beams_pick_top_two() {
         let mut state = BeamSearchState::new();
         let config = default_config(2);
-        let mut logits = vec![-10.0f32; 5];
+        let mut logits = [-10.0f32; 5];
         logits[1] = 0.0;
         logits[3] = -1.0;
         beam_search_step(&mut state, &logits, 5, 99, &config).unwrap();
@@ -598,7 +598,7 @@ mod tests {
         ]);
         let config = default_config(2);
         // beam 0 prefers token 1; beam 1 prefers token 2
-        let mut logits = vec![-10.0f32; 6]; // 2×3
+        let mut logits = [-10.0f32; 6]; // 2×3
         logits[1] = 0.0; // beam 0, token 1
         logits[5] = 0.0; // beam 1, token 2
         beam_search_step(&mut state, &logits, 3, 99, &config).unwrap();
@@ -728,7 +728,7 @@ mod tests {
 
     #[test]
     fn diverse_penalises_selected_tokens() {
-        let mut logits = vec![0.0f32; 5];
+        let mut logits = [0.0f32; 5];
         beam_search_diverse(&mut logits, &[1, 3], 2.0);
         assert!((logits[0] - 0.0).abs() < f32::EPSILON);
         assert!((logits[1] - (-2.0)).abs() < f32::EPSILON);
@@ -739,14 +739,14 @@ mod tests {
 
     #[test]
     fn diverse_no_tokens_no_change() {
-        let mut logits = vec![1.0f32; 4];
+        let mut logits = [1.0f32; 4];
         beam_search_diverse(&mut logits, &[], 5.0);
         assert!(logits.iter().all(|&v| (v - 1.0).abs() < f32::EPSILON));
     }
 
     #[test]
     fn diverse_out_of_bounds_token_ignored() {
-        let mut logits = vec![0.0f32; 3];
+        let mut logits = [0.0f32; 3];
         beam_search_diverse(&mut logits, &[10], 1.0);
         assert!(logits.iter().all(|&v| v.abs() < f32::EPSILON));
     }
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn diverse_cumulative_penalty() {
-        let mut logits = vec![0.0f32; 3];
+        let mut logits = [0.0f32; 3];
         beam_search_diverse(&mut logits, &[1, 1], 1.0);
         // Token 1 penalised twice.
         assert!((logits[1] - (-2.0)).abs() < f32::EPSILON);
@@ -940,7 +940,7 @@ mod tests {
     fn identical_scores_deterministic_order() {
         let mut state = BeamSearchState::new();
         let config = default_config(2);
-        let logits = vec![0.0f32; 4];
+        let logits = [0.0f32; 4];
         beam_search_step(&mut state, &logits, 4, 99, &config).unwrap();
         // Must pick exactly 2, not crash.
         assert_eq!(state.active_beams.len(), 2);

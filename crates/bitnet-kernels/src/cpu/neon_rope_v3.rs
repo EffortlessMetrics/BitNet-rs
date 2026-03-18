@@ -1219,7 +1219,7 @@ mod tests {
     #[test]
     fn test_all_zeros_input() {
         let (cos_t, sin_t) = make_tables(8, 4, 10000.0);
-        let mut data = vec![0.0f32; 8];
+        let mut data = [0.0f32; 8];
         rope_forward_f32(&mut data, &cos_t, &sin_t, 8, 2);
         for i in 0..8 {
             assert!(approx_eq(data[i], 0.0));

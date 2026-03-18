@@ -818,8 +818,8 @@ mod tests {
     #[test]
     fn norm_linear_matches_reference() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let weight = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
 
         let fused = fused_norm_linear(&input, &gamma, &beta, &weight, EPS).unwrap();
@@ -830,7 +830,7 @@ mod tests {
     #[test]
     fn norm_linear_no_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let weight = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
 
         let fused = fused_norm_linear(&input, &gamma, &[], &weight, EPS).unwrap();
@@ -859,9 +859,9 @@ mod tests {
 
     #[test]
     fn norm_linear_zero_input() {
-        let input = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
-        let weight = vec![1.0; 8];
+        let input = [0.0; 4];
+        let gamma = [1.0; 4];
+        let weight = [1.0; 8];
         let fused = fused_norm_linear(&input, &gamma, &[], &weight, EPS).unwrap();
         for &v in &fused {
             assert!(v.abs() < TOL);
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn linear_activation_relu_negative_output() {
         // Linear output is negative → ReLU should clamp to 0.
-        let input = vec![1.0];
+        let input = [1.0];
         let weight = vec![-1.0]; // output = -1
         let fused = fused_linear_activation(&input, &weight, &[], FusionActivation::ReLU).unwrap();
         assert!(fused[0].abs() < TOL);
@@ -990,7 +990,7 @@ mod tests {
     #[test]
     fn norm_linear_activation_silu_matches_reference() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let beta = vec![];
         let weight = vec![0.5, -0.5, 0.25, 0.1, 0.1, 0.2, 0.3, 0.4];
         let bias = vec![0.01, -0.01];
@@ -1035,7 +1035,7 @@ mod tests {
     #[test]
     fn norm_linear_activation_gelu() {
         let input = vec![1.0, -1.0, 0.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let weight = vec![1.0, 1.0, 1.0]; // 1×3 → out_dim = 1
         let fused = fused_norm_linear_activation(
             &input,
@@ -1054,7 +1054,7 @@ mod tests {
     #[test]
     fn norm_linear_activation_relu() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let weight = vec![-1.0, -1.0]; // negative output → ReLU clamps
         let fused = fused_norm_linear_activation(
             &input,
@@ -1072,9 +1072,9 @@ mod tests {
     #[test]
     fn norm_linear_activation_with_beta_and_bias() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![0.5; 4];
-        let beta = vec![0.1; 4];
-        let weight = vec![1.0; 8]; // 2×4
+        let gamma = [0.5; 4];
+        let beta = [0.1; 4];
+        let weight = [1.0; 8]; // 2×4
         let bias = vec![0.5, -0.5];
 
         let fused = fused_norm_linear_activation(
@@ -1253,10 +1253,10 @@ mod tests {
 
     #[test]
     fn ffn_block_single_element() {
-        let input = vec![2.0];
-        let w_gate = vec![1.0];
-        let w_up = vec![1.0];
-        let w_down = vec![1.0];
+        let input = [2.0];
+        let w_gate = [1.0];
+        let w_up = [1.0];
+        let w_down = [1.0];
 
         let fused =
             fused_ffn_block(&input, &w_gate, &w_up, &w_down, FusionActivation::ReLU).unwrap();

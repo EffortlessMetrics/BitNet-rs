@@ -1549,9 +1549,9 @@ mod tests {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
         let src = vec![1.0, 2.0, 3.0];
-        let mut dst = vec![0.0; 3];
+        let mut dst = [0.0f32; 3];
         let rec = pt.transfer(DeviceId(0), DeviceId(1), &src, &mut dst).unwrap();
-        assert_eq!(dst, vec![1.0, 2.0, 3.0]);
+        assert_eq!(dst.to_vec(), vec![1.0, 2.0, 3.0]);
         assert_eq!(rec.status, TransferStatus::Completed);
         assert_eq!(rec.bytes, 12); // 3 * 4 bytes
     }
@@ -1561,7 +1561,7 @@ mod tests {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
         let src = vec![1.0, 2.0];
-        let mut dst = vec![0.0; 3];
+        let mut dst = [0.0; 3];
         assert!(pt.transfer(DeviceId(0), DeviceId(1), &src, &mut dst).is_err());
     }
 
@@ -1569,8 +1569,8 @@ mod tests {
     fn transfer_total_bytes_accumulates() {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
-        let src = vec![1.0; 10];
-        let mut dst = vec![0.0; 10];
+        let src = [1.0; 10];
+        let mut dst = [0.0; 10];
         pt.transfer(DeviceId(0), DeviceId(1), &src, &mut dst).unwrap();
         pt.transfer(DeviceId(1), DeviceId(0), &src, &mut dst).unwrap();
         assert_eq!(pt.total_bytes(), 80); // 2 * 10 * 4
@@ -1580,8 +1580,8 @@ mod tests {
     fn transfer_num_transfers() {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
-        let src = vec![1.0];
-        let mut dst = vec![0.0];
+        let src = [1.0];
+        let mut dst = [0.0];
         pt.transfer(DeviceId(0), DeviceId(1), &src, &mut dst).unwrap();
         assert_eq!(pt.num_transfers(), 1);
     }
@@ -1590,8 +1590,8 @@ mod tests {
     fn transfer_history_recorded() {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
-        let src = vec![1.0; 5];
-        let mut dst = vec![0.0; 5];
+        let src = [1.0; 5];
+        let mut dst = [0.0; 5];
         pt.transfer(DeviceId(0), DeviceId(1), &src, &mut dst).unwrap();
         let h = pt.history();
         assert_eq!(h.len(), 1);
@@ -1780,7 +1780,7 @@ mod tests {
         assert_eq!(chunks.len(), 2);
 
         // Simulate local computation producing per-device results.
-        let mut bufs = vec![vec![1.0; 50], vec![2.0; 50]];
+        let mut bufs = [vec![1.0; 50], vec![2.0; 50]];
         allreduce_sum(&mut bufs).unwrap();
         assert_eq!(bufs[0][0], 3.0);
         assert_eq!(bufs[1][0], 3.0);
@@ -1818,15 +1818,15 @@ mod tests {
     fn end_to_end_peer_transfer_round_trip() {
         let topo = DeviceTopology::discover(2).unwrap();
         let mut pt = PeerTransfer::new(topo);
-        let original = vec![3.14, 2.72, 1.41];
-        let mut buf_a = vec![0.0; 3];
-        let mut buf_b = vec![0.0; 3];
+        let original = vec![1.5, 2.5, 1.25];
+        let mut buf_a = [0.0f32; 3];
+        let mut buf_b = [0.0f32; 3];
 
         // GPU0 → GPU1.
         pt.transfer(DeviceId(0), DeviceId(1), &original, &mut buf_a).unwrap();
         // GPU1 → GPU0.
         pt.transfer(DeviceId(1), DeviceId(0), &buf_a, &mut buf_b).unwrap();
-        assert_eq!(buf_b, original);
+        assert_eq!(buf_b.to_vec(), original);
         assert_eq!(pt.num_transfers(), 2);
     }
 

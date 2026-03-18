@@ -348,7 +348,7 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let b = vec![2.0, 3.0, 4.0, 5.0, 6.0];
         let c = vec![0.5, 0.5, 0.5, 0.5, 0.5];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         for i in 0..5 {
             assert!((out[i] - naive_fma(a[i], b[i], c[i])).abs() < EPS);
@@ -357,8 +357,8 @@ mod tests {
 
     #[test]
     fn test_fma_zeros() {
-        let z = vec![0.0; 8];
-        let mut out = vec![1.0; 8];
+        let z = [0.0; 8];
+        let mut out = [1.0; 8];
         unsafe { fma_f32(&z, &z, &z, &mut out) };
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -368,7 +368,7 @@ mod tests {
         let a = vec![-1.0, -2.0, -3.0, -4.0];
         let b = vec![1.0, 2.0, 3.0, 4.0];
         let c = vec![10.0, 10.0, 10.0, 10.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         let expected = [9.0, 6.0, 1.0, -6.0];
         for i in 0..4 {
@@ -379,9 +379,9 @@ mod tests {
     #[test]
     fn test_fma_nan_propagation() {
         let a = vec![f32::NAN, 1.0, 2.0, 3.0];
-        let b = vec![1.0; 4];
-        let c = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let b = [1.0; 4];
+        let c = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         assert!(out[0].is_nan());
     }
@@ -390,8 +390,8 @@ mod tests {
     fn test_fma_inf() {
         let a = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, 0.0];
         let b = vec![1.0, 1.0, 1.0, 1.0];
-        let c = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let c = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         assert_eq!(out[0], f32::INFINITY);
         assert_eq!(out[1], f32::NEG_INFINITY);
@@ -400,10 +400,10 @@ mod tests {
     #[test]
     fn test_fma_subnormals() {
         let tiny = f32::MIN_POSITIVE / 2.0; // subnormal
-        let a = vec![tiny; 4];
-        let b = vec![1.0; 4];
-        let c = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let a = [tiny; 4];
+        let b = [1.0; 4];
+        let c = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         for &v in &out {
             assert!((v - tiny).abs() < f32::EPSILON);
@@ -412,10 +412,10 @@ mod tests {
 
     #[test]
     fn test_fma_single_element() {
-        let a = vec![3.0];
-        let b = vec![4.0];
-        let c = vec![5.0];
-        let mut out = vec![0.0];
+        let a = [3.0];
+        let b = [4.0];
+        let c = [5.0];
+        let mut out = [0.0];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         assert!((out[0] - 17.0).abs() < EPS);
     }
@@ -435,7 +435,7 @@ mod tests {
         let a = vec![2.0, 3.0, 4.0, 5.0, 6.0];
         let b = vec![3.0, 4.0, 5.0, 6.0, 7.0];
         let c = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         unsafe { fms_f32(&a, &b, &c, &mut out) };
         for i in 0..5 {
             let expected = a[i] * b[i] - c[i];
@@ -446,9 +446,9 @@ mod tests {
     #[test]
     fn test_fms_nan() {
         let a = vec![1.0, f32::NAN, 3.0, 4.0];
-        let b = vec![1.0; 4];
-        let c = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let b = [1.0; 4];
+        let c = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fms_f32(&a, &b, &c, &mut out) };
         assert!(out[1].is_nan());
     }
@@ -458,8 +458,8 @@ mod tests {
         // a * b - 0 == a * b
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let c = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let c = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { fms_f32(&a, &b, &c, &mut out) };
         let expected = [5.0, 12.0, 21.0, 32.0];
         for i in 0..4 {
@@ -480,16 +480,16 @@ mod tests {
 
     #[test]
     fn test_dot_zeros() {
-        let a = vec![0.0; 8];
-        let b = vec![1.0; 8];
+        let a = [0.0; 8];
+        let b = [1.0; 8];
         let result = unsafe { dot_product_fma_f32(&a, &b) };
         assert_eq!(result, 0.0);
     }
 
     #[test]
     fn test_dot_single() {
-        let a = vec![3.0];
-        let b = vec![7.0];
+        let a = [3.0];
+        let b = [7.0];
         let result = unsafe { dot_product_fma_f32(&a, &b) };
         assert!((result - 21.0).abs() < EPS);
     }
@@ -519,7 +519,7 @@ mod tests {
         let mat = vec![1.0, 0.0, 0.0, 1.0];
         let x = vec![3.0, 7.0];
         let bias = vec![0.0, 0.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         unsafe { matvec_fma_f32(&mat, &x, &bias, &mut out, 2, 2) };
         assert!((out[0] - 3.0).abs() < EPS);
         assert!((out[1] - 7.0).abs() < EPS);
@@ -530,7 +530,7 @@ mod tests {
         let mat = vec![1.0, 2.0, 3.0, 4.0]; // 2x2
         let x = vec![1.0, 1.0];
         let bias = vec![10.0, 20.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         unsafe { matvec_fma_f32(&mat, &x, &bias, &mut out, 2, 2) };
         // row0: 1+2+10=13, row1: 3+4+20=27
         assert!((out[0] - 13.0).abs() < EPS);
@@ -541,9 +541,9 @@ mod tests {
     fn test_matvec_wide() {
         // 1x8 matrix (exercises NEON path fully for one row)
         let mat: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let x = vec![1.0; 8];
-        let bias = vec![0.0];
-        let mut out = vec![0.0; 1];
+        let x = [1.0; 8];
+        let bias = [0.0];
+        let mut out = [0.0; 1];
         unsafe { matvec_fma_f32(&mat, &x, &bias, &mut out, 1, 8) };
         // 1+2+...+8 = 36
         assert!((out[0] - 36.0).abs() < EPS);
@@ -556,9 +556,9 @@ mod tests {
             1.0, 2.0, 3.0, 4.0, 5.0, // row 0
             6.0, 7.0, 8.0, 9.0, 10.0, // row 1
         ];
-        let x = vec![1.0; 5];
+        let x = [1.0; 5];
         let bias = vec![0.0, 0.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         unsafe { matvec_fma_f32(&mat, &x, &bias, &mut out, 2, 5) };
         assert!((out[0] - 15.0).abs() < EPS);
         assert!((out[1] - 40.0).abs() < EPS);
@@ -570,8 +570,8 @@ mod tests {
     fn test_horner_constant() {
         // p(x) = 5
         let x = vec![0.0, 1.0, 2.0, 3.0, 100.0];
-        let coeffs = vec![5.0];
-        let mut out = vec![0.0; 5];
+        let coeffs = [5.0];
+        let mut out = [0.0; 5];
         unsafe { horner_fma_f32(&x, &coeffs, &mut out) };
         for &v in &out {
             assert!((v - 5.0).abs() < EPS);
@@ -583,7 +583,7 @@ mod tests {
         // p(x) = 2 + 3x
         let x = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         let coeffs = vec![2.0, 3.0];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         unsafe { horner_fma_f32(&x, &coeffs, &mut out) };
         let expected = [2.0, 5.0, 8.0, 11.0, 14.0];
         for i in 0..5 {
@@ -596,7 +596,7 @@ mod tests {
         // p(x) = 1 + 0*x + 1*x^2 = 1 + x^2
         let x = vec![0.0, 1.0, 2.0, 3.0];
         let coeffs = vec![1.0, 0.0, 1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { horner_fma_f32(&x, &coeffs, &mut out) };
         let expected = [1.0, 2.0, 5.0, 10.0];
         for i in 0..4 {
@@ -609,7 +609,7 @@ mod tests {
         // p(x) = 1 + 2x + 3x^2 + 4x^3
         let x = vec![1.0, 2.0, -1.0, 0.0, 0.5];
         let coeffs = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         unsafe { horner_fma_f32(&x, &coeffs, &mut out) };
         for i in 0..5 {
             let xv = x[i];
@@ -623,9 +623,9 @@ mod tests {
     #[test]
     fn test_scale_bias_basic() {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let scale = vec![2.0; 5];
-        let bias = vec![1.0; 5];
-        let mut out = vec![0.0; 5];
+        let scale = [2.0; 5];
+        let bias = [1.0; 5];
+        let mut out = [0.0; 5];
         unsafe { scale_bias_f32(&x, &scale, &bias, &mut out) };
         let expected = [3.0, 5.0, 7.0, 9.0, 11.0];
         for i in 0..5 {
@@ -637,9 +637,9 @@ mod tests {
     fn test_scale_bias_identity() {
         // scale=1, bias=0 → identity
         let x: Vec<f32> = (0..9).map(|i| i as f32).collect();
-        let scale = vec![1.0; 9];
-        let bias = vec![0.0; 9];
-        let mut out = vec![0.0; 9];
+        let scale = [1.0; 9];
+        let bias = [0.0; 9];
+        let mut out = [0.0; 9];
         unsafe { scale_bias_f32(&x, &scale, &bias, &mut out) };
         for i in 0..9 {
             assert!((out[i] - x[i]).abs() < EPS);
@@ -649,19 +649,19 @@ mod tests {
     #[test]
     fn test_scale_bias_nan_in_x() {
         let x = vec![f32::NAN, 1.0, 2.0, 3.0];
-        let scale = vec![1.0; 4];
-        let bias = vec![0.0; 4];
-        let mut out = vec![0.0; 4];
+        let scale = [1.0; 4];
+        let bias = [0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { scale_bias_f32(&x, &scale, &bias, &mut out) };
         assert!(out[0].is_nan());
     }
 
     #[test]
     fn test_scale_bias_inf() {
-        let x = vec![f32::INFINITY; 4];
-        let scale = vec![2.0; 4];
-        let bias = vec![-1.0; 4];
-        let mut out = vec![0.0; 4];
+        let x = [f32::INFINITY; 4];
+        let scale = [2.0; 4];
+        let bias = [-1.0; 4];
+        let mut out = [0.0; 4];
         unsafe { scale_bias_f32(&x, &scale, &bias, &mut out) };
         assert_eq!(out[0], f32::INFINITY);
     }
@@ -671,7 +671,7 @@ mod tests {
     #[test]
     fn test_scale_bias_scalar_basic() {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         unsafe { scale_bias_scalar_f32(&x, 2.0, 1.0, &mut out) };
         let expected = [3.0, 5.0, 7.0, 9.0, 11.0];
         for i in 0..5 {
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn test_scale_bias_scalar_zero_scale() {
         let x = vec![100.0, 200.0, 300.0, 400.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { scale_bias_scalar_f32(&x, 0.0, 5.0, &mut out) };
         for &v in &out {
             assert!((v - 5.0).abs() < EPS);
@@ -708,10 +708,10 @@ mod tests {
         // Kahan's classic example: a*b+c where naive loses precision.
         // With f32 the effect is small, but FMA should be at least as
         // good as the naive path.
-        let a = vec![1.0 + 1e-7_f32; 4];
-        let b = vec![1.0 + 1e-7_f32; 4];
-        let c = vec![-(1.0 + 2e-7_f32); 4];
-        let mut out = vec![0.0; 4];
+        let a = [1.0 + 1e-7_f32; 4];
+        let b = [1.0 + 1e-7_f32; 4];
+        let c = [-(1.0 + 2e-7_f32); 4];
+        let mut out = [0.0; 4];
         unsafe { fma_f32(&a, &b, &c, &mut out) };
         for i in 0..4 {
             let naive = a[i] * b[i] + c[i];
@@ -739,8 +739,8 @@ mod tests {
         let c = vec![0.1, 0.2, 0.3, 0.4, 0.5];
         let neg_c: Vec<f32> = c.iter().map(|&v| -v).collect();
 
-        let mut fms_out = vec![0.0; 5];
-        let mut fma_out = vec![0.0; 5];
+        let mut fms_out = [0.0; 5];
+        let mut fma_out = [0.0; 5];
         unsafe {
             fms_f32(&a, &b, &c, &mut fms_out);
             fma_f32(&a, &b, &neg_c, &mut fma_out);

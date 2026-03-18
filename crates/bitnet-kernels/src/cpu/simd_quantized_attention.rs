@@ -892,7 +892,7 @@ mod tests {
 
     #[test]
     fn test_quantize_i8_single_value() {
-        let qt = quantize_to_i8(&[3.14]);
+        let qt = quantize_to_i8(&[1.5]);
         assert_eq!(qt.data.len(), 1);
         assert_eq!(qt.data[0], 127);
     }
@@ -1011,29 +1011,29 @@ mod tests {
 
     #[test]
     fn test_qkv_projection_input_too_small() {
-        let w = vec![1i8; 16];
-        let mut out = vec![0.0f32; 4];
+        let w = [1i8; 16];
+        let mut out = [0.0f32; 4];
         let res = quantized_qkv_projection(&[1.0, 2.0], &w, 1.0, 4, 4, &mut out);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_qkv_projection_weight_too_small() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         let res = quantized_qkv_projection(&[1.0; 4], &[1i8; 8], 1.0, 4, 4, &mut out);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_qkv_projection_output_too_small() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         let res = quantized_qkv_projection(&[1.0; 4], &[1i8; 16], 1.0, 4, 4, &mut out);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_qkv_projection_negative_scale() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         let res = quantized_qkv_projection(&[1.0; 4], &[1i8; 16], -1.0, 4, 4, &mut out);
         assert!(res.is_err());
     }
@@ -1056,7 +1056,7 @@ mod tests {
         let head_dim = 4;
         let q = QuantizedTensor { data: vec![127, 0, 0, 0, 0, 127, 0, 0], scale: 1.0 / 127.0 };
         let k = QuantizedTensor { data: vec![127, 0, 0, 0, 0, 127, 0, 0], scale: 1.0 / 127.0 };
-        let mut scores = vec![0.0f32; 4];
+        let mut scores = [0.0f32; 4];
         quantized_score_computation(&q, &k, seq_len, head_dim, 1.0, &mut scores).unwrap();
         // Diagonal should be ~1.0, off-diagonal ~0.0
         assert!(approx_eq(scores[0], 1.0, 0.02));
@@ -1071,7 +1071,7 @@ mod tests {
         let head_dim = 4;
         let q = QuantizedTensor { data: vec![10i8; 12], scale: 0.1 };
         let k = QuantizedTensor { data: vec![10i8; 12], scale: 0.1 };
-        let mut scores = vec![0.0f32; 9];
+        let mut scores = [0.0f32; 9];
         quantized_score_computation(&q, &k, seq_len, head_dim, 1.0, &mut scores).unwrap();
         // All scores should be identical.
         let first = scores[0];
@@ -1084,7 +1084,7 @@ mod tests {
         let head_dim = 4;
         let q = QuantizedTensor { data: vec![10, 10, 10, 10], scale: 1.0 };
         let k = QuantizedTensor { data: vec![10, 10, 10, 10], scale: 1.0 };
-        let mut scores = vec![0.0f32; 1];
+        let mut scores = [0.0f32; 1];
         quantized_score_computation(&q, &k, seq_len, head_dim, 0.5, &mut scores).unwrap();
         // dot = 4 × 100 = 400, combined = 400 * 1.0 * 1.0 * 0.5 = 200.0
         assert!(approx_eq(scores[0], 200.0, 1e-3));
@@ -1094,7 +1094,7 @@ mod tests {
     fn test_score_computation_q_too_small() {
         let q = QuantizedTensor { data: vec![1; 3], scale: 1.0 };
         let k = QuantizedTensor { data: vec![1; 8], scale: 1.0 };
-        let mut scores = vec![0.0f32; 4];
+        let mut scores = [0.0f32; 4];
         let res = quantized_score_computation(&q, &k, 2, 4, 1.0, &mut scores);
         assert!(res.is_err());
     }
@@ -1103,7 +1103,7 @@ mod tests {
     fn test_score_computation_scores_too_small() {
         let q = QuantizedTensor { data: vec![1; 8], scale: 1.0 };
         let k = QuantizedTensor { data: vec![1; 8], scale: 1.0 };
-        let mut scores = vec![0.0f32; 2];
+        let mut scores = [0.0f32; 2];
         let res = quantized_score_computation(&q, &k, 2, 4, 1.0, &mut scores);
         assert!(res.is_err());
     }
@@ -1112,10 +1112,10 @@ mod tests {
     fn test_score_computation_orthogonal() {
         let q = QuantizedTensor { data: vec![127, 0, 0, 127], scale: 1.0 / 127.0 };
         let k = QuantizedTensor { data: vec![0, 127, 127, 0], scale: 1.0 / 127.0 };
-        let mut scores = vec![0.0f32; 4];
+        let mut scores = [0.0f32; 4];
         quantized_score_computation(&q, &k, 2, 2, 1.0, &mut scores).unwrap();
-        assert!(approx_eq(scores[0 * 2 + 0], 0.0, 0.02)); // q0 · k0
-        assert!(approx_eq(scores[1 * 2 + 1], 0.0, 0.02)); // q1 · k1
+        assert!(approx_eq(scores[0], 0.0, 0.02)); // q0 · k0
+        assert!(approx_eq(scores[3], 0.0, 0.02)); // q1 · k1
     }
 
     #[test]
@@ -1135,7 +1135,7 @@ mod tests {
 
     #[test]
     fn test_softmax_uniform() {
-        let mut scores = vec![1.0f32; 4];
+        let mut scores = [1.0f32; 4];
         quantized_softmax(&mut scores, 2, false).unwrap();
         // Each row should be [0.5, 0.5].
         assert!(approx_eq(scores[0], 0.5, 1e-6));
@@ -1195,7 +1195,7 @@ mod tests {
 
     #[test]
     fn test_softmax_causal_single_row() {
-        let mut scores = vec![5.0];
+        let mut scores = [5.0];
         quantized_softmax(&mut scores, 1, true).unwrap();
         assert!(approx_eq(scores[0], 1.0, 1e-6));
     }
@@ -1211,14 +1211,14 @@ mod tests {
 
     #[test]
     fn test_softmax_buffer_too_small() {
-        let mut scores = vec![1.0; 3];
+        let mut scores = [1.0; 3];
         let res = quantized_softmax(&mut scores, 2, false);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_softmax_all_neg_inf() {
-        let mut scores = vec![f32::NEG_INFINITY; 4];
+        let mut scores = [f32::NEG_INFINITY; 4];
         quantized_softmax(&mut scores, 2, false).unwrap();
         // Should produce zeros (degenerate case).
         assert!(scores.iter().all(|&v| v == 0.0));
@@ -1267,7 +1267,7 @@ mod tests {
     #[test]
     fn test_value_aggregation_v_too_small() {
         let v = QuantizedTensor { data: vec![1; 3], scale: 1.0 };
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         let res = quantized_value_aggregation(&[0.5; 4], &v, 2, 4, &mut out);
         assert!(res.is_err());
     }
@@ -1275,7 +1275,7 @@ mod tests {
     #[test]
     fn test_value_aggregation_output_too_small() {
         let v = QuantizedTensor { data: vec![1; 8], scale: 1.0 };
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         let res = quantized_value_aggregation(&[0.5; 4], &v, 2, 4, &mut out);
         assert!(res.is_err());
     }
@@ -1283,7 +1283,7 @@ mod tests {
     #[test]
     fn test_value_aggregation_weights_too_small() {
         let v = QuantizedTensor { data: vec![1; 8], scale: 1.0 };
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         let res = quantized_value_aggregation(&[0.5; 2], &v, 2, 4, &mut out);
         assert!(res.is_err());
     }
@@ -1305,7 +1305,7 @@ mod tests {
     fn test_dequantized_output_no_bias() {
         let q = vec![127i8, -127, 0, 64];
         let scale = 0.01;
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantized_output(&q, scale, None, &mut out).unwrap();
         assert!(approx_eq(out[0], 1.27, 1e-5));
         assert!(approx_eq(out[1], -1.27, 1e-5));
@@ -1318,7 +1318,7 @@ mod tests {
         let q = vec![100i8, -50];
         let scale = 0.1;
         let bias = vec![1.0f32, 2.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         dequantized_output(&q, scale, Some(&bias), &mut out).unwrap();
         assert!(approx_eq(out[0], 11.0, 1e-4)); // 100*0.1 + 1.0
         assert!(approx_eq(out[1], -3.0, 1e-4)); // -50*0.1 + 2.0
@@ -1326,20 +1326,20 @@ mod tests {
 
     #[test]
     fn test_dequantized_output_empty() {
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         dequantized_output(&[], 1.0, None, &mut out).unwrap();
     }
 
     #[test]
     fn test_dequantized_output_output_too_small() {
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         let res = dequantized_output(&[1i8, 2], 1.0, None, &mut out);
         assert!(res.is_err());
     }
 
     #[test]
     fn test_dequantized_output_bias_too_small() {
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         let res = dequantized_output(&[1i8, 2], 1.0, Some(&[1.0]), &mut out);
         assert!(res.is_err());
     }
@@ -1347,7 +1347,7 @@ mod tests {
     #[test]
     fn test_dequantized_output_zero_scale() {
         let q = vec![127i8, -127];
-        let mut out = vec![99.0f32; 2];
+        let mut out = [99.0f32; 2];
         dequantized_output(&q, 0.0, None, &mut out).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }
@@ -1424,9 +1424,9 @@ mod tests {
     fn test_self_attention_input_too_small() {
         let head_dim = 8;
         let (w, ws) = identity_i8(head_dim);
-        let input = vec![0.1f32; 4]; // too small for seq_len=2
+        let input = [0.1f32; 4]; // too small for seq_len=2
         let cfg = QuantizedAttentionConfig::new(2, head_dim, 1);
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         let res = quantized_self_attention(&input, &w, ws, &w, ws, &w, ws, &cfg, &mut output);
         assert!(res.is_err());
     }
@@ -1435,9 +1435,9 @@ mod tests {
     fn test_self_attention_output_too_small() {
         let head_dim = 8;
         let (w, ws) = identity_i8(head_dim);
-        let input = vec![0.1f32; 16];
+        let input = [0.1f32; 16];
         let cfg = QuantizedAttentionConfig::new(2, head_dim, 1);
-        let mut output = vec![0.0f32; 4]; // too small
+        let mut output = [0.0f32; 4]; // too small
         let res = quantized_self_attention(&input, &w, ws, &w, ws, &w, ws, &cfg, &mut output);
         assert!(res.is_err());
     }
@@ -1445,9 +1445,9 @@ mod tests {
     #[test]
     fn test_self_attention_zero_config() {
         let (w, ws) = identity_i8(4);
-        let input = vec![0.1f32; 4];
+        let input = [0.1f32; 4];
         let cfg = QuantizedAttentionConfig::new(0, 4, 1);
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         let res = quantized_self_attention(&input, &w, ws, &w, ws, &w, ws, &cfg, &mut output);
         assert!(res.is_err());
     }
@@ -1513,7 +1513,7 @@ mod tests {
     fn test_score_negative_values() {
         let q = QuantizedTensor { data: vec![-100i8; 4], scale: 0.01 };
         let k = QuantizedTensor { data: vec![100i8; 4], scale: 0.01 };
-        let mut scores = vec![0.0f32; 1];
+        let mut scores = [0.0f32; 1];
         quantized_score_computation(&q, &k, 1, 4, 1.0, &mut scores).unwrap();
         assert!(scores[0] < 0.0);
     }
@@ -1656,9 +1656,9 @@ mod tests {
 
     #[test]
     fn test_dequantized_output_bias_additivity() {
-        let q = vec![0i8; 4];
+        let q = [0i8; 4];
         let bias = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         dequantized_output(&q, 1.0, Some(&bias), &mut out).unwrap();
         // With zero quantized values, output = bias.
         assert!(vec_approx_eq(&out, &bias, 1e-6));
@@ -1707,7 +1707,7 @@ mod tests {
     fn test_score_computation_zero_scale() {
         let q = QuantizedTensor { data: vec![100i8; 4], scale: 0.0 };
         let k = QuantizedTensor { data: vec![100i8; 4], scale: 1.0 };
-        let mut scores = vec![99.0f32; 1];
+        let mut scores = [99.0f32; 1];
         quantized_score_computation(&q, &k, 1, 4, 1.0, &mut scores).unwrap();
         assert!(approx_eq(scores[0], 0.0, 1e-6));
     }
@@ -1752,8 +1752,8 @@ mod tests {
 
     #[test]
     fn test_dequantized_output_preserves_zero() {
-        let q = vec![0i8; 8];
-        let mut out = vec![99.0f32; 8];
+        let q = [0i8; 8];
+        let mut out = [99.0f32; 8];
         dequantized_output(&q, 0.5, None, &mut out).unwrap();
         assert!(out.iter().all(|&v| v == 0.0));
     }

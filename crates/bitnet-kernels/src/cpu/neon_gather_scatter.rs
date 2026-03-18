@@ -676,46 +676,46 @@ mod tests {
     fn test_gather_basic() {
         let src = [10.0, 20.0, 30.0, 40.0, 50.0];
         let indices = [4, 2, 0, 3, 1];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         gather_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![50.0, 30.0, 10.0, 40.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![50.0, 30.0, 10.0, 40.0, 20.0]);
     }
 
     #[test]
     fn test_gather_identity() {
         let src: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let indices: Vec<usize> = (0..8).collect();
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         gather_f32(&src, &indices, &mut out);
-        assert_eq!(out, src);
+        assert_eq!(out.to_vec(), src);
     }
 
     #[test]
     fn test_gather_reverse() {
         let src: Vec<f32> = (0..8).map(|i| i as f32).collect();
         let indices: Vec<usize> = (0..8).rev().collect();
-        let mut out = vec![0.0; 8];
+        let mut out = [0.0; 8];
         gather_f32(&src, &indices, &mut out);
         let expected: Vec<f32> = (0..8).rev().map(|i| i as f32).collect();
-        assert_eq!(out, expected);
+        assert_eq!(out.to_vec(), expected);
     }
 
     #[test]
     fn test_gather_tail_elements() {
         let src = [1.0, 2.0, 3.0];
         let indices = [2, 0, 1];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         gather_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![3.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 1.0, 2.0]);
     }
 
     #[test]
     fn test_gather_single() {
         let src = [42.0, 99.0];
         let indices = [1];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         gather_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![99.0]);
+        assert_eq!(out.to_vec(), vec![99.0]);
     }
 
     #[test]
@@ -731,9 +731,9 @@ mod tests {
     fn test_gather_duplicate_indices() {
         let src = [10.0, 20.0, 30.0];
         let indices = [1, 1, 1, 1];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         gather_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![20.0, 20.0, 20.0, 20.0]);
+        assert_eq!(out.to_vec(), vec![20.0, 20.0, 20.0, 20.0]);
     }
 
     #[test]
@@ -741,7 +741,7 @@ mod tests {
     fn test_gather_oob() {
         let src = [1.0, 2.0];
         let indices = [5];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         gather_f32(&src, &indices, &mut out);
     }
 
@@ -749,10 +749,10 @@ mod tests {
     fn test_gather_large() {
         let src: Vec<f32> = (0..100).map(|i| i as f32).collect();
         let indices: Vec<usize> = (0..100).rev().collect();
-        let mut out = vec![0.0; 100];
+        let mut out = [0.0; 100];
         gather_f32(&src, &indices, &mut out);
         let expected: Vec<f32> = (0..100).rev().map(|i| i as f32).collect();
-        assert_eq!(out, expected);
+        assert_eq!(out.to_vec(), expected);
     }
 
     // ── gather_batched ─────────────────────────────────────────────
@@ -762,18 +762,18 @@ mod tests {
         // 2 batches × 4 elements each, gather 2 per batch
         let src = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
         let indices = [3, 1, 0, 2]; // batch0: [3,1], batch1: [0,2]
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         gather_batched(&src, 4, &indices, 2, &mut out);
-        assert_eq!(out, vec![40.0, 20.0, 50.0, 70.0]);
+        assert_eq!(out.to_vec(), vec![40.0, 20.0, 50.0, 70.0]);
     }
 
     #[test]
     fn test_gather_batched_single_batch() {
         let src = [1.0, 2.0, 3.0];
         let indices = [2, 0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         gather_batched(&src, 3, &indices, 2, &mut out);
-        assert_eq!(out, vec![3.0, 1.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 1.0]);
     }
 
     #[test]
@@ -789,7 +789,7 @@ mod tests {
     fn test_gather_batched_oob() {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 5]; // index 5 out of segment_len=2
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         gather_batched(&src, 2, &indices, 1, &mut out);
     }
 
@@ -799,45 +799,45 @@ mod tests {
     fn test_scatter_add_basic() {
         let src = [1.0, 2.0, 3.0, 4.0, 5.0];
         let indices = [0, 1, 2, 3, 4];
-        let mut out = vec![10.0; 5];
+        let mut out = [10.0; 5];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![11.0, 12.0, 13.0, 14.0, 15.0]);
+        assert_eq!(out.to_vec(), vec![11.0, 12.0, 13.0, 14.0, 15.0]);
     }
 
     #[test]
     fn test_scatter_add_duplicate_indices() {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 0, 1, 1];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![3.0, 7.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 7.0]);
     }
 
     #[test]
     fn test_scatter_add_tail() {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 1, 0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![4.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 2.0]);
     }
 
     #[test]
     fn test_scatter_add_single() {
         let src = [7.0];
         let indices = [0];
-        let mut out = vec![3.0];
+        let mut out = [3.0];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![10.0]);
+        assert_eq!(out.to_vec(), vec![10.0]);
     }
 
     #[test]
     fn test_scatter_add_empty() {
         let src: [f32; 0] = [];
         let indices: [usize; 0] = [];
-        let mut out = vec![5.0; 3];
+        let mut out = [5.0; 3];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![5.0; 3]);
+        assert_eq!(out.to_vec(), vec![5.0; 3]);
     }
 
     #[test]
@@ -845,7 +845,7 @@ mod tests {
     fn test_scatter_add_oob() {
         let src = [1.0];
         let indices = [10];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         scatter_add_f32(&src, &indices, &mut out);
     }
 
@@ -853,9 +853,9 @@ mod tests {
     fn test_scatter_add_all_same_index() {
         let src = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
         let indices = [0; 8];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         scatter_add_f32(&src, &indices, &mut out);
-        assert_eq!(out, vec![8.0]);
+        assert_eq!(out.to_vec(), vec![8.0]);
     }
 
     // ── scatter_add_scaled ─────────────────────────────────────────
@@ -864,36 +864,36 @@ mod tests {
     fn test_scatter_add_scaled_basic() {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 1, 2, 3];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scatter_add_scaled(&src, &indices, 2.0, &mut out);
-        assert_eq!(out, vec![2.0, 4.0, 6.0, 8.0]);
+        assert_eq!(out.to_vec(), vec![2.0, 4.0, 6.0, 8.0]);
     }
 
     #[test]
     fn test_scatter_add_scaled_zero_alpha() {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 1, 2, 3];
-        let mut out = vec![10.0; 4];
+        let mut out = [10.0; 4];
         scatter_add_scaled(&src, &indices, 0.0, &mut out);
-        assert_eq!(out, vec![10.0, 10.0, 10.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![10.0, 10.0, 10.0, 10.0]);
     }
 
     #[test]
     fn test_scatter_add_scaled_negative() {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 1, 0];
-        let mut out = vec![10.0; 2];
+        let mut out = [10.0; 2];
         scatter_add_scaled(&src, &indices, -1.0, &mut out);
-        assert_eq!(out, vec![6.0, 8.0]); // 10-1-3, 10-2
+        assert_eq!(out.to_vec(), vec![6.0, 8.0]); // 10-1-3, 10-2
     }
 
     #[test]
     fn test_scatter_add_scaled_tail() {
         let src = [1.0, 2.0, 3.0, 4.0, 5.0];
         let indices = [0, 1, 2, 3, 4];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         scatter_add_scaled(&src, &indices, 0.5, &mut out);
-        assert_eq!(out, vec![0.5, 1.0, 1.5, 2.0, 2.5]);
+        assert_eq!(out.to_vec(), vec![0.5, 1.0, 1.5, 2.0, 2.5]);
     }
 
     // ── scatter_add_batched ────────────────────────────────────────
@@ -903,18 +903,18 @@ mod tests {
         // 2 batches, 2 values each, output segments of 3
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 2, 1, 0];
-        let mut out = vec![0.0; 6]; // 2 × 3
+        let mut out = [0.0; 6]; // 2 × 3
         scatter_add_batched(&src, &indices, 2, &mut out, 3);
-        assert_eq!(out, vec![1.0, 0.0, 2.0, 4.0, 3.0, 0.0]);
+        assert_eq!(out.to_vec(), vec![1.0, 0.0, 2.0, 4.0, 3.0, 0.0]);
     }
 
     #[test]
     fn test_scatter_add_batched_empty() {
         let src: [f32; 0] = [];
         let indices: [usize; 0] = [];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scatter_add_batched(&src, &indices, 0, &mut out, 4);
-        assert_eq!(out, vec![0.0; 4]);
+        assert_eq!(out.to_vec(), vec![0.0; 4]);
     }
 
     // ── indexed_copy_f32 ───────────────────────────────────────────
@@ -923,18 +923,18 @@ mod tests {
     fn test_indexed_copy_basic() {
         let src = [10.0, 20.0, 30.0, 40.0, 50.0];
         let indices = [4, 0, 2];
-        let mut dst = vec![0.0; 3];
+        let mut dst = [0.0; 3];
         indexed_copy_f32(&src, &indices, &mut dst);
-        assert_eq!(dst, vec![50.0, 10.0, 30.0]);
+        assert_eq!(dst.to_vec(), vec![50.0, 10.0, 30.0]);
     }
 
     #[test]
     fn test_indexed_copy_single() {
         let src = [42.0];
         let indices = [0];
-        let mut dst = vec![0.0; 1];
+        let mut dst = [0.0; 1];
         indexed_copy_f32(&src, &indices, &mut dst);
-        assert_eq!(dst, vec![42.0]);
+        assert_eq!(dst.to_vec(), vec![42.0]);
     }
 
     #[test]
@@ -953,7 +953,7 @@ mod tests {
         // 4 rows × stride 4, copy 3 elements per row
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let indices = [2, 0]; // rows 2 and 0
-        let mut dst = vec![0.0; 8]; // 2 × stride 4
+        let mut dst = [0.0; 8]; // 2 × stride 4
         indexed_copy_strided(&src, 4, &mut dst, 4, &indices, 3);
         // row 2: [8,9,10,...], row 0: [0,1,2,...]
         assert_eq!(dst[0..3], [8.0, 9.0, 10.0]);
@@ -965,19 +965,19 @@ mod tests {
         // NEON path: 8 elements per row (2 chunks)
         let src: Vec<f32> = (0..24).map(|i| i as f32).collect();
         let indices = [1]; // row 1 of 3×8
-        let mut dst = vec![0.0; 8];
+        let mut dst = [0.0; 8];
         indexed_copy_strided(&src, 8, &mut dst, 8, &indices, 8);
         let expected: Vec<f32> = (8..16).map(|i| i as f32).collect();
-        assert_eq!(dst, expected);
+        assert_eq!(dst.to_vec(), expected);
     }
 
     #[test]
     fn test_strided_copy_count_one() {
         let src = [10.0, 20.0, 30.0, 40.0];
         let indices = [3, 1];
-        let mut dst = vec![0.0; 2];
+        let mut dst = [0.0; 2];
         indexed_copy_strided(&src, 1, &mut dst, 1, &indices, 1);
-        assert_eq!(dst, vec![40.0, 20.0]);
+        assert_eq!(dst.to_vec(), vec![40.0, 20.0]);
     }
 
     #[test]
@@ -993,7 +993,7 @@ mod tests {
     fn test_strided_copy_oob() {
         let src = [1.0, 2.0, 3.0, 4.0]; // 2 rows × 2
         let indices = [5]; // oob
-        let mut dst = vec![0.0; 2];
+        let mut dst = [0.0; 2];
         indexed_copy_strided(&src, 2, &mut dst, 2, &indices, 2);
     }
 
@@ -1003,36 +1003,36 @@ mod tests {
     fn test_gather_rows_basic() {
         let src: Vec<f32> = (0..12).map(|i| i as f32).collect(); // 4×3
         let indices = [3, 0];
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         gather_rows(&src, 3, &indices, &mut out);
-        assert_eq!(out, vec![9.0, 10.0, 11.0, 0.0, 1.0, 2.0]);
+        assert_eq!(out.to_vec(), vec![9.0, 10.0, 11.0, 0.0, 1.0, 2.0]);
     }
 
     #[test]
     fn test_gather_rows_single() {
         let src = [1.0, 2.0, 3.0, 4.0]; // 2×2
         let indices = [1];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         gather_rows(&src, 2, &indices, &mut out);
-        assert_eq!(out, vec![3.0, 4.0]);
+        assert_eq!(out.to_vec(), vec![3.0, 4.0]);
     }
 
     #[test]
     fn test_gather_rows_wide() {
         let src: Vec<f32> = (0..16).map(|i| i as f32).collect(); // 2×8
         let indices = [1, 0];
-        let mut out = vec![0.0; 16];
+        let mut out = [0.0; 16];
         gather_rows(&src, 8, &indices, &mut out);
         let expected: Vec<f32> = (8..16).chain(0..8).map(|i| i as f32).collect();
-        assert_eq!(out, expected);
+        assert_eq!(out.to_vec(), expected);
     }
 
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn test_gather_rows_oob() {
-        let src = vec![0.0; 8]; // 2×4
+        let src = [0.0; 8]; // 2×4
         let indices = [5];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         gather_rows(&src, 4, &indices, &mut out);
     }
 
@@ -1042,19 +1042,19 @@ mod tests {
     fn test_scatter_rows_add_basic() {
         let src = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2 rows × 3
         let indices = [1, 0]; // row 0→dst 1, row 1→dst 0
-        let mut out = vec![10.0; 6]; // 2×3
+        let mut out = [10.0; 6]; // 2×3
         scatter_rows_add(&src, 3, &indices, &mut out);
         // dst row 0: [10+4, 10+5, 10+6], dst row 1: [10+1, 10+2, 10+3]
-        assert_eq!(out, vec![14.0, 15.0, 16.0, 11.0, 12.0, 13.0]);
+        assert_eq!(out.to_vec(), vec![14.0, 15.0, 16.0, 11.0, 12.0, 13.0]);
     }
 
     #[test]
     fn test_scatter_rows_add_duplicate() {
         let src = [1.0, 2.0, 3.0, 4.0]; // 2 rows × 2
         let indices = [0, 0]; // both scatter to row 0
-        let mut out = vec![0.0; 2]; // 1×2
+        let mut out = [0.0; 2]; // 1×2
         scatter_rows_add(&src, 2, &indices, &mut out);
-        assert_eq!(out, vec![4.0, 6.0]); // 1+3, 2+4
+        assert_eq!(out.to_vec(), vec![4.0, 6.0]); // 1+3, 2+4
     }
 
     #[test]
@@ -1062,17 +1062,17 @@ mod tests {
         // 8 cols → exercises NEON path
         let src: Vec<f32> = vec![1.0; 8]; // 1 row × 8
         let indices = [0];
-        let mut out = vec![10.0; 8];
+        let mut out = [10.0; 8];
         scatter_rows_add(&src, 8, &indices, &mut out);
-        assert_eq!(out, vec![11.0; 8]);
+        assert_eq!(out.to_vec(), vec![11.0; 8]);
     }
 
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn test_scatter_rows_add_oob() {
-        let src = vec![1.0; 4]; // 2×2
+        let src = [1.0; 4]; // 2×2
         let indices = [5, 0];
-        let mut out = vec![0.0; 4]; // 2×2
+        let mut out = [0.0; 4]; // 2×2
         scatter_rows_add(&src, 2, &indices, &mut out);
     }
 
@@ -1083,9 +1083,9 @@ mod tests {
         let src = [10.0, 20.0, 30.0, 40.0, 50.0];
         let indices = [4, 3, 2, 1, 0];
         let mask = [true, false, true, false, true];
-        let mut out = vec![0.0; 5];
+        let mut out = [0.0; 5];
         masked_gather(&src, &indices, &mask, &mut out, -1.0);
-        assert_eq!(out, vec![50.0, -1.0, 30.0, -1.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![50.0, -1.0, 30.0, -1.0, 10.0]);
     }
 
     #[test]
@@ -1093,9 +1093,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [3, 2, 1, 0];
         let mask = [true; 4];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         masked_gather(&src, &indices, &mask, &mut out, -1.0);
-        assert_eq!(out, vec![4.0, 3.0, 2.0, 1.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 3.0, 2.0, 1.0]);
     }
 
     #[test]
@@ -1103,9 +1103,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 0, 0, 0]; // indices don't matter
         let mask = [false; 4];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         masked_gather(&src, &indices, &mask, &mut out, 99.0);
-        assert_eq!(out, vec![99.0; 4]);
+        assert_eq!(out.to_vec(), vec![99.0; 4]);
     }
 
     #[test]
@@ -1113,9 +1113,9 @@ mod tests {
         let src = [10.0, 20.0, 30.0];
         let indices = [2, 1, 0];
         let mask = [true, false, true];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         masked_gather(&src, &indices, &mask, &mut out, -1.0);
-        assert_eq!(out, vec![30.0, -1.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![30.0, -1.0, 10.0]);
     }
 
     #[test]
@@ -1124,9 +1124,9 @@ mod tests {
         let src = [1.0, 2.0];
         let indices = [999]; // oob, but mask is false
         let mask = [false];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         masked_gather(&src, &indices, &mask, &mut out, -1.0);
-        assert_eq!(out, vec![-1.0]);
+        assert_eq!(out.to_vec(), vec![-1.0]);
     }
 
     // ── masked_scatter ─────────────────────────────────────────────
@@ -1136,9 +1136,9 @@ mod tests {
         let src = [10.0, 20.0, 30.0];
         let indices = [2, 1, 0];
         let mask = [true, false, true];
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         masked_scatter(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![30.0, 0.0, 10.0]);
+        assert_eq!(out.to_vec(), vec![30.0, 0.0, 10.0]);
     }
 
     #[test]
@@ -1146,9 +1146,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [3, 2, 1, 0];
         let mask = [true; 4];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         masked_scatter(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![4.0, 3.0, 2.0, 1.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 3.0, 2.0, 1.0]);
     }
 
     #[test]
@@ -1156,9 +1156,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 1, 2];
         let mask = [false; 3];
-        let mut out = vec![99.0; 3];
+        let mut out = [99.0; 3];
         masked_scatter(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![99.0; 3]); // unchanged
+        assert_eq!(out.to_vec(), vec![99.0; 3]); // unchanged
     }
 
     // ── masked_scatter_add ─────────────────────────────────────────
@@ -1168,10 +1168,10 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0, 5.0];
         let indices = [0, 1, 2, 0, 1];
         let mask = [true, false, true, true, false];
-        let mut out = vec![10.0; 3];
+        let mut out = [10.0; 3];
         masked_scatter_add(&src, &indices, &mask, &mut out);
         // out[0] += 1 + 4 = 15, out[2] += 3 = 13
-        assert_eq!(out, vec![15.0, 10.0, 13.0]);
+        assert_eq!(out.to_vec(), vec![15.0, 10.0, 13.0]);
     }
 
     #[test]
@@ -1179,9 +1179,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 1, 0, 1];
         let mask = [true; 4];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         masked_scatter_add(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![4.0, 6.0]);
+        assert_eq!(out.to_vec(), vec![4.0, 6.0]);
     }
 
     #[test]
@@ -1189,9 +1189,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0, 4.0];
         let indices = [0, 1, 2, 3];
         let mask = [false; 4];
-        let mut out = vec![10.0; 4];
+        let mut out = [10.0; 4];
         masked_scatter_add(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![10.0; 4]);
+        assert_eq!(out.to_vec(), vec![10.0; 4]);
     }
 
     #[test]
@@ -1199,9 +1199,9 @@ mod tests {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 0, 0];
         let mask = [true, false, true];
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         masked_scatter_add(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![4.0]); // 1 + 3
+        assert_eq!(out.to_vec(), vec![4.0]); // 1 + 3
     }
 
     #[test]
@@ -1209,9 +1209,9 @@ mod tests {
         let src = [1.0];
         let indices = [999]; // oob but masked out
         let mask = [false];
-        let mut out = vec![5.0; 1];
+        let mut out = [5.0; 1];
         masked_scatter_add(&src, &indices, &mask, &mut out);
-        assert_eq!(out, vec![5.0]);
+        assert_eq!(out.to_vec(), vec![5.0]);
     }
 
     // ── masked_fill ────────────────────────────────────────────────
@@ -1339,9 +1339,9 @@ mod tests {
         // Logical shape [2,3], flat: [0,1,2,3,4,5]
         let src: Vec<f32> = (0..6).map(|i| i as f32).collect();
         let indices = [5, 0, 3]; // flat indices
-        let mut out = vec![0.0; 3];
+        let mut out = [0.0; 3];
         gather_nd(&src, &[2, 3], &indices, &mut out);
-        assert_eq!(out, vec![5.0, 0.0, 3.0]);
+        assert_eq!(out.to_vec(), vec![5.0, 0.0, 3.0]);
     }
 
     #[test]
@@ -1349,16 +1349,16 @@ mod tests {
         let src: Vec<f32> = (0..24).map(|i| i as f32).collect();
         let shape = [2, 3, 4];
         let idx = ravel_multi_index(&[1, 2, 3], &shape); // = 23
-        let mut out = vec![0.0; 1];
+        let mut out = [0.0; 1];
         gather_nd(&src, &shape, &[idx], &mut out);
-        assert_eq!(out, vec![23.0]);
+        assert_eq!(out.to_vec(), vec![23.0]);
     }
 
     #[test]
     #[should_panic(expected = "out of bounds")]
     fn test_gather_nd_oob() {
-        let src = vec![0.0; 6];
-        let mut out = vec![0.0; 1];
+        let src = [0.0; 6];
+        let mut out = [0.0; 1];
         gather_nd(&src, &[2, 3], &[6], &mut out); // 6 >= numel=6
     }
 
@@ -1368,16 +1368,16 @@ mod tests {
     fn test_scatter_nd_add_2d() {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 3, 5];
-        let mut out = vec![10.0; 6];
+        let mut out = [10.0; 6];
         scatter_nd_add(&src, &indices, &[2, 3], &mut out);
-        assert_eq!(out, vec![11.0, 10.0, 10.0, 12.0, 10.0, 13.0]);
+        assert_eq!(out.to_vec(), vec![11.0, 10.0, 10.0, 12.0, 10.0, 13.0]);
     }
 
     #[test]
     fn test_scatter_nd_add_duplicate() {
         let src = [1.0, 2.0, 3.0];
         let indices = [0, 0, 0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         scatter_nd_add(&src, &indices, &[4], &mut out);
         assert_eq!(out[0], 6.0);
     }
@@ -1387,7 +1387,7 @@ mod tests {
     fn test_scatter_nd_add_oob() {
         let src = [1.0];
         let indices = [10];
-        let mut out = vec![0.0; 6];
+        let mut out = [0.0; 6];
         scatter_nd_add(&src, &indices, &[2, 3], &mut out);
     }
 
@@ -1402,28 +1402,28 @@ mod tests {
             // Exactly 4 elements → pure NEON, no scalar tail.
             let src = [10.0, 20.0, 30.0, 40.0];
             let indices = [3, 2, 1, 0];
-            let mut out = vec![0.0; 4];
+            let mut out = [0.0; 4];
             gather_f32(&src, &indices, &mut out);
-            assert_eq!(out, vec![40.0, 30.0, 20.0, 10.0]);
+            assert_eq!(out.to_vec(), vec![40.0, 30.0, 20.0, 10.0]);
         }
 
         #[test]
         fn test_gather_two_chunks() {
             let src: Vec<f32> = (0..10).map(|i| i as f32).collect();
             let indices = [9, 8, 7, 6, 5, 4, 3, 2];
-            let mut out = vec![0.0; 8];
+            let mut out = [0.0; 8];
             gather_f32(&src, &indices, &mut out);
             let expected: Vec<f32> = (2..10).rev().map(|i| i as f32).collect();
-            assert_eq!(out, expected);
+            assert_eq!(out.to_vec(), expected);
         }
 
         #[test]
         fn test_scatter_add_exact_chunk() {
             let src = [1.0, 2.0, 3.0, 4.0];
             let indices = [0, 1, 2, 3];
-            let mut out = vec![0.0; 4];
+            let mut out = [0.0; 4];
             scatter_add_f32(&src, &indices, &mut out);
-            assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
         }
 
         #[test]
@@ -1437,9 +1437,9 @@ mod tests {
         fn test_scatter_add_scaled_exact_chunk() {
             let src = [2.0, 4.0, 6.0, 8.0];
             let indices = [0, 1, 2, 3];
-            let mut out = vec![0.0; 4];
+            let mut out = [0.0; 4];
             scatter_add_scaled(&src, &indices, 0.5, &mut out);
-            assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
+            assert_eq!(out.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
         }
 
         #[test]
@@ -1447,19 +1447,19 @@ mod tests {
             // 8 cols → 2 NEON chunks per row
             let src: Vec<f32> = (0..32).map(|i| i as f32).collect();
             let indices = [3, 1];
-            let mut dst = vec![0.0; 16];
+            let mut dst = [0.0; 16];
             indexed_copy_strided(&src, 8, &mut dst, 8, &indices, 8);
             let expected: Vec<f32> = (24..32).chain(8..16).map(|i| i as f32).collect();
-            assert_eq!(dst, expected);
+            assert_eq!(dst.to_vec(), expected);
         }
 
         #[test]
         fn test_scatter_rows_add_neon_path() {
-            let src: Vec<f32> = vec![2.0; 8]; // 1×8
+            let src: Vec<f32> = [2.0; 8]; // 1×8
             let indices = [0];
-            let mut out = vec![1.0; 8]; // 1×8
+            let mut out = [1.0; 8]; // 1×8
             scatter_rows_add(&src, 8, &indices, &mut out);
-            assert_eq!(out, vec![3.0; 8]);
+            assert_eq!(out.to_vec(), vec![3.0; 8]);
         }
 
         #[test]
@@ -1467,9 +1467,9 @@ mod tests {
             let src = [10.0, 20.0, 30.0, 40.0];
             let indices = [0, 1, 2, 3];
             let mask = [true, false, true, false];
-            let mut out = vec![0.0; 4];
+            let mut out = [0.0; 4];
             masked_gather(&src, &indices, &mask, &mut out, -1.0);
-            assert_eq!(out, vec![10.0, -1.0, 30.0, -1.0]);
+            assert_eq!(out.to_vec(), vec![10.0, -1.0, 30.0, -1.0]);
         }
 
         #[test]
@@ -1477,16 +1477,16 @@ mod tests {
             let src = [1.0, 2.0, 3.0, 4.0];
             let indices = [0, 0, 0, 0];
             let mask = [true, false, true, false];
-            let mut out = vec![0.0; 1];
+            let mut out = [0.0; 1];
             masked_scatter_add(&src, &indices, &mask, &mut out);
-            assert_eq!(out, vec![4.0]); // 1 + 3
+            assert_eq!(out.to_vec(), vec![4.0]); // 1 + 3
         }
 
         #[test]
         fn test_gather_large_multi_chunk() {
             let src: Vec<f32> = (0..256).map(|i| i as f32).collect();
             let indices: Vec<usize> = (0..256).rev().collect();
-            let mut out = vec![0.0; 256];
+            let mut out = [0.0; 256];
             gather_f32(&src, &indices, &mut out);
             for i in 0..256 {
                 assert_eq!(out[i], (255 - i) as f32);

@@ -803,9 +803,9 @@ mod tests {
         let input = [1.0, 3.0, 2.0, 5.0, 4.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0f32; 3];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![3.0, 5.0, 5.0]);
+        assert_eq!(output.to_vec(), vec![3.0, 5.0, 5.0]);
     }
 
     #[test]
@@ -813,11 +813,11 @@ mod tests {
         let input = [1.0, 3.0, 2.0, 5.0, 4.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
-        let mut indices = vec![0_usize; 3];
+        let mut output = [0.0f32; 3];
+        let mut indices = [0_usize; 3];
         pool.forward(&input, &mut output, Some(&mut indices)).unwrap();
-        assert_eq!(output, vec![3.0, 5.0, 5.0]);
-        assert_eq!(indices, vec![1, 3, 3]);
+        assert_eq!(output.to_vec(), vec![3.0, 5.0, 5.0]);
+        assert_eq!(indices.to_vec(), vec![1, 3, 3]);
     }
 
     #[test]
@@ -826,9 +826,9 @@ mod tests {
         // kernel=2, stride=2 → (6-2)/2+1 = 3
         let cfg = Pool1dConfig::new(2, 2, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0f32; 3];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![5.0, 7.0, 6.0]);
+        assert_eq!(output.to_vec(), vec![5.0, 7.0, 6.0]);
     }
 
     #[test]
@@ -836,9 +836,9 @@ mod tests {
         let input = [2.0, 4.0, 1.0, 3.0];
         let cfg = Pool1dConfig::new(1, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0f32; 4];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![2.0, 4.0, 1.0, 3.0]);
+        assert_eq!(output.to_vec(), vec![2.0, 4.0, 1.0, 3.0]);
     }
 
     #[test]
@@ -850,9 +850,9 @@ mod tests {
         let input = [1.0, 2.0, 3.0];
         let cfg = Pool1dConfig::new(3, 1, 1).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![2.0, 3.0, 3.0]);
+        assert_eq!(output.to_vec(), vec![2.0, 3.0, 3.0]);
     }
 
     #[test]
@@ -860,9 +860,9 @@ mod tests {
         let input = [-5.0, -3.0, -7.0, -1.0, -4.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![-3.0, -1.0, -1.0]);
+        assert_eq!(output.to_vec(), vec![-3.0, -1.0, -1.0]);
     }
 
     #[test]
@@ -870,9 +870,9 @@ mod tests {
         let input = [42.0];
         let cfg = Pool1dConfig::new(1, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![42.0]);
+        assert_eq!(output.to_vec(), vec![42.0]);
     }
 
     #[test]
@@ -880,7 +880,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 1]; // need 3
+        let mut output = [0.0; 1]; // need 3
         assert!(pool.forward(&input, &mut output, None).is_err());
     }
 
@@ -889,8 +889,8 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
-        let mut indices = vec![0_usize; 1]; // need 3
+        let mut output = [0.0; 3];
+        let mut indices = [0_usize; 1]; // need 3
         assert!(pool.forward(&input, &mut output, Some(&mut indices)).is_err());
     }
 
@@ -903,7 +903,7 @@ mod tests {
         let out_len = pool.config.output_len(input.len());
         let mut output = vec![0.0; out_len];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![9.0, 8.0, 7.0]);
+        assert_eq!(output.to_vec(), vec![9.0, 8.0, 7.0]);
     }
 
     // ── AvgPool1d correctness ────────────────────────────────────
@@ -913,7 +913,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], 2.0, EPS, "avg[0]");
         assert_near(output[1], 3.0, EPS, "avg[1]");
@@ -925,7 +925,7 @@ mod tests {
         let input = [2.0, 4.0, 6.0, 8.0, 10.0, 12.0];
         let cfg = Pool1dConfig::new(2, 2, 0).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], 3.0, EPS, "avg[0]");
         assert_near(output[1], 7.0, EPS, "avg[1]");
@@ -939,7 +939,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0];
         let cfg = Pool1dConfig::new(3, 1, 1).unwrap();
         let pool = AvgPool1d::new(cfg, true);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], (0.0 + 1.0 + 2.0) / 3.0, EPS, "avg_inc[0]");
         assert_near(output[1], (1.0 + 2.0 + 3.0) / 3.0, EPS, "avg_inc[1]");
@@ -952,7 +952,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0];
         let cfg = Pool1dConfig::new(3, 1, 1).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], (1.0 + 2.0) / 2.0, EPS, "avg_exc[0]");
         assert_near(output[1], (1.0 + 2.0 + 3.0) / 3.0, EPS, "avg_exc[1]");
@@ -964,9 +964,9 @@ mod tests {
         let input = [10.0, 20.0, 30.0];
         let cfg = Pool1dConfig::new(1, 1, 0).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
-        assert_eq!(output, vec![10.0, 20.0, 30.0]);
+        assert_eq!(output.to_vec(), vec![10.0, 20.0, 30.0]);
     }
 
     #[test]
@@ -974,7 +974,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         assert!(pool.forward(&input, &mut output).is_err());
     }
 
@@ -1065,16 +1065,16 @@ mod tests {
         // input=6, output=3 → windows [0,1], [2,3], [4,5]
         let input = [1.0, 4.0, 2.0, 6.0, 3.0, 5.0];
         let ap = AdaptivePool::new(3, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         ap.forward(&input, &mut output).unwrap();
-        assert_eq!(output, vec![4.0, 6.0, 5.0]);
+        assert_eq!(output.to_vec(), vec![4.0, 6.0, 5.0]);
     }
 
     #[test]
     fn test_adaptive_avg_halve() {
         let input = [2.0, 4.0, 6.0, 8.0, 10.0, 12.0];
         let ap = AdaptivePool::new(3, GlobalPoolKind::Average).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         ap.forward(&input, &mut output).unwrap();
         assert_near(output[0], 3.0, EPS, "adap_avg[0]");
         assert_near(output[1], 7.0, EPS, "adap_avg[1]");
@@ -1086,7 +1086,7 @@ mod tests {
         // Reduce to single element = global pool
         let input = [1.0, 5.0, 3.0, 7.0, 2.0];
         let ap = AdaptivePool::new(1, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         ap.forward(&input, &mut output).unwrap();
         assert_eq!(output[0], 7.0);
     }
@@ -1096,9 +1096,9 @@ mod tests {
         // output_size = input_len → each window has 1 element
         let input = [1.0, 2.0, 3.0, 4.0];
         let ap = AdaptivePool::new(4, GlobalPoolKind::Average).unwrap();
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         ap.forward(&input, &mut output).unwrap();
-        assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(output.to_vec(), vec![1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -1110,7 +1110,7 @@ mod tests {
     fn test_adaptive_input_smaller_than_output() {
         let input = [1.0, 2.0];
         let ap = AdaptivePool::new(5, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 5];
+        let mut output = [0.0; 5];
         assert!(ap.forward(&input, &mut output).is_err());
     }
 
@@ -1118,7 +1118,7 @@ mod tests {
     fn test_adaptive_output_buffer_too_small() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let ap = AdaptivePool::new(3, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(ap.forward(&input, &mut output).is_err());
     }
 
@@ -1127,7 +1127,7 @@ mod tests {
         // input=7, output=3 → windows: [0,2), [2,4), [4,7)
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let ap = AdaptivePool::new(3, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         ap.forward(&input, &mut output).unwrap();
         assert_eq!(output[0], 2.0); // max(1,2)
         assert_eq!(output[1], 4.0); // max(3,4)
@@ -1142,7 +1142,7 @@ mod tests {
         let input = [1.0, -2.0, 3.0, -4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = LpPool::new(cfg, 1.0).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         // window[0,1,2]: (1+2+3)/3 = 2.0
         assert_near(output[0], 2.0, EPS, "lp1[0]");
@@ -1158,7 +1158,7 @@ mod tests {
         let input = [3.0, 4.0];
         let cfg = Pool1dConfig::new(2, 1, 0).unwrap();
         let pool = LpPool::new(cfg, 2.0).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         pool.forward(&input, &mut output).unwrap();
         let expected = ((9.0 + 16.0) / 2.0_f32).sqrt();
         assert_near(output[0], expected, EPS, "lp2");
@@ -1170,7 +1170,7 @@ mod tests {
         let input = [5.0, 5.0, 5.0, 5.0];
         let cfg = Pool1dConfig::new(2, 2, 0).unwrap();
         let pool = LpPool::new(cfg, 2.0).unwrap();
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], 5.0, EPS, "lp2_uniform[0]");
         assert_near(output[1], 5.0, EPS, "lp2_uniform[1]");
@@ -1187,7 +1187,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = LpPool::new(cfg, 2.0).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         assert!(pool.forward(&input, &mut output).is_err());
     }
 
@@ -1197,7 +1197,7 @@ mod tests {
         let input = [0.1, 1.0, 0.2];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = LpPool::new(cfg, 20.0).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         pool.forward(&input, &mut output).unwrap();
         // Should be close to 1.0 (the max)
         assert!((output[0] - 1.0).abs() < 0.1, "large p should approach max, got {}", output[0]);
@@ -1211,7 +1211,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let weights = [1.0, 1.0, 1.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         weighted_avg_pool1d_ref(&input, &weights, &mut output, &cfg).unwrap();
         assert_near(output[0], 2.0, EPS, "wavg[0]");
         assert_near(output[1], 3.0, EPS, "wavg[1]");
@@ -1224,7 +1224,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0];
         let weights = [1.0, 2.0, 1.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         weighted_avg_pool1d_ref(&input, &weights, &mut output, &cfg).unwrap();
         assert_near(output[0], 2.0, EPS, "wavg_nonuniform");
     }
@@ -1234,7 +1234,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0];
         let weights = [1.0]; // kernel=3, need 3 weights
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         assert!(weighted_avg_pool1d_ref(&input, &weights, &mut output, &cfg).is_err());
     }
 
@@ -1243,7 +1243,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let weights = [1.0, 1.0, 1.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
-        let mut output = vec![0.0; 1]; // need 3
+        let mut output = [0.0; 1]; // need 3
         assert!(weighted_avg_pool1d_ref(&input, &weights, &mut output, &cfg).is_err());
     }
 
@@ -1337,7 +1337,7 @@ mod tests {
         let input = [3.0, 1.0, 4.0, 1.0, 5.0];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output, None).unwrap();
         for (i, &v) in output.iter().enumerate() {
             let window = &input[i..i + 3];
@@ -1413,7 +1413,7 @@ mod tests {
         let out_len = pool.config.output_len(input.len());
         let mut output = vec![0.0; out_len];
         pool.forward(&input, &mut output, None).unwrap();
-        assert_eq!(output, vec![9.0, 8.0]);
+        assert_eq!(output.to_vec(), vec![9.0, 8.0]);
     }
 
     #[test]
@@ -1458,7 +1458,7 @@ mod tests {
         let input = [7.0; 6];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = MaxPool1d::new(cfg);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         pool.forward(&input, &mut output, None).unwrap();
         assert!(output.iter().all(|&v| v == 7.0));
     }
@@ -1468,7 +1468,7 @@ mod tests {
         let input = [7.0; 6];
         let cfg = Pool1dConfig::new(3, 1, 0).unwrap();
         let pool = AvgPool1d::new(cfg, false);
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         pool.forward(&input, &mut output).unwrap();
         for &v in &output {
             assert_near(v, 7.0, EPS, "avg_equal");
@@ -1483,7 +1483,7 @@ mod tests {
         let input = [4.0, 6.0, 8.0];
         let weights = [1.0, 2.0, 1.0];
         let cfg = Pool1dConfig::new(3, 1, 1).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         weighted_avg_pool1d_ref(&input, &weights, &mut output, &cfg).unwrap();
         // First window: positions -1(pad),0,1 → valid: 0,1 → w[1]*4 + w[2]*6 = 8+6=14, wdiv=3
         assert_near(output[0], 14.0 / 3.0, EPS, "wpad[0]");
@@ -1498,7 +1498,7 @@ mod tests {
         // output=1 → global max
         let input = [10.0, 2.0, 8.0, 1.0, 9.0];
         let ap = AdaptivePool::new(1, GlobalPoolKind::Max).unwrap();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         ap.forward(&input, &mut output).unwrap();
         assert_eq!(output[0], 10.0);
     }
@@ -1508,7 +1508,7 @@ mod tests {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let cfg = Pool1dConfig::new(2, 2, 0).unwrap();
         let pool = LpPool::new(cfg, 1.0).unwrap();
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         pool.forward(&input, &mut output).unwrap();
         assert_near(output[0], 1.5, EPS, "lp1_s2[0]");
         assert_near(output[1], 3.5, EPS, "lp1_s2[1]");

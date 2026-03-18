@@ -1300,7 +1300,7 @@ mod tests {
         let b = pack_i2_matrix(&[1, 0, 0, 1], 2, 2);
         let scales_a = vec![1.0, 1.0];
         let scales_b = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 2, 2, 2, &mut out).unwrap();
         assert_eq!(out, [1.0, 0.0, 0.0, 1.0]);
     }
@@ -1325,9 +1325,9 @@ mod tests {
     fn test_i2_gemm_with_scales() {
         let a = pack_i2_values(&[1, 1]);
         let b = pack_i2_values(&[1, 1]);
-        let scales_a = vec![2.0];
-        let scales_b = vec![3.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [2.0];
+        let scales_b = [3.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], 2.0 * 2.0 * 3.0);
     }
@@ -1336,9 +1336,9 @@ mod tests {
     fn test_i2_gemm_negative_values() {
         let a = pack_i2_values(&[-1, 1]);
         let b = pack_i2_values(&[1, -1]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], -2.0);
     }
@@ -1347,9 +1347,9 @@ mod tests {
     fn test_i2_gemm_zero_values() {
         let a = pack_i2_values(&[0, 0, 0, 0]);
         let b = pack_i2_values(&[1, 1, 1, 1]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 4, &mut out).unwrap();
         assert_eq!(out[0], 0.0);
     }
@@ -1358,9 +1358,9 @@ mod tests {
     fn test_i2_gemm_odd_k() {
         let a = pack_i2_values(&[1, 1, 1]);
         let b = pack_i2_values(&[1, 1, 1]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &scales_a, &scales_b, 1, 1, 3, &mut out).unwrap();
         assert_eq!(out[0], 3.0);
     }
@@ -1369,15 +1369,15 @@ mod tests {
     fn test_i2_gemm_buffer_too_small() {
         let a = pack_i2_matrix(&[1, 1, 1, 1], 2, 2);
         let b = pack_i2_matrix(&[1, 1, 1, 1], 2, 2);
-        let mut out = vec![0.0f32; 1]; // need 4
+        let mut out = [0.0f32; 1]; // need 4
         assert!(quantized_gemm_i2(&a, &b, &[1.0, 1.0], &[1.0, 1.0], 2, 2, 2, &mut out).is_err());
     }
 
     #[test]
     fn test_i2_gemm_a_packed_too_small() {
-        let a = vec![0u8; 1]; // too small for 2×4
+        let a = [0u8; 1]; // too small for 2×4
         let b = pack_i2_matrix(&[1, 1, 1, 1, 1, 1, 1, 1], 2, 4);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(quantized_gemm_i2(&a, &b, &[1.0, 1.0], &[1.0, 1.0], 2, 2, 4, &mut out).is_err());
     }
 
@@ -1387,9 +1387,9 @@ mod tests {
     fn test_i4_gemm_simple() {
         let a = pack_i4_values(&[1, 2]);
         let b = pack_i4_values(&[3, 4]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], 11.0);
     }
@@ -1398,9 +1398,9 @@ mod tests {
     fn test_i4_gemm_with_scales() {
         let a = pack_i4_values(&[1, 1]);
         let b = pack_i4_values(&[1, 1]);
-        let scales_a = vec![2.0];
-        let scales_b = vec![3.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [2.0];
+        let scales_b = [3.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], 12.0);
     }
@@ -1409,9 +1409,9 @@ mod tests {
     fn test_i4_gemm_negative_values() {
         let a = pack_i4_values(&[-3, 2]);
         let b = pack_i4_values(&[4, -1]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], -14.0);
     }
@@ -1420,9 +1420,9 @@ mod tests {
     fn test_i4_gemm_odd_k() {
         let a = pack_i4_values(&[1, 2, 3]);
         let b = pack_i4_values(&[4, 5, 6]);
-        let scales_a = vec![1.0];
-        let scales_b = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_a = [1.0];
+        let scales_b = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 1, 1, 3, &mut out).unwrap();
         assert_eq!(out[0], 32.0);
     }
@@ -1433,7 +1433,7 @@ mod tests {
         let b = pack_i4_matrix(&[1, 0, 0, 1], 2, 2);
         let scales_a = vec![1.0, 1.0];
         let scales_b = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quantized_gemm_i4(&a, &b, &scales_a, &scales_b, 2, 2, 2, &mut out).unwrap();
         assert_eq!(out, [1.0, 0.0, 0.0, 1.0]);
     }
@@ -1444,8 +1444,8 @@ mod tests {
     fn test_mixed_gemm_simple() {
         let w = pack_i2_values(&[1, -1]);
         let x = vec![2.0f32, 3.0];
-        let scales_w = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let scales_w = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_gemm_mixed(&w, &x, &scales_w, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], -1.0);
     }
@@ -1454,8 +1454,8 @@ mod tests {
     fn test_mixed_gemm_with_scale() {
         let w = pack_i2_values(&[1, 1]);
         let x = vec![1.0f32, 1.0];
-        let scales_w = vec![0.5];
-        let mut out = vec![0.0f32; 1];
+        let scales_w = [0.5];
+        let mut out = [0.0f32; 1];
         quantized_gemm_mixed(&w, &x, &scales_w, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], 1.0);
     }
@@ -1469,7 +1469,7 @@ mod tests {
             1.0, 1.0, // row 2
         ];
         let scales_w = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         quantized_gemm_mixed(&w, &x, &scales_w, 2, 3, 2, &mut out).unwrap();
         assert_eq!(out, [1.0, 0.0, 1.0, 0.0, 1.0, 1.0]);
     }
@@ -1478,7 +1478,7 @@ mod tests {
     fn test_mixed_gemm_buffer_errors() {
         let w = pack_i2_values(&[1]);
         let x = vec![1.0f32];
-        let mut out = vec![0.0f32; 0];
+        let mut out = [0.0f32; 0];
         assert!(quantized_gemm_mixed(&w, &x, &[1.0], 1, 1, 1, &mut out).is_err());
     }
 
@@ -1488,8 +1488,8 @@ mod tests {
     fn test_dequant_gemm_simple() {
         let w = pack_i2_values(&[1, -1]);
         let x = vec![3.0f32, 4.0];
-        let scales = vec![2.0];
-        let mut out = vec![0.0f32; 1];
+        let scales = [2.0];
+        let mut out = [0.0f32; 1];
         quantized_dequant_gemm(&w, &x, &scales, 1, 1, 2, &mut out).unwrap();
         assert_eq!(out[0], -2.0);
     }
@@ -1497,9 +1497,9 @@ mod tests {
     #[test]
     fn test_dequant_gemm_all_zeros() {
         let w = pack_i2_values(&[0, 0, 0, 0]);
-        let x = vec![1.0f32; 4];
-        let scales = vec![1.0];
-        let mut out = vec![0.0f32; 1];
+        let x = [1.0f32; 4];
+        let scales = [1.0];
+        let mut out = [0.0f32; 1];
         quantized_dequant_gemm(&w, &x, &scales, 1, 1, 4, &mut out).unwrap();
         assert_eq!(out[0], 0.0);
     }
@@ -1512,17 +1512,17 @@ mod tests {
             3.0, 4.0, // col 1
         ];
         let scales = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         quantized_dequant_gemm(&w, &x, &scales, 2, 2, 2, &mut out).unwrap();
         assert_eq!(out, [3.0, 7.0, -3.0, -7.0]);
     }
 
     #[test]
     fn test_dequant_gemm_w_packed_too_small() {
-        let w = vec![0u8; 1];
-        let x = vec![1.0f32; 8];
+        let w = [0u8; 1];
+        let x = [1.0f32; 8];
         let scales = vec![1.0, 1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         assert!(quantized_dequant_gemm(&w, &x, &scales, 2, 2, 4, &mut out).is_err());
     }
 
@@ -1571,7 +1571,7 @@ mod tests {
     fn test_single_element_i2() {
         let a = pack_i2_values(&[1]);
         let b = pack_i2_values(&[1]);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, 1, &mut out).unwrap();
         assert_eq!(out[0], 1.0);
     }
@@ -1580,7 +1580,7 @@ mod tests {
     fn test_single_element_i4() {
         let a = pack_i4_values(&[3]);
         let b = pack_i4_values(&[4]);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i4(&a, &b, &[1.0], &[1.0], 1, 1, 1, &mut out).unwrap();
         assert_eq!(out[0], 12.0);
     }
@@ -1590,7 +1590,7 @@ mod tests {
         let k = 256;
         let a = pack_i2_values(&vec![1i8; k]);
         let b = pack_i2_values(&vec![1i8; k]);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
         assert_eq!(out[0], k as f32);
     }
@@ -1700,7 +1700,7 @@ mod tests {
             fn i2_gemm_ones_equals_k(k in 1usize..64) {
                 let a = pack_i2_values(&vec![1i8; k]);
                 let b = pack_i2_values(&vec![1i8; k]);
-                let mut out = vec![0.0f32; 1];
+                let mut out = [0.0f32; 1];
                 quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
                 prop_assert!((out[0] - k as f32).abs() < 1e-6);
             }
@@ -1709,7 +1709,7 @@ mod tests {
             fn i2_gemm_zeros_is_zero(k in 1usize..64) {
                 let a = pack_i2_values(&vec![0i8; k]);
                 let b = pack_i2_values(&vec![1i8; k]);
-                let mut out = vec![0.0f32; 1];
+                let mut out = [0.0f32; 1];
                 quantized_gemm_i2(&a, &b, &[1.0], &[1.0], 1, 1, k, &mut out).unwrap();
                 prop_assert!((out[0]).abs() < 1e-6);
             }

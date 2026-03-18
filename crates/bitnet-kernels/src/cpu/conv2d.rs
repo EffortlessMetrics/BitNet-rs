@@ -505,7 +505,7 @@ mod tests {
     fn conv2d_identity_1x1() {
         let config = Conv2dConfig::new(1, 1, 1);
         let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2
-        let weight = vec![1.0]; // 1x1x1x1
+        let weight = [1.0]; // 1x1x1x1
         let out = conv2d(&input, &weight, None, &config, 1, 2, 2).unwrap();
         assert!(approx_eq(&out, &input, TOL));
     }
@@ -514,8 +514,8 @@ mod tests {
     fn conv2d_identity_1x1_with_bias() {
         let config = Conv2dConfig::new(1, 1, 1);
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0];
-        let bias = vec![10.0];
+        let weight = [1.0];
+        let bias = [10.0];
         let out = conv2d(&input, &weight, Some(&bias), &config, 1, 2, 2).unwrap();
         let expected: Vec<f32> = input.iter().map(|v| v + 10.0).collect();
         assert!(approx_eq(&out, &expected, TOL));
@@ -535,7 +535,7 @@ mod tests {
             13.0, 14.0, 15.0, 16.0,
         ];
         // All-ones kernel → each output is sum of 3x3 patch
-        let weight = vec![1.0; 9];
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 4, 4).unwrap();
         // Output is 2x2
         assert_eq!(out.len(), 4);
@@ -585,7 +585,7 @@ mod tests {
             16.0, 17.0, 18.0, 19.0, 20.0,
             21.0, 22.0, 23.0, 24.0, 25.0,
         ];
-        let weight = vec![1.0; 9];
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 5, 5).unwrap();
         // out_h = (5-3)/2+1 = 2, out_w = 2
         assert_eq!(out.len(), 4);
@@ -597,7 +597,7 @@ mod tests {
         config.stride_h = 2;
         config.stride_w = 2;
         let input = vec![1.0, 2.0, 3.0, 4.0]; // 2x2
-        let weight = vec![1.0];
+        let weight = [1.0];
         let out = conv2d(&input, &weight, None, &config, 1, 2, 2).unwrap();
         // out_h = (2-1)/2+1 = 1, out_w = 1
         assert_eq!(out.len(), 1);
@@ -625,8 +625,8 @@ mod tests {
         let mut config = Conv2dConfig::new(1, 1, 3);
         config.padding_h = 1;
         config.padding_w = 1;
-        let input = vec![5.0]; // 1x1
-        let weight = vec![1.0; 9];
+        let input = [5.0]; // 1x1
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 1, 1).unwrap();
         // Only centre of kernel touches the input
         assert_eq!(out.len(), 1);
@@ -643,7 +643,7 @@ mod tests {
         // effective kernel = 5, so need at least 5x5 input
         #[rustfmt::skip]
         let input: Vec<f32> = (1..=25).map(|i| i as f32).collect(); // 5x5
-        let weight = vec![1.0; 9];
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 5, 5).unwrap();
         // out_h = (5 - (1+2*2)) / 1 + 1 = 1
         assert_eq!(out.len(), 1);
@@ -688,7 +688,7 @@ mod tests {
     fn conv2d_batch_2() {
         let config = Conv2dConfig::new(1, 1, 1);
         let input = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0]; // batch=2
-        let weight = vec![1.0];
+        let weight = [1.0];
         let out = conv2d(&input, &weight, None, &config, 2, 2, 2).unwrap();
         assert_eq!(out.len(), 8);
         assert!(approx_eq(&out, &input, TOL));
@@ -724,7 +724,7 @@ mod tests {
     #[test]
     fn conv2d_bias_addition() {
         let config = Conv2dConfig::new(1, 2, 1);
-        let input = vec![0.0; 4]; // 1x1x2x2, all zeros
+        let input = [0.0; 4]; // 1x1x2x2, all zeros
         let weight = vec![1.0, 1.0];
         let bias = vec![5.0, -3.0];
         let out = conv2d(&input, &weight, Some(&bias), &config, 1, 2, 2).unwrap();
@@ -761,7 +761,7 @@ mod tests {
     fn depthwise_with_bias() {
         let mut config = Conv2dConfig::new(2, 2, 1);
         config.groups = 2;
-        let input = vec![0.0; 8]; // 1x2x2x2
+        let input = [0.0; 8]; // 1x2x2x2
         let weight = vec![1.0, 1.0];
         let bias = vec![7.0, -2.0];
         let out = depthwise_conv2d(&input, &weight, Some(&bias), &config, 1, 2, 2).unwrap();
@@ -829,7 +829,7 @@ mod tests {
             9.0, 10.0, 11.0, 12.0,
             13.0, 14.0, 15.0, 16.0,
         ];
-        let weight = vec![1.0; 9];
+        let weight = [1.0; 9];
 
         // Direct
         let direct = conv2d(&input, &weight, None, &config, 1, 4, 4).unwrap();
@@ -838,7 +838,7 @@ mod tests {
         let cols = im2col(&input, &config, 4, 4, 0).unwrap();
         let out_h = compute_output_size(4, 3, 1, 0, 1);
         let out_w = compute_output_size(4, 3, 1, 0, 1);
-        let col_h = 1 * 3 * 3; // ic_per_group * kh * kw
+        let col_h = 9; // ic_per_group * kh * kw
         let col_w = out_h * out_w;
         // weight is [oc, col_h], cols is [col_h, col_w]
         // output = weight * cols → [oc, col_w]
@@ -856,7 +856,7 @@ mod tests {
     #[test]
     fn im2col_invalid_group() {
         let config = Conv2dConfig::new(1, 1, 3);
-        let input = vec![0.0; 9];
+        let input = [0.0; 9];
         assert!(im2col(&input, &config, 3, 3, 1).is_err()); // group 1 >= groups 1
     }
 
@@ -903,8 +903,8 @@ mod tests {
     #[test]
     fn conv2d_zero_input() {
         let config = Conv2dConfig::new(1, 1, 3);
-        let input = vec![0.0; 9];
-        let weight = vec![1.0; 9];
+        let input = [0.0; 9];
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 3, 3).unwrap();
         assert!(approx_eq(&out, &[0.0], TOL));
     }
@@ -922,7 +922,7 @@ mod tests {
         config.dilation_w = 2;
         // effective kernel = 5, padded input = 4+4 = 8, out = (8-5)/2+1 = 2
         let input: Vec<f32> = (1..=16).map(|i| i as f32).collect(); // 4x4
-        let weight = vec![1.0; 9];
+        let weight = [1.0; 9];
         let out = conv2d(&input, &weight, None, &config, 1, 4, 4).unwrap();
         assert_eq!(out.len(), 4);
         for v in &out {

@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn test_rms_norm_unit_weight() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let output = rms_norm(&input, &weight, 1e-5);
         // After RMSNorm, values should be rescaled
         let rms = compute_rms(&input);
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_rms_norm_inplace() {
         let mut input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let expected = rms_norm(&input, &weight, 1e-5);
         rms_norm_inplace(&mut input, &weight, 1e-5);
         for (a, b) in input.iter().zip(expected.iter()) {
@@ -147,8 +147,8 @@ mod tests {
     #[test]
     fn test_layer_norm_zero_mean() {
         let input = vec![1.0, -1.0, 1.0, -1.0];
-        let weight = vec![1.0; 4];
-        let bias = vec![0.0; 4];
+        let weight = [1.0; 4];
+        let bias = [0.0; 4];
         let output = layer_norm(&input, &weight, &bias, 1e-5);
         // Mean is 0, so output should be input / std
         assert!((output[0] - output[2]).abs() < 1e-6);
@@ -157,8 +157,8 @@ mod tests {
     #[test]
     fn test_layer_norm_with_bias() {
         let input = vec![0.0, 0.0, 0.0];
-        let weight = vec![1.0; 3];
-        let bias = vec![5.0; 3];
+        let weight = [1.0; 3];
+        let bias = [5.0; 3];
         let output = layer_norm(&input, &weight, &bias, 1e-5);
         for v in &output {
             assert!((v - 5.0).abs() < 0.1);
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_layer_norm_no_bias() {
         let input = vec![1.0, 2.0, 3.0];
-        let weight = vec![1.0; 3];
+        let weight = [1.0; 3];
         let output = layer_norm_no_bias(&input, &weight, 1e-5);
         // Output should be zero-mean, unit variance (approx)
         let (mean, _) = compute_mean_var(&output);
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn test_rms_norm_with_weight() {
         let input = vec![1.0, 1.0, 1.0, 1.0];
-        let weight = vec![2.0; 4];
+        let weight = [2.0; 4];
         let output = rms_norm(&input, &weight, 1e-5);
         // rms(1,1,1,1)=1, so output ≈ 2.0
         for v in &output {
@@ -214,7 +214,7 @@ mod tests {
     fn test_f64_stability() {
         // Large values that could overflow in f32 squared
         let input = vec![1e4, 1e4, 1e4, 1e4];
-        let weight = vec![1.0; 4];
+        let weight = [1.0; 4];
         let output = rms_norm(&input, &weight, 1e-5);
         // Should still produce ~1.0 since all values are equal
         for v in &output {
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn test_rms_norm_eps_effect() {
         let input = vec![0.0, 0.0, 0.0];
-        let weight = vec![1.0; 3];
+        let weight = [1.0; 3];
         let output = rms_norm(&input, &weight, 1.0);
         // rms ≈ sqrt(eps) = 1.0, so output ≈ 0
         for v in &output {
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_rms_norm_preserves_direction() {
         let input = vec![3.0, 4.0];
-        let weight = vec![1.0; 2];
+        let weight = [1.0; 2];
         let output = rms_norm(&input, &weight, 1e-8);
         // Ratio should be preserved
         let ratio_in = input[0] / input[1];

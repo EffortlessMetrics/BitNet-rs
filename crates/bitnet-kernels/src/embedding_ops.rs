@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn test_embed_lookup_oob() {
         let table = vec![1.0, 2.0, 3.0, 4.0];
-        let ids = vec![100]; // out of bounds
+        let ids = [100]; // out of bounds
         let out = token_embed_lookup(&ids, &table, 2, 2);
         // Clamped to vocab_size-1 = 1
         assert_eq!(out, vec![3.0, 4.0]);

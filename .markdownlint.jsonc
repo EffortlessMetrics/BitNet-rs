@@ -1,6 +1,7 @@
 {
   // Markdownlint configuration for bitnet-rs
   // Relaxed rules for technical documentation
+  // Note: Ignores are configured in .markdownlint-cli2.jsonc
   "default": true,
 
   // Line length: disabled - allow long lines for code blocks, URLs, and tables

@@ -860,7 +860,7 @@ mod tests {
 
     #[test]
     fn online_softmax_uniform() {
-        let scores = vec![0.0; 8];
+        let scores = [0.0; 8];
         let result = OnlineSoftmax::softmax(&scores);
         for &v in &result {
             assert!((v - 0.125).abs() < 1e-6);

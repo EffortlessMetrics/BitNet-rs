@@ -722,8 +722,8 @@ mod tests {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_max_seq_len(2);
         let table = compute_sincos_table(&cfg);
-        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut output = vec![0.0f32; 8];
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut output = [0.0f32; 8];
         rope_forward_cpu(&input, &mut output, &cfg).unwrap();
 
         let pos = 1;
@@ -753,8 +753,8 @@ mod tests {
         // At position 0 all angles are 0 → cos=1, sin=0 → output == input
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap();
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0, 2.0, 3.0, 4.0];
+        let mut output = [0.0f32; 4];
 
         rope_forward_cpu(&input, &mut output, &cfg).unwrap();
 
@@ -802,7 +802,7 @@ mod tests {
             1.0, 0.0, // pos 0 → angle = 0
             1.0, 0.0, // pos 1 → angle = 1
         ];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
 
         rope_forward_cpu(&input, &mut output, &cfg).unwrap();
 
@@ -830,14 +830,14 @@ mod tests {
         let head_dim = 4;
         // Without offset at pos=1
         let cfg_no_offset = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
-        let input = vec![1.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5];
-        let mut out_no_offset = vec![0.0f32; 8];
+        let input = [1.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5];
+        let mut out_no_offset = [0.0f32; 8];
         rope_forward_cpu(&input, &mut out_no_offset, &cfg_no_offset).unwrap();
 
         // With offset=1 at pos=0 should match no-offset pos=1
         let cfg_offset = RopeConfig::for_shape(head_dim, 1, 1).unwrap().with_position_offset(1);
-        let single_input = vec![1.0, 0.0, 0.5, 0.5];
-        let mut out_offset = vec![0.0f32; 4];
+        let single_input = [1.0, 0.0, 0.5, 0.5];
+        let mut out_offset = [0.0f32; 4];
         rope_forward_cpu(&single_input, &mut out_offset, &cfg_offset).unwrap();
 
         // pos=1 from no-offset should equal pos=0 from offset=1
@@ -861,7 +861,7 @@ mod tests {
 
         let total = n_heads * seq_len * head_dim;
         // All heads get the same data
-        let pattern = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let pattern = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let input: Vec<f32> = pattern.iter().copied().cycle().take(total).collect();
         let mut output = vec![0.0f32; total];
 
@@ -871,7 +871,7 @@ mod tests {
         let stride = seq_len * head_dim;
         for pos in 0..seq_len {
             for d in 0..head_dim {
-                let ref_val = output[0 * stride + pos * head_dim + d];
+                let ref_val = output[pos * head_dim + d];
                 for head in 1..n_heads {
                     let val = output[head * stride + pos * head_dim + d];
                     assert!(
@@ -917,12 +917,12 @@ mod tests {
     #[test]
     fn test_rope_cpu_buffer_length_mismatch() {
         let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
-        let input = vec![1.0f32; 4];
-        let mut output_short = vec![0.0f32; 2]; // too short
+        let input = [1.0f32; 4];
+        let mut output_short = [0.0f32; 2]; // too short
         assert!(rope_forward_cpu(&input, &mut output_short, &cfg).is_err());
 
-        let input_short = vec![1.0f32; 2]; // too short
-        let mut output = vec![0.0f32; 4];
+        let input_short = [1.0f32; 2]; // too short
+        let mut output = [0.0f32; 4];
         assert!(rope_forward_cpu(&input_short, &mut output, &cfg).is_err());
     }
 
@@ -932,9 +932,9 @@ mod tests {
         let cfg_default = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
         let cfg_custom = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_base(500_000.0);
 
-        let input = vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0];
-        let mut out_default = vec![0.0f32; 8];
-        let mut out_custom = vec![0.0f32; 8];
+        let input = [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0];
+        let mut out_default = [0.0f32; 8];
+        let mut out_custom = [0.0f32; 8];
 
         rope_forward_cpu(&input, &mut out_default, &cfg_default).unwrap();
         rope_forward_cpu(&input, &mut out_custom, &cfg_custom).unwrap();
@@ -954,9 +954,9 @@ mod tests {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
         let cfg_explicit = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_scaling_factor(1.0);
-        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out1 = vec![0.0f32; 8];
-        let mut out2 = vec![0.0f32; 8];
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out1 = [0.0f32; 8];
+        let mut out2 = [0.0f32; 8];
         rope_forward_cpu(&input, &mut out1, &cfg).unwrap();
         rope_forward_cpu(&input, &mut out2, &cfg_explicit).unwrap();
         for (a, b) in out1.iter().zip(out2.iter()) {
@@ -969,9 +969,9 @@ mod tests {
         let head_dim = 4;
         let cfg1 = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
         let cfg2 = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_scaling_factor(0.5);
-        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out1 = vec![0.0f32; 8];
-        let mut out2 = vec![0.0f32; 8];
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out1 = [0.0f32; 8];
+        let mut out2 = [0.0f32; 8];
         rope_forward_cpu(&input, &mut out1, &cfg1).unwrap();
         rope_forward_cpu(&input, &mut out2, &cfg2).unwrap();
         for i in 0..head_dim {
@@ -1003,7 +1003,7 @@ mod tests {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 4).unwrap();
         let total = 4 * head_dim;
-        let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0].into_iter().cycle().take(total).collect();
+        let input: Vec<f32> = [1.0, 2.0, 3.0, 4.0].into_iter().cycle().take(total).collect();
         let mut output = vec![0.0f32; total];
         rope_forward_cpu(&input, &mut output, &cfg).unwrap();
         for p in 0..3 {
@@ -1059,8 +1059,8 @@ mod tests {
     fn test_rope_forward_dispatches_cpu() {
         // On CPU-only builds, rope_forward should succeed via the CPU path
         let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0, 2.0, 3.0, 4.0];
+        let mut output = [0.0f32; 4];
 
         let result = rope_forward(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CPU dispatch should succeed: {result:?}");
@@ -1110,8 +1110,8 @@ mod tests {
     fn test_rope_interleaved_identity_at_pos_zero() {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap().with_interleaved(true);
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0, 2.0, 3.0, 4.0];
+        let mut output = [0.0f32; 4];
         rope_forward_cpu(&input, &mut output, &cfg).unwrap();
         for (o, i) in output.iter().zip(input.iter()) {
             assert!((o - i).abs() < 1e-6, "interleaved pos-0 identity: {o} vs {i}");
@@ -1148,9 +1148,9 @@ mod tests {
         let cfg_default = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
         let cfg_interleaved = RopeConfig::for_shape(head_dim, 1, 2).unwrap().with_interleaved(true);
         let input =
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let mut out_default = vec![0.0f32; 16];
-        let mut out_interleaved = vec![0.0f32; 16];
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut out_default = [0.0f32; 16];
+        let mut out_interleaved = [0.0f32; 16];
         rope_forward_cpu(&input, &mut out_default, &cfg_default).unwrap();
         rope_forward_cpu(&input, &mut out_interleaved, &cfg_interleaved).unwrap();
         // pos 0 is identity for both, pos 1 should differ
@@ -1207,9 +1207,9 @@ mod tests {
     fn test_apply_rope_sequential_matches_forward() {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 3).unwrap();
-        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
         let positions = [0u32, 1, 2];
-        let mut expected = vec![0.0f32; 12];
+        let mut expected = [0.0f32; 12];
         rope_forward_cpu(&input, &mut expected, &cfg).unwrap();
 
         let result = apply_rope(&input, &positions, &cfg);
@@ -1222,7 +1222,7 @@ mod tests {
     fn test_apply_rope_noncontiguous_positions() {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
-        let input = vec![1.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5];
+        let input = [1.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5];
         // positions [0, 5] — non-contiguous
         let result = apply_rope(&input, &[0, 5], &cfg);
         // Position 0 is identity
@@ -1231,7 +1231,7 @@ mod tests {
         }
         // Position 5 should differ from position 1
         let cfg1 = RopeConfig::for_shape(head_dim, 1, 2).unwrap();
-        let mut out_seq = vec![0.0f32; 8];
+        let mut out_seq = [0.0f32; 8];
         rope_forward_cpu(&input, &mut out_seq, &cfg1).unwrap();
         let any_diff =
             (0..head_dim).any(|i| (result[head_dim + i] - out_seq[head_dim + i]).abs() > 1e-4);
@@ -1242,7 +1242,7 @@ mod tests {
     fn test_apply_rope_single_position() {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap();
-        let input = vec![3.0, 4.0, 5.0, 6.0];
+        let input = [3.0, 4.0, 5.0, 6.0];
         let result = apply_rope(&input, &[0], &cfg);
         // Position 0 → identity
         for (a, b) in result.iter().zip(input.iter()) {
@@ -1341,8 +1341,8 @@ mod tests {
     fn test_rope_backward_identity_at_pos_zero() {
         let head_dim = 4;
         let cfg = RopeConfig::for_shape(head_dim, 1, 1).unwrap();
-        let grad_out = vec![1.0, 2.0, 3.0, 4.0];
-        let mut grad_in = vec![0.0f32; 4];
+        let grad_out = [1.0, 2.0, 3.0, 4.0];
+        let mut grad_in = [0.0f32; 4];
         rope_backward_cpu(&grad_out, &mut grad_in, &cfg).unwrap();
         // pos 0 → angle=0, transpose of identity rotation = identity
         for (o, i) in grad_in.iter().zip(grad_out.iter()) {
@@ -1372,16 +1372,16 @@ mod tests {
     #[test]
     fn test_rope_backward_buffer_mismatch() {
         let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
-        let grad_out = vec![1.0f32; 4];
-        let mut grad_in_short = vec![0.0f32; 2];
+        let grad_out = [1.0f32; 4];
+        let mut grad_in_short = [0.0f32; 2];
         assert!(rope_backward_cpu(&grad_out, &mut grad_in_short, &cfg).is_err());
     }
 
     #[test]
     fn test_rope_backward_dispatch() {
         let cfg = RopeConfig::for_shape(4, 1, 1).unwrap();
-        let grad_out = vec![1.0, 2.0, 3.0, 4.0];
-        let mut grad_in = vec![0.0f32; 4];
+        let grad_out = [1.0, 2.0, 3.0, 4.0];
+        let mut grad_in = [0.0f32; 4];
         let result = rope_backward(&grad_out, &mut grad_in, &cfg);
         assert!(result.is_ok(), "backward dispatch should succeed: {result:?}");
     }

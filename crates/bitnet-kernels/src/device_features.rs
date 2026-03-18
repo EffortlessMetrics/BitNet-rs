@@ -179,14 +179,12 @@ pub fn opencl_available_runtime() -> bool {
         .map(|v| v == "1" || v.to_lowercase() == "true")
         .unwrap_or(false);
 
-    if !strict_mode {
-        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-            if fake.eq_ignore_ascii_case("opencl") {
-                return true;
-            }
-            if fake.eq_ignore_ascii_case("none") {
-                return false;
-            }
+    if !strict_mode && let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+        if fake.eq_ignore_ascii_case("opencl") {
+            return true;
+        }
+        if fake.eq_ignore_ascii_case("none") {
+            return false;
         }
     }
 

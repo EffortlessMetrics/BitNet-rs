@@ -744,7 +744,7 @@ mod tests {
         // Test 2x2 * 2x2 matrix multiplication
         let a = vec![1i8, 2, 3, 4];
         let b = vec![1u8, 0, 0, 1];
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
 
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
@@ -770,8 +770,8 @@ mod tests {
             .cycle()
             .take(64)
             .collect::<Vec<f32>>();
-        let mut output = vec![0u8; 16]; // 64 values / 4 per byte = 16 bytes
-        let mut scales = vec![0.0f32; 1]; // 64 values / 64 per block = 1 block
+        let mut output = [0u8; 16]; // 64 values / 4 per byte = 16 bytes
+        let mut scales = [0.0f32; 1]; // 64 values / 64 per block = 1 block
 
         kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL1).unwrap();
 
@@ -789,8 +789,8 @@ mod tests {
 
         // 1 block of 256 elements = 64 packed bytes
         // All code 0b10 (code 2) → LUT[2] = 1.0, scaled by 2.0 → 2.0
-        let quantized = vec![0xAAu8 as i8; 64]; // 0b10101010 → all code 2
-        let scales = vec![2.0f32; 1];
+        let quantized = [0xAAu8 as i8; 64]; // 0b10101010 → all code 2
+        let scales = [2.0f32; 1];
 
         let result =
             kernel.dequantize_qk256(&quantized, &scales, 256).expect("dequantize should succeed");
@@ -810,13 +810,13 @@ mod tests {
         }
 
         // Mixed codes across 1 block
-        let mut quantized = vec![0i8; 64];
+        let mut quantized = [0i8; 64];
         for (i, byte) in quantized.iter_mut().enumerate() {
             // Cycle through codes: 0,1,2,3,0,1,2,3,...
             *byte = (0x00 | (0x01 << 2) | (0x02 << 4) | (0x03 << 6)) as i8;
             let _ = i; // use i to suppress unused warning
         }
-        let scales = vec![1.5f32; 1];
+        let scales = [1.5f32; 1];
 
         let result_neon = kernel
             .dequantize_qk256(&quantized, &scales, 256)
@@ -835,8 +835,8 @@ mod tests {
     #[test]
     fn test_neon_dequantize_qk256_invalid_block_size() {
         let kernel = NeonKernel;
-        let quantized = vec![0i8; 64];
-        let scales = vec![1.0f32; 1];
+        let quantized = [0i8; 64];
+        let scales = [1.0f32; 1];
         let result = kernel.dequantize_qk256(&quantized, &scales, 128);
         assert!(result.is_err());
     }
@@ -850,8 +850,8 @@ mod tests {
         }
 
         let input: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) / 64.0).collect();
-        let mut output = vec![0u8; 32]; // 128 values / 4 per byte
-        let mut scales = vec![0.0f32; 1]; // 128 / 128 = 1 block
+        let mut output = [0u8; 32]; // 128 values / 4 per byte
+        let mut scales = [0.0f32; 1]; // 128 / 128 = 1 block
 
         kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL2).unwrap();
 

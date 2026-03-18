@@ -1007,11 +1007,11 @@ mod tests {
     #[test]
     fn test_dataset_single_value() {
         let mut ds = CalibrationDataset::new(64, 1024);
-        ds.record(&[3.14]);
+        ds.record(&[1.5]);
         assert_eq!(ds.count, 1);
-        assert!((ds.min - 3.14).abs() < 1e-6);
-        assert!((ds.max - 3.14).abs() < 1e-6);
-        assert!((ds.mean() - 3.14).abs() < 1e-6);
+        assert!((ds.min - 1.5).abs() < 1e-6);
+        assert!((ds.max - 1.5).abs() < 1e-6);
+        assert!((ds.mean() - 1.5).abs() < 1e-6);
     }
 
     #[test]

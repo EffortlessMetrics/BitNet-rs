@@ -505,8 +505,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_all_zeros() {
-        let packed = vec![0x00; 4];
-        let mut output = vec![0.0f32; 16];
+        let packed = [0x00; 4];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -514,8 +514,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_all_ones() {
-        let packed = vec![0x55; 4]; // 0b01010101 → all +1
-        let mut output = vec![0.0f32; 16];
+        let packed = [0x55; 4]; // 0b01010101 → all +1
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -523,8 +523,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_all_neg_ones() {
-        let packed = vec![0xFF; 4]; // 0b11111111 → all -1
-        let mut output = vec![0.0f32; 16];
+        let packed = [0xFF; 4]; // 0b11111111 → all -1
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -534,7 +534,7 @@ mod tests {
     fn dequant_i2_mixed() {
         // byte: 0b11_00_01_00 = 0xC4 → [0, +1, 0, -1]
         let packed = vec![0xC4];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -543,7 +543,7 @@ mod tests {
     #[test]
     fn dequant_i2_single_byte() {
         let packed = vec![0x55];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_dequantize_i2_to_f32(&packed, 2.5, &mut output) };
         let expected = ref_dequant_i2(&packed, 2.5);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     fn dequant_i2_multi_byte() {
         let packed = vec![0x55, 0xFF, 0x00, 0xC4, 0x55];
-        let mut output = vec![0.0f32; 20];
+        let mut output = [0.0f32; 20];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -560,8 +560,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_with_scale() {
-        let packed = vec![0x55; 2];
-        let mut output = vec![0.0f32; 8];
+        let packed = [0x55; 2];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_to_f32(&packed, 0.125, &mut output) };
         let expected = ref_dequant_i2(&packed, 0.125);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -569,8 +569,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_large() {
-        let packed = vec![0x55; 256]; // 1024 values
-        let mut output = vec![0.0f32; 1024];
+        let packed = [0x55; 256]; // 1024 values
+        let mut output = [0.0f32; 1024];
         unsafe { neon_dequantize_i2_to_f32(&packed, 0.5, &mut output) };
         let expected = ref_dequant_i2(&packed, 0.5);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -579,8 +579,8 @@ mod tests {
     #[test]
     fn dequant_i2_pattern_0b10() {
         // 0b10101010 = 0xAA → all 0b10 (reserved → 0)
-        let packed = vec![0xAA; 4];
-        let mut output = vec![0.0f32; 16];
+        let packed = [0xAA; 4];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -593,7 +593,7 @@ mod tests {
     fn dequant_i2_roundtrip() {
         let codes = vec![0b01, 0b11, 0b00, 0b01, 0b11, 0b11, 0b01, 0b00];
         let packed = pack_codes(&codes);
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected: Vec<f32> = codes
             .iter()
@@ -610,9 +610,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_single_block() {
-        let packed = vec![0x55; 2]; // 8 values, all +1
-        let scales = vec![3.0];
-        let mut output = vec![0.0f32; 8];
+        let packed = [0x55; 2]; // 8 values, all +1
+        let scales = [3.0];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 8, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 8);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -622,7 +622,7 @@ mod tests {
     fn dequant_i2_block_multi_block() {
         let packed = vec![0x55, 0xFF]; // 8 values
         let scales = vec![2.0, 0.5];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 4, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 4);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -630,9 +630,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_varying_scales() {
-        let packed = vec![0x55; 4]; // 16 values, all +1
+        let packed = [0x55; 4]; // 16 values, all +1
         let scales = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 4, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 4);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -640,9 +640,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_zero_scale() {
-        let packed = vec![0xFF; 2];
+        let packed = [0xFF; 2];
         let scales = vec![0.0, 0.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 4, &mut output) };
         for &v in &output {
             assert_eq!(v, 0.0);
@@ -651,9 +651,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_negative_scale() {
-        let packed = vec![0x55; 2]; // all +1
+        let packed = [0x55; 2]; // all +1
         let scales = vec![-1.0, -2.0];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 4, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 4);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -661,9 +661,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_size_32() {
-        let packed = vec![0x55; 8]; // 32 values
-        let scales = vec![1.5];
-        let mut output = vec![0.0f32; 32];
+        let packed = [0x55; 8]; // 32 values
+        let scales = [1.5];
+        let mut output = [0.0f32; 32];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 32, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 32);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -671,9 +671,9 @@ mod tests {
 
     #[test]
     fn dequant_i2_block_size_256() {
-        let packed = vec![0xFF; 64]; // 256 values
-        let scales = vec![0.25];
-        let mut output = vec![0.0f32; 256];
+        let packed = [0xFF; 64]; // 256 values
+        let scales = [0.25];
+        let mut output = [0.0f32; 256];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 256, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 256);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -684,7 +684,7 @@ mod tests {
         // 3 bytes = 12 values, block_size=8 → 2 blocks (8 + 4)
         let packed = vec![0x55, 0xFF, 0x00];
         let scales = vec![1.0, 2.0];
-        let mut output = vec![0.0f32; 12];
+        let mut output = [0.0f32; 12];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 8, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 8);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -694,8 +694,8 @@ mod tests {
 
     #[test]
     fn dequant_i8_zeros() {
-        let data = vec![0i8; 16];
-        let mut output = vec![0.0f32; 16];
+        let data = [0i8; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i8_to_f32(&data, 1.0, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 1.0, 0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -704,7 +704,7 @@ mod tests {
     #[test]
     fn dequant_i8_positive() {
         let data: Vec<i8> = (1..=16).map(|x| x as i8).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.5, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 0.5, 0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -713,7 +713,7 @@ mod tests {
     #[test]
     fn dequant_i8_negative() {
         let data: Vec<i8> = (-16..0).map(|x| x as i8).collect();
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i8_to_f32(&data, 1.0, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 1.0, 0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -722,7 +722,7 @@ mod tests {
     #[test]
     fn dequant_i8_mixed() {
         let data = vec![-128i8, -64, -1, 0, 1, 64, 127, 42, -42, 100];
-        let mut output = vec![0.0f32; 10];
+        let mut output = [0.0f32; 10];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.01, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 0.01, 0);
         assert_f32_eq(&output, &expected, 1e-4);
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn dequant_i8_with_zero_point() {
         let data = vec![10i8, 20, 30, 40, 50, 60, 70, 80];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i8_to_f32(&data, 1.0, 10, &mut output) };
         let expected = ref_dequant_i8(&data, 1.0, 10);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -740,7 +740,7 @@ mod tests {
     #[test]
     fn dequant_i8_scale_factor() {
         let data = vec![1i8, 2, 3, 4, 5, 6, 7, 8];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.125, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 0.125, 0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     fn dequant_i8_large() {
         let data: Vec<i8> = (0..256).map(|x| x as i8).collect();
-        let mut output = vec![0.0f32; 256];
+        let mut output = [0.0f32; 256];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.1, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 0.1, 0);
         assert_f32_eq(&output, &expected, 1e-4);
@@ -758,7 +758,7 @@ mod tests {
     #[test]
     fn dequant_i8_precision() {
         let data = vec![127i8, -128];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.00784314, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 0.00784314, 0);
         assert_f32_eq(&output, &expected, 1e-4);
@@ -768,8 +768,8 @@ mod tests {
 
     #[test]
     fn pack_ternary_all_zero() {
-        let weights = vec![0.0f32; 8];
-        let mut output = vec![0u8; 2];
+        let weights = [0.0f32; 8];
+        let mut output = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..2], &expected[..]);
@@ -777,8 +777,8 @@ mod tests {
 
     #[test]
     fn pack_ternary_all_positive() {
-        let weights = vec![1.0f32; 8];
-        let mut output = vec![0u8; 2];
+        let weights = [1.0f32; 8];
+        let mut output = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..2], &expected[..]);
@@ -786,8 +786,8 @@ mod tests {
 
     #[test]
     fn pack_ternary_all_negative() {
-        let weights = vec![-1.0f32; 8];
-        let mut output = vec![0u8; 2];
+        let weights = [-1.0f32; 8];
+        let mut output = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..2], &expected[..]);
@@ -796,7 +796,7 @@ mod tests {
     #[test]
     fn pack_ternary_mixed() {
         let weights = vec![1.0, -1.0, 0.0, 0.5, -0.5, 0.1, -2.0, 3.0];
-        let mut output = vec![0u8; 2];
+        let mut output = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..2], &expected[..]);
@@ -806,7 +806,7 @@ mod tests {
     fn pack_ternary_threshold_sweep() {
         let weights = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
         for threshold in [0.1, 0.25, 0.5, 0.75] {
-            let mut output = vec![0u8; 2];
+            let mut output = [0u8; 2];
             unsafe { neon_pack_ternary_f32(&weights, threshold, &mut output) };
             let expected = ref_pack_ternary(&weights, threshold);
             assert_eq!(&output[..2], &expected[..], "threshold={threshold}");
@@ -816,9 +816,9 @@ mod tests {
     #[test]
     fn pack_ternary_roundtrip_with_dequant() {
         let weights = vec![1.0, -1.0, 0.0, 1.0, -1.0, 0.0, 1.0, -1.0];
-        let mut packed = vec![0u8; 2];
+        let mut packed = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut packed) };
-        let mut recovered = vec![0.0f32; 8];
+        let mut recovered = [0.0f32; 8];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut recovered) };
         assert_f32_eq(&recovered, &weights, 1e-6);
     }
@@ -832,7 +832,7 @@ mod tests {
                 _ => 0.0,
             })
             .collect();
-        let mut output = vec![0u8; 32];
+        let mut output = [0u8; 32];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..32], &expected[..]);
@@ -842,7 +842,7 @@ mod tests {
     fn pack_ternary_boundary() {
         // Values exactly at threshold
         let weights = vec![0.5, -0.5, 0.5, -0.5];
-        let mut output = vec![0u8; 1];
+        let mut output = [0u8; 1];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..1], &expected[..]);
@@ -853,7 +853,7 @@ mod tests {
     #[test]
     fn dequant_dot_identity() {
         let packed = vec![0x55]; // 4x +1
-        let vector = vec![1.0f32; 4];
+        let vector = [1.0f32; 4];
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let expected = ref_dequant_dot(&packed, 1.0, &vector);
         assert!((result - expected).abs() < 1e-5, "{result} vs {expected}");
@@ -861,16 +861,16 @@ mod tests {
 
     #[test]
     fn dequant_dot_zeros() {
-        let packed = vec![0x00; 4]; // all zero weights
-        let vector = vec![42.0f32; 16];
+        let packed = [0x00; 4]; // all zero weights
+        let vector = [42.0f32; 16];
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         assert!((result - 0.0).abs() < 1e-5);
     }
 
     #[test]
     fn dequant_dot_ones_vector() {
-        let packed = vec![0x55; 4]; // 16x +1
-        let vector = vec![1.0f32; 16];
+        let packed = [0x55; 4]; // 16x +1
+        let vector = [1.0f32; 16];
         let result = unsafe { neon_dequant_dot_f32(&packed, 2.0, &vector) };
         let expected = ref_dequant_dot(&packed, 2.0, &vector);
         assert!((result - expected).abs() < 1e-5, "{result} vs {expected}");
@@ -887,8 +887,8 @@ mod tests {
 
     #[test]
     fn dequant_dot_scale_effect() {
-        let packed = vec![0x55; 2]; // 8x +1
-        let vector = vec![1.0f32; 8];
+        let packed = [0x55; 2]; // 8x +1
+        let vector = [1.0f32; 8];
         let r1 = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let r2 = unsafe { neon_dequant_dot_f32(&packed, 3.0, &vector) };
         assert!((r2 - r1 * 3.0).abs() < 1e-5);
@@ -896,7 +896,7 @@ mod tests {
 
     #[test]
     fn dequant_dot_large() {
-        let packed = vec![0x55; 64]; // 256x +1
+        let packed = [0x55; 64]; // 256x +1
         let vector: Vec<f32> = (0..256).map(|i| i as f32 * 0.01).collect();
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let expected = ref_dequant_dot(&packed, 1.0, &vector);
@@ -905,7 +905,7 @@ mod tests {
 
     #[test]
     fn dequant_dot_precision() {
-        let packed = vec![0xFF; 8]; // 32x -1
+        let packed = [0xFF; 8]; // 32x -1
         let vector: Vec<f32> = (0..32).map(|i| (i as f32 + 1.0) * 0.001).collect();
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let expected = ref_dequant_dot(&packed, 1.0, &vector);
@@ -921,7 +921,7 @@ mod tests {
         let fused = unsafe { neon_dequant_dot_f32(&packed, scale, &vector) };
 
         // Separate: dequant then dot
-        let mut dequant = vec![0.0f32; 16];
+        let mut dequant = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut dequant) };
         let separate: f32 =
             dequant.iter().zip(vector.iter()).map(|(a, b)| a * b).sum::<f32>() * scale;
@@ -966,7 +966,7 @@ mod tests {
     #[test]
     fn edge_single_byte_i2() {
         let packed = vec![0b01_11_01_00u8]; // [0, +1, -1, +1]
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -975,7 +975,7 @@ mod tests {
     #[test]
     fn edge_single_element_i8() {
         let data = vec![42i8];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.5, 0, &mut output) };
         assert!((output[0] - 21.0).abs() < 1e-6);
     }
@@ -983,7 +983,7 @@ mod tests {
     #[test]
     fn edge_non_aligned_i8() {
         let data = vec![1i8, 2, 3, 4, 5];
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         unsafe { neon_dequantize_i8_to_f32(&data, 1.0, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 1.0, 0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -991,8 +991,8 @@ mod tests {
 
     #[test]
     fn edge_large_scale() {
-        let packed = vec![0x55; 4]; // all +1
-        let mut output = vec![0.0f32; 16];
+        let packed = [0x55; 4]; // all +1
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1e6, &mut output) };
         let expected = ref_dequant_i2(&packed, 1e6);
         assert_f32_eq(&output, &expected, 1.0);
@@ -1000,8 +1000,8 @@ mod tests {
 
     #[test]
     fn edge_tiny_scale() {
-        let packed = vec![0x55; 4]; // all +1
-        let mut output = vec![0.0f32; 16];
+        let packed = [0x55; 4]; // all +1
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1e-7, &mut output) };
         let expected = ref_dequant_i2(&packed, 1e-7);
         assert_f32_eq(&output, &expected, 1e-12);
@@ -1010,7 +1010,7 @@ mod tests {
     #[test]
     fn edge_overflow_safe_i8() {
         let data = vec![127i8, -128];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         unsafe { neon_dequantize_i8_to_f32(&data, 1e6, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 1e6, 0);
         assert_f32_eq(&output, &expected, 100.0);
@@ -1018,8 +1018,8 @@ mod tests {
 
     #[test]
     fn dequant_i2_neg_scale() {
-        let packed = vec![0x55; 2]; // all +1
-        let mut output = vec![0.0f32; 8];
+        let packed = [0x55; 2]; // all +1
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i2_to_f32(&packed, -0.5, &mut output) };
         let expected = ref_dequant_i2(&packed, -0.5);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -1028,7 +1028,7 @@ mod tests {
     #[test]
     fn dequant_i8_negative_zero_point() {
         let data = vec![0i8, 10, -10, 50, -50, 100, -100, 127];
-        let mut output = vec![0.0f32; 8];
+        let mut output = [0.0f32; 8];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.1, -5, &mut output) };
         let expected = ref_dequant_i8(&data, 0.1, -5);
         assert_f32_eq(&output, &expected, 1e-4);
@@ -1037,7 +1037,7 @@ mod tests {
     #[test]
     fn pack_ternary_tail_3() {
         let weights = vec![1.0, -1.0, 0.0];
-        let mut output = vec![0u8; 1];
+        let mut output = [0u8; 1];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..1], &expected[..]);
@@ -1046,7 +1046,7 @@ mod tests {
     #[test]
     fn pack_ternary_tail_5() {
         let weights = vec![1.0, -1.0, 0.0, 1.0, -1.0];
-        let mut output = vec![0u8; 2];
+        let mut output = [0u8; 2];
         unsafe { neon_pack_ternary_f32(&weights, 0.5, &mut output) };
         let expected = ref_pack_ternary(&weights, 0.5);
         assert_eq!(&output[..2], &expected[..]);
@@ -1054,8 +1054,8 @@ mod tests {
 
     #[test]
     fn dequant_dot_neg_weights() {
-        let packed = vec![0xFF; 4]; // 16x -1
-        let vector = vec![2.0f32; 16];
+        let packed = [0xFF; 4]; // 16x -1
+        let vector = [2.0f32; 16];
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let expected = ref_dequant_dot(&packed, 1.0, &vector);
         assert!((result - expected).abs() < 1e-4, "{result} vs {expected}");
@@ -1063,7 +1063,7 @@ mod tests {
 
     #[test]
     fn dequant_dot_alternating() {
-        let packed = vec![0b11_01_11_01u8; 4]; // [+1, -1, +1, -1] repeated
+        let packed = [0b11_01_11_01u8; 4]; // [+1, -1, +1, -1] repeated
         let vector: Vec<f32> = (0..16).map(|i| i as f32).collect();
         let result = unsafe { neon_dequant_dot_f32(&packed, 1.0, &vector) };
         let expected = ref_dequant_dot(&packed, 1.0, &vector);
@@ -1074,7 +1074,7 @@ mod tests {
     fn dequant_i2_all_codes_byte() {
         // One byte with all 4 distinct codes: 0b10_11_01_00
         let packed = vec![0b10_11_01_00u8];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe { neon_dequantize_i2_to_f32(&packed, 1.0, &mut output) };
         let expected = ref_dequant_i2(&packed, 1.0);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -1084,7 +1084,7 @@ mod tests {
     fn dequant_i2_block_block_size_4() {
         let packed = vec![0x55, 0xFF, 0x00, 0xAA]; // 16 values
         let scales = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i2_block_f32(&packed, &scales, 4, &mut output) };
         let expected = ref_dequant_i2_block(&packed, &scales, 4);
         assert_f32_eq(&output, &expected, 1e-6);
@@ -1092,8 +1092,8 @@ mod tests {
 
     #[test]
     fn dequant_i8_all_same() {
-        let data = vec![42i8; 16];
-        let mut output = vec![0.0f32; 16];
+        let data = [42i8; 16];
+        let mut output = [0.0f32; 16];
         unsafe { neon_dequantize_i8_to_f32(&data, 0.1, 42, &mut output) };
         for &v in &output {
             assert!((v - 0.0).abs() < 1e-6);
@@ -1103,7 +1103,7 @@ mod tests {
     #[test]
     fn dequant_i8_seven_elements() {
         let data = vec![1i8, -1, 2, -2, 3, -3, 4];
-        let mut output = vec![0.0f32; 7];
+        let mut output = [0.0f32; 7];
         unsafe { neon_dequantize_i8_to_f32(&data, 2.0, 0, &mut output) };
         let expected = ref_dequant_i8(&data, 2.0, 0);
         assert_f32_eq(&output, &expected, 1e-6);

@@ -476,8 +476,8 @@ mod tests {
     #[test]
     fn test_gather_scalar_single_index() {
         let cache = sequential_f32(8 * 64);
-        let indices = vec![3];
-        let mut output = vec![0.0f32; 64];
+        let indices = [3];
+        let mut output = [0.0f32; 64];
         kv_cache_gather_scalar(&cache, &indices, &mut output, 64);
         assert_eq!(&output[..64], &cache[192..256]);
     }
@@ -496,7 +496,7 @@ mod tests {
     fn test_gather_scalar_empty_indices() {
         let cache = sequential_f32(4 * 32);
         let indices: Vec<usize> = vec![];
-        let mut output = vec![0.0f32; 0];
+        let mut output = [0.0f32; 0];
         kv_cache_gather_scalar(&cache, &indices, &mut output, 32);
         assert!(output.is_empty());
     }
@@ -505,8 +505,8 @@ mod tests {
     #[should_panic(expected = "cache index out of bounds")]
     fn test_gather_scalar_out_of_bounds() {
         let cache = sequential_f32(4 * 32);
-        let indices = vec![10];
-        let mut output = vec![0.0f32; 32];
+        let indices = [10];
+        let mut output = [0.0f32; 32];
         kv_cache_gather_scalar(&cache, &indices, &mut output, 32);
     }
 
@@ -581,8 +581,8 @@ mod tests {
     #[test]
     fn test_quantize_scalar_basic() {
         let cache = vec![1.0f32, -1.0, 0.5, -0.5, 0.0, 0.25, -0.25, 0.0];
-        let mut output = vec![0i8; 8];
-        let mut scale = vec![0.0f32; 1];
+        let mut output = [0i8; 8];
+        let mut scale = [0.0f32; 1];
         kv_cache_quantize_scalar(&cache, &mut output, &mut scale, 8, 1);
         assert!(scale[0] > 0.0);
         assert_eq!(output[0], 127);
@@ -591,9 +591,9 @@ mod tests {
 
     #[test]
     fn test_quantize_scalar_zeros() {
-        let cache = vec![0.0f32; 32];
-        let mut output = vec![0i8; 32];
-        let mut scale = vec![0.0f32; 1];
+        let cache = [0.0f32; 32];
+        let mut output = [0i8; 32];
+        let mut scale = [0.0f32; 1];
         kv_cache_quantize_scalar(&cache, &mut output, &mut scale, 32, 1);
         assert!(output.iter().all(|&v| v == 0));
     }
@@ -601,8 +601,8 @@ mod tests {
     #[test]
     fn test_quantize_scalar_multi_position() {
         let cache: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.1).collect();
-        let mut output = vec![0i8; 64];
-        let mut scale = vec![0.0f32; 2];
+        let mut output = [0i8; 64];
+        let mut scale = [0.0f32; 2];
         kv_cache_quantize_scalar(&cache, &mut output, &mut scale, 32, 2);
         assert!(scale[0] > 0.0);
         assert!(scale[1] > 0.0);
@@ -612,7 +612,7 @@ mod tests {
     fn test_dequantize_scalar_basic() {
         let cache = vec![127i8, -127, 64, -64];
         let scale = vec![1.0 / 127.0];
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         kv_cache_dequantize_scalar(&cache, &scale, &mut output, 4, 1);
         assert!((output[0] - 1.0).abs() < 0.01);
         assert!((output[1] + 1.0).abs() < 0.01);
@@ -621,11 +621,11 @@ mod tests {
     #[test]
     fn test_quantize_dequantize_roundtrip_scalar() {
         let cache: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
-        let mut q_out = vec![0i8; 128];
-        let mut scale = vec![0.0f32; 1];
+        let mut q_out = [0i8; 128];
+        let mut scale = [0.0f32; 1];
         kv_cache_quantize_scalar(&cache, &mut q_out, &mut scale, 128, 1);
 
-        let mut deq_out = vec![0.0f32; 128];
+        let mut deq_out = [0.0f32; 128];
         kv_cache_dequantize_scalar(&q_out, &scale, &mut deq_out, 128, 1);
 
         for (orig, deq) in cache.iter().zip(deq_out.iter()) {
@@ -636,11 +636,11 @@ mod tests {
     #[test]
     fn test_quantize_dequantize_roundtrip_scalar_multi() {
         let cache: Vec<f32> = (0..256).map(|i| (i as f32 - 128.0) * 0.005).collect();
-        let mut q_out = vec![0i8; 256];
-        let mut scale = vec![0.0f32; 4];
+        let mut q_out = [0i8; 256];
+        let mut scale = [0.0f32; 4];
         kv_cache_quantize_scalar(&cache, &mut q_out, &mut scale, 64, 4);
 
-        let mut deq_out = vec![0.0f32; 256];
+        let mut deq_out = [0.0f32; 256];
         kv_cache_dequantize_scalar(&q_out, &scale, &mut deq_out, 64, 4);
 
         for (orig, deq) in cache.iter().zip(deq_out.iter()) {
@@ -651,18 +651,18 @@ mod tests {
     #[test]
     #[should_panic(expected = "cache too small")]
     fn test_quantize_scalar_cache_too_small() {
-        let cache = vec![1.0f32; 4];
-        let mut output = vec![0i8; 32];
-        let mut scale = vec![0.0f32; 1];
+        let cache = [1.0f32; 4];
+        let mut output = [0i8; 32];
+        let mut scale = [0.0f32; 1];
         kv_cache_quantize_scalar(&cache, &mut output, &mut scale, 32, 1);
     }
 
     #[test]
     #[should_panic(expected = "cache too small")]
     fn test_dequantize_scalar_cache_too_small() {
-        let cache = vec![1i8; 4];
-        let scale = vec![1.0f32; 1];
-        let mut output = vec![0.0f32; 32];
+        let cache = [1i8; 4];
+        let scale = [1.0f32; 1];
+        let mut output = [0.0f32; 32];
         kv_cache_dequantize_scalar(&cache, &scale, &mut output, 32, 1);
     }
 
@@ -772,8 +772,8 @@ mod tests {
         #[test]
         fn test_gather_neon_single_index() {
             let cache = sequential_f32(8 * 64);
-            let indices = vec![3];
-            let mut output = vec![0.0f32; 64];
+            let indices = [3];
+            let mut output = [0.0f32; 64];
             kv_cache_gather_neon(&cache, &indices, &mut output, 64);
             assert_eq!(&output[..64], &cache[192..256]);
         }
@@ -792,7 +792,7 @@ mod tests {
         fn test_gather_neon_empty() {
             let cache = sequential_f32(4 * 32);
             let indices: Vec<usize> = vec![];
-            let mut output = vec![0.0f32; 0];
+            let mut output = [0.0f32; 0];
             kv_cache_gather_neon(&cache, &indices, &mut output, 32);
             assert!(output.is_empty());
         }
@@ -811,8 +811,8 @@ mod tests {
         #[should_panic(expected = "cache index out of bounds")]
         fn test_gather_neon_out_of_bounds() {
             let cache = sequential_f32(4 * 32);
-            let indices = vec![10];
-            let mut output = vec![0.0f32; 32];
+            let indices = [10];
+            let mut output = [0.0f32; 32];
             kv_cache_gather_neon(&cache, &indices, &mut output, 32);
         }
 
@@ -932,8 +932,8 @@ mod tests {
         #[test]
         fn test_quantize_neon_basic() {
             let cache = vec![1.0f32, -1.0, 0.5, -0.5, 0.0, 0.25, -0.25, 0.0];
-            let mut output = vec![0i8; 8];
-            let mut scale = vec![0.0f32; 1];
+            let mut output = [0i8; 8];
+            let mut scale = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut output, &mut scale, 8, 1);
             assert!(scale[0] > 0.0);
             assert_eq!(output[0], 127);
@@ -942,9 +942,9 @@ mod tests {
 
         #[test]
         fn test_quantize_neon_zeros() {
-            let cache = vec![0.0f32; 32];
-            let mut output = vec![0i8; 32];
-            let mut scale = vec![0.0f32; 1];
+            let cache = [0.0f32; 32];
+            let mut output = [0i8; 32];
+            let mut scale = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut output, &mut scale, 32, 1);
             assert!(output.iter().all(|&v| v == 0));
         }
@@ -952,8 +952,8 @@ mod tests {
         #[test]
         fn test_quantize_neon_multi_position() {
             let cache: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.1).collect();
-            let mut output = vec![0i8; 64];
-            let mut scale = vec![0.0f32; 2];
+            let mut output = [0i8; 64];
+            let mut scale = [0.0f32; 2];
             kv_cache_quantize_neon(&cache, &mut output, &mut scale, 32, 2);
             assert!(scale[0] > 0.0);
             assert!(scale[1] > 0.0);
@@ -963,7 +963,7 @@ mod tests {
         fn test_dequantize_neon_basic() {
             let cache = vec![127i8, -127, 64, -64];
             let scale = vec![1.0 / 127.0];
-            let mut output = vec![0.0f32; 4];
+            let mut output = [0.0f32; 4];
             kv_cache_dequantize_neon(&cache, &scale, &mut output, 4, 1);
             assert!((output[0] - 1.0).abs() < 0.01);
             assert!((output[1] + 1.0).abs() < 0.01);
@@ -974,11 +974,11 @@ mod tests {
         #[test]
         fn test_quantize_dequantize_roundtrip_neon_head32() {
             let cache: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.05).collect();
-            let mut q_out = vec![0i8; 32];
-            let mut scale = vec![0.0f32; 1];
+            let mut q_out = [0i8; 32];
+            let mut scale = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut q_out, &mut scale, 32, 1);
 
-            let mut deq_out = vec![0.0f32; 32];
+            let mut deq_out = [0.0f32; 32];
             kv_cache_dequantize_neon(&q_out, &scale, &mut deq_out, 32, 1);
 
             for (orig, deq) in cache.iter().zip(deq_out.iter()) {
@@ -992,11 +992,11 @@ mod tests {
         #[test]
         fn test_quantize_dequantize_roundtrip_neon_head64() {
             let cache: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.01).collect();
-            let mut q_out = vec![0i8; 128];
-            let mut scale = vec![0.0f32; 2];
+            let mut q_out = [0i8; 128];
+            let mut scale = [0.0f32; 2];
             kv_cache_quantize_neon(&cache, &mut q_out, &mut scale, 64, 2);
 
-            let mut deq_out = vec![0.0f32; 128];
+            let mut deq_out = [0.0f32; 128];
             kv_cache_dequantize_neon(&q_out, &scale, &mut deq_out, 64, 2);
 
             for (orig, deq) in cache.iter().zip(deq_out.iter()) {
@@ -1010,11 +1010,11 @@ mod tests {
         #[test]
         fn test_quantize_dequantize_roundtrip_neon_head128() {
             let cache: Vec<f32> = (0..512).map(|i| (i as f32 - 256.0) * 0.003).collect();
-            let mut q_out = vec![0i8; 512];
-            let mut scale = vec![0.0f32; 4];
+            let mut q_out = [0i8; 512];
+            let mut scale = [0.0f32; 4];
             kv_cache_quantize_neon(&cache, &mut q_out, &mut scale, 128, 4);
 
-            let mut deq_out = vec![0.0f32; 512];
+            let mut deq_out = [0.0f32; 512];
             kv_cache_dequantize_neon(&q_out, &scale, &mut deq_out, 128, 4);
 
             for (orig, deq) in cache.iter().zip(deq_out.iter()) {
@@ -1030,12 +1030,12 @@ mod tests {
         #[test]
         fn test_quantize_parity_head32() {
             let cache: Vec<f32> = (0..32).map(|i| (i as f32 - 16.0) * 0.1).collect();
-            let mut q_neon = vec![0i8; 32];
-            let mut s_neon = vec![0.0f32; 1];
+            let mut q_neon = [0i8; 32];
+            let mut s_neon = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut q_neon, &mut s_neon, 32, 1);
 
-            let mut q_scalar = vec![0i8; 32];
-            let mut s_scalar = vec![0.0f32; 1];
+            let mut q_scalar = [0i8; 32];
+            let mut s_scalar = [0.0f32; 1];
             kv_cache_quantize_scalar(&cache, &mut q_scalar, &mut s_scalar, 32, 1);
 
             assert!((s_neon[0] - s_scalar[0]).abs() < 1e-6);
@@ -1047,12 +1047,12 @@ mod tests {
         #[test]
         fn test_quantize_parity_head64() {
             let cache: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.05).collect();
-            let mut q_neon = vec![0i8; 64];
-            let mut s_neon = vec![0.0f32; 1];
+            let mut q_neon = [0i8; 64];
+            let mut s_neon = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut q_neon, &mut s_neon, 64, 1);
 
-            let mut q_scalar = vec![0i8; 64];
-            let mut s_scalar = vec![0.0f32; 1];
+            let mut q_scalar = [0i8; 64];
+            let mut s_scalar = [0.0f32; 1];
             kv_cache_quantize_scalar(&cache, &mut q_scalar, &mut s_scalar, 64, 1);
 
             assert!((s_neon[0] - s_scalar[0]).abs() < 1e-6);
@@ -1064,12 +1064,12 @@ mod tests {
         #[test]
         fn test_quantize_parity_head128() {
             let cache: Vec<f32> = (0..128).map(|i| (i as f32 - 64.0) * 0.02).collect();
-            let mut q_neon = vec![0i8; 128];
-            let mut s_neon = vec![0.0f32; 1];
+            let mut q_neon = [0i8; 128];
+            let mut s_neon = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut q_neon, &mut s_neon, 128, 1);
 
-            let mut q_scalar = vec![0i8; 128];
-            let mut s_scalar = vec![0.0f32; 1];
+            let mut q_scalar = [0i8; 128];
+            let mut s_scalar = [0.0f32; 1];
             kv_cache_quantize_scalar(&cache, &mut q_scalar, &mut s_scalar, 128, 1);
 
             assert!((s_neon[0] - s_scalar[0]).abs() < 1e-6);
@@ -1084,8 +1084,8 @@ mod tests {
         fn test_dequantize_parity_head32() {
             let cache: Vec<i8> = (0..32).map(|i| (i as i8).wrapping_sub(16)).collect();
             let scale = vec![0.01f32];
-            let mut o_neon = vec![0.0f32; 32];
-            let mut o_scalar = vec![0.0f32; 32];
+            let mut o_neon = [0.0f32; 32];
+            let mut o_scalar = [0.0f32; 32];
             kv_cache_dequantize_neon(&cache, &scale, &mut o_neon, 32, 1);
             kv_cache_dequantize_scalar(&cache, &scale, &mut o_scalar, 32, 1);
             for (a, b) in o_neon.iter().zip(o_scalar.iter()) {
@@ -1097,8 +1097,8 @@ mod tests {
         fn test_dequantize_parity_head64() {
             let cache: Vec<i8> = (0..64).map(|i| ((i % 255) as i8).wrapping_sub(64)).collect();
             let scale = vec![0.005f32];
-            let mut o_neon = vec![0.0f32; 64];
-            let mut o_scalar = vec![0.0f32; 64];
+            let mut o_neon = [0.0f32; 64];
+            let mut o_scalar = [0.0f32; 64];
             kv_cache_dequantize_neon(&cache, &scale, &mut o_neon, 64, 1);
             kv_cache_dequantize_scalar(&cache, &scale, &mut o_scalar, 64, 1);
             for (a, b) in o_neon.iter().zip(o_scalar.iter()) {
@@ -1110,8 +1110,8 @@ mod tests {
         fn test_dequantize_parity_head128() {
             let cache: Vec<i8> = (0..128).map(|i| ((i % 255) as i8).wrapping_sub(64)).collect();
             let scale = vec![0.002f32];
-            let mut o_neon = vec![0.0f32; 128];
-            let mut o_scalar = vec![0.0f32; 128];
+            let mut o_neon = [0.0f32; 128];
+            let mut o_scalar = [0.0f32; 128];
             kv_cache_dequantize_neon(&cache, &scale, &mut o_neon, 128, 1);
             kv_cache_dequantize_scalar(&cache, &scale, &mut o_scalar, 128, 1);
             for (a, b) in o_neon.iter().zip(o_scalar.iter()) {
@@ -1150,8 +1150,8 @@ mod tests {
             ];
             kv_cache_rotate_neon(&mut cache, 1, 2, 2);
             // After rotate by 1: pos1,pos2,pos3,pos0
-            let indices = vec![0]; // should now be old pos 1
-            let mut output = vec![0.0f32; 4];
+            let indices = [0]; // should now be old pos 1
+            let mut output = [0.0f32; 4];
             // Gather using head_dim * num_heads = 4 as row size
             kv_cache_gather_neon(&cache, &indices, &mut output, 4);
             assert_eq!(output, vec![5.0, 6.0, 7.0, 8.0]);
@@ -1159,12 +1159,12 @@ mod tests {
 
         #[test]
         fn test_quantize_dequantize_neon_preserves_zero() {
-            let cache = vec![0.0f32; 64];
-            let mut q_out = vec![0i8; 64];
-            let mut scale = vec![0.0f32; 1];
+            let cache = [0.0f32; 64];
+            let mut q_out = [0i8; 64];
+            let mut scale = [0.0f32; 1];
             kv_cache_quantize_neon(&cache, &mut q_out, &mut scale, 64, 1);
 
-            let mut deq_out = vec![0.0f32; 64];
+            let mut deq_out = [0.0f32; 64];
             kv_cache_dequantize_neon(&q_out, &scale, &mut deq_out, 64, 1);
             assert!(deq_out.iter().all(|&v| v == 0.0));
         }
@@ -1175,7 +1175,7 @@ mod tests {
             let n = 256 * 128;
             let cache: Vec<f32> = (0..n).map(|i| (i as f32 - (n / 2) as f32) * 0.001).collect();
             let mut q_out = vec![0i8; n];
-            let mut scale = vec![0.0f32; 256];
+            let mut scale = [0.0f32; 256];
             kv_cache_quantize_neon(&cache, &mut q_out, &mut scale, 128, 256);
 
             let mut deq_out = vec![0.0f32; n];

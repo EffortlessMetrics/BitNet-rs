@@ -679,7 +679,7 @@ fn dynamic_reduce_recursive(data: &[f32], depth_remaining: u32) -> f32 {
 pub fn dynamic_reduce_forward(input: &[f32], config: &DynamicLaunchConfig) -> Result<f32> {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         if crate::device_features::gpu_available_runtime()
             && launch_dynamic_reduce(input, &mut output, config).is_ok()
         {
@@ -1373,7 +1373,7 @@ mod tests {
     fn test_launch_child_kernel_depth_exceeded() {
         let cfg = config_depth(1);
         let mut mgr = DynamicParallelismManager::new(cfg).unwrap();
-        let mut data = vec![1.0];
+        let mut data = [1.0];
         let desc = ChildKernelDescriptor::new("bad", 1).with_depth(2);
         assert!(launch_child_kernel(&mut data, &desc, &mut mgr, |_| {}).is_err());
     }
@@ -1512,9 +1512,9 @@ mod tests {
     #[test]
     fn test_scan_single() {
         let cfg = default_config();
-        let mut data = vec![5.0];
+        let mut data = [5.0f32];
         dynamic_scan(&mut data, &cfg).unwrap();
-        assert_eq!(data, vec![0.0]);
+        assert_eq!(data.to_vec(), vec![0.0]);
     }
 
     #[test]
@@ -1566,9 +1566,9 @@ mod tests {
     #[test]
     fn test_scan_zeroes() {
         let cfg = default_config();
-        let mut data = vec![0.0; 8];
+        let mut data = [0.0f32; 8];
         dynamic_scan(&mut data, &cfg).unwrap();
-        assert_eq!(data, vec![0.0; 8]);
+        assert_eq!(data.to_vec(), vec![0.0; 8]);
     }
 
     #[test]
@@ -1583,7 +1583,7 @@ mod tests {
     fn test_scan_invalid_config() {
         let mut cfg = default_config();
         cfg.max_depth = 0;
-        let mut data = vec![1.0];
+        let mut data = [1.0];
         assert!(dynamic_scan(&mut data, &cfg).is_err());
     }
 
@@ -1600,9 +1600,9 @@ mod tests {
     #[test]
     fn test_sort_single() {
         let cfg = default_config();
-        let mut data = vec![42.0];
+        let mut data = [42.0f32];
         recursive_merge_sort(&mut data, &cfg).unwrap();
-        assert_eq!(data, vec![42.0]);
+        assert_eq!(data.to_vec(), vec![42.0]);
     }
 
     #[test]
@@ -1711,9 +1711,9 @@ mod tests {
     fn test_adaptive_grid_basic() {
         let cfg = default_config();
         let input = vec![1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0f32; 3];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
-        assert_eq!(output, vec![1.0, 4.0, 9.0]);
+        assert_eq!(output.to_vec(), vec![1.0, 4.0, 9.0]);
     }
 
     #[test]
@@ -1727,28 +1727,28 @@ mod tests {
     #[test]
     fn test_adaptive_grid_single() {
         let cfg = default_config();
-        let input = vec![5.0];
-        let mut output = vec![0.0];
+        let input = [5.0f32];
+        let mut output = [0.0f32];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
-        assert_eq!(output, vec![25.0]);
+        assert_eq!(output.to_vec(), vec![25.0]);
     }
 
     #[test]
     fn test_adaptive_grid_zeros() {
         let cfg = default_config();
         let input = constant(8, 0.0);
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0f32; 8];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
-        assert_eq!(output, constant(8, 0.0));
+        assert_eq!(output.to_vec(), constant(8, 0.0));
     }
 
     #[test]
     fn test_adaptive_grid_negative() {
         let cfg = default_config();
         let input = vec![-3.0, -2.0, -1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0f32; 3];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
-        assert_eq!(output, vec![9.0, 4.0, 1.0]);
+        assert_eq!(output.to_vec(), vec![9.0, 4.0, 1.0]);
     }
 
     #[test]
@@ -1767,15 +1767,15 @@ mod tests {
     fn test_adaptive_grid_output_too_short() {
         let cfg = default_config();
         let input = vec![1.0, 2.0, 3.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         assert!(adaptive_grid_launch(&input, &mut output, &cfg).is_err());
     }
 
     #[test]
     fn test_adaptive_grid_output_longer_ok() {
         let cfg = default_config();
-        let input = vec![2.0];
-        let mut output = vec![0.0; 5];
+        let input = [2.0];
+        let mut output = [0.0; 5];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
         assert_eq!(output[0], 4.0);
     }
@@ -1783,17 +1783,17 @@ mod tests {
     #[test]
     fn test_adaptive_grid_forward_dispatch() {
         let cfg = default_config();
-        let input = vec![3.0];
-        let mut output = vec![0.0];
+        let input = [3.0f32];
+        let mut output = [0.0f32];
         adaptive_grid_launch_forward(&input, &mut output, &cfg).unwrap();
-        assert_eq!(output, vec![9.0]);
+        assert_eq!(output.to_vec(), vec![9.0]);
     }
 
     #[test]
     fn test_adaptive_grid_invalid_config() {
         let mut cfg = default_config();
         cfg.max_depth = 0;
-        let mut out = vec![0.0];
+        let mut out = [0.0];
         assert!(adaptive_grid_launch(&[1.0], &mut out, &cfg).is_err());
     }
 
@@ -1802,9 +1802,9 @@ mod tests {
     #[test]
     fn test_matmul_1x1() {
         let cfg = default_config();
-        let a = vec![3.0];
-        let b = vec![4.0];
-        let mut c = vec![0.0];
+        let a = [3.0];
+        let b = [4.0];
+        let mut c = [0.0];
         nested_matmul(&a, &b, &mut c, 1, 1, 1, &cfg).unwrap();
         assert!((c[0] - 12.0).abs() < 1e-5);
     }
@@ -1814,9 +1814,9 @@ mod tests {
         let cfg = default_config();
         let a = vec![1.0, 0.0, 0.0, 1.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0f32; 4];
         nested_matmul(&a, &b, &mut c, 2, 2, 2, &cfg).unwrap();
-        assert_eq!(c, vec![5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(c.to_vec(), vec![5.0, 6.0, 7.0, 8.0]);
     }
 
     #[test]
@@ -1824,7 +1824,7 @@ mod tests {
         let cfg = default_config();
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3
         let b = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]; // 3×2
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         nested_matmul(&a, &b, &mut c, 2, 2, 3, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 3);
         for i in 0..4 {
@@ -1850,11 +1850,11 @@ mod tests {
     #[test]
     fn test_matmul_zeros() {
         let cfg = default_config();
-        let a = vec![0.0; 4];
+        let a = [0.0; 4];
         let b = vec![1.0, 2.0, 3.0, 4.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0f32; 4];
         nested_matmul(&a, &b, &mut c, 2, 2, 2, &cfg).unwrap();
-        assert_eq!(c, vec![0.0; 4]);
+        assert_eq!(c.to_vec(), vec![0.0; 4]);
     }
 
     #[test]
@@ -1862,7 +1862,7 @@ mod tests {
         let cfg = default_config();
         let a: Vec<f32> = (1..=16).map(|i| i as f32).collect();
         let b: Vec<f32> = (1..=16).map(|i| i as f32).collect();
-        let mut c = vec![0.0f32; 16];
+        let mut c = [0.0f32; 16];
         nested_matmul(&a, &b, &mut c, 4, 4, 4, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 4, 4, 4);
         for i in 0..16 {
@@ -1899,27 +1899,27 @@ mod tests {
     #[test]
     fn test_matmul_a_too_short() {
         let cfg = default_config();
-        let a = vec![1.0; 3];
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 4];
+        let a = [1.0; 3];
+        let b = [1.0; 4];
+        let mut c = [0.0; 4];
         assert!(nested_matmul(&a, &b, &mut c, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_matmul_b_too_short() {
         let cfg = default_config();
-        let a = vec![1.0; 4];
-        let b = vec![1.0; 3];
-        let mut c = vec![0.0; 4];
+        let a = [1.0; 4];
+        let b = [1.0; 3];
+        let mut c = [0.0; 4];
         assert!(nested_matmul(&a, &b, &mut c, 2, 2, 2, &cfg).is_err());
     }
 
     #[test]
     fn test_matmul_c_too_short() {
         let cfg = default_config();
-        let a = vec![1.0; 4];
-        let b = vec![1.0; 4];
-        let mut c = vec![0.0; 3];
+        let a = [1.0; 4];
+        let b = [1.0; 4];
+        let mut c = [0.0; 3];
         assert!(nested_matmul(&a, &b, &mut c, 2, 2, 2, &cfg).is_err());
     }
 
@@ -1927,7 +1927,7 @@ mod tests {
     fn test_matmul_invalid_config() {
         let mut cfg = default_config();
         cfg.max_depth = 0;
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         assert!(nested_matmul(&[1.0; 4], &[1.0; 4], &mut c, 2, 2, 2, &cfg).is_err());
     }
 
@@ -1936,7 +1936,7 @@ mod tests {
         let cfg = default_config();
         let a = vec![1.0, 2.0, 3.0, 4.0];
         let b = vec![5.0, 6.0, 7.0, 8.0];
-        let mut c = vec![0.0; 4];
+        let mut c = [0.0; 4];
         nested_matmul_forward(&a, &b, &mut c, 2, 2, 2, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 2, 2, 2);
         for i in 0..4 {
@@ -1949,7 +1949,7 @@ mod tests {
         let cfg = config_depth(1);
         let a: Vec<f32> = (1..=9).map(|i| i as f32).collect();
         let b: Vec<f32> = (1..=9).map(|i| i as f32).collect();
-        let mut c = vec![0.0f32; 9];
+        let mut c = [0.0f32; 9];
         nested_matmul(&a, &b, &mut c, 3, 3, 3, &cfg).unwrap();
         let expected = naive_matmul(&a, &b, 3, 3, 3);
         for i in 0..9 {
@@ -1995,7 +1995,7 @@ mod tests {
     fn test_adaptive_grid_matches_naive_square() {
         let cfg = default_config();
         let input = ascending(50);
-        let mut output = vec![0.0; 50];
+        let mut output = [0.0; 50];
         adaptive_grid_launch(&input, &mut output, &cfg).unwrap();
         for (i, (&inp, &out)) in input.iter().zip(output.iter()).enumerate() {
             assert!((out - inp * inp).abs() < 1e-3, "mismatch at {i}");
@@ -2005,8 +2005,8 @@ mod tests {
     #[test]
     fn test_matmul_commutativity_1x1() {
         let cfg = default_config();
-        let mut c1 = vec![0.0];
-        let mut c2 = vec![0.0];
+        let mut c1 = [0.0];
+        let mut c2 = [0.0];
         nested_matmul(&[3.0], &[7.0], &mut c1, 1, 1, 1, &cfg).unwrap();
         nested_matmul(&[7.0], &[3.0], &mut c2, 1, 1, 1, &cfg).unwrap();
         assert!((c1[0] - c2[0]).abs() < 1e-5);

@@ -822,8 +822,8 @@ mod tests {
     #[test]
     fn fused_qln_identity_gamma_zero_beta() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_quantized_layer_norm(&input, &gamma, Some(&beta), &cfg).unwrap();
         let expected = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -846,8 +846,8 @@ mod tests {
     #[test]
     fn fused_qln_batch_two() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_quantized_layer_norm(&input, &gamma, Some(&beta), &cfg).unwrap();
         assert_eq!(out.len(), 6);
@@ -868,7 +868,7 @@ mod tests {
     #[test]
     fn fused_qln_no_beta() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         assert_eq!(out.len(), 3);
@@ -877,8 +877,8 @@ mod tests {
 
     #[test]
     fn fused_qln_constant_input() {
-        let input = vec![5.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [5.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         // Constant input → all outputs near zero (normalized)
@@ -889,8 +889,8 @@ mod tests {
 
     #[test]
     fn fused_qln_all_zeros() {
-        let input = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [0.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         assert!(out.iter().all(|v| v.abs() < STRICT_TOL));
@@ -920,7 +920,7 @@ mod tests {
     #[test]
     fn fused_qln_large_values() {
         let input = vec![1000.0, -1000.0, 500.0, -500.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
@@ -929,7 +929,7 @@ mod tests {
     #[test]
     fn fused_qln_negative_values() {
         let input = vec![-3.0, -2.0, -1.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         let ref_out = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -939,7 +939,7 @@ mod tests {
     #[test]
     fn fused_qln_custom_eps() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let mut cfg = QuantizedLayerNormConfig::new(3);
         cfg.eps = 1e-3;
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
@@ -953,7 +953,7 @@ mod tests {
     #[test]
     fn qrms_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         assert_eq!(out.len(), 4);
@@ -963,7 +963,7 @@ mod tests {
     #[test]
     fn qrms_matches_reference_approx() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         let ref_out = reference_rms_norm(&input, &gamma, 1e-5);
@@ -981,7 +981,7 @@ mod tests {
     #[test]
     fn qrms_batch() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         assert_eq!(out.len(), 6);
@@ -989,8 +989,8 @@ mod tests {
 
     #[test]
     fn qrms_all_zeros() {
-        let input = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [0.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         assert!(out.iter().all(|v| v.abs() < TOL));
@@ -1021,7 +1021,7 @@ mod tests {
     #[test]
     fn qrms_large_values() {
         let input = vec![1e4, -1e4, 5e3, -5e3];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         assert!(out.iter().all(|v| v.is_finite()));
@@ -1035,7 +1035,7 @@ mod tests {
     fn int8_ln_basic() {
         let input: Vec<i8> = vec![10, 20, 30, 40];
         let scale = 0.1;
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = int8_layer_norm(&input, scale, &gamma, None, &cfg).unwrap();
         assert_eq!(out.data.len(), 4);
@@ -1052,7 +1052,7 @@ mod tests {
         let inv = 1.0 / scale;
         let qdata: Vec<i8> = float_in.iter().map(|&v| (v * inv).round() as i8).collect();
 
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = int8_layer_norm(&qdata, scale, &gamma, None, &cfg).unwrap();
 
@@ -1068,7 +1068,7 @@ mod tests {
     fn int8_ln_batch_scales() {
         let input: Vec<i8> = vec![10, 20, 30, 40, 50, 60];
         let scale = 0.05;
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = int8_layer_norm(&input, scale, &gamma, None, &cfg).unwrap();
         assert_eq!(out.data.len(), 6);
@@ -1079,8 +1079,8 @@ mod tests {
     fn int8_ln_with_beta() {
         let input: Vec<i8> = vec![10, -10, 5];
         let scale = 0.1;
-        let gamma = vec![1.0; 3];
-        let beta = vec![1.0; 3];
+        let gamma = [1.0; 3];
+        let beta = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = int8_layer_norm(&input, scale, &gamma, Some(&beta), &cfg).unwrap();
         assert_eq!(out.data.len(), 3);
@@ -1139,8 +1139,8 @@ mod tests {
     fn qgn_basic() {
         // 4 channels, 2 groups, spatial=1
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let cfg = QuantizedGroupNormConfig::new(2, 4);
         let out = quantized_group_norm(&input, &gamma, Some(&beta), &cfg).unwrap();
         assert_eq!(out.len(), 4);
@@ -1151,7 +1151,7 @@ mod tests {
     fn qgn_single_group_matches_layer_norm() {
         // 1 group = entire layer → should approximate layer norm
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg_gn = QuantizedGroupNormConfig::new(1, 4);
         let cfg_ln = QuantizedLayerNormConfig::new(4);
 
@@ -1169,7 +1169,7 @@ mod tests {
         // Two groups: changing one group shouldn't affect the other
         let input_a = vec![1.0, 2.0, 3.0, 4.0];
         let input_b = vec![1.0, 2.0, 30.0, 40.0]; // changed group 1
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedGroupNormConfig::new(2, 4);
 
         let out_a = quantized_group_norm(&input_a, &gamma, None, &cfg).unwrap();
@@ -1183,7 +1183,7 @@ mod tests {
     fn qgn_with_spatial() {
         // 2 channels, 1 group, spatial=2 → [C=2, S=2] total 4 elems
         let input = vec![1.0, 2.0, 3.0, 4.0]; // ch0=[1,2], ch1=[3,4]
-        let gamma = vec![1.0; 2];
+        let gamma = [1.0; 2];
         let cfg = QuantizedGroupNormConfig::new(1, 2);
         let out = quantized_group_norm(&input, &gamma, None, &cfg).unwrap();
         assert_eq!(out.len(), 4);
@@ -1233,7 +1233,7 @@ mod tests {
     #[test]
     fn online_ln_matches_standard() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let online = online_layer_norm(&input, &gamma, None, &cfg).unwrap();
         let standard = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1246,8 +1246,8 @@ mod tests {
     #[test]
     fn online_ln_with_beta() {
         let input = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.5; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.5; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let online = online_layer_norm(&input, &gamma, Some(&beta), &cfg).unwrap();
         let standard = reference_layer_norm(&input, &gamma, Some(&beta), 1e-5);
@@ -1257,7 +1257,7 @@ mod tests {
     #[test]
     fn online_ln_batch() {
         let input = vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let online = online_layer_norm(&input, &gamma, None, &cfg).unwrap();
         let standard = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1273,8 +1273,8 @@ mod tests {
 
     #[test]
     fn online_ln_constant() {
-        let input = vec![7.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [7.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = online_layer_norm(&input, &gamma, None, &cfg).unwrap();
         // All same → normalized near zero
@@ -1345,7 +1345,7 @@ mod tests {
     fn fused_ln_res_basic() {
         let input = vec![1.0, 2.0, 3.0];
         let residual = vec![0.5, 0.5, 0.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_layer_norm_residual(&input, &residual, &gamma, None, &cfg).unwrap();
         // Should equal LayerNorm(input + residual)
@@ -1357,8 +1357,8 @@ mod tests {
     #[test]
     fn fused_ln_res_zero_residual() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let residual = vec![0.0; 4];
-        let gamma = vec![1.0; 4];
+        let residual = [0.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_layer_norm_residual(&input, &residual, &gamma, None, &cfg).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1369,7 +1369,7 @@ mod tests {
     fn fused_ln_res_batch() {
         let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let residual = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_layer_norm_residual(&input, &residual, &gamma, None, &cfg).unwrap();
         assert_eq!(out.len(), 6);
@@ -1391,9 +1391,9 @@ mod tests {
     #[test]
     fn fused_ln_res_with_beta() {
         let input = vec![1.0, 2.0, 3.0];
-        let residual = vec![0.5; 3];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.1; 3];
+        let residual = [0.5; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.1; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_layer_norm_residual(&input, &residual, &gamma, Some(&beta), &cfg).unwrap();
         let combined: Vec<f32> = input.iter().zip(&residual).map(|(a, b)| a + b).collect();
@@ -1404,8 +1404,8 @@ mod tests {
     #[test]
     fn fused_ln_res_with_sum_returns_both() {
         let input = vec![1.0, 2.0, 3.0];
-        let residual = vec![0.5; 3];
-        let gamma = vec![1.0; 3];
+        let residual = [0.5; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let (normed, sum) =
             fused_layer_norm_residual_with_sum(&input, &residual, &gamma, None, &cfg).unwrap();
@@ -1444,9 +1444,9 @@ mod tests {
     #[test]
     fn asym_qln_basic() {
         let input: Vec<u8> = vec![128, 140, 160, 200];
-        let scales = vec![0.1; 4];
-        let zero_points = vec![128; 4];
-        let gamma = vec![1.0; 4];
+        let scales = [0.1; 4];
+        let zero_points = [128; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out =
             asymmetric_quantized_layer_norm(&input, &scales, &zero_points, &gamma, None, &cfg)
@@ -1458,10 +1458,10 @@ mod tests {
     #[test]
     fn asym_qln_with_beta() {
         let input: Vec<u8> = vec![100, 150, 200];
-        let scales = vec![0.05; 3];
-        let zero_points = vec![128; 3];
-        let gamma = vec![1.0; 3];
-        let beta = vec![0.5; 3];
+        let scales = [0.05; 3];
+        let zero_points = [128; 3];
+        let gamma = [1.0; 3];
+        let beta = [0.5; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = asymmetric_quantized_layer_norm(
             &input,
@@ -1478,9 +1478,9 @@ mod tests {
     #[test]
     fn asym_qln_batch() {
         let input: Vec<u8> = vec![100, 150, 200, 110, 160, 210];
-        let scales = vec![0.1; 3];
-        let zero_points = vec![128; 3];
-        let gamma = vec![1.0; 3];
+        let scales = [0.1; 3];
+        let zero_points = [128; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out =
             asymmetric_quantized_layer_norm(&input, &scales, &zero_points, &gamma, None, &cfg)
@@ -1548,9 +1548,9 @@ mod tests {
     fn asym_qln_zero_centered_input() {
         // Input at zero-point → dequantized to 0 → output near zero
         let input: Vec<u8> = vec![128; 4];
-        let scales = vec![0.1; 4];
-        let zero_points = vec![128; 4];
-        let gamma = vec![1.0; 4];
+        let scales = [0.1; 4];
+        let zero_points = [128; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out =
             asymmetric_quantized_layer_norm(&input, &scales, &zero_points, &gamma, None, &cfg)
@@ -1566,7 +1566,7 @@ mod tests {
         let input: Vec<u8> = vec![178, 153, 228]; // dq: 5.0, 2.5, 10.0
         let scales = vec![1.0, 0.1, 1.0];
         let zero_points = vec![128, 128, 128];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out =
             asymmetric_quantized_layer_norm(&input, &scales, &zero_points, &gamma, None, &cfg)
@@ -1581,7 +1581,7 @@ mod tests {
     #[test]
     fn pre_norm_basic() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = pre_norm(&input, &gamma, None, &cfg).unwrap();
         let expected = reference_layer_norm(&input, &gamma, None, 1e-5);
@@ -1597,7 +1597,7 @@ mod tests {
     #[test]
     fn pre_norm_batch() {
         let input = vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = pre_norm(&input, &gamma, None, &cfg).unwrap();
         assert_eq!(out.len(), 6);
@@ -1607,7 +1607,7 @@ mod tests {
     fn post_norm_basic() {
         let sublayer = vec![0.5, 1.0, 1.5];
         let residual = vec![1.0, 2.0, 3.0];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = post_norm(&sublayer, &residual, &gamma, None, &cfg).unwrap();
         let combined: Vec<f32> = sublayer.iter().zip(&residual).map(|(a, b)| a + b).collect();
@@ -1619,7 +1619,7 @@ mod tests {
     fn norm_with_mode_pre() {
         let input = vec![1.0, 2.0, 3.0];
         let sublayer_output = vec![0.5, 0.5, 0.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out =
             norm_with_mode(&input, &sublayer_output, &gamma, None, &cfg, NormMode::Pre).unwrap();
@@ -1632,7 +1632,7 @@ mod tests {
     fn norm_with_mode_post() {
         let input = vec![1.0, 2.0, 3.0];
         let sublayer_output = vec![0.5, 0.5, 0.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out =
             norm_with_mode(&input, &sublayer_output, &gamma, None, &cfg, NormMode::Post).unwrap();
@@ -1695,8 +1695,8 @@ mod tests {
 
     #[test]
     fn fused_qln_single_element() {
-        let input = vec![3.0];
-        let gamma = vec![1.0];
+        let input = [3.0];
+        let gamma = [1.0];
         let cfg = QuantizedLayerNormConfig::new(1);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         assert_eq!(out.len(), 1);
@@ -1708,7 +1708,7 @@ mod tests {
     fn online_vs_fused_consistency() {
         // Online (exact float) vs fused (quantized domain) — should be close
         let input = vec![1.0, 3.0, 5.0, 7.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let online = online_layer_norm(&input, &gamma, None, &cfg).unwrap();
         let fused = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
@@ -1723,7 +1723,7 @@ mod tests {
         // sublayer_out = identity(normalized) (trivial sublayer)
         // output = sublayer_out + x
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
 
         let normalized = pre_norm(&x, &gamma, None, &cfg).unwrap();
@@ -1739,7 +1739,7 @@ mod tests {
     fn post_norm_after_sublayer() {
         let x = vec![1.0, 2.0, 3.0];
         let sublayer = vec![0.1, 0.2, 0.3];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
 
         let via_mode = norm_with_mode(&x, &sublayer, &gamma, None, &cfg, NormMode::Post).unwrap();
@@ -1752,8 +1752,8 @@ mod tests {
     fn fused_ln_res_equals_manual_add_then_ln() {
         let input = vec![2.0, 4.0, 6.0, 8.0];
         let residual = vec![1.0, 1.0, 1.0, 1.0];
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
 
         let fused =
@@ -1769,7 +1769,7 @@ mod tests {
         // Changing one batch element shouldn't affect another
         let input_a: Vec<i8> = vec![10, 20, 30, 40, 50, 60];
         let input_b: Vec<i8> = vec![10, 20, 30, 100, 100, 100]; // changed batch 1
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
 
         let out_a = int8_layer_norm(&input_a, 0.1, &gamma, None, &cfg).unwrap();
@@ -1790,7 +1790,7 @@ mod tests {
     fn fused_qln_symmetric_input() {
         // Symmetric around zero should produce symmetric-ish output
         let input = vec![-2.0, -1.0, 1.0, 2.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
         // Mean of input ≈ 0, so output should preserve symmetry approximately
@@ -1802,8 +1802,8 @@ mod tests {
     fn qrms_no_mean_subtraction() {
         // RMS norm doesn't subtract mean — constant positive input should not
         // collapse to zero (unlike layer norm)
-        let input = vec![5.0; 4];
-        let gamma = vec![1.0; 4];
+        let input = [5.0; 4];
+        let gamma = [1.0; 4];
         let cfg = QuantizedLayerNormConfig::new(4);
         let rms_out = quantized_rms_norm(&input, &gamma, &cfg).unwrap();
         let ln_out = fused_quantized_layer_norm(&input, &gamma, None, &cfg).unwrap();
@@ -1819,7 +1819,7 @@ mod tests {
         let input: Vec<u8> = vec![130, 140, 150];
         let scales = vec![0.1, 0.1, 0.1];
         let zero_points = vec![128, 130, 132]; // different per channel
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out =
             asymmetric_quantized_layer_norm(&input, &scales, &zero_points, &gamma, None, &cfg)
@@ -1843,7 +1843,7 @@ mod tests {
     fn fused_ln_res_negative_residual() {
         let input = vec![1.0, 2.0, 3.0];
         let residual = vec![-0.5, -1.0, -1.5];
-        let gamma = vec![1.0; 3];
+        let gamma = [1.0; 3];
         let cfg = QuantizedLayerNormConfig::new(3);
         let out = fused_layer_norm_residual(&input, &residual, &gamma, None, &cfg).unwrap();
         let combined: Vec<f32> = input.iter().zip(&residual).map(|(a, b)| a + b).collect();

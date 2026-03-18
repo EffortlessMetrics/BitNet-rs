@@ -1052,7 +1052,7 @@ mod tests {
     #[test]
     fn rng_sample_index_single_element() {
         let mut rng = SamplingRng::new(0);
-        let probs = vec![1.0];
+        let probs = [1.0];
         for _ in 0..100 {
             assert_eq!(rng.sample_index(&probs), 0);
         }
@@ -1104,14 +1104,14 @@ mod tests {
 
     #[test]
     fn softmax_single_element() {
-        let mut logits = vec![5.0];
+        let mut logits = [5.0];
         softmax(&mut logits);
         assert!((logits[0] - 1.0).abs() < 1e-6);
     }
 
     #[test]
     fn softmax_uniform_produces_uniform() {
-        let mut logits = vec![2.0; 5];
+        let mut logits = [2.0; 5];
         softmax(&mut logits);
         for &p in &logits {
             assert!((p - 0.2).abs() < 1e-6, "p = {p}");
@@ -1402,7 +1402,7 @@ mod tests {
 
     #[test]
     fn min_p_filter_uniform_keeps_all() {
-        let mut logits = vec![2.0; 5];
+        let mut logits = [2.0; 5];
         min_p_filter(&mut logits, 0.5);
         // All have equal probability, all should survive
         assert!(logits.iter().all(|&v| v != f32::NEG_INFINITY));
@@ -1451,7 +1451,7 @@ mod tests {
 
     #[test]
     fn typical_filter_uniform_keeps_all_at_high_p() {
-        let mut logits = vec![1.0; 10];
+        let mut logits = [1.0; 10];
         typical_filter(&mut logits, 0.99);
         let active = logits.iter().filter(|&&v| v != f32::NEG_INFINITY).count();
         assert_eq!(active, 10);
@@ -1594,7 +1594,7 @@ mod tests {
         for i in 0..5 {
             rp.add_token(i);
         }
-        let mut logits = vec![1.0; 6];
+        let mut logits = [1.0; 6];
         rp.apply(&mut logits);
         // Only tokens 2, 3, 4 should be in the window (size=3)
         assert!((logits[0] - 1.0).abs() < 1e-6, "token 0 evicted");

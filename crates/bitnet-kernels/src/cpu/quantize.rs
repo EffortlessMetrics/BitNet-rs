@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn symmetric_i8_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (q, scale) = quantize_symmetric_i8(&input, 8);
         assert_eq!(scale, 0.0);
         assert!(q.iter().all(|&v| v == 0));
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn asymmetric_u8_constant_input() {
-        let input = vec![5.0; 4];
+        let input = [5.0; 4];
         let (q, scale, zp) = quantize_asymmetric_u8(&input);
         assert_eq!(scale, 0.0);
         assert_eq!(zp, 0);
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn asymmetric_u8_single_element() {
-        let input = vec![42.0];
+        let input = [42.0];
         let (q, scale, zp) = quantize_asymmetric_u8(&input);
         assert_eq!(scale, 0.0);
         assert_eq!(zp, 0);

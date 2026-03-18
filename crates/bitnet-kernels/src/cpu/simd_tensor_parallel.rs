@@ -1392,7 +1392,7 @@ mod tests {
 
     #[test]
     fn matmul_zero_dim_m() {
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         assert!(
             sharded_matmul(&[], &[], &mut c, 0, 4, 4, 2, SimdShardStrategy::ColumnParallel)
                 .is_err()
@@ -1403,7 +1403,7 @@ mod tests {
     fn matmul_zero_cores() {
         let a = sequential_matrix(2, 2);
         let b = sequential_matrix(2, 2);
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(
             sharded_matmul(&a, &b, &mut c, 2, 2, 2, 0, SimdShardStrategy::ColumnParallel).is_err()
         );
@@ -1411,9 +1411,9 @@ mod tests {
 
     #[test]
     fn matmul_buffer_too_small_a() {
-        let a = vec![1.0f32; 3]; // too small for 2×2
+        let a = [1.0f32; 3]; // too small for 2×2
         let b = sequential_matrix(2, 2);
-        let mut c = vec![0.0f32; 4];
+        let mut c = [0.0f32; 4];
         assert!(
             sharded_matmul(&a, &b, &mut c, 2, 2, 2, 1, SimdShardStrategy::ColumnParallel).is_err()
         );
@@ -1422,8 +1422,8 @@ mod tests {
     #[test]
     fn matmul_buffer_too_small_b() {
         let a = sequential_matrix(2, 2);
-        let b = vec![1.0f32; 3]; // too small for 2×2
-        let mut c = vec![0.0f32; 4];
+        let b = [1.0f32; 3]; // too small for 2×2
+        let mut c = [0.0f32; 4];
         assert!(
             sharded_matmul(&a, &b, &mut c, 2, 2, 2, 1, SimdShardStrategy::ColumnParallel).is_err()
         );
@@ -1433,7 +1433,7 @@ mod tests {
     fn matmul_buffer_too_small_c() {
         let a = sequential_matrix(2, 2);
         let b = sequential_matrix(2, 2);
-        let mut c = vec![0.0f32; 3]; // too small for 2×2
+        let mut c = [0.0f32; 3]; // too small for 2×2
         assert!(
             sharded_matmul(&a, &b, &mut c, 2, 2, 2, 1, SimdShardStrategy::ColumnParallel).is_err()
         );

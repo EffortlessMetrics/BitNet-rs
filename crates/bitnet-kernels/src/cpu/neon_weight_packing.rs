@@ -510,8 +510,8 @@ mod tests {
     #[test]
     fn test_ternary_roundtrip_basic() {
         let weights: Vec<i8> = vec![0, 1, -1, 0];
-        let mut packed = vec![0u8; 1];
-        let mut unpacked = vec![0i8; 4];
+        let mut packed = [0u8; 1];
+        let mut unpacked = [0i8; 4];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -522,8 +522,8 @@ mod tests {
     #[test]
     fn test_ternary_roundtrip_16_elements() {
         let weights: Vec<i8> = vec![1, -1, 0, 1, -1, -1, 0, 0, 1, 1, 1, -1, 0, -1, 1, 0];
-        let mut packed = vec![0u8; 4];
-        let mut unpacked = vec![0i8; 16];
+        let mut packed = [0u8; 4];
+        let mut unpacked = [0i8; 16];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -534,8 +534,8 @@ mod tests {
     #[test]
     fn test_ternary_roundtrip_17_elements() {
         let weights: Vec<i8> = vec![1, -1, 0, 1, -1, -1, 0, 0, 1, 1, 1, -1, 0, -1, 1, 0, -1];
-        let mut packed = vec![0u8; 5]; // ceil(17/4) = 5
-        let mut unpacked = vec![0i8; 17];
+        let mut packed = [0u8; 5]; // ceil(17/4) = 5
+        let mut unpacked = [0i8; 17];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -545,9 +545,9 @@ mod tests {
 
     #[test]
     fn test_ternary_roundtrip_all_zeros() {
-        let weights = vec![0i8; 32];
-        let mut packed = vec![0u8; 8];
-        let mut unpacked = vec![99i8; 32];
+        let weights = [0i8; 32];
+        let mut packed = [0u8; 8];
+        let mut unpacked = [99i8; 32];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -558,9 +558,9 @@ mod tests {
 
     #[test]
     fn test_ternary_roundtrip_all_ones() {
-        let weights = vec![1i8; 20];
-        let mut packed = vec![0u8; 5];
-        let mut unpacked = vec![0i8; 20];
+        let weights = [1i8; 20];
+        let mut packed = [0u8; 5];
+        let mut unpacked = [0i8; 20];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -570,9 +570,9 @@ mod tests {
 
     #[test]
     fn test_ternary_roundtrip_all_neg_ones() {
-        let weights = vec![-1i8; 20];
-        let mut packed = vec![0u8; 5];
-        let mut unpacked = vec![0i8; 20];
+        let weights = [-1i8; 20];
+        let mut packed = [0u8; 5];
+        let mut unpacked = [0i8; 20];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
             unpack_ternary_weights(&packed, &mut unpacked);
@@ -584,8 +584,8 @@ mod tests {
     fn test_ternary_roundtrip_single_element() {
         for &val in &[-1i8, 0, 1] {
             let weights = vec![val];
-            let mut packed = vec![0u8; 1];
-            let mut unpacked = vec![0i8; 1];
+            let mut packed = [0u8; 1];
+            let mut unpacked = [0i8; 1];
             unsafe {
                 pack_ternary_weights(&weights, &mut packed);
                 unpack_ternary_weights(&packed, &mut unpacked);
@@ -610,7 +610,7 @@ mod tests {
         // LSB-first: val0 at bits[1:0], val1 at bits[3:2], val2 at bits[5:4], val3 at bits[7:6]
         // 0→0b00, 1→0b01, -1→0b11, 0→0b00 = 0b00_11_01_00 = 0x34
         let weights: Vec<i8> = vec![0, 1, -1, 0];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
@@ -621,7 +621,7 @@ mod tests {
     fn test_ternary_pack_all_neg_one_known() {
         // [-1, -1, -1, -1] → 0b11_11_11_11 = 0xFF
         let weights: Vec<i8> = vec![-1, -1, -1, -1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
@@ -632,7 +632,7 @@ mod tests {
     fn test_ternary_pack_all_pos_one_known() {
         // [1, 1, 1, 1] → 0b01_01_01_01 = 0x55
         let weights: Vec<i8> = vec![1, 1, 1, 1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
@@ -658,8 +658,8 @@ mod tests {
     #[test]
     fn test_binary_roundtrip_basic() {
         let weights: Vec<i8> = vec![1, -1, 1, -1, 1, -1, 1, -1];
-        let mut packed = vec![0u8; 1];
-        let mut unpacked = vec![0i8; 8];
+        let mut packed = [0u8; 1];
+        let mut unpacked = [0i8; 8];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 8);
@@ -670,8 +670,8 @@ mod tests {
     #[test]
     fn test_binary_roundtrip_16_elements() {
         let weights: Vec<i8> = vec![1, 1, -1, -1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1];
-        let mut packed = vec![0u8; 2];
-        let mut unpacked = vec![0i8; 16];
+        let mut packed = [0u8; 2];
+        let mut unpacked = [0i8; 16];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 16);
@@ -682,8 +682,8 @@ mod tests {
     #[test]
     fn test_binary_roundtrip_17_elements() {
         let weights: Vec<i8> = vec![1, 1, -1, -1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1];
-        let mut packed = vec![0u8; 3]; // ceil(17/8)=3
-        let mut unpacked = vec![0i8; 17];
+        let mut packed = [0u8; 3]; // ceil(17/8)=3
+        let mut unpacked = [0i8; 17];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 17);
@@ -693,9 +693,9 @@ mod tests {
 
     #[test]
     fn test_binary_roundtrip_all_positive() {
-        let weights = vec![1i8; 24];
-        let mut packed = vec![0u8; 3];
-        let mut unpacked = vec![0i8; 24];
+        let weights = [1i8; 24];
+        let mut packed = [0u8; 3];
+        let mut unpacked = [0i8; 24];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 24);
@@ -706,9 +706,9 @@ mod tests {
 
     #[test]
     fn test_binary_roundtrip_all_negative() {
-        let weights = vec![-1i8; 24];
-        let mut packed = vec![0u8; 3];
-        let mut unpacked = vec![0i8; 24];
+        let weights = [-1i8; 24];
+        let mut packed = [0u8; 3];
+        let mut unpacked = [0i8; 24];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 24);
@@ -721,8 +721,8 @@ mod tests {
     fn test_binary_roundtrip_single() {
         for &val in &[-1i8, 1] {
             let weights = vec![val];
-            let mut packed = vec![0u8; 1];
-            let mut unpacked = vec![0i8; 1];
+            let mut packed = [0u8; 1];
+            let mut unpacked = [0i8; 1];
             unsafe {
                 pack_binary_weights(&weights, &mut packed);
                 unpack_binary_weights(&packed, &mut unpacked, 1);
@@ -744,7 +744,7 @@ mod tests {
     fn test_binary_pack_known() {
         // [1, -1, 1, 1, -1, -1, 1, -1] → bits: 1,0,1,1,0,0,1,0 = 0b01001101 = 0x4D
         let weights: Vec<i8> = vec![1, -1, 1, 1, -1, -1, 1, -1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_binary_weights(&weights, &mut packed);
         }
@@ -771,13 +771,13 @@ mod tests {
     fn test_matmul_identity_like() {
         // 2x2 identity-like with ternary weights [1,0,0,1]
         let weights: Vec<i8> = vec![1, 0, 0, 1];
-        let mut packed = vec![0u8; 2]; // 2 rows × 1 byte each (2 cols → ceil(2/4)=1)
+        let mut packed = [0u8; 2]; // 2 rows × 1 byte each (2 cols → ceil(2/4)=1)
         unsafe {
             pack_ternary_weights(&weights[0..2], &mut packed[0..1]);
             pack_ternary_weights(&weights[2..4], &mut packed[1..2]);
         }
         let input = vec![3.0f32, 7.0];
-        let mut output = vec![0.0f32; 2];
+        let mut output = [0.0f32; 2];
         unsafe {
             ternary_matmul_packed(&packed, &input, &mut output, 2, 2);
         }
@@ -789,12 +789,12 @@ mod tests {
     fn test_matmul_negation() {
         // 1x4 row of all -1s
         let weights: Vec<i8> = vec![-1, -1, -1, -1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
         let input = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         unsafe {
             ternary_matmul_packed(&packed, &input, &mut output, 1, 4);
         }
@@ -804,12 +804,12 @@ mod tests {
     #[test]
     fn test_matmul_zeros() {
         let weights: Vec<i8> = vec![0, 0, 0, 0];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
         let input = vec![100.0f32, 200.0, 300.0, 400.0];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         unsafe {
             ternary_matmul_packed(&packed, &input, &mut output, 1, 4);
         }
@@ -820,12 +820,12 @@ mod tests {
     fn test_matmul_accumulates() {
         // output should accumulate, not overwrite
         let weights: Vec<i8> = vec![1, 1, 1, 1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
         let input = vec![1.0f32, 1.0, 1.0, 1.0];
-        let mut output = vec![5.0f32; 1]; // start with 5.0
+        let mut output = [5.0f32; 1]; // start with 5.0
         unsafe {
             ternary_matmul_packed(&packed, &input, &mut output, 1, 4);
         }
@@ -842,7 +842,7 @@ mod tests {
             pack_ternary_weights(&weights, &mut packed);
         }
         let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
-        let mut output = vec![0.0f32; 1];
+        let mut output = [0.0f32; 1];
         unsafe {
             ternary_matmul_packed(&packed, &input, &mut output, 1, 5);
         }
@@ -855,11 +855,11 @@ mod tests {
     #[test]
     fn test_dequantize_scale_1() {
         let weights: Vec<i8> = vec![0, 1, -1, 0];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe {
             dequantize_i2s_block(&packed, 1.0, &mut output);
         }
@@ -872,11 +872,11 @@ mod tests {
     #[test]
     fn test_dequantize_scale_half() {
         let weights: Vec<i8> = vec![1, -1, 1, -1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe {
             dequantize_i2s_block(&packed, 0.5, &mut output);
         }
@@ -889,11 +889,11 @@ mod tests {
     #[test]
     fn test_dequantize_scale_negative() {
         let weights: Vec<i8> = vec![1, -1, 0, 1];
-        let mut packed = vec![0u8; 1];
+        let mut packed = [0u8; 1];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
-        let mut output = vec![0.0f32; 4];
+        let mut output = [0.0f32; 4];
         unsafe {
             dequantize_i2s_block(&packed, -1.0, &mut output);
         }
@@ -906,11 +906,11 @@ mod tests {
     #[test]
     fn test_dequantize_16_elements() {
         let weights: Vec<i8> = vec![1, -1, 0, 1, -1, -1, 0, 0, 1, 1, 1, -1, 0, -1, 1, 0];
-        let mut packed = vec![0u8; 4];
+        let mut packed = [0u8; 4];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
-        let mut output = vec![0.0f32; 16];
+        let mut output = [0.0f32; 16];
         unsafe {
             dequantize_i2s_block(&packed, 2.0, &mut output);
         }
@@ -928,11 +928,11 @@ mod tests {
     fn test_dequantize_non_aligned() {
         // 5 values → 2 packed bytes, but output only 5 floats
         let weights: Vec<i8> = vec![1, -1, 0, 1, -1];
-        let mut packed = vec![0u8; 2];
+        let mut packed = [0u8; 2];
         unsafe {
             pack_ternary_weights(&weights, &mut packed);
         }
-        let mut output = vec![0.0f32; 5];
+        let mut output = [0.0f32; 5];
         unsafe {
             dequantize_i2s_block(&packed, 1.0, &mut output);
         }
@@ -1017,14 +1017,14 @@ mod tests {
 
     #[test]
     fn test_popcount_all_zeros() {
-        let data = vec![0u8; 32];
+        let data = [0u8; 32];
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 0);
     }
 
     #[test]
     fn test_popcount_all_ones() {
-        let data = vec![0xFFu8; 16];
+        let data = [0xFFu8; 16];
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 128); // 16 bytes × 8 bits
     }
@@ -1032,7 +1032,7 @@ mod tests {
     #[test]
     fn test_popcount_known_pattern() {
         // 0x55 = 0b01010101 → 4 bits set per byte
-        let data = vec![0x55u8; 8];
+        let data = [0x55u8; 8];
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 32); // 8 bytes × 4 bits
     }
@@ -1053,7 +1053,7 @@ mod tests {
     #[test]
     fn test_popcount_17_bytes() {
         // 16 bytes of 0xFF + 1 byte of 0x0F
-        let mut data = vec![0xFFu8; 16];
+        let mut data = [0xFFu8; 16];
         data.push(0x0F); // 4 bits
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 128 + 4);
@@ -1061,7 +1061,7 @@ mod tests {
 
     #[test]
     fn test_popcount_large() {
-        let data = vec![0xAAu8; 1000]; // 0xAA = 4 bits per byte
+        let data = [0xAAu8; 1000]; // 0xAA = 4 bits per byte
         let count = unsafe { neon_popcount_u8x16(&data) };
         assert_eq!(count, 4000);
     }
@@ -1073,8 +1073,8 @@ mod tests {
         for pattern in
             [vec![1i8, 1, 1, 1], vec![-1, -1, -1, -1], vec![0, 0, 0, 0], vec![1, -1, 0, 1]]
         {
-            let mut packed = vec![0u8; 1];
-            let mut unpacked = vec![0i8; 4];
+            let mut packed = [0u8; 1];
+            let mut unpacked = [0i8; 4];
             unsafe {
                 pack_ternary_weights(&pattern, &mut packed);
                 unpack_ternary_weights(&packed, &mut unpacked);
@@ -1086,8 +1086,8 @@ mod tests {
     #[test]
     fn test_binary_8_element_neon_lane() {
         let pattern = vec![1i8, -1, 1, -1, 1, -1, 1, -1];
-        let mut packed = vec![0u8; 1];
-        let mut unpacked = vec![0i8; 8];
+        let mut packed = [0u8; 1];
+        let mut unpacked = [0i8; 8];
         unsafe {
             pack_binary_weights(&pattern, &mut packed);
             unpack_binary_weights(&packed, &mut unpacked, 8);

@@ -1556,7 +1556,7 @@ mod tests {
 
     #[test]
     fn test_batch_gemm_zero_batch() {
-        let mut c = vec![0.0f32; 0];
+        let mut c = [0.0f32; 0];
         batch_gemm(&[], &[], &mut c, 4, 4, 4, 0).unwrap();
     }
 

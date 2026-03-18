@@ -156,18 +156,18 @@ mod tests {
     #[test]
     fn rocm_matmul_returns_err() {
         let kernel = RocmKernel::new();
-        let a = vec![1i8; 16];
-        let b = vec![1u8; 16];
-        let mut c = vec![0.0f32; 16];
+        let a = [1i8; 16];
+        let b = [1u8; 16];
+        let mut c = [0.0f32; 16];
         assert!(kernel.matmul_i2s(&a, &b, &mut c, 4, 4, 4).is_err());
     }
 
     #[test]
     fn rocm_quantize_returns_err() {
         let kernel = RocmKernel::new();
-        let input = vec![1.0f32; 32];
-        let mut output = vec![0u8; 8];
-        let mut scales = vec![0.0f32; 1];
+        let input = [1.0f32; 32];
+        let mut output = [0u8; 8];
+        let mut scales = [0.0f32; 1];
         assert!(kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).is_err());
     }
 

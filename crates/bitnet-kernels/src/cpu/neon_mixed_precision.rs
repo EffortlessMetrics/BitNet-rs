@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_f16_to_f32_all_zeros() {
-        let inp = vec![f16::ZERO; 12];
+        let inp = [f16::ZERO; 12];
         let r = f16_to_f32_neon(&inp);
         assert!(r.iter().all(|&v| v == 0.0));
     }
@@ -541,14 +541,14 @@ mod tests {
 
     #[test]
     fn test_bf16_to_f32_large_16() {
-        let inp = vec![0x3F80u16; 16];
+        let inp = [0x3F80u16; 16];
         let r = bf16_to_f32_neon(&inp);
         assert!(r.iter().all(|&v| (v - 1.0).abs() < EPS_BF16));
     }
 
     #[test]
     fn test_bf16_to_f32_all_zeros() {
-        let inp = vec![0u16; 12];
+        let inp = [0u16; 12];
         let r = bf16_to_f32_neon(&inp);
         assert!(r.iter().all(|&v| v == 0.0));
     }
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn test_bf16_to_f32_large_33() {
-        let inp = vec![0x4000u16; 33];
+        let inp = [0x4000u16; 33];
         let r = bf16_to_f32_neon(&inp);
         assert_eq!(r.len(), 33);
         assert!(r.iter().all(|&v| (v - 2.0).abs() < EPS_BF16));
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn test_f32_to_bf16_large_16() {
-        let v = vec![1.0f32; 16];
+        let v = [1.0f32; 16];
         let r = f32_to_bf16_neon(&v);
         assert!(r.iter().all(|&b| b == 0x3F80));
     }
@@ -660,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_f32_to_bf16_large_33() {
-        let v = vec![2.0f32; 33];
+        let v = [2.0f32; 33];
         let r = f32_to_bf16_neon(&v);
         assert_eq!(r.len(), 33);
         assert!(r.iter().all(|&b| b == 0x4000));
@@ -815,7 +815,7 @@ mod tests {
     #[test]
     fn test_accumulate_four_aligned() {
         let src = f16s(&[1.0, 2.0, 3.0, 4.0]);
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         accumulate_f16_to_f32(&src, &mut dst);
         assert_approx(&dst, &[1.0, 2.0, 3.0, 4.0], EPS_F16);
     }
@@ -823,7 +823,7 @@ mod tests {
     #[test]
     fn test_accumulate_eight_elements() {
         let src = f16s(&[1.0; 8]);
-        let mut dst = vec![1.0f32; 8];
+        let mut dst = [1.0f32; 8];
         accumulate_f16_to_f32(&src, &mut dst);
         assert!(dst.iter().all(|&v| (v - 2.0).abs() < EPS_F16));
     }
@@ -831,7 +831,7 @@ mod tests {
     #[test]
     fn test_accumulate_non_aligned_5() {
         let src = f16s(&[1.0, 2.0, 3.0, 4.0, 5.0]);
-        let mut dst = vec![0.0f32; 5];
+        let mut dst = [0.0f32; 5];
         accumulate_f16_to_f32(&src, &mut dst);
         let expected = [1.0f32, 2.0, 3.0, 4.0, 5.0];
         assert_approx(&dst, &expected, EPS_F16);
@@ -840,7 +840,7 @@ mod tests {
     #[test]
     fn test_accumulate_large_16() {
         let src = f16s(&[0.5; 16]);
-        let mut dst = vec![0.5f32; 16];
+        let mut dst = [0.5f32; 16];
         accumulate_f16_to_f32(&src, &mut dst);
         assert!(dst.iter().all(|&v| (v - 1.0).abs() < EPS_F16));
     }
@@ -848,15 +848,15 @@ mod tests {
     #[test]
     fn test_accumulate_large_33() {
         let src = f16s(&[1.0; 33]);
-        let mut dst = vec![0.0f32; 33];
+        let mut dst = [0.0f32; 33];
         accumulate_f16_to_f32(&src, &mut dst);
         assert!(dst.iter().all(|&v| (v - 1.0).abs() < EPS_F16));
     }
 
     #[test]
     fn test_accumulate_all_zeros_src() {
-        let src = vec![f16::ZERO; 8];
-        let mut dst = vec![5.0f32; 8];
+        let src = [f16::ZERO; 8];
+        let mut dst = [5.0f32; 8];
         accumulate_f16_to_f32(&src, &mut dst);
         assert!(dst.iter().all(|&v| (v - 5.0).abs() < EPS_F16));
     }
@@ -872,7 +872,7 @@ mod tests {
     #[test]
     fn test_accumulate_negative() {
         let src = f16s(&[-1.0, -2.0, -3.0, -4.0]);
-        let mut dst = vec![10.0f32; 4];
+        let mut dst = [10.0f32; 4];
         accumulate_f16_to_f32(&src, &mut dst);
         assert_approx(&dst, &[9.0, 8.0, 7.0, 6.0], EPS_F16);
     }
@@ -880,7 +880,7 @@ mod tests {
     #[test]
     fn test_accumulate_mixed() {
         let src = f16s(&[-1.0, 1.0, -1.0, 1.0, -1.0]);
-        let mut dst = vec![0.0f32; 5];
+        let mut dst = [0.0f32; 5];
         accumulate_f16_to_f32(&src, &mut dst);
         let expected = [-1.0f32, 1.0, -1.0, 1.0, -1.0];
         assert_approx(&dst, &expected, EPS_F16);
@@ -889,7 +889,7 @@ mod tests {
     #[test]
     fn test_accumulate_twice() {
         let src = f16s(&[1.0; 4]);
-        let mut dst = vec![0.0f32; 4];
+        let mut dst = [0.0f32; 4];
         accumulate_f16_to_f32(&src, &mut dst);
         accumulate_f16_to_f32(&src, &mut dst);
         assert!(dst.iter().all(|&v| (v - 2.0).abs() < EPS_F16));
@@ -898,7 +898,7 @@ mod tests {
     #[test]
     fn test_accumulate_longer_dst() {
         let src = f16s(&[1.0, 2.0]);
-        let mut dst = vec![0.0f32; 5];
+        let mut dst = [0.0f32; 5];
         accumulate_f16_to_f32(&src, &mut dst);
         assert!((dst[0] - 1.0).abs() < EPS_F16);
         assert!((dst[1] - 2.0).abs() < EPS_F16);
@@ -921,7 +921,7 @@ mod tests {
     fn test_accumulate_additive() {
         let a = f16s(&[1.0, 2.0, 3.0, 4.0]);
         let b = f16s(&[4.0, 3.0, 2.0, 1.0]);
-        let mut d = vec![0.0f32; 4];
+        let mut d = [0.0f32; 4];
         accumulate_f16_to_f32(&a, &mut d);
         accumulate_f16_to_f32(&b, &mut d);
         assert!(d.iter().all(|&v| (v - 5.0).abs() < EPS_F16));

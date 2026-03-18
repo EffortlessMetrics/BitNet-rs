@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_causal_mask_seq1_kv1() {
-        let mut s = vec![5.0];
+        let mut s = [5.0];
         neon_causal_mask_f32(&mut s, 1, 1);
         assert_eq!(s[0], 5.0);
     }
@@ -568,7 +568,7 @@ mod tests {
 
     #[test]
     fn test_padding_mask_all_visible() {
-        let mask = vec![true; 4];
+        let mask = [true; 4];
         let mut s = ones(2, 4);
         neon_padding_mask_f32(&mut s, &mask, 2, 4);
         for v in &s {
@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn test_padding_mask_all_masked() {
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         let mut s = ones(2, 4);
         neon_padding_mask_f32(&mut s, &mask, 2, 4);
         for v in &s {
@@ -616,7 +616,7 @@ mod tests {
     #[test]
     fn test_padding_mask_single_element() {
         let mask = vec![false];
-        let mut s = vec![42.0];
+        let mut s = [42.0];
         neon_padding_mask_f32(&mut s, &mask, 1, 1);
         assert!(is_masked(s[0]));
     }
@@ -634,7 +634,7 @@ mod tests {
 
     #[test]
     fn test_padding_mask_wide() {
-        let mut mask = vec![true; 16];
+        let mut mask = [true; 16];
         mask[3] = false;
         mask[7] = false;
         mask[11] = false;
@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_sliding_window_1x1() {
-        let mut s = vec![5.0];
+        let mut s = [5.0];
         neon_sliding_window_mask_f32(&mut s, 1, 1, 1);
         assert_eq!(s[0], 5.0);
     }
@@ -857,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_alibi_mask_additive() {
-        let mut s = vec![10.0; 4];
+        let mut s = [10.0; 4];
         neon_alibi_mask_f32(&mut s, 1, 4, 8, 0);
         let slope = alibi_slope(8, 0);
         // q_abs=3; k=3: dist=0 → score stays 10
@@ -867,7 +867,7 @@ mod tests {
 
     #[test]
     fn test_alibi_mask_1x1() {
-        let mut s = vec![0.0];
+        let mut s = [0.0];
         neon_alibi_mask_f32(&mut s, 1, 1, 1, 0);
         assert!(s[0].abs() < 1e-6);
     }
@@ -986,7 +986,7 @@ mod tests {
 
     #[test]
     fn test_combined_1x1() {
-        let mut s = vec![5.0];
+        let mut s = [5.0];
         neon_combined_mask_f32(&mut s, true, None, None, 1, 1);
         assert_eq!(s[0], 5.0);
     }
@@ -1053,7 +1053,7 @@ mod tests {
 
     #[test]
     fn test_prefix_mask_1x1() {
-        let mut s = vec![5.0];
+        let mut s = [5.0];
         neon_prefix_mask_f32(&mut s, 1, 1, 1);
         assert_eq!(s[0], 5.0);
     }
@@ -1253,7 +1253,7 @@ mod tests {
 
     #[test]
     fn test_fill_neg_inf_helper() {
-        let mut buf = vec![1.0; 17];
+        let mut buf = [1.0; 17];
         fill_neg_inf(&mut buf);
         for v in &buf {
             assert!(is_masked(*v));
@@ -1262,7 +1262,7 @@ mod tests {
 
     #[test]
     fn test_padding_mask_large_kv_13() {
-        let mut mask = vec![true; 13];
+        let mut mask = [true; 13];
         mask[12] = false;
         let mut s = ones(1, 13);
         neon_padding_mask_f32(&mut s, &mask, 1, 13);

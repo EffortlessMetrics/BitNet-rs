@@ -17,6 +17,8 @@ use bitnet_device_probe::{
     oneapi_compiled, probe_device, probe_gpu, vulkan_available_runtime, vulkan_compiled,
 };
 use proptest::prelude::*;
+#[allow(unused_imports)]
+use serial_test::serial;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROCm: GpuCapabilities.rocm_available
@@ -74,7 +76,7 @@ proptest! {
     }
 }
 
-/// BITNET_GPU_FAKE=rocm must set `rocm_available=true` (with ROCm/GPU feature).
+/// `BITNET_GPU_FAKE=rocm` must set `rocm_available=true` (with ROCm/GPU feature).
 #[cfg(any(feature = "gpu", feature = "rocm"))]
 #[test]
 #[serial(bitnet_env)]
@@ -89,7 +91,7 @@ fn rocm_fake_env_sets_rocm_available_true() {
     );
 }
 
-/// BITNET_GPU_FAKE=gpu must set both `cuda_available` and `rocm_available` (with GPU feature).
+/// `BITNET_GPU_FAKE=gpu` must set both `cuda_available` and `rocm_available` (with GPU feature).
 #[cfg(any(feature = "gpu", feature = "rocm", feature = "cuda"))]
 #[test]
 #[serial(bitnet_env)]
@@ -103,7 +105,7 @@ fn gpu_fake_gpu_sets_all_available() {
     );
 }
 
-/// BITNET_GPU_FAKE=none must set all availability flags to `false` (with GPU feature).
+/// `BITNET_GPU_FAKE=none` must set all availability flags to `false` (with GPU feature).
 #[cfg(any(feature = "gpu", feature = "rocm", feature = "cuda"))]
 #[test]
 #[serial(bitnet_env)]
@@ -119,11 +121,11 @@ fn gpu_fake_none_clears_rocm_available() {
     );
 }
 
-/// Known GPU-fake values that should enable ROCm.
+/// Known GPU-fake values that should enable `ROCm`.
 #[cfg(any(feature = "gpu", feature = "rocm"))]
 const ROCM_FAKE_PRESENT: &[&str] = &["rocm", "ROCM", "gpu", "GPU"];
 
-/// Known GPU-fake values that should disable ROCm.
+/// Known GPU-fake values that should disable `ROCm`.
 #[cfg(any(feature = "gpu", feature = "rocm"))]
 const ROCM_FAKE_ABSENT: &[&str] = &["none", "NONE", "cuda", "CUDA"];
 

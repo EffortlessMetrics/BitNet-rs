@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn layer_norm_dim_mismatch_gamma() {
         let input = vec![1.0, 2.0];
-        let gamma = vec![1.0];
+        let gamma = [1.0];
         let beta = vec![0.0, 0.0];
         assert!(batched_layer_norm(&input, &gamma, &beta, 1, 2, EPS).is_err());
     }

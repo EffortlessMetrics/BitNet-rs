@@ -13,7 +13,7 @@
 
 #![cfg(feature = "full-cli")]
 
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -50,8 +50,7 @@ macro_rules! require_model {
 /// Tests feature spec: validation-workflow.md#basic-inspect-invocation
 #[test]
 fn test_inspect_help_displays_usage() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--help"])
         .assert()
         .success()
@@ -64,8 +63,7 @@ fn test_inspect_help_displays_usage() {
 /// Tests feature spec: validation-workflow.md#error-handling
 #[test]
 fn test_inspect_requires_model_argument() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats"])
         .assert()
         .failure()
@@ -75,8 +73,7 @@ fn test_inspect_requires_model_argument() {
 /// Tests feature spec: validation-workflow.md#error-handling
 #[test]
 fn test_inspect_fails_on_nonexistent_file() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "/nonexistent/model.gguf"])
         .assert()
         .failure()
@@ -88,8 +85,7 @@ fn test_inspect_fails_on_nonexistent_file() {
 fn test_inspect_requires_inspection_mode() {
     // Without --ln-stats flag, should error
     let temp_path = model_path("models/test.gguf");
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", temp_path.to_str().unwrap()])
         .assert()
         .failure()
@@ -109,8 +105,7 @@ fn test_inspect_bitnet_i2s_model_with_auto_gate() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--gate", "auto", model.to_str().unwrap()])
         .assert()
         .success()
@@ -128,8 +123,7 @@ fn test_inspect_bitnet_i2s_auto_detects_architecture() {
     let model = model_path(BITNET_I2S_MODEL);
 
     // Default gate is "auto"
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
         .success()
@@ -156,8 +150,7 @@ fn test_inspect_bitnet_i2s_json_output() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -207,8 +200,7 @@ fn test_inspect_llama_f16_model_uses_generic_rules() {
 
     let model = model_path(LLAMA_F16_MODEL);
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
         .success()
@@ -225,8 +217,7 @@ fn test_inspect_gate_none_forces_generic_rules() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--gate", "none", model.to_str().unwrap()])
         .assert()
         .success()
@@ -246,8 +237,7 @@ fn test_inspect_reports_layernorm_rms_values() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
         .success()
@@ -274,8 +264,7 @@ fn test_inspect_identifies_layernorm_tensors() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -314,8 +303,7 @@ fn test_inspect_validates_projection_weights_separately() {
 
     let model = model_path(LLAMA_F16_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -357,8 +345,7 @@ fn test_inspect_skips_quantized_projection_weights() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -398,8 +385,7 @@ fn test_inspect_non_strict_mode_warns_but_succeeds() {
     let model = model_path(BITNET_I2S_MODEL);
 
     // Without BITNET_STRICT_MODE, should succeed even if weights are suspicious
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .env_remove("BITNET_STRICT_MODE")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
@@ -418,8 +404,7 @@ fn test_inspect_strict_mode_behavior() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .env("BITNET_STRICT_MODE", "1")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .output()
@@ -459,8 +444,7 @@ fn test_inspect_auto_detects_bitnet_architecture() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -490,8 +474,7 @@ fn test_inspect_distinguishes_f16_vs_i2s_rulesets() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -524,8 +507,7 @@ fn test_inspect_json_output_complete_schema() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -580,8 +562,7 @@ fn test_inspect_json_tensor_entry_schema() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .assert()
         .success()
@@ -634,8 +615,7 @@ fn test_inspect_gate_policy_requires_policy_file() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "--gate", "policy", model.to_str().unwrap()])
         .assert()
         .failure()
@@ -651,8 +631,7 @@ fn test_inspect_gate_policy_fails_on_missing_file() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args([
             "inspect",
             "--ln-stats",
@@ -679,8 +658,7 @@ fn test_inspect_text_output_format() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
         .success()
@@ -712,8 +690,7 @@ fn test_inspect_text_output_includes_gate_summary() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", model.to_str().unwrap()])
         .assert()
         .success()
@@ -746,8 +723,7 @@ fn test_inspect_handles_corrupted_gguf() {
     // Create a file with invalid GGUF magic
     std::fs::write(&corrupt_file, b"INVALID_MAGIC").unwrap();
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", corrupt_file.to_str().unwrap()])
         .assert()
         .failure();
@@ -766,8 +742,7 @@ fn test_inspect_handles_empty_file() {
 
     std::fs::write(&empty_file, b"").unwrap();
 
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", empty_file.to_str().unwrap()])
         .assert()
         .failure();
@@ -789,8 +764,7 @@ fn test_inspect_respects_strict_mode_env_var() {
 
     let model = model_path(BITNET_I2S_MODEL);
 
-    let output = Command::cargo_bin("bitnet")
-        .unwrap()
+    let output = cargo_bin_cmd!("bitnet")
         .env("BITNET_STRICT_MODE", "1")
         .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
         .output()
@@ -817,8 +791,7 @@ fn test_inspect_strict_mode_value_formats() {
     let model = model_path(BITNET_I2S_MODEL);
 
     for value in &["1", "true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"] {
-        let output = Command::cargo_bin("bitnet")
-            .unwrap()
+        let output = cargo_bin_cmd!("bitnet")
             .env("BITNET_STRICT_MODE", value)
             .args(["inspect", "--ln-stats", "--json", model.to_str().unwrap()])
             .output()

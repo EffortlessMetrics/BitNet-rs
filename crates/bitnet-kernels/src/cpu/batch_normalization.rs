@@ -835,7 +835,7 @@ mod tests {
 
     #[test]
     fn forward_uniform_input() {
-        let input = vec![5.0; 8]; // N=4, C=2
+        let input = [5.0; 8]; // N=4, C=2
         let mut state = default_state(2);
         let cfg = default_config();
         let out = batch_norm_forward(&input, 2, &[1.0; 2], &[0.0; 2], &mut state, &cfg).unwrap();
@@ -1171,7 +1171,7 @@ mod tests {
     #[test]
     fn fused_bn_add_zero_residual() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let residual = vec![0.0; 4];
+        let residual = [0.0; 4];
         let state = default_state(2);
         let cfg = default_config();
         let out = fused_bn_add(&input, &residual, 2, &[1.0; 2], &[0.0; 2], &state, &cfg).unwrap();
@@ -1185,8 +1185,8 @@ mod tests {
     fn group_norm_basic() {
         // N=1, C=4, spatial=2, groups=2
         let input: Vec<f32> = (1..=8).map(|i| i as f32).collect();
-        let gamma = vec![1.0; 4];
-        let beta = vec![0.0; 4];
+        let gamma = [1.0; 4];
+        let beta = [0.0; 4];
         let out = group_norm(&input, 2, 4, 2, Some(&gamma), Some(&beta), 1e-5).unwrap();
         assert_eq!(out.len(), 8);
         for &v in &out {
@@ -1408,7 +1408,7 @@ mod tests {
 
     #[test]
     fn compute_variance_constant() {
-        let data = vec![5.0; 16];
+        let data = [5.0; 16];
         let mean = compute_mean(&data);
         let var = compute_variance(&data, mean);
         assert!(var.abs() < TOL);
@@ -1428,7 +1428,7 @@ mod tests {
     #[test]
     fn normalize_and_scale_basic() {
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         normalize_and_scale(&data, 2.5, 1.0, None, None, &mut out);
         let expected = vec![-1.5, -0.5, 0.5, 1.5];
         assert!(approx_eq(&out, &expected, TOL));
@@ -1437,9 +1437,9 @@ mod tests {
     #[test]
     fn normalize_and_scale_with_affine() {
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![2.0; 4];
-        let beta = vec![1.0; 4];
-        let mut out = vec![0.0; 4];
+        let gamma = [2.0; 4];
+        let beta = [1.0; 4];
+        let mut out = [0.0; 4];
         normalize_and_scale(&data, 2.5, 1.0, Some(&gamma), Some(&beta), &mut out);
         let expected: Vec<f32> = data.iter().map(|&x| (x - 2.5) * 2.0 + 1.0).collect();
         assert!(approx_eq(&out, &expected, TOL));

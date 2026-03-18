@@ -632,7 +632,7 @@ mod tests {
     #[test]
     fn output_head_rejects_wrong_bias_size() {
         let cfg = OutputHeadConfig::new(4, 3);
-        let weight = vec![0.0; 12];
+        let weight = vec![0.0f32; 12];
         assert!(OutputHead::new(weight, Some(vec![0.0; 2]), cfg).is_err());
     }
 
@@ -646,7 +646,7 @@ mod tests {
         ];
         let head = OutputHead::new(weight, None, cfg).unwrap();
         let hidden = vec![3.0, 5.0, 7.0];
-        let mut output = vec![0.0; 2];
+        let mut output = [0.0; 2];
         head.forward(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 3.0, EPS)); // dot([3,5,7], [1,0,0])
         assert!(approx_eq(output[1], 5.0, EPS)); // dot([3,5,7], [0,1,0])
@@ -663,7 +663,7 @@ mod tests {
         let bias = vec![0.5, -0.5, 1.0];
         let head = OutputHead::new(weight, Some(bias), cfg).unwrap();
         let hidden = vec![2.0, 3.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         head.forward(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 2.5, EPS)); // 2 + 0.5
         assert!(approx_eq(output[1], 2.5, EPS)); // 3 - 0.5
@@ -676,7 +676,7 @@ mod tests {
         let weight = vec![1.0, 0.0, 0.0, 1.0];
         let head = OutputHead::new(weight, None, cfg).unwrap();
         let hidden = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
-        let mut output = vec![0.0; 4]; // [2, 2]
+        let mut output = [0.0; 4]; // [2, 2]
         head.forward(&hidden, &mut output, 2).unwrap();
         assert!(approx_eq(output[0], 1.0, EPS));
         assert!(approx_eq(output[1], 2.0, EPS));
@@ -687,10 +687,10 @@ mod tests {
     #[test]
     fn output_head_zero_weights() {
         let cfg = OutputHeadConfig::new(3, 2);
-        let weight = vec![0.0; 6];
+        let weight = vec![0.0f32; 6];
         let head = OutputHead::new(weight, None, cfg).unwrap();
         let hidden = vec![1.0, 2.0, 3.0];
-        let mut output = vec![99.0; 2];
+        let mut output = [99.0; 2];
         head.forward(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 0.0, EPS));
         assert!(approx_eq(output[1], 0.0, EPS));
@@ -720,7 +720,7 @@ mod tests {
         ];
         let tw = TiedWeights::new(weight, 3, 2).unwrap();
         let hidden = vec![1.0, 1.0];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         tw.project(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 3.0, EPS)); // 1+2
         assert!(approx_eq(output[1], 7.0, EPS)); // 3+4
@@ -739,8 +739,8 @@ mod tests {
         let tw = TiedWeights::new(weight, 2, 3).unwrap();
 
         let hidden = vec![1.0, -0.5, 2.0];
-        let mut out_head = vec![0.0; 2];
-        let mut out_tied = vec![0.0; 2];
+        let mut out_head = [0.0; 2];
+        let mut out_tied = [0.0; 2];
         head.forward(&hidden, &mut out_head, 1).unwrap();
         tw.project(&hidden, &mut out_tied, 1).unwrap();
 
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn normalize_single_element() {
-        let mut logits = vec![42.0];
+        let mut logits = [42.0];
         LogitNormalizer::normalize(&mut logits, 1, 1).unwrap();
         assert!(approx_eq(logits[0], 0.0, EPS));
     }
@@ -890,7 +890,7 @@ mod tests {
     #[test]
     fn stats_uniform_distribution() {
         // Uniform logits → maximum entropy
-        let logits = vec![0.0; 4];
+        let logits = [0.0; 4];
         let stats = OutputStats::compute(&logits, 2);
         // Uniform over 4 → entropy = ln(4) ≈ 1.386
         let expected_entropy = (4.0f32).ln();
@@ -929,8 +929,8 @@ mod tests {
     fn efficient_projection_matches_naive() {
         let hidden = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
         let weight = vec![1.0, 0.0, 0.0, 1.0, 1.0, 1.0]; // [3, 2]
-        let mut naive_out = vec![0.0; 6]; // [2, 3]
-        let mut tiled_out = vec![0.0; 6]; // [2, 3]
+        let mut naive_out = [0.0; 6]; // [2, 3]
+        let mut tiled_out = [0.0; 6]; // [2, 3]
 
         projection_ref(&hidden, &weight, None, &mut naive_out, 2, 2, 3).unwrap();
         let proj = EfficientProjection::default();
@@ -994,7 +994,7 @@ mod tests {
         let weight = vec![1.0, 1.0, 1.0];
         let head = OutputHead::new(weight, None, cfg).unwrap();
         let hidden = vec![2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         head.forward(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 9.0, EPS));
     }
@@ -1004,8 +1004,8 @@ mod tests {
         let cfg = OutputHeadConfig::new(1, 3);
         let weight = vec![2.0, 3.0, 4.0];
         let head = OutputHead::new(weight, None, cfg).unwrap();
-        let hidden = vec![5.0];
-        let mut output = vec![0.0; 3];
+        let hidden = [5.0];
+        let mut output = [0.0; 3];
         head.forward(&hidden, &mut output, 1).unwrap();
         assert!(approx_eq(output[0], 10.0, EPS));
         assert!(approx_eq(output[1], 15.0, EPS));
@@ -1040,8 +1040,8 @@ mod tests {
         let weight = vec![1.0, 2.0, 3.0, 4.0]; // [2, 2]
         let hidden = vec![1.0, 1.0];
         let scaled_hidden = vec![3.0, 3.0];
-        let mut out1 = vec![0.0; 2];
-        let mut out2 = vec![0.0; 2];
+        let mut out1 = [0.0; 2];
+        let mut out2 = [0.0; 2];
 
         projection_ref(&hidden, &weight, None, &mut out1, 1, 2, 2).unwrap();
         projection_ref(&scaled_hidden, &weight, None, &mut out2, 1, 2, 2).unwrap();

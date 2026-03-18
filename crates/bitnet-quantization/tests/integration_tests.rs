@@ -134,8 +134,8 @@ fn test_tl2_dequantize_symmetry() {
 /// Using inputs in `[-0.1, 0.1]` bounds `max_abs ≤ 0.1`, so max error ≤ 0.05 < 0.1.
 #[test]
 fn test_quantize_dequantize_round_trip_accuracy() {
-    use rand::Rng as _;
-    use rand::SeedableRng as _;
+    use rand::RngExt;
+    use rand_core::SeedableRng as _;
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
     let data: Vec<f32> = (0..64).map(|_| rng.random_range(-0.1f32..=0.1f32)).collect();
 

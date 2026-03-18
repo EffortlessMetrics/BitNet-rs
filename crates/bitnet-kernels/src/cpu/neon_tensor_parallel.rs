@@ -495,17 +495,17 @@ mod tests {
     fn test_allreduce_sum_two_partitions() {
         let a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
         let b = vec![10.0f32, 20.0, 30.0, 40.0, 50.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         unsafe { neon_allreduce_sum(&[&a, &b], &mut out) };
         assert_eq!(out, vec![11.0, 22.0, 33.0, 44.0, 55.0]);
     }
 
     #[test]
     fn test_allreduce_sum_three_partitions() {
-        let a = vec![1.0f32; 8];
-        let b = vec![2.0f32; 8];
-        let c = vec![3.0f32; 8];
-        let mut out = vec![0.0f32; 8];
+        let a = [1.0f32; 8];
+        let b = [2.0f32; 8];
+        let c = [3.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_allreduce_sum(&[&a, &b, &c], &mut out) };
         assert_eq!(out, vec![6.0; 8]);
     }
@@ -513,7 +513,7 @@ mod tests {
     #[test]
     fn test_allreduce_sum_single_partition() {
         let a = vec![7.0f32, 8.0, 9.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         unsafe { neon_allreduce_sum(&[&a], &mut out) };
         assert_eq!(out, vec![7.0, 8.0, 9.0]);
     }
@@ -531,7 +531,7 @@ mod tests {
     fn test_allreduce_max_basic() {
         let a = vec![1.0f32, 5.0, 3.0, 7.0, 2.0];
         let b = vec![4.0f32, 2.0, 6.0, 1.0, 8.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         unsafe { neon_allreduce_max(&[&a, &b], &mut out) };
         assert_eq!(out, vec![4.0, 5.0, 6.0, 7.0, 8.0]);
     }
@@ -540,7 +540,7 @@ mod tests {
     fn test_allreduce_max_negative_values() {
         let a = vec![-1.0f32, -5.0, -3.0, -7.0];
         let b = vec![-4.0f32, -2.0, -6.0, -1.0];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_allreduce_max(&[&a, &b], &mut out) };
         assert_eq!(out, vec![-1.0, -2.0, -3.0, -1.0]);
     }
@@ -550,7 +550,7 @@ mod tests {
         let a = vec![1.0f32, 9.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let b = vec![8.0f32, 2.0, 7.0, 4.0, 5.0, 6.0, 1.0, 3.0];
         let c = vec![5.0f32, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_allreduce_max(&[&a, &b, &c], &mut out) };
         assert_eq!(out, vec![8.0, 9.0, 7.0, 5.0, 5.0, 6.0, 7.0, 8.0]);
     }
@@ -560,8 +560,8 @@ mod tests {
     #[test]
     fn test_scatter_even_split() {
         let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let mut p0 = vec![0.0f32; 3];
-        let mut p1 = vec![0.0f32; 3];
+        let mut p0 = [0.0f32; 3];
+        let mut p1 = [0.0f32; 3];
         let mut outputs: Vec<&mut [f32]> = vec![&mut p0, &mut p1];
         unsafe { neon_tensor_scatter(&input, &mut outputs, 2) };
         assert_eq!(p0, vec![1.0, 2.0, 3.0]);
@@ -571,10 +571,10 @@ mod tests {
     #[test]
     fn test_scatter_four_partitions() {
         let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-        let mut p0 = vec![0.0f32; 4];
-        let mut p1 = vec![0.0f32; 4];
-        let mut p2 = vec![0.0f32; 4];
-        let mut p3 = vec![0.0f32; 4];
+        let mut p0 = [0.0f32; 4];
+        let mut p1 = [0.0f32; 4];
+        let mut p2 = [0.0f32; 4];
+        let mut p3 = [0.0f32; 4];
         let mut outputs: Vec<&mut [f32]> = vec![&mut p0, &mut p1, &mut p2, &mut p3];
         unsafe { neon_tensor_scatter(&input, &mut outputs, 4) };
         assert_eq!(p0, vec![1.0, 2.0, 3.0, 4.0]);
@@ -589,7 +589,7 @@ mod tests {
     fn test_gather_basic() {
         let p0 = vec![1.0f32, 2.0, 3.0];
         let p1 = vec![4.0f32, 5.0, 6.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         unsafe { neon_tensor_gather(&[&p0, &p1], &mut out) };
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
@@ -597,14 +597,14 @@ mod tests {
     #[test]
     fn test_scatter_gather_roundtrip() {
         let input: Vec<f32> = (0..20).map(|x| x as f32).collect();
-        let mut p0 = vec![0.0f32; 5];
-        let mut p1 = vec![0.0f32; 5];
-        let mut p2 = vec![0.0f32; 5];
-        let mut p3 = vec![0.0f32; 5];
+        let mut p0 = [0.0f32; 5];
+        let mut p1 = [0.0f32; 5];
+        let mut p2 = [0.0f32; 5];
+        let mut p3 = [0.0f32; 5];
         let mut outputs: Vec<&mut [f32]> = vec![&mut p0, &mut p1, &mut p2, &mut p3];
         unsafe { neon_tensor_scatter(&input, &mut outputs, 4) };
 
-        let mut restored = vec![0.0f32; 20];
+        let mut restored = [0.0f32; 20];
         unsafe { neon_tensor_gather(&[&p0, &p1, &p2, &p3], &mut restored) };
         assert_eq!(input, restored);
     }
@@ -623,7 +623,7 @@ mod tests {
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0,
         ];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         unsafe {
             neon_column_parallel_linear(&input, &weight, None, &mut out, 1, 4, 0, 2);
         }
@@ -638,7 +638,7 @@ mod tests {
             2.0, 2.0, 2.0, 2.0, // row 1 → dot = 8
         ];
         let bias = vec![0.5, 1.0];
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         unsafe {
             neon_column_parallel_linear(&input, &weight, Some(&bias), &mut out, 1, 4, 0, 2);
         }
@@ -677,7 +677,7 @@ mod tests {
             0.0, 1.0, // out_feat 1, part_feat [2..4)
         ];
 
-        let mut out = vec![0.0f32; 2];
+        let mut out = [0.0f32; 2];
         unsafe {
             neon_row_parallel_linear(&input[0..2], &w0, &mut out, 1, 2, 2);
             neon_row_parallel_linear(&input[2..4], &w1, &mut out, 1, 2, 2);
@@ -699,7 +699,7 @@ mod tests {
         assert_eq!(buf.feature_dim, 3);
         assert_eq!(buf.activations, activations);
 
-        let mut received = vec![0.0f32; 6];
+        let mut received = [0.0f32; 6];
         unsafe { buf.receive_into(&mut received) };
         assert_eq!(received, activations);
     }
@@ -721,7 +721,7 @@ mod tests {
         // 17 elements: 4 NEON chunks + 1 scalar tail
         let a: Vec<f32> = (0..17).map(|x| x as f32).collect();
         let b: Vec<f32> = (0..17).map(|x| (x * 2) as f32).collect();
-        let mut out = vec![0.0f32; 17];
+        let mut out = [0.0f32; 17];
         unsafe { neon_allreduce_sum(&[&a, &b], &mut out) };
         for i in 0..17 {
             assert_eq!(out[i], (i + i * 2) as f32, "mismatch at {i}");
@@ -731,16 +731,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "partition 1 length")]
     fn test_allreduce_sum_mismatched_lengths() {
-        let a = vec![1.0f32; 4];
-        let b = vec![1.0f32; 5]; // wrong length
-        let mut out = vec![0.0f32; 4];
+        let a = [1.0f32; 4];
+        let b = [1.0f32; 5]; // wrong length
+        let mut out = [0.0f32; 4];
         unsafe { neon_allreduce_sum(&[&a, &b], &mut out) };
     }
 
     #[test]
     #[should_panic(expected = "partitions must not be empty")]
     fn test_allreduce_max_empty_partitions() {
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_allreduce_max(&[], &mut out) };
     }
 }

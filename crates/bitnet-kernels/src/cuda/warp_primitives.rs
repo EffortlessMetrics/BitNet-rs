@@ -916,7 +916,7 @@ mod tests {
     fn shuffle_broadcast_lane0() {
         let cfg = WarpConfig::new();
         let mut data = sequential_data();
-        let src = vec![0u32; 32];
+        let src = [0u32; 32];
         warp_shuffle(&mut data, &src, &cfg).unwrap();
         for &v in &data {
             assert_eq!(v, 1.0);
@@ -941,7 +941,7 @@ mod tests {
     fn shuffle_src_lanes_too_short() {
         let cfg = WarpConfig::new();
         let mut data = sequential_data();
-        let src = vec![0u32; 16];
+        let src = [0u32; 16];
         assert!(warp_shuffle(&mut data, &src, &cfg).is_err());
     }
 
@@ -957,7 +957,7 @@ mod tests {
     #[test]
     fn shuffle_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 16];
+        let mut data = [0.0f32; 16];
         let src: Vec<u32> = (0..32).collect();
         assert!(warp_shuffle(&mut data, &src, &cfg).is_err());
     }
@@ -1023,7 +1023,7 @@ mod tests {
     #[test]
     fn shuffle_xor_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 10];
+        let mut data = [1.0f32; 10];
         assert!(warp_shuffle_xor(&mut data, 1, &cfg).is_err());
     }
 
@@ -1090,7 +1090,7 @@ mod tests {
     #[test]
     fn shuffle_up_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 5];
+        let mut data = [0.0f32; 5];
         assert!(warp_shuffle_up(&mut data, 1, &cfg).is_err());
     }
 
@@ -1154,7 +1154,7 @@ mod tests {
     #[test]
     fn shuffle_down_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![0.0f32; 3];
+        let mut data = [0.0f32; 3];
         assert!(warp_shuffle_down(&mut data, 1, &cfg).is_err());
     }
 
@@ -1213,7 +1213,7 @@ mod tests {
     #[test]
     fn reduce_sum_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 5];
+        let mut data = [1.0f32; 5];
         assert!(warp_reduce_sum(&mut data, &cfg).is_err());
     }
 
@@ -1251,7 +1251,7 @@ mod tests {
     #[test]
     fn reduce_max_all_same() {
         let cfg = WarpConfig::new();
-        let mut data = vec![42.0f32; 32];
+        let mut data = [42.0f32; 32];
         warp_reduce_max(&mut data, &cfg).unwrap();
         for &v in &data {
             assert_eq!(v, 42.0);
@@ -1261,7 +1261,7 @@ mod tests {
     #[test]
     fn reduce_max_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 2];
+        let mut data = [1.0f32; 2];
         assert!(warp_reduce_max(&mut data, &cfg).is_err());
     }
 
@@ -1299,7 +1299,7 @@ mod tests {
     #[test]
     fn reduce_min_all_same() {
         let cfg = WarpConfig::new();
-        let mut data = vec![7.0f32; 32];
+        let mut data = [7.0f32; 32];
         warp_reduce_min(&mut data, &cfg).unwrap();
         for &v in &data {
             assert_eq!(v, 7.0);
@@ -1309,7 +1309,7 @@ mod tests {
     #[test]
     fn reduce_min_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 4];
+        let mut data = [1.0f32; 4];
         assert!(warp_reduce_min(&mut data, &cfg).is_err());
     }
 
@@ -1320,14 +1320,14 @@ mod tests {
     #[test]
     fn ballot_all_true() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert_eq!(warp_ballot(&preds, &cfg).unwrap(), FULL_MASK);
     }
 
     #[test]
     fn ballot_all_false() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert_eq!(warp_ballot(&preds, &cfg).unwrap(), 0);
     }
 
@@ -1342,7 +1342,7 @@ mod tests {
     #[test]
     fn ballot_partial_mask() {
         let cfg = WarpConfig::with_active_mask(0x0F).unwrap();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         let result = warp_ballot(&preds, &cfg).unwrap();
         assert_eq!(result, 0x0F);
     }
@@ -1350,7 +1350,7 @@ mod tests {
     #[test]
     fn ballot_single_lane() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[7] = true;
         assert_eq!(warp_ballot(&preds, &cfg).unwrap(), 1 << 7);
     }
@@ -1358,7 +1358,7 @@ mod tests {
     #[test]
     fn ballot_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 10];
+        let preds = [true; 10];
         assert!(warp_ballot(&preds, &cfg).is_err());
     }
 
@@ -1369,14 +1369,14 @@ mod tests {
     #[test]
     fn vote_all_unanimous_true() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert!(warp_vote_all(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn vote_all_one_false() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![true; 32];
+        let mut preds = [true; 32];
         preds[15] = false;
         assert!(!warp_vote_all(&preds, &cfg).unwrap());
     }
@@ -1384,7 +1384,7 @@ mod tests {
     #[test]
     fn vote_all_partial_mask_ignores_inactive() {
         let cfg = WarpConfig::with_active_mask(0x03).unwrap(); // lanes 0, 1
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[0] = true;
         preds[1] = true;
         // lanes 2-31 are false but inactive
@@ -1394,14 +1394,14 @@ mod tests {
     #[test]
     fn vote_all_all_false() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert!(!warp_vote_all(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn vote_all_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 5];
+        let preds = [true; 5];
         assert!(warp_vote_all(&preds, &cfg).is_err());
     }
 
@@ -1412,7 +1412,7 @@ mod tests {
     #[test]
     fn vote_any_one_true() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[20] = true;
         assert!(warp_vote_any(&preds, &cfg).unwrap());
     }
@@ -1420,21 +1420,21 @@ mod tests {
     #[test]
     fn vote_any_all_false() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert!(!warp_vote_any(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn vote_any_all_true() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert!(warp_vote_any(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn vote_any_partial_mask_only_active_matters() {
         let cfg = WarpConfig::with_active_mask(0x01).unwrap(); // only lane 0
-        let mut preds = vec![true; 32]; // all true
+        let mut preds = [true; 32]; // all true
         preds[0] = false; // but the only active lane is false
         assert!(!warp_vote_any(&preds, &cfg).unwrap());
     }
@@ -1442,7 +1442,7 @@ mod tests {
     #[test]
     fn vote_any_predicates_too_short() {
         let cfg = WarpConfig::new();
-        let preds = vec![false; 8];
+        let preds = [false; 8];
         assert!(warp_vote_any(&preds, &cfg).is_err());
     }
 
@@ -1453,7 +1453,7 @@ mod tests {
     #[test]
     fn prefix_sum_all_ones() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         warp_prefix_sum(&mut data, &cfg).unwrap();
         for i in 0..32 {
             assert!((data[i] - (i + 1) as f32).abs() < 1e-5);
@@ -1498,7 +1498,7 @@ mod tests {
     #[test]
     fn prefix_sum_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 4];
+        let mut data = [1.0f32; 4];
         assert!(warp_prefix_sum(&mut data, &cfg).is_err());
     }
 
@@ -1548,7 +1548,7 @@ mod tests {
     #[test]
     fn broadcast_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 4];
+        let mut data = [1.0f32; 4];
         assert!(warp_broadcast(&mut data, 0, &cfg).is_err());
     }
 
@@ -1559,7 +1559,7 @@ mod tests {
     #[test]
     fn match_any_all_same() {
         let cfg = WarpConfig::new();
-        let data = vec![42.0f32; 32];
+        let data = [42.0f32; 32];
         let masks = warp_match_any(&data, &cfg).unwrap();
         for &m in &masks {
             assert_eq!(m, FULL_MASK);
@@ -1592,7 +1592,7 @@ mod tests {
     #[test]
     fn match_any_partial_mask() {
         let cfg = WarpConfig::with_active_mask(0x0F).unwrap();
-        let data = vec![1.0f32; 32];
+        let data = [1.0f32; 32];
         let masks = warp_match_any(&data, &cfg).unwrap();
         assert_eq!(masks[0], 0x0F); // only active lanes match
         assert_eq!(masks[4], 0); // inactive lane
@@ -1601,7 +1601,7 @@ mod tests {
     #[test]
     fn match_any_data_too_short() {
         let cfg = WarpConfig::new();
-        let data = vec![1.0f32; 5];
+        let data = [1.0f32; 5];
         assert!(warp_match_any(&data, &cfg).is_err());
     }
 
@@ -1613,7 +1613,7 @@ mod tests {
     fn segmented_reduce_single_segment() {
         let cfg = WarpConfig::new();
         let mut data = sequential_data();
-        let segments = vec![0u32; 32];
+        let segments = [0u32; 32];
         warp_segmented_reduce(&mut data, &segments, &cfg).unwrap();
         let expected = (1..=32).sum::<u32>() as f32;
         for &v in &data[..32] {
@@ -1634,7 +1634,7 @@ mod tests {
     #[test]
     fn segmented_reduce_two_halves() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         let segments: Vec<u32> = (0..32).map(|i| if i < 16 { 0 } else { 1 }).collect();
         warp_segmented_reduce(&mut data, &segments, &cfg).unwrap();
         for i in 0..16 {
@@ -1648,7 +1648,7 @@ mod tests {
     #[test]
     fn segmented_reduce_four_groups() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         let segments: Vec<u32> = (0..32).map(|i| (i / 8) as u32).collect();
         warp_segmented_reduce(&mut data, &segments, &cfg).unwrap();
         for &v in &data[..32] {
@@ -1659,9 +1659,9 @@ mod tests {
     #[test]
     fn segmented_reduce_partial_mask() {
         let cfg = WarpConfig::with_active_mask(0x0F).unwrap();
-        let mut data = vec![2.0f32; 32];
+        let mut data = [2.0f32; 32];
         let original = data.clone();
-        let segments = vec![0u32; 32]; // all same segment
+        let segments = [0u32; 32]; // all same segment
         warp_segmented_reduce(&mut data, &segments, &cfg).unwrap();
         // 4 active lanes × 2.0 = 8.0
         for i in 0..4 {
@@ -1674,15 +1674,15 @@ mod tests {
     fn segmented_reduce_segments_too_short() {
         let cfg = WarpConfig::new();
         let mut data = sequential_data();
-        let segments = vec![0u32; 10];
+        let segments = [0u32; 10];
         assert!(warp_segmented_reduce(&mut data, &segments, &cfg).is_err());
     }
 
     #[test]
     fn segmented_reduce_data_too_short() {
         let cfg = WarpConfig::new();
-        let mut data = vec![1.0f32; 4];
-        let segments = vec![0u32; 32];
+        let mut data = [1.0f32; 4];
+        let segments = [0u32; 32];
         assert!(warp_segmented_reduce(&mut data, &segments, &cfg).is_err());
     }
 
@@ -1781,7 +1781,7 @@ mod tests {
     #[test]
     fn ballot_matches_vote_all() {
         let cfg = WarpConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         let ballot = warp_ballot(&preds, &cfg).unwrap();
         let all = warp_vote_all(&preds, &cfg).unwrap();
         assert_eq!(ballot, FULL_MASK);
@@ -1791,7 +1791,7 @@ mod tests {
     #[test]
     fn ballot_matches_vote_any() {
         let cfg = WarpConfig::new();
-        let mut preds = vec![false; 32];
+        let mut preds = [false; 32];
         preds[5] = true;
         let ballot = warp_ballot(&preds, &cfg).unwrap();
         let any = warp_vote_any(&preds, &cfg).unwrap();
@@ -1842,7 +1842,7 @@ mod tests {
         let cfg = WarpConfig::new();
         let mut full_data = sequential_data();
         let mut seg_data = sequential_data();
-        let segments = vec![0u32; 32]; // all in one segment
+        let segments = [0u32; 32]; // all in one segment
         warp_reduce_sum(&mut full_data, &cfg).unwrap();
         warp_segmented_reduce(&mut seg_data, &segments, &cfg).unwrap();
         for i in 0..32 {

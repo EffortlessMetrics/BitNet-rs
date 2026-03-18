@@ -1144,8 +1144,8 @@ mod tests {
     fn test_ffn_zero_input() {
         let cfg = FfnConfig::new(1, 3, 4, FfnActivationType::ReLU).unwrap();
         let input = [0.0f32; 3];
-        let w1 = vec![0.5f32; 12];
-        let w2 = vec![0.5f32; 12];
+        let w1 = [0.5f32; 12];
+        let w2 = [0.5f32; 12];
         let mut output = [0.0f32; 3];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         assert_close(&output, &[0.0, 0.0, 0.0], 1e-7);
@@ -1154,8 +1154,8 @@ mod tests {
     #[test]
     fn test_ffn_zero_weights() {
         let cfg = FfnConfig::new(1, 2, 3, FfnActivationType::SiLU).unwrap();
-        let w1 = vec![0.0f32; 6];
-        let w2 = vec![0.0f32; 6];
+        let w1 = [0.0f32; 6];
+        let w2 = [0.0f32; 6];
         let input = [5.0, 10.0];
         let mut output = [999.0f32; 2];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
@@ -1229,10 +1229,10 @@ mod tests {
     #[test]
     fn test_ffn_batch_1() {
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::SiLU).unwrap();
-        let input = vec![1.0f32; 4];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0f32; 4];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut output = [0.0f32; 4];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         assert_eq!(output.len(), 4);
     }
@@ -1240,10 +1240,10 @@ mod tests {
     #[test]
     fn test_ffn_batch_4() {
         let cfg = FfnConfig::new(4, 4, 8, FfnActivationType::ReLU).unwrap();
-        let input = vec![1.0f32; 16];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut output = vec![0.0f32; 16];
+        let input = [1.0f32; 16];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut output = [0.0f32; 16];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         assert_eq!(output.len(), 16);
     }
@@ -1251,10 +1251,10 @@ mod tests {
     #[test]
     fn test_ffn_batch_16() {
         let cfg = FfnConfig::new(16, 4, 8, FfnActivationType::GELU).unwrap();
-        let input = vec![0.5f32; 64];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut output = vec![0.0f32; 64];
+        let input = [0.5f32; 64];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut output = [0.0f32; 64];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         assert_eq!(output.len(), 64);
     }
@@ -1262,10 +1262,10 @@ mod tests {
     #[test]
     fn test_ffn_batch_32() {
         let cfg = FfnConfig::new(32, 4, 8, FfnActivationType::SiLU).unwrap();
-        let input = vec![0.5f32; 128];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut output = vec![0.0f32; 128];
+        let input = [0.5f32; 128];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut output = [0.0f32; 128];
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         // All rows get same output since input is uniform
         let row0 = &output[0..4];
@@ -1281,8 +1281,8 @@ mod tests {
         let w2 = vec![1.0, 1.0, 1.0, 0.0, 1.0, 0.0];
         let input_a = vec![1.0, 2.0, 3.0, 4.0];
         let input_b = vec![1.0, 2.0, 99.0, 99.0];
-        let mut out_a = vec![0.0f32; 4];
-        let mut out_b = vec![0.0f32; 4];
+        let mut out_a = [0.0f32; 4];
+        let mut out_b = [0.0f32; 4];
         ffn_forward(&input_a, &w1, None, &w2, None, &mut out_a, &cfg).unwrap();
         ffn_forward(&input_b, &w1, None, &w2, None, &mut out_b, &cfg).unwrap();
         assert_close(&out_a[0..2], &out_b[0..2], 1e-6);
@@ -1352,9 +1352,9 @@ mod tests {
     fn test_gated_ffn_zero_gate_weights() {
         let cfg = FfnConfig::new(1, 2, 3, FfnActivationType::ReLU).unwrap();
         let input = [5.0, 10.0];
-        let w_gate = vec![0.0f32; 6];
-        let w_up = vec![1.0f32; 6];
-        let w_down = vec![1.0f32; 6];
+        let w_gate = [0.0f32; 6];
+        let w_up = [1.0f32; 6];
+        let w_down = [1.0f32; 6];
         let mut output = [0.0f32; 2];
         gated_ffn_forward(&input, &w_gate, &w_up, &w_down, &mut output, &cfg).unwrap();
         assert_close(&output, &[0.0, 0.0], 1e-7);
@@ -1575,8 +1575,8 @@ mod tests {
     fn test_fused_ffn_norm_batched() {
         let cfg = FfnConfig::new(2, 2, 4, FfnActivationType::ReLU).unwrap();
         let gamma = [1.0f32, 1.0];
-        let w1 = vec![0.5f32; 8];
-        let w2 = vec![0.5f32; 8];
+        let w1 = [0.5f32; 8];
+        let w2 = [0.5f32; 8];
         let input = [1.0, 2.0, 3.0, 4.0];
         let mut output = [0.0f32; 4];
         fused_ffn_norm(&input, &gamma, &w1, &w2, &mut output, &cfg, 1e-5).unwrap();
@@ -1590,8 +1590,8 @@ mod tests {
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::ReLU).unwrap();
         let gamma = [1.0f32; 2]; // needs 4
         let input = [1.0f32; 4];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
         let mut output = [0.0f32; 4];
         assert!(fused_ffn_norm(&input, &gamma, &w1, &w2, &mut output, &cfg, 1e-5).is_err());
     }
@@ -1708,8 +1708,8 @@ mod tests {
     #[test]
     fn test_dropout_full_drop() {
         let cfg = FfnConfig::new(1, 2, 3, FfnActivationType::ReLU).unwrap();
-        let w1 = vec![1.0f32; 6];
-        let w2 = vec![1.0f32; 6];
+        let w1 = [1.0f32; 6];
+        let w2 = [1.0f32; 6];
         let mask = [0.0f32; 3]; // drop everything
         let input = [5.0, 10.0];
         let mut output = [999.0f32; 2];
@@ -1745,8 +1745,8 @@ mod tests {
     #[test]
     fn test_dropout_mask_too_small() {
         let cfg = FfnConfig::new(1, 2, 4, FfnActivationType::ReLU).unwrap();
-        let w1 = vec![0.1f32; 8];
-        let w2 = vec![0.1f32; 8];
+        let w1 = [0.1f32; 8];
+        let w2 = [0.1f32; 8];
         let mask = [1.0f32; 2]; // needs 4
         let input = [1.0, 2.0];
         let mut output = [0.0f32; 2];
@@ -1819,8 +1819,8 @@ mod tests {
         // Quantized FFN should produce results within a reasonable bound of dense FFN
         let cfg = FfnConfig::new(1, 2, 4, FfnActivationType::ReLU).unwrap();
         // Dense reference weights: small uniform values
-        let w1_dense = vec![0.5f32; 8];
-        let w2_dense = vec![0.5f32; 8];
+        let w1_dense = [0.5f32; 8];
+        let w2_dense = [0.5f32; 8];
         let input = [1.0, 1.0];
         let mut dense_output = [0.0f32; 2];
         ffn_forward(&input, &w1_dense, None, &w2_dense, None, &mut dense_output, &cfg).unwrap();
@@ -1828,9 +1828,9 @@ mod tests {
         // Pack quantized approximation (all ones → dequant to 0 for INT2 center=1)
         // Use scale to approximate 0.5
         let w1_packed = vec![0b10_10_10_10u8, 0b10_10_10_10u8]; // all code=2 → val=1
-        let w1_scales = vec![0.5f32; 2]; // scale 0.5 → effective 0.5
+        let w1_scales = [0.5f32; 2]; // scale 0.5 → effective 0.5
         let w2_packed = vec![0b10_10_10_10u8, 0b10_10_10_10u8];
-        let w2_scales = vec![0.5f32; 2];
+        let w2_scales = [0.5f32; 2];
         let mut quant_output = [0.0f32; 2];
         quantized_ffn_forward(
             &input,
@@ -1857,7 +1857,7 @@ mod tests {
     #[test]
     fn test_quantized_ffn_zero_block_size_rejected() {
         let cfg = FfnConfig::new(1, 2, 2, FfnActivationType::ReLU).unwrap();
-        let w_packed = vec![0u8; 1];
+        let w_packed = [0u8; 1];
         let w_scales = vec![1.0f32];
         let input = [1.0, 2.0];
         let mut output = [0.0f32; 2];
@@ -1880,12 +1880,12 @@ mod tests {
     #[test]
     fn test_quantized_ffn_packed_too_small() {
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::ReLU).unwrap();
-        let w1_packed = vec![0u8; 1]; // needs 8 for INT2
+        let w1_packed = [0u8; 1]; // needs 8 for INT2
         let w1_scales = vec![1.0f32];
-        let w2_packed = vec![0u8; 8];
+        let w2_packed = [0u8; 8];
         let w2_scales = vec![1.0f32];
-        let input = vec![1.0f32; 4];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0f32; 4];
+        let mut output = [0.0f32; 4];
         assert!(
             quantized_ffn_forward(
                 &input,
@@ -1908,8 +1908,8 @@ mod tests {
     fn test_ffn_input_too_small() {
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::ReLU).unwrap();
         let input = [1.0f32; 2]; // needs 4
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
         let mut output = [0.0f32; 4];
         assert!(ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).is_err());
     }
@@ -1918,8 +1918,8 @@ mod tests {
     fn test_ffn_w1_too_small() {
         let cfg = FfnConfig::new(1, 2, 4, FfnActivationType::SiLU).unwrap();
         let input = [1.0f32; 2];
-        let w1 = vec![0.1f32; 4]; // needs 8
-        let w2 = vec![0.1f32; 8];
+        let w1 = [0.1f32; 4]; // needs 8
+        let w2 = [0.1f32; 8];
         let mut output = [0.0f32; 2];
         assert!(ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).is_err());
     }
@@ -1928,8 +1928,8 @@ mod tests {
     fn test_ffn_w2_too_small() {
         let cfg = FfnConfig::new(1, 2, 4, FfnActivationType::GELU).unwrap();
         let input = [1.0f32; 2];
-        let w1 = vec![0.1f32; 8];
-        let w2 = vec![0.1f32; 4]; // needs 8
+        let w1 = [0.1f32; 8];
+        let w2 = [0.1f32; 4]; // needs 8
         let mut output = [0.0f32; 2];
         assert!(ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).is_err());
     }
@@ -1938,8 +1938,8 @@ mod tests {
     fn test_ffn_output_too_small() {
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::ReLU).unwrap();
         let input = [1.0f32; 4];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
         let mut output = [0.0f32; 2]; // needs 4
         assert!(ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).is_err());
     }
@@ -1948,9 +1948,9 @@ mod tests {
     fn test_gated_ffn_w_gate_too_small() {
         let cfg = FfnConfig::new(1, 2, 4, FfnActivationType::SiLU).unwrap();
         let input = [1.0f32; 2];
-        let w_gate = vec![0.1f32; 4]; // needs 8
-        let w_up = vec![0.1f32; 8];
-        let w_down = vec![0.1f32; 8];
+        let w_gate = [0.1f32; 4]; // needs 8
+        let w_up = [0.1f32; 8];
+        let w_down = [0.1f32; 8];
         let mut output = [0.0f32; 2];
         assert!(gated_ffn_forward(&input, &w_gate, &w_up, &w_down, &mut output, &cfg).is_err());
     }
@@ -1961,10 +1961,10 @@ mod tests {
     fn test_inference_path_no_gradients() {
         // Verify that all FFN functions work without any gradient tracking
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::SiLU).unwrap();
-        let input = vec![1.0f32; 4];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut output = vec![0.0f32; 4];
+        let input = [1.0f32; 4];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut output = [0.0f32; 4];
         // Should succeed without any gradient infrastructure
         ffn_forward(&input, &w1, None, &w2, None, &mut output, &cfg).unwrap();
         for &v in &output {
@@ -1976,11 +1976,11 @@ mod tests {
     fn test_inference_path_deterministic() {
         // Two calls with same input must produce identical output
         let cfg = FfnConfig::new(1, 4, 8, FfnActivationType::SiLU).unwrap();
-        let input = vec![0.5f32; 4];
-        let w1 = vec![0.1f32; 32];
-        let w2 = vec![0.1f32; 32];
-        let mut out1 = vec![0.0f32; 4];
-        let mut out2 = vec![0.0f32; 4];
+        let input = [0.5f32; 4];
+        let w1 = [0.1f32; 32];
+        let w2 = [0.1f32; 32];
+        let mut out1 = [0.0f32; 4];
+        let mut out2 = [0.0f32; 4];
         ffn_forward(&input, &w1, None, &w2, None, &mut out1, &cfg).unwrap();
         ffn_forward(&input, &w1, None, &w2, None, &mut out2, &cfg).unwrap();
         assert_eq!(out1, out2);

@@ -1039,7 +1039,7 @@ mod tests {
     fn conv1d_f32_identity_kernel() {
         // kernel_size=1, should be pass-through scaled by weight.
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![2.0];
+        let weight = [2.0];
         let config = Conv1dConfig::new(1, 1, 1);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 4).unwrap();
         assert!(approx_eq(&out, &[2.0, 4.0, 6.0, 8.0]));
@@ -1070,7 +1070,7 @@ mod tests {
     fn conv1d_f32_with_bias() {
         let input = vec![1.0, 2.0, 3.0];
         let weight = vec![1.0, 0.0, 0.0];
-        let bias = vec![10.0];
+        let bias = [10.0];
         let config = Conv1dConfig::new(1, 1, 3);
         let out = conv1d_f32(&input, &weight, Some(&bias), &config, 1, 3).unwrap();
         assert!(approx_eq(&out, &[11.0]));
@@ -1079,7 +1079,7 @@ mod tests {
     #[test]
     fn conv1d_f32_kernel5() {
         let input: Vec<f32> = (1..=10).map(|x| x as f32).collect();
-        let weight = vec![1.0; 5];
+        let weight = [1.0; 5];
         let config = Conv1dConfig::new(1, 1, 5);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 10).unwrap();
         // Window sums: [15, 20, 25, 30, 35, 40]
@@ -1089,7 +1089,7 @@ mod tests {
     #[test]
     fn conv1d_f32_kernel7() {
         let input: Vec<f32> = (1..=10).map(|x| x as f32).collect();
-        let weight = vec![1.0; 7];
+        let weight = [1.0; 7];
         let config = Conv1dConfig::new(1, 1, 7);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 10).unwrap();
         // [28, 35, 42, 49]
@@ -1190,7 +1190,7 @@ mod tests {
     #[test]
     fn conv1d_f32_batch_size_one() {
         let input = vec![1.0, 2.0, 3.0];
-        let weight = vec![1.0];
+        let weight = [1.0];
         let config = Conv1dConfig::new(1, 1, 1);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 3).unwrap();
         assert!(approx_eq(&out, &[1.0, 2.0, 3.0]));
@@ -1199,7 +1199,7 @@ mod tests {
     #[test]
     fn conv1d_f32_kernel_larger_than_input_errors() {
         let input = vec![1.0, 2.0];
-        let weight = vec![1.0; 5];
+        let weight = [1.0; 5];
         let config = Conv1dConfig::new(1, 1, 5);
         assert!(conv1d_f32(&input, &weight, None, &config, 1, 2).is_err());
     }
@@ -1300,7 +1300,7 @@ mod tests {
     fn depthwise_with_bias() {
         let input = vec![1.0, 2.0, 3.0];
         let weight = vec![1.0, 1.0, 1.0];
-        let bias = vec![10.0];
+        let bias = [10.0];
         let mut config = Conv1dConfig::new(1, 1, 3);
         config.groups = 1;
         let out = conv1d_depthwise(&input, &weight, Some(&bias), &config, 1, 3).unwrap();
@@ -1373,8 +1373,8 @@ mod tests {
     #[test]
     fn pointwise_with_bias() {
         let input = vec![1.0, 2.0];
-        let weight = vec![2.0];
-        let bias = vec![5.0];
+        let weight = [2.0];
+        let bias = [5.0];
         let out = conv1d_pointwise(&input, &weight, Some(&bias), 1, 1, 1, 2).unwrap();
         assert!(approx_eq(&out, &[7.0, 9.0]));
     }
@@ -1438,7 +1438,7 @@ mod tests {
     fn transposed_with_bias() {
         let input = vec![1.0, 2.0];
         let weight = vec![1.0, 1.0];
-        let bias = vec![10.0];
+        let bias = [10.0];
         let config = Conv1dConfig::new(1, 1, 2);
         let out = conv1d_transposed(&input, &weight, Some(&bias), &config, 1, 2).unwrap();
         // out_len = 3, bias fills: [10, 10, 10], then +[1, 1+2, 2] = [11, 13, 12]
@@ -1581,7 +1581,7 @@ mod tests {
     #[test]
     fn col2im_validates_length() {
         let config = Conv1dConfig::new(1, 1, 3);
-        let bad_cols = vec![0.0; 5]; // wrong length
+        let bad_cols = [0.0; 5]; // wrong length
         assert!(col2im(&bad_cols, &config, 5, 3, 0).is_err());
     }
 
@@ -1589,7 +1589,7 @@ mod tests {
 
     #[test]
     fn conv1d_f32_all_zeros() {
-        let input = vec![0.0; 10];
+        let input = [0.0; 10];
         let weight = vec![1.0, 2.0, 3.0];
         let config = Conv1dConfig::new(1, 1, 3);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 10).unwrap();
@@ -1615,7 +1615,7 @@ mod tests {
 
     #[test]
     fn conv1d_f32_wrong_weight_length() {
-        let input = vec![1.0; 5];
+        let input = [1.0; 5];
         let weight = vec![1.0, 2.0]; // wrong
         let config = Conv1dConfig::new(1, 1, 3);
         assert!(conv1d_f32(&input, &weight, None, &config, 1, 5).is_err());
@@ -1623,7 +1623,7 @@ mod tests {
 
     #[test]
     fn conv1d_f32_wrong_bias_length() {
-        let input = vec![1.0; 5];
+        let input = [1.0; 5];
         let weight = vec![1.0, 1.0, 1.0];
         let bias = vec![1.0, 2.0]; // too many for out_channels=1
         let config = Conv1dConfig::new(1, 1, 3);
@@ -1632,8 +1632,8 @@ mod tests {
 
     #[test]
     fn conv1d_f32_single_element() {
-        let input = vec![5.0];
-        let weight = vec![3.0];
+        let input = [5.0];
+        let weight = [3.0];
         let config = Conv1dConfig::new(1, 1, 1);
         let out = conv1d_f32(&input, &weight, None, &config, 1, 1).unwrap();
         assert!(approx_eq(&out, &[15.0]));
@@ -1693,21 +1693,21 @@ mod tests {
     #[test]
     fn im2col_validates_input_length() {
         let config = Conv1dConfig::new(2, 1, 3);
-        let bad_input = vec![0.0; 5]; // expected 2*3=6
+        let bad_input = [0.0; 5]; // expected 2*3=6
         assert!(im2col(&bad_input, &config, 3, 0).is_err());
     }
 
     #[test]
     fn im2col_validates_group_index() {
         let config = Conv1dConfig::new(2, 1, 3);
-        let input = vec![0.0; 6];
+        let input = [0.0; 6];
         assert!(im2col(&input, &config, 3, 1).is_err()); // groups=1, index=1 invalid
     }
 
     #[test]
     fn conv1d_avx2_kernel1() {
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let weight = vec![2.0];
+        let weight = [2.0];
         let config = Conv1dConfig::new(1, 1, 1);
         let out = conv1d_avx2(&input, &weight, None, &config, 1, 4).unwrap();
         assert!(approx_eq(&out, &[2.0, 4.0, 6.0, 8.0]));

@@ -368,8 +368,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_gemv_qk256_avx2_smoke() {
-        use rand::{Rng, SeedableRng};
+        use rand::RngExt;
         use rand_chacha::ChaCha8Rng;
+        use rand_core::SeedableRng;
 
         // Skip if AVX2 not available
         if !is_x86_feature_detected!("avx2") {
@@ -467,8 +468,9 @@ mod tests {
             return;
         }
         use crate::i2s_qk256::gemv_qk256_row;
-        use rand::{Rng, SeedableRng};
+        use rand::RngExt;
         use rand_chacha::ChaCha8Rng;
+        use rand_core::SeedableRng;
         use std::time::Instant;
 
         // Skip if AVX2 not available

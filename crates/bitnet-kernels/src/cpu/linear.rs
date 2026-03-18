@@ -307,7 +307,7 @@ mod tests {
         let expected = vec![1.0, 2.0, 3.0, 6.0, 4.0, 5.0, 6.0, 15.0];
 
         let cfg = LinearConfig::new(2, 3, 4).unwrap();
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         linear_cpu(&x, &weight, None, &mut out, &cfg).unwrap();
         assert_close(&out, &expected, 1e-6);
     }
@@ -332,7 +332,7 @@ mod tests {
         let expected = vec![11.0, 22.0, 33.0, 46.0, 14.0, 25.0, 36.0, 55.0];
 
         let cfg = LinearConfig::new(2, 3, 4).unwrap().with_bias(true);
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         linear_cpu(&x, &weight, Some(&bias), &mut out, &cfg).unwrap();
         assert_close(&out, &expected, 1e-6);
     }
@@ -344,7 +344,7 @@ mod tests {
         let x = vec![1.0, 2.0];
         let weight = vec![3.0, 4.0]; // [1, 2] → [1, 1]
         let cfg = LinearConfig::new(1, 2, 1).unwrap();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         linear_cpu(&x, &weight, None, &mut out, &cfg).unwrap();
         // 1*3 + 2*4 = 11
         assert_close(&out, &[11.0], 1e-6);
@@ -379,7 +379,7 @@ mod tests {
         ];
 
         let cfg = LinearConfig::new(4, 2, 3).unwrap();
-        let mut out = vec![0.0f32; 12];
+        let mut out = [0.0f32; 12];
         linear_cpu(&x, &weight, None, &mut out, &cfg).unwrap();
         assert_close(&out, &expected, 1e-6);
     }
@@ -395,8 +395,8 @@ mod tests {
         let cfg_no = LinearConfig::new(2, 3, 2).unwrap();
         let cfg_zero = LinearConfig::new(2, 3, 2).unwrap().with_bias(true);
 
-        let mut out_no = vec![0.0f32; 4];
-        let mut out_zero = vec![0.0f32; 4];
+        let mut out_no = [0.0f32; 4];
+        let mut out_zero = [0.0f32; 4];
 
         linear_cpu(&x, &weight, None, &mut out_no, &cfg_no).unwrap();
         linear_cpu(&x, &weight, Some(&zero_bias), &mut out_zero, &cfg_zero).unwrap();
@@ -406,12 +406,12 @@ mod tests {
     #[test]
     fn test_linear_bias_only_adds_to_output() {
         // Zero input + bias → output == bias broadcast
-        let x = vec![0.0f32; 6]; // [2, 3]
-        let weight = vec![1.0f32; 6]; // [2, 3]
+        let x = [0.0f32; 6]; // [2, 3]
+        let weight = [1.0f32; 6]; // [2, 3]
         let bias = vec![7.0, 11.0];
 
         let cfg = LinearConfig::new(2, 3, 2).unwrap().with_bias(true);
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         linear_cpu(&x, &weight, Some(&bias), &mut out, &cfg).unwrap();
         // 0·W + bias → [7, 11, 7, 11]
         assert_close(&out, &[7.0, 11.0, 7.0, 11.0], 1e-6);
@@ -430,7 +430,7 @@ mod tests {
             0.0, 0.0, 1.0,
         ];
         let cfg = LinearConfig::new(2, 3, 3).unwrap();
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         linear_cpu(&x, &weight, None, &mut out, &cfg).unwrap();
         assert_close(&out, &x, 1e-6);
     }
@@ -446,7 +446,7 @@ mod tests {
         ];
         let bias = vec![10.0, 20.0, 30.0];
         let cfg = LinearConfig::new(1, 3, 3).unwrap().with_bias(true);
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         linear_cpu(&x, &weight, Some(&bias), &mut out, &cfg).unwrap();
         assert_close(&out, &[11.0, 22.0, 33.0], 1e-6);
     }
@@ -456,37 +456,37 @@ mod tests {
     #[test]
     fn test_linear_x_buffer_too_small() {
         let cfg = LinearConfig::new(2, 4, 3).unwrap();
-        let x = vec![1.0f32; 4]; // need 8
-        let w = vec![1.0f32; 12];
-        let mut out = vec![0.0f32; 6];
+        let x = [1.0f32; 4]; // need 8
+        let w = [1.0f32; 12];
+        let mut out = [0.0f32; 6];
         assert!(linear_cpu(&x, &w, None, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_linear_weight_buffer_too_small() {
         let cfg = LinearConfig::new(2, 4, 3).unwrap();
-        let x = vec![1.0f32; 8];
-        let w = vec![1.0f32; 8]; // need 12
-        let mut out = vec![0.0f32; 6];
+        let x = [1.0f32; 8];
+        let w = [1.0f32; 8]; // need 12
+        let mut out = [0.0f32; 6];
         assert!(linear_cpu(&x, &w, None, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_linear_output_buffer_too_small() {
         let cfg = LinearConfig::new(2, 4, 3).unwrap();
-        let x = vec![1.0f32; 8];
-        let w = vec![1.0f32; 12];
-        let mut out = vec![0.0f32; 3]; // need 6
+        let x = [1.0f32; 8];
+        let w = [1.0f32; 12];
+        let mut out = [0.0f32; 3]; // need 6
         assert!(linear_cpu(&x, &w, None, &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_linear_bias_buffer_too_small() {
         let cfg = LinearConfig::new(2, 4, 3).unwrap().with_bias(true);
-        let x = vec![1.0f32; 8];
-        let w = vec![1.0f32; 12];
-        let bias = vec![1.0f32; 2]; // need 3
-        let mut out = vec![0.0f32; 6];
+        let x = [1.0f32; 8];
+        let w = [1.0f32; 12];
+        let bias = [1.0f32; 2]; // need 3
+        let mut out = [0.0f32; 6];
         assert!(linear_cpu(&x, &w, Some(&bias), &mut out, &cfg).is_err());
     }
 
@@ -502,7 +502,7 @@ mod tests {
             0.0, 0.0, 1.0,
         ];
         let cfg = LinearConfig::new(1, 3, 3).unwrap();
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         linear_forward(&x, &weight, None, &mut out, &cfg).unwrap();
         assert_close(&out, &x, 1e-6);
     }
@@ -536,8 +536,8 @@ mod tests {
 
         let cfg = LinearConfig::new(2, 3, 2).unwrap();
 
-        let mut out_x = vec![0.0f32; 4];
-        let mut out_sx = vec![0.0f32; 4];
+        let mut out_x = [0.0f32; 4];
+        let mut out_sx = [0.0f32; 4];
 
         linear_cpu(&x, &weight, None, &mut out_x, &cfg).unwrap();
         linear_cpu(&x_scaled, &weight, None, &mut out_sx, &cfg).unwrap();
@@ -558,9 +558,9 @@ mod tests {
 
         let cfg = LinearConfig::new(1, 3, 2).unwrap();
 
-        let mut out_a = vec![0.0f32; 2];
-        let mut out_b = vec![0.0f32; 2];
-        let mut out_ab = vec![0.0f32; 2];
+        let mut out_a = [0.0f32; 2];
+        let mut out_b = [0.0f32; 2];
+        let mut out_ab = [0.0f32; 2];
 
         linear_cpu(&a, &weight, None, &mut out_a, &cfg).unwrap();
         linear_cpu(&b, &weight, None, &mut out_b, &cfg).unwrap();
@@ -577,7 +577,7 @@ mod tests {
         let x = vec![5.0f32];
         let w = vec![3.0f32];
         let cfg = LinearConfig::new(1, 1, 1).unwrap();
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         linear_cpu(&x, &w, None, &mut out, &cfg).unwrap();
         assert_close(&out, &[15.0], 1e-6);
     }
@@ -588,7 +588,7 @@ mod tests {
         let w = vec![3.0f32];
         let bias = vec![2.0f32];
         let cfg = LinearConfig::new(1, 1, 1).unwrap().with_bias(true);
-        let mut out = vec![0.0f32; 1];
+        let mut out = [0.0f32; 1];
         linear_cpu(&x, &w, Some(&bias), &mut out, &cfg).unwrap();
         assert_close(&out, &[17.0], 1e-6);
     }

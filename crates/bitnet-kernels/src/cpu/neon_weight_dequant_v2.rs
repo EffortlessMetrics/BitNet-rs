@@ -1159,9 +1159,9 @@ mod tests {
 
     #[test]
     fn test_row_blocked_block32() {
-        let packed = vec![0x55u8; 16]; // 64 elements, 2 blocks of 32
+        let packed = [0x55u8; 16]; // 64 elements, 2 blocks of 32
         let scales = [1.0f32, 2.0];
-        let mut out = vec![0.0f32; 64];
+        let mut out = [0.0f32; 64];
         dequant_row_blocked(&packed, &scales, 32, 64, &mut out);
         assert!(out[..32].iter().all(|&v| (v - 1.0).abs() < 1e-6));
         assert!(out[32..].iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -1169,18 +1169,18 @@ mod tests {
 
     #[test]
     fn test_row_block32_convenience() {
-        let packed = vec![0x55u8; 8];
+        let packed = [0x55u8; 8];
         let scales = [1.5f32];
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         dequant_row_block32(&packed, &scales, 32, &mut out);
         assert!(out.iter().all(|&v| (v - 1.5).abs() < 1e-6));
     }
 
     #[test]
     fn test_row_qk256_convenience() {
-        let packed = vec![0xFFu8; 64];
+        let packed = [0xFFu8; 64];
         let scales = [0.5f32];
-        let mut out = vec![0.0f32; 256];
+        let mut out = [0.0f32; 256];
         dequant_row_qk256(&packed, &scales, 256, &mut out);
         assert!(out.iter().all(|&v| (v + 0.5).abs() < 1e-6));
     }
@@ -1197,8 +1197,8 @@ mod tests {
 
     #[test]
     fn test_row_to_vec_multi_block() {
-        let packed = vec![0x55u8; 16];
-        let scales = vec![1.0f32; 2];
+        let packed = [0x55u8; 16];
+        let scales = [1.0f32; 2];
         let out = dequant_row_to_vec(&packed, &scales, 32, 64);
         assert_eq!(out.len(), 64);
     }
@@ -1219,10 +1219,10 @@ mod tests {
 
     #[test]
     fn test_batch_rows_4x8() {
-        let packed = vec![0x55u8; 8]; // 4 rows × 2 bytes
+        let packed = [0x55u8; 8]; // 4 rows × 2 bytes
         let s = [1.0f32, 1.0];
-        let scales: Vec<&[f32]> = vec![&s; 4];
-        let mut out = vec![0.0f32; 32];
+        let scales: Vec<&[f32]> = [&s; 4];
+        let mut out = [0.0f32; 32];
         dequant_batch_rows(&packed, &scales, 4, 8, 4, &mut out);
         assert!(out.iter().all(|&v| (v - 1.0).abs() < 1e-6));
     }
@@ -1241,9 +1241,9 @@ mod tests {
 
     #[test]
     fn test_batch_flat_scales_multi_block() {
-        let packed = vec![0x55u8; 16]; // 2 rows × 8 bytes = 2×32 elements
+        let packed = [0x55u8; 16]; // 2 rows × 8 bytes = 2×32 elements
         let scales = [1.0f32, 2.0, 3.0, 4.0]; // 2 rows × 2 blocks of 16
-        let mut out = vec![0.0f32; 64];
+        let mut out = [0.0f32; 64];
         dequant_batch_rows_flat_scales(&packed, &scales, 16, 32, 2, &mut out);
         assert!(out[..16].iter().all(|&v| (v - 1.0).abs() < 1e-6));
         assert!(out[16..32].iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -1262,7 +1262,7 @@ mod tests {
 
     #[test]
     fn test_scale_inplace_zero() {
-        let mut data = vec![5.0; 8];
+        let mut data = [5.0; 8];
         apply_scale_inplace(&mut data, 0.0);
         assert!(data.iter().all(|&v| v == 0.0));
     }
@@ -1284,7 +1284,7 @@ mod tests {
 
     #[test]
     fn test_scale_inplace_odd_len() {
-        let mut data = vec![2.0; 7];
+        let mut data = [2.0; 7];
         apply_scale_inplace(&mut data, 0.5);
         assert!(data.iter().all(|&v| (v - 1.0).abs() < 1e-6));
     }
@@ -1294,7 +1294,7 @@ mod tests {
     #[test]
     fn test_scale_out_of_place() {
         let data = vec![1.0, -1.0, 0.0, 2.0, -2.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         apply_scale(&data, 3.0, &mut out);
         assert_eq!(out, vec![3.0, -3.0, 0.0, 6.0, -6.0]);
     }
@@ -1302,7 +1302,7 @@ mod tests {
     #[test]
     fn test_scale_out_of_place_large() {
         let data: Vec<f32> = (0..33).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 33];
+        let mut out = [0.0f32; 33];
         apply_scale(&data, 2.0, &mut out);
         for i in 0..33 {
             assert!((out[i] - i as f32 * 2.0).abs() < 1e-5, "mismatch at {i}");
@@ -1362,8 +1362,8 @@ mod tests {
         let interleaved = pack_interleaved_4row(&packed_rows, 4, 4);
         assert_eq!(interleaved.len(), 4);
 
-        let scales = vec![1.0f32; 4]; // 4 rows × 1 block each
-        let mut out = vec![0.0f32; 16];
+        let scales = [1.0f32; 4]; // 4 rows × 1 block each
+        let mut out = [0.0f32; 16];
         dequant_interleaved_4row(&interleaved, &scales, 4, 4, &mut out);
 
         // Compare against direct scalar dequant
@@ -1376,20 +1376,20 @@ mod tests {
 
     #[test]
     fn test_interleaved_8_rows() {
-        let packed_rows = vec![0x55u8; 8]; // 8 rows × 1 byte (4 elem)
+        let packed_rows = [0x55u8; 8]; // 8 rows × 1 byte (4 elem)
         let interleaved = pack_interleaved_4row(&packed_rows, 4, 8);
-        let scales = vec![1.0f32; 8];
-        let mut out = vec![0.0f32; 32];
+        let scales = [1.0f32; 8];
+        let mut out = [0.0f32; 32];
         dequant_interleaved_4row(&interleaved, &scales, 4, 8, &mut out);
         assert!(out.iter().all(|&v| (v - 1.0).abs() < 1e-6));
     }
 
     #[test]
     fn test_interleaved_with_different_scales() {
-        let packed_rows = vec![0x55u8; 4]; // 4 rows, all +1
+        let packed_rows = [0x55u8; 4]; // 4 rows, all +1
         let interleaved = pack_interleaved_4row(&packed_rows, 4, 4);
         let scales = [1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 16];
+        let mut out = [0.0f32; 16];
         dequant_interleaved_4row(&interleaved, &scales, 4, 4, &mut out);
         assert!(out[0..4].iter().all(|&v| (v - 1.0).abs() < 1e-6));
         assert!(out[4..8].iter().all(|&v| (v - 2.0).abs() < 1e-6));
@@ -1401,7 +1401,7 @@ mod tests {
 
     #[test]
     fn test_pack_interleaved_preserves_size() {
-        let packed = vec![0u8; 32]; // 8 rows × 4 bytes
+        let packed = [0u8; 32]; // 8 rows × 4 bytes
         let interleaved = pack_interleaved_4row(&packed, 16, 8);
         assert_eq!(interleaved.len(), packed.len());
     }
@@ -1409,7 +1409,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "num_rows must be multiple of 4")]
     fn test_pack_interleaved_bad_rows() {
-        let packed = vec![0u8; 3];
+        let packed = [0u8; 3];
         let _ = pack_interleaved_4row(&packed, 4, 3);
     }
 
@@ -1516,16 +1516,16 @@ mod tests {
 
     #[test]
     fn test_accumulate_16_elements() {
-        let packed = vec![0x55u8; 4]; // 16 all-positive
-        let mut acc = vec![1.0f32; 16];
+        let packed = [0x55u8; 4]; // 16 all-positive
+        let mut acc = [1.0f32; 16];
         dequant_i2s_block_accumulate(&packed, 2.0, 16, &mut acc);
         assert!(acc.iter().all(|&v| (v - 3.0).abs() < 1e-6));
     }
 
     #[test]
     fn test_accumulate_32_elements() {
-        let packed = vec![0xFFu8; 8]; // 32 all-negative
-        let mut acc = vec![5.0f32; 32];
+        let packed = [0xFFu8; 8]; // 32 all-negative
+        let mut acc = [5.0f32; 32];
         dequant_i2s_block_accumulate(&packed, 1.0, 32, &mut acc);
         assert!(acc.iter().all(|&v| (v - 4.0).abs() < 1e-6));
     }
@@ -1643,7 +1643,7 @@ mod tests {
     #[test]
     fn test_v2_block_256_matches_reference() {
         let packed: Vec<u8> = (0..64).map(|i| (i * 41 + 3) as u8).collect();
-        let mut out = vec![0.0f32; 256];
+        let mut out = [0.0f32; 256];
         dequant_i2s_block_v2(&packed, 1.23, 256, &mut out);
         let expected = reference_dequant(&packed, 1.23, 256);
         assert_f32_eq(&out, &expected, 1e-5);
@@ -1652,7 +1652,7 @@ mod tests {
     #[test]
     fn test_v2_block_1024_matches_reference() {
         let packed: Vec<u8> = (0..256).map(|i| (i * 17 + 5) as u8).collect();
-        let mut out = vec![0.0f32; 1024];
+        let mut out = [0.0f32; 1024];
         dequant_i2s_block_v2(&packed, 0.001, 1024, &mut out);
         let expected = reference_dequant(&packed, 0.001, 1024);
         assert_f32_eq(&out, &expected, 1e-7);
@@ -1689,8 +1689,8 @@ mod tests {
 
     #[test]
     fn test_zero_point_large_block() {
-        let packed = vec![0x55u8; 8]; // 32 all-positive
-        let mut out = vec![0.0f32; 32];
+        let packed = [0x55u8; 8]; // 32 all-positive
+        let mut out = [0.0f32; 32];
         dequant_with_zero_point(&packed, 2.0, 1.0, 32, &mut out);
         // dequant=1.0, (1.0 - 1.0)*2.0 = 0.0
         assert!(out.iter().all(|&v| v.abs() < 1e-6));

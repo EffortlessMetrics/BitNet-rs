@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn test_stable_basic() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_stable(&input, &mut output) };
         assert_sums_to_one(&output, 1e-3, "basic sum");
         for w in output.windows(2) {
@@ -587,7 +587,7 @@ mod tests {
     #[test]
     fn test_stable_large_values() {
         let input = [1000.0, 1001.0, 1002.0, 1003.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_stable(&input, &mut output) };
         assert_sums_to_one(&output, 1e-3, "large");
         assert_all_finite(&output, "large");
@@ -596,7 +596,7 @@ mod tests {
     #[test]
     fn test_stable_negative_values() {
         let input = [-100.0, -50.0, -10.0, 0.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_stable(&input, &mut output) };
         assert_sums_to_one(&output, 1e-3, "negative");
         assert_all_finite(&output, "negative");
@@ -605,7 +605,7 @@ mod tests {
     #[test]
     fn test_stable_uniform() {
         let input = [5.0; 8];
-        let mut output = vec![0.0; 8];
+        let mut output = [0.0; 8];
         unsafe { softmax_stable(&input, &mut output) };
         let expected = 1.0 / 8.0;
         for (i, &v) in output.iter().enumerate() {
@@ -642,7 +642,7 @@ mod tests {
     #[test]
     fn test_masked_causal() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_masked(&input, &mut output, MaskType::Causal { row: 1 }, None) };
         // Positions 2 and 3 should be zero (masked out).
         assert_close(output[2], 0.0, 1e-6, "causal[2]");
@@ -656,7 +656,7 @@ mod tests {
     fn test_masked_padding() {
         let input = [1.0, 2.0, 3.0, 4.0];
         let mask = [true, false, true, false];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_masked(&input, &mut output, MaskType::Padding, Some(&mask)) };
         assert_close(output[1], 0.0, 1e-6, "pad[1]");
         assert_close(output[3], 0.0, 1e-6, "pad[3]");
@@ -676,7 +676,7 @@ mod tests {
     #[test]
     fn test_log_softmax_basic() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut log_out = vec![0.0; 4];
+        let mut log_out = [0.0; 4];
         unsafe { log_softmax_stable(&input, &mut log_out) };
         // All log-softmax values must be <= 0.
         for (i, &v) in log_out.iter().enumerate() {
@@ -690,9 +690,9 @@ mod tests {
     #[test]
     fn test_log_softmax_parity() {
         let input = [0.5, 1.5, -0.5, 2.0, 0.0];
-        let mut softmax_out = vec![0.0; 5];
+        let mut softmax_out = [0.0; 5];
         unsafe { softmax_stable(&input, &mut softmax_out) };
-        let mut log_out = vec![0.0; 5];
+        let mut log_out = [0.0; 5];
         unsafe { log_softmax_stable(&input, &mut log_out) };
 
         for (i, (&s, &l)) in softmax_out.iter().zip(log_out.iter()).enumerate() {
@@ -712,8 +712,8 @@ mod tests {
     #[test]
     fn test_temperature_one() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut t1 = vec![0.0; 4];
-        let mut plain = vec![0.0; 4];
+        let mut t1 = [0.0; 4];
+        let mut plain = [0.0; 4];
         unsafe {
             softmax_with_temperature(&input, &mut t1, 1.0);
             softmax_stable(&input, &mut plain);
@@ -726,7 +726,7 @@ mod tests {
     #[test]
     fn test_temperature_high_flattens() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { softmax_with_temperature(&input, &mut out, 100.0) };
         // High temperature → near-uniform.
         let expected = 0.25;
@@ -738,7 +738,7 @@ mod tests {
     #[test]
     fn test_temperature_low_sharpens() {
         let input = [1.0, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         unsafe { softmax_with_temperature(&input, &mut out, 0.01) };
         // Low temperature → argmax dominates.
         assert!(out[3] > 0.99, "expected argmax to dominate, got {}", out[3]);
@@ -748,7 +748,7 @@ mod tests {
     #[should_panic(expected = "temperature must be positive")]
     fn test_temperature_zero_panics() {
         let input = [1.0, 2.0];
-        let mut out = vec![0.0; 2];
+        let mut out = [0.0; 2];
         unsafe { softmax_with_temperature(&input, &mut out, 0.0) };
     }
 
@@ -818,8 +818,8 @@ mod tests {
     #[test]
     fn test_multi_head_single() {
         let data = [1.0, 2.0, 3.0, 4.0];
-        let mut single = vec![0.0; 4];
-        let mut multi = vec![0.0; 4];
+        let mut single = [0.0; 4];
+        let mut multi = [0.0; 4];
         unsafe {
             softmax_stable(&data, &mut single);
             multi_head_softmax(&data, &mut multi, 1, 4);
@@ -854,7 +854,7 @@ mod tests {
 
     #[test]
     fn test_inplace_single() {
-        let mut data = vec![99.0];
+        let mut data = [99.0];
         unsafe { softmax_stable_inplace(&mut data) };
         assert_close(data[0], 1.0, 1e-5, "inplace single");
     }
@@ -864,7 +864,7 @@ mod tests {
     #[test]
     fn test_extreme_range_no_nan() {
         let input = [-1e6, 0.0, 1e6];
-        let mut output = vec![0.0; 3];
+        let mut output = [0.0; 3];
         unsafe { softmax_stable(&input, &mut output) };
         assert_all_finite(&output, "extreme range");
         assert_sums_to_one(&output, 1e-3, "extreme range");
@@ -875,7 +875,7 @@ mod tests {
         // All -inf should not produce NaN; behaviour is technically
         // undefined (0/0) but we accept any finite or NaN result.
         let input = [f32::NEG_INFINITY; 4];
-        let mut output = vec![0.0; 4];
+        let mut output = [0.0; 4];
         unsafe { softmax_stable(&input, &mut output) };
         // Just assert no panic occurred.
     }

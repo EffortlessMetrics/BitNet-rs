@@ -1037,7 +1037,7 @@ mod tests {
 
     #[test]
     fn test_sinusoidal_pe_at_zero() {
-        let mut pe = vec![0.0f32; 4];
+        let mut pe = [0.0f32; 4];
         compute_sinusoidal_pe(0, 4, &mut pe);
         // sin(0) = 0, cos(0) = 1
         assert!((pe[0] - 0.0).abs() < 1e-6);
@@ -1073,11 +1073,11 @@ mod tests {
     #[test]
     fn test_embedding_with_position_basic() {
         // All-zero table so output == PE only.
-        let table = vec![0.0f32; 6]; // vocab=2, dim=3
+        let table = [0.0f32; 6]; // vocab=2, dim=3
         let cfg = CpuEmbeddingConfig::new(2, 3);
         let result = embedding_with_position(&table, &[0], &cfg, 1).unwrap();
 
-        let mut expected = vec![0.0f32; 3];
+        let mut expected = [0.0f32; 3];
         compute_sinusoidal_pe(1, 3, &mut expected);
         for (a, b) in result.iter().zip(expected.iter()) {
             assert!((a - b).abs() < 1e-6);
@@ -1093,7 +1093,7 @@ mod tests {
         let cfg = CpuEmbeddingConfig::new(2, 3);
         let result = embedding_with_position(&table, &[0], &cfg, 0).unwrap();
 
-        let mut pe = vec![0.0f32; 3];
+        let mut pe = [0.0f32; 3];
         compute_sinusoidal_pe(0, 3, &mut pe);
         assert!((result[0] - (1.0 + pe[0])).abs() < 1e-6);
         assert!((result[1] - (2.0 + pe[1])).abs() < 1e-6);
@@ -1102,7 +1102,7 @@ mod tests {
 
     #[test]
     fn test_embedding_with_position_offset() {
-        let table = vec![0.0f32; 4]; // vocab=2, dim=2
+        let table = [0.0f32; 4]; // vocab=2, dim=2
         let cfg = CpuEmbeddingConfig::new(2, 2);
         let r0 = embedding_with_position(&table, &[0], &cfg, 0).unwrap();
         let r5 = embedding_with_position(&table, &[0], &cfg, 5).unwrap();
@@ -1133,7 +1133,7 @@ mod tests {
 
     #[test]
     fn test_embedding_with_position_batch() {
-        let table = vec![0.0f32; 8]; // vocab=4, dim=2
+        let table = [0.0f32; 8]; // vocab=4, dim=2
         let cfg = CpuEmbeddingConfig::new(4, 2);
         let result = embedding_with_position(&table, &[0, 1, 2, 3], &cfg, 0).unwrap();
         assert_eq!(result.len(), 8);
@@ -1401,7 +1401,7 @@ mod tests {
 
     #[test]
     fn test_bag_sum_empty_offsets() {
-        let table = vec![1.0];
+        let table = [1.0];
         let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
         let out = embedding_bag_sum(&table, &[0], &[], &cfg).unwrap();
         assert!(out.is_empty());
@@ -1477,7 +1477,7 @@ mod tests {
 
     #[test]
     fn test_bag_mean_empty_bag_at_end() {
-        let table = vec![4.0];
+        let table = [4.0];
         let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
         let out = embedding_bag_mean(&table, &[0], &[0, 1], &cfg).unwrap();
         // Bag 0 = mean([4.0]) = 4.0, Bag 1 = empty → 0.0
@@ -1503,7 +1503,7 @@ mod tests {
 
     #[test]
     fn test_bag_mean_oob() {
-        let table = vec![1.0];
+        let table = [1.0];
         let cfg = EmbeddingConfig { vocab_size: 1, embedding_dim: 1, padding_idx: None };
         assert!(embedding_bag_mean(&table, &[9], &[0], &cfg).is_err());
     }
@@ -1552,7 +1552,7 @@ mod tests {
     fn test_positional_embedding_bounded_values() {
         let pe = positional_embedding(100, 64);
         for &v in &pe {
-            assert!(v >= -1.0 && v <= 1.0, "PE value {v} out of [-1,1]");
+            assert!((-1.0..=1.0).contains(&v), "PE value {v} out of [-1,1]");
         }
     }
 
@@ -1586,7 +1586,7 @@ mod tests {
         assert_eq!(pe.len(), 4000);
         // Values should still be bounded
         for &v in &pe {
-            assert!(v >= -1.0 && v <= 1.0);
+            assert!((-1.0..=1.0).contains(&v));
         }
     }
 
@@ -1833,7 +1833,7 @@ mod tests {
     #[test]
     fn test_add_pe_zero_encoding_is_identity() {
         let mut emb = vec![5.0, 6.0, 7.0, 8.0];
-        let pe = vec![0.0; 4];
+        let pe = [0.0; 4];
         let orig = emb.clone();
         add_positional_encoding(&mut emb, &pe, 2, 2);
         assert_eq!(emb, orig);

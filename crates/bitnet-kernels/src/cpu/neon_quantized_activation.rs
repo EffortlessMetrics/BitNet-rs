@@ -572,7 +572,7 @@ mod tests {
     #[test]
     fn test_relu_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_relu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert_eq!(*o, if *x > 0.0 { *x } else { 0.0 });
@@ -582,7 +582,7 @@ mod tests {
     #[test]
     fn test_relu_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_relu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert_eq!(*o, if *x > 0.0 { *x } else { 0.0 });
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn test_relu_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_relu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert_eq!(*o, if *x > 0.0 { *x } else { 0.0 });
@@ -657,7 +657,7 @@ mod tests {
     #[test]
     fn test_sigmoid_size_8() {
         let input = make_input(8);
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_sigmoid(*x), EPS), "sigmoid({x}): got {o}");
@@ -667,7 +667,7 @@ mod tests {
     #[test]
     fn test_sigmoid_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_sigmoid(*x), EPS));
@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn test_sigmoid_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_sigmoid(*x), EPS));
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn test_sigmoid_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_sigmoid(*x), EPS));
@@ -756,7 +756,7 @@ mod tests {
     #[test]
     fn test_tanh_size_8() {
         let input = make_input(8);
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_tanh_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_tanh(*x), EPS));
@@ -766,7 +766,7 @@ mod tests {
     #[test]
     fn test_tanh_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_tanh_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_tanh(*x), EPS));
@@ -776,7 +776,7 @@ mod tests {
     #[test]
     fn test_tanh_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_tanh_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_tanh(*x), EPS));
@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn test_tanh_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_tanh_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_tanh(*x), EPS));
@@ -855,7 +855,7 @@ mod tests {
     #[test]
     fn test_silu_size_8() {
         let input = make_input(8);
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_silu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_silu(*x), EPS));
@@ -865,7 +865,7 @@ mod tests {
     #[test]
     fn test_silu_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_silu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_silu(*x), EPS));
@@ -875,7 +875,7 @@ mod tests {
     #[test]
     fn test_silu_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_silu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_silu(*x), EPS));
@@ -885,7 +885,7 @@ mod tests {
     #[test]
     fn test_silu_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_silu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_silu(*x), EPS));
@@ -949,7 +949,7 @@ mod tests {
     #[test]
     fn test_gelu_size_8() {
         let input = make_input(8);
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_gelu(*x), EPS));
@@ -959,7 +959,7 @@ mod tests {
     #[test]
     fn test_gelu_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_gelu(*x), EPS));
@@ -969,7 +969,7 @@ mod tests {
     #[test]
     fn test_gelu_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_gelu(*x), EPS));
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn test_gelu_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_gelu(*x), EPS));
@@ -1030,7 +1030,7 @@ mod tests {
     fn test_gelu_accuracy() {
         // Sweep to verify max error < 1e-3
         let input: Vec<f32> = (0..200).map(|i| (i as f32 - 100.0) * 0.05).collect();
-        let mut output = vec![0.0_f32; 200];
+        let mut output = [0.0_f32; 200];
         unsafe { neon_gelu_f32(&input, &mut output) };
         let mut max_err: f32 = 0.0;
         for (x, o) in input.iter().zip(output.iter()) {
@@ -1063,7 +1063,7 @@ mod tests {
     #[test]
     fn test_fast_gelu_size_8() {
         let input = make_input(8);
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_fast_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_fast_gelu(*x), EPS));
@@ -1073,7 +1073,7 @@ mod tests {
     #[test]
     fn test_fast_gelu_size_16() {
         let input = make_input(16);
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_fast_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_fast_gelu(*x), EPS));
@@ -1083,7 +1083,7 @@ mod tests {
     #[test]
     fn test_fast_gelu_size_100() {
         let input = make_input(100);
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_fast_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_fast_gelu(*x), EPS));
@@ -1093,7 +1093,7 @@ mod tests {
     #[test]
     fn test_fast_gelu_size_1000() {
         let input = make_input(1000);
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_fast_gelu_f32(&input, &mut output) };
         for (x, o) in input.iter().zip(output.iter()) {
             assert!(approx_eq(*o, ref_fast_gelu(*x), EPS));
@@ -1113,7 +1113,7 @@ mod tests {
     #[test]
     fn test_fast_gelu_accuracy() {
         let input: Vec<f32> = (0..200).map(|i| (i as f32 - 100.0) * 0.05).collect();
-        let mut output = vec![0.0_f32; 200];
+        let mut output = [0.0_f32; 200];
         unsafe { neon_fast_gelu_f32(&input, &mut output) };
         let mut max_err: f32 = 0.0;
         for (x, o) in input.iter().zip(output.iter()) {
@@ -1155,7 +1155,7 @@ mod tests {
     fn test_swiglu_size_8() {
         let gate = make_input(8);
         let up: Vec<f32> = gate.iter().map(|x| x + 1.0).collect();
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_swiglu_f32(&gate, &up, &mut output) };
         for i in 0..8 {
             let expected = ref_silu(gate[i]) * up[i];
@@ -1167,7 +1167,7 @@ mod tests {
     fn test_swiglu_size_16() {
         let gate = make_input(16);
         let up: Vec<f32> = gate.iter().map(|x| x * 0.5 + 1.0).collect();
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_swiglu_f32(&gate, &up, &mut output) };
         for i in 0..16 {
             let expected = ref_silu(gate[i]) * up[i];
@@ -1179,7 +1179,7 @@ mod tests {
     fn test_swiglu_size_100() {
         let gate = make_input(100);
         let up: Vec<f32> = gate.iter().map(|x| x * 2.0).collect();
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_swiglu_f32(&gate, &up, &mut output) };
         for i in 0..100 {
             let expected = ref_silu(gate[i]) * up[i];
@@ -1191,7 +1191,7 @@ mod tests {
     fn test_swiglu_size_1000() {
         let gate = make_input(1000);
         let up: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.01).collect();
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_swiglu_f32(&gate, &up, &mut output) };
         for i in 0..1000 {
             let expected = ref_silu(gate[i]) * up[i];
@@ -1277,7 +1277,7 @@ mod tests {
     fn test_geglu_size_8() {
         let gate = make_input(8);
         let up: Vec<f32> = gate.iter().map(|x| x + 1.0).collect();
-        let mut output = vec![0.0_f32; 8];
+        let mut output = [0.0_f32; 8];
         unsafe { neon_geglu_f32(&gate, &up, &mut output) };
         for i in 0..8 {
             let expected = ref_gelu(gate[i]) * up[i];
@@ -1289,7 +1289,7 @@ mod tests {
     fn test_geglu_size_16() {
         let gate = make_input(16);
         let up: Vec<f32> = gate.iter().map(|x| x * 0.5 + 1.0).collect();
-        let mut output = vec![0.0_f32; 16];
+        let mut output = [0.0_f32; 16];
         unsafe { neon_geglu_f32(&gate, &up, &mut output) };
         for i in 0..16 {
             let expected = ref_gelu(gate[i]) * up[i];
@@ -1301,7 +1301,7 @@ mod tests {
     fn test_geglu_size_100() {
         let gate = make_input(100);
         let up: Vec<f32> = gate.iter().map(|x| x * 2.0).collect();
-        let mut output = vec![0.0_f32; 100];
+        let mut output = [0.0_f32; 100];
         unsafe { neon_geglu_f32(&gate, &up, &mut output) };
         for i in 0..100 {
             let expected = ref_gelu(gate[i]) * up[i];
@@ -1313,7 +1313,7 @@ mod tests {
     fn test_geglu_size_1000() {
         let gate = make_input(1000);
         let up: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.01).collect();
-        let mut output = vec![0.0_f32; 1000];
+        let mut output = [0.0_f32; 1000];
         unsafe { neon_geglu_f32(&gate, &up, &mut output) };
         for i in 0..1000 {
             let expected = ref_gelu(gate[i]) * up[i];
@@ -1372,7 +1372,7 @@ mod tests {
     #[test]
     fn test_sigmoid_accuracy() {
         let input: Vec<f32> = (0..200).map(|i| (i as f32 - 100.0) * 0.1).collect();
-        let mut output = vec![0.0_f32; 200];
+        let mut output = [0.0_f32; 200];
         unsafe { neon_sigmoid_f32(&input, &mut output) };
         let mut max_err: f32 = 0.0;
         for (x, o) in input.iter().zip(output.iter()) {
@@ -1387,7 +1387,7 @@ mod tests {
     #[test]
     fn test_tanh_accuracy() {
         let input: Vec<f32> = (0..200).map(|i| (i as f32 - 100.0) * 0.05).collect();
-        let mut output = vec![0.0_f32; 200];
+        let mut output = [0.0_f32; 200];
         unsafe { neon_tanh_f32(&input, &mut output) };
         let mut max_err: f32 = 0.0;
         for (x, o) in input.iter().zip(output.iter()) {

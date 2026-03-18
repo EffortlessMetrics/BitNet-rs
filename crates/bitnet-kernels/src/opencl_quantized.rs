@@ -901,7 +901,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, 0, 0, 1];
         let (packed, scales) = build_test_data(&weights, 2, 2, 32, 1.0);
         let x = vec![3.0f32, 5.0];
-        let mut y = vec![0.0f32; 2];
+        let mut y = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 2, 2, 32);
         assert!((y[0] - 3.0).abs() < 1e-6);
         assert!((y[1] - 5.0).abs() < 1e-6);
@@ -913,7 +913,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, 1, 1, 1];
         let (packed, scales) = build_test_data(&weights, 2, 2, 32, 1.0);
         let x = vec![2.0f32, 3.0];
-        let mut y = vec![0.0f32; 2];
+        let mut y = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 2, 2, 32);
         assert!((y[0] - 5.0).abs() < 1e-6);
         assert!((y[1] - 5.0).abs() < 1e-6);
@@ -925,7 +925,7 @@ mod tests {
         let weights: Vec<i8> = vec![-1, -1, -1, -1];
         let (packed, scales) = build_test_data(&weights, 2, 2, 32, 1.0);
         let x = vec![2.0f32, 3.0];
-        let mut y = vec![0.0f32; 2];
+        let mut y = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 2, 2, 32);
         assert!((y[0] + 5.0).abs() < 1e-6);
         assert!((y[1] + 5.0).abs() < 1e-6);
@@ -943,7 +943,7 @@ mod tests {
         ];
         let (packed, scales) = build_test_data(&weights, 4, 4, 32, 1.0);
         let x = vec![1.0f32, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 4, 4, 32);
         for i in 0..4 {
             assert!((y[i] - x[i]).abs() < 1e-6, "y[{i}] = {} expected {}", y[i], x[i]);
@@ -955,8 +955,8 @@ mod tests {
         // W = [[1, -1, 0], [-1, 1, 1]], x = [1,1,1] → y = [0, 1]
         let weights: Vec<i8> = vec![1, -1, 0, -1, 1, 1];
         let (packed, scales) = build_test_data(&weights, 2, 3, 32, 1.0);
-        let x = vec![1.0f32; 3];
-        let mut y = vec![0.0f32; 2];
+        let x = [1.0f32; 3];
+        let mut y = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 2, 3, 32);
         assert!((y[0] - 0.0).abs() < 1e-6);
         assert!((y[1] - 1.0).abs() < 1e-6);
@@ -1038,7 +1038,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, -1, 1, -1];
         let (packed, scales) = build_test_data(&weights, 1, 4, 32, 1.0);
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, 4, 32);
         // 1*1 + (-1)*2 + 1*3 + (-1)*4 = 1 - 2 + 3 - 4 = -2
         assert!((y[0] + 2.0).abs() < 1e-6);
@@ -1049,7 +1049,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, -1, 0];
         let (packed, scales) = build_test_data(&weights, 3, 1, 32, 1.0);
         let x = vec![5.0f32];
-        let mut y = vec![0.0f32; 3];
+        let mut y = [0.0f32; 3];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 3, 1, 32);
         assert!((y[0] - 5.0).abs() < 1e-6);
         assert!((y[1] + 5.0).abs() < 1e-6);
@@ -1062,7 +1062,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, 0, -1, -1, 1, 0];
         let (packed, scales) = build_test_data(&weights, 2, 3, 32, 1.0);
         let x = vec![1.0, 2.0, 3.0];
-        let mut y = vec![0.0f32; 2];
+        let mut y = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 2, 3, 32);
         // row0: 1*1 + 0*2 + (-1)*3 = -2
         // row1: (-1)*1 + 1*2 + 0*3 = 1
@@ -1075,7 +1075,7 @@ mod tests {
         let weights: Vec<i8> = vec![1, 1, 1, 1, 1];
         let (packed, scales) = build_test_data(&weights, 1, 5, 32, 1.0);
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, 5, 32);
         assert!((y[0] - 15.0).abs() < 1e-6);
     }
@@ -1085,7 +1085,7 @@ mod tests {
         let weights: Vec<i8> = vec![1];
         let (packed, scales) = build_test_data(&weights, 1, 1, 32, 2.0);
         let x = vec![7.0f32];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, 1, 32);
         assert!((y[0] - 14.0).abs() < 1e-6);
     }
@@ -1095,7 +1095,7 @@ mod tests {
         let weights: Vec<i8> = vec![0; 16];
         let (packed, scales) = build_test_data(&weights, 4, 4, 32, 1.0);
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 4];
+        let mut y = [0.0f32; 4];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 4, 4, 32);
         for val in &y {
             assert!((val - 0.0).abs() < 1e-6);
@@ -1106,8 +1106,8 @@ mod tests {
     fn test_matvec_zero_input() {
         let weights: Vec<i8> = vec![1, -1, 0, 1];
         let (packed, scales) = build_test_data(&weights, 1, 4, 32, 1.0);
-        let x = vec![0.0f32; 4];
-        let mut y = vec![0.0f32; 1];
+        let x = [0.0f32; 4];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, 4, 32);
         assert!((y[0]).abs() < 1e-6);
     }
@@ -1118,7 +1118,7 @@ mod tests {
         let packed = I2sPackedFormat::pack(&weights);
         let scales = vec![0.0f32];
         let x = vec![1.0, 2.0, 3.0, 4.0];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, 4, 32);
         assert!((y[0]).abs() < 1e-6);
     }
@@ -1159,8 +1159,8 @@ mod tests {
         let weights: Vec<i8> = (0..cols).map(|i| (i % 3) as i8 - 1).collect();
         let (packed, scales) = build_test_data(&weights, 1, cols, 256, 1.0);
         let x = vec![1.0f32; cols];
-        let mut y_ref = vec![0.0f32; 1];
-        let mut y_opt = vec![0.0f32; 1];
+        let mut y_ref = [0.0f32; 1];
+        let mut y_opt = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y_ref, 1, cols, 256);
         QuantizedMatVecCpu::matvec_block_opt(&packed, &scales, &x, &mut y_opt, 1, cols, 256);
         assert!((y_ref[0] - y_opt[0]).abs() < 1e-4);
@@ -1172,8 +1172,8 @@ mod tests {
         let weights: Vec<i8> = (0..cols).map(|i| (i % 3) as i8 - 1).collect();
         let (packed, scales) = build_test_data(&weights, 1, cols, 256, 0.5);
         let x: Vec<f32> = (0..cols).map(|i| (i as f32) * 0.01).collect();
-        let mut y_ref = vec![0.0f32; 1];
-        let mut y_opt = vec![0.0f32; 1];
+        let mut y_ref = [0.0f32; 1];
+        let mut y_opt = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y_ref, 1, cols, 256);
         QuantizedMatVecCpu::matvec_block_opt(&packed, &scales, &x, &mut y_opt, 1, cols, 256);
         assert!((y_ref[0] - y_opt[0]).abs() < 1e-3);
@@ -1195,7 +1195,7 @@ mod tests {
         let weights: Vec<i8> = (0..cols).map(|i| (i % 3) as i8 - 1).collect();
         let (packed, scales) = build_test_data(&weights, 1, cols, 32, 1.0);
         let x = vec![1.0f32; cols];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, cols, 32);
         // Known sum: 11×(-1) + 10×0 + 11×1 = 0
         // Indices 0..32 mod 3: pattern -1,0,1 repeats ⌊32/3⌋=10 full + 2 remain(-1,0)
@@ -1209,7 +1209,7 @@ mod tests {
         let weights: Vec<i8> = vec![1; cols];
         let (packed, scales) = build_test_data(&weights, 1, cols, 32, 0.5);
         let x = vec![1.0f32; cols];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y, 1, cols, 32);
         // All +1 × scale 0.5 × input 1.0 → 64 × 0.5 = 32.0
         assert!((y[0] - 32.0).abs() < 1e-4, "y[0] = {}", y[0]);
@@ -1295,8 +1295,8 @@ mod tests {
     #[test]
     fn test_build_test_data_scale_value() {
         let weights: Vec<i8> = vec![0; 4];
-        let (_, scales) = build_test_data(&weights, 1, 4, 32, 3.14);
-        assert!((scales[0] - 3.14).abs() < 1e-6);
+        let (_, scales) = build_test_data(&weights, 1, 4, 32, 1.5);
+        assert!((scales[0] - 1.5).abs() < 1e-6);
     }
 
     // ── Bench reference ─────────────────────────────────────────────────
@@ -1314,13 +1314,13 @@ mod tests {
     #[test]
     fn test_scale_doubles_output() {
         let weights: Vec<i8> = vec![1, 1, 1, 1];
-        let x = vec![1.0f32; 4];
+        let x = [1.0f32; 4];
 
         let (packed1, scales1) = build_test_data(&weights, 1, 4, 32, 1.0);
         let (packed2, scales2) = build_test_data(&weights, 1, 4, 32, 2.0);
 
-        let mut y1 = vec![0.0f32; 1];
-        let mut y2 = vec![0.0f32; 1];
+        let mut y1 = [0.0f32; 1];
+        let mut y2 = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_ref(&packed1, &scales1, &x, &mut y1, 1, 4, 32);
         QuantizedMatVecCpu::matvec_ref(&packed2, &scales2, &x, &mut y2, 1, 4, 32);
         assert!((y2[0] - 2.0 * y1[0]).abs() < 1e-6);
@@ -1333,8 +1333,8 @@ mod tests {
         let weights: Vec<i8> = vec![1, 0, -1, -1, 1, 0];
         let (packed, scales) = build_test_data(&weights, 2, 3, 32, 1.0);
         let x = vec![1.0, 2.0, 3.0];
-        let mut y_ref = vec![0.0f32; 2];
-        let mut y_opt = vec![0.0f32; 2];
+        let mut y_ref = [0.0f32; 2];
+        let mut y_opt = [0.0f32; 2];
         QuantizedMatVecCpu::matvec_ref(&packed, &scales, &x, &mut y_ref, 2, 3, 32);
         QuantizedMatVecCpu::matvec_block_opt(&packed, &scales, &x, &mut y_opt, 2, 3, 32);
         for i in 0..2 {
@@ -1352,7 +1352,7 @@ mod tests {
         let weights: Vec<i8> = vec![1];
         let (packed, scales) = build_test_data(&weights, 1, 1, 32, 3.0);
         let x = vec![2.0f32];
-        let mut y = vec![0.0f32; 1];
+        let mut y = [0.0f32; 1];
         QuantizedMatVecCpu::matvec_block_opt(&packed, &scales, &x, &mut y, 1, 1, 32);
         assert!((y[0] - 6.0).abs() < 1e-6);
     }

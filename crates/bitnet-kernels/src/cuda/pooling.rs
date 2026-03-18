@@ -1185,7 +1185,7 @@ mod tests {
     #[test]
     fn avg_pool2d_numerical_precision() {
         let cfg = Pool2dConfig::new(1, 1, 4, 4, 4, 4, 1, 1, 0, 0).unwrap();
-        let input = vec![0.1_f32; 16];
+        let input = [0.1_f32; 16];
         let mut output = vec![0.0; cfg.output_numel()];
         avg_pool2d_cpu(&input, &mut output, &cfg).unwrap();
         assert!((output[0] - 0.1).abs() < 1e-5);
@@ -1212,7 +1212,7 @@ mod tests {
     fn adaptive_avg_pool2d_global() {
         let cfg = AdaptivePool2dConfig::new(1, 1, 4, 4, 1, 1).unwrap();
         let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-        let mut output = vec![0.0; 1];
+        let mut output = [0.0; 1];
         adaptive_avg_pool2d_cpu(&input, &mut output, &cfg).unwrap();
         assert!((output[0] - 8.5).abs() < TOL);
     }
@@ -1221,7 +1221,7 @@ mod tests {
     fn adaptive_avg_pool2d_identity() {
         let cfg = AdaptivePool2dConfig::new(1, 1, 3, 3, 3, 3).unwrap();
         let input: Vec<f32> = (1..=9).map(|x| x as f32).collect();
-        let mut output = vec![0.0; 9];
+        let mut output = [0.0; 9];
         adaptive_avg_pool2d_cpu(&input, &mut output, &cfg).unwrap();
         assert!(approx_eq(&output, &input, TOL));
     }
@@ -1365,7 +1365,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_pooling_max_launch() {
         let cfg = PoolingConfig::new(CudaPoolType::Max, 1024, 4, 4, 0).unwrap();
-        let input = vec![1.0_f32; 1024];
+        let input = [1.0_f32; 1024];
         let mut output = vec![0.0_f32; cfg.output_len()];
         let result = launch_pooling(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA max pooling launch failed: {result:?}");
@@ -1375,7 +1375,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_pooling_avg_launch() {
         let cfg = PoolingConfig::new(CudaPoolType::Average, 1024, 4, 4, 0).unwrap();
-        let input = vec![1.0_f32; 1024];
+        let input = [1.0_f32; 1024];
         let mut output = vec![0.0_f32; cfg.output_len()];
         let result = launch_pooling(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA avg pooling launch failed: {result:?}");
@@ -1385,7 +1385,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_max_pool2d_launch() {
         let cfg = Pool2dConfig::new(1, 1, 8, 8, 2, 2, 2, 2, 0, 0).unwrap();
-        let input = vec![1.0_f32; 64];
+        let input = [1.0_f32; 64];
         let mut output = vec![0.0_f32; cfg.output_numel()];
         let result = launch_max_pool2d(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA max_pool2d launch failed: {result:?}");
@@ -1395,7 +1395,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_avg_pool2d_launch() {
         let cfg = Pool2dConfig::new(1, 1, 8, 8, 2, 2, 2, 2, 0, 0).unwrap();
-        let input = vec![1.0_f32; 64];
+        let input = [1.0_f32; 64];
         let mut output = vec![0.0_f32; cfg.output_numel()];
         let result = launch_avg_pool2d(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA avg_pool2d launch failed: {result:?}");
@@ -1405,7 +1405,7 @@ mod tests {
     #[ignore = "requires CUDA runtime — run with --features gpu on GPU hardware"]
     fn cuda_adaptive_avg_pool2d_launch() {
         let cfg = AdaptivePool2dConfig::new(1, 1, 8, 8, 2, 2).unwrap();
-        let input = vec![1.0_f32; 64];
+        let input = [1.0_f32; 64];
         let mut output = vec![0.0_f32; cfg.output_numel()];
         let result = launch_adaptive_avg_pool2d(&input, &mut output, &cfg);
         assert!(result.is_ok(), "CUDA adaptive launch failed: {result:?}");

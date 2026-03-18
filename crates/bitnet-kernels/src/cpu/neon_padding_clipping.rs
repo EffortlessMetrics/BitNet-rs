@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_zero_pad_basic() {
         let input = [1.0f32, 2.0, 3.0, 4.0];
-        let mut out = vec![0.0f32; 8];
+        let mut out = [0.0f32; 8];
         unsafe { neon_zero_pad(&input, &mut out, 4, 2, 2) };
         assert_eq!(out, [0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 0.0]);
     }
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn test_zero_pad_no_padding() {
         let input = [5.0f32, 6.0, 7.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         unsafe { neon_zero_pad(&input, &mut out, 3, 0, 0) };
         assert_eq!(out, [5.0, 6.0, 7.0]);
     }
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn test_zero_pad_only_before() {
         let input = [1.0f32, 2.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         unsafe { neon_zero_pad(&input, &mut out, 2, 4, 0) };
         assert_eq!(out, [0.0, 0.0, 0.0, 0.0, 1.0, 2.0]);
     }
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_zero_pad_empty_input() {
         let input: &[f32] = &[];
-        let mut out = vec![0.0f32; 4];
+        let mut out = [0.0f32; 4];
         unsafe { neon_zero_pad(input, &mut out, 0, 2, 2) };
         assert_eq!(out, [0.0, 0.0, 0.0, 0.0]);
     }
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn test_reflect_pad_basic() {
         let input = [1.0f32, 2.0, 3.0, 4.0, 5.0];
-        let mut out = vec![0.0f32; 9];
+        let mut out = [0.0f32; 9];
         // pad_before=2 → mirror indices 2,1 → [3,2]
         // pad_after=2  → mirror indices 3,2 → [4,3]
         unsafe { neon_reflect_pad(&input, &mut out, 5, 2, 2) };
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_reflect_pad_single_each_side() {
         let input = [10.0f32, 20.0, 30.0];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         unsafe { neon_reflect_pad(&input, &mut out, 3, 1, 1) };
         assert_eq!(out, [20.0, 10.0, 20.0, 30.0, 20.0]);
     }
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn test_reflect_pad_no_padding() {
         let input = [1.0f32, 2.0, 3.0];
-        let mut out = vec![0.0f32; 3];
+        let mut out = [0.0f32; 3];
         unsafe { neon_reflect_pad(&input, &mut out, 3, 0, 0) };
         assert_eq!(out, [1.0, 2.0, 3.0]);
     }
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn test_clip_basic() {
         let input = [-2.0f32, -0.5, 0.0, 0.5, 1.5, 3.0];
-        let mut out = vec![0.0f32; 6];
+        let mut out = [0.0f32; 6];
         unsafe { neon_clip(&input, &mut out, -1.0, 1.0) };
         assert_eq!(out, [-1.0, -0.5, 0.0, 0.5, 1.0, 1.0]);
     }
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn test_clip_all_within_range() {
         let input = [0.1f32, 0.2, 0.3, 0.4, 0.5];
-        let mut out = vec![0.0f32; 5];
+        let mut out = [0.0f32; 5];
         unsafe { neon_clip(&input, &mut out, 0.0, 1.0) };
         assert_eq!(out, input);
     }

@@ -1306,7 +1306,7 @@ mod tests {
     #[test]
     fn test_shuffle_xor_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b1111).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         data[1] = 20.0;
         data[2] = 30.0;
@@ -1321,7 +1321,7 @@ mod tests {
     #[test]
     fn test_shuffle_xor_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 16];
+        let mut data = [1.0f32; 16];
         assert!(shuffle_xor(&mut data, 1, &cfg).is_err());
     }
 
@@ -1352,7 +1352,7 @@ mod tests {
     #[test]
     fn test_shuffle_down_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 8];
+        let mut data = [1.0f32; 8];
         assert!(shuffle_down(&mut data, 1, &cfg).is_err());
     }
 
@@ -1385,7 +1385,7 @@ mod tests {
     #[test]
     fn test_shuffle_up_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 4];
+        let mut data = [0.0f32; 4];
         assert!(shuffle_up(&mut data, 1, &cfg).is_err());
     }
 
@@ -1404,7 +1404,7 @@ mod tests {
     #[test]
     fn test_shuffle_idx_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b11).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         data[1] = 20.0;
         data[5] = 99.0;
@@ -1417,7 +1417,7 @@ mod tests {
     #[test]
     fn test_shuffle_idx_out_of_range() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         assert!(shuffle_idx(&mut data, 32, &cfg).is_err());
     }
 
@@ -1437,7 +1437,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_sum_zeros() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         butterfly_reduce_sum(&mut data, &cfg).unwrap();
         for &v in &data[..32] {
             assert!(v.abs() < 1e-7);
@@ -1447,7 +1447,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_sum_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0x0F).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 1.0;
         data[1] = 2.0;
         data[2] = 3.0;
@@ -1471,7 +1471,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_sum_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 8];
+        let mut data = [1.0f32; 8];
         assert!(butterfly_reduce_sum(&mut data, &cfg).is_err());
     }
 
@@ -1498,7 +1498,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_max_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b1010).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[1] = 3.0;
         data[3] = 7.0;
         data[0] = 999.0; // inactive
@@ -1511,7 +1511,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_max_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 4];
+        let mut data = [0.0f32; 4];
         assert!(butterfly_reduce_max(&mut data, &cfg).is_err());
     }
 
@@ -1530,7 +1530,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_min_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b1100).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[2] = 5.0;
         data[3] = 2.0;
         data[0] = -999.0; // inactive
@@ -1543,7 +1543,7 @@ mod tests {
     #[test]
     fn test_butterfly_reduce_min_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 4];
+        let mut data = [0.0f32; 4];
         assert!(butterfly_reduce_min(&mut data, &cfg).is_err());
     }
 
@@ -1561,7 +1561,7 @@ mod tests {
     #[test]
     fn test_halving_reduce_sum_zeros() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         halving_reduce_sum(&mut data, &cfg).unwrap();
         assert!(data[0].abs() < 1e-7);
     }
@@ -1569,7 +1569,7 @@ mod tests {
     #[test]
     fn test_halving_reduce_sum_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 10];
+        let mut data = [0.0f32; 10];
         assert!(halving_reduce_sum(&mut data, &cfg).is_err());
     }
 
@@ -1594,7 +1594,7 @@ mod tests {
     #[test]
     fn test_halving_reduce_max_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 2];
+        let mut data = [0.0f32; 2];
         assert!(halving_reduce_max(&mut data, &cfg).is_err());
     }
 
@@ -1603,7 +1603,7 @@ mod tests {
     #[test]
     fn test_inclusive_scan_ones() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         shuffle_inclusive_scan(&mut data, &cfg).unwrap();
         for i in 0..32 {
             assert!((data[i] - (i + 1) as f32).abs() < 1e-5);
@@ -1624,7 +1624,7 @@ mod tests {
     #[test]
     fn test_inclusive_scan_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b10101).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 1.0;
         data[1] = 999.0; // inactive
         data[2] = 2.0;
@@ -1639,7 +1639,7 @@ mod tests {
     #[test]
     fn test_inclusive_scan_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 2];
+        let mut data = [1.0f32; 2];
         assert!(shuffle_inclusive_scan(&mut data, &cfg).is_err());
     }
 
@@ -1648,7 +1648,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_ones() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         shuffle_exclusive_scan(&mut data, &cfg).unwrap();
         for i in 0..32 {
             assert!((data[i] - i as f32).abs() < 1e-5);
@@ -1666,7 +1666,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 3];
+        let mut data = [1.0f32; 3];
         assert!(shuffle_exclusive_scan(&mut data, &cfg).is_err());
     }
 
@@ -1675,7 +1675,7 @@ mod tests {
     #[test]
     fn test_segmented_scan_single_segment() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         let heads: Vec<bool> = (0..32).map(|i| i == 0).collect();
         segmented_inclusive_scan(&mut data, &heads, &cfg).unwrap();
         for i in 0..32 {
@@ -1686,7 +1686,7 @@ mod tests {
     #[test]
     fn test_segmented_scan_two_segments() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         let heads: Vec<bool> = (0..32).map(|i| i == 0 || i == 16).collect();
         segmented_inclusive_scan(&mut data, &heads, &cfg).unwrap();
         // First segment: 1, 2, 3, ..., 16
@@ -1702,8 +1702,8 @@ mod tests {
     #[test]
     fn test_segmented_scan_every_lane_is_head() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![5.0f32; 32];
-        let heads = vec![true; 32];
+        let mut data = [5.0f32; 32];
+        let heads = [true; 32];
         segmented_inclusive_scan(&mut data, &heads, &cfg).unwrap();
         // Each lane is its own segment → identity
         for &v in &data[..32] {
@@ -1714,8 +1714,8 @@ mod tests {
     #[test]
     fn test_segmented_scan_heads_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
-        let heads = vec![true; 10];
+        let mut data = [1.0f32; 32];
+        let heads = [true; 10];
         assert!(segmented_inclusive_scan(&mut data, &heads, &cfg).is_err());
     }
 
@@ -1753,7 +1753,7 @@ mod tests {
     #[test]
     fn test_butterfly_exchange_out_of_range() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         assert!(butterfly_exchange(&mut data, 5, &cfg).is_err());
     }
 
@@ -1762,9 +1762,9 @@ mod tests {
     #[test]
     fn test_cross_warp_reduce_sum_two_warps() {
         let cfg = ShuffleConfig::new();
-        let w0 = vec![1.0f32; 32];
-        let w1 = vec![2.0f32; 32];
-        let mut out = vec![0.0f32; 32];
+        let w0 = [1.0f32; 32];
+        let w1 = [2.0f32; 32];
+        let mut out = [0.0f32; 32];
         cross_warp_reduce_sum(&[&w0, &w1], &mut out, &cfg).unwrap();
         for &v in &out[..32] {
             assert!((v - 3.0).abs() < 1e-7);
@@ -1775,7 +1775,7 @@ mod tests {
     fn test_cross_warp_reduce_sum_single_warp() {
         let cfg = ShuffleConfig::new();
         let w0: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         cross_warp_reduce_sum(&[&w0[..]], &mut out, &cfg).unwrap();
         assert_eq!(&out[..32], &w0[..32]);
     }
@@ -1783,8 +1783,8 @@ mod tests {
     #[test]
     fn test_cross_warp_reduce_sum_output_too_short() {
         let cfg = ShuffleConfig::new();
-        let w0 = vec![1.0f32; 32];
-        let mut out = vec![0.0f32; 8];
+        let w0 = [1.0f32; 32];
+        let mut out = [0.0f32; 8];
         assert!(cross_warp_reduce_sum(&[&w0[..]], &mut out, &cfg).is_err());
     }
 
@@ -1795,7 +1795,7 @@ mod tests {
         let cfg = ShuffleConfig::new();
         let w0: Vec<f32> = (0..32).map(|i| i as f32).collect();
         let w1: Vec<f32> = (0..32).map(|i| (31 - i) as f32).collect();
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         cross_warp_reduce_max(&[&w0, &w1], &mut out, &cfg).unwrap();
         for &v in &out[..32] {
             assert!(v >= 15.0); // min of maxes
@@ -1805,15 +1805,15 @@ mod tests {
     #[test]
     fn test_cross_warp_reduce_max_empty_warps() {
         let cfg = ShuffleConfig::new();
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         assert!(cross_warp_reduce_max(&[], &mut out, &cfg).is_err());
     }
 
     #[test]
     fn test_cross_warp_reduce_max_output_too_short() {
         let cfg = ShuffleConfig::new();
-        let w0 = vec![1.0f32; 32];
-        let mut out = vec![0.0f32; 4];
+        let w0 = [1.0f32; 32];
+        let mut out = [0.0f32; 4];
         assert!(cross_warp_reduce_max(&[&w0[..]], &mut out, &cfg).is_err());
     }
 
@@ -1830,7 +1830,7 @@ mod tests {
     #[test]
     fn test_allgather_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b11).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         data[1] = 20.0;
         data[5] = 50.0;
@@ -1843,7 +1843,7 @@ mod tests {
     #[test]
     fn test_allgather_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let data = vec![0.0f32; 8];
+        let data = [0.0f32; 8];
         assert!(warp_allgather(&data, &cfg).is_err());
     }
 
@@ -1862,7 +1862,7 @@ mod tests {
     #[test]
     fn test_scatter_to_subset() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 42.0;
         warp_scatter(&mut data, 0, 0b1010, &cfg).unwrap();
         assert!((data[0] - 42.0).abs() < 1e-7); // not targeted
@@ -1874,7 +1874,7 @@ mod tests {
     #[test]
     fn test_scatter_src_out_of_range() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         assert!(warp_scatter(&mut data, 32, 0xFF, &cfg).is_err());
     }
 
@@ -1892,7 +1892,7 @@ mod tests {
     #[test]
     fn test_sync_reduce_sum_partial() {
         let cfg = ShuffleConfig::with_mask(0b111).unwrap();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         data[1] = 20.0;
         data[2] = 30.0;
@@ -1904,7 +1904,7 @@ mod tests {
     #[test]
     fn test_sync_reduce_sum_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let data = vec![0.0f32; 4];
+        let data = [0.0f32; 4];
         assert!(warp_sync_reduce_sum(&data, &cfg).is_err());
     }
 
@@ -1913,7 +1913,7 @@ mod tests {
     #[test]
     fn test_divergence_ballot_all_same() {
         let cfg = ShuffleConfig::new();
-        let data = vec![7.0f32; 32];
+        let data = [7.0f32; 32];
         let mask = divergence_ballot(&data, &cfg).unwrap();
         assert_eq!(mask, 0);
     }
@@ -1930,7 +1930,7 @@ mod tests {
     #[test]
     fn test_divergence_ballot_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let data = vec![0.0f32; 2];
+        let data = [0.0f32; 2];
         assert!(divergence_ballot(&data, &cfg).is_err());
     }
 
@@ -1939,21 +1939,21 @@ mod tests {
     #[test]
     fn test_uniform_all_true() {
         let cfg = ShuffleConfig::new();
-        let preds = vec![true; 32];
+        let preds = [true; 32];
         assert!(uniform_branch_check(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn test_uniform_all_false() {
         let cfg = ShuffleConfig::new();
-        let preds = vec![false; 32];
+        let preds = [false; 32];
         assert!(uniform_branch_check(&preds, &cfg).unwrap());
     }
 
     #[test]
     fn test_uniform_divergent() {
         let cfg = ShuffleConfig::new();
-        let mut preds = vec![true; 32];
+        let mut preds = [true; 32];
         preds[15] = false;
         assert!(!uniform_branch_check(&preds, &cfg).unwrap());
     }
@@ -1961,7 +1961,7 @@ mod tests {
     #[test]
     fn test_uniform_partial_mask() {
         let cfg = ShuffleConfig::with_mask(0b11).unwrap();
-        let mut preds = vec![false; 32]; // inactive lanes false
+        let mut preds = [false; 32]; // inactive lanes false
         preds[0] = true;
         preds[1] = true;
         assert!(uniform_branch_check(&preds, &cfg).unwrap());
@@ -1970,7 +1970,7 @@ mod tests {
     #[test]
     fn test_uniform_preds_too_short() {
         let cfg = ShuffleConfig::new();
-        let preds = vec![true; 10];
+        let preds = [true; 10];
         assert!(uniform_branch_check(&preds, &cfg).is_err());
     }
 
@@ -2027,48 +2027,48 @@ mod tests {
 
     #[test]
     fn test_fragment_load_row_major() {
-        let buf = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let buf = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let f = fragment_load(&buf, 2, 3, 3, MatrixLayout::RowMajor).unwrap();
-        assert_eq!(f.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(f.data, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
     fn test_fragment_load_col_major() {
         // Col-major: columns are contiguous.
         // 2 rows, 3 cols, ld=2: buffer = [a00, a10, a01, a11, a02, a12]
-        let buf = vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
+        let buf = [1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
         let f = fragment_load(&buf, 2, 3, 2, MatrixLayout::ColMajor).unwrap();
         // Row-major output: [1,2,3, 4,5,6]
-        assert_eq!(f.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(f.data, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
     fn test_fragment_load_buffer_too_short() {
-        let buf = vec![1.0, 2.0];
+        let buf = [1.0, 2.0];
         assert!(fragment_load(&buf, 2, 3, 3, MatrixLayout::RowMajor).is_err());
     }
 
     #[test]
     fn test_fragment_store_row_major() {
         let f = MatrixFragment { rows: 2, cols: 2, data: vec![1.0, 2.0, 3.0, 4.0] };
-        let mut buf = vec![0.0f32; 4];
+        let mut buf = [0.0f32; 4];
         fragment_store(&f, &mut buf, 2, MatrixLayout::RowMajor).unwrap();
-        assert_eq!(buf, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(buf, [1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
     fn test_fragment_store_col_major() {
         let f = MatrixFragment { rows: 2, cols: 2, data: vec![1.0, 2.0, 3.0, 4.0] };
-        let mut buf = vec![0.0f32; 4];
+        let mut buf = [0.0f32; 4];
         fragment_store(&f, &mut buf, 2, MatrixLayout::ColMajor).unwrap();
         // Col-major: [1, 3, 2, 4]
-        assert_eq!(buf, vec![1.0, 3.0, 2.0, 4.0]);
+        assert_eq!(buf, [1.0, 3.0, 2.0, 4.0]);
     }
 
     #[test]
     fn test_fragment_store_buffer_too_short() {
         let f = MatrixFragment { rows: 2, cols: 2, data: vec![1.0, 2.0, 3.0, 4.0] };
-        let mut buf = vec![0.0f32; 2];
+        let mut buf = [0.0f32; 2];
         assert!(fragment_store(&f, &mut buf, 2, MatrixLayout::RowMajor).is_err());
     }
 
@@ -2079,7 +2079,7 @@ mod tests {
         let b = MatrixFragment { rows: 2, cols: 2, data: vec![1.0, 2.0, 3.0, 4.0] };
         let c = MatrixFragment::zeros(2, 2);
         let d = fragment_mma(&a, &b, &c).unwrap();
-        assert_eq!(d.data, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(d.data, [1.0, 2.0, 3.0, 4.0]);
     }
 
     #[test]
@@ -2088,7 +2088,7 @@ mod tests {
         let b = MatrixFragment { rows: 2, cols: 2, data: vec![1.0, 2.0, 3.0, 4.0] };
         let c = MatrixFragment { rows: 2, cols: 2, data: vec![10.0, 20.0, 30.0, 40.0] };
         let d = fragment_mma(&a, &b, &c).unwrap();
-        assert_eq!(d.data, vec![11.0, 22.0, 33.0, 44.0]);
+        assert_eq!(d.data, [11.0, 22.0, 33.0, 44.0]);
     }
 
     #[test]
@@ -2154,7 +2154,7 @@ mod tests {
     #[test]
     fn test_transpose_4x8_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 16];
+        let mut data = [0.0f32; 16];
         assert!(shuffle_transpose_4x8(&mut data, &cfg).is_err());
     }
 
@@ -2176,7 +2176,7 @@ mod tests {
     #[test]
     fn test_transpose_8x4_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 16];
+        let mut data = [0.0f32; 16];
         assert!(shuffle_transpose_8x4(&mut data, &cfg).is_err());
     }
 
@@ -2221,7 +2221,7 @@ mod tests {
     #[test]
     fn test_specialize_map_double_negate() {
         let spec = WarpSpecConfig::split_at(16).unwrap();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         warp_specialize_map(&mut data, &spec, |v| v * 2.0, |v| -v).unwrap();
         // Producers (0..16) doubled
         for &v in &data[..16] {
@@ -2236,7 +2236,7 @@ mod tests {
     #[test]
     fn test_specialize_map_data_too_short() {
         let spec = WarpSpecConfig::split_at(16).unwrap();
-        let mut data = vec![1.0f32; 8];
+        let mut data = [1.0f32; 8];
         assert!(warp_specialize_map(&mut data, &spec, |v| v, |v| v).is_err());
     }
 
@@ -2245,7 +2245,7 @@ mod tests {
     #[test]
     fn test_pipeline_single_stage() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![2.0f32; 32];
+        let mut data = [2.0f32; 32];
         warp_pipeline_stages(&mut data, &[|v| v * 3.0], &cfg).unwrap();
         for &v in &data[..32] {
             assert!((v - 6.0).abs() < 1e-7);
@@ -2255,7 +2255,7 @@ mod tests {
     #[test]
     fn test_pipeline_two_stages() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![1.0f32; 32];
+        let mut data = [1.0f32; 32];
         warp_pipeline_stages(&mut data, &[|v| v + 1.0, |v| v * 2.0], &cfg).unwrap();
         // stage 1: 1+1=2, stage 2: 2*2=4
         for &v in &data[..32] {
@@ -2266,7 +2266,7 @@ mod tests {
     #[test]
     fn test_pipeline_zero_stages() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![5.0f32; 32];
+        let mut data = [5.0f32; 32];
         warp_pipeline_stages(&mut data, &[], &cfg).unwrap();
         for &v in &data[..32] {
             assert!((v - 5.0).abs() < 1e-7);
@@ -2276,7 +2276,7 @@ mod tests {
     #[test]
     fn test_pipeline_data_too_short() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 4];
+        let mut data = [0.0f32; 4];
         assert!(warp_pipeline_stages(&mut data, &[|v| v], &cfg).is_err());
     }
 
@@ -2318,7 +2318,7 @@ mod tests {
     #[test]
     fn test_exclusive_scan_shift_of_inclusive() {
         let cfg = ShuffleConfig::new();
-        let values = vec![3.0f32; 32];
+        let values = [3.0f32; 32];
         let mut incl = values.clone();
         shuffle_inclusive_scan(&mut incl, &cfg).unwrap();
         let mut excl = values;
@@ -2343,7 +2343,7 @@ mod tests {
     #[test]
     fn test_divergence_and_uniform_consistent() {
         let cfg = ShuffleConfig::new();
-        let data = vec![5.0f32; 32];
+        let data = [5.0f32; 32];
         let div_mask = divergence_ballot(&data, &cfg).unwrap();
         let preds: Vec<bool> = data.iter().map(|&v| v > 0.0).collect();
         let uniform = uniform_branch_check(&preds, &cfg).unwrap();
@@ -2353,9 +2353,9 @@ mod tests {
 
     #[test]
     fn test_fragment_load_store_roundtrip() {
-        let buf = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let buf = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
         let f = fragment_load(&buf, 3, 3, 3, MatrixLayout::RowMajor).unwrap();
-        let mut out = vec![0.0f32; 9];
+        let mut out = [0.0f32; 9];
         fragment_store(&f, &mut out, 3, MatrixLayout::RowMajor).unwrap();
         assert_eq!(out, buf);
     }
@@ -2365,7 +2365,7 @@ mod tests {
         let cfg = ShuffleConfig::new();
         let w0: Vec<f32> = (0..32).map(|i| i as f32).collect();
         let w1: Vec<f32> = (0..32).map(|i| (i * 2) as f32).collect();
-        let mut out = vec![0.0f32; 32];
+        let mut out = [0.0f32; 32];
         cross_warp_reduce_sum(&[&w0, &w1], &mut out, &cfg).unwrap();
         for i in 0..32 {
             let expected = i as f32 + (i * 2) as f32;
@@ -2376,7 +2376,7 @@ mod tests {
     #[test]
     fn test_scatter_then_reduce_pattern() {
         let cfg = ShuffleConfig::new();
-        let mut data = vec![0.0f32; 32];
+        let mut data = [0.0f32; 32];
         data[0] = 10.0;
         // Scatter lane 0 to all, then reduce — should get 10*32
         warp_scatter(&mut data, 0, 0xFFFF_FFFF, &cfg).unwrap();

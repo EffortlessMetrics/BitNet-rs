@@ -66,9 +66,9 @@ mod tests {
     #[test]
     fn rmsnorm_returns_err() {
         let cfg = HipRmsNormConfig::new(64);
-        let input = vec![1.0f32; 64];
-        let gamma = vec![1.0f32; 64];
-        let mut output = vec![0.0f32; 64];
+        let input = [1.0f32; 64];
+        let gamma = [1.0f32; 64];
+        let mut output = [0.0f32; 64];
         assert!(rmsnorm_hip(&input, &gamma, &mut output, 1, &cfg).is_err());
     }
 

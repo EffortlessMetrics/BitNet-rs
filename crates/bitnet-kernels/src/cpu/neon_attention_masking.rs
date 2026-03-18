@@ -342,7 +342,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_size_1() {
-        let mut s = vec![1.0];
+        let mut s = [1.0];
         apply_causal(&mut s, 1, 1, NEG_INF);
         assert_eq!(s, vec![1.0]); // diagonal kept
     }
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_size_4() {
-        let mut s = vec![1.0; 16];
+        let mut s = [1.0; 16];
         apply_causal(&mut s, 4, 4, NEG_INF);
         // Row 0: keep col 0, mask 1-3
         assert_eq!(s[0], 1.0);
@@ -419,7 +419,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_non_square_check() {
         // seq_len=2, head_dim=4 → 2 rows, 4 cols
-        let mut s = vec![1.0; 8];
+        let mut s = [1.0; 8];
         apply_causal(&mut s, 2, 4, NEG_INF);
         // Row 0: keep col 0, mask 1-3
         assert_eq!(s[0], 1.0);
@@ -436,7 +436,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_mask_value_neg_inf() {
-        let mut s = vec![5.0; 4];
+        let mut s = [5.0; 4];
         apply_causal(&mut s, 2, 2, NEG_INF);
         assert!(s[1] == NEG_INF);
     }
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_mask_value_zero() {
-        let mut s = vec![5.0; 4];
+        let mut s = [5.0; 4];
         apply_causal(&mut s, 2, 2, 0.0);
         assert_eq!(s[1], 0.0);
     }
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn causal_mask_already_masked() {
-        let mut s = vec![NEG_INF; 4];
+        let mut s = [NEG_INF; 4];
         apply_causal(&mut s, 2, 2, NEG_INF);
         // Diagonal kept (already NEG_INF from input, but function only writes above diag)
         assert!(s[0] == NEG_INF);
@@ -476,7 +476,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn padding_mask_no_padding() {
-        let mut s = vec![1.0; 4];
+        let mut s = [1.0; 4];
         let pmask = vec![false, false];
         apply_padding(&mut s, &pmask, 2, 1, NEG_INF);
         assert_eq!(s, vec![1.0; 4]);
@@ -485,7 +485,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn padding_mask_all_padding() {
-        let mut s = vec![1.0; 4];
+        let mut s = [1.0; 4];
         let pmask = vec![true, true];
         apply_padding(&mut s, &pmask, 2, 1, NEG_INF);
         for v in &s {
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn padding_mask_single_token() {
-        let mut s = vec![5.0; 1];
+        let mut s = [5.0; 1];
         let pmask = vec![false];
         apply_padding(&mut s, &pmask, 1, 1, NEG_INF);
         assert_eq!(s[0], 5.0);
@@ -721,8 +721,8 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_uniform() {
-        let mut s = vec![1.0; 4];
-        let mask = vec![false; 4];
+        let mut s = [1.0; 4];
+        let mask = [false; 4];
         masked_softmax(&mut s, &mask, 4);
         for v in &s {
             assert!((v - 0.25).abs() < 1e-5);
@@ -733,7 +733,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_peaked() {
         let mut s = vec![0.0, 0.0, 10.0, 0.0];
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         masked_softmax(&mut s, &mask, 4);
         // Element 2 should dominate
         assert!(s[2] > 0.9);
@@ -756,7 +756,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_no_mask() {
         let mut s = vec![1.0, 2.0, 3.0];
-        let mask = vec![false; 3];
+        let mask = [false; 3];
         masked_softmax(&mut s, &mask, 3);
         let sum: f32 = s.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5);
@@ -766,7 +766,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_large_values() {
         let mut s = vec![1000.0, 1000.0, 1000.0, 1000.0];
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         masked_softmax(&mut s, &mask, 4);
         for v in &s {
             assert!((v - 0.25).abs() < 1e-5);
@@ -777,7 +777,7 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_negative_values() {
         let mut s = vec![-1.0, -2.0, -3.0, -4.0];
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         masked_softmax(&mut s, &mask, 4);
         let sum: f32 = s.iter().sum();
         assert!((sum - 1.0).abs() < 1e-5);
@@ -789,7 +789,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn masked_softmax_single_element() {
-        let mut s = vec![5.0];
+        let mut s = [5.0];
         let mask = vec![false];
         masked_softmax(&mut s, &mask, 1);
         assert!((s[0] - 1.0).abs() < 1e-5);
@@ -800,7 +800,7 @@ mod tests {
     fn masked_softmax_stability() {
         // Very large spread should not produce NaN or Inf
         let mut s = vec![1e10, -1e10, 0.0, 1.0];
-        let mask = vec![false; 4];
+        let mask = [false; 4];
         masked_softmax(&mut s, &mask, 4);
         for v in &s {
             assert!(v.is_finite());
@@ -814,9 +814,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn combine_masks_both_ones() {
-        let a = vec![0.0; 4];
-        let b = vec![0.0; 4];
-        let mut out = vec![999.0; 4];
+        let a = [0.0; 4];
+        let b = [0.0; 4];
+        let mut out = [999.0; 4];
         combine(&a, &b, &mut out);
         assert_eq!(out, vec![0.0; 4]);
     }
@@ -824,9 +824,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn combine_masks_one_zero() {
-        let a = vec![0.0; 4];
-        let b = vec![NEG_INF; 4];
-        let mut out = vec![0.0; 4];
+        let a = [0.0; 4];
+        let b = [NEG_INF; 4];
+        let mut out = [0.0; 4];
         combine(&a, &b, &mut out);
         for v in &out {
             assert!(*v == NEG_INF);
@@ -836,9 +836,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn combine_masks_both_zero() {
-        let a = vec![NEG_INF; 4];
-        let b = vec![NEG_INF; 4];
-        let mut out = vec![0.0; 4];
+        let a = [NEG_INF; 4];
+        let b = [NEG_INF; 4];
+        let mut out = [0.0; 4];
         combine(&a, &b, &mut out);
         for v in &out {
             assert!(*v == NEG_INF);
@@ -850,7 +850,7 @@ mod tests {
     fn combine_masks_mixed() {
         let a = vec![0.0, NEG_INF, 0.0, NEG_INF];
         let b = vec![NEG_INF, 0.0, 0.0, NEG_INF];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         combine(&a, &b, &mut out);
         assert!(out[0] == NEG_INF);
         assert!(out[1] == NEG_INF);
@@ -873,8 +873,8 @@ mod tests {
     #[cfg(target_arch = "aarch64")]
     fn combine_masks_identity() {
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let b = vec![f32::INFINITY; 5];
-        let mut out = vec![0.0; 5];
+        let b = [f32::INFINITY; 5];
+        let mut out = [0.0; 5];
         combine(&a, &b, &mut out);
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
     }
@@ -884,8 +884,8 @@ mod tests {
     fn combine_masks_symmetry() {
         let a = vec![1.0, -2.0, 3.0, -4.0];
         let b = vec![-1.0, 2.0, -3.0, 4.0];
-        let mut out1 = vec![0.0; 4];
-        let mut out2 = vec![0.0; 4];
+        let mut out1 = [0.0; 4];
+        let mut out2 = [0.0; 4];
         combine(&a, &b, &mut out1);
         combine(&b, &a, &mut out2);
         assert_eq!(out1, out2); // min is commutative
@@ -1028,7 +1028,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn edge_single_element_causal() {
-        let mut s = vec![42.0];
+        let mut s = [42.0];
         apply_causal(&mut s, 1, 1, NEG_INF);
         assert_eq!(s[0], 42.0);
     }
@@ -1036,7 +1036,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn edge_single_element_sliding() {
-        let mut s = vec![42.0];
+        let mut s = [42.0];
         apply_sliding(&mut s, 1, 1, NEG_INF);
         assert_eq!(s[0], 42.0);
     }
@@ -1044,9 +1044,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn edge_single_element_combine() {
-        let a = vec![1.0];
-        let b = vec![2.0];
-        let mut out = vec![0.0];
+        let a = [1.0];
+        let b = [2.0];
+        let mut out = [0.0];
         combine(&a, &b, &mut out);
         assert_eq!(out[0], 1.0);
     }
@@ -1083,7 +1083,7 @@ mod tests {
         // Length 7 — exercises tail scalar path
         let a = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
         let b = vec![7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
-        let mut out = vec![0.0; 7];
+        let mut out = [0.0; 7];
         combine(&a, &b, &mut out);
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0]);
     }
@@ -1151,7 +1151,7 @@ mod tests {
     fn combine_masks_with_finite_values() {
         let a = vec![-1.0, -2.0, -3.0, -4.0];
         let b = vec![-4.0, -3.0, -2.0, -1.0];
-        let mut out = vec![0.0; 4];
+        let mut out = [0.0; 4];
         combine(&a, &b, &mut out);
         assert_eq!(out, vec![-4.0, -3.0, -3.0, -4.0]);
     }

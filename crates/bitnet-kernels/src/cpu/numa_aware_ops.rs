@@ -1433,7 +1433,7 @@ mod tests {
     #[test]
     fn partition_node_ids_correct() {
         let t = two_node_topology();
-        let data = vec![1.0; 20];
+        let data = [1.0; 20];
         let (parts, _) = partition_tensor(&data, &t, false).unwrap();
         assert_eq!(parts[0].node_id, 0);
         assert_eq!(parts[1].node_id, 1);
@@ -1442,7 +1442,7 @@ mod tests {
     #[test]
     fn partition_indices_sequential() {
         let t = four_node_topology();
-        let data = vec![0.0; 40];
+        let data = [0.0; 40];
         let (parts, _) = partition_tensor(&data, &t, false).unwrap();
         for (i, p) in parts.iter().enumerate() {
             assert_eq!(p.partition_index, i);
@@ -1459,7 +1459,7 @@ mod tests {
     #[test]
     fn partition_single_node() {
         let t = single_node_topology();
-        let data = vec![1.0; 50];
+        let data = [1.0; 50];
         let (parts, _) = partition_tensor(&data, &t, false).unwrap();
         assert_eq!(parts.len(), 1);
         assert_eq!(parts[0].data.len(), 50);

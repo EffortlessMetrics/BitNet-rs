@@ -855,7 +855,7 @@ mod tests {
 
     #[test]
     fn test_quantized_tensor_all_zeros() {
-        let vals = vec![0.0; 8];
+        let vals = [0.0; 8];
         let qt = QuantizedTensor::from_f32(&vals, 2, 4, 4, QuantType::INT2).unwrap();
         for &v in &qt.data {
             assert_eq!(v, 0);
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn test_quantized_matmul_vec_dimension_mismatch() {
         let w = QuantizedTensor::from_f32(&[1.0; 8], 2, 4, 4, QuantType::INT2).unwrap();
-        let x = vec![1i8; 3]; // wrong size
+        let x = [1i8; 3]; // wrong size
         assert!(quantized_matmul_vec(&w, &x, 1.0).is_err());
     }
 
@@ -965,7 +965,7 @@ mod tests {
     #[test]
     fn test_layer_norm_normalizes() {
         let mut input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         quantized_layer_norm(&mut input, &gamma, 4, 1e-5).unwrap();
         // Mean should be ~0.
         let mean: f32 = input.iter().sum::<f32>() / 4.0;
@@ -978,7 +978,7 @@ mod tests {
     #[test]
     fn test_layer_norm_gamma_scaling() {
         let mut input = vec![1.0, 2.0, 3.0, 4.0];
-        let gamma = vec![2.0; 4];
+        let gamma = [2.0; 4];
         quantized_layer_norm(&mut input, &gamma, 4, 1e-5).unwrap();
         // Variance of the output should be ~4 (gamma=2 squared).
         let mean: f32 = input.iter().sum::<f32>() / 4.0;
@@ -989,7 +989,7 @@ mod tests {
     #[test]
     fn test_layer_norm_batched() {
         let mut input = vec![1.0, 3.0, 5.0, 7.0, 2.0, 4.0, 6.0, 8.0];
-        let gamma = vec![1.0; 4];
+        let gamma = [1.0; 4];
         quantized_layer_norm(&mut input, &gamma, 4, 1e-5).unwrap();
         // Each batch element should be independently normalized.
         let mean0: f32 = input[0..4].iter().sum::<f32>() / 4.0;
@@ -1000,15 +1000,15 @@ mod tests {
 
     #[test]
     fn test_layer_norm_gamma_mismatch() {
-        let mut input = vec![1.0; 8];
-        let gamma = vec![1.0; 3]; // wrong size
+        let mut input = [1.0; 8];
+        let gamma = [1.0; 3]; // wrong size
         assert!(quantized_layer_norm(&mut input, &gamma, 3, 1e-5).is_err());
     }
 
     #[test]
     fn test_layer_norm_input_not_divisible() {
-        let mut input = vec![1.0; 7];
-        let gamma = vec![1.0; 4];
+        let mut input = [1.0; 7];
+        let gamma = [1.0; 4];
         assert!(quantized_layer_norm(&mut input, &gamma, 4, 1e-5).is_err());
     }
 
@@ -1071,7 +1071,7 @@ mod tests {
     #[test]
     fn test_residual_add_length_mismatch() {
         let mut out = vec![1.0, 2.0];
-        let residual = vec![0.5];
+        let residual = [0.5];
         assert!(quantized_residual_add(&mut out, &residual).is_err());
     }
 
@@ -1112,7 +1112,7 @@ mod tests {
     fn test_attention_input_size_mismatch() {
         let cfg = make_test_config(QuantType::INT2);
         let weights = make_test_weights(&cfg);
-        let input = vec![0.1f32; 5]; // wrong size
+        let input = [0.1f32; 5]; // wrong size
         assert!(quantized_attention(&input, &weights, &cfg, 1).is_err());
     }
 
@@ -1177,7 +1177,7 @@ mod tests {
     fn test_ffn_input_size_mismatch() {
         let cfg = make_test_config(QuantType::INT2);
         let weights = make_test_weights(&cfg);
-        let input = vec![0.1f32; 5]; // wrong
+        let input = [0.1f32; 5]; // wrong
         assert!(quantized_ffn(&input, &weights, &cfg, 1).is_err());
     }
 
@@ -1433,7 +1433,7 @@ mod tests {
 
     #[test]
     fn test_softmax_single() {
-        let mut v = vec![42.0];
+        let mut v = [42.0];
         softmax_inplace(&mut v);
         assert!((v[0] - 1.0).abs() < 1e-6);
     }
@@ -1486,7 +1486,7 @@ mod tests {
 
     #[test]
     fn test_quantize_vec_all_zeros() {
-        let input = vec![0.0; 8];
+        let input = [0.0; 8];
         let (q, _scale) = quantize_vec(&input, QuantType::INT4);
         for &v in &q {
             assert_eq!(v, 0);
@@ -1495,7 +1495,7 @@ mod tests {
 
     #[test]
     fn test_quantize_vec_single_element() {
-        let input = vec![1.0];
+        let input = [1.0];
         let (q, scale) = quantize_vec(&input, QuantType::INT4);
         assert_eq!(q.len(), 1);
         assert!(scale > 0.0);
