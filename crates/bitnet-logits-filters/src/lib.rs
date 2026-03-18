@@ -76,7 +76,7 @@ pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
     let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
     let threshold = min_p * max_prob;
     for p in probs.iter_mut() {
-        if *p < threshold {
+        if *p > 0.0 && *p < threshold {
             *p = 0.0;
         }
     }
@@ -92,18 +92,31 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    // Single pass to collect non-zero probabilities and compute entropy components
+    let mut entropy = 0.0f32;
+    let mut indexed = Vec::with_capacity(probs.len());
+
+    for (i, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            let surprise = -p.ln();
+            entropy += p * surprise;
+            indexed.push((i, p, surprise));
+        }
+    }
+
     if indexed.is_empty() {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
+    // In rare cases where floating point inaccuracies make sum_p > 0 but
+    // the true sum should be 1.0. We usually expect probability slice to sum to 1.0.
+    // If the slice doesn't sum to 1.0, entropy as calculated above is not the true entropy.
+    // Assuming the probabilities are already softmaxed and sum to 1.0.
 
+    // Map to sortable deviations array reusing capacity without re-evaluating .ln()
     let mut deviations: Vec<(usize, f32, f32)> = indexed
         .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
+        .map(|(i, p, surprise)| {
             let deviation = (surprise - entropy).abs();
             (i, p, deviation)
         })
