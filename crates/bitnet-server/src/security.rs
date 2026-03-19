@@ -228,7 +228,7 @@ impl SecurityValidator {
         }
 
         // Prevent path traversal attacks
-        if model_path.contains("..") || model_path.contains("~") {
+        if model_path.contains("..") || model_path.contains("~") || model_path.contains('\0') {
             return Err(ValidationError::InvalidFieldValue(
                 "Invalid characters in model path".to_string(),
             ));
@@ -610,6 +610,11 @@ mod tests {
 
         assert!(validator.validate_model_request("/tmp/model.gguf").is_ok());
         assert!(validator.validate_model_request("relative/model.gguf").is_ok());
+
+        assert!(matches!(
+            validator.validate_model_request("path_with_null\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
 
         // Case 2: Restricted directories
         let config = SecurityConfig {
