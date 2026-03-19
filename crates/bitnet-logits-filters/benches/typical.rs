@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use bitnet_logits_filters::apply_typical;
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn bench_typical(c: &mut Criterion) {
     let mut group = c.benchmark_group("typical");
