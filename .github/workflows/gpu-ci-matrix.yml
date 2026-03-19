@@ -96,6 +96,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
+      - name: Free up runner disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
@@ -121,6 +124,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
+      - name: Free up runner disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
@@ -133,6 +139,7 @@ jobs:
 
       - name: Run CPU tests
         run: |
+          export CARGO_PROFILE_TEST_DEBUG=0
           cargo test --workspace --locked --no-default-features --features cpu \
             -- --skip "gpu" --skip "cuda" 2>&1 | tail -100
 
