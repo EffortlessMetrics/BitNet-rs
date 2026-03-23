@@ -60,6 +60,10 @@ jobs:
             ${{ runner.os }}-cargo-smoke-
             ${{ runner.os }}-cargo-
 
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+
       - name: Run workspace check
         run: |
           cargo check --locked --workspace --no-default-features --features cpu 2>&1 | tail -20
