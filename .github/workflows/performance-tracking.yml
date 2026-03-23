@@ -41,6 +41,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
@@ -61,6 +65,8 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Run workspace check
+        env:
+          CARGO_PROFILE_TEST_DEBUG: 0
         run: |
           cargo check --locked --workspace --no-default-features --features cpu 2>&1 | tail -20
 
