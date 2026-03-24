@@ -228,7 +228,7 @@ impl SecurityValidator {
         }
 
         // Prevent path traversal attacks
-        if model_path.contains("..") || model_path.contains("~") {
+        if model_path.contains("..") || model_path.contains("~") || model_path.contains('\0') {
             return Err(ValidationError::InvalidFieldValue(
                 "Invalid characters in model path".to_string(),
             ));
