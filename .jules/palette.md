@@ -11,3 +11,6 @@
 ## 2024-05-22 - Keyboard Navigation in Custom Tabs
 **Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
 **Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
+## 2025-02-28 - Accessible Labeling for Scrollable Output Regions
+**Learning:** In HTML, `<label>` elements are strictly for labellable form controls. Labeling standard `<div>` containers (like output areas) with `<label>` tags is invalid and semantically incorrect. Additionally, scrollable non-interactive elements (like `div`s with `overflow-y: auto`) are not accessible to keyboard users by default.
+**Action:** Use a styled `<div>` (e.g., with a class like `.fake-label`) and link it to the container using `aria-labelledby`. To make the scrollable container accessible to keyboard users, add `tabindex="0"` and `role="region"`.
