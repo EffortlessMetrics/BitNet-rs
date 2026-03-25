@@ -477,6 +477,15 @@ fn test_model_path_empty_rejected_as_missing_field() {
     );
 }
 
+#[test]
+fn test_model_path_null_byte_rejected() {
+    let v = validator(false, false);
+    assert!(
+        v.validate_model_request("/etc/passwd\0.gguf").is_err(),
+        "null bytes must be rejected"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Health endpoint
 // ─────────────────────────────────────────────────────────────────────────────
