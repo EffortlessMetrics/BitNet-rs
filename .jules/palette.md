@@ -8,6 +8,10 @@
 **Learning:** Frontend code that imports WASM modules (like `pkg/bitnet_wasm.js`) fails to run in isolation if the WASM build artifacts are missing.
 **Action:** Create a mock JS file that exports the necessary functions and classes (even if empty) to allow the frontend logic to execute and be verified without a full WASM build.
 
+## 2024-05-23 - Accessibility of Scrollable Regions
+**Learning:** Standard `<div>` elements with scrollbars (e.g. `overflow-y: auto`) are not implicitly focusable. To make them accessible to keyboard users and screen readers, they need semantic meaning and a way to receive focus. Furthermore, `<label>` elements are exclusively for form controls and should not be used to caption generic `<div>` elements.
+**Action:** When creating a scrollable output region, use a standard `<div>` styled as a label, assign it an `id`, and link it to the container `<div>` using `aria-labelledby`. Ensure the container has `tabindex="0"` and `role="region"`.
+
 ## 2024-05-22 - Keyboard Navigation in Custom Tabs
 **Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
 **Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
