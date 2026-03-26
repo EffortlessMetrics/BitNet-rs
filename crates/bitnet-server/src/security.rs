@@ -228,7 +228,7 @@ impl SecurityValidator {
         }
 
         // Prevent path traversal attacks
-        if model_path.contains("..") || model_path.contains("~") {
+        if model_path.contains("..") || model_path.contains("~") || model_path.contains('\0') {
             return Err(ValidationError::InvalidFieldValue(
                 "Invalid characters in model path".to_string(),
             ));
@@ -640,6 +640,21 @@ mod tests {
         // Path traversal attempts (already blocked, but verifying combined behavior)
         assert!(matches!(
             validator.validate_model_request("/models/../secret.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
+    }
+
+    #[test]
+    fn test_model_path_null_byte_rejection() {
+        let config = SecurityConfig {
+            allowed_model_directories: vec!["/models".to_string()],
+            ..Default::default()
+        };
+        let validator = SecurityValidator::new(config).unwrap();
+
+        // Path truncation attempt via null byte
+        assert!(matches!(
+            validator.validate_model_request("/models/allowed\0.gguf"),
             Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
         ));
     }
