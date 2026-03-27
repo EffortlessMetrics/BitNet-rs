@@ -131,7 +131,14 @@ jobs:
         with:
           key: gpu-ci-cpu-test
 
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          sudo docker image prune --all --force
+
       - name: Run CPU tests
+        env:
+          CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
           cargo test --workspace --locked --no-default-features --features cpu \
             -- --skip "gpu" --skip "cuda" 2>&1 | tail -100
