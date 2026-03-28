@@ -227,8 +227,8 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
-        // Prevent path traversal attacks
-        if model_path.contains("..") || model_path.contains("~") {
+        // Prevent path traversal attacks and path truncation
+        if model_path.contains("..") || model_path.contains("~") || model_path.contains('\0') {
             return Err(ValidationError::InvalidFieldValue(
                 "Invalid characters in model path".to_string(),
             ));
@@ -663,6 +663,17 @@ mod tests {
             ),
             "Empty allowed_model_directories entry must not grant access to arbitrary paths"
         );
+    }
+
+    #[test]
+    fn test_model_path_null_byte_rejection() {
+        let config = SecurityConfig::default();
+        let validator = SecurityValidator::new(config).unwrap();
+
+        assert!(matches!(
+            validator.validate_model_request("/models/llama\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
     }
 
     /// Symlinks that point outside an allowed directory must be rejected.
