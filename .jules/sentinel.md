@@ -18,3 +18,8 @@
 **Vulnerability:** The `try_consume` method in `RateLimitBucket` was vulnerable to a Time-of-Check to Time-of-Use (TOCTOU) bug because it used a separate `load` and `fetch_sub` when verifying and decrementing available tokens. Concurrently running tasks could observe a positive number of tokens, pass the conditional check, and subtract tokens simultaneously, leading to integer underflow and a bypass of the rate limiter. Additionally, the `refill` method was subject to a data race that could overwrite consumed tokens with a stale calculation.
 **Learning:** Separate read-then-write operations on atomics are inherently susceptible to race conditions under heavy concurrency.
 **Prevention:** Use atomic `fetch_update` operations to guarantee atomic Read-Modify-Write functionality when an atomic value change is conditional on its current value.
+
+## 2025-10-18 - Path Truncation Vulnerability in Model Path Validation
+**Vulnerability:** The `validate_model_request` function in `bitnet-server` checked for path traversal (`..`, `~`) and file extensions (`.gguf`, `.safetensors`), but failed to reject paths containing null bytes (`\0`). This allowed potential Path Truncation vulnerabilities where an attacker could bypass extension checks by appending a null byte followed by an allowed extension (e.g. `/etc/passwd\0.gguf`).
+**Learning:** Checking for malicious characters like `..` and `~` or specific extensions is insufficient; always explicitly reject null bytes (`\0`) to prevent Path Truncation vulnerabilities in underlying OS-level operations.
+**Prevention:** Explicitly check for and reject paths containing null bytes when validating user input that is used to construct file paths.
