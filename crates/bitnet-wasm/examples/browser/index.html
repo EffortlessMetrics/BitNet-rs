@@ -92,7 +92,7 @@
             margin: 15px 0;
         }
 
-        label {
+        label, .section-label {
             display: block;
             margin-bottom: 5px;
             font-weight: 500;
@@ -172,6 +172,11 @@
             font-family: 'Courier New', monospace;
             min-height: 200px;
             overflow-y: auto;
+        }
+
+        .output:focus-visible, .streaming-output:focus-visible {
+            outline: 3px solid #0056b3;
+            outline-offset: 2px;
         }
 
         .worker-status {
@@ -296,10 +301,10 @@
 
             <div class="input-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <label style="margin-bottom: 0;">Output:</label>
+                    <div class="section-label" id="output-label" style="margin-bottom: 0;">Output:</div>
                     <button id="copy-output" onclick="copyToClipboard()" disabled style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
                 </div>
-                <div id="output" class="output">Generated text will appear here...</div>
+                <div id="output" class="output" role="region" tabindex="0" aria-labelledby="output-label">Generated text will appear here...</div>
             </div>
         </div>
     </div>
@@ -321,8 +326,8 @@
             </div>
 
             <div class="input-group">
-                <label>Streaming Output:</label>
-                <div id="streaming-output" class="streaming-output">Streaming output will appear here...</div>
+                <div class="section-label" id="streaming-output-label">Streaming Output:</div>
+                <div id="streaming-output" class="streaming-output" role="region" tabindex="0" aria-labelledby="streaming-output-label">Streaming output will appear here...</div>
             </div>
 
             <div class="stats">
@@ -364,8 +369,8 @@
             </div>
 
             <div class="input-group">
-                <label>Worker Output:</label>
-                <div id="worker-output" class="output">Worker output will appear here...</div>
+                <div class="section-label" id="worker-output-label">Worker Output:</div>
+                <div id="worker-output" class="output" role="region" tabindex="0" aria-labelledby="worker-output-label">Worker output will appear here...</div>
             </div>
         </div>
     </div>
@@ -387,8 +392,8 @@
             </div>
 
             <div class="input-group">
-                <label>Benchmark Results:</label>
-                <div id="benchmark-output" class="output">Run benchmarks to see performance metrics...</div>
+                <div class="section-label" id="benchmark-output-label">Benchmark Results:</div>
+                <div id="benchmark-output" class="output" role="region" tabindex="0" aria-labelledby="benchmark-output-label">Run benchmarks to see performance metrics...</div>
             </div>
 
             <div class="stats">
