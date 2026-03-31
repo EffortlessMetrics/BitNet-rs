@@ -227,6 +227,13 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
+        // Prevent path truncation attacks
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Model path cannot contain null bytes".to_string(),
+            ));
+        }
+
         // Prevent path traversal attacks
         if model_path.contains("..") || model_path.contains("~") {
             return Err(ValidationError::InvalidFieldValue(
@@ -641,6 +648,12 @@ mod tests {
         assert!(matches!(
             validator.validate_model_request("/models/../secret.gguf"),
             Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
+
+        // Path truncation attacks
+        assert!(matches!(
+            validator.validate_model_request("/models/legit.gguf\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Model path cannot contain null bytes"
         ));
     }
 
