@@ -92,22 +92,27 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    // Combine indexed filtering and surprise/entropy calculation into a single pass
+    let mut indexed = Vec::with_capacity(probs.len());
+    let mut entropy = 0.0f32;
+
+    for (i, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            let surprise = -p.ln();
+            entropy += p * surprise;
+            indexed.push((i, p, surprise));
+        }
+    }
+
     if indexed.is_empty() {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
-
-    let mut deviations: Vec<(usize, f32, f32)> = indexed
-        .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
-        })
-        .collect();
+    // Convert into deviations, reusing the same vector allocation
+    let mut deviations = indexed;
+    for (_, _, dev) in &mut deviations {
+        *dev = (*dev - entropy).abs();
+    }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
