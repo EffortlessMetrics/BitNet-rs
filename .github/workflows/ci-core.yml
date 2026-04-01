@@ -70,6 +70,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   BITNET_SKIP_SLOW_TESTS: "1"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
   # Job 1: Build and test on Linux
@@ -250,6 +251,11 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy
+
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          sudo docker image prune --all --force
 
       - name: Run clippy (core crates, libs only)
         run: |
