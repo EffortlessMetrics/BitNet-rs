@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2025-04-02 - Fusing Logarithmic Calculations in Typical Sampling
+**Learning:** Computing expected surprise (entropy) and per-token deviation in Locally Typical Sampling normally requires evaluating `.ln()` twice per token. Transcendental math is expensive in hot sampling loops. We can calculate and accumulate entropy while storing the intermediate `surprise` in a single pass, completely eliminating redundant `.ln()` calls.
+**Action:** When calculating aggregations (like entropy or variance) alongside point deviations, look for opportunities to compute the base expensive math (`.ln()`, `.exp()`) once per element, store it, and mutate it in-place during a subsequent pass.
