@@ -227,8 +227,8 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
-        // Prevent path traversal attacks
-        if model_path.contains("..") || model_path.contains("~") {
+        // Prevent path traversal attacks and path truncation
+        if model_path.contains("..") || model_path.contains("~") || model_path.contains('\0') {
             return Err(ValidationError::InvalidFieldValue(
                 "Invalid characters in model path".to_string(),
             ));
@@ -710,5 +710,24 @@ mod tests {
             validator.validate_model_request(legit.to_str().unwrap()).is_ok(),
             "Legitimate path inside allowed directory must be accepted"
         );
+    }
+
+    #[test]
+    fn test_model_path_null_byte_rejection() {
+        let config = SecurityConfig::default();
+        let validator = SecurityValidator::new(config).unwrap();
+
+        // Legitimate paths
+        assert!(validator.validate_model_request("model.gguf").is_ok());
+
+        // Paths with null bytes
+        assert!(matches!(
+            validator.validate_model_request("model.gguf\0.txt"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
+        assert!(matches!(
+            validator.validate_model_request("\0model.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
+        ));
     }
 }
