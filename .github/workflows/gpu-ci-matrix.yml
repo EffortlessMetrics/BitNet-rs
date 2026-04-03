@@ -30,6 +30,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   RUST_LOG: warn
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
   # ── Docker-based compile checks for each GPU backend ───────────
@@ -118,6 +119,11 @@ jobs:
     needs: [native-compile]
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          sudo docker image prune --all --force
+
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
