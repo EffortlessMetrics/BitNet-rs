@@ -226,9 +226,10 @@ async fn initialize_app_state() -> Result<AppState> {
 
     // Load API keys from environment
     let api_keys = std::env::var("BITNET_API_KEYS")
-        .unwrap_or_else(|_| "demo-key-123,test-key-456".to_string())
+        .unwrap_or_else(|_| "".to_string())
         .split(',')
         .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .collect();
 
     info!("Application state initialized successfully");
