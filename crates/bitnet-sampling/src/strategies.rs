@@ -279,11 +279,18 @@ impl RepetitionPenaltyConfig {
             // Count penalty: multiplicative
             #[allow(clippy::float_cmp)]
             if self.count_penalty != 1.0 {
-                let penalty = self.count_penalty.powi(count as i32);
+                let mut p = self.count_penalty;
+                let inv_penalty = 1.0 / self.count_penalty;
+                let mut inv_p = inv_penalty;
+                for _ in 1..count {
+                    p *= self.count_penalty;
+                    inv_p *= inv_penalty;
+                }
+
                 if logits[idx] > 0.0 {
-                    logits[idx] /= penalty;
+                    logits[idx] *= inv_p;
                 } else {
-                    logits[idx] *= penalty;
+                    logits[idx] *= p;
                 }
             }
         }
