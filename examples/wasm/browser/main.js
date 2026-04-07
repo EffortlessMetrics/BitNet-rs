@@ -21,6 +21,9 @@ let benchmarkSuite = null;
 // Initialize the application
 async function initApp() {
     try {
+        // Setup keyboard navigation for tabs
+        setupTabNavigation();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -445,22 +448,30 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName) {
+function switchTab(tabName, element) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class, reset aria-selected, and remove from tab order for all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class, set aria-selected, and add to tab order for selected tab
+    // Fallback to event.target if element is not provided (backwards compatibility)
+    const target = element || (typeof event !== 'undefined' ? event.target : null);
+    if (target) {
+        target.classList.add('active');
+        target.setAttribute('aria-selected', 'true');
+        target.setAttribute('tabindex', '0');
+    }
 }
 
 // Settings management
@@ -543,6 +554,44 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard navigation for tabs
+function setupTabNavigation() {
+    const tabsContainer = document.querySelector('.tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.addEventListener('keydown', (e) => {
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const activeTab = document.activeElement;
+        const index = tabs.indexOf(activeTab);
+
+        if (index === -1) return; // Focus not on a tab
+
+        let nextIndex = index;
+        let handled = false;
+
+        if (e.key === 'ArrowRight') {
+            nextIndex = (index + 1) % tabs.length;
+            handled = true;
+        } else if (e.key === 'ArrowLeft') {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+            handled = true;
+        } else if (e.key === 'Home') {
+            nextIndex = 0;
+            handled = true;
+        } else if (e.key === 'End') {
+            nextIndex = tabs.length - 1;
+            handled = true;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            const nextTab = tabs[nextIndex];
+            nextTab.focus();
+            nextTab.click(); // Activate the tab
+        }
+    });
+}
 
 // Make functions globally available
 window.loadModel = loadModel;
