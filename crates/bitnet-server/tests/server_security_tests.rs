@@ -429,6 +429,18 @@ fn test_content_filter_disabled_allows_blocked_keywords() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
+fn test_model_path_null_byte_rejected() {
+    let v = validator(false, false);
+    assert!(
+        matches!(
+            v.validate_model_request("model\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(_))
+        ),
+        "null byte in model path must be rejected"
+    );
+}
+
+#[test]
 fn test_model_path_tilde_rejected() {
     let v = validator(false, false);
     assert!(
