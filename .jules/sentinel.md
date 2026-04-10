@@ -18,3 +18,8 @@
 **Vulnerability:** The `try_consume` method in `RateLimitBucket` was vulnerable to a Time-of-Check to Time-of-Use (TOCTOU) bug because it used a separate `load` and `fetch_sub` when verifying and decrementing available tokens. Concurrently running tasks could observe a positive number of tokens, pass the conditional check, and subtract tokens simultaneously, leading to integer underflow and a bypass of the rate limiter. Additionally, the `refill` method was subject to a data race that could overwrite consumed tokens with a stale calculation.
 **Learning:** Separate read-then-write operations on atomics are inherently susceptible to race conditions under heavy concurrency.
 **Prevention:** Use atomic `fetch_update` operations to guarantee atomic Read-Modify-Write functionality when an atomic value change is conditional on its current value.
+
+## 2025-06-03 - Path Truncation via Null Byte
+**Vulnerability:** The `validate_model_request` function in `bitnet-server`'s security validator checked that model paths end with `.gguf` or `.safetensors`, but didn't block null bytes (`\0`). This allowed path truncation attacks when the path is passed to underlying C APIs (like `llama.cpp`), where a path like `/etc/passwd\0.gguf` would bypass the extension check but load `/etc/passwd`.
+**Learning:** String validation methods like `.ends_with()` in Rust operate on the full string length, but when the string is passed to C APIs (which use null-terminated strings), any data after the null byte is ignored.
+**Prevention:** Always explicitly reject null bytes (`\0`) in the validation logic for file paths derived from user input, especially when the path will eventually interact with C or OS-level APIs.
