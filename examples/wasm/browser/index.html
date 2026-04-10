@@ -78,6 +78,16 @@
             cursor: not-allowed;
         }
 
+        button:focus-visible {
+            outline: 3px solid #0056b3;
+            outline-offset: 2px;
+        }
+
+        button.tab:focus-visible {
+            outline: 2px solid #007bff;
+            outline-offset: -2px;
+        }
+
         .input-group {
             margin: 15px 0;
         }
@@ -188,14 +198,25 @@
             margin-bottom: 20px;
         }
 
-        .tab {
+        /* Tab button styles - higher specificity to override generic button styles */
+        button.tab {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
             padding: 12px 20px;
             cursor: pointer;
-            border-bottom: 2px solid transparent;
+            font-family: inherit;
+            font-size: 1rem;
+            color: inherit;
             transition: all 0.2s;
+            border-radius: 0;
         }
 
-        .tab.active {
+        button.tab:hover:not(:disabled) {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        button.tab.active {
             border-bottom-color: #007bff;
             color: #007bff;
         }
@@ -216,25 +237,25 @@
     </div>
 
     <div class="container">
-        <div id="status" class="status loading">
+        <div id="status" class="status loading" role="status" aria-live="polite">
             Initializing WebAssembly module...
         </div>
 
-        <div class="progress-bar">
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading progress">
             <div id="progress" class="progress-fill"></div>
         </div>
     </div>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('basic')">Basic Inference</div>
-        <div class="tab" onclick="switchTab('streaming')">Streaming</div>
-        <div class="tab" onclick="switchTab('worker')">Web Workers</div>
-        <div class="tab" onclick="switchTab('benchmark')">Benchmarks</div>
-        <div class="tab" onclick="switchTab('settings')">Settings</div>
+    <div class="tabs" role="tablist" aria-label="Application Sections">
+        <button type="button" class="tab active" role="tab" aria-selected="true" aria-controls="basic-tab" id="tab-basic" tabindex="0" onclick="switchTab('basic', this)">Basic Inference</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="streaming-tab" id="tab-streaming" tabindex="-1" onclick="switchTab('streaming', this)">Streaming</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="worker-tab" id="tab-worker" tabindex="-1" onclick="switchTab('worker', this)">Web Workers</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="benchmark-tab" id="tab-benchmark" tabindex="-1" onclick="switchTab('benchmark', this)">Benchmarks</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="settings-tab" id="tab-settings" tabindex="-1" onclick="switchTab('settings', this)">Settings</button>
     </div>
 
     <!-- Basic Inference Tab -->
-    <div id="basic-tab" class="tab-content active">
+    <div id="basic-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-basic">
         <div class="container">
             <h3>Basic Text Generation</h3>
 
@@ -274,14 +295,17 @@
             </div>
 
             <div class="input-group">
-                <label>Output:</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="margin-bottom: 0;">Output:</label>
+                    <button id="copy-output" onclick="copyToClipboard()" disabled style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
+                </div>
                 <div id="output" class="output">Generated text will appear here...</div>
             </div>
         </div>
     </div>
 
     <!-- Streaming Tab -->
-    <div id="streaming-tab" class="tab-content">
+    <div id="streaming-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-streaming">
         <div class="container">
             <h3>Streaming Text Generation</h3>
 
@@ -319,7 +343,7 @@
     </div>
 
     <!-- Web Workers Tab -->
-    <div id="worker-tab" class="tab-content">
+    <div id="worker-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-worker">
         <div class="container">
             <h3>Web Workers Integration</h3>
 
@@ -347,7 +371,7 @@
     </div>
 
     <!-- Benchmark Tab -->
-    <div id="benchmark-tab" class="tab-content">
+    <div id="benchmark-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-benchmark">
         <div class="container">
             <h3>Performance Benchmarks</h3>
 
@@ -358,7 +382,7 @@
                 <button id="loading-bench" onclick="runLoadingBenchmark()">Loading Performance</button>
             </div>
 
-            <div id="benchmark-progress" class="progress-bar" style="display: none;">
+            <div id="benchmark-progress" class="progress-bar" style="display: none;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Benchmark progress">
                 <div id="benchmark-progress-fill" class="progress-fill"></div>
             </div>
 
@@ -389,7 +413,7 @@
     </div>
 
     <!-- Settings Tab -->
-    <div id="settings-tab" class="tab-content">
+    <div id="settings-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-settings">
         <div class="container">
             <h3>Configuration Settings</h3>
 
