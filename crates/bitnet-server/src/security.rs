@@ -227,6 +227,13 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
+        // Null byte injection protection
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Null bytes are not allowed in model path".to_string(),
+            ));
+        }
+
         // Prevent path traversal attacks
         if model_path.contains("..") || model_path.contains("~") {
             return Err(ValidationError::InvalidFieldValue(
@@ -607,6 +614,11 @@ mod tests {
         // Case 1: No restriction (empty allowed directories)
         let config = SecurityConfig::default();
         let validator = SecurityValidator::new(config).unwrap();
+
+        assert!(matches!(
+            validator.validate_model_request("test.gguf\0"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Null bytes are not allowed in model path"
+        ));
 
         assert!(validator.validate_model_request("/tmp/model.gguf").is_ok());
         assert!(validator.validate_model_request("relative/model.gguf").is_ok());
