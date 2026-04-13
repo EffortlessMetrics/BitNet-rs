@@ -227,6 +227,13 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
+        // Prevent path truncation attacks (null byte injection)
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Null bytes are not allowed in model path".to_string(),
+            ));
+        }
+
         // Prevent path traversal attacks
         if model_path.contains("..") || model_path.contains("~") {
             return Err(ValidationError::InvalidFieldValue(
@@ -600,6 +607,17 @@ mod tests {
 
         let config = SecurityConfig { trust_forwarded_headers: true, ..Default::default() };
         assert_eq!(extract_client_ip(&request, &config), Some(IpAddr::from([203, 0, 113, 1])));
+    }
+
+    #[test]
+    fn test_model_path_null_byte_rejection() {
+        let config = SecurityConfig::default();
+        let validator = SecurityValidator::new(config).unwrap();
+
+        assert!(matches!(
+            validator.validate_model_request("/tmp/model\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Null bytes are not allowed in model path"
+        ));
     }
 
     #[test]
