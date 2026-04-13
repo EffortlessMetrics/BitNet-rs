@@ -11,3 +11,6 @@
 ## 2024-05-22 - Keyboard Navigation in Custom Tabs
 **Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
 **Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
+## 2025-04-12 - Focus Indicators and ARIA Live Regions
+**Learning:** Form inputs and dynamically updated output containers lack proper visual focus indicators and accessibility announcements for screen readers.
+**Action:** Always add `:focus-visible` styles to interactive inputs for keyboard accessibility and `aria-live="polite"` to dynamically updating regions so screen readers announce changes.
