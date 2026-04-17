@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2026-03-10 - Sparse Distribution Vector Allocations
+**Learning:** Functions like `apply_top_p` and `apply_typical` frequently run after vocabulary truncation (e.g. `top_k`), resulting in extremely sparse probability distributions (often 1 or 0 elements). Dynamically allocating vectors using `.filter().collect()` over the entire vocabulary size creates significant overhead and wasteful dynamic resizing in the hot path.
+**Action:** When filtering probability slices, pre-compute `non_zero_count`. If it's sparse (<= 1), short-circuit early. Otherwise, use `Vec::with_capacity(non_zero_count)` to allocate exactly what is needed without reallocation.

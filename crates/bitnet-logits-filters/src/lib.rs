@@ -46,8 +46,24 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let mut indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    let mut non_zero_count = 0;
+    for &p in probs.iter() {
+        if p > 0.0 {
+            non_zero_count += 1;
+        }
+    }
+
+    if non_zero_count <= 1 {
+        return;
+    }
+
+    let mut indexed: Vec<(usize, f32)> = Vec::with_capacity(non_zero_count);
+    for (idx, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            indexed.push((idx, p));
+        }
+    }
+
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
 
     let mut cumsum = 0.0f32;
@@ -92,22 +108,32 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
-    if indexed.is_empty() {
+    let mut non_zero_count = 0;
+    for &p in probs.iter() {
+        if p > 0.0 {
+            non_zero_count += 1;
+        }
+    }
+
+    if non_zero_count <= 1 {
         return;
+    }
+
+    let mut indexed: Vec<(usize, f32)> = Vec::with_capacity(non_zero_count);
+    for (idx, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            indexed.push((idx, p));
+        }
     }
 
     let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
 
-    let mut deviations: Vec<(usize, f32, f32)> = indexed
-        .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
-        })
-        .collect();
+    let mut deviations: Vec<(usize, f32, f32)> = Vec::with_capacity(non_zero_count);
+    for (i, p) in indexed {
+        let surprise = -p.ln();
+        let deviation = (surprise - entropy).abs();
+        deviations.push((i, p, deviation));
+    }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
