@@ -296,10 +296,10 @@
 
             <div class="input-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <label style="margin-bottom: 0;">Output:</label>
+                    <div id="label-output" style="font-weight: 500; margin-bottom: 0;">Output:</div>
                     <button id="copy-output" onclick="copyToClipboard()" disabled style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
                 </div>
-                <div id="output" class="output">Generated text will appear here...</div>
+                <div id="output" class="output" tabindex="0" role="region" aria-labelledby="label-output">Generated text will appear here...</div>
             </div>
         </div>
     </div>
@@ -321,8 +321,8 @@
             </div>
 
             <div class="input-group">
-                <label>Streaming Output:</label>
-                <div id="streaming-output" class="streaming-output">Streaming output will appear here...</div>
+                <div id="label-streaming-output" style="font-weight: 500; margin-bottom: 5px;">Streaming Output:</div>
+                <div id="streaming-output" class="streaming-output" tabindex="0" role="region" aria-labelledby="label-streaming-output">Streaming output will appear here...</div>
             </div>
 
             <div class="stats">
@@ -364,8 +364,8 @@
             </div>
 
             <div class="input-group">
-                <label>Worker Output:</label>
-                <div id="worker-output" class="output">Worker output will appear here...</div>
+                <div id="label-worker-output" style="font-weight: 500; margin-bottom: 5px;">Worker Output:</div>
+                <div id="worker-output" class="output" tabindex="0" role="region" aria-labelledby="label-worker-output">Worker output will appear here...</div>
             </div>
         </div>
     </div>
@@ -387,8 +387,8 @@
             </div>
 
             <div class="input-group">
-                <label>Benchmark Results:</label>
-                <div id="benchmark-output" class="output">Run benchmarks to see performance metrics...</div>
+                <div id="label-benchmark-output" style="font-weight: 500; margin-bottom: 5px;">Benchmark Results:</div>
+                <div id="benchmark-output" class="output" tabindex="0" role="region" aria-labelledby="label-benchmark-output">Run benchmarks to see performance metrics...</div>
             </div>
 
             <div class="stats">
