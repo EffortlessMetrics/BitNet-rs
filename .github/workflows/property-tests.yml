@@ -33,6 +33,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
   # Lightweight smoke test — runs on every push and PR so the workflow never has 0 jobs.
@@ -41,6 +42,11 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          sudo docker image prune --all --force
+
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Setup Rust

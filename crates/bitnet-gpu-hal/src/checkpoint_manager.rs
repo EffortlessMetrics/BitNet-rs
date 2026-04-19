@@ -337,7 +337,7 @@ impl CheckpointStorage for FileCheckpointStorage {
                 metas.push(meta);
             }
         }
-        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp).then_with(|| b.id.cmp(&a.id)));
         Ok(metas)
     }
 
@@ -389,7 +389,7 @@ impl CheckpointStorage for MemoryCheckpointStorage {
 
     fn list(&self) -> Result<Vec<CheckpointMetadata>, CheckpointError> {
         let mut metas: Vec<_> = self.metas.values().cloned().collect();
-        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp).then_with(|| b.id.cmp(&a.id)));
         Ok(metas)
     }
 
