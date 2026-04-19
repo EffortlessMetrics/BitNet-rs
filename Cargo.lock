@@ -878,6 +878,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
+ "uuid",
 ]
 
 [[package]]

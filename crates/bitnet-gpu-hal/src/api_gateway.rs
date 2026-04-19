@@ -887,14 +887,14 @@ impl ApiGateway {
 
 /// Generate a short pseudo-random request id.
 fn generate_request_id() -> String {
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-    format!("req-{ts:x}")
+    let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+    format!("req-{uuid}")
 }
 
 /// Generate a pseudo-random API key.
 fn generate_api_key() -> String {
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-    format!("sk-bitnet-{ts:x}")
+    let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+    format!("sk-bitnet-{uuid}")
 }
 
 /// Strip `"Bearer "` prefix from a header value.
