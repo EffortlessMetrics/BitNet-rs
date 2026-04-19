@@ -21,6 +21,9 @@ let benchmarkSuite = null;
 // Initialize the application
 async function initApp() {
     try {
+        // Setup keyboard navigation for tabs
+        setupTabNavigation();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -67,6 +70,10 @@ function updateStatus(message, type = 'loading') {
 function updateProgress(percent) {
     const progressEl = document.getElementById('progress');
     progressEl.style.width = `${percent}%`;
+    const progressBarContainer = progressEl.parentElement;
+    if (progressBarContainer) {
+        progressBarContainer.setAttribute('aria-valuenow', percent);
+    }
 }
 
 // Detect platform features
@@ -90,11 +97,16 @@ async function detectPlatformFeatures() {
 async function loadModel() {
     const fileInput = document.getElementById('model-file');
     const file = fileInput.files[0];
+    const loadButton = document.getElementById('load-model');
 
     if (!file) {
         updateStatus('Please select a model file', 'error');
         return;
     }
+
+    const originalText = loadButton.textContent;
+    loadButton.disabled = true;
+    loadButton.textContent = 'Loading...';
 
     try {
         updateStatus('Loading model...', 'loading');
@@ -124,29 +136,43 @@ async function loadModel() {
         document.getElementById('generate').disabled = false;
         document.getElementById('start-streaming').disabled = false;
 
+        // Reset copy button
+        const copyBtn = document.getElementById('copy-output');
+        copyBtn.disabled = true;
+        copyBtn.style.backgroundColor = '#6c757d';
+        copyBtn.style.cursor = 'not-allowed';
+
         updateStatus('Model loaded successfully!', 'success');
         Logger.info('Model loaded and inference engine initialized');
 
     } catch (error) {
         updateStatus(`Model loading failed: ${error.message}`, 'error');
         Logger.error(`Model loading error: ${error}`);
+    } finally {
+        loadButton.disabled = false;
+        loadButton.textContent = originalText;
     }
 }
 
 // Generate text
 async function generateText() {
+    const generateButton = document.getElementById('generate');
     if (!inference) {
         updateStatus('Please load a model first', 'error');
         return;
     }
 
-    try {
-        const prompt = document.getElementById('prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
+    const prompt = document.getElementById('prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
 
+    const originalText = generateButton.textContent;
+    generateButton.disabled = true;
+    generateButton.textContent = 'Generating...';
+
+    try {
         updateStatus('Generating text...', 'loading');
         const startTime = performance.now();
 
@@ -171,33 +197,46 @@ async function generateText() {
         const tokensPerSec = (estimatedTokens / (generationTime / 1000)).toFixed(1);
         document.getElementById('tokens-per-sec').textContent = tokensPerSec;
 
+        // Enable copy button
+        const copyBtn = document.getElementById('copy-output');
+        copyBtn.disabled = false;
+        copyBtn.style.backgroundColor = '#007bff';
+        copyBtn.style.cursor = 'pointer';
+
         updateStatus('Text generated successfully!', 'success');
         Logger.info(`Generated ${estimatedTokens} tokens in ${generationTime.toFixed(0)}ms`);
 
     } catch (error) {
         updateStatus(`Generation failed: ${error.message}`, 'error');
         Logger.error(`Generation error: ${error}`);
+    } finally {
+        generateButton.disabled = false;
+        generateButton.textContent = originalText;
     }
 }
 
 // Start streaming generation
 async function startStreaming() {
+    const startButton = document.getElementById('start-streaming');
+    const stopButton = document.getElementById('stop-streaming');
     if (!inference) {
         updateStatus('Please load a model first', 'error');
         return;
     }
 
+    const prompt = document.getElementById('streaming-prompt').value;
+    if (!prompt.trim()) {
+        updateStatus('Please enter a prompt', 'error');
+        return;
+    }
+
+    streamingActive = true;
+    const originalText = startButton.textContent;
+    startButton.disabled = true;
+    startButton.textContent = 'Generating...';
+    stopButton.disabled = false;
+
     try {
-        const prompt = document.getElementById('streaming-prompt').value;
-        if (!prompt.trim()) {
-            updateStatus('Please enter a prompt', 'error');
-            return;
-        }
-
-        streamingActive = true;
-        document.getElementById('start-streaming').disabled = true;
-        document.getElementById('stop-streaming').disabled = false;
-
         const outputEl = document.getElementById('streaming-output');
         outputEl.textContent = '';
 
@@ -237,19 +276,17 @@ async function startStreaming() {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
 
-        streamingActive = false;
-        document.getElementById('start-streaming').disabled = false;
-        document.getElementById('stop-streaming').disabled = true;
-
         updateStatus('Streaming completed!', 'success');
         Logger.info(`Streaming completed: ${tokenCount} tokens generated`);
 
     } catch (error) {
-        streamingActive = false;
-        document.getElementById('start-streaming').disabled = false;
-        document.getElementById('stop-streaming').disabled = true;
         updateStatus(`Streaming failed: ${error.message}`, 'error');
         Logger.error(`Streaming error: ${error}`);
+    } finally {
+        streamingActive = false;
+        startButton.disabled = false;
+        startButton.textContent = originalText;
+        stopButton.disabled = true;
     }
 }
 
@@ -350,10 +387,15 @@ function terminateWorker() {
 
 // Run all benchmarks
 async function runBenchmarks() {
+    const runBtn = document.getElementById('run-benchmarks');
     if (!benchmarkSuite) {
         updateStatus('Benchmark suite not initialized', 'error');
         return;
     }
+
+    const originalText = runBtn.textContent;
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running...';
 
     try {
         updateStatus('Running comprehensive benchmarks...', 'loading');
@@ -370,19 +412,25 @@ async function runBenchmarks() {
                 results.platform_info.estimated_gflops.toFixed(2);
         }
 
-        showBenchmarkProgress(false);
         updateStatus('Benchmarks completed successfully!', 'success');
         Logger.info('Comprehensive benchmarks completed');
 
     } catch (error) {
-        showBenchmarkProgress(false);
         updateStatus(`Benchmark failed: ${error.message}`, 'error');
         Logger.error(`Benchmark error: ${error}`);
+    } finally {
+        showBenchmarkProgress(false);
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
     }
 }
 
 // Run individual benchmark categories
 async function runKernelBenchmark() {
+    const btn = document.getElementById('kernel-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running kernel benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_kernels();
@@ -390,10 +438,17 @@ async function runKernelBenchmark() {
         updateStatus('Kernel benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Kernel benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function runMemoryBenchmark() {
+    const btn = document.getElementById('memory-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running memory benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_memory();
@@ -401,10 +456,17 @@ async function runMemoryBenchmark() {
         updateStatus('Memory benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Memory benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
 async function runLoadingBenchmark() {
+    const btn = document.getElementById('loading-bench');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Running...';
     try {
         updateStatus('Running loading benchmarks...', 'loading');
         const results = await benchmarkSuite.benchmark_loading();
@@ -412,6 +474,9 @@ async function runLoadingBenchmark() {
         updateStatus('Loading benchmarks completed!', 'success');
     } catch (error) {
         updateStatus(`Loading benchmark failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
@@ -425,12 +490,14 @@ function showBenchmarkProgress(show) {
         const interval = setInterval(() => {
             progress += 2;
             document.getElementById('benchmark-progress-fill').style.width = `${progress}%`;
+            progressEl.setAttribute('aria-valuenow', progress);
             if (progress >= 100) {
                 clearInterval(interval);
             }
         }, 100);
     } else {
         progressEl.style.display = 'none';
+        progressEl.setAttribute('aria-valuenow', 0);
     }
 }
 
@@ -445,22 +512,30 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName) {
+function switchTab(tabName, element) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class, reset aria-selected, and remove from tab order for all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class, set aria-selected, and add to tab order for selected tab
+    // Fallback to event.target if element is not provided (backwards compatibility)
+    const target = element || (typeof event !== 'undefined' ? event.target : null);
+    if (target) {
+        target.classList.add('active');
+        target.setAttribute('aria-selected', 'true');
+        target.setAttribute('tabindex', '0');
+    }
 }
 
 // Settings management
@@ -533,6 +608,35 @@ function clearOutput() {
     document.getElementById('output').textContent = 'Generated text will appear here...';
     document.getElementById('generation-time').textContent = '-';
     document.getElementById('tokens-per-sec').textContent = '-';
+
+    // Reset copy button
+    const copyBtn = document.getElementById('copy-output');
+    copyBtn.disabled = true;
+    copyBtn.style.backgroundColor = '#6c757d';
+    copyBtn.style.cursor = 'not-allowed';
+}
+
+async function copyToClipboard() {
+    const outputText = document.getElementById('output').textContent;
+    const copyBtn = document.getElementById('copy-output');
+
+    try {
+        await navigator.clipboard.writeText(outputText);
+
+        // Visual feedback
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.backgroundColor = '#28a745';
+
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.backgroundColor = '#007bff';
+        }, 2000);
+
+    } catch (err) {
+        Logger.error('Failed to copy: ' + err);
+        updateStatus('Failed to copy to clipboard', 'error');
+    }
 }
 
 // Event listeners for range inputs
@@ -544,6 +648,44 @@ document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
 
+// Setup keyboard navigation for tabs
+function setupTabNavigation() {
+    const tabsContainer = document.querySelector('.tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.addEventListener('keydown', (e) => {
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const activeTab = document.activeElement;
+        const index = tabs.indexOf(activeTab);
+
+        if (index === -1) return; // Focus not on a tab
+
+        let nextIndex = index;
+        let handled = false;
+
+        if (e.key === 'ArrowRight') {
+            nextIndex = (index + 1) % tabs.length;
+            handled = true;
+        } else if (e.key === 'ArrowLeft') {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+            handled = true;
+        } else if (e.key === 'Home') {
+            nextIndex = 0;
+            handled = true;
+        } else if (e.key === 'End') {
+            nextIndex = tabs.length - 1;
+            handled = true;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            const nextTab = tabs[nextIndex];
+            nextTab.focus();
+            nextTab.click(); // Activate the tab
+        }
+    });
+}
+
 // Make functions globally available
 window.loadModel = loadModel;
 window.generateText = generateText;
@@ -551,6 +693,7 @@ window.startStreaming = startStreaming;
 window.stopStreaming = stopStreaming;
 window.clearStreaming = clearStreaming;
 window.clearOutput = clearOutput;
+window.copyToClipboard = copyToClipboard;
 window.initWorker = initWorker;
 window.workerGenerate = workerGenerate;
 window.terminateWorker = terminateWorker;
