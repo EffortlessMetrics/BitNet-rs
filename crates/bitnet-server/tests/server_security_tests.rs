@@ -477,6 +477,18 @@ fn test_model_path_empty_rejected_as_missing_field() {
     );
 }
 
+#[test]
+fn test_model_path_null_byte_rejected() {
+    let v = validator(false, false);
+    assert!(
+        matches!(
+            v.validate_model_request("model\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(_))
+        ),
+        "null byte in model path must be rejected"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Health endpoint
 // ─────────────────────────────────────────────────────────────────────────────
