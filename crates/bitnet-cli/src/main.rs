@@ -5,7 +5,7 @@
 
 // COMPILE-TIME FIREWALL: Prevent mock feature in production CLI
 #[cfg(feature = "mock")]
-compile_error!("The 'mock' feature must never be enabled for the CLI ΓÇô tests only.");
+compile_error!("The 'mock' feature must never be enabled for the CLI — tests only.");
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
@@ -67,8 +67,8 @@ use config::{CliConfig, ConfigBuilder};
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet-rs ΓÇö 1-bit neural network inference with strict receipts")]
-#[command(long_about = r#"BitNet-rs CLI ΓÇö one-shot generation and chat with strict receipts
+#[command(about = "BitNet-rs — 1-bit neural network inference with strict receipts")]
+#[command(long_about = r#"BitNet-rs CLI — one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 
@@ -101,9 +101,9 @@ PERFORMANCE:
 
   QK256 Models (I2_S quantization):
     - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
-    - With AVX2: ~1.2├ù faster (optimized kernels)
+    - With AVX2: ~1.2× faster (optimized kernels)
     - For quick validation: use --max-tokens 4-16
-    - SIMD optimizations (ΓëÑ3├ù faster) coming in v0.2.0
+    - SIMD optimizations (≥3× faster) coming in v0.2.0
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -915,13 +915,13 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
     // (This is conservative - the actual dispatch depends on runtime detection in the kernel)
     if avx2_available {
         // Still show a minimal note about QK256 usage
-        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("Γä╣").cyan().bold());
+        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("ℹ").cyan().bold());
         return Ok(());
     }
 
     // Show performance warning for scalar kernels
     eprintln!();
-    eprintln!("{}", style("ΓÜá  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
+    eprintln!("{}", style("⚠  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
     eprintln!();
     eprintln!("For quick validation, use --max-tokens 4-16");
     eprintln!("Performance: ~10 seconds per token (2B models)");
@@ -936,7 +936,7 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
         eprintln!("Estimated time for {} tokens: ~{} seconds", max_tokens, estimated_seconds);
     }
     eprintln!();
-    eprintln!("SIMD optimizations coming in v0.2.0 (ΓëÑ3├ù faster)");
+    eprintln!("SIMD optimizations coming in v0.2.0 (≥3× faster)");
     eprintln!();
     eprintln!("Use --no-warnings to suppress this message");
     eprintln!();
@@ -1123,7 +1123,7 @@ async fn run_simple_generation(
     };
 
     // Load tokenizer with auto-discovery
-    // Priority: explicit path ΓåÆ sibling tokenizer.json ΓåÆ parent tokenizer.json ΓåÆ GGUF embedded ΓåÆ mock
+    // Priority: explicit path → sibling tokenizer.json → parent tokenizer.json → GGUF embedded → mock
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
@@ -1358,7 +1358,7 @@ async fn run_simple_generation(
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
     // Performance impact: This changes embedding from O(N┬▓) to O(N), providing
-    // ~50├ù speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
     for step_idx in 0..max_new_tokens {
         // Embed only the LAST token (incremental)
         // KV cache already maintains historical context
@@ -1377,7 +1377,7 @@ async fn run_simple_generation(
             eprintln!("timing: forward_us={}", t.elapsed().as_micros());
         }
 
-        // Extract last token hidden state first to avoid 3D├ù2D matmul issues
+        // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
 
         // Debug tap: hidden state RMS sanity (catches "everything is zero")
@@ -1785,21 +1785,21 @@ async fn show_system_info() -> Result<()> {
     println!("{}", style("Features:").bold());
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        println!("  GPU support: {}", style("Γ£ô Enabled").green());
+        println!("  GPU support: {}", style("✓ Enabled").green());
         // Check CUDA availability
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             match candle_core::Device::cuda_if_available(0).is_ok() {
-                true => println!("  CUDA: {}", style("Γ£ô Available").green()),
-                false => println!("  CUDA: {}", style("Γ£ù Not available").red()),
+                true => println!("  CUDA: {}", style("✓ Available").green()),
+                false => println!("  CUDA: {}", style("✗ Not available").red()),
             }
         }
         #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-        println!("  CUDA: {}", style("Γ£ù Not compiled").yellow())
+        println!("  CUDA: {}", style("✗ Not compiled").yellow())
     }
     #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
-        println!("  GPU support: {}", style("Γ£ù Disabled").red());
+        println!("  GPU support: {}", style("✗ Disabled").red());
     }
 
     // CPU features
@@ -1807,22 +1807,22 @@ async fn show_system_info() -> Result<()> {
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx2") {
-            println!("    AVX2: {}", style("Γ£ô").green());
+            println!("    AVX2: {}", style("✓").green());
         } else {
-            println!("    AVX2: {}", style("Γ£ù").red());
+            println!("    AVX2: {}", style("✗").red());
         }
         if is_x86_feature_detected!("avx512f") {
-            println!("    AVX-512: {}", style("Γ£ô").green());
+            println!("    AVX-512: {}", style("✓").green());
         } else {
-            println!("    AVX-512: {}", style("Γ£ù").red());
+            println!("    AVX-512: {}", style("✗").red());
         }
     }
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            println!("    NEON: {}", style("Γ£ô").green());
+            println!("    NEON: {}", style("✓").green());
         } else {
-            println!("    NEON: {}", style("Γ£ù").red());
+            println!("    NEON: {}", style("✗").red());
         }
     }
 
@@ -1830,16 +1830,16 @@ async fn show_system_info() -> Result<()> {
 
     // Model formats
     println!("{}", style("Supported formats:").bold());
-    println!("  GGUF: {}", style("Γ£ô").green());
-    println!("  SafeTensors: {}", style("Γ£ô").green());
-    println!("  HuggingFace: {}", style("Γ£ô").green());
+    println!("  GGUF: {}", style("✓").green());
+    println!("  SafeTensors: {}", style("✓").green());
+    println!("  HuggingFace: {}", style("✓").green());
     println!();
 
     // Quantization types
     println!("{}", style("Quantization types:").bold());
-    println!("  I2_S (2-bit signed): {}", style("Γ£ô").green());
-    println!("  TL1 (ARM optimized): {}", style("Γ£ô").green());
-    println!("  TL2 (x86 optimized): {}", style("Γ£ô").green());
+    println!("  I2_S (2-bit signed): {}", style("✓").green());
+    println!("  TL1 (ARM optimized): {}", style("✓").green());
+    println!("  TL2 (x86 optimized): {}", style("✓").green());
 
     Ok(())
 }
@@ -2105,7 +2105,7 @@ async fn handle_compat_check_command(
         println!("{}", serde_json::to_string_pretty(&obj)?);
     } else {
         println!("File:      {}", path.display());
-        println!("Status:    Γ£ô Valid GGUF");
+        println!("Status:    ✓ Valid GGUF");
         println!(
             "Version:   {} {}",
             header.version,
@@ -2143,10 +2143,10 @@ async fn handle_compat_check_command(
         }
 
         if suspicious {
-            eprintln!("ΓÜá Unusually high tensor/KV counts detected");
+            eprintln!("⚠ Unusually high tensor/KV counts detected");
         }
         if !supported {
-            eprintln!("ΓÜá Unsupported GGUF version");
+            eprintln!("⚠ Unsupported GGUF version");
         }
     }
 
