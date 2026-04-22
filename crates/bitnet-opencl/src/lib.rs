@@ -33,6 +33,7 @@ pub use spirv::{
 pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
 pub mod model_validator;
 pub mod numerical_validator;
+pub mod runtime;
 
 pub use model_validator::{
     GpuDeviceCapabilities, ModelMetadata, ModelValidator, ModelWeights, ProjectionWeight,
@@ -41,6 +42,7 @@ pub use model_validator::{
 pub use numerical_validator::{
     ComparisonResult, DistributionStats, DivergencePoint, NumericalValidator,
 };
+pub use runtime::discover_devices;
 pub mod diagnostics;
 pub mod system_info;
 
