@@ -9,6 +9,7 @@
 
 use bitnet_compat::gguf_fixer::GgufCompatibilityFixer;
 use proptest::prelude::*;
+use proptest::test_runner::Config as ProptestConfig;
 use tempfile::TempDir;
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,12 @@ fn write_temp(dir: &TempDir, bytes: &[u8], name: &str) -> std::path::PathBuf {
 // ---------------------------------------------------------------------------
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        // Avoid FileFailurePersistence warnings in integration-test contexts.
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// Every issue string returned by `diagnose()` contains no newline characters.
     ///
     /// Issues are designed to be displayed as single-line bullet points; embedding
@@ -102,6 +109,11 @@ proptest! {
 // ---------------------------------------------------------------------------
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// `verify_idempotent()` returns `Ok(false)` for a file that has never been
     /// passed through `export_fixed()`.
     ///
@@ -126,6 +138,11 @@ proptest! {
 // ---------------------------------------------------------------------------
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// `export_fixed()` always creates a companion `.gguf.compat.json` stamp file.
     ///
     /// The stamp records the timestamp, crate version, and list of fixes applied.
@@ -172,6 +189,11 @@ proptest! {
 // ---------------------------------------------------------------------------
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// Files whose first 4 bytes differ from the "GGUF" magic are rejected with `Err`.
     ///
     /// The GGUF format is identified by its 4-byte magic at offset 0. Any file lacking
