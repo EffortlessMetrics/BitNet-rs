@@ -229,7 +229,26 @@ fn test_gpu_backend_auto_enforcement() {
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("no GPU kernels found"))
-        .stderr(predicate::str::contains("backend is 'cuda'"));
+        .stderr(predicate::str::contains("backend is 'cuda' or 'gpu'"));
+}
+
+/// Test 8b: GPU alias backend auto-enforcement (backend="gpu" requires GPU kernels)
+///
+/// This test validates that legacy/alias GPU backend naming is also protected
+/// from silent CPU fallback.
+#[test]
+fn test_gpu_alias_backend_auto_enforcement() {
+    let mut cmd = cargo_bin_cmd!("xtask");
+    cmd.args([
+        "verify-receipt",
+        "--path",
+        fixture_path("gpu_alias_cpu_kernels_only").to_str().unwrap(),
+    ]);
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("no GPU kernels found"))
+        .stderr(predicate::str::contains("backend is 'cuda' or 'gpu'"));
 }
 
 // ============================================================================

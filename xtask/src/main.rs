@@ -5623,9 +5623,10 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
         bail!("compute_path must be 'real' (got '{}') — mock inference not allowed", compute_path);
     }
 
-    // Check backend and determine GPU kernel requirement (auto-enforce for CUDA)
+    // Check backend and determine GPU kernel requirement (auto-enforce for GPU backends)
     let backend = receipt.get("backend").and_then(|v| v.as_str()).unwrap_or("cpu");
-    let must_require_gpu = backend.eq_ignore_ascii_case("cuda");
+    let must_require_gpu =
+        backend.eq_ignore_ascii_case("cuda") || backend.eq_ignore_ascii_case("gpu");
 
     // Check kernels array
     let kernels = receipt
@@ -5673,7 +5674,7 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
 
         if !has_gpu_kernel {
             let reason = if must_require_gpu {
-                "backend is 'cuda'"
+                "backend is 'cuda' or 'gpu'"
             } else {
                 "--require-gpu-kernels flag set"
             };
