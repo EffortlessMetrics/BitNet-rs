@@ -1307,6 +1307,7 @@ async fn run_simple_generation(
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+    ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -1644,6 +1645,100 @@ async fn run_simple_generation(
     }
 
     Ok(())
+}
+
+fn ensure_non_empty_generation_context(
+    tokens: &mut Vec<u32>,
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> Result<()> {
+    if !tokens.is_empty() {
+        return Ok(());
+    }
+
+    if let Some(bos_id) = tokenizer.bos_token_id() {
+        warn!(
+            "Tokenizer produced an empty prompt token sequence; seeding generation with BOS token id {bos_id}"
+        );
+        tokens.push(bos_id);
+        return Ok(());
+    }
+
+    anyhow::bail!(
+        "Prompt produced zero tokens and tokenizer has no BOS token. Provide a non-empty prompt, set --bos with a tokenizer that defines BOS, or use a template that emits content."
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ensure_non_empty_generation_context;
+    use bitnet_common::Result as TokenizerResult;
+    use bitnet_tokenizers::Tokenizer;
+
+    struct EmptyTokenizerWithBos;
+    impl Tokenizer for EmptyTokenizerWithBos {
+        fn encode(
+            &self,
+            _text: &str,
+            _add_bos: bool,
+            _parse_special: bool,
+        ) -> TokenizerResult<Vec<u32>> {
+            Ok(Vec::new())
+        }
+        fn decode(&self, _ids: &[u32]) -> TokenizerResult<String> {
+            Ok(String::new())
+        }
+        fn vocab_size(&self) -> usize {
+            1
+        }
+        fn token_to_piece(&self, _token: u32) -> Option<String> {
+            None
+        }
+        fn eos_token_id(&self) -> Option<u32> {
+            Some(2)
+        }
+        fn bos_token_id(&self) -> Option<u32> {
+            Some(1)
+        }
+    }
+
+    struct EmptyTokenizerNoBos;
+    impl Tokenizer for EmptyTokenizerNoBos {
+        fn encode(
+            &self,
+            _text: &str,
+            _add_bos: bool,
+            _parse_special: bool,
+        ) -> TokenizerResult<Vec<u32>> {
+            Ok(Vec::new())
+        }
+        fn decode(&self, _ids: &[u32]) -> TokenizerResult<String> {
+            Ok(String::new())
+        }
+        fn vocab_size(&self) -> usize {
+            1
+        }
+        fn token_to_piece(&self, _token: u32) -> Option<String> {
+            None
+        }
+    }
+
+    #[test]
+    fn empty_tokens_are_seeded_with_bos_when_available() {
+        let mut tokens = Vec::new();
+        let tokenizer = EmptyTokenizerWithBos;
+        ensure_non_empty_generation_context(&mut tokens, &tokenizer).expect("should seed BOS");
+        assert_eq!(tokens, vec![1]);
+    }
+
+    #[test]
+    fn empty_tokens_error_when_bos_unavailable() {
+        let mut tokens = Vec::new();
+        let tokenizer = EmptyTokenizerNoBos;
+        let err = ensure_non_empty_generation_context(&mut tokens, &tokenizer)
+            .expect_err("missing BOS should return error");
+        assert!(err.to_string().contains("zero tokens"));
+        assert!(tokens.is_empty());
+    }
 }
 
 /// Extract last token hidden state from 3D tensor \[B,T,H\] -> \[B,H\]
