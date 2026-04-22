@@ -10,7 +10,15 @@ pub enum DownloadValidationError {
 /// Returns true when download logic should operate in offline mode.
 #[must_use]
 pub fn offline_enabled(cli_offline: bool) -> bool {
-    cli_offline || std::env::var("BITNET_OFFLINE").as_deref() == Ok("1")
+    cli_offline || std::env::var("BITNET_OFFLINE").ok().as_deref().is_some_and(is_truthy_env_value)
+}
+
+#[must_use]
+fn is_truthy_env_value(value: &str) -> bool {
+    value.eq_ignore_ascii_case("1")
+        || value.eq_ignore_ascii_case("true")
+        || value.eq_ignore_ascii_case("yes")
+        || value.eq_ignore_ascii_case("on")
 }
 
 /// Parses `Content-Range` total bytes from values like `bytes 0-0/1234`.
@@ -67,6 +75,32 @@ mod tests {
     fn parses_content_range_total() {
         assert_eq!(parse_content_range_total("bytes 0-0/1234"), Some(1234));
         assert_eq!(parse_content_range_total("invalid"), None);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn offline_enabled_accepts_common_truthy_env_values() {
+        unsafe { std::env::remove_var("BITNET_OFFLINE") };
+        assert!(!offline_enabled(false));
+        assert!(offline_enabled(true));
+
+        for truthy in ["1", "true", "TRUE", "yes", "YES", "on", "ON"] {
+            unsafe { std::env::set_var("BITNET_OFFLINE", truthy) };
+            assert!(
+                offline_enabled(false),
+                "expected truthy value {truthy} to enable offline mode"
+            );
+        }
+
+        for falsey in ["0", "false", "off", "no", ""] {
+            unsafe { std::env::set_var("BITNET_OFFLINE", falsey) };
+            assert!(
+                !offline_enabled(false),
+                "expected falsey value {falsey} to disable offline mode"
+            );
+        }
+
+        unsafe { std::env::remove_var("BITNET_OFFLINE") };
     }
 
     #[test]
