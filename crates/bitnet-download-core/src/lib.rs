@@ -25,7 +25,25 @@ fn is_truthy_env_value(value: &str) -> bool {
 /// Parses `Content-Range` total bytes from values like `bytes 0-0/1234`.
 #[must_use]
 pub fn parse_content_range_total(content_range: &str) -> Option<u64> {
-    content_range.rsplit('/').next()?.parse::<u64>().ok()
+    let value = content_range.trim();
+    let (range, total) = value.split_once('/')?;
+
+    // Reject malformed inputs with multiple `/` separators (e.g. `bytes 0-0/1/2`).
+    if total.contains('/') {
+        return None;
+    }
+
+    // RFC 7233 uses `*` when the complete length is unknown.
+    if total == "*" {
+        return None;
+    }
+
+    // Basic sanity check for accepted `Content-Range` formats.
+    if !range.starts_with("bytes ") && range != "bytes *" {
+        return None;
+    }
+
+    total.parse::<u64>().ok()
 }
 
 /// Ensure downloaded bytes match expected total when available.
@@ -76,6 +94,11 @@ mod tests {
     fn parses_content_range_total() {
         assert_eq!(parse_content_range_total("bytes 0-0/1234"), Some(1234));
         assert_eq!(parse_content_range_total("invalid"), None);
+        assert_eq!(parse_content_range_total("bytes */*"), None);
+        assert_eq!(parse_content_range_total("bytes */2048"), Some(2048));
+        assert_eq!(parse_content_range_total("bytes 0-0/1234\r\n"), Some(1234));
+        assert_eq!(parse_content_range_total("bytes 0-0/1/2"), None);
+        assert_eq!(parse_content_range_total("items 0-0/1234"), None);
     }
 
     #[test]
