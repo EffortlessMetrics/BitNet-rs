@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{io::Write, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -34,17 +34,19 @@ pub const fn validate_downloaded_len(
 
 /// Atomic write helper for small metadata files (etag/last-modified).
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, bytes)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| std::io::Error::other("target path must have a parent directory"))?;
+    let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+    tmp.write_all(bytes)?;
+    tmp.flush()?;
 
     #[cfg(unix)]
     {
-        if let Ok(f) = std::fs::File::open(&tmp) {
-            f.sync_all()?;
-        }
+        tmp.as_file().sync_all()?;
     }
 
-    fs::rename(&tmp, path)?;
+    tmp.persist(path).map_err(|err| err.error)?;
 
     #[cfg(unix)]
     {
@@ -88,5 +90,16 @@ mod tests {
 
         atomic_write(&file_path, b"etag-v2").expect("atomic overwrite should succeed");
         assert_eq!(fs::read(&file_path).expect("read file"), b"etag-v2");
+    }
+
+    #[test]
+    fn atomic_write_ignores_preexisting_tmp_extension_path() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let file_path = dir.path().join("etag");
+        let conflicting_tmp_path = file_path.with_extension("tmp");
+        fs::create_dir(&conflicting_tmp_path).expect("create conflicting tmp directory");
+
+        atomic_write(&file_path, b"etag").expect("atomic write should not depend on .tmp path");
+        assert_eq!(fs::read(&file_path).expect("read file"), b"etag");
     }
 }
