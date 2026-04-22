@@ -659,21 +659,42 @@ fn check_benchmark_smoke(path: &Path) -> Result<()> {
 
 fn command_available(command: &str) -> bool {
     if command.contains(std::path::MAIN_SEPARATOR) {
-        return Path::new(command).exists();
+        return is_executable_file(Path::new(command));
     }
-    let Some(path) = env::var_os("PATH") else {
+    command_available_in_path(command, env::var_os("PATH"))
+}
+
+fn command_available_in_path(command: &str, path: Option<std::ffi::OsString>) -> bool {
+    let Some(path) = path else {
         return false;
     };
     let exts: &[&str] = if cfg!(windows) { &[".com", ".exe", ".bat", ".cmd", ""] } else { &[""] };
     for dir in env::split_paths(&path) {
         for ext in exts {
             let candidate = dir.join(format!("{command}{ext}"));
-            if candidate.exists() {
+            if is_executable_file(&candidate) {
                 return true;
             }
         }
     }
     false
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
 }
 
 struct ProcessKiller(Option<std::process::Child>);
@@ -794,4 +815,34 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
     }
 
     lines.iter().take(5).map(|line| line.to_string()).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{command_available_in_path, is_executable_file};
+    use std::{env, ffi::OsString, fs, path::Path};
+
+    fn mktemp_dir(label: &str) -> std::path::PathBuf {
+        let base = env::temp_dir().join(format!("bitnet-task-{label}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(&base).expect("create temp dir");
+        base
+    }
+
+    #[test]
+    fn command_available_ignores_directories_in_path() {
+        let temp = mktemp_dir("command-available-dir");
+        let fake_cmd = temp.join("fakecmd");
+        fs::create_dir_all(&fake_cmd).expect("create fake command directory");
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp)));
+
+        assert!(!found, "directory entries should not be treated as commands");
+    }
+
+    #[test]
+    fn is_executable_file_rejects_directories() {
+        let temp = mktemp_dir("exec-file-dir");
+        assert!(!is_executable_file(Path::new(&temp)));
+        let _ = fs::remove_dir_all(temp);
+    }
 }
