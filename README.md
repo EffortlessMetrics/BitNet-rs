@@ -70,7 +70,7 @@ cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli
 Download the official Microsoft BitNet GGUF:
 
 ```bash
-cargo run --locked -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --locked -p xtask --no-default-features -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 ```
 
 Run a diagnostic CPU generation path:

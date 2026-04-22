@@ -29,7 +29,7 @@ cargo build --release --no-default-features --features gpu
 
 ```bash
 # Download Microsoft's 1.58-bit quantized model (QK256 GGML I2_S format)
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
 ```
 
 **What is QK256?** This model uses GGML-compatible I2_S quantization with 256-element blocks and separate scale tensors. BitNet-rs automatically detects the quantization flavor and routes to the appropriate kernels.
@@ -40,10 +40,10 @@ BitNet-rs automatically discovers and loads tokenizers from GGUF files:
 
 ```bash
 # Verify GGUF model with automatic tokenizer discovery
-cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 # Or specify tokenizer explicitly if needed
-cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
+cargo run --no-default-features -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
 **What Just Happened?**
@@ -56,13 +56,13 @@ cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/gg
 
 ```bash
 # Generate text with automatic tokenizer discovery
-cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "BitNet is a neural network architecture that" --deterministic
+cargo run --no-default-features -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "BitNet is a neural network architecture that" --deterministic
 
 # Stream inference (real-time generation) with automatic tokenizer
-cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "Explain 1-bit quantization:" --stream
+cargo run --no-default-features -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "Explain 1-bit quantization:" --stream
 
 # Or specify tokenizer explicitly if needed
-cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --prompt "Test" --deterministic
+cargo run --no-default-features -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --prompt "Test" --deterministic
 ```
 
 ## Step 5: CPU Performance Optimization (Optional)
@@ -139,7 +139,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- run \
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
-  cargo run --release -p xtask -- benchmark \
+  cargo run --no-default-features --release -p xtask -- benchmark \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 16  # Reduced for QK256
 ```
 
@@ -157,7 +157,7 @@ For production deployments with QK256 models, use strict loader mode to ensure p
 export BITNET_DISABLE_MINIMAL_LOADER=1
 
 # Verify model loads correctly with enhanced GGUF loader
-cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 # Run inference with strict validation
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
@@ -251,7 +251,7 @@ Verify QK256 implementation against the Microsoft BitNet C++ reference:
 export BITNET_CPP_DIR=/path/to/bitnet.cpp
 
 # Run comprehensive cross-validation
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # Or use quick parity smoke test
 ./scripts/parity_smoke.sh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
@@ -286,7 +286,7 @@ You've successfully:
 3. **Automatic tokenizer discovery** extracted tokenizer from GGUF metadata, detected model architecture, and applied optimal configuration
 4. **Verified model compatibility** with enhanced GGUF loader, strict mode validation, and comprehensive tensor validation
 5. **Ran production-grade inference** with pure-Rust QK256 kernels, real transformer weights, and autoregressive generation
-6. **Benchmarked performance** — run `cargo run -p xtask -- benchmark --model <path> --tokens 128` to produce a verifiable receipt (typical CPU envelope: 10–25 tok/s for I2_S BitNet32-F16)
+6. **Benchmarked performance** — run `cargo run --no-default-features -p xtask -- benchmark --model <path> --tokens 128` to produce a verifiable receipt (typical CPU envelope: 10–25 tok/s for I2_S BitNet32-F16)
 7. **Generated validation receipts** with parity metrics, kernel IDs, and reproducible baselines in `docs/baselines/`
 
 ## Next Steps
@@ -311,16 +311,16 @@ cargo build --no-default-features --features gpu
 cargo test --workspace --no-default-features --features gpu
 
 # Download and verify model (automatic tokenizer discovery)
-cargo run -p xtask -- download-model
-cargo run -p xtask -- verify --model PATH
+cargo run --no-default-features -p xtask -- download-model
+cargo run --no-default-features -p xtask -- verify --model PATH
 
 # Neural network inference with automatic tokenizer
-cargo run -p xtask -- infer --model PATH --prompt "TEXT" --deterministic
-cargo run -p xtask -- benchmark --model PATH --tokens 128
+cargo run --no-default-features -p xtask -- infer --model PATH --prompt "TEXT" --deterministic
+cargo run --no-default-features -p xtask -- benchmark --model PATH --tokens 128
 
 # Explicit tokenizer specification (optional)
-cargo run -p xtask -- verify --model PATH --tokenizer PATH
-cargo run -p xtask -- infer --model PATH --tokenizer PATH --prompt "TEXT"
+cargo run --no-default-features -p xtask -- verify --model PATH --tokenizer PATH
+cargo run --no-default-features -p xtask -- infer --model PATH --tokenizer PATH --prompt "TEXT"
 ```
 
 **Total time: ~5 minutes to working BitNet neural network inference**
