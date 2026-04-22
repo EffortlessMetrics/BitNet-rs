@@ -501,7 +501,7 @@ impl InferenceCommand {
 
         // Execute based on mode
         match (self.interactive, self.input_file.as_ref(), self.prompt.as_ref()) {
-            (true, _, _) => self.run_interactive_mode(engine, tokenizer).await,
+            (true, _, _) => self.run_interactive_mode(engine).await,
             (false, Some(file), _) => self.run_batch_mode(engine, tokenizer, file).await,
             (false, None, Some(prompt)) => {
                 self.run_single_inference(engine, tokenizer, prompt).await
@@ -1229,19 +1229,12 @@ impl InferenceCommand {
     }
 
     /// Run interactive mode
-    async fn run_interactive_mode(
-        &self,
-        engine: InferenceEngine,
-        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
-    ) -> Result<()> {
-        // Temporary: keep references alive; TODO(use in REPL)
-        let _keep_alive = (&engine, &tokenizer);
-
+    async fn run_interactive_mode(&self, engine: InferenceEngine) -> Result<()> {
         println!("{}", style("BitNet Interactive Mode").bold().cyan());
         println!("Type your prompts below. Press Ctrl+C to exit, Ctrl+D for new session.\n");
 
         let mut conversation_history = Vec::new();
-        let _config = self.create_generation_config()?;
+        let config = self.create_generation_config()?;
 
         loop {
             // Get user input
@@ -1269,7 +1262,11 @@ impl InferenceCommand {
                             continue;
                         }
                         "/metrics" => {
-                            // Show current metrics
+                            println!("Messages in conversation: {}", conversation_history.len());
+                            println!(
+                                "Streaming: {}",
+                                if self.stream { "enabled" } else { "disabled" }
+                            );
                             continue;
                         }
                         "/exit" | "/quit" => break,
@@ -1282,29 +1279,37 @@ impl InferenceCommand {
                     } else {
                         input.to_string()
                     };
-                    // TODO: use prompt in generation
-                    let _ = &prompt;
-
                     // Generate response
                     let start_time = Instant::now();
+                    let response = if self.stream {
+                        engine.reset_decoded_tokens();
+                        let tokenizer = engine.tokenizer();
+                        let engine_config =
+                            self.to_engine_config(&config, Some(tokenizer.as_ref()));
+                        let mut stream =
+                            engine.generate_stream_with_config(&prompt, &engine_config)?;
 
-                    // Placeholder implementation
-                    let response = format!("Response to: {}", input);
-
-                    if self.stream {
                         print!("{} ", style("Assistant:").bold().blue());
                         io::stdout().flush()?;
 
-                        // Simulate streaming
-                        for char in response.chars() {
-                            print!("{}", char);
+                        let mut response = String::new();
+                        while let Some(chunk) = stream.next().await {
+                            let chunk = chunk?;
+                            engine.inc_decoded_tokens_by(chunk.token_ids.len());
+                            print!("{}", chunk.text);
                             io::stdout().flush()?;
-                            tokio::time::sleep(Duration::from_millis(30)).await;
+                            response.push_str(&chunk.text);
                         }
-                        println!(); // New line
+                        println!();
+                        response
                     } else {
+                        let tokenizer = engine.tokenizer();
+                        let engine_config =
+                            self.to_engine_config(&config, Some(tokenizer.as_ref()));
+                        let response = engine.generate_with_config(&prompt, &engine_config).await?;
                         println!("{} {}", style("Assistant:").bold().blue(), response);
-                    }
+                        response
+                    };
 
                     conversation_history.push((input.to_string(), response));
 
