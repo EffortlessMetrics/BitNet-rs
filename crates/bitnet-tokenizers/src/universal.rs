@@ -50,8 +50,7 @@ impl UniversalTokenizer {
         let mmap = MmapFile::open(path)?;
         let reader = GgufReader::new(mmap.as_slice())?;
 
-        let model_type =
-            reader.get_string_metadata("tokenizer.ggml.model").unwrap_or_else(|| "gpt2".into());
+        let model_type = Self::resolve_model_type(&reader);
 
         let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").unwrap_or_default();
         let vocab_size = tokens.len();
@@ -87,6 +86,34 @@ impl UniversalTokenizer {
             bpe_merges: merges,
         };
         Self::new(config)
+    }
+
+    fn resolve_model_type(reader: &bitnet_models::GgufReader) -> String {
+        if let Some(model_type) = reader.get_string_metadata("tokenizer.ggml.model")
+            && !model_type.trim().is_empty()
+        {
+            return model_type;
+        }
+
+        let architecture = reader.get_string_metadata("general.architecture");
+        let normalized_arch = architecture.as_deref().unwrap_or_default().trim().to_lowercase();
+        let inferred = Self::infer_model_type_from_architecture(&normalized_arch);
+
+        warn!(
+            "Missing tokenizer.ggml.model metadata; inferring tokenizer type '{}' from general.architecture={:?}",
+            inferred, architecture
+        );
+        inferred.to_string()
+    }
+
+    fn infer_model_type_from_architecture(architecture: &str) -> &'static str {
+        match architecture {
+            "llama" | "mistral" | "gemma" | "qwen" | "qwen2" | "qwen3" | "phi" | "phi2"
+            | "phi3" => "llama",
+            "gpt2" | "gpt-2" => "gpt2",
+            "bloom" | "falcon" | "gptj" | "gpt-j" | "gpt_neox" | "gpt-neox" => "gpt2",
+            _ => "unknown",
+        }
     }
 
     /// Create from model with auto-detection
@@ -225,6 +252,33 @@ impl UniversalTokenizer {
                 Ok(InternalTokenizerBackend::Mock(MockTokenizer::new()))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UniversalTokenizer;
+
+    #[test]
+    fn infer_model_type_maps_sentencepiece_architectures_to_llama() {
+        for arch in ["llama", "mistral", "gemma", "qwen2", "phi3"] {
+            assert_eq!(UniversalTokenizer::infer_model_type_from_architecture(arch), "llama");
+        }
+    }
+
+    #[test]
+    fn infer_model_type_maps_bpe_architectures_to_gpt2() {
+        for arch in ["gpt2", "gpt-2", "bloom", "gpt-j", "gpt-neox"] {
+            assert_eq!(UniversalTokenizer::infer_model_type_from_architecture(arch), "gpt2");
+        }
+    }
+
+    #[test]
+    fn infer_model_type_unknown_when_no_arch_mapping_exists() {
+        assert_eq!(
+            UniversalTokenizer::infer_model_type_from_architecture("totally-new-arch"),
+            "unknown"
+        );
     }
 }
 
