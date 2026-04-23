@@ -78,6 +78,13 @@ fn guard_profile_summary_not_empty() {
     assert!(!guard.profile_summary.is_empty());
 }
 
+#[test]
+fn guard_profile_summary_matches_report_context() {
+    let guard =
+        StartupContractGuard::evaluate(RuntimeComponent::Test, ContractPolicy::Observe).unwrap();
+    assert_eq!(guard.profile_summary, guard.report.profile_summary());
+}
+
 // ---------------------------------------------------------------------------
 // StartupContractGuard: is_compatible
 // ---------------------------------------------------------------------------
@@ -145,6 +152,24 @@ fn guard_profile_violations_is_option() {
         }
         None => {}
     }
+}
+
+#[test]
+fn guard_profile_violations_match_contract() {
+    let guard =
+        StartupContractGuard::evaluate(RuntimeComponent::Cli, ContractPolicy::Observe).unwrap();
+    let expected = if guard.report.contract.required_features().is_empty()
+        && guard.report.contract.optional_features().is_empty()
+        && guard.report.contract.forbidden_features().is_empty()
+    {
+        None
+    } else {
+        Some((
+            guard.report.contract.missing_required().to_vec(),
+            guard.report.contract.forbidden_active().to_vec(),
+        ))
+    };
+    assert_eq!(guard.profile_violations, expected);
 }
 
 // ---------------------------------------------------------------------------
