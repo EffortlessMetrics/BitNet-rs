@@ -8,70 +8,77 @@ use std::sync::LazyLock;
 
 pub use bitnet_bdd_grid_core::{
     BddCell, BddGrid, BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario,
-    feature_set_from_names,
+    feature_set_from_names, feature_set_from_names_checked,
 };
 
 static CURATED_ROWS: LazyLock<Box<[BddCell]>> = LazyLock::new(build_curated_rows);
+
+fn feature_set_or_panic(names: &[&str]) -> FeatureSet {
+    match feature_set_from_names_checked(names) {
+        Ok(set) => set,
+        Err(unknown) => panic!("curated BDD grid contains unknown feature name(s): {unknown:?}"),
+    }
+}
 
 fn build_curated_rows() -> Box<[BddCell]> {
     vec![
         BddCell {
             scenario: TestingScenario::Unit,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
-            optional_features: feature_set_from_names(&["reporting", "fixtures"]),
-            forbidden_features: feature_set_from_names(&["cpp-ffi"]),
+            required_features: feature_set_or_panic(&["inference", "kernels", "tokenizers"]),
+            optional_features: feature_set_or_panic(&["reporting", "fixtures"]),
+            forbidden_features: feature_set_or_panic(&["cpp-ffi"]),
             intent: "Fast, isolated unit execution with core inference path",
         },
         BddCell {
             scenario: TestingScenario::Integration,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
-            optional_features: feature_set_from_names(&["crossval", "reporting", "fixtures"]),
+            required_features: feature_set_or_panic(&["inference", "kernels", "tokenizers"]),
+            optional_features: feature_set_or_panic(&["crossval", "reporting", "fixtures"]),
             forbidden_features: FeatureSet::new(),
             intent: "Component and module interaction in local build",
         },
         BddCell {
             scenario: TestingScenario::CrossValidation,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&[
+            required_features: feature_set_or_panic(&[
                 "inference",
                 "kernels",
                 "tokenizers",
                 "crossval",
             ]),
-            optional_features: feature_set_from_names(&["fixtures", "reporting", "trend"]),
+            optional_features: feature_set_or_panic(&["fixtures", "reporting", "trend"]),
             forbidden_features: FeatureSet::new(),
             intent: "Reference parity / regression surface with controlled fixtures",
         },
         BddCell {
             scenario: TestingScenario::Performance,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["inference", "kernels"]),
-            optional_features: feature_set_from_names(&["gpu", "cuda", "reporting", "trend"]),
+            required_features: feature_set_or_panic(&["inference", "kernels"]),
+            optional_features: feature_set_or_panic(&["gpu", "cuda", "reporting", "trend"]),
             forbidden_features: FeatureSet::new(),
             intent: "Throughput and latency-sensitive checks",
         },
         BddCell {
             scenario: TestingScenario::Smoke,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["inference"]),
-            optional_features: feature_set_from_names(&["tokenizers", "kernels", "crossval"]),
+            required_features: feature_set_or_panic(&["inference"]),
+            optional_features: feature_set_or_panic(&["tokenizers", "kernels", "crossval"]),
             forbidden_features: FeatureSet::new(),
             intent: "Minimum viable run for deployment safety",
         },
         BddCell {
             scenario: TestingScenario::Debug,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference"]),
-            optional_features: feature_set_from_names(&["trace", "reporting"]),
+            required_features: feature_set_or_panic(&["inference"]),
+            optional_features: feature_set_or_panic(&["trace", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Detailed behavior introspection and diagnostics",
         },
         BddCell {
             scenario: TestingScenario::Minimal,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference"]),
+            required_features: feature_set_or_panic(&["inference"]),
             optional_features: FeatureSet::new(),
             forbidden_features: FeatureSet::new(),
             intent: "Fastest-path execution with hard constraints",
@@ -79,14 +86,14 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::EndToEnd,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&[
+            required_features: feature_set_or_panic(&[
                 "inference",
                 "kernels",
                 "tokenizers",
                 "reporting",
                 "crossval",
             ]),
-            optional_features: feature_set_from_names(&["fixtures", "trend", "server"]),
+            optional_features: feature_set_or_panic(&["fixtures", "trend", "server"]),
             forbidden_features: FeatureSet::new(),
             intent: "Full stack workflow checks spanning startup through response path",
         },
@@ -95,8 +102,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Unit,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["cpu", "inference", "kernels"]),
-            optional_features: feature_set_from_names(&["tokenizers", "reporting"]),
+            required_features: feature_set_or_panic(&["cpu", "inference", "kernels"]),
+            optional_features: feature_set_or_panic(&["tokenizers", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Deterministic CPU-only unit path with explicit kernel feature",
         },
@@ -105,13 +112,13 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Integration,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&[
+            required_features: feature_set_or_panic(&[
                 "inference",
                 "kernels",
                 "tokenizers",
                 "quantization",
             ]),
-            optional_features: feature_set_from_names(&["fixtures", "reporting"]),
+            optional_features: feature_set_or_panic(&["fixtures", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)",
         },
@@ -120,8 +127,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Performance,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference", "kernels"]),
-            optional_features: feature_set_from_names(&["cpu", "gpu", "cuda", "reporting"]),
+            required_features: feature_set_or_panic(&["inference", "kernels"]),
+            optional_features: feature_set_or_panic(&["cpu", "gpu", "cuda", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Local backend selection and kernel dispatch benchmarks",
         },
@@ -130,8 +137,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Development,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
-            optional_features: feature_set_from_names(&["reporting", "trace"]),
+            required_features: feature_set_or_panic(&["inference", "kernels", "tokenizers"]),
+            optional_features: feature_set_or_panic(&["reporting", "trace"]),
             forbidden_features: FeatureSet::new(),
             intent: "Sampling strategy development and greedy/top-p/top-k path exercising",
         },
@@ -140,8 +147,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Smoke,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["inference", "reporting"]),
-            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            required_features: feature_set_or_panic(&["inference", "reporting"]),
+            optional_features: feature_set_or_panic(&["kernels", "tokenizers"]),
             forbidden_features: FeatureSet::new(),
             intent: "Smoke path for receipt generation and schema v1.0.0 validation",
         },
@@ -152,8 +159,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::EndToEnd,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["inference", "server", "reporting"]),
-            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            required_features: feature_set_or_panic(&["inference", "server", "reporting"]),
+            optional_features: feature_set_or_panic(&["kernels", "tokenizers"]),
             forbidden_features: FeatureSet::new(),
             intent: "Server health-check path (/health endpoint returns 200)",
         },
@@ -163,8 +170,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Development,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["inference", "tokenizers", "cli"]),
-            optional_features: feature_set_from_names(&["kernels", "reporting"]),
+            required_features: feature_set_or_panic(&["inference", "tokenizers", "cli"]),
+            optional_features: feature_set_or_panic(&["kernels", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Prompt-template auto-detection selects instruct for base models",
         },
@@ -174,8 +181,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::CrossValidation,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["inference", "tokenizers"]),
-            optional_features: feature_set_from_names(&["fixtures", "reporting"]),
+            required_features: feature_set_or_panic(&["inference", "tokenizers"]),
+            optional_features: feature_set_or_panic(&["fixtures", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Tokenizer encode/decode round-trip preserves original token sequence",
         },
@@ -185,8 +192,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Debug,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["inference", "reporting"]),
-            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            required_features: feature_set_or_panic(&["inference", "reporting"]),
+            optional_features: feature_set_or_panic(&["kernels", "tokenizers"]),
             forbidden_features: FeatureSet::new(),
             intent: "Receipt JSON validates against schema v1.0.0 with all required gates",
         },
@@ -197,7 +204,7 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Minimal,
             environment: ExecutionEnvironment::Ci,
-            required_features: feature_set_from_names(&["inference", "kernels"]),
+            required_features: feature_set_or_panic(&["inference", "kernels"]),
             optional_features: FeatureSet::new(),
             forbidden_features: FeatureSet::new(),
             intent: "Deterministic seed produces identical output across repeated runs",
@@ -209,9 +216,9 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Smoke,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["cpu", "inference"]),
-            optional_features: feature_set_from_names(&["reporting"]),
-            forbidden_features: feature_set_from_names(&["gpu", "cuda"]),
+            required_features: feature_set_or_panic(&["cpu", "inference"]),
+            optional_features: feature_set_or_panic(&["reporting"]),
+            forbidden_features: feature_set_or_panic(&["gpu", "cuda"]),
             intent: "Device probe detects CPU features and reports available SIMD capabilities",
         },
         // Feature: logits — Scenario: "pure logits transforms pass numerical precision checks"
@@ -221,8 +228,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Integration,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["cpu", "inference", "kernels"]),
-            optional_features: feature_set_from_names(&["reporting"]),
+            required_features: feature_set_or_panic(&["cpu", "inference", "kernels"]),
+            optional_features: feature_set_or_panic(&["reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Pure logits transforms (temperature, top-k, top-p) pass numerical precision checks",
         },
@@ -233,8 +240,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Debug,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["inference"]),
-            optional_features: feature_set_from_names(&["trace", "reporting"]),
+            required_features: feature_set_or_panic(&["inference"]),
+            optional_features: feature_set_or_panic(&["trace", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Generation stopping criteria (max-tokens, stop-id, stop-string) fire deterministically",
         },
@@ -246,8 +253,8 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::CrossValidation,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["inference", "kernels"]),
-            optional_features: feature_set_from_names(&["crossval", "fixtures", "reporting"]),
+            required_features: feature_set_or_panic(&["inference", "kernels"]),
+            optional_features: feature_set_or_panic(&["crossval", "fixtures", "reporting"]),
             forbidden_features: FeatureSet::new(),
             intent: "Engine-core session contracts match C++ reference for all decode-step invariants",
         },
@@ -258,9 +265,9 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::EndToEnd,
             environment: ExecutionEnvironment::Local,
-            required_features: feature_set_from_names(&["cpu", "metal"]),
-            optional_features: feature_set_from_names(&["reporting"]),
-            forbidden_features: feature_set_from_names(&["cuda"]),
+            required_features: feature_set_or_panic(&["cpu", "metal"]),
+            optional_features: feature_set_or_panic(&["reporting"]),
+            forbidden_features: feature_set_or_panic(&["cuda"]),
             intent: "Metal backend feature gate compiles without errors (compile-only check)",
         },
         // Feature: vulkan — Scenario: "Vulkan backend compiles and probes availability"
@@ -269,9 +276,9 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Minimal,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["cpu", "vulkan"]),
-            optional_features: feature_set_from_names(&["reporting"]),
-            forbidden_features: feature_set_from_names(&["cuda"]),
+            required_features: feature_set_or_panic(&["cpu", "vulkan"]),
+            optional_features: feature_set_or_panic(&["reporting"]),
+            forbidden_features: feature_set_or_panic(&["cuda"]),
             intent: "Vulkan backend feature gate compiles and probe reports compiled=true",
         },
         // Feature: oneapi — Scenario: "Intel oneAPI backend compiles without errors"
@@ -280,9 +287,9 @@ fn build_curated_rows() -> Box<[BddCell]> {
         BddCell {
             scenario: TestingScenario::Development,
             environment: ExecutionEnvironment::PreProduction,
-            required_features: feature_set_from_names(&["cpu", "oneapi"]),
-            optional_features: feature_set_from_names(&["reporting"]),
-            forbidden_features: feature_set_from_names(&["cuda"]),
+            required_features: feature_set_or_panic(&["cpu", "oneapi"]),
+            optional_features: feature_set_or_panic(&["reporting"]),
+            forbidden_features: feature_set_or_panic(&["cuda"]),
             intent: "Intel oneAPI backend feature gate compiles without errors (compile-only check)",
         },
     ]
@@ -304,7 +311,7 @@ mod tests {
         let cell = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(cell.is_some());
 
-        let active = feature_set_from_names(&["inference", "kernels", "tokenizers"]);
+        let active = feature_set_or_panic(&["inference", "kernels", "tokenizers"]);
         let cell = cell.unwrap_or_else(|| panic!("unit/local row exists in curated grid"));
         assert!(cell.supports(&active));
         assert!(cell.violations(&active).0.is_empty());

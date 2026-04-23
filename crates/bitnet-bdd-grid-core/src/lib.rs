@@ -354,6 +354,26 @@ pub fn feature_set_from_names(features: &[&str]) -> FeatureSet {
     set
 }
 
+/// Strict helper for mapping runtime feature selections to `FeatureSet`.
+///
+/// Unlike [`feature_set_from_names`], this variant returns unknown feature names
+/// so callers can fail fast when static policy data contains typos.
+pub fn feature_set_from_names_checked(features: &[&str]) -> Result<FeatureSet, Vec<String>> {
+    let mut set = FeatureSet::new();
+    let mut unknown = Vec::new();
+
+    for feature_name in features {
+        match feature_name.parse() {
+            Ok(feature) => {
+                set.insert(feature);
+            }
+            Err(_) => unknown.push((*feature_name).to_string()),
+        }
+    }
+
+    if unknown.is_empty() { Ok(set) } else { Err(unknown) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,5 +409,20 @@ mod tests {
         let grid = BddGrid::from_rows(rows);
         let found = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(found.is_some());
+    }
+
+    #[test]
+    fn test_feature_set_from_names_checked_returns_unknown_features() {
+        let result = feature_set_from_names_checked(&["inference", "kernels", "not-a-feature"]);
+        let unknown = result.expect_err("unknown feature should return an error");
+        assert_eq!(unknown, vec!["not-a-feature".to_string()]);
+    }
+
+    #[test]
+    fn test_feature_set_from_names_checked_accepts_valid_features() {
+        let set = feature_set_from_names_checked(&["inference", "kernels"])
+            .expect("known features should parse");
+        assert!(set.contains(BitnetFeature::Inference));
+        assert!(set.contains(BitnetFeature::Kernels));
     }
 }
