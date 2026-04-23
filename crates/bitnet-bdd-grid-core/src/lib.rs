@@ -257,6 +257,27 @@ impl FeatureSet {
     }
 }
 
+/// Error returned when one or more feature names are unknown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownFeatureNames {
+    names: Vec<String>,
+}
+
+impl UnknownFeatureNames {
+    /// Unknown feature labels in deterministic input order.
+    pub fn names(&self) -> &[String] {
+        &self.names
+    }
+}
+
+impl fmt::Display for UnknownFeatureNames {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unknown features: {}", self.names.join(", "))
+    }
+}
+
+impl std::error::Error for UnknownFeatureNames {}
+
 impl From<&[BitnetFeature]> for FeatureSet {
     fn from(value: &[BitnetFeature]) -> Self {
         Self(value.iter().copied().collect())
@@ -354,6 +375,27 @@ pub fn feature_set_from_names(features: &[&str]) -> FeatureSet {
     set
 }
 
+/// Strict variant of [`feature_set_from_names`] that errors on unknown values.
+pub fn feature_set_from_names_strict(features: &[&str]) -> Result<FeatureSet, UnknownFeatureNames> {
+    let mut set = FeatureSet::new();
+    let mut unknown = Vec::new();
+
+    for feature in features {
+        match feature.parse() {
+            Ok(parsed) => {
+                set.insert(parsed);
+            }
+            Err(_) => unknown.push((*feature).to_string()),
+        }
+    }
+
+    if unknown.is_empty() {
+        Ok(set)
+    } else {
+        Err(UnknownFeatureNames { names: unknown })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,5 +431,20 @@ mod tests {
         let grid = BddGrid::from_rows(rows);
         let found = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(found.is_some());
+    }
+
+    #[test]
+    fn test_feature_set_from_names_strict_reports_unknowns() {
+        let err = feature_set_from_names_strict(&["inference", "wat", "also-wat"])
+            .expect_err("expected strict parser to reject unknown features");
+        assert_eq!(err.names(), &["wat".to_string(), "also-wat".to_string()]);
+    }
+
+    #[test]
+    fn test_feature_set_from_names_strict_accepts_knowns() {
+        let set = feature_set_from_names_strict(&["inference", "kernels"])
+            .expect("known feature names should parse");
+        assert!(set.contains(BitnetFeature::Inference));
+        assert!(set.contains(BitnetFeature::Kernels));
     }
 }
