@@ -226,6 +226,29 @@ impl FeatureSet {
         set
     }
 
+    /// Create a set from a string list, returning an error on unknown feature names.
+    ///
+    /// This is useful for policy/contract sources (like curated BDD rows) where
+    /// silently dropping unknown names could hide configuration mistakes.
+    pub fn try_from_names<I, S>(features: I) -> Result<Self, Vec<String>>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let mut set = Self::new();
+        let mut unknown = Vec::new();
+        for feature in features {
+            match feature.as_ref().parse() {
+                Ok(feature) => {
+                    set.insert(feature);
+                }
+                Err(_) => unknown.push(feature.as_ref().to_owned()),
+            }
+        }
+
+        if unknown.is_empty() { Ok(set) } else { Err(unknown) }
+    }
+
     /// Human-readable representation for logs and diagnostics.
     pub fn labels(&self) -> Vec<String> {
         self.0.iter().map(ToString::to_string).collect()
@@ -345,13 +368,12 @@ impl BddGrid {
 
 /// Canonical, reusable helper for mapping runtime feature selections to `FeatureSet`.
 pub fn feature_set_from_names(features: &[&str]) -> FeatureSet {
-    let mut set = FeatureSet::new();
-    for feature in features {
-        if let Ok(feature) = feature.parse() {
-            set.insert(feature);
-        }
-    }
-    set
+    FeatureSet::from_names(features.iter().copied())
+}
+
+/// Strict variant of [`feature_set_from_names`] that errors on unknown features.
+pub fn try_feature_set_from_names(features: &[&str]) -> Result<FeatureSet, Vec<String>> {
+    FeatureSet::try_from_names(features.iter().copied())
 }
 
 #[cfg(test)]
@@ -389,5 +411,11 @@ mod tests {
         let grid = BddGrid::from_rows(rows);
         let found = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(found.is_some());
+    }
+
+    #[test]
+    fn test_try_feature_set_from_names_rejects_unknown_features() {
+        let result = try_feature_set_from_names(&["inference", "unknown-feature"]);
+        assert_eq!(result, Err(vec!["unknown-feature".to_string()]));
     }
 }

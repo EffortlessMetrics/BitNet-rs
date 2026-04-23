@@ -5,7 +5,7 @@
 
 use bitnet_bdd_grid::{
     BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario, curated,
-    feature_set_from_names,
+    feature_set_from_names, try_feature_set_from_names,
 };
 
 // ── 1. Structural invariants ─────────────────────────────────────────────────
@@ -326,6 +326,12 @@ fn feature_set_from_names_silently_ignores_unknown_names() {
     assert!(set.contains(BitnetFeature::Kernels));
     // The unknown name must not be there (and no panic)
     assert_eq!(set.labels().len(), 2, "Unknown feature name should be silently dropped");
+}
+
+#[test]
+fn try_feature_set_from_names_rejects_unknown_names() {
+    let result = try_feature_set_from_names(&["inference", "not-a-real-feature", "kernels"]);
+    assert_eq!(result, Err(vec!["not-a-real-feature".to_string()]));
 }
 
 #[test]
