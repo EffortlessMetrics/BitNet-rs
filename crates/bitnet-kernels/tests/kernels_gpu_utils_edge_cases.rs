@@ -243,3 +243,23 @@ fn strict_mode_rejects_fake_gpu() {
         },
     );
 }
+
+#[test]
+#[serial(bitnet_env)]
+#[should_panic(expected = "strict mode forbids fake GPU")]
+fn strict_mode_rejects_fake_gpu_with_text_bool() {
+    temp_env::with_vars(
+        [("BITNET_GPU_FAKE", Some("cuda")), ("BITNET_STRICT_NO_FAKE_GPU", Some("true"))],
+        || {
+            let _ = get_gpu_info();
+        },
+    );
+}
+
+#[test]
+#[serial(bitnet_env)]
+fn gpu_cache_false_text_disables_cache() {
+    temp_env::with_vars([("BITNET_GPU_FAKE", None), ("BITNET_GPU_CACHE", Some("false"))], || {
+        let _ = get_gpu_info();
+    });
+}

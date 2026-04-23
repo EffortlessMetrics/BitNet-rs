@@ -115,7 +115,10 @@ impl<P: KernelProvider> DebugLayer<P> {
 /// Check whether `BITNET_GPU_DEBUG` is set to a truthy value.
 pub fn gpu_debug_enabled() -> bool {
     std::env::var("BITNET_GPU_DEBUG")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
+        .map(|v| {
+            let normalized = v.trim().to_ascii_lowercase();
+            matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
+        })
         .unwrap_or(false)
 }
 
@@ -450,6 +453,12 @@ mod tests {
             assert!(gpu_debug_enabled());
         });
         temp_env::with_var("BITNET_GPU_DEBUG", Some("yes"), || {
+            assert!(gpu_debug_enabled());
+        });
+        temp_env::with_var("BITNET_GPU_DEBUG", Some(" TRUE "), || {
+            assert!(gpu_debug_enabled());
+        });
+        temp_env::with_var("BITNET_GPU_DEBUG", Some("on"), || {
             assert!(gpu_debug_enabled());
         });
     }
