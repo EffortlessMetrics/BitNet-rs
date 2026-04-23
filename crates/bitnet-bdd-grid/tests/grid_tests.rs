@@ -119,6 +119,20 @@ fn cell_lookup_nonexistent_returns_none() {
     assert!(cell.is_none(), "Unit/Production cell should NOT exist in the curated grid");
 }
 
+#[test]
+fn rows_for_pair_matches_find_for_existing_cell() {
+    let grid = curated();
+    let rows = grid.rows_for_pair(TestingScenario::Unit, ExecutionEnvironment::Local);
+    assert!(
+        !rows.is_empty(),
+        "rows_for_pair() should return at least one row for existing Unit/Local cell"
+    );
+    let found = grid
+        .find(TestingScenario::Unit, ExecutionEnvironment::Local)
+        .expect("Unit/Local should exist");
+    assert_eq!(rows[0].intent, found.intent, "find() should return first pair row");
+}
+
 // ── 3. Required-feature spot-checks ─────────────────────────────────────────
 
 #[test]
@@ -257,6 +271,19 @@ fn violations_detects_missing_required_features() {
         "EndToEnd/Ci must report missing required features for an empty active set"
     );
     assert!(violated.is_empty(), "An empty active set cannot trigger forbidden violations");
+}
+
+#[test]
+fn validate_accepts_any_matching_row_for_same_pair() {
+    let grid = curated();
+    // This set satisfies the Smoke/Local contract and should produce no
+    // missing/forbidden diagnostics from validate().
+    let active = feature_set_from_names(&["cpu", "inference"]);
+    let (missing, forbidden) = grid
+        .validate(TestingScenario::Smoke, ExecutionEnvironment::Local, &active)
+        .expect("Smoke/Local rows must exist");
+    assert!(missing.is_empty(), "at least one Smoke/Local row should be satisfied");
+    assert!(forbidden.is_empty(), "matching row should not report forbidden overlap");
 }
 
 #[test]

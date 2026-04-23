@@ -327,6 +327,22 @@ impl BddGrid {
         self.rows.iter().find(|cell| cell.scenario == scenario && cell.environment == environment)
     }
 
+    /// Find all rows for a scenario/environment pair.
+    ///
+    /// This is useful when curated policy intentionally contains multiple rows
+    /// for the same pair (for example, when one scenario/environment has
+    /// multiple focused intents with different feature contracts).
+    pub fn rows_for_pair(
+        &self,
+        scenario: TestingScenario,
+        environment: ExecutionEnvironment,
+    ) -> Vec<&'static BddCell> {
+        self.rows
+            .iter()
+            .filter(|cell| cell.scenario == scenario && cell.environment == environment)
+            .collect()
+    }
+
     /// Find all rows for a scenario.
     pub fn rows_for_scenario(&self, scenario: TestingScenario) -> Vec<&'static BddCell> {
         self.rows.iter().filter(|cell| cell.scenario == scenario).collect()
@@ -339,7 +355,25 @@ impl BddGrid {
         environment: ExecutionEnvironment,
         features: &FeatureSet,
     ) -> Option<(FeatureSet, FeatureSet)> {
-        self.find(scenario, environment).map(|cell| cell.violations(features))
+        let matches = self.rows_for_pair(scenario, environment);
+        if matches.is_empty() {
+            return None;
+        }
+
+        if matches.iter().any(|cell| cell.supports(features)) {
+            return Some((FeatureSet::new(), FeatureSet::new()));
+        }
+
+        // If no row fully supports the features, return diagnostics from the
+        // "closest" row to aid remediation. Prefer fewer missing requirements,
+        // then fewer forbidden-feature conflicts.
+        matches.into_iter().map(|cell| cell.violations(features)).min_by(|a, b| {
+            let a_missing = a.0.iter().count();
+            let b_missing = b.0.iter().count();
+            let a_forbidden = a.1.iter().count();
+            let b_forbidden = b.1.iter().count();
+            (a_missing, a_forbidden).cmp(&(b_missing, b_forbidden))
+        })
     }
 }
 
@@ -370,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_grid_lookup_and_validation() {
-        let cell = BddCell {
+        let row_a = BddCell {
             scenario: TestingScenario::Unit,
             environment: ExecutionEnvironment::Local,
             required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
@@ -378,16 +412,63 @@ mod tests {
             forbidden_features: FeatureSet::new(),
             intent: "Unit test row",
         };
+        let row_b = BddCell {
+            scenario: TestingScenario::Unit,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["inference"]),
+            optional_features: FeatureSet::new(),
+            forbidden_features: feature_set_from_names(&["gpu"]),
+            intent: "Alternative unit row",
+        };
 
         let active = feature_set_from_names(&["inference", "kernels", "tokenizers"]);
-        assert!(cell.supports(&active));
-        assert!(cell.violations(&active).0.is_empty());
-        assert!(cell.violations(&active).1.is_empty());
+        assert!(row_a.supports(&active));
+        assert!(row_a.violations(&active).0.is_empty());
+        assert!(row_a.violations(&active).1.is_empty());
 
         // Verify grid lookup with a leaked static slice (test-only).
-        let rows: &'static [BddCell] = Box::leak(Box::new([cell]));
+        let rows: &'static [BddCell] = Box::leak(Box::new([row_a, row_b]));
         let grid = BddGrid::from_rows(rows);
         let found = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(found.is_some());
+        assert_eq!(
+            grid.rows_for_pair(TestingScenario::Unit, ExecutionEnvironment::Local).len(),
+            2
+        );
+        assert_eq!(
+            grid.validate(TestingScenario::Unit, ExecutionEnvironment::Local, &active),
+            Some((FeatureSet::new(), FeatureSet::new()))
+        );
+    }
+
+    #[test]
+    fn validate_uses_best_match_when_no_row_supports_features() {
+        let strict = BddCell {
+            scenario: TestingScenario::Integration,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
+            optional_features: FeatureSet::new(),
+            forbidden_features: FeatureSet::new(),
+            intent: "Strict row",
+        };
+        let lenient = BddCell {
+            scenario: TestingScenario::Integration,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference"]),
+            optional_features: FeatureSet::new(),
+            forbidden_features: feature_set_from_names(&["gpu"]),
+            intent: "Lenient row",
+        };
+        let rows: &'static [BddCell] = Box::leak(Box::new([strict, lenient]));
+        let grid = BddGrid::from_rows(rows);
+
+        // Missing "inference", but avoids forbidden overlap and is therefore
+        // closer to the lenient row than to the strict row.
+        let active = feature_set_from_names(&["gpu"]);
+        let (missing, forbidden) = grid
+            .validate(TestingScenario::Integration, ExecutionEnvironment::Ci, &active)
+            .expect("matching rows should exist");
+        assert_eq!(missing.labels(), vec!["inference".to_string()]);
+        assert_eq!(forbidden.labels(), vec!["gpu".to_string()]);
     }
 }
