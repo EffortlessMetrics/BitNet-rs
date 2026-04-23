@@ -44,9 +44,9 @@ impl FromStr for TestingScenario {
         match s.to_ascii_lowercase().as_str() {
             "unit" => Ok(Self::Unit),
             "integration" => Ok(Self::Integration),
-            "e2e" | "end-to-end" | "endtoend" => Ok(Self::EndToEnd),
+            "e2e" | "end-to-end" | "endtoend" | "end_to_end" => Ok(Self::EndToEnd),
             "performance" | "perf" => Ok(Self::Performance),
-            "crossval" | "cross-validation" => Ok(Self::CrossValidation),
+            "crossval" | "cross-validation" | "cross_validation" => Ok(Self::CrossValidation),
             "smoke" => Ok(Self::Smoke),
             "development" | "dev" => Ok(Self::Development),
             "debug" => Ok(Self::Debug),
@@ -83,7 +83,13 @@ impl FromStr for ExecutionEnvironment {
         match s.to_ascii_lowercase().as_str() {
             "local" | "dev" | "development" => Ok(Self::Local),
             "ci" | "ci/cd" | "cicd" => Ok(Self::Ci),
-            "pre-prod" | "preprod" | "pre-production" | "preproduction" | "staging" => {
+            "pre-prod"
+            | "preprod"
+            | "pre-production"
+            | "preproduction"
+            | "pre_prod"
+            | "pre_production"
+            | "staging" => {
                 Ok(Self::PreProduction)
             }
             "prod" | "production" => Ok(Self::Production),
@@ -170,14 +176,16 @@ impl FromStr for BitnetFeature {
             "ffi" => Ok(Self::Ffi),
             "python" => Ok(Self::Python),
             "wasm" => Ok(Self::Wasm),
-            "crossval" | "cross-validation" => Ok(Self::CrossValidation),
+            "crossval" | "cross-validation" | "cross_validation" => Ok(Self::CrossValidation),
             "trace" => Ok(Self::Trace),
-            "iq2s-ffi" => Ok(Self::Iq2sFfi),
-            "cpp-ffi" => Ok(Self::CppFfi),
+            "iq2s-ffi" | "iq2s_ffi" => Ok(Self::Iq2sFfi),
+            "cpp-ffi" | "cpp_ffi" => Ok(Self::CppFfi),
             "fixtures" => Ok(Self::Fixtures),
             "reporting" => Ok(Self::Reporting),
             "trend" => Ok(Self::Trend),
-            "integration-tests" => Ok(Self::IntegrationTests),
+            "integration-tests" | "integration_tests" | "integration-test" | "integration_test" => {
+                Ok(Self::IntegrationTests)
+            }
             _ => Err("unknown feature"),
         }
     }

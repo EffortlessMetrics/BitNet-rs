@@ -21,13 +21,18 @@ fn scenario_integration_parses() {
 }
 
 #[test]
-fn scenario_e2e_alias_end_to_end() {
+fn scenario_e2e_alias_end_dash_to_dash_end() {
     assert_eq!(TestingScenario::from_str("end-to-end"), Ok(TestingScenario::EndToEnd));
 }
 
 #[test]
 fn scenario_e2e_alias_endtoend() {
     assert_eq!(TestingScenario::from_str("endtoend"), Ok(TestingScenario::EndToEnd));
+}
+
+#[test]
+fn scenario_e2e_alias_end_to_end() {
+    assert_eq!(TestingScenario::from_str("end_to_end"), Ok(TestingScenario::EndToEnd));
 }
 
 #[test]
@@ -38,6 +43,11 @@ fn scenario_perf_alias() {
 #[test]
 fn scenario_crossval_alias() {
     assert_eq!(TestingScenario::from_str("cross-validation"), Ok(TestingScenario::CrossValidation));
+}
+
+#[test]
+fn scenario_crossval_alias_underscore() {
+    assert_eq!(TestingScenario::from_str("cross_validation"), Ok(TestingScenario::CrossValidation));
 }
 
 #[test]
@@ -137,7 +147,15 @@ fn env_cicd_no_slash_alias() {
 
 #[test]
 fn env_preprod_aliases() {
-    for alias in &["pre-prod", "preprod", "pre-production", "preproduction", "staging"] {
+    for alias in &[
+        "pre-prod",
+        "preprod",
+        "pre-production",
+        "preproduction",
+        "pre_prod",
+        "pre_production",
+        "staging",
+    ] {
         assert_eq!(
             ExecutionEnvironment::from_str(alias),
             Ok(ExecutionEnvironment::PreProduction),
@@ -234,6 +252,21 @@ fn feature_all_known_parse() {
 #[test]
 fn feature_crossval_alias() {
     assert_eq!(BitnetFeature::from_str("cross-validation"), Ok(BitnetFeature::CrossValidation));
+    assert_eq!(BitnetFeature::from_str("cross_validation"), Ok(BitnetFeature::CrossValidation));
+}
+
+#[test]
+fn feature_ffi_and_integration_aliases() {
+    assert_eq!(BitnetFeature::from_str("iq2s_ffi"), Ok(BitnetFeature::Iq2sFfi));
+    assert_eq!(BitnetFeature::from_str("cpp_ffi"), Ok(BitnetFeature::CppFfi));
+    assert_eq!(
+        BitnetFeature::from_str("integration_tests"),
+        Ok(BitnetFeature::IntegrationTests)
+    );
+    assert_eq!(
+        BitnetFeature::from_str("integration_test"),
+        Ok(BitnetFeature::IntegrationTests)
+    );
 }
 
 #[test]
