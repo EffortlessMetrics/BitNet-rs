@@ -88,6 +88,14 @@ pub fn validate_token_parity(
     prompt: &str,
     backend: CppBackend,
 ) -> anyhow::Result<()> {
+    if let Some((index, token)) = cpp_tokens.iter().enumerate().find(|(_, token)| **token < 0) {
+        let diagnostic = format_negative_cpp_token_error(index, *token, prompt, backend);
+        eprintln!("{diagnostic}");
+        anyhow::bail!(
+            "Invalid C++ token ID at index {index}: {token} (token IDs must be non-negative)"
+        );
+    }
+
     // Convert C++ tokens from i32 to u32 for comparison
     // Note: C++ FFI returns i32, but token IDs are non-negative in practice
     let cpp_tokens_u32: Vec<u32> = cpp_tokens.iter().map(|&id| id as u32).collect();
@@ -115,6 +123,39 @@ pub fn validate_token_parity(
 
     // Silent success - no output when tokens match
     Ok(())
+}
+
+fn format_negative_cpp_token_error(
+    index: usize,
+    token: i32,
+    prompt: &str,
+    backend: CppBackend,
+) -> String {
+    use std::fmt::Write;
+
+    let mut output = String::new();
+    writeln!(
+        output,
+        "\n{}",
+        style(format!("❌ Invalid C++ token ID from {} backend", backend.name())).red().bold()
+    )
+    .unwrap();
+    writeln!(output, "{}: {}", style("Index").yellow(), index).unwrap();
+    writeln!(output, "{}: {}", style("Token").yellow(), token).unwrap();
+    writeln!(
+        output,
+        "{}",
+        style("C++ tokenizer emitted a negative token ID; token IDs must be >= 0").yellow()
+    )
+    .unwrap();
+    writeln!(output, "\n{}:", style("Troubleshooting").green().bold()).unwrap();
+    writeln!(output, "  • Verify model/tokenizer pair is compatible with selected backend")
+        .unwrap();
+    writeln!(output, "  • Re-run with --dump-cpp-ids to inspect raw C++ token stream").unwrap();
+    writeln!(output, "  • Re-run with --dump-ids to compare Rust token stream").unwrap();
+    writeln!(output, "  • Prompt: \"{}\"", prompt).unwrap();
+
+    output
 }
 
 /// Helper to compute first diff position between two token sequences
@@ -557,9 +598,8 @@ mod tests {
     // Edge case: i32 to u32 conversion (negative values should be handled)
     #[test]
     fn test_negative_cpp_tokens() {
-        // Policy: negative i32 token IDs from C++ are cast to u32 (wrapping).
-        // This means they will never match a valid Rust token, so the call
-        // returns Err (mismatch) rather than panicking.
+        // Policy: negative i32 token IDs from C++ are rejected explicitly to
+        // avoid silent i32->u32 wrapping.
         let rust = vec![1u32, 2, 3];
         let cpp = vec![1_i32, -1, 3]; // -1 becomes u32::MAX when cast
         let result = validate_token_parity(&rust, &cpp, "test", CppBackend::BitNet);
@@ -567,6 +607,23 @@ mod tests {
             result.is_err(),
             "Negative C++ token IDs should produce a mismatch error, not panic"
         );
+
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Invalid C++ token ID"),
+            "Error should explicitly explain invalid token id, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_negative_cpp_token_error_format() {
+        let formatted = format_negative_cpp_token_error(7, -42, "abc", CppBackend::Llama);
+        assert!(formatted.contains("Invalid C++ token ID"));
+        assert!(formatted.contains("Index"));
+        assert!(formatted.contains("7"));
+        assert!(formatted.contains("-42"));
+        assert!(formatted.contains("--dump-cpp-ids"));
+        assert!(formatted.contains("LLaMA"));
     }
 
     // AC10: Backend-specific troubleshooting hints
