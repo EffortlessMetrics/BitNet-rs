@@ -1,4 +1,21 @@
 use super::*;
+use std::process::Output;
+
+fn ensure_command_succeeded(output: &Output, command: &str) -> Result<()> {
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let details = if !stderr.trim().is_empty() { stderr.trim() } else { stdout.trim() };
+
+    if details.is_empty() {
+        bail!("{command} failed with {}", output.status);
+    }
+
+    bail!("{command} failed with {}: {details}", output.status);
+}
 
 pub(crate) fn cmd_check_ignore_annotations(root: &Path) -> Result<()> {
     let script = root.join("scripts/lib/ignore_check.sh");
@@ -460,11 +477,12 @@ pub(crate) fn cmd_validate_fixtures(root: &Path) -> Result<()> {
     }
 
     let sha_status =
-        run_capture(&fixture_dir, "sha256sum", &["--check", "--strict", "SHA256SUMS"], &[], false);
-    if sha_status.is_err() {
+        run_capture(&fixture_dir, "sha256sum", &["--check", "--strict", "SHA256SUMS"], &[], true)?;
+    if let Err(err) = ensure_command_succeeded(&sha_status, "sha256sum --check --strict SHA256SUMS")
+    {
         println!("::error::Fixture checksum verification failed");
         println!("Fixtures may be corrupted or modified without updating SHA256SUMS");
-        bail!("fixture checksum verification failed");
+        bail!("{err}");
     }
 
     println!("✅ All fixture checksums valid");
@@ -519,6 +537,13 @@ pub(crate) fn cmd_validate_fixtures(root: &Path) -> Result<()> {
             println!("::warning::Could not inspect {name} - skipping metadata validation");
             continue;
         };
+        if !inspect.status.success() {
+            println!(
+                "::warning::Inspect command failed for {name}; skipping metadata validation: {}",
+                String::from_utf8_lossy(&inspect.stderr).trim()
+            );
+            continue;
+        }
         let inspect_text = String::from_utf8_lossy(&inspect.stdout);
         let inspect_json: Value = match serde_json::from_str(&inspect_text) {
             Ok(value) => value,
@@ -853,4 +878,35 @@ pub(crate) fn cmd_check_feature_gates(root: &Path) -> Result<()> {
 
     println!("✅ Feature gate consistency check passed");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    fn output_with_status(status: i32, stdout: &[u8], stderr: &[u8]) -> Output {
+        use std::os::unix::process::ExitStatusExt;
+        Output {
+            status: std::process::ExitStatus::from_raw(status << 8),
+            stdout: stdout.to_vec(),
+            stderr: stderr.to_vec(),
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ensure_command_succeeded_accepts_success_status() {
+        let output = output_with_status(0, b"ok", b"");
+        assert!(ensure_command_succeeded(&output, "dummy").is_ok());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ensure_command_succeeded_reports_stderr_on_failure() {
+        let output = output_with_status(1, b"", b"checksum mismatch");
+        let err = ensure_command_succeeded(&output, "sha256sum").expect_err("expected failure");
+        assert!(err.to_string().contains("checksum mismatch"));
+        assert!(err.to_string().contains("sha256sum"));
+    }
 }
