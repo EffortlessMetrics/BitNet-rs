@@ -62,6 +62,15 @@ fn scenario_case_insensitive() {
 }
 
 #[test]
+fn scenario_accepts_trimmed_and_underscored_values() {
+    assert_eq!(TestingScenario::from_str(" end_to_end "), Ok(TestingScenario::EndToEnd));
+    assert_eq!(
+        TestingScenario::from_str(" cross_validation "),
+        Ok(TestingScenario::CrossValidation)
+    );
+}
+
+#[test]
 fn scenario_display_roundtrip() {
     let scenarios = [
         TestingScenario::Unit,
@@ -164,6 +173,14 @@ fn env_case_insensitive() {
 }
 
 #[test]
+fn env_accepts_trimmed_and_underscored_values() {
+    assert_eq!(
+        ExecutionEnvironment::from_str(" pre_production "),
+        Ok(ExecutionEnvironment::PreProduction)
+    );
+}
+
+#[test]
 fn env_display_roundtrip() {
     let envs = [
         ExecutionEnvironment::Local,
@@ -245,6 +262,15 @@ fn feature_unknown_errors() {
 fn feature_case_insensitive() {
     assert_eq!(BitnetFeature::from_str("CPU"), Ok(BitnetFeature::Cpu));
     assert_eq!(BitnetFeature::from_str("Gpu"), Ok(BitnetFeature::Gpu));
+}
+
+#[test]
+fn feature_accepts_trimmed_and_underscored_values() {
+    assert_eq!(
+        BitnetFeature::from_str(" integration_tests "),
+        Ok(BitnetFeature::IntegrationTests)
+    );
+    assert_eq!(BitnetFeature::from_str(" cpp_ffi "), Ok(BitnetFeature::CppFfi));
 }
 
 #[test]
