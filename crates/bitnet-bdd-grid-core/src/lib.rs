@@ -7,6 +7,10 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
+fn normalize_key(value: &str) -> String {
+    value.trim().to_ascii_lowercase().replace(['_', ' '], "-")
+}
+
 /// Logical test scenario axis for BDD planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TestingScenario {
@@ -41,7 +45,7 @@ impl FromStr for TestingScenario {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_key(s).as_str() {
             "unit" => Ok(Self::Unit),
             "integration" => Ok(Self::Integration),
             "e2e" | "end-to-end" | "endtoend" => Ok(Self::EndToEnd),
@@ -80,7 +84,7 @@ impl FromStr for ExecutionEnvironment {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_key(s).as_str() {
             "local" | "dev" | "development" => Ok(Self::Local),
             "ci" | "ci/cd" | "cicd" => Ok(Self::Ci),
             "pre-prod" | "preprod" | "pre-production" | "preproduction" | "staging" => {
@@ -154,7 +158,7 @@ impl FromStr for BitnetFeature {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_key(s).as_str() {
             "cpu" => Ok(Self::Cpu),
             "gpu" => Ok(Self::Gpu),
             "cuda" => Ok(Self::Cuda),
@@ -361,11 +365,25 @@ mod tests {
     #[test]
     fn test_scenario_parsing() {
         assert_eq!(TestingScenario::from_str("unit"), Ok(TestingScenario::Unit));
+        assert_eq!(TestingScenario::from_str(" End_to_End "), Ok(TestingScenario::EndToEnd));
         assert_eq!(
             TestingScenario::from_str("perf").map_err(|e| e.to_string()),
             Ok(TestingScenario::Performance)
         );
         assert!(TestingScenario::from_str("unknown").is_err());
+    }
+
+    #[test]
+    fn test_environment_and_feature_parsing_tolerates_common_separators() {
+        assert_eq!(
+            ExecutionEnvironment::from_str(" pre_production "),
+            Ok(ExecutionEnvironment::PreProduction)
+        );
+        assert_eq!(
+            BitnetFeature::from_str("integration_tests"),
+            Ok(BitnetFeature::IntegrationTests)
+        );
+        assert_eq!(BitnetFeature::from_str("iq2s ffi"), Ok(BitnetFeature::Iq2sFfi));
     }
 
     #[test]
