@@ -62,6 +62,18 @@ fn scenario_case_insensitive() {
 }
 
 #[test]
+fn scenario_parsing_accepts_whitespace_and_underscore_aliases() {
+    assert_eq!(
+        TestingScenario::from_str("  end_to_end "),
+        Ok(TestingScenario::EndToEnd)
+    );
+    assert_eq!(
+        TestingScenario::from_str("cross_validation"),
+        Ok(TestingScenario::CrossValidation)
+    );
+}
+
+#[test]
 fn scenario_display_roundtrip() {
     let scenarios = [
         TestingScenario::Unit,
@@ -164,6 +176,14 @@ fn env_case_insensitive() {
 }
 
 #[test]
+fn env_parsing_accepts_whitespace_and_underscore_aliases() {
+    assert_eq!(
+        ExecutionEnvironment::from_str("  pre_production "),
+        Ok(ExecutionEnvironment::PreProduction)
+    );
+}
+
+#[test]
 fn env_display_roundtrip() {
     let envs = [
         ExecutionEnvironment::Local,
@@ -234,6 +254,15 @@ fn feature_all_known_parse() {
 #[test]
 fn feature_crossval_alias() {
     assert_eq!(BitnetFeature::from_str("cross-validation"), Ok(BitnetFeature::CrossValidation));
+}
+
+#[test]
+fn feature_parsing_accepts_whitespace_and_underscore_aliases() {
+    assert_eq!(
+        BitnetFeature::from_str("  integration_tests "),
+        Ok(BitnetFeature::IntegrationTests)
+    );
+    assert_eq!(BitnetFeature::from_str("cpp_ffi"), Ok(BitnetFeature::CppFfi));
 }
 
 #[test]
@@ -310,6 +339,14 @@ fn feature_set_from_names_skips_unknown() {
     assert!(set.contains(BitnetFeature::Cpu));
     assert!(set.contains(BitnetFeature::Gpu));
     assert!(!set.contains(BitnetFeature::Cuda));
+}
+
+#[test]
+fn feature_set_from_names_trims_and_normalizes_labels() {
+    let set = FeatureSet::from_names([" cpu ", "integration_tests", "cross_validation"]);
+    assert!(set.contains(BitnetFeature::Cpu));
+    assert!(set.contains(BitnetFeature::IntegrationTests));
+    assert!(set.contains(BitnetFeature::CrossValidation));
 }
 
 #[test]

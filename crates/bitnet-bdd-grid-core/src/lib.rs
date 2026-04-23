@@ -7,6 +7,12 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
+fn normalize_name_token(raw: &str) -> String {
+    raw.trim()
+        .to_ascii_lowercase()
+        .replace(['_', ' '], "-")
+}
+
 /// Logical test scenario axis for BDD planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TestingScenario {
@@ -41,7 +47,7 @@ impl FromStr for TestingScenario {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_name_token(s).as_str() {
             "unit" => Ok(Self::Unit),
             "integration" => Ok(Self::Integration),
             "e2e" | "end-to-end" | "endtoend" => Ok(Self::EndToEnd),
@@ -80,7 +86,7 @@ impl FromStr for ExecutionEnvironment {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_name_token(s).as_str() {
             "local" | "dev" | "development" => Ok(Self::Local),
             "ci" | "ci/cd" | "cicd" => Ok(Self::Ci),
             "pre-prod" | "preprod" | "pre-production" | "preproduction" | "staging" => {
@@ -154,7 +160,7 @@ impl FromStr for BitnetFeature {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_name_token(s).as_str() {
             "cpu" => Ok(Self::Cpu),
             "gpu" => Ok(Self::Gpu),
             "cuda" => Ok(Self::Cuda),
@@ -177,7 +183,9 @@ impl FromStr for BitnetFeature {
             "fixtures" => Ok(Self::Fixtures),
             "reporting" => Ok(Self::Reporting),
             "trend" => Ok(Self::Trend),
-            "integration-tests" => Ok(Self::IntegrationTests),
+            "integration-tests" | "integrationtest" | "integrationtests" => {
+                Ok(Self::IntegrationTests)
+            }
             _ => Err("unknown feature"),
         }
     }
