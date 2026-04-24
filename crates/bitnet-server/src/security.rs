@@ -234,6 +234,13 @@ impl SecurityValidator {
             ));
         }
 
+        // Prevent path truncation vulnerabilities
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Null bytes are not allowed in model path".to_string(),
+            ));
+        }
+
         // Only allow specific file extensions
         if !model_path.ends_with(".gguf") && !model_path.ends_with(".safetensors") {
             return Err(ValidationError::InvalidFieldValue(
