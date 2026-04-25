@@ -234,6 +234,13 @@ impl SecurityValidator {
             ));
         }
 
+        // Prevent path truncation attacks (null byte injection)
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Null bytes are not allowed in model path".to_string(),
+            ));
+        }
+
         // Only allow specific file extensions
         if !model_path.ends_with(".gguf") && !model_path.ends_with(".safetensors") {
             return Err(ValidationError::InvalidFieldValue(
@@ -647,6 +654,17 @@ mod tests {
     /// An empty string in `allowed_model_directories` must NOT act as a wildcard.
     /// `Path::starts_with("")` returns `true` for every path (empty path has no
     /// components, which is trivially a prefix of anything), so we must skip empty entries.
+    #[test]
+    fn test_model_path_null_byte_rejection() {
+        let config = SecurityConfig::default();
+        let validator = SecurityValidator::new(config).unwrap();
+
+        assert!(matches!(
+            validator.validate_model_request("valid_model.gguf\0.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Null bytes are not allowed in model path"
+        ));
+    }
+
     #[test]
     fn test_empty_allowed_dir_does_not_bypass_restriction() {
         let config = SecurityConfig {
