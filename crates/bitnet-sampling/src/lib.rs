@@ -20,7 +20,6 @@ use anyhow::{Context, Result};
 use bitnet_probability::{renormalize_in_place, sample_categorical};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::collections::HashMap;
 use tracing::debug;
 
 /// Configuration for sampling strategies.
@@ -62,15 +61,13 @@ impl Default for SamplingConfig {
     }
 }
 
-/// Stateful sampling strategy that tracks token counts for repetition penalty.
+/// Stateful sampling strategy for text generation.
 ///
 /// Create with [`SamplingStrategy::new`], then call [`SamplingStrategy::sample`]
-/// for each step in the decode loop.  Call [`SamplingStrategy::reset`] when
-/// starting a new sequence to clear the internal token-count state.
+/// for each step in the decode loop.
 pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
-    token_counts: HashMap<u32, usize>,
     /// Pre-allocated buffer to avoid allocating on every generation step
     logits_buffer: Vec<f32>,
 }
@@ -96,7 +93,7 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new(), logits_buffer: Vec::new() }
+        Self { config, rng, logits_buffer: Vec::new() }
     }
 
     /// Sample the next token from logits.
@@ -164,7 +161,6 @@ impl SamplingStrategy {
         // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
         if self.config.temperature == 0.0 {
             let token = greedy_sample(&buf)?;
-            *self.token_counts.entry(token).or_insert(0) += 1;
             // Restore buffer
             self.logits_buffer = buf;
             return Ok(token);
@@ -192,7 +188,6 @@ impl SamplingStrategy {
         let _ = renormalize_in_place(&mut buf);
 
         let token = self.sample_from_distribution(&buf)?;
-        *self.token_counts.entry(token).or_insert(0) += 1;
 
         // Restore buffer
         self.logits_buffer = buf;
@@ -270,16 +265,14 @@ impl SamplingStrategy {
     /// let config = SamplingConfig { temperature: 0.0, seed: Some(1), ..Default::default() };
     /// let mut strategy = SamplingStrategy::new(config);
     ///
-    /// // Generate a token so internal counts are non-empty.
+    /// // Generate a token.
     /// let logits = vec![0.1f32, 0.9, 0.3];
     /// let _ = strategy.sample(&logits, &[]).unwrap();
     ///
-    /// // reset() clears those counts so the next request is independent.
+    /// // reset() does nothing in the current implementation but is kept for API compatibility.
     /// strategy.reset();
     /// ```
-    pub fn reset(&mut self) {
-        self.token_counts.clear();
-    }
+    pub fn reset(&mut self) {}
 
     /// Update configuration, re-seeding the PRNG if the seed changed.
     pub fn update_config(&mut self, config: SamplingConfig) {
