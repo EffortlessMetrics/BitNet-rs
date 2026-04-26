@@ -11,3 +11,7 @@
 ## 2024-05-22 - Keyboard Navigation in Custom Tabs
 **Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
 **Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
+
+## 2024-05-22 - Accessible Dynamic Text Regions
+**Learning:** Scrollable text output containers (like terminal output or AI generation results) labeled with `<label>` tags are incorrect as labels are only for form controls. Furthermore, dynamically updating text is missed by screen readers.
+**Action:** Use a styled `<div>` for the label, link it via `aria-labelledby`, add `tabindex="0"` and `role="region"` for keyboard/screen reader access, and apply `aria-live="polite"` to announce asynchronous updates.
