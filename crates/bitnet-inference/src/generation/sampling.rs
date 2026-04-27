@@ -7,7 +7,6 @@ use anyhow::{Context, Result};
 use bitnet_common::{BitNetTensor, Tensor};
 use candle_core::Tensor as CandleTensor;
 use rand::{Rng, RngCore};
-use std::collections::HashMap;
 
 /// Configuration for sampling strategies
 #[derive(Debug, Clone)]
@@ -35,7 +34,7 @@ impl Default for SamplingConfig {
 #[derive(Debug)]
 pub struct SamplingStrategy {
     config: SamplingConfig,
-    repetition_counts: HashMap<usize, usize>,
+    seen_tokens: Vec<u32>,
     current_repetition_penalty: f32,
 }
 
@@ -45,7 +44,7 @@ impl SamplingStrategy {
         Self {
             current_repetition_penalty: config.repetition_penalty,
             config,
-            repetition_counts: HashMap::new(),
+            seen_tokens: Vec::new(),
         }
     }
 
@@ -129,23 +128,18 @@ impl SamplingStrategy {
 
     /// Apply repetition penalty to logits
     fn apply_repetition_penalty(&self, logits: &CandleTensor) -> Result<CandleTensor> {
-        if self.current_repetition_penalty == 1.0 || self.repetition_counts.is_empty() {
+        if self.current_repetition_penalty == 1.0 || self.seen_tokens.is_empty() {
             return Ok(logits.clone());
         }
 
         let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
 
-        // Expand each (token, count) pair into `count` repetitions of the token ID.
-        // Passing a token N times to apply_repetition_penalty produces penalty^N,
-        // which is equivalent to the original count-based exponential formula.
-        let token_ids: Vec<u32> = self
-            .repetition_counts
-            .iter()
-            .flat_map(|(&id, &count)| std::iter::repeat_n(id as u32, count))
-            .collect();
+        // Pass seen_tokens directly. Passing a token N times to apply_repetition_penalty
+        // produces penalty^N, which is equivalent to the original count-based exponential formula,
+        // without requiring a HashMap lookup or per-token allocation.
         bitnet_logits::apply_repetition_penalty(
             &mut logits_vec,
-            &token_ids,
+            &self.seen_tokens,
             self.current_repetition_penalty,
         );
 
@@ -219,11 +213,12 @@ impl SamplingStrategy {
 
     /// Update repetition tracking
     pub fn track_token(&mut self, token_id: usize) {
-        *self.repetition_counts.entry(token_id).or_insert(0) += 1;
+        self.seen_tokens.push(token_id as u32);
 
-        // Clean up old entries to prevent unbounded growth
-        if self.repetition_counts.len() > 1000 {
-            self.repetition_counts.clear();
+        // Clean up old entries to prevent unbounded growth using a sliding window
+        // to avoid abruptly altering text generation semantics
+        if self.seen_tokens.len() > 1000 {
+            self.seen_tokens.drain(0..500);
         }
     }
 
@@ -235,7 +230,7 @@ impl SamplingStrategy {
     /// Reset repetition penalty
     pub fn reset_repetition_penalty(&mut self) {
         self.current_repetition_penalty = self.config.repetition_penalty;
-        self.repetition_counts.clear();
+        self.seen_tokens.clear();
     }
 
     /// Update configuration
