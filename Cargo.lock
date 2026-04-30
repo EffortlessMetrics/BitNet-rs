@@ -916,6 +916,7 @@ dependencies = [
  "bitnet-kv-cache-policy-core",
  "bitnet-logits",
  "bitnet-models",
+ "bitnet-probability",
  "bitnet-prompt-templates",
  "bitnet-quantization",
  "bitnet-quantization-bits",

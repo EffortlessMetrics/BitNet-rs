@@ -3,9 +3,8 @@
 //! Provides various sampling strategies including temperature scaling,
 //! top-k sampling, nucleus (top-p) sampling, and repetition penalty.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bitnet_common::{BitNetTensor, Tensor};
-use candle_core::Tensor as CandleTensor;
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
 
@@ -37,6 +36,7 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     repetition_counts: HashMap<usize, usize>,
     current_repetition_penalty: f32,
+    logits_buffer: Vec<f32>,
 }
 
 impl SamplingStrategy {
@@ -46,6 +46,7 @@ impl SamplingStrategy {
             current_repetition_penalty: config.repetition_penalty,
             config,
             repetition_counts: HashMap::new(),
+            logits_buffer: Vec::new(),
         }
     }
 
@@ -59,51 +60,93 @@ impl SamplingStrategy {
             return self.greedy_sample(logits).await;
         }
 
-        let logits_candle = logits.to_candle()?;
+        let mut buf = std::mem::take(&mut self.logits_buffer);
+        buf.clear();
 
-        // Get the last token's logits (for autoregressive generation)
+        let logits_candle = logits.to_candle()?;
         let last_logits = if logits_candle.dims().len() == 3 {
             let (batch, seq_len, vocab_size) = logits_candle.dims3()?;
             logits_candle.narrow(1, seq_len - 1, 1)?.reshape(&[batch, vocab_size])?
         } else if logits_candle.dims().len() == 2 {
             logits_candle.clone()
         } else {
+            self.logits_buffer = buf;
             return Err(anyhow::anyhow!("Unexpected logits shape: {:?}", logits_candle.shape()));
         };
 
+        let logits_slice = last_logits.flatten_all()?.to_vec1::<f32>()?;
+        buf.extend_from_slice(&logits_slice);
+
         // Apply temperature scaling
-        let scaled_logits = if self.config.temperature != 1.0 {
-            last_logits.affine(1.0 / self.config.temperature as f64, 0.0)?
-        } else {
-            last_logits
-        };
+        bitnet_logits::apply_temperature(&mut buf, self.config.temperature);
 
         // Apply repetition penalty
-        let penalized_logits = self.apply_repetition_penalty(&scaled_logits)?;
+        if self.current_repetition_penalty != 1.0 && !self.repetition_counts.is_empty() {
+            let token_ids: Vec<u32> = self
+                .repetition_counts
+                .iter()
+                .flat_map(|(&id, &count)| std::iter::repeat_n(id as u32, count))
+                .collect();
+            bitnet_logits::apply_repetition_penalty(
+                &mut buf,
+                &token_ids,
+                self.current_repetition_penalty,
+            );
+        }
 
-        // Apply top-k filtering if specified
-        let filtered_logits = if let Some(top_k) = self.config.top_k {
-            self.apply_top_k(&penalized_logits, top_k)?
-        } else {
-            penalized_logits
-        };
+        // Apply top-k filtering
+        if let Some(k) = self.config.top_k {
+            #[allow(clippy::collapsible_if)]
+            if k > 0 && k < buf.len() {
+                bitnet_logits::apply_top_k(&mut buf, k);
+            }
+        }
 
-        // Apply nucleus (top-p) sampling if specified
-        let final_logits = if let Some(top_p) = self.config.top_p {
-            self.apply_top_p(&filtered_logits, top_p)?
-        } else {
-            filtered_logits
-        };
+        // Softmax
+        bitnet_logits::softmax_in_place(&mut buf);
 
-        // Convert to probabilities
-        let probabilities = candle_nn::ops::softmax(&final_logits, candle_core::D::Minus1)?;
+        // Apply nucleus (top-p)
+        if let Some(p) = self.config.top_p {
+            #[allow(clippy::collapsible_if)]
+            if p < 1.0 {
+                bitnet_logits::apply_top_p(&mut buf, p);
+            }
+        }
 
-        // Sample from distribution
-        self.multinomial_sample(&probabilities, rng).await
+        // Re-normalize after top-p
+        let _ = bitnet_probability::renormalize_in_place(&mut buf);
+
+        // Multinomial sample
+        let random_val: f32 = rng.random();
+        let mut cumulative_prob = 0.0;
+        let mut max_idx = buf.len() - 1;
+        let mut max_prob = *buf.last().unwrap_or(&0.0);
+
+        let mut sampled = false;
+        for (i, &prob) in buf.iter().enumerate() {
+            cumulative_prob += prob;
+            if random_val <= cumulative_prob {
+                max_idx = i;
+                max_prob = prob;
+                sampled = true;
+                break;
+            }
+        }
+
+        if !sampled && !buf.is_empty() {
+            max_idx = buf.len() - 1;
+            max_prob = buf[max_idx];
+        }
+
+        self.logits_buffer = buf;
+        Ok((max_idx, max_prob))
     }
 
     /// Greedy sampling (argmax)
-    async fn greedy_sample(&self, logits: &BitNetTensor) -> Result<(usize, f32)> {
+    async fn greedy_sample(&mut self, logits: &BitNetTensor) -> Result<(usize, f32)> {
+        let mut buf = std::mem::take(&mut self.logits_buffer);
+        buf.clear();
+
         let logits_candle = logits.to_candle()?;
 
         // Get the last token's logits
@@ -114,107 +157,16 @@ impl SamplingStrategy {
             logits_candle.clone()
         };
 
-        // Find argmax
-        let probabilities = candle_nn::ops::softmax(&last_logits, candle_core::D::Minus1)?;
-        let probs_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
+        let logits_slice = last_logits.flatten_all()?.to_vec1::<f32>()?;
+        buf.extend_from_slice(&logits_slice);
 
-        let (max_idx, max_prob) = probs_vec
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .ok_or_else(|| anyhow::anyhow!("Empty probability distribution"))?;
+        let max_idx = bitnet_logits::argmax(&buf);
 
-        Ok((max_idx, *max_prob))
-    }
+        bitnet_logits::softmax_in_place(&mut buf);
+        let max_prob = buf.get(max_idx).copied().unwrap_or(0.0);
 
-    /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &CandleTensor) -> Result<CandleTensor> {
-        if self.current_repetition_penalty == 1.0 || self.repetition_counts.is_empty() {
-            return Ok(logits.clone());
-        }
-
-        let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-
-        // Expand each (token, count) pair into `count` repetitions of the token ID.
-        // Passing a token N times to apply_repetition_penalty produces penalty^N,
-        // which is equivalent to the original count-based exponential formula.
-        let token_ids: Vec<u32> = self
-            .repetition_counts
-            .iter()
-            .flat_map(|(&id, &count)| std::iter::repeat_n(id as u32, count))
-            .collect();
-        bitnet_logits::apply_repetition_penalty(
-            &mut logits_vec,
-            &token_ids,
-            self.current_repetition_penalty,
-        );
-
-        CandleTensor::from_slice(&logits_vec, logits.shape(), logits.device())
-            .context("Failed to create tensor from penalized logits")
-    }
-
-    /// Apply top-k filtering
-    fn apply_top_k(&self, logits: &CandleTensor, k: usize) -> Result<CandleTensor> {
-        let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-
-        // k=0 means "all tokens" — skip filtering entirely
-        if k == 0 || k >= logits_vec.len() {
-            return Ok(logits.clone());
-        }
-
-        bitnet_logits::apply_top_k(&mut logits_vec, k);
-
-        CandleTensor::from_slice(&logits_vec, logits.shape(), logits.device())
-            .context("Failed to create tensor from top-k filtered logits")
-    }
-
-    /// Apply nucleus (top-p) sampling
-    fn apply_top_p(&self, logits: &CandleTensor, p: f32) -> Result<CandleTensor> {
-        if p >= 1.0 {
-            return Ok(logits.clone());
-        }
-
-        let logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-
-        // Compute probabilities, then apply top-p to the probability distribution.
-        let mut probs = logits_vec.clone();
-        bitnet_logits::softmax_in_place(&mut probs);
-        bitnet_logits::apply_top_p(&mut probs, p);
-
-        // Mask logits where top-p filtering zeroed the corresponding probability.
-        let filtered: Vec<f32> = logits_vec
-            .into_iter()
-            .zip(probs.iter())
-            .map(|(l, &prob)| if prob == 0.0 { f32::NEG_INFINITY } else { l })
-            .collect();
-
-        CandleTensor::from_slice(&filtered, logits.shape(), logits.device())
-            .context("Failed to create tensor from nucleus filtered logits")
-    }
-
-    /// Sample from multinomial distribution
-    async fn multinomial_sample<R: RngCore>(
-        &self,
-        probabilities: &CandleTensor,
-        rng: &mut R,
-    ) -> Result<(usize, f32)> {
-        let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
-
-        // Generate random number
-        let random_val: f32 = rng.random();
-
-        // Find token by cumulative probability
-        let mut cumulative_prob = 0.0;
-        for (i, &prob) in prob_vec.iter().enumerate() {
-            cumulative_prob += prob;
-            if random_val <= cumulative_prob {
-                return Ok((i, prob));
-            }
-        }
-
-        // Fallback: return last token
-        let last_idx = prob_vec.len() - 1;
-        Ok((last_idx, prob_vec[last_idx]))
+        self.logits_buffer = buf;
+        Ok((max_idx, max_prob))
     }
 
     /// Update repetition tracking
