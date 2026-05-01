@@ -18,10 +18,28 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
         return logits.len();
     }
 
-    let mut vals: Vec<f32> = logits.iter().copied().filter(|&x| x > f32::NEG_INFINITY).collect();
-    if vals.len() <= top_k {
-        return vals.len();
+    // Optimization: avoid allocating a large Vec when we don't need to.
+    // Count how many are already finite (e.g., from prior apply_min_p).
+    let mut finite_count = 0;
+    for &l in logits.iter() {
+        if l > f32::NEG_INFINITY {
+            finite_count += 1;
+        }
     }
+
+    if finite_count <= top_k {
+        return finite_count;
+    }
+
+    // We can pre-allocate exactly finite_count, saving allocation overhead
+    // compared to relying on filter(...).collect() resizing repeatedly.
+    let mut vals = Vec::with_capacity(finite_count);
+    for &l in logits.iter() {
+        if l > f32::NEG_INFINITY {
+            vals.push(l);
+        }
+    }
+
     let partition_idx = vals.len() - top_k;
     vals.select_nth_unstable_by(partition_idx, |a, b| f32_ascending(*a, *b));
     let threshold = vals[partition_idx];
