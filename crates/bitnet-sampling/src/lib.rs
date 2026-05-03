@@ -20,7 +20,6 @@ use anyhow::{Context, Result};
 use bitnet_probability::{renormalize_in_place, sample_categorical};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::collections::HashMap;
 use tracing::debug;
 
 /// Configuration for sampling strategies.
@@ -70,7 +69,6 @@ impl Default for SamplingConfig {
 pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
-    token_counts: HashMap<u32, usize>,
     /// Pre-allocated buffer to avoid allocating on every generation step
     logits_buffer: Vec<f32>,
 }
@@ -96,7 +94,7 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new(), logits_buffer: Vec::new() }
+        Self { config, rng, logits_buffer: Vec::new() }
     }
 
     /// Sample the next token from logits.
@@ -164,7 +162,6 @@ impl SamplingStrategy {
         // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
         if self.config.temperature == 0.0 {
             let token = greedy_sample(&buf)?;
-            *self.token_counts.entry(token).or_insert(0) += 1;
             // Restore buffer
             self.logits_buffer = buf;
             return Ok(token);
@@ -192,7 +189,6 @@ impl SamplingStrategy {
         let _ = renormalize_in_place(&mut buf);
 
         let token = self.sample_from_distribution(&buf)?;
-        *self.token_counts.entry(token).or_insert(0) += 1;
 
         // Restore buffer
         self.logits_buffer = buf;
@@ -278,7 +274,7 @@ impl SamplingStrategy {
     /// strategy.reset();
     /// ```
     pub fn reset(&mut self) {
-        self.token_counts.clear();
+        // No per-sequence state to clear since token_counts was removed
     }
 
     /// Update configuration, re-seeding the PRNG if the seed changed.

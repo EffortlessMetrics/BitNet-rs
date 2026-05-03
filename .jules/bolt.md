@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2024-05-03 - Unused HashMap Allocation in Hot Loop
+**Learning:** Found a `HashMap` (`token_counts`) in `SamplingStrategy` that was allocated, updated in the hot generation loop, and cleared on reset, but *never actually read*. The repetition penalty correctly used the `context_tokens` slice instead. This incurred unnecessary allocation and per-token hashing overhead for absolutely no benefit.
+**Action:** Always audit structs that maintain collection state in hot loops (like `HashMap`s for token counting) to ensure they are actually read from, not just blindly written to.
