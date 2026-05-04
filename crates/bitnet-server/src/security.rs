@@ -227,6 +227,13 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
+        // Prevent path truncation vulnerabilities
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Model path contains null bytes".to_string(),
+            ));
+        }
+
         // Prevent path traversal attacks
         if model_path.contains("..") || model_path.contains("~") {
             return Err(ValidationError::InvalidFieldValue(
