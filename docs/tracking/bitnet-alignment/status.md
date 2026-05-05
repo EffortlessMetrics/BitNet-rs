@@ -10,7 +10,6 @@ P0 truth boundary, crate consolidation inventory, and docs-only hardware-lane sc
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
-| CPU-001 | #3635 | pr_open | Strict CPU proof command |
 | HW-001 | TBD | pr_open | Add shared hardware validation matrix and proof-stage contract |
 | BITNET-001 | TBD | pr_open | Add BitNet model/kernel/receipt proof contract |
 | NPU-001 | TBD | pr_open | Add Intel NPU backend lane without runtime execution |
@@ -116,6 +115,7 @@ The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform r
 | TRUTH-003 | #3626 | f44bbf5586b9bb97b336589d83bea85bedd13f4e | Null-byte model path validation merged. |
 | TRUTH-002 | #3630 | 18e4f8142aaafec3528a0d54b5332a2b9f7583fd | GGUF minimal fallback made explicit. |
 | INV-001 | #3632 | 457b36630906f2044e406e0dcf27ecb539e8a7a5 | Crate consolidation inventory completed for all workspace members. |
+| CPU-001 | #3635 | d90f70f4410155077ffc9741e018e5d747d40a9f | Strict CPU proof command documented. |
 
 ## Blocked
 
