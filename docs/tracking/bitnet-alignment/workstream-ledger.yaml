@@ -349,7 +349,7 @@ items:
 
   - id: BITNET-002
     title: Add canonical BitNet fixture manifest and receipt templates
-    state: pr_open
+    state: merged
     priority: P1
     workstream: runtime_cpu
     depends_on:
@@ -373,6 +373,8 @@ items:
       - Does not add large model files.
     verification:
       - cargo fmt --all -- --check
+      - Parse YAML tracker files
+      - Parse receipt template JSON files
 
   - id: BITNET-003
     title: Add BitNet parity tolerance policy
@@ -436,13 +438,434 @@ items:
     receipt_required: false
     followups: []
 
-  - id: CPU-002
-    title: Validate CPU inference receipt for CLI proof
-    state: ready
+  - id: CPU-BITNET-000
+    title: Add real BitNet CPU path implementation plan
+    state: pr_open
     priority: P0
     workstream: runtime_cpu
     depends_on:
       - CPU-001
+      - BITNET-002
+    scope:
+      allowed_paths:
+        - docs/README.md
+        - docs/bitnet/BITNET_CPU_PATH_PLAN.md
+        - docs/bitnet/BITNET_KERNEL_MATRIX.md
+        - docs/bitnet/BITNET_RECEIPT_FIELDS.md
+        - .codex/bitnet-alignment.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Documents that BitNet CPU proof cannot route around real GGUF loading, tokenizer authority, packed layout, scalar truth kernels, SIMD dispatch, transformer decode coverage, strict fallback behavior, and receipts.
+      - Adds CPU-BITNET-001 through CPU-BITNET-009 as PR-sized follow-up items.
+      - Keeps unknown parity tolerances in the existing tolerance policy instead of inventing new numeric thresholds.
+      - Does not touch runtime code.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files
+      - git diff --check
+    notes:
+      - Docs and tracker only.
+    claim_boundary:
+      may_claim:
+        - The real BitNet CPU implementation sequence is documented after merge.
+      must_not_claim:
+        - Loader, tokenizer, packed kernels, transformer decode, receipts, or performance are implemented.
+    receipt_required: false
+    followups:
+      - CPU-BITNET-001
+      - CPU-BITNET-002
+      - CPU-BITNET-003
+      - CPU-BITNET-004
+      - CPU-BITNET-005
+      - CPU-BITNET-006
+      - CPU-BITNET-007
+      - CPU-BITNET-008
+      - CPU-BITNET-009
+
+  - id: CPU-BITNET-001
+    title: Establish strict BitNet GGUF loader authority
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-000
+      - TRUTH-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/formats/gguf/loader.rs
+        - crates/bitnet-models/src/gguf_simple.rs
+        - crates/bitnet-models/src/lib.rs
+        - crates/bitnet-cli/**
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Strict CPU inference has one authoritative real GGUF loader path for BitNet models.
+      - Required BitNet metadata is validated before inference.
+      - Minimal GGUF fallback is impossible in strict proof mode.
+      - Unsupported layouts fail early with a clear error.
+      - Loader receipts or test-visible result structs record `loader.mode=real_gguf`.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Do not add dense fallback, mock tensors, model files, or GPU/NPU work.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet GGUF loader authority exists after merge.
+      must_not_claim:
+        - Tokenizer, packed layout, transformer decode, or performance is complete.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-002
+
+  - id: CPU-BITNET-002
+    title: Establish strict BitNet tokenizer authority
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-tokenizers/src/gguf_loader.rs
+        - crates/bitnet-tokenizers/src/gguf_tokenizer.rs
+        - crates/bitnet-tokenizers/src/auto.rs
+        - crates/bitnet-tokenizers/src/universal.rs
+        - crates/bitnet-cli/src/tokenizer_discovery.rs
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure.
+      - Hardcoded GPT-2 or generic tokenizer fallback cannot run in strict mode.
+      - Receipt fields record tokenizer source.
+      - Canonical smoke prompt tokenizes deterministically.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-tokenizers --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Tokenization success alone is not model inference success.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet tokenizer authority exists after merge.
+      must_not_claim:
+        - Packed layout, transformer decode, or performance is complete.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-003
+
+  - id: CPU-BITNET-003
+    title: Make QK256 and I2_S packed layout canonical
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-qk256-layout-core/src/lib.rs
+        - crates/bitnet-quantization/src/i2s_qk256.rs
+        - crates/bitnet-quantization/src/qk256_dispatch.rs
+        - crates/bitnet-models/src/quant/**
+        - crates/bitnet-models/src/qk256_utils.rs
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Canonical block geometry, alignment, stride, and row/block iteration API are defined.
+      - GGUF tensor metadata normalizes into the canonical packed layout.
+      - Loader, scalar kernels, and SIMD kernels consume the same packed layout.
+      - Layout fixtures are byte-exact.
+      - Steady-state inference does not require repacking or full-matrix dequantization.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-qk256-layout-core --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Do not duplicate layout interpretation across model and quantization crates.
+    claim_boundary:
+      may_claim:
+        - Canonical packed layout exists after merge.
+      must_not_claim:
+        - Optimized kernel performance is proven.
+    receipt_required: false
+    followups:
+      - CPU-BITNET-004
+
+  - id: CPU-BITNET-004
+    title: Add scalar packed BitNet truth kernels
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/i2s_qk256.rs
+        - crates/bitnet-kernels/src/matmul_dispatch.rs
+        - crates/bitnet-kernels/src/ffi.rs
+        - crates/bitnet-kernels/src/ffi/bridge.rs
+        - crates/bitnet-kernels/tests/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Scalar packed GEMV for decode is deterministic.
+      - Scalar packed GEMM for prefill is deterministic.
+      - Debug dequant/reference helpers are test-only and do not become strict production fallback.
+      - Pack/layout parity is exact.
+      - Receipt or test-visible metadata records selected scalar kernel IDs.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Correctness before optimization.
+    claim_boundary:
+      may_claim:
+        - Scalar packed truth kernels exist after merge.
+      must_not_claim:
+        - AVX2, AVX-512, NEON, GPU, or full model performance is proven.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-005
+
+  - id: CPU-BITNET-005
+    title: Add AVX2 packed decode GEMV
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/i2s_qk256_avx2.rs
+        - crates/bitnet-kernels/src/matmul_dispatch.rs
+        - crates/bitnet-kernels/src/dispatch_planner.rs
+        - crates/bitnet-kernels/src/dispatch_table.rs
+        - crates/bitnet-receipts/**
+        - benches/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - AVX2 dispatch is CPUID-gated.
+      - Scalar forced mode remains available.
+      - AVX2 decode GEMV compares against scalar packed reference.
+      - Strict `qk256-avx2-gemv` requests fail if AVX2 is unavailable or fallback occurs.
+      - Receipts record requested kernel and selected kernel.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2
+    notes:
+      - 8250U is the active AVX2 implementation lane; 258V and 5700X are validation lanes.
+    claim_boundary:
+      may_claim:
+        - AVX2 decode GEMV parity exists after merge.
+      must_not_claim:
+        - Full transformer decode or sustained benchmark performance is proven.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-006
+
+  - id: CPU-BITNET-006
+    title: Complete CPU transformer decode ops
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cpu/**
+        - crates/bitnet-transformer/**
+        - crates/bitnet-inference/src/backends.rs
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Embedding gather, RMSNorm/subln, RoPE, attention scores, softmax, A/V, FFN, KV-cache, output head, logits handoff, and sampling handoff are authoritative for CPU decode.
+      - Prefill and decode scheduling are separated.
+      - One real-model decode step can run with real tensors.
+      - Missing ops fail explicitly.
+      - KV-cache append/read is deterministic.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+    notes:
+      - Matmul alone is not model inference.
+    claim_boundary:
+      may_claim:
+        - CPU decode op coverage exists after merge.
+      must_not_claim:
+        - Full inference quality or performance is proven without receipts.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-007
+
+  - id: CPU-BITNET-007
+    title: Enforce strict BitNet CPU receipts and fallback behavior
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-inference/src/backends.rs
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-cli/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Strict proof fails on hidden fallback.
+      - Receipts record model repo/file/hash, tokenizer source, quantization, packed layout, requested/selected backend, requested/selected kernel, runtime phase, fallback status, fallback reason, reference path, and parity metrics when relevant.
+      - Auto mode may fall back, but receipts record it.
+      - Minimal loader fallback cannot support CPU proof.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+    notes:
+      - This item supersedes earlier receipt-first work that did not depend on loader/tokenizer/layout authority.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet CPU proof receipts enforce fallback rules after merge.
+      must_not_claim:
+        - Benchmark performance is proven without benchmark artifacts.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-008
+
+  - id: CPU-BITNET-008
+    title: Add BitNet CPU phase benchmark profiles
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-quantization/benches/**
+        - crates/bitnet-bench-receipts/**
+        - docs/bitnet/**
+        - docs/hardware/BENCHMARK_PROTOCOL.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Micro, layer, prefill_512, first_token, decode_128, and context_4096 profiles are defined or emitted.
+      - Model-level profiles use real BitNet GGUF artifacts.
+      - Microbench profiles use synthetic packed fixtures only.
+      - Benchmark JSON records model, tokenizer, quantization, kernel, phase, selected backend, fallback status, CPU feature set, thread count, and power/thermal context when available.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo bench --locked -p bitnet-kernels --bench kernel_benchmarks --features cpu
+      - cargo bench --locked -p bitnet-quantization --bench qk256_gemv --features cpu
+    notes:
+      - Benchmarks must separate cold and warm runs, prefill, first token, and steady-state decode.
+    claim_boundary:
+      may_claim:
+        - BitNet CPU benchmark profiles exist after merge.
+      must_not_claim:
+        - Cross-machine performance generalizes without hardware context.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-009
+
+  - id: CPU-BITNET-009
+    title: Add optional NEON and AVX-512 CPU lanes
+    state: proposed
+    priority: P2
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-008
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/*neon*
+        - crates/bitnet-quantization/src/*avx512*
+        - crates/bitnet-kernels/src/cpu/**
+        - crates/bitnet-kernels/src/dispatch_planner.rs
+        - crates/bitnet-kernels/src/dispatch_table.rs
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - NEON and AVX-512 are optional widened paths that prove against scalar packed reference.
+      - AVX2 remains the common x86 baseline.
+      - NEON does not change x86 layout semantics.
+      - AVX-512 is runtime-gated and never required for correctness.
+      - Each widened path records selected kernel receipts.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Widen only after scalar and AVX2 decode are proven.
+    claim_boundary:
+      may_claim:
+        - Optional widened CPU lanes exist after merge.
+      must_not_claim:
+        - Wider lanes replace scalar truth or AVX2 baseline.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-002
+    title: Validate CPU inference receipt for CLI proof
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-007
     scope:
       allowed_paths:
         - crates/bitnet-cli/**
@@ -460,7 +883,7 @@ items:
       - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
       - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
     notes:
-      - Add a separate schema item if loader-mode receipt fields need expansion.
+      - Deferred until loader, tokenizer, layout, kernel, decode, and strict receipt authority exist.
     claim_boundary:
       may_claim:
         - CPU receipt validation exists for the CLI proof path after merge.
