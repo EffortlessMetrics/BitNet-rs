@@ -10,7 +10,6 @@ P0 truth boundary, crate consolidation inventory, and docs-only hardware-lane sc
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
-| TRUTH-002 | #3630 | pr_open | Make GGUF fallback explicit |
 | INV-001 | TBD | ready | Crate consolidation map |
 | HW-001 | TBD | pr_open | Add shared hardware validation matrix and proof-stage contract |
 | BITNET-001 | TBD | pr_open | Add BitNet model/kernel/receipt proof contract |
@@ -115,6 +114,7 @@ The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform r
 | TRUTH-001 | #3621 | 10ea2b409a1d4095205722da77a600d31bb57d04 | Fence server simulated inference merged. |
 | QUEUE-001 | #3623 | 678a3ba1592ab10e9a7b473db077ec93b1d867fb | Codecov duplicate cluster normalized; #3620 retained as deferred canonical candidate. |
 | TRUTH-003 | #3626 | f44bbf5586b9bb97b336589d83bea85bedd13f4e | Null-byte model path validation merged. |
+| TRUTH-002 | #3630 | 18e4f8142aaafec3528a0d54b5332a2b9f7583fd | GGUF minimal fallback made explicit. |
 
 ## Blocked
 

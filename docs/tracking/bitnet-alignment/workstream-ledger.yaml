@@ -147,7 +147,7 @@ items:
 
   - id: TRUTH-002
     title: Make GGUF minimal fallback explicit
-    state: pr_open
+    state: merged
     priority: P0
     workstream: truth
     depends_on:
