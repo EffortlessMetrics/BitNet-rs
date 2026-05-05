@@ -90,6 +90,7 @@ jobs:
               cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
                 --ignore-run-fail
               cargo llvm-cov report --json --output-path coverage.json
+              cargo llvm-cov report --lcov --output-path lcov.info
               cargo llvm-cov report --text | tee coverage.txt
             '
 
@@ -120,6 +121,16 @@ jobs:
           fi
           echo "Coverage OK"
 
+      - name: Upload coverage reports to Codecov
+        if: ${{ always() && hashFiles('lcov.info') != '' }}
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: rust-cpu
+          name: bitnet-rs-rust-cpu
+          fail_ci_if_error: true
+
       - name: Upload coverage artifacts (always)
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
@@ -128,4 +139,5 @@ jobs:
           path: |
             coverage.json
             coverage.txt
+            lcov.info
           retention-days: 7
