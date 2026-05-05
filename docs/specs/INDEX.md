@@ -9,6 +9,20 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 
 ## Files in This Directory
 
+### 0. cpu-path-plan.md (New)
+**Purpose**: Native Rust CPU inference roadmap for GGUF/tokenizer authority, packed QK256/I2_S kernels, strict fallback policy, and receipt-backed benchmarks
+**Audience**: Runtime, model-loading, tokenizer, kernel, inference, and receipts contributors planning CPU path work
+
+**Contents**:
+- Current repo surfaces to preserve and unify
+- Canonical CPU dispatch path
+- Strict-mode loader/tokenizer/kernel contract
+- Kernel matrix and hardware lane policy
+- PR-sized work items CPU-001 through CPU-008
+- Parity tolerances, benchmark profiles, target receipt shape, and standard commands
+
+**When to use**: Planning or reviewing native CPU inference changes before implementing loader, tokenizer, layout, dispatch, kernel, transformer-op, or receipt work
+
 ### 0. apple-silicon-backend-roadmap.md (New)
 **Purpose**: Phased implementation plan for Apple GPU/NPU support in BitNet-rs
 **Audience**: Runtime/kernel/inference contributors planning Apple backend work

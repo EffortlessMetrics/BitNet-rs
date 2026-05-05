@@ -25,6 +25,7 @@
 - [Streaming API](streaming-api.md)
 
 ## CPU / GPU Architectures
+- [CPU Path Plan](specs/cpu-path-plan.md)
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)
