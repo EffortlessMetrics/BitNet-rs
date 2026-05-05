@@ -10,6 +10,7 @@ P0 truth boundary, crate consolidation inventory, and docs-only hardware-lane sc
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
+| CPU-001 | TBD | ready | Strict CPU proof command |
 | HW-001 | TBD | pr_open | Add shared hardware validation matrix and proof-stage contract |
 | BITNET-001 | TBD | pr_open | Add BitNet model/kernel/receipt proof contract |
 | NPU-001 | TBD | pr_open | Add Intel NPU backend lane without runtime execution |
