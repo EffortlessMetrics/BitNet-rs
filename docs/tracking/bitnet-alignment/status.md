@@ -20,6 +20,7 @@ P0 truth boundary, crate consolidation inventory, and docs-only hardware-lane sc
 | RTX5070TI-001 | TBD | pr_open | Add NVIDIA RTX 5070 Ti CUDA-first backend lane without runtime execution |
 | AMD9950X3D-001 | TBD | pr_open | Add AMD Ryzen 9 9950X3D AVX-512 CPU validation lane without runtime execution |
 | AMD5700X-001 | TBD | pr_open | Add AMD Ryzen 7 5700X AVX2 CPU validation lane without runtime execution |
+| CPU-002 | TBD | ready | Validate CPU inference receipt for CLI proof |
 
 ## Hardware Lanes
 
