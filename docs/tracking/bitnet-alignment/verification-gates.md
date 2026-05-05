@@ -57,3 +57,18 @@ cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -
 ## Rule
 
 Do not claim a gate passed unless it was actually run.
+
+## Local verification honesty
+
+Record verification mechanically:
+
+- passed:
+- failed:
+- blocked locally:
+- not run:
+
+On Windows, `cargo fmt --all -- --check` may fail with `os error 206` path-length
+issues or newline-style issues before formatting starts. If that happens, record it
+exactly, run narrower checks when useful, and rely on GitHub CI for the full
+formatting gate. Do not solve local environment failures by formatting unrelated
+files.

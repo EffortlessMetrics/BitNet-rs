@@ -38,14 +38,52 @@ Out of scope:
 
 ## Verification
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] ...
+Verification result:
+- passed:
+  - `...`
+- failed:
+  - `...`
+- blocked locally:
+  - `...`
+- not run:
+  - `...`
 
 ## Notes
 
 - No behavior change / behavior change explained
 - Follow-up items
 ```
+
+## State transitions
+
+```text
+proposed -> ready       only when scope, acceptance, and verification are clear
+ready -> in_progress    when a branch starts work
+in_progress -> pr_open  when a PR is opened
+pr_open -> merged       only after merge
+pr_open -> blocked      when waiting on an external blocker
+pr_open -> superseded   when replaced by another PR
+```
+
+Work item state must match `status.md`. A PR must not mark itself merged. Only
+update a merged state after the merge SHA exists.
+
+## Scope exceptions
+
+Every work item may update these tracker files even when they are not listed in
+`scope.allowed_paths`:
+
+- `docs/tracking/bitnet-alignment/status.md`
+- `docs/tracking/bitnet-alignment/workstream-ledger.yaml`
+
+Use the exception only for state, PR number, verification notes, and follow-up items.
+Do not reshape unrelated tracker sections inside implementation PRs.
+
+## Follow-up rule
+
+If a PR discovers adjacent work, do not implement it unless it is required for the
+current item acceptance. Add a `proposed` ledger item with scope, acceptance, and
+verification instead.
 
 ## Merge rules
 

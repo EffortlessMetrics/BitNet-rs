@@ -10,6 +10,18 @@ status_values:
   - parity_tested
   - receipt_backed
 
+claim_boundaries:
+  working: Receipt-backed or directly tested through the user path.
+  validation_only: Correct enough for tests, not a performance or user-facing claim.
+  scaffold: Code exists but is not end-to-end validated.
+  not_implemented: Route or module exists but must fail honestly.
+
+hard_rules:
+  - GPU is scaffold unless receipt-backed.
+  - Server inference is not working until it returns real model output.
+  - QK256 is validation-only until performance target and receipts exist.
+  - Minimal GGUF fallback cannot support correctness or performance claims.
+
 backends:
   cpu:
     status: receipt_backed

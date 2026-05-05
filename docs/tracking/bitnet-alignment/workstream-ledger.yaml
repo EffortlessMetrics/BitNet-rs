@@ -11,6 +11,47 @@ states:
   - merged
   - superseded
 
+item_schema:
+  required:
+    - id
+    - title
+    - state
+    - priority
+    - workstream
+    - depends_on
+    - scope.allowed_paths
+    - scope.forbidden_paths
+    - acceptance
+    - verification
+    - notes
+    - followups
+  crate_collapse_fields:
+    - source_crate
+    - destination_crate
+    - destination_module
+    - behavior_change
+    - public_api_change
+  runtime_fields:
+    - claim_boundary.may_claim
+    - claim_boundary.must_not_claim
+    - receipt_required
+
+state_transition_rules:
+  - proposed -> ready only when scope, acceptance, and verification are clear.
+  - ready -> in_progress when a branch starts work.
+  - in_progress -> pr_open when a PR is opened.
+  - pr_open -> merged only after merge.
+  - pr_open -> blocked when waiting on an external blocker.
+  - pr_open -> superseded when replaced by another PR.
+  - Work item state must match status.md.
+  - A PR must not mark itself merged.
+  - Only update merged state after the merge SHA exists.
+
+sequence_gates:
+  - No crate movement before TRUTH-001, TRUTH-002, TRUTH-003, and INV-001 are merged.
+  - No server real-inference work before fake/simulated paths are fenced and GGUF fallback is explicit.
+  - No GPU validation claims before backend identity and fallback semantics are clean and a CPU proof path exists.
+
 workstreams:
   truth:
     title: Truth boundary
@@ -43,7 +84,7 @@ workstreams:
 items:
   - id: TRUTH-001
     title: Fence server simulated inference
-    state: pr_open
+    state: merged
     priority: P0
     workstream: truth
     depends_on: []
@@ -68,13 +109,22 @@ items:
     notes:
       - Do not attempt real batching in this PR.
       - Single-request real inference is a later item.
+    claim_boundary:
+      may_claim:
+        - Public server inference paths fail honestly after merge.
+      must_not_claim:
+        - Server inference works or returns real model output.
+    receipt_required: false
+    followups: []
 
   - id: TRUTH-002
     title: Make GGUF minimal fallback explicit
     state: ready
     priority: P0
     workstream: truth
-    depends_on: []
+    depends_on:
+      - TRUTH-001
+      - TRUTH-003
     scope:
       allowed_paths:
         - crates/bitnet-models/src/gguf_simple.rs
@@ -90,40 +140,95 @@ items:
     verification:
       - cargo test --locked -p bitnet-models --no-default-features --features cpu
       - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Add a proposed receipt-schema item if loader mode needs schema expansion.
+    claim_boundary:
+      may_claim:
+        - User-facing fallback behavior is explicit after merge.
+      must_not_claim:
+        - Minimal fallback proves model correctness or performance.
+    receipt_required: false
+    followups: []
 
   - id: TRUTH-003
     title: Fix null-byte model path validation
     state: ready
     priority: P0
     workstream: truth
-    depends_on: []
+    depends_on:
+      - TRUTH-001
     scope:
       allowed_paths:
         - crates/bitnet-server/src/security.rs
         - crates/bitnet-server/tests/**
+      forbidden_paths:
+        - Cargo.toml
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-models/**
+        - .github/**
     acceptance:
       - Model paths containing null bytes are rejected.
       - Tests cover prefix, suffix, and middle null-byte cases.
       - Duplicate open security PRs can be closed as superseded.
     verification:
       - cargo test --locked -p bitnet-server security --no-default-features --features cpu
+    notes:
+      - Close duplicate Sentinel PRs only after a canonical ledger-aligned PR exists.
+    followups: []
 
   - id: INV-001
     title: Add crate consolidation map
     state: ready
     priority: P0
     workstream: inventory
-    depends_on: []
+    depends_on:
+      - TRUTH-001
+      - TRUTH-002
+      - TRUTH-003
     scope:
       allowed_paths:
         - docs/tracking/bitnet-alignment/crate-consolidation-map.yaml
         - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - Cargo.toml
+        - crates/**
+        - .github/**
     acceptance:
       - Every current workspace member has a disposition.
       - Each item has destination, reason, wave, and verification gate.
       - No code is moved in this PR.
     verification:
       - cargo fmt --all -- --check
+    notes:
+      - Inventory only; do not move code or edit Cargo.toml.
+    followups: []
+
+  - id: QUEUE-001
+    title: Deduplicate generated PR clusters
+    state: ready
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/superseded-work.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - Cargo.toml
+        - crates/**
+        - .github/**
+    acceptance:
+      - Duplicate null-byte PRs are tied to TRUTH-003.
+      - Duplicate Codecov PRs have one canonical PR or are deferred.
+      - Duplicate accessibility PRs have one canonical PR or are deferred.
+      - Duplicate performance PRs are deferred until truth boundary and inventory complete.
+    verification:
+      - cargo fmt --all -- --check
+    notes:
+      - This item may be completed by PR comments and tracker updates; do not touch runtime code.
+    followups: []
 
   - id: LEAF-001
     title: Collapse warn-once into common
@@ -148,3 +253,11 @@ items:
     verification:
       - cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
       - cargo nextest run --locked --workspace --no-default-features --features cpu
+    notes:
+      - Do not start until INV-001 is merged.
+    source_crate: bitnet-warn-once
+    destination_crate: bitnet-common
+    destination_module: warn_once
+    behavior_change: false
+    public_api_change: true
+    followups: []
