@@ -208,7 +208,7 @@ items:
 
   - id: INV-001
     title: Add crate consolidation map
-    state: ready
+    state: in_progress
     priority: P0
     workstream: inventory
     depends_on:

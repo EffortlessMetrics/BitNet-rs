@@ -10,6 +10,12 @@ policy:
   otherwise: merge_into_owner_crate_as_srp_module
 
 destinations:
+  bitnet:
+    target_modules:
+      - facade
+      - examples
+      - workspace_tests
+
   bitnet-common:
     target_modules:
       - math
@@ -27,6 +33,7 @@ destinations:
       - merge
       - model
       - text
+      - prompt_templates
 
   bitnet-models:
     target_modules:
@@ -36,6 +43,8 @@ destinations:
       - validation
       - weight_names
       - download
+      - transformer
+      - trace
 
   bitnet-quantization:
     target_modules:
@@ -47,6 +56,7 @@ destinations:
     target_modules:
       - cpu/detect
       - cpu/activations
+      - cpu/simd
       - gpu/hal
       - gpu/cuda
       - gpu/metal
@@ -55,6 +65,7 @@ destinations:
       - gpu/rocm
       - gpu/wgpu
       - dispatch
+      - shaders
 
   bitnet-inference:
     target_modules:
@@ -100,49 +111,1345 @@ destinations:
       - policy
       - scenarios
       - snapshots
+      - profile
+
+  bitnet-tools:
+    target_modules:
+      - xtask
+      - task_runner
+      - migration
+      - fuzz
+      - crossval
+      - safetensors_tools
+
 
 crates:
+  bitnet:
+    path: Cargo.toml
+    disposition: keep
+    destination: bitnet
+    module: facade
+    wave: public
+    risk: high
+    reason: root public facade and package boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-atomic-file-core:
+    path: crates/bitnet-atomic-file-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: atomic_file
+    wave: leaf
+    risk: low
+    reason: pure file utility without independent runtime boundary
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-common:
+    path: crates/bitnet-common/Cargo.toml
+    disposition: keep
+    destination: bitnet-common
+    module: crate
+    wave: public
+    risk: medium
+    reason: shared public utility crate and current consolidation owner
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-math:
+    path: crates/bitnet-math/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: math
+    wave: leaf
+    risk: low
+    reason: shared math helpers fit the common owner
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-thread-config-core:
+    path: crates/bitnet-thread-config-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: threading
+    wave: leaf
+    risk: low
+    reason: thread config primitives are common runtime utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
   bitnet-warn-once:
+    path: crates/bitnet-warn-once/Cargo.toml
     disposition: merge
     destination: bitnet-common
     module: warn_once
     wave: leaf
     risk: low
-    reason: pure utility macro; no independent public seam
+    reason: pure utility macro with no independent public seam
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-test-support:
+    path: crates/bitnet-test-support/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: support
+    wave: test
+    risk: low
+    reason: test support belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-test-env:
+    path: crates/bitnet-test-env/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: env
+    wave: test
+    risk: low
+    reason: test env helpers belong with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-device-probe:
+    path: crates/bitnet-device-probe/Cargo.toml
+    disposition: defer
+    destination: bitnet-device-probe
+    module: crate
+    wave: defer
+    risk: medium
+    reason: workspace member needs owner review before consolidation
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-intel-gpu-id:
+    path: crates/bitnet-intel-gpu-id/Cargo.toml
+    disposition: defer
+    destination: bitnet-intel-gpu-id
+    module: crate
+    wave: defer
+    risk: medium
+    reason: workspace member needs owner review before consolidation
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-inference:
+    path: crates/bitnet-inference/Cargo.toml
+    disposition: keep
+    destination: bitnet-inference
+    module: crate
+    wave: public
+    risk: high
+    reason: inference runtime owner and public API boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-engine-core:
+    path: crates/bitnet-engine-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: engine
+    wave: domain
+    risk: medium
+    reason: engine contracts belong with inference runtime
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-engine-state-core:
+    path: crates/bitnet-engine-state-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: engine/state
+    wave: leaf
+    risk: low
+    reason: engine state machine is inference implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-generation:
+    path: crates/bitnet-generation/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: generation
+    wave: domain
+    risk: medium
+    reason: decode loop logic belongs with inference runtime
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-generation-events-core:
+    path: crates/bitnet-generation-events-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: generation/events
+    wave: leaf
+    risk: low
+    reason: generation event contracts belong with generation
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-generation-stop-core:
+    path: crates/bitnet-generation-stop-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: generation/stop
+    wave: leaf
+    risk: low
+    reason: stop criteria belong with generation
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-session-config-core:
+    path: crates/bitnet-session-config-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: session/config
+    wave: leaf
+    risk: low
+    reason: session config contracts belong with inference sessions
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-logits:
+    path: crates/bitnet-logits/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: logits
+    wave: leaf
+    risk: medium
+    reason: logits transforms belong with inference decode path
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-logits-filters:
+    path: crates/bitnet-logits-filters/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: logits/filters
+    wave: leaf
+    risk: low
+    reason: logits filters belong with logits transforms
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-gguf:
+    path: crates/bitnet-gguf/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: gguf
+    wave: domain
+    risk: medium
+    reason: GGUF header/types belong with model loading
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-inference-metrics-core:
+    path: crates/bitnet-inference-metrics-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: metrics
+    wave: leaf
+    risk: low
+    reason: inference metrics DTOs belong with inference runtime
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-kernels:
+    path: crates/bitnet-kernels/Cargo.toml
+    disposition: keep
+    destination: bitnet-kernels
+    module: crate
+    wave: public
+    risk: high
+    reason: kernel backend owner with feature-gated runtime surface
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-cpu-activations:
+    path: crates/bitnet-cpu-activations/Cargo.toml
+    disposition: merge
+    destination: bitnet-kernels
+    module: cpu/activations
+    wave: leaf
+    risk: medium
+    reason: CPU activation kernels belong with kernel crate
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-kernels
+
+  bitnet-cpu-detect:
+    path: crates/bitnet-cpu-detect/Cargo.toml
+    disposition: merge
+    destination: bitnet-kernels
+    module: cpu/detect
+    wave: leaf
+    risk: medium
+    reason: CPU feature detection belongs with kernel dispatch
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-kernels
+
+  bitnet-kv-cache-policy-core:
+    path: crates/bitnet-kv-cache-policy-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: kv_cache/policy
+    wave: leaf
+    risk: medium
+    reason: KV-cache policy belongs with inference runtime
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-simd:
+    path: crates/bitnet-simd/Cargo.toml
+    disposition: merge
+    destination: bitnet-kernels
+    module: cpu/simd
+    wave: leaf
+    risk: medium
+    reason: SIMD helpers belong with CPU kernel implementation
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-kernels
+
+  bitnet-ggml-ffi:
+    path: crates/bitnet-ggml-ffi/Cargo.toml
+    disposition: keep
+    destination: bitnet-ggml-ffi
+    module: ffi
+    wave: public
+    risk: medium
+    reason: GGML linking and external ABI boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-quantization:
+    path: crates/bitnet-quantization/Cargo.toml
+    disposition: keep
+    destination: bitnet-quantization
+    module: crate
+    wave: public
+    risk: high
+    reason: quantization public API and consolidation owner
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-quantization-bits:
+    path: crates/bitnet-quantization-bits/Cargo.toml
+    disposition: merge
+    destination: bitnet-quantization
+    module: bits
+    wave: leaf
+    risk: low
+    reason: bit packing primitives belong with quantization
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-quantization
+
+  bitnet-models:
+    path: crates/bitnet-models/Cargo.toml
+    disposition: keep
+    destination: bitnet-models
+    module: crate
+    wave: public
+    risk: high
+    reason: model loading public API and consolidation owner
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-trace:
+    path: crates/bitnet-trace/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: trace
+    wave: domain
+    risk: medium
+    reason: activation tracing belongs with model validation/cross-validation
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-transformer:
+    path: crates/bitnet-transformer/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: transformer
+    wave: domain
+    risk: high
+    reason: transformer structures were extracted from models and need reintegration review
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-qk256-dispatch:
+    path: crates/bitnet-qk256-dispatch/Cargo.toml
+    disposition: merge
+    destination: bitnet-quantization
+    module: qk256/dispatch
+    wave: domain
+    risk: medium
+    reason: QK256 dispatch metadata belongs with quantization
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-quantization
+
+  bitnet-qk256-layout-core:
+    path: crates/bitnet-qk256-layout-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-quantization
+    module: qk256/layout
+    wave: leaf
+    risk: medium
+    reason: QK256 layout validation belongs with quantization
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-quantization
+
+  bitnet-rope:
+    path: crates/bitnet-rope/Cargo.toml
+    disposition: defer
+    destination: bitnet-rope
+    module: crate
+    wave: defer
+    risk: medium
+    reason: workspace member needs owner review before consolidation
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-weight-name-core:
+    path: crates/bitnet-weight-name-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: weight_names
+    wave: leaf
+    risk: low
+    reason: weight name canonicalization is model-loading detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-st2gguf:
+    path: crates/bitnet-st2gguf/Cargo.toml
+    disposition: keep
+    destination: bitnet-st2gguf
+    module: converter
+    wave: tool
+    risk: medium
+    reason: SafeTensors to GGUF converter binary boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-test-fixtures-core:
+    path: crates/bitnet-test-fixtures-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: fixtures
+    wave: test
+    risk: low
+    reason: fixture helpers belong with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-tests:
+    path: tests/Cargo.toml
+    disposition: keep
+    destination: bitnet-testkit
+    module: workspace_tests
+    wave: test
+    risk: medium
+    reason: integration test package boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-compat:
+    path: crates/bitnet-compat/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: compatibility
+    wave: domain
+    risk: medium
+    reason: GGUF compatibility facade belongs with model loading
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-compat-core:
+    path: crates/bitnet-compat-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: compatibility
+    wave: leaf
+    risk: low
+    reason: GGUF compatibility diagnostics are model-loading internals
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-tokenizers:
+    path: crates/bitnet-tokenizers/Cargo.toml
+    disposition: keep
+    destination: bitnet-tokenizers
+    module: crate
+    wave: public
+    risk: medium
+    reason: tokenizer public API and consolidation owner
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
 
   bitnet-token-merge-core:
+    path: crates/bitnet-token-merge-core/Cargo.toml
     disposition: merge
     destination: bitnet-tokenizers
     module: merge
     wave: leaf
     risk: low
-    reason: tokenizer implementation detail
+    reason: token span helpers are tokenizer implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-tokenizer-model-core:
+    path: crates/bitnet-tokenizer-model-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: model
+    wave: leaf
+    risk: low
+    reason: tokenizer model detection belongs with tokenizers
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-crossval:
+    path: crossval/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: crossval
+    wave: tool
+    risk: medium
+    reason: cross-validation harness boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-sys:
+    path: crates/bitnet-sys/Cargo.toml
+    disposition: keep
+    destination: bitnet-sys
+    module: ffi
+    wave: public
+    risk: high
+    reason: native sys crate and ABI boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  xtask-build-helper:
+    path: xtask-build-helper/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: xtask/build_helper
+    wave: tool
+    risk: low
+    reason: build helper tool boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-honest-compute:
+    path: crates/bitnet-honest-compute/Cargo.toml
+    disposition: merge
+    destination: bitnet-receipts
+    module: honest_compute
+    wave: domain
+    risk: medium
+    reason: honest compute markers belong with receipts
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-receipts
+
+  bitnet-prompt-templates:
+    path: crates/bitnet-prompt-templates/Cargo.toml
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: prompt_templates
+    wave: domain
+    risk: medium
+    reason: prompt formatting is adjacent to tokenizer/prompt handling
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-prompt-templates-core:
+    path: crates/bitnet-prompt-templates-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: prompt_templates
+    wave: leaf
+    risk: low
+    reason: prompt template core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-receipts:
+    path: crates/bitnet-receipts/Cargo.toml
+    disposition: keep
+    destination: bitnet-receipts
+    module: crate
+    wave: public
+    risk: high
+    reason: receipt validation public API and consolidation owner
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
 
   bitnet-receipts-core:
+    path: crates/bitnet-receipts-core/Cargo.toml
     disposition: merge
     destination: bitnet-receipts
     module: schema
     wave: domain
     risk: medium
-    reason: receipts crate should own schema and validation surface
+    reason: receipt schema should be owned by receipts
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-receipts
 
-  bitnet-ggml-ffi:
-    disposition: keep
-    destination: bitnet-ggml-ffi
-    wave: publish
+  bitnet-sampling:
+    path: crates/bitnet-sampling/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: sampling
+    wave: domain
     risk: medium
-    reason: external FFI/linking boundary
+    reason: sampling belongs with inference decode path
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
 
-  bitnet-cli:
-    disposition: keep
-    destination: bitnet-cli
-    wave: public
-    risk: high
-    reason: binary/user-facing runtime
+  bitnet-probability:
+    path: crates/bitnet-probability/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: probability
+    wave: leaf
+    risk: low
+    reason: probability helpers belong with sampling
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-testing-policy-tests:
+    path: crates/bitnet-testing-policy-tests/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/tests
+    wave: test
+    risk: medium
+    reason: policy tests belong with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-runtime:
+    path: crates/bitnet-testing-policy-runtime/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/runtime
+    wave: test
+    risk: medium
+    reason: policy runtime belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-interop:
+    path: crates/bitnet-testing-policy-interop/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/interop
+    wave: test
+    risk: medium
+    reason: policy interop belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-runtime-feature-flags:
+    path: crates/bitnet-runtime-feature-flags/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/feature_flags
+    wave: domain
+    risk: medium
+    reason: runtime feature facade belongs with common runtime utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-bdd-grid-core:
+    path: crates/bitnet-bdd-grid-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: bdd
+    wave: test
+    risk: low
+    reason: BDD grid core belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-runtime-feature-flags-core:
+    path: crates/bitnet-runtime-feature-flags-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/feature_flags
+    wave: leaf
+    risk: low
+    reason: feature flag core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-testing-policy-contract:
+    path: crates/bitnet-testing-policy-contract/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/contract
+    wave: test
+    risk: medium
+    reason: policy contract belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-feature-contract:
+    path: crates/bitnet-feature-contract/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: feature_matrix
+    wave: test
+    risk: medium
+    reason: feature contract validation belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-bdd-grid:
+    path: crates/bitnet-bdd-grid/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: bdd
+    wave: test
+    risk: medium
+    reason: BDD grid facade belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-feature-matrix:
+    path: crates/bitnet-feature-matrix/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: feature_matrix
+    wave: test
+    risk: medium
+    reason: feature matrix checks belong with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-runtime-profile-core:
+    path: crates/bitnet-runtime-profile-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/profile
+    wave: leaf
+    risk: low
+    reason: runtime profile core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-runtime-profile-contract:
+    path: crates/bitnet-runtime-profile-contract/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/profile
+    wave: domain
+    risk: medium
+    reason: runtime profile contract belongs with common runtime profile
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-runtime-profile-contract-core:
+    path: crates/bitnet-runtime-profile-contract-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/profile
+    wave: leaf
+    risk: low
+    reason: runtime profile contract core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-runtime-context:
+    path: crates/bitnet-runtime-context/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/context
+    wave: domain
+    risk: medium
+    reason: runtime context wrapper belongs with common runtime utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-runtime-context-core:
+    path: crates/bitnet-runtime-context-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/context
+    wave: leaf
+    risk: low
+    reason: runtime context core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-testing-policy-core:
+    path: crates/bitnet-testing-policy-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy
+    wave: test
+    risk: low
+    reason: testing policy core belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-snapshot-core:
+    path: crates/bitnet-testing-policy-snapshot-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: snapshots
+    wave: test
+    risk: low
+    reason: policy snapshot resolution belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-profile:
+    path: crates/bitnet-testing-profile/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: profile
+    wave: test
+    risk: medium
+    reason: testing profiles belong with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-runtime-profile:
+    path: crates/bitnet-runtime-profile/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/profile
+    wave: domain
+    risk: medium
+    reason: runtime profile facade belongs with common runtime utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-testing-scenarios-core:
+    path: crates/bitnet-testing-scenarios-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: scenarios
+    wave: test
+    risk: low
+    reason: scenario core belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-scenarios-profile-core:
+    path: crates/bitnet-testing-scenarios-profile-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: scenarios/profile
+    wave: test
+    risk: low
+    reason: scenario profile core belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-kit:
+    path: crates/bitnet-testing-policy-kit/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/kit
+    wave: test
+    risk: medium
+    reason: policy kit belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy:
+    path: crates/bitnet-testing-policy/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy
+    wave: test
+    risk: medium
+    reason: testing policy facade belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-runtime-core:
+    path: crates/bitnet-testing-policy-runtime-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/runtime
+    wave: test
+    risk: low
+    reason: policy runtime core belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-testing-policy-state-core:
+    path: crates/bitnet-testing-policy-state-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: policy/state
+    wave: test
+    risk: low
+    reason: policy state core belongs with testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-tool-use-core:
+    path: crates/bitnet-tool-use-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: tool_use
+    wave: leaf
+    risk: medium
+    reason: tool-calling contracts belong with inference orchestration
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-tokenizer-text-core:
+    path: crates/bitnet-tokenizer-text-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: text
+    wave: leaf
+    risk: low
+    reason: tokenizer text normalization belongs with tokenizers
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-tokenizer-discovery-core:
+    path: crates/bitnet-tokenizer-discovery-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: discovery
+    wave: leaf
+    risk: low
+    reason: tokenizer path discovery belongs with tokenizers
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-tokenizers
+
+  bitnet-device-config-core:
+    path: crates/bitnet-device-config-core/Cargo.toml
+    disposition: defer
+    destination: bitnet-device-config-core
+    module: crate
+    wave: defer
+    risk: medium
+    reason: workspace member needs owner review before consolidation
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-repl-core:
+    path: crates/bitnet-repl-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: repl
+    wave: leaf
+    risk: low
+    reason: REPL state belongs with inference/user loop
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-eval-core:
+    path: crates/bitnet-eval-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: eval
+    wave: leaf
+    risk: low
+    reason: eval math helpers belong with inference evaluation
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-client-ip-core:
+    path: crates/bitnet-client-ip-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: client_ip
+    wave: leaf
+    risk: low
+    reason: client IP extraction belongs with server request handling
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-api-versioning-core:
+    path: crates/bitnet-api-versioning-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: api_versioning
+    wave: leaf
+    risk: low
+    reason: API version routing belongs with server
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-api-key-auth-core:
+    path: crates/bitnet-api-key-auth-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: api_key_auth
+    wave: leaf
+    risk: low
+    reason: API key auth policy belongs with server
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-http-auth-core:
+    path: crates/bitnet-http-auth-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: http_auth
+    wave: leaf
+    risk: low
+    reason: HTTP auth parsing belongs with server
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-server-health-types-core:
+    path: crates/bitnet-server-health-types-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: health/types
+    wave: leaf
+    risk: low
+    reason: health contract types belong with server
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-request-context-core:
+    path: crates/bitnet-request-context-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: request_context
+    wave: leaf
+    risk: low
+    reason: request metadata contracts belong with server
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
 
   bitnet-server:
+    path: crates/bitnet-server/Cargo.toml
     disposition: keep
     destination: bitnet-server
+    module: crate
     wave: public
     risk: high
-    reason: binary/server boundary
+    reason: server public surface and binary boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-runtime-bootstrap:
+    path: crates/bitnet-runtime-bootstrap/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: domain
+    risk: medium
+    reason: runtime bootstrap belongs with startup/runtime contract utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-startup-contract:
+    path: crates/bitnet-startup-contract/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: domain
+    risk: medium
+    reason: startup contract facade belongs with common runtime utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-startup-contract-core:
+    path: crates/bitnet-startup-contract-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: leaf
+    risk: low
+    reason: startup contract core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-startup-contract-guard:
+    path: crates/bitnet-startup-contract-guard/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: domain
+    risk: medium
+    reason: startup guard belongs with startup contract utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-startup-contract-diagnostics:
+    path: crates/bitnet-startup-contract-diagnostics/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: domain
+    risk: medium
+    reason: startup diagnostics facade belongs with startup contract utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-startup-contract-diagnostics-core:
+    path: crates/bitnet-startup-contract-diagnostics-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-common
+    module: runtime/startup_contract
+    wave: leaf
+    risk: low
+    reason: startup diagnostics core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-common
+
+  bitnet-cli-sampling-core:
+    path: crates/bitnet-cli-sampling-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: sampling/cli
+    wave: leaf
+    risk: low
+    reason: CLI sampling primitives should share inference sampling owner
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-cli-config-core:
+    path: crates/bitnet-cli-config-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-cli
+    module: config
+    wave: leaf
+    risk: low
+    reason: CLI config validation belongs with CLI
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-cli
+
+  bitnet-scoring-core:
+    path: crates/bitnet-scoring-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-inference
+    module: scoring
+    wave: leaf
+    risk: medium
+    reason: NLL/logit scoring belongs with inference
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-inference
+
+  bitnet-cli:
+    path: crates/bitnet-cli/Cargo.toml
+    disposition: keep
+    destination: bitnet-cli
+    module: crate
+    wave: public
+    risk: high
+    reason: CLI binary and user-facing runtime proof boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-validation:
+    path: crates/bitnet-validation/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: validation
+    wave: domain
+    risk: medium
+    reason: model validation rules belong with model loading
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-safetensors-ln:
+    path: crates/bitnet-safetensors-ln/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: safetensors
+    wave: leaf
+    risk: low
+    reason: SafeTensors LayerNorm helpers belong with model conversion/loading
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-st-tools:
+    path: crates/bitnet-st-tools/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: safetensors_tools
+    wave: tool
+    risk: medium
+    reason: SafeTensors inspection and merge tooling boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-ffi:
+    path: crates/bitnet-ffi/Cargo.toml
+    disposition: keep
+    destination: bitnet-ffi
+    module: ffi
+    wave: public
+    risk: high
+    reason: C ABI packaging boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-py:
+    path: crates/bitnet-py/Cargo.toml
+    disposition: keep
+    destination: bitnet-py
+    module: python
+    wave: public
+    risk: high
+    reason: Python packaging boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-wasm:
+    path: crates/bitnet-wasm/Cargo.toml
+    disposition: keep
+    destination: bitnet-wasm
+    module: wasm
+    wave: public
+    risk: high
+    reason: WASM package boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-wasm-utils:
+    path: crates/bitnet-wasm-utils/Cargo.toml
+    disposition: keep
+    destination: bitnet-wasm-utils
+    module: wasm/utils
+    wave: public
+    risk: medium
+    reason: WASM helper package boundary
+    verification_gate: Focused public crate checks; no collapse gate unless disposition changes
+
+  bitnet-testing-scenarios:
+    path: crates/bitnet-testing-scenarios/Cargo.toml
+    disposition: merge
+    destination: bitnet-testkit
+    module: scenarios
+    wave: test
+    risk: medium
+    reason: scenario facade belongs with unified testkit
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-testkit
+
+  bitnet-download-core:
+    path: crates/bitnet-download-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: download
+    wave: leaf
+    risk: low
+    reason: download core is an implementation detail
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-download:
+    path: crates/bitnet-download/Cargo.toml
+    disposition: merge
+    destination: bitnet-models
+    module: download
+    wave: domain
+    risk: medium
+    reason: model download mechanics belong with model management
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-models
+
+  bitnet-http-retry:
+    path: crates/bitnet-http-retry/Cargo.toml
+    disposition: merge
+    destination: bitnet-server
+    module: http_retry
+    wave: leaf
+    risk: low
+    reason: HTTP retry timing belongs with server/client IO utilities
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-server
+
+  bitnet-gpu-hal:
+    path: crates/bitnet-gpu-hal/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/hal
+    wave: platform
+    risk: high
+    reason: GPU HAL should consolidate only after backend identity semantics are stable
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-nvidia:
+    path: crates/bitnet-nvidia/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/cuda
+    wave: platform
+    risk: high
+    reason: NVIDIA tuning is platform-specific and deferred until CUDA lane proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-opencl:
+    path: crates/bitnet-opencl/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/opencl
+    wave: platform
+    risk: high
+    reason: OpenCL backend is platform-specific and deferred until OpenCL proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-spirv:
+    path: crates/bitnet-spirv/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/vulkan
+    wave: platform
+    risk: medium
+    reason: SPIR-V cache/validation belongs with Vulkan after GPU proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-metal:
+    path: crates/bitnet-metal/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/metal
+    wave: platform
+    risk: high
+    reason: Metal backend is platform-specific and deferred until Metal proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-rocm:
+    path: crates/bitnet-rocm/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/rocm
+    wave: platform
+    risk: high
+    reason: ROCm backend is platform-specific and deferred until ROCm proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-vulkan:
+    path: crates/bitnet-vulkan/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/vulkan
+    wave: platform
+    risk: high
+    reason: Vulkan backend is platform-specific and deferred until Vulkan proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-vulkan-shaders:
+    path: crates/bitnet-vulkan-shaders/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: shaders/vulkan
+    wave: platform
+    risk: medium
+    reason: Vulkan shader catalog belongs with backend once validated
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-wgpu:
+    path: crates/bitnet-wgpu/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/wgpu
+    wave: platform
+    risk: high
+    reason: wgpu backend is platform-specific and deferred until wgpu proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-dispatch-core:
+    path: crates/bitnet-dispatch-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-kernels
+    module: dispatch
+    wave: leaf
+    risk: medium
+    reason: dispatch sizing contracts belong with kernel dispatch
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-kernels
+
+  bitnet-bench-receipts:
+    path: crates/bitnet-bench-receipts/Cargo.toml
+    disposition: merge
+    destination: bitnet-receipts
+    module: benchmark
+    wave: domain
+    risk: medium
+    reason: benchmark receipt model belongs with receipts
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-receipts
+
+  bitnet-bench-regression-core:
+    path: crates/bitnet-bench-regression-core/Cargo.toml
+    disposition: merge
+    destination: bitnet-receipts
+    module: regression
+    wave: leaf
+    risk: low
+    reason: benchmark regression comparison belongs with receipts/bench gates
+    verification_gate: Gate 2 focused crate-collapse checks for bitnet-receipts
+
+  bitnet-wgpu-bench:
+    path: crates/bitnet-wgpu-bench/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/wgpu
+    wave: platform
+    risk: medium
+    reason: wgpu benchmark harness belongs with backend tooling after proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-wgpu-runner:
+    path: crates/bitnet-wgpu-runner/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: gpu/wgpu
+    wave: platform
+    risk: medium
+    reason: wgpu runner belongs with backend tooling after proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
+
+  bitnet-tests-new:
+    path: tests-new/Cargo.toml
+    disposition: keep
+    destination: bitnet-testkit
+    module: workspace_tests_new
+    wave: test
+    risk: medium
+    reason: new integration test package boundary
+    verification_gate: Focused tool/test package checks
+
+  xtask:
+    path: xtask/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: xtask
+    wave: tool
+    risk: medium
+    reason: workspace automation binary boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-task:
+    path: tools/bitnet-task/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: task_runner
+    wave: tool
+    risk: low
+    reason: task runner tool boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-fuzz:
+    path: fuzz/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: fuzz
+    wave: tool
+    risk: medium
+    reason: cargo-fuzz package boundary
+    verification_gate: Focused tool/test package checks
+
+  migrate-gen-config:
+    path: tools/migrate-gen-config/Cargo.toml
+    disposition: keep
+    destination: bitnet-tools
+    module: migration
+    wave: tool
+    risk: low
+    reason: AST migration tool boundary
+    verification_gate: Focused tool/test package checks
+
+  bitnet-wgpu-shaders-i2s:
+    path: crates/bitnet-wgpu-shaders-i2s/Cargo.toml
+    disposition: defer
+    destination: bitnet-kernels
+    module: shaders/wgpu_i2s
+    wave: platform
+    risk: medium
+    reason: WGSL I2_S shader catalog belongs with wgpu backend after proof
+    verification_gate: Inventory-only now; define item-specific gate before implementation
