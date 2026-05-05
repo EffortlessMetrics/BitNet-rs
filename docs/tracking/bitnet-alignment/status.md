@@ -11,7 +11,7 @@ P0 truth boundary, then crate consolidation inventory.
 | Item | PR | State | Notes |
 |---|---:|---|---|
 | TRUTH-002 | TBD | ready | Make GGUF fallback explicit |
-| TRUTH-003 | TBD | ready | Null-byte model path validation |
+| TRUTH-003 | TBD | in_progress | Null-byte model path validation |
 | INV-001 | TBD | ready | Crate consolidation map |
 
 ## Queue hygiene

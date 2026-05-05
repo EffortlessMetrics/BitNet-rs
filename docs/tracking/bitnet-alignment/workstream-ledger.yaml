@@ -152,7 +152,7 @@ items:
 
   - id: TRUTH-003
     title: Fix null-byte model path validation
-    state: ready
+    state: in_progress
     priority: P0
     workstream: truth
     depends_on:
@@ -169,7 +169,7 @@ items:
         - .github/**
     acceptance:
       - Model paths containing null bytes are rejected.
-      - Tests cover prefix, suffix, and middle null-byte cases.
+      - Tests cover prefix, suffix, middle, and extension-bypass null-byte cases.
       - Duplicate open security PRs can be closed as superseded.
     verification:
       - cargo test --locked -p bitnet-server security --no-default-features --features cpu
