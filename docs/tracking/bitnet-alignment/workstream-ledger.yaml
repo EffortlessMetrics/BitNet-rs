@@ -180,7 +180,7 @@ items:
 
   - id: TRUTH-003
     title: Fix null-byte model path validation
-    state: pr_open
+    state: merged
     priority: P0
     workstream: truth
     depends_on:
@@ -202,7 +202,8 @@ items:
     verification:
       - cargo test --locked -p bitnet-server security --no-default-features --features cpu
     notes:
-      - Close duplicate Sentinel PRs only after a canonical ledger-aligned PR exists.
+      - Canonical ledger-aligned fix landed in #3626.
+      - Duplicate Sentinel PRs were closed as superseded by #3626.
     followups: []
 
   - id: INV-001
