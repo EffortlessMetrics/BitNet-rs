@@ -54,6 +54,20 @@ pub struct GgufLoadResult {
     pub i2s_qk256: HashMap<String, I2SQk256NoScale>,
 }
 
+fn minimal_loader_disabled() -> bool {
+    std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+        || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1")
+}
+
+fn minimal_loader_allowed() -> bool {
+    std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1")
+}
+
+fn minimal_loader_hint() -> &'static str {
+    "Set BITNET_ALLOW_MINIMAL_LOADER=1 to opt into the reduced-feature minimal loader. \
+     Set BITNET_DISABLE_MINIMAL_LOADER=1 or BITNET_STRICT_MODE=1 to fail fast for proof/CI paths."
+}
+
 /// Load a GGUF model file - backward compatibility shim (returns tuple)
 ///
 /// This function provides backward compatibility with existing tests that expect
@@ -124,31 +138,23 @@ pub fn load_gguf_full(
                 }
             }
 
-            // For other errors, fall back to minimal parser
+            // For other errors, fall back to minimal parser only when explicitly requested.
             match result {
                 Ok(x) => Ok(x),
                 Err(e) => {
-                    let hint = "Set BITNET_DISABLE_MINIMAL_LOADER=1 to fail-fast with the enhanced loader \
-                                (preferred for CI/parity). Unset to allow minimal loader fallback (reduced features).";
+                    let hint = minimal_loader_hint();
 
-                    let fail_fast =
-                        std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1");
-
-                    if fail_fast {
+                    if minimal_loader_disabled() || !minimal_loader_allowed() {
                         tracing::error!("Enhanced loader failed: {}. {}", e, hint);
-                        tracing::error!(
-                            "BITNET_DISABLE_MINIMAL_LOADER=1: stopping here (no minimal fallback)."
-                        );
-                        return Err(BitNetError::Validation(format!(
-                            "{}\nHint: unset BITNET_DISABLE_MINIMAL_LOADER to try the minimal loader (reduced features).",
-                            e
-                        )));
-                    } else {
-                        tracing::warn!("Enhanced loader failed: {}. {}", e, hint);
-                        tracing::warn!(
-                            "Falling back to minimal parser (may use 32/0 default dims)"
-                        );
+                        tracing::error!("Stopping here without minimal compatibility fallback.");
+                        return Err(BitNetError::Validation(format!("{}\nHint: {}", e, hint)));
                     }
+
+                    tracing::warn!("Enhanced loader failed: {}. {}", e, hint);
+                    tracing::warn!(
+                        "BITNET_ALLOW_MINIMAL_LOADER=1: using minimal parser \
+                        (reduced features; may use default/mock transformer tensors)"
+                    );
 
                     // AC9: Fallback to minimal GGUF parser for backward compatibility
                     // This happens when:
@@ -164,9 +170,17 @@ pub fn load_gguf_full(
             }
         }
         Err(e) => {
-            // GgufReader construction failed - fall back to minimal
-            tracing::info!(
-                "GGUF reader construction failed ({}), falling back to minimal parser",
+            // GgufReader construction failed - fall back to minimal only when explicitly requested.
+            if minimal_loader_disabled() || !minimal_loader_allowed() {
+                return Err(BitNetError::Validation(format!(
+                    "GGUF reader construction failed: {}\nHint: {}",
+                    e,
+                    minimal_loader_hint()
+                )));
+            }
+            tracing::warn!(
+                "GGUF reader construction failed ({}); BITNET_ALLOW_MINIMAL_LOADER=1: \
+                using minimal compatibility parser",
                 e
             );
             load_gguf_minimal(path, device)
@@ -1797,4 +1811,60 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         tensor_map.len()
     );
     Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GGUFLoaderConfig, load_gguf_full};
+    use bitnet_common::Device;
+    use serial_test::serial;
+    use tempfile::TempDir;
+
+    #[test]
+    #[serial]
+    fn mock_compatibility_loader_requires_explicit_opt_in() {
+        let dir = TempDir::new().expect("tempdir");
+        let path = dir.path().join("mock.gguf");
+        std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");
+
+        temp_env::with_var_unset("BITNET_ALLOW_MINIMAL_LOADER", || {
+            temp_env::with_var_unset("BITNET_DISABLE_MINIMAL_LOADER", || {
+                temp_env::with_var_unset("BITNET_STRICT_MODE", || {
+                    let result = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::default());
+                    assert!(result.is_err(), "minimal/mock fallback must be opt-in");
+                    let err = result.err().expect("error").to_string();
+                    assert!(
+                        err.contains("BITNET_ALLOW_MINIMAL_LOADER=1"),
+                        "error should explain explicit opt-in: {err}"
+                    );
+                });
+            });
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn minimal_loader_opt_in_env_is_explicit() {
+        temp_env::with_var_unset("BITNET_ALLOW_MINIMAL_LOADER", || {
+            assert!(!super::minimal_loader_allowed());
+        });
+        temp_env::with_var("BITNET_ALLOW_MINIMAL_LOADER", Some("1"), || {
+            assert!(super::minimal_loader_allowed());
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn strict_mode_blocks_minimal_loader_even_when_allowed() {
+        let dir = TempDir::new().expect("tempdir");
+        let path = dir.path().join("mock.gguf");
+        std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");
+
+        temp_env::with_var("BITNET_ALLOW_MINIMAL_LOADER", Some("1"), || {
+            temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+                let result = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::default());
+                assert!(result.is_err(), "strict mode must fail before compatibility fallback");
+            });
+        });
+    }
 }
