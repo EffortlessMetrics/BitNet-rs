@@ -435,7 +435,7 @@ items:
 
   - id: CPU-002
     title: Validate CPU inference receipt for CLI proof
-    state: ready
+    state: pr_open
     priority: P0
     workstream: runtime_cpu
     depends_on:
@@ -455,7 +455,7 @@ items:
       - Fallback/minimal loader cannot pass proof silently.
     verification:
       - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
-      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+      - cargo test --locked -p bitnet-receipts --no-default-features
     notes:
       - Add a separate schema item if loader-mode receipt fields need expansion.
     claim_boundary:

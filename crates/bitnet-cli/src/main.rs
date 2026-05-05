@@ -58,6 +58,103 @@ fn bitnet_version() -> &'static str {
     })
 }
 
+fn cpu_simple_generation_kernel_ids() -> Vec<String> {
+    vec![
+        "cpu_embedding_lookup".to_string(),
+        "cpu_model_forward".to_string(),
+        "cpu_logits_projection".to_string(),
+        "sampling_cpu".to_string(),
+    ]
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_cpu_proof_receipt(
+    model_path: &std::path::Path,
+    loader_mode: &str,
+    deterministic: bool,
+    tokens_generated: usize,
+    total_ms: u64,
+    tokens_per_second: f64,
+    first_token_latency_ms: Option<u64>,
+    minimal_fallback_allowed: bool,
+    minimal_fallback_disabled: bool,
+) -> serde_json::Value {
+    let kernels = cpu_simple_generation_kernel_ids();
+    let compute_path = if loader_mode == "enhanced" { "real" } else { "compatibility_fallback" };
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "compute_path": compute_path,
+        "backend": "cpu",
+        "backend_summary": "requested=cpu detected=[cpu] selected=cpu",
+        "kernels": kernels,
+        "deterministic": deterministic,
+        "environment": {
+            "BITNET_VERSION": env!("CARGO_PKG_VERSION"),
+            "OS": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+            "BITNET_ALLOW_MINIMAL_LOADER": if minimal_fallback_allowed { "1" } else { "0" },
+            "BITNET_DISABLE_MINIMAL_LOADER": if minimal_fallback_disabled { "1" } else { "0" },
+        },
+        "model_info": {
+            "model_path": model_path.display().to_string(),
+        },
+        "test_results": {
+            "total_tests": 0,
+            "passed": 0,
+            "failed": 0,
+        },
+        "performance_baseline": {
+            "tokens_generated": tokens_generated,
+            "total_time_ms": total_ms,
+            "tokens_per_second": tokens_per_second,
+            "first_token_latency_ms": first_token_latency_ms,
+        },
+        "corrections": [],
+        "loader_mode": loader_mode,
+        "minimal_fallback_allowed": minimal_fallback_allowed,
+        "minimal_fallback_disabled": minimal_fallback_disabled,
+    })
+}
+
+fn validate_cpu_proof_receipt(receipt: &serde_json::Value) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    if receipt.get("compute_path").and_then(serde_json::Value::as_str) != Some("real") {
+        errors.push("compute_path must be real".to_string());
+    }
+    if receipt.get("backend").and_then(serde_json::Value::as_str) != Some("cpu") {
+        errors.push("backend must be cpu".to_string());
+    }
+    if receipt.get("loader_mode").and_then(serde_json::Value::as_str) != Some("enhanced") {
+        errors.push("loader_mode must be enhanced".to_string());
+    }
+    if receipt.get("minimal_fallback_disabled").and_then(serde_json::Value::as_bool) != Some(true) {
+        errors.push("minimal fallback must be disabled for proof".to_string());
+    }
+
+    match receipt.get("kernels").and_then(serde_json::Value::as_array) {
+        Some(kernels) if kernels.is_empty() => {
+            errors.push("kernels must be non-empty".to_string());
+        }
+        Some(kernels) => {
+            for kernel in kernels {
+                match kernel.as_str() {
+                    Some(id)
+                        if !id.trim().is_empty()
+                            && id.len() <= 128
+                            && !id.to_ascii_lowercase().contains("mock") => {}
+                    Some(id) => errors.push(format!("invalid kernel id: {id:?}")),
+                    None => errors.push("kernel id must be a string".to_string()),
+                }
+            }
+        }
+        None => errors.push("kernels must be present".to_string()),
+    }
+
+    errors
+}
+
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
@@ -854,6 +951,75 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn cpu_proof_receipt_validates_for_enhanced_strict_cpu() {
+        let receipt = build_cpu_proof_receipt(
+            Path::new("models/model.gguf"),
+            "enhanced",
+            true,
+            1,
+            100,
+            10.0,
+            Some(90),
+            false,
+            true,
+        );
+
+        let errors = validate_cpu_proof_receipt(&receipt);
+
+        assert!(errors.is_empty(), "unexpected receipt validation errors: {errors:?}");
+        assert_eq!(receipt["compute_path"], "real");
+        assert_eq!(receipt["backend"], "cpu");
+        assert!(!receipt["kernels"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn cpu_proof_receipt_rejects_compatibility_fallback() {
+        let receipt = build_cpu_proof_receipt(
+            Path::new("models/model.gguf"),
+            "compatibility_fallback",
+            true,
+            1,
+            100,
+            10.0,
+            Some(90),
+            true,
+            false,
+        );
+
+        let errors = validate_cpu_proof_receipt(&receipt);
+
+        assert!(errors.iter().any(|e| e.contains("compute_path")));
+        assert!(errors.iter().any(|e| e.contains("loader_mode")));
+        assert!(errors.iter().any(|e| e.contains("minimal fallback")));
+    }
+
+    #[test]
+    fn cpu_proof_receipt_rejects_mock_kernel_ids() {
+        let mut receipt = build_cpu_proof_receipt(
+            Path::new("models/model.gguf"),
+            "enhanced",
+            true,
+            1,
+            100,
+            10.0,
+            Some(90),
+            false,
+            true,
+        );
+        receipt["kernels"] = serde_json::json!(["mock_gemv"]);
+
+        let errors = validate_cpu_proof_receipt(&receipt);
+
+        assert!(errors.iter().any(|e| e.contains("mock_gemv")));
+    }
+}
+
 /// Check if AVX2 is available at runtime
 #[cfg(target_arch = "x86_64")]
 fn has_avx2() -> bool {
@@ -1616,6 +1782,23 @@ async fn run_simple_generation(
             "minimal_fallback_disabled": std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
                 || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1"),
         });
+        let minimal_fallback_allowed =
+            std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1");
+        let minimal_fallback_disabled = std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref()
+            == Ok("1")
+            || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
+        let proof_receipt = build_cpu_proof_receipt(
+            &model_path,
+            loader_mode,
+            deterministic || greedy,
+            generated_tokens.len(),
+            total_ms,
+            tok_per_sec,
+            first_token_ms,
+            minimal_fallback_allowed,
+            minimal_fallback_disabled,
+        );
+        let receipt_errors = validate_cpu_proof_receipt(&proof_receipt);
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
         let output = serde_json::json!({
@@ -1639,6 +1822,11 @@ async fn run_simple_generation(
             "counts": counts,
             "tokenizer": tokenizer_info,
             "loader": loader_info,
+            "receipt": proof_receipt,
+            "receipt_validation": {
+                "passed": receipt_errors.is_empty(),
+                "errors": receipt_errors,
+            },
             "gen_policy": gen_policy,
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {

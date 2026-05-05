@@ -11,7 +11,7 @@ P0 truth boundary, crate consolidation inventory, and first implementation prep 
 | Item | PR | State | Notes |
 |---|---:|---|---|
 | BITNET-002 | #3628 | pr_open | Add canonical BitNet fixture manifest and receipt templates |
-| CPU-002 | TBD | ready | Validate CPU inference receipt for CLI proof |
+| CPU-002 | #3638 | pr_open | Validate CPU inference receipt for CLI proof |
 | NPU-002 | TBD | ready | Preserve Intel NPU backend identity before runtime probing |
 | A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
 | KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
