@@ -50,6 +50,7 @@ Understanding-oriented. These explain *why* things work the way they do.
 | [explanation/i2s-dual-flavor.md](explanation/i2s-dual-flavor.md) | I2_S quantization flavor auto-detection |
 | [explanation/correction-policy.md](explanation/correction-policy.md) | Model-specific correction policies |
 | [explanation/cpu-inference-architecture.md](explanation/cpu-inference-architecture.md) | CPU inference pipeline |
+| [architecture/cpu-path-plan.md](architecture/cpu-path-plan.md) | CPU path authority, strict fallback policy, packed-kernel roadmap, and receipt plan |
 | [explanation/device-feature-detection.md](explanation/device-feature-detection.md) | Runtime device/capability detection |
 | [explanation/backend-detection-and-device-selection-patterns.md](explanation/backend-detection-and-device-selection-patterns.md) | Backend selection patterns |
 | [gpu-kernel-architecture.md](gpu-kernel-architecture.md) | CUDA kernel design |

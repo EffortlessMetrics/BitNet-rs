@@ -26,6 +26,7 @@
 
 ## CPU / GPU Architectures
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
+- [CPU Path Plan](architecture/cpu-path-plan.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)
 - [Intel Arc GPU Setup](INTEL_GPU_SETUP.md)

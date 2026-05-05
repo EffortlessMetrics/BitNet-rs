@@ -33,6 +33,7 @@ bitnet-rs is a pre-alpha (v0.2.1-dev) Rust inference engine for 1-bit BitNet LLM
 
 Active workstreams, no date commitments:
 
+- [ ] CPU path authority milestones from [docs/architecture/cpu-path-plan.md](docs/architecture/cpu-path-plan.md): canonical GGUF/tokenizer/layout contracts, scalar packed truth kernels, strict receipts, then AVX2 decode-first GEMV
 - [ ] QK256 AVX2 nibble-LUT + FMA tiling (target 3x over scalar)
 - [ ] Zero-alloc dense forward pass (BlockWorkspace + ping-pong buffers)
 - [ ] Apple Silicon NEON kernel parity (softmax, attention, matmul)
