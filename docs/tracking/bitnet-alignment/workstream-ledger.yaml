@@ -431,7 +431,7 @@ items:
 
   - id: CPU-002
     title: Validate CPU inference receipt for CLI proof
-    state: proposed
+    state: ready
     priority: P0
     workstream: runtime_cpu
     depends_on:
