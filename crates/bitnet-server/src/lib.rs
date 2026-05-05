@@ -475,7 +475,7 @@ async fn enhanced_inference_handler(
     // Submit to batch engine and build response
     let result = state.batch_engine.submit_request(batch_request).await.map_err(|e| {
         error!(error = %e, "Batch processing failed");
-        StatusCode::INTERNAL_SERVER_ERROR
+        StatusCode::SERVICE_UNAVAILABLE
     })?;
 
     // Calculate tokens per second efficiently

@@ -43,7 +43,7 @@ workstreams:
 items:
   - id: TRUTH-001
     title: Fence server simulated inference
-    state: ready
+    state: pr_open
     priority: P0
     workstream: truth
     depends_on: []
@@ -53,6 +53,7 @@ items:
         - crates/bitnet-server/src/lib.rs
         - crates/bitnet-server/tests/**
         - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
         - crates/bitnet-inference/**
         - crates/bitnet-kernels/**
