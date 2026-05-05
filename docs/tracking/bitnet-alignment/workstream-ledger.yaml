@@ -389,6 +389,183 @@ items:
     verification:
       - cargo fmt --all -- --check
 
+  - id: CPU-001
+    title: Add strict CPU inference proof command
+    state: ready
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - TRUTH-002
+      - TRUTH-003
+      - INV-001
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/verification-gates.md
+        - docs/reference/inference-cli-reference.md
+        - docs/howto/validate-models.md
+        - scripts/**
+      forbidden_paths:
+        - crates/**
+        - Cargo.toml
+        - .github/**
+    acceptance:
+      - Strict CPU proof command is documented.
+      - Command disables minimal fallback and enables strict mode.
+      - Command uses explicit model and tokenizer paths.
+      - Command enables JSON output or another receipt-adjacent proof artifact.
+      - Output expectations are documented as smoke/proof, not model-quality claims.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+    notes:
+      - Documentation and scripts only; do not change runtime behavior in this item.
+    claim_boundary:
+      may_claim:
+        - Strict CPU proof command is reproducible after merge.
+      must_not_claim:
+        - CPU inference correctness, performance, or receipt validation is complete.
+    receipt_required: false
+    followups: []
+
+  - id: CPU-002
+    title: Validate CPU inference receipt for CLI proof
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-receipts/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-server/**
+    acceptance:
+      - CLI proof emits or references a receipt.
+      - Receipt validates compute_path=real and backend=cpu.
+      - Kernel IDs are non-empty and non-mock.
+      - Fallback/minimal loader cannot pass proof silently.
+    verification:
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+    notes:
+      - Add a separate schema item if loader-mode receipt fields need expansion.
+    claim_boundary:
+      may_claim:
+        - CPU receipt validation exists for the CLI proof path after merge.
+      must_not_claim:
+        - QK256 scalar or AVX2 performance is proven.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-003
+    title: Add QK256 scalar correctness/parity gate
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - TRUTH-002
+      - BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/**
+        - crates/bitnet-models/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - .github/**
+    acceptance:
+      - QK256 scalar fixtures pass.
+      - BitNet32 vs QK256 detection is covered.
+      - Orientation/shape mismatch errors are tested.
+      - Scalar kernel IDs are receipt-compatible.
+    verification:
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu,fixtures
+    notes:
+      - Correctness only; do not make performance claims in this item.
+    claim_boundary:
+      may_claim:
+        - QK256 scalar correctness/parity gate exists after merge.
+      must_not_claim:
+        - QK256 is fast or production performance-ready.
+    receipt_required: false
+    followups: []
+
+  - id: CPU-004
+    title: Implement QK256 AVX2 dispatch parity
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-cli/**
+    acceptance:
+      - AVX2 path dispatches only when available.
+      - Scalar fallback is visible.
+      - AVX2 output matches scalar within tolerance.
+      - Benchmarks record scalar vs AVX2 delta.
+    verification:
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Performance claims require benchmark receipts.
+    claim_boundary:
+      may_claim:
+        - QK256 AVX2 dispatch parity exists after merge.
+      must_not_claim:
+        - Sustained CPU performance is proven without benchmark receipts.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-005
+    title: Audit CPU decode hot-path allocations
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-sampling/**
+        - crates/bitnet-logits/**
+        - crates/bitnet-logits-filters/**
+        - crates/bitnet-probability/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/**
+        - Cargo.toml
+    acceptance:
+      - Sampling/logits hot path avoids per-token HashMap or vocab-sized avoidable allocations.
+      - Any optimization PR includes tests and benchmark notes.
+      - Existing Bolt PRs are reviewed only after truth boundary and inventory.
+    verification:
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu
+      - cargo test --locked -p bitnet-sampling --no-default-features --features cpu
+    notes:
+      - Audit first; add separate implementation items for optimizations found.
+    claim_boundary:
+      may_claim:
+        - CPU decode allocation risks are audited after merge.
+      must_not_claim:
+        - Decode performance is improved without benchmark receipts.
+    receipt_required: false
+    followups: []
+
   - id: NPU-001
     title: Add Intel NPU backend lane
     state: pr_open
