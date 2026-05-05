@@ -33,6 +33,81 @@ backends:
       - Add receipt kernel IDs.
       - Add benchmark baseline.
 
+  intel_i5_8250u_cpu_avx2:
+    status: scaffold
+    notes:
+      - Target hardware is Intel Core i5-8250U, formerly Kaby Lake R.
+      - Role is active AVX2 CPU implementation and low-power mobile proof.
+      - CPU has 4 cores, 8 threads, AVX2, and no AVX-512.
+      - This lane owns scalar/AVX2 parity, strict CPU proof, and sustained low-power behavior.
+      - Sustained performance must be reported separately from short turbo behavior.
+      - This lane must not touch GPU/NPU work.
+    blockers:
+      - Add 8250U machine profile.
+      - Add CPU feature probe receipt.
+      - Add scalar versus AVX2 dispatch proof.
+      - Add strict CPU inference proof command.
+      - Add sustained-load thermal and throttle notes.
+      - Add benchmark baseline with power and thermal context.
+
+  intel_258v_cpu_avx2:
+    status: scaffold
+    notes:
+      - Target hardware is the CPU inside Intel Core Ultra 7 258V.
+      - Role is Lunar Lake CPU AVX2 validation on the same machine as Arc 140V and Intel NPU.
+      - CPU has 8 cores / 8 threads with 4 P-cores and 4 low-power E-cores.
+      - AVX2 is available; AVX-512 should not be assumed.
+      - This lane validates CPU behavior on Lunar Lake and supports cross-device comparison, but does not replace the 8250U AVX2 implementation lane.
+    blockers:
+      - Add 258V CPU profile to platform bundle.
+      - Add CPU feature probe receipt.
+      - Add scalar versus AVX2 validation receipt.
+      - Add power, scheduler, and core-class context.
+
+  intel_uhd_620_openvino_gpu:
+    status: scaffold
+    notes:
+      - Optional reference lane for the i5-8250U integrated GPU.
+      - Expected GPU is Intel UHD Graphics 620, device ID 0x5917.
+      - OpenVINO GPU plugin is OpenCL-based and would likely expose this as GPU.0 on an iGPU-only machine.
+      - This lane must not block CPU path work.
+      - Do not claim BitNet GPU acceleration from this lane without receipts.
+    blockers:
+      - Add OpenCL/OpenVINO GPU visibility probe.
+      - Add tiny graph smoke only if useful.
+      - Keep UHD 620 work optional and deferred behind CPU proof work.
+
+  amd_9950x3d_cpu_avx512:
+    status: scaffold
+    notes:
+      - Target hardware is AMD Ryzen 9 9950X3D.
+      - Primary role is modern desktop CPU proof with AVX-512 and AVX2 comparison.
+      - CPU has 16 cores, 32 threads, Zen 5 architecture, AM5 platform, and 128 MB L3 cache.
+      - Default TDP is 170 W; cooling and sustained power behavior must be recorded before performance claims.
+      - This lane is CPU-only and must not be conflated with GPU or NPU acceleration.
+    blockers:
+      - Add 9950X3D machine profile.
+      - Add CPU feature probe receipt.
+      - Add scalar, AVX2, and AVX-512 dispatch proof.
+      - Add cache-domain and scheduler notes for X3D behavior.
+      - Add strict CPU inference proof command.
+      - Add sustained desktop benchmark baseline.
+
+  amd_5700x_cpu_avx2:
+    status: scaffold
+    notes:
+      - Target hardware is AMD Ryzen 7 5700X.
+      - Primary role is mainstream AM4 Zen 3 AVX2 desktop CPU validation.
+      - CPU has 8 cores, 16 threads, 32 MB L3 cache, DDR4 platform, and 65 W TDP.
+      - AVX2 is available; AVX-512 should not be assumed.
+      - This lane is separate from the 9950X3D AVX-512 lane and from accelerator work.
+    blockers:
+      - Add 5700X machine profile.
+      - Add CPU feature probe receipt.
+      - Add scalar versus AVX2 dispatch proof.
+      - Add strict CPU inference proof command.
+      - Add sustained DDR4/AM4 benchmark baseline.
+
   cuda:
     status: scaffold
     blockers:
@@ -46,6 +121,46 @@ backends:
       - Kernel smoke tests.
       - End-to-end validation.
 
+  apple_m4_metal:
+    status: scaffold
+    notes:
+      - Target hardware is Apple M4 Mac mini.
+      - Native accelerator path is Metal compute.
+      - Base M4 has 10-core GPU and 120 GB/s unified memory bandwidth.
+      - M4 Pro variants have higher GPU core counts and 273 GB/s memory bandwidth.
+      - CPU fallback cannot count as Metal execution.
+    blockers:
+      - Add M4 machine profile.
+      - Add Metal device probe.
+      - Add tiny Metal compute smoke.
+      - Add CPU/Metal parity.
+      - Add receipt fields for Apple chip, GPU family, unified memory, selected backend, and fallback.
+      - Add benchmark baseline.
+
+  apple_m4_mpsgraph:
+    status: scaffold
+    notes:
+      - Reference graph path through Metal Performance Shaders Graph.
+      - MPSGraph can target GPU, CPU, and Neural Engine depending on platform and runtime behavior.
+      - MPSGraph smoke is not native handwritten Metal kernel proof.
+      - Do not claim Neural Engine execution unless receipt-backed.
+    blockers:
+      - Add MPSGraph visibility and probe notes.
+      - Add tiny graph smoke.
+      - Record resolved execution target when available.
+      - Keep MPSGraph proof separate from native Metal kernel proof.
+
+  apple_m4_cpu_neon:
+    status: scaffold
+    notes:
+      - CPU fallback and parity lane for Apple M4.
+      - ARM64/NEON path; not AVX2 or AVX-512.
+      - Useful for CPU/Metal parity and no-accelerator fallback receipts.
+    blockers:
+      - Add CPU feature probe.
+      - Add CPU/Metal parity baseline.
+      - Add receipt fields for CPU backend and fallback status.
+
   vulkan:
     status: scaffold
     blockers:
@@ -57,6 +172,128 @@ backends:
     blockers:
       - Backend identity cleanup.
       - Intel Arc validation lane.
+
+  intel_npu:
+    status: scaffold
+    notes:
+      - Target hardware is Lunar Lake Intel NPU.
+      - Initial runtime path is OpenVINO NPU, with selected_backend=intel-npu-openvino.
+      - Intel GPU/OpenCL validation is a separate lane and should use labels such as intel-gpu-opencl.
+      - Linux driver signals may use VPU language, including intel_vpu, even when the device is marketed as NPU.
+      - Windows-native validation should be supported early; do not assume WSL can see the NPU.
+      - /dev/accel detection is only kernel device-node evidence, not runtime execution.
+      - OpenVINO NPU smoke can prove runtime graph execution, not full BitNet inference.
+      - OpenVINO NPU currently requires static model shapes for the first smoke/subgraph work.
+      - OpenVINO NPU precision support does not directly prove packed BitNet QK256 acceleration.
+      - CPU fallback cannot count as Intel NPU execution.
+      - QK256 CPU execution cannot count as Intel NPU execution.
+    blockers:
+      - Add explicit Intel NPU device identity.
+      - Add runtime detection beyond /dev/accel, including OpenVINO runtime, NPU device visibility, driver/compiler versions, and driver hints.
+      - Add static-shape OpenVINO NPU smoke graph.
+      - Add strict fallback semantics for requested Intel NPU.
+      - Add receipt fields for requested backend, selected backend, runtime identity, fallback reason, shape contract, and compile/cache timings.
+      - Evaluate OpenVINO llama.cpp GGUF backend as a reference lane before claiming native BitNet GGUF NPU support.
+
+  intel_arc_a770_opencl:
+    status: scaffold
+    notes:
+      - Target hardware is Intel Arc A770 discrete GPU, with the 16GB board expected to report PCI device ID 0x56A0.
+      - Native path is OpenCL first through bitnet-kernels; Level Zero/SYCL is a later lower-level option.
+      - OpenCL detection is not kernel execution.
+      - Dedicated VRAM path; verify exact VRAM size, board identity, PCIe link, and ReBAR before performance claims.
+      - CPU fallback cannot count as A770 execution.
+    blockers:
+      - Add A770 machine profile.
+      - Add OpenCL and Level Zero runtime probe.
+      - Add strict selected-device identity for Intel Arc A770.
+      - Add native OpenCL kernel smoke.
+      - Add CPU/OpenCL parity.
+      - Add receipt fields for device, driver, runtime, fallback, PCI ID, VRAM, and ReBAR.
+      - Add A770 benchmark baseline.
+
+  intel_arc_a770_openvino_gpu:
+    status: scaffold
+    notes:
+      - Reference graph/runtime path through OpenVINO GPU plugin.
+      - OpenVINO GPU plugin is OpenCL-based and enumerates devices as GPU.X.
+      - If an iGPU is present, A770 may be GPU.1 rather than GPU.0; GPU alone is not enough proof.
+      - OpenVINO GPU smoke is not native BitNet kernel acceleration proof.
+    blockers:
+      - Add OpenVINO GPU device probe with resolved GPU.X identity.
+      - Add tiny graph smoke on the selected A770 GPU.X device.
+      - Add receipt fields for OpenVINO runtime, GPU device identity, fallback status, and timing.
+      - Evaluate OpenVINO llama.cpp GGUF backend as an A770 reference lane.
+
+  intel_arc_140v_opencl:
+    status: scaffold
+    notes:
+      - Target hardware is Intel Arc 140V integrated GPU inside Lunar Lake / Core Ultra 7 258V.
+      - Expected PCI device ID on 258V is 0x64A0.
+      - Shared LPDDR5X memory path; do not compare directly to A770 without memory, power, and thermal context.
+      - Native path is OpenCL first, with Level Zero/SYCL as a later lower-level option.
+      - CPU fallback cannot count as Arc 140V execution.
+    blockers:
+      - Add Arc 140V machine profile.
+      - Add OpenCL and Level Zero runtime probe.
+      - Add OpenVINO GPU.0 visibility probe on the 258V laptop.
+      - Add native OpenCL smoke.
+      - Add CPU/iGPU parity.
+      - Add shared-memory pressure and power/thermal measurements.
+
+  intel_arc_140v_openvino_gpu:
+    status: scaffold
+    notes:
+      - Reference graph/runtime path for the Lunar Lake integrated GPU through OpenVINO GPU plugin.
+      - On the 258V laptop, Arc 140V is expected to be OpenVINO GPU.0 when visible.
+      - OpenVINO GPU smoke is not native BitNet OpenCL kernel proof.
+    blockers:
+      - Add OpenVINO GPU.0 probe and tiny graph smoke.
+      - Add receipt fields for OpenVINO runtime/device identity and fallback status.
+      - Compare against CPU AVX2 and NPU smoke artifacts on the same 258V platform.
+
+  intel_258v_npu_openvino:
+    status: scaffold
+    notes:
+      - Target hardware is Intel AI Boost NPU inside Core Ultra 7 258V.
+      - NPU peak is 47 INT8 TOPS on the 258V.
+      - Initial runtime path is OpenVINO NPU with static-shape graph smoke.
+      - CPU or GPU fallback cannot count as NPU execution.
+      - This is the 258V-specific hardware lane for the broader intel_npu tracker entry.
+    blockers:
+      - Add Windows/Linux NPU driver probe.
+      - Add OpenVINO NPU visibility probe.
+      - Add static F16 tiny graph smoke.
+      - Add receipt fields for driver, compiler, OpenVINO, shape contract, cache timings, and fallback status.
+
+  nvidia_rtx_5070_ti_cuda:
+    status: scaffold
+    notes:
+      - Target hardware is NVIDIA GeForce RTX 5070 Ti.
+      - Native path is CUDA first.
+      - CUDA compute capability is 12.0.
+      - Expected memory is 16 GB GDDR7 on a 256-bit bus.
+      - CPU fallback cannot count as CUDA execution.
+    blockers:
+      - Add 5070 Ti machine profile.
+      - Add CUDA runtime and NVML probe.
+      - Add strict selected-device identity.
+      - Add CUDA kernel smoke.
+      - Add CPU/CUDA parity.
+      - Add receipt fields for CUDA runtime, driver, compute capability, VRAM, power, and fallback.
+      - Add benchmark baseline.
+
+  nvidia_rtx_5070_ti_wgpu:
+    status: scaffold
+    notes:
+      - Cross-platform reference path through wgpu/Vulkan/D3D12.
+      - WGPU smoke is not CUDA kernel proof.
+      - Useful for shader portability and non-CUDA comparison.
+    blockers:
+      - Add wgpu adapter probe.
+      - Add tiny shader smoke.
+      - Add CPU/wgpu parity.
+      - Record backend API, adapter name, driver, and fallback status.
 
   rocm:
     status: scaffold
