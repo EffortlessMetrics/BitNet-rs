@@ -1,0 +1,149 @@
+schema: 1
+project: bitnet-rs-alignment
+updated: 2026-05-05
+
+states:
+  - proposed
+  - ready
+  - in_progress
+  - pr_open
+  - blocked
+  - merged
+  - superseded
+
+workstreams:
+  truth:
+    title: Truth boundary
+    objective: Prevent misleading runtime behavior and align docs with real status.
+
+  inventory:
+    title: Consolidation inventory
+    objective: Assign every microcrate to a final public crate or internal module.
+
+  collapse_leaf:
+    title: Leaf crate collapse
+    objective: Move low-risk utility microcrates into destination modules.
+
+  collapse_domain:
+    title: Domain crate collapse
+    objective: Collapse tokenizer, inference, receipt, model, and quantization helper crates.
+
+  runtime_cpu:
+    title: CPU runtime proof
+    objective: Make strict CPU QK256 CLI inference receipt-backed and measurable.
+
+  server:
+    title: Server real inference
+    objective: Replace simulated inference with real engine execution or explicit 501.
+
+  gpu:
+    title: GPU validation
+    objective: Validate one backend end-to-end with receipts before broadening.
+
+items:
+  - id: TRUTH-001
+    title: Fence server simulated inference
+    state: ready
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - crates/bitnet-server/src/batch_engine.rs
+        - crates/bitnet-server/src/lib.rs
+        - crates/bitnet-server/tests/**
+        - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+    acceptance:
+      - Public server inference routes do not return simulated text.
+      - Non-test builds either call real inference or return 501/503.
+      - Tests assert simulated responses are unavailable outside test mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo clippy --locked -p bitnet-server --all-targets --no-default-features --features cpu -- -D warnings
+      - cargo test --locked -p bitnet-server --no-default-features --features cpu
+    notes:
+      - Do not attempt real batching in this PR.
+      - Single-request real inference is a later item.
+
+  - id: TRUTH-002
+    title: Make GGUF minimal fallback explicit
+    state: ready
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/gguf_simple.rs
+        - crates/bitnet-cli/src/main.rs
+        - docs/reference/quantization-support.md
+        - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+    acceptance:
+      - CLI/server/bench paths do not silently use minimal loader fallback.
+      - Explicit opt-in exists for compatibility/test fallback.
+      - Receipt or JSON output records loader mode.
+    verification:
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+
+  - id: TRUTH-003
+    title: Fix null-byte model path validation
+    state: ready
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - crates/bitnet-server/src/security.rs
+        - crates/bitnet-server/tests/**
+    acceptance:
+      - Model paths containing null bytes are rejected.
+      - Tests cover prefix, suffix, and middle null-byte cases.
+      - Duplicate open security PRs can be closed as superseded.
+    verification:
+      - cargo test --locked -p bitnet-server security --no-default-features --features cpu
+
+  - id: INV-001
+    title: Add crate consolidation map
+    state: ready
+    priority: P0
+    workstream: inventory
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/crate-consolidation-map.yaml
+        - docs/tracking/bitnet-alignment/status.md
+    acceptance:
+      - Every current workspace member has a disposition.
+      - Each item has destination, reason, wave, and verification gate.
+      - No code is moved in this PR.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: LEAF-001
+    title: Collapse warn-once into common
+    state: proposed
+    priority: P1
+    workstream: collapse_leaf
+    depends_on:
+      - INV-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/**
+        - crates/bitnet-warn-once/**
+        - Cargo.toml
+        - crates/*/Cargo.toml
+      forbidden_paths:
+        - crates/bitnet-inference/src/engine.rs
+    acceptance:
+      - warn-once code lives under bitnet-common module.
+      - Workspace member is removed.
+      - Imports updated.
+      - No behavior change.
+    verification:
+      - cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
+      - cargo nextest run --locked --workspace --no-default-features --features cpu

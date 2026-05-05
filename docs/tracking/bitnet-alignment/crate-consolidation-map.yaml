@@ -1,0 +1,38 @@
+schema: 1
+policy:
+  keep_crate_if:
+    - public_package_boundary
+    - binary_or_tool_boundary
+    - abi_or_linking_boundary
+    - heavy_optional_dependency_boundary
+    - platform_packaging_boundary
+    - independently_useful_external_api
+  otherwise: merge_into_owner_crate_as_srp_module
+
+destinations:
+  bitnet-common:
+    target_modules:
+      - math
+      - warn_once
+      - atomic_file
+      - threading
+      - runtime/context
+      - runtime/feature_flags
+      - runtime/profile
+      - runtime/startup_contract
+
+  bitnet-tokenizers:
+    target_modules:
+      - discovery
+      - merge
+      - model
+      - text
+
+crates:
+  bitnet-warn-once:
+    disposition: merge
+    destination: bitnet-common
+    module: warn_once
+    wave: leaf
+    risk: low
+    reason: pure utility macro; no independent public seam

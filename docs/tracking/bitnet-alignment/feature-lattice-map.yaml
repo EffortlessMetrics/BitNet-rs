@@ -1,0 +1,8 @@
+schema: 1
+
+principles:
+  - Library default features remain empty.
+  - Backend features are concrete: cpu, cuda, metal, vulkan, opencl, rocm, npu.
+  - Generic gpu is compatibility alias only, not a proof claim.
+  - Component features are separate from backend features.
+  - Strict mode must fail on unvalidated fallback.

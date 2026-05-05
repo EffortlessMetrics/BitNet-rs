@@ -1,0 +1,19 @@
+schema: 1
+updated: 2026-05-05
+
+status_values:
+  - not_present
+  - scaffold
+  - compiles
+  - runtime_detected
+  - kernel_smoke_tested
+  - parity_tested
+  - receipt_backed
+
+backends:
+  cpu:
+    status: receipt_backed
+    notes:
+      - Primary path.
+      - SIMD optimized path exists.
+    blockers: []
