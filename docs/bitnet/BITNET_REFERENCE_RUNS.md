@@ -43,6 +43,14 @@ context = 512 for smoke
 
 Longer profiles are defined in `docs/bitnet/BITNET_BENCHMARK_PROTOCOL.md`.
 
+The canonical fixture manifest is:
+
+```text
+docs/bitnet/fixtures.yaml
+```
+
+Do not add model binaries to the repository. Fixture entries identify expected paths, hashes, prompt settings, and command shapes only.
+
 ## bitnet.cpp Reference Shape
 
 Command shape:

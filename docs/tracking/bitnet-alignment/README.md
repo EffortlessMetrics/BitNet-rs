@@ -84,3 +84,4 @@ BitNet proof contracts:
 - `../../bitnet/BITNET_RECEIPT_FIELDS.md`
 - `../../bitnet/BITNET_BENCHMARK_PROTOCOL.md`
 - `../../bitnet/BITNET_PARITY_TOLERANCES.md`
+- `../../bitnet/fixtures.yaml`

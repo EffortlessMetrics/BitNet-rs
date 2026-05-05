@@ -265,7 +265,7 @@ items:
 
   - id: HW-001
     title: Add shared hardware validation matrix
-    state: pr_open
+    state: merged
     priority: P1
     workstream: inventory
     depends_on: []
@@ -293,7 +293,7 @@ items:
 
   - id: HW-002
     title: Add hardware artifact naming policy
-    state: proposed
+    state: merged
     priority: P1
     workstream: inventory
     depends_on:
@@ -316,7 +316,7 @@ items:
 
   - id: BITNET-001
     title: Add BitNet model and kernel proof contract
-    state: pr_open
+    state: merged
     priority: P1
     workstream: runtime_cpu
     depends_on:
@@ -345,8 +345,8 @@ items:
       - Parse YAML tracker files.
 
   - id: BITNET-002
-    title: Add canonical BitNet fixture manifest
-    state: proposed
+    title: Add canonical BitNet fixture manifest and receipt templates
+    state: pr_open
     priority: P1
     workstream: runtime_cpu
     depends_on:
@@ -355,6 +355,9 @@ items:
       allowed_paths:
         - docs/bitnet/fixtures.yaml
         - docs/bitnet/BITNET_REFERENCE_RUNS.md
+        - ci/hardware/README.md
+        - ci/hardware/_templates/**
+        - .codex/bitnet-alignment.md
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
@@ -363,13 +366,14 @@ items:
     acceptance:
       - Lists canonical GGUF, tokenizer, prompt fixtures, expected loader mode, and reference command.
       - Includes model hash placeholder fields.
+      - Adds probe, smoke, parity, benchmark, and strict BitNet proof receipt templates.
       - Does not add large model files.
     verification:
       - cargo fmt --all -- --check
 
   - id: BITNET-003
     title: Add BitNet parity tolerance policy
-    state: proposed
+    state: merged
     priority: P1
     workstream: runtime_cpu
     depends_on:
@@ -568,7 +572,7 @@ items:
 
   - id: NPU-001
     title: Add Intel NPU backend lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: npu
     depends_on: []
@@ -594,7 +598,7 @@ items:
 
   - id: NPU-002
     title: Preserve Intel NPU backend identity
-    state: proposed
+    state: ready
     priority: P1
     workstream: npu
     depends_on:
@@ -794,7 +798,7 @@ items:
 
   - id: A770-001
     title: Add Intel Arc A770 16GB backend lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: intel_arc_gpu
     depends_on: []
@@ -821,7 +825,7 @@ items:
 
   - id: A770-002
     title: Add Intel Arc A770 machine profile
-    state: proposed
+    state: merged
     priority: P1
     workstream: intel_arc_gpu
     depends_on:
@@ -844,7 +848,7 @@ items:
 
   - id: A770-003
     title: Preserve Intel Arc A770 backend identity
-    state: proposed
+    state: ready
     priority: P1
     workstream: intel_arc_gpu
     depends_on:
@@ -1058,7 +1062,7 @@ items:
 
   - id: ARC140V-001
     title: Add Intel Arc 140V integrated GPU lane
-    state: proposed
+    state: merged
     priority: P1
     workstream: intel_arc_gpu
     depends_on:
@@ -1214,7 +1218,7 @@ items:
 
   - id: LNL258V-001
     title: Add Core Ultra 7 258V platform profile
-    state: pr_open
+    state: merged
     priority: P1
     workstream: lunar_lake_platform
     depends_on:
@@ -1241,7 +1245,7 @@ items:
 
   - id: CPU258V-001
     title: Add Core Ultra 7 258V CPU AVX2 validation lane
-    state: proposed
+    state: merged
     priority: P1
     workstream: runtime_cpu
     depends_on:
@@ -1267,7 +1271,7 @@ items:
 
   - id: KBL8250U-001
     title: Add Intel Core i5-8250U CPU validation lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: legacy_mobile_cpu
     depends_on: []
@@ -1292,7 +1296,7 @@ items:
 
   - id: KBL8250U-002
     title: Add i5-8250U machine profile and probe bundle
-    state: proposed
+    state: merged
     priority: P1
     workstream: legacy_mobile_cpu
     depends_on:
@@ -1315,7 +1319,7 @@ items:
 
   - id: KBL8250U-003
     title: Prove i5-8250U scalar and AVX2 dispatch
-    state: proposed
+    state: ready
     priority: P1
     workstream: legacy_mobile_cpu
     depends_on:
@@ -1387,7 +1391,7 @@ items:
 
   - id: M4-001
     title: Add Apple M4 Mac mini backend lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: apple_silicon
     depends_on: []
@@ -1414,7 +1418,7 @@ items:
 
   - id: M4-002
     title: Add M4 machine profile and probe bundle
-    state: proposed
+    state: merged
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1437,7 +1441,7 @@ items:
 
   - id: M4-003
     title: Preserve Apple Metal backend identity
-    state: proposed
+    state: ready
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1617,7 +1621,7 @@ items:
 
   - id: RTX5070TI-001
     title: Add NVIDIA RTX 5070 Ti CUDA backend lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on: []
@@ -1643,7 +1647,7 @@ items:
 
   - id: RTX5070TI-002
     title: Add RTX 5070 Ti machine profile and probe bundle
-    state: proposed
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -1666,7 +1670,7 @@ items:
 
   - id: RTX5070TI-003
     title: Preserve RTX 5070 Ti CUDA selected-device identity
-    state: proposed
+    state: ready
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -1846,7 +1850,7 @@ items:
 
   - id: AMD9950X3D-001
     title: Add AMD Ryzen 9 9950X3D CPU validation lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: desktop_cpu
     depends_on: []
@@ -1871,7 +1875,7 @@ items:
 
   - id: AMD9950X3D-002
     title: Add 9950X3D machine profile and probe bundle
-    state: proposed
+    state: merged
     priority: P1
     workstream: desktop_cpu
     depends_on:
@@ -1894,7 +1898,7 @@ items:
 
   - id: AMD9950X3D-003
     title: Prove 9950X3D scalar AVX2 and AVX-512 dispatch
-    state: proposed
+    state: ready
     priority: P1
     workstream: desktop_cpu
     depends_on:
@@ -1988,7 +1992,7 @@ items:
 
   - id: AMD5700X-001
     title: Add AMD Ryzen 7 5700X CPU validation lane
-    state: pr_open
+    state: merged
     priority: P1
     workstream: desktop_cpu
     depends_on: []
@@ -2013,7 +2017,7 @@ items:
 
   - id: AMD5700X-002
     title: Add 5700X machine profile and probe bundle
-    state: proposed
+    state: merged
     priority: P1
     workstream: desktop_cpu
     depends_on:
@@ -2036,7 +2040,7 @@ items:
 
   - id: AMD5700X-003
     title: Prove 5700X scalar and AVX2 dispatch
-    state: proposed
+    state: ready
     priority: P1
     workstream: desktop_cpu
     depends_on:
