@@ -10,7 +10,7 @@ P0 truth boundary, crate consolidation inventory, and docs-only hardware-lane sc
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
-| TRUTH-002 | TBD | ready | Make GGUF fallback explicit |
+| TRUTH-002 | #3630 | pr_open | Make GGUF fallback explicit |
 | INV-001 | TBD | ready | Crate consolidation map |
 | HW-001 | TBD | pr_open | Add shared hardware validation matrix and proof-stage contract |
 | BITNET-001 | TBD | pr_open | Add BitNet model/kernel/receipt proof contract |

@@ -1063,6 +1063,7 @@ async fn run_simple_generation(
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let mut loader_mode = "enhanced";
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -1080,6 +1081,14 @@ async fn run_simple_generation(
                 );
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
+            if !strict_loader {
+                unsafe {
+                    std::env::set_var("BITNET_ALLOW_MINIMAL_LOADER", "1");
+                }
+                warn!(
+                    "BITNET_ALLOW_MINIMAL_LOADER=1 enabled by --allow-mock for compatibility fallback"
+                );
+            }
             // Mock fallback
             let load_result = bitnet_models::gguf_simple::load_gguf_full(
                 &model_path,
@@ -1087,6 +1096,8 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
+            loader_mode = "compatibility_fallback";
+            warn!("GGUF loader mode: {}", loader_mode);
             let mut raw_tensors = std::collections::HashMap::new();
             for (name, qk256) in load_result.i2s_qk256 {
                 let expected_bytes = qk256.rows * qk256.row_stride_bytes;
@@ -1599,6 +1610,12 @@ async fn run_simple_generation(
             "greedy": greedy,
             "deterministic": deterministic,
         });
+        let loader_info = serde_json::json!({
+            "mode": loader_mode,
+            "minimal_fallback_allowed": std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1"),
+            "minimal_fallback_disabled": std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+                || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1"),
+        });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
         let output = serde_json::json!({
@@ -1621,6 +1638,7 @@ async fn run_simple_generation(
             },
             "counts": counts,
             "tokenizer": tokenizer_info,
+            "loader": loader_info,
             "gen_policy": gen_policy,
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {
