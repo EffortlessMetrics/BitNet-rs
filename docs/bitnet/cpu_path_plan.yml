@@ -1,0 +1,144 @@
+# Machine-readable companion to docs/bitnet/CPU_PATH_PLAN.md.
+version: 1
+status: planning
+principles:
+  - strict_loader_tokenizer_layout_authority
+  - scalar_packed_reference_before_fast_paths
+  - avx2_decode_before_prefill_and_widening
+  - receipts_record_requested_selected_and_fallback
+canonical_flow:
+  - cli_or_server_request
+  - backend_selection
+  - inference_backend_adapter
+  - canonical_gguf_loader
+  - canonical_tokenizer_resolver
+  - qk256_i2s_layout_selection
+  - prefill_kernel_dispatch
+  - decode_kernel_dispatch
+  - transformer_cpu_ops
+  - receipts_and_benchmarks
+strict_mode:
+  auto_allowed:
+    - scalar_kernel_fallback
+    - tokenizer_discovery_fallback
+    - reference_dequant_for_diagnostics
+  strict_forbidden:
+    - minimal_loader_fallback
+    - hardcoded_tokenizer_fallback
+    - hidden_scalar_substitution
+    - hidden_dequantized_steady_state_inference
+    - fake_success_receipts
+tokenizer_precedence:
+  - explicit_override
+  - gguf_embedded_or_referenced_tokenizer
+  - sibling_tokenizer_assets
+  - fail_in_strict_mode
+work_items:
+  - id: CPU-001
+    title: unify_gguf_authority
+    primary_files:
+      - crates/bitnet-models/src/formats/gguf/loader.rs
+      - crates/bitnet-models/src/gguf_simple.rs
+      - crates/bitnet-models/src/lib.rs
+    acceptance:
+      - one_canonical_load_path
+      - quant_layout_metadata_validated
+      - strict_mode_rejects_unsupported_or_partial_models
+  - id: CPU-002
+    title: unify_tokenizer_authority
+    primary_files:
+      - crates/bitnet-tokenizers/src/gguf_loader.rs
+      - crates/bitnet-tokenizers/src/gguf_tokenizer.rs
+      - crates/bitnet-tokenizers/src/auto.rs
+      - crates/bitnet-tokenizers/src/universal.rs
+      - crates/bitnet-cli/src/tokenizer_discovery.rs
+    acceptance:
+      - deterministic_precedence_order
+      - tokenizer_source_recorded_in_receipts
+      - strict_mode_fails_instead_of_guessing
+  - id: CPU-003
+    title: canonical_packed_layout_crate
+    primary_files:
+      - crates/bitnet-qk256-layout-core/src/lib.rs
+      - crates/bitnet-quantization/src/qk256_dispatch.rs
+      - crates/bitnet-models/src/qk256_utils.rs
+    acceptance:
+      - loader_emits_canonical_layout
+      - kernels_consume_canonical_layout
+      - no_hot_path_repacking
+  - id: CPU-004
+    title: scalar_packed_reference_kernels
+    primary_files:
+      - crates/bitnet-quantization/src/i2s_qk256.rs
+      - crates/bitnet-kernels/src/ffi.rs
+      - crates/bitnet-kernels/src/ffi/bridge.rs
+    acceptance:
+      - scalar_gemv_truth_path
+      - scalar_gemm_truth_path
+      - stable_golden_fixtures
+  - id: CPU-005
+    title: avx2_decode_first_kernel
+    primary_files:
+      - crates/bitnet-quantization/src/i2s_qk256_avx2.rs
+      - crates/bitnet-kernels/src/matmul_dispatch.rs
+      - crates/bitnet-kernels/src/dispatch_planner.rs
+    acceptance:
+      - cpuid_gated_avx2_selection
+      - scalar_parity
+      - meaningful_speedup_over_scalar_on_avx2_hosts
+  - id: CPU-006
+    title: cpu_transformer_op_lane
+    primary_files:
+      - crates/bitnet-kernels/src/cpu/
+      - crates/bitnet-transformer/src/lib.rs
+      - crates/bitnet-inference/src/backends.rs
+    acceptance:
+      - rmsnorm_rope_attention_kv_embedding_logits_covered
+      - deterministic_layer_or_block_parity
+      - no_generic_hidden_fallback_in_decode_loop
+  - id: CPU-007
+    title: strict_mode_and_receipts
+    primary_files:
+      - crates/bitnet-common/src/backend_selection.rs
+      - crates/bitnet-inference/src/backends.rs
+      - crates/bitnet-receipts/
+      - crates/bitnet-cli/
+    acceptance:
+      - requested_and_selected_kernel_recorded
+      - fallback_reason_recorded
+      - strict_mode_rejects_hidden_fallback
+  - id: CPU-008
+    title: neon_and_optional_avx512_widening
+    primary_files:
+      - crates/bitnet-quantization/src/*_neon.rs
+      - crates/bitnet-quantization/src/*_avx512.rs
+      - crates/bitnet-kernels/src/dispatch_table.rs
+    acceptance:
+      - neon_parity_and_receipts_on_arm64
+      - avx512_optional_not_required
+      - widening_after_avx2_decode_proof
+benchmark_profiles:
+  - micro
+  - layer
+  - prefill
+  - decode
+receipt_required_fields:
+  - requested_backend
+  - selected_backend
+  - requested_kernel
+  - selected_kernel
+  - fallback_used
+  - fallback_reason
+  - cpu.arch
+  - cpu.features
+  - cpu.threads
+  - model.format
+  - model.family
+  - model.quant_format
+  - tokenizer.source
+  - workload.prompt_tokens
+  - workload.generated_tokens
+  - workload.batch_size
+  - metrics.prompt_tps
+  - metrics.decode_tps
+  - parity.reference_kernel

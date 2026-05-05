@@ -24,6 +24,14 @@
 - [Health Endpoints](health-endpoints.md)
 - [Streaming API](streaming-api.md)
 
+## BitNet
+- [CPU Path Plan](bitnet/CPU_PATH_PLAN.md)
+- [Model Contract](bitnet/BITNET_MODEL_CONTRACT.md)
+- [Kernel Matrix](bitnet/BITNET_KERNEL_MATRIX.md)
+- [Runtime Phases](bitnet/BITNET_RUNTIME_PHASES.md)
+- [Receipt Fields](bitnet/BITNET_RECEIPT_FIELDS.md)
+- [Benchmark Protocol](bitnet/BITNET_BENCHMARK_PROTOCOL.md)
+
 ## CPU / GPU Architectures
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
