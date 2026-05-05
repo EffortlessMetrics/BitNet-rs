@@ -2,7 +2,9 @@
 
 ## Purpose
 
-This file defines the hardware data bundle for the Apple M4 Mac mini validation lane. It is a Metal-first profile with MPSGraph as a reference lane and CPU/NEON as fallback/parity.
+This file defines the machine profile and probe bundle for the Apple M4 Mac mini validation lane. It is a Metal-first profile with MPSGraph as a graph/reference lane and CPU/NEON as fallback/parity.
+
+M4-002 is docs and artifact prep only. It records stable machine facts and planned probe artifact paths before any Metal kernels, MPSGraph graph execution, CPU/Metal parity, receipts, or benchmarks.
 
 Roadmap:
 
@@ -12,27 +14,39 @@ docs/specs/apple-m4-mac-mini-roadmap.md
 
 ## Hardware Baseline
 
-Base M4 Mac mini:
+Known public configuration classes:
 
-- Chip: Apple M4.
-- CPU: 10-core CPU.
-- GPU: 10-core GPU.
-- Neural Engine: 16-core Neural Engine.
-- Unified memory: 16GB configurable to 24GB or 32GB.
-- Memory bandwidth: 120 GB/s.
-- GPU features: Dynamic Caching, hardware ray tracing, mesh shading.
+| Machine class | Chip | CPU | GPU | Unified memory | Memory bandwidth class |
+|---|---|---:|---:|---|---:|
+| Base M4 Mac mini | Apple M4 | 10-core CPU | 10-core GPU | 16GB, configurable to 24GB or 32GB | 120 GB/s |
+| M4 Pro Mac mini | Apple M4 Pro | 12-core or configurable 14-core CPU | 16-core or configurable 20-core GPU | up to 64GB | 273 GB/s |
 
-M4 Pro Mac mini:
+The probe bundle must record the actual machine configuration. Do not infer base M4 values for an M4 Pro machine, and do not infer GPU core count or memory size from the lane name.
 
-- CPU: 12-core or configurable 14-core CPU.
-- GPU: 16-core or configurable 20-core GPU.
-- Neural Engine: 16-core Neural Engine.
-- Unified memory: up to 64GB.
-- Memory bandwidth: 273 GB/s.
+Required recorded facts:
 
-Record the actual machine configuration in every receipt.
+- macOS version and kernel/build.
+- Native macOS vs virtualized execution.
+- Chip name: Apple M4 or Apple M4 Pro.
+- CPU core count.
+- GPU core count when visible from system tools or confirmed machine spec.
+- Unified memory size.
+- Memory bandwidth class when known from confirmed Apple machine docs/specs.
+- Metal device visibility.
+- MPSGraph lane availability notes.
+- CPU/NEON visibility.
+- Rust toolchain versions.
 
 ## Claim Boundary
+
+| Lane | Meaning | Must not claim |
+|---|---|---|
+| `apple-m4-cpu-neon` | ARM64 CPU/NEON fallback and parity | Metal acceleration |
+| `apple-m4-metal` | Native Metal compute path | MPSGraph or Neural Engine proof |
+| `apple-m4-mpsgraph` | Graph/reference lane | Native Metal packed-kernel proof |
+| Neural Engine | Only if resolved and receipt-backed | Never infer from MPSGraph alone |
+
+Additional boundaries:
 
 - Metal visibility is not Metal execution.
 - Metal smoke is not CPU/Metal parity.
@@ -40,6 +54,7 @@ Record the actual machine configuration in every receipt.
 - MPSGraph smoke cannot count as native handwritten Metal kernel proof.
 - MPSGraph smoke cannot count as Neural Engine execution unless the resolved target is receipt-backed.
 - Apple CPU/NEON is not AVX2 or AVX-512.
+- Hardware probe artifacts are not BitNet proof artifacts.
 
 ## macOS Probe Bundle
 
@@ -60,50 +75,117 @@ system_profiler SPMetalDataType || true
 echo "=== Memory ==="
 vm_stat
 sysctl hw.memsize
+
+echo "=== CPU / NEON ==="
 sysctl machdep.cpu.brand_string || true
+sysctl hw.physicalcpu hw.logicalcpu || true
+sysctl hw.perflevel0.physicalcpu hw.perflevel1.physicalcpu || true
 sysctl hw.optional.neon || true
 
-echo "=== Rust / toolchain ==="
+echo "=== Virtualization ==="
+sysctl kern.hv_vmm_present || true
+
+echo "=== Rust toolchain ==="
 rustc --version
 cargo --version
 ```
 
-## First Metal Receipt
+Record command output into the machine profile bundle without committing bulky machine-specific output in docs-only PRs.
 
-The first useful receipt is a Metal smoke proof:
+## Expected Artifact Paths
+
+Use the shared hardware artifact convention:
+
+```text
+ci/hardware/apple-m4-mac-mini/<date>/metal-probe.json
+ci/hardware/apple-m4-mac-mini/<date>/cpu-neon-probe.json
+ci/hardware/apple-m4-mac-mini/<date>/mpsgraph-probe.json
+```
+
+Use ISO dates such as `2026-05-05`. These are planned probe artifact paths only; do not add large artifacts for M4-002.
+
+## Probe Receipt Shape
+
+Metal probe artifacts record visibility only:
 
 ```json
 {
-  "hardware": "apple-m4-mac-mini",
-  "requested_backend": "apple-m4",
+  "requested_backend": "apple-m4-metal",
   "selected_backend": "apple-m4-metal",
   "runtime_api": "metal",
-  "chip": "Apple M4",
-  "gpu_cores": 10,
-  "unified_memory": true,
-  "memory_bandwidth_gbps": 120,
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184,
+    "memory_bandwidth_gbps": 120,
+    "native_or_virtualized": "native-macos",
+    "metal_visible": true
+  },
   "fallback_used": false,
-  "status": "kernel_smoke_tested"
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/metal-probe.json"
 }
 ```
 
-For M4 Pro, this must record the actual core and memory configuration.
-
-## Optional MPSGraph Receipt
+CPU/NEON probe artifacts remain separate from Metal:
 
 ```json
 {
-  "hardware": "apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "neon_visible": true,
+    "unified_memory": true,
+    "native_or_virtualized": "native-macos"
+  },
+  "fallback_used": false,
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/cpu-neon-probe.json"
+}
+```
+
+MPSGraph probe artifacts remain graph/reference lane evidence only:
+
+```json
+{
   "requested_backend": "apple-m4-mpsgraph",
   "selected_backend": "apple-m4-mpsgraph",
   "runtime_api": "mpsgraph",
-  "resolved_target": "unknown",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "mpsgraph_visible": true,
+    "resolved_target": "unknown"
+  },
   "fallback_used": false,
-  "status": "kernel_smoke_tested"
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/mpsgraph-probe.json"
 }
 ```
 
-This is graph/reference proof only, not native Metal kernel proof.
+The concrete values above are example base-M4 values. Generated artifacts must replace them with recorded machine facts, including M4 Pro values when applicable.
+
+When a later artifact claims BitNet progress, it must also include the BitNet contract fields:
+
+```json
+{
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "tokenizer": "llama3"
+  },
+  "bitnet": {
+    "kernel_family": "i2_s|tl1|qk256|openvino_graph",
+    "execution_phase": "probe|smoke|parity|prefill|decode"
+  }
+}
+```
+
+M4-002 probe artifacts do not claim BitNet inference, Metal kernel execution, MPSGraph graph execution, or Neural Engine execution.
 
 ## Benchmark Notes
 

@@ -4,21 +4,29 @@ Updated: 2026-05-05
 
 ## Current Focus
 
-P0 truth boundary, crate consolidation inventory, and first implementation prep after the hardware and BitNet validation contracts merged.
+Apple Silicon M4-002 machine profile and probe bundle, after the #3625 hardware and BitNet contract merge. Earlier truth, crate inventory, and strict CPU proof documentation items are merged.
 
-## Active PR queue
+## Active / Coordination Queue
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
-| BITNET-002 | #3628 | pr_open | Add canonical BitNet fixture manifest and receipt templates |
+| HW-001 | #3625 | merged | Shared hardware validation matrix and proof-stage contract; docs/contracts only, no runtime execution |
+| BITNET-001 | #3625 | merged | BitNet model, kernel, and receipt proof contract; docs/contracts only |
+| NPU-001 | #3625 | merged | Intel NPU backend lane scaffold; no runtime execution |
+| A770-001 | #3625 | merged | Intel Arc A770 OpenCL-first lane scaffold; no runtime execution |
+| LNL258V-001 | #3625 | merged | Core Ultra 7 258V platform scaffold; no runtime execution |
+| KBL8250U-001 | #3625 | merged | i5-8250U AVX2 CPU lane scaffold; no runtime execution |
+| M4-001 | #3625 | merged | Apple M4 Mac mini lane scaffold; no runtime execution |
+| RTX5070TI-001 | #3625 | merged | RTX 5070 Ti CUDA lane scaffold; no runtime execution |
+| AMD9950X3D-001 | #3625 | merged | AMD 9950X3D CPU lane scaffold; no runtime execution |
+| AMD5700X-001 | #3625 | merged | AMD 5700X CPU lane scaffold; no runtime execution |
 | CPU-002 | TBD | ready | Validate CPU inference receipt for CLI proof |
-| NPU-002 | TBD | ready | Preserve Intel NPU backend identity before runtime probing |
-| A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
-| KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
-| M4-003 | TBD | ready | Preserve Apple Metal backend identity |
-| RTX5070TI-003 | TBD | ready | Preserve RTX 5070 Ti CUDA selected-device identity |
-| AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
-| AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
+| M4-002 | #3627 | pr_open | Add Apple M4 Mac mini machine profile and probe bundle without runtime work |
+
+These rows are coordination markers, not implementation proof. Merged scaffold
+rows stay visible so the A770, NPU, 258V, 8250U, AMD, NVIDIA, and Mac lanes can
+coordinate follow-up work without implying that runtime execution has been built
+or tested.
 
 ## Hardware Lanes
 
@@ -93,9 +101,15 @@ The 5700X and 9950X3D lanes are CPU proof lanes, not accelerator lanes. The 5700
 
 The M4 Mac mini lane is Metal-first, with MPSGraph as a graph/reference lane and CPU/NEON as fallback/parity. CPU fallback cannot count as Metal execution, MPSGraph smoke cannot count as native Metal kernel proof, and Neural Engine execution must not be claimed unless the resolved target is receipt-backed.
 
+The Apple Silicon implementation order is M4-002 machine profile, M4-003 backend identity, M4-004 Metal probe, M4-005 Metal compute smoke, M4-006 CPU/Metal parity, M4-007 MPSGraph smoke, M4-008 receipt identity fields, and M4-009 benchmark baseline. The current M4-002 work is docs/artifact prep only and must not touch runtime code, kernels, QK256, server inference, or dependencies.
+
 ## NVIDIA CUDA Boundary
 
 The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform reference lane. CUDA visibility is not kernel execution, WGPU smoke is not CUDA proof, CPU fallback cannot count as CUDA execution, and performance claims require driver, CUDA version, compute capability, VRAM, power, and thermal context.
+
+## Tracker Notes
+
+HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact naming guidance, but maintainers should confirm whether that fully satisfies HW-002 before marking it merged.
 
 ## Queue hygiene
 
@@ -117,25 +131,15 @@ The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform r
 | INV-001 | #3632 | 457b36630906f2044e406e0dcf27ecb539e8a7a5 | Crate consolidation inventory completed for all workspace members. |
 | CPU-001 | #3635 | d90f70f4410155077ffc9741e018e5d747d40a9f | Strict CPU proof command documented. |
 | HW-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Shared hardware validation matrix and proof-stage contract merged. |
-| HW-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Hardware artifact naming policy merged. |
-| BITNET-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | BitNet model/kernel/receipt proof contract merged. |
-| BITNET-003 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Initial BitNet parity tolerance policy merged. |
-| NPU-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel NPU backend lane merged. |
-| A770-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel Arc A770 backend lane merged. |
-| A770-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel Arc A770 machine profile merged. |
-| ARC140V-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel Arc 140V integrated GPU lane merged. |
-| LNL258V-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core Ultra 7 258V platform profile merged. |
-| CPU258V-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core Ultra 7 258V CPU AVX2 validation lane merged. |
-| KBL8250U-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core i5-8250U CPU validation lane merged. |
-| KBL8250U-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core i5-8250U machine profile and probe bundle merged. |
-| M4-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Apple M4 Mac mini backend lane merged. |
-| M4-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Apple M4 machine profile and probe bundle merged. |
-| RTX5070TI-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti CUDA backend lane merged. |
-| RTX5070TI-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti machine profile and probe bundle merged. |
-| AMD9950X3D-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D CPU validation lane merged. |
-| AMD9950X3D-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D machine profile and probe bundle merged. |
-| AMD5700X-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X CPU validation lane merged. |
-| AMD5700X-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X machine profile and probe bundle merged. |
+| BITNET-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | BitNet model, kernel, and receipt proof contract merged. |
+| NPU-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel NPU backend lane scaffold merged without runtime execution. |
+| A770-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel Arc A770 backend lane scaffold merged without runtime execution. |
+| LNL258V-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core Ultra 7 258V platform profile merged without runtime execution. |
+| KBL8250U-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Intel Core i5-8250U CPU validation lane merged without runtime execution. |
+| M4-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Apple M4 Mac mini Metal, MPSGraph, and CPU/NEON lane scaffold merged without runtime execution. |
+| RTX5070TI-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti CUDA backend lane scaffold merged without runtime execution. |
+| AMD9950X3D-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D CPU validation lane merged without runtime execution. |
+| AMD5700X-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X CPU validation lane merged without runtime execution. |
 
 ## Blocked
 

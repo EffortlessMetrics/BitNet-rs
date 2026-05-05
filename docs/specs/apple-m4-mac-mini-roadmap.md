@@ -12,7 +12,7 @@ apple-m4-mpsgraph
 apple-m4-cpu-neon
 ```
 
-The first useful milestone is tiny Metal compute smoke with a receipt proving `selected_backend=apple-m4-metal` and `fallback_used=false`.
+The first work after the lane scaffold is M4-002 machine profiling. It records stable machine facts and planned probe artifact paths before any Metal kernels, MPSGraph graph execution, CPU/Metal parity, receipts, or benchmarks.
 
 ## Hardware Baseline
 
@@ -38,7 +38,7 @@ M4 Pro variants:
 | Memory | Up to 64GB unified memory |
 | Memory bandwidth | 273 GB/s |
 
-Receipts must record the actual chip, CPU/GPU core counts, unified memory size, and memory bandwidth. Do not assume base M4 when validating M4 Pro.
+Receipts and probe artifacts must record the actual chip, CPU/GPU core counts, unified memory size, and memory bandwidth class when known from confirmed docs/specs. Do not assume base M4 when validating M4 Pro.
 
 ## Claim Boundary
 
@@ -51,6 +51,32 @@ Receipts must record the actual chip, CPU/GPU core counts, unified memory size, 
 - Apple CPU/NEON fallback is not AVX2 or AVX-512.
 
 ## Runtime Paths
+
+### Machine Profile Path
+
+M4-002 owns docs/artifact prep only. It must collect and document:
+
+- macOS version and kernel/build.
+- Native macOS vs virtualized execution.
+- Apple chip name: M4 or M4 Pro.
+- CPU core count.
+- GPU core count when visible from system tools or confirmed machine spec.
+- Unified memory size.
+- Memory bandwidth class when known.
+- Metal visibility.
+- MPSGraph lane notes.
+- CPU/NEON lane notes.
+- Rust toolchain versions.
+
+Expected probe artifact paths:
+
+```text
+ci/hardware/apple-m4-mac-mini/<date>/metal-probe.json
+ci/hardware/apple-m4-mac-mini/<date>/cpu-neon-probe.json
+ci/hardware/apple-m4-mac-mini/<date>/mpsgraph-probe.json
+```
+
+These paths are probe placeholders until a machine run produces receipts. Do not commit large machine-specific outputs as part of M4-002.
 
 ### Native Metal Path
 
@@ -93,15 +119,17 @@ Minimum Metal receipt:
 
 ```json
 {
-  "requested_backend": "apple-m4",
+  "requested_backend": "apple-m4-metal",
   "selected_backend": "apple-m4-metal",
   "runtime_api": "metal",
-  "chip": "Apple M4",
-  "gpu_cores": 10,
-  "unified_memory": true,
-  "memory_bandwidth_gbps": 120,
-  "fallback_backend": null,
-  "fallback_used": false
+  "resolved_device": {
+    "chip": "Apple M4",
+    "gpu_cores": 10,
+    "unified_memory": true
+  },
+  "fallback_used": false,
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/metal-probe.json"
 }
 ```
 
@@ -112,11 +140,50 @@ Minimum MPSGraph receipt:
   "requested_backend": "apple-m4-mpsgraph",
   "selected_backend": "apple-m4-mpsgraph",
   "runtime_api": "mpsgraph",
-  "resolved_target": "gpu|cpu|neural-engine|unknown",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "resolved_target": "gpu|cpu|neural-engine|unknown"
+  },
   "fallback_used": false,
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/mpsgraph-probe.json",
   "graph": {
     "name": "tiny_matmul",
     "shape_mode": "static"
+  }
+}
+```
+
+Minimum CPU/NEON receipt:
+
+```json
+{
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "unified_memory": true
+  },
+  "fallback_used": false,
+  "proof_stage": "runtime_detected",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-05/cpu-neon-probe.json"
+}
+```
+
+BitNet-specific artifacts must add:
+
+```json
+{
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "tokenizer": "llama3"
+  },
+  "bitnet": {
+    "kernel_family": "i2_s|tl1|qk256|openvino_graph",
+    "execution_phase": "probe|smoke|parity|prefill|decode"
   }
 }
 ```
@@ -138,6 +205,7 @@ It must collect:
 - Unified memory size and bandwidth target.
 - Metal device visibility.
 - MPSGraph availability notes.
+- CPU/NEON availability notes.
 - Rust toolchain.
 
 ## Work Plan
@@ -148,7 +216,7 @@ Docs/tracking only. Add M4 Metal, MPSGraph, and CPU/NEON lanes.
 
 ### M4-002 - Machine Profile
 
-Collect macOS, Apple chip, GPU cores, unified memory, Metal visibility, and Rust toolchain data.
+Collect macOS, native-vs-virtualized status, Apple chip, CPU/GPU cores, unified memory, memory bandwidth class when known, Metal visibility, MPSGraph lane notes, CPU/NEON lane notes, Rust toolchain data, and expected probe artifact paths.
 
 ### M4-003 - Backend Identity
 

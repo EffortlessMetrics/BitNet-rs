@@ -41,6 +41,8 @@ ci/hardware/intel-258v/2026-05-05/arc-140v-opencl-smoke.json
 ci/hardware/intel-258v/2026-05-05/npu-openvino-smoke.json
 
 ci/hardware/apple-m4-mac-mini/2026-05-05/metal-probe.json
+ci/hardware/apple-m4-mac-mini/2026-05-05/cpu-neon-probe.json
+ci/hardware/apple-m4-mac-mini/2026-05-05/mpsgraph-probe.json
 ci/hardware/apple-m4-mac-mini/2026-05-05/metal-smoke.json
 ci/hardware/apple-m4-mac-mini/2026-05-05/mpsgraph-smoke.json
 
@@ -87,6 +89,8 @@ opencl-probe.json
 openvino-gpu-smoke.json
 npu-openvino-smoke.json
 metal-probe.json
+cpu-neon-probe.json
+mpsgraph-probe.json
 metal-smoke.json
 mpsgraph-smoke.json
 cuda-probe.json
