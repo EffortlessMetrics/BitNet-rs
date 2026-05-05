@@ -1,0 +1,57 @@
+schema: 1
+
+principles:
+  - Library default features remain empty.
+  - Backend features are concrete: cpu, cuda, metal, vulkan, opencl, rocm, npu.
+  - Generic gpu is compatibility alias only, not a proof claim.
+  - Component features are separate from backend features.
+  - Strict mode must fail on unvalidated fallback.
+
+feature_classes:
+  backend:
+    - cpu
+    - cuda
+    - metal
+    - vulkan
+    - opencl
+    - rocm
+    - npu
+
+  component:
+    - inference
+    - tokenizers
+    - kernels
+    - cli
+    - server
+    - ffi
+    - wasm
+    - python
+
+  validation:
+    - fixtures
+    - crossval
+    - trace
+    - strict
+    - bench
+    - integration-tests
+
+  convenience:
+    - full-cli
+    - full-cpu
+    - full-validation
+    - gpu
+
+planned_changes:
+  - id: FEAT-001
+    title: Document feature taxonomy
+    state: ready
+    acceptance:
+      - docs/explanation/FEATURES.md separates backend/component/validation/convenience features.
+      - README examples use concrete features.
+
+  - id: FEAT-002
+    title: Replace server OpenCL/Vulkan-to-CUDA aliasing
+    state: proposed
+    acceptance:
+      - Requested backend is preserved separately from selected backend.
+      - Receipts/logs never call OpenCL or Vulkan CUDA.
