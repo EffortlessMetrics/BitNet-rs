@@ -391,7 +391,7 @@ items:
 
   - id: CPU-001
     title: Add strict CPU inference proof command
-    state: ready
+    state: pr_open
     priority: P0
     workstream: runtime_cpu
     depends_on:
