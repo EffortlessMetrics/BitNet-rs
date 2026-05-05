@@ -1,0 +1,71 @@
+schema: 1
+policy:
+  keep_crate_if:
+    - public_package_boundary
+    - binary_or_tool_boundary
+    - abi_or_linking_boundary
+    - heavy_optional_dependency_boundary
+    - platform_packaging_boundary
+    - independently_useful_external_api
+  otherwise: merge_into_owner_crate_as_srp_module
+
+destinations:
+  bitnet-common:
+    target_modules: [math, warn_once, atomic_file, threading, runtime/context, runtime/feature_flags, runtime/profile, runtime/startup_contract]
+  bitnet-tokenizers:
+    target_modules: [discovery, merge, model, text]
+  bitnet-models:
+    target_modules: [gguf, safetensors, compatibility, validation, weight_names, download]
+  bitnet-quantization:
+    target_modules: [bits, qk256/layout, qk256/dispatch]
+  bitnet-kernels:
+    target_modules: [cpu/detect, cpu/activations, gpu/hal, gpu/cuda, gpu/metal, gpu/vulkan, gpu/opencl, gpu/rocm, gpu/wgpu, dispatch]
+  bitnet-inference:
+    target_modules: [logits, logits/filters, probability, sampling, generation, generation/events, generation/stop, kv_cache/policy, engine/state, session/config, metrics, repl, scoring, eval, tool_use]
+  bitnet-receipts:
+    target_modules: [schema, honest_compute, benchmark, regression]
+  bitnet-server:
+    target_modules: [api_versioning, api_key_auth, client_ip, http_auth, http_retry, request_context, health/types]
+  bitnet-testkit:
+    target_modules: [env, fixtures, bdd, feature_matrix, policy, scenarios, snapshots]
+
+crates:
+  bitnet-warn-once:
+    disposition: merge
+    destination: bitnet-common
+    module: warn_once
+    wave: leaf
+    risk: low
+    reason: pure utility macro; no independent public seam
+  bitnet-token-merge-core:
+    disposition: merge
+    destination: bitnet-tokenizers
+    module: merge
+    wave: leaf
+    risk: low
+    reason: tokenizer implementation detail
+  bitnet-receipts-core:
+    disposition: merge
+    destination: bitnet-receipts
+    module: schema
+    wave: domain
+    risk: medium
+    reason: receipts crate should own schema and validation surface
+  bitnet-ggml-ffi:
+    disposition: keep
+    destination: bitnet-ggml-ffi
+    wave: publish
+    risk: medium
+    reason: external FFI/linking boundary
+  bitnet-cli:
+    disposition: keep
+    destination: bitnet-cli
+    wave: public
+    risk: high
+    reason: binary/user-facing runtime
+  bitnet-server:
+    disposition: keep
+    destination: bitnet-server
+    wave: public
+    risk: high
+    reason: binary/server boundary

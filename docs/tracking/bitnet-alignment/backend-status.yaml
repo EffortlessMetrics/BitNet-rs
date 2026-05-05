@@ -1,0 +1,34 @@
+schema: 1
+updated: 2026-05-05
+status_values: [not_present, scaffold, compiles, runtime_detected, kernel_smoke_tested, parity_tested, receipt_backed]
+backends:
+  cpu:
+    status: receipt_backed
+    notes: [Primary path., SIMD optimized path exists.]
+    blockers: []
+  qk256_cpu_scalar:
+    status: parity_tested
+    notes: [Works for validation but too slow for normal use.]
+    blockers: [QK256 AVX2/FMA tiled GEMV]
+  qk256_cpu_avx2:
+    status: scaffold
+    blockers:
+      - Implement nibble-LUT dequant.
+      - Add scalar parity tests.
+      - Add receipt kernel IDs.
+      - Add benchmark baseline.
+  cuda:
+    status: scaffold
+    blockers: [End-to-end receipt validation., CPU/CUDA parity., Strict fallback behavior.]
+  metal:
+    status: scaffold
+    blockers: [Kernel smoke tests., End-to-end validation.]
+  vulkan:
+    status: scaffold
+    blockers: [Backend identity cleanup., Kernel smoke tests.]
+  opencl:
+    status: scaffold
+    blockers: [Backend identity cleanup., Intel Arc validation lane.]
+  rocm:
+    status: scaffold
+    blockers: [Kernel smoke tests., Device detection.]
