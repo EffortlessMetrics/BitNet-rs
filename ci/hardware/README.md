@@ -59,6 +59,26 @@ ci/hardware/nvidia-rtx-5070-ti/2026-05-05/cuda-parity.json
 | `benchmark.json` | Timing with power/thermal context |
 | `proof.json` | Strict receipt-backed inference or kernel proof |
 
+## Templates
+
+Templates for future manual and automated receipts live in:
+
+```text
+ci/hardware/_templates/
+```
+
+Current templates:
+
+```text
+probe.json
+smoke.json
+parity.json
+benchmark.json
+strict-bitnet-proof.json
+```
+
+Templates are schema starters, not evidence. Replace every `TBD` field and write the completed receipt under `ci/hardware/<machine-id>/<date>/`.
+
 Specific names are allowed when clearer:
 
 ```text
