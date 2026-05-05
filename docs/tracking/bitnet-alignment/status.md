@@ -10,9 +10,19 @@ P0 truth boundary, then crate consolidation inventory.
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
+| QUEUE-001 | TBD | in_progress | Deduplicate generated PR clusters without code changes |
 | TRUTH-002 | TBD | ready | Make GGUF fallback explicit |
 | TRUTH-003 | TBD | ready | Null-byte model path validation |
 | INV-001 | TBD | ready | Crate consolidation map |
+
+## Queue hygiene
+
+| Cluster | Decision | Notes |
+|---|---|---|
+| Codecov duplicates | Deferred canonical #3620 | #3609-#3612 and #3617-#3619 are recorded as superseded by #3620; handle this in a separate CI coverage review. |
+| Null-byte Sentinel duplicates | Tied to TRUTH-003 | Do not merge pre-ledger Sentinel branches; close duplicates after the canonical TRUTH-003 PR lands. |
+| Accessibility Palette duplicates | Deferred | Review after truth boundary and inventory are complete; #3607 is the latest matching candidate for later review. |
+| Sampling/performance Bolt duplicates | Deferred | Hold until truth boundary and inventory are complete. |
 
 ## Completed
 

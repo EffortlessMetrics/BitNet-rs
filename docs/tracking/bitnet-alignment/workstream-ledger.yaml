@@ -206,7 +206,7 @@ items:
 
   - id: QUEUE-001
     title: Deduplicate generated PR clusters
-    state: ready
+    state: in_progress
     priority: P0
     workstream: truth
     depends_on: []
@@ -228,6 +228,10 @@ items:
       - cargo fmt --all -- --check
     notes:
       - This item may be completed by PR comments and tracker updates; do not touch runtime code.
+      - Codecov duplicate cluster uses #3620 as the deferred canonical candidate.
+      - Null-byte Sentinel duplicates are tied to TRUTH-003 and should close after canonical merge.
+      - Accessibility Palette duplicates are deferred until truth boundary and inventory.
+      - Sampling/performance Bolt duplicates are deferred until truth boundary and inventory.
     followups: []
 
   - id: LEAF-001
