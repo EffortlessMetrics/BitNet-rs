@@ -35,3 +35,4 @@ Reduce public crate surface, preserve SRP through modules, make CPU inference pr
 - Backend status: `backend-status.yaml`
 - Verification commands: `verification-gates.md`
 - PR rules: `pr-playbook.md`
+- Review rules: `codex-review-guide.md`
