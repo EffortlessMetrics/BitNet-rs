@@ -90,8 +90,19 @@ jobs:
               cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
                 --ignore-run-fail
               cargo llvm-cov report --json --output-path coverage.json
+              cargo llvm-cov report --lcov --output-path lcov.info
               cargo llvm-cov report --text | tee coverage.txt
             '
+
+      - name: Upload coverage reports to Codecov
+        if: ${{ always() && hashFiles('lcov.info') != '' }}
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: rust-cpu
+          name: bitnet-rs-rust-cpu
+          fail_ci_if_error: true
 
       - name: Disk usage after coverage
         if: always()
@@ -128,4 +139,5 @@ jobs:
           path: |
             coverage.json
             coverage.txt
+            lcov.info
           retention-days: 7
