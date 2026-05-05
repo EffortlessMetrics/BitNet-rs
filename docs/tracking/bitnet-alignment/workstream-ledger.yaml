@@ -161,6 +161,12 @@ items:
       allowed_paths:
         - crates/bitnet-server/src/security.rs
         - crates/bitnet-server/tests/**
+      forbidden_paths:
+        - Cargo.toml
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-models/**
+        - .github/**
     acceptance:
       - Model paths containing null bytes are rejected.
       - Tests cover prefix, suffix, and middle null-byte cases.
@@ -184,6 +190,10 @@ items:
       allowed_paths:
         - docs/tracking/bitnet-alignment/crate-consolidation-map.yaml
         - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - Cargo.toml
+        - crates/**
+        - .github/**
     acceptance:
       - Every current workspace member has a disposition.
       - Each item has destination, reason, wave, and verification gate.
