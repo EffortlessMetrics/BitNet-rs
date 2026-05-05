@@ -10,7 +10,7 @@ P0 truth boundary, then crate consolidation inventory.
 
 | Item | PR | State | Notes |
 |---|---:|---|---|
-| QUEUE-001 | TBD | in_progress | Deduplicate generated PR clusters without code changes |
+| QUEUE-001 | #3623 | pr_open | Deduplicate generated PR clusters without code changes |
 | TRUTH-002 | TBD | ready | Make GGUF fallback explicit |
 | TRUTH-003 | TBD | ready | Null-byte model path validation |
 | INV-001 | TBD | ready | Crate consolidation map |

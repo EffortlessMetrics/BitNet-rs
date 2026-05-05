@@ -206,7 +206,7 @@ items:
 
   - id: QUEUE-001
     title: Deduplicate generated PR clusters
-    state: in_progress
+    state: pr_open
     priority: P0
     workstream: truth
     depends_on: []
