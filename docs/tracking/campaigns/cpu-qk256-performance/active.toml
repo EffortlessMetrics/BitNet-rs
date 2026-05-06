@@ -20,7 +20,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "KBL8250U-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact"
 stackable = false
 requires_human_merge = true

@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| KBL8250U-003 | in_progress | TBD | `codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact` | Prove i5-8250U scalar and AVX2 dispatch with receipt-backed selected CPU kernel identity and no GPU/NPU fallback. |
+| KBL8250U-003 | pr_open | #3785 | `codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact` | Prove i5-8250U scalar and AVX2 dispatch with receipt-backed selected CPU kernel identity and no GPU/NPU fallback. |
 | KBL8250U-004 | proposed | TBD | `codex/cpu-qk256-performance/KBL8250U-004-strict-proof-run` | Add an i5-8250U strict CPU proof run with selected backend, no fallback, model hash, timing, and thermal context. |
 
 ## Hard Constraints
