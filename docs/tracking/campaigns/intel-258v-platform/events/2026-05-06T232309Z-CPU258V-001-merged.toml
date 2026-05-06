@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T23:23:09Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-001"
+event = "merged"
+pr = 3802
+merge_sha = "38827fc2caa73726b35f4f5d0b53c2c3b1f1f876"
+actor = "codex"
+
+notes = [
+  "Recorded merge of the 258V CPU BitNet validation preflight harness.",
+  "The merged command emits structured blocked_preflight or preflight_ready artifacts without claiming inference or performance.",
+]

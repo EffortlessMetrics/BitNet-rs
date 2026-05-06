@@ -187,7 +187,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-258v-platform/CPU258V-001-validation-harness"
 stackable = false
 requires_human_merge = true
