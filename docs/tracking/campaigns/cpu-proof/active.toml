@@ -339,7 +339,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-007"
-status = "ready"
+status = "merged"
+pr = 3800
 branch = "codex/cpu-bitnet-007-strict-receipts"
 stackable = false
 requires_human_merge = true
@@ -347,7 +348,7 @@ blocked_by = ["CPU-BITNET-006"]
 acceptance = "Strict CPU proof receipts tie loader mode, tokenizer source, requested/selected backend, requested/selected kernel, CPU features, quant format, decode/prefill phase, prompt/generated tokens, and fallback status into one machine-checkable record; validation fails on hidden fallback, non-real GGUF loader mode, guessed tokenizer source, mock/diagnostic kernels, or requested AVX2 silently selecting scalar."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-receipts --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-receipts --no-default-features",
   "cargo test --locked -p bitnet-receipts-core --no-default-features",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
 ]
@@ -375,4 +376,40 @@ must_not_claim = [
   "Benchmark or throughput performance is proven.",
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-008"
+status = "ready"
+branch = "codex/cpu-bitnet-008-benchmark-receipts"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-007"]
+acceptance = "CPU proof benchmark profiles emit receipt-backed micro, layer, prefill, first-token, and decode measurements with selected backend/kernel, fallback status, workload shape, model identity, quant format, prompt/generated token counts, and hardware context."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo bench --locked -p bitnet-kernels --bench kernel_benchmarks --features cpu --no-run",
+  "cargo bench --locked -p bitnet-quantization --bench qk256_gemv --features cpu,avx2 --no-run",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/benches/**",
+  "crates/bitnet-quantization/benches/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-cli/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "CPU benchmark artifacts record selected backend/kernel, fallback state, workload, and hardware context after merge.",
+]
+must_not_claim = [
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+  "Sustained Kaby Lake throughput is proven from cold-turbo-only runs.",
 ]

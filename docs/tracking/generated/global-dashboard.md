@@ -6,7 +6,7 @@
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | M4-015 | TBD | ready | M4-016 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | CPU-BITNET-007 | TBD | ready | none | No GPU or NPU claims. |
+| cpu-proof | CPU-BITNET-008 | TBD | ready | none | No GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | TBD | ready | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | LNL258V-RUN-001 | #3714 | merged | none | Arc 140V OpenCL proof is not NPU proof. |

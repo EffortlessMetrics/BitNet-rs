@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T23:45:38Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-007"
+event = "merged"
+pr = 3800
+merge_sha = "2ff4bce45581bdf67a01c121e1376a4357528ac1"
+actor = "maintainer"
+
+notes = [
+  "Strict CPU proof receipt enforcement merged with tokenizer strictness, CPU model/features, model SHA, phase, prompt/decode token, and selected-kernel feature validation.",
+  "CPU-BITNET-008 benchmark receipts is next; no server, GPU, NPU, or throughput claim is made by this tracker sync.",
+]
