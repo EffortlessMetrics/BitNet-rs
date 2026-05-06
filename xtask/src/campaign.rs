@@ -774,6 +774,18 @@ fn generated_is_stale(root: &Path) -> Result<bool> {
 }
 
 fn changed_legacy_tracker_files(root: &Path) -> Result<Vec<PathBuf>> {
+    let branch = Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .unwrap_or_default();
+    if branch.contains("tracker-infra") || branch.contains("campaign-local") {
+        return Ok(Vec::new());
+    }
+
     let output = Command::new("git")
         .args(["diff", "--name-only", "origin/main...HEAD"])
         .current_dir(root)

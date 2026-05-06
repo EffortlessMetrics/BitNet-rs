@@ -20,7 +20,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "TRACKER-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/tracker-infra/TRACKER-001-campaign-local-gates"
 stackable = false
 requires_human_merge = true

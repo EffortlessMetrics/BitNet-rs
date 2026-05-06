@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| TRACKER-001 | in_progress | TBD | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
+| TRACKER-001 | pr_open | #3660 | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
 
 ## Hard Constraints
 

@@ -5,3 +5,4 @@
 |---|---|---:|---|---|
 | ci-coverage | CI-COVERAGE-001 | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
 | cpu-proof | CPU-BITNET-001 | #3651 | `codex/cpu-proof/CPU-BITNET-001-loader-authority` | Strict CPU inference has one authoritative real GGUF loader path for BitNet models, and minimal fallback is impossible in strict proof mode. |
+| tracker-infra | TRACKER-001 | #3660 | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
