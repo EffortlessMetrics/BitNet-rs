@@ -18,7 +18,7 @@
 | M4-007 | merged | #3719 | `codex/apple-m4/M4-007-mpsgraph-smoke` | Run a tiny MPSGraph graph smoke as reference-lane evidence without claiming native Metal or Neural Engine proof. |
 | M4-008 | merged | #3721 | `codex/apple-m4/M4-008-backend-receipts` | Record Apple requested backend, selected backend, runtime API, resolved device identity, fallback status, and artifact path in receipts. |
 | M4-009 | merged | #3732 | `codex/apple-m4/M4-009-benchmark-baseline` | Compare Apple CPU/NEON and M4 Metal for a validated kernel or subgraph after parity exists. |
-| M4-010 | in_progress | TBD | `codex/apple-m4/M4-010-cpu-neon-bitnet-reference` | Prove the Apple CPU/NEON BitNet reference path before native Metal BitNet kernels. |
+| M4-010 | pr_open | #3746 | `codex/apple-m4/M4-010-cpu-neon-bitnet-reference` | Prove the Apple CPU/NEON BitNet reference path before native Metal BitNet kernels. |
 | M4-011 | proposed | TBD | `codex/apple-m4/M4-011-metal-i2s-smoke-parity` | Run an I2_S-adjacent native Metal smoke or parity target against Apple CPU/NEON without claiming full inference. |
 | M4-012 | proposed | TBD | `codex/apple-m4/M4-012-tl1-arm-investigation` | Investigate TL1 as an Apple CPU/NEON-oriented BitNet path and document any Metal conversion boundaries honestly. |
 | M4-013 | proposed | TBD | `codex/apple-m4/M4-013-metal-prefill-decode` | Move from isolated Apple Metal kernels toward a named BitNet inference phase with CPU reference and explicit fallback status. |
