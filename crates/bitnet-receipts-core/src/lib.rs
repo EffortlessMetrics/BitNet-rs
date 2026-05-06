@@ -22,6 +22,7 @@ use bitnet_honest_compute::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -226,6 +227,239 @@ pub struct StrictInferenceProvenance {
     /// Decode throughput in tokens per second.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub decode_tps: Option<f64>,
+}
+
+/// Validate a receipt for the RTX 5070 Ti CUDA tiny-kernel smoke proof.
+///
+/// This validator is intentionally scoped to strict, fallback-free CUDA proof
+/// receipts. It does not validate full BitNet inference and does not treat a
+/// probe-only receipt as kernel execution.
+pub fn validate_cuda_smoke_receipt_json(receipt: &Value) -> Result<()> {
+    let stats = validate_cuda_receipt_common(receipt, "cuda_smoke", "kernel_smoke_tested")?;
+    require_string_eq(stats, "kernel_id", "cuda_tiny_vector_add")?;
+    require_string_eq(receipt, "result", "pass")?;
+    require_positive_u64(receipt, "input_len")?;
+    require_non_negative_number(receipt, "max_abs_error")?;
+    require_non_negative_number(receipt, "mean_abs_error")?;
+    Ok(())
+}
+
+/// Validate a receipt for the RTX 5070 Ti CUDA CPU/CUDA parity proof.
+///
+/// The receipt must prove one deterministic fixture matched the CPU reference,
+/// with CUDA invocation counters greater than zero and zero fallback
+/// invocations. It is not a benchmark or end-to-end inference validator.
+pub fn validate_cuda_parity_receipt_json(receipt: &Value) -> Result<()> {
+    let stats = validate_cuda_receipt_common(receipt, "cuda_parity", "cuda_cpu_parity_tested")?;
+    require_string_eq(receipt, "result", "pass")?;
+    require_positive_u64(receipt, "input_len")?;
+    require_non_negative_number(receipt, "max_abs_error")?;
+    require_non_negative_number(receipt, "mean_abs_error")?;
+
+    let parity = object_field(receipt, "parity")?;
+    require_string_eq(parity, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(parity, "target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(parity, "kernel_id", required_string(stats, "kernel_id")?)?;
+    require_string_non_empty(parity, "fixture_id")?;
+    require_bool_eq(parity, "passed", true)?;
+    require_non_negative_number(parity, "max_abs_error")?;
+    require_non_negative_number(parity, "mean_abs_error")?;
+    require_non_negative_number(parity, "tolerance")?;
+    require_string_non_empty(parity, "tolerance_source")?;
+
+    Ok(())
+}
+
+/// Load and validate an RTX 5070 Ti CUDA smoke receipt from disk.
+pub fn validate_cuda_smoke_receipt_file(path: &Path) -> Result<()> {
+    let receipt = load_json_receipt(path)?;
+    validate_cuda_smoke_receipt_json(&receipt)
+}
+
+/// Load and validate an RTX 5070 Ti CUDA parity receipt from disk.
+pub fn validate_cuda_parity_receipt_file(path: &Path) -> Result<()> {
+    let receipt = load_json_receipt(path)?;
+    validate_cuda_parity_receipt_json(&receipt)
+}
+
+fn load_json_receipt(path: &Path) -> Result<Value> {
+    let content = std::fs::read_to_string(path)?;
+    Ok(serde_json::from_str(&content)?)
+}
+
+fn validate_cuda_receipt_common<'a>(
+    receipt: &'a Value,
+    artifact_kind: &str,
+    claim: &str,
+) -> Result<&'a Value> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", artifact_kind)?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", claim)?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let stats = first_kernel_stats(receipt)?;
+    require_string_non_empty(stats, "kernel_id")?;
+    require_positive_u64(stats, "invocations")?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_positive_u64(stats, "host_to_device_bytes")?;
+    require_positive_u64(stats, "device_to_host_bytes")?;
+    require_positive_u64(stats, "kernel_launches")?;
+    require_optional_non_negative_number(stats, "kernel_time_ms")?;
+
+    Ok(stats)
+}
+
+fn first_kernel_stats(receipt: &Value) -> Result<&Value> {
+    let stats = object_field(receipt, "kernel_stats")?;
+    let stats = stats.as_array().ok_or_else(|| anyhow!("kernel_stats must be an array"))?;
+    stats.first().ok_or_else(|| anyhow!("kernel_stats must contain at least one entry"))
+}
+
+fn object_field<'a>(object: &'a Value, field: &str) -> Result<&'a Value> {
+    object.get(field).ok_or_else(|| anyhow!("missing required field `{field}`"))
+}
+
+fn required_string<'a>(object: &'a Value, field: &str) -> Result<&'a str> {
+    object_field(object, field)?.as_str().ok_or_else(|| anyhow!("field `{field}` must be a string"))
+}
+
+fn require_string_eq(object: &Value, field: &str, expected: &str) -> Result<()> {
+    let actual = required_string(object, field)?;
+    if actual != expected {
+        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+    }
+    Ok(())
+}
+
+fn require_string_non_empty(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    if value.trim().is_empty() {
+        return Err(anyhow!("field `{field}` must not be empty"));
+    }
+    Ok(())
+}
+
+fn require_string_non_empty_not_tbd(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    if value.trim().is_empty() || value == "TBD" {
+        return Err(anyhow!("field `{field}` must record a concrete value"));
+    }
+    Ok(())
+}
+
+fn require_rtx_5070_ti_name(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    let compact = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_lowercase();
+    if !(compact.contains("nvidia") && compact.contains("rtx5070ti")) {
+        return Err(anyhow!("field `{field}` must identify NVIDIA GeForce RTX 5070 Ti"));
+    }
+    Ok(())
+}
+
+fn require_bool_eq(object: &Value, field: &str, expected: bool) -> Result<()> {
+    let actual = object_field(object, field)?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `{field}` must be a bool"))?;
+    if actual != expected {
+        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+    }
+    Ok(())
+}
+
+fn require_null(object: &Value, field: &str) -> Result<()> {
+    if !object_field(object, field)?.is_null() {
+        return Err(anyhow!("field `{field}` must be null"));
+    }
+    Ok(())
+}
+
+fn require_u64_eq(object: &Value, field: &str, expected: u64) -> Result<()> {
+    let actual = object_field(object, field)?
+        .as_u64()
+        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))?;
+    if actual != expected {
+        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+    }
+    Ok(())
+}
+
+fn require_positive_u64(object: &Value, field: &str) -> Result<()> {
+    let actual = object_field(object, field)?
+        .as_u64()
+        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))?;
+    if actual == 0 {
+        return Err(anyhow!("field `{field}` must be greater than zero"));
+    }
+    Ok(())
+}
+
+fn require_cuda_device_index(cuda: &Value) -> Result<()> {
+    if object_field(cuda, "device_index")
+        .and_then(|value| {
+            value
+                .as_u64()
+                .ok_or_else(|| anyhow!("field `device_index` must be an unsigned integer"))
+        })
+        .is_ok()
+        || object_field(cuda, "selected_device_index")
+            .and_then(|value| {
+                value.as_u64().ok_or_else(|| {
+                    anyhow!("field `selected_device_index` must be an unsigned integer")
+                })
+            })
+            .is_ok()
+    {
+        return Ok(());
+    }
+
+    Err(anyhow!("cuda receipt must record `device_index` or `selected_device_index`"))
+}
+
+fn require_non_negative_number(object: &Value, field: &str) -> Result<()> {
+    let actual = object_field(object, field)?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
+    if actual < 0.0 {
+        return Err(anyhow!("field `{field}` must be non-negative"));
+    }
+    Ok(())
+}
+
+fn require_optional_non_negative_number(object: &Value, field: &str) -> Result<()> {
+    let value = object_field(object, field)?;
+    if value.is_null() {
+        return Ok(());
+    }
+    let actual =
+        value.as_f64().ok_or_else(|| anyhow!("field `{field}` must be null or a number"))?;
+    if actual < 0.0 {
+        return Err(anyhow!("field `{field}` must be non-negative"));
+    }
+    Ok(())
 }
 
 /// Main inference receipt structure (AC4)

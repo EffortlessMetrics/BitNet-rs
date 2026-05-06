@@ -80,6 +80,46 @@ pub struct PerformanceStats {
     pub cache_misses: u64,
 }
 
+/// Per-kernel CUDA invocation counters for receipt-backed proof artifacts.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaKernelInvocationStats {
+    pub kernel_id: String,
+    pub invocations: u64,
+    pub fallback_invocations: u64,
+    pub host_to_device_bytes: u64,
+    pub device_to_host_bytes: u64,
+    pub kernel_launches: u64,
+    pub kernel_time_ms: Option<f64>,
+    pub selected_device_index: usize,
+    pub selected_device_name: String,
+    pub compute_capability: String,
+}
+
+impl CudaKernelInvocationStats {
+    fn tiny_vector_add(
+        device_info: &CudaDeviceInfo,
+        host_to_device_bytes: u64,
+        device_to_host_bytes: u64,
+        kernel_launches: u64,
+    ) -> Self {
+        Self {
+            kernel_id: CUDA_TINY_VECTOR_ADD_KERNEL_ID.to_string(),
+            invocations: u64::from(kernel_launches > 0),
+            fallback_invocations: 0,
+            host_to_device_bytes,
+            device_to_host_bytes,
+            kernel_launches,
+            kernel_time_ms: None,
+            selected_device_index: device_info.device_id,
+            selected_device_name: device_info.name.clone(),
+            compute_capability: format!(
+                "{}.{}",
+                device_info.compute_capability.0, device_info.compute_capability.1
+            ),
+        }
+    }
+}
+
 /// Result of the RTX5070TI-005 tiny CUDA vector-add smoke.
 #[derive(Debug, Clone)]
 pub struct CudaTinyVectorAddSmoke {
@@ -92,6 +132,7 @@ pub struct CudaTinyVectorAddSmoke {
     pub host_to_device_bytes: u64,
     pub device_to_host_bytes: u64,
     pub kernel_launches: u64,
+    pub kernel_stats: CudaKernelInvocationStats,
 }
 
 /// Result of comparing the CUDA vector-add output with the CPU reference.
@@ -127,6 +168,7 @@ pub struct CudaTinyVectorAddParity {
     pub host_to_device_bytes: u64,
     pub device_to_host_bytes: u64,
     pub kernel_launches: u64,
+    pub kernel_stats: CudaKernelInvocationStats,
 }
 
 struct CudaTinyVectorAddDeviceOutput {
@@ -135,6 +177,7 @@ struct CudaTinyVectorAddDeviceOutput {
     host_to_device_bytes: u64,
     device_to_host_bytes: u64,
     kernel_launches: u64,
+    kernel_stats: CudaKernelInvocationStats,
 }
 
 fn compile_cuda_ptx(source: &str, label: &str) -> Result<Ptx> {
@@ -263,6 +306,7 @@ pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVector
         host_to_device_bytes: parity.host_to_device_bytes,
         device_to_host_bytes: parity.device_to_host_bytes,
         kernel_launches: parity.kernel_launches,
+        kernel_stats: parity.kernel_stats,
     })
 }
 
@@ -293,6 +337,7 @@ pub fn run_cuda_tiny_vector_add_parity(
         host_to_device_bytes: device_output.host_to_device_bytes,
         device_to_host_bytes: device_output.device_to_host_bytes,
         kernel_launches: device_output.kernel_launches,
+        kernel_stats: device_output.kernel_stats,
     })
 }
 
@@ -368,12 +413,24 @@ fn run_cuda_tiny_vector_add_kernel(
         reason: format!("Failed to transfer tiny smoke output back to host: {e:?}"),
     })?;
 
+    let device_info = CudaKernel::get_device_info(device_id)?;
+    let host_to_device_bytes = ((a.len() + b.len()) * size_of::<f32>()) as u64;
+    let device_to_host_bytes = (a.len() * size_of::<f32>()) as u64;
+    let kernel_launches = 1;
+    let kernel_stats = CudaKernelInvocationStats::tiny_vector_add(
+        &device_info,
+        host_to_device_bytes,
+        device_to_host_bytes,
+        kernel_launches,
+    );
+
     Ok(CudaTinyVectorAddDeviceOutput {
-        device_info: CudaKernel::get_device_info(device_id)?,
+        device_info,
         actual,
-        host_to_device_bytes: ((a.len() + b.len()) * size_of::<f32>()) as u64,
-        device_to_host_bytes: (a.len() * size_of::<f32>()) as u64,
-        kernel_launches: 1,
+        host_to_device_bytes,
+        device_to_host_bytes,
+        kernel_launches,
+        kernel_stats,
     })
 }
 
