@@ -1585,6 +1585,18 @@ async fn run_simple_generation(
             .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
             .unwrap_or(false);
     let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
+    bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
+    unsafe {
+        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
+        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
+        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
+        if strict_backend && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
+        {
+            std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
+        } else {
+            std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
+        }
+    }
 
     // Parse and resolve template type
     use bitnet_inference::TemplateType;
@@ -2143,6 +2155,7 @@ async fn run_simple_generation(
         let selected_backend = backend_identity.selected_backend.as_str();
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
+        let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
         let strict_cpu_reference_artifact = strict_backend
             && canonical_bitnet_model
             && runtime_api == "cpu"
@@ -2211,6 +2224,13 @@ async fn run_simple_generation(
                 "runtime_api": runtime_api,
                 "fallback_used": backend_identity.fallback_used,
                 "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            },
+            "execution_coverage": {
+                "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
+                "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
+                "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                "unsupported_ops": bitnet_linear_coverage.unsupported_ops,
+                "execution_claim": bitnet_linear_coverage.execution_claim,
             },
             "kernel": {
                 "family": kernel_family,
