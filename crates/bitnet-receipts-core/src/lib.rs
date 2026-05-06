@@ -171,6 +171,71 @@ pub struct ParityMetadata {
     pub status: String,
 }
 
+/// Strict CPU decode proof metadata.
+///
+/// This optional section turns the generic receipt into an end-to-end CPU
+/// inference proof by recording the loader, tokenizer, kernel dispatch, fallback,
+/// token-count, latency, and CPU capability facts that strict mode must not infer
+/// from logs or warnings.  When present, [`InferenceReceipt::validate`] enforces
+/// the no-hidden-fallback contract for this section.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrictCpuDecodeMetadata {
+    /// Backend requested by the caller (must be "cpu" for strict CPU proofs).
+    pub requested_backend: String,
+
+    /// Backend selected by dispatch (must be "cpu" for strict CPU proofs).
+    pub selected_backend: String,
+
+    /// Kernel requested by the caller, for example "qk256-avx2-gemv".
+    pub requested_kernel: String,
+
+    /// Kernel selected by runtime dispatch. Must match `requested_kernel`.
+    pub selected_kernel: String,
+
+    /// Loader mode used for model materialization. Strict CPU requires
+    /// "real_gguf" rather than simple/minimal/diagnostic loaders.
+    pub loader_mode: String,
+
+    /// Deterministic tokenizer source, for example "explicit",
+    /// "gguf_embedded", "gguf_referenced", or "sibling_tokenizer_json".
+    pub tokenizer_source: String,
+
+    /// Normalized model family from GGUF metadata.
+    pub model_family: String,
+
+    /// Normalized quantization format, for example "qk256_i2_s".
+    pub quant_format: String,
+
+    /// CPU features observed by dispatch, for example `["avx2", "fma"]`.
+    pub cpu_features: Vec<String>,
+
+    /// Thread count used by the strict proof run.
+    pub thread_count: usize,
+
+    /// Whether any fallback was used. Must be false for strict CPU proofs.
+    pub fallback_used: bool,
+
+    /// Fallback reason if a fallback was used. Must be absent when strict proof
+    /// validation succeeds.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+
+    /// Prompt tokens consumed by the proof run.
+    pub prompt_tokens: usize,
+
+    /// Decode/new tokens emitted by the proof run.
+    pub decode_tokens: usize,
+
+    /// p50 decode latency in milliseconds.
+    pub p50_latency_ms: f64,
+
+    /// p95 decode latency in milliseconds.
+    pub p95_latency_ms: f64,
+
+    /// Decode throughput in tokens per second.
+    pub decode_tokens_per_second: f64,
+}
+
 /// Main inference receipt structure (AC4)
 ///
 /// # Schema Version: 1.0.0
@@ -227,6 +292,10 @@ pub struct InferenceReceipt {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parity: Option<ParityMetadata>,
 
+    /// Strict CPU decode proof metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict_cpu_decode: Option<StrictCpuDecodeMetadata>,
+
     /// Model corrections applied (LayerNorm rescaling, etc.)
     /// Empty if no corrections applied
     pub corrections: Vec<CorrectionRecord>,
@@ -275,6 +344,7 @@ impl InferenceReceipt {
             performance_baseline: PerformanceBaseline::default(),
             cross_validation: None,
             parity: None,
+            strict_cpu_decode: None,
             corrections: Vec::new(),
         })
     }
@@ -458,6 +528,11 @@ impl InferenceReceipt {
             return Err(anyhow!("Determinism test failed: sequences not identical"));
         }
 
+        // Strict CPU proof gate: if present, enforce the real decode lane contract.
+        if self.strict_cpu_decode.is_some() {
+            self.validate_strict_cpu_decode()?;
+        }
+
         // Soft gate: if backend_summary is non-empty, verify it has the expected format.
         if !self.backend_summary.is_empty() && !self.backend_summary.contains("selected=") {
             return Err(anyhow!(
@@ -526,6 +601,111 @@ impl InferenceReceipt {
     /// ```
     pub fn validate_kernel_ids(&self) -> Result<()> {
         validate_honest_kernel_ids(self.kernels.iter().map(String::as_str)).map_err(Into::into)
+    }
+
+    /// Validate strict CPU decode metadata, when present.
+    ///
+    /// This is intentionally stricter than generic receipt validation: a strict
+    /// CPU proof must name the requested and selected CPU backend/kernel, prove
+    /// the real GGUF loader and deterministic tokenizer source, include CPU and
+    /// latency/token-count facts, and reject every fallback.
+    pub fn validate_strict_cpu_decode(&self) -> Result<()> {
+        let Some(strict) = self.strict_cpu_decode.as_ref() else {
+            return Err(anyhow!("strict CPU decode metadata missing"));
+        };
+
+        if self.compute_path != "real" {
+            return Err(anyhow!(
+                "strict CPU decode requires compute_path=real, got {}",
+                self.compute_path
+            ));
+        }
+        if strict.requested_backend != "cpu" || strict.selected_backend != "cpu" {
+            return Err(anyhow!(
+                "strict CPU decode requires requested_backend=cpu and selected_backend=cpu, got requested={} selected={}",
+                strict.requested_backend,
+                strict.selected_backend
+            ));
+        }
+        if strict.requested_kernel.is_empty() || strict.selected_kernel.is_empty() {
+            return Err(anyhow!("strict CPU decode requires requested and selected kernels"));
+        }
+        if strict.requested_kernel != strict.selected_kernel {
+            return Err(anyhow!(
+                "strict CPU decode kernel mismatch: requested={} selected={}",
+                strict.requested_kernel,
+                strict.selected_kernel
+            ));
+        }
+        if !self.kernels.iter().any(|kernel| kernel == &strict.selected_kernel) {
+            return Err(anyhow!(
+                "strict CPU selected kernel {} not present in receipt kernel list",
+                strict.selected_kernel
+            ));
+        }
+        if strict.loader_mode != "real_gguf" {
+            return Err(anyhow!(
+                "strict CPU decode requires loader_mode=real_gguf, got {}",
+                strict.loader_mode
+            ));
+        }
+        if strict.tokenizer_source.trim().is_empty()
+            || strict.tokenizer_source.to_ascii_lowercase().contains("fallback")
+            || strict.tokenizer_source.eq_ignore_ascii_case("gpt2")
+        {
+            return Err(anyhow!(
+                "strict CPU decode requires deterministic non-fallback tokenizer_source, got {:?}",
+                strict.tokenizer_source
+            ));
+        }
+        if strict.model_family.trim().is_empty() || strict.quant_format.trim().is_empty() {
+            return Err(anyhow!("strict CPU decode requires model_family and quant_format"));
+        }
+        if strict.cpu_features.is_empty() {
+            return Err(anyhow!("strict CPU decode requires CPU feature metadata"));
+        }
+        if strict.thread_count == 0 {
+            return Err(anyhow!("strict CPU decode requires thread_count > 0"));
+        }
+        if strict.fallback_used {
+            return Err(anyhow!(
+                "strict CPU decode forbids fallback_used=true: {}",
+                strict.fallback_reason.as_deref().unwrap_or("no reason recorded")
+            ));
+        }
+        if strict.fallback_reason.as_deref().is_some_and(|reason| !reason.trim().is_empty()) {
+            return Err(anyhow!(
+                "strict CPU decode fallback_reason must be empty when fallback_used=false"
+            ));
+        }
+        if strict.prompt_tokens == 0 || strict.decode_tokens == 0 {
+            return Err(anyhow!("strict CPU decode requires prompt_tokens and decode_tokens > 0"));
+        }
+        if !(strict.p50_latency_ms.is_finite()
+            && strict.p95_latency_ms.is_finite()
+            && strict.decode_tokens_per_second.is_finite()
+            && strict.p50_latency_ms >= 0.0
+            && strict.p95_latency_ms >= strict.p50_latency_ms
+            && strict.decode_tokens_per_second > 0.0)
+        {
+            return Err(anyhow!(
+                "strict CPU decode requires finite latency metrics with p95>=p50 and decode TPS > 0"
+            ));
+        }
+        match self.parity.as_ref() {
+            Some(parity) if parity.status == "ok" || parity.status == "rust_only" => Ok(()),
+            Some(parity) => Err(anyhow!(
+                "strict CPU decode parity status must be ok or rust_only, got {}",
+                parity.status
+            )),
+            None => Err(anyhow!("strict CPU decode requires parity metadata")),
+        }
+    }
+
+    /// Builder for strict CPU decode proof metadata.
+    pub fn with_strict_cpu_decode(mut self, strict_cpu_decode: StrictCpuDecodeMetadata) -> Self {
+        self.strict_cpu_decode = Some(strict_cpu_decode);
+        self
     }
 
     /// Builder for test results

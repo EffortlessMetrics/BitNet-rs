@@ -89,3 +89,82 @@ proptest! {
         prop_assert!(receipt.validate_kernel_ids().is_err());
     }
 }
+
+fn strict_cpu_decode_metadata() -> bitnet_receipts::StrictCpuDecodeMetadata {
+    bitnet_receipts::StrictCpuDecodeMetadata {
+        requested_backend: "cpu".to_string(),
+        selected_backend: "cpu".to_string(),
+        requested_kernel: "qk256-avx2-gemv".to_string(),
+        selected_kernel: "qk256-avx2-gemv".to_string(),
+        loader_mode: "real_gguf".to_string(),
+        tokenizer_source: "explicit".to_string(),
+        model_family: "bitnet".to_string(),
+        quant_format: "qk256_i2_s".to_string(),
+        cpu_features: vec!["avx2".to_string(), "fma".to_string()],
+        thread_count: 8,
+        fallback_used: false,
+        fallback_reason: None,
+        prompt_tokens: 512,
+        decode_tokens: 128,
+        p50_latency_ms: 4.0,
+        p95_latency_ms: 8.0,
+        decode_tokens_per_second: 125.0,
+    }
+}
+
+fn strict_cpu_receipt() -> InferenceReceipt {
+    InferenceReceipt::generate(
+        "cpu",
+        vec!["qk256-avx2-gemv".to_string(), "rope_apply".to_string()],
+        Some("requested=cpu detected=[cpu] selected=cpu".to_string()),
+    )
+    .unwrap()
+    .with_parity(bitnet_receipts::ParityMetadata {
+        cpp_available: false,
+        cosine_similarity: None,
+        exact_match_rate: None,
+        status: "rust_only".to_string(),
+    })
+    .with_strict_cpu_decode(strict_cpu_decode_metadata())
+}
+
+#[test]
+fn strict_cpu_decode_receipt_validates_real_no_fallback_path() {
+    let receipt = strict_cpu_receipt();
+    assert!(receipt.validate().is_ok());
+    assert!(receipt.validate_strict_cpu_decode().is_ok());
+}
+
+#[test]
+fn strict_cpu_decode_rejects_loader_fallback() {
+    let mut receipt = strict_cpu_receipt();
+    receipt.strict_cpu_decode.as_mut().unwrap().loader_mode = "simple".to_string();
+    let err = receipt.validate().unwrap_err().to_string();
+    assert!(err.contains("loader_mode=real_gguf"), "{err}");
+}
+
+#[test]
+fn strict_cpu_decode_rejects_tokenizer_fallback() {
+    let mut receipt = strict_cpu_receipt();
+    receipt.strict_cpu_decode.as_mut().unwrap().tokenizer_source = "gpt2_fallback".to_string();
+    let err = receipt.validate().unwrap_err().to_string();
+    assert!(err.contains("tokenizer_source"), "{err}");
+}
+
+#[test]
+fn strict_cpu_decode_rejects_kernel_mismatch() {
+    let mut receipt = strict_cpu_receipt();
+    receipt.strict_cpu_decode.as_mut().unwrap().selected_kernel = "qk256-scalar-gemv".to_string();
+    let err = receipt.validate().unwrap_err().to_string();
+    assert!(err.contains("kernel mismatch"), "{err}");
+}
+
+#[test]
+fn strict_cpu_decode_rejects_fallback_flag() {
+    let mut receipt = strict_cpu_receipt();
+    let strict = receipt.strict_cpu_decode.as_mut().unwrap();
+    strict.fallback_used = true;
+    strict.fallback_reason = Some("avx2 unavailable".to_string());
+    let err = receipt.validate().unwrap_err().to_string();
+    assert!(err.contains("fallback_used=true"), "{err}");
+}
