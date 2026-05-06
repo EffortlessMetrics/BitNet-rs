@@ -386,6 +386,13 @@ enum Commands {
     /// Show system information
     Info,
 
+    /// Probe selected device identity without launching kernels
+    DeviceSmoke {
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     #[cfg(feature = "full-cli")]
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
@@ -486,16 +493,17 @@ async fn main() -> Result<()> {
         warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
     }
 
+    let requested_backend_label =
+        cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+
     // Report backend selection at startup so logs and receipts are deterministic.
     {
         use bitnet_common::{BackendRequest, select_backend};
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let requested_backend_label =
-            cli.device.as_deref().unwrap_or(config.default_device.as_str());
         let request =
-            BackendRequest::from_label(requested_backend_label).unwrap_or(BackendRequest::Auto);
+            BackendRequest::from_label(&requested_backend_label).unwrap_or(BackendRequest::Auto);
         let strict_mode = std::env::var("BITNET_STRICT_MODE")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
@@ -587,6 +595,9 @@ async fn main() -> Result<()> {
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
+        Some(Commands::DeviceSmoke { json_out }) => {
+            handle_device_smoke_command(&requested_backend_label, json_out).await
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
@@ -825,6 +836,124 @@ async fn handle_tokenize_command(
         println!("{}", serde_json::to_string_pretty(&output)?);
     }
 
+    Ok(())
+}
+
+async fn handle_device_smoke_command(
+    requested_backend_label: &str,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported device-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::Cuda | BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "device-smoke currently supports cuda and nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA probe device is unavailable".to_string()))
+    } else {
+        None
+    };
+    let selected_backend = if error.is_none() {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_probe",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": cuda_probe,
+        "claim": "cuda_runtime_probe_recorded",
+        "kernel_execution": false,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn validate_rtx_5070_ti_identity(probe: &bitnet_device_probe::NvidiaCudaProbe) -> Option<String> {
+    match probe.selected_device_name.as_deref() {
+        Some(name) if is_rtx_5070_ti_device_name(name) => None,
+        Some(name) => {
+            Some(format!("requested nvidia-rtx-5070-ti-cuda but selected CUDA device is {name:?}"))
+        }
+        None => Some(
+            "requested nvidia-rtx-5070-ti-cuda but selected CUDA device name was not reported"
+                .to_string(),
+        ),
+    }
+}
+
+fn is_rtx_5070_ti_device_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    normalized.contains("rtx 5070 ti")
+}
+
+fn write_json_output(path: Option<&std::path::PathBuf>, value: &serde_json::Value) -> Result<()> {
+    let json = serde_json::to_string_pretty(value)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create {}", parent.display()))?;
+        }
+        std::fs::write(path, json)
+            .with_context(|| format!("Failed to write JSON to {}", path.display()))?;
+        println!("Wrote {}", path.display());
+    } else {
+        println!("{json}");
+    }
     Ok(())
 }
 

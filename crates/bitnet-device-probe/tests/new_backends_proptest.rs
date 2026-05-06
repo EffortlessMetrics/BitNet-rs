@@ -17,6 +17,7 @@ use bitnet_device_probe::{
     oneapi_compiled, probe_device, probe_gpu, vulkan_available_runtime, vulkan_compiled,
 };
 use proptest::prelude::*;
+use serial_test::serial;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROCm: GpuCapabilities.rocm_available
@@ -214,23 +215,35 @@ proptest! {
 
 /// `DeviceProbe.rocm_available` must agree with `GpuCapabilities.rocm_available`.
 #[test]
+#[serial(bitnet_env)]
 fn device_probe_rocm_consistent_with_probe_gpu() {
-    let probe = probe_device();
-    let gpu = probe_gpu();
-    assert_eq!(
-        probe.rocm_available, gpu.rocm_available,
-        "DeviceProbe.rocm_available must match GpuCapabilities.rocm_available"
+    temp_env::with_vars(
+        [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", None::<&str>)],
+        || {
+            let probe = probe_device();
+            let gpu = probe_gpu();
+            assert_eq!(
+                probe.rocm_available, gpu.rocm_available,
+                "DeviceProbe.rocm_available must match GpuCapabilities.rocm_available"
+            );
+        },
     );
 }
 
 /// `DeviceProbe.cuda_available` must agree with `GpuCapabilities.cuda_available`.
 #[test]
+#[serial(bitnet_env)]
 fn device_probe_cuda_consistent_with_probe_gpu() {
-    let probe = probe_device();
-    let gpu = probe_gpu();
-    assert_eq!(
-        probe.cuda_available, gpu.cuda_available,
-        "DeviceProbe.cuda_available must match GpuCapabilities.cuda_available"
+    temp_env::with_vars(
+        [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", None::<&str>)],
+        || {
+            let probe = probe_device();
+            let gpu = probe_gpu();
+            assert_eq!(
+                probe.cuda_available, gpu.cuda_available,
+                "DeviceProbe.cuda_available must match GpuCapabilities.cuda_available"
+            );
+        },
     );
 }
 
@@ -552,9 +565,14 @@ fn gpu_capabilities_debug_mentions_rocm_available() {
 
 /// Snapshot: `GpuCapabilities` Debug with cpu-only feature (all fields false).
 #[test]
+#[serial(bitnet_env)]
 fn snapshot_gpu_capabilities_debug_no_gpu_feature() {
-    let caps = probe_gpu();
-    insta::assert_debug_snapshot!("gpu_capabilities_debug_no_gpu", caps);
+    temp_env::with_var("BITNET_STRICT_MODE", None::<&str>, || {
+        temp_env::with_var("BITNET_GPU_FAKE", Some("none"), || {
+            let caps = probe_gpu();
+            insta::assert_debug_snapshot!("gpu_capabilities_debug_no_gpu", caps);
+        });
+    });
 }
 
 /// Snapshot: `DeviceCapabilities` GPU-related fields with cpu-only feature.
@@ -582,11 +600,16 @@ fn snapshot_vulkan_compiled_no_vulkan_feature() {
 
 /// Snapshot: `DeviceProbe` availability fields with cpu-only feature.
 #[test]
+#[serial(bitnet_env)]
 fn snapshot_device_probe_availability_no_gpu() {
-    let probe = probe_device();
-    let fields = format!(
-        "cuda_available={} rocm_available={} oneapi_available={}",
-        probe.cuda_available, probe.rocm_available, probe.oneapi_available
-    );
-    insta::assert_snapshot!("device_probe_availability_no_gpu", fields);
+    temp_env::with_var("BITNET_STRICT_MODE", None::<&str>, || {
+        temp_env::with_var("BITNET_GPU_FAKE", Some("none"), || {
+            let probe = probe_device();
+            let fields = format!(
+                "cuda_available={} rocm_available={} oneapi_available={}",
+                probe.cuda_available, probe.rocm_available, probe.oneapi_available
+            );
+            insta::assert_snapshot!("device_probe_availability_no_gpu", fields);
+        });
+    });
 }

@@ -29,5 +29,7 @@
     "failure_reason": null
   },
   "claim": "cuda_runtime_probe_recorded",
+  "kernel_execution": false,
+  "error": null,
   "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/cuda-probe.json"
 }

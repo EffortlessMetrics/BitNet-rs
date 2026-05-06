@@ -288,11 +288,11 @@ backends:
       - Primary proof bench is windows-9950x3d-rtx5070ti with AMD Ryzen 9 9950X3D as the CPU reference path.
       - Existing CUDA code is kernel-provider-level infrastructure, not proof that the real transformer inference path routes through CUDA.
       - QK256 CUDA remains scaffold-only until a real packed fused dequant GEMV kernel is implemented and wired.
+      - Strict selected-device backend identity landed in RTX5070TI-003.
       - CPU fallback cannot count as CUDA execution.
     blockers:
       - Collect normalized Windows 9950X3D plus RTX 5070 Ti machine profile receipt.
       - Add CUDA runtime and NVML probe.
-      - Add strict selected-device identity.
       - Add CUDA kernel smoke.
       - Add CPU/CUDA parity.
       - Add receipt fields for CUDA runtime, driver, compute capability, VRAM, power, fallback, and kernel invocation counts.
