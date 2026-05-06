@@ -1,15 +1,13 @@
 # BitNet.cpp Python Bindings
 
-High-performance Python bindings for BitNet.cpp, providing a drop-in replacement for the original Python implementation with significant performance improvements.
+Python bindings for BitNet-rs (pre-alpha; scaffolded, not yet validated end-to-end in CI).
 
-## Features
+## Features (implemented, validation pending)
 
-- **Drop-in Compatibility**: Exact API compatibility with the original BitNet Python implementation
-- **High Performance**: 2-10x performance improvement over the Python baseline
-- **Multiple Backends**: Support for CPU and GPU inference with automatic fallback
-- **Streaming Generation**: Async/await support for real-time text generation
-- **Model Format Support**: GGUF, SafeTensors, and HuggingFace checkpoint formats
-- **Production Ready**: Comprehensive error handling, logging, and monitoring
+- **llama-cpp-python Compatible API**: API compatibility with llama-cpp-python (validation pending)
+- **Multiple Backends**: CPU inference; GPU support is alpha/scaffolded
+- **Streaming Generation**: Async/await support for text generation
+- **Model Format Support**: GGUF and SafeTensors formats
 - **Type Safety**: Full type hints and IDE support
 
 ## Installation
@@ -26,8 +24,8 @@ pip install bitnet-py
 
 ```bash
 # Clone the repository
-git clone https://github.com/microsoft/BitNet.git
-cd BitNet/crates/bitnet-py
+git clone https://github.com/EffortlessMetrics/BitNet-rs.git
+cd BitNet-rs/crates/bitnet-py
 
 # Verify Python version
 python --version  # Should show 3.12+
@@ -75,7 +73,7 @@ print(result)
 The library provides exact API compatibility with the original FastGen implementation:
 
 ```python
-import bitnet_py as fast  # Drop-in replacement for 'import model as fast'
+import bitnet_py as fast  # Compatible API for 'import model as fast'
 
 # Create generation arguments
 gen_args = fast.GenArgs(
@@ -377,7 +375,7 @@ gen_args = bitnet.GenArgs(**config_dict["generation"])
 See the `examples/` directory for comprehensive examples:
 
 - `basic_usage.py` - Basic model loading and inference
-- `fastgen_compatibility.py` - Drop-in replacement demonstration
+- `fastgen_compatibility.py` - API compatibility demonstration
 - `async_streaming.py` - Async streaming generation
 - `performance_comparison.py` - Benchmarking and validation
 - `migration_example.py` - Step-by-step migration guide

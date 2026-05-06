@@ -8,11 +8,17 @@
 
 use bitnet_common::{BitNetError, KernelError, Result};
 
-// ── AVX2 helpers ────────────────────────────────────────────────────────
+// ── SIMD imports ────────────────────────────────────────────────────────
 
 #[cfg(target_arch = "x86_64")]
 #[allow(clippy::wildcard_imports)]
 use std::arch::x86_64::*;
+
+#[cfg(target_arch = "aarch64")]
+#[allow(clippy::wildcard_imports)]
+use std::arch::aarch64::*;
+
+// ── AVX2 helpers ────────────────────────────────────────────────────────
 
 /// 8-wide AVX2 horizontal max → scalar.
 ///
@@ -54,6 +60,60 @@ fn fast_exp(x: f32) -> f32 {
     x.clamp(-88.0, 88.0).exp()
 }
 
+/// Vectorized exp(x) for 8×f32 using AVX2 (Cephes-style polynomial).
+///
+/// Uses the identity exp(x) = 2^(x * log2(e)) and splits into integer
+/// and fractional parts.  The fractional part is approximated with a
+/// degree-5 minimax polynomial (Cephes coefficients).
+///
+/// Accuracy: max relative error < 2e-7 over [-88, 88].
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+#[allow(clippy::excessive_precision)] // Cody-Waite constants need exact bit patterns
+#[inline]
+unsafe fn exp_avx2(x: __m256) -> __m256 {
+    // Clamp to avoid overflow/underflow.
+    let lo = _mm256_set1_ps(-88.376_26_f32);
+    let hi = _mm256_set1_ps(88.376_26_f32);
+    let x = _mm256_min_ps(_mm256_max_ps(x, lo), hi);
+
+    // Compute t = x * log2(e) and split into integer n and fraction f.
+    let log2e = _mm256_set1_ps(std::f32::consts::LOG2_E);
+    let t = _mm256_mul_ps(x, log2e);
+    let n = _mm256_round_ps(t, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+    // f = x - n * ln(2)  (Cody-Waite range reduction for precision)
+    let ln2_hi = _mm256_set1_ps(0.693_145_751_953_125_f32);
+    let ln2_lo = _mm256_set1_ps(1.428_606_765_330_187_e-6_f32);
+    let f = _mm256_sub_ps(_mm256_sub_ps(x, _mm256_mul_ps(n, ln2_hi)), _mm256_mul_ps(n, ln2_lo));
+
+    // Polynomial approximation of exp(f) - 1 on [-ln2/2, ln2/2].
+    // Coefficients from Cephes (degree 5 minimax).
+    let c5 = _mm256_set1_ps(1.987_569_1e-4);
+    let c4 = _mm256_set1_ps(1.398_199_9e-3);
+    let c3 = _mm256_set1_ps(8.333_452e-3);
+    let c2 = _mm256_set1_ps(4.166_579_6e-2);
+    let c1 = _mm256_set1_ps(1.666_666_6e-1);
+    let c0 = _mm256_set1_ps(5.000_000_2e-1);
+    let one = _mm256_set1_ps(1.0);
+
+    // Horner's method: p = ((((c5*f + c4)*f + c3)*f + c2)*f + c1)*f + c0
+    let mut p = _mm256_fmadd_ps(c5, f, c4);
+    p = _mm256_fmadd_ps(p, f, c3);
+    p = _mm256_fmadd_ps(p, f, c2);
+    p = _mm256_fmadd_ps(p, f, c1);
+    p = _mm256_fmadd_ps(p, f, c0);
+    p = _mm256_fmadd_ps(p, _mm256_mul_ps(f, f), _mm256_add_ps(f, one));
+
+    // Reconstruct: exp(x) = p * 2^n via exponent bit manipulation.
+    let ni = _mm256_cvtps_epi32(n);
+    let pow2n =
+        _mm256_castsi256_ps(_mm256_slli_epi32(_mm256_add_epi32(ni, _mm256_set1_epi32(127)), 23));
+    _mm256_mul_ps(p, pow2n)
+}
+
 // ── Core scalar implementation ──────────────────────────────────────────
 
 /// Find max of a slice (scalar).
@@ -62,6 +122,7 @@ fn scalar_max(data: &[f32]) -> f32 {
 }
 
 /// Numerically-stable softmax written to `output` (scalar path).
+#[cfg_attr(target_arch = "aarch64", allow(dead_code))]
 fn softmax_scalar(input: &[f32], output: &mut [f32]) {
     if input.is_empty() {
         return;
@@ -81,14 +142,209 @@ fn softmax_scalar(input: &[f32], output: &mut [f32]) {
     }
 }
 
+// ── NEON helpers ────────────────────────────────────────────────────────
+
+/// 4-wide NEON horizontal max → scalar.
+///
+/// # Safety
+/// Caller must ensure this is called on an aarch64 target.
+#[cfg(target_arch = "aarch64")]
+#[inline]
+unsafe fn hmax_neon(v: float32x4_t) -> f32 {
+    let pair = vpmax_f32(vget_low_f32(v), vget_high_f32(v));
+    let pair = vpmax_f32(pair, pair);
+    vget_lane_f32(pair, 0)
+}
+
+/// 4-wide NEON horizontal sum → scalar.
+///
+/// # Safety
+/// Caller must ensure this is called on an aarch64 target.
+#[cfg(target_arch = "aarch64")]
+#[inline]
+unsafe fn hsum_neon(v: float32x4_t) -> f32 {
+    let pair = vpadd_f32(vget_low_f32(v), vget_high_f32(v));
+    let pair = vpadd_f32(pair, pair);
+    vget_lane_f32(pair, 0)
+}
+
+/// Vectorized exp(x) for 4×f32 using NEON (Cephes-style polynomial).
+///
+/// Uses the same identity and coefficients as [`exp_avx2`] but operates
+/// on 4-wide `float32x4_t` vectors.
+///
+/// Accuracy: max relative error < 2e-7 over [-88, 88].
+///
+/// # Safety
+/// Caller must ensure this is called on an aarch64 target.
+#[cfg(target_arch = "aarch64")]
+#[allow(clippy::excessive_precision)]
+#[inline]
+unsafe fn exp_neon(x: float32x4_t) -> float32x4_t {
+    // Clamp to avoid overflow/underflow.
+    let lo = vdupq_n_f32(-88.376_26_f32);
+    let hi = vdupq_n_f32(88.376_26_f32);
+    let x = vminq_f32(vmaxq_f32(x, lo), hi);
+
+    // Compute t = x * log2(e) and split into integer n and fraction f.
+    let log2e = vdupq_n_f32(std::f32::consts::LOG2_E);
+    let t = vmulq_f32(x, log2e);
+    let n = vrndnq_f32(t);
+
+    // f = x - n * ln(2)  (Cody-Waite range reduction for precision)
+    let ln2_hi = vdupq_n_f32(0.693_145_751_953_125_f32);
+    let ln2_lo = vdupq_n_f32(1.428_606_765_330_187_e-6_f32);
+    let f = vsubq_f32(vsubq_f32(x, vmulq_f32(n, ln2_hi)), vmulq_f32(n, ln2_lo));
+
+    // Polynomial approximation of exp(f) - 1 on [-ln2/2, ln2/2].
+    // Coefficients from Cephes (degree 5 minimax).
+    let c5 = vdupq_n_f32(1.987_569_1e-4);
+    let c4 = vdupq_n_f32(1.398_199_9e-3);
+    let c3 = vdupq_n_f32(8.333_452e-3);
+    let c2 = vdupq_n_f32(4.166_579_6e-2);
+    let c1 = vdupq_n_f32(1.666_666_6e-1);
+    let c0 = vdupq_n_f32(5.000_000_2e-1);
+    let one = vdupq_n_f32(1.0);
+
+    // Horner's method: p = ((((c5*f + c4)*f + c3)*f + c2)*f + c1)*f + c0
+    let mut p = vfmaq_f32(c4, c5, f);
+    p = vfmaq_f32(c3, p, f);
+    p = vfmaq_f32(c2, p, f);
+    p = vfmaq_f32(c1, p, f);
+    p = vfmaq_f32(c0, p, f);
+    p = vfmaq_f32(vaddq_f32(f, one), p, vmulq_f32(f, f));
+
+    // Reconstruct: exp(x) = p * 2^n via exponent bit manipulation.
+    let ni = vcvtq_s32_f32(n);
+    let pow2n = vreinterpretq_f32_s32(vshlq_n_s32(vaddq_s32(ni, vdupq_n_s32(127)), 23));
+    vmulq_f32(p, pow2n)
+}
+
+// ── NEON softmax core ──────────────────────────────────────────────────
+
+/// Numerically-stable softmax using NEON intrinsics.
+///
+/// # Safety
+/// Caller must ensure this is called on an aarch64 target.
+#[cfg(target_arch = "aarch64")]
+unsafe fn softmax_neon(input: &[f32], output: &mut [f32]) {
+    let n = input.len();
+    if n == 0 {
+        return;
+    }
+
+    // ── pass 1: find max ────────────────────────────────────────────────
+    let mut vmax = vdupq_n_f32(f32::NEG_INFINITY);
+    let chunks = n / 4;
+    let inp = input.as_ptr();
+
+    for i in 0..chunks {
+        let v = vld1q_f32(inp.add(i * 4));
+        vmax = vmaxq_f32(vmax, v);
+    }
+    let mut max_val = hmax_neon(vmax);
+    for i in (chunks * 4)..n {
+        max_val = max_val.max(*inp.add(i));
+    }
+
+    // ── pass 2: exp(x - max) and accumulate sum ─────────────────────────
+    let vmax_bc = vdupq_n_f32(max_val);
+    let mut vsum = vdupq_n_f32(0.0);
+    let outp = output.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = vld1q_f32(inp.add(i * 4));
+        let shifted = vsubq_f32(v, vmax_bc);
+        let exp_v = exp_neon(shifted);
+        vst1q_f32(outp.add(i * 4), exp_v);
+        vsum = vaddq_f32(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_neon(vsum);
+    for i in (chunks * 4)..n {
+        let e = fast_exp(*inp.add(i) - max_val);
+        *outp.add(i) = e;
+        sum_exp += e;
+    }
+
+    // ── pass 3: normalize ───────────────────────────────────────────────
+    if sum_exp > 0.0 {
+        let inv = vdupq_n_f32(1.0 / sum_exp);
+        for i in 0..chunks {
+            let v = vld1q_f32(outp.add(i * 4));
+            vst1q_f32(outp.add(i * 4), vmulq_f32(v, inv));
+        }
+        let inv_s = 1.0 / sum_exp;
+        for i in (chunks * 4)..n {
+            *outp.add(i) *= inv_s;
+        }
+    }
+}
+
+/// In-place numerically-stable softmax using NEON intrinsics.
+///
+/// # Safety
+/// Caller must ensure this is called on an aarch64 target.
+#[cfg(target_arch = "aarch64")]
+unsafe fn softmax_neon_inplace(data: &mut [f32]) {
+    let n = data.len();
+    if n == 0 {
+        return;
+    }
+
+    // ── pass 1: find max ────────────────────────────────────────────────
+    let mut vmax = vdupq_n_f32(f32::NEG_INFINITY);
+    let chunks = n / 4;
+    let ptr = data.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = vld1q_f32(ptr.add(i * 4));
+        vmax = vmaxq_f32(vmax, v);
+    }
+    let mut max_val = hmax_neon(vmax);
+    for i in (chunks * 4)..n {
+        max_val = max_val.max(*ptr.add(i));
+    }
+
+    // ── pass 2: exp(x - max) in-place and accumulate sum ────────────────
+    let vmax_bc = vdupq_n_f32(max_val);
+    let mut vsum = vdupq_n_f32(0.0);
+
+    for i in 0..chunks {
+        let v = vld1q_f32(ptr.add(i * 4));
+        let shifted = vsubq_f32(v, vmax_bc);
+        let exp_v = exp_neon(shifted);
+        vst1q_f32(ptr.add(i * 4), exp_v);
+        vsum = vaddq_f32(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_neon(vsum);
+    for i in (chunks * 4)..n {
+        let e = fast_exp(*ptr.add(i) - max_val);
+        *ptr.add(i) = e;
+        sum_exp += e;
+    }
+
+    // ── pass 3: normalize ───────────────────────────────────────────────
+    if sum_exp > 0.0 {
+        let inv = vdupq_n_f32(1.0 / sum_exp);
+        for i in 0..chunks {
+            let v = vld1q_f32(ptr.add(i * 4));
+            vst1q_f32(ptr.add(i * 4), vmulq_f32(v, inv));
+        }
+        let inv_s = 1.0 / sum_exp;
+        for i in (chunks * 4)..n {
+            *ptr.add(i) *= inv_s;
+        }
+    }
+}
+
 // ── AVX2 softmax core ──────────────────────────────────────────────────
 
 /// Numerically-stable softmax using AVX2 intrinsics.
 ///
 /// # Safety
-/// Caller must ensure AVX2 is available (`is_x86_feature_detected!("avx2")`).
+/// Caller must ensure AVX2 + FMA are available at runtime.
 #[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2")]
+#[target_feature(enable = "avx2", enable = "fma")]
 unsafe fn softmax_avx2(input: &[f32], output: &mut [f32]) {
     let n = input.len();
     if n == 0 {
@@ -117,13 +373,7 @@ unsafe fn softmax_avx2(input: &[f32], output: &mut [f32]) {
     for i in 0..chunks {
         let v = _mm256_loadu_ps(inp.add(i * 8));
         let shifted = _mm256_sub_ps(v, vmax_bc);
-        // Per-lane std exp via scalar; compiler may auto-vectorize.
-        let mut buf = [0.0f32; 8];
-        _mm256_storeu_ps(buf.as_mut_ptr(), shifted);
-        for b in &mut buf {
-            *b = fast_exp(*b);
-        }
-        let exp_v = _mm256_loadu_ps(buf.as_ptr());
+        let exp_v = exp_avx2(shifted);
         _mm256_storeu_ps(outp.add(i * 8), exp_v);
         vsum = _mm256_add_ps(vsum, exp_v);
     }
@@ -148,6 +398,67 @@ unsafe fn softmax_avx2(input: &[f32], output: &mut [f32]) {
     }
 }
 
+/// In-place numerically-stable softmax using AVX2 intrinsics.
+///
+/// Avoids the allocation in `softmax_avx2` by reading and writing
+/// the same buffer (each element is read once then overwritten).
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn softmax_avx2_inplace(data: &mut [f32]) {
+    let n = data.len();
+    if n == 0 {
+        return;
+    }
+
+    // ── pass 1: find max ────────────────────────────────────────────────
+    let mut vmax = _mm256_set1_ps(f32::NEG_INFINITY);
+    let chunks = n / 8;
+    let ptr = data.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(ptr.add(i * 8));
+        vmax = _mm256_max_ps(vmax, v);
+    }
+    let mut max_val = hmax_avx2(vmax);
+    for i in (chunks * 8)..n {
+        max_val = max_val.max(*ptr.add(i));
+    }
+
+    // ── pass 2: exp(x - max) in-place and accumulate sum ────────────────
+    let vmax_bc = _mm256_set1_ps(max_val);
+    let mut vsum = _mm256_setzero_ps();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(ptr.add(i * 8));
+        let shifted = _mm256_sub_ps(v, vmax_bc);
+        let exp_v = exp_avx2(shifted);
+        _mm256_storeu_ps(ptr.add(i * 8), exp_v);
+        vsum = _mm256_add_ps(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_avx2(vsum);
+    for i in (chunks * 8)..n {
+        let e = fast_exp(*ptr.add(i) - max_val);
+        *ptr.add(i) = e;
+        sum_exp += e;
+    }
+
+    // ── pass 3: normalize ───────────────────────────────────────────────
+    if sum_exp > 0.0 {
+        let inv = _mm256_set1_ps(1.0 / sum_exp);
+        for i in 0..chunks {
+            let v = _mm256_loadu_ps(ptr.add(i * 8));
+            _mm256_storeu_ps(ptr.add(i * 8), _mm256_mul_ps(v, inv));
+        }
+        let inv_s = 1.0 / sum_exp;
+        for i in (chunks * 8)..n {
+            *ptr.add(i) *= inv_s;
+        }
+    }
+}
+
 // ── Public API ──────────────────────────────────────────────────────────
 
 /// Numerically-stable softmax over `input`, written to `output`.
@@ -166,14 +477,22 @@ pub fn softmax_f32(input: &[f32], output: &mut [f32]) -> Result<()> {
 
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") {
-            // SAFETY: feature detection above guarantees AVX2.
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: feature detection above guarantees AVX2 + FMA.
             unsafe { softmax_avx2(input, output) };
             return Ok(());
         }
     }
 
+    #[cfg(target_arch = "aarch64")]
+    {
+        // SAFETY: NEON is always available on aarch64.
+        unsafe { softmax_neon(input, output) };
+    }
+
+    #[cfg(not(target_arch = "aarch64"))]
     softmax_scalar(input, output);
+
     Ok(())
 }
 
@@ -191,31 +510,101 @@ pub fn softmax_f32_inplace(data: &mut [f32]) -> Result<()> {
 
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") {
-            let input: Vec<f32> = data.to_vec();
-            // SAFETY: feature detection above guarantees AVX2.
-            unsafe { softmax_avx2(&input, data) };
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: feature detection above guarantees AVX2 + FMA.
+            unsafe { softmax_avx2_inplace(data) };
             return Ok(());
         }
     }
 
-    let max_val = scalar_max(data);
-    let mut sum = 0.0f32;
-    for x in data.iter_mut() {
-        let e = fast_exp(*x - max_val);
-        *x = e;
-        sum += e;
+    #[cfg(target_arch = "aarch64")]
+    {
+        // SAFETY: NEON is always available on aarch64.
+        unsafe { softmax_neon_inplace(data) };
     }
-    if sum > 0.0 {
-        let inv = 1.0 / sum;
+
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        let max_val = scalar_max(data);
+        let mut sum = 0.0f32;
         for x in data.iter_mut() {
-            *x *= inv;
+            let e = fast_exp(*x - max_val);
+            *x = e;
+            sum += e;
+        }
+        if sum > 0.0 {
+            let inv = 1.0 / sum;
+            for x in data.iter_mut() {
+                *x *= inv;
+            }
         }
     }
     Ok(())
 }
 
+/// AVX2+FMA numerically-stable log-softmax.
+///
+/// `log_softmax(x)_i = x_i - max - log(Σ exp(x_j - max))`
+///
+/// Uses vectorized exp and reduce for the sum-of-exp pass.
+///
+/// # Safety
+/// Caller must ensure AVX2 + FMA are available at runtime.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn log_softmax_avx2(input: &[f32], output: &mut [f32]) {
+    let n = input.len();
+    if n == 0 {
+        return;
+    }
+
+    // ── pass 1: find max ────────────────────────────────────────────────
+    let mut vmax = _mm256_set1_ps(f32::NEG_INFINITY);
+    let chunks = n / 8;
+    let inp = input.as_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        vmax = _mm256_max_ps(vmax, v);
+    }
+    let mut max_val = hmax_avx2(vmax);
+    for i in (chunks * 8)..n {
+        max_val = max_val.max(*inp.add(i));
+    }
+
+    // ── pass 2: sum exp(x - max) ────────────────────────────────────────
+    let vmax_bc = _mm256_set1_ps(max_val);
+    let mut vsum = _mm256_setzero_ps();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        let shifted = _mm256_sub_ps(v, vmax_bc);
+        let exp_v = exp_avx2(shifted);
+        vsum = _mm256_add_ps(vsum, exp_v);
+    }
+    let mut sum_exp = hsum_avx2(vsum);
+    for i in (chunks * 8)..n {
+        sum_exp += fast_exp(*inp.add(i) - max_val);
+    }
+
+    // ── pass 3: output[i] = input[i] - log_sum_exp ─────────────────────
+    let log_sum_exp = max_val + sum_exp.ln();
+    let vlse = _mm256_set1_ps(log_sum_exp);
+    let outp = output.as_mut_ptr();
+
+    for i in 0..chunks {
+        let v = _mm256_loadu_ps(inp.add(i * 8));
+        _mm256_storeu_ps(outp.add(i * 8), _mm256_sub_ps(v, vlse));
+    }
+    for i in (chunks * 8)..n {
+        *outp.add(i) = *inp.add(i) - log_sum_exp;
+    }
+}
+
 /// Numerically-stable log-softmax: `log_softmax(x)_i = x_i - max - log(Σ exp(x_j - max))`.
+///
+/// On x86-64 with AVX2+FMA, uses vectorized exp and SIMD reduce.
+/// Falls back to scalar on all other targets.
 ///
 /// # Errors
 ///
@@ -228,6 +617,17 @@ pub fn log_softmax_f32(input: &[f32], output: &mut [f32]) -> Result<()> {
     }
     if input.is_empty() {
         return Ok(());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: AVX2+FMA verified above; lengths checked.
+            unsafe {
+                log_softmax_avx2(input, output);
+            }
+            return Ok(());
+        }
     }
 
     let max_val = scalar_max(input);
@@ -665,6 +1065,40 @@ mod tests {
         }
         let exp_sum: f32 = output.iter().map(|&x| x.exp()).sum();
         assert!((exp_sum - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_log_softmax_avx2_sized() {
+        // 32 elements: exercises the AVX2 8-wide path (4 full chunks).
+        let input: Vec<f32> = (0..32).map(|i| i as f32 * 0.3 - 4.0).collect();
+        let mut output = vec![0.0f32; 32];
+        log_softmax_f32(&input, &mut output).unwrap();
+
+        // All outputs must be ≤ 0.
+        for (i, &x) in output.iter().enumerate() {
+            assert!(x <= 0.0, "log_softmax[{i}] = {x} > 0");
+            assert!(x.is_finite(), "log_softmax[{i}] is not finite");
+        }
+        // exp(log_softmax) should sum to 1.
+        let exp_sum: f32 = output.iter().map(|&x| x.exp()).sum();
+        assert!((exp_sum - 1.0).abs() < 1e-4, "sum = {exp_sum}");
+    }
+
+    #[test]
+    fn test_log_softmax_matches_log_of_softmax() {
+        // Verify: log(softmax(x)) ≈ log_softmax(x) for a large vector.
+        let input: Vec<f32> = (0..64).map(|i| (i as f32 * 0.1).sin()).collect();
+        let mut sm = vec![0.0f32; 64];
+        let mut lsm = vec![0.0f32; 64];
+        softmax_f32(&input, &mut sm).unwrap();
+        log_softmax_f32(&input, &mut lsm).unwrap();
+        for (i, (&s, &l)) in sm.iter().zip(lsm.iter()).enumerate() {
+            let log_s = s.ln();
+            assert!(
+                (log_s - l).abs() < 1e-4,
+                "mismatch at [{i}]: log(softmax)={log_s} vs log_softmax={l}"
+            );
+        }
     }
 
     // ── Temperature ─────────────────────────────────────────────────────
@@ -1339,5 +1773,45 @@ mod tests {
         let mut output = vec![0.0; 256];
         softmax_f32(&input, &mut output).unwrap();
         assert_sums_to_one(&output, 1e-5);
+    }
+
+    // ── NEON parity ─────────────────────────────────────────────────────
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn softmax_neon_matches_scalar() {
+        for &size in &[1, 3, 4, 7, 8, 15, 16, 31, 32, 64, 128, 255, 256] {
+            let input: Vec<f32> = (0..size).map(|i| (i as f32) * 0.3 - 5.0).collect();
+
+            // Scalar reference
+            let mut expected = vec![0.0f32; size];
+            softmax_scalar(&input, &mut expected);
+
+            // NEON path
+            let mut got = vec![0.0f32; size];
+            unsafe { softmax_neon(&input, &mut got) };
+
+            for i in 0..size {
+                assert!(
+                    (got[i] - expected[i]).abs() < 1e-6,
+                    "softmax_neon mismatch at index {i} for size {size}: got {} expected {}",
+                    got[i],
+                    expected[i],
+                );
+            }
+
+            // In-place variant
+            let mut inplace = input.clone();
+            unsafe { softmax_neon_inplace(&mut inplace) };
+
+            for i in 0..size {
+                assert!(
+                    (inplace[i] - expected[i]).abs() < 1e-6,
+                    "softmax_neon_inplace mismatch at index {i} for size {size}: got {} expected {}",
+                    inplace[i],
+                    expected[i],
+                );
+            }
+        }
     }
 }

@@ -288,8 +288,14 @@ fn test_gguf_load_result_structure() {
     let tensors = HashMap::new();
     let i2s_qk256 = HashMap::new();
 
-    let result = GgufLoadResult { config: config.clone(), tensors, i2s_qk256 };
+    let result = GgufLoadResult {
+        loader_mode: bitnet_models::GgufLoaderMode::RealGguf,
+        config: config.clone(),
+        tensors,
+        i2s_qk256,
+    };
 
+    assert_eq!(result.loader_mode, bitnet_models::GgufLoaderMode::RealGguf);
     assert_eq!(result.config.model.vocab_size, config.model.vocab_size);
     assert_eq!(result.tensors.len(), 0);
     assert_eq!(result.i2s_qk256.len(), 0);

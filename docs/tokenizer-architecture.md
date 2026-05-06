@@ -214,7 +214,7 @@ The system includes specialized knowledge about different neural network archite
 
 ## Smart Download and Caching
 
-The smart download system provides robust, production-ready tokenizer acquisition with comprehensive error handling.
+The smart download system provides robust tokenizer acquisition with comprehensive error handling.
 
 ### Download Architecture
 

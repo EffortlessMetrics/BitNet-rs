@@ -623,7 +623,7 @@ impl Fence {
 
 fn ceil_div(total: u32, group_size: u32) -> u32 {
     assert_ne!(group_size, 0);
-    (total + group_size - 1) / group_size
+    total.div_ceil(group_size)
 }
 
 fn align_up(size: usize, alignment: usize) -> usize {

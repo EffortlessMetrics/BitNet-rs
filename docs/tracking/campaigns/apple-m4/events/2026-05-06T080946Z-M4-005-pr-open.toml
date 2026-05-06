@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T08:09:46Z"
+campaign = "apple-m4"
+item = "M4-005"
+event = "pr_open"
+pr = 3699
+head_sha = "dac694eae804af239753e700f991932f81f981c7"
+actor = "codex"
+
+notes = [
+  "Opened tiny native Metal compute smoke PR.",
+  "The live smoke dispatch compiles and runs only when BITNET_RUN_M4_METAL_SMOKE=1 is set.",
+  "No BitNet model loading, QK256, MPSGraph execution, server inference, benchmarks, Neural Engine claims, or performance claims.",
+]

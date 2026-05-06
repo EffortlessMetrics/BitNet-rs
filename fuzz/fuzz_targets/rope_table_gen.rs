@@ -22,19 +22,15 @@ fuzz_target!(|input: Input| {
     let dim = input.dim as usize;
     let seq_len = input.seq_len as usize;
 
-    match build_tables(dim, seq_len, input.base) {
-        Ok(tables) => {
-            // Shape invariant: both vecs must have exactly seq_len * half_dim entries.
-            assert_eq!(tables.sin.len(), seq_len * tables.half_dim);
-            assert_eq!(tables.cos.len(), seq_len * tables.half_dim);
+    if let Ok(tables) = build_tables(dim, seq_len, input.base) {
+        // Shape invariant: both vecs must have exactly seq_len * half_dim entries.
+        assert_eq!(tables.sin.len(), seq_len * tables.half_dim);
+        assert_eq!(tables.cos.len(), seq_len * tables.half_dim);
 
-            // Trig identity: sin² + cos² ≈ 1 for every pair.
-            for (s, c) in tables.sin.iter().zip(&tables.cos) {
-                let norm = s * s + c * c;
-                assert!((norm - 1.0).abs() < 1e-5, "sin²+cos²={norm} != 1.0 (sin={s}, cos={c})");
-            }
+        // Trig identity: sin² + cos² ≈ 1 for every pair.
+        for (s, c) in tables.sin.iter().zip(&tables.cos) {
+            let norm = s * s + c * c;
+            assert!((norm - 1.0).abs() < 1e-5, "sin²+cos²={norm} != 1.0 (sin={s}, cos={c})");
         }
-        // Errors are expected for invalid inputs; just ensure no panic occurred.
-        Err(_) => {}
     }
 });

@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: src.source
+---
+__kernel void softmax_row(
+    __global const float* input, __global float* output,
+    const int rows, const int cols)
+{
+    int row = get_global_id(0);
+    if (row >= rows) return;
+    int base = row * cols;
+    float max_val = input[base];
+    for (int j = 1; j < cols; j++)
+        max_val = fmax(max_val, input[base + j]);
+    float sum = 0.0f;
+    for (int j = 0; j < cols; j++) {
+        float e = exp(input[base + j] - max_val);
+        output[base + j] = e;
+        sum += e;
+    }
+    float inv = 1.0f / sum;
+    for (int j = 0; j < cols; j++) output[base + j] *= inv;
+}

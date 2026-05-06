@@ -16,6 +16,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-qk256-layout-core = { path = "../bitnet-qk256-layout-core", version = "0.2.1-dev" }
 anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
@@ -25,6 +26,7 @@ serde.workspace = true
 tracing.workspace = true
 bitnet-quantization-bits.workspace = true
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
+bitnet-cpu-detect = { path = "../bitnet-cpu-detect", version = "0.2.1-dev", default-features = false, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -42,10 +44,11 @@ bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev", features = [
 default = []
 cpu = ["bitnet-kernels/cpu"]
 simd = []
+avx2 = ["dep:bitnet-cpu-detect", "bitnet-cpu-detect/avx2"]
 integration-tests = []
 cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]
-gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
+gpu = ["cuda"]
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
 opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl"]
 inference = []

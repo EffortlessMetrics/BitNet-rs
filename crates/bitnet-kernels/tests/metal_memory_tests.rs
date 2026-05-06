@@ -94,7 +94,7 @@ impl MockMetalBuffer {
     }
 
     fn is_aligned(&self) -> bool {
-        self.allocated_size % METAL_BUFFER_ALIGNMENT == 0
+        self.allocated_size.is_multiple_of(METAL_BUFFER_ALIGNMENT)
     }
 
     /// Write bytes at offset (only for CPU-accessible modes).

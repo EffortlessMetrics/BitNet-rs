@@ -44,7 +44,7 @@ const M3_MAX_GPU_CORES: u32 = 40;
 
 fn ceil_div(total: u32, group_size: u32) -> u32 {
     assert_ne!(group_size, 0);
-    (total + group_size - 1) / group_size
+    total.div_ceil(group_size)
 }
 
 fn is_power_of_two(n: u32) -> bool {
@@ -54,7 +54,7 @@ fn is_power_of_two(n: u32) -> bool {
 /// Round `n` up to the nearest multiple of `align`.
 fn round_up(n: u32, align: u32) -> u32 {
     assert_ne!(align, 0);
-    ((n + align - 1) / align) * align
+    n.div_ceil(align) * align
 }
 
 /// Choose an optimal 1-D threadgroup size: multiple of SIMD_WIDTH, clamped to
@@ -796,7 +796,7 @@ fn test_prime_dimension_1d() {
     for &prime in &[7u32, 13, 97, 251, 509, 1021, 4093, 65521] {
         let tg = optimal_threadgroup_1d(prime);
         assert!(tg > 0);
-        assert!(tg % SIMD_WIDTH == 0);
+        assert!(tg.is_multiple_of(SIMD_WIDTH));
         let groups = grid_threadgroups_1d(prime, tg);
         assert!(groups * tg >= prime);
     }

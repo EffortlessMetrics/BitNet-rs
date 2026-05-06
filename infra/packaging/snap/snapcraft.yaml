@@ -1,23 +1,23 @@
 name: bitnet-rs
 base: core22
-version: '1.0.0'
+version: '0.2.1-dev'
 summary: High-performance Rust implementation of BitNet 1-bit LLM inference
 description: |
-  bitnet-rs is the primary, production-ready implementation of BitNet 1-bit
-  Large Language Model inference engine, written in Rust for maximum
-  performance and safety.
+  bitnet-rs is a pre-alpha implementation of BitNet 1-bit
+  Large Language Model inference engine, written in Rust for memory
+  safety and SIMD-optimised CPU inference.
 
   Features:
   - Memory Safety: Rust's ownership system prevents memory leaks and buffer overflows
   - High Performance: Zero-cost abstractions and SIMD optimizations
   - Cross-platform: Native support for Linux, macOS, and Windows
   - Reliability: Comprehensive error handling and graceful degradation
-  - GPU Support: CUDA acceleration for NVIDIA GPUs
+  - GPU Support: CUDA acceleration (alpha, not validated end-to-end)
   - Multiple Interfaces: CLI, HTTP server, and library APIs
 
   This snap includes both the CLI tool (bitnet-cli) and HTTP server (bitnet-server).
 
-grade: stable
+grade: devel
 confinement: strict
 
 architectures:
@@ -61,9 +61,9 @@ apps:
 parts:
   bitnet-rs:
     plugin: rust
-    source: https://github.com/microsoft/BitNet.git
+    source: https://github.com/EffortlessMetrics/BitNet-rs.git
     source-type: git
-    source-tag: v1.0.0
+    source-branch: main
 
     rust-features:
       - cpu

@@ -109,7 +109,7 @@ fuzz_target!(|input: SimdMathInput| {
                 } else if input_val.is_finite() {
                     // tanh output must be in [-1, 1].
                     assert!(
-                        out >= -1.0 - 1e-5 && out <= 1.0 + 1e-5,
+                        ((-1.0 - 1e-5)..=(1.0 + 1e-5)).contains(&out),
                         "tanh({input_val}) = {out} out of range at {i}"
                     );
                 }
@@ -126,7 +126,7 @@ fuzz_target!(|input: SimdMathInput| {
                 } else if input_val.is_finite() {
                     // sigmoid output must be in [0, 1].
                     assert!(
-                        out >= -1e-5 && out <= 1.0 + 1e-5,
+                        ((-1e-5)..=(1.0 + 1e-5)).contains(&out),
                         "sigmoid({input_val}) = {out} out of range at {i}"
                     );
                 }

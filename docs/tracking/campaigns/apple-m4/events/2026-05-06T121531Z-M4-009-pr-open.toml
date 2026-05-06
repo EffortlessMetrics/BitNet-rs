@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:15:31Z"
+campaign = "apple-m4"
+item = "M4-009"
+event = "pr_open"
+pr = 3732
+head_sha = "1bd2aa6b5955516d1bbe88aec16ec4e5c0a00231"
+actor = "codex"
+
+notes = [
+  "Opened the M4 Metal benchmark baseline PR.",
+  "Benchmark scope is limited to the validated tiny Metal add kernel with CPU/NEON reference timing; no BitNet inference, QK256, MPSGraph, Neural Engine, or broad performance claim.",
+]

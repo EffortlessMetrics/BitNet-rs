@@ -29,7 +29,7 @@ fuzz_target!(|input: ManifestInput| {
 
     // Invariant 2: known_models must always return consistent data
     let models = known_models();
-    for (_, manifest) in &models {
+    for manifest in models.values() {
         assert!(!manifest.model_id.is_empty());
         assert!(manifest.file_count() > 0);
     }

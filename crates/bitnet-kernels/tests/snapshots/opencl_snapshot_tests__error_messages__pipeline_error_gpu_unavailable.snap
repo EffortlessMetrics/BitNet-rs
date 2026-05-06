@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "PipelineError::GpuUnavailable.to_string()"
+---
+GPU is unavailable

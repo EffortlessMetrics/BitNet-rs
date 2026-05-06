@@ -822,7 +822,7 @@ int bitnet_switch_model_backend(int model_id, unsigned int backend_preference);
 int bitnet_get_model_loading_progress(int model_id);
 
 /**
- * Load model from file - 100% compatible with llama_load_model_from_file
+ * Load model from file - llama.cpp compatible API (CI validation pending)
  *
  * # Safety
  * This function dereferences raw pointers and must be called with valid arguments:

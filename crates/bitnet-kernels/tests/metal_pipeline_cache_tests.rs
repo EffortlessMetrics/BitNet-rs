@@ -225,11 +225,11 @@ impl PipelineCache {
         let mut stats = self.stats.lock().unwrap();
         stats.misses += 1;
 
-        if map.len() >= self.capacity {
-            if let Some(evict_key) = map.keys().next().cloned() {
-                map.remove(&evict_key);
-                stats.evictions += 1;
-            }
+        if map.len() >= self.capacity
+            && let Some(evict_key) = map.keys().next().cloned()
+        {
+            map.remove(&evict_key);
+            stats.evictions += 1;
         }
 
         let id = PipelineId(self.next_id.fetch_add(1, Ordering::Relaxed));
@@ -344,7 +344,7 @@ fn align_to_256(size: usize) -> usize {
 }
 
 fn is_aligned(offset: usize) -> bool {
-    offset % METAL_BUFFER_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_BUFFER_ALIGNMENT)
 }
 
 fn validate_workgroup(x: u32, y: u32, z: u32) -> Result<(), PipelineError> {
@@ -1460,9 +1460,11 @@ fn test_metal_integration_multiple_buffers() {
 #[cfg(target_os = "macos")]
 fn test_metal_integration_sequential_execution() {
     let cache = PipelineCache::new(64);
-    for _ in 0..10 {
+    for i in 0..10 {
         let (_, r) = cache.get_or_create(VALID_SHADER, "add_arrays").unwrap();
-        if cache.stats().misses == 1 {
+        if i == 0 {
+            assert_eq!(r, CacheResult::Miss);
+        } else {
             // After first miss, all should be hits.
             assert_eq!(r, CacheResult::Hit);
         }
@@ -1494,7 +1496,8 @@ fn test_metal_integration_cache_and_pool() {
     }
 
     assert_eq!(cache.len(), 4);
-    assert_eq!(pool.allocated_count(), 4);
+    assert_eq!(pool.allocated_count(), 1);
+    assert_eq!(pool.recycled_count(), 3);
 }
 
 /// Buffer recycling reduces allocations.

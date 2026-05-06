@@ -31,7 +31,7 @@ fn assert_bitwise_identical(a: &[f32], b: &[f32], label: &str, run: usize) {
 // ── Hardcoded test vectors ────────────────────────────────────────────────
 
 /// 8-element vector with mixed positive, negative, zero, and near-zero values.
-const INPUT_8: [f32; 8] = [0.5, -1.2, 0.0, 3.14, -0.001, 2.71, 1.0, -0.5];
+const INPUT_8: [f32; 8] = [0.5, -1.2, 0.0, std::f32::consts::PI, -0.001, 2.71, 1.0, -0.5];
 
 /// 4×4 matrix A (row-major) for matmul tests.
 const MAT_A_4X4: [f32; 16] = [

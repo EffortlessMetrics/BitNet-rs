@@ -21,8 +21,9 @@
 //!
 //! ## Safety
 //!
-//! This module uses `unsafe` blocks for AVX2 intrinsics. All functions are marked
-//! with `#[target_feature(enable = "avx2")]` to ensure proper CPU feature detection.
+//! This module uses `unsafe` blocks for AVX2/FMA intrinsics. FMA-using functions
+//! are marked with `#[target_feature(enable = "avx2,fma")]` and must only be
+//! called after runtime AVX2+FMA detection.
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
@@ -38,7 +39,7 @@ use anyhow::Result;
 ///
 /// Then maps codes [0,1,2,3] → weights [-2,-1,+1,+2] via: `weight = code - 2 + (code >> 1) & 1`.
 #[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2")]
+#[target_feature(enable = "avx2,fma")]
 unsafe fn decode_8_weights_avx2(
     byte0: u8,
     byte1: u8,
@@ -77,7 +78,7 @@ unsafe fn decode_8_weights_avx2(
 ///
 /// Requires AVX2 + FMA. Caller must verify via `is_x86_feature_detected!`.
 #[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2")]
+#[target_feature(enable = "avx2,fma")]
 unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     let blocks_needed = cols.div_ceil(QK256_BLOCK);
     let expected_bytes = blocks_needed * QK256_PACKED_BYTES;
@@ -231,7 +232,7 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
 /// AVX2-accelerated multi-row GEMV: y = Ax where A is quantized QK256, x is dense
 ///
 /// This is the public interface for AVX2-accelerated QK256 GEMV operations.
-/// Runtime dispatch ensures this function is only called when AVX2 is available.
+/// Runtime dispatch ensures this function is only called when AVX2 and FMA are available.
 ///
 /// # Arguments
 ///
@@ -273,8 +274,12 @@ pub fn gemv_qk256_avx2(
         bail!("AVX2: data too short: {} < {}", qs_data.len(), expected_total);
     }
 
-    // SAFETY: We've verified AVX2 availability via runtime dispatch before calling this function.
-    // All AVX2 intrinsics are properly guarded by #[target_feature(enable = "avx2")].
+    if !avx2_fma_runtime_available() {
+        bail!("AVX2: avx2/fma CPU features are required for qk256 AVX2 GEMV");
+    }
+
+    // SAFETY: AVX2 and FMA availability is verified above before calling target-feature code.
+    // All FMA-using intrinsics are guarded by #[target_feature(enable = "avx2,fma")].
     unsafe {
         for (row, output) in y_out.iter_mut().enumerate().take(rows) {
             // Prefetch next row's first cache line to overlap decode with memory.
@@ -292,6 +297,12 @@ pub fn gemv_qk256_avx2(
     }
 
     Ok(())
+}
+
+#[cfg(target_arch = "x86_64")]
+#[inline]
+fn avx2_fma_runtime_available() -> bool {
+    is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma")
 }
 
 /// Stub implementation for non-x86_64 architectures
@@ -321,9 +332,9 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_avx2_smoke() {
-        // Skip if AVX2 not available
-        if !is_x86_feature_detected!("avx2") {
-            eprintln!("Skipping AVX2 smoke test: AVX2 not available");
+        // Skip if AVX2/FMA not available
+        if !avx2_fma_runtime_available() {
+            eprintln!("Skipping AVX2 smoke test: AVX2/FMA not available");
             return;
         }
 
@@ -371,9 +382,9 @@ mod tests {
         use rand::{Rng, SeedableRng};
         use rand_chacha::ChaCha8Rng;
 
-        // Skip if AVX2 not available
-        if !is_x86_feature_detected!("avx2") {
-            eprintln!("Skipping AVX2 smoke test: AVX2 not available");
+        // Skip if AVX2/FMA not available
+        if !avx2_fma_runtime_available() {
+            eprintln!("Skipping AVX2 smoke test: AVX2/FMA not available");
             return;
         }
 
@@ -471,9 +482,9 @@ mod tests {
         use rand_chacha::ChaCha8Rng;
         use std::time::Instant;
 
-        // Skip if AVX2 not available
-        if !is_x86_feature_detected!("avx2") {
-            eprintln!("Skipping AVX2 benchmark: AVX2 not available");
+        // Skip if AVX2/FMA not available
+        if !avx2_fma_runtime_available() {
+            eprintln!("Skipping AVX2 benchmark: AVX2/FMA not available");
             return;
         }
 

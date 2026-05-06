@@ -1150,7 +1150,7 @@ pub struct StreamKernelLaunchConfig {
 impl StreamKernelLaunchConfig {
     /// Create a 1-D launch config for `n` elements.
     pub fn for_1d(n: usize, block_size: u32, stream_index: usize) -> Self {
-        let grid_x = ((n as u32) + block_size - 1) / block_size;
+        let grid_x = (n as u32).div_ceil(block_size);
         Self { grid: [grid_x, 1, 1], block: [block_size, 1, 1], shared_mem: 0, stream_index }
     }
 }

@@ -65,7 +65,7 @@ fn trace_record_debug() {
 
 #[test]
 fn trace_record_clone() {
-    let r = record("a", vec![10, 20], 3.14);
+    let r = record("a", vec![10, 20], std::f64::consts::PI);
     let c = r.clone();
     assert_eq!(r.name, c.name);
     assert_eq!(r.shape, c.shape);

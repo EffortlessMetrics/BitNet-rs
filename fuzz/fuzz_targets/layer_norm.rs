@@ -54,7 +54,7 @@ fuzz_target!(|input: LayerNormFuzzInput| {
 
     // Need enough data for at least one batch.
     let data: Vec<f32> = input.data.iter().copied().take(256).collect();
-    if data.len() < norm_size || data.len() % norm_size != 0 {
+    if data.len() < norm_size || !data.len().is_multiple_of(norm_size) {
         return;
     }
 
@@ -98,14 +98,11 @@ fuzz_target!(|input: LayerNormFuzzInput| {
     // --- Fuzz rms_norm ---
     if input.test_rms {
         let rms_result = rms_norm(&data, &gamma, &config);
-        match rms_result {
-            Ok(output) => {
-                assert_eq!(output.len(), data.len());
-                for (i, &v) in output.iter().enumerate() {
-                    assert!(v.is_finite(), "rms_norm output non-finite at {i}: {v}");
-                }
+        if let Ok(output) = rms_result {
+            assert_eq!(output.len(), data.len());
+            for (i, &v) in output.iter().enumerate() {
+                assert!(v.is_finite(), "rms_norm output non-finite at {i}: {v}");
             }
-            Err(_) => {}
         }
     }
 });

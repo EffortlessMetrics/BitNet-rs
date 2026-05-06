@@ -6,22 +6,32 @@ This document describes the quantization formats and device-aware acceleration s
 
 BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
 
-### I2S - Native Rust Implementation (Production Ready - Issue #261)
+### I2S - Native Rust Implementation (Issue #261)
 
 - Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
 - Device-aware quantization with CUDA kernel acceleration (feature-gated) and CPU SIMD optimization
-- **Accuracy**: ≥99.8% correlation with FP32 reference (production requirement, validated in AC3)
-- **Performance** (receipt-driven, hardware-dependent): Typical ranges CPU 10-25 tok/s, GPU 50-100 tok/s. See [docs/baselines/](../../baselines/) for measured results.
+- **Accuracy**: Target ≥99.8% correlation with FP32 reference (defined in test fixtures; formal measurement pending)
+- **Performance**: Hardware-dependent; SIMD-optimised. QK256 path uses scalar kernels (~0.1 tok/s for 2B models).
 - 2-bit signed quantization with optimized bit-packing (4 values per byte)
 - **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent mock fallbacks and ensure real quantized computation
 - **Real Computation**: Native quantized GEMV kernel eliminates FP32 dequantization staging (Issue #261 - AC3)
 - **QuantizedLinear Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
 
+## GGUF Loader Fallback Boundary
+
+User-facing runtime and proof paths must not silently use the reduced-feature GGUF minimal loader. The enhanced GGUF loader is the default expectation for real inference claims.
+
+- `BITNET_STRICT_MODE=1` or `BITNET_DISABLE_MINIMAL_LOADER=1` fails fast when the enhanced loader cannot parse or validate the model.
+- `BITNET_ALLOW_MINIMAL_LOADER=1` is the explicit compatibility opt-in for the minimal loader. It may initialize missing transformer tensors with compatibility defaults and cannot support correctness or performance claims.
+- `bitnet run --strict-loader` sets strict loader mode for CLI proof paths.
+- `bitnet run --allow-mock` is a smoke/UX-test escape hatch and enables compatibility fallback only by request.
+- JSON output from `bitnet run --json-out` records the loader mode so receipts or adjacent proof artifacts can distinguish `enhanced` from explicitly requested `compatibility_fallback`.
+
 ### TL1 - Table Lookup Quantization (ARM Optimized - Issue #261)
 
 - Table lookup quantization optimized for ARM NEON architecture (4-bit, 2 elements per byte with nibble packing)
-- **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
-- **Performance** (receipt-driven): Typical range 12-18 tok/s on ARM NEON. Verify with receipts and baselines.
+- **Accuracy**: Target ≥99.6% correlation with FP32 reference (defined in test fixtures)
+- **Performance**: Hardware-dependent; optimised for ARM NEON.
 - **NEON Improvements**: ARM NEON kernel throughput and accuracy improvements added in #988
 - **Device-Aware Selection**: Automatic ARM NEON vectorization with scalar fallback
 - Memory-efficient lookup tables (16-256 entries, cache-friendly)
@@ -32,8 +42,8 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 ### TL2 - Advanced Table Lookup (x86 Optimized - Issue #261)
 
 - Advanced table lookup quantization optimized for x86 AVX2/AVX-512 (8-bit, 1 element per byte)
-- **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
-- **Performance** (receipt-driven): Typical range 10-15 tok/s on x86 AVX. Verify with receipts and baselines.
+- **Accuracy**: Target ≥99.6% correlation with FP32 reference (defined in test fixtures)
+- **Performance**: Hardware-dependent; optimised for x86 AVX2/AVX-512.
 - **SIMD Optimization**: AVX2 (32-byte) and AVX-512 (64-byte) vectorization
 - **AVX-512 Kernels**: Dedicated AVX-512 TL2 kernels added in #997 for 64-byte wide SIMD lanes
 - Enhanced vectorized operations (256-4096 entry tables) for large tensor processing
@@ -42,15 +52,15 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **2-bit Domain**: Input quantization stays in the 2-bit domain throughout (fixed in #978)
 - **Safe LUT Index Calculation**: Uses `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic and overflow protection
 
-### I2S (QK256/GGML) - Pure Rust (Production Ready)
+### I2S (QK256/GGML) - Pure Rust
 
 - GGML I2_S format with 256-element blocks (QK_K = 256 per GGML conventions)
 - **Block size:** 256 elements
 - **Format:** 64 bytes per block (no per-block scales), scales in separate tensor
 - **Support:** ✅ Pure Rust (kernel: `i2s_qk256::gemv_qk256`) - no FFI required
-- **Status:** Production-ready
+- **Status:** Working (scalar kernels; ~0.1 tok/s for 2B models)
 - **Use case:** MS BitNet GGUF models using GGML format
-- **Accuracy:** ≥99.8% correlation with FP32 reference
+- **Accuracy:** Target ≥99.8% correlation with FP32 reference
 - **Performance:** 2-bit signed quantization: [-2, -1, +1, +2] mapping
 - **Automatic detection:** Loader detects QK256 format from tensor sizes
 - **Transparent dispatch:** Transformer automatically uses QK256 kernel when weights present
@@ -137,12 +147,12 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index
 
 All quantizers support device-aware operations with:
 
-- **Automatic GPU acceleration**: CUDA kernels with performance monitoring (50-100 tok/s)
+- **Automatic GPU acceleration**: CUDA kernels with performance monitoring (alpha)
 - **Metal acceleration**: macOS/iOS GPU via `feature = "metal"` (#992)
 - **Vulkan compute**: Cross-platform GPU via `feature = "vulkan"` (#993)
 - **Intel oneAPI**: Intel CPU/GPU acceleration via `feature = "oneapi"` (#986)
 - **ROCm support**: AMD GPU detection via `rocm_available` field in `DeviceProbe` (#995)
-- **Transparent CPU fallback**: Graceful degradation with maintained accuracy (10-20 tok/s)
+- **Transparent CPU fallback**: Graceful degradation with maintained accuracy (SIMD-optimised)
 - **Memory optimization**: GPU memory leak detection and efficient allocation
 - **Feature gating**: Proper `#[cfg(feature = "gpu")]` guards for CPU-only builds
 - **Strict Mode Enforcement**: `BITNET_STRICT_MODE=1` prevents mock fallbacks
@@ -255,7 +265,7 @@ cargo test -p bitnet-quantization --no-default-features --features cpu test_simd
 
 ## Strict Mode Enforcement (Issue #261 - AC2, AC6)
 
-BitNet-rs provides comprehensive strict mode controls to eliminate mock inference paths and ensure production-ready quantized computation:
+BitNet-rs provides comprehensive strict mode controls to eliminate mock inference paths and ensure real quantized computation:
 
 ### Primary Strict Mode Configuration
 

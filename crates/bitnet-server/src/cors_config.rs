@@ -103,13 +103,13 @@ impl CorsConfig {
         let mut headers = Vec::new();
 
         // Access-Control-Allow-Origin
-        if let Some(origin) = request_origin {
-            if self.is_origin_allowed(origin) {
-                if self.allowed_origins.iter().any(|o| o == "*") && !self.allow_credentials {
-                    headers.push(("Access-Control-Allow-Origin".into(), "*".into()));
-                } else {
-                    headers.push(("Access-Control-Allow-Origin".into(), origin.into()));
-                }
+        if let Some(origin) = request_origin
+            && self.is_origin_allowed(origin)
+        {
+            if self.allowed_origins.iter().any(|o| o == "*") && !self.allow_credentials {
+                headers.push(("Access-Control-Allow-Origin".into(), "*".into()));
+            } else {
+                headers.push(("Access-Control-Allow-Origin".into(), origin.into()));
             }
         }
 

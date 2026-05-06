@@ -28,6 +28,7 @@ const BUFFER_ALIGNMENT: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 enum GpuCounterKind {
     Timestamp,
     VertexInvocations,
@@ -277,7 +278,7 @@ impl PipelineStats {
 
 fn ceil_div(a: u32, b: u32) -> u32 {
     assert_ne!(b, 0);
-    (a + b - 1) / b
+    a.div_ceil(b)
 }
 
 fn optimal_threadgroup_1d(total: u32) -> u32 {
@@ -287,7 +288,7 @@ fn optimal_threadgroup_1d(total: u32) -> u32 {
     let mut best = SIMD_WIDTH;
     let mut tg = SIMD_WIDTH;
     while tg <= MAX_THREADS_PER_THREADGROUP && tg <= total {
-        if tg % SIMD_WIDTH == 0 {
+        if tg.is_multiple_of(SIMD_WIDTH) {
             best = tg;
         }
         tg += SIMD_WIDTH;
@@ -326,9 +327,9 @@ fn optimal_threadgroup_3d(x: u32, y: u32, z: u32) -> (u32, u32, u32) {
     if x == 0 || y == 0 || z == 0 {
         return (0, 0, 0);
     }
-    let tx = x.min(8).max(1);
-    let ty = y.min(8).max(1);
-    let tz = z.min(4).max(1);
+    let tx = x.clamp(1, 8);
+    let ty = y.clamp(1, 8);
+    let tz = z.clamp(1, 4);
     let product = tx * ty * tz;
     if product > MAX_THREADS_PER_THREADGROUP {
         return (SIMD_WIDTH, 1, 1);
@@ -371,7 +372,7 @@ fn estimate_bank_conflicts(threads: u32, stride_words: u32, banks: u32) -> u32 {
         hit[bank as usize] += 1;
     }
     let max_hit = hit.iter().max().copied().unwrap_or(1);
-    if max_hit > 1 { max_hit - 1 } else { 0 }
+    max_hit.saturating_sub(1)
 }
 
 fn estimate_cache_hit_ratio(working_set_bytes: usize, cache_size_bytes: usize) -> f64 {
@@ -564,18 +565,19 @@ fn optimal_batch_size(
     if element_bytes == 0 || compute_per_element_us <= 0.0 {
         return 0;
     }
-    let max_by_memory = available_memory / element_bytes;
+    let max_by_memory = (available_memory / element_bytes).max(1);
     // Amortise launch overhead: batch_size * compute >= 10 * overhead
     let min_for_amortisation =
         ((10.0 * overhead_per_launch_us) / compute_per_element_us).ceil() as usize;
     // Saturate GPU cores
     let min_for_saturation = (gpu_cores as usize) * (SIMD_WIDTH as usize);
     let ideal = min_for_amortisation.max(min_for_saturation);
-    ideal.min(max_by_memory).max(1)
+    ideal.clamp(1, max_by_memory)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 enum ComputeRegime {
     MemoryBound,
     ComputeBound,
@@ -912,7 +914,7 @@ fn occupancy_shared_memory_limits() {
 fn occupancy_simd_aligned_threadgroup() {
     let occ = calculate_occupancy(SIMD_WIDTH, 16, 0, 16384, 32768, 4);
     assert!(occ > 0.0);
-    assert!(SIMD_WIDTH % 32 == 0, "SIMD width should be 32");
+    assert!(SIMD_WIDTH.is_multiple_of(32), "SIMD width should be 32");
 }
 
 #[test]
@@ -1049,7 +1051,7 @@ fn dispatch_optimal_1d_small() {
 fn dispatch_optimal_1d_large() {
     let tg = optimal_threadgroup_1d(100_000);
     assert!(tg <= MAX_THREADS_PER_THREADGROUP);
-    assert!(tg % SIMD_WIDTH == 0);
+    assert!(tg.is_multiple_of(SIMD_WIDTH));
 }
 
 #[test]
@@ -1532,12 +1534,12 @@ fn regression_exact_threshold_boundary() {
 
 #[test]
 fn regression_multi_kernel_suite() {
-    let baselines = vec![
+    let baselines = [
         PerfBaseline { name: "matmul".into(), throughput: 100.0, latency_us: 50.0 },
         PerfBaseline { name: "attention".into(), throughput: 80.0, latency_us: 60.0 },
         PerfBaseline { name: "softmax".into(), throughput: 200.0, latency_us: 10.0 },
     ];
-    let measured = vec![(105.0, 48.0), (75.0, 62.0), (195.0, 10.5)];
+    let measured = [(105.0, 48.0), (75.0, 62.0), (195.0, 10.5)];
     let regressions: Vec<_> = baselines
         .iter()
         .zip(measured.iter())

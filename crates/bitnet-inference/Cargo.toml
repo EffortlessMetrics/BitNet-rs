@@ -69,7 +69,7 @@ bitnet-test-support.workspace = true
 insta.workspace = true
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
 bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 
 [[bench]]
 name = "dense_ops"
@@ -78,12 +78,12 @@ required-features = ["bench"]
 
 [features]
 default = []
-cpu = ["bitnet-kernels/cpu-optimized"]
+cpu = ["bitnet-kernels/cpu", "bitnet-kernels/cpu-optimized"]
 cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]
 metal = ["bitnet-common/metal", "bitnet-models/metal"]
 npu-backend = ["bitnet-kernels/npu-backend", "metal"]
-gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
+gpu = ["cuda"]
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
 opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl", "bitnet-quantization/opencl"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]

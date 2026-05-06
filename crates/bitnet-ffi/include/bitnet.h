@@ -1,10 +1,10 @@
 /**
  * @file bitnet.h
- * @brief BitNet C API - Drop-in replacement for BitNet C++ bindings
+ * @brief BitNet C API - Compatible with BitNet C++ bindings
  *
- * This header provides a comprehensive C API that serves as a drop-in replacement
- * for the existing BitNet C++ bindings. It maintains exact signature compatibility
- * while providing enhanced error handling, thread safety, and performance monitoring.
+ * This header provides a C API compatible with the BitNet C++ bindings.
+ * It targets signature compatibility while providing enhanced error handling,
+ * thread safety, and performance monitoring. CI validation is pending.
  *
  * @version 0.1.0
  * @author BitNet Contributors

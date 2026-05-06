@@ -134,7 +134,7 @@ fn validate_workgroup_simd_aligned(
     limits: &AppleSiliconLimits,
 ) -> Result<(), MetalLimitError> {
     validate_workgroup(config, limits)?;
-    if config.width % limits.simd_width != 0 && !config.width.is_power_of_two() {
+    if !config.width.is_multiple_of(limits.simd_width) && !config.width.is_power_of_two() {
         return Err(MetalLimitError::NotSimdAligned {
             dim: config.width,
             simd_width: limits.simd_width,
@@ -172,7 +172,7 @@ fn ceil_div(total: u64, group_size: u32) -> Result<u64, MetalLimitError> {
         return Err(MetalLimitError::ZeroDimension);
     }
     let g = group_size as u64;
-    Ok((total + g - 1) / g)
+    Ok(total.div_ceil(g))
 }
 
 /// Calculate a 1-D dispatch for `total_elements` using `threadgroup_size`.
@@ -255,7 +255,7 @@ fn optimal_threadgroup_1d(total: u64) -> u32 {
         return 0;
     }
     let clamped = total.min(MAX_THREADS_PER_THREADGROUP as u64) as u32;
-    let rounded = ((clamped + SIMD_WIDTH - 1) / SIMD_WIDTH) * SIMD_WIDTH;
+    let rounded = clamped.div_ceil(SIMD_WIDTH) * SIMD_WIDTH;
     rounded.min(MAX_THREADS_PER_THREADGROUP)
 }
 

@@ -335,6 +335,12 @@ pub struct OnlineSoftmaxState {
     pub sum: f32,
 }
 
+impl Default for OnlineSoftmaxState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OnlineSoftmaxState {
     /// Create a new empty state.
     #[inline]
@@ -347,7 +353,7 @@ impl OnlineSoftmaxState {
     pub fn update(&mut self, val: f32) {
         if val > self.max {
             // Rescale the existing sum for the new max.
-            self.sum = self.sum * fast_exp_scalar(self.max - val);
+            self.sum *= fast_exp_scalar(self.max - val);
             self.max = val;
         }
         self.sum += fast_exp_scalar(val - self.max);

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"gpu_coverage={:.2}\", reg.gpu_coverage())"
+---
+gpu_coverage=1.00

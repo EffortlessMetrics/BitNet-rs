@@ -218,7 +218,7 @@ ls -lh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 **Solution:**
 - Increase timeout: `CROSSVAL_TIMEOUT_SECS=600 ./scripts/run_crossval_sweep.sh ...`
-- Or use I2_S BitNet32-F16 models for 10-20× faster inference
+- Or use I2_S BitNet32-F16 models for faster inference with SIMD optimization
 
 ### Permission Denied
 **Solution:** Make script executable:

@@ -154,7 +154,7 @@ pub fn neon_gemv(a: &[f32], x: &[f32], m: usize, k: usize) -> Vec<f32> {
     let mut y = vec![0.0f32; m];
     let k4 = k - k % 4;
 
-    for i in 0..m {
+    for (i, y_val) in y.iter_mut().enumerate().take(m) {
         unsafe {
             let mut acc = vdupq_n_f32(0.0);
             let row_base = i * k;
@@ -170,7 +170,7 @@ pub fn neon_gemv(a: &[f32], x: &[f32], m: usize, k: usize) -> Vec<f32> {
             for p in k4..k {
                 sum += a[row_base + p] * x[p];
             }
-            y[i] = sum;
+            *y_val = sum;
         }
     }
 
@@ -188,9 +188,9 @@ pub fn neon_outer_product_update(c: &mut [f32], a: &[f32], b: &[f32], m: usize, 
 
     let n4 = n - n % 4;
 
-    for i in 0..m {
+    for (i, &a_val) in a.iter().enumerate().take(m) {
         unsafe {
-            let va = vdupq_n_f32(a[i]);
+            let va = vdupq_n_f32(a_val);
             let row_base = i * n;
             let mut j = 0;
             while j < n4 {
@@ -202,7 +202,7 @@ pub fn neon_outer_product_update(c: &mut [f32], a: &[f32], b: &[f32], m: usize, 
             }
             // Scalar tail
             for j in n4..n {
-                c[row_base + j] += a[i] * b[j];
+                c[row_base + j] += a_val * b[j];
             }
         }
     }

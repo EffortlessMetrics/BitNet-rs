@@ -9,9 +9,6 @@
 //! LayerNorm degenerate inputs).
 
 #![cfg(target_os = "macos")]
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 #![allow(clippy::manual_div_ceil)]
 #![allow(clippy::useless_vec)]
 #![allow(clippy::approx_constant)]
@@ -198,7 +195,7 @@ mod softmax_stability {
         let sum: f32 = output.iter().sum();
         approx_eq(sum, 1.0, 1e-6);
         for &v in &output {
-            assert!(v >= 0.0 && v <= 1.0);
+            assert!((0.0..=1.0).contains(&v));
         }
     }
 

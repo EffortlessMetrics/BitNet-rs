@@ -24,7 +24,7 @@ pub fn neon_build_rope_cache(
     max_seq_len: usize,
     base: f32,
 ) -> (Vec<f32>, Vec<f32>) {
-    assert!(head_dim > 0 && head_dim % 2 == 0, "head_dim must be even and non-zero");
+    assert!(head_dim > 0 && head_dim.is_multiple_of(2), "head_dim must be even and non-zero");
     let half_dim = head_dim / 2;
     let total = max_seq_len * half_dim;
     let mut cos_cache = Vec::with_capacity(total);
@@ -64,7 +64,7 @@ pub fn neon_rope_interleaved(
     head_dim: usize,
     seq_pos: usize,
 ) {
-    assert!(head_dim % 2 == 0, "head_dim must be even");
+    assert!(head_dim.is_multiple_of(2), "head_dim must be even");
     assert!(x.len() >= head_dim, "x too short for head_dim");
     let half_dim = head_dim / 2;
     let table_offset = seq_pos * half_dim;
@@ -131,7 +131,7 @@ pub fn neon_rope_half_rotary(
     head_dim: usize,
     seq_pos: usize,
 ) {
-    assert!(head_dim % 2 == 0, "head_dim must be even");
+    assert!(head_dim.is_multiple_of(2), "head_dim must be even");
     assert!(x.len() >= head_dim, "x too short for head_dim");
     let half_dim = head_dim / 2;
     let table_offset = seq_pos * half_dim;

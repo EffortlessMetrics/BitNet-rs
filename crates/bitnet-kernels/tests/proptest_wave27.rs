@@ -81,7 +81,7 @@ proptest! {
     ) {
         let input = vec![0.0f32; batch * dim];
         let chunks = micro_batch_split(&input, batch, dim, micro).unwrap();
-        let expected = (batch + micro - 1) / micro;
+        let expected = batch.div_ceil(micro);
         prop_assert_eq!(chunks.len(), expected);
     }
 
@@ -209,7 +209,7 @@ proptest! {
         let out = positional_embedding(seq, dim_even);
         for (i, &v) in out.iter().enumerate() {
             prop_assert!(
-                v >= -1.0 - 1e-6 && v <= 1.0 + 1e-6,
+                (-1.0 - 1e-6..=1.0 + 1e-6).contains(&v),
                 "positional_embedding[{i}] = {v} out of [-1,1]"
             );
         }
@@ -437,7 +437,7 @@ proptest! {
         softmax_cpu(&input, &mut out, &config).unwrap();
         for (i, &val) in out.iter().enumerate() {
             prop_assert!(
-                val >= 0.0 && val <= 1.0 + 1e-6,
+                (0.0..=1.0 + 1e-6).contains(&val),
                 "softmax[{i}] = {val} not in [0,1]"
             );
         }
@@ -860,7 +860,7 @@ proptest! {
     #[test]
     fn prop_sigmoid_unit_interval(x in -100.0f32..100.0) {
         let s = sigmoid(x);
-        prop_assert!(s >= 0.0 && s <= 1.0, "sigmoid({x}) = {s} not in [0,1]");
+        prop_assert!((0.0..=1.0).contains(&s), "sigmoid({x}) = {s} not in [0,1]");
     }
 
     /// layer_norm with all-equal input produces all-zero (or very small) output.

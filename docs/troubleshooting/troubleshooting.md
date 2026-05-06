@@ -1,6 +1,6 @@
 # BitNet-rs Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with **BitNet-rs**, the primary, production-ready Rust implementation of BitNet inference.
+This guide helps you diagnose and resolve common issues with **BitNet-rs**, the Rust implementation of BitNet inference (pre-alpha).
 
 > **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet-rs for better reliability, performance, and support. See our [Migration Guide](../migration-guide.md).
 
@@ -621,7 +621,7 @@ Async runtime panic: Cannot start a runtime from within a runtime
 
 **Solutions:**
 
-BitNet-rs now includes production-ready threading utilities with robust error handling:
+BitNet-rs includes threading utilities with robust error handling:
 
 ```bash
 # Test thread pool robustness (validates PR #179 fixes)

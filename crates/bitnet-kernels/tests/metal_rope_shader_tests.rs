@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::manual_div_ceil, clippy::unnecessary_cast, clippy::needless_range_loop)]
 //! Metal RoPE (Rotary Position Embedding) shader tests for Apple Silicon.
 //!
@@ -7,8 +8,6 @@
 //! via WGSL compute shaders on the Metal backend.
 //!
 //! All tests are `#[ignore]` because CI runs on Linux.
-
-#![cfg(target_os = "macos")]
 
 use std::f32::consts::PI;
 use wgpu::util::DeviceExt;

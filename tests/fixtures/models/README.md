@@ -102,7 +102,7 @@ The tests use auto-discovery for tokenizers:
 
 ```yaml
 - name: Cache Models
-  uses: actions/cache@v3
+  uses: actions/cache@...  # Use SHA-pinned version in real workflows
   with:
     path: models/
     key: bitnet-models-${{ hashFiles('models/models.lock.json') }}
@@ -139,7 +139,7 @@ ls -la ../../models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 # Recreate symlink with absolute path
 rm tiny-bitnet.gguf
-ln -s /home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf tiny-bitnet.gguf
+ln -s "$PWD/../../models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" tiny-bitnet.gguf
 ```
 
 ### Model Checksum Mismatch
@@ -159,7 +159,7 @@ cat tiny-bitnet.gguf.sha256
 echo $BITNET_GGUF
 
 # Use absolute path
-export BITNET_GGUF=/home/steven/code/Rust/BitNet-rs/tests/fixtures/models/tiny-bitnet.gguf
+export BITNET_GGUF="$PWD/tests/fixtures/models/tiny-bitnet.gguf"
 ```
 
 ## Model Metadata
@@ -187,6 +187,6 @@ File Size: 1.2GB (compressed from ~6GB FP32)
 
 ## Related Documentation
 
-- **Main Fixtures README:** `/home/steven/code/Rust/BitNet-rs/tests/fixtures/README.md`
+- **Main Fixtures README:** `tests/fixtures/README.md`
 - **Model Validation Guide:** `docs/howto/validate-models.md`
 - **GGUF Format Reference:** `docs/reference/gguf-format.md` (if exists)

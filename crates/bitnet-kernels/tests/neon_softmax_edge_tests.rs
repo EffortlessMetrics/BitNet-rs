@@ -6,7 +6,6 @@
 //! out-of-place computation, and temperature scaling edge cases.
 
 #![cfg(feature = "cpu")]
-#![allow(dead_code, unused_imports)]
 
 // ── Numerical stability: overflow / underflow ──────────────────────────
 

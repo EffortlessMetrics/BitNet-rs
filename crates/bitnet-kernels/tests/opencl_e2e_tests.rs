@@ -710,7 +710,7 @@ fn e2e_kernel_source_registry_feeds_cache() {
         let key = KernelCacheKey::from_source(
             source.source,
             "Intel Arc A770",
-            &registry.build_options_string(id),
+            registry.build_options_string(id),
             "OpenCL 3.0",
         );
 

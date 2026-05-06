@@ -483,13 +483,13 @@ impl MetalResourcePool {
 
     fn acquire_buffer(&mut self, size: usize) -> MetalBuffer {
         let class = SizeClass::from_size(size);
-        if let Some(pool) = self.buffer_pools.get_mut(&class) {
-            if let Some(entry) = pool.pop_front() {
-                self.hits += 1;
-                let mut buf = entry.buffer;
-                buf.state = BufferState::Allocated;
-                return buf;
-            }
+        if let Some(pool) = self.buffer_pools.get_mut(&class)
+            && let Some(entry) = pool.pop_front()
+        {
+            self.hits += 1;
+            let mut buf = entry.buffer;
+            buf.state = BufferState::Allocated;
+            return buf;
         }
         self.misses += 1;
         MetalBuffer::new(class.0, "pool_alloc")
@@ -518,12 +518,12 @@ impl MetalResourcePool {
         mips: u32,
     ) -> MetalTexture {
         let key = (w, h, format as u32);
-        if let Some(pool) = self.texture_cache.get_mut(&key) {
-            if let Some(mut tex) = pool.pop_front() {
-                self.hits += 1;
-                tex.state = TextureState::Created;
-                return tex;
-            }
+        if let Some(pool) = self.texture_cache.get_mut(&key)
+            && let Some(mut tex) = pool.pop_front()
+        {
+            self.hits += 1;
+            tex.state = TextureState::Created;
+            return tex;
         }
         self.misses += 1;
         MetalTexture::new(w, h, format, usage, mips, "pool_tex")
@@ -724,6 +724,7 @@ enum DependencyKind {
 
 /// Barrier type for synchronization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 enum BarrierType {
     BufferBarrier,
     TextureBarrier,
@@ -816,12 +817,12 @@ impl DependencyGraph {
         while let Some(node) = queue.pop_front() {
             order.push(node);
             for e in &self.edges {
-                if e.source_id == node {
-                    if let Some(d) = in_degree.get_mut(&e.target_id) {
-                        *d -= 1;
-                        if *d == 0 {
-                            queue.push_back(e.target_id);
-                        }
+                if e.source_id == node
+                    && let Some(d) = in_degree.get_mut(&e.target_id)
+                {
+                    *d -= 1;
+                    if *d == 0 {
+                        queue.push_back(e.target_id);
                     }
                 }
             }

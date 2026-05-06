@@ -445,4 +445,4 @@ When reporting issues, include:
 
 ---
 
-**Ready to deploy?** Start with `./deploy.sh deploy` for a production-ready bitnet-rs deployment!
+**Ready to deploy?** Start with `./deploy.sh deploy` for a bitnet-rs deployment!

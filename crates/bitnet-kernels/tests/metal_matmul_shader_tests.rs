@@ -1,3 +1,4 @@
+#![cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #![allow(clippy::too_many_arguments, clippy::manual_div_ceil, unused_variables)]
 //! Tests for Metal matrix multiplication compute shaders on Apple Silicon.
 //!
@@ -6,8 +7,6 @@
 //! mixed-precision, buffer alignment, dispatch sizing, numerical stability,
 //! and edge cases — all dispatched via WGSL compute shaders on the Metal
 //! backend.
-
-#![cfg(target_os = "macos")]
 
 use wgpu::util::DeviceExt;
 

@@ -65,7 +65,7 @@ nix build .#checks.bitnet-server-receipts
 ### Packages (Buildable Binaries)
 
 #### `packages.bitnet-server` (default)
-**Production-ready inference server**
+**Inference server (pre-alpha)**
 - Features: `cpu` (CPU-only for reproducibility)
 - Binary: `result/bin/bitnet-server`
 

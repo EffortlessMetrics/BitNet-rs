@@ -53,7 +53,7 @@ fuzz_target!(|input: CalibrationInput| {
 
     // Invariant 4: Multiple updates accumulate correctly
     let mut stats2 = CalibrationStats::new();
-    for chunk in clean.chunks(4.max(1)) {
+    for chunk in clean.chunks(4) {
         stats2.update(chunk);
     }
     assert_eq!(stats2.count, stats.count);

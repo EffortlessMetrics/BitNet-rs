@@ -184,7 +184,7 @@ fn select_workgroup(op: OpKind, m: u32, n: u32) -> WorkgroupSize {
                 .iter()
                 .copied()
                 .find(|&t| t * t <= MAX_THREADS_PER_THREADGROUP)
-                .and_then(|t| WorkgroupSize::tile(t))
+                .and_then(WorkgroupSize::tile)
                 .unwrap()
         }
         OpKind::Attention => {

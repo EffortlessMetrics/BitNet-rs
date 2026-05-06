@@ -34,6 +34,7 @@ impl TestTensor {
         Self { shape, data: None, strides: None, alignment: 64 }
     }
 
+    #[allow(dead_code)]
     fn with_alignment(mut self, align: usize) -> Self {
         self.alignment = align;
         self
@@ -218,7 +219,7 @@ fn test_given_pool_budget_when_allocated_within_limit_then_success() {
     let buf = pool.allocate(1024);
 
     // Then allocation succeeds and stats reflect it
-    assert!(buf.as_f32_slice().len() > 0);
+    assert!(!buf.as_f32_slice().is_empty());
     let stats = pool.stats();
     assert!(stats.active_bytes > 0);
 }

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: cfg
+---
+EmbeddingConfig {
+    vocab_size: 32000,
+    embedding_dim: 2048,
+    padding_idx: None,
+}

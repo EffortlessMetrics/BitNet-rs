@@ -1,6 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables, non_camel_case_types, unused_mut)]
 #![cfg(feature = "cpu")]
-#![allow(dead_code, unused_imports, unused_variables)]
 //! Metal GPU buffer management TDD scaffolds for Apple Silicon.
 //!
 //! Covers buffer allocation strategies, alignment requirements, lifecycle

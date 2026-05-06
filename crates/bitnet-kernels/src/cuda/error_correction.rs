@@ -709,7 +709,7 @@ impl ECCLaunchConfig {
     /// threads per block.
     pub fn for_elements(n: u32) -> Self {
         let block_dim = 256;
-        let grid_dim = (n + block_dim - 1) / block_dim;
+        let grid_dim = n.div_ceil(block_dim);
         Self { grid_dim, block_dim, n }
     }
 }

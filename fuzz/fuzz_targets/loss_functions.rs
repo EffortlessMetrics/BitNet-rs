@@ -73,17 +73,16 @@ fuzz_target!(|input: LossFuzzInput| {
                 return;
             }
 
-            match cross_entropy_loss(&logits, &class_targets, num_classes, reduction) {
-                Ok((scalar, per_sample)) => {
-                    assert_eq!(per_sample.len(), batch_size);
-                    // Cross-entropy per-sample losses should be non-negative.
-                    for (i, &l) in per_sample.iter().enumerate() {
-                        assert!(l >= -1e-5, "CE per-sample[{i}] negative: {l}");
-                        assert!(l.is_finite(), "CE per-sample[{i}] non-finite: {l}");
-                    }
-                    assert!(scalar.is_finite(), "CE scalar non-finite: {scalar}");
+            if let Ok((scalar, per_sample)) =
+                cross_entropy_loss(&logits, &class_targets, num_classes, reduction)
+            {
+                assert_eq!(per_sample.len(), batch_size);
+                // Cross-entropy per-sample losses should be non-negative.
+                for (i, &l) in per_sample.iter().enumerate() {
+                    assert!(l >= -1e-5, "CE per-sample[{i}] negative: {l}");
+                    assert!(l.is_finite(), "CE per-sample[{i}] non-finite: {l}");
                 }
-                Err(_) => {}
+                assert!(scalar.is_finite(), "CE scalar non-finite: {scalar}");
             }
         }
         1 => {
@@ -99,12 +98,9 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = mse_loss(p, t, reduction);
                 return;
             }
-            match mse_loss(p, t, reduction) {
-                Ok(loss) => {
-                    assert!(loss >= 0.0, "MSE negative: {loss}");
-                    assert!(loss.is_finite(), "MSE non-finite: {loss}");
-                }
-                Err(_) => {}
+            if let Ok(loss) = mse_loss(p, t, reduction) {
+                assert!(loss >= 0.0, "MSE negative: {loss}");
+                assert!(loss.is_finite(), "MSE non-finite: {loss}");
             }
         }
         2 => {
@@ -120,12 +116,9 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = l1_loss(p, t, reduction);
                 return;
             }
-            match l1_loss(p, t, reduction) {
-                Ok(loss) => {
-                    assert!(loss >= 0.0, "L1 negative: {loss}");
-                    assert!(loss.is_finite(), "L1 non-finite: {loss}");
-                }
-                Err(_) => {}
+            if let Ok(loss) = l1_loss(p, t, reduction) {
+                assert!(loss >= 0.0, "L1 negative: {loss}");
+                assert!(loss.is_finite(), "L1 non-finite: {loss}");
             }
         }
         3 => {
@@ -141,11 +134,8 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = binary_cross_entropy(p, t, reduction);
                 return;
             }
-            match binary_cross_entropy(p, t, reduction) {
-                Ok(loss) => {
-                    assert!(loss.is_finite(), "BCE non-finite: {loss}");
-                }
-                Err(_) => {}
+            if let Ok(loss) = binary_cross_entropy(p, t, reduction) {
+                assert!(loss.is_finite(), "BCE non-finite: {loss}");
             }
         }
         4 => {
@@ -165,12 +155,9 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = smooth_l1_loss(p, t, beta, reduction);
                 return;
             }
-            match smooth_l1_loss(p, t, beta, reduction) {
-                Ok(loss) => {
-                    assert!(loss >= 0.0, "Smooth L1 negative: {loss}");
-                    assert!(loss.is_finite(), "Smooth L1 non-finite: {loss}");
-                }
-                Err(_) => {}
+            if let Ok(loss) = smooth_l1_loss(p, t, beta, reduction) {
+                assert!(loss >= 0.0, "Smooth L1 negative: {loss}");
+                assert!(loss.is_finite(), "Smooth L1 non-finite: {loss}");
             }
         }
         5 => {
@@ -202,15 +189,12 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = cosine_similarity_loss(a, b);
                 return;
             }
-            match cosine_similarity_loss(a, b) {
-                Ok(loss) => {
-                    assert!(loss.is_finite(), "cosine loss non-finite: {loss}");
-                    assert!(
-                        loss >= -1e-5 && loss <= 2.0 + 1e-5,
-                        "cosine loss out of [0,2]: {loss}"
-                    );
-                }
-                Err(_) => {}
+            if let Ok(loss) = cosine_similarity_loss(a, b) {
+                assert!(loss.is_finite(), "cosine loss non-finite: {loss}");
+                assert!(
+                    ((-1e-5)..=(2.0 + 1e-5)).contains(&loss),
+                    "cosine loss out of [0,2]: {loss}"
+                );
             }
         }
         _ => {
@@ -232,12 +216,9 @@ fuzz_target!(|input: LossFuzzInput| {
                 let _ = contrastive_loss(a, b, label, margin);
                 return;
             }
-            match contrastive_loss(a, b, label, margin) {
-                Ok(loss) => {
-                    assert!(loss >= 0.0, "contrastive loss negative: {loss}");
-                    assert!(loss.is_finite(), "contrastive loss non-finite: {loss}");
-                }
-                Err(_) => {}
+            if let Ok(loss) = contrastive_loss(a, b, label, margin) {
+                assert!(loss >= 0.0, "contrastive loss negative: {loss}");
+                assert!(loss.is_finite(), "contrastive loss non-finite: {loss}");
             }
         }
     }

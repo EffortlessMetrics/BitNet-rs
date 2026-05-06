@@ -75,27 +75,27 @@ fuzz_target!(|input: ElementWiseChainInput| {
             1 => {
                 // Residual add.
                 let mut buf = current.clone();
-                if buf.len() == b.len() {
-                    if add_residual(&mut buf, b).is_ok() {
-                        current = buf;
-                    }
+                if buf.len() == b.len() && add_residual(&mut buf, b).is_ok() {
+                    current = buf;
                 }
             }
             2 => {
                 // Scaled residual add.
                 let mut buf = current.clone();
-                if buf.len() == b.len() && scale.is_finite() {
-                    if add_residual_scaled(&mut buf, b, scale).is_ok() {
-                        current = buf;
-                    }
+                if buf.len() == b.len()
+                    && scale.is_finite()
+                    && add_residual_scaled(&mut buf, b, scale).is_ok()
+                {
+                    current = buf;
                 }
             }
             3 => {
                 // Fused scale+add.
-                if current.len() == b.len() && scale.is_finite() {
-                    if let Ok(out) = fused_scale_add(&current, b, scale) {
-                        current = out;
-                    }
+                if current.len() == b.len()
+                    && scale.is_finite()
+                    && let Ok(out) = fused_scale_add(&current, b, scale)
+                {
+                    current = out;
                 }
             }
             4 => {

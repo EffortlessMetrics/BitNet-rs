@@ -48,14 +48,10 @@ fuzz_target!(|input: SamplingInput| {
 
     let mut strategy = SamplingStrategy::new(config);
 
-    match strategy.sample(&logits, &context_tokens) {
-        Ok(token_id) => {
-            assert!(
-                (token_id as usize) < vocab_size,
-                "sample returned out-of-bounds token {token_id} for vocab size {vocab_size}",
-            );
-        }
-        // Errors are acceptable (all-NaN input, empty after filtering, etc.).
-        Err(_) => {}
+    if let Ok(token_id) = strategy.sample(&logits, &context_tokens) {
+        assert!(
+            (token_id as usize) < vocab_size,
+            "sample returned out-of-bounds token {token_id} for vocab size {vocab_size}",
+        );
     }
 });

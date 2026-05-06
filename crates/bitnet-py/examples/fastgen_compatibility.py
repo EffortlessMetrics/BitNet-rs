@@ -7,7 +7,7 @@ replacement for the original FastGen implementation, maintaining full
 API compatibility while providing improved performance.
 """
 
-import bitnet_py as fast  # Drop-in replacement for original 'import model as fast'
+import bitnet_py as fast  # Compatible API for original 'import model as fast'
 import time
 import sys
 

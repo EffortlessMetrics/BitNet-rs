@@ -1,18 +1,33 @@
-//! # bitnet-rs - High-Performance 1-bit LLM Inference
+//! # bitnet-rs — 1-bit LLM Inference Engine
 //!
-//! bitnet-rs is a high-performance Rust implementation of `BitNet` 1-bit Large Language Model inference,
-//! providing drop-in compatibility with the original Python/C++ implementation while achieving
-//! superior performance and safety.
+//! Pre-alpha (v0.2.1-dev) Rust inference engine for `BitNet` 1-bit large language models.
 //!
-//! ## Features
+//! ## Status
 //!
-//! - **High Performance**: Optimized SIMD kernels for `x86_64` (AVX2/AVX-512) and ARM64 (NEON)
-//! - **Cross-Platform**: Support for Linux, macOS, and Windows
-//! - **Multiple Backends**: CPU and GPU (CUDA) inference engines
-//! - **Format Support**: GGUF, `SafeTensors`, and `HuggingFace` model formats
-//! - **Quantization**: `I2_S`, TL1 (ARM), and TL2 (x86) quantization algorithms
-//! - **Language Bindings**: C API, Python bindings, and WebAssembly support
-//! - **Production Ready**: Comprehensive testing, benchmarking, and monitoring
+//! This is **pre-alpha software**. Correctness, performance, and validation work is ongoing.
+//! CPU inference with SIMD optimization works; GPU backends are scaffolded but not validated.
+//! Do not use in production.
+//!
+//! ## Feature Flags
+//!
+//! Default features are **empty** — always specify features explicitly:
+//!
+//! - `cpu`: SIMD-optimised CPU inference (AVX2 / AVX-512 / NEON)
+//! - `gpu`: GPU acceleration (CUDA umbrella; requires CUDA 12.x)
+//! - `full-cli`: Enable all CLI subcommands
+//! - `ffi`: C++ FFI bridge for cross-validation
+//! - `fixtures`: GGUF fixture-based integration tests (test-only)
+//!
+//! ## Architecture
+//!
+//! The workspace contains ~200 crates. Key crates:
+//!
+//! - [`bitnet_common`]: Shared types, config, error types
+//! - [`bitnet_models`]: GGUF / `SafeTensors` model loading
+//! - [`bitnet_quantization`]: `I2_S`, `TL1`, `TL2` quantization
+//! - [`bitnet_kernels`]: AVX2 / AVX-512 / NEON / CUDA compute kernels
+//! - [`bitnet_inference`]: Autoregressive generation engine
+//! - [`bitnet_tokenizers`]: Universal tokenizer with auto-discovery
 //!
 //! ## Quick Start
 //!
@@ -20,58 +35,13 @@
 //! use bitnet::prelude::*;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create a BitNet model with default config
+//! // Create a BitNet model config (load tensors from GGUF in practice)
 //! let device = Device::Cpu;
 //! let config = BitNetConfig::default();
-//! let model = BitNetModel::new(config, device);
-//!
-//! // Note: This is a simplified example. In practice, you would load
-//! // tensors from a model file using the model loader.
-//!
-//! println!("BitNet model created successfully!");
+//! let _model = BitNetModel::new(config, device);
 //! # Ok(())
 //! # }
 //! ```
-//!
-//! ## Feature Flags
-//!
-//! bitnet-rs uses feature flags to enable optional functionality:
-//!
-//! - `cpu` (default): CPU inference with optimized kernels
-//! - `gpu`: GPU acceleration via CUDA
-//! - `python`: Python bindings via `PyO3`
-//! - `wasm`: WebAssembly support for browser deployment
-//! - `server`: HTTP server for inference API
-//! - `cli`: Command-line interface
-//! - `full`: Enable all features
-//!
-//! ## Architecture
-//!
-//! The library is organized into several crates:
-//!
-//! - [`bitnet_common`]: Shared types and utilities
-//! - [`bitnet_models`]: Model loading and definitions
-//! - [`bitnet_quantization`]: Quantization algorithms
-//! - [`bitnet_kernels`]: High-performance compute kernels
-//! - [`bitnet_inference`]: Inference engines
-//! - [`bitnet_tokenizers`]: Tokenization support
-//!
-//! ## Performance
-//!
-//! bitnet-rs achieves significant performance improvements over the original Python implementation:
-//!
-//! - **2-5x faster inference** through zero-cost abstractions and SIMD optimization
-//! - **Reduced memory footprint** via zero-copy operations and efficient memory management
-//! - **Better scalability** with async/await support and batch processing
-//!
-//! ## Safety
-//!
-//! The library follows Rust's safety principles:
-//!
-//! - Memory safety without garbage collection
-//! - Thread safety through the type system
-//! - Minimal unsafe code, isolated and documented
-//! - Comprehensive testing including property-based tests
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
@@ -114,7 +84,7 @@ pub mod prelude {
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Minimum supported Rust version
-pub const MSRV: &str = "1.90.0";
+pub const MSRV: &str = "1.92.0";
 
 /// Build information
 pub mod build_info {
@@ -153,12 +123,13 @@ mod tests {
         {
             assert!(!VERSION.is_empty());
         }
-        assert_eq!(VERSION, "0.1.2");
+        // Version is read from Cargo.toml via env!(); don't hardcode it here
+        assert!(VERSION.starts_with("0."), "expected 0.x version, got {VERSION}");
     }
 
     #[test]
     fn test_msrv() {
-        assert_eq!(MSRV, "1.90.0");
+        assert_eq!(MSRV, "1.92.0");
     }
 
     #[test]

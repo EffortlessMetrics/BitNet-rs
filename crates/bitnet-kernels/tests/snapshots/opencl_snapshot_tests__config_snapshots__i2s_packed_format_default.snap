@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: fmt
+---
+I2sPackedFormat {
+    values_per_byte: 4,
+    bits_per_value: 2,
+}

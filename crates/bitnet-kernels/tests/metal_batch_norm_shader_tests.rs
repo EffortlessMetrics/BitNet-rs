@@ -932,7 +932,7 @@ mod tests {
             let (gamma, beta) = learned_affine(channels);
             let running_mean = vec![0.1, 0.2, 0.3, 0.4];
             let running_var = vec![1.0, 1.5, 2.0, 2.5];
-            let single_input = make_input(1 * channels * spatial, 72.0);
+            let single_input = make_input(channels * spatial, 72.0);
             let out_single = batch_norm_inference_cpu(
                 &single_input,
                 &gamma,

@@ -862,7 +862,7 @@ fn precision_small_angle_accuracy() {
     let config = RopeConfig::new(dim, 4);
     let freqs = compute_frequencies(&config);
     // Position 1, last pair: should have very small angle
-    let idx = (1 * half + (half - 1)) * 2;
+    let idx = (half + (half - 1)) * 2;
     let c = freqs[idx];
     let s = freqs[idx + 1];
     // cos should be very close to 1, sin very close to 0 for small angles
@@ -1258,7 +1258,7 @@ fn gpu_rope_buffer_alignment_256() {
     let alignment = 256u64;
     let dim = 64;
     let buffer_size = (dim * 4) as u64; // f32 = 4 bytes
-    let aligned = (buffer_size + alignment - 1) / alignment * alignment;
+    let aligned = buffer_size.div_ceil(alignment) * alignment;
     assert_eq!(aligned % alignment, 0, "buffer should be 256-byte aligned");
 }
 
@@ -1299,5 +1299,5 @@ fn gpu_rope_interleaved_vs_split_parity() {
     let split = reference_rope_split(&data, dim, 5, DEFAULT_THETA);
     // Different layouts produce different results (not a bug)
     let diff: f32 = interleaved.iter().zip(split.iter()).map(|(a, b)| (a - b).abs()).sum();
-    assert!(diff > 1e-3 || diff < 1e-10, "layouts differ or data is trivial");
+    assert!(!(1e-10..=1e-3).contains(&diff), "layouts differ or data is trivial");
 }

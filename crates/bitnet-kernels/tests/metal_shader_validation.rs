@@ -146,7 +146,7 @@ fn test_metal_workgroup_sizes_valid() {
     }
 
     // Invalid: not powers of 2 or exceed limits
-    let invalid_configs = vec![
+    let invalid_configs = [
         MetalKernelConfig {
             workgroup_size: [3, 1, 1],
             entry_point: "kernel1".to_string(),
@@ -313,7 +313,7 @@ fn test_metal_simd_group_size() {
     assert_ne!(inefficient_size % APPLE_SILICON_SIMD_GROUP_SIZE, 0);
 
     // Verify SIMD group size bounds
-    assert!(APPLE_SILICON_SIMD_GROUP_SIZE <= METAL_MAX_THREADS_PER_THREADGROUP);
+    const { assert!(APPLE_SILICON_SIMD_GROUP_SIZE <= METAL_MAX_THREADS_PER_THREADGROUP) };
 }
 
 /// Test: Test format enum coverage for common Metal pixel formats
@@ -388,7 +388,7 @@ fn test_metal_argument_buffer_layout() {
     // Size should be 20 bytes (8 + 4 + 4 + 4), typically aligned to 16 or 32
     let size = std::mem::size_of::<ArgumentBuffer>();
     assert!(size >= 20);
-    assert!(size % 4 == 0);
+    assert!(size.is_multiple_of(4));
 
     // Verify buffer pointer alignment
     assert_eq!(arg_buffer.buffer_ptr % 8, 0);
@@ -479,7 +479,7 @@ fn is_power_of_two(n: u32) -> bool {
 
 /// Validate buffer alignment configuration
 fn validate_buffer_alignment(buffer: &MetalBufferConfig) -> Result<(), String> {
-    if buffer.size % METAL_BUFFER_ALIGNMENT != 0 {
+    if !buffer.size.is_multiple_of(METAL_BUFFER_ALIGNMENT) {
         return Err(format!(
             "Buffer size {} is not a multiple of {}",
             buffer.size, METAL_BUFFER_ALIGNMENT

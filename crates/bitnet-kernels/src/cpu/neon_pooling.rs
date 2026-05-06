@@ -81,7 +81,7 @@ unsafe fn max_pool1d_neon_inner(
     let out_len = pool1d_output_len(input_len, pool_size, stride);
     let ptr = input.as_ptr();
 
-    for idx in 0..out_len {
+    for (idx, out_val) in output.iter_mut().enumerate().take(out_len) {
         let base = idx * stride;
         let chunks = pool_size / 4;
         let remainder = pool_size % 4;
@@ -99,7 +99,7 @@ unsafe fn max_pool1d_neon_inner(
                 max_val = val;
             }
         }
-        output[idx] = max_val;
+        *out_val = max_val;
     }
 }
 
@@ -181,7 +181,7 @@ unsafe fn avg_pool1d_neon_inner(
     let ptr = input.as_ptr();
     let inv_k = 1.0 / pool_size as f32;
 
-    for idx in 0..out_len {
+    for (idx, out_val) in output.iter_mut().enumerate().take(out_len) {
         let base = idx * stride;
         let chunks = pool_size / 4;
         let remainder = pool_size % 4;
@@ -196,7 +196,7 @@ unsafe fn avg_pool1d_neon_inner(
         for r in 0..remainder {
             sum += unsafe { *ptr.add(base + chunks * 4 + r) };
         }
-        output[idx] = sum * inv_k;
+        *out_val = sum * inv_k;
     }
 }
 
@@ -274,7 +274,7 @@ unsafe fn global_avg_pool_neon_inner(
     let ptr = input.as_ptr();
     let inv_s = 1.0 / spatial_size as f32;
 
-    for ch in 0..channels {
+    for (ch, out_val) in output.iter_mut().enumerate().take(channels) {
         let base = ch * spatial_size;
         let chunks = spatial_size / 4;
         let remainder = spatial_size % 4;
@@ -289,7 +289,7 @@ unsafe fn global_avg_pool_neon_inner(
         for r in 0..remainder {
             sum += unsafe { *ptr.add(base + chunks * 4 + r) };
         }
-        output[ch] = sum * inv_s;
+        *out_val = sum * inv_s;
     }
 }
 
@@ -359,7 +359,7 @@ unsafe fn global_max_pool_neon_inner(
 ) {
     let ptr = input.as_ptr();
 
-    for ch in 0..channels {
+    for (ch, out_val) in output.iter_mut().enumerate().take(channels) {
         let base = ch * spatial_size;
         let chunks = spatial_size / 4;
         let remainder = spatial_size % 4;
@@ -377,7 +377,7 @@ unsafe fn global_max_pool_neon_inner(
                 max_val = val;
             }
         }
-        output[ch] = max_val;
+        *out_val = max_val;
     }
 }
 
@@ -448,7 +448,7 @@ unsafe fn adaptive_avg_pool1d_neon_inner(
 ) {
     let ptr = input.as_ptr();
 
-    for i in 0..output_len {
+    for (i, out_val) in output.iter_mut().enumerate().take(output_len) {
         let start = (i * input_len) / output_len;
         let end = ((i + 1) * input_len) / output_len;
         let bin_len = end - start;
@@ -466,7 +466,7 @@ unsafe fn adaptive_avg_pool1d_neon_inner(
         for r in 0..remainder {
             sum += unsafe { *ptr.add(start + chunks * 4 + r) };
         }
-        output[i] = sum / bin_len as f32;
+        *out_val = sum / bin_len as f32;
     }
 }
 

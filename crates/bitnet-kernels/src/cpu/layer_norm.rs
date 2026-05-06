@@ -44,6 +44,83 @@ impl Default for LayerNormConfig {
     }
 }
 
+// ── NEON-accelerated affine / RMS transforms (aarch64 only) ───────
+
+#[cfg(target_arch = "aarch64")]
+fn neon_affine_transform(
+    input: &[f32],
+    gamma: &[f32],
+    beta: Option<&[f32]>,
+    mean: f32,
+    inv_std: f32,
+    output: &mut [f32],
+) {
+    use std::arch::aarch64::*;
+    let n = input.len();
+    let chunks = n / 4;
+    let vmean = unsafe { vdupq_n_f32(mean) };
+    let vinv = unsafe { vdupq_n_f32(inv_std) };
+
+    match beta {
+        Some(beta) => {
+            for c in 0..chunks {
+                let off = c * 4;
+                unsafe {
+                    let x = vld1q_f32(input.as_ptr().add(off));
+                    let g = vld1q_f32(gamma.as_ptr().add(off));
+                    let b = vld1q_f32(beta.as_ptr().add(off));
+                    let centered = vsubq_f32(x, vmean);
+                    let normed = vmulq_f32(centered, vinv);
+                    let scaled = vmulq_f32(normed, g);
+                    let result = vaddq_f32(scaled, b);
+                    vst1q_f32(output.as_mut_ptr().add(off), result);
+                }
+            }
+            for i in (chunks * 4)..n {
+                output[i] = (input[i] - mean) * inv_std * gamma[i] + beta[i];
+            }
+        }
+        None => {
+            for c in 0..chunks {
+                let off = c * 4;
+                unsafe {
+                    let x = vld1q_f32(input.as_ptr().add(off));
+                    let g = vld1q_f32(gamma.as_ptr().add(off));
+                    let centered = vsubq_f32(x, vmean);
+                    let normed = vmulq_f32(centered, vinv);
+                    let result = vmulq_f32(normed, g);
+                    vst1q_f32(output.as_mut_ptr().add(off), result);
+                }
+            }
+            for i in (chunks * 4)..n {
+                output[i] = (input[i] - mean) * inv_std * gamma[i];
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+fn neon_rms_transform(input: &[f32], gamma: &[f32], inv_rms: f32, output: &mut [f32]) {
+    use std::arch::aarch64::*;
+    let n = input.len();
+    let chunks = n / 4;
+    let vinv = unsafe { vdupq_n_f32(inv_rms) };
+
+    for c in 0..chunks {
+        let off = c * 4;
+        unsafe {
+            let x = vld1q_f32(input.as_ptr().add(off));
+            let g = vld1q_f32(gamma.as_ptr().add(off));
+            let scaled = vmulq_f32(x, vinv);
+            let result = vmulq_f32(scaled, g);
+            vst1q_f32(output.as_mut_ptr().add(off), result);
+        }
+    }
+    for i in (chunks * 4)..n {
+        output[i] = input[i] * inv_rms * gamma[i];
+    }
+}
+
 // ── Layer normalization ────────────────────────────────────────────
 
 /// Compute layer normalization over the last dimension(s).
@@ -103,15 +180,22 @@ pub fn layer_norm_into(
         let inv_std = 1.0 / (variance + config.eps).sqrt();
 
         if config.elementwise_affine {
-            match beta {
-                Some(beta) => {
-                    for i in 0..norm_size {
-                        out[i] = (slice[i] - mean) * inv_std * gamma[i] + beta[i];
+            #[cfg(target_arch = "aarch64")]
+            {
+                neon_affine_transform(slice, gamma, beta, mean, inv_std, out);
+            }
+            #[cfg(not(target_arch = "aarch64"))]
+            {
+                match beta {
+                    Some(beta) => {
+                        for i in 0..norm_size {
+                            out[i] = (slice[i] - mean) * inv_std * gamma[i] + beta[i];
+                        }
                     }
-                }
-                None => {
-                    for i in 0..norm_size {
-                        out[i] = (slice[i] - mean) * inv_std * gamma[i];
+                    None => {
+                        for i in 0..norm_size {
+                            out[i] = (slice[i] - mean) * inv_std * gamma[i];
+                        }
                     }
                 }
             }
@@ -173,8 +257,15 @@ pub fn rms_norm_into(
         let rms = compute_rms(slice);
         let inv_rms = 1.0 / (rms + config.eps).sqrt();
 
-        for i in 0..norm_size {
-            out[i] = slice[i] * inv_rms * gamma[i];
+        #[cfg(target_arch = "aarch64")]
+        {
+            neon_rms_transform(slice, gamma, inv_rms, out);
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            for i in 0..norm_size {
+                out[i] = slice[i] * inv_rms * gamma[i];
+            }
         }
     }
 
@@ -1525,5 +1616,107 @@ mod tests {
         layer_norm_into(&input, &gamma, Some(&beta), &config, &mut output).unwrap();
 
         assert_eq!(output, expected);
+    }
+
+    // ── NEON parity tests ──────────────────────────────────────────
+
+    /// Scalar reference for layer norm (always uses scalar arithmetic).
+    fn scalar_layer_norm_ref(
+        input: &[f32],
+        gamma: &[f32],
+        beta: Option<&[f32]>,
+        eps: f32,
+    ) -> Vec<f32> {
+        let n = input.len();
+        let mean = input.iter().map(|&x| x as f64).sum::<f64>() / n as f64;
+        let var = input
+            .iter()
+            .map(|&x| {
+                let d = x as f64 - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / n as f64;
+        let inv_std = 1.0 / (var as f32 + eps).sqrt();
+        let mean = mean as f32;
+        input
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| {
+                let v = (x - mean) * inv_std * gamma[i];
+                match beta {
+                    Some(b) => v + b[i],
+                    None => v,
+                }
+            })
+            .collect()
+    }
+
+    /// Scalar reference for RMS norm.
+    fn scalar_rms_norm_ref(input: &[f32], gamma: &[f32], eps: f32) -> Vec<f32> {
+        let n = input.len();
+        let rms = input
+            .iter()
+            .map(|&x| {
+                let v = x as f64;
+                v * v
+            })
+            .sum::<f64>()
+            / n as f64;
+        let inv_rms = 1.0 / (rms as f32 + eps).sqrt();
+        input.iter().enumerate().map(|(i, &x)| x * inv_rms * gamma[i]).collect()
+    }
+
+    #[test]
+    fn layer_norm_neon_matches_scalar() {
+        // Test several sizes: exact multiple of 4, non-multiple, and small.
+        for &size in &[4, 7, 8, 13, 16, 33] {
+            let input: Vec<f32> = (0..size).map(|i| (i as f32) * 0.3 - 1.0).collect();
+            let gamma: Vec<f32> = (0..size).map(|i| 1.0 + (i as f32) * 0.1).collect();
+            let beta: Vec<f32> = (0..size).map(|i| (i as f32) * 0.05).collect();
+            let eps = 1e-5;
+            let config =
+                LayerNormConfig { normalized_shape: vec![size], eps, elementwise_affine: true };
+
+            // With beta
+            let expected = scalar_layer_norm_ref(&input, &gamma, Some(&beta), eps);
+            let actual = layer_norm(&input, &gamma, Some(&beta), &config).unwrap();
+            for (j, (&e, &a)) in expected.iter().zip(actual.iter()).enumerate() {
+                assert!(
+                    (e - a).abs() < 1e-5,
+                    "layer_norm with beta, size={size}, idx={j}: expected {e}, got {a}"
+                );
+            }
+
+            // Without beta
+            let expected = scalar_layer_norm_ref(&input, &gamma, None, eps);
+            let actual = layer_norm(&input, &gamma, None, &config).unwrap();
+            for (j, (&e, &a)) in expected.iter().zip(actual.iter()).enumerate() {
+                assert!(
+                    (e - a).abs() < 1e-5,
+                    "layer_norm no beta, size={size}, idx={j}: expected {e}, got {a}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn rms_norm_neon_matches_scalar() {
+        for &size in &[4, 7, 8, 13, 16, 33] {
+            let input: Vec<f32> = (0..size).map(|i| (i as f32) * 0.3 - 1.0).collect();
+            let gamma: Vec<f32> = (0..size).map(|i| 1.0 + (i as f32) * 0.1).collect();
+            let eps = 1e-5;
+            let config =
+                LayerNormConfig { normalized_shape: vec![size], eps, elementwise_affine: true };
+
+            let expected = scalar_rms_norm_ref(&input, &gamma, eps);
+            let actual = rms_norm(&input, &gamma, &config).unwrap();
+            for (j, (&e, &a)) in expected.iter().zip(actual.iter()).enumerate() {
+                assert!(
+                    (e - a).abs() < 1e-5,
+                    "rms_norm, size={size}, idx={j}: expected {e}, got {a}"
+                );
+            }
+        }
     }
 }

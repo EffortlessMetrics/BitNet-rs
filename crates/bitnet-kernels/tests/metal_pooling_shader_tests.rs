@@ -240,7 +240,7 @@ fn align_to_metal(size: usize) -> usize {
 
 /// Compute dispatch threadgroups.
 fn dispatch_groups(total: u32, group_size: u32) -> u32 {
-    (total + group_size - 1) / group_size
+    total.div_ceil(group_size)
 }
 
 fn assert_close(actual: &[f32], expected: &[f32], atol: f32, label: &str) {
@@ -1095,7 +1095,7 @@ fn test_gpu_avg_pool_2d_dispatch() {
     let cpu_result = avg_pool_2d_cpu(&input, h, w, 4, 4, 4, 4, 0, 0);
     let out_size = cpu_result.len() * std::mem::size_of::<f32>();
     let aligned_size = align_to_metal(out_size);
-    assert!(aligned_size % METAL_BUFFER_ALIGNMENT == 0, "output buffer alignment");
+    assert!(aligned_size.is_multiple_of(METAL_BUFFER_ALIGNMENT), "output buffer alignment");
     assert_no_nan_inf(&cpu_result, "gpu_avg_2d");
 }
 
@@ -1120,7 +1120,7 @@ fn test_gpu_attention_pool_buffer_alignment() {
     let result = attention_pool_cpu(&values, &scores, seq_len, dim);
     let buf_size = result.len() * std::mem::size_of::<f32>();
     let aligned = align_to_metal(buf_size);
-    assert!(aligned % METAL_BUFFER_ALIGNMENT == 0, "attn buffer alignment");
+    assert!(aligned.is_multiple_of(METAL_BUFFER_ALIGNMENT), "attn buffer alignment");
     assert_no_nan_inf(&result, "gpu_attn_align");
 }
 

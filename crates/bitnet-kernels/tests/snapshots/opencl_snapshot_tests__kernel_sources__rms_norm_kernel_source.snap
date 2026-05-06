@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: src.source
+---
+__kernel void rms_norm(
+    __global const float* input, __global const float* gamma,
+    __global float* output,
+    const int rows, const int hidden_size, const float eps)
+{
+    int row = get_global_id(0);
+    if (row >= rows) return;
+    int base = row * hidden_size;
+    float sum_sq = 0.0f;
+    for (int i = 0; i < hidden_size; i++)
+        sum_sq += input[base + i] * input[base + i];
+    float rms = sqrt(sum_sq / (float)hidden_size + eps);
+    float inv = 1.0f / rms;
+    for (int i = 0; i < hidden_size; i++) {
+        output[base + i] = input[base + i] * inv * gamma[i];
+    }
+}

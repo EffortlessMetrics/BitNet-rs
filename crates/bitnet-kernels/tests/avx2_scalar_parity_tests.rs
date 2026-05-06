@@ -18,6 +18,7 @@ use bitnet_kernels::cpu::layer_norm_simd::{
 };
 use bitnet_kernels::cpu::simd_matmul::{SimdMatmulConfig, simd_matmul_f32, simd_matmul_i2s};
 use bitnet_kernels::cpu::simd_softmax::simd_softmax;
+use bitnet_kernels::cpu::softmax::log_softmax_f32;
 
 // ── Tolerance constants ────────────────────────────────────────────────
 //
@@ -397,4 +398,63 @@ fn pipeline_layernorm_matmul_softmax_parity() {
             &format!("pipeline_row_{row}"),
         );
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 5. LOG-SOFTMAX  —  log_softmax_f32 dispatches to AVX2 or scalar
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Reference scalar log-softmax (portable, no SIMD dispatch).
+fn reference_log_softmax(input: &[f32]) -> Vec<f32> {
+    let max = input.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let sum_exp: f32 = input.iter().map(|&x| (x - max).exp()).sum();
+    let log_sum_exp = max + sum_exp.ln();
+    input.iter().map(|&x| x - log_sum_exp).collect()
+}
+
+#[test]
+fn log_softmax_parity_aligned() {
+    for &n in &[8, 16, 32, 64, 128, 256] {
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.17).sin() * 3.0).collect();
+        let expected = reference_log_softmax(&input);
+        let mut actual = vec![0.0f32; n];
+        log_softmax_f32(&input, &mut actual).expect("log_softmax should not fail");
+        assert_vec_parity(
+            &actual,
+            &expected,
+            ELEM_ABS_TOL,
+            ELEM_REL_TOL,
+            &format!("log_softmax_aligned(n={n})"),
+        );
+    }
+}
+
+#[test]
+fn log_softmax_parity_unaligned() {
+    for &n in &[1, 3, 7, 9, 15, 17, 31, 33, 65] {
+        let input: Vec<f32> = (0..n).map(|i| (i as f32 * 0.23).cos() * 2.0).collect();
+        let expected = reference_log_softmax(&input);
+        let mut actual = vec![0.0f32; n];
+        log_softmax_f32(&input, &mut actual).expect("log_softmax should not fail");
+        assert_vec_parity(
+            &actual,
+            &expected,
+            ELEM_ABS_TOL,
+            ELEM_REL_TOL,
+            &format!("log_softmax_unaligned(n={n})"),
+        );
+    }
+}
+
+#[test]
+fn log_softmax_stability_large_values() {
+    let input = vec![1000.0, 1001.0, 999.0, 1002.0, 998.0, 1003.0, 997.0, 1004.0];
+    let mut output = vec![0.0f32; 8];
+    log_softmax_f32(&input, &mut output).expect("log_softmax should not fail");
+    for (i, &v) in output.iter().enumerate() {
+        assert!(v.is_finite(), "log_softmax[{i}] is not finite: {v}");
+        assert!(v <= 0.0, "log_softmax[{i}] is positive: {v}");
+    }
+    let exp_sum: f32 = output.iter().map(|&x| x.exp()).sum();
+    assert!((exp_sum - 1.0).abs() < 1e-4, "exp(log_softmax) should sum to 1.0, got {exp_sum}");
 }

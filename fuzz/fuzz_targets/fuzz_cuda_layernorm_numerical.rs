@@ -81,17 +81,15 @@ fuzz_target!(|input: CudaLayerNormInput| {
                 );
             }
         }
-    } else {
-        if let Ok(out) =
-            layer_norm_cpu_fallback(&data[..total], &gamma[..dim], &beta[..dim], dim, &config)
-        {
-            assert_eq!(out.len(), total, "layer_norm output length mismatch");
-            for (i, &val) in out.iter().enumerate() {
-                assert!(
-                    !val.is_nan(),
-                    "layer_norm produced NaN at index {i} (dim={dim}, batch={batch_size})"
-                );
-            }
+    } else if let Ok(out) =
+        layer_norm_cpu_fallback(&data[..total], &gamma[..dim], &beta[..dim], dim, &config)
+    {
+        assert_eq!(out.len(), total, "layer_norm output length mismatch");
+        for (i, &val) in out.iter().enumerate() {
+            assert!(
+                !val.is_nan(),
+                "layer_norm produced NaN at index {i} (dim={dim}, batch={batch_size})"
+            );
         }
     }
 

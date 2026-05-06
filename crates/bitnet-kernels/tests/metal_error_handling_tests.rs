@@ -103,7 +103,7 @@ impl MetalErrorSimulator {
             self.error_log.push(err.clone());
             return Err(err);
         }
-        if size % METAL_BUFFER_ALIGNMENT != 0 {
+        if !size.is_multiple_of(METAL_BUFFER_ALIGNMENT) {
             let err = MetalError::BufferAllocationFailed {
                 size,
                 reason: format!("buffer size must be aligned to {METAL_BUFFER_ALIGNMENT} bytes"),

@@ -1,13 +1,13 @@
 """
 llama-cpp-python compatible API for BitNet-rs
 
-This module provides a drop-in replacement for llama-cpp-python.
-Simply replace:
+This module provides a llama-cpp-python compatible API (validation pending).
+Replace:
     from llama_cpp import Llama
 with:
     from bitnet.llama_compat import Llama
 
-And your code will work unchanged with BitNet-rs!
+Status: Scaffolded, not yet validated end-to-end in CI.
 """
 
 from typing import Optional, List, Dict, Any, Union
@@ -19,7 +19,7 @@ except Exception:  # Fallback when running as a script or in tests
     import bitnet_py
 
 class Llama:
-    """Drop-in replacement for llama_cpp.Llama"""
+    """llama-cpp-python compatible API (validation pending)"""
 
     def __init__(
         self,

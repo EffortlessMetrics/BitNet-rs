@@ -1,4 +1,19 @@
-#![allow(unsafe_op_in_unsafe_fn, unused_unsafe, dead_code, unused_variables, unused_assignments)]
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    unused_unsafe,
+    dead_code,
+    unused_variables,
+    unused_assignments,
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop,
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments,
+    clippy::ptr_as_ptr,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::unnecessary_cast
+)]
 //! ARM NEON-optimized weight dequantization for Apple Silicon.
 //!
 //! Provides vectorized dequantization of various quantization formats
@@ -166,7 +181,7 @@ pub fn neon_dequant_qk256_block(packed: &[u8], scale: f32) -> Vec<f32> {
 /// Panics if `fp16_bytes.len()` is odd.
 #[cfg(target_arch = "aarch64")]
 pub fn neon_dequant_fp16_to_f32(fp16_bytes: &[u8]) -> Vec<f32> {
-    assert!(fp16_bytes.len() % 2 == 0, "fp16 byte slice must have even length");
+    assert!(fp16_bytes.len().is_multiple_of(2), "fp16 byte slice must have even length");
 
     let count = fp16_bytes.len() / 2;
     let mut out = Vec::with_capacity(count);
@@ -215,7 +230,7 @@ pub fn neon_dequant_i8_symmetric(quantized: &[i8], scale: f32) -> Vec<f32> {
         let full_chunks = n / 8;
         for chunk in 0..full_chunks {
             let base = chunk * 8;
-            let ptr = quantized.as_ptr().add(base) as *const i8;
+            let ptr = quantized.as_ptr().add(base);
             let i8v = vld1_s8(ptr);
             let i16v = vmovl_s8(i8v);
 
@@ -237,8 +252,8 @@ pub fn neon_dequant_i8_symmetric(quantized: &[i8], scale: f32) -> Vec<f32> {
         }
 
         // Scalar remainder.
-        for i in (full_chunks * 8)..n {
-            out.push(quantized[i] as f32 * scale);
+        for &q in quantized.iter().take(n).skip(full_chunks * 8) {
+            out.push(q as f32 * scale);
         }
     }
 
@@ -312,7 +327,7 @@ pub fn neon_dequant_i4_packed(packed: &[u8], scales: &[f32], block_size: usize) 
                 let global_idx = elem_start + i;
                 let byte_idx = global_idx / 2;
                 let b = packed[byte_idx];
-                let nibble = if global_idx % 2 == 0 { b & 0x0F } else { (b >> 4) & 0x0F };
+                let nibble = if global_idx.is_multiple_of(2) { b & 0x0F } else { (b >> 4) & 0x0F };
                 let signed = ((nibble as i8) << 4) >> 4;
                 out.push(signed as f32 * blk_scale);
             }

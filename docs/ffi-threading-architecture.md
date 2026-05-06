@@ -1,6 +1,6 @@
 # FFI Threading Architecture and Best Practices
 
-This document describes the production-ready threading and synchronization patterns implemented in BitNet-rs's FFI layer, enhanced in PR #179 to provide robust, deadlock-free operation.
+This document describes the threading and synchronization patterns implemented in BitNet-rs's FFI layer, enhanced in PR #179 to provide robust, deadlock-free operation.
 
 ## Overview
 

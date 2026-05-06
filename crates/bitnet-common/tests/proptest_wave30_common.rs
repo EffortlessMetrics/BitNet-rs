@@ -27,11 +27,11 @@ fn arb_shape(max_rank: usize, max_dim: usize) -> impl Strategy<Value = Vec<usize
 fn arb_device() -> impl Strategy<Value = Device> {
     prop_oneof![
         Just(Device::Cpu),
-        (0usize..8).prop_map(|i| Device::Cuda(i)),
-        (0usize..8).prop_map(|i| Device::Hip(i)),
+        (0usize..8).prop_map(Device::Cuda),
+        (0usize..8).prop_map(Device::Hip),
         Just(Device::Npu),
         Just(Device::Metal),
-        (0usize..8).prop_map(|i| Device::OpenCL(i)),
+        (0usize..8).prop_map(Device::OpenCL),
     ]
 }
 

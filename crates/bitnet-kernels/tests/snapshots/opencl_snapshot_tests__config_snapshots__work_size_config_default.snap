@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: cfg
+---
+WorkSizeConfig {
+    simd_width: 16,
+    max_work_group_size: 1024,
+    preferred_work_group_size: 256,
+    compute_units: 32,
+}

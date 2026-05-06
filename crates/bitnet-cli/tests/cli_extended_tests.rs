@@ -236,11 +236,12 @@ mod template_detect {
         assert_eq!(result, TemplateType::Llama3Chat);
     }
 
-    /// Tokenizer name containing "instruct" → Instruct.
+    /// Tokenizer name containing "mistral" → MistralChat (mistral match has
+    /// higher priority than generic "instruct").
     #[test]
     fn test_detect_instruct_from_tokenizer_name() {
         let result = TemplateType::detect(Some("mistral-instruct-v0.2"), None);
-        assert_eq!(result, TemplateType::Instruct);
+        assert_eq!(result, TemplateType::MistralChat);
     }
 
     /// No hints at all → Raw (fallback).
@@ -420,7 +421,20 @@ mod cli_config_validation {
     /// Valid device strings all pass.
     #[test]
     fn test_cli_config_all_valid_devices() {
-        for device in &["cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "auto"] {
+        for device in &[
+            "cpu",
+            "cuda",
+            "gpu",
+            "vulkan",
+            "opencl",
+            "ocl",
+            "metal",
+            "mpsgraph",
+            "apple-m4-metal",
+            "apple-m4-mpsgraph",
+            "apple-m4-cpu-neon",
+            "auto",
+        ] {
             let cfg = CliConfig { default_device: device.to_string(), ..Default::default() };
             assert!(cfg.validate().is_ok(), "device={device} must be valid");
         }

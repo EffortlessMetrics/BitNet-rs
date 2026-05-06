@@ -221,14 +221,14 @@ impl BufferPool {
         let aligned = align_up(size, METAL_BUFFER_ALIGNMENT);
         let key = (aligned, mode);
 
-        if let Some(list) = self.free_lists.get_mut(&key) {
-            if let Some(entry) = list.pop_front() {
-                self.pool_bytes -= entry.buffer.aligned_size();
-                self.hits += 1;
-                let buf = entry.buffer;
-                self.in_use.insert(buf.id, buf.clone());
-                return Ok(buf);
-            }
+        if let Some(list) = self.free_lists.get_mut(&key)
+            && let Some(entry) = list.pop_front()
+        {
+            self.pool_bytes -= entry.buffer.aligned_size();
+            self.hits += 1;
+            let buf = entry.buffer;
+            self.in_use.insert(buf.id, buf.clone());
+            return Ok(buf);
         }
 
         self.misses += 1;
@@ -270,24 +270,23 @@ impl BufferPool {
         let mut oldest_frame = u64::MAX;
 
         for (key, list) in &self.free_lists {
-            if let Some(entry) = list.front() {
-                if entry.last_used_frame < oldest_frame {
-                    oldest_frame = entry.last_used_frame;
-                    oldest_key = Some(*key);
-                }
+            if let Some(entry) = list.front()
+                && entry.last_used_frame < oldest_frame
+            {
+                oldest_frame = entry.last_used_frame;
+                oldest_key = Some(*key);
             }
         }
 
-        if let Some(key) = oldest_key {
-            if let Some(list) = self.free_lists.get_mut(&key) {
-                if let Some(entry) = list.pop_front() {
-                    let aligned = entry.buffer.aligned_size();
-                    self.pool_bytes -= aligned;
-                    let mut buf = entry.buffer;
-                    self.device.release_buffer(&mut buf);
-                    return true;
-                }
-            }
+        if let Some(key) = oldest_key
+            && let Some(list) = self.free_lists.get_mut(&key)
+            && let Some(entry) = list.pop_front()
+        {
+            let aligned = entry.buffer.aligned_size();
+            self.pool_bytes -= aligned;
+            let mut buf = entry.buffer;
+            self.device.release_buffer(&mut buf);
+            return true;
         }
         false
     }
@@ -488,7 +487,7 @@ fn align_up(size: usize, alignment: usize) -> usize {
 }
 
 fn is_aligned(size: usize, alignment: usize) -> bool {
-    size % alignment == 0
+    size.is_multiple_of(alignment)
 }
 
 fn required_alignment_for_type(type_size: usize) -> usize {

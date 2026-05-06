@@ -2,7 +2,7 @@
 
 **Audience:** Developers and researchers working with GGUF models who need to ensure model quality and catch quantization errors before deployment.
 
-**Goal:** Learn the complete 3-stage validation workflow to verify GGUF models are production-ready with correct LayerNorm weights and healthy projection weights.
+**Goal:** Learn the complete 3-stage validation workflow to verify GGUF models have correct LayerNorm weights and healthy projection weights.
 
 ---
 
@@ -67,6 +67,33 @@ The validation system uses a **3-stage pipeline**:
   models/clean/clean-f16.gguf \
   models/tokenizer.json
 ```
+
+### Strict CPU Proof Smoke
+
+After the model and tokenizer are present locally, use the strict CPU proof
+command to check the user-facing CLI path without mock or minimal-loader
+ambiguity:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+RUST_LOG=warn \
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy \
+  --json-out target/cpu-proof.json
+```
+
+This is a strict smoke/proof command, not a model-quality or performance claim.
+The JSON artifact must distinguish the enhanced loader from compatibility
+fallback. Receipt validation, kernel IDs, and throughput claims are handled by
+follow-up CPU proof items.
 
 ---
 
@@ -358,7 +385,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 ### Workflow 1: Validate Existing GGUF
 
-**Scenario:** You have a GGUF model from Hugging Face or a third-party export tool and need to verify it's production-ready.
+**Scenario:** You have a GGUF model from Hugging Face or a third-party export tool and need to verify it's valid for inference.
 
 **Steps:**
 
@@ -801,7 +828,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 # Validation in CI (exit code check)
 ./scripts/validate_gguf.sh model.gguf tokenizer.json
 if [ $? -ne 0 ]; then
-  echo "Validation failed - model is not production-ready"
+  echo "Validation failed - model did not pass checks"
   exit 1
 fi
 ```

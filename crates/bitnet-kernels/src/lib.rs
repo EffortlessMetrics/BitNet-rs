@@ -1,4 +1,7 @@
-//! High-performance compute kernels for BitNet
+//! High-performance compute kernels for BitNet inference.
+//!
+//! Provides SIMD-optimized (AVX2, NEON) and GPU-accelerated kernel implementations
+//! for quantized and dense neural network operations.
 
 use bitnet_common::{QuantizationType, Result};
 #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
@@ -43,6 +46,8 @@ pub mod kernel_select;
 pub mod kernel_selection;
 pub mod kernels;
 pub mod matmul_dispatch;
+#[cfg(feature = "metal")]
+pub mod metal;
 #[cfg(feature = "metal")]
 pub mod metal_compute;
 pub mod norm_ops;

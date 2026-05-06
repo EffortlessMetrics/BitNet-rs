@@ -2,8 +2,8 @@ apiVersion: v2
 name: bitnet
 description: A Helm chart for bitnet-rs - High-performance Rust implementation of 1-bit LLM inference
 type: application
-version: 1.0.0
-appVersion: "1.0.0"
+version: 0.2.1-dev
+appVersion: "0.2.1-dev"
 home: https://github.com/bitnet-rs/bitnet
 sources:
   - https://github.com/bitnet-rs/bitnet

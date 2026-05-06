@@ -29,6 +29,8 @@ members = [
   "crates/bitnet-token-merge-core", # SRP: reusable token span merge/split primitives
   "crates/bitnet-tokenizer-model-core", # SRP: tokenizer model/vocabulary detection helpers
   "crates/bitnet-tokenizer-discovery-core", # SRP: tokenizer path auto-discovery core
+  "crates/bitnet-tokenizer-text-core", # SRP: tokenizer pre-tokenization/normalization primitives
+  "crates/bitnet-weight-name-core", # SRP: vendor weight-name canonicalization helpers
   "crates/bitnet-prompt-templates",
   "crates/bitnet-prompt-templates-core",
   "crates/bitnet-honest-compute",
@@ -47,6 +49,7 @@ members = [
   "crates/bitnet-generation-stop-core", # SRP: reusable stop criteria/check core
   "crates/bitnet-kv-cache-policy-core", # SRP: KV-cache sequence transition decision policy
   "crates/bitnet-engine-state-core", # SRP: reusable engine lifecycle state machine core
+  "crates/bitnet-session-config-core", # SRP: reusable inference session config contracts + validation
   "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
   "crates/bitnet-repl-core",     # SRP: reusable chat REPL state/command primitives
   "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
@@ -55,6 +58,7 @@ members = [
   "crates/bitnet-feature-matrix",
   "crates/bitnet-client-ip-core", # SRP: reusable client IP extraction from forwarding headers
   "crates/bitnet-api-versioning-core", # SRP: reusable API version negotiation and routing helpers
+  "crates/bitnet-api-key-auth-core", # SRP: API key auth policy/store primitives
   "crates/bitnet-server-health-types-core", # SRP: reusable server health endpoint contract types
   "crates/bitnet-endpoint-registry-core", # SRP: reusable HTTP endpoint registry contracts + lookup helpers
   "crates/bitnet-request-context-core", # SRP: reusable request context metadata contracts
@@ -125,10 +129,10 @@ members = [
   "tests",
   "tests-new",
   "xtask",
+  "tools/bitnet-task",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-  "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
   "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
   "crates/bitnet-qk256-dispatch",
 ]
@@ -166,6 +170,7 @@ default-members = [
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli-config-core", # SRP: reusable CLI configuration contracts/validation
   "crates/bitnet-cli",
+  "crates/bitnet-api-key-auth-core",
   "crates/bitnet-scoring-core",
   "crates/bitnet-server",
   "crates/bitnet-st2gguf",
@@ -189,6 +194,7 @@ default-members = [
   "crates/bitnet-generation-events-core",
   "crates/bitnet-generation-stop-core",
   "crates/bitnet-kv-cache-policy-core",
+  "crates/bitnet-session-config-core",
   "crates/bitnet-engine-core",
   "crates/bitnet-repl-core",
   "crates/bitnet-gguf",
@@ -242,6 +248,7 @@ bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
+bitnet-tokenizer-text-core = { path = "crates/bitnet-tokenizer-text-core", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
 bitnet-quantization-bits = { path = "crates/bitnet-quantization-bits", version = "0.2.1-dev" }
@@ -309,7 +316,7 @@ integration-tests = ["bitnet-tests/fixtures", "bitnet-tests/reporting", "bitnet-
 spm = []                                                                                                                        # for sentencepiece tokenizer tests
 
 # Core inference features
-cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 rocm = ["kernels", "inference", "tokenizers", "bitnet-kernels/rocm", "bitnet-inference/rocm", "bitnet-quantization/rocm"]
@@ -466,7 +473,7 @@ humansize = "2.1.3"
 humantime = "2.3.0"
 indicatif = "0.18.3"
 num_cpus = "1.17.0"
-sysinfo = "0.37.2"
+sysinfo = "0.38.0"
 
 # Web server
 axum = "0.8.7"

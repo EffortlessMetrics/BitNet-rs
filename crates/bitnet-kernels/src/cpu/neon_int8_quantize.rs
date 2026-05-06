@@ -145,11 +145,11 @@ pub fn quantize_per_channel_neon(input: &[f32], scales: &[f32], channels: usize)
     let channel_size = input.len() / channels;
     let mut output = vec![0i8; input.len()];
 
-    for ch in 0..channels {
+    for (ch, &scale) in scales.iter().enumerate().take(channels) {
         let start = ch * channel_size;
         let end = start + channel_size;
         let ch_input = &input[start..end];
-        let ch_output = quantize_f32_to_i8_neon(ch_input, scales[ch]);
+        let ch_output = quantize_f32_to_i8_neon(ch_input, scale);
         output[start..end].copy_from_slice(&ch_output);
     }
 
@@ -190,8 +190,8 @@ fn find_absmax(input: &[f32]) -> f32 {
             max_val = unsafe { vmaxvq_f32(acc) };
         }
         // Scalar tail
-        for i in (chunks * 4)..input.len() {
-            let a = input[i].abs();
+        for &val in input.iter().skip(chunks * 4) {
+            let a = val.abs();
             if a > max_val {
                 max_val = a;
             }

@@ -7,8 +7,8 @@ We actively support the following versions for security updates:
 | Version | Status | Support Level |
 |---------|--------|---------------|
 | `main` branch | ✅ Active Development | Full support with rapid response |
-| `v0.1.x` (MVP) | ✅ Maintained | Security fixes and critical bugs |
-| Older versions | ⚠️ Best Effort | May receive fixes at maintainer discretion |
+| `v0.2.x` (current) | ✅ Active Development | Full support with rapid response |
+| `v0.1.x` (MVP) | ⚠️ Best Effort | May receive fixes at maintainer discretion |
 
 ## Reporting a Vulnerability
 
@@ -126,8 +126,8 @@ BitNet-rs validates quantization accuracy through cross-validation with C++ refe
 
 **Security Implications**:
 - Incorrect quantization could leak model weights or produce biased outputs
-- Validation gates enforce ≥99% accuracy for I2_S/TL1/TL2
-- GPU/CPU parity checked via cosine similarity (≥0.999 threshold)
+- Validation gates target ≥99% accuracy for I2_S/TL1/TL2 (formal measurement pending)
+- GPU/CPU parity designed around cosine similarity threshold (≥0.999); formal validation pending
 
 ### Unsafe Rust Usage
 
@@ -151,5 +151,5 @@ For security-related inquiries: **security@effortlessmetrics.com**
 
 ---
 
-**Last Updated**: 2025-11-03
+**Last Updated**: 2026-03-05
 **Policy Version**: 1.0

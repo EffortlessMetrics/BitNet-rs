@@ -1,8 +1,8 @@
 //! Wave 28 insta snapshot tests for bitnet-common types.
 
 use bitnet_common::{
-    BitNetError, Device, InferenceError, KernelBackend, KernelCapabilities, KernelError,
-    ModelError, QuantizationError, QuantizationType, SimdLevel, ValidationErrorDetails,
+    BitNetError, Device, InferenceError, KernelBackend, KernelCapabilities, ModelError,
+    QuantizationError, QuantizationType, SimdLevel,
 };
 
 // ── Device ───────────────────────────────────────────────────────────────────

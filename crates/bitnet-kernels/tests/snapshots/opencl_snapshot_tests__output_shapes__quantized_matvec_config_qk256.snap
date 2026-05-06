@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"packed_cols={} scales_per_row={} total_weight_bytes={} block_size={}\",\ncfg.packed_cols(), cfg.scales_per_row(), cfg.total_weight_bytes(),\ncfg.block_size(),)"
+---
+packed_cols=512 scales_per_row=8 total_weight_bytes=1048576 block_size=256

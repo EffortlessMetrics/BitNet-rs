@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"kernel_count={}\", reg.len())"
+---
+kernel_count=10

@@ -11,7 +11,7 @@ BitNet-rs includes a comprehensive performance benchmarking infrastructure desig
 ./scripts/setup-perf-env.sh
 BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh
 
-# Run GPU benchmarks with strict mode (requires CUDA, realistic 50-100 tok/s)
+# Run GPU benchmarks with strict mode (requires CUDA, GPU-accelerated alpha)
 BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh --features gpu
 
 # Run with cross-validation against C++ implementation and strict mode
@@ -467,7 +467,7 @@ All performance metrics below are backed by receipt artifacts in `ci/inference.j
 Receipt: [ci/inference.json](../ci/inference.json)
 
 **I2S BitNet32-F16 (Production Recommended):**
-- **Throughput**: 10-20 tokens/sec (validated, hardware-dependent)
+- **Throughput**: SIMD-optimised (hardware-dependent, not yet benchmarked)
 - **First Token Latency**: 250ms
 - **Average Token Latency**: 50-100ms
 - **Memory Usage**: 1024MB for 2B parameter model
@@ -476,7 +476,7 @@ Receipt: [ci/inference.json](../ci/inference.json)
 - **Accuracy**: MSE ≤ 8.5e-6 vs FP32 (tolerance: 1e-5)
 - **Deterministic**: Yes (BITNET_DETERMINISTIC=1, seed=42)
 - **Environment**: RAYON_NUM_THREADS=1 for reproducibility
-- **Status**: ✅ Production-ready
+- **Status**: ✅ Working (SIMD-optimised)
 
 **I2S QK256 (GGML) - MVP Scalar Kernels:**
 - **Throughput**: ~0.1 tokens/sec (scalar implementation)
@@ -486,7 +486,7 @@ Receipt: [ci/inference.json](../ci/inference.json)
 - **Compute Path**: Real quantized GEMV (scalar, no SIMD)
 - **Kernels**: `qk256_scalar_dequant`, `qk256_scalar_matmul`
 - **Accuracy**: Bit-exact with GGML reference
-- **Status**: ⚠️ MVP validation only - NOT production-ready
+- **Status**: ⚠️ MVP validation only (scalar kernels)
 - **Roadmap**: v0.2.0 targets ≥3× with AVX2 (nibble-LUT + FMA tiling)
 - **Recommendation**: Limit to `--max-tokens 4-16` for quick validation
 
@@ -630,13 +630,13 @@ BitNet-rs Issue #261 implemented comprehensive strict mode controls to eliminate
 ### Strict Mode Benchmark Examples
 
 ```bash
-# CPU baseline with strict mode (I2S quantization: 10-20 tok/s expected)
+# CPU baseline with strict mode (I2S quantization, SIMD-optimised)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
 cargo run -p xtask -- benchmark --features cpu --quantization i2s
 
-# GPU baseline with strict mode (mixed precision: 50-100 tok/s expected)
+# GPU baseline with strict mode (mixed precision, GPU-accelerated alpha)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 cargo run -p xtask -- benchmark --features gpu --quantization i2s
@@ -660,9 +660,9 @@ Strict mode enforces realistic performance expectations:
 
 | Quantization | CPU Performance | GPU Performance | Accuracy Target |
 |--------------|----------------|-----------------|-----------------|
-| I2S (2-bit) | 10-20 tok/s (AVX-512 > AVX2 > NEON) | 50-100 tok/s (FP16/BF16) | ≥99.8% vs FP32 |
-| TL1 (table lookup) | 12-18 tok/s (ARM NEON optimized) | N/A | ≥99.6% vs FP32 |
-| TL2 (table lookup) | 10-15 tok/s (x86 AVX optimized) | N/A | ≥99.6% vs FP32 |
+| I2S (2-bit) | SIMD-optimised (AVX-512 > AVX2 > NEON) | GPU-accelerated (alpha, FP16/BF16) | ≥99.8% vs FP32 |
+| TL1 (table lookup) | SIMD-optimised (ARM NEON) | N/A | ≥99.6% vs FP32 |
+| TL2 (table lookup) | SIMD-optimised (x86 AVX) | N/A | ≥99.6% vs FP32 |
 
 **Validation Rules:**
 - Performance >150 tok/s flagged as potentially mock computation

@@ -64,7 +64,7 @@ cargo run -p xtask -- tokenizer --into models/ --source mirror|official
 - **Zero-Configuration Goal**: "Copy-paste works" README experience
 - **Backward Compatible**: Explicit flag still works (no breaking changes)
 - **Predictable**: Well-defined discovery order, no hidden heuristics
-- **Production-Ready**: Fails fast with clear guidance, no silent degradation
+- **Robust**: Fails fast with clear guidance, no silent degradation
 
 ## Architecture Decisions
 
@@ -143,7 +143,7 @@ cargo run -p xtask -- tokenizer --into models/ --source mirror|official
 - **Zero-Configuration**: Enables "copy-paste works" README examples
 - **Backward Compatible**: Explicit flag preserves existing workflows
 - **Fail-Fast**: Clear errors better than silent mock fallbacks
-- **Production-Ready**: Predictable discovery order, actionable guidance
+- **Robust**: Predictable discovery order, actionable guidance
 
 **Discovery Order Justification**:
 

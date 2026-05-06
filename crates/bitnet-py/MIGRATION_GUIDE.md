@@ -23,13 +23,13 @@ This comprehensive guide will help you migrate from the original BitNet Python i
 
 ## Overview
 
-The `bitnet_py` library is a drop-in replacement for the original BitNet Python implementation, providing:
+The `bitnet_py` library targets API compatibility with the original BitNet Python implementation (validation pending):
 
-- **2-10x performance improvement** through Rust implementation
-- **50% reduction in memory usage** with optimized kernels
-- **Identical API compatibility** - minimal code changes required
+- **Rust-based implementation** for memory safety
+- **llama-cpp-python compatible API** (validation pending)
+- **Minimal code changes required** for migration
 - **Enhanced features** including async/await support and streaming generation
-- **Better error handling** and production-ready reliability
+- **Better error handling** with Rust-backed reliability
 
 ## Prerequisites
 

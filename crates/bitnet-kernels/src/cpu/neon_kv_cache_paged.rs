@@ -352,7 +352,7 @@ impl PagedKvCachePool {
         new_values: &[f32],
     ) -> Result<(), &'static str> {
         let hd = self.head_dim;
-        if new_keys.len() % hd != 0 {
+        if !new_keys.len().is_multiple_of(hd) {
             return Err("new_keys length not a multiple of head_dim");
         }
         if new_keys.len() != new_values.len() {

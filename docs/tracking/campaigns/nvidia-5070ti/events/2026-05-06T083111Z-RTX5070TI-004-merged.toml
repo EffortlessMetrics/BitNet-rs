@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T08:31:11Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-004"
+event = "merged"
+pr = 3691
+merge_sha = "43023bd2aecb1a77f4e6027b10501b0c1948f8b1"
+actor = "maintainer"
+
+notes = [
+  "Merged RTX 5070 Ti CUDA/NVML runtime probe.",
+  "No CUDA kernel execution, QK256, transformer routing, server inference, WGPU proof, dense CUDA work, or hardware artifacts were claimed.",
+  "RTX5070TI-005 is ready for tiny CUDA kernel smoke.",
+]

@@ -468,7 +468,7 @@ fn test_embedding_similarity_computation() {
     let norm2 = l2_norm(&emb2);
     if norm1 > EPSILON && norm2 > EPSILON {
         let cosine_sim = sim_1_2 / (norm1 * norm2);
-        assert!(cosine_sim >= -1.0 && cosine_sim <= 1.0, "cosine similarity should be in [-1, 1]");
+        assert!((-1.0..=1.0).contains(&cosine_sim), "cosine similarity should be in [-1, 1]");
     }
 }
 
@@ -652,7 +652,7 @@ fn test_quantized_batch_operations() {
     let scales: Vec<f32> = (0..vocab_size).map(|_| 0.01).collect();
 
     // Dequantize batch
-    let token_ids = vec![10, 20, 30, 40, 50];
+    let token_ids = [10, 20, 30, 40, 50];
     let mut dequantized_batch = vec![0.0; token_ids.len() * embedding_dim];
 
     for (batch_idx, &token_id) in token_ids.iter().enumerate() {

@@ -107,11 +107,12 @@ impl MockMetalBuffer {
     }
 
     fn is_aligned(&self) -> bool {
-        self.aligned_size % METAL_ALIGNMENT == 0 && self.offset % METAL_ALIGNMENT == 0
+        self.aligned_size.is_multiple_of(METAL_ALIGNMENT)
+            && self.offset.is_multiple_of(METAL_ALIGNMENT)
     }
 
     fn is_page_aligned(&self) -> bool {
-        self.aligned_size % PAGE_SIZE == 0 && self.offset % PAGE_SIZE == 0
+        self.aligned_size.is_multiple_of(PAGE_SIZE) && self.offset.is_multiple_of(PAGE_SIZE)
     }
 }
 
@@ -298,7 +299,7 @@ fn align_up(size: usize, alignment: usize) -> usize {
 
 /// Check 256-byte alignment.
 fn is_metal_aligned(offset: usize) -> bool {
-    offset % METAL_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_ALIGNMENT)
 }
 
 /// Select best storage mode for a workload pattern.

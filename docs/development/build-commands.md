@@ -220,7 +220,7 @@ BITNET_STRICT_MODE=1 \
 
 ```bash
 # Quick compile & test (CPU, MSRV-accurate)
-rustup run 1.90.0 cargo test --no-default-features --workspace --no-default-features --features cpu
+rustup run 1.92.0 cargo test --locked --no-default-features --workspace --features cpu
 
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
