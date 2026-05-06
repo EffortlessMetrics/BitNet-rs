@@ -1903,6 +1903,30 @@ fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
         .map(|(token_id, _)| token_id as u32)
 }
 
+fn nvidia_smi_memory_used_bytes(device_index: Option<usize>) -> Option<u64> {
+    let mut command = std::process::Command::new("nvidia-smi");
+    let index_arg;
+    if let Some(index) = device_index {
+        index_arg = index.to_string();
+        command.args(["-i", index_arg.as_str()]);
+    }
+    let output =
+        command.args(["--query-gpu=memory.used", "--format=csv,noheader,nounits"]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    nvidia_smi_memory_used_bytes_from_csv(&stdout)
+}
+
+fn nvidia_smi_memory_used_bytes_from_csv(stdout: &str) -> Option<u64> {
+    let first = stdout.lines().map(str::trim).find(|line| !line.is_empty())?;
+    let mib_text = first.split_whitespace().next()?;
+    let mib = mib_text.parse::<u64>().ok()?;
+    mib.checked_mul(1024 * 1024)
+}
+
 #[derive(Debug, Clone)]
 struct StrictReferenceReceipt {
     artifact_path: String,
@@ -2042,12 +2066,17 @@ async fn run_simple_generation(
             .unwrap_or(false);
     let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
     bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
+    let strict_cuda_backend_selected = strict_backend
+        && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
+        && backend_identity.runtime_api.as_str() == "cuda"
+        && !backend_identity.fallback_used;
+    let cuda_memory_before_bytes =
+        strict_cuda_backend_selected.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
     unsafe {
         std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
         std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
         std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
-        if strict_backend && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
-        {
+        if strict_cuda_backend_selected {
             std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
         } else {
             std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
@@ -2543,7 +2572,6 @@ async fn run_simple_generation(
                 t.drain(..safe_cut);
             }
         }
-
         let step_ms = elapsed_ms(decode_step_start);
         if first_token_decode_ms.is_none() {
             first_token_decode_ms = Some(step_ms);
@@ -2662,16 +2690,23 @@ async fn run_simple_generation(
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
-        let strict_cuda_proof_artifact = strict_backend
+        let strict_cuda_selected_artifact = strict_backend
             && canonical_bitnet_model
             && selected_backend == "nvidia-rtx-5070-ti-cuda"
             && runtime_api == "cuda"
             && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str()
-            && generated_tokens.len() == 1
             && !backend_identity.fallback_used;
+        let strict_cuda_proof_artifact =
+            strict_cuda_selected_artifact && generated_tokens.len() == 1;
+        let strict_cuda_short_decode_artifact =
+            strict_cuda_selected_artifact && generated_tokens.len() > 1;
         let cuda_generated_token_id = generated_tokens.first().copied();
         let cuda_top1_token_id = top1_tokens.first().copied();
         let cuda_kernel_invocations = bitnet_linear_coverage.bitnet_linear_layers_on_cuda;
+        let cuda_memory_after_bytes =
+            strict_cuda_selected_artifact.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
+        let cuda_memory_hwm_bytes =
+            cuda_memory_before_bytes.into_iter().chain(cuda_memory_after_bytes).max();
         let expected_reference_path =
             strict_cuda_proof_artifact.then(|| strict_reference_receipt_path(&json_path));
         let strict_reference_receipt = match expected_reference_path.as_deref() {
@@ -2692,7 +2727,7 @@ async fn run_simple_generation(
         let top1_agreement = cpu_top1_token_id
             .zip(cuda_top1_token_id)
             .map(|(cpu_token, cuda_token)| cpu_token == cuda_token);
-        let cuda_probe = if strict_cuda_proof_artifact {
+        let cuda_probe = if strict_cuda_proof_artifact || strict_cuda_short_decode_artifact {
             Some(bitnet_device_probe::probe_nvidia_cuda(Some(0)))
         } else {
             None
@@ -2707,6 +2742,8 @@ async fn run_simple_generation(
             "strict_bitnet_cpu_reference"
         } else if strict_cuda_proof_artifact {
             "strict_bitnet_cuda_proof"
+        } else if strict_cuda_short_decode_artifact {
+            "strict_bitnet_cuda_short_decode_proof"
         } else {
             "inference_result"
         };
@@ -2772,6 +2809,10 @@ async fn run_simple_generation(
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
             "prompt_tokenize_ms": rounded_ms(prompt_tokenize_ms),
         });
+        let decode_steady_state_tok_s =
+            steady_decode_tps.map(|value| (value * 1000.0).round() / 1000.0);
+        let execution_phase =
+            if strict_cuda_short_decode_artifact { "short_decode" } else { "decode" };
         let mut output = serde_json::json!({
             "schema_version": "1.0.0",
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -2803,7 +2844,7 @@ async fn run_simple_generation(
                 "first_token_ms": first_token_ms,
                 "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
                 "decode_total_ms": rounded_ms(decode_total_ms),
-                "decode_steady_state_tok_s": steady_decode_tps.map(|value| (value * 1000.0).round() / 1000.0),
+                "decode_steady_state_tok_s": decode_steady_state_tok_s,
                 "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
             },
             "throughput": {
@@ -2830,14 +2871,14 @@ async fn run_simple_generation(
                 "quantization": if canonical_bitnet_model { "W1.58A8" } else { "unknown" },
                 "kernel_format": kernel_family,
                 "kernel_family": kernel_family,
-                "execution_phase": "decode",
+                "execution_phase": execution_phase,
                 "layout_source": layout_source,
                 "fallback_layout": serde_json::Value::Null,
                 "weights_uploaded_once": false,
-                "per_token_weight_upload": strict_cuda_proof_artifact && cuda_kernel_invocations > 0,
+                "per_token_weight_upload": strict_cuda_selected_artifact && cuda_kernel_invocations > 0,
             },
             "execution": {
-                "phase": "decode",
+                "phase": execution_phase,
                 "prompt_tokens": prompt_tokens_len,
                 "generated_tokens": generated_tokens.len(),
                 "batch_size": 1,
@@ -2885,7 +2926,7 @@ async fn run_simple_generation(
                 "fallback_reason": backend_identity.fallback_reason.as_deref(),
                 "prompt_tokens": prompt_tokens_len,
                 "decode_tokens": generated_tokens.len(),
-                "phase": "decode",
+                "phase": execution_phase,
                 "decode_tps": tok_per_sec,
             },
             "counts": counts,
@@ -2990,6 +3031,145 @@ async fn run_simple_generation(
             };
             object.insert("cpu_fallback_ops".to_string(), serde_json::json!(cpu_fallback_ops));
         }
+        if strict_cuda_short_decode_artifact && let Some(object) = output.as_object_mut() {
+            object
+                .insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_short_decode"));
+            object.insert("speedup_claim".to_string(), serde_json::json!(false));
+            object.insert(
+                "reference_backend".to_string(),
+                serde_json::json!("amd-9950x3d-cpu-avx512"),
+            );
+            object.insert("fallback_backend".to_string(), serde_json::Value::Null);
+            object.insert("execution_phase".to_string(), serde_json::json!("short_decode"));
+            object.insert("prompt_tokens".to_string(), serde_json::json!(prompt_tokens_len));
+            object
+                .insert("generated_tokens".to_string(), serde_json::json!(generated_tokens.len()));
+            object.insert("prefill_ms".to_string(), serde_json::json!(first_token_ms.unwrap_or(0)));
+            object.insert("prompt_prefill_ms".to_string(), serde_json::json!(rounded_ms(prefill_ms)));
+            object.insert(
+                "prefill_timing_source".to_string(),
+                serde_json::json!("time_to_first_token_current_cli_path"),
+            );
+            object.insert("first_token_ms".to_string(), serde_json::json!(first_token_ms));
+            object.insert(
+                "decode_steady_state_tok_s".to_string(),
+                serde_json::json!(decode_steady_state_tok_s),
+            );
+            object.insert(
+                "cuda_kernel_invocations".to_string(),
+                serde_json::json!(cuda_kernel_invocations),
+            );
+            object.insert(
+                "cuda_memory_hwm_bytes".to_string(),
+                serde_json::json!(cuda_memory_hwm_bytes),
+            );
+            object.insert(
+                "cuda_memory_hwm_source".to_string(),
+                serde_json::json!("nvidia-smi-memory.used-sampled"),
+            );
+            if let Some(cuda_probe) = &cuda_probe {
+                object.insert(
+                    "cuda".to_string(),
+                    serde_json::json!({
+                        "available": cuda_probe.available,
+                        "device_count": cuda_probe.device_count,
+                        "device_index": cuda_probe.selected_device_index,
+                        "device_name": cuda_probe.selected_device_name,
+                        "compute_capability": cuda_probe.compute_capability,
+                        "driver_version": cuda_probe.driver_version,
+                        "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+                        "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+                        "nvrtc_version": cuda_probe.nvrtc_version,
+                        "vram_bytes": cuda_probe.vram_bytes,
+                        "cuda_kernel_invocations": cuda_kernel_invocations,
+                        "memory_used_before_bytes": cuda_memory_before_bytes,
+                        "memory_used_after_bytes": cuda_memory_after_bytes,
+                        "memory_hwm_bytes": cuda_memory_hwm_bytes,
+                        "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+                    }),
+                );
+            }
+            object.insert(
+                "timing".to_string(),
+                serde_json::json!({
+                    "model_load_ms": rounded_ms(model_load_ms),
+                    "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                    "tokenize_ms": rounded_ms(prompt_tokenize_ms),
+                    "prefill_ms": first_token_ms.unwrap_or(0),
+                    "prompt_prefill_ms": rounded_ms(prefill_ms),
+                    "prefill_timing_source": "time_to_first_token_current_cli_path",
+                    "first_token_ms": first_token_ms,
+                    "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
+                    "decode_total_ms": rounded_ms(decode_total_ms),
+                    "decode_steady_state_tok_s": decode_steady_state_tok_s,
+                    "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                    "decode_step_ms": timing_samples_json(&decode_step_ms),
+                    "embed_ms": timing_samples_json(&embed_step_ms),
+                    "forward_ms": timing_samples_json(&forward_step_ms),
+                    "logits_ms": timing_samples_json(&logits_step_ms),
+                    "sample_ms": timing_samples_json(&sample_step_ms),
+                    "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+                    "total_ms": total_ms,
+                }),
+            );
+            object.insert(
+                "kv_cache".to_string(),
+                serde_json::json!({
+                    "enabled": true,
+                    "mode": "incremental_decode",
+                    "device": "cpu",
+                    "batch_size": 1,
+                    "prompt_tokens": prompt_tokens_len,
+                    "generated_tokens": generated_tokens.len(),
+                    "decode_steps": generated_tokens.len(),
+                }),
+            );
+            object.insert(
+                "kernel_stats".to_string(),
+                serde_json::json!([{
+                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                    "invocations": cuda_kernel_invocations,
+                    "fallback_invocations": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                    "host_to_device_bytes": serde_json::Value::Null,
+                    "device_to_host_bytes": serde_json::Value::Null,
+                    "kernel_launches": cuda_kernel_invocations,
+                    "kernel_time_ms": serde_json::Value::Null,
+                }]),
+            );
+            object.insert(
+                "kernel".to_string(),
+                serde_json::json!({
+                    "family": "qk256",
+                    "implementation": "cuda",
+                    "layout": kernel_layout,
+                    "dequantizes_before_compute": false,
+                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                }),
+            );
+            if let Some(strict_provenance) =
+                object.get_mut("strict_provenance").and_then(serde_json::Value::as_object_mut)
+            {
+                strict_provenance.insert(
+                    "requested_kernel".to_string(),
+                    serde_json::json!(bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "selected_kernel".to_string(),
+                    serde_json::json!(bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "cuda_kernel_invocations".to_string(),
+                    serde_json::json!(cuda_kernel_invocations),
+                );
+            }
+            let cpu_fallback_ops = if bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback == 0
+            {
+                Vec::<String>::new()
+            } else {
+                vec!["qk256_cpu_fallback".to_string()]
+            };
+            object.insert("cpu_fallback_ops".to_string(), serde_json::json!(cpu_fallback_ops));
+        }
         if let Some(apple_machine) = apple_machine
             && let Some(object) = output.as_object_mut()
         {
@@ -3031,7 +3211,7 @@ fn ensure_non_empty_generation_context(
 
 #[cfg(test)]
 mod empty_generation_context_tests {
-    use super::ensure_non_empty_generation_context;
+    use super::{ensure_non_empty_generation_context, nvidia_smi_memory_used_bytes_from_csv};
     use bitnet_common::Result as TokenizerResult;
     use bitnet_tokenizers::Tokenizer;
 
@@ -3099,6 +3279,16 @@ mod empty_generation_context_tests {
             .expect_err("missing BOS should return error");
         assert!(err.to_string().contains("zero tokens"));
         assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn parses_nvidia_smi_memory_used_mib() {
+        assert_eq!(nvidia_smi_memory_used_bytes_from_csv("5673 MiB\n"), Some(5_948_571_648));
+    }
+
+    #[test]
+    fn rejects_nvidia_smi_memory_used_without_number() {
+        assert_eq!(nvidia_smi_memory_used_bytes_from_csv("N/A\n"), None);
     }
 }
 

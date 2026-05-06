@@ -392,7 +392,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-006-one-token-proof"
 stackable = false
 requires_human_merge = true
@@ -428,7 +428,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-007"
-status = "proposed"
+status = "in_progress"
 branch = "codex/cuda-bitnet-007-short-decode-proof"
 stackable = false
 requires_human_merge = true
@@ -449,7 +449,9 @@ allowed_paths = [
 forbidden_paths = [
   "crates/bitnet-server/**",
 ]
-may_claim = []
+may_claim = [
+  "Strict BitNet CUDA short decode works after strict-bitnet-cuda-short-decode.json exists.",
+]
 must_not_claim = [
   "CUDA speedup exists.",
   "Full benchmark performance is proven.",
