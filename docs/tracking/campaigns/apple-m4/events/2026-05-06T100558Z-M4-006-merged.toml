@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T10:05:58Z"
+campaign = "apple-m4"
+item = "M4-006"
+event = "merged"
+pr = 3709
+merge_sha = "b07f16e1877e4a9502bd8c3a59c320b648657265"
+actor = "maintainer"
+
+notes = [
+  "CPU/Metal parity for the tiny M4 Metal add kernel merged.",
+  "M4-007 promoted to ready for MPSGraph tiny graph smoke.",
+  "No BitNet inference, QK256, MPSGraph execution, benchmark, or performance claim is made by M4-006.",
+]
