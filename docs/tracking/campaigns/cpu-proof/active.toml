@@ -157,7 +157,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-bitnet-004-scalar-packed-truth"
 stackable = false
 requires_human_merge = true
@@ -184,4 +184,39 @@ must_not_claim = [
   "Optimized kernel performance is proven.",
   "AVX2 dispatch is complete.",
   "Transformer decode is complete.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-005"
+status = "ready"
+branch = "codex/cpu-bitnet-005-avx2-gemv"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-004"]
+acceptance = "CPUID-gated AVX2/FMA QK256 GEMV dispatch matches the scalar packed oracle and records requested versus selected kernel identity."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 i2s_qk256",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "crates/bitnet-quantization/src/i2s_qk256_avx2.rs",
+  "crates/bitnet-quantization/tests/qk256_avx2_parity_tests.rs",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+]
+may_claim = [
+  "AVX2/FMA GEMV dispatch parity against the scalar QK256 oracle exists after merge.",
+]
+must_not_claim = [
+  "Transformer decode is complete.",
+  "Strict receipts are complete.",
+  "Benchmark or throughput performance is proven.",
+  "GPU or NPU execution is involved.",
 ]
