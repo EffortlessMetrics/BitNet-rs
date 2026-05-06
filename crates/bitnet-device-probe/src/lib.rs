@@ -15,6 +15,17 @@ pub use apple_metal::{
     parse_apple_metal_probe, probe_apple_metal,
 };
 
+#[cfg(feature = "metal")]
+pub mod apple_mpsgraph;
+#[cfg(feature = "metal")]
+pub use apple_mpsgraph::{
+    APPLE_M4_MPSGRAPH_BACKEND, APPLE_M4_MPSGRAPH_RESOLVED_TARGET_UNKNOWN,
+    APPLE_M4_MPSGRAPH_RUNTIME_API, TINY_MPSGRAPH_MATMUL_GRAPH_ID, TinyMpsGraphSmokeComparison,
+    TinyMpsGraphSmokeError, TinyMpsGraphSmokeReceipt, apple_mpsgraph_smoke_artifact_path,
+    compare_tiny_mpsgraph_matmul_outputs, expected_tiny_mpsgraph_matmul,
+    tiny_mpsgraph_matmul_inputs, tiny_mpsgraph_smoke_swift_source,
+};
+
 pub mod intel_arc;
 pub use intel_arc::{
     IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
