@@ -1,9 +1,12 @@
 name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
-# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, fuzz/**, Cargo.{toml,lock}, .github/workflows/**, .github/images/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
-# Workflow hardening: concurrency + timeouts applied across all workflows in #485
+# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh.
+# Triggers are scoped to inputs that affect Rust compilation/tests; docs and meta-only
+# changes are handled by markdownlint, link-check, docs-automation, and similar workflows.
+#
+# CI cost / verification policy: see docs/ci/cost-and-verification-policy.md
+# (rationale for the well-below-$1-per-PR target and the verification ladder).
 
 on:
   pull_request:
