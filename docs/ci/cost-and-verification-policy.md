@@ -51,9 +51,10 @@ squash-merge PRs, commit cost is a reasonable proxy for per-PR cost — though
 the figure should be treated as **directional rather than exact**.
 
 That number is not evidence that OpenClaw is doing CI wrong. It is evidence
-that serious agentic workflows need serious verification, and that the
-default economics do not scale. The question is not verification vs. cost.
-The question is:
+that **verification demand is rising faster than verification efficiency**.
+The lesson is not "verify less." The lesson is that serious agentic
+workflows need a better verification cost model. The question is not
+verification vs. cost. The question is:
 
 ```text
 expensive broad verification
@@ -101,22 +102,66 @@ That means we can run deep checks without needing every ordinary PR to
 download models, build external C++ references, start Docker images,
 provision macOS runners, or touch live hardware.
 
-[ripr](https://github.com/EffortlessMetrics/ripr) exists for the same reason
-at the workflow layer: to make verification selectable, explainable, and
-cheap enough to run continuously. The point is not to suppress validation.
-The point is to route validation to the right lane with the right proof
-obligation and the right cost envelope.
+### ripr is mutation-testing-lite at static-analysis prices
 
-In other words:
+The CI design principles in this document are adapted from the
+[ripr](https://github.com/EffortlessMetrics/ripr) project, which we also use
+as tooling. ripr is one of the main reasons this CI strategy is
+economically viable. It is **not** generic CI routing.
+
+Coverage tells us code executed. Traditional mutation testing tells us
+whether tests fail when a concrete mutant is run. Both are useful, but they
+sit at different points on the cost curve:
 
 ```text
-Rust makes the checks fast.
-ripr makes the checks intentional.
-LEM budgeting makes the cost visible.
+coverage:
+  cheap, but often too weak as an oracle signal
+ripr:
+  mutation-testing-shaped static exposure signal
+mutation testing:
+  strong runtime confirmation, but expensive
 ```
 
-Together, they let us **increase** verification without letting CI spend
-scale linearly with PR volume.
+`ripr` is the middle layer. It analyzes the diff, builds mutation-shaped
+static probes, and asks whether the changed behavior appears exposed to a
+meaningful test discriminator. The PR-time question it answers is:
+
+> For the behavior changed in this diff, do the current tests appear to
+> contain a discriminator that would notice if that behavior were wrong?
+
+That is exactly the kind of signal agentic development needs: fast, local,
+targeted, and cheap enough to run while a PR is still being drafted.
+
+`ripr` does **not** run mutants, does **not** report `killed` / `survived`
+outcomes, and does **not** replace execution-backed mutation testing. It
+*shifts mutation-testing-shaped feedback earlier and cheaper*. Full mutation
+testing remains valuable for calibration, nightly, and high-risk changes.
+
+### The verification ladder
+
+| Signal                                 |        Cost | Use                                      |
+| -------------------------------------- | ----------: | ---------------------------------------- |
+| `cargo check` / clippy                 |         low | type / lint correctness                  |
+| unit / oracle tests                    |         low | deterministic behavior proof             |
+| `ripr`                                 |  low-medium | static mutation-shaped oracle-gap signal |
+| property tests                         |      medium | bounded-input confidence                 |
+| coverage                               | medium-high | execution surface                        |
+| mutation testing                       |        high | runtime adequacy confirmation            |
+| crossval / hardware / model validation |        high | external parity and platform proof       |
+
+The strategic claim is:
+
+```text
+Rust makes correctness checks fast.
+ripr makes oracle gaps visible early.
+LEM budgeting makes verification economics explicit.
+CI routing spends expensive lanes only where they buy signal.
+```
+
+Together, they let us **increase** verification density without letting CI
+spend scale linearly with PR volume. The goal is more proof per CI minute —
+enough verification for the agentic age, paid for by changing the cost curve
+of verification.
 
 ## Why verification needs to increase
 
@@ -265,3 +310,6 @@ after-the-fact billing concerns. The test rig is part of the machine.
   the validation gate surface.
 - [PR Plan workflow](../../.github/workflows/pr-plan.yml) — advisory per-PR
   Linux-equivalent-minute (LEM) estimate posted to the run summary.
+- [ripr](https://github.com/EffortlessMetrics/ripr) — source of the CI
+  design principles used here, and the mutation-testing-lite tooling that
+  makes this verification ladder economically viable.
