@@ -489,11 +489,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-015"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-015-steady-decode-profile"
 stackable = false
 requires_human_merge = true
 blocked_by = ["M4-014"]
+pr = 3804
 acceptance = "Add steady decode and prefill timing profiles for the selected Apple backend with strict model, tokenizer, phase, fallback, and machine context recorded."
 commands = [
   "cargo fmt --all -- --check",

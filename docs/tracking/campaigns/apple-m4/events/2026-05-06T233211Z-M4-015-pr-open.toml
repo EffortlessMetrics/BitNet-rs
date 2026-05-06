@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T23:32:11Z"
+campaign = "apple-m4"
+item = "M4-015"
+event = "pr_open"
+pr = 3804
+head_sha = "e4f4ef0bc8e9adf6d3982792b542fbdff1ba88f2"
+actor = "codex"
+
+notes = [
+  "Opened strict BitNet M4 profile receipt PR.",
+  "Receipt scope records named CPU/NEON BitNet phase timing under Apple machine context; no general M4 performance, Neural Engine, QK256 acceleration, or Metal BitNet inference claim.",
+]
