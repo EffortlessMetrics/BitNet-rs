@@ -42,6 +42,7 @@ pub mod async_execution;
 pub mod attention;
 pub mod attention_mask;
 pub mod batch_norm;
+pub mod bitnet_context;
 pub mod constant_memory;
 pub mod conv1d;
 pub mod cooperative_groups;
@@ -129,6 +130,11 @@ pub use attention_mask::{
 pub use batch_norm::{
     BatchNormConfig, BatchNormKernel, BatchNormState, CudaBatchNormConfig, batch_norm_cpu,
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
+};
+pub use bitnet_context::{
+    CudaActivationWorkspace, CudaBitnetContext, CudaBitnetDeviceInfo, CudaBitnetKernelFamily,
+    CudaBitnetReceiptFields, CudaBitnetRuntimeStats, CudaTensorShape, CudaWeightHandle,
+    CudaWeightId,
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
