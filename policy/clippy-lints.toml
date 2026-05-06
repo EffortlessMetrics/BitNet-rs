@@ -1,0 +1,371 @@
+# Clippy / rustc lint policy ledger for bitnet-rs.
+#
+# This file is the source of truth for which lints are *intended* to be active
+# at the workspace level, and which are *planned* to flip when a future MSRV is
+# adopted. The block in `Cargo.toml` `[workspace.lints]` is what the compiler
+# actually enforces; `cargo xtask check-lint-policy` verifies the two stay in
+# sync and that planned lints are not activated before their target MSRV.
+#
+# Schema:
+#   schema           : integer, increments on breaking schema change
+#   msrv             : current workspace MSRV (must match workspace.package.rust-version)
+#   policy           : repo-wide policy posture
+#   [[active]]       : lint expected to be enforced today
+#   [[planned]]      : lint expected to flip on a specific future MSRV
+#
+# See docs/CLIPPY_POLICY.md for the rationale and rollout plan.
+
+schema = 1
+msrv = "1.92.0"
+
+[policy]
+# Workspace-wide posture flags, asserted by `cargo xtask check-lint-policy`.
+panic_free_tests       = false  # ratchet target; flips to true when test carveouts are removed
+allow_test_carveouts   = true   # current state: clippy.toml still allows unwrap/expect in tests
+suppression_style      = "expect-with-reason"
+blanket_categories     = true   # current state: workspace warns on all/pedantic/nursery
+target_panic_free_tests = true  # docs/CLIPPY_POLICY.md commits to flipping this
+target_msrv            = "1.93" # platform-wide ratchet target
+
+# ---------------------------------------------------------------------------
+# Active lints (enforced today). Each entry should match an entry in the root
+# Cargo.toml [workspace.lints.*] block. The xtask checker treats this list as
+# advisory until the strict baseline lands (see PR 2 of the rollout).
+# ---------------------------------------------------------------------------
+
+[[active]]
+name = "clippy::ptr_arg"
+level = "deny"
+class = "api"
+reason = "Prefer slice references over &Vec/&String in public APIs."
+
+[[active]]
+name = "clippy::all"
+level = "warn"
+class = "category"
+reason = "Workspace baseline; tracked for promotion to explicit lints in PR 2."
+
+[[active]]
+name = "clippy::pedantic"
+level = "warn"
+class = "category"
+reason = "Workspace baseline; will be replaced with explicit selections in PR 2."
+
+[[active]]
+name = "clippy::nursery"
+level = "warn"
+class = "category"
+reason = "Workspace baseline; will be replaced with explicit selections in PR 2."
+
+# ---------------------------------------------------------------------------
+# Planned lints (PR 2 — strict baseline). These are the lints we intend to add
+# to [workspace.lints] in the next stacked PR. They are listed here so the
+# governance check can verify the next PR matches the plan.
+# ---------------------------------------------------------------------------
+
+[[planned]]
+name = "rust::unsafe_code"
+level = "forbid"
+activate_when_msrv = "1.92"
+class = "unsafe-memory"
+reason = "BitNet-rs already does not use unsafe Rust outside FFI shims; lock that in."
+overlay_exception = ["bitnet-kernels", "bitnet-rocm", "bitnet-cuda*", "bitnet-metal", "bitnet-vulkan", "bitnet-opencl", "bitnet-wgpu"]
+
+[[planned]]
+name = "rust::unsafe_op_in_unsafe_fn"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "unsafe-memory"
+reason = "Force explicit unsafe blocks even inside unsafe fn."
+
+[[planned]]
+name = "rust::unused_must_use"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Catch ignored Result/Future returns at compile time."
+
+[[planned]]
+name = "clippy::dbg_macro"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "diagnostic-debt"
+reason = "dbg!() must not ship; pre-commit already greps for it."
+
+[[planned]]
+name = "clippy::todo"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "diagnostic-debt"
+reason = "TDD scaffolds use #[ignore] tests with panic!(); never todo!() in shipping code."
+
+[[planned]]
+name = "clippy::unimplemented"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "diagnostic-debt"
+reason = "Same posture as todo!()."
+
+[[planned]]
+name = "clippy::panic"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Production code must propagate errors; tests use Result-returning helpers."
+
+[[planned]]
+name = "clippy::unreachable"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Use exhaustive matches or explicit error returns."
+
+[[planned]]
+name = "clippy::unwrap_used"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "No unchecked Result/Option collapse in production or tests."
+
+[[planned]]
+name = "clippy::expect_used"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Same posture as unwrap_used; .expect() is just a labelled panic."
+
+[[planned]]
+name = "clippy::get_unwrap"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Slice access must be bounds-checked or use checked accessors."
+
+[[planned]]
+name = "clippy::unwrap_in_result"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "A Result-returning function should propagate, not panic on failure."
+
+[[planned]]
+name = "clippy::panic_in_result_fn"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Same posture as unwrap_in_result."
+
+[[planned]]
+name = "clippy::indexing_slicing"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Numeric kernels must use checked_*, get(), or window iterators."
+
+[[planned]]
+name = "clippy::out_of_bounds_indexing"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Compile-time bounds violations are always bugs."
+
+[[planned]]
+name = "clippy::string_slice"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "String slicing on byte indices is a UTF-8 footgun."
+
+[[planned]]
+name = "clippy::unchecked_time_subtraction"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "panic"
+reason = "Use checked_duration_since to avoid panics on clock skew."
+
+[[planned]]
+name = "clippy::let_underscore_future"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Dropping a Future without awaiting cancels work silently."
+
+[[planned]]
+name = "clippy::let_underscore_must_use"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Suppressing #[must_use] with `let _ =` hides intent; use a binding with a reason."
+
+[[planned]]
+name = "clippy::let_underscore_lock"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Dropping a lock guard immediately is almost always a bug."
+
+[[planned]]
+name = "clippy::unused_result_ok"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Use ? or explicit handling, not .ok() to discard."
+
+[[planned]]
+name = "clippy::map_err_ignore"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Ignoring the original error loses diagnostic information."
+
+[[planned]]
+name = "clippy::assertions_on_result_states"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "assert!(result.is_ok()) hides the actual error; unwrap or match instead."
+
+[[planned]]
+name = "clippy::lines_filter_map_ok"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "silent-failure"
+reason = "Silently skipping IO errors is not a substitute for handling them."
+
+[[planned]]
+name = "clippy::allow_attributes"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "suppression-governance"
+reason = "Migrate every #[allow] to #[expect(..., reason = \"...\")]."
+
+[[planned]]
+name = "clippy::allow_attributes_without_reason"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "suppression-governance"
+reason = "Suppressions must justify themselves."
+
+[[planned]]
+name = "clippy::blanket_clippy_restriction_lints"
+level = "deny"
+activate_when_msrv = "1.92"
+class = "suppression-governance"
+reason = "Restriction lints must be opted-in individually."
+
+# Numeric / GPU / kernel lane — staged carefully per the rollout plan.
+# These are kept at warn during PR 2 and only promoted in a later PR after
+# kernel debt is triaged.
+
+[[planned]]
+name = "clippy::float_cmp"
+level = "warn"
+activate_when_msrv = "1.92"
+class = "numeric"
+reason = "Bit-for-bit float comparison is rarely what kernels want; verify per call site."
+
+[[planned]]
+name = "clippy::cast_possible_truncation"
+level = "warn"
+activate_when_msrv = "1.92"
+class = "numeric"
+reason = "Track u64-as-usize and i32-as-isize sites; promote to deny per crate."
+
+[[planned]]
+name = "clippy::cast_sign_loss"
+level = "warn"
+activate_when_msrv = "1.92"
+class = "numeric"
+reason = "Audit signed-to-unsigned casts in tensor sizing paths."
+
+[[planned]]
+name = "clippy::cast_precision_loss"
+level = "warn"
+activate_when_msrv = "1.92"
+class = "numeric"
+reason = "Audit usize-as-f32/f64 in metric and logging paths."
+
+[[planned]]
+name = "clippy::arithmetic_side_effects"
+level = "warn"
+activate_when_msrv = "1.92"
+class = "numeric"
+reason = "Stays at warn for BitNet-rs; do not promote without kernel-debt triage."
+
+# ---------------------------------------------------------------------------
+# Rust 1.94 flip cohort (target activate_when_msrv = "1.94").
+# ---------------------------------------------------------------------------
+
+[[planned]]
+name = "clippy::same_length_and_capacity"
+level = "deny"
+activate_when_msrv = "1.94"
+class = "unsafe-memory"
+reason = "Catch raw-parts reconstruction mistakes."
+
+[[planned]]
+name = "clippy::manual_ilog2"
+level = "warn"
+activate_when_msrv = "1.94"
+class = "good-taste"
+reason = "Prefer the standard integer log helper."
+
+[[planned]]
+name = "clippy::decimal_bitwise_operands"
+level = "warn"
+activate_when_msrv = "1.94"
+class = "numeric"
+reason = "Make bit masks visually inspectable."
+
+[[planned]]
+name = "clippy::needless_type_cast"
+level = "warn"
+activate_when_msrv = "1.94"
+class = "numeric"
+reason = "Avoid stale numeric type drift."
+
+# ---------------------------------------------------------------------------
+# Rust 1.95 flip cohort (target activate_when_msrv = "1.95").
+# ---------------------------------------------------------------------------
+
+[[planned]]
+name = "clippy::disallowed_fields"
+level = "deny"
+activate_when_msrv = "1.95"
+class = "architecture"
+reason = "Allow architecture policy to ban direct field access across protected seams."
+
+[[planned]]
+name = "clippy::manual_checked_ops"
+level = "warn"
+activate_when_msrv = "1.95"
+class = "numeric"
+reason = "Prefer checked arithmetic over manual divide-by-zero guards."
+
+[[planned]]
+name = "clippy::manual_take"
+level = "warn"
+activate_when_msrv = "1.95"
+class = "good-taste"
+reason = "Use standard ownership helper instead of local reimplementation."
+
+[[planned]]
+name = "clippy::manual_pop_if"
+level = "warn"
+activate_when_msrv = "1.95"
+class = "good-taste"
+reason = "Use collection APIs that encode predicate-and-pop intent directly."
+
+[[planned]]
+name = "clippy::duration_suboptimal_units"
+level = "warn"
+activate_when_msrv = "1.95"
+class = "good-taste"
+reason = "Make durations legible without mental unit conversion."
+
+[[planned]]
+name = "clippy::unnecessary_trailing_comma"
+level = "warn"
+activate_when_msrv = "1.95"
+class = "good-taste"
+reason = "Keep generated and hand-written format macro calls clean."

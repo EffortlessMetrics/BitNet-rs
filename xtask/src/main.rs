@@ -44,6 +44,7 @@ mod gates;
 mod grid_check;
 #[allow(dead_code)]
 mod health_check;
+mod lint_policy;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
@@ -1003,6 +1004,20 @@ enum Cmd {
         #[command(subcommand)]
         command: campaign::CampaignCmd,
     },
+
+    /// Verify the workspace lint governance ledger (`policy/clippy-lints.toml`)
+    /// is internally consistent and matches `Cargo.toml` and
+    /// `rust-toolchain.toml`.
+    ///
+    /// Advisory by default (always exits 0). Pass `--strict` to fail on any
+    /// finding; this is what CI will use once the strict lint baseline lands
+    /// in PR 2 of the Clippy governance rollout.
+    #[command(name = "check-lint-policy")]
+    CheckLintPolicy {
+        /// Fail the command on any finding instead of just reporting them.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1329,6 +1344,11 @@ fn real_main() -> Result<()> {
             grid_check::run(cpu_only, verbose, dry_run)
         }
         Cmd::Campaign { command } => campaign::run(command),
+        Cmd::CheckLintPolicy { strict } => lint_policy::run(if strict {
+            lint_policy::Mode::Strict
+        } else {
+            lint_policy::Mode::Advisory
+        }),
     }
 }
 

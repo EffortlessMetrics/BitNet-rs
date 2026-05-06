@@ -1,0 +1,218 @@
+# Non-Rust file policy allowlist for bitnet-rs.
+#
+# bitnet-rs is a Rust workspace. New non-Rust *programming* files (shell, Python,
+# C++, TypeScript, ...) require an explicit reviewed entry here that explains
+# why xtask / Rust is not the right home for that surface.
+#
+# Files always excluded from this policy (no entry needed):
+#   - Markdown / docs: *.md, docs/**, ROADMAP.md, CHANGELOG.md
+#   - Configuration: *.toml, *.yaml, *.yml, *.json (in conventional locations)
+#   - Build artefacts: target/**, Cargo.lock
+#   - License / repo metadata: LICENSE, .gitignore, .gitattributes, CODEOWNERS
+#   - Fixture inputs: fixtures/**, models/**, tests/**/fixtures/**
+#
+# For any other non-Rust source file, add an entry here.
+#
+# Schema fields:
+#   schema_version : "1.0"
+#   [[allow]]
+#     glob | path  : exactly one — repo-relative
+#     kind         : editor_extension | ci_declarative | ci_script | build_script
+#                    | fixture_input | reference_impl | binding_glue | tooling_script
+#                    | benchmark_harness | nix_module | container_artifact | other
+#     owner        : crate / team / surface identifier
+#     reason       : 1-3 sentences explaining why this is not a Rust/xtask surface
+#     surface      : ci | release | tooling | reference | editor | benchmarks
+#                    | infra | other
+#     classification : production | test | tooling | config | reference | example
+#     covered_by   : list of CI/test commands or workflows that exercise this file
+#     expires      : optional ISO-8601 date for known-temporary entries
+#
+# `cargo xtask check-file-policy` (added in a follow-up PR) will:
+#   - reject programming files not covered by an entry here
+#   - require owner + reason + surface + classification
+#   - require covered_by for production/test/tooling surfaces
+#   - fail expired entries
+#   - report unused / stale entries
+#
+# This file is the TOML migration of the prior pipe-delimited convention used
+# in `ripr`. It is seeded with the most common bitnet-rs non-Rust surfaces;
+# enforcement is wired up in a later PR (after `cargo xtask check-file-policy`
+# lands and the false-positive rate is tuned).
+
+schema_version = "1.0"
+
+# ---------- CI / release ----------
+
+[[allow]]
+glob           = ".github/workflows/*.yml"
+kind           = "ci_declarative"
+owner          = "release/ci"
+reason         = "GitHub Actions workflow definitions are platform-required YAML."
+surface        = "ci"
+classification = "config"
+covered_by     = ["cargo xtask check-workflows"]
+
+[[allow]]
+glob           = ".github/actions/**/*.yml"
+kind           = "ci_declarative"
+owner          = "release/ci"
+reason         = "Composite GitHub Actions definitions."
+surface        = "ci"
+classification = "config"
+covered_by     = ["cargo xtask check-workflows"]
+
+[[allow]]
+glob           = ".github/scripts/**/*.sh"
+kind           = "ci_script"
+owner          = "release/ci"
+reason         = "Workflow helpers invoked from GitHub Actions runners."
+surface        = "ci"
+classification = "tooling"
+covered_by     = ["shellcheck (via pre-commit)", "GitHub Actions runs"]
+
+[[allow]]
+glob           = ".githooks/**"
+kind           = "ci_script"
+owner          = "release/ci"
+reason         = "Pre-commit hook implementations."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = [".pre-commit-config.yaml"]
+
+# ---------- Build / packaging ----------
+
+[[allow]]
+path           = "Dockerfile"
+kind           = "container_artifact"
+owner          = "release/packaging"
+reason         = "Container image definition for reproducible builds."
+surface        = "release"
+classification = "config"
+covered_by     = ["GitHub Actions docker build job"]
+
+[[allow]]
+path           = "Makefile"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "Convenience entry points for common CI workflows; thin wrapper around xtask."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["make guards", "make CI matrix"]
+
+[[allow]]
+path           = "Makefile.ci"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "CI-only Make targets; same posture as Makefile."
+surface        = "ci"
+classification = "tooling"
+covered_by     = ["GitHub Actions"]
+
+[[allow]]
+path           = "Makefile.minimal"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "Minimal Make targets for constrained environments."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["docs/quickstart.md"]
+
+[[allow]]
+path           = "Justfile"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "Just task runner; mirror of Makefile entry points for contributors."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["docs/development/build-commands.md"]
+
+# ---------- Reference / cross-validation ----------
+
+[[allow]]
+glob           = "crates/*/src/**/*.cu"
+kind           = "reference_impl"
+owner          = "kernels/cuda"
+reason         = "CUDA kernel sources compiled by build.rs; required to be C++/CUDA, cannot be Rust."
+surface        = "reference"
+classification = "production"
+covered_by     = ["cargo build --features gpu", "GPU CI lane"]
+
+[[allow]]
+glob           = "crates/*/src/**/*.cpp"
+kind           = "binding_glue"
+owner          = "ffi"
+reason         = "C++ FFI shims for cross-validation against bitnet.cpp."
+surface        = "reference"
+classification = "production"
+covered_by     = ["cargo build --features ffi", "cargo run -p xtask -- fetch-cpp"]
+
+[[allow]]
+glob           = "crates/*/src/**/*.h"
+kind           = "binding_glue"
+owner          = "ffi"
+reason         = "C/C++ headers for FFI bindings."
+surface        = "reference"
+classification = "production"
+covered_by     = ["cargo build --features ffi"]
+
+[[allow]]
+glob           = "crates/*/build.rs"
+kind           = "build_script"
+owner          = "release/build"
+reason         = "Cargo build scripts; required to be Rust but excluded from no-panic policy until reviewed."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["cargo build"]
+
+# ---------- Nix ----------
+
+[[allow]]
+path           = "flake.nix"
+kind           = "nix_module"
+owner          = "release/nix"
+reason         = "Nix flake entry point for reproducible builds."
+surface        = "release"
+classification = "config"
+covered_by     = ["nix flake check", "nix build .#bitnet-cli"]
+
+[[allow]]
+glob           = "nix/**/*.nix"
+kind           = "nix_module"
+owner          = "release/nix"
+reason         = "Nix flake modules; required to be Nix, not Rust."
+surface        = "release"
+classification = "config"
+covered_by     = ["nix flake check"]
+
+# ---------- Documentation tooling ----------
+
+[[allow]]
+glob           = "docs/**/*.py"
+kind           = "tooling_script"
+owner          = "docs"
+reason         = "Documentation generators; pending migration to xtask."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["docs build job"]
+expires        = "2026-12-01"
+
+[[allow]]
+glob           = "scripts/**/*.sh"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "Operator scripts; pending audit and migration to xtask."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["shellcheck", "operator runbooks"]
+expires        = "2026-12-01"
+
+[[allow]]
+glob           = "scripts/**/*.py"
+kind           = "tooling_script"
+owner          = "release/ci"
+reason         = "Python operator scripts; pending audit and migration to xtask."
+surface        = "tooling"
+classification = "tooling"
+covered_by     = ["operator runbooks"]
+expires        = "2026-12-01"

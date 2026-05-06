@@ -1,0 +1,40 @@
+# Tracked Clippy / lint debt for bitnet-rs.
+#
+# Every entry here is a *temporary, reviewed* exception to the workspace lint
+# baseline. Silent debt (a bare #[allow] or a config carveout in clippy.toml)
+# is not allowed; if you need an exception, add it here with an owner, a
+# reason, and an expiry date. `cargo xtask check-lint-policy` fails on:
+#   - missing required fields
+#   - debt past its expiry
+#   - debt referring to lints not declared as active or planned
+#
+# Schema:
+#   schema     : integer, increments on breaking schema change
+#   [[debt]]
+#     lint    : "clippy::name" or "rust::name" (matches policy/clippy-lints.toml)
+#     path    : exact file path, or glob (use trailing /** for directories)
+#     owner   : team or crate-owner identifier (free text, but must be set)
+#     reason  : 1-3 sentences explaining why the global rule cannot apply yet
+#     expires : ISO-8601 date; once past, CI will fail until removed or extended
+#
+# This file is intentionally empty in PR 1 (governance scaffolding only).
+# PR 2 (strict baseline rollout) will seed it with the violations the new
+# lint block exposes; each entry must be reviewed before merge.
+
+schema = 1
+
+# Examples of the expected shape (commented out — these are not active debt):
+#
+# [[debt]]
+# lint    = "clippy::indexing_slicing"
+# path    = "crates/bitnet-kernels/src/i2s/qk256/scalar.rs"
+# owner   = "kernels"
+# reason  = "Bounds-checked at the kernel-launcher boundary; promoting to .get() requires a benchmark sweep."
+# expires = "2026-09-01"
+#
+# [[debt]]
+# lint    = "clippy::arithmetic_side_effects"
+# path    = "crates/bitnet-kernels/src/**"
+# owner   = "kernels"
+# reason  = "Kernel arithmetic needs a reviewed checked/wrapping/saturating policy before global promotion."
+# expires = "2026-09-01"

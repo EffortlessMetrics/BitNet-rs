@@ -1,0 +1,69 @@
+# No-panic allowlist for bitnet-rs.
+#
+# When the strict Clippy baseline is active (see policy/clippy-lints.toml,
+# planned cohort with activate_when_msrv = "1.92"), the workspace forbids:
+#
+#   .unwrap(), .expect(), panic!(), todo!(), unimplemented!(), unreachable!()
+#
+# in both production and test code. Each call site that cannot yet comply must
+# be listed here with a *semantic* identifier — not a line/column pair, since
+# locations rot during refactors.
+#
+# Identity (must be unique per [[allow]]):
+#   path     + family + selector
+#
+# Locator (advisory only, used for diagnostics; refreshed by tooling):
+#   last_seen.line, last_seen.column
+#
+# Schema fields:
+#   schema_version : "0.3" (compatible with the ripr v0.2 model + owner/expires)
+#   [[allow]]
+#     path           : repo-relative source file
+#     family         : one of unwrap | expect | panic | todo | unimplemented | unreachable
+#     classification : test_only | fixture_setup | infallible_invariant | external_api_panic
+#                      | tdd_scaffold | other
+#     owner          : crate or team identifier
+#     explanation    : 1-3 sentences; must include why the panic is safe or temporary
+#     expires        : optional ISO-8601 date; required for tdd_scaffold and other
+#   [allow.selector]
+#     kind                  : method_call | macro_call | function_call
+#     container             : enclosing fn / impl / module path
+#     callee                : the panicking item (e.g. "unwrap", "panic")
+#     receiver_fingerprint  : optional; helps disambiguate multiple sites in one fn
+#   [allow.last_seen]
+#     line   : advisory
+#     column : advisory
+#
+# `cargo xtask check-no-panic-family` (added in a follow-up PR) will:
+#   - parse Rust with syn / rust-analyzer
+#   - reject panic-family calls outside this allowlist
+#   - reject stale entries (selector no longer present)
+#   - require owner + reason
+#   - fail expired entries
+#
+# This file is intentionally empty in PR 1 (governance scaffolding only).
+# It will be populated when the strict baseline is enabled, by walking the
+# existing tree and converting genuine carveouts (TDD scaffolds, fixture
+# setup, infallible invariants) into structured entries.
+
+schema_version = "0.3"
+
+# Example of the expected shape (commented out — not an active entry):
+#
+# [[allow]]
+# path           = "crates/bitnet-quantization/src/i2s/qk256/tests/golden.rs"
+# family         = "expect"
+# classification = "fixture_setup"
+# owner          = "quantization"
+# explanation    = "Loading checked-in golden fixture; missing fixture means a build-system bug, not a runtime path."
+# expires        = "2026-09-01"
+#
+# [allow.selector]
+# kind                 = "method_call"
+# container            = "load_qk256_golden"
+# callee               = "expect"
+# receiver_fingerprint = "std::fs::read(&fixture_path)"
+#
+# [allow.last_seen]
+# line   = 42
+# column = 17
