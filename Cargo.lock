@@ -716,6 +716,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-endpoint-registry-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitnet-engine-core"
 version = "0.2.1-dev"
 dependencies = [
@@ -1412,6 +1419,7 @@ dependencies = [
  "bitnet-client-ip-core",
  "bitnet-common",
  "bitnet-device-config-core",
+ "bitnet-endpoint-registry-core",
  "bitnet-eval-core",
  "bitnet-http-auth-core",
  "bitnet-inference",
