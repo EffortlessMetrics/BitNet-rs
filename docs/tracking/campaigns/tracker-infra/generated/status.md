@@ -9,7 +9,8 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| TRACKER-001 | pr_open | #3660 | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
+| TRACKER-001 | merged | #3660 | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
+| TRACKER-002 | proposed | TBD | `codex/tracker-infra/TRACKER-002-ci-enforcement` | Add CI enforcement for campaign doctor and generated-dashboard freshness after the advisory tracker gate has landed. |
 
 ## Hard Constraints
 

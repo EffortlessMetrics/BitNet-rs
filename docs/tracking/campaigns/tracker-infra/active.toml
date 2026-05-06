@@ -20,7 +20,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "TRACKER-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/tracker-infra/TRACKER-001-campaign-local-gates"
 stackable = false
 requires_human_merge = true
@@ -51,4 +51,35 @@ must_not_claim = [
   "Legacy global tracking has been fully removed.",
   "CI enforcement is active.",
   "Runtime behavior changed.",
+]
+
+[[work_item]]
+id = "TRACKER-002"
+status = "proposed"
+branch = "codex/tracker-infra/TRACKER-002-ci-enforcement"
+stackable = false
+requires_human_merge = true
+blocked_by = ["TRACKER-001"]
+acceptance = "Add CI enforcement for campaign doctor and generated-dashboard freshness after the advisory tracker gate has landed."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  "docs/tracking/campaigns/tracker-infra/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Campaign tracker checks are enforced in CI after merge.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "Legacy global tracking has been removed.",
 ]
