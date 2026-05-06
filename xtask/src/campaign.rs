@@ -885,10 +885,10 @@ fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> 
             items.insert(item.id.as_str(), (&campaign.manifest.id, item));
         }
         for event in &campaign.events {
-            if event.event == "pr_open" {
-                if let Some(pr) = event.pr {
-                    pr_open_event_prs.insert(event.item.as_str(), pr);
-                }
+            if event.event == "pr_open"
+                && let Some(pr) = event.pr
+            {
+                pr_open_event_prs.insert(event.item.as_str(), pr);
             }
             if event.event == "merged" {
                 merged_events.insert(event.item.as_str());
