@@ -122,7 +122,7 @@ jobs:
           echo "Coverage OK"
 
       - name: Upload coverage reports to Codecov
-        if: ${{ always() && hashFiles('lcov.info') != '' }}
+        if: ${{ always() && hashFiles('lcov.info') != '' && secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
