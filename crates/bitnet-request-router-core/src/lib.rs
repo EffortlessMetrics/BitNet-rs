@@ -16,7 +16,7 @@ pub enum Method {
 
 impl Method {
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Get => "GET",
             Self::Post => "POST",
@@ -91,7 +91,7 @@ impl RequestRouter {
     }
 
     #[must_use]
-    pub fn route_count(&self) -> usize {
+    pub const fn route_count(&self) -> usize {
         self.routes.len()
     }
 
@@ -137,12 +137,14 @@ impl RequestRouter {
 /// Simple path matching (supports `:param` wildcards).
 #[must_use]
 pub fn path_matches(pattern: &str, path: &str) -> bool {
-    let pat_parts: Vec<&str> = pattern.split('/').collect();
-    let path_parts: Vec<&str> = path.split('/').collect();
-    if pat_parts.len() != path_parts.len() {
+    let pattern_parts: Vec<&str> = pattern.split('/').collect();
+    let route_parts: Vec<&str> = path.split('/').collect();
+    if pattern_parts.len() != route_parts.len() {
         return false;
     }
-    pat_parts.iter().zip(path_parts.iter()).all(|(p, a)| p.starts_with(':') || *p == *a)
+    pattern_parts.iter().zip(route_parts.iter()).all(|(pattern_part, route_part)| {
+        pattern_part.starts_with(':') || *pattern_part == *route_part
+    })
 }
 
 #[cfg(test)]

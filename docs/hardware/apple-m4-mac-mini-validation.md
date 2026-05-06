@@ -241,6 +241,39 @@ feature, but this proof must not claim a NEON-optimized packed kernel unless one
 is actually selected. It also does not claim Metal BitNet execution, QK256
 optimization on Apple Silicon, or Apple CPU performance.
 
+## M4-011 Native Metal I2_S Smoke/Parity
+
+The first BitNet-specific native Metal proof is a tiny I2_S-adjacent parity
+fixture, not full model inference. It uses a 1x4 output fixture with `k=32`,
+canonical I2_S packed bytes, and a `u32_le_words_from_i2s_bytes` transport buffer
+for Metal storage-buffer alignment. The receipt must say both things: the source
+layout is packed I2_S, and the Metal test transports those bytes as little-endian
+`u32` words.
+
+Run the non-live contract tests with:
+
+```bash
+cargo test --locked -p bitnet-kernels \
+  --no-default-features --features metal \
+  --test metal_tiny_smoke i2s -- --nocapture
+```
+
+Run the live M4 receipt-backed proof with:
+
+```bash
+BITNET_RUN_M4_METAL_I2S_PARITY=1 \
+BITNET_M4_METAL_I2S_PARITY_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-parity.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features --features metal \
+  --test metal_tiny_smoke tiny_m4_metal_i2s_matches_cpu_neon_reference_when_enabled -- --nocapture
+```
+
+The receipt may claim only that `tiny_metal_i2s_parity` runs on
+`apple-m4-metal`, consumes the declared packed I2_S fixture layout without CPU
+fallback, and matches the Apple CPU/NEON reference lane for that fixture. It must
+not claim full BitNet Metal inference, QK256 on Metal, benchmark performance,
+server inference, MPSGraph execution, or Neural Engine execution.
+
 ## Benchmark Notes
 
 Benchmarks must record:

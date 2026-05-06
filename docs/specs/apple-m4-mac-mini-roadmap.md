@@ -297,7 +297,44 @@ claim Metal BitNet execution, QK256 on Apple Silicon, or Apple CPU performance.
 ### M4-011 - Native Metal I2_S Smoke/Parity
 
 Start BitNet-specific native Metal work with an I2_S-adjacent kernel or
-subgraph, not QK256, and compare against Apple CPU/NEON.
+subgraph, not QK256, and compare against Apple CPU/NEON. The first proof target
+is `tiny_metal_i2s_parity`: a 1x4 output fixture with `k=32`, canonical I2_S
+packed bytes, per-column scales, and a Metal storage-buffer transport layout of
+`u32_le_words_from_i2s_bytes`.
+
+The receipt must record:
+
+```json
+{
+  "requested_backend": "apple-m4-metal",
+  "selected_backend": "apple-m4-metal",
+  "runtime_api": "metal",
+  "kernel_id": "tiny_metal_i2s_parity",
+  "fallback_used": false,
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "parity",
+    "layout_source": "fixture_packed_i2_s",
+    "fallback_layout": null
+  },
+  "layout": {
+    "source": "fixture_packed_i2_s",
+    "transport_layout": "u32_le_words_from_i2s_bytes",
+    "consumes_packed_i2_s_directly": true,
+    "dequantizes_before_compute": false
+  },
+  "parity": {
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "kernel_id": "tiny_metal_i2s_parity",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0
+  }
+}
+```
+
+M4-011 does not claim full BitNet Metal inference, QK256 on Metal, MPSGraph
+execution, Neural Engine execution, or performance.
 
 ### M4-012 - TL1 / ARM-Oriented Investigation
 

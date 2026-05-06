@@ -355,7 +355,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-011"
-status = "ready"
+status = "pr_open"
 branch = "codex/apple-m4/M4-011-metal-i2s-smoke-parity"
 stackable = false
 requires_human_merge = true

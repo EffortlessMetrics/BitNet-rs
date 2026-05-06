@@ -2,12 +2,15 @@
 
 use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
 use bitnet_kernels::metal::smoke::{
-    ARTIFACT_KIND, MACHINE_ID, PARITY_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND,
-    RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SmokeComparison,
-    TINY_METAL_ADD_PARITY_KERNEL_ID, TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt,
-    TinyMetalAddSmokeReceipt, compare_tiny_add_outputs, expected_tiny_add,
-    is_apple_m4_adapter_name, metal_parity_artifact_path, metal_smoke_artifact_path,
-    tiny_add_inputs,
+    ARTIFACT_KIND, I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE,
+    I2S_METAL_PARITY_KERNEL_ID, I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N,
+    I2S_TRANSPORT_LAYOUT, I2sMetalParityFixture, I2sMetalParityReceipt, MACHINE_ID,
+    PARITY_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND, RUNTIME_API, SELECTED_BACKEND,
+    SMOKE_WORKGROUP_SIZE, SmokeComparison, TINY_METAL_ADD_PARITY_KERNEL_ID,
+    TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt, TinyMetalAddSmokeReceipt,
+    compare_tiny_add_outputs, expected_tiny_add, i2s_metal_parity_fixture, i2s_parity_shape_words,
+    is_apple_m4_adapter_name, metal_i2s_parity_artifact_path, metal_parity_artifact_path,
+    metal_smoke_artifact_path, tiny_add_inputs,
 };
 
 #[test]
@@ -64,6 +67,48 @@ fn parity_receipt_contract_records_cpu_neon_reference_and_metal_target() {
 }
 
 #[test]
+fn i2s_fixture_records_packed_layout_and_cpu_reference() {
+    let fixture = i2s_metal_parity_fixture();
+
+    assert_eq!(fixture.m, I2S_PARITY_M);
+    assert_eq!(fixture.n, I2S_PARITY_N);
+    assert_eq!(fixture.k, I2S_PARITY_K);
+    assert_eq!(fixture.block_size, I2S_PARITY_BLOCK_SIZE);
+    assert_eq!(fixture.activations.len(), I2S_PARITY_M * I2S_PARITY_K);
+    assert_eq!(fixture.weights_packed.len(), I2S_PARITY_N * I2S_PARITY_K.div_ceil(4));
+    assert_eq!(fixture.weights_packed_words.len(), fixture.weights_packed.len().div_ceil(4));
+    assert_eq!(fixture.scales.len(), I2S_PARITY_N * I2S_PARITY_K.div_ceil(I2S_PARITY_BLOCK_SIZE));
+    assert_eq!(fixture.expected.len(), I2S_PARITY_M * I2S_PARITY_N);
+    assert!(fixture.expected.iter().any(|value| *value != 0.0));
+}
+
+#[test]
+fn i2s_receipt_contract_records_kernel_family_without_inference_claim() {
+    let receipt = I2sMetalParityReceipt::passed(
+        metal_i2s_parity_artifact_path("2026-05-06"),
+        SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 },
+    );
+
+    assert_eq!(receipt.machine_id, MACHINE_ID);
+    assert_eq!(receipt.artifact_kind, PARITY_ARTIFACT_KIND);
+    assert_eq!(receipt.requested_backend, REQUESTED_BACKEND);
+    assert_eq!(receipt.selected_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.runtime_api, RUNTIME_API);
+    assert_eq!(receipt.reference_backend, REFERENCE_BACKEND);
+    assert_eq!(receipt.target_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.kernel_id, I2S_METAL_PARITY_KERNEL_ID);
+    assert_eq!(receipt.kernel_family, I2S_KERNEL_FAMILY);
+    assert_eq!(receipt.execution_phase, I2S_EXECUTION_PHASE);
+    assert_eq!(receipt.layout_source, I2S_LAYOUT_SOURCE);
+    assert_eq!(receipt.transport_layout, I2S_TRANSPORT_LAYOUT);
+    assert!(!receipt.fallback_used);
+    assert_eq!(
+        receipt.artifact_path,
+        "ci/hardware/apple-m4-mac-mini/2026-05-06/metal-i2s-parity.json"
+    );
+}
+
+#[test]
 fn comparison_fails_instead_of_falling_back_to_cpu() {
     let expected = [1.0_f32, 2.0, 3.0];
     let actual = [1.0_f32, 20.0, 3.0];
@@ -102,6 +147,9 @@ mod live_metal {
     const BENCHMARK_RECEIPT_ENV: &str = "BITNET_M4_METAL_BENCHMARK_RECEIPT";
     const BENCHMARK_ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_BENCHMARK_ARTIFACT_PATH";
     const BENCHMARK_ITERATIONS_ENV: &str = "BITNET_M4_METAL_BENCHMARK_ITERATIONS";
+    const RUN_I2S_PARITY_ENV: &str = "BITNET_RUN_M4_METAL_I2S_PARITY";
+    const I2S_PARITY_RECEIPT_ENV: &str = "BITNET_M4_METAL_I2S_PARITY_RECEIPT";
+    const I2S_PARITY_ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_I2S_PARITY_ARTIFACT_PATH";
     const TINY_KERNEL_SMOKE_PROFILE: &str = "tiny_kernel_smoke";
 
     struct MetalSmokeOutput {
@@ -113,6 +161,11 @@ mod live_metal {
         adapter_name: String,
         output: Vec<f32>,
         timing: BenchmarkTiming,
+    }
+
+    struct MetalI2sParityOutput {
+        adapter_name: String,
+        output: Vec<f32>,
     }
 
     struct BenchmarkTiming {
@@ -171,10 +224,11 @@ mod live_metal {
         );
 
         if let Ok(path) = std::env::var(RECEIPT_ENV) {
-            if let Some(parent) = Path::new(&path).parent() {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(&path, serde_json::to_string_pretty(&receipt_json)?)?;
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
         }
 
         println!("{}", serde_json::to_string_pretty(&receipt_json)?);
@@ -232,10 +286,11 @@ mod live_metal {
         );
 
         if let Ok(path) = std::env::var(PARITY_RECEIPT_ENV) {
-            if let Some(parent) = Path::new(&path).parent() {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(&path, serde_json::to_string_pretty(&receipt_json)?)?;
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
         }
 
         println!("{}", serde_json::to_string_pretty(&receipt_json)?);
@@ -294,10 +349,63 @@ mod live_metal {
         );
 
         if let Ok(path) = std::env::var(BENCHMARK_RECEIPT_ENV) {
-            if let Some(parent) = Path::new(&path).parent() {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(&path, serde_json::to_string_pretty(&receipt_json)?)?;
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
+        }
+
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+        Ok(())
+    }
+
+    #[test]
+    fn tiny_m4_metal_i2s_matches_cpu_neon_reference_when_enabled() -> Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_I2S_PARITY_ENV).as_deref() != Ok("1") {
+            eprintln!("skipping live M4 Metal I2_S parity; set {RUN_I2S_PARITY_ENV}=1 to run it");
+            return Ok(());
+        }
+
+        let fixture = i2s_metal_parity_fixture();
+        let metal_output = run_i2s_metal_parity(&fixture)?;
+
+        if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
+            return Err(io_error(format!(
+                "M4-011 I2_S parity requires an Apple M4-family Metal adapter; found '{}'",
+                metal_output.adapter_name
+            )));
+        }
+
+        let comparison = compare_tiny_add_outputs(&fixture.expected, &metal_output.output, 1e-5)?;
+        let artifact_path = std::env::var(I2S_PARITY_ARTIFACT_PATH_ENV)
+            .or_else(|_| std::env::var(I2S_PARITY_RECEIPT_ENV))
+            .unwrap_or_else(|_| {
+                "ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-parity.json".to_string()
+            });
+        let receipt = I2sMetalParityReceipt::passed(artifact_path.clone(), comparison);
+
+        let mut receipt_json = apple_backend_receipt_json(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            metal_output.adapter_name,
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+            Some(receipt.kernel_id),
+            None,
+            receipt.result,
+        )?;
+        extend_i2s_parity_metrics(&mut receipt_json, &receipt, &fixture);
+
+        if let Ok(path) = std::env::var(I2S_PARITY_RECEIPT_ENV) {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
         }
 
         println!("{}", serde_json::to_string_pretty(&receipt_json)?);
@@ -430,6 +538,165 @@ mod live_metal {
             staging_buffer.unmap();
 
             Ok(MetalSmokeOutput { adapter_name: adapter_info.name, output })
+        })
+    }
+
+    fn run_i2s_metal_parity(
+        fixture: &I2sMetalParityFixture,
+    ) -> Result<MetalI2sParityOutput, Box<dyn Error>> {
+        pollster::block_on(async move {
+            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+                backends: wgpu::Backends::METAL,
+                ..Default::default()
+            });
+            let adapter = instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    compatible_surface: None,
+                    force_fallback_adapter: false,
+                })
+                .await
+                .ok_or_else(|| io_error("no Metal adapter found for M4-011 I2_S parity"))?;
+
+            let adapter_info = adapter.get_info();
+            if adapter_info.backend != wgpu::Backend::Metal {
+                return Err(io_error(format!(
+                    "M4-011 I2_S parity requires Metal backend, found {:?}",
+                    adapter_info.backend
+                )));
+            }
+
+            let (device, queue) = adapter
+                .request_device(&wgpu::DeviceDescriptor::default(), None)
+                .await
+                .map_err(|error| io_error(format!("failed to create Metal device: {error}")))?;
+
+            let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(I2S_METAL_PARITY_KERNEL_ID),
+                source: wgpu::ShaderSource::Wgsl(I2S_PARITY_SHADER.into()),
+            });
+
+            let activations_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_i2s_activations"),
+                contents: bytemuck::cast_slice(&fixture.activations),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_i2s_weights_u32_le"),
+                contents: bytemuck::cast_slice(&fixture.weights_packed_words),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let scales_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_i2s_scales"),
+                contents: bytemuck::cast_slice(&fixture.scales),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let shape_words = i2s_parity_shape_words(fixture);
+            let shape_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_i2s_shape"),
+                contents: bytemuck::cast_slice(&shape_words),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let byte_len = std::mem::size_of_val(&fixture.expected[..]) as u64;
+            let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("tiny_metal_i2s_output"),
+                size: byte_len,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("tiny_metal_i2s_staging"),
+                size: byte_len,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            let bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("tiny_metal_i2s_layout"),
+                    entries: &[
+                        storage_buffer_entry(0, true),
+                        storage_buffer_entry(1, true),
+                        storage_buffer_entry(2, true),
+                        storage_buffer_entry(3, false),
+                        storage_buffer_entry(4, true),
+                    ],
+                });
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("tiny_metal_i2s_bind_group"),
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: activations_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weights_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: scales_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry { binding: 4, resource: shape_buffer.as_entire_binding() },
+                ],
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("tiny_metal_i2s_pipeline_layout"),
+                bind_group_layouts: &[&bind_group_layout],
+                push_constant_ranges: &[],
+            });
+            let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("tiny_metal_i2s_pipeline"),
+                layout: Some(&pipeline_layout),
+                module: &shader,
+                entry_point: Some("main"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("tiny_metal_i2s_encoder"),
+            });
+            {
+                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("tiny_metal_i2s_pass"),
+                    timestamp_writes: None,
+                });
+                pass.set_pipeline(&pipeline);
+                pass.set_bind_group(0, &bind_group, &[]);
+                pass.dispatch_workgroups(
+                    (fixture.expected.len() as u32).div_ceil(SMOKE_WORKGROUP_SIZE),
+                    1,
+                    1,
+                );
+            }
+
+            encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, byte_len);
+            queue.submit(std::iter::once(encoder.finish()));
+
+            let slice = staging_buffer.slice(..);
+            let (tx, rx) = std::sync::mpsc::channel();
+            slice.map_async(wgpu::MapMode::Read, move |result| {
+                tx.send(result).unwrap();
+            });
+            device.poll(wgpu::Maintain::Wait);
+            rx.recv()
+                .map_err(|error| io_error(format!("failed to receive Metal map result: {error}")))?
+                .map_err(|error| io_error(format!("failed to map Metal I2_S output: {error}")))?;
+
+            let data = slice.get_mapped_range();
+            let output = bytemuck::cast_slice::<u8, f32>(&data).to_vec();
+            drop(data);
+            staging_buffer.unmap();
+
+            Ok(MetalI2sParityOutput { adapter_name: adapter_info.name, output })
         })
     }
 
@@ -636,6 +903,15 @@ mod live_metal {
         Box::new(io::Error::other(message.into()))
     }
 
+    fn receipt_output_path(path: &str) -> std::path::PathBuf {
+        let path = Path::new(path);
+        if path.is_absolute() {
+            return path.to_path_buf();
+        }
+
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn apple_backend_receipt_json(
         machine_id: &str,
@@ -754,6 +1030,51 @@ mod live_metal {
         );
     }
 
+    fn extend_i2s_parity_metrics(
+        receipt_json: &mut serde_json::Value,
+        receipt: &I2sMetalParityReceipt,
+        fixture: &I2sMetalParityFixture,
+    ) {
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert(
+            "bitnet".to_string(),
+            json!({
+                "kernel_family": receipt.kernel_family,
+                "execution_phase": receipt.execution_phase,
+                "layout_source": receipt.layout_source,
+                "fallback_layout": null
+            }),
+        );
+        object.insert("model".to_string(), serde_json::Value::Null);
+        object.insert(
+            "layout".to_string(),
+            json!({
+                "source": receipt.layout_source,
+                "transport_layout": receipt.transport_layout,
+                "canonical_packed_bytes": fixture.weights_packed.len(),
+                "transport_words_u32": fixture.weights_packed_words.len(),
+                "consumes_packed_i2_s_directly": true,
+                "dequantizes_before_compute": false,
+                "m": fixture.m,
+                "n": fixture.n,
+                "k": fixture.k,
+                "block_size": fixture.block_size
+            }),
+        );
+        object.insert(
+            "parity".to_string(),
+            json!({
+                "reference_backend": receipt.reference_backend,
+                "target_backend": receipt.target_backend,
+                "kernel_id": receipt.kernel_id,
+                "kernel_family": receipt.kernel_family,
+                "max_abs_error": receipt.max_abs_error,
+                "mean_abs_error": receipt.mean_abs_error,
+                "token_agreement_for_greedy": null
+            }),
+        );
+    }
+
     fn duration_ms(duration: Duration) -> f64 {
         duration.as_secs_f64() * 1_000.0
     }
@@ -786,6 +1107,63 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if index < arrayLength(&lhs) {
         output[index] = lhs[index] + rhs[index];
     }
+}
+"#;
+
+    const I2S_PARITY_SHADER: &str = r#"
+@group(0) @binding(0) var<storage, read> activations: array<f32>;
+@group(0) @binding(1) var<storage, read> weights_words: array<u32>;
+@group(0) @binding(2) var<storage, read> scales: array<f32>;
+@group(0) @binding(3) var<storage, read_write> output: array<f32>;
+@group(0) @binding(4) var<storage, read> shape: array<u32>;
+
+fn decode_i2s(bits: u32) -> f32 {
+    if bits == 1u {
+        return 1.0;
+    }
+    if bits == 3u {
+        return -1.0;
+    }
+    return 0.0;
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let output_index = global_id.x;
+    let m = shape[0];
+    let n = shape[1];
+    let k = shape[2];
+    let packed_k = shape[3];
+    let block_size = shape[4];
+    let num_blocks_k = shape[5];
+
+    if output_index >= m * n {
+        return;
+    }
+
+    let row = output_index / n;
+    let col = output_index % n;
+    var acc = 0.0;
+
+    var k_index = 0u;
+    loop {
+        if k_index >= k {
+            break;
+        }
+
+        let packed_byte_index = col * packed_k + k_index / 4u;
+        let word_index = packed_byte_index / 4u;
+        let byte_shift = (packed_byte_index % 4u) * 8u;
+        let packed_byte = (weights_words[word_index] >> byte_shift) & 0xffu;
+        let bit_shift = (k_index % 4u) * 2u;
+        let bits = (packed_byte >> bit_shift) & 0x03u;
+        let block_index = k_index / block_size;
+        let scale = scales[col * num_blocks_k + block_index];
+        acc = acc + activations[row * k + k_index] * decode_i2s(bits) * scale;
+        k_index = k_index + 1u;
+    }
+
+    output[output_index] = acc;
 }
 "#;
 }
