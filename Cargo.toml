@@ -110,7 +110,6 @@ members = [
   "crates/bitnet-atomic-file-core", # SRP: shared atomic file write primitive
   "crates/bitnet-download-core", # SRP: core download validation and atomic file helpers
   "crates/bitnet-download",      # SRP: download mechanics primitives
-  "crates/bitnet-download-core", # SRP: pure download utility helpers
   "crates/bitnet-http-retry",    # SRP: reusable HTTP Retry-After/backoff timing primitives
   "crates/bitnet-http-auth-core", # SRP: reusable Authorization Bearer parsing helpers
   "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
