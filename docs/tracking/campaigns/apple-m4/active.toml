@@ -322,7 +322,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-010"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-010-cpu-neon-bitnet-reference"
 stackable = false
 requires_human_merge = true
@@ -355,7 +355,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-011"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-011-metal-i2s-smoke-parity"
 stackable = false
 requires_human_merge = true

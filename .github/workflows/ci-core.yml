@@ -18,11 +18,12 @@ on:
       - 'crossval/**'
       - 'tests/**'
       - 'xtask/**'
+      - 'docs/tracking/**'
+      - '.codex/campaigns/**'
       - 'fuzz/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
-      - 'docs/tracking/**'
       - '.github/workflows/ci-core.yml'
   push:
     branches: [ main ]
@@ -31,11 +32,12 @@ on:
       - 'crossval/**'
       - 'tests/**'
       - 'xtask/**'
+      - 'docs/tracking/**'
+      - '.codex/campaigns/**'
       - 'fuzz/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
-      - 'docs/tracking/**'
       - '.github/workflows/ci-core.yml'
   workflow_dispatch:
 
