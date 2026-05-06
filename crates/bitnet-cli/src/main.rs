@@ -400,6 +400,12 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run validation-only preflight checks
+    Validate {
+        #[command(subcommand)]
+        action: ValidateAction,
+    },
+
     /// Compile and launch a tiny CUDA vector-add kernel
     CudaSmoke {
         /// CUDA device index to probe and launch on
@@ -449,6 +455,44 @@ enum Commands {
         /// Output in JSON format
         #[arg(long)]
         json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum ValidateAction {
+    /// Emit a CPU BitNet validation preflight receipt without running inference
+    CpuBitnet {
+        /// Machine label for the validation target
+        #[arg(long, default_value = "intel-258v")]
+        machine: String,
+
+        /// Canonical BitNet GGUF model path
+        #[arg(long)]
+        model: std::path::PathBuf,
+
+        /// Optional tokenizer artifact path
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// Requested backend identity
+        #[arg(long, default_value = "cpu")]
+        backend: String,
+
+        /// Require strict, no-fallback validation semantics
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Maximum tokens intended for the eventual validation run
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 1)]
+        max_tokens: usize,
+
+        /// Same-machine platform artifact to cross-link
+        #[arg(long)]
+        platform_artifact: Option<std::path::PathBuf>,
+
+        /// Output JSON validation receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
     },
 }
 
@@ -620,6 +664,7 @@ async fn main() -> Result<()> {
         Some(Commands::LunarLakeProbe { json_out }) => {
             handle_lunar_lake_probe_command(json_out).await
         }
+        Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
             handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
         }
@@ -988,6 +1033,273 @@ async fn handle_lunar_lake_probe_command(json_out: Option<std::path::PathBuf>) -
     write_json_output(json_out.as_ref(), &receipt)?;
 
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct CpuBitnetValidationPreflight {
+    status: &'static str,
+    proof_stage: &'static str,
+    validation_attempted: bool,
+    blocked_before_inference: bool,
+    blocker_stage: Option<&'static str>,
+    blocker_reason: Option<String>,
+    tokenizer_source: Option<String>,
+    tokenizer_path: Option<std::path::PathBuf>,
+    model_sha256: Option<String>,
+}
+
+fn sibling_tokenizer_path(model_path: &std::path::Path) -> Option<std::path::PathBuf> {
+    let parent = model_path.parent()?;
+    for name in ["tokenizer.json", "tokenizer.model"] {
+        let candidate = parent.join(name);
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn cpu_bitnet_validation_preflight(
+    model_path: &std::path::Path,
+    tokenizer_path: Option<&std::path::Path>,
+    backend: &str,
+    strict: bool,
+) -> CpuBitnetValidationPreflight {
+    if backend != "cpu" && backend != "intel-258v-cpu-avx2" {
+        return CpuBitnetValidationPreflight {
+            status: "blocked_wrong_backend",
+            proof_stage: "blocked_preflight",
+            validation_attempted: false,
+            blocked_before_inference: true,
+            blocker_stage: Some("backend_selection"),
+            blocker_reason: Some(format!(
+                "CPU258V validation is CPU-only; requested backend was {backend:?}"
+            )),
+            tokenizer_source: None,
+            tokenizer_path: None,
+            model_sha256: None,
+        };
+    }
+
+    if !model_path.exists() {
+        return CpuBitnetValidationPreflight {
+            status: "blocked_missing_canonical_model",
+            proof_stage: "blocked_preflight",
+            validation_attempted: false,
+            blocked_before_inference: true,
+            blocker_stage: Some("load_model"),
+            blocker_reason: Some(format!("model path does not exist: {}", model_path.display())),
+            tokenizer_source: None,
+            tokenizer_path: None,
+            model_sha256: None,
+        };
+    }
+
+    let resolved_tokenizer = if let Some(path) = tokenizer_path {
+        if path.exists() { Some(("explicit".to_string(), path.to_path_buf())) } else { None }
+    } else {
+        sibling_tokenizer_path(model_path).map(|path| {
+            let source =
+                if path.file_name().and_then(|name| name.to_str()) == Some("tokenizer.json") {
+                    "sibling_tokenizer_json"
+                } else {
+                    "sibling_sentencepiece"
+                };
+            (source.to_string(), path)
+        })
+    };
+
+    let Some((tokenizer_source, tokenizer_path)) = resolved_tokenizer else {
+        return CpuBitnetValidationPreflight {
+            status: "blocked_missing_tokenizer",
+            proof_stage: "blocked_preflight",
+            validation_attempted: false,
+            blocked_before_inference: true,
+            blocker_stage: Some("tokenize_prompt"),
+            blocker_reason: Some(if strict {
+                "strict validation requires an explicit tokenizer or sibling tokenizer asset"
+                    .to_string()
+            } else {
+                "tokenizer artifact was not found; no fallback tokenizer is used by CPU258V validation"
+                    .to_string()
+            }),
+            tokenizer_source: None,
+            tokenizer_path: None,
+            model_sha256: None,
+        };
+    };
+
+    let model_sha256 = compute_model_sha256(model_path).ok();
+
+    CpuBitnetValidationPreflight {
+        status: "preflight_ready",
+        proof_stage: "runtime_detected",
+        validation_attempted: false,
+        blocked_before_inference: false,
+        blocker_stage: None,
+        blocker_reason: None,
+        tokenizer_source: Some(tokenizer_source),
+        tokenizer_path: Some(tokenizer_path),
+        model_sha256,
+    }
+}
+
+struct CpuBitnetValidationReceiptInput {
+    machine: String,
+    model: std::path::PathBuf,
+    tokenizer: Option<std::path::PathBuf>,
+    backend: String,
+    strict: bool,
+    max_tokens: usize,
+    platform_artifact: Option<std::path::PathBuf>,
+    json_out: Option<std::path::PathBuf>,
+    timestamp_utc: String,
+}
+
+fn build_cpu_bitnet_validation_receipt(
+    input: CpuBitnetValidationReceiptInput,
+) -> serde_json::Value {
+    let platform = bitnet_device_probe::probe_lnl258v_platform();
+    let preflight = cpu_bitnet_validation_preflight(
+        &input.model,
+        input.tokenizer.as_deref(),
+        &input.backend,
+        input.strict,
+    );
+    let cpu_features = detected_cpu_feature_labels();
+    let thread_count = platform.cpu.threads.max(1);
+    let artifact_path = input.json_out.as_ref().map(|path| path.display().to_string());
+    let platform_artifact = input.platform_artifact.as_ref().map(|path| path.display().to_string());
+    let tokenizer_path = preflight.tokenizer_path.as_ref().map(|path| path.display().to_string());
+    let blocker = match (preflight.blocker_stage, preflight.blocker_reason.as_ref()) {
+        (Some(stage), Some(reason)) => serde_json::json!({
+            "stage": stage,
+            "reason": reason,
+        }),
+        _ => serde_json::Value::Null,
+    };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cpu-bitnet-validation",
+        "machine_id": input.machine,
+        "hardware_lane": "intel-258v-cpu-avx2",
+        "timestamp_utc": input.timestamp_utc,
+        "proof_stage": preflight.proof_stage,
+        "status": preflight.status,
+        "validation_attempted": preflight.validation_attempted,
+        "blocked_before_inference": preflight.blocked_before_inference,
+        "blocker": blocker,
+        "strict": input.strict,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "kernel_execution": false,
+        "bitnet_inference": false,
+        "hardware": {
+            "requested_backend": input.backend,
+            "selected_backend": "intel-258v-cpu-avx2",
+            "runtime_api": "cpu",
+            "cpu": {
+                "model": platform.cpu.brand,
+                "cores": platform.cpu.cores,
+                "threads": platform.cpu.threads,
+                "p_core_count": platform.cpu.p_core_count,
+                "lp_e_core_count": platform.cpu.lp_e_core_count,
+                "avx2_detected": platform.cpu.has_avx2,
+                "avx512_detected": platform.cpu.has_avx512,
+                "fma_detected": platform.cpu.has_fma,
+                "sse42_detected": platform.cpu.has_sse42,
+                "features": cpu_features,
+            },
+            "platform_artifact": platform_artifact,
+        },
+        "model": {
+            "expected_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "expected_file": "ggml-model-i2_s.gguf",
+            "path": input.model.display().to_string(),
+            "exists": input.model.exists(),
+            "sha256": preflight.model_sha256,
+            "format": "gguf",
+            "architecture": "bitnet_b1_58",
+            "context_length": 4096,
+            "tokenizer": "llama3",
+            "vocab_size": 128256,
+            "loader_mode": null,
+        },
+        "tokenizer": {
+            "path": tokenizer_path,
+            "source": preflight.tokenizer_source,
+            "strict": input.strict,
+        },
+        "bitnet": {
+            "weight_quantization": "W1.58",
+            "activation_quantization": "A8",
+            "weight_domain": "ternary",
+            "kernel_family": "i2_s|tl2|qk256",
+            "layout": null,
+            "layout_source": null,
+            "fallback_layout": null,
+        },
+        "execution": {
+            "phase": "load_model",
+            "prompt_tokens": 0,
+            "generated_tokens": 0,
+            "max_tokens_requested": input.max_tokens,
+            "batch_size": 1,
+            "thread_count": thread_count,
+            "requested_backend": "intel-258v-cpu-avx2",
+            "selected_backend": "intel-258v-cpu-avx2",
+            "requested_kernel": null,
+            "selected_kernel": null,
+            "fallback_used": false,
+            "fallback_reason": null,
+        },
+        "claim_allowed": if preflight.status == "preflight_ready" {
+            "The 258V CPU lane preflight found the requested model and tokenizer artifacts; no inference was run."
+        } else {
+            "The 258V CPU lane emitted a structured validation blocker before inference."
+        },
+        "claims_not_allowed": [
+            "Strict BitNet GGUF loaded on 258V",
+            "Tokenizer authority resolved through the inference path on 258V",
+            "QK256 or TL2 execution ran on 258V",
+            "BitNet inference works on 258V",
+            "258V CPU benchmark performance"
+        ],
+        "artifact_path": artifact_path,
+    })
+}
+
+async fn handle_validate_command(action: ValidateAction) -> Result<()> {
+    match action {
+        ValidateAction::CpuBitnet {
+            machine,
+            model,
+            tokenizer,
+            backend,
+            strict,
+            max_tokens,
+            platform_artifact,
+            json_out,
+        } => {
+            let timestamp_utc =
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+            let receipt = build_cpu_bitnet_validation_receipt(CpuBitnetValidationReceiptInput {
+                machine,
+                model,
+                tokenizer,
+                backend,
+                strict,
+                max_tokens,
+                platform_artifact,
+                json_out: json_out.clone(),
+                timestamp_utc,
+            });
+            write_json_output(json_out.as_ref(), &receipt)?;
+            Ok(())
+        }
+    }
 }
 
 struct CudaSmokeReceiptFields {
@@ -2826,6 +3138,53 @@ mod tests {
         assert_eq!(receipt["bitnet_inference"], false);
         assert_eq!(receipt["fallback_used"], false);
         assert!(receipt["platform"]["cpu"]["has_avx512"].is_boolean());
+    }
+
+    #[test]
+    fn cpu258v_validation_blocks_missing_model_before_inference() {
+        let missing_model = std::env::temp_dir()
+            .join(format!("bitnet-missing-{}-ggml-model-i2_s.gguf", std::process::id()));
+        let receipt = build_cpu_bitnet_validation_receipt(CpuBitnetValidationReceiptInput {
+            machine: "intel-258v".to_string(),
+            model: missing_model,
+            tokenizer: None,
+            backend: "cpu".to_string(),
+            strict: true,
+            max_tokens: 1,
+            platform_artifact: None,
+            json_out: None,
+            timestamp_utc: "2026-05-06T00:00:00Z".to_string(),
+        });
+
+        assert_eq!(receipt["artifact_kind"], "cpu-bitnet-validation");
+        assert_eq!(receipt["hardware_lane"], "intel-258v-cpu-avx2");
+        assert_eq!(receipt["proof_stage"], "blocked_preflight");
+        assert_eq!(receipt["status"], "blocked_missing_canonical_model");
+        assert_eq!(receipt["blocked_before_inference"], true);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["blocker"]["stage"], "load_model");
+    }
+
+    #[test]
+    fn cpu258v_validation_rejects_accelerator_backend() {
+        let receipt = build_cpu_bitnet_validation_receipt(CpuBitnetValidationReceiptInput {
+            machine: "intel-258v".to_string(),
+            model: std::path::PathBuf::from("models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"),
+            tokenizer: None,
+            backend: "intel-npu".to_string(),
+            strict: true,
+            max_tokens: 1,
+            platform_artifact: None,
+            json_out: None,
+            timestamp_utc: "2026-05-06T00:00:00Z".to_string(),
+        });
+
+        assert_eq!(receipt["status"], "blocked_wrong_backend");
+        assert_eq!(receipt["blocker"]["stage"], "backend_selection");
+        assert_eq!(receipt["hardware"]["requested_backend"], "intel-npu");
+        assert_eq!(receipt["bitnet_inference"], false);
     }
 }
 

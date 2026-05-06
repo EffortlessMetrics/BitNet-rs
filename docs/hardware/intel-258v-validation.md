@@ -145,6 +145,31 @@ The command records `proof_stage=runtime_detected`, `runtime_api=platform_probe`
 `fallback_used=false`, and a `must_not_claim` list. It does not replace the
 lane-specific Arc 140V, NPU, CPU BitNet, parity, or benchmark artifacts.
 
+### CPU BitNet Validation Preflight
+
+Use the CPU validation command to emit the Lunar Lake CPU lane artifact without
+taking ownership of CPU implementation internals:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- validate cpu-bitnet \
+  --machine intel-258v \
+  --model /models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer /models/BitNet-b1.58-2B-4T/tokenizer.json \
+  --backend cpu \
+  --strict \
+  --max-tokens 1 \
+  --platform-artifact ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/cpu-bitnet-validation.json
+```
+
+This command is validation-only. If the canonical GGUF or tokenizer is absent,
+it writes `proof_stage=blocked_preflight` with a structured blocker. It does not
+load BitNet tensors, run QK256/TL2 kernels, decode tokens, or make benchmark
+claims.
+
 ## Windows PowerShell Bundle
 
 ```powershell
