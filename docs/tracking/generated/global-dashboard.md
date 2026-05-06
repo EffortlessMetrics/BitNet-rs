@@ -9,7 +9,7 @@
 | cpu-proof | CPU-BITNET-005b | #3748 | pr_open | CPU-BITNET-005c | No GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-003 | TBD | ready | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | LNL258V-RUN-001 | #3714 | pr_open | LNL258V-002 | Arc 140V OpenCL proof is not NPU proof. |
+| intel-258v-platform | ARC140V-002 | TBD | in_progress | LNL258V-002 | Arc 140V OpenCL proof is not NPU proof. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-003 | #3739 | pr_open | none | Device-node detection is not inference. |
 | nvidia-5070ti | RTX5070TI-006 | TBD | ready | none | CUDA visibility is not kernel execution. |

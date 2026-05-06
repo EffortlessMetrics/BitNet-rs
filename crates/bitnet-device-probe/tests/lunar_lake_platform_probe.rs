@@ -26,8 +26,13 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
             scheduler_hint: Some("record topology context".to_owned()),
         },
         arc140v: IntelArc140vProbe {
+            proof_stage: LNL258V_PROOF_STAGE_RUNTIME_DETECTED.to_owned(),
+            requested_backend: "intel-arc-140v".to_owned(),
+            selected_backend: Some("intel-arc-140v-opencl".to_owned()),
+            runtime_api: Some("opencl".to_owned()),
             available: true,
             pci_device_id: Some("0x64A0".to_owned()),
+            identity_evidence: vec!["opencl:Intel(R) Arc(TM) 140V Graphics".to_owned()],
             opencl_available: true,
             opencl_platform_name: Some("Intel(R) OpenCL Graphics".to_owned()),
             opencl_device_name: Some("Intel(R) Arc(TM) 140V Graphics".to_owned()),
@@ -39,6 +44,7 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
             openvino_gpu_full_name: Some("Intel(R) Arc(TM) 140V Graphics".to_owned()),
             shared_memory_bytes: Some(32 * 1024 * 1024 * 1024),
             power_mode: Some("balanced".to_owned()),
+            fallback_used: false,
             failure_reason: None,
         },
         npu: IntelNpuProbe {
@@ -113,7 +119,11 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
     assert_eq!(value["fallback_used"], false);
     assert_eq!(value["cpu"]["has_avx2"], true);
     assert_eq!(value["cpu"]["has_avx512"], false);
+    assert_eq!(value["arc140v"]["proof_stage"], "runtime_detected");
+    assert_eq!(value["arc140v"]["selected_backend"], "intel-arc-140v-opencl");
+    assert_eq!(value["arc140v"]["runtime_api"], "opencl");
     assert_eq!(value["arc140v"]["openvino_gpu_device"], "GPU.0");
+    assert_eq!(value["arc140v"]["fallback_used"], false);
     assert_eq!(value["npu"]["requested_backend"], "intel-npu");
     assert_eq!(value["npu"]["selected_backend"], "intel-npu-openvino");
     assert_eq!(value["npu"]["runtime_api"], "openvino");
