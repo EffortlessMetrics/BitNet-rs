@@ -219,7 +219,15 @@ jobs:
     name: Model Validation (PR Lane)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'pull_request'
+    # Currently a no-op when no test model is committed; only run when a real
+    # model fixture exists (signaled via the `model-validation` or `full-ci` label),
+    # on main, or on manual dispatch. Avoids wasting minutes on an unconditional
+    # successful exit on every PR.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'model-validation') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -328,6 +336,13 @@ jobs:
     name: GGUF Compatibility Check
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Downloads a multi-GB GGUF on cache miss; not worth running on every PR.
+    # Run on main, manual dispatch, or when explicitly requested via labels.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gguf') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -398,6 +413,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true  # Non-blocking for PRs
+    # Audit/license output is informational and duplicated by the dedicated
+    # security workflow. Run on main and manual dispatch only; PRs can opt in
+    # via the `audit` or `full-ci` label.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'audit') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
