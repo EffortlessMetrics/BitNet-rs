@@ -155,7 +155,7 @@ pub use layernorm::{
     rms_norm_cpu_fallback, rms_norm_forward,
 };
 pub use linear::{LINEAR_KERNEL_SRC, launch_linear};
-pub use qk256_gemv::{Qk256GemvConfig, launch_qk256_gemv};
+pub use qk256_gemv::{CUDA_QK256_GEMV_KERNEL_ID, Qk256GemvConfig, launch_qk256_gemv};
 pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
 pub use rope::{
     RopeConfig, apply_rope, apply_rope_batched, build_rope_freqs, compute_sincos_table,
