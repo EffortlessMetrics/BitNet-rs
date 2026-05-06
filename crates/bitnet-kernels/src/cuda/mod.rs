@@ -135,7 +135,7 @@ pub use bitnet_context::{
     CUDA_BITNET_I2S_GEMV_KERNEL_ID, CudaActivationWorkspace, CudaBitnetContext,
     CudaBitnetDeviceInfo, CudaBitnetKernelFamily, CudaBitnetKernelInvocationStats,
     CudaBitnetLinearBackend, CudaBitnetReceiptFields, CudaBitnetRuntimeStats, CudaTensorShape,
-    CudaWeightHandle, CudaWeightId, PackedI2sWeights,
+    CudaWeightHandle, CudaWeightId, PackedI2sWeights, PackedQk256Weights,
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};

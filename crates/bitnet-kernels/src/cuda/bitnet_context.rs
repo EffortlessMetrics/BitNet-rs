@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "cuda")]
 use std::sync::{Arc, Mutex};
 
+use super::qk256_gemv::{QK256_BLOCK_COLS, QK256_PACKED_BYTES_PER_BLOCK};
 #[cfg(feature = "cuda")]
 use super::quantized_matmul::{I2S_MATMUL_KERNEL_SRC, I2sMatmulConfig};
 #[cfg(feature = "cuda")]
@@ -130,6 +131,8 @@ pub struct CudaWeightHandle {
     pub scale_bytes: usize,
     /// Quantization block size for packed linear kernels, when applicable.
     pub block_size: Option<usize>,
+    /// True when the weight was packed during strict model load before upload.
+    pub packed_at_load: bool,
     /// True when this handle was uploaded or registered once at context lifetime.
     pub uploaded_once: bool,
 }
@@ -272,6 +275,97 @@ impl PackedI2sWeights {
     }
 }
 
+/// Strict GGUF no-scale QK256 weights for one BitNet linear projection.
+///
+/// The logical weight shape is `[output_features, input_features]`. The GGUF
+/// payload is stored row-major as whole QK256 blocks: 64 packed bytes encode
+/// each 256-column block, and the last block may include ignored tail columns.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackedQk256Weights {
+    /// Output feature count.
+    pub output_features: usize,
+    /// Input feature count.
+    pub input_features: usize,
+    /// Packed bytes per output row.
+    pub row_stride_bytes: usize,
+    /// QK256 no-scale packed payload.
+    pub packed_weights: Vec<u8>,
+    /// True when the payload was validated and packed during strict GGUF load.
+    pub packed_at_load: bool,
+}
+
+impl PackedQk256Weights {
+    /// Construct and validate strict GGUF no-scale QK256 weight metadata.
+    ///
+    /// This rejects non-canonical row strides and payload sizes before any CUDA
+    /// upload can happen, matching the MS BitNet GGUF no-scale QK256 layout.
+    pub fn from_strict_gguf_no_scale(
+        output_features: usize,
+        input_features: usize,
+        row_stride_bytes: usize,
+        packed_weights: Vec<u8>,
+    ) -> Result<Self> {
+        let weights = Self {
+            output_features,
+            input_features,
+            row_stride_bytes,
+            packed_weights,
+            packed_at_load: true,
+        };
+        weights.validate_strict_gguf_no_scale()?;
+        Ok(weights)
+    }
+
+    /// Logical shape used by CUDA weight handles.
+    pub fn shape(&self) -> Result<CudaTensorShape> {
+        CudaTensorShape::matrix(self.output_features, self.input_features)
+    }
+
+    /// Number of packed QK256 blocks consumed per output feature.
+    pub fn blocks_per_output(&self) -> usize {
+        self.input_features.div_ceil(QK256_BLOCK_COLS)
+    }
+
+    /// Canonical packed row stride for the logical input feature count.
+    pub fn expected_row_stride_bytes(&self) -> Result<usize> {
+        checked_mul(self.blocks_per_output(), QK256_PACKED_BYTES_PER_BLOCK, "QK256 row stride")
+    }
+
+    /// Exact packed byte count required for the logical shape.
+    pub fn expected_packed_bytes(&self) -> Result<usize> {
+        checked_mul(self.output_features, self.row_stride_bytes, "QK256 packed payload")
+    }
+
+    /// No-scale QK256 has no scale or side-table payload.
+    pub const fn scale_bytes_len(&self) -> usize {
+        0
+    }
+
+    fn validate_strict_gguf_no_scale(&self) -> Result<()> {
+        if self.output_features == 0 || self.input_features == 0 {
+            return Err(invalid_arguments(format!(
+                "strict GGUF QK256 weights require non-zero shape: output_features={} input_features={}",
+                self.output_features, self.input_features
+            )));
+        }
+        let expected_row_stride = self.expected_row_stride_bytes()?;
+        if self.row_stride_bytes != expected_row_stride {
+            return Err(invalid_arguments(format!(
+                "strict GGUF QK256 row stride mismatch: expected {expected_row_stride}, got {}",
+                self.row_stride_bytes
+            )));
+        }
+        let expected_packed = self.expected_packed_bytes()?;
+        if self.packed_weights.len() != expected_packed {
+            return Err(invalid_arguments(format!(
+                "strict GGUF QK256 packed payload mismatch: expected {expected_packed}, got {}",
+                self.packed_weights.len()
+            )));
+        }
+        Ok(())
+    }
+}
+
 /// Per-kernel stats recorded by the CUDA BitNet linear primitive.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CudaBitnetKernelInvocationStats {
@@ -344,6 +438,13 @@ pub trait CudaBitnetLinearBackend {
         weights: &PackedI2sWeights,
     ) -> Result<CudaWeightHandle>;
 
+    /// Upload strict GGUF no-scale QK256 weights once and return a stable CUDA handle.
+    fn upload_qk256_weights(
+        &mut self,
+        tensor_name: &str,
+        weights: &PackedQk256Weights,
+    ) -> Result<CudaWeightHandle>;
+
     /// Run one I2_S GEMV using a CUDA-resident weight handle.
     fn i2s_gemv(
         &mut self,
@@ -369,6 +470,8 @@ pub struct CudaBitnetReceiptFields {
     pub cuda_stream_persistent: bool,
     /// Number of cached CUDA weight handles.
     pub weight_handle_count: usize,
+    /// True when all cached weights were packed during strict model load.
+    pub packed_at_load: bool,
     /// True when all cached weights were uploaded or registered once.
     pub weights_uploaded_once: bool,
     /// True when any decode-time/per-token weight upload was recorded.
@@ -542,6 +645,7 @@ impl CudaBitnetContext {
             packed_bytes: packed_weights.len(),
             scale_bytes: scale_bytes.len(),
             block_size: None,
+            packed_at_load: true,
             uploaded_once: true,
         };
 
@@ -608,6 +712,8 @@ impl CudaBitnetContext {
     /// Return receipt fields proving lifetime behavior without inference claims.
     pub fn receipt_fields(&self) -> CudaBitnetReceiptFields {
         let weight_handle_count = self.weight_cache.len();
+        let packed_at_load = weight_handle_count > 0
+            && self.weight_cache.values().all(|handle| handle.packed_at_load);
         let weights_uploaded_once = weight_handle_count > 0
             && self.weight_cache.values().all(|handle| handle.uploaded_once)
             && self.stats.weight_uploads == weight_handle_count as u64;
@@ -619,6 +725,7 @@ impl CudaBitnetContext {
             cuda_context_persistent: self.has_persistent_cuda_context(),
             cuda_stream_persistent: self.has_persistent_cuda_stream(),
             weight_handle_count,
+            packed_at_load,
             weights_uploaded_once,
             per_token_weight_upload: self.stats.per_token_weight_uploads > 0,
             activation_workspace_bytes: self.workspace.total_bytes(),
@@ -816,6 +923,7 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
             packed_bytes: weights.packed_weights.len(),
             scale_bytes: weights.scale_bytes_len(),
             block_size: Some(weights.block_size),
+            packed_at_load: true,
             uploaded_once: true,
         };
 
@@ -846,6 +954,62 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
             u64::try_from(handle.total_bytes()).map_err(|_| KernelError::InvalidArguments {
                 reason: format!(
                     "CUDA I2S weight '{}' byte count exceeds receipt counter range",
+                    handle.tensor_name
+                ),
+            })?;
+        self.stats.weight_uploads += 1;
+        self.stats.weight_upload_bytes += upload_bytes;
+        self.weight_cache.insert(handle.tensor_name.clone(), handle.clone());
+        Ok(handle)
+    }
+
+    fn upload_qk256_weights(
+        &mut self,
+        tensor_name: &str,
+        weights: &PackedQk256Weights,
+    ) -> Result<CudaWeightHandle> {
+        weights.validate_strict_gguf_no_scale()?;
+        validate_weight_upload(tensor_name, &weights.packed_weights)?;
+        let shape = weights.shape()?;
+
+        if let Some(existing) = self.weight_cache.get(tensor_name) {
+            validate_existing_qk256_handle(existing, &shape, weights)?;
+            return Ok(existing.clone());
+        }
+
+        let id = CudaWeightId(NEXT_WEIGHT_ID.fetch_add(1, Ordering::Relaxed));
+        let handle = CudaWeightHandle {
+            id,
+            tensor_name: tensor_name.to_string(),
+            shape,
+            kernel_family: CudaBitnetKernelFamily::Qk256,
+            packed_bytes: weights.packed_weights.len(),
+            scale_bytes: weights.scale_bytes_len(),
+            block_size: Some(QK256_BLOCK_COLS),
+            packed_at_load: weights.packed_at_load,
+            uploaded_once: true,
+        };
+
+        #[cfg(feature = "cuda")]
+        if let Some(stream) = &self.stream {
+            let packed = stream.memcpy_stod(&weights.packed_weights).map_err(|err| {
+                KernelError::GpuError {
+                    reason: format!(
+                        "failed to upload CUDA QK256 weight '{}': {err:?}",
+                        handle.tensor_name
+                    ),
+                }
+            })?;
+            self.device_weight_buffers.insert(
+                id,
+                CudaDeviceWeightBuffers { packed, _scale_bytes: None, i2s_scales: None },
+            );
+        }
+
+        let upload_bytes =
+            u64::try_from(handle.total_bytes()).map_err(|_| KernelError::InvalidArguments {
+                reason: format!(
+                    "CUDA QK256 weight '{}' byte count exceeds receipt counter range",
                     handle.tensor_name
                 ),
             })?;
@@ -932,7 +1096,9 @@ fn validate_existing_handle(
         && existing.kernel_family == kernel_family
         && existing.packed_bytes == packed_weights.len()
         && existing.scale_bytes == scale_bytes.len()
-        && existing.block_size.is_none();
+        && existing.block_size.is_none()
+        && existing.packed_at_load
+        && existing.uploaded_once;
 
     if matches {
         Ok(())
@@ -953,13 +1119,38 @@ fn validate_existing_i2s_handle(
         && existing.kernel_family == CudaBitnetKernelFamily::I2s
         && existing.packed_bytes == weights.packed_weights.len()
         && existing.scale_bytes == weights.scale_bytes_len()
-        && existing.block_size == Some(weights.block_size);
+        && existing.block_size == Some(weights.block_size)
+        && existing.packed_at_load
+        && existing.uploaded_once;
 
     if matches {
         Ok(())
     } else {
         Err(invalid_arguments(format!(
             "CUDA I2S weight '{}' is already cached with different metadata",
+            existing.tensor_name
+        )))
+    }
+}
+
+fn validate_existing_qk256_handle(
+    existing: &CudaWeightHandle,
+    shape: &CudaTensorShape,
+    weights: &PackedQk256Weights,
+) -> Result<()> {
+    let matches = existing.shape == *shape
+        && existing.kernel_family == CudaBitnetKernelFamily::Qk256
+        && existing.packed_bytes == weights.packed_weights.len()
+        && existing.scale_bytes == weights.scale_bytes_len()
+        && existing.block_size == Some(QK256_BLOCK_COLS)
+        && existing.packed_at_load == weights.packed_at_load
+        && existing.uploaded_once;
+
+    if matches {
+        Ok(())
+    } else {
+        Err(invalid_arguments(format!(
+            "CUDA QK256 weight '{}' is already cached with different metadata",
             existing.tensor_name
         )))
     }
@@ -1004,6 +1195,13 @@ fn validate_i2s_gemv_args(
         )));
     }
     Ok(I2sGemvShape { output_features, input_features, block_size })
+}
+
+fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
+    lhs.checked_mul(rhs).ok_or_else(|| {
+        KernelError::InvalidArguments { reason: format!("{label} length overflow: {lhs} * {rhs}") }
+            .into()
+    })
 }
 
 fn checked_f32_bytes(count: usize, label: &str) -> Result<usize> {
@@ -1125,6 +1323,10 @@ mod tests {
         .unwrap()
     }
 
+    fn qk256_fixture() -> PackedQk256Weights {
+        PackedQk256Weights::from_strict_gguf_no_scale(3, 300, 128, vec![0xaa; 3 * 128]).unwrap()
+    }
+
     fn pack_i2s_row(vals: [i8; 5]) -> u8 {
         pack_i2s_nibble([vals[0], vals[1], vals[2], vals[3]])
     }
@@ -1169,6 +1371,29 @@ mod tests {
         assert!(PackedI2sWeights::new(3, 5, 32, vec![0; 5], vec![1.0; 3]).is_err());
         assert!(PackedI2sWeights::new(3, 5, 32, vec![0; 6], vec![1.0; 2]).is_err());
         assert!(PackedI2sWeights::new(3, 5, 64, vec![0; 6], vec![1.0; 3]).is_err());
+    }
+
+    #[test]
+    fn packed_qk256_weights_validate_strict_gguf_no_scale_layout() {
+        let weights = qk256_fixture();
+
+        assert_eq!(weights.output_features, 3);
+        assert_eq!(weights.input_features, 300);
+        assert_eq!(weights.blocks_per_output(), 2);
+        assert_eq!(weights.row_stride_bytes, 128);
+        assert_eq!(weights.expected_row_stride_bytes().unwrap(), 128);
+        assert_eq!(weights.expected_packed_bytes().unwrap(), 384);
+        assert_eq!(weights.scale_bytes_len(), 0);
+        assert!(weights.packed_at_load);
+        assert_eq!(weights.shape().unwrap().dims, vec![3, 300]);
+    }
+
+    #[test]
+    fn packed_qk256_weights_reject_non_strict_gguf_layouts() {
+        assert!(PackedQk256Weights::from_strict_gguf_no_scale(0, 300, 128, vec![0; 384]).is_err());
+        assert!(PackedQk256Weights::from_strict_gguf_no_scale(3, 0, 128, vec![0; 384]).is_err());
+        assert!(PackedQk256Weights::from_strict_gguf_no_scale(3, 300, 64, vec![0; 192]).is_err());
+        assert!(PackedQk256Weights::from_strict_gguf_no_scale(3, 300, 128, vec![0; 383]).is_err());
     }
 
     #[test]
@@ -1236,6 +1461,8 @@ mod tests {
         assert_eq!(first.block_size, Some(32));
         assert_eq!(first.packed_bytes, weights.packed_weights.len());
         assert_eq!(first.scale_bytes, weights.scale_bytes_len());
+        assert!(first.packed_at_load);
+        assert!(first.uploaded_once);
         assert_eq!(context.stats().weight_uploads, 1);
         assert_eq!(
             context.stats().weight_upload_bytes,
@@ -1254,17 +1481,43 @@ mod tests {
     }
 
     #[test]
+    fn upload_qk256_weights_reuses_handle_without_second_upload() {
+        let mut context = test_context();
+        let weights = qk256_fixture();
+        let first = context.upload_qk256_weights("layers.0.attention.wq", &weights).unwrap();
+        let second = context.upload_qk256_weights("layers.0.attention.wq", &weights).unwrap();
+
+        assert_eq!(first, second);
+        assert_eq!(first.kernel_family, CudaBitnetKernelFamily::Qk256);
+        assert_eq!(first.block_size, Some(QK256_BLOCK_COLS));
+        assert_eq!(first.packed_bytes, weights.packed_weights.len());
+        assert_eq!(first.scale_bytes, 0);
+        assert!(first.packed_at_load);
+        assert!(first.uploaded_once);
+        assert_eq!(context.stats().weight_uploads, 1);
+        assert_eq!(
+            context.stats().weight_upload_bytes,
+            u64::try_from(weights.packed_weights.len()).unwrap()
+        );
+    }
+
+    #[test]
+    fn upload_qk256_weights_rejects_cached_metadata_mismatch() {
+        let mut context = test_context();
+        let weights = qk256_fixture();
+        context.upload_qk256_weights("layers.0.attention.wq", &weights).unwrap();
+        let different =
+            PackedQk256Weights::from_strict_gguf_no_scale(4, 300, 128, vec![0xbb; 4 * 128])
+                .unwrap();
+
+        assert!(context.upload_qk256_weights("layers.0.attention.wq", &different).is_err());
+    }
+
+    #[test]
     fn i2s_gemv_rejects_wrong_family_before_launch() {
         let mut context = test_context();
-        let handle = context
-            .upload_weight_once(
-                "layers.0.attention.wq",
-                CudaTensorShape::matrix(3, 5).unwrap(),
-                CudaBitnetKernelFamily::Qk256,
-                &[1, 2, 3, 4, 5, 6],
-                &[],
-            )
-            .unwrap();
+        let qk256 = qk256_fixture();
+        let handle = context.upload_qk256_weights("layers.0.attention.wq", &qk256).unwrap();
         let mut output = vec![0.0; 3];
         let mut stats = CudaBitnetKernelInvocationStats::default();
 
@@ -1310,6 +1563,7 @@ mod tests {
         assert_eq!(fields.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(fields.runtime_api, "cuda");
         assert_eq!(fields.weight_handle_count, 1);
+        assert!(fields.packed_at_load);
         assert!(fields.weights_uploaded_once);
         assert!(!fields.per_token_weight_upload);
         assert!(fields.activation_workspace_reused);
