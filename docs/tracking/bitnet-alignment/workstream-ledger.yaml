@@ -488,7 +488,7 @@ items:
 
   - id: CPU-BITNET-001
     title: Establish strict BitNet GGUF loader authority
-    state: proposed
+    state: merged
     priority: P0
     workstream: runtime_cpu
     depends_on:

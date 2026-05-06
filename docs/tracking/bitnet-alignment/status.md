@@ -143,6 +143,7 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 | INV-001 | #3632 | 457b36630906f2044e406e0dcf27ecb539e8a7a5 | Crate consolidation inventory completed for all workspace members. |
 | CPU-001 | #3635 | d90f70f4410155077ffc9741e018e5d747d40a9f | Strict CPU proof command documented. |
 | CPU-BITNET-000 | #3642 | c5f3480ac90cccfd1aec9766ae4628fd7e9fd3c3 | Real BitNet CPU path implementation plan merged. |
+| CPU-BITNET-001 | #3651 | 5bf32dc335a52aeab5a790d3811a57dc06ed0d3d | Strict real GGUF loader authority merged. |
 | HW-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Shared hardware validation matrix and proof-stage contract merged. |
 | HW-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Hardware artifact naming policy merged. |
 | BITNET-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | BitNet model/kernel/receipt proof contract merged. |
