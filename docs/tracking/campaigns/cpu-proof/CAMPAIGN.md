@@ -35,7 +35,7 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-003 | pr_open | Canonical packed layout open in #3690. |
 | CPU-BITNET-004 | proposed | Scalar truth kernels. |
 | CPU-BITNET-005 | proposed | AVX2 decode GEMV. |
-| CPU-BITNET-006 | proposed | CPU transformer decode ops. |
+| CPU-BITNET-006 | ready | CPU transformer decode ops. |
 | CPU-BITNET-007 | proposed | Strict receipts and fallback behavior. |
 | CPU-BITNET-008 | proposed | CPU phase benchmark profiles. |
 

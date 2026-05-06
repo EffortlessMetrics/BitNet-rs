@@ -267,7 +267,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005c"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-bitnet-005c-avx2-parity-hardening"
 stackable = false
 requires_human_merge = true
@@ -297,5 +297,41 @@ must_not_claim = [
   "Transformer decode is complete.",
   "Strict receipts are complete.",
   "Benchmark or throughput performance is proven.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-006"
+status = "ready"
+branch = "codex/cpu-bitnet-006-transformer-decode-ops"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-005c"]
+acceptance = "Embedding gather, RMSNorm/subln, RoPE, attention scores, softmax, A/V, FFN, KV-cache, output head, logits handoff, and sampling handoff are authoritative for CPU decode; prefill and decode scheduling are separated; one real-model decode step can run with real tensors; missing ops fail explicitly; KV-cache append/read is deterministic."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cpu/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/src/backends.rs",
+  "crates/bitnet-inference/**",
+  "tests/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "CPU decode op coverage exists after merge.",
+]
+must_not_claim = [
+  "Full inference quality or performance is proven without receipts.",
   "GPU or NPU execution is involved.",
 ]
