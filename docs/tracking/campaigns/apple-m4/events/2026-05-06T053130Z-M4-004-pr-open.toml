@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T05:31:30Z"
+campaign = "apple-m4"
+item = "M4-004"
+event = "pr_open"
+pr = 3692
+head_sha = "8389c4869efec58e360f89fee56a74242ec988b7"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 Metal runtime visibility probe PR.",
+  "Records requested/selected backend identity, runtime API, macOS/chip/core/memory/virtualization fields, Metal visibility, fallback status, proof stage, and planned artifact path.",
+  "No Metal kernels, MPSGraph execution, Neural Engine claims, QK256, server inference, dependencies, or BitNet inference claims.",
+]
