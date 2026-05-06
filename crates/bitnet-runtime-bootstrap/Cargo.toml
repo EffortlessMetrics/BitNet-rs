@@ -63,3 +63,6 @@ runtime-profile-integration-tests = ["bitnet-startup-contract/runtime-profile-in
 
 [dev-dependencies]
 proptest.workspace = true
+
+[lints]
+workspace = true

@@ -1047,6 +1047,15 @@ enum Cmd {
         strict: bool,
     },
 
+    /// Verify every workspace member opts in to workspace lints.
+    ///
+    /// Cargo only applies `[workspace.lints]` to a member if that
+    /// member's manifest contains `[lints] workspace = true`. This
+    /// command enumerates members via `cargo metadata` and fails if any
+    /// member is missing the opt-in.
+    #[command(name = "check-lint-inheritance")]
+    CheckLintInheritance,
+
     /// Generate a review-only proposed no-panic allowlist.
     ///
     /// Writes `target/bitnet/reports/no-panic-proposed-allowlist.toml`
@@ -1394,6 +1403,17 @@ fn real_main() -> Result<()> {
         Cmd::Campaign { command } => campaign::run(command),
         Cmd::CheckFilePolicy { strict } => check_file_policy_cmd(strict),
         Cmd::PolicyReport => policy_report_cmd(),
+        Cmd::CheckLintInheritance => {
+            let root = policy::repo_root()?;
+            let outcome = policy::lints::run_check(&root)?;
+            if !outcome.ok() {
+                anyhow::bail!(
+                    "lint-inheritance: {} workspace member(s) missing `[lints] workspace = true`",
+                    outcome.missing.len()
+                );
+            }
+            Ok(())
+        }
         Cmd::CheckNoPanicFamily { strict } => check_no_panic_family_cmd(strict),
         Cmd::NoPanic { command } => match command {
             NoPanicCmd::Propose => {

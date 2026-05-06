@@ -105,3 +105,6 @@ trace = ["bitnet-models/trace"]  # Enable tensor activation tracing
 name = "comprehensive_tests"
 path = "tests/comprehensive_tests.rs"
 required-features = ["full-engine"]
+
+[lints]
+workspace = true

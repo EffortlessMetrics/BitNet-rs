@@ -20,3 +20,6 @@ serde_yaml.workspace = true
 tempfile = "3"
 proptest.workspace = true
 insta = { workspace = true }
+
+[lints]
+workspace = true

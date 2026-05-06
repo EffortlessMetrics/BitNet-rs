@@ -174,3 +174,6 @@ required-features = ["cpu"]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
 required-features = ["gpu"]
+
+[lints]
+workspace = true

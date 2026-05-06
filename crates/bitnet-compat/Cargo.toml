@@ -28,3 +28,6 @@ proptest.workspace = true
 [features]
 integration-tests = []
 tokenizer-probe = ["bitnet-tokenizers"]
+
+[lints]
+workspace = true

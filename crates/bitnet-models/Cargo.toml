@@ -81,3 +81,6 @@ tl2 = []  # TL2 quantization for test scaffolding
 test-fixtures = []  # Enable tests that require real GGUF fixtures
 fixtures = []  # Enable GGUF fixture generation for QK256 dual-flavor tests (PR1)
 trace = ["dep:bitnet-trace"]  # Enable tensor activation tracing for cross-validation
+
+[lints]
+workspace = true
