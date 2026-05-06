@@ -1047,6 +1047,18 @@ enum Cmd {
         strict: bool,
     },
 
+    /// Validate the strict-clippy policy ledger.
+    ///
+    /// Verifies that:
+    ///   - policy/clippy-lints.toml schema and policy invariants are valid
+    ///   - workspace.package.rust-version matches the policy MSRV
+    ///   - clippy.toml has no panic-family test carve-outs
+    ///   - Cargo.toml has an explicit [workspace.lints] block (no blanket
+    ///     `clippy::all` / `pedantic` / `nursery` at deny level)
+    ///   - planned 1.94/1.95 lints are not active before their MSRV gate
+    #[command(name = "check-lint-policy")]
+    CheckLintPolicy,
+
     /// Verify every workspace member opts in to workspace lints.
     ///
     /// Cargo only applies `[workspace.lints]` to a member if that
@@ -1403,6 +1415,34 @@ fn real_main() -> Result<()> {
         Cmd::Campaign { command } => campaign::run(command),
         Cmd::CheckFilePolicy { strict } => check_file_policy_cmd(strict),
         Cmd::PolicyReport => policy_report_cmd(),
+        Cmd::CheckLintPolicy => {
+            let root = policy::repo_root()?;
+            let outcome = policy::lints::run_lint_policy(&root)?;
+            for w in &outcome.warnings {
+                eprintln!("warn: {w}");
+            }
+            for due in &outcome.planned_due {
+                eprintln!("planned-due: {due}");
+            }
+            if !outcome.ok() {
+                for e in &outcome.errors {
+                    eprintln!("error: {e}");
+                }
+                anyhow::bail!(
+                    "lint-policy: {} error(s); manifest_msrv={}, policy_msrv={}",
+                    outcome.errors.len(),
+                    outcome.manifest_msrv,
+                    outcome.policy_msrv
+                );
+            }
+            println!(
+                "lint-policy: OK | msrv={}, planned_due={}, warnings={}",
+                outcome.policy_msrv,
+                outcome.planned_due.len(),
+                outcome.warnings.len()
+            );
+            Ok(())
+        }
         Cmd::CheckLintInheritance => {
             let root = policy::repo_root()?;
             let outcome = policy::lints::run_check(&root)?;

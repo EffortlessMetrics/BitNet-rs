@@ -539,16 +539,71 @@ debug = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Workspace-level lints for code quality
+# -----------------------------------------------------------------------------
+# Strict policy lint profile — Stage A (MSRV 1.93)
+#
+# This is the explicit, named-lint baseline for BitNet-rs. It replaces the
+# previous broad-category profile (`clippy::all`/`pedantic`/`nursery` at warn)
+# so the policy is stable across toolchain bumps. The full strict profile
+# (panic-family at deny, additional good-taste lints) lands in PR 9. See
+# docs/development/STRICT_CLIPPY_POLICY.md and policy/clippy-lints.toml.
+#
+# `cargo xtask check-lint-policy` enforces that this block matches the
+# active rules declared in policy/clippy-lints.toml and that the profile
+# stage is consistent with the workspace MSRV.
+# -----------------------------------------------------------------------------
+
+[workspace.lints.rust]
+# Unsafe stays at warn through Stage A: BitNet has legitimate FFI/GPU/SIMD
+# unsafe islands that need crate-level `#[expect(unsafe_code, reason = ...)]`
+# receipts before the level can be promoted to deny in PR 9.
+unsafe_code = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_must_use = "deny"
+unexpected_cfgs = "warn"
+
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
+# Hard bans (already enforced before this PR).
+dbg_macro = "deny"
+ptr_arg = "deny"
+
+# Panic-family lints. Stage A keeps these at warn — the AST-backed
+# `cargo xtask check-no-panic-family` is the blocking gate during the
+# migration in PRs 7–8. Stage B (PR 9) promotes them to deny.
+panic = "warn"
+unreachable = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+get_unwrap = "warn"
+unwrap_in_result = "warn"
+panic_in_result_fn = "warn"
+todo = "warn"
+unimplemented = "warn"
+string_slice = "warn"
+indexing_slicing = "warn"
+out_of_bounds_indexing = "deny"
+unchecked_duration_subtraction = "warn"
+
+# Silent failure lints. Stage A keeps these at warn to surface existing
+# debt without blocking; PR 9 promotes them to deny once the debt is
+# either fixed or receipted in policy/clippy-debt.toml.
+let_underscore_future = "warn"
+let_underscore_must_use = "warn"
+let_underscore_lock = "warn"
+map_err_ignore = "warn"
+lines_filter_map_ok = "warn"
+
+# Suppression governance.
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+blanket_clippy_restriction_lints = "deny"
+
+# Carry-over allows kept as `allow` for now to keep PR 5 mechanical;
+# these are revisited in PR 9 alongside the panic-family flip.
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
-nursery = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-ptr_arg = "deny"
 
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]

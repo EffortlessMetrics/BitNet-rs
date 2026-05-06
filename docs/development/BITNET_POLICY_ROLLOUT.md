@@ -41,12 +41,13 @@ evidence layer.
 | `policy/non-rust-allowlist.toml` schema | `1.0` |
 | `policy/no-panic-allowlist.toml` schema | `0.3` |
 | Non-Rust allowlist enforcement | advisory until PR 9 |
-| No-panic allowlist enforcement | blocking after PR 5 |
-| `[lints] workspace = true` inheritance | every member |
+| No-panic allowlist enforcement | advisory until PR 9 |
+| `[lints] workspace = true` inheritance | 133/133 members |
 | Clippy profile stage | A (panic-family at warn) |
 | Panic-family Clippy lints | `warn` (gated by `xtask check-no-panic-family`) |
-| `unsafe_code` | `deny` (FFI/GPU islands use crate-local `#[expect]`) |
-| Test carve-outs in `clippy.toml` | none |
+| `unsafe_code` | `warn` (Stage A); `deny` + crate-local `#[expect]` lands in PR 9 |
+| Silent-failure lints | `warn` (Stage A); `deny` lands in PR 9 |
+| Test carve-outs in `clippy.toml` | removed (only tooling thresholds remain) |
 | `ripr` evidence reports | not added yet (PR 10) |
 
 ## Operating principles

@@ -1,16 +1,21 @@
-# Clippy configuration for bitnet-rs
-# Ensures high code quality standards for crates.io publication
+# Clippy configuration for bitnet-rs.
+#
+# Active lint levels live in the workspace lint profile in Cargo.toml.
+# This file holds tooling thresholds and project-specific tuning only.
+#
+# IMPORTANT: This file must NOT add test carve-outs for panic-family
+# lints. Tests are workspace surface, not a relaxation. See
+# docs/development/STRICT_CLIPPY_POLICY.md.
 
-# MSRV compatibility
-msrv = "1.92.0"
+# MSRV — keep aligned with workspace.package.rust-version.
+msrv = "1.93"
 
-# Complexity thresholds
+# Complexity thresholds.
 cognitive-complexity-threshold = 30
 too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 trivial-copy-size-limit = 64
 
-# Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
-allow-mixed-uninlined-format-args = true  # Performance in hot paths
+# Allow performance-driven format-arg patterns in hot paths. This is a
+# tooling tuning, not a panic-family carve-out.
+allow-mixed-uninlined-format-args = true
