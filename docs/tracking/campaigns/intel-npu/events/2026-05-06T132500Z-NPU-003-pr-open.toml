@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T13:25:00Z"
+campaign = "intel-npu"
+item = "NPU-003"
+event = "pr_open"
+pr = 3739
+branch = "codex/intel-npu/NPU-003-openvino-runtime-probe"
+head_sha = "777c9f0f"
+actor = "codex"
+
+notes = [
+  "Opened Intel NPU OpenVINO runtime visibility PR.",
+  "Scope remains visibility-only: no OpenVINO graph execution, NPU smoke, BitNet inference, or acceleration claim.",
+]

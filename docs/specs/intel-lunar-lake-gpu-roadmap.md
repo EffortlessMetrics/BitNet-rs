@@ -104,8 +104,13 @@ Suggested probe result:
 
 ```rust
 pub struct IntelArc140vProbe {
+    pub proof_stage: String,
+    pub requested_backend: String,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
     pub available: bool,
     pub pci_device_id: Option<String>,
+    pub identity_evidence: Vec<String>,
     pub opencl_available: bool,
     pub opencl_platform_name: Option<String>,
     pub opencl_device_name: Option<String>,
@@ -116,9 +121,12 @@ pub struct IntelArc140vProbe {
     pub openvino_gpu_full_name: Option<String>,
     pub shared_memory_bytes: Option<u64>,
     pub power_mode: Option<String>,
+    pub fallback_used: bool,
     pub failure_reason: Option<String>,
 }
 ```
+
+For `ARC140V-002`, exact identity can come from OpenCL device name, Level Zero device name, Level Zero PCI/device ID `0x64A0`, or OpenVINO `GPU.0` full device name. Generic Intel GPU visibility is not sufficient.
 
 ## Receipt Fields
 

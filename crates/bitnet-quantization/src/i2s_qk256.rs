@@ -50,6 +50,95 @@ pub const QK256_SCALAR_GEMV_KERNEL_ID: &str = "qk256-scalar-gemv";
 /// Stable receipt/proof kernel ID for the canonical scalar QK256 prefill GEMM.
 pub const QK256_SCALAR_GEMM_KERNEL_ID: &str = "qk256-scalar-gemm";
 
+/// Stable receipt/proof kernel ID for the canonical AVX2/FMA QK256 decode GEMV.
+pub const QK256_AVX2_GEMV_KERNEL_ID: &str = "qk256-avx2-gemv";
+
+/// Proof-level QK256 kernel selection metadata.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Qk256KernelSelection {
+    pub requested_kernel: Option<&'static str>,
+    pub selected_kernel: &'static str,
+    pub fallback_used: bool,
+    pub fallback_reason: Option<String>,
+    pub cpu_features: Vec<&'static str>,
+}
+
+fn qk256_cpu_features(avx2_fma_available: bool) -> Vec<&'static str> {
+    if avx2_fma_available { vec!["avx2", "fma"] } else { Vec::new() }
+}
+
+fn qk256_avx2_fma_available() -> bool {
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+    {
+        return bitnet_cpu_detect::avx2_fma_available();
+    }
+
+    #[allow(unreachable_code)]
+    false
+}
+
+fn select_qk256_gemv_kernel_for_availability(
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+    avx2_fma_available: bool,
+) -> Result<Qk256KernelSelection> {
+    let cpu_features = qk256_cpu_features(avx2_fma_available);
+
+    match requested_kernel {
+        None if avx2_fma_available => Ok(Qk256KernelSelection {
+            requested_kernel,
+            selected_kernel: QK256_AVX2_GEMV_KERNEL_ID,
+            fallback_used: false,
+            fallback_reason: None,
+            cpu_features,
+        }),
+        None => Ok(Qk256KernelSelection {
+            requested_kernel,
+            selected_kernel: QK256_SCALAR_GEMV_KERNEL_ID,
+            fallback_used: false,
+            fallback_reason: None,
+            cpu_features,
+        }),
+        Some(QK256_SCALAR_GEMV_KERNEL_ID) => Ok(Qk256KernelSelection {
+            requested_kernel,
+            selected_kernel: QK256_SCALAR_GEMV_KERNEL_ID,
+            fallback_used: false,
+            fallback_reason: None,
+            cpu_features,
+        }),
+        Some(QK256_AVX2_GEMV_KERNEL_ID) if avx2_fma_available => Ok(Qk256KernelSelection {
+            requested_kernel,
+            selected_kernel: QK256_AVX2_GEMV_KERNEL_ID,
+            fallback_used: false,
+            fallback_reason: None,
+            cpu_features,
+        }),
+        Some(QK256_AVX2_GEMV_KERNEL_ID) if strict => {
+            bail!(
+                "I2S_QK256: strict requested kernel qk256-avx2-gemv cannot fall back because avx2/fma is unavailable"
+            )
+        }
+        Some(QK256_AVX2_GEMV_KERNEL_ID) => Ok(Qk256KernelSelection {
+            requested_kernel,
+            selected_kernel: QK256_SCALAR_GEMV_KERNEL_ID,
+            fallback_used: true,
+            fallback_reason: Some("avx2/fma unavailable".to_string()),
+            cpu_features,
+        }),
+        Some(other) => {
+            bail!("I2S_QK256: unsupported requested QK256 GEMV kernel '{other}'")
+        }
+    }
+}
+
+/// Select the QK256 decode GEMV kernel without executing it.
+pub fn select_qk256_gemv_kernel(
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<Qk256KernelSelection> {
+    select_qk256_gemv_kernel_for_availability(requested_kernel, strict, qk256_avx2_fma_available())
+}
+
 /// Storage for GGML I2_S (QK=256) quantized weights without per-block scales
 ///
 /// This structure holds raw packed 2-bit codes for a weight tensor in the
@@ -394,7 +483,7 @@ pub fn qk256_gemm_scalar(
 /// Multi-row GEMV with runtime dispatch: y = Ax where A is quantized QK256, x is dense
 ///
 /// This function automatically selects the best available implementation:
-/// - **AVX2**: x86_64 with AVX2 support (3-5× speedup over scalar)
+/// - **AVX2**: x86_64 with AVX2 and FMA support
 /// - **Scalar**: Fallback for all other cases
 ///
 /// # Arguments
@@ -422,6 +511,25 @@ pub fn gemv_qk256(
     cols: usize,
     row_stride_bytes: usize,
 ) -> Result<()> {
+    gemv_qk256_with_kernel_selection(qs_data, x, y_out, rows, cols, row_stride_bytes, None, false)
+        .map(|_| ())
+}
+
+/// Multi-row GEMV with requested/selected kernel metadata.
+///
+/// `requested_kernel = None` means automatic selection. In strict mode, a
+/// requested AVX2 kernel fails rather than silently falling back to scalar when
+/// AVX2/FMA is unavailable.
+pub fn gemv_qk256_with_kernel_selection(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<Qk256KernelSelection> {
     let expected_stride = qk256_row_stride_bytes(cols)?;
     if row_stride_bytes != expected_stride {
         bail!(
@@ -432,24 +540,25 @@ pub fn gemv_qk256(
         );
     }
 
-    // Runtime dispatch: probe for AVX2 support on x86_64
-    #[cfg(target_arch = "x86_64")]
+    let selection = select_qk256_gemv_kernel(requested_kernel, strict)?;
+
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        if is_x86_feature_detected!("avx2") {
-            // Use AVX2 path (3-5× speedup over scalar)
-            return super::i2s_qk256_avx2::gemv_qk256_avx2(
+        if selection.selected_kernel == QK256_AVX2_GEMV_KERNEL_ID {
+            super::i2s_qk256_avx2::gemv_qk256_avx2(
                 qs_data,
                 x,
                 y_out,
                 rows,
                 cols,
                 row_stride_bytes,
-            );
+            )?;
+            return Ok(selection);
         }
     }
 
-    // Fallback to scalar implementation
-    gemv_qk256_scalar_checked(qs_data, x, y_out, rows, cols, row_stride_bytes)
+    gemv_qk256_scalar_checked(qs_data, x, y_out, rows, cols, row_stride_bytes)?;
+    Ok(selection)
 }
 
 #[cfg(test)]
@@ -578,6 +687,115 @@ mod tests {
     fn qk256_scalar_kernel_ids_are_stable() {
         assert_eq!(QK256_SCALAR_GEMV_KERNEL_ID, "qk256-scalar-gemv");
         assert_eq!(QK256_SCALAR_GEMM_KERNEL_ID, "qk256-scalar-gemm");
+        assert_eq!(QK256_AVX2_GEMV_KERNEL_ID, "qk256-avx2-gemv");
+    }
+
+    #[test]
+    fn qk256_kernel_selection_auto_selects_avx2_when_available() -> Result<()> {
+        let selection = select_qk256_gemv_kernel_for_availability(None, false, true)?;
+        assert_eq!(selection.requested_kernel, None);
+        assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+        assert!(!selection.fallback_used);
+        assert_eq!(selection.fallback_reason, None);
+        assert_eq!(selection.cpu_features, vec!["avx2", "fma"]);
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_kernel_selection_auto_selects_scalar_when_avx2_unavailable() -> Result<()> {
+        let selection = select_qk256_gemv_kernel_for_availability(None, false, false)?;
+        assert_eq!(selection.requested_kernel, None);
+        assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+        assert!(!selection.fallback_used);
+        assert_eq!(selection.fallback_reason, None);
+        assert!(selection.cpu_features.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_kernel_selection_requested_avx2_selects_avx2_when_available() -> Result<()> {
+        let selection =
+            select_qk256_gemv_kernel_for_availability(Some(QK256_AVX2_GEMV_KERNEL_ID), true, true)?;
+        assert_eq!(selection.requested_kernel, Some(QK256_AVX2_GEMV_KERNEL_ID));
+        assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+        assert!(!selection.fallback_used);
+        assert_eq!(selection.fallback_reason, None);
+        assert_eq!(selection.cpu_features, vec!["avx2", "fma"]);
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_kernel_selection_requested_avx2_strict_fails_when_unavailable() {
+        let err =
+            select_qk256_gemv_kernel_for_availability(Some(QK256_AVX2_GEMV_KERNEL_ID), true, false)
+                .expect_err("strict requested AVX2 must fail without avx2/fma");
+        assert!(err.to_string().contains("cannot fall back"));
+    }
+
+    #[test]
+    fn qk256_kernel_selection_requested_avx2_non_strict_falls_back() -> Result<()> {
+        let selection = select_qk256_gemv_kernel_for_availability(
+            Some(QK256_AVX2_GEMV_KERNEL_ID),
+            false,
+            false,
+        )?;
+        assert_eq!(selection.requested_kernel, Some(QK256_AVX2_GEMV_KERNEL_ID));
+        assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+        assert!(selection.fallback_used);
+        assert_eq!(selection.fallback_reason.as_deref(), Some("avx2/fma unavailable"));
+        assert!(selection.cpu_features.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_kernel_selection_requested_scalar_is_not_a_fallback() -> Result<()> {
+        let selection = select_qk256_gemv_kernel_for_availability(
+            Some(QK256_SCALAR_GEMV_KERNEL_ID),
+            true,
+            true,
+        )?;
+        assert_eq!(selection.requested_kernel, Some(QK256_SCALAR_GEMV_KERNEL_ID));
+        assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+        assert!(!selection.fallback_used);
+        assert_eq!(selection.fallback_reason, None);
+        assert_eq!(selection.cpu_features, vec!["avx2", "fma"]);
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_kernel_selection_rejects_unknown_requested_kernel() {
+        let err = select_qk256_gemv_kernel_for_availability(Some("qk256-made-up"), false, true)
+            .expect_err("unknown requested kernel must fail");
+        assert!(err.to_string().contains("unsupported requested QK256 GEMV kernel"));
+    }
+
+    #[test]
+    fn gemv_qk256_with_kernel_selection_can_force_scalar() -> Result<()> {
+        let rows = 2usize;
+        let cols = 256usize;
+        let row_stride_bytes = QK256_PACKED_BYTES;
+        let qs_data = vec![0xAAu8; rows * row_stride_bytes];
+        let x: Vec<f32> = (0..cols).map(|i| i as f32 * 0.25).collect();
+        let mut y_out = vec![0.0f32; rows];
+
+        let selection = gemv_qk256_with_kernel_selection(
+            &qs_data,
+            &x,
+            &mut y_out,
+            rows,
+            cols,
+            row_stride_bytes,
+            Some(QK256_SCALAR_GEMV_KERNEL_ID),
+            true,
+        )?;
+
+        assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+        assert!(!selection.fallback_used);
+        let expected: f32 = x.iter().sum();
+        for got in y_out {
+            assert!((got - expected).abs() < 1e-3, "expected {expected}, got {got}");
+        }
+        Ok(())
     }
 
     #[test]

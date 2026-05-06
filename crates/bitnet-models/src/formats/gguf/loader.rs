@@ -294,6 +294,8 @@ impl GgufLoader {
     /// Validate LayerNorm gamma statistics to catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
+    /// BitNet GGUFs can also store pre-scaled RMSNorm weights near
+    /// 1/sqrt(hidden_size); accept that narrow envelope for real hidden vectors.
     /// If stats are suspicious, fail in strict mode or warn otherwise.
     ///
     /// Set BITNET_STRICT_MODE=1 to fail on invalid LN gamma.
@@ -304,12 +306,25 @@ impl GgufLoader {
         let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
         let rms = Self::rms_f32(&w32)?;
 
-        // Acceptable envelope for γ RMS
-        let ok = (0.5..=2.0).contains(&rms) && rms.is_finite();
+        // Acceptable envelopes for γ RMS.
+        let unit_scaled_ok = (0.5..=2.0).contains(&rms);
+        let hidden_scaled_ok = w32
+            .dims()
+            .last()
+            .copied()
+            .filter(|hidden| *hidden >= 512)
+            .map(|hidden| {
+                let target = 1.0 / (hidden as f32).sqrt();
+                ((target * 0.5)..=(target * 1.5)).contains(&rms)
+            })
+            .unwrap_or(false);
+        let ok = rms.is_finite() && (unit_scaled_ok || hidden_scaled_ok);
 
         if !ok {
-            let msg =
-                format!("LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0)", name, rms);
+            let msg = format!(
+                "LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0 or pre-scaled ≈1/sqrt(hidden_size))",
+                name, rms
+            );
 
             // In strict mode, fail immediately
             if Self::env_truthy("BITNET_STRICT_MODE") {
@@ -877,22 +892,29 @@ impl GgufLoader {
 
         let mut missing = Vec::new();
 
-        if !has_any(&[
+        let has_token_embedding = has_any(&[
             "token_embd.weight".to_string(),
             "tok_embeddings.weight".to_string(),
             "embed_tokens.weight".to_string(),
             "model.embed_tokens.weight".to_string(),
             "transformer.wte.weight".to_string(),
-        ]) {
+        ]);
+        if !has_token_embedding {
             missing.push("token embedding weight".to_string());
         }
 
-        if !has_any(&[
+        let has_output_head = has_any(&[
             "output.weight".to_string(),
             "lm_head.weight".to_string(),
             "model.lm_head.weight".to_string(),
-        ]) {
+            "head.weight".to_string(),
+        ]);
+        if !has_output_head && !has_token_embedding {
             missing.push("output/lm head weight".to_string());
+        } else if !has_output_head {
+            tracing::info!(
+                "Strict real_gguf load: no output/lm head tensor; using tied token embeddings"
+            );
         }
 
         let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
@@ -1565,10 +1587,35 @@ impl GgufLoader {
 
                     let blocks_per_row = cols.div_ceil(256); // 256 elements per block
                     let row_stride_bytes = blocks_per_row * 64; // 64 bytes per 256-element block
+                    let expected_raw_bytes =
+                        rows.checked_mul(row_stride_bytes).ok_or_else(|| {
+                            BitNetError::Validation(format!(
+                                "QK256 '{}': raw byte shape overflow for rows={} stride={}",
+                                info.name, rows, row_stride_bytes
+                            ))
+                        })?;
+                    if data.len() < expected_raw_bytes {
+                        return Err(BitNetError::Validation(format!(
+                            "QK256 '{}': missing raw bytes: available={}, expected={}",
+                            info.name,
+                            data.len(),
+                            expected_raw_bytes
+                        )));
+                    }
+                    let raw_data = if data.len() > expected_raw_bytes {
+                        tracing::debug!(
+                            "QK256 '{}': ignoring {} trailing alignment padding bytes",
+                            info.name,
+                            data.len() - expected_raw_bytes
+                        );
+                        &data[..expected_raw_bytes]
+                    } else {
+                        data
+                    };
 
                     // Store raw bytes as U8 tensor [rows, row_stride_bytes]
                     let raw_tensor = Tensor::from_raw_buffer(
-                        data,
+                        raw_data,
                         DType::U8,
                         &[rows, row_stride_bytes],
                         &candle_device,

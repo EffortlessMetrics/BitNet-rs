@@ -38,8 +38,8 @@ Make Apple Silicon a receipt-backed BitNet target by moving in order from machin
 | M4-006 | merged | CPU/Metal parity merged in #3709. |
 | M4-007 | merged | MPSGraph tiny graph smoke merged in #3719. |
 | M4-008 | merged | Apple backend receipt identity merged in #3721. |
-| M4-009 | ready | Add benchmark baseline after parity and receipt identity. |
-| M4-010 | proposed | Prove Apple CPU/NEON BitNet reference before native Metal BitNet kernels. |
+| M4-009 | merged | Benchmark baseline for the validated tiny Metal add kernel merged in #3732. |
+| M4-010 | ready | Prove Apple CPU/NEON BitNet reference before native Metal BitNet kernels. |
 | M4-011 | proposed | Run native Metal I2_S smoke/parity, not QK256. |
 | M4-012 | proposed | Investigate TL1 as an ARM-oriented Apple path. |
 | M4-013 | proposed | Add receipt-backed Metal prefill/decode contribution. |

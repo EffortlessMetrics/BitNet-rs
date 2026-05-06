@@ -20,6 +20,15 @@ type BatchOperation<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usiz
 /// Kernel ID used by RTX5070TI-005 tiny CUDA smoke receipts.
 pub const CUDA_TINY_VECTOR_ADD_KERNEL_ID: &str = "cuda_tiny_vector_add";
 
+/// Fixture ID used by RTX5070TI-006 CPU/CUDA parity receipts.
+pub const CUDA_TINY_VECTOR_ADD_FIXTURE_ID: &str = "cuda_tiny_vector_add_1024";
+
+/// Number of elements in the deterministic tiny vector-add fixture.
+pub const CUDA_TINY_VECTOR_ADD_INPUT_LEN: usize = 1024;
+
+/// Exact-add fixture tolerance used for RTX5070TI-006 parity.
+pub const CUDA_TINY_VECTOR_ADD_PARITY_TOLERANCE: f32 = f32::EPSILON;
+
 const CUDA_TINY_VECTOR_ADD_SRC: &str = r#"
 extern "C" __global__
 void cuda_tiny_vector_add(const float* a, const float* b, float* c, int n) {
@@ -85,6 +94,49 @@ pub struct CudaTinyVectorAddSmoke {
     pub kernel_launches: u64,
 }
 
+/// Result of comparing the CUDA vector-add output with the CPU reference.
+#[derive(Debug, Clone)]
+pub struct CudaTinyVectorAddComparison {
+    pub passed: bool,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+    pub first_mismatch: Option<CudaTinyVectorAddMismatch>,
+}
+
+/// First mismatching element recorded for a CPU/CUDA parity debug artifact.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaTinyVectorAddMismatch {
+    pub index: usize,
+    pub expected: f32,
+    pub actual: f32,
+    pub abs_error: f32,
+}
+
+/// Result of the RTX5070TI-006 tiny CUDA vector-add CPU/CUDA parity fixture.
+#[derive(Debug, Clone)]
+pub struct CudaTinyVectorAddParity {
+    pub kernel_id: &'static str,
+    pub fixture_id: &'static str,
+    pub device_info: CudaDeviceInfo,
+    pub input_len: usize,
+    pub passed: bool,
+    pub tolerance: f32,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+    pub first_mismatch: Option<CudaTinyVectorAddMismatch>,
+    pub host_to_device_bytes: u64,
+    pub device_to_host_bytes: u64,
+    pub kernel_launches: u64,
+}
+
+struct CudaTinyVectorAddDeviceOutput {
+    device_info: CudaDeviceInfo,
+    actual: Vec<f32>,
+    host_to_device_bytes: u64,
+    device_to_host_bytes: u64,
+    kernel_launches: u64,
+}
+
 fn compile_cuda_ptx(source: &str, label: &str) -> Result<Ptx> {
     // cudarc 0.17 can panic while dynamically loading NVRTC when nvrtc.dll is
     // absent. Convert that into a normal error so smoke commands can still
@@ -121,14 +173,152 @@ fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
     }
 }
 
+/// Deterministic inputs for the tiny CUDA vector-add smoke and parity fixture.
+pub fn cuda_tiny_vector_add_inputs() -> (Vec<f32>, Vec<f32>) {
+    let a: Vec<f32> =
+        (0..CUDA_TINY_VECTOR_ADD_INPUT_LEN).map(|i| (i as f32 * 0.25) - 17.0).collect();
+    let b: Vec<f32> =
+        (0..CUDA_TINY_VECTOR_ADD_INPUT_LEN).map(|i| ((i % 31) as f32) - 15.0).collect();
+    (a, b)
+}
+
+/// CPU reference output for the tiny CUDA vector-add fixture.
+pub fn expected_cuda_tiny_vector_add(a: &[f32], b: &[f32]) -> Result<Vec<f32>> {
+    if a.len() != b.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "tiny vector-add input lengths differ: lhs={} rhs={}",
+                a.len(),
+                b.len()
+            ),
+        }
+        .into());
+    }
+
+    Ok(a.iter().zip(b).map(|(a, b)| a + b).collect())
+}
+
+/// Compare CUDA vector-add output against the CPU reference.
+pub fn compare_cuda_tiny_vector_add_outputs(
+    expected: &[f32],
+    actual: &[f32],
+    tolerance: f32,
+) -> Result<CudaTinyVectorAddComparison> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "tiny vector-add output lengths differ: expected={} actual={}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+
+    let mut max_abs_error = 0.0f32;
+    let mut total_abs_error = 0.0f32;
+    let mut first_mismatch = None;
+
+    for (index, (expected, actual)) in expected.iter().zip(actual).enumerate() {
+        let abs_error = (actual - expected).abs();
+        max_abs_error = max_abs_error.max(abs_error);
+        total_abs_error += abs_error;
+
+        if abs_error > tolerance && first_mismatch.is_none() {
+            first_mismatch = Some(CudaTinyVectorAddMismatch {
+                index,
+                expected: *expected,
+                actual: *actual,
+                abs_error,
+            });
+        }
+    }
+
+    let mean_abs_error =
+        if expected.is_empty() { 0.0 } else { total_abs_error / expected.len() as f32 };
+
+    Ok(CudaTinyVectorAddComparison {
+        passed: first_mismatch.is_none(),
+        max_abs_error,
+        mean_abs_error,
+        first_mismatch,
+    })
+}
+
 /// Compile and launch a tiny CUDA vector-add kernel on the selected device.
 ///
 /// This is intentionally not a BitNet kernel or inference proof. It only proves
 /// NVRTC compilation, CUDA launch, synchronization, and device-to-host copy for
 /// a deterministic vector-add fixture.
 pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVectorAddSmoke> {
-    const LEN: usize = 1024;
+    let parity = run_cuda_tiny_vector_add_parity(device_id, CUDA_TINY_VECTOR_ADD_PARITY_TOLERANCE)?;
+
+    Ok(CudaTinyVectorAddSmoke {
+        kernel_id: parity.kernel_id,
+        device_info: parity.device_info,
+        input_len: parity.input_len,
+        passed: parity.passed,
+        max_abs_error: parity.max_abs_error,
+        mean_abs_error: parity.mean_abs_error,
+        host_to_device_bytes: parity.host_to_device_bytes,
+        device_to_host_bytes: parity.device_to_host_bytes,
+        kernel_launches: parity.kernel_launches,
+    })
+}
+
+/// Run the RTX5070TI-006 tiny vector-add CPU/CUDA parity fixture.
+///
+/// This only compares a deterministic kernel fixture against the CPU reference.
+/// It is not a BitNet inference proof and does not touch QK256 routing.
+pub fn run_cuda_tiny_vector_add_parity(
+    device_id: usize,
+    tolerance: f32,
+) -> Result<CudaTinyVectorAddParity> {
+    let (a, b) = cuda_tiny_vector_add_inputs();
+    let expected = expected_cuda_tiny_vector_add(&a, &b)?;
+    let device_output = run_cuda_tiny_vector_add_kernel(device_id, &a, &b)?;
+    let comparison =
+        compare_cuda_tiny_vector_add_outputs(&expected, &device_output.actual, tolerance)?;
+
+    Ok(CudaTinyVectorAddParity {
+        kernel_id: CUDA_TINY_VECTOR_ADD_KERNEL_ID,
+        fixture_id: CUDA_TINY_VECTOR_ADD_FIXTURE_ID,
+        device_info: device_output.device_info,
+        input_len: expected.len(),
+        passed: comparison.passed,
+        tolerance,
+        max_abs_error: comparison.max_abs_error,
+        mean_abs_error: comparison.mean_abs_error,
+        first_mismatch: comparison.first_mismatch,
+        host_to_device_bytes: device_output.host_to_device_bytes,
+        device_to_host_bytes: device_output.device_to_host_bytes,
+        kernel_launches: device_output.kernel_launches,
+    })
+}
+
+fn run_cuda_tiny_vector_add_kernel(
+    device_id: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<CudaTinyVectorAddDeviceOutput> {
     const THREADS_PER_BLOCK: u32 = 256;
+
+    if a.len() != b.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "tiny vector-add input lengths differ: lhs={} rhs={}",
+                a.len(),
+                b.len()
+            ),
+        }
+        .into());
+    }
+    if a.len() > i32::MAX as usize {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("tiny vector-add input is too large: len={}", a.len()),
+        }
+        .into());
+    }
 
     let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
         reason: format!("Failed to create CUDA context for device {device_id}: {e:?}"),
@@ -143,21 +333,17 @@ pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVector
         KernelError::GpuError { reason: format!("Failed to load tiny CUDA smoke kernel: {e:?}") }
     })?;
 
-    let a: Vec<f32> = (0..LEN).map(|i| (i as f32 * 0.25) - 17.0).collect();
-    let b: Vec<f32> = (0..LEN).map(|i| ((i % 31) as f32) - 15.0).collect();
-    let expected: Vec<f32> = a.iter().zip(&b).map(|(a, b)| a + b).collect();
-
-    let a_dev = stream.memcpy_stod(&a).map_err(|e| KernelError::GpuError {
+    let a_dev = stream.memcpy_stod(a).map_err(|e| KernelError::GpuError {
         reason: format!("Failed to transfer tiny smoke input A to device: {e:?}"),
     })?;
-    let b_dev = stream.memcpy_stod(&b).map_err(|e| KernelError::GpuError {
+    let b_dev = stream.memcpy_stod(b).map_err(|e| KernelError::GpuError {
         reason: format!("Failed to transfer tiny smoke input B to device: {e:?}"),
     })?;
-    let mut c_dev: CudaSlice<f32> = stream.alloc_zeros(LEN).map_err(|e| KernelError::GpuError {
-        reason: format!("Failed to allocate tiny smoke output: {e:?}"),
+    let mut c_dev: CudaSlice<f32> = stream.alloc_zeros(a.len()).map_err(|e| {
+        KernelError::GpuError { reason: format!("Failed to allocate tiny smoke output: {e:?}") }
     })?;
 
-    let grid = (LEN as u32).div_ceil(THREADS_PER_BLOCK);
+    let grid = (a.len() as u32).div_ceil(THREADS_PER_BLOCK);
     let cfg = LaunchConfig {
         grid_dim: (grid, 1, 1),
         block_dim: (THREADS_PER_BLOCK, 1, 1),
@@ -168,7 +354,7 @@ pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVector
     builder.arg(&a_dev);
     builder.arg(&b_dev);
     builder.arg(&mut c_dev);
-    let n_arg = LEN as i32;
+    let n_arg = a.len() as i32;
     builder.arg(&n_arg);
 
     unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
@@ -182,24 +368,11 @@ pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVector
         reason: format!("Failed to transfer tiny smoke output back to host: {e:?}"),
     })?;
 
-    let mut max_abs_error = 0.0f32;
-    let mut total_abs_error = 0.0f32;
-    for (actual, expected) in actual.iter().zip(&expected) {
-        let abs_error = (actual - expected).abs();
-        max_abs_error = max_abs_error.max(abs_error);
-        total_abs_error += abs_error;
-    }
-    let mean_abs_error = total_abs_error / LEN as f32;
-
-    Ok(CudaTinyVectorAddSmoke {
-        kernel_id: CUDA_TINY_VECTOR_ADD_KERNEL_ID,
+    Ok(CudaTinyVectorAddDeviceOutput {
         device_info: CudaKernel::get_device_info(device_id)?,
-        input_len: LEN,
-        passed: max_abs_error <= f32::EPSILON,
-        max_abs_error,
-        mean_abs_error,
-        host_to_device_bytes: (2 * LEN * size_of::<f32>()) as u64,
-        device_to_host_bytes: (LEN * size_of::<f32>()) as u64,
+        actual,
+        host_to_device_bytes: ((a.len() + b.len()) * size_of::<f32>()) as u64,
+        device_to_host_bytes: (a.len() * size_of::<f32>()) as u64,
         kernel_launches: 1,
     })
 }

@@ -249,11 +249,50 @@ Record chip, GPU core count, unified memory, selected backend, fallback status, 
 ### M4-009 - Benchmark Baseline
 
 Compare Apple CPU/NEON against M4 Metal for the validated kernel/subgraph.
+The first baseline is limited to the validated `tiny_metal_add_smoke` kernel and
+records `compile_ms`, `first_dispatch_ms`, `steady_state_ms`, and
+`cpu_reference_ms` in `ci/hardware/apple-m4-mac-mini/<date>/metal-benchmark.json`.
+It is not a general Metal performance claim and is not a BitNet inference claim.
 
 ### M4-010 - Apple CPU/NEON BitNet Reference
 
 Run a BitNet reference path on Apple CPU/NEON or scalar fallback with model,
 tokenizer, kernel family, and fallback status recorded.
+
+The proof artifact is emitted through the CLI JSON path and must include:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "...",
+    "tokenizer": "llama3",
+    "loader_mode": "real_gguf"
+  },
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "decode",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "fallback_layout": null
+  },
+  "kernel": {
+    "implementation": "scalar",
+    "layout": "gguf_packed_i2_s",
+    "dequantizes_before_compute": false,
+    "kernel_id": "i2_s-scalar-reference"
+  }
+}
+```
+
+If scalar fallback is selected, the receipt must say so with
+`fallback_used=true` and cannot count as Apple CPU/NEON proof. M4-010 does not
+claim Metal BitNet execution, QK256 on Apple Silicon, or Apple CPU performance.
 
 ### M4-011 - Native Metal I2_S Smoke/Parity
 

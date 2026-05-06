@@ -172,6 +172,15 @@ jobs:
     name: ABI Stability Check
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # ABI surface only changes when bitnet-ffi / public C headers move.
+    # Gate to main, manual dispatch, or PRs that opt in via the `ffi` or
+    # `full-ci` label. This avoids building libbitnet_ffi on every PR.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'ffi') ||
+      contains(github.event.pull_request.labels.*.name, 'abi') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -190,6 +199,13 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 10
+    # Builds libbitnet_ffi.so and a C harness; only useful when FFI surface
+    # could plausibly have moved. Gate to main, manual dispatch, or label.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'ffi') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -277,6 +293,15 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true  # Informational while stabilizing baselines
     timeout-minutes: 10
+    # Installs transformers + torch + scipy and replays tokenizer fixtures.
+    # Only relevant when bitnet-tokenizers or its fixtures change. Gate to
+    # main, manual dispatch, or PRs that opt in via the `tokenizer` /
+    # `full-ci` label.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'tokenizer') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable

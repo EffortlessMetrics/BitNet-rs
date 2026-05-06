@@ -6,7 +6,9 @@
 #![cfg(all(test, feature = "cpu"))]
 
 use bitnet_quantization::i2s_qk256::{
-    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256, gemv_qk256_row, unpack_qk256_block,
+    QK256_AVX2_GEMV_KERNEL_ID, QK256_BLOCK, QK256_PACKED_BYTES, QK256_SCALAR_GEMV_KERNEL_ID,
+    code_to_f32, gemv_qk256, gemv_qk256_row, gemv_qk256_with_kernel_selection,
+    select_qk256_gemv_kernel, unpack_qk256_block,
 };
 use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
 
@@ -81,7 +83,7 @@ fn assert_parity(
 
     // Explicit AVX2 path (only on x86_64 with runtime detection)
     #[cfg(target_arch = "x86_64")]
-    if is_x86_feature_detected!("avx2") {
+    if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
         let mut y_avx2 = vec![0.0f32; rows];
         gemv_qk256_avx2(qs_data, x, &mut y_avx2, rows, cols, row_stride).expect("avx2 gemv");
         for (i, (s, a)) in y_scalar.iter().zip(y_avx2.iter()).enumerate() {
@@ -90,6 +92,70 @@ fn assert_parity(
                 "row {i}: scalar={s} avx2={a} diff={}",
                 (s - a).abs()
             );
+        }
+    }
+}
+
+#[test]
+fn test_requested_scalar_selection_executes_scalar() {
+    let rows = 2;
+    let cols = 256;
+    let row_codes = vec![vec![2u8; cols], vec![1u8; cols]];
+    let (qs, stride) = build_qs_data(&row_codes, cols);
+    let x: Vec<f32> = (0..cols).map(|i| (i as f32 + 1.0) * 0.125).collect();
+    let mut y = vec![0.0f32; rows];
+
+    let selection = gemv_qk256_with_kernel_selection(
+        &qs,
+        &x,
+        &mut y,
+        rows,
+        cols,
+        stride,
+        Some(QK256_SCALAR_GEMV_KERNEL_ID),
+        true,
+    )
+    .expect("forced scalar selection");
+
+    assert_eq!(selection.requested_kernel, Some(QK256_SCALAR_GEMV_KERNEL_ID));
+    assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+    assert!(!selection.fallback_used);
+    assert_eq!(selection.fallback_reason, None);
+
+    assert!((y[0] - manual_dot(&row_codes[0], &x, cols)).abs() < 1e-4);
+    assert!((y[1] - manual_dot(&row_codes[1], &x, cols)).abs() < 1e-4);
+}
+
+#[test]
+fn test_requested_avx2_selection_is_explicit() {
+    let selection = select_qk256_gemv_kernel(Some(QK256_AVX2_GEMV_KERNEL_ID), false)
+        .expect("non-strict requested AVX2 selection");
+
+    if selection.selected_kernel == QK256_AVX2_GEMV_KERNEL_ID {
+        assert!(!selection.fallback_used);
+        assert_eq!(selection.fallback_reason, None);
+        assert!(selection.cpu_features.contains(&"avx2"));
+        assert!(selection.cpu_features.contains(&"fma"));
+    } else {
+        assert_eq!(selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+        assert!(selection.fallback_used);
+        assert_eq!(selection.fallback_reason.as_deref(), Some("avx2/fma unavailable"));
+    }
+}
+
+#[test]
+fn test_requested_avx2_strict_matches_runtime_availability() {
+    let selection = select_qk256_gemv_kernel(Some(QK256_AVX2_GEMV_KERNEL_ID), true);
+
+    match selection {
+        Ok(selection) => {
+            assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+            assert!(!selection.fallback_used);
+            assert!(selection.cpu_features.contains(&"avx2"));
+            assert!(selection.cpu_features.contains(&"fma"));
+        }
+        Err(err) => {
+            assert!(err.to_string().contains("cannot fall back"));
         }
     }
 }

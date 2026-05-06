@@ -1,2 +1,0 @@
-    Checking bitnet-common v0.2.1-dev (C:\Code\Rust\BitNet-rs\crates\bitnet-common)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.53s

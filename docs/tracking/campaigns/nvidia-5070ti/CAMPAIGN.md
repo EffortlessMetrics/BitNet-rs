@@ -27,7 +27,9 @@ Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-devi
 |---|---|---|
 | RTX5070TI-003 | merged | Preserved selected-device CUDA identity in #3679. |
 | RTX5070TI-004 | merged | Added CUDA and NVML runtime probe in #3691. |
-| RTX5070TI-005 | ready | Run tiny CUDA kernel smoke after #3691. |
+| RTX5070TI-005 | merged | Tiny CUDA kernel smoke receipt merged in #3723. |
+| RTX5070TI-006 | merged | CPU/CUDA tiny fixture parity receipt merged in #3749. |
+| RTX5070TI-007 | ready | Add CUDA receipt validation and kernel counters. |
 
 ## Review Policy
 

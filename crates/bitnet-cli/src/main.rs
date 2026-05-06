@@ -558,6 +558,7 @@ async fn main() -> Result<()> {
             no_warnings,
         }) => {
             run_simple_generation(
+                &requested_backend_label,
                 model,
                 model_format,
                 architecture,
@@ -1301,9 +1302,192 @@ fn detect_loader_mode_for_path(path: &std::path::Path, is_hf_directory: bool) ->
     }
 }
 
+#[derive(Debug, Clone)]
+struct RunBackendIdentity {
+    requested_backend: String,
+    selected_backend: String,
+    runtime_api: String,
+    fallback_used: bool,
+    fallback_reason: Option<String>,
+}
+
+fn resolve_run_backend_identity(
+    requested_backend_label: &str,
+    strict_backend: bool,
+) -> Result<RunBackendIdentity> {
+    use bitnet_common::{BackendRequest, select_backend};
+    use bitnet_kernels::device_features::current_kernel_capabilities;
+
+    let request =
+        BackendRequest::from_label(requested_backend_label).unwrap_or(BackendRequest::Auto);
+    let caps = current_kernel_capabilities();
+
+    match select_backend(request, &caps) {
+        Ok(result) => Ok(RunBackendIdentity {
+            requested_backend: result.requested_backend(),
+            selected_backend: result.selected_backend(),
+            runtime_api: result.runtime_api().to_string(),
+            fallback_used: result.fallback_used(),
+            fallback_reason: result.fallback_reason().map(str::to_string),
+        }),
+        Err(err) if strict_backend => Err(err.into()),
+        Err(err) => Ok(RunBackendIdentity {
+            requested_backend: request.to_string(),
+            selected_backend: "cpu".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: request != BackendRequest::Auto && request != BackendRequest::Cpu,
+            fallback_reason: Some(err.to_string()),
+        }),
+    }
+}
+
+fn detected_cpu_feature_labels() -> Vec<String> {
+    let features = bitnet_common::runtime_diag::CpuFeatures::detect();
+    let mut labels = Vec::new();
+    if features.neon {
+        labels.push("neon".to_string());
+    }
+    if features.avx512f {
+        labels.push("avx512f".to_string());
+    }
+    if features.avx2 {
+        labels.push("avx2".to_string());
+    }
+    if features.avx {
+        labels.push("avx".to_string());
+    }
+    if features.fma {
+        labels.push("fma".to_string());
+    }
+    if features.sse42 {
+        labels.push("sse4.2".to_string());
+    }
+    if features.sse2 {
+        labels.push("sse2".to_string());
+    }
+    if labels.is_empty() {
+        labels.push("scalar".to_string());
+    }
+    labels
+}
+
+fn cpu_kernel_implementation(quantization: bitnet_common::QuantizationType) -> &'static str {
+    if matches!(quantization, bitnet_common::QuantizationType::I2S) && cfg!(target_arch = "aarch64")
+    {
+        // The current Apple CPU proof path has NEON available, but the packed
+        // GGUF I2_S reference kernel is still scalar. Keep the receipt honest.
+        return "scalar";
+    }
+    bitnet_common::runtime_diag::CpuFeatures::detect().best_simd()
+}
+
+fn effective_thread_count(threads: usize) -> usize {
+    if threads > 0 {
+        return threads;
+    }
+
+    std::env::var("RAYON_NUM_THREADS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|threads| *threads > 0)
+        .unwrap_or_else(|| std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1))
+}
+
+fn kernel_family_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "i2_s",
+        bitnet_common::QuantizationType::TL1 => "tl1",
+        bitnet_common::QuantizationType::TL2 => "tl2",
+    }
+}
+
+fn layout_source_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "gguf_packed_i2_s_reference",
+        bitnet_common::QuantizationType::TL1 => "tl1_reference",
+        bitnet_common::QuantizationType::TL2 => "tl2_reference",
+    }
+}
+
+fn kernel_layout_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "gguf_packed_i2_s",
+        bitnet_common::QuantizationType::TL1 => "tl1",
+        bitnet_common::QuantizationType::TL2 => "tl2",
+    }
+}
+
+fn dequantizes_before_compute(quantization: bitnet_common::QuantizationType) -> bool {
+    !matches!(quantization, bitnet_common::QuantizationType::I2S)
+}
+
+fn infer_model_repo(path: &std::path::Path) -> String {
+    let normalized = path.to_string_lossy().to_ascii_lowercase();
+    if normalized.contains("bitnet-b1.58-2b-4t")
+        || normalized.contains("microsoft-bitnet-b1.58-2b-4t")
+    {
+        "microsoft/bitnet-b1.58-2B-4T-gguf".to_string()
+    } else {
+        "local".to_string()
+    }
+}
+
+fn infer_model_architecture(path: &std::path::Path) -> String {
+    if infer_model_repo(path) == "microsoft/bitnet-b1.58-2B-4T-gguf" {
+        "bitnet_b1_58".to_string()
+    } else {
+        "unknown".to_string()
+    }
+}
+
+fn receipt_model_format(
+    path: &std::path::Path,
+    requested_format: &str,
+    is_hf_directory: bool,
+) -> String {
+    if is_hf_directory {
+        return "huggingface".to_string();
+    }
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+        .filter(|ext| ext == "gguf" || ext == "safetensors")
+        .unwrap_or_else(|| requested_format.to_string())
+}
+
+fn infer_tokenizer_label(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+    source: bitnet_tokenizers::auto::TokenizerSource,
+) -> String {
+    if tokenizer.token_to_id("<|eot_id|>").is_some() {
+        "llama3".to_string()
+    } else {
+        source.as_str().to_string()
+    }
+}
+
+fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let mut file =
+        std::fs::File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 1024 * 1024];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
+    requested_backend_label: &str,
     model_path: std::path::PathBuf,
     model_format: String,
     _architecture: Option<String>,
@@ -1388,6 +1572,12 @@ async fn run_simple_generation(
 
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
+
+    let strict_backend = strict_loader
+        || std::env::var("BITNET_STRICT_MODE")
+            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+    let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
 
     // Parse and resolve template type
     use bitnet_inference::TemplateType;
@@ -1917,10 +2107,53 @@ async fn run_simple_generation(
             "minimal_fallback_allowed": std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1"),
             "minimal_fallback_disabled": std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
                 || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1"),
+            "minimal_loader_fallback_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+            "tokenizer_source": tokenizer_source_str,
+            "mock_tensors_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
+        let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
+        let kernel_implementation =
+            cpu_kernel_implementation(config.quantization.quantization_type);
+        let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
+        let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
+        let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
+        let dequantizes_before_compute =
+            dequantizes_before_compute(config.quantization.quantization_type);
+        let model_sha256 = compute_model_sha256(&model_path)?;
+        let model_repo = infer_model_repo(&model_path);
+        let canonical_bitnet_model = model_repo == "microsoft/bitnet-b1.58-2B-4T-gguf";
+        let model_architecture = infer_model_architecture(&model_path);
+        let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
+        let model_file =
+            model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+        let thread_count = effective_thread_count(threads);
+        let cpu_features = detected_cpu_feature_labels();
+        let fallback_reason = backend_identity.fallback_reason.clone();
+        let requested_backend = backend_identity.requested_backend.as_str();
+        let selected_backend = backend_identity.selected_backend.as_str();
+        let runtime_api = backend_identity.runtime_api.as_str();
+        let strict_cpu_reference_artifact = strict_backend
+            && canonical_bitnet_model
+            && runtime_api == "cpu"
+            && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str();
+        let artifact_kind = if strict_cpu_reference_artifact {
+            "strict_bitnet_cpu_reference"
+        } else {
+            "inference_result"
+        };
         let output = serde_json::json!({
+            "schema_version": "1.0.0",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "artifact_kind": artifact_kind,
+            "artifact_path": json_path.display().to_string(),
+            "requested_backend": requested_backend,
+            "selected_backend": selected_backend,
+            "runtime_api": runtime_api,
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": fallback_reason,
             "prompt": prompt,
             "text": generated_text,
             "tokens": {
@@ -1938,6 +2171,68 @@ async fn run_simple_generation(
                 "tokens_per_second": tok_per_sec,
                 "decoded_tokens": generated_tokens.len(),
             },
+            "model": {
+                "repo": model_repo,
+                "file": model_file,
+                "path": model_path.display().to_string(),
+                "sha256": model_sha256,
+                "format": model_format_label,
+                "architecture": model_architecture,
+                "context_length": config.model.max_position_embeddings,
+                "tokenizer": tokenizer_label,
+                "vocab_size": tokenizer.vocab_size(),
+                "loader_mode": loader_mode,
+            },
+            "bitnet": {
+                "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
+                "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
+                "kernel_format": kernel_family,
+                "kernel_family": kernel_family,
+                "execution_phase": "decode",
+                "layout_source": layout_source,
+                "fallback_layout": serde_json::Value::Null,
+            },
+            "execution": {
+                "phase": "decode",
+                "prompt_tokens": prompt_tokens_len,
+                "generated_tokens": generated_tokens.len(),
+                "batch_size": 1,
+                "thread_count": thread_count,
+                "requested_backend": requested_backend,
+                "selected_backend": selected_backend,
+                "runtime_api": runtime_api,
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            },
+            "kernel": {
+                "family": kernel_family,
+                "implementation": kernel_implementation,
+                "layout": kernel_layout,
+                "dequantizes_before_compute": dequantizes_before_compute,
+                "kernel_id": selected_kernel.as_str(),
+            },
+            "cpu": {
+                "arch": std::env::consts::ARCH,
+                "features": &cpu_features,
+                "threads": thread_count,
+            },
+            "strict_provenance": {
+                "requested_backend": requested_backend,
+                "selected_backend": selected_backend,
+                "requested_kernel": selected_kernel.as_str(),
+                "selected_kernel": selected_kernel.as_str(),
+                "loader_mode": loader_mode,
+                "tokenizer_source": tokenizer_source_str,
+                "model_family": "bitnet",
+                "quant_format": format!("{}", config.quantization.quantization_type),
+                "cpu_features": &cpu_features,
+                "thread_count": thread_count,
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+                "prompt_tokens": prompt_tokens_len,
+                "decode_tokens": generated_tokens.len(),
+                "decode_tps": tok_per_sec,
+            },
             "counts": counts,
             "tokenizer": tokenizer_info,
             "loader": loader_info,
@@ -1954,8 +2249,7 @@ async fn run_simple_generation(
                 None
             },
         });
-        std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
-        println!("JSON output written to: {}", json_path.display());
+        write_json_output(Some(&json_path), &output)?;
     }
 
     // Dump IDs if requested
@@ -2078,6 +2372,61 @@ fn compute_rms(xs: &[f32]) -> f32 {
     }
     let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
     (sum_sq / (xs.len() as f32)).sqrt()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apple_cpu_neon_identity_is_preserved_or_visible_fallback() {
+        let identity = resolve_run_backend_identity("apple-m4-cpu-neon", false).unwrap();
+
+        assert_eq!(identity.requested_backend, "apple-m4-cpu-neon");
+        assert_eq!(identity.runtime_api, "cpu");
+        assert!(
+            identity.selected_backend == "apple-m4-cpu-neon" || identity.selected_backend == "cpu",
+            "unexpected selected backend: {}",
+            identity.selected_backend
+        );
+        if identity.selected_backend == "cpu" {
+            assert!(identity.fallback_used);
+            assert!(identity.fallback_reason.is_some());
+        }
+    }
+
+    #[test]
+    fn i2s_receipt_kernel_family_is_stable() {
+        assert_eq!(kernel_family_for_quantization(bitnet_common::QuantizationType::I2S), "i2_s");
+    }
+
+    #[test]
+    fn i2s_receipt_records_packed_reference_layout() {
+        assert_eq!(
+            layout_source_for_quantization(bitnet_common::QuantizationType::I2S),
+            "gguf_packed_i2_s_reference"
+        );
+        assert_eq!(
+            kernel_layout_for_quantization(bitnet_common::QuantizationType::I2S),
+            "gguf_packed_i2_s"
+        );
+        assert!(!dequantizes_before_compute(bitnet_common::QuantizationType::I2S));
+    }
+
+    #[test]
+    fn apple_i2s_receipt_does_not_overclaim_neon_kernel() {
+        #[cfg(target_arch = "aarch64")]
+        assert_eq!(cpu_kernel_implementation(bitnet_common::QuantizationType::I2S), "scalar");
+    }
+
+    #[test]
+    fn known_bitnet_model_path_records_canonical_repo() {
+        let repo = infer_model_repo(std::path::Path::new(
+            "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+        ));
+
+        assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
 }
 
 /// Show system information

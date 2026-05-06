@@ -23,6 +23,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
 
 jobs:
   build:
@@ -48,7 +49,7 @@ jobs:
           echo "sha_tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2  # v4.0.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -60,7 +61,7 @@ jobs:
         with:
           context: .github/images/rust-ci
           file: .github/images/rust-ci/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ env.PUBLISH_IMAGE == 'true' }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version_tag }}
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}
