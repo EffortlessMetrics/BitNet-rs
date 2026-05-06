@@ -1,0 +1,1 @@
+Use the CI coverage campaign to make coverage upload and reporting reliable in trusted and forked PR contexts. Keep this work CI-only, make skipped coverage reasons visible, and do not let optional coverage upload failures block unrelated runtime or tracker work.

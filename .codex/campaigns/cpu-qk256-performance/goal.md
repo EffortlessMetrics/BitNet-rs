@@ -1,0 +1,1 @@
+Use the CPU QK256 performance campaign to move from strict proof surfaces into scalar, packed-layout, AVX2, and sustained benchmark evidence. Keep scalar truth before SIMD claims, keep receipts explicit about selected CPU paths and fallback status, and do not claim performance until proof artifacts and hardware context support it.

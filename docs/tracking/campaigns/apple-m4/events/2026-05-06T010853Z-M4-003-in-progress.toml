@@ -1,0 +1,11 @@
+timestamp = "2026-05-06T01:08:53Z"
+campaign = "apple-m4"
+item = "M4-003"
+event = "in_progress"
+branch = "codex/apple-m4/M4-003-backend-identity"
+actor = "codex"
+
+notes = [
+  "Started Apple backend identity preservation only.",
+  "No Metal kernels, MPSGraph execution, QK256, server inference, dependencies, or runtime probe work.",
+]
