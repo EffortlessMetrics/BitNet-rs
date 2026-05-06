@@ -37,6 +37,7 @@ use std::{
 use walkdir::WalkDir;
 
 mod campaign;
+mod ci_plan;
 mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
@@ -1003,6 +1004,44 @@ enum Cmd {
         #[command(subcommand)]
         command: campaign::CampaignCmd,
     },
+
+    /// CI planning and budget tools (LEM forecast, lane selection).
+    ///
+    /// See docs/ci/cost-and-verification-policy.md for the verification
+    /// economics model and what each lane buys.
+    Ci {
+        #[command(subcommand)]
+        command: CiCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum CiCmd {
+    /// Forecast which CI lanes will run for this PR and estimate Linux-equivalent minutes.
+    ///
+    /// Replaces the inline Python planner that previously lived in
+    /// `.github/workflows/pr-plan.yml`. Emits `ci-plan.json` with a stable
+    /// schema for downstream tooling.
+    Plan {
+        /// Base SHA / ref for the diff (e.g. PR base). Defaults to origin/main.
+        #[arg(long)]
+        base: Option<String>,
+        /// Head SHA / ref for the diff. Defaults to HEAD.
+        #[arg(long)]
+        head: Option<String>,
+        /// JSON array of label strings (e.g. `["full-ci","gpu-ci"]`).
+        #[arg(long)]
+        labels_json: Option<String>,
+        /// Write `ci-plan.json` to this path.
+        #[arg(long)]
+        json_out: Option<PathBuf>,
+        /// Append a Markdown summary to this file (typically `$GITHUB_STEP_SUMMARY`).
+        #[arg(long)]
+        github_summary: Option<PathBuf>,
+        /// Skip git diff and emit a plan for an empty diff (useful for fixture testing).
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1329,6 +1368,11 @@ fn real_main() -> Result<()> {
             grid_check::run(cpu_only, verbose, dry_run)
         }
         Cmd::Campaign { command } => campaign::run(command),
+        Cmd::Ci { command } => match command {
+            CiCmd::Plan { base, head, labels_json, json_out, github_summary, dry_run } => {
+                ci_plan::run(base, head, labels_json, json_out, github_summary, dry_run)
+            }
+        },
     }
 }
 

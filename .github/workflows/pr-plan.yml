@@ -9,6 +9,9 @@ name: PR Plan
 # - LEM = Linux-equivalent minutes (macOS is treated as 10x, GPU Docker as 6x).
 # - Estimates are rough heuristics. Actual cost is recorded in the GitHub
 #   Actions metrics UI; this job exists to give a per-PR forecast.
+#
+# Implementation: see `xtask::ci_plan` (xtask/src/ci_plan.rs). The planner is
+# Rust-native and unit-testable; this workflow just wires it up.
 
 on:
   pull_request:
@@ -26,172 +29,44 @@ jobs:
   plan:
     name: PR Plan
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
         with:
           fetch-depth: 0
 
-      - name: Compute changed files
-        id: diff
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache xtask build
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: xtask-ci-plan
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Restrict cache to xtask + its deps to keep this lane small.
+          workspaces: ". -> target"
+
+      - name: Run xtask ci plan
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
-          # Fetch base if needed (workflow_dispatch has no PR base).
-          if [ -z "${BASE_SHA:-}" ]; then
-            base_ref="refs/heads/main"
-            git fetch --no-tags --depth=1 origin main || true
-            BASE_SHA="$(git rev-parse origin/main 2>/dev/null || echo "")"
+          # Make sure the base ref is fetched for diff computation.
+          if [ -n "${BASE_SHA:-}" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || true
           fi
-          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "$BASE_SHA" 2>/dev/null; then
-            git diff --name-only "$BASE_SHA"..."$HEAD_SHA" > changed.txt || true
-          else
-            # Fall back to last commit on this branch.
-            git diff --name-only HEAD~1..HEAD > changed.txt || true
-          fi
-          count=$(wc -l < changed.txt | tr -d ' ')
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Changed files ($count):"
-          sed -n '1,200p' changed.txt
 
-      - name: Build PR plan
-        id: plan
-        env:
-          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, os, re, pathlib
-
-          changed = pathlib.Path("changed.txt").read_text().splitlines()
-          changed = [c for c in changed if c]
-          labels = set(json.loads(os.environ.get("LABELS") or "[]"))
-
-          AREAS = {
-              "docs":        [r"^docs/", r"\.md$", r"^README", r"^CHANGELOG", r"^CONTRIBUTING",
-                              r"^SECURITY", r"^COMPATIBILITY", r"^THIRD_PARTY", r"^CLAUDE\.md$"],
-              "tracking":    [r"^\.codex/campaigns/", r"^docs/tracking/"],
-              "workflow":    [r"^\.github/workflows/", r"^\.github/actions/"],
-              "rust_core":   [r"^crates/", r"^tests/", r"^xtask/", r"^Cargo\.(toml|lock)$",
-                              r"^rust-toolchain\.toml$"],
-              "gpu":         [r"^crates/bitnet-kernels/", r"^crates/bitnet-gpu-hal/",
-                              r"^crates/bitnet-device-probe/", r"^crates/bitnet-device-config-core/",
-                              r"^crates/bitnet-inference/", r"^crates/bitnet-metal/",
-                              r"^crates/bitnet-opencl/", r"^crates/bitnet-vulkan",
-                              r"^crates/bitnet-wgpu", r"^crates/bitnet-webgpu/",
-                              r"^crates/bitnet-rocm/", r"^crates/bitnet-intel-gpu-id/",
-                              r"^docker/"],
-              "ffi":         [r"^crates/bitnet-ffi/", r"^crates/bitnet-sys/",
-                              r"^crates/bitnet-ggml-ffi/", r"^crossval/"],
-              "tokenizer":   [r"^crates/bitnet-tokenizers/", r"^tests/fixtures/tokenizers/"],
-              "bdd":         [r"^crates/bitnet-bdd-", r"^crates/bitnet-testing-policy",
-                              r"^crates/bitnet-testing-scenarios", r"^crates/bitnet-runtime-feature-flags",
-                              r"^crates/bitnet-startup-contract", r"^crates/bitnet-feature-contract"],
-              "fuzz":        [r"^fuzz/"],
-              "manifest":    [r"^Cargo\.(toml|lock)$", r"^rust-toolchain\.toml$"],
-          }
-
-          touched = {area: False for area in AREAS}
-          for path in changed:
-              for area, patterns in AREAS.items():
-                  if any(re.search(p, path) for p in patterns):
-                      touched[area] = True
-
-          # Lanes that will run on the default PR path, given gating rules.
-          lanes = []  # list of (lane_name, lem, reason)
-
-          # CI Core triggers on rust_core (after PR A merges).
-          if touched["rust_core"]:
-              lanes.append(("CI (Core) — build/test/clippy/docs", 22, "rust_core changed"))
-          # BDD grid: gated to bdd/grid/full-ci or main (after PR G).
-          if "bdd" in labels or "grid" in labels or "full-ci" in labels:
-              lanes.append(("BDD Grid Check", 4, "bdd/grid/full-ci label"))
-          # macOS clippy: gated to macos/full-ci (after PR F). 10x multiplier.
-          if "macos" in labels or "full-ci" in labels:
-              lanes.append(("Clippy (macOS ARM64)", 15 * 10, "macos/full-ci label"))
-          # Feature matrix: 3-combo PR matrix; full matrix on label.
-          if touched["rust_core"] or touched["manifest"]:
-              if "feature-matrix" in labels or "full-ci" in labels:
-                  lanes.append(("Feature Matrix (full ~21 jobs)", 70, "feature-matrix/full-ci label"))
-              else:
-                  lanes.append(("Feature Matrix (PR 3-combo)", 12, "rust/manifest changed"))
-          # GPU CI: triggers on gpu paths (after PR B).
-          if touched["gpu"]:
-              lanes.append(("GPU CI Matrix (native compile)", 18, "GPU paths changed"))
-              if "gpu-ci" in labels or "docker" in labels or "full-ci" in labels:
-                  lanes.append(("GPU CI Matrix (Docker, ~6x)", 90, "gpu-ci/docker/full-ci label"))
-          # Compatibility lanes (after PR E).
-          if touched["rust_core"]:
-              lanes.append(("Compatibility (MSRV)", 12, "rust_core changed"))
-          if touched["ffi"] or "ffi" in labels or "abi" in labels or "full-ci" in labels:
-              lanes.append(("Compatibility (ABI/FFI)", 8, "ffi area / label"))
-          if touched["tokenizer"] or "tokenizer" in labels or "full-ci" in labels:
-              lanes.append(("Compatibility (tokenizer)", 6, "tokenizer area / label"))
-          # Property smoke (after PR D).
-          if "property-tests" in labels or "full-ci" in labels:
-              lanes.append(("Property Tests (smoke)", 4, "property-tests/full-ci label"))
-          # Always-on cheap guards.
-          if changed:
-              lanes.append(("Guards / PR Size Guard / Markdownlint / Link Check", 4, "always-on"))
-
-          total = sum(lem for _, lem, _ in lanes)
-
-          # Categorize.
-          if not changed:
-              posture = "empty"
-          elif touched["docs"] and not (touched["rust_core"] or touched["gpu"] or touched["ffi"] or touched["tokenizer"]):
-              posture = "docs-only"
-          elif touched["tracking"] and not (touched["rust_core"] or touched["gpu"] or touched["ffi"]):
-              posture = "tracking-only"
-          else:
-              posture = "rust"
-
-          # Budget banding.
-          if total <= 12:
-              band = "✅ pennies (< 12 LEM)"
-          elif total <= 35:
-              band = "✅ default budget (< 35 LEM)"
-          elif total <= 75:
-              band = "⚠️  elevated (35–75 LEM)"
-          elif total <= 125:
-              band = "⚠️  high (75–125 LEM)"
-          else:
-              band = "🚨 over hard ceiling (> 125 LEM)"
-
-          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
-          with open(summary_path, "a") as f:
-              f.write(f"# PR Plan\n\n")
-              f.write(f"- **Posture:** {posture}\n")
-              f.write(f"- **Touched areas:** "
-                      f"{', '.join(a for a, t in touched.items() if t) or '(none)'}\n")
-              f.write(f"- **Labels:** {', '.join(sorted(labels)) or '(none)'}\n")
-              f.write(f"- **Estimated LEM:** {total}  ·  {band}\n\n")
-              f.write("| Lane | Estimated LEM | Reason |\n")
-              f.write("|---|---:|---|\n")
-              for name, lem, reason in lanes:
-                  f.write(f"| {name} | {lem} | {reason} |\n")
-              if not lanes:
-                  f.write("| (no lanes expected) | 0 | nothing matched |\n")
-              f.write("\n")
-              f.write("> Estimates are rough heuristics derived from path globs + labels. ")
-              f.write("Actual minutes are recorded in the GitHub Actions metrics UI. ")
-              f.write("This job is advisory only and does not gate merges.\n")
-
-          # Also emit machine-readable artifact for future LEM-aware routing.
-          plan = {
-              "posture": posture,
-              "touched": touched,
-              "labels": sorted(labels),
-              "lanes": [{"name": n, "lem": l, "reason": r} for n, l, r in lanes],
-              "estimated_lem": total,
-              "band": band,
-          }
-          pathlib.Path("ci-plan.json").write_text(json.dumps(plan, indent=2))
-          print(json.dumps(plan, indent=2))
-          PY
+          cargo run --locked -p xtask --no-default-features -- ci plan \
+            --base "${BASE_SHA:-origin/main}" \
+            --head "${HEAD_SHA:-HEAD}" \
+            --labels-json "${LABELS_JSON:-[]}" \
+            --json-out ci-plan.json \
+            --github-summary "$GITHUB_STEP_SUMMARY"
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
