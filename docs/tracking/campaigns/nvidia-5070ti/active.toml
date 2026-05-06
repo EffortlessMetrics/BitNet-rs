@@ -232,3 +232,281 @@ must_not_claim = [
   "QK256 CUDA works.",
   "CUDA speedup exists without a same-model benchmark artifact.",
 ]
+
+[[work_item]]
+id = "CUDA-BITNET-001"
+status = "merged"
+branch = "codex/cuda-bitnet-001-context-handles"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-007"]
+acceptance = "Add persistent CUDA BitNet context, stream lifetime, reusable workspace, and weight handles without claiming full BitNet inference."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-kernels/src/lib.rs",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-common/src/backend_selection.rs",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "CUDA BitNet context, stream, workspace, and weight-handle infrastructure exists after CUDA-BITNET-001 lands.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works.",
+  "CUDA speedup exists.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-002"
+status = "merged"
+branch = "codex/cuda-bitnet-002-i2s-linear"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-001"]
+acceptance = "Add reusable CUDA I2S linear primitive with CPU/CUDA parity, tails and padding support, and kernel stats without full inference claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+  "Manual RTX 5070 Ti I2S parity command with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-kernels/tests/**",
+  "crates/bitnet-quantization/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "CUDA I2S primitive parity exists for named fixtures after CUDA-BITNET-002 lands.",
+]
+must_not_claim = [
+  "QK256 CUDA works.",
+  "Full BitNet CUDA inference works.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-003"
+status = "merged"
+branch = "codex/cuda-bitnet-003-qk256-gemv"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-001"]
+acceptance = "Replace scaffold-only QK256 launch with a compiled packed fused dequant GEMV CUDA kernel that passes CPU scalar parity."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+  "Manual RTX 5070 Ti QK256 parity command with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-kernels/tests/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "QK256 CUDA GEMV works for receipt-backed parity fixtures after CUDA-BITNET-003 lands.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works.",
+  "CUDA speedup exists.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-004"
+status = "merged"
+branch = "codex/cuda-bitnet-004-upload-once-weights"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-002", "CUDA-BITNET-003"]
+acceptance = "Prepack and upload BitNet weights once for CUDA with per-layer handles and receipt fields for packed_at_load and uploaded_once."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "CUDA BitNet weight handles can be packed and uploaded once after CUDA-BITNET-004 lands.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works.",
+  "The routed transformer proof is upload-once until a receipt proves it.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-005"
+status = "merged"
+branch = "codex/cuda-bitnet-005-route-linear"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-004"]
+acceptance = "Route actual BitNetLinear transformer dispatch through the selected CUDA backend with coverage counters and strict CPU fallback rejection."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu,cuda",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda",
+]
+allowed_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Actual BitNetLinear dispatch can contribute CUDA work after CUDA-BITNET-005 lands.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works until the strict one-token proof lands.",
+  "Dense CUDA fallback counts as BitNet packed-kernel proof.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-006"
+status = "pr_open"
+branch = "codex/cuda-bitnet-006-one-token-proof"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-005"]
+acceptance = "Add strict one-token BitNet CUDA proof with official GGUF, real tokenizer, CUDA kernel invocations greater than zero, zero CPU fallback, CPU/CUDA greedy or top-1 agreement, fallback_used=false, and speedup_claim=false."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli",
+  "cargo clippy --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli -- -D warnings",
+  "Manual RTX 5070 Ti strict one-token BitNet CUDA proof with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cpu-reference.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict one-token BitNet CUDA inference ran fallback-free on the RTX 5070 Ti after the proof receipt exists.",
+]
+must_not_claim = [
+  "CUDA speedup exists.",
+  "Short decode works.",
+  "The routed proof path uploads weights once unless the receipt proves it.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-007"
+status = "proposed"
+branch = "codex/cuda-bitnet-007-short-decode-proof"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-006"]
+acceptance = "Add short greedy BitNet CUDA decode proof with timing, kernel invocation growth, memory high-water mark, and fallback_used=false."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual RTX 5070 Ti short decode BitNet CUDA proof with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = []
+must_not_claim = [
+  "CUDA speedup exists.",
+  "Full benchmark performance is proven.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-008"
+status = "proposed"
+branch = "codex/cuda-bitnet-008-benchmark-baseline"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CUDA-BITNET-007"]
+acceptance = "Add RTX 5070 Ti full BitNet CUDA benchmark baseline comparing 9950X3D CPU scalar, AVX2, AVX-512, and CUDA with matching model, tokenizer, prompt profile, strict loader mode, fallback_used=false, and runtime context."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual RTX 5070 Ti BitNet CUDA benchmark with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/benches/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = []
+must_not_claim = [
+  "CUDA speedup exists before same-model benchmark receipt proves it.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-001"
+status = "proposed"
+branch = "codex/cuda-dense-001-reference-lane"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-007"]
+acceptance = "Add regular LLM CUDA dense-kernel reference lane with dense_regular_llm receipt labels that cannot satisfy BitNet packed I2S or QK256 proof acceptance."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = []
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+]

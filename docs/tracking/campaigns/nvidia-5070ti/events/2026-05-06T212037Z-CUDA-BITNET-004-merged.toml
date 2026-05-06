@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T21:20:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-004"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3790
+merge_sha = "da1e566dd464b03b347db31dc94dbc3425f13d65"
+actor = "codex"
+
+notes = [
+  "Merged load-time BitNet CUDA packing and upload-once weight handles.",
+  "This does not by itself prove the routed transformer path uses upload-once weights.",
+]

@@ -1,0 +1,234 @@
+{
+  "artifact_kind": "strict_bitnet_cuda_proof",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": true,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "claim": "strict_bitnet_cuda_inference",
+  "counts": {
+    "n_kv": 0,
+    "n_tensors": 0,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx512f",
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "threads": 1
+  },
+  "cpu_fallback_ops": [],
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_kernel_invocations": 210,
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvrtc_version": "12.9",
+    "vram_bytes": 17094475776
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 1,
+    "phase": "decode",
+    "prompt_tokens": 22,
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 210,
+    "bitnet_linear_layers_total": 210,
+    "execution_claim": "cuda_inference_contribution",
+    "unsupported_ops": []
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "qk256",
+    "implementation": "cuda",
+    "kernel_id": "qk256_gemv_cuda",
+    "layout": "gguf_packed_i2_s"
+  },
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "invocations": 210,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_launches": 210,
+      "kernel_time_ms": null
+    }
+  ],
+  "latency": {
+    "cmd_to_first_ms": 19890,
+    "decode_first_ms": 19890,
+    "total_ms": 19890
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 89048,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 9.742095947265625,
+          "token_id": 89048
+        },
+        {
+          "logit": 8.802050590515137,
+          "token_id": 12281
+        },
+        {
+          "logit": 8.758410453796387,
+          "token_id": 39256
+        },
+        {
+          "logit": 8.517449378967285,
+          "token_id": 87896
+        },
+        {
+          "logit": 8.477624893188477,
+          "token_id": 100952
+        },
+        {
+          "logit": 8.464189529418945,
+          "token_id": 17642
+        },
+        {
+          "logit": 8.459884643554688,
+          "token_id": 31064
+        },
+        {
+          "logit": 8.373509407043457,
+          "token_id": 3654
+        },
+        {
+          "logit": 8.36257266998291,
+          "token_id": 127558
+        },
+        {
+          "logit": 8.315672874450684,
+          "token_id": 69976
+        }
+      ]
+    }
+  ],
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "prompt": "Answer with a single digit: 2+2=",
+  "reference": {
+    "cpu_greedy_token_id": 89048,
+    "cpu_reference_artifact": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cpu-reference.json",
+    "cpu_top1_token_id": 89048,
+    "cuda_greedy_token_id": 89048,
+    "cuda_top1_token_id": 89048,
+    "greedy_token_agreement": true,
+    "max_abs_error": null,
+    "mean_abs_error": null,
+    "top1_agreement": true
+  },
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema_version": "1.0.0",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "strict_provenance": {
+    "cpu_features": [
+      "avx512f",
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cuda_kernel_invocations": 210,
+    "decode_tokens": 1,
+    "decode_tps": 0.05027652086475616,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "prompt_tokens": 22,
+    "quant_format": "I2_S",
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "requested_kernel": "qk256_gemv_cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_kernel": "qk256_gemv_cuda",
+    "thread_count": 1,
+    "tokenizer_source": "explicit"
+  },
+  "text": "'E",
+  "throughput": {
+    "decoded_tokens": 1,
+    "tokens_per_second": 0.05027652086475616
+  },
+  "timestamp": "2026-05-06T22:47:18.129906800+00:00",
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "origin": "external",
+    "source": "explicit",
+    "strict": true,
+    "type": "sentencepiece"
+  },
+  "tokens": {
+    "generated": 1,
+    "ids": [
+      89048
+    ],
+    "prompt": 22,
+    "total": 23
+  }
+}

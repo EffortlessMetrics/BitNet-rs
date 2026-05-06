@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T19:20:11Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-001"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3776
+merge_sha = "2743a373b1a1418f0f2e2b98f9d597d00e6138e9"
+actor = "codex"
+
+notes = [
+  "Merged persistent CUDA BitNet context and weight-handle infrastructure.",
+  "This creates CUDA lifetime substrate only and does not claim full BitNet CUDA inference.",
+]
