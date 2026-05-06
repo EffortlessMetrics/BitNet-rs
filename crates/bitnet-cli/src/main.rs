@@ -2372,7 +2372,7 @@ fn ensure_non_empty_generation_context(
 }
 
 #[cfg(test)]
-mod tests {
+mod empty_generation_context_tests {
     use super::ensure_non_empty_generation_context;
     use bitnet_common::Result as TokenizerResult;
     use bitnet_tokenizers::Tokenizer;
