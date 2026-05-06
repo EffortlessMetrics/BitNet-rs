@@ -2,10 +2,10 @@
 
 use bitnet_device_probe::{
     APPLE_M4_MPSGRAPH_BACKEND, APPLE_M4_MPSGRAPH_RESOLVED_TARGET_UNKNOWN,
-    APPLE_M4_MPSGRAPH_RUNTIME_API, TINY_MPSGRAPH_MATMUL_GRAPH_ID, TinyMpsGraphSmokeComparison,
-    TinyMpsGraphSmokeReceipt, apple_mpsgraph_smoke_artifact_path,
-    compare_tiny_mpsgraph_matmul_outputs, expected_tiny_mpsgraph_matmul,
-    tiny_mpsgraph_matmul_inputs, tiny_mpsgraph_smoke_swift_source,
+    APPLE_M4_MPSGRAPH_RUNTIME_API, AppleBackendReceipt, AppleResolvedDevice,
+    TINY_MPSGRAPH_MATMUL_GRAPH_ID, TinyMpsGraphSmokeComparison, TinyMpsGraphSmokeReceipt,
+    apple_mpsgraph_smoke_artifact_path, compare_tiny_mpsgraph_matmul_outputs,
+    expected_tiny_mpsgraph_matmul, tiny_mpsgraph_matmul_inputs, tiny_mpsgraph_smoke_swift_source,
 };
 
 #[test]
@@ -105,25 +105,26 @@ mod live_mpsgraph {
         let receipt =
             TinyMpsGraphSmokeReceipt::passed(artifact_path.clone(), expected.len(), comparison);
 
-        let receipt_json = json!({
-            "machine_id": receipt.machine_id,
-            "artifact_kind": receipt.artifact_kind,
-            "requested_backend": receipt.requested_backend,
-            "selected_backend": receipt.selected_backend,
-            "runtime_api": receipt.runtime_api,
-            "resolved_device": {
-                "chip": device_name,
-                "unified_memory": true
-            },
-            "graph_id": receipt.graph_id,
-            "resolved_target": receipt.resolved_target,
-            "fallback_used": receipt.fallback_used,
-            "result": receipt.result,
-            "artifact_path": receipt.artifact_path,
-            "element_count": receipt.element_count,
-            "max_abs_error": receipt.max_abs_error,
-            "mean_abs_error": receipt.mean_abs_error
-        });
+        let backend_receipt = AppleBackendReceipt::new(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            AppleResolvedDevice::new(device_name).with_unified_memory(true),
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+        )
+        .with_graph_id(receipt.graph_id)
+        .with_resolved_target(receipt.resolved_target)
+        .with_result(receipt.result);
+        backend_receipt.validate()?;
+
+        let mut receipt_json = serde_json::to_value(backend_receipt)?;
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert("element_count".to_string(), json!(receipt.element_count));
+        object.insert("max_abs_error".to_string(), json!(receipt.max_abs_error));
+        object.insert("mean_abs_error".to_string(), json!(receipt.mean_abs_error));
 
         if let Ok(path) = std::env::var(RECEIPT_ENV) {
             if let Some(parent) = Path::new(&path).parent() {
