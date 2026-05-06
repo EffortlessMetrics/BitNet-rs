@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T03:38:29Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-002"
+event = "pr_open"
+pr = 3680
+head_sha = "92bce81a61f585bf5ed74c75689694fa4e018a3f"
+actor = "codex"
+
+notes = [
+  "Recorded live GitHub state for the tokenizer authority PR before making campaign doctor enforce PR reconciliation.",
+  "No CPU runtime behavior changed in this tracker-infra PR.",
+]

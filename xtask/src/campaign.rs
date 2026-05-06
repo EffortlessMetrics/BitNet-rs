@@ -144,6 +144,31 @@ struct Event {
     notes: Vec<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct GithubPullRequest {
+    number: u64,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    body: Option<String>,
+    #[serde(default)]
+    merged_at: Option<String>,
+    #[serde(default)]
+    merge_commit_sha: Option<String>,
+    #[serde(default)]
+    labels: Vec<GithubLabel>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GithubLabel {
+    name: String,
+}
+
+struct GithubContext {
+    repository: String,
+    token: String,
+}
+
 struct LoadedCampaign {
     dir: PathBuf,
     manifest: CampaignManifest,
@@ -253,35 +278,8 @@ fn cmd_check(root: &Path, campaign_id: &str) -> Result<()> {
 
 fn cmd_generate(root: &Path, check: bool) -> Result<()> {
     let campaigns = load_all_campaigns(root)?;
-    let mut writes = BTreeMap::new();
-
-    for campaign in &campaigns {
-        let rel = format!("{CAMPAIGNS_DIR}/{}/generated/status.md", campaign.manifest.id);
-        writes.insert(root.join(&rel), render_campaign_status(campaign));
-    }
-
-    writes.insert(
-        root.join(format!("{GENERATED_DIR}/global-dashboard.md")),
-        render_global_dashboard(&campaigns),
-    );
-    writes
-        .insert(root.join(format!("{GENERATED_DIR}/active-prs.md")), render_active_prs(&campaigns));
-    writes.insert(
-        root.join(format!("{GENERATED_DIR}/lane-dashboard.md")),
-        render_lane_dashboard(&campaigns),
-    );
-    writes.insert(
-        root.join(format!("{GENERATED_DIR}/blocked-items.md")),
-        render_blocked_items(&campaigns),
-    );
-
-    let stale: Vec<_> = writes
-        .iter()
-        .filter_map(|(path, content)| {
-            let current = fs::read_to_string(path).ok();
-            if current.as_deref() == Some(content.as_str()) { None } else { Some(path.clone()) }
-        })
-        .collect();
+    let writes = expected_dashboard_writes(root, &campaigns);
+    let stale = stale_generated_dashboards(&writes);
 
     if check {
         if stale.is_empty() {
@@ -361,18 +359,26 @@ fn cmd_doctor(root: &Path) -> Result<()> {
         }
     }
 
-    if generated_is_stale(root)? {
-        problems.push(Problem::warning(
-            "generated dashboards are stale; run `cargo run -p xtask --no-default-features -- campaign generate`",
-        ));
+    let stale_dashboards = stale_generated_dashboards(&expected_dashboard_writes(root, &campaigns));
+    if !stale_dashboards.is_empty() {
+        problems.push(Problem::error(format!(
+            "generated dashboards are stale; run `cargo run -p xtask --no-default-features -- campaign generate`:\n{}",
+            stale_dashboards
+                .iter()
+                .map(|path| format!("- {}", path.display()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )));
     }
 
     for path in changed_legacy_tracker_files(root)? {
-        problems.push(Problem::warning(format!(
+        problems.push(Problem::error(format!(
             "legacy tracker changed in this branch: {}; normal item PRs should use campaign files",
             path.display()
         )));
     }
+
+    problems.extend(reconcile_github_pull_requests(&campaigns));
 
     print_problems(&problems);
     fail_on_errors(&problems)?;
@@ -526,6 +532,7 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
 
     let item_ids: BTreeSet<_> = manifest.work_items.iter().map(|item| item.id.as_str()).collect();
     let mut merged_events = BTreeSet::new();
+    let mut pr_open_events_with_pr = BTreeSet::new();
     for event in &campaign.events {
         if event.timestamp.trim().is_empty() {
             problems.push(Problem::error(format!(
@@ -561,10 +568,11 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
             merged_events.insert(event.item.as_str());
         }
         if event.event == "pr_open" && event.pr.is_none() {
-            problems.push(Problem::warning(format!(
-                "pr_open event for `{}` is missing pr",
-                event.item
-            )));
+            problems
+                .push(Problem::error(format!("pr_open event for `{}` is missing pr", event.item)));
+        }
+        if event.event == "pr_open" && event.pr.is_some() {
+            pr_open_events_with_pr.insert(event.item.as_str());
         }
         if event.event == "pr_open" && event.head_sha.as_deref().unwrap_or("").trim().is_empty() {
             problems.push(Problem::warning(format!(
@@ -590,6 +598,12 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
         if item.status == "merged" && !merged_events.contains(item.id.as_str()) {
             problems.push(Problem::error(format!(
                 "item `{}` is merged but has no merged event with merge_sha",
+                item.id
+            )));
+        }
+        if item.status == "pr_open" && !pr_open_events_with_pr.contains(item.id.as_str()) {
+            problems.push(Problem::error(format!(
+                "item `{}` is pr_open but has no pr_open event with a PR number",
                 item.id
             )));
         }
@@ -766,23 +780,48 @@ fn render_blocked_items(campaigns: &[LoadedCampaign]) -> String {
     out
 }
 
-fn generated_is_stale(root: &Path) -> Result<bool> {
-    let campaigns = load_all_campaigns(root)?;
-    let expected = root.join(format!("{GENERATED_DIR}/global-dashboard.md"));
-    let rendered = render_global_dashboard(&campaigns);
-    Ok(fs::read_to_string(expected).ok().as_deref() != Some(rendered.as_str()))
+fn expected_dashboard_writes(
+    root: &Path,
+    campaigns: &[LoadedCampaign],
+) -> BTreeMap<PathBuf, String> {
+    let mut writes = BTreeMap::new();
+
+    for campaign in campaigns {
+        let rel = format!("{CAMPAIGNS_DIR}/{}/generated/status.md", campaign.manifest.id);
+        writes.insert(root.join(&rel), render_campaign_status(campaign));
+    }
+
+    writes.insert(
+        root.join(format!("{GENERATED_DIR}/global-dashboard.md")),
+        render_global_dashboard(campaigns),
+    );
+    writes
+        .insert(root.join(format!("{GENERATED_DIR}/active-prs.md")), render_active_prs(campaigns));
+    writes.insert(
+        root.join(format!("{GENERATED_DIR}/lane-dashboard.md")),
+        render_lane_dashboard(campaigns),
+    );
+    writes.insert(
+        root.join(format!("{GENERATED_DIR}/blocked-items.md")),
+        render_blocked_items(campaigns),
+    );
+
+    writes
+}
+
+fn stale_generated_dashboards(writes: &BTreeMap<PathBuf, String>) -> Vec<PathBuf> {
+    writes
+        .iter()
+        .filter_map(|(path, content)| {
+            let current = fs::read_to_string(path).ok();
+            if current.as_deref() == Some(content.as_str()) { None } else { Some(path.clone()) }
+        })
+        .collect()
 }
 
 fn changed_legacy_tracker_files(root: &Path) -> Result<Vec<PathBuf>> {
-    let branch = Command::new("git")
-        .args(["branch", "--show-current"])
-        .current_dir(root)
-        .output()
-        .ok()
-        .filter(|output| output.status.success())
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
-        .unwrap_or_default();
-    if branch.contains("tracker-infra") || branch.contains("campaign-local") {
+    let branch = current_branch_name(root);
+    if legacy_tracker_change_exception(&branch) {
         return Ok(Vec::new());
     }
 
@@ -808,6 +847,267 @@ fn changed_legacy_tracker_files(root: &Path) -> Result<Vec<PathBuf>> {
         .map(PathBuf::from)
         .collect();
     Ok(paths)
+}
+
+fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> {
+    let Some(context) = github_context() else {
+        return Vec::new();
+    };
+
+    let mut problems = Vec::new();
+    let client = match reqwest::blocking::Client::builder()
+        .user_agent("bitnet-rs-xtask-campaign-doctor")
+        .build()
+    {
+        Ok(client) => client,
+        Err(err) => {
+            problems
+                .push(github_reconciliation_problem(format!("build GitHub client failed: {err}")));
+            return problems;
+        }
+    };
+
+    let open_prs = match fetch_open_pull_requests(&client, &context) {
+        Ok(prs) => prs,
+        Err(err) => {
+            problems.push(github_reconciliation_problem(format!(
+                "fetch open GitHub PRs failed: {err}"
+            )));
+            return problems;
+        }
+    };
+
+    let mut items = BTreeMap::new();
+    let mut pr_open_event_prs = BTreeMap::new();
+    let mut merged_events = BTreeSet::new();
+    for campaign in campaigns {
+        for item in &campaign.manifest.work_items {
+            items.insert(item.id.as_str(), (&campaign.manifest.id, item));
+        }
+        for event in &campaign.events {
+            if event.event == "pr_open" {
+                if let Some(pr) = event.pr {
+                    pr_open_event_prs.insert(event.item.as_str(), pr);
+                }
+            }
+            if event.event == "merged" {
+                merged_events.insert(event.item.as_str());
+            }
+        }
+    }
+
+    let mut claims: BTreeMap<&str, Vec<&GithubPullRequest>> = BTreeMap::new();
+    for pr in &open_prs {
+        for item_id in items.keys() {
+            if pull_request_claims_item(pr, item_id) {
+                claims.entry(item_id).or_default().push(pr);
+            }
+        }
+    }
+
+    for (item_id, claimed_prs) in &claims {
+        if claimed_prs.len() > 1 {
+            problems.push(Problem::error(format!(
+                "multiple open GitHub PRs claim `{item_id}`: {}",
+                claimed_prs
+                    .iter()
+                    .map(|pr| format!("#{}", pr.number))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )));
+        }
+
+        let Some((_campaign_id, item)) = items.get(item_id).copied() else {
+            continue;
+        };
+        let pr = claimed_prs[0];
+        if item.status != "pr_open" {
+            problems.push(Problem::error(format!(
+                "open GitHub PR #{} claims `{item_id}`, but active.toml status is `{}`",
+                pr.number, item.status
+            )));
+        }
+        match pr_open_event_prs.get(item_id) {
+            Some(recorded_pr) if *recorded_pr == pr.number => {}
+            Some(recorded_pr) => problems.push(Problem::error(format!(
+                "open GitHub PR #{} claims `{item_id}`, but the latest pr_open event records #{}",
+                pr.number, recorded_pr
+            ))),
+            None => problems.push(Problem::error(format!(
+                "open GitHub PR #{} claims `{item_id}`, but no pr_open event records a PR number",
+                pr.number
+            ))),
+        }
+    }
+
+    let open_pr_numbers: BTreeSet<_> = open_prs.iter().map(|pr| pr.number).collect();
+    for (item_id, (_campaign_id, item)) in &items {
+        if item.status != "pr_open" {
+            continue;
+        }
+        let Some(recorded_pr) = pr_open_event_prs.get(item_id) else {
+            continue;
+        };
+        if open_pr_numbers.contains(recorded_pr) {
+            if !claims.contains_key(item_id) {
+                problems.push(Problem::error(format!(
+                    "item `{item_id}` is pr_open for GitHub PR #{recorded_pr}, but that open PR does not claim the item in its title, body, or labels"
+                )));
+            }
+            continue;
+        }
+
+        match fetch_pull_request(&client, &context, *recorded_pr) {
+            Ok(pr) if pr.merged_at.is_some() && !merged_events.contains(item_id) => {
+                let merge_ref = pr
+                    .merge_commit_sha
+                    .as_deref()
+                    .filter(|value| !value.trim().is_empty())
+                    .unwrap_or("<unknown merge sha>");
+                problems.push(Problem::error(format!(
+                    "item `{item_id}` is pr_open, but GitHub PR #{} merged at {}; add a merged event with merge_sha `{merge_ref}` and mark the item merged",
+                    pr.number,
+                    pr.merged_at.unwrap_or_default()
+                )));
+            }
+            Ok(pr) => {
+                problems.push(Problem::error(format!(
+                    "item `{item_id}` is pr_open for GitHub PR #{}, but the PR is not open",
+                    pr.number
+                )));
+            }
+            Err(err) => problems.push(github_reconciliation_problem(format!(
+                "fetch GitHub PR #{recorded_pr} for `{item_id}` failed: {err}"
+            ))),
+        }
+    }
+
+    problems
+}
+
+fn github_context() -> Option<GithubContext> {
+    if std::env::var("GITHUB_EVENT_NAME").ok().as_deref() == Some("push") {
+        return None;
+    }
+
+    let repository = std::env::var("GITHUB_REPOSITORY").ok();
+    let token = std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GH_TOKEN")).ok();
+    match (repository, token) {
+        (Some(repository), Some(token))
+            if !repository.trim().is_empty() && !token.trim().is_empty() =>
+        {
+            Some(GithubContext { repository, token })
+        }
+        _ => None,
+    }
+}
+
+fn github_reconciliation_problem(message: String) -> Problem {
+    if std::env::var("GITHUB_ACTIONS").ok().as_deref() == Some("true") {
+        Problem::error(format!("GitHub PR reconciliation failed: {message}"))
+    } else {
+        Problem::warning(format!("GitHub PR reconciliation skipped: {message}"))
+    }
+}
+
+fn fetch_open_pull_requests(
+    client: &reqwest::blocking::Client,
+    context: &GithubContext,
+) -> Result<Vec<GithubPullRequest>> {
+    let url = format!(
+        "https://api.github.com/repos/{}/pulls?state=open&per_page=100",
+        context.repository
+    );
+    client
+        .get(url)
+        .bearer_auth(&context.token)
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .context("send GitHub open PR request")?
+        .error_for_status()
+        .context("GitHub open PR request failed")?
+        .json()
+        .context("parse GitHub open PR response")
+}
+
+fn fetch_pull_request(
+    client: &reqwest::blocking::Client,
+    context: &GithubContext,
+    pr: u64,
+) -> Result<GithubPullRequest> {
+    let url = format!("https://api.github.com/repos/{}/pulls/{pr}", context.repository);
+    client
+        .get(url)
+        .bearer_auth(&context.token)
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .with_context(|| format!("send GitHub PR #{pr} request"))?
+        .error_for_status()
+        .with_context(|| format!("GitHub PR #{pr} request failed"))?
+        .json()
+        .with_context(|| format!("parse GitHub PR #{pr} response"))
+}
+
+fn pull_request_claims_item(pr: &GithubPullRequest, item_id: &str) -> bool {
+    let item_label = format!("item:{item_id}").to_ascii_lowercase();
+    if pr.labels.iter().any(|label| label.name.eq_ignore_ascii_case(&item_label)) {
+        return true;
+    }
+    if pr.title.contains(item_id) {
+        return true;
+    }
+
+    pr.body
+        .as_deref()
+        .is_some_and(|body| body.lines().any(|line| body_line_claims_item(line, item_id)))
+}
+
+fn body_line_claims_item(line: &str, item_id: &str) -> bool {
+    let trimmed = line
+        .trim()
+        .trim_start_matches('-')
+        .trim_start_matches('*')
+        .trim_start_matches('>')
+        .trim()
+        .trim_matches('`')
+        .trim();
+    if trimmed.starts_with(item_id) {
+        return true;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    let explicit_claim = lower.starts_with("work item")
+        || lower.starts_with("item:")
+        || lower.starts_with("item ")
+        || lower.starts_with("scope:")
+        || lower.starts_with("boundary:");
+    explicit_claim && trimmed.contains(item_id)
+}
+
+fn current_branch_name(root: &Path) -> String {
+    for key in ["GITHUB_HEAD_REF", "GITHUB_REF_NAME"] {
+        if let Ok(value) = std::env::var(key) {
+            let value = value.trim().to_string();
+            if !value.is_empty() {
+                return value;
+            }
+        }
+    }
+
+    Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .unwrap_or_default()
+}
+
+fn legacy_tracker_change_exception(branch: &str) -> bool {
+    ["tracker-infra", "legacy-migration", "generated-dashboard"]
+        .iter()
+        .any(|marker| branch.contains(marker))
 }
 
 fn print_problems(problems: &[Problem]) {
