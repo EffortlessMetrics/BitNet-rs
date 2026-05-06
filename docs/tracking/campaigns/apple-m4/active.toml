@@ -422,7 +422,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-013"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-013-metal-prefill-decode"
 stackable = false
 requires_human_merge = true
@@ -455,7 +455,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-014"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
 stackable = false
 requires_human_merge = true
