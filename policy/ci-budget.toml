@@ -1,0 +1,30 @@
+# BitNet-rs CI budget policy.
+#
+# Drives the LEM banding output by `xtask ci plan` and (in PR O) the
+# soft-warning thresholds in pr-plan.yml. Hand-edit this file to change
+# the budget posture; the planner falls back to the same defaults if the
+# file is missing.
+#
+# See docs/ci/cost-and-verification-policy.md for rationale.
+
+[budget]
+# Soft target — well below this is "default budget".
+preferred_default_lem = 25
+# Soft warning threshold — beyond this we emit an "elevated" band marker.
+default_limit_lem = 35
+# Stronger warning threshold — beyond this we emit a "high" band marker.
+elevated_limit_lem = 75
+# Hard ceiling — beyond this we emit "over hard ceiling" and (PR O)
+# require a full-ci / ci-budget-override label to merge.
+hard_limit_lem = 125
+
+[runner_multipliers]
+# Linux baseline.
+ubuntu_22_04 = 1.0
+# GPU Docker images use the GitHub-hosted runner CPU but compile multi-GB
+# layers; treat as 6x for forecast purposes.
+gpu_docker = 6.0
+# Apple Silicon runners are billed at 10x the Linux multiplier.
+macos_14 = 10.0
+# Windows runners are billed at 2x.
+windows_latest = 2.0

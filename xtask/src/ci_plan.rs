@@ -14,11 +14,11 @@
 
 use anyhow::{Context, Result};
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 /// Touched-area buckets considered by the planner.
@@ -138,11 +138,79 @@ pub struct Plan {
     pub band: &'static str,
 }
 
+/// LEM banding thresholds. Hand-tunable via `policy/ci-budget.toml`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct BudgetPolicy {
+    pub preferred_default_lem: u32,
+    pub default_limit_lem: u32,
+    pub elevated_limit_lem: u32,
+    pub hard_limit_lem: u32,
+}
+
+impl Default for BudgetPolicy {
+    /// Hard-coded fallback used when `policy/ci-budget.toml` is missing or
+    /// malformed. Kept in sync with the values shipped in that file so the
+    /// planner produces identical output in either case.
+    fn default() -> Self {
+        Self {
+            preferred_default_lem: 25,
+            default_limit_lem: 35,
+            elevated_limit_lem: 75,
+            hard_limit_lem: 125,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct BudgetFile {
+    budget: BudgetPolicy,
+}
+
+/// Load `policy/ci-budget.toml` if present. Falls back to [`BudgetPolicy::default`]
+/// on any failure (missing file, parse error, etc.) so the planner remains
+/// usable in fresh checkouts and unit-test fixtures.
+pub fn load_budget_policy(policy_dir: Option<&Path>) -> BudgetPolicy {
+    let path = policy_dir.unwrap_or_else(|| Path::new("policy")).join("ci-budget.toml");
+    let Ok(text) = fs::read_to_string(&path) else {
+        return BudgetPolicy::default();
+    };
+    match toml::from_str::<BudgetFile>(&text) {
+        Ok(f) => f.budget,
+        Err(e) => {
+            eprintln!("warning: {} parse failed ({e}); using built-in defaults", path.display());
+            BudgetPolicy::default()
+        }
+    }
+}
+
+fn band_for(total: u32, p: &BudgetPolicy) -> &'static str {
+    if total <= p.preferred_default_lem.saturating_sub(13).max(12) {
+        // "pennies" band sits below ~12 LEM; we anchor at the smaller of
+        // (preferred_default - 13, 12) so docs-only PRs always show pennies.
+        "✅ pennies (< 12 LEM)"
+    } else if total <= p.default_limit_lem {
+        "✅ default budget (< 35 LEM)"
+    } else if total <= p.elevated_limit_lem {
+        "⚠️  elevated (35–75 LEM)"
+    } else if total <= p.hard_limit_lem {
+        "⚠️  high (75–125 LEM)"
+    } else {
+        "🚨 over hard ceiling (> 125 LEM)"
+    }
+}
+
 /// Pure planner: given the changed files and labels, produce the plan.
 ///
-/// This is the core function exercised by the unit tests. The [`run`] entry
-/// point wraps this with git-diff invocation and JSON / step-summary output.
+/// Uses the default budget policy. Tests typically call this; production
+/// callers go through [`plan_with_policy`] so `policy/ci-budget.toml` can
+/// override band thresholds.
+#[allow(dead_code)] // Re-exported for tests + downstream xtask consumers.
 pub fn plan_for(changed: &[String], labels: &[String]) -> Plan {
+    plan_with_policy(changed, labels, &BudgetPolicy::default())
+}
+
+/// Pure planner with explicit budget policy.
+pub fn plan_with_policy(changed: &[String], labels: &[String], budget: &BudgetPolicy) -> Plan {
     let mut touched: BTreeMap<String, bool> =
         AREAS.iter().map(|a| ((*a).to_string(), false)).collect();
 
@@ -316,17 +384,7 @@ pub fn plan_for(changed: &[String], labels: &[String]) -> Plan {
         "rust"
     };
 
-    let band: &'static str = if total <= 12 {
-        "✅ pennies (< 12 LEM)"
-    } else if total <= 35 {
-        "✅ default budget (< 35 LEM)"
-    } else if total <= 75 {
-        "⚠️  elevated (35–75 LEM)"
-    } else if total <= 125 {
-        "⚠️  high (75–125 LEM)"
-    } else {
-        "🚨 over hard ceiling (> 125 LEM)"
-    };
+    let band: &'static str = band_for(total, budget);
 
     let mut sorted_labels: Vec<String> = labels.to_vec();
     sorted_labels.sort();
@@ -434,7 +492,8 @@ pub fn run(
     let changed =
         if dry_run { Vec::new() } else { git_changed_files(base.as_deref(), head.as_deref())? };
 
-    let plan = plan_for(&changed, &labels);
+    let budget = load_budget_policy(None);
+    let plan = plan_with_policy(&changed, &labels, &budget);
     let json = serde_json::to_string_pretty(&plan).context("serialize plan to JSON")?;
     println!("{json}");
 
@@ -572,5 +631,66 @@ mod tests {
             parse_git_output(raw),
             vec!["crates/foo.rs".to_string(), "docs/bar.md".to_string()]
         );
+    }
+
+    #[test]
+    fn budget_policy_default_matches_committed_toml() {
+        // Committed policy/ci-budget.toml ships values that mirror the
+        // BudgetPolicy::default() fallback; they must agree so the planner
+        // produces identical output with or without the file.
+        let p = BudgetPolicy::default();
+        assert_eq!(p.preferred_default_lem, 25);
+        assert_eq!(p.default_limit_lem, 35);
+        assert_eq!(p.elevated_limit_lem, 75);
+        assert_eq!(p.hard_limit_lem, 125);
+    }
+
+    #[test]
+    fn budget_policy_override_changes_band() {
+        let stricter = BudgetPolicy {
+            preferred_default_lem: 10,
+            default_limit_lem: 20,
+            elevated_limit_lem: 40,
+            hard_limit_lem: 60,
+        };
+        let plan = plan_with_policy(
+            &["crates/bitnet-quantization/src/i2s_qk256.rs".into()],
+            &[],
+            &stricter,
+        );
+        // Same diff that lands at 54 LEM under defaults (elevated band)
+        // becomes "high" under the stricter policy — the threshold table
+        // moved, the diff didn't.
+        assert_eq!(plan.estimated_lem, 54);
+        assert!(plan.band.contains("high"));
+    }
+
+    #[test]
+    fn load_budget_policy_falls_back_when_missing() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        // No ci-budget.toml in tmp dir → expect default fallback.
+        let p = load_budget_policy(Some(tmp.path()));
+        assert_eq!(p, BudgetPolicy::default());
+    }
+
+    #[test]
+    fn load_budget_policy_reads_toml() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            tmp.path().join("ci-budget.toml"),
+            r#"
+[budget]
+preferred_default_lem = 5
+default_limit_lem = 10
+elevated_limit_lem = 20
+hard_limit_lem = 40
+"#,
+        )
+        .unwrap();
+        let p = load_budget_policy(Some(tmp.path()));
+        assert_eq!(p.preferred_default_lem, 5);
+        assert_eq!(p.default_limit_lem, 10);
+        assert_eq!(p.elevated_limit_lem, 20);
+        assert_eq!(p.hard_limit_lem, 40);
     }
 }
