@@ -228,6 +228,45 @@ pub struct StrictInferenceProvenance {
     pub decode_tps: Option<f64>,
 }
 
+/// BitNet-specific kernel/layout metadata for strict receipts.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BitnetExecutionMetadata {
+    pub kernel_family: String,
+    pub kernel_format: String,
+    pub layout: String,
+    pub layout_source: String,
+    pub requested_kernel: String,
+    pub selected_kernel: String,
+    pub dequantizes_before_compute: bool,
+}
+
+/// Loader and tokenizer authority metadata for strict receipts.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LoaderMetadata {
+    pub mode: String,
+    pub minimal_loader_fallback_used: bool,
+    pub tokenizer_source: String,
+    pub mock_tensors_used: bool,
+}
+
+/// Same-machine platform metadata for CPU/GPU/NPU validation receipts.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PlatformRuntimeMetadata {
+    pub machine: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cpu_features: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencl_device_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub openvino_available_devices: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_device: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub power_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thermal_profile: Option<String>,
+}
+
 /// Main inference receipt structure (AC4)
 ///
 /// # Schema Version: 1.0.0
@@ -291,6 +330,18 @@ pub struct InferenceReceipt {
     /// Strict CPU proof provenance (optional for legacy receipts).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strict_provenance: Option<StrictInferenceProvenance>,
+
+    /// BitNet-specific execution metadata for requested-vs-selected kernel receipts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bitnet: Option<BitnetExecutionMetadata>,
+
+    /// Loader/tokenizer authority metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loader: Option<LoaderMetadata>,
+
+    /// Platform runtime context for same-machine CPU/GPU/NPU comparisons.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform_runtime: Option<PlatformRuntimeMetadata>,
 }
 
 impl InferenceReceipt {
@@ -338,6 +389,9 @@ impl InferenceReceipt {
             parity: None,
             corrections: Vec::new(),
             strict_provenance: None,
+            bitnet: None,
+            loader: None,
+            platform_runtime: None,
         })
     }
 

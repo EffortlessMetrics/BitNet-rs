@@ -15,6 +15,14 @@ pub enum DeviceConfig {
     Cpu,
     /// Force GPU execution on specific device ID.
     Gpu(usize),
+    /// Preserve Intel NPU identity for OpenVINO/runtime probing.
+    IntelNpu(usize),
+    /// Preserve strict OpenVINO NPU identity.
+    OpenVinoNpu,
+    /// Preserve Intel Arc 140V GPU identity.
+    IntelArc140v(usize),
+    /// Preserve OpenVINO GPU identity for Intel graphics devices.
+    OpenVinoGpu(usize),
     /// Preserve a native Metal backend identity.
     Metal,
     /// Preserve an MPSGraph graph/reference backend identity.
@@ -34,7 +42,11 @@ impl FromStr for DeviceConfig {
         match s.to_lowercase().as_str() {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
+            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
+            "npu" | "intel-npu" => Ok(DeviceConfig::IntelNpu(0)),
+            "openvino-npu" | "intel-npu-openvino" => Ok(DeviceConfig::OpenVinoNpu),
+            "intel-arc-140v" | "arc-140v" => Ok(DeviceConfig::IntelArc140v(0)),
+            "openvino-gpu" | "openvino-gpu.0" => Ok(DeviceConfig::OpenVinoGpu(0)),
             "metal" => Ok(DeviceConfig::Metal),
             "mpsgraph" => Ok(DeviceConfig::MpsGraph),
             "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
@@ -45,6 +57,16 @@ impl FromStr for DeviceConfig {
             s if s.starts_with("vulkan:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
             s if s.starts_with("opencl:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
             s if s.starts_with("ocl:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
+            s if s.starts_with("npu:") => Ok(DeviceConfig::IntelNpu(s[4..].parse::<usize>()?)),
+            s if s.starts_with("intel-npu:") => {
+                Ok(DeviceConfig::IntelNpu(s[10..].parse::<usize>()?))
+            }
+            s if s.starts_with("intel-arc-140v:") => {
+                Ok(DeviceConfig::IntelArc140v(s[15..].parse::<usize>()?))
+            }
+            s if s.starts_with("openvino-gpu:") => {
+                Ok(DeviceConfig::OpenVinoGpu(s[13..].parse::<usize>()?))
+            }
             _ => anyhow::bail!("Unknown device config: {}", s),
         }
     }
@@ -68,6 +90,8 @@ impl DeviceConfig {
             }
             DeviceConfig::Cpu => Device::Cpu,
             DeviceConfig::Gpu(id) => Device::Cuda(*id),
+            DeviceConfig::IntelNpu(_) | DeviceConfig::OpenVinoNpu => Device::Npu,
+            DeviceConfig::IntelArc140v(id) | DeviceConfig::OpenVinoGpu(id) => Device::OpenCL(*id),
             DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
             // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
             DeviceConfig::MpsGraph | DeviceConfig::AppleM4MpsGraph => Device::Cpu,
@@ -82,6 +106,10 @@ impl DeviceConfig {
             DeviceConfig::Auto => BackendRequest::Auto,
             DeviceConfig::Cpu => BackendRequest::Cpu,
             DeviceConfig::Gpu(_) => BackendRequest::Gpu,
+            DeviceConfig::IntelNpu(_) => BackendRequest::IntelNpu,
+            DeviceConfig::OpenVinoNpu => BackendRequest::OpenVinoNpu,
+            DeviceConfig::IntelArc140v(_) => BackendRequest::IntelArc140v,
+            DeviceConfig::OpenVinoGpu(_) => BackendRequest::IntelArc140vOpenVinoGpu,
             DeviceConfig::Metal => BackendRequest::Metal,
             DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
             DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
@@ -106,6 +134,13 @@ mod tests {
         assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);
         assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);
         assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
+        assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(0));
+        assert_eq!("openvino-npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::OpenVinoNpu);
+        assert_eq!(
+            "intel-arc-140v".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::IntelArc140v(0)
+        );
+        assert_eq!("openvino-gpu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::OpenVinoGpu(1));
         assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
         assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));
         assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);

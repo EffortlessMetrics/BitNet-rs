@@ -146,9 +146,9 @@ pub struct GpuBackend {
 
 /// NPU backend implementation.
 ///
-/// The current implementation routes execution through the model's Metal path and
-/// provides an explicit backend surface for NPU-oriented deployment policy,
-/// warm-up behavior, and capability reporting.
+/// This backend preserves a distinct Intel/OpenVINO NPU identity. Until real
+/// OpenVINO graph execution lands, NPU requests fail strictly when the runtime
+/// identity probe is unavailable instead of aliasing to Metal or generic GPU.
 pub struct NpuBackend {
     model: Arc<dyn Model>,
     device: Device,
@@ -160,12 +160,15 @@ impl NpuBackend {
     pub fn new(model: Arc<dyn Model>, device: Device) -> Result<Self> {
         if !Self::is_available() {
             return Err(anyhow::anyhow!(
-                "NPU backend unavailable. Set {NPU_ENABLE_ENV}=1 and compile with metal support on macOS"
+                "Intel NPU backend unavailable. Set {NPU_ENABLE_ENV}=1 and ensure an Intel NPU runtime device is visible"
             ));
         }
 
-        if !matches!(device, Device::Metal) {
-            return Err(anyhow::anyhow!("NPU backend currently requires Device::Metal"));
+        if !matches!(device, Device::Npu) {
+            return Err(anyhow::anyhow!(
+                "NPU backend requires Device::Npu; refusing to alias {:?} to NPU",
+                device
+            ));
         }
 
         let allow_cpu_fallback = std::env::var(NPU_FALLBACK_ENV)
@@ -186,7 +189,7 @@ impl NpuBackend {
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
 
-        enabled && cfg!(target_os = "macos")
+        enabled && intel_npu_runtime_visible()
     }
 
     fn ensure_npu_tensor(&self, input: &ConcreteTensor) -> Result<ConcreteTensor> {
@@ -209,6 +212,29 @@ impl NpuBackend {
             "NPU tensor transfer is not available and fallback is disabled via {NPU_FALLBACK_ENV}=0"
         ))
     }
+}
+
+fn intel_npu_runtime_visible() -> bool {
+    std::env::var("BITNET_NPU_FAKE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true") || v.eq_ignore_ascii_case("intel"))
+        .unwrap_or(false)
+        || linux_accel_device_present()
+}
+
+#[cfg(target_os = "linux")]
+fn linux_accel_device_present() -> bool {
+    std::fs::read_dir("/dev/accel")
+        .map(|entries| {
+            entries.filter_map(Result::ok).any(|entry| {
+                entry.file_name().to_str().map(|name| name.starts_with("accel")).unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn linux_accel_device_present() -> bool {
+    false
 }
 
 impl GpuBackend {
@@ -384,14 +410,11 @@ pub fn select_backend(
             Ok(Box::new(CpuBackend::new(model)?))
         }
         Device::Metal => {
-            if NpuBackend::is_available() {
-                info!("Selected NPU backend");
-                Ok(Box::new(NpuBackend::new(model, device)?))
-            } else if GpuBackend::is_available() {
+            if GpuBackend::is_available() {
                 info!("Selected GPU backend for Metal device");
                 Ok(Box::new(GpuBackend::new(model, device)?))
             } else {
-                warn!("Metal/NPU requested but unavailable, falling back to CPU");
+                warn!("Metal requested but unavailable, falling back to CPU");
                 Ok(Box::new(CpuBackend::new(model)?))
             }
         }
@@ -418,8 +441,9 @@ pub fn select_backend(
                 info!("Selected NPU backend");
                 Ok(Box::new(NpuBackend::new(model, device)?))
             } else {
-                warn!("NPU requested but not available, falling back to CPU");
-                Ok(Box::new(CpuBackend::new(model)?))
+                Err(anyhow::anyhow!(
+                    "NPU requested but Intel NPU runtime is not available; refusing CPU/GPU fallback"
+                ))
             }
         }
         Device::OpenCL(_) => {

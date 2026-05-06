@@ -1,8 +1,8 @@
 //! NPU integration utilities for inference.
 //!
 //! This module centralizes environment-driven controls for the NPU path so the
-//! engine and CLI can expose a stable "npu" target while backend wiring to
-//! Qualcomm QNN/SNPE matures.
+//! engine and CLI can expose a stable Intel/OpenVINO NPU target without
+//! collapsing it to Metal, CUDA, OpenCL, or generic GPU identities.
 
 use bitnet_common::Device;
 
@@ -18,11 +18,30 @@ pub fn npu_requested() -> bool {
 
 /// Map an external `--device` style token to an internal device preference.
 pub fn map_device_token(token: &str) -> Option<Device> {
-    match token {
+    match token.trim().to_ascii_lowercase().as_str() {
         "cpu" => Some(Device::Cpu),
         "cuda" | "gpu" => Some(Device::Cuda(0)),
-        "metal" | "npu" => Some(Device::Metal),
-        "oneapi" | "opencl" | "intel-gpu" => Some(Device::OpenCL(0)),
+        "oneapi" | "opencl" | "intel-gpu" | "intel-arc-140v" => Some(Device::OpenCL(0)),
+        "npu" | "intel-npu" | "openvino-npu" | "intel-npu-openvino" => Some(Device::Npu),
+        "metal" => Some(Device::Metal),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_device_token;
+    use bitnet_common::Device;
+
+    #[test]
+    fn npu_tokens_preserve_npu_identity() {
+        assert_eq!(map_device_token("npu"), Some(Device::Npu));
+        assert_eq!(map_device_token("intel-npu"), Some(Device::Npu));
+        assert_eq!(map_device_token("openvino-npu"), Some(Device::Npu));
+    }
+
+    #[test]
+    fn metal_token_stays_separate_from_npu() {
+        assert_eq!(map_device_token("metal"), Some(Device::Metal));
     }
 }
