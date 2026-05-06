@@ -28,7 +28,7 @@
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | ready |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
-| intel-258v-platform | LNL258V-003 | LNL258V-002 | pr_open |
+| intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T22:14:11Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-003"
+event = "merged"
+pr = 3795
+merge_sha = "1c4490708f4119368f831b393e4cab482f13890b"
+actor = "codex"
+
+notes = [
+  "Recorded merge of the visibility-only Lunar Lake platform probe CLI command.",
+  "The command emits platform probe receipts without BitNet inference, kernel execution, or OpenVINO graph execution claims.",
+]

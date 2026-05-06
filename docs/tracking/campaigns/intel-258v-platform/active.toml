@@ -144,7 +144,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-258v-platform/LNL258V-003-cli-platform-probe"
 stackable = false
 requires_human_merge = true
