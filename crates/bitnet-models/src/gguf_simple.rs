@@ -38,6 +38,13 @@ pub struct GGUFLoaderConfig {
     pub tolerance_bytes: usize,
 }
 
+impl GGUFLoaderConfig {
+    /// Strict proof mode: exact packed-layout validation and no compatibility fallback.
+    pub fn strict_proof() -> Self {
+        Self { strict_mode: true, tolerance_bytes: 0 }
+    }
+}
+
 impl Default for GGUFLoaderConfig {
     fn default() -> Self {
         Self {
@@ -56,12 +63,14 @@ pub struct GgufLoadResult {
 }
 
 /// Machine-readable GGUF loader mode for receipts and proof paths.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum GgufLoaderMode {
     /// Authoritative GGUF parser loaded the model from real GGUF metadata and tensors.
     RealGguf,
     /// Explicit opt-in compatibility path that may synthesize missing tensors.
     MinimalCompatibility,
+    /// Explicit opt-in mock tensor compatibility path was used.
+    MockCompatibility,
 }
 
 impl GgufLoaderMode {
@@ -69,12 +78,18 @@ impl GgufLoaderMode {
         match self {
             Self::RealGguf => "real_gguf",
             Self::MinimalCompatibility => "minimal_compatibility",
+            Self::MockCompatibility => "mock_compatibility",
         }
+    }
+
+    pub fn fallback_used(self) -> bool {
+        !matches!(self, Self::RealGguf)
     }
 }
 
-fn minimal_loader_disabled() -> bool {
-    std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+fn minimal_loader_disabled(config: &GGUFLoaderConfig) -> bool {
+    config.strict_mode
+        || std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
         || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1")
 }
 
@@ -163,7 +178,7 @@ pub fn load_gguf_full(
                 Err(e) => {
                     let hint = minimal_loader_hint();
 
-                    if minimal_loader_disabled() || !minimal_loader_allowed() {
+                    if minimal_loader_disabled(&config) || !minimal_loader_allowed() {
                         tracing::error!("Enhanced loader failed: {}. {}", e, hint);
                         tracing::error!("Stopping here without minimal compatibility fallback.");
                         return Err(BitNetError::Validation(format!("{}\nHint: {}", e, hint)));
@@ -190,7 +205,7 @@ pub fn load_gguf_full(
         }
         Err(e) => {
             // GgufReader construction failed - fall back to minimal only when explicitly requested.
-            if minimal_loader_disabled() || !minimal_loader_allowed() {
+            if minimal_loader_disabled(&config) || !minimal_loader_allowed() {
                 return Err(BitNetError::Validation(format!(
                     "GGUF reader construction failed: {}\nHint: {}",
                     e,
@@ -483,10 +498,10 @@ fn load_gguf_enhanced(
     // This must happen HERE in the enhanced loader to prevent double transposition downstream
     normalize_embed_and_lm_head(&mut tensor_map, &config, &cdevice)?;
 
-    // AC9: Maintain backward compatibility only outside strict proof paths.
     if strict_mode {
-        tracing::debug!("Strict GGUF load: compatibility tensor synthesis disabled");
+        validate_no_missing_runtime_tensors(&tensor_map, &i2s_qk256_map, &config)?;
     } else {
+        // AC9: Maintain backward compatibility only outside strict proof paths.
         ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
     }
 
@@ -1716,6 +1731,58 @@ fn ensure_backward_compatibility(
     Ok(())
 }
 
+fn has_loaded_tensor(
+    tensor_map: &HashMap<String, CandleTensor>,
+    qk256_map: &HashMap<String, I2SQk256NoScale>,
+    name: &str,
+) -> bool {
+    tensor_map.contains_key(name) || qk256_map.contains_key(name)
+}
+
+/// Strict proof mode cannot create default tensors. All runtime-critical tensors
+/// must come from the GGUF file as real loaded tensors or packed QK256 views.
+fn validate_no_missing_runtime_tensors(
+    tensor_map: &HashMap<String, CandleTensor>,
+    qk256_map: &HashMap<String, I2SQk256NoScale>,
+    config: &bitnet_common::BitNetConfig,
+) -> Result<()> {
+    let mut missing = Vec::new();
+    for name in ["token_embd.weight", "output.weight", "output_norm.weight"] {
+        if !has_loaded_tensor(tensor_map, qk256_map, name) {
+            missing.push(name.to_string());
+        }
+    }
+
+    for layer_idx in 0..config.model.num_layers {
+        let layer_prefix = format!("blk.{}", layer_idx);
+        for suffix in [
+            "attn_q.weight",
+            "attn_k.weight",
+            "attn_v.weight",
+            "attn_output.weight",
+            "ffn_gate.weight",
+            "ffn_up.weight",
+            "ffn_down.weight",
+            "attn_norm.weight",
+            "ffn_norm.weight",
+        ] {
+            let name = format!("{}.{}", layer_prefix, suffix);
+            if !has_loaded_tensor(tensor_map, qk256_map, &name) {
+                missing.push(name);
+            }
+        }
+    }
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    Err(BitNetError::Validation(format!(
+        "Strict GGUF loading rejected missing runtime tensors; compatibility/default tensors are disabled in strict proof mode. Missing: {}",
+        missing.join(", ")
+    )))
+}
+
 /// Create a default mock tensor layout for test compatibility
 /// This handles completely invalid mock files used in test infrastructure
 fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
@@ -1858,7 +1925,7 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         tensor_map.len()
     );
     Ok(GgufLoadResult {
-        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        loader_mode: GgufLoaderMode::MockCompatibility,
         config,
         tensors: tensor_map,
         i2s_qk256: HashMap::new(),
@@ -1925,5 +1992,6 @@ mod tests {
     fn loader_mode_names_are_receipt_stable() {
         assert_eq!(super::GgufLoaderMode::RealGguf.as_str(), "real_gguf");
         assert_eq!(super::GgufLoaderMode::MinimalCompatibility.as_str(), "minimal_compatibility");
+        assert_eq!(super::GgufLoaderMode::MockCompatibility.as_str(), "mock_compatibility");
     }
 }

@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| RTX5070TI-003 | pr_open | #3679 | `codex/rtx5070ti-003-backend-identity` | Preserve RTX 5070 Ti requested and selected CUDA backend identity without adding kernels or inference claims. |
+| RTX5070TI-003 | merged | #3679 | `codex/rtx5070ti-003-backend-identity` | Preserve RTX 5070 Ti requested and selected CUDA backend identity without adding kernels or inference claims. |
 | RTX5070TI-004 | proposed | TBD | `codex/nvidia-5070ti/RTX5070TI-004-cuda-nvml-probe` | Add RTX 5070 Ti CUDA and NVML runtime probe without claiming kernel execution or BitNet inference. |
 
 ## Hard Constraints

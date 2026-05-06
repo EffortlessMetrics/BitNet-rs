@@ -19,7 +19,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "RTX5070TI-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/rtx5070ti-003-backend-identity"
 stackable = false
 requires_human_merge = true

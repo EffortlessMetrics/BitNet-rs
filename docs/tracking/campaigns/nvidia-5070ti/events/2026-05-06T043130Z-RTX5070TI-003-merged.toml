@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T04:31:30Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-003"
+event = "merged"
+pr = 3679
+merge_sha = "3be5b896a68f6dd0f54796107bfad09e3ce68c2e"
+actor = "maintainer"
+
+notes = [
+  "RTX 5070 Ti backend identity PR merged.",
+  "CUDA/NVML probing, CUDA kernel smoke, parity, receipts, and benchmarks remain follow-up work.",
+]

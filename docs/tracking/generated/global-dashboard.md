@@ -12,6 +12,6 @@
 | intel-258v-platform | LNL258V-002 | TBD | ready | none | Arc 140V OpenCL proof is not NPU proof. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-002 | TBD | ready | none | Device-node detection is not inference. |
-| nvidia-5070ti | RTX5070TI-003 | #3679 | pr_open | RTX5070TI-004 | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | RTX5070TI-004 | TBD | proposed | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | tracker-infra | TRACKER-001 | #3660 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
