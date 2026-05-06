@@ -167,6 +167,7 @@ struct GithubLabel {
 struct GithubContext {
     repository: String,
     token: String,
+    current_pr_number: Option<u64>,
 }
 
 struct LoadedCampaign {
@@ -927,6 +928,9 @@ fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> 
             continue;
         };
         let pr = claimed_prs[0];
+        if context.current_pr_number.is_some_and(|current_pr| pr.number != current_pr) {
+            continue;
+        }
         if item.status != "pr_open" {
             problems.push(Problem::error(format!(
                 "open GitHub PR #{} claims `{item_id}`, but active.toml status is `{}`",
@@ -1006,10 +1010,31 @@ fn github_context() -> Option<GithubContext> {
         (Some(repository), Some(token))
             if !repository.trim().is_empty() && !token.trim().is_empty() =>
         {
-            Some(GithubContext { repository, token })
+            Some(GithubContext { repository, token, current_pr_number: current_pr_number() })
         }
         _ => None,
     }
+}
+
+fn current_pr_number() -> Option<u64> {
+    let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
+    if !matches!(event_name.as_str(), "pull_request" | "pull_request_target") {
+        return None;
+    }
+
+    let ref_value =
+        std::env::var("GITHUB_REF").ok().or_else(|| std::env::var("GITHUB_REF_NAME").ok())?;
+    parse_pull_request_ref(&ref_value)
+}
+
+fn parse_pull_request_ref(ref_value: &str) -> Option<u64> {
+    let trimmed = ref_value.trim();
+    let rest = trimmed
+        .strip_prefix("refs/pull/")
+        .or_else(|| trimmed.strip_prefix("pull/"))
+        .unwrap_or(trimmed);
+    let pr_number = rest.split('/').next()?.trim();
+    if pr_number.is_empty() { None } else { pr_number.parse().ok() }
 }
 
 fn github_reconciliation_problem(message: String) -> Problem {
@@ -1146,4 +1171,22 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
         bail!("{errors} campaign tracker error(s)");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_pull_request_ref;
+
+    #[test]
+    fn parses_github_pull_request_refs() {
+        assert_eq!(parse_pull_request_ref("refs/pull/3721/merge"), Some(3721));
+        assert_eq!(parse_pull_request_ref("3722/merge"), Some(3722));
+        assert_eq!(parse_pull_request_ref("pull/3723/head"), Some(3723));
+    }
+
+    #[test]
+    fn rejects_non_pull_request_refs() {
+        assert_eq!(parse_pull_request_ref("refs/heads/main"), None);
+        assert_eq!(parse_pull_request_ref(""), None);
+    }
 }

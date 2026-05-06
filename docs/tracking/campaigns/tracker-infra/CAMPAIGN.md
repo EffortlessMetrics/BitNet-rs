@@ -28,6 +28,7 @@ Finish the move from global hand-edited alignment trackers to campaign-local TOM
 |---|---|---|
 | TRACKER-001 | merged | Advisory campaign check/generate/doctor commands and generated dashboards merged in #3660. |
 | TRACKER-002 | merged | CI enforcement for campaign doctor and generated-dashboard freshness merged in #3681. |
+| TRACKER-003 | in_progress | Scope live GitHub PR reconciliation to the current PR in pull-request CI to avoid cross-branch campaign deadlocks. |
 
 ## Review Policy
 
