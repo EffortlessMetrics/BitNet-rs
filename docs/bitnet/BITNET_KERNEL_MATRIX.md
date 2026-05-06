@@ -39,6 +39,17 @@ Applies to:
 - `amd-5700x-cpu-avx2`
 - `amd-9950x3d-cpu-avx512`
 
+Kernel family and kernel implementation are different fields. For example:
+
+| Kernel family | Example requested kernel | Meaning |
+|---|---|---|
+| `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
+| `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
+| `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
+| `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
+
+Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
+
 ### ARM / M4 Lane
 
 Valid targets:
@@ -96,6 +107,7 @@ Native GPU kernels must declare whether they:
 
 - consume `I2_S` directly,
 - consume `QK256` directly,
+- consume canonical QK256/I2_S layout from `bitnet-qk256-layout-core`,
 - convert/dequantize before compute,
 - or run a graph/reference path.
 
@@ -129,3 +141,8 @@ Every kernel proof must record:
   }
 }
 ```
+
+## Related Docs
+
+- `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
+- `docs/bitnet/BITNET_RECEIPT_FIELDS.md`

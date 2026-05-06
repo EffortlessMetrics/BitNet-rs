@@ -92,6 +92,32 @@ Kernel receipts must record:
 }
 ```
 
+
+## CPU Path Fields
+
+CPU receipts must distinguish the requested kernel from the selected kernel so strict mode can reject hidden fallback. Decode and prefill benchmark receipts should include:
+
+```json
+{
+  "profile": "decode|prefill|layer|micro",
+  "requested_kernel": "qk256-avx2-gemv",
+  "selected_kernel": "qk256-avx2-gemv",
+  "fallback_used": false,
+  "fallback_reason": null,
+  "tokenizer": {
+    "source": "tokenizer.json|gguf|override",
+    "strict": true
+  },
+  "cpu": {
+    "arch": "x86_64|aarch64",
+    "features": ["avx2", "fma"],
+    "threads": 8
+  }
+}
+```
+
+Strict CPU receipts are invalid if `requested_kernel` and `selected_kernel` differ without an explicit failure result.
+
 ## Reference Fields
 
 Parity receipts must record:
@@ -121,3 +147,4 @@ Parity receipts must record:
 - `docs/bitnet/BITNET_MODEL_CONTRACT.md`
 - `docs/bitnet/BITNET_QUANTIZATION_CONTRACT.md`
 - `docs/bitnet/BITNET_RUNTIME_PHASES.md`
+- `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
