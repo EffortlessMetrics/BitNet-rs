@@ -29,17 +29,94 @@ For ordinary PRs, our operating target is:
 
 The `$1` mark is a ceiling, not the goal.
 
-By comparison, OpenClaw has been cited as an example of how expensive modern
-agentic CI can become: their published Blacksmith spend of approximately
-`$511k` mapped to roughly `$20` per commit (squash-merged PRs) since February.
-Whether or not that number is typical, it illustrates the failure mode
-clearly. In high-volume agentic workflows, broad CI that feels acceptable at
-low volume becomes a material operating cost very quickly.
+## Why the budget target is aggressive
 
-That comparison is not included to criticize a different repository or runner
-choice. It is a reminder of the operating reality: in the agentic age, PR
-volume rises, verification demand rises, and default CI economics can break
-quickly if every branch triggers broad, expensive validation.
+Our CI budget target is intentionally aggressive — but **not because we want
+less verification**.
+
+We believe the opposite. Agentic development requires *more* verification than
+traditional software development, and likely more verification than most
+current agentic repositories are doing today. More generated branches, more
+rapid iteration, more integration edges, and more repeated PR attempts all
+increase the need for automated proof. Review alone does not scale to that
+volume.
+
+OpenClaw is a useful benchmark **not because we think they are wrong to spend
+heavily on verification**, but because their published cost curve shows what
+happens when verification demand rises faster than verification efficiency.
+They published a Blacksmith runner bill of roughly `$511k`; using commit
+volume since February as the denominator, that maps directionally to about
+`$20 per commit` on Blacksmith runners alone. Because OpenClaw appears to
+squash-merge PRs, commit cost is a reasonable proxy for per-PR cost — though
+the figure should be treated as **directional rather than exact**.
+
+That number is not evidence that OpenClaw is doing CI wrong. It is evidence
+that serious agentic workflows need serious verification, and that the
+default economics do not scale. The question is not verification vs. cost.
+The question is:
+
+```text
+expensive broad verification
+   vs.
+cheap, scoped, high-frequency verification
+```
+
+BitNet-rs is targeting a **different verification economics model**, not less
+verification:
+
+- ordinary PRs should stay well below `$1`,
+- normal Rust PRs should usually land well below `$0.50`,
+- docs / tracking PRs should cost pennies,
+- expensive lanes should run when they are relevant, not by default,
+- high-cost validation should require explicit labels, main-branch execution,
+  nightly execution, release gates, or campaign gates.
+
+The goal is not to spend less by testing less. **The goal is to spend less on
+unrelated work so we can afford more verification where the change actually
+creates risk.**
+
+> Source note: the OpenClaw comparison is based on their published Blacksmith
+> runner cost of approximately `$511k`, divided by observed commit volume
+> since February. Because OpenClaw appears to squash-merge PRs, commit count
+> is used as a directional proxy for merged-PR count. The figure refers to
+> Blacksmith runner cost alone and should not be treated as total CI cost.
+
+## Why Rust and ripr matter
+
+A major reason BitNet-rs is written in Rust is that Rust changes the cost
+curve of verification.
+
+Rust lets us push a large share of correctness checking into fast,
+deterministic, local validation:
+
+- type and ownership checks at compile time,
+- crate-local unit tests,
+- feature-gated compile checks,
+- small oracle tests,
+- bounded property tests,
+- deterministic receipt and schema tests,
+- precise package and dependency selection.
+
+That means we can run deep checks without needing every ordinary PR to
+download models, build external C++ references, start Docker images,
+provision macOS runners, or touch live hardware.
+
+[ripr](https://github.com/EffortlessMetrics/ripr) exists for the same reason
+at the workflow layer: to make verification selectable, explainable, and
+cheap enough to run continuously. The point is not to suppress validation.
+The point is to route validation to the right lane with the right proof
+obligation and the right cost envelope.
+
+In other words:
+
+```text
+Rust makes the checks fast.
+ripr makes the checks intentional.
+LEM budgeting makes the cost visible.
+```
+
+Together, they let us **increase** verification without letting CI spend
+scale linearly with PR volume.
 
 ## Why verification needs to increase
 
@@ -65,25 +142,43 @@ Expensive validation still matters, but it belongs on the right lanes: main,
 nightly, release, campaign, hardware, or explicit labels such as `full-ci`,
 `gpu-ci`, `crossval`, `coverage`, or `model-validation`.
 
-## Why Rust is central to the cost model
+## Linux-equivalent minutes (LEM)
 
-A major reason BitNet-rs is written in Rust is that Rust lets us move a large
-amount of verification into fast compile-time and unit-level checks.
+We track CI in **Linux-equivalent minutes** because raw wall-clock minutes
+hide runner cost. A 10-minute macOS job and a 10-minute Linux job are not
+economically equivalent.
 
-Rust gives us:
+LEM gives us one planning unit:
 
-- strong type and ownership guarantees before runtime,
-- fast deterministic unit tests,
-- precise crate-level test selection,
-- feature-gated compile checks,
-- lightweight property and oracle tests,
-- reliable local reproduction of CI failures.
+```text
+LEM = wall_minutes × runner_multiplier
+```
 
-That changes the economics. We can run deep correctness checks without needing
-to download large models, build external C++ references, start Docker images,
-or provision special hardware for every ordinary PR.
+GitHub-hosted runner multipliers (rough planning placeholders):
 
-The goal is not fewer tests. The goal is **more proof per CI minute**.
+| Runner            | Multiplier |
+| ----------------- | ---------: |
+| Linux             |        1.0 |
+| Linux + GHA cache |        1.0 |
+| GPU Docker (gha)  |       ~6.0 |
+| macOS-14 (M1)     |       10.0 |
+| Windows           |        2.0 |
+
+Use cases for LEM:
+
+1. **Forecast** PR cost before the PR runs (see `.github/workflows/pr-plan.yml`).
+2. **Compare** optional lanes fairly when deciding what to gate behind labels.
+3. **Prevent** expensive labels from silently turning ordinary PRs into
+   high-cost validation runs.
+4. **Calibrate** budgets against observed spend before introducing hard
+   budget enforcement.
+
+We deliberately start with LEM **visibility** rather than LEM **enforcement**.
+The current repo-level evidence does not yet provide durable enough timing,
+queue, cache-hit, failure-rate, flake, and MTTR data to manage CI as a
+complete operating system. The path forward is: collect that data, tighten
+the default PR lane, move exhaustive lanes to main/nightly/labels, and only
+then enforce learned budgets with guardrails.
 
 ## CI lane policy
 
