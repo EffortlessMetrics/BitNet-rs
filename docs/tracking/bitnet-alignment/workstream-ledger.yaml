@@ -1883,7 +1883,7 @@ items:
 
   - id: M4-003
     title: Preserve Apple backend identity
-    state: in_progress
+    state: pr_open
     priority: P1
     workstream: apple_silicon
     depends_on:

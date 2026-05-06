@@ -23,7 +23,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-003-backend-identity"
 stackable = false
 requires_human_merge = true
