@@ -2142,6 +2142,7 @@ async fn run_simple_generation(
         let requested_backend = backend_identity.requested_backend.as_str();
         let selected_backend = backend_identity.selected_backend.as_str();
         let runtime_api = backend_identity.runtime_api.as_str();
+        let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let strict_cpu_reference_artifact = strict_backend
             && canonical_bitnet_model
             && runtime_api == "cpu"
@@ -2151,7 +2152,7 @@ async fn run_simple_generation(
         } else {
             "inference_result"
         };
-        let output = serde_json::json!({
+        let mut output = serde_json::json!({
             "schema_version": "1.0.0",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "artifact_kind": artifact_kind,
@@ -2256,6 +2257,13 @@ async fn run_simple_generation(
                 None
             },
         });
+        if let Some(apple_machine) = apple_machine
+            && let Some(object) = output.as_object_mut()
+        {
+            object.insert("machine_id".to_string(), apple_machine["machine_id"].clone());
+            object.insert("resolved_device".to_string(), apple_machine["resolved_device"].clone());
+            object.insert("apple".to_string(), apple_machine);
+        }
         write_json_output(Some(&json_path), &output)?;
     }
 
@@ -2381,6 +2389,165 @@ fn compute_rms(xs: &[f32]) -> f32 {
     (sum_sq / (xs.len() as f32)).sqrt()
 }
 
+fn apple_machine_receipt_json(
+    requested_backend: &str,
+    selected_backend: &str,
+) -> Option<serde_json::Value> {
+    if !is_apple_m4_backend_label(requested_backend) && !is_apple_m4_backend_label(selected_backend)
+    {
+        return None;
+    }
+
+    let probe = probe_apple_cli_machine();
+    Some(apple_machine_receipt_json_from_probe(&probe))
+}
+
+fn is_apple_m4_backend_label(label: &str) -> bool {
+    label.trim().to_ascii_lowercase().starts_with("apple-m4-")
+}
+
+#[derive(Debug, Clone, Default)]
+struct AppleCliMachineProbe {
+    chip: Option<String>,
+    cpu_cores: Option<usize>,
+    gpu_cores: Option<usize>,
+    unified_memory: Option<bool>,
+    unified_memory_bytes: Option<u64>,
+    macos_version: Option<String>,
+    macos_build: Option<String>,
+    native_or_virtualized: Option<String>,
+    metal_visible: bool,
+}
+
+fn probe_apple_cli_machine() -> AppleCliMachineProbe {
+    if std::env::consts::OS != "macos" {
+        return AppleCliMachineProbe {
+            native_or_virtualized: Some("not-macos".to_string()),
+            ..AppleCliMachineProbe::default()
+        };
+    }
+
+    let sw_vers = command_stdout_text("sw_vers", &[]).0;
+    let hardware = command_stdout_text("system_profiler", &["SPHardwareDataType"]).0;
+    let displays = command_stdout_text("system_profiler", &["SPDisplaysDataType"]).0;
+    let (metal, metal_success) = command_stdout_text("system_profiler", &["SPMetalDataType"]);
+    let memsize = command_stdout_text("sysctl", &["hw.memsize"]).0;
+    let virtualization = command_stdout_text("sysctl", &["kern.hv_vmm_present"]).0;
+
+    let chip = parse_receipt_colon_value(&hardware, "Chip")
+        .or_else(|| parse_receipt_colon_value(&metal, "Chipset Model"))
+        .or_else(|| parse_receipt_colon_value(&displays, "Chipset Model"));
+    let unified_memory = if chip.as_deref().is_some_and(|value| value.starts_with("Apple M")) {
+        Some(true)
+    } else if chip.is_some() {
+        Some(false)
+    } else {
+        None
+    };
+
+    AppleCliMachineProbe {
+        chip,
+        cpu_cores: parse_receipt_colon_value(&hardware, "Total Number of Cores")
+            .and_then(|value| parse_receipt_first_usize(&value)),
+        gpu_cores: parse_receipt_colon_value(&metal, "Total Number of Cores")
+            .or_else(|| parse_receipt_colon_value(&displays, "Total Number of Cores"))
+            .and_then(|value| parse_receipt_first_usize(&value)),
+        unified_memory,
+        unified_memory_bytes: parse_receipt_colon_value(&memsize, "hw.memsize").and_then(|value| {
+            value.split_whitespace().next().and_then(|number| number.parse::<u64>().ok())
+        }),
+        macos_version: parse_receipt_colon_value(&sw_vers, "ProductVersion"),
+        macos_build: parse_receipt_colon_value(&sw_vers, "BuildVersion"),
+        native_or_virtualized: parse_receipt_virtualization_state(&virtualization),
+        metal_visible: (metal_success && receipt_metal_text_reports_visibility(&metal))
+            || receipt_metal_text_reports_visibility(&displays),
+    }
+}
+
+fn command_stdout_text(command: &str, args: &[&str]) -> (String, bool) {
+    std::process::Command::new(command)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map_or_else(
+            |_| (String::new(), false),
+            |output| {
+                (String::from_utf8_lossy(&output.stdout).into_owned(), output.status.success())
+            },
+        )
+}
+
+fn parse_receipt_colon_value(output: &str, key: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        let trimmed = line.trim();
+        let value = trimmed.strip_prefix(key)?.trim_start().strip_prefix(':')?.trim();
+        (!value.is_empty()).then(|| value.to_owned())
+    })
+}
+
+fn parse_receipt_first_usize(value: &str) -> Option<usize> {
+    let mut digits = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_digit() {
+            digits.push(ch);
+        } else if !digits.is_empty() {
+            break;
+        }
+    }
+    digits.parse().ok()
+}
+
+fn parse_receipt_virtualization_state(output: &str) -> Option<String> {
+    let value = parse_receipt_colon_value(output, "kern.hv_vmm_present")?;
+    match value.split_whitespace().next() {
+        Some("0") => Some("native-macos".to_string()),
+        Some("1") => Some("virtualized-macos".to_string()),
+        _ => Some("unknown".to_string()),
+    }
+}
+
+fn receipt_metal_text_reports_visibility(output: &str) -> bool {
+    let lower = output.to_ascii_lowercase();
+    lower.contains("metal")
+        && (lower.contains("chipset model")
+            || lower.contains("metal support")
+            || lower.contains("metal family")
+            || lower.contains("gpu"))
+}
+
+fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_json::Value {
+    let mut resolved_device = serde_json::Map::new();
+    resolved_device.insert(
+        "chip".to_string(),
+        serde_json::Value::String(probe.chip.clone().unwrap_or_else(|| "unknown".to_string())),
+    );
+    if let Some(cpu_cores) = probe.cpu_cores {
+        resolved_device.insert("cpu_cores".to_string(), serde_json::json!(cpu_cores));
+    }
+    if let Some(gpu_cores) = probe.gpu_cores {
+        resolved_device.insert("gpu_cores".to_string(), serde_json::json!(gpu_cores));
+    }
+    if let Some(unified_memory) = probe.unified_memory {
+        resolved_device.insert("unified_memory".to_string(), serde_json::json!(unified_memory));
+    }
+    if let Some(unified_memory_bytes) = probe.unified_memory_bytes {
+        resolved_device
+            .insert("unified_memory_bytes".to_string(), serde_json::json!(unified_memory_bytes));
+    }
+
+    serde_json::json!({
+        "machine_id": "apple-m4-mac-mini",
+        "resolved_device": resolved_device,
+        "macos": {
+            "version": probe.macos_version,
+            "build": probe.macos_build,
+            "native_or_virtualized": probe.native_or_virtualized,
+        },
+        "metal_visible": probe.metal_visible,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2433,6 +2600,43 @@ mod tests {
         ));
 
         assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
+
+    #[test]
+    fn apple_m4_receipt_includes_resolved_machine_fields() {
+        let probe = AppleCliMachineProbe {
+            chip: Some("Apple M4".to_string()),
+            cpu_cores: Some(10),
+            gpu_cores: Some(10),
+            unified_memory: Some(true),
+            unified_memory_bytes: Some(17_179_869_184),
+            macos_version: Some("15.4".to_string()),
+            macos_build: Some("24E248".to_string()),
+            native_or_virtualized: Some("native-macos".to_string()),
+            metal_visible: true,
+        };
+        let receipt = apple_machine_receipt_json_from_probe(&probe);
+
+        assert_eq!(receipt["machine_id"], "apple-m4-mac-mini");
+        assert_eq!(receipt["resolved_device"]["chip"], "Apple M4");
+        assert_eq!(receipt["resolved_device"]["cpu_cores"], 10);
+        assert_eq!(receipt["resolved_device"]["gpu_cores"], 10);
+        assert_eq!(receipt["resolved_device"]["unified_memory"], true);
+        assert_eq!(receipt["resolved_device"]["unified_memory_bytes"], 17_179_869_184_u64);
+        assert_eq!(receipt["macos"]["native_or_virtualized"], "native-macos");
+        assert_eq!(receipt["metal_visible"], true);
+    }
+
+    #[test]
+    fn non_apple_backend_does_not_probe_apple_machine_fields() {
+        assert!(apple_machine_receipt_json("cpu", "cpu").is_none());
+    }
+
+    #[test]
+    fn apple_receipt_metal_visibility_accepts_display_profiler_output() {
+        assert!(receipt_metal_text_reports_visibility(
+            "Graphics/Displays:\n\n    Apple M4:\n      Chipset Model: Apple M4\n      Metal Support: Metal 4\n",
+        ));
     }
 }
 

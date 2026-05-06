@@ -1,0 +1,11 @@
+timestamp = "2026-05-06T20:54:18Z"
+campaign = "apple-m4"
+item = "M4-014"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
+
+notes = [
+  "Started strict real-model BitNet M4 proof work from merged M4-013 closeout.",
+  "Scope remains selected Apple backend proof with fallback_used=false; no QK256, server inference, Neural Engine, or general performance claims.",
+]

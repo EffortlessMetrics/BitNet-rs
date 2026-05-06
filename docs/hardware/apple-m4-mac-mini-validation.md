@@ -343,6 +343,71 @@ must not claim full autoregressive decode, KV-cache correctness, full BitNet
 inference, QK256 on Metal, MPSGraph execution, Neural Engine execution, or
 performance.
 
+## M4-014 Strict BitNet M4 Proof
+
+The strict BitNet M4 proof uses the same real-GGUF CLI path, but it is the first
+Apple campaign item that may claim BitNet inference works for the selected Apple
+backend and configuration. It must still be precise about the backend:
+`apple-m4-cpu-neon` proof is CPU/NEON proof, not Metal proof.
+
+Run the live proof with:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- \
+  --device apple-m4-cpu-neon \
+  run \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy \
+  --deterministic \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt-template raw \
+  --no-warnings \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-proof.json
+```
+
+The receipt must record:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "machine_id": "apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "resolved_device": {
+    "chip": "Apple M4",
+    "gpu_cores": 10,
+    "unified_memory": true
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "tokenizer": "llama3",
+    "loader_mode": "real_gguf"
+  },
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "decode",
+    "layout_source": "gguf_packed_i2_s_reference"
+  }
+}
+```
+
+This may claim that BitNet inference works on M4 for `apple-m4-cpu-neon` with
+the recorded model, tokenizer, quantization, kernel family, and decode proof.
+It must not claim Metal BitNet inference, Neural Engine execution, QK256 on
+Metal, or general M4 performance.
+
 ## Benchmark Notes
 
 Benchmarks must record:
