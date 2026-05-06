@@ -16,6 +16,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-qk256-layout-core = { path = "../bitnet-qk256-layout-core", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-transformer = { path = "../bitnet-transformer", version = "0.2.1-dev" }
 bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T01:59:00Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-001"
+event = "merged"
+pr = 3651
+merge_sha = "5bf32dc335a52aeab5a790d3811a57dc06ed0d3d"
+actor = "maintainer"
+
+notes = [
+  "Strict real GGUF loader authority merged.",
+  "Tokenizer authority, packed layout, transformer decode, and performance remain follow-up work.",
+]

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "artifact_kind": "probe",
+  "machine_id": "TBD",
+  "hardware_lane": "TBD",
+  "timestamp_utc": "TBD",
+  "os": {
+    "name": "TBD",
+    "version": "TBD",
+    "kernel_or_build": "TBD",
+    "native_or_virtualized": "TBD"
+  },
+  "cpu": {
+    "model": "TBD",
+    "cores": null,
+    "threads": null,
+    "flags": [],
+    "selected_backend": null
+  },
+  "accelerator": {
+    "requested_backend": "TBD",
+    "selected_backend": null,
+    "runtime_api": "TBD",
+    "device_name": null,
+    "device_id": null,
+    "driver_version": null,
+    "fallback_used": false,
+    "fallback_reason": null
+  },
+  "artifact_path": "ci/hardware/<machine-id>/<date>/probe.json"
+}

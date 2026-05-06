@@ -477,6 +477,24 @@ fn test_model_path_empty_rejected_as_missing_field() {
     );
 }
 
+#[test]
+fn test_model_path_null_bytes_rejected_before_extension_or_directory_checks() {
+    let v = validator(false, false);
+    let paths =
+        ["/etc/passwd\0.gguf", "models/good.gguf\0", "models/\0bad.gguf", "secret.txt\0.gguf"];
+
+    for path in paths {
+        assert!(
+            matches!(
+                v.validate_model_request(path),
+                Err(ValidationError::InvalidFieldValue(msg))
+                    if msg == "Model path contains null byte"
+            ),
+            "model path containing a null byte must be rejected: {path:?}"
+        );
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Health endpoint
 // ─────────────────────────────────────────────────────────────────────────────

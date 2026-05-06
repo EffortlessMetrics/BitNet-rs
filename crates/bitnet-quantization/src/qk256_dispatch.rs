@@ -6,9 +6,12 @@
 //! implementation.
 
 use crate::i2s_qk256;
+use bitnet_qk256_layout_core::{
+    QK256_BLOCK_COLS, Qk256Layout, qk256_packed_len_bytes, qk256_row_stride_bytes,
+};
 
 /// QK256 block size (256 elements per quantized block)
-pub const QK256: usize = 256;
+pub const QK256: usize = QK256_BLOCK_COLS;
 
 /// Legacy QK256 GEMV entry-point.
 ///
@@ -29,14 +32,16 @@ pub fn qk256_gemv(
     assert_eq!(activations.len(), cols, "Activation length mismatch");
     assert_eq!(cols % QK256, 0, "Cols must be multiple of QK256={}", QK256);
 
-    let blocks_per_row = cols / QK256;
-    let expected_packed_len = rows * cols / 4;
+    let layout = Qk256Layout::from_rows_cols(rows, cols).expect("valid QK256 layout");
+    let blocks_per_row = layout.blocks_per_row;
+    let expected_packed_len =
+        qk256_packed_len_bytes(rows, cols).expect("valid QK256 packed length");
     let expected_scales_len = rows * blocks_per_row;
 
     assert_eq!(packed.len(), expected_packed_len, "Packed weight size mismatch");
     assert_eq!(scales.len(), expected_scales_len, "Scales length mismatch");
 
-    let row_stride_bytes = blocks_per_row * i2s_qk256::QK256_PACKED_BYTES;
+    let row_stride_bytes = qk256_row_stride_bytes(cols).expect("valid QK256 row stride");
 
     i2s_qk256::gemv_qk256(packed, activations, output, rows, cols, row_stride_bytes)
         .expect("qk256_gemv dispatch should succeed for validated inputs");
@@ -58,8 +63,10 @@ pub fn qk256_gemv_scalar(
     assert_eq!(activations.len(), cols, "Activation length mismatch");
     assert_eq!(cols % QK256, 0, "Cols must be multiple of QK256={}", QK256);
 
-    let blocks_per_row = cols / QK256;
-    let expected_packed_len = rows * cols / 4;
+    let layout = Qk256Layout::from_rows_cols(rows, cols).expect("valid QK256 layout");
+    let blocks_per_row = layout.blocks_per_row;
+    let expected_packed_len =
+        qk256_packed_len_bytes(rows, cols).expect("valid QK256 packed length");
     let expected_scales_len = rows * blocks_per_row;
 
     assert_eq!(packed.len(), expected_packed_len, "Packed weight size mismatch");

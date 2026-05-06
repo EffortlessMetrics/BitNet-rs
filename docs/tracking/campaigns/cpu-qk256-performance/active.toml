@@ -1,0 +1,79 @@
+id = "cpu-qk256-performance"
+title = "CPU QK256 performance"
+status = "active"
+
+objective = "Move CPU BitNet work from strict proof surfaces into scalar, packed-layout, AVX2, and sustained benchmark evidence without hiding fallback behavior."
+
+end_state = [
+  "Scalar truth kernels are available before SIMD dispatch claims.",
+  "QK256 and related packed layouts are receipt-backed.",
+  "AVX2 paths can be forced and compared against scalar references.",
+  "Mobile and desktop baselines record thermal, power, memory, and sustained-load context.",
+]
+
+hard_constraints = [
+  "Do not claim performance before strict proof receipts exist.",
+  "Do not mix GPU, NPU, CUDA, OpenCL, or Metal execution into CPU proof.",
+  "Do not treat helper-only AVX2 code as real inference.",
+  "Do not report short turbo behavior as sustained performance.",
+]
+
+[[work_item]]
+id = "KBL8250U-003"
+status = "ready"
+branch = "codex/cpu-qk256-performance/KBL8250U-003-scalar-avx2-dispatch"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Prove i5-8250U scalar and AVX2 dispatch with receipt-backed selected CPU kernel identity and no GPU/NPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2",
+]
+allowed_paths = [
+  "crates/bitnet-cpu-detect/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-receipts/**",
+  "docs/tracking/campaigns/cpu-qk256-performance/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "i5-8250U scalar and AVX2 dispatch can be selected after receipt-backed validation.",
+]
+must_not_claim = [
+  "CPU performance is proven.",
+  "GPU, NPU, CUDA, OpenCL, or Metal execution works.",
+]
+
+[[work_item]]
+id = "KBL8250U-004"
+status = "proposed"
+branch = "codex/cpu-qk256-performance/KBL8250U-004-strict-proof-run"
+stackable = false
+requires_human_merge = true
+blocked_by = ["KBL8250U-003"]
+acceptance = "Add an i5-8250U strict CPU proof run with selected backend, no fallback, model hash, timing, and thermal context."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual i5-8250U strict CPU proof command with receipt artifact",
+]
+allowed_paths = [
+  "docs/hardware/intel-i5-8250u-validation.md",
+  "ci/intel-i5-8250u/**",
+  "docs/tracking/campaigns/cpu-qk256-performance/**",
+]
+forbidden_paths = [
+  "crates/**",
+]
+may_claim = [
+  "i5-8250U strict CPU proof receipt exists after the hardware run is complete.",
+]
+must_not_claim = [
+  "Sustained mobile performance is proven.",
+  "GPU or NPU acceleration is involved.",
+]

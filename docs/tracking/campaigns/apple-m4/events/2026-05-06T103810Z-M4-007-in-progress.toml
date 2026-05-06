@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T10:38:10Z"
+campaign = "apple-m4"
+item = "M4-007"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started MPSGraph tiny graph smoke as Apple graph/reference-lane evidence.",
+  "No native Metal kernel, Neural Engine, BitNet inference, QK256, server, or benchmark claim is in scope.",
+]

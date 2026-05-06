@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T02:50:26Z"
+campaign = "tracker-infra"
+item = "TRACKER-001"
+event = "merged"
+pr = 3660
+merge_sha = "8bbff8c4fcf6637305f169827bc017fbfa36dda2"
+actor = "maintainer"
+
+notes = [
+  "Campaign-local tracker gates and generated dashboards merged.",
+  "Advisory only; CI enforcement remains a follow-up item.",
+]

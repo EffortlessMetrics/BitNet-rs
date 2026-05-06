@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T05:31:30Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-003"
+event = "pr_open"
+pr = 3690
+head_sha = "ab89f51cf7aae1ffb5e34e24758c11eff6aa637e"
+actor = "maintainer"
+
+notes = [
+  "Synced live GitHub PR state for the canonical packed layout PR.",
+  "Tracker-only update so campaign doctor can reconcile the open PR live lock.",
+]

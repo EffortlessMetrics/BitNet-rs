@@ -1,0 +1,1 @@
+Use the server real inference campaign to replace server-side simulated output with real engine execution or explicit unavailable responses. Keep loader, tokenizer, backend, fallback, and receipt truth shared with the CLI, and do not mix server runtime work with hardware acceleration claims.

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T06:51:22Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-003"
+event = "merged"
+pr = 3690
+merge_sha = "d3775af4697af85997ad3773b9c39d8b36af9f35"
+actor = "maintainer"
+
+notes = [
+  "Canonical QK256 packed layout authority merged.",
+  "Scalar truth kernels, AVX2 dispatch, transformer decode, strict receipts, and benchmarks remain follow-up work.",
+]

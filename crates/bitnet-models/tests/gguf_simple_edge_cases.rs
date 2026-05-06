@@ -13,7 +13,7 @@
 #[cfg(any(feature = "cpu", feature = "gpu", feature = "crossval"))]
 mod tests {
     use bitnet_common::Device;
-    use bitnet_models::gguf_simple::{GGUFLoaderConfig, load_gguf, load_gguf_full};
+    use bitnet_models::gguf_simple::{GGUFLoaderConfig, GgufLoaderMode, load_gguf, load_gguf_full};
     use bitnet_st2gguf::writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
     use std::path::Path;
     use tempfile::TempDir;
@@ -264,6 +264,74 @@ mod tests {
         let cfg = GGUFLoaderConfig { strict_mode: true, ..Default::default() };
         let result = load_gguf_full(&path, Device::Cpu, cfg);
         assert!(result.is_ok(), "strict mode should still load valid F32 GGUF: {:?}", result.err());
+        let result = result.unwrap();
+        assert_eq!(result.loader_mode, GgufLoaderMode::RealGguf);
+        assert!(!result.loader_mode.fallback_used());
+    }
+
+    #[test]
+    fn strict_loader_config_blocks_minimal_fallback_without_env() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("mock.gguf");
+        std::fs::write(&path, b"mock_gguf_content").unwrap();
+        let cfg = GGUFLoaderConfig::strict_proof();
+
+        temp_env::with_var("BITNET_ALLOW_MINIMAL_LOADER", Some("1"), || {
+            temp_env::with_var_unset("BITNET_STRICT_MODE", || {
+                temp_env::with_var_unset("BITNET_DISABLE_MINIMAL_LOADER", || {
+                    let result = load_gguf_full(&path, Device::Cpu, cfg.clone());
+                    assert!(
+                        result.is_err(),
+                        "strict loader config must block minimal/mock fallback even when the compatibility env is set"
+                    );
+                    let err = result.err().unwrap().to_string();
+                    assert!(
+                        err.contains("BITNET_ALLOW_MINIMAL_LOADER=1")
+                            || err.contains("GGUF reader construction failed"),
+                        "error should explain strict compatibility-fallback rejection: {err}"
+                    );
+                });
+            });
+        });
+    }
+
+    #[test]
+    fn strict_loader_rejects_default_tensor_creation() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("partial.gguf");
+        let hidden = 32usize;
+        let vocab = 64usize;
+
+        let mut w = GgufWriter::new();
+        w.add_metadata("llama.embedding_length", MetadataValue::U32(hidden as u32));
+        w.add_metadata("llama.block_count", MetadataValue::U32(1));
+        w.add_metadata("llama.feed_forward_length", MetadataValue::U32(64));
+        w.add_metadata("llama.attention.head_count", MetadataValue::U32(4));
+        w.add_metadata("llama.attention.head_count_kv", MetadataValue::U32(4));
+
+        let f32_tensor = |name: &str, rows: usize, cols: usize| -> TensorEntry {
+            TensorEntry::new(
+                name.to_string(),
+                vec![rows as u64, cols as u64],
+                TensorDType::F32,
+                vec![0u8; rows * cols * 4],
+            )
+        };
+
+        // Deliberately omit output_norm and all layer tensors. Permissive mode
+        // may create defaults; strict proof mode must reject that route.
+        w.add_tensor(f32_tensor("token_embd.weight", vocab, hidden));
+        w.add_tensor(f32_tensor("output.weight", hidden, vocab));
+        w.write_to_file(&path).unwrap();
+
+        let result = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::strict_proof());
+        assert!(result.is_err(), "strict mode must reject missing runtime tensors");
+        let err = result.err().unwrap().to_string();
+        assert!(
+            err.contains("missing runtime tensors") || err.contains("Missing required tensors"),
+            "unexpected error: {err}"
+        );
+        assert!(err.contains("attn_q.weight"), "missing layer tensor must be named: {err}");
     }
 
     #[test]
@@ -285,5 +353,6 @@ mod tests {
         let path = build_minimal_gguf(&dir);
         let res = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::default()).unwrap();
         assert!(res.i2s_qk256.is_empty(), "F32-only model should have no QK256 tensors");
+        assert_eq!(res.loader_mode.as_str(), "real_gguf");
     }
 }
