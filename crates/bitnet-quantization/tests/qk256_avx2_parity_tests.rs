@@ -52,6 +52,82 @@ fn manual_dot(codes: &[u8], x: &[f32], cols: usize) -> f32 {
     acc
 }
 
+fn deterministic_row_codes(rows: usize, cols: usize, salt: usize) -> Vec<Vec<u8>> {
+    (0..rows)
+        .map(|row| {
+            (0..cols).map(|col| ((row * 17 + col * 13 + col / 7 + salt * 5) & 0x03) as u8).collect()
+        })
+        .collect()
+}
+
+fn deterministic_activation(cols: usize, salt: usize) -> Vec<f32> {
+    (0..cols)
+        .map(|i| {
+            let centered = ((i * 31 + salt * 19) % 257) as f32 - 128.0;
+            let sign = if (i + salt).is_multiple_of(11) { -1.0 } else { 1.0 };
+            sign * centered / 37.0
+        })
+        .collect()
+}
+
+#[derive(Clone, Copy, Debug)]
+enum CodePattern {
+    AllZeroCodes,
+    Repeating0123,
+    AlternatingRows,
+    PseudoRandom,
+}
+
+impl CodePattern {
+    fn name(self) -> &'static str {
+        match self {
+            Self::AllZeroCodes => "all_zero_codes",
+            Self::Repeating0123 => "repeating_0123",
+            Self::AlternatingRows => "alternating_rows",
+            Self::PseudoRandom => "pseudo_random",
+        }
+    }
+}
+
+fn row_codes_for_pattern(pattern: CodePattern, row: usize, cols: usize) -> Vec<u8> {
+    (0..cols)
+        .map(|col| match pattern {
+            CodePattern::AllZeroCodes => 0,
+            CodePattern::Repeating0123 => (col % 4) as u8,
+            CodePattern::AlternatingRows => ((row + col) % 4) as u8,
+            CodePattern::PseudoRandom => {
+                let mixed = (row as u64)
+                    .wrapping_mul(0x9E37_79B9)
+                    .wrapping_add((col as u64).wrapping_mul(0x85EB_CA6B))
+                    .wrapping_add(0xC2B2_AE35);
+                ((mixed ^ (mixed >> 13) ^ (mixed >> 29)) & 0x03) as u8
+            }
+        })
+        .collect()
+}
+
+fn deterministic_prng_activation(cols: usize) -> Vec<f32> {
+    (0..cols)
+        .map(|i| {
+            let mixed =
+                (i as u64).wrapping_mul(0xD1B5_4A32).wrapping_add(0x94D0_49BB).rotate_left(17);
+            let bucket = (mixed % 2049) as f32 - 1024.0;
+            bucket / 512.0
+        })
+        .collect()
+}
+
+fn assert_close_vectors(label: &str, expected: &[f32], actual: &[f32], tolerance: f32) {
+    assert_eq!(expected.len(), actual.len(), "{label}: vector length mismatch");
+    for (idx, (&expected, &actual)) in expected.iter().zip(actual.iter()).enumerate() {
+        assert!(
+            (expected - actual).abs() <= tolerance,
+            "{label} row {idx}: expected={expected} actual={actual} diff={}",
+            (expected - actual).abs()
+        );
+    }
+}
+
 /// Compare scalar `gemv_qk256_row` against dispatched `gemv_qk256`
 /// and (on x86_64 with AVX2) the explicit AVX2 path.
 fn assert_parity(
@@ -93,6 +169,107 @@ fn assert_parity(
                 (s - a).abs()
             );
         }
+    }
+}
+
+fn assert_hardened_parity_case(rows: usize, cols: usize, salt: usize, tolerance: f32) {
+    let row_codes = deterministic_row_codes(rows, cols, salt);
+    let (qs, stride) = build_qs_data(&row_codes, cols);
+    let x = deterministic_activation(cols, salt);
+
+    let mut y_scalar = vec![0.0f32; rows];
+    let scalar_selection = gemv_qk256_with_kernel_selection(
+        &qs,
+        &x,
+        &mut y_scalar,
+        rows,
+        cols,
+        stride,
+        Some(QK256_SCALAR_GEMV_KERNEL_ID),
+        true,
+    )
+    .expect("forced scalar selection must run");
+    assert_eq!(scalar_selection.selected_kernel, QK256_SCALAR_GEMV_KERNEL_ID);
+    assert!(!scalar_selection.fallback_used);
+
+    let mut y_auto = vec![0.0f32; rows];
+    let auto_selection =
+        gemv_qk256_with_kernel_selection(&qs, &x, &mut y_auto, rows, cols, stride, None, false)
+            .expect("auto selection must run");
+    assert!(matches!(
+        auto_selection.selected_kernel,
+        QK256_SCALAR_GEMV_KERNEL_ID | QK256_AVX2_GEMV_KERNEL_ID
+    ));
+    assert!(!auto_selection.fallback_used, "auto selection is not fallback");
+    assert_close_vectors("auto-vs-scalar", &y_scalar, &y_auto, tolerance);
+
+    let mut y_auto_repeat = vec![0.0f32; rows];
+    gemv_qk256(&qs, &x, &mut y_auto_repeat, rows, cols, stride).expect("repeat auto dispatch");
+    assert_eq!(y_auto, y_auto_repeat, "auto GEMV must be repeatable for rows={rows} cols={cols}");
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            let mut y_strict_avx2 = vec![0.0f32; rows];
+            let avx2_selection = gemv_qk256_with_kernel_selection(
+                &qs,
+                &x,
+                &mut y_strict_avx2,
+                rows,
+                cols,
+                stride,
+                Some(QK256_AVX2_GEMV_KERNEL_ID),
+                true,
+            )
+            .expect("strict AVX2 selection must run on AVX2/FMA hosts");
+            assert_eq!(avx2_selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+            assert!(!avx2_selection.fallback_used);
+            assert_close_vectors("strict-avx2-vs-scalar", &y_scalar, &y_strict_avx2, tolerance);
+
+            let mut y_direct_avx2 = vec![0.0f32; rows];
+            gemv_qk256_avx2(&qs, &x, &mut y_direct_avx2, rows, cols, stride)
+                .expect("direct AVX2 GEMV");
+            assert_close_vectors("direct-avx2-vs-strict-avx2", &y_strict_avx2, &y_direct_avx2, 0.0);
+
+            let mut y_direct_avx2_repeat = vec![0.0f32; rows];
+            gemv_qk256_avx2(&qs, &x, &mut y_direct_avx2_repeat, rows, cols, stride)
+                .expect("repeat direct AVX2 GEMV");
+            assert_eq!(
+                y_direct_avx2, y_direct_avx2_repeat,
+                "direct AVX2 GEMV must be repeatable for rows={rows} cols={cols}"
+            );
+        } else {
+            let mut y_strict_avx2 = vec![0.0f32; rows];
+            let err = gemv_qk256_with_kernel_selection(
+                &qs,
+                &x,
+                &mut y_strict_avx2,
+                rows,
+                cols,
+                stride,
+                Some(QK256_AVX2_GEMV_KERNEL_ID),
+                true,
+            )
+            .expect_err("strict AVX2 selection must fail if AVX2/FMA is unavailable");
+            assert!(err.to_string().contains("cannot fall back"));
+        }
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let mut y_strict_avx2 = vec![0.0f32; rows];
+        let err = gemv_qk256_with_kernel_selection(
+            &qs,
+            &x,
+            &mut y_strict_avx2,
+            rows,
+            cols,
+            stride,
+            Some(QK256_AVX2_GEMV_KERNEL_ID),
+            true,
+        )
+        .expect_err("strict AVX2 selection must fail on non-x86_64 hosts");
+        assert!(err.to_string().contains("cannot fall back"));
     }
 }
 
@@ -156,6 +333,125 @@ fn test_requested_avx2_strict_matches_runtime_availability() {
         }
         Err(err) => {
             assert!(err.to_string().contains("cannot fall back"));
+        }
+    }
+}
+
+#[test]
+fn test_hardened_avx2_parity_rows_tails_patterns_and_repeats() {
+    for (rows, cols, salt) in [(1, 256, 3), (2, 257, 5), (5, 511, 7), (9, 768, 11), (13, 1025, 17)]
+    {
+        assert_hardened_parity_case(rows, cols, salt, 1e-3);
+    }
+}
+
+#[test]
+fn test_avx2_parity_requested_shape_pattern_matrix_1e4() {
+    let patterns = [
+        CodePattern::AllZeroCodes,
+        CodePattern::Repeating0123,
+        CodePattern::AlternatingRows,
+        CodePattern::PseudoRandom,
+    ];
+
+    for rows in [1usize, 2, 7, 32] {
+        for cols in [256usize, 300, 512, 513, 1024] {
+            let x = deterministic_prng_activation(cols);
+            for pattern in patterns {
+                let row_codes: Vec<Vec<u8>> =
+                    (0..rows).map(|row| row_codes_for_pattern(pattern, row, cols)).collect();
+                let (qs, stride) = build_qs_data(&row_codes, cols);
+
+                let mut y_scalar = vec![0.0f32; rows];
+                gemv_qk256_with_kernel_selection(
+                    &qs,
+                    &x,
+                    &mut y_scalar,
+                    rows,
+                    cols,
+                    stride,
+                    Some(QK256_SCALAR_GEMV_KERNEL_ID),
+                    true,
+                )
+                .expect("forced scalar GEMV");
+
+                let mut y_scalar_repeat = vec![0.0f32; rows];
+                gemv_qk256_with_kernel_selection(
+                    &qs,
+                    &x,
+                    &mut y_scalar_repeat,
+                    rows,
+                    cols,
+                    stride,
+                    Some(QK256_SCALAR_GEMV_KERNEL_ID),
+                    true,
+                )
+                .expect("repeat forced scalar GEMV");
+                assert_eq!(
+                    y_scalar,
+                    y_scalar_repeat,
+                    "scalar repeat mismatch rows={rows} cols={cols} pattern={}",
+                    pattern.name()
+                );
+
+                #[cfg(target_arch = "x86_64")]
+                if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+                    let mut y_avx2 = vec![0.0f32; rows];
+                    let selection = gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_avx2,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect("forced AVX2 GEMV");
+                    assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+                    assert!(!selection.fallback_used);
+
+                    let mut y_avx2_repeat = vec![0.0f32; rows];
+                    gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_avx2_repeat,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect("repeat forced AVX2 GEMV");
+                    assert_eq!(
+                        y_avx2,
+                        y_avx2_repeat,
+                        "AVX2 repeat mismatch rows={rows} cols={cols} pattern={}",
+                        pattern.name()
+                    );
+
+                    assert_close_vectors(
+                        "requested-shape-pattern-avx2-vs-scalar",
+                        &y_scalar,
+                        &y_avx2,
+                        1e-4,
+                    );
+                } else {
+                    let mut y_strict_avx2 = vec![0.0f32; rows];
+                    let err = gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_strict_avx2,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect_err("strict AVX2 must fail when AVX2/FMA is unavailable");
+                    assert!(err.to_string().contains("cannot fall back"));
+                }
+            }
         }
     }
 }
