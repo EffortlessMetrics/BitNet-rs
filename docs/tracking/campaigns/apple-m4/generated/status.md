@@ -13,7 +13,7 @@
 | M4-002 | merged | #3627 | `codex/apple-m4/M4-002-profile-probe-bundle` | Add the Apple M4 Mac mini machine profile and probe bundle without runtime code, kernels, QK256, server inference, dependencies, or bulky artifacts. |
 | M4-003 | merged | #3652 | `codex/apple-m4/M4-003-backend-identity` | Preserve Apple M4 Metal, MPSGraph, and CPU/NEON backend identity without adding runtime execution or kernels. |
 | M4-004 | merged | #3692 | `codex/apple-m4/M4-004-metal-probe` | Add Apple M4 Metal device probe without claiming Metal execution or BitNet inference. |
-| M4-005 | ready | TBD | `codex/apple-m4/M4-005-metal-smoke` | Run a tiny native Metal compute smoke on M4 with fallback_used=false. |
+| M4-005 | pr_open | #3699 | `codex/apple-m4/M4-005-metal-smoke` | Run a tiny native Metal compute smoke on M4 with fallback_used=false. |
 | M4-006 | proposed | TBD | `codex/apple-m4/M4-006-metal-cpu-parity` | Compare one M4 Metal kernel or subgraph output against Apple CPU/NEON without claiming full inference. |
 | M4-007 | proposed | TBD | `codex/apple-m4/M4-007-mpsgraph-smoke` | Run a tiny MPSGraph graph smoke as reference-lane evidence without claiming native Metal or Neural Engine proof. |
 | M4-008 | proposed | TBD | `codex/apple-m4/M4-008-backend-receipts` | Record Apple requested backend, selected backend, runtime API, resolved device identity, fallback status, and artifact path in receipts. |
