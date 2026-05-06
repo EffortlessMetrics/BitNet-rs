@@ -455,7 +455,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-014"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
 stackable = false
 requires_human_merge = true
@@ -485,4 +485,141 @@ must_not_claim = [
   "General M4 performance.",
   "Neural Engine execution unless resolved target is receipt-backed.",
   "Unsupported model, tokenizer, quantization, or kernel-family claims.",
+]
+
+[[work_item]]
+id = "M4-015"
+status = "ready"
+branch = "codex/apple-m4/M4-015-steady-decode-profile"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-014"]
+acceptance = "Add steady decode and prefill timing profiles for the selected Apple backend with strict model, tokenizer, phase, fallback, and machine context recorded."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual M4 steady decode or prefill profile command with receipt artifact",
+]
+allowed_paths = [
+  "crates/**/src/**",
+  "crates/**/tests/**",
+  "crates/**/benches/**",
+  "docs/tracking/campaigns/apple-m4/**",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 timing is recorded for the named BitNet phase and profile under captured machine context.",
+]
+must_not_claim = [
+  "General M4 performance.",
+  "Neural Engine execution.",
+  "QK256 acceleration on Apple Silicon.",
+]
+
+[[work_item]]
+id = "M4-016"
+status = "proposed"
+branch = "codex/apple-m4/M4-016-hot-loop-allocation-audit"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-015"]
+acceptance = "Measure or bound hot-loop allocations for the Apple BitNet path and distinguish compute timing from allocation overhead."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual M4 decode allocation audit command with receipt or report artifact",
+]
+allowed_paths = [
+  "crates/**/src/**",
+  "crates/**/tests/**",
+  "crates/**/benches/**",
+  "docs/tracking/campaigns/apple-m4/**",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Per-token allocation behavior is measured or bounded for the selected Apple BitNet path.",
+]
+must_not_claim = [
+  "Decode performance is compute-bound unless allocation overhead is separated.",
+  "QK256 acceleration on Apple Silicon.",
+  "General M4 performance.",
+]
+
+[[work_item]]
+id = "M4-017"
+status = "proposed"
+branch = "codex/apple-m4/M4-017-metal-kernel-family-expansion"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-016"]
+acceptance = "Expand Apple Metal BitNet kernel or subgraph coverage only where CPU reference parity, fallback=false receipts, phase labels, and claim boundaries are present."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal",
+  "Manual M4 Metal kernel-family parity command with receipt artifact",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-kernels/tests/**",
+  "crates/**/tests/**",
+  "docs/tracking/campaigns/apple-m4/**",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Specific Apple Metal BitNet kernels or subgraphs pass CPU reference parity with fallback_used=false receipts.",
+]
+must_not_claim = [
+  "Full Metal inference works unless strict real-model proof covers it.",
+  "QK256 works on Apple Silicon.",
+  "General M4 performance without benchmark receipts.",
+]
+
+[[work_item]]
+id = "M4-018"
+status = "proposed"
+branch = "codex/apple-m4/M4-018-cli-package-polish"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-017"]
+acceptance = "Polish Apple backend CLI and package surfaces so backend labels, strict-mode errors, artifact paths, and non-M4 failure modes are clear."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+]
+allowed_paths = [
+  "crates/bitnet-cli*/src/**",
+  "crates/**/tests/**",
+  "docs/tracking/campaigns/apple-m4/**",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "Apple backend CLI and package surfaces describe supported backend labels and failure modes accurately.",
+]
+must_not_claim = [
+  "New Metal kernel execution.",
+  "Neural Engine execution.",
+  "General M4 performance.",
 ]
