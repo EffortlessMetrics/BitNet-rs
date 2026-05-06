@@ -267,7 +267,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005c"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cpu-bitnet-005c-avx2-parity-hardening"
 stackable = false
 requires_human_merge = true
