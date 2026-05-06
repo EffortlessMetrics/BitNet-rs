@@ -96,10 +96,10 @@ pub fn probe_intel_arc_140v(
     if level_zero_pci_match {
         identity_evidence.push(format!("level_zero_pci_device_id:{INTEL_ARC_140V_PCI_DEVICE_ID}"));
     }
-    if let (Some(token), Some(full_name)) = (&openvino_gpu_device, &openvino_gpu_full_name) {
-        if openvino_name_matches {
-            identity_evidence.push(format!("openvino:{token}:{full_name}"));
-        }
+    if let (Some(token), Some(full_name)) = (&openvino_gpu_device, &openvino_gpu_full_name)
+        && openvino_name_matches
+    {
+        identity_evidence.push(format!("openvino:{token}:{full_name}"));
     }
 
     let opencl_available = opencl_device.is_some();

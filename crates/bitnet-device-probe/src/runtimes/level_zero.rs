@@ -110,11 +110,11 @@ mod tests {
 
     #[test]
     fn parses_level_zero_device_ids_from_ze_info() {
-        let output = r#"
+        let output = r"
             Device Name       : Intel(R) Arc(TM) 140V Graphics
             Device ID         : 0x64a0
             DeviceId          : 64A0
-        "#;
+        ";
 
         assert_eq!(parse_ze_info_device_ids(output), vec!["0x64A0", "0x64A0"]);
     }
