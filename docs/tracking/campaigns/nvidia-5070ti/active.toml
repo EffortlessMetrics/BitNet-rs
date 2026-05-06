@@ -199,7 +199,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-008"
-status = "pr_open"
+status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-008-benchmark-baseline"
 stackable = false
 requires_human_merge = true
