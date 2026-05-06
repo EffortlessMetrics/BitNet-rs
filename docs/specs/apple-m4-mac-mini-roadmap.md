@@ -423,6 +423,49 @@ Run strict real GGUF, real tokenizer, selected Apple backend,
 `fallback_used=false`, deterministic prompt, and receipt emission before
 claiming BitNet inference on M4.
 
+The first proof target is `apple-m4-cpu-neon` with the canonical
+`microsoft/bitnet-b1.58-2B-4T-gguf` I2_S GGUF. The receipt must keep Apple
+machine identity, model identity, tokenizer authority, kernel family, execution
+phase, and fallback state together:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "machine_id": "apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "resolved_device": {
+    "chip": "Apple M4",
+    "gpu_cores": 10,
+    "unified_memory": true
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "...",
+    "tokenizer": "llama3",
+    "loader_mode": "real_gguf"
+  },
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "decode",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "fallback_layout": null
+  },
+  "kernel": {
+    "kernel_id": "i2_s-scalar-reference",
+    "implementation": "scalar",
+    "layout": "gguf_packed_i2_s"
+  }
+}
+```
+
+This proves BitNet inference only for the selected Apple backend and recorded
+configuration. It is not Metal BitNet proof, QK256-on-Metal proof, Neural Engine
+proof, or a performance claim.
+
 ## Do Not
 
 - Do not start with Apple Neural Engine inference claims.

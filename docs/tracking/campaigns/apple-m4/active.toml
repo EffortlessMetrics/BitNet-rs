@@ -455,7 +455,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-014"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
 stackable = false
 requires_human_merge = true
