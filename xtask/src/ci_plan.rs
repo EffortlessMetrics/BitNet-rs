@@ -136,6 +136,18 @@ pub struct Plan {
     pub lanes: Vec<Lane>,
     pub estimated_lem: u32,
     pub band: &'static str,
+    /// Soft budget warnings derived from `estimated_lem` against the
+    /// thresholds in [`BudgetPolicy`]. Always emitted as informational
+    /// signal — this layer does NOT block merges, even at the hard
+    /// ceiling. Actual enforcement (status check) is a deliberate
+    /// follow-up gated on observed actuals from `ci-actuals.yml`.
+    pub warnings: Vec<BudgetWarning>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BudgetWarning {
+    pub level: &'static str,
+    pub message: String,
 }
 
 /// LEM banding thresholds. Hand-tunable via `policy/ci-budget.toml`.
@@ -389,7 +401,70 @@ pub fn plan_with_policy(changed: &[String], labels: &[String], budget: &BudgetPo
     let mut sorted_labels: Vec<String> = labels.to_vec();
     sorted_labels.sort();
 
-    Plan { posture, touched, labels: sorted_labels, lanes, estimated_lem: total, band }
+    let warnings = compute_warnings(total, budget, &label_set);
+
+    Plan { posture, touched, labels: sorted_labels, lanes, estimated_lem: total, band, warnings }
+}
+
+/// Soft budget warnings.
+///
+/// Tiering:
+///   - `estimated_lem > preferred_default_lem` → notice (`info` level)
+///   - `estimated_lem > default_limit_lem`     → warning
+///   - `estimated_lem > elevated_limit_lem`    → warning (stronger language)
+///   - `estimated_lem > hard_limit_lem`        → error (still informational —
+///     no merge gate yet — but the message references the override label so
+///     enforcement can land later by changing one call site).
+///
+/// The `full-ci` and `ci-budget-override` labels are documented as the
+/// expected escape hatches when enforcement does land. They suppress the
+/// hard-ceiling error but not the elevated/high warnings.
+fn compute_warnings(
+    total: u32,
+    p: &BudgetPolicy,
+    labels: &std::collections::HashSet<&str>,
+) -> Vec<BudgetWarning> {
+    let mut out = Vec::new();
+    if total > p.hard_limit_lem {
+        let suppressed = labels.contains("full-ci") || labels.contains("ci-budget-override");
+        let level = if suppressed { "warning" } else { "error" };
+        out.push(BudgetWarning {
+            level,
+            message: format!(
+                "Estimated CI spend {total} LEM exceeds hard ceiling ({}); \
+                 future enforcement will require the `full-ci` or \
+                 `ci-budget-override` label{}.",
+                p.hard_limit_lem,
+                if suppressed { " (override label present)" } else { "" }
+            ),
+        });
+    } else if total > p.elevated_limit_lem {
+        out.push(BudgetWarning {
+            level: "warning",
+            message: format!(
+                "Estimated CI spend {total} LEM is high (> {}); review whether \
+                 this PR genuinely needs this lane breadth.",
+                p.elevated_limit_lem
+            ),
+        });
+    } else if total > p.default_limit_lem {
+        out.push(BudgetWarning {
+            level: "warning",
+            message: format!(
+                "Estimated CI spend {total} LEM is elevated (> {}); review touched-area mapping.",
+                p.default_limit_lem
+            ),
+        });
+    } else if total > p.preferred_default_lem {
+        out.push(BudgetWarning {
+            level: "notice",
+            message: format!(
+                "Estimated CI spend {total} LEM is above the preferred default ({}).",
+                p.preferred_default_lem
+            ),
+        });
+    }
+    out
 }
 
 fn render_summary(plan: &Plan) -> String {
@@ -429,7 +504,36 @@ fn render_summary(plan: &Plan) -> String {
          This job is advisory only and does not gate merges. \
          See [docs/ci/cost-and-verification-policy.md](../blob/main/docs/ci/cost-and-verification-policy.md)."
     );
+    if !plan.warnings.is_empty() {
+        let _ = writeln!(s);
+        let _ = writeln!(s, "### Budget warnings");
+        let _ = writeln!(s);
+        for w in &plan.warnings {
+            let icon = match w.level {
+                "error" => "🚨",
+                "warning" => "⚠️ ",
+                _ => "ℹ️ ",
+            };
+            let _ = writeln!(s, "- {icon} **{}** — {}", w.level, w.message);
+        }
+    }
     s
+}
+
+/// Emit GitHub workflow commands (`::warning::`, `::error::`, `::notice::`)
+/// for each budget warning. These show up as PR-level annotations in the
+/// Files tab. PR O is informational only — even `::error::` does NOT fail
+/// the job, because the planner step is `continue-on-error: true` already
+/// and we are not yet enforcing budget.
+fn emit_github_commands(plan: &Plan) {
+    for w in &plan.warnings {
+        // Escape % \r \n per GitHub workflow command grammar.
+        let msg = w.message.replace('%', "%25").replace('\r', "%0D").replace('\n', "%0A");
+        // ci-plan is run from the repo root; we anchor annotations on
+        // ripr.toml as a stable, always-present file. Without a file
+        // anchor GitHub still surfaces the message in the run summary.
+        eprintln!("::{}::{}", w.level, msg);
+    }
 }
 
 /// Compute changed files via `git diff --name-only base...head`.
@@ -515,6 +619,11 @@ pub fn run(
             .with_context(|| format!("open {}", path.display()))?;
         f.write_all(summary.as_bytes()).context("write step summary")?;
     }
+
+    // Emit ::warning::/::error::/::notice:: workflow commands to stderr so
+    // GitHub surfaces budget warnings as PR annotations. PR O is advisory:
+    // the run() entry point still returns Ok(()) regardless of warning level.
+    emit_github_commands(&plan);
 
     Ok(())
 }
@@ -671,6 +780,73 @@ mod tests {
         // No ci-budget.toml in tmp dir → expect default fallback.
         let p = load_budget_policy(Some(tmp.path()));
         assert_eq!(p, BudgetPolicy::default());
+    }
+
+    #[test]
+    fn warnings_empty_for_pennies_band() {
+        let plan = plan_for(&[], &[]);
+        assert!(plan.warnings.is_empty());
+    }
+
+    #[test]
+    fn warnings_notice_above_preferred_default() {
+        // 22 (Core) + 12 (Feature Matrix PR) = 34 LEM. That is > preferred (25)
+        // but ≤ default_limit (35), so we expect a single `notice`-level entry.
+        let plan = plan_for(&["Cargo.lock".into()], &[]);
+        // Cargo.lock alone touches manifest + rust_core; 22+12+4=38? Actually:
+        // rust_core → CI Core (22) + Feature Matrix PR (12) + MSRV (12)
+        // = 46 LEM, plus guards (4) = 50. That is > 35 → expect "warning".
+        assert!(plan.estimated_lem >= 35);
+        assert_eq!(plan.warnings.len(), 1);
+        assert_eq!(plan.warnings[0].level, "warning");
+    }
+
+    #[test]
+    fn warnings_error_at_hard_ceiling_without_override() {
+        let plan =
+            plan_for(&["crates/bitnet-kernels/src/cuda_smoke.rs".into()], &["full-ci".into()]);
+        // full-ci pushes us over 125 LEM. full-ci is itself the override label,
+        // so the warning level downgrades from `error` to `warning`.
+        assert!(plan.estimated_lem > 125);
+        assert_eq!(plan.warnings.len(), 1);
+        assert_eq!(plan.warnings[0].level, "warning");
+        assert!(plan.warnings[0].message.contains("override label present"));
+    }
+
+    #[test]
+    fn warnings_emit_error_when_over_ceiling_without_label() {
+        let stricter = BudgetPolicy {
+            preferred_default_lem: 5,
+            default_limit_lem: 10,
+            elevated_limit_lem: 20,
+            hard_limit_lem: 30,
+        };
+        let plan = plan_with_policy(
+            &["crates/bitnet-quantization/src/i2s_qk256.rs".into()],
+            &[], // no override label
+            &stricter,
+        );
+        // 54 LEM > stricter hard_limit (30) without override → error.
+        assert!(plan.estimated_lem > 30);
+        assert_eq!(plan.warnings.len(), 1);
+        assert_eq!(plan.warnings[0].level, "error");
+        assert!(plan.warnings[0].message.contains("hard ceiling"));
+    }
+
+    #[test]
+    fn ci_budget_override_label_downgrades_error_to_warning() {
+        let stricter = BudgetPolicy {
+            preferred_default_lem: 5,
+            default_limit_lem: 10,
+            elevated_limit_lem: 20,
+            hard_limit_lem: 30,
+        };
+        let plan = plan_with_policy(
+            &["crates/bitnet-quantization/src/i2s_qk256.rs".into()],
+            &["ci-budget-override".into()],
+            &stricter,
+        );
+        assert_eq!(plan.warnings[0].level, "warning");
     }
 
     #[test]
