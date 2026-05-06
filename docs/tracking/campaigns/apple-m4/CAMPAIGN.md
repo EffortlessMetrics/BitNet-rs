@@ -35,7 +35,7 @@ Make Apple Silicon a receipt-backed BitNet target by moving in order from machin
 | M4-003 | merged | Apple Metal, MPSGraph, and CPU/NEON backend identity merged in #3652. |
 | M4-004 | merged | Add Metal device probe. |
 | M4-005 | ready | Run tiny Metal compute smoke. |
-| M4-006 | proposed | Add CPU/Metal parity. |
+| M4-006 | pr_open | Add CPU/Metal parity in #3709. |
 | M4-007 | proposed | Run MPSGraph tiny graph smoke. |
 | M4-008 | proposed | Record Apple backend identity in receipts. |
 | M4-009 | proposed | Add benchmark baseline after parity and receipt identity. |

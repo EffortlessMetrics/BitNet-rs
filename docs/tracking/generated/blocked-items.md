@@ -7,7 +7,7 @@
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
 | apple-m4 | M4-005 | M4-004 | merged |
-| apple-m4 | M4-006 | M4-005 | ready |
+| apple-m4 | M4-006 | M4-005 | pr_open |
 | apple-m4 | M4-007 | M4-006 | proposed |
 | apple-m4 | M4-008 | M4-007 | proposed |
 | apple-m4 | M4-009 | M4-008 | proposed |

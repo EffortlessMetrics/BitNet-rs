@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T09:45:04Z"
+campaign = "apple-m4"
+item = "M4-006"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 3709
+head_sha = "20b9ba2af5b9f7058281dc80a94679e1a739527e"
+actor = "codex"
+notes = [
+  "Recorded live GitHub state for the M4-006 CPU/Metal parity PR so campaign doctor can reconcile open PR claims.",
+]
