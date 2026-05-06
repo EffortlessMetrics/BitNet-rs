@@ -49,9 +49,28 @@ impl Default for GGUFLoaderConfig {
 
 /// Result of GGUF loading with both regular tensors and QK256 quantized weights
 pub struct GgufLoadResult {
+    pub loader_mode: GgufLoaderMode,
     pub config: bitnet_common::BitNetConfig,
     pub tensors: HashMap<String, CandleTensor>,
     pub i2s_qk256: HashMap<String, I2SQk256NoScale>,
+}
+
+/// Machine-readable GGUF loader mode for receipts and proof paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GgufLoaderMode {
+    /// Authoritative GGUF parser loaded the model from real GGUF metadata and tensors.
+    RealGguf,
+    /// Explicit opt-in compatibility path that may synthesize missing tensors.
+    MinimalCompatibility,
+}
+
+impl GgufLoaderMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::RealGguf => "real_gguf",
+            Self::MinimalCompatibility => "minimal_compatibility",
+        }
+    }
 }
 
 fn minimal_loader_disabled() -> bool {
@@ -216,6 +235,9 @@ fn load_gguf_enhanced(
     device: Device,
     loader_config: &GGUFLoaderConfig,
 ) -> Result<GgufLoadResult> {
+    let strict_mode =
+        loader_config.strict_mode || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
+
     let cdevice = match device {
         Device::Cpu => CDevice::Cpu,
         Device::Cuda(id) => match CDevice::new_cuda(id) {
@@ -252,10 +274,10 @@ fn load_gguf_enhanced(
         tensor_infos.insert(info.name.clone(), info.clone());
     }
 
-    // AC3: Validate tensor metadata completeness
-    // NOTE: Validation moved to later stage (build_transformer) for better error messages
-    // and to avoid false positives with different tensor naming conventions
-    // validate_tensor_completeness(&tensor_infos, &config)?;
+    // Strict proof paths must fail before compatibility defaults can synthesize tensors.
+    if strict_mode {
+        validate_tensor_completeness(&tensor_infos, &config)?;
+    }
 
     let mut tensor_map = HashMap::with_capacity(tensor_count);
     let mut i2s_qk256_map = HashMap::new();
@@ -461,8 +483,12 @@ fn load_gguf_enhanced(
     // This must happen HERE in the enhanced loader to prevent double transposition downstream
     normalize_embed_and_lm_head(&mut tensor_map, &config, &cdevice)?;
 
-    // AC9: Maintain backward compatibility - ensure all expected tensors exist
-    ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    // AC9: Maintain backward compatibility only outside strict proof paths.
+    if strict_mode {
+        tracing::debug!("Strict GGUF load: compatibility tensor synthesis disabled");
+    } else {
+        ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    }
 
     tracing::debug!(
         "Enhanced loader complete: hidden={}, n_heads={}, n_kv_heads={}, vocab={}, layers={}",
@@ -473,7 +499,12 @@ fn load_gguf_enhanced(
         config.model.num_layers
     );
 
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: i2s_qk256_map })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::RealGguf,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: i2s_qk256_map,
+    })
 }
 
 /// Minimal GGUF loading for backward compatibility with existing mock infrastructure
@@ -653,7 +684,12 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
     );
 
     tracing::info!("Loaded model using minimal GGUF parser with {} tensors", tensor_map.len());
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
 }
 
 /// Extract BitNet configuration from GGUF metadata
@@ -843,7 +879,6 @@ fn parse_usize_prefix(bytes: &[u8]) -> Option<usize> {
 }
 
 /// AC3: Validate that all required transformer tensors are present
-#[allow(dead_code)]
 fn validate_tensor_completeness(
     tensor_infos: &HashMap<String, crate::formats::gguf::TensorInfo>,
     config: &bitnet_common::BitNetConfig,
@@ -851,42 +886,47 @@ fn validate_tensor_completeness(
     let mut missing_tensors = Vec::new();
 
     // Check for essential embedding tensors
-    if !tensor_infos.contains_key("token_embd.weight")
-        && !tensor_infos.contains_key("model.embed_tokens.weight")
-    {
+    if !has_any_tensor(
+        tensor_infos,
+        &[
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "embed_tokens.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
+        ],
+    ) {
         missing_tensors.push("token_embd.weight".to_string());
     }
 
-    if !tensor_infos.contains_key("output.weight") && !tensor_infos.contains_key("lm_head.weight") {
+    if !has_any_tensor(tensor_infos, &["output.weight", "lm_head.weight", "model.lm_head.weight"]) {
         missing_tensors.push("output.weight".to_string());
     }
 
+    let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
+    let required_suffix_groups: &[&[&str]] = &[
+        &["attn_q.weight", "attention.q_proj.weight", "self_attn.q_proj.weight"],
+        &["attn_k.weight", "attention.k_proj.weight", "self_attn.k_proj.weight"],
+        &["attn_v.weight", "attention.v_proj.weight", "self_attn.v_proj.weight"],
+        &["attn_output.weight", "attention.o_proj.weight", "self_attn.o_proj.weight"],
+        &["ffn_gate.weight", "feed_forward.gate_proj.weight", "mlp.gate_proj.weight"],
+        &["ffn_up.weight", "feed_forward.up_proj.weight", "mlp.up_proj.weight"],
+        &["ffn_down.weight", "feed_forward.down_proj.weight", "mlp.down_proj.weight"],
+        &["attn_norm.weight", "attention_norm.weight", "input_layernorm.weight"],
+        &["ffn_norm.weight", "post_attention_layernorm.weight"],
+    ];
+
     // Check transformer layers
     for layer_idx in 0..config.model.num_layers {
-        let layer_prefix = format!("blk.{}", layer_idx);
-
-        // Attention tensors
-        for suffix in &[".attn_q.weight", ".attn_k.weight", ".attn_v.weight", ".attn_output.weight"]
-        {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
-            }
-        }
-
-        // Feed-forward tensors
-        for suffix in &[".ffn_gate.weight", ".ffn_up.weight", ".ffn_down.weight"] {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
-            }
-        }
-
-        // Normalization tensors
-        for suffix in &[".attn_norm.weight", ".ffn_norm.weight"] {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
+        for suffix_group in required_suffix_groups {
+            let found = layer_prefixes.iter().any(|prefix| {
+                suffix_group.iter().any(|suffix| {
+                    tensor_infos.contains_key(&format!("{}.{}.{}", prefix, layer_idx, suffix))
+                })
+            });
+            if !found {
+                missing_tensors
+                    .push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
             }
         }
     }
@@ -899,6 +939,13 @@ fn validate_tensor_completeness(
     }
 
     Ok(())
+}
+
+fn has_any_tensor(
+    tensor_infos: &HashMap<String, crate::formats::gguf::TensorInfo>,
+    names: &[&str],
+) -> bool {
+    names.iter().any(|name| tensor_infos.contains_key(*name))
 }
 
 /// Find a sibling scale tensor for I2_S quantized data
@@ -1810,7 +1857,12 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         "Created mock tensor layout with {} tensors for test compatibility",
         tensor_map.len()
     );
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
 }
 
 #[cfg(test)]
@@ -1866,5 +1918,12 @@ mod tests {
                 assert!(result.is_err(), "strict mode must fail before compatibility fallback");
             });
         });
+    }
+
+    #[test]
+    #[serial]
+    fn loader_mode_names_are_receipt_stable() {
+        assert_eq!(super::GgufLoaderMode::RealGguf.as_str(), "real_gguf");
+        assert_eq!(super::GgufLoaderMode::MinimalCompatibility.as_str(), "minimal_compatibility");
     }
 }

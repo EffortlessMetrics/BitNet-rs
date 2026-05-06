@@ -945,6 +945,18 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
     Ok(())
 }
 
+fn detect_loader_mode_for_path(path: &std::path::Path, is_hf_directory: bool) -> &'static str {
+    if is_hf_directory {
+        return "huggingface";
+    }
+
+    match path.extension().and_then(|ext| ext.to_str()).map(str::to_ascii_lowercase) {
+        Some(ext) if ext == "gguf" => bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+        Some(ext) if ext == "safetensors" => "safetensors",
+        _ => "unknown",
+    }
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
@@ -1064,13 +1076,14 @@ async fn run_simple_generation(
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
-    let mut loader_mode = "enhanced";
+    let loader_mode;
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
     {
         Ok(m) => {
             let cfg = m.config().clone();
+            loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
             (Arc::from(m) as Arc<dyn Model>, cfg)
         }
         Err(e) => {
@@ -1097,7 +1110,7 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
-            loader_mode = "compatibility_fallback";
+            loader_mode = load_result.loader_mode.as_str();
             warn!("GGUF loader mode: {}", loader_mode);
             let mut raw_tensors = std::collections::HashMap::new();
             for (name, qk256) in load_result.i2s_qk256 {
