@@ -80,8 +80,8 @@ pub fn load_allowlist(repo_root: &Path) -> Result<Allowlist> {
     let path = repo_root.join(ALLOWLIST_PATH);
     let raw = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    let list: Allowlist = toml::from_str(&raw)
-        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let list: Allowlist =
+        toml::from_str(&raw).with_context(|| format!("failed to parse {}", path.display()))?;
     if list.schema_version != SCHEMA_VERSION {
         bail!(
             "{}: schema_version {} not supported (expected {})",
@@ -107,14 +107,9 @@ pub fn is_non_rust_implementation(path: &Path) -> bool {
     if s.starts_with("target/") || s.starts_with(".git/") {
         return false;
     }
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let ext = path
-        .extension()
-        .map(|e| e.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
+    let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let ext =
+        path.extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
 
     // Cargo standard files are not governed.
     if name == "Cargo.toml" || name == "Cargo.lock" {
@@ -152,16 +147,12 @@ pub fn evaluate(allowlist: &Allowlist, files: &[PathBuf]) -> Result<CheckOutcome
     for (idx, entry) in allowlist.entries.iter().enumerate() {
         // Validate entry.
         if entry.path.is_none() && entry.glob.is_none() {
-            outcome
-                .schema_errors
-                .push(format!("entry {idx}: requires `path` or `glob`"));
+            outcome.schema_errors.push(format!("entry {idx}: requires `path` or `glob`"));
             entry_paths.push(None);
             continue;
         }
         if entry.path.is_some() && entry.glob.is_some() {
-            outcome
-                .schema_errors
-                .push(format!("entry {idx}: must not set both `path` and `glob`"));
+            outcome.schema_errors.push(format!("entry {idx}: must not set both `path` and `glob`"));
             entry_paths.push(None);
             continue;
         }
@@ -176,10 +167,8 @@ pub fn evaluate(allowlist: &Allowlist, files: &[PathBuf]) -> Result<CheckOutcome
             ));
         }
         // Production/test/tooling surfaces require covered_by.
-        let needs_coverage = matches!(
-            entry.classification.as_str(),
-            "production" | "test" | "tooling"
-        );
+        let needs_coverage =
+            matches!(entry.classification.as_str(), "production" | "test" | "tooling");
         if needs_coverage && entry.covered_by.is_empty() && !entry.retired {
             outcome.schema_errors.push(format!(
                 "entry {idx}: classification `{}` requires non-empty covered_by",
@@ -191,9 +180,7 @@ pub fn evaluate(allowlist: &Allowlist, files: &[PathBuf]) -> Result<CheckOutcome
             match parse_iso_date(expires) {
                 Ok(date) => {
                     if is_expired(&date) {
-                        outcome
-                            .expired_entries
-                            .push((idx, expires.to_string()));
+                        outcome.expired_entries.push((idx, expires.to_string()));
                     }
                 }
                 Err(e) => outcome
@@ -211,9 +198,9 @@ pub fn evaluate(allowlist: &Allowlist, files: &[PathBuf]) -> Result<CheckOutcome
                     globs.add(glob);
                     glob_owners.push(idx);
                 }
-                Err(e) => outcome
-                    .schema_errors
-                    .push(format!("entry {idx}: invalid glob `{g}`: {e}")),
+                Err(e) => {
+                    outcome.schema_errors.push(format!("entry {idx}: invalid glob `{g}`: {e}"))
+                }
             }
         }
     }
@@ -275,18 +262,9 @@ pub fn evaluate(allowlist: &Allowlist, files: &[PathBuf]) -> Result<CheckOutcome
 
 fn parse_iso_date(s: &str) -> Result<(i32, u32, u32)> {
     let mut parts = s.split('-');
-    let y = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing year"))?
-        .parse::<i32>()?;
-    let m = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing month"))?
-        .parse::<u32>()?;
-    let d = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing day"))?
-        .parse::<u32>()?;
+    let y = parts.next().ok_or_else(|| anyhow!("missing year"))?.parse::<i32>()?;
+    let m = parts.next().ok_or_else(|| anyhow!("missing month"))?.parse::<u32>()?;
+    let d = parts.next().ok_or_else(|| anyhow!("missing day"))?.parse::<u32>()?;
     if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
         bail!("out-of-range");
     }
@@ -296,9 +274,11 @@ fn parse_iso_date(s: &str) -> Result<(i32, u32, u32)> {
 fn is_expired(date: &(i32, u32, u32)) -> bool {
     let now = chrono::Utc::now().date_naive();
     let (y, m, d) = *date;
-    let cmp = (now.format("%Y").to_string().parse::<i32>().unwrap_or(0),
-               now.format("%m").to_string().parse::<u32>().unwrap_or(0),
-               now.format("%d").to_string().parse::<u32>().unwrap_or(0));
+    let cmp = (
+        now.format("%Y").to_string().parse::<i32>().unwrap_or(0),
+        now.format("%m").to_string().parse::<u32>().unwrap_or(0),
+        now.format("%d").to_string().parse::<u32>().unwrap_or(0),
+    );
     cmp > (y, m, d)
 }
 
@@ -342,11 +322,7 @@ fn write_reports(repo_root: &Path, allowlist: &Allowlist, outcome: &CheckOutcome
         total_tracked: outcome.total_tracked,
         in_scope: outcome.in_scope,
         matched: outcome.matched,
-        uncovered: outcome
-            .uncovered
-            .iter()
-            .map(|p| p.to_string_lossy().into_owned())
-            .collect(),
+        uncovered: outcome.uncovered.iter().map(|p| p.to_string_lossy().into_owned()).collect(),
         unused_entries: outcome
             .unused_entries
             .iter()
@@ -355,7 +331,9 @@ fn write_reports(repo_root: &Path, allowlist: &Allowlist, outcome: &CheckOutcome
         expired_entries: outcome
             .expired_entries
             .iter()
-            .map(|(idx, exp)| format!("{}: expired {}", describe_entry(&allowlist.entries[*idx]), exp))
+            .map(|(idx, exp)| {
+                format!("{}: expired {}", describe_entry(&allowlist.entries[*idx]), exp)
+            })
             .collect(),
         schema_errors: outcome.schema_errors.clone(),
     };

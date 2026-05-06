@@ -15,7 +15,7 @@ concurrency:
 
 env:
   BITNET_SKIP_SLOW_TESTS: "1"
-  RUSTFLAGS: "-Dwarnings"
+  # Stage A: -D warnings returns in PR 9 — see STRICT_CLIPPY_POLICY.md
 
 jobs:
   build-test-macos:
@@ -28,7 +28,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy, rustfmt
 
       - name: Rust cache
@@ -43,7 +43,7 @@ jobs:
         run: cargo build --locked --no-default-features --features cpu -p bitnet-kernels
 
       - name: Clippy bitnet-kernels
-        run: cargo clippy --locked -p bitnet-kernels --lib --no-default-features --features cpu -- -D warnings
+        run: cargo clippy --locked -p bitnet-kernels --lib --no-default-features --features cpu
 
       - name: Test NEON kernels (lib)
         run: cargo test --locked -p bitnet-kernels --no-default-features --features cpu --lib -- neon
@@ -62,7 +62,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy, rustfmt
 
       - name: Rust cache

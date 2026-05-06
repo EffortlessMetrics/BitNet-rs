@@ -139,8 +139,8 @@ pub fn load_allowlist(repo_root: &Path) -> Result<Allowlist> {
     let path = repo_root.join(ALLOWLIST_PATH);
     let raw = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    let list: Allowlist = toml::from_str(&raw)
-        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let list: Allowlist =
+        toml::from_str(&raw).with_context(|| format!("failed to parse {}", path.display()))?;
     if list.schema_version != SCHEMA_VERSION {
         bail!(
             "{}: schema_version {} not supported (expected {})",
@@ -174,18 +174,11 @@ struct PanicFamilyVisitor {
 
 impl PanicFamilyVisitor {
     fn new(path: PathBuf) -> Self {
-        Self {
-            path,
-            container_stack: Vec::new(),
-            findings: Vec::new(),
-        }
+        Self { path, container_stack: Vec::new(), findings: Vec::new() }
     }
 
     fn current_container(&self) -> String {
-        self.container_stack
-            .last()
-            .cloned()
-            .unwrap_or_else(|| "<module-scope>".to_string())
+        self.container_stack.last().cloned().unwrap_or_else(|| "<module-scope>".to_string())
     }
 }
 
@@ -240,13 +233,8 @@ impl<'ast> Visit<'ast> for PanicFamilyVisitor {
         if let Some(family) = macro_family(&node.mac.path) {
             let span = node.mac.path.span();
             let start = span.start();
-            let callee = node
-                .mac
-                .path
-                .segments
-                .last()
-                .map(|s| s.ident.to_string())
-                .unwrap_or_default();
+            let callee =
+                node.mac.path.segments.last().map(|s| s.ident.to_string()).unwrap_or_default();
             let selector = Selector {
                 kind: "macro_call".to_string(),
                 container: self.current_container(),
@@ -269,13 +257,8 @@ impl<'ast> Visit<'ast> for PanicFamilyVisitor {
         if let Some(family) = macro_family(&node.mac.path) {
             let span = node.mac.path.span();
             let start = span.start();
-            let callee = node
-                .mac
-                .path
-                .segments
-                .last()
-                .map(|s| s.ident.to_string())
-                .unwrap_or_default();
+            let callee =
+                node.mac.path.segments.last().map(|s| s.ident.to_string()).unwrap_or_default();
             let selector = Selector {
                 kind: "macro_call".to_string(),
                 container: self.current_container(),
@@ -324,11 +307,7 @@ fn normalize_receiver(raw: &str) -> String {
         }
     }
     let trimmed = out.trim().to_string();
-    if trimmed.len() > 160 {
-        format!("{}...", &trimmed[..160])
-    } else {
-        trimmed
-    }
+    if trimmed.len() > 160 { format!("{}...", &trimmed[..160]) } else { trimmed }
 }
 
 /// Match a finding against an allowlist entry. Identity is path + family +
@@ -357,20 +336,14 @@ fn entry_matches(entry: &Entry, finding: &Finding) -> bool {
     if entry.selector.callee != finding.selector.callee {
         return false;
     }
-    match (
-        &entry.selector.receiver_fingerprint,
-        &finding.selector.receiver_fingerprint,
-    ) {
+    match (&entry.selector.receiver_fingerprint, &finding.selector.receiver_fingerprint) {
         (Some(a), Some(b)) if a != b => return false,
         _ => {}
     }
     true
 }
 
-pub fn evaluate(
-    allowlist: &Allowlist,
-    findings: &[Finding],
-) -> Result<CheckOutcome> {
+pub fn evaluate(allowlist: &Allowlist, findings: &[Finding]) -> Result<CheckOutcome> {
     let mut outcome = CheckOutcome::default();
     outcome.findings = findings.to_vec();
 
@@ -389,17 +362,13 @@ pub fn evaluate(
             ));
         }
         if Family::parse(&entry.family).is_none() {
-            outcome
-                .schema_errors
-                .push(format!("entry {idx}: unknown family `{}`", entry.family));
+            outcome.schema_errors.push(format!("entry {idx}: unknown family `{}`", entry.family));
         }
         if let Some(expires) = entry.expires.as_deref() {
             match parse_iso_date(expires) {
                 Ok(date) => {
                     if is_expired(&date) {
-                        outcome
-                            .expired_entries
-                            .push((idx, expires.to_string()));
+                        outcome.expired_entries.push((idx, expires.to_string()));
                     }
                 }
                 Err(e) => outcome
@@ -456,18 +425,9 @@ pub fn evaluate(
 
 fn parse_iso_date(s: &str) -> Result<(i32, u32, u32)> {
     let mut parts = s.split('-');
-    let y = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing year"))?
-        .parse::<i32>()?;
-    let m = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing month"))?
-        .parse::<u32>()?;
-    let d = parts
-        .next()
-        .ok_or_else(|| anyhow!("missing day"))?
-        .parse::<u32>()?;
+    let y = parts.next().ok_or_else(|| anyhow!("missing year"))?.parse::<i32>()?;
+    let m = parts.next().ok_or_else(|| anyhow!("missing month"))?.parse::<u32>()?;
+    let d = parts.next().ok_or_else(|| anyhow!("missing day"))?.parse::<u32>()?;
     if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
         bail!("out-of-range");
     }
@@ -562,10 +522,7 @@ pub fn run_propose(repo_root: &Path) -> Result<PathBuf> {
             retired: false,
         })
         .collect();
-    let proposal = Allowlist {
-        schema_version: SCHEMA_VERSION.to_string(),
-        entries,
-    };
+    let proposal = Allowlist { schema_version: SCHEMA_VERSION.to_string(), entries };
     let dir = super::report_dir(repo_root);
     std::fs::create_dir_all(&dir)?;
     let path = dir.join("no-panic-proposed-allowlist.toml");
@@ -574,11 +531,7 @@ pub fn run_propose(repo_root: &Path) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn write_reports(
-    repo_root: &Path,
-    allowlist: &Allowlist,
-    outcome: &CheckOutcome,
-) -> Result<()> {
+fn write_reports(repo_root: &Path, allowlist: &Allowlist, outcome: &CheckOutcome) -> Result<()> {
     let dir = super::report_dir(repo_root);
     std::fs::create_dir_all(&dir)?;
 

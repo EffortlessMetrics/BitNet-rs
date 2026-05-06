@@ -13,7 +13,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
+  # Stage A: -D warnings returns in PR 9 — see STRICT_CLIPPY_POLICY.md
 
 jobs:
   build-matrix:
@@ -36,7 +36,7 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
       with:
-        toolchain: "1.92.0"
+        toolchain: "1.93.0"
 
     - name: Rust Cache
       uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -68,11 +68,12 @@ jobs:
     - name: Clippy Check
       if: steps.probe.outputs.available == 'true'
       run: |
+        # Stage A: `-- -D warnings` returns in PR 9. The job already
+        # tolerates failure via `|| true`; keep the advisory clippy run.
         cargo clippy --workspace --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
-          --all-targets \
-          -- -D warnings || true
+          --all-targets || true
 
     - name: Build
       if: steps.probe.outputs.available == 'true'
@@ -177,7 +178,7 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
       with:
-        toolchain: "1.92.0"
+        toolchain: "1.93.0"
 
     - name: Run IQ2_S parity test
       run: |

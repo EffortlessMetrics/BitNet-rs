@@ -1529,10 +1529,9 @@ fn policy_report_cmd() -> Result<()> {
             lines.push(format!("schema_errors: {}", outcome.schema_errors.len()));
             sections.push(("non-rust-file-policy".to_string(), lines));
         }
-        Err(e) => sections.push((
-            "non-rust-file-policy".to_string(),
-            vec![format!("ERROR: {e:#}")],
-        )),
+        Err(e) => {
+            sections.push(("non-rust-file-policy".to_string(), vec![format!("ERROR: {e:#}")]))
+        }
     }
 
     match policy::no_panic::run_check(&root, false) {
@@ -1547,10 +1546,7 @@ fn policy_report_cmd() -> Result<()> {
             lines.push(format!("schema_errors: {}", outcome.schema_errors.len()));
             sections.push(("no-panic-family".to_string(), lines));
         }
-        Err(e) => sections.push((
-            "no-panic-family".to_string(),
-            vec![format!("ERROR: {e:#}")],
-        )),
+        Err(e) => sections.push(("no-panic-family".to_string(), vec![format!("ERROR: {e:#}")])),
     }
 
     let mut md = String::new();
@@ -1573,10 +1569,7 @@ fn policy_report_cmd() -> Result<()> {
             })
         })
         .collect();
-    std::fs::write(
-        dir.join("policy-report.json"),
-        serde_json::to_string_pretty(&json)?,
-    )?;
+    std::fs::write(dir.join("policy-report.json"), serde_json::to_string_pretty(&json)?)?;
 
     println!("policy-report: wrote {}", dir.join("policy-report.md").display());
     Ok(())

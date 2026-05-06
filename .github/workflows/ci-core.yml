@@ -39,8 +39,12 @@ concurrency:
 permissions:
   contents: read
 
+# Stage-A note: workspace lints carry many warn-level entries that are
+# intentionally non-blocking until PR 9 (see
+# docs/development/STRICT_CLIPPY_POLICY.md). The blocking gate is the
+# explicit deny levels in [workspace.lints] plus `cargo xtask check-*`.
+# `-D warnings` returns alongside the strict flip in PR 9.
 env:
-  RUSTFLAGS: "-Dwarnings"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   BITNET_SKIP_SLOW_TESTS: "1"
@@ -54,7 +58,6 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     env:
-      RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
       INSTA_UPDATE: unseen
@@ -65,7 +68,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy,rustfmt
 
       - name: Cache Rust dependencies
@@ -153,7 +156,7 @@ jobs:
       - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
         if: runner.os == 'Linux' && runner.arch == 'X64'
         env:
-          RUSTFLAGS: "-D warnings -C target-feature=+avx2"
+          RUSTFLAGS: "-C target-feature=+avx2"
         run: |
           cargo test --locked \
             -p bitnet-quantization \
@@ -183,7 +186,6 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'grid') ||
       contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
-      RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
@@ -193,7 +195,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -210,7 +212,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     env:
-      RUSTFLAGS: "-D warnings"
+      # `-D warnings` returns in PR 9 alongside the panic-family flip;
+      # Stage A relies on the explicit deny levels in [workspace.lints]
+      # plus `cargo xtask check-lint-policy` / `check-no-panic-family`.
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
@@ -220,7 +224,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy
 
       - name: Cache Rust dependencies
@@ -262,22 +266,9 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'macos') ||
       contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
-      # Allow NEON-idiomatic patterns common in SIMD intrinsic code (~120 files).
-      # Linux x86 Clippy remains strict (-D warnings with no allows).
-      RUSTFLAGS: >-
-        -D warnings
-        -A clippy::missing_safety_doc
-        -A clippy::needless_range_loop
-        -A clippy::manual_is_multiple_of
-        -A clippy::manual_div_ceil
-        -A clippy::unnecessary_cast
-        -A clippy::ptr_as_ptr
-        -A clippy::excessive_precision
-        -A clippy::manual_range_contains
-        -A clippy::collapsible_if
-        -A clippy::let_and_return
-        -A clippy::new_without_default
-        -A clippy::assign_op_pattern
+      # Stage A: `-D warnings` and the NEON-idiomatic allow-list both
+      # return in PR 9. Until then this lane reports clippy advisory
+      # only — the deny levels in [workspace.lints] are still enforced.
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
@@ -287,7 +278,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy
 
       - name: Cache Rust dependencies
@@ -319,7 +310,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2

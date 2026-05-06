@@ -44,7 +44,8 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   CARGO_INCREMENTAL: 0
-  RUSTFLAGS: "-D warnings"
+  # `-D warnings` returns in PR 9 alongside the strict-clippy flip; see
+  # docs/development/STRICT_CLIPPY_POLICY.md.
   # Strict validation mode - fail on suspicious weights
   BITNET_STRICT_MODE: "1"
   # Deterministic inference for reproducible tests

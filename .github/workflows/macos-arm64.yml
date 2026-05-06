@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 env:
-  RUSTFLAGS: "-D warnings"
+  # Stage A: -D warnings returns in PR 9 — see STRICT_CLIPPY_POLICY.md
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   BITNET_SKIP_SLOW_TESTS: "1"
@@ -56,7 +56,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -105,7 +105,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -136,7 +136,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: clippy
 
       - name: Cache Rust dependencies
@@ -145,6 +145,8 @@ jobs:
           shared-key: macos-arm64-clippy
 
       - name: Run clippy (CPU, libs only)
+        # Stage A: trailing `-- -D warnings` returns in PR 9. The deny
+        # levels in [workspace.lints] still cause hard failures.
         run: |
           cargo clippy --locked \
             -p bitnet-common \
@@ -153,8 +155,7 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --lib \
-            --no-default-features --features cpu \
-            -- -D warnings
+            --no-default-features --features cpu
 
   # Job 4: Formatting check
   fmt:
@@ -168,7 +169,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
           components: rustfmt
 
       - name: Check formatting

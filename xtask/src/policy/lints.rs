@@ -49,10 +49,7 @@ pub fn run_check(repo_root: &Path) -> Result<CheckOutcome> {
         .output()
         .context("cargo metadata")?;
     if !output.status.success() {
-        anyhow::bail!(
-            "cargo metadata failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        anyhow::bail!("cargo metadata failed: {}", String::from_utf8_lossy(&output.stderr));
     }
     let metadata: CargoMetadata =
         serde_json::from_slice(&output.stdout).context("parse cargo metadata")?;
@@ -86,8 +83,8 @@ pub fn run_check(repo_root: &Path) -> Result<CheckOutcome> {
 fn has_lints_workspace(manifest_path: &Path) -> Result<bool> {
     let raw = std::fs::read_to_string(manifest_path)
         .with_context(|| format!("read {}", manifest_path.display()))?;
-    let parsed: toml::Value = toml::from_str(&raw)
-        .with_context(|| format!("parse {}", manifest_path.display()))?;
+    let parsed: toml::Value =
+        toml::from_str(&raw).with_context(|| format!("parse {}", manifest_path.display()))?;
     let Some(lints) = parsed.get("lints") else {
         return Ok(false);
     };
@@ -166,8 +163,8 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
     let ledger_path = repo_root.join("policy/clippy-lints.toml");
     let ledger_raw = std::fs::read_to_string(&ledger_path)
         .with_context(|| format!("read {}", ledger_path.display()))?;
-    let ledger: PolicyLedger = toml::from_str(&ledger_raw)
-        .with_context(|| format!("parse {}", ledger_path.display()))?;
+    let ledger: PolicyLedger =
+        toml::from_str(&ledger_raw).with_context(|| format!("parse {}", ledger_path.display()))?;
 
     if ledger.schema_version != "1.0" {
         outcome.errors.push(format!(
@@ -180,8 +177,8 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
     let root_manifest = repo_root.join("Cargo.toml");
     let root_raw = std::fs::read_to_string(&root_manifest)
         .with_context(|| format!("read {}", root_manifest.display()))?;
-    let root: toml::Value = toml::from_str(&root_raw)
-        .with_context(|| format!("parse {}", root_manifest.display()))?;
+    let root: toml::Value =
+        toml::from_str(&root_raw).with_context(|| format!("parse {}", root_manifest.display()))?;
     let manifest_msrv = root
         .get("workspace")
         .and_then(|w| w.get("package"))
@@ -200,10 +197,14 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
 
     // 3. Verify policy invariants.
     if !ledger.policy.panic_free_tests {
-        outcome.errors.push("policy/clippy-lints.toml: policy.panic_free_tests must be true".into());
+        outcome
+            .errors
+            .push("policy/clippy-lints.toml: policy.panic_free_tests must be true".into());
     }
     if ledger.policy.allow_test_carveouts {
-        outcome.errors.push("policy/clippy-lints.toml: policy.allow_test_carveouts must be false".into());
+        outcome
+            .errors
+            .push("policy/clippy-lints.toml: policy.allow_test_carveouts must be false".into());
     }
     if ledger.policy.suppression_style != "expect-with-reason" {
         outcome.errors.push(format!(
@@ -212,7 +213,9 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
         ));
     }
     if ledger.policy.blanket_categories {
-        outcome.errors.push("policy/clippy-lints.toml: policy.blanket_categories must be false".into());
+        outcome
+            .errors
+            .push("policy/clippy-lints.toml: policy.blanket_categories must be false".into());
     }
 
     // 4. clippy.toml must not declare panic-family test carveouts.
@@ -221,10 +224,7 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
         let clippy_raw = std::fs::read_to_string(&clippy_toml_path)
             .with_context(|| format!("read {}", clippy_toml_path.display()))?;
         for needle in FORBIDDEN_CARVEOUTS {
-            if clippy_raw
-                .lines()
-                .any(|l| l.trim_start().starts_with(needle))
-            {
+            if clippy_raw.lines().any(|l| l.trim_start().starts_with(needle)) {
                 outcome.errors.push(format!(
                     "clippy.toml: forbidden test carve-out `{needle}`; tests are workspace surface"
                 ));
@@ -234,10 +234,7 @@ pub fn run_lint_policy(repo_root: &Path) -> Result<LintPolicyOutcome> {
 
     // 5. Verify that root manifest declares an explicit lints block (no
     //    blanket category at deny, and at least the dbg_macro deny rule).
-    let root_lints = root
-        .get("workspace")
-        .and_then(|w| w.get("lints"))
-        .cloned();
+    let root_lints = root.get("workspace").and_then(|w| w.get("lints")).cloned();
     match root_lints {
         Some(toml::Value::Table(t)) => {
             for (cat, val) in &t {
