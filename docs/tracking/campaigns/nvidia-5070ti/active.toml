@@ -199,7 +199,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-008"
-status = "ready"
+status = "in_progress"
 branch = "codex/nvidia-5070ti/RTX5070TI-008-benchmark-baseline"
 stackable = false
 requires_human_merge = true
@@ -210,9 +210,10 @@ commands = [
   "Manual RTX 5070 Ti benchmark command with receipt artifact.",
 ]
 allowed_paths = [
+  "crates/bitnet-kernels/Cargo.toml",
   "crates/bitnet-kernels/benches/**",
   "crates/bitnet-bench-receipts/**",
-  "ci/hardware/_templates/benchmark.json",
+  "ci/hardware/_templates/cuda-benchmark-receipt.json",
   "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json",
   "docs/tracking/campaigns/nvidia-5070ti/**",
 ]
