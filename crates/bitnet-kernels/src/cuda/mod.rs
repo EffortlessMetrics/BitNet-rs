@@ -132,9 +132,10 @@ pub use batch_norm::{
     batch_norm_cpu_fallback, batch_norm_inference_cpu_fallback,
 };
 pub use bitnet_context::{
-    CudaActivationWorkspace, CudaBitnetContext, CudaBitnetDeviceInfo, CudaBitnetKernelFamily,
-    CudaBitnetReceiptFields, CudaBitnetRuntimeStats, CudaTensorShape, CudaWeightHandle,
-    CudaWeightId,
+    CUDA_BITNET_I2S_GEMV_KERNEL_ID, CudaActivationWorkspace, CudaBitnetContext,
+    CudaBitnetDeviceInfo, CudaBitnetKernelFamily, CudaBitnetKernelInvocationStats,
+    CudaBitnetLinearBackend, CudaBitnetReceiptFields, CudaBitnetRuntimeStats, CudaTensorShape,
+    CudaWeightHandle, CudaWeightId, PackedI2sWeights,
 };
 pub use conv1d::{Conv1dConfig, PaddingMode, conv1d_cpu, conv1d_forward, launch_conv1d};
 pub use kv_cache::{CacheDtype, CacheStats, KvCacheBuffer, KvCacheConfig, launch_append_kv};
