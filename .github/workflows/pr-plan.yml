@@ -92,6 +92,15 @@ jobs:
                               r"^crates/bitnet-startup-contract", r"^crates/bitnet-feature-contract"],
               "fuzz":        [r"^fuzz/"],
               "manifest":    [r"^Cargo\.(toml|lock)$", r"^rust-toolchain\.toml$"],
+              # ripr triggers on production Rust (i.e. crates/*/src, xtask/src,
+              # crossval/src) and on its own config files. Test-only diffs do
+              # not invoke ripr by default — there is no behavior to probe.
+              "rust_production": [
+                  r"^crates/[^/]+/src/",
+                  r"^crossval/src/",
+                  r"^xtask/src/",
+              ],
+              "ripr":        [r"^ripr\.toml$", r"^policy/ripr-"],
           }
 
           touched = {area: False for area in AREAS}
@@ -133,6 +142,10 @@ jobs:
           # Property smoke (after PR D).
           if "property-tests" in labels or "full-ci" in labels:
               lanes.append(("Property Tests (smoke)", 4, "property-tests/full-ci label"))
+          # ripr static exposure (PR J): production Rust diffs or explicit label.
+          # Advisory only — does not gate merges.
+          if touched["rust_production"] or touched["ripr"] or "ripr" in labels or "full-ci" in labels:
+              lanes.append(("ripr static exposure (advisory)", 4, "production Rust diff / ripr label"))
           # Always-on cheap guards.
           if changed:
               lanes.append(("Guards / PR Size Guard / Markdownlint / Link Check", 4, "always-on"))

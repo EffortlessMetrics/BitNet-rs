@@ -1,0 +1,22 @@
+# BitNet-rs ripr suppressions.
+#
+# Format and semantics are defined by ripr (see https://github.com/EffortlessMetrics/ripr).
+# This file is intentionally empty at landing.
+#
+# Rationale:
+# - The first real ripr runs on BitNet-rs are expected to surface a baseline
+#   inventory of historical oracle-exposure gaps. That is signal, not failure.
+# - We do NOT want to silence the entire baseline by default. The advisory
+#   workflow (.github/workflows/ripr.yml) is non-blocking, so historical gaps
+#   are visible in the PR step summary without blocking merges.
+# - Use this file only for findings that have been triaged and consciously
+#   accepted. Each entry should include rationale + owner + expiration.
+#
+# Example shape (keep commented until calibration begins):
+#
+# [[suppress]]
+# path = "crates/bitnet-quantization/src/i2s_qk256.rs"
+# classification = "reachable_unrevealed"
+# rationale = "Path is unreachable from public API in 0.2.x; see #1234."
+# owner = "@user"
+# expires = "2026-09-01"

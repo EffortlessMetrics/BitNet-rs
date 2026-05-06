@@ -1,0 +1,39 @@
+# BitNet-rs ripr policy.
+#
+# ripr is mutation-testing-lite at static-analysis prices. It analyzes the
+# diff, builds mutation-shaped static probes, and asks whether the changed
+# behavior appears exposed to a meaningful test discriminator.
+#
+# Initial BitNet-rs posture: ADVISORY.
+# - Diff-scoped (no full-repo scan).
+# - No merge gate. Findings are reported via PR step summary + JSON/SARIF.
+# - Promotion to soft-gate or hard-gate requires calibration: see
+#   docs/ci/cost-and-verification-policy.md and the staged plan in PR P.
+#
+# See https://github.com/EffortlessMetrics/ripr for the schema reference.
+
+[analysis]
+mode = "diff"
+
+[policy]
+# Start advisory: nothing fails the build. Promotion happens incrementally
+# once the noise profile is observed (PR P in the CI roadmap).
+fail_on = []
+
+[report]
+max_related_tests = 8
+include_context = true
+
+[severity]
+# Map ripr classifications to GitHub annotation severity. Initial values
+# bias toward `notice` so the first runs do not flood the Files tab.
+exposed = "notice"
+weakly_exposed = "warning"
+reachable_unrevealed = "warning"
+no_static_path = "notice"
+infection_unknown = "notice"
+propagation_unknown = "notice"
+static_unknown = "notice"
+
+[suppressions]
+path = "policy/ripr-suppressions.toml"

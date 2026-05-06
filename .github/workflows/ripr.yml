@@ -1,0 +1,155 @@
+name: ripr (static exposure)
+
+# Mutation-testing-lite static exposure analysis on PR diffs.
+#
+# ripr asks: for the behavior changed in this diff, do the current tests
+# appear to contain a discriminator that would notice if the behavior were
+# wrong? It does NOT run mutants and does NOT report killed/survived
+# outcomes. See docs/ci/cost-and-verification-policy.md for the
+# verification ladder and why this layer matters.
+#
+# Initial posture: ADVISORY (non-blocking).
+# - continue-on-error: true at the job level
+# - no merge gate
+# - JSON + SARIF + GitHub annotations only
+# - production Rust paths only; skips docs-only PRs
+# - workflow_dispatch + label-triggered runs supported
+#
+# Toolchain note: ripr targets Rust 2024 and requires Rust >= 1.93.
+# BitNet-rs MSRV (rust-toolchain.toml) is currently 1.92, so we install a
+# separate stable toolchain just for the ripr install + invocation. This
+# keeps the BitNet-rs MSRV decision orthogonal to ripr adoption.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'crossval/**'
+      - 'tests/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'ripr.toml'
+      - 'policy/ripr-suppressions.toml'
+      - '.github/workflows/ripr.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ripr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # Allow uploading SARIF for native code-scanning surfacing on label opt-in.
+  security-events: write
+
+jobs:
+  ripr:
+    name: ripr static exposure
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    # Advisory only. Findings do not gate merges yet.
+    continue-on-error: true
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+
+    steps:
+      - name: Checkout (with full history for diff)
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          fetch-depth: 0
+
+      # Install a separate stable Rust toolchain just for ripr. We do NOT
+      # change rust-toolchain.toml — BitNet-rs MSRV stays at 1.92 for
+      # ordinary CI lanes. This step is the one that requires Rust >= 1.93.
+      - name: Install Rust (stable, for ripr)
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: stable
+
+      - name: Cache ripr install
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: ripr-install-stable
+          # Save on main only — PR runs are restore-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # ripr is installed via cargo install; cache its target dir but
+          # not the BitNet-rs workspace target (different toolchain).
+          cache-targets: false
+
+      - name: Install ripr (locked)
+        # Pin via --locked so we can later promote to a release artifact /
+        # prebuilt binary without changing the workflow shape.
+        run: |
+          cargo install ripr --locked || {
+            echo "::warning::ripr install failed; advisory job emits no findings."
+            echo "RIPR_INSTALL_FAILED=1" >> "$GITHUB_ENV"
+            exit 0
+          }
+
+      - name: ripr doctor
+        if: env.RIPR_INSTALL_FAILED != '1'
+        run: ripr doctor || true
+
+      - name: Run ripr (diff-scoped)
+        if: env.RIPR_INSTALL_FAILED != '1'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ripr
+
+          # Ensure the base ref is fetched for diff computation.
+          if [ -n "${BASE_SHA:-}" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || true
+          fi
+
+          base_arg="origin/main"
+          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "$BASE_SHA" 2>/dev/null; then
+            base_arg="$BASE_SHA"
+          fi
+
+          # JSON artifact (machine-readable).
+          ripr check --base "$base_arg" --json > target/ripr/ripr.json || true
+          # GitHub annotations (visible in Files tab).
+          ripr check --base "$base_arg" --format github || true
+          # SARIF artifact (for label opt-in code-scanning surfacing later).
+          ripr check --base "$base_arg" --format sarif > target/ripr/ripr.sarif || true
+
+      - name: PR step summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "## ripr static exposure (advisory)"
+            echo
+            echo "ripr asks whether the behavior changed in this diff appears exposed"
+            echo "to a meaningful test discriminator. It does **not** run mutants."
+            echo
+            if [ -s target/ripr/ripr.json ]; then
+              echo '```json'
+              head -c 8000 target/ripr/ripr.json || true
+              echo
+              echo '```'
+            else
+              echo "_No ripr JSON produced (install failure or no findings)._"
+            fi
+            echo
+            echo "Findings here are advisory and do not gate merges. See"
+            echo "[docs/ci/cost-and-verification-policy.md](../blob/main/docs/ci/cost-and-verification-policy.md)"
+            echo "for the verification ladder and ripr's role in it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ripr artifacts
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: ripr-report
+          path: |
+            target/ripr/ripr.json
+            target/ripr/ripr.sarif
+          retention-days: 14
+          if-no-files-found: ignore
