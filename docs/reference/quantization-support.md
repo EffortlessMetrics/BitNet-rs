@@ -17,6 +17,16 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **Real Computation**: Native quantized GEMV kernel eliminates FP32 dequantization staging (Issue #261 - AC3)
 - **QuantizedLinear Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
 
+## GGUF Loader Fallback Boundary
+
+User-facing runtime and proof paths must not silently use the reduced-feature GGUF minimal loader. The enhanced GGUF loader is the default expectation for real inference claims.
+
+- `BITNET_STRICT_MODE=1` or `BITNET_DISABLE_MINIMAL_LOADER=1` fails fast when the enhanced loader cannot parse or validate the model.
+- `BITNET_ALLOW_MINIMAL_LOADER=1` is the explicit compatibility opt-in for the minimal loader. It may initialize missing transformer tensors with compatibility defaults and cannot support correctness or performance claims.
+- `bitnet run --strict-loader` sets strict loader mode for CLI proof paths.
+- `bitnet run --allow-mock` is a smoke/UX-test escape hatch and enables compatibility fallback only by request.
+- JSON output from `bitnet run --json-out` records the loader mode so receipts or adjacent proof artifacts can distinguish `enhanced` from explicitly requested `compatibility_fallback`.
+
 ### TL1 - Table Lookup Quantization (ARM Optimized - Issue #261)
 
 - Table lookup quantization optimized for ARM NEON architecture (4-bit, 2 elements per byte with nibble packing)

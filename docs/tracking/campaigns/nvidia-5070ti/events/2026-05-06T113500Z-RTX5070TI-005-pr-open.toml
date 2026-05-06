@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T11:35:00Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-005"
+event = "pr_open"
+pr = 3723
+head_sha = "425bc737ac6170e2b6865bb359d84f01d067c469"
+actor = "codex"
+
+notes = [
+  "Recorded live GitHub state for the RTX 5070 Ti smoke receipt PR so campaign doctor can reconcile open PR claims.",
+  "No CPU-BITNET runtime behavior changed in this tracker sync.",
+]

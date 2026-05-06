@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T00:12:03Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-000"
+event = "merged"
+pr = 3642
+merge_sha = "c5f3480ac90cccfd1aec9766ae4628fd7e9fd3c3"
+actor = "maintainer"
+
+notes = [
+  "Real BitNet CPU path implementation plan merged.",
+  "Plan only; strict loader, tokenizer, layout, scalar, AVX2, receipt, and benchmark implementation remains sequenced follow-up work.",
+]

@@ -1,0 +1,125 @@
+id = "nvidia-5070ti"
+title = "NVIDIA RTX 5070 Ti validation"
+status = "active"
+
+objective = "Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-device receipts and no CPU, OpenCL, WGPU, or generic GPU conflation."
+
+end_state = [
+  "RTX 5070 Ti CUDA backend identity is distinct from generic CUDA and WGPU.",
+  "CUDA and NVML probe facts are recorded before kernel execution claims.",
+  "CUDA smoke, parity, receipts, and benchmarks are sequenced after identity.",
+]
+
+hard_constraints = [
+  "CUDA visibility is not kernel execution.",
+  "WGPU smoke is not CUDA proof.",
+  "CPU fallback cannot count as CUDA execution.",
+  "Performance claims require driver, CUDA, VRAM, power, and thermal context.",
+]
+
+[[work_item]]
+id = "RTX5070TI-003"
+status = "merged"
+branch = "codex/rtx5070ti-003-backend-identity"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Preserve RTX 5070 Ti requested and selected CUDA backend identity without adding kernels or inference claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-common --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-common/src/kernel_registry.rs",
+  "crates/bitnet-device-config-core/Cargo.toml",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "xtask/src/campaign.rs",
+  "xtask/src/main.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "RTX 5070 Ti CUDA backend identity is preserved through config and logging surfaces.",
+]
+must_not_claim = [
+  "CUDA execution works.",
+  "WGPU smoke proves CUDA.",
+  "BitNet inference works on RTX 5070 Ti.",
+]
+
+[[work_item]]
+id = "RTX5070TI-004"
+status = "merged"
+branch = "codex/nvidia-5070ti/RTX5070TI-004-cuda-nvml-probe"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-003"]
+acceptance = "Add RTX 5070 Ti CUDA and NVML runtime probe without claiming kernel execution or BitNet inference."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features cuda",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/cuda/**",
+]
+may_claim = [
+  "RTX 5070 Ti CUDA runtime visibility is recorded after probe receipts exist.",
+]
+must_not_claim = [
+  "CUDA kernel execution works.",
+  "BitNet inference works on RTX 5070 Ti.",
+]
+
+[[work_item]]
+id = "RTX5070TI-005"
+status = "pr_open"
+branch = "codex/nvidia-5070ti/RTX5070TI-005-smoke-receipt"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-004"]
+acceptance = "Compile and run a tiny CUDA kernel on the selected RTX 5070 Ti with a fallback-free smoke receipt and no BitNet inference or speedup claim."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual RTX 5070 Ti CUDA smoke command with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-kernels/tests/**",
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/_templates/cuda-smoke-receipt.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "RTX 5070 Ti CUDA executes a tiny smoke kernel fallback-free after a smoke receipt exists.",
+]
+must_not_claim = [
+  "BitNet inference works on RTX 5070 Ti.",
+  "CUDA is faster than CPU.",
+  "QK256 CUDA works.",
+]

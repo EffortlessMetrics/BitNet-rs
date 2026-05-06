@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "artifact_kind": "cuda_smoke",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "TBD",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "fallback_used": false,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "cuda": {
+    "device_index": null,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "driver_version": "TBD",
+    "cuda_runtime_version": "TBD",
+    "cuda_toolkit_version": "TBD",
+    "nvrtc_version": "TBD",
+    "vram_bytes": null
+  },
+  "kernel_stats": [
+    {
+      "kernel_id": "cuda_tiny_vector_add",
+      "invocations": 1,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "device_to_host_bytes": null,
+      "kernel_launches": 1,
+      "kernel_time_ms": null
+    }
+  ],
+  "input_len": 1024,
+  "max_abs_error": 0.0,
+  "mean_abs_error": 0.0,
+  "result": "TBD",
+  "claim": "kernel_smoke_tested",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/cuda-smoke.json"
+}

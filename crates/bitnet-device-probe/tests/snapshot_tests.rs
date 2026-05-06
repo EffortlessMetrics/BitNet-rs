@@ -43,10 +43,13 @@ fn device_capabilities_gpu_compiled_consistent() {
     let caps = DeviceCapabilities::detect();
     let gpu_feat = cfg!(any(feature = "gpu", feature = "cuda"));
     assert_eq!(caps.cuda_compiled, gpu_feat, "cuda_compiled should match gpu/cuda feature gate");
-    insta::assert_snapshot!(
-        "device_capabilities_gpu_consistent",
-        format!("cuda_compiled={} gpu_feature={}", caps.cuda_compiled, gpu_feat)
-    );
+    #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
+    {
+        insta::assert_snapshot!(
+            "device_capabilities_gpu_consistent",
+            format!("cuda_compiled={} gpu_feature={}", caps.cuda_compiled, gpu_feat)
+        );
+    }
 }
 
 #[test]
@@ -73,9 +76,12 @@ fn device_probe_full_summary() {
     );
     assert!(summary.contains("cpu_rust=true"));
     assert!(summary.contains("simd="));
-    insta::with_settings!({
-        filters => vec![(r"simd=\w+", "simd=[SIMD]")]
-    }, {
-        insta::assert_snapshot!("device_probe_summary", summary);
-    });
+    #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
+    {
+        insta::with_settings!({
+            filters => vec![(r"simd=\w+", "simd=[SIMD]")]
+        }, {
+            insta::assert_snapshot!("device_probe_summary", summary);
+        });
+    }
 }

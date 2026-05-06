@@ -1,0 +1,47 @@
+id = "server-real-inference"
+title = "Server real inference"
+status = "active"
+
+objective = "Replace server-side simulated inference surfaces with real engine execution or explicit unavailable responses without weakening strict proof boundaries."
+
+end_state = [
+  "Server endpoints never return fake model output in non-test builds.",
+  "Real inference entrypoints share loader, tokenizer, backend, receipt, and fallback truth with the CLI.",
+  "Unsupported server configurations fail explicitly.",
+]
+
+hard_constraints = [
+  "Do not reintroduce simulated inference.",
+  "Do not bypass strict model loading, tokenizer authority, or fallback receipts.",
+  "Do not mix server runtime work with hardware kernel claims.",
+]
+
+[[work_item]]
+id = "SERVER-001"
+status = "proposed"
+branch = "codex/server-real-inference/SERVER-001-single-request-engine"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Wire single-request server inference to real engine execution or explicit 501/503, with no simulated response path in non-test builds."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-inference/**",
+  "docs/tracking/campaigns/server-real-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Server inference routes are wired to real execution or explicit unavailable responses after merge.",
+]
+must_not_claim = [
+  "Any hardware acceleration works.",
+  "Server performance is proven.",
+]

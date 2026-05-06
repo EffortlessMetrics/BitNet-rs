@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "artifact_kind": "proof",
+  "machine_id": "TBD",
+  "hardware_lane": "TBD",
+  "timestamp_utc": "TBD",
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "TBD",
+    "format": "gguf",
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "tokenizer": "llama3",
+    "vocab_size": 128256,
+    "loader_mode": "strict"
+  },
+  "bitnet": {
+    "weight_quantization": "W1.58",
+    "activation_quantization": "A8",
+    "weight_domain": "ternary",
+    "weight_quantization_method": "absmean",
+    "activation_quantization_method": "absmax",
+    "activation_quantization_granularity": "per_token",
+    "kernel_family": "i2_s|tl1|tl2|qk256|openvino_graph",
+    "layout": "TBD",
+    "layout_source": "gguf|converted|repo_internal",
+    "fallback_layout": null
+  },
+  "execution": {
+    "phase": "full",
+    "prompt_tokens": null,
+    "generated_tokens": null,
+    "batch_size": 1,
+    "thread_count": null,
+    "requested_backend": "TBD",
+    "selected_backend": "TBD",
+    "fallback_used": false
+  },
+  "loader": {
+    "mode": "real_gguf",
+    "minimal_loader_fallback_used": false,
+    "tokenizer_source": "model_artifact",
+    "mock_tensors_used": false
+  },
+  "reference": {
+    "name": "TBD",
+    "artifact_path": "TBD",
+    "max_abs_error": null,
+    "mean_abs_error": null,
+    "token_agreement": null
+  },
+  "artifact_path": "ci/hardware/<machine-id>/<date>/strict-bitnet-proof.json"
+}

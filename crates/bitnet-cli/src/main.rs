@@ -116,7 +116,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device to use (cpu, cuda, oneapi, gpu, npu, auto)
+    /// Device/backend to use (cpu, cuda, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
 
@@ -386,6 +386,24 @@ enum Commands {
     /// Show system information
     Info,
 
+    /// Probe selected device identity without launching kernels
+    DeviceSmoke {
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
+    /// Compile and launch a tiny CUDA vector-add kernel
+    CudaSmoke {
+        /// CUDA device index to probe and launch on
+        #[arg(long, default_value_t = 0)]
+        device_index: usize,
+
+        /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     #[cfg(feature = "full-cli")]
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
@@ -486,22 +504,23 @@ async fn main() -> Result<()> {
         warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
     }
 
+    let requested_backend_label =
+        cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+
     // Report backend selection at startup so logs and receipts are deterministic.
     {
         use bitnet_common::{BackendRequest, select_backend};
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let request = match cli.device.as_deref() {
-            Some("cuda") => BackendRequest::Cuda,
-            Some("gpu") => BackendRequest::Gpu,
-            Some("oneapi") => BackendRequest::OneApi,
-            Some("cpu") => BackendRequest::Cpu,
-            Some("npu") => BackendRequest::Auto,
-            _ => BackendRequest::Auto,
-        };
+        let request =
+            BackendRequest::from_label(&requested_backend_label).unwrap_or(BackendRequest::Auto);
+        let strict_mode = std::env::var("BITNET_STRICT_MODE")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
         match select_backend(request, &caps) {
-            Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
+            Ok(result) => info!(backend_selection = %result.identity_summary(), "backend selected"),
+            Err(e) if strict_mode => return Err(e.into()),
             Err(e) => warn!(error = %e, "backend selection warning"),
         }
     }
@@ -587,6 +606,12 @@ async fn main() -> Result<()> {
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
+        Some(Commands::DeviceSmoke { json_out }) => {
+            handle_device_smoke_command(&requested_backend_label, json_out).await
+        }
+        Some(Commands::CudaSmoke { device_index, json_out }) => {
+            handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
@@ -828,6 +853,326 @@ async fn handle_tokenize_command(
     Ok(())
 }
 
+async fn handle_device_smoke_command(
+    requested_backend_label: &str,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported device-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::Cuda | BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "device-smoke currently supports cuda and nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA probe device is unavailable".to_string()))
+    } else {
+        None
+    };
+    let selected_backend = if error.is_none() {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_probe",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": cuda_probe,
+        "claim": "cuda_runtime_probe_recorded",
+        "kernel_execution": false,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+struct CudaSmokeReceiptFields {
+    result: &'static str,
+    input_len: serde_json::Value,
+    max_abs_error: serde_json::Value,
+    mean_abs_error: serde_json::Value,
+    host_to_device_bytes: serde_json::Value,
+    device_to_host_bytes: serde_json::Value,
+    invocations: u64,
+    kernel_launches: u64,
+}
+
+impl Default for CudaSmokeReceiptFields {
+    fn default() -> Self {
+        Self {
+            result: "fail",
+            input_len: serde_json::Value::Null,
+            max_abs_error: serde_json::Value::Null,
+            mean_abs_error: serde_json::Value::Null,
+            host_to_device_bytes: serde_json::Value::Null,
+            device_to_host_bytes: serde_json::Value::Null,
+            invocations: 0,
+            kernel_launches: 0,
+        }
+    }
+}
+
+fn run_cuda_smoke_kernel_receipt_fields(
+    cuda_probe: &mut bitnet_device_probe::NvidiaCudaProbe,
+    device_index: usize,
+    error: &mut Option<String>,
+) -> CudaSmokeReceiptFields {
+    #[cfg(feature = "cuda")]
+    {
+        match bitnet_kernels::gpu::run_cuda_tiny_vector_add_smoke(device_index) {
+            Ok(smoke) => {
+                cuda_probe.selected_device_index = Some(smoke.device_info.device_id);
+                cuda_probe.selected_device_name = Some(smoke.device_info.name);
+                cuda_probe.compute_capability = Some(format!(
+                    "{}.{}",
+                    smoke.device_info.compute_capability.0, smoke.device_info.compute_capability.1
+                ));
+                cuda_probe.vram_bytes = Some(smoke.device_info.total_memory as u64);
+
+                if !smoke.passed {
+                    *error = Some(format!(
+                        "tiny CUDA vector add mismatch: max_abs_error={}, mean_abs_error={}",
+                        smoke.max_abs_error, smoke.mean_abs_error
+                    ));
+                }
+
+                CudaSmokeReceiptFields {
+                    result: if smoke.passed { "pass" } else { "fail" },
+                    input_len: serde_json::json!(smoke.input_len),
+                    max_abs_error: serde_json::json!(smoke.max_abs_error),
+                    mean_abs_error: serde_json::json!(smoke.mean_abs_error),
+                    host_to_device_bytes: serde_json::json!(smoke.host_to_device_bytes),
+                    device_to_host_bytes: serde_json::json!(smoke.device_to_host_bytes),
+                    invocations: 1,
+                    kernel_launches: smoke.kernel_launches,
+                }
+            }
+            Err(err) => {
+                *error = Some(format!("tiny CUDA vector add smoke failed: {err}"));
+                CudaSmokeReceiptFields::default()
+            }
+        }
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = cuda_probe;
+        let _ = device_index;
+        *error = Some("compiled without the cuda feature".to_string());
+        CudaSmokeReceiptFields::default()
+    }
+}
+
+async fn handle_cuda_smoke_command(
+    requested_backend_label: &str,
+    device_index: usize,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+    const KERNEL_ID: &str = "cuda_tiny_vector_add";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported cuda-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "cuda-smoke currently supports nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(device_index));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let mut error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA smoke device is unavailable".to_string()))
+    } else {
+        None
+    };
+
+    let selected_backend = if cuda_probe.available {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let outcome = if error.is_none() {
+        run_cuda_smoke_kernel_receipt_fields(&mut cuda_probe, device_index, &mut error)
+    } else {
+        CudaSmokeReceiptFields::default()
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let claim = if error.is_none() && outcome.result == "pass" {
+        "kernel_smoke_tested"
+    } else {
+        "cuda_kernel_smoke_attempted"
+    };
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_smoke",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": {
+            "available": cuda_probe.available,
+            "device_count": cuda_probe.device_count,
+            "device_index": cuda_probe.selected_device_index,
+            "device_name": cuda_probe.selected_device_name,
+            "compute_capability": cuda_probe.compute_capability,
+            "driver_version": cuda_probe.driver_version,
+            "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+            "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+            "nvrtc_version": cuda_probe.nvrtc_version,
+            "nvml_available": cuda_probe.nvml_available,
+            "vram_bytes": cuda_probe.vram_bytes,
+            "power_limit_watts": cuda_probe.power_limit_watts,
+            "power_draw_watts": cuda_probe.power_draw_watts,
+            "temperature_c": cuda_probe.temperature_c,
+        },
+        "kernel_stats": [
+            {
+                "kernel_id": KERNEL_ID,
+                "invocations": outcome.invocations,
+                "fallback_invocations": 0,
+                "host_to_device_bytes": outcome.host_to_device_bytes,
+                "device_to_host_bytes": outcome.device_to_host_bytes,
+                "kernel_launches": outcome.kernel_launches,
+                "kernel_time_ms": null
+            }
+        ],
+        "input_len": outcome.input_len,
+        "max_abs_error": outcome.max_abs_error,
+        "mean_abs_error": outcome.mean_abs_error,
+        "result": outcome.result,
+        "claim": claim,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn validate_rtx_5070_ti_identity(probe: &bitnet_device_probe::NvidiaCudaProbe) -> Option<String> {
+    match probe.selected_device_name.as_deref() {
+        Some(name) if is_rtx_5070_ti_device_name(name) => None,
+        Some(name) => {
+            Some(format!("requested nvidia-rtx-5070-ti-cuda but selected CUDA device is {name:?}"))
+        }
+        None => Some(
+            "requested nvidia-rtx-5070-ti-cuda but selected CUDA device name was not reported"
+                .to_string(),
+        ),
+    }
+}
+
+fn is_rtx_5070_ti_device_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    normalized.contains("rtx 5070 ti")
+}
+
+fn write_json_output(path: Option<&std::path::PathBuf>, value: &serde_json::Value) -> Result<()> {
+    let json = serde_json::to_string_pretty(value)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create {}", parent.display()))?;
+        }
+        std::fs::write(path, json)
+            .with_context(|| format!("Failed to write JSON to {}", path.display()))?;
+        println!("Wrote {}", path.display());
+    } else {
+        println!("{json}");
+    }
+    Ok(())
+}
+
 async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Result<()> {
     match action {
         ConfigAction::Show => {
@@ -942,6 +1287,18 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
     eprintln!();
 
     Ok(())
+}
+
+fn detect_loader_mode_for_path(path: &std::path::Path, is_hf_directory: bool) -> &'static str {
+    if is_hf_directory {
+        return "huggingface";
+    }
+
+    match path.extension().and_then(|ext| ext.to_str()).map(str::to_ascii_lowercase) {
+        Some(ext) if ext == "gguf" => bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+        Some(ext) if ext == "safetensors" => "safetensors",
+        _ => "unknown",
+    }
 }
 
 /// Run text generation with sampling
@@ -1063,12 +1420,14 @@ async fn run_simple_generation(
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let loader_mode;
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
     {
         Ok(m) => {
             let cfg = m.config().clone();
+            loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
             (Arc::from(m) as Arc<dyn Model>, cfg)
         }
         Err(e) => {
@@ -1080,6 +1439,14 @@ async fn run_simple_generation(
                 );
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
+            if !strict_loader {
+                unsafe {
+                    std::env::set_var("BITNET_ALLOW_MINIMAL_LOADER", "1");
+                }
+                warn!(
+                    "BITNET_ALLOW_MINIMAL_LOADER=1 enabled by --allow-mock for compatibility fallback"
+                );
+            }
             // Mock fallback
             let load_result = bitnet_models::gguf_simple::load_gguf_full(
                 &model_path,
@@ -1087,6 +1454,8 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
+            loader_mode = load_result.loader_mode.as_str();
+            warn!("GGUF loader mode: {}", loader_mode);
             let mut raw_tensors = std::collections::HashMap::new();
             for (name, qk256) in load_result.i2s_qk256 {
                 let expected_bytes = qk256.rows * qk256.row_stride_bytes;
@@ -1122,140 +1491,77 @@ async fn run_simple_generation(
         }
     };
 
-    // Load tokenizer with auto-discovery
-    // Priority: explicit path ΓåÆ sibling tokenizer.json ΓåÆ parent tokenizer.json ΓåÆ GGUF embedded ΓåÆ mock
+    // Load tokenizer with deterministic CPU-BITNET authority.
+    // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
-    let mut external_tokenizer = false;
+    let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
-    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = {
-        // Try auto-discovery first (handles explicit, sibling, parent)
-        let discovered_path = if tokenizer_path.is_some() {
-            // Explicit path provided
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, tokenizer_path)
-        } else {
-            // Try sibling/parent discovery
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, None)
-        };
-
-        match discovered_path {
-            Ok(path) => {
-                // Found tokenizer via discovery
-                external_tokenizer = true;
-                println!("Loading tokenizer from: {}", path.display());
-
-                match bitnet_tokenizers::load_tokenizer(&path) {
-                    Ok(tok) => tok,
-                    Err(e) => {
-                        if strict_tokenizer {
-                            eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
-                            std::process::exit(EXIT_STRICT_TOKENIZER);
-                        }
-                        if !allow_mock {
-                            anyhow::bail!(
-                                "Failed to load tokenizer from {}: {e}. Use --allow-mock to use mock tokenizer.",
-                                path.display()
-                            );
-                        }
-                        println!("Warning: Using mock tokenizer due to: {e}");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+    let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
+        &model_path,
+        tokenizer_path.as_deref(),
+        effective_strict_tokenizer,
+    ) {
+        Ok(resolution) => {
+            match resolution.source {
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+                | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+                    if let Some(path) = &resolution.path {
+                        println!("Loading tokenizer from: {}", path.display());
                     }
                 }
+                bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => {
+                    println!("Successfully loaded tokenizer from GGUF metadata");
+                }
+                bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {}
             }
-            Err(_discovery_err) => {
-                if is_hf_directory {
-                    // For HF directories, check for tokenizer.json inside the model dir
-                    let hf_tok_path = model_path.join("tokenizer.json");
-                    if hf_tok_path.exists() {
-                        println!("Loading tokenizer from HuggingFace directory...");
-                        external_tokenizer = true;
-                        match bitnet_tokenizers::load_tokenizer(&hf_tok_path) {
-                            Ok(tok) => tok,
-                            Err(e) => {
-                                if strict_tokenizer {
-                                    eprintln!("Strict tokenizer failed: {e}");
-                                    std::process::exit(EXIT_STRICT_TOKENIZER);
-                                }
-                                if !allow_mock {
-                                    anyhow::bail!(
-                                        "Failed to load tokenizer from {}: {e}",
-                                        hf_tok_path.display()
-                                    );
-                                }
-                                println!("Warning: Using mock tokenizer due to: {e}");
-                                std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                            }
-                        }
-                    } else if strict_tokenizer {
-                        eprintln!(
-                            "Strict tokenizer failed: no tokenizer.json in {}",
-                            model_path.display()
-                        );
-                        std::process::exit(EXIT_STRICT_TOKENIZER);
-                    } else if !allow_mock {
-                        anyhow::bail!(
-                            "No tokenizer.json found in HuggingFace model directory: {}\n\
-                             Provide --tokenizer or use --allow-mock",
-                            model_path.display()
-                        );
-                    } else {
-                        println!("Warning: Using mock tokenizer (no tokenizer.json in HF dir)");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                    }
+            resolution
+        }
+        Err(e) => {
+            if effective_strict_tokenizer {
+                eprintln!("Strict tokenizer failed: {e}");
+                std::process::exit(EXIT_STRICT_TOKENIZER);
+            }
+            if !allow_mock {
+                let model_dir = if is_hf_directory {
+                    model_path.as_path()
                 } else {
-                    // Discovery failed, try GGUF embedded as fallback
-                    println!("No external tokenizer found, attempting to load from GGUF model...");
-
-                    // Read the GGUF file to get tokenizer metadata
-                    let gguf_data = std::fs::read(&model_path)
-                        .context("Failed to read GGUF file for tokenizer extraction")?;
-                    let reader = bitnet_models::GgufReader::new(&gguf_data)
-                        .context("Failed to parse GGUF for tokenizer extraction")?;
-
-                    // Capture metadata counts
-                    let n_tensors = reader.tensor_count() as usize;
-                    let n_kv = reader.metadata_keys().len();
-                    gguf_metadata = Some((n_kv, n_tensors));
-
-                    match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-                        Ok(tok) => {
-                            println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                            tok
-                        }
-                        Err(e) => {
-                            if strict_tokenizer {
-                                eprintln!(
-                                    "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
-                                );
-                                std::process::exit(EXIT_STRICT_TOKENIZER);
-                            }
-                            if !allow_mock {
-                                // Provide actionable error message
-                                let model_dir = model_path
-                                    .parent()
-                                    .unwrap_or_else(|| std::path::Path::new("."));
-                                anyhow::bail!(
-                                    "Failed to load tokenizer from GGUF: {e}\n\
-                                 \n\
-                                 No tokenizer found. Solutions:\n\
-                                 1. Download tokenizer:\n\
-                                    cargo run -p xtask -- tokenizer --into {}\n\
-                                 2. Provide explicit tokenizer path:\n\
-                                    --tokenizer /path/to/tokenizer.json\n\
-                                 3. Use mock tokenizer for testing:\n\
-                                    --allow-mock",
-                                    model_dir.display()
-                                );
-                            }
-                            println!("Warning: Using mock tokenizer due to: {e}");
-                            std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                        }
-                    }
-                } // end GGUF else branch
+                    model_path.parent().unwrap_or_else(|| std::path::Path::new("."))
+                };
+                anyhow::bail!(
+                    "{e}\n\
+                     \n\
+                     No tokenizer found. Solutions:\n\
+                     1. Download tokenizer:\n\
+                        cargo run -p xtask -- tokenizer --into {}\n\
+                     2. Provide explicit tokenizer path:\n\
+                        --tokenizer /path/to/tokenizer.json\n\
+                     3. Use mock tokenizer for testing only:\n\
+                        --allow-mock",
+                    model_dir.display()
+                );
+            }
+            println!("Warning: Using mock tokenizer due to: {e}");
+            bitnet_tokenizers::auto::TokenizerResolution {
+                tokenizer: std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new()),
+                source: bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback,
+                strict: false,
+                path: None,
             }
         }
     };
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+
+    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+        let gguf_data = std::fs::read(&model_path)
+            .context("Failed to read GGUF file for tokenizer metadata")?;
+        let reader = bitnet_models::GgufReader::new(&gguf_data)
+            .context("Failed to parse GGUF for tokenizer metadata")?;
+        gguf_metadata = Some((reader.metadata_keys().len(), reader.tensor_count() as usize));
+    }
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -1577,9 +1883,16 @@ async fn run_simple_generation(
         let generated_text = tokenizer.decode(&generated_tokens)?;
 
         // Get tokenizer info
+        let tokenizer_source_str = tokenizer_source.as_str();
         let tokenizer_info = serde_json::json!({
             "type": "sentencepiece",
-            "origin": if external_tokenizer { "external" } else { "embedded" },
+            "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+                "embedded"
+            } else {
+                "external"
+            },
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
@@ -1598,6 +1911,12 @@ async fn run_simple_generation(
             "seed": seed.unwrap_or(0),
             "greedy": greedy,
             "deterministic": deterministic,
+        });
+        let loader_info = serde_json::json!({
+            "mode": loader_mode,
+            "minimal_fallback_allowed": std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1"),
+            "minimal_fallback_disabled": std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+                || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1"),
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
@@ -1621,6 +1940,7 @@ async fn run_simple_generation(
             },
             "counts": counts,
             "tokenizer": tokenizer_info,
+            "loader": loader_info,
             "gen_policy": gen_policy,
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {

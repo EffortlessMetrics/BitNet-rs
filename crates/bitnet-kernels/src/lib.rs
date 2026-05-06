@@ -47,6 +47,8 @@ pub mod kernel_selection;
 pub mod kernels;
 pub mod matmul_dispatch;
 #[cfg(feature = "metal")]
+pub mod metal;
+#[cfg(feature = "metal")]
 pub mod metal_compute;
 pub mod norm_ops;
 pub mod norm_registry;
