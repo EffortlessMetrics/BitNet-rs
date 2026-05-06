@@ -68,6 +68,154 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 - CPU or GPU fallback cannot count as NPU execution.
 - 258V CPU validation must record artifacts without reshaping shared CPU implementation unless explicitly scoped by a ledger item.
 
+
+## Build-Out Gates
+
+Use this profile as a gate checklist before making any 258V runtime claim.
+
+| Gate | Required evidence | Claim allowed |
+|---|---|---|
+| Platform visibility | `Lnl258vPlatformProbe` JSON with CPU, Arc 140V, OpenVINO GPU, OpenVINO NPU, memory, power, and OS fields. | The 258V platform is detected. |
+| Intel NPU identity | `npu`, `intel-npu`, and `openvino-npu` preserve NPU identity and fail strictly when unavailable. | NPU request routing is identity-safe. |
+| Arc 140V identity | PCI ID `0x64A0` or exact Arc 140V full device name through OpenCL/Level Zero/OpenVINO. | Arc 140V runtime is visible. |
+| Strict CPU validation | Real GGUF loader, strict tokenizer source, selected CPU AVX2 kernel, no mock tensors, no fallback. | 258V CPU validates the CPU BitNet path. |
+| Same-machine comparison | CPU, GPU, and NPU receipts link to the same platform probe artifact. | The lanes can be compared on one laptop. |
+
+The first three gates are visibility and identity work. They do not prove BitNet inference. Strict CPU validation starts only after the CPU-proof lane lands loader and tokenizer authority.
+
+## Manual Probe Additions
+
+The platform bundle above captures the broad machine state. Add these OpenVINO property probes when OpenVINO is installed so the eventual machine-readable probe has exact source fields to mirror.
+
+### OpenVINO device inventory
+
+```python
+import json
+import openvino as ov
+
+core = ov.Core()
+out = {
+    "openvino_version": ov.__version__,
+    "available_devices": list(core.available_devices),
+    "devices": {}
+}
+for dev in core.available_devices:
+    props = {}
+    for prop in [
+        "FULL_DEVICE_NAME",
+        "SUPPORTED_PROPERTIES",
+        "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "DEVICE_ARCHITECTURE",
+        "DEVICE_UUID",
+    ]:
+        try:
+            props[prop] = str(core.get_property(dev, prop))
+        except Exception as e:
+            props[prop] = "ERR: " + repr(e)
+    out["devices"][dev] = props
+print(json.dumps(out, indent=2))
+```
+
+### OpenVINO NPU property inventory
+
+```python
+import json
+import openvino as ov
+
+core = ov.Core()
+out = {"available_devices": list(core.available_devices), "npu": {}}
+if any(d == "NPU" or d.startswith("NPU.") for d in core.available_devices):
+    for prop in [
+        "FULL_DEVICE_NAME",
+        "SUPPORTED_PROPERTIES",
+        "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "NPU_DRIVER_VERSION",
+        "NPU_COMPILER_VERSION",
+        "NPU_DEVICE_TOTAL_MEM_SIZE",
+        "NPU_DEVICE_ALLOC_MEM_SIZE",
+        "NPU_MAX_TILES",
+    ]:
+        try:
+            out["npu"][prop] = str(core.get_property("NPU", prop))
+        except Exception as e:
+            out["npu"][prop] = "ERR: " + repr(e)
+print(json.dumps(out, indent=2))
+```
+
+## Machine-Readable Artifact Targets
+
+Store raw manual logs and normalized JSON separately:
+
+```text
+ci/receipts/258v/platform/raw/<date>-<os>-probe.txt
+ci/receipts/258v/platform/lnl258v-platform.json
+ci/receipts/258v/cpu/cpu-bitnet-validation.json
+ci/receipts/258v/gpu/arc140v-runtime-probe.json
+ci/receipts/258v/npu/intel-npu-runtime-probe.json
+```
+
+The normalized platform artifact must include at least these exact identity fields:
+
+```json
+{
+  "platform": "core-ultra-7-258v",
+  "os": "linux|windows|wsl",
+  "arch": "x86_64",
+  "cpu_model": "Intel Core Ultra 7 258V",
+  "cpu_cores": 8,
+  "cpu_threads": 8,
+  "cpu_flags": ["avx2", "fma", "sse4_2"],
+  "cpu_has_avx2": true,
+  "cpu_has_avx512": false,
+  "opencl_arc_140v_visible": true,
+  "opencl_platform_name": "Intel(R) OpenCL Graphics",
+  "opencl_device_name": "Intel(R) Arc(TM) 140V Graphics",
+  "opencl_driver_version": "...",
+  "pci_device_id": "0x64A0",
+  "level_zero_visible": true,
+  "level_zero_devices": ["Intel(R) Arc(TM) 140V Graphics"],
+  "openvino_version": "...",
+  "openvino_available_devices": ["CPU", "GPU.0", "NPU"],
+  "openvino_gpu_device": "GPU.0",
+  "openvino_gpu_full_name": "Intel(R) Arc(TM) 140V Graphics",
+  "openvino_npu_visible": true,
+  "openvino_npu_full_name": "...",
+  "accel_device_present": true,
+  "accel_devices": ["/dev/accel/accel0"],
+  "intel_vpu_driver_seen": true,
+  "npu_driver_version": "...",
+  "power_mode": "...",
+  "thermal_profile": "...",
+  "shared_memory_bytes": 0,
+  "status": "runtime_detected"
+}
+```
+
+For strict 258V CPU validation, the CPU artifact must include loader, tokenizer, kernel, backend, and phase fields in addition to benchmark metrics:
+
+```json
+{
+  "machine": "core-ultra-7-258v",
+  "requested_backend": "intel-258v-cpu-avx2",
+  "selected_backend": "intel-258v-cpu-avx2",
+  "runtime_api": "cpu",
+  "loader_mode": "real_gguf",
+  "minimal_loader_fallback_used": false,
+  "tokenizer_source": "gguf|override|sibling-tokenizer-json|sibling-tokenizer-model",
+  "mock_tensors_used": false,
+  "kernel_family": "qk256|i2_s|tl2",
+  "requested_kernel": "qk256-avx2-gemv",
+  "selected_kernel": "qk256-avx2-gemv",
+  "fallback_used": false,
+  "fallback_reason": null,
+  "phase": "prefill|decode_steady_state",
+  "prompt_tokens": 0,
+  "generated_tokens": 0,
+  "tokens_per_second": null,
+  "first_token_latency_ms": null
+}
+```
+
 ## Windows PowerShell Bundle
 
 ```powershell

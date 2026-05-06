@@ -111,6 +111,7 @@ pub struct IntelArc140vProbe {
     pub opencl_device_name: Option<String>,
     pub opencl_driver_version: Option<String>,
     pub level_zero_available: bool,
+    pub level_zero_devices: Vec<String>,
     pub openvino_gpu_visible: bool,
     pub openvino_gpu_device: Option<String>,
     pub openvino_gpu_full_name: Option<String>,
@@ -119,6 +120,42 @@ pub struct IntelArc140vProbe {
     pub failure_reason: Option<String>,
 }
 ```
+
+
+## ARC140V-002 Runtime Probe Contract
+
+The Arc 140V probe must prove exact integrated-GPU identity. Generic Intel GPU visibility is not enough.
+
+Detection priority:
+
+1. Prefer PCI device ID `0x64A0` when the OS exposes it.
+2. Match OpenCL device name or OpenVINO `FULL_DEVICE_NAME` against `Intel(R) Arc(TM) 140V Graphics`.
+3. Record Level Zero device names separately from OpenCL devices.
+4. Record OpenVINO `GPU.0` separately from native OpenCL.
+5. Never let CPU fallback satisfy `available = true`.
+
+`ARC140V-002` should emit a visibility-only receipt before any kernel smoke work:
+
+```json
+{
+  "available": true,
+  "pci_device_id": "0x64A0",
+  "opencl_available": true,
+  "opencl_platform_name": "Intel(R) OpenCL Graphics",
+  "opencl_device_name": "Intel(R) Arc(TM) 140V Graphics",
+  "opencl_driver_version": "...",
+  "level_zero_available": true,
+  "level_zero_devices": ["Intel(R) Arc(TM) 140V Graphics"],
+  "openvino_gpu_visible": true,
+  "openvino_gpu_device": "GPU.0",
+  "openvino_gpu_full_name": "Intel(R) Arc(TM) 140V Graphics",
+  "shared_memory_bytes": 0,
+  "power_mode": "...",
+  "failure_reason": null
+}
+```
+
+The visibility receipt may claim only `runtime_detected`. Kernel smoke, parity, and benchmark claims require later receipts with selected backend, executed kernel or graph, output comparison, and fallback status.
 
 ## Receipt Fields
 

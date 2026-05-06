@@ -207,6 +207,34 @@ Auto mode rules:
 - CPU fallback may be allowed.
 - Receipts and smoke artifacts must record requested backend, selected backend, fallback backend, and fallback reason.
 
+
+### NPU-002-lite implementation contract
+
+Before adding real OpenVINO graph execution, land an identity-only PR that removes ambiguous `npu` routing. The required behavior is:
+
+- Backend selection has explicit `IntelNpu` and `OpenVinoNpu` request variants.
+- Device configuration has explicit `IntelNpu(usize)` and `OpenVinoNpu` variants.
+- `npu`, `intel-npu`, and `openvino-npu` never map to Metal, CUDA, OpenCL, or generic `Gpu(0)`.
+- Strict mode fails before inference when Intel NPU is requested but unavailable.
+- Receipts can represent `requested_backend = "intel-npu"` and `selected_backend = "intel-npu-openvino"` without inventing a GPU or Metal route.
+
+Suggested mapping contract:
+
+```rust
+pub fn map_device_token(token: &str) -> Option<Device> {
+    match token {
+        "cpu" => Some(Device::Cpu),
+        "cuda" | "gpu" => Some(Device::Cuda(0)),
+        "opencl" | "intel-gpu" => Some(Device::OpenCL(0)),
+        "npu" | "intel-npu" | "openvino-npu" => Some(Device::Npu),
+        "metal" => Some(Device::Metal),
+        _ => None,
+    }
+}
+```
+
+`NpuBackend::is_available()` must be an Intel-NPU identity surface. It may consult feature-gated OpenVINO or OS probes, but it must not imply macOS Metal availability or generic GPU availability.
+
 ## Detection Layers
 
 Detection should be layered and conservative.

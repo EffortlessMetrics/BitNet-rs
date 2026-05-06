@@ -128,6 +128,145 @@ The first platform receipt is detection-only:
 
 This receipt does not prove BitNet inference, GPU kernel parity, or NPU subgraph parity.
 
+
+## Runtime Enablement Build-Out Plan
+
+The 258V laptop is the platform validation lane, not the owner of the shared CPU BitNet implementation. The build-out sequence must preserve that separation:
+
+| PR / lane | Purpose | May touch | Must not touch |
+|---|---|---|---|
+| `LNL258V-RUN-001` | Add visibility-only 258V platform probe and receipt schema. | `bitnet-device-probe`, CLI or `xtask` probe entry point, receipt types, this hardware/spec documentation. | QK256 CPU kernels, transformer hot path, model loader behavior. |
+| `NPU-002-lite` | Preserve Intel NPU identity before OpenVINO execution work. | Backend request parsing, device config mapping, strict NPU failure behavior, receipt identity fields. | OpenVINO graph execution, CPU kernels. |
+| `ARC140V-002` | Prove Arc 140V runtime identity separately from CPU and NPU. | Arc probe code, OpenCL/Level Zero/OpenVINO GPU visibility receipts, Arc docs. | CPU kernels, NPU runtime. |
+| `CPU258V-001` | Add 258V CPU-only validation harness after strict CPU loader/tokenizer work lands. | Receipt emission, validation commands, hardware artifacts, campaign docs. | Shared QK256 dispatch, quantized transformer internals unless stacked on CPU-proof work. |
+
+The dependency order is identity first, strict CPU proof second, 258V CPU validation third:
+
+```text
+NPU-002-lite -> ARC140V-002 -> LNL258V-RUN-001
+CPU-BITNET-001/002 remain owned by cpu-proof/i5-8250U
+CPU258V-001 validates the merged strict CPU path on Lunar Lake
+```
+
+### LNL258V-RUN-001 acceptance contract
+
+`LNL258V-RUN-001` should produce one platform-level detection artifact. It records what the laptop can see; it does not run inference and must not claim BitNet correctness or speed.
+
+Required probe shape:
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lnl258vPlatformProbe {
+    pub platform: String,
+    pub os: String,
+    pub arch: String,
+    pub cpu_brand: String,
+    pub cpu_cores: usize,
+    pub cpu_threads: usize,
+    pub cpu_has_avx2: bool,
+    pub cpu_has_avx512: bool,
+    pub opencl_arc_140v_visible: bool,
+    pub opencl_platform_name: Option<String>,
+    pub opencl_device_name: Option<String>,
+    pub opencl_driver_version: Option<String>,
+    pub pci_device_id: Option<String>,
+    pub level_zero_visible: bool,
+    pub level_zero_devices: Vec<String>,
+    pub openvino_version: Option<String>,
+    pub openvino_available_devices: Vec<String>,
+    pub openvino_gpu_device: Option<String>,
+    pub openvino_gpu_full_name: Option<String>,
+    pub openvino_npu_visible: bool,
+    pub openvino_npu_full_name: Option<String>,
+    pub accel_device_present: bool,
+    pub accel_devices: Vec<String>,
+    pub intel_vpu_driver_seen: bool,
+    pub npu_driver_version: Option<String>,
+    pub power_mode: Option<String>,
+    pub thermal_profile: Option<String>,
+    pub shared_memory_bytes: Option<u64>,
+    pub status: String,
+    pub failure_reason: Option<String>,
+}
+
+pub fn probe_lnl258v_platform() -> Lnl258vPlatformProbe;
+```
+
+Minimum JSON fields:
+
+```json
+{
+  "platform": "core-ultra-7-258v",
+  "os": "linux|windows|wsl",
+  "arch": "x86_64",
+  "cpu_brand": "Intel Core Ultra 7 258V",
+  "cpu_cores": 8,
+  "cpu_threads": 8,
+  "cpu_has_avx2": true,
+  "cpu_has_avx512": false,
+  "opencl_arc_140v_visible": true,
+  "opencl_platform_name": "Intel(R) OpenCL Graphics",
+  "opencl_device_name": "Intel(R) Arc(TM) 140V Graphics",
+  "opencl_driver_version": "...",
+  "pci_device_id": "0x64A0",
+  "level_zero_visible": true,
+  "level_zero_devices": ["Intel(R) Arc(TM) 140V Graphics"],
+  "openvino_version": "...",
+  "openvino_available_devices": ["CPU", "GPU.0", "NPU"],
+  "openvino_gpu_device": "GPU.0",
+  "openvino_gpu_full_name": "Intel(R) Arc(TM) 140V Graphics",
+  "openvino_npu_visible": true,
+  "openvino_npu_full_name": "...",
+  "accel_device_present": true,
+  "accel_devices": ["/dev/accel/accel0"],
+  "intel_vpu_driver_seen": true,
+  "npu_driver_version": "...",
+  "status": "runtime_detected"
+}
+```
+
+### CPU258V-001 acceptance contract
+
+`CPU258V-001` starts only after strict loader/tokenizer authority is available from the CPU-proof lane. It records strict CPU behavior on the 258V and must not take over shared CPU implementation work.
+
+Required receipt shape:
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuBitnetValidationReceipt {
+    pub machine: String,
+    pub requested_backend: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub loader_mode: String,
+    pub minimal_loader_fallback_used: bool,
+    pub tokenizer_source: String,
+    pub mock_tensors_used: bool,
+    pub kernel_family: String,
+    pub requested_kernel: String,
+    pub selected_kernel: String,
+    pub fallback_used: bool,
+    pub fallback_reason: Option<String>,
+    pub cpu_features: Vec<String>,
+    pub threads: usize,
+    pub phase: String,
+    pub prompt_tokens: usize,
+    pub generated_tokens: usize,
+    pub tokens_per_second: Option<f64>,
+    pub first_token_latency_ms: Option<f64>,
+}
+```
+
+Strict 258V CPU validation must assert:
+
+- `loader_mode = "real_gguf"`.
+- `minimal_loader_fallback_used = false`.
+- `mock_tensors_used = false`.
+- `requested_backend` and `selected_backend` both identify the CPU AVX2 lane.
+- `requested_kernel` equals `selected_kernel` unless the receipt explicitly records a non-strict fallback failure.
+- `fallback_used = false` for strict proof receipts.
+- Decode and prefill phases are reported separately.
+
 ## Work Plan
 
 ### LNL258V-001 - Add Platform Profile
