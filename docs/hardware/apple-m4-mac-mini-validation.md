@@ -92,6 +92,30 @@ cargo --version
 
 Record command output into the machine profile bundle without committing bulky machine-specific output in docs-only PRs.
 
+## M4-004 Device Probe
+
+M4-004 adds the dependency-free `bitnet-device-probe` Metal visibility probe:
+
+```bash
+cargo test --locked -p bitnet-device-probe --no-default-features --features metal
+```
+
+The probe records:
+
+- `requested_backend = "apple-m4-metal"`.
+- `selected_backend = "apple-m4-metal"` only when macOS reports Metal visibility on an Apple M4-family chip.
+- `runtime_api = "metal"`.
+- macOS version/build and kernel string.
+- Apple chip name when reported by `system_profiler`.
+- CPU and GPU core counts when visible from system tools.
+- unified memory size from `sysctl hw.memsize`.
+- native macOS vs virtualized macOS when `kern.hv_vmm_present` is available.
+- Metal device name and support/family strings when visible.
+- `fallback_used = false`.
+- `proof_stage = "runtime_detected"` or `proof_stage = "runtime_unavailable"`.
+
+This probe must not compile or dispatch Metal kernels, run MPSGraph, claim Neural Engine use, or claim BitNet inference.
+
 ## Expected Artifact Paths
 
 Use the shared hardware artifact convention:

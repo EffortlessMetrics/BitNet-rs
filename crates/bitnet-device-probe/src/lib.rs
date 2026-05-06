@@ -5,6 +5,16 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+#[cfg(feature = "metal")]
+pub mod apple_metal;
+#[cfg(feature = "metal")]
+pub use apple_metal::{
+    APPLE_M4_METAL_BACKEND, APPLE_M4_METAL_PROOF_STAGE_DETECTED,
+    APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE, APPLE_M4_METAL_RUNTIME_API, AppleMetalProbe,
+    AppleMetalProbeText, apple_metal_available_runtime, apple_metal_probe_artifact_path,
+    parse_apple_metal_probe, probe_apple_metal,
+};
+
 pub mod intel_arc;
 pub use intel_arc::{
     IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
@@ -159,6 +169,15 @@ pub const fn probe_gpu() -> GpuCapabilities {
 #[inline]
 pub const fn gpu_compiled() -> bool {
     cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))
+}
+
+/// Check if Apple Metal probe support was compiled into this binary.
+///
+/// This is intentionally separate from [`gpu_compiled`] so Apple Metal,
+/// `MPSGraph`, and CPU/NEON lanes do not collapse into a generic GPU claim.
+#[inline]
+pub const fn apple_metal_compiled() -> bool {
+    cfg!(feature = "metal")
 }
 
 /// Check if a GPU is available at runtime.
