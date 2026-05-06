@@ -26,7 +26,7 @@ Transition note: campaign-local `active.toml` files and append-only `events/*.to
 | A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
 | KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
 | M4-004 | TBD | ready | Add Apple M4 Metal device probe before execution smoke or inference claims |
-| RTX5070TI-003 | TBD | in progress | Preserve RTX 5070 Ti CUDA selected-device identity |
+| RTX5070TI-003 | #3679 | pr_open | Preserve RTX 5070 Ti CUDA selected-device identity |
 | AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
 | AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
 
