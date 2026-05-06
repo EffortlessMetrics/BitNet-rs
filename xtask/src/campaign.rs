@@ -897,9 +897,15 @@ fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> 
     }
 
     let mut claims: BTreeMap<&str, Vec<&GithubPullRequest>> = BTreeMap::new();
+    let mut closeout_claims = BTreeSet::new();
+    let has_merge_closeout_pr = open_prs.iter().any(pull_request_is_merge_closeout);
     for pr in &open_prs {
         for item_id in items.keys() {
             if pull_request_claims_item(pr, item_id) {
+                if pull_request_is_merge_closeout(pr) {
+                    closeout_claims.insert(*item_id);
+                    continue;
+                }
                 claims.entry(item_id).or_default().push(pr);
             }
         }
@@ -956,8 +962,12 @@ fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> 
             }
             continue;
         }
+        if closeout_claims.contains(item_id) {
+            continue;
+        }
 
         match fetch_pull_request(&client, &context, *recorded_pr) {
+            Ok(pr) if pr.merged_at.is_some() && has_merge_closeout_pr => {}
             Ok(pr) if pr.merged_at.is_some() && !merged_events.contains(item_id) => {
                 let merge_ref = pr
                     .merge_commit_sha
@@ -1082,6 +1092,17 @@ fn body_line_claims_item(line: &str, item_id: &str) -> bool {
         || lower.starts_with("scope:")
         || lower.starts_with("boundary:");
     explicit_claim && trimmed.contains(item_id)
+}
+
+fn pull_request_is_merge_closeout(pr: &GithubPullRequest) -> bool {
+    let mut text = pr.title.to_ascii_lowercase();
+    if let Some(body) = &pr.body {
+        text.push('\n');
+        text.push_str(&body.to_ascii_lowercase());
+    }
+    ["closeout", "merged", "merge sha", "merge state", "sync"]
+        .iter()
+        .any(|term| text.contains(term))
 }
 
 fn current_branch_name(root: &Path) -> String {
