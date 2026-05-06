@@ -11,6 +11,7 @@
 
 use bitnet_compat::gguf_fixer::GgufCompatibilityFixer;
 use proptest::prelude::*;
+use proptest::test_runner::Config as ProptestConfig;
 use tempfile::TempDir;
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,13 @@ fn write_temp_gguf(dir: &TempDir, bytes: &[u8], name: &str) -> std::path::PathBu
 // ---------------------------------------------------------------------------
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        // Integration tests don't map cleanly to a crate `lib.rs`/`main.rs` path,
+        // which causes noisy FileFailurePersistence warnings in CI logs.
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// `diagnose()` is deterministic: calling it twice on the same file content
     /// always returns an identical issue list (same order, same strings).
     ///
@@ -120,6 +128,11 @@ proptest! {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     /// Non-existent paths with a `.gguf` extension return an `Err`, never panic.
     ///
     /// The fixer must not crash on valid-looking paths that don't exist on disk.

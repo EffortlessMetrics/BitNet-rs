@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T04:06:47Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-002"
+event = "merged"
+pr = 3680
+merge_sha = "5a42ba619fcc89a4d4c72131f70512b19754e3db"
+actor = "maintainer"
+
+notes = [
+  "Strict tokenizer authority merged.",
+  "Canonical packed layout, scalar truth kernels, AVX2 dispatch, transformer decode, strict receipts, and benchmarks remain follow-up work.",
+]

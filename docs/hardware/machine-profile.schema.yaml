@@ -1,0 +1,132 @@
+schema: 1
+
+required_fields:
+  machine_id: string
+  hardware_lane: string
+  os:
+    name: string
+    version: string
+    kernel_or_build: string
+    native_or_virtualized: string
+
+  cpu:
+    model: string
+    cores: number
+    threads: number
+    flags: list
+    selected_backend: string
+
+  accelerator:
+    requested_backend: string
+    selected_backend: string
+    runtime_api: string
+    device_name: string
+    device_id: string
+    driver_version: string
+    fallback_used: boolean
+    fallback_reason: string|null
+
+  memory:
+    kind: string
+    total_bytes: number|null
+    vram_bytes: number|null
+    shared_memory: boolean
+
+  power:
+    mode: string|null
+    thermal_profile: string|null
+    sustained_run: boolean
+
+common_receipt_fields:
+  requested_backend: string
+  selected_backend: string
+  runtime_api: string
+  resolved_device:
+    name: string
+    device_id: string|null
+    pci_device_id: string|null
+    openvino_device: string|null
+  fallback_used: boolean
+  fallback_reason: string|null
+  proof_stage: string
+  artifact_path: string
+
+lane_extensions:
+  a770:
+    pci_device_id: "0x56A0"
+    rebar_enabled: boolean|null
+    pcie_link: string|null
+    vram_bytes: number
+
+  arc_140v:
+    pci_device_id: "0x64A0"
+    shared_memory_pressure: string|null
+    openvino_gpu_index: string
+
+  npu:
+    runtime_device: "NPU"
+    driver_hint: string|null
+    compiler_version: string|null
+    shape_mode: "static"
+    cache_mode: string|null
+
+  i5_8250u:
+    avx2_detected: boolean
+    avx512_detected: false
+    tdp_context: string|null
+    sustained_frequency: string|null
+
+  amd_5700x:
+    vendor: "AMD"
+    architecture: "Zen 3"
+    cores: 8
+    threads: 16
+    l3_cache_bytes: 33554432
+    avx2_detected: boolean
+    avx512_detected: false
+    memory_platform: "DDR4"
+    tdp_watts: 65
+    sustained_frequency: string|null
+
+  amd_9950x3d:
+    vendor: "AMD"
+    architecture: "Zen 5"
+    cores: 16
+    threads: 32
+    l3_cache_bytes: 134217728
+    avx2_detected: boolean
+    avx512_detected: boolean
+    memory_platform: "DDR5"
+    tdp_watts: 170
+    cache_domain_context: string|null
+    scheduler_context: string|null
+    cooling_context: string|null
+    sustained_frequency: string|null
+
+  apple_m4:
+    chip: string
+    cpu_cores: number
+    gpu_cores: number
+    neural_engine_cores: number
+    unified_memory: true
+    memory_bandwidth_gbps: number
+    metal_device_name: string|null
+    mpsgraph_resolved_target: string|null
+
+  rtx_5070_ti:
+    compute_capability: "12.0"
+    cuda_version: string|null
+    nvml_available: boolean|null
+    vram_bytes: number
+    power_limit_watts: number|null
+    temperature_c: number|null
+    wgpu_backend_api: string|null
+
+valid_proof_stages:
+  - detected
+  - runtime_detected
+  - compile_smoke
+  - kernel_smoke_tested
+  - parity_tested
+  - receipt_backed
+  - benchmark_backed

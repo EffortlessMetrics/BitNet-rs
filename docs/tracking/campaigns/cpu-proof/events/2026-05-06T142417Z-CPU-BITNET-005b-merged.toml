@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T14:24:17Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005b"
+event = "merged"
+pr = 3748
+merge_sha = "0f993f22406bd00cb6c988ffd6fcc4bc21f0b1af"
+actor = "maintainer"
+
+notes = [
+  "Proof-level QK256 requested and selected kernel dispatch merged.",
+  "CPU-BITNET-005c AVX2 parity hardening remains next; no receipts, benchmarks, transformer decode, server, GPU, NPU, or crate collapse are claimed.",
+]

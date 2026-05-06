@@ -18,5 +18,6 @@ serde.workspace = true
 
 [features]
 default = []
+cpu = ["bitnet-common/cpu"]
 cuda = ["dep:bitnet-kernels", "bitnet-kernels/cuda"]
 gpu = ["cuda", "bitnet-kernels/gpu"]

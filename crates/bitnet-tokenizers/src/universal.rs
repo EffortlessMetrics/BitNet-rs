@@ -50,8 +50,12 @@ impl UniversalTokenizer {
         let mmap = MmapFile::open(path)?;
         let reader = GgufReader::new(mmap.as_slice())?;
 
-        let model_type =
-            reader.get_string_metadata("tokenizer.ggml.model").unwrap_or_else(|| "gpt2".into());
+        let model_type = reader.get_string_metadata("tokenizer.ggml.model").ok_or_else(|| {
+            BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: "GGUF missing tokenizer.ggml.model; refusing GPT-2 compatibility guess"
+                    .to_string(),
+            })
+        })?;
 
         let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").unwrap_or_default();
         let vocab_size = tokens.len();

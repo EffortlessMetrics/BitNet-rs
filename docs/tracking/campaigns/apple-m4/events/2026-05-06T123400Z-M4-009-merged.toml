@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:34:00Z"
+campaign = "apple-m4"
+item = "M4-009"
+event = "merged"
+pr = 3732
+merge_sha = "07f8e2e5a9657f792367e5f25355adf12a1afc50"
+actor = "maintainer"
+
+notes = [
+  "M4 benchmark baseline merged for the validated tiny Metal add kernel.",
+  "M4-010 Apple CPU/NEON BitNet reference is ready; no full BitNet-on-Metal inference or broad performance claim is made by this closeout.",
+]

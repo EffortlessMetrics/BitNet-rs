@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T05:31:30Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-004"
+event = "pr_open"
+pr = 3691
+head_sha = "6c2fa736b182570b990c326cb02b7e33b9e068fe"
+actor = "codex"
+
+notes = [
+  "Synced live GitHub PR state for the RTX 5070 Ti CUDA and NVML runtime probe PR.",
+  "Tracker-only update so campaign doctor can reconcile the open PR live lock.",
+]

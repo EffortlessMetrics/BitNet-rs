@@ -1,0 +1,22 @@
+timestamp_utc=2026-05-06T20:15:59Z
+machine_id=intel-i5-8250u-cpu-avx2
+cpu_model=Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
+cores=4
+threads=8
+os=Microsoft Windows 11 Home 10.0.26200 build 26200
+power_scheme=Balanced
+memory=34359738368 bytes DDR4-2400 SODIMM Kingston KF3200C20S4/32GX
+
+dotnet_runtime_intrinsics:
+avx2=true
+fma=true
+avx512f=false
+
+cargo_validation:
+cargo test --locked -p bitnet-cpu-detect --no-default-features --features avx2 -- --nocapture
+result=ok, 4 passed
+
+cargo test --locked -p bitnet-quantization --no-default-features --features "cpu,avx2" --test qk256_avx2_parity_tests -- --nocapture
+result=ok, 17 passed
+
+claim_boundary=CPU scalar/AVX2 selection and parity evidence only; no GPU, OpenVINO, UHD 620, NPU, throughput, or sustained-performance claim.

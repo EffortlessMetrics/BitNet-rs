@@ -11,6 +11,8 @@ pub enum ReceiptError {
     Json(#[from] serde_json::Error),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("validation error: {0}")]
+    Validation(String),
 }
 
 /// A single benchmark measurement for a compute-kernel dispatch.
@@ -90,9 +92,230 @@ impl ReceiptStore {
     }
 }
 
+/// Validate an RTX 5070 Ti CUDA benchmark receipt.
+///
+/// This validator is deliberately strict about backend identity and fallback
+/// counters so a dense, WGPU, CPU-fallback, or generic CUDA run cannot satisfy
+/// the NVIDIA CUDA proof lane.
+pub fn validate_rtx5070ti_cuda_benchmark_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "cuda_benchmark")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", "cuda_benchmark_baseline")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    require_u64(cuda, "selected_device_index")?;
+    let device_name = require_string(cuda, "selected_device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "selected_device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+
+    let benchmark = require_object(receipt, "benchmark")?;
+    require_string_eq(benchmark, "profile", "cuda_tiny_smoke")?;
+    require_string_eq(benchmark, "kernel_id", "cuda_tiny_vector_add")?;
+    require_string_eq(benchmark, "fixture_id", "cuda_tiny_vector_add_1024")?;
+    require_u64_at_least(benchmark, "iterations", 1)?;
+    require_string_eq(benchmark, "cpu_reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(benchmark, "cuda_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_non_negative_number(benchmark, "cpu_reference_ms")?;
+    require_non_negative_number(benchmark, "cuda_total_ms")?;
+    require_non_negative_number(benchmark, "cuda_kernel_ms")?;
+    require_non_negative_number(benchmark, "host_to_device_ms")?;
+    require_non_negative_number(benchmark, "device_to_host_ms")?;
+    require_non_negative_number(benchmark, "speedup_vs_cpu")?;
+    require_non_negative_number(benchmark, "max_abs_error")?;
+    require_non_negative_number(benchmark, "mean_abs_error")?;
+    require_bool_eq(benchmark, "passed", true)?;
+
+    let cold_warm = require_object(benchmark, "cold_warm")?;
+    require_non_negative_number(cold_warm, "compile_ms")?;
+    require_non_negative_number(cold_warm, "first_iteration_total_ms")?;
+    require_u64_at_least(cold_warm, "warm_iterations", 1)?;
+
+    let profiles = receipt
+        .get("profiles")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| validation_error("profiles must be an array"))?;
+    for profile in [
+        "cuda_tiny_smoke",
+        "cuda_fp32_matmul_small",
+        "cuda_i2s_matmul_small",
+        "cuda_i2s_matmul_medium",
+        "cuda_transfer_h2d_d2h",
+    ] {
+        if !profiles
+            .iter()
+            .any(|entry| entry.get("profile").and_then(serde_json::Value::as_str) == Some(profile))
+        {
+            return Err(validation_error(format!("profiles missing {profile}")));
+        }
+    }
+
+    let stats = receipt
+        .get("kernel_stats")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|items| items.first())
+        .ok_or_else(|| validation_error("kernel_stats must contain at least one entry"))?;
+    require_string_eq(stats, "kernel_id", "cuda_tiny_vector_add")?;
+    require_u64_at_least(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_at_least(stats, "host_to_device_bytes", 1)?;
+    require_u64_at_least(stats, "device_to_host_bytes", 1)?;
+    require_u64_at_least(stats, "kernel_launches", 1)?;
+    require_non_negative_number(stats, "kernel_time_ms")?;
+    require_string_eq(stats, "selected_device_name", device_name)?;
+    require_string_eq(stats, "compute_capability", "12.0")?;
+
+    Ok(())
+}
+
+/// Validate an RTX 5070 Ti CUDA benchmark receipt file.
+pub fn validate_rtx5070ti_cuda_benchmark_receipt_file(path: &Path) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt)
+}
+
+fn require_object<'a>(
+    value: &'a serde_json::Value,
+    field: &str,
+) -> Result<&'a serde_json::Value, ReceiptError> {
+    let child =
+        value.get(field).ok_or_else(|| validation_error(format!("{field} must be an object")))?;
+    if !child.is_object() {
+        return Err(validation_error(format!("{field} must be an object")));
+    }
+    Ok(child)
+}
+
+fn require_string<'a>(value: &'a serde_json::Value, field: &str) -> Result<&'a str, ReceiptError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| validation_error(format!("{field} must be a string")))
+}
+
+fn require_non_empty_string(value: &serde_json::Value, field: &str) -> Result<(), ReceiptError> {
+    let actual = require_string(value, field)?;
+    if actual.trim().is_empty() {
+        return Err(validation_error(format!("{field} must not be empty")));
+    }
+    Ok(())
+}
+
+fn require_string_eq(
+    value: &serde_json::Value,
+    field: &str,
+    expected: &str,
+) -> Result<(), ReceiptError> {
+    let actual = require_string(value, field)?;
+    if actual != expected {
+        return Err(validation_error(format!("{field} must be {expected}, got {actual}")));
+    }
+    Ok(())
+}
+
+fn require_bool_eq(
+    value: &serde_json::Value,
+    field: &str,
+    expected: bool,
+) -> Result<(), ReceiptError> {
+    let actual = value
+        .get(field)
+        .and_then(serde_json::Value::as_bool)
+        .ok_or_else(|| validation_error(format!("{field} must be a boolean")))?;
+    if actual != expected {
+        return Err(validation_error(format!("{field} must be {expected}, got {actual}")));
+    }
+    Ok(())
+}
+
+fn require_null(value: &serde_json::Value, field: &str) -> Result<(), ReceiptError> {
+    if !value.get(field).is_some_and(serde_json::Value::is_null) {
+        return Err(validation_error(format!("{field} must be null")));
+    }
+    Ok(())
+}
+
+fn require_u64(value: &serde_json::Value, field: &str) -> Result<u64, ReceiptError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| validation_error(format!("{field} must be an unsigned integer")))
+}
+
+fn require_u64_eq(
+    value: &serde_json::Value,
+    field: &str,
+    expected: u64,
+) -> Result<(), ReceiptError> {
+    let actual = require_u64(value, field)?;
+    if actual != expected {
+        return Err(validation_error(format!("{field} must be {expected}, got {actual}")));
+    }
+    Ok(())
+}
+
+fn require_u64_at_least(
+    value: &serde_json::Value,
+    field: &str,
+    minimum: u64,
+) -> Result<(), ReceiptError> {
+    let actual = require_u64(value, field)?;
+    if actual < minimum {
+        return Err(validation_error(format!("{field} must be >= {minimum}, got {actual}")));
+    }
+    Ok(())
+}
+
+fn require_non_negative_number(value: &serde_json::Value, field: &str) -> Result<(), ReceiptError> {
+    let actual = value
+        .get(field)
+        .and_then(serde_json::Value::as_f64)
+        .ok_or_else(|| validation_error(format!("{field} must be a number")))?;
+    if actual < 0.0 {
+        return Err(validation_error(format!("{field} must be non-negative, got {actual}")));
+    }
+    Ok(())
+}
+
+fn validation_error(message: impl Into<String>) -> ReceiptError {
+    ReceiptError::Validation(message.into())
+}
+
+fn is_rtx5070ti_device_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    normalized.contains("nvidia")
+        && normalized.contains("geforce")
+        && normalized.contains("rtx")
+        && normalized.contains("5070")
+        && normalized.contains("ti")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::io::Write;
 
     fn sample_receipt(name: &str, elapsed_us: u64) -> BenchReceipt {
@@ -216,5 +439,133 @@ mod tests {
 
         ReceiptStore::append(&path, &sample_receipt("k", 1)).unwrap();
         assert!(path.exists());
+    }
+
+    #[test]
+    fn rtx5070ti_cuda_benchmark_receipt_validates() {
+        let receipt = sample_cuda_benchmark_receipt();
+        validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn rtx5070ti_cuda_benchmark_rejects_generic_cuda_backend() {
+        let mut receipt = sample_cuda_benchmark_receipt();
+        receipt["selected_backend"] = json!("cuda");
+        assert!(validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).is_err());
+    }
+
+    #[test]
+    fn rtx5070ti_cuda_benchmark_rejects_fallback() {
+        let mut receipt = sample_cuda_benchmark_receipt();
+        receipt["fallback_used"] = json!(true);
+        assert!(validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).is_err());
+    }
+
+    #[test]
+    fn rtx5070ti_cuda_benchmark_rejects_speedup_claim() {
+        let mut receipt = sample_cuda_benchmark_receipt();
+        receipt["speedup_claim"] = json!(true);
+        assert!(validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).is_err());
+    }
+
+    #[test]
+    fn rtx5070ti_cuda_benchmark_rejects_missing_required_profile() {
+        let mut receipt = sample_cuda_benchmark_receipt();
+        receipt["profiles"] = json!([
+            { "profile": "cuda_tiny_smoke", "status": "measured" }
+        ]);
+        assert!(validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).is_err());
+    }
+
+    #[test]
+    fn committed_rtx5070ti_cuda_benchmark_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json");
+        validate_rtx5070ti_cuda_benchmark_receipt_file(&path).unwrap();
+    }
+
+    fn sample_cuda_benchmark_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "cuda_benchmark",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-06T00:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "claim": "cuda_benchmark_baseline",
+            "speedup_claim": false,
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "selected_device_index": 0,
+                "selected_device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "570.00",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "nvml_available": true,
+                "vram_bytes": 17179869184u64,
+                "power_limit_watts": 300.0,
+                "power_draw_watts": 50.0,
+                "temperature_c": 45.0
+            },
+            "machine": {
+                "cpu": "AMD Ryzen 9 9950X3D",
+                "gpu": "NVIDIA GeForce RTX 5070 Ti"
+            },
+            "benchmark": {
+                "profile": "cuda_tiny_smoke",
+                "kernel_id": "cuda_tiny_vector_add",
+                "fixture_id": "cuda_tiny_vector_add_1024",
+                "input_len": 1024,
+                "iterations": 10,
+                "cold_warm": {
+                    "compile_ms": 1.0,
+                    "first_iteration_total_ms": 1.0,
+                    "warm_iterations": 10
+                },
+                "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+                "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+                "cpu_reference_ms": 0.1,
+                "cuda_total_ms": 0.2,
+                "cuda_kernel_ms": 0.1,
+                "host_to_device_ms": 0.01,
+                "device_to_host_ms": 0.01,
+                "allocation_ms": 0.01,
+                "speedup_vs_cpu": 0.5,
+                "max_abs_error": 0.0,
+                "mean_abs_error": 0.0,
+                "passed": true
+            },
+            "profiles": [
+                { "profile": "cuda_tiny_smoke", "status": "measured" },
+                { "profile": "cuda_transfer_h2d_d2h", "status": "measured" },
+                { "profile": "cuda_fp32_matmul_small", "status": "not_run" },
+                { "profile": "cuda_i2s_matmul_small", "status": "not_run" },
+                { "profile": "cuda_i2s_matmul_medium", "status": "not_run" }
+            ],
+            "kernel_stats": [
+                {
+                    "kernel_id": "cuda_tiny_vector_add",
+                    "invocations": 10,
+                    "fallback_invocations": 0,
+                    "host_to_device_bytes": 81920,
+                    "device_to_host_bytes": 40960,
+                    "kernel_launches": 10,
+                    "kernel_time_ms": 0.1,
+                    "selected_device_index": 0,
+                    "selected_device_name": "NVIDIA GeForce RTX 5070 Ti",
+                    "compute_capability": "12.0"
+                }
+            ],
+            "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json"
+        })
     }
 }

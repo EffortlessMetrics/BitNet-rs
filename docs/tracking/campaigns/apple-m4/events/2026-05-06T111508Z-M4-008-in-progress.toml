@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T11:15:08Z"
+campaign = "apple-m4"
+item = "M4-008"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple backend receipt field work for validated probe, smoke, parity, and MPSGraph artifacts.",
+  "No BitNet inference, QK256, server, benchmark, performance, or Neural Engine claim is in scope.",
+]

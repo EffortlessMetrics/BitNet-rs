@@ -12,5 +12,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN rustup component add llvm-tools-preview
 
-RUN cargo install cargo-llvm-cov --locked && \
-    cargo install cargo-nextest --locked
+RUN cargo install cargo-llvm-cov --version 0.8.4 --locked && \
+    cargo install cargo-nextest --version 0.9.131 --locked

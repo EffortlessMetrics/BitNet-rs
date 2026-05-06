@@ -1,0 +1,48 @@
+{
+  "artifact_kind": "cuda_smoke",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-smoke.json",
+  "claim": "kernel_smoke_tested",
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 34.97,
+    "power_limit_watts": 300.0,
+    "temperature_c": 38.0,
+    "vram_bytes": 17094475776
+  },
+  "error": null,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "input_len": 1024,
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": 4096,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 8192,
+      "invocations": 1,
+      "kernel_id": "cuda_tiny_vector_add",
+      "kernel_launches": 1,
+      "kernel_time_ms": null
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "max_abs_error": 0.0,
+  "mean_abs_error": 0.0,
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "result": "pass",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "2026-05-06T11:27:54Z"
+}

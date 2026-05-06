@@ -116,7 +116,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device to use (cpu, cuda, oneapi, gpu, npu, auto)
+    /// Device/backend to use (cpu, cuda, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
 
@@ -386,6 +386,31 @@ enum Commands {
     /// Show system information
     Info,
 
+    /// Probe selected device identity without launching kernels
+    DeviceSmoke {
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
+    /// Probe Lunar Lake 258V platform visibility without launching kernels
+    LunarLakeProbe {
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
+    /// Compile and launch a tiny CUDA vector-add kernel
+    CudaSmoke {
+        /// CUDA device index to probe and launch on
+        #[arg(long, default_value_t = 0)]
+        device_index: usize,
+
+        /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     #[cfg(feature = "full-cli")]
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
@@ -486,22 +511,23 @@ async fn main() -> Result<()> {
         warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
     }
 
+    let requested_backend_label =
+        cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+
     // Report backend selection at startup so logs and receipts are deterministic.
     {
         use bitnet_common::{BackendRequest, select_backend};
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let request = match cli.device.as_deref() {
-            Some("cuda") => BackendRequest::Cuda,
-            Some("gpu") => BackendRequest::Gpu,
-            Some("oneapi") => BackendRequest::OneApi,
-            Some("cpu") => BackendRequest::Cpu,
-            Some("npu") => BackendRequest::Auto,
-            _ => BackendRequest::Auto,
-        };
+        let request =
+            BackendRequest::from_label(&requested_backend_label).unwrap_or(BackendRequest::Auto);
+        let strict_mode = std::env::var("BITNET_STRICT_MODE")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
         match select_backend(request, &caps) {
-            Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
+            Ok(result) => info!(backend_selection = %result.identity_summary(), "backend selected"),
+            Err(e) if strict_mode => return Err(e.into()),
             Err(e) => warn!(error = %e, "backend selection warning"),
         }
     }
@@ -539,6 +565,7 @@ async fn main() -> Result<()> {
             no_warnings,
         }) => {
             run_simple_generation(
+                &requested_backend_label,
                 model,
                 model_format,
                 architecture,
@@ -587,6 +614,15 @@ async fn main() -> Result<()> {
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
+        Some(Commands::DeviceSmoke { json_out }) => {
+            handle_device_smoke_command(&requested_backend_label, json_out).await
+        }
+        Some(Commands::LunarLakeProbe { json_out }) => {
+            handle_lunar_lake_probe_command(json_out).await
+        }
+        Some(Commands::CudaSmoke { device_index, json_out }) => {
+            handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
@@ -828,6 +864,377 @@ async fn handle_tokenize_command(
     Ok(())
 }
 
+async fn handle_device_smoke_command(
+    requested_backend_label: &str,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported device-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::Cuda | BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "device-smoke currently supports cuda and nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA probe device is unavailable".to_string()))
+    } else {
+        None
+    };
+    let selected_backend = if error.is_none() {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_probe",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": cuda_probe,
+        "claim": "cuda_runtime_probe_recorded",
+        "kernel_execution": false,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn build_lunar_lake_probe_receipt(
+    probe: bitnet_device_probe::Lnl258vPlatformProbe,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "lnl258v_platform_probe",
+        "machine_id": probe.machine_id.clone(),
+        "hardware_lane": "core-ultra-7-258v",
+        "proof_stage": probe.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": "core-ultra-7-258v",
+        "selected_backend": "core-ultra-7-258v",
+        "runtime_api": "platform_probe",
+        "fallback_used": probe.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "platform": probe,
+        "kernel_execution": false,
+        "graph_execution": false,
+        "bitnet_inference": false,
+        "claim": "lunar_lake_runtime_visibility_recorded",
+        "must_not_claim": [
+            "BitNet inference works on 258V",
+            "Arc 140V execution works",
+            "Intel NPU execution works",
+            "NPU accelerates BitNet"
+        ],
+        "artifact_path": artifact_path,
+    })
+}
+
+async fn handle_lunar_lake_probe_command(json_out: Option<std::path::PathBuf>) -> Result<()> {
+    let probe = bitnet_device_probe::probe_lnl258v_platform();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = build_lunar_lake_probe_receipt(probe, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    Ok(())
+}
+
+struct CudaSmokeReceiptFields {
+    result: &'static str,
+    input_len: serde_json::Value,
+    max_abs_error: serde_json::Value,
+    mean_abs_error: serde_json::Value,
+    host_to_device_bytes: serde_json::Value,
+    device_to_host_bytes: serde_json::Value,
+    invocations: u64,
+    fallback_invocations: u64,
+    kernel_launches: u64,
+}
+
+impl Default for CudaSmokeReceiptFields {
+    fn default() -> Self {
+        Self {
+            result: "fail",
+            input_len: serde_json::Value::Null,
+            max_abs_error: serde_json::Value::Null,
+            mean_abs_error: serde_json::Value::Null,
+            host_to_device_bytes: serde_json::Value::Null,
+            device_to_host_bytes: serde_json::Value::Null,
+            invocations: 0,
+            fallback_invocations: 0,
+            kernel_launches: 0,
+        }
+    }
+}
+
+fn run_cuda_smoke_kernel_receipt_fields(
+    cuda_probe: &mut bitnet_device_probe::NvidiaCudaProbe,
+    device_index: usize,
+    error: &mut Option<String>,
+) -> CudaSmokeReceiptFields {
+    #[cfg(feature = "cuda")]
+    {
+        match bitnet_kernels::gpu::run_cuda_tiny_vector_add_smoke(device_index) {
+            Ok(smoke) => {
+                cuda_probe.selected_device_index = Some(smoke.device_info.device_id);
+                cuda_probe.selected_device_name = Some(smoke.device_info.name);
+                cuda_probe.compute_capability = Some(format!(
+                    "{}.{}",
+                    smoke.device_info.compute_capability.0, smoke.device_info.compute_capability.1
+                ));
+                cuda_probe.vram_bytes = Some(smoke.device_info.total_memory as u64);
+
+                if !smoke.passed {
+                    *error = Some(format!(
+                        "tiny CUDA vector add mismatch: max_abs_error={}, mean_abs_error={}",
+                        smoke.max_abs_error, smoke.mean_abs_error
+                    ));
+                }
+
+                CudaSmokeReceiptFields {
+                    result: if smoke.passed { "pass" } else { "fail" },
+                    input_len: serde_json::json!(smoke.input_len),
+                    max_abs_error: serde_json::json!(smoke.max_abs_error),
+                    mean_abs_error: serde_json::json!(smoke.mean_abs_error),
+                    host_to_device_bytes: serde_json::json!(
+                        smoke.kernel_stats.host_to_device_bytes
+                    ),
+                    device_to_host_bytes: serde_json::json!(
+                        smoke.kernel_stats.device_to_host_bytes
+                    ),
+                    invocations: smoke.kernel_stats.invocations,
+                    fallback_invocations: smoke.kernel_stats.fallback_invocations,
+                    kernel_launches: smoke.kernel_stats.kernel_launches,
+                }
+            }
+            Err(err) => {
+                *error = Some(format!("tiny CUDA vector add smoke failed: {err}"));
+                CudaSmokeReceiptFields::default()
+            }
+        }
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = cuda_probe;
+        let _ = device_index;
+        *error = Some("compiled without the cuda feature".to_string());
+        CudaSmokeReceiptFields::default()
+    }
+}
+
+async fn handle_cuda_smoke_command(
+    requested_backend_label: &str,
+    device_index: usize,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+    const KERNEL_ID: &str = "cuda_tiny_vector_add";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported cuda-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "cuda-smoke currently supports nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(device_index));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let mut error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA smoke device is unavailable".to_string()))
+    } else {
+        None
+    };
+
+    let selected_backend = if cuda_probe.available {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let outcome = if error.is_none() {
+        run_cuda_smoke_kernel_receipt_fields(&mut cuda_probe, device_index, &mut error)
+    } else {
+        CudaSmokeReceiptFields::default()
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let claim = if error.is_none() && outcome.result == "pass" {
+        "kernel_smoke_tested"
+    } else {
+        "cuda_kernel_smoke_attempted"
+    };
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_smoke",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": {
+            "available": cuda_probe.available,
+            "device_count": cuda_probe.device_count,
+            "device_index": cuda_probe.selected_device_index,
+            "device_name": cuda_probe.selected_device_name,
+            "compute_capability": cuda_probe.compute_capability,
+            "driver_version": cuda_probe.driver_version,
+            "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+            "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+            "nvrtc_version": cuda_probe.nvrtc_version,
+            "nvml_available": cuda_probe.nvml_available,
+            "vram_bytes": cuda_probe.vram_bytes,
+            "power_limit_watts": cuda_probe.power_limit_watts,
+            "power_draw_watts": cuda_probe.power_draw_watts,
+            "temperature_c": cuda_probe.temperature_c,
+        },
+        "kernel_stats": [
+            {
+                "kernel_id": KERNEL_ID,
+                "invocations": outcome.invocations,
+                "fallback_invocations": outcome.fallback_invocations,
+                "host_to_device_bytes": outcome.host_to_device_bytes,
+                "device_to_host_bytes": outcome.device_to_host_bytes,
+                "kernel_launches": outcome.kernel_launches,
+                "kernel_time_ms": null
+            }
+        ],
+        "input_len": outcome.input_len,
+        "max_abs_error": outcome.max_abs_error,
+        "mean_abs_error": outcome.mean_abs_error,
+        "result": outcome.result,
+        "claim": claim,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn validate_rtx_5070_ti_identity(probe: &bitnet_device_probe::NvidiaCudaProbe) -> Option<String> {
+    match probe.selected_device_name.as_deref() {
+        Some(name) if is_rtx_5070_ti_device_name(name) => None,
+        Some(name) => {
+            Some(format!("requested nvidia-rtx-5070-ti-cuda but selected CUDA device is {name:?}"))
+        }
+        None => Some(
+            "requested nvidia-rtx-5070-ti-cuda but selected CUDA device name was not reported"
+                .to_string(),
+        ),
+    }
+}
+
+fn is_rtx_5070_ti_device_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    normalized.contains("rtx 5070 ti")
+}
+
+fn write_json_output(path: Option<&std::path::PathBuf>, value: &serde_json::Value) -> Result<()> {
+    let json = serde_json::to_string_pretty(value)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create {}", parent.display()))?;
+        }
+        std::fs::write(path, json)
+            .with_context(|| format!("Failed to write JSON to {}", path.display()))?;
+        println!("Wrote {}", path.display());
+    } else {
+        println!("{json}");
+    }
+    Ok(())
+}
+
 async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Result<()> {
     match action {
         ConfigAction::Show => {
@@ -944,9 +1351,204 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
     Ok(())
 }
 
+fn detect_loader_mode_for_path(path: &std::path::Path, is_hf_directory: bool) -> &'static str {
+    if is_hf_directory {
+        return "huggingface";
+    }
+
+    match path.extension().and_then(|ext| ext.to_str()).map(str::to_ascii_lowercase) {
+        Some(ext) if ext == "gguf" => bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+        Some(ext) if ext == "safetensors" => "safetensors",
+        _ => "unknown",
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RunBackendIdentity {
+    requested_backend: String,
+    selected_backend: String,
+    runtime_api: String,
+    fallback_used: bool,
+    fallback_reason: Option<String>,
+}
+
+fn resolve_run_backend_identity(
+    requested_backend_label: &str,
+    strict_backend: bool,
+) -> Result<RunBackendIdentity> {
+    use bitnet_common::{BackendRequest, select_backend};
+    use bitnet_kernels::device_features::current_kernel_capabilities;
+
+    let request =
+        BackendRequest::from_label(requested_backend_label).unwrap_or(BackendRequest::Auto);
+    let caps = current_kernel_capabilities();
+
+    match select_backend(request, &caps) {
+        Ok(result) => Ok(RunBackendIdentity {
+            requested_backend: result.requested_backend(),
+            selected_backend: result.selected_backend(),
+            runtime_api: result.runtime_api().to_string(),
+            fallback_used: result.fallback_used(),
+            fallback_reason: result.fallback_reason().map(str::to_string),
+        }),
+        Err(err) if strict_backend => Err(err.into()),
+        Err(err) => Ok(RunBackendIdentity {
+            requested_backend: request.to_string(),
+            selected_backend: "cpu".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: request != BackendRequest::Auto && request != BackendRequest::Cpu,
+            fallback_reason: Some(err.to_string()),
+        }),
+    }
+}
+
+fn detected_cpu_feature_labels() -> Vec<String> {
+    let features = bitnet_common::runtime_diag::CpuFeatures::detect();
+    let mut labels = Vec::new();
+    if features.neon {
+        labels.push("neon".to_string());
+    }
+    if features.avx512f {
+        labels.push("avx512f".to_string());
+    }
+    if features.avx2 {
+        labels.push("avx2".to_string());
+    }
+    if features.avx {
+        labels.push("avx".to_string());
+    }
+    if features.fma {
+        labels.push("fma".to_string());
+    }
+    if features.sse42 {
+        labels.push("sse4.2".to_string());
+    }
+    if features.sse2 {
+        labels.push("sse2".to_string());
+    }
+    if labels.is_empty() {
+        labels.push("scalar".to_string());
+    }
+    labels
+}
+
+fn cpu_kernel_implementation(quantization: bitnet_common::QuantizationType) -> &'static str {
+    if matches!(quantization, bitnet_common::QuantizationType::I2S) && cfg!(target_arch = "aarch64")
+    {
+        // The current Apple CPU proof path has NEON available, but the packed
+        // GGUF I2_S reference kernel is still scalar. Keep the receipt honest.
+        return "scalar";
+    }
+    bitnet_common::runtime_diag::CpuFeatures::detect().best_simd()
+}
+
+fn effective_thread_count(threads: usize) -> usize {
+    if threads > 0 {
+        return threads;
+    }
+
+    std::env::var("RAYON_NUM_THREADS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|threads| *threads > 0)
+        .unwrap_or_else(|| std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1))
+}
+
+fn kernel_family_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "i2_s",
+        bitnet_common::QuantizationType::TL1 => "tl1",
+        bitnet_common::QuantizationType::TL2 => "tl2",
+    }
+}
+
+fn layout_source_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "gguf_packed_i2_s_reference",
+        bitnet_common::QuantizationType::TL1 => "tl1_reference",
+        bitnet_common::QuantizationType::TL2 => "tl2_reference",
+    }
+}
+
+fn kernel_layout_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
+    match quantization {
+        bitnet_common::QuantizationType::I2S => "gguf_packed_i2_s",
+        bitnet_common::QuantizationType::TL1 => "tl1",
+        bitnet_common::QuantizationType::TL2 => "tl2",
+    }
+}
+
+fn dequantizes_before_compute(quantization: bitnet_common::QuantizationType) -> bool {
+    !matches!(quantization, bitnet_common::QuantizationType::I2S)
+}
+
+fn infer_model_repo(path: &std::path::Path) -> String {
+    let normalized = path.to_string_lossy().to_ascii_lowercase();
+    if normalized.contains("bitnet-b1.58-2b-4t")
+        || normalized.contains("microsoft-bitnet-b1.58-2b-4t")
+    {
+        "microsoft/bitnet-b1.58-2B-4T-gguf".to_string()
+    } else {
+        "local".to_string()
+    }
+}
+
+fn infer_model_architecture(path: &std::path::Path) -> String {
+    if infer_model_repo(path) == "microsoft/bitnet-b1.58-2B-4T-gguf" {
+        "bitnet_b1_58".to_string()
+    } else {
+        "unknown".to_string()
+    }
+}
+
+fn receipt_model_format(
+    path: &std::path::Path,
+    requested_format: &str,
+    is_hf_directory: bool,
+) -> String {
+    if is_hf_directory {
+        return "huggingface".to_string();
+    }
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+        .filter(|ext| ext == "gguf" || ext == "safetensors")
+        .unwrap_or_else(|| requested_format.to_string())
+}
+
+fn infer_tokenizer_label(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+    source: bitnet_tokenizers::auto::TokenizerSource,
+) -> String {
+    if tokenizer.token_to_id("<|eot_id|>").is_some() {
+        "llama3".to_string()
+    } else {
+        source.as_str().to_string()
+    }
+}
+
+fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let mut file =
+        std::fs::File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 1024 * 1024];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
+    requested_backend_label: &str,
     model_path: std::path::PathBuf,
     model_format: String,
     _architecture: Option<String>,
@@ -1032,6 +1634,24 @@ async fn run_simple_generation(
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
 
+    let strict_backend = strict_loader
+        || std::env::var("BITNET_STRICT_MODE")
+            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+    let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
+    bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
+    unsafe {
+        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
+        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
+        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
+        if strict_backend && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
+        {
+            std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
+        } else {
+            std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
+        }
+    }
+
     // Parse and resolve template type
     use bitnet_inference::TemplateType;
     let template_type: TemplateType = if prompt_template == "auto" {
@@ -1063,12 +1683,14 @@ async fn run_simple_generation(
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let loader_mode;
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
     {
         Ok(m) => {
             let cfg = m.config().clone();
+            loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
             (Arc::from(m) as Arc<dyn Model>, cfg)
         }
         Err(e) => {
@@ -1080,6 +1702,14 @@ async fn run_simple_generation(
                 );
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
+            if !strict_loader {
+                unsafe {
+                    std::env::set_var("BITNET_ALLOW_MINIMAL_LOADER", "1");
+                }
+                warn!(
+                    "BITNET_ALLOW_MINIMAL_LOADER=1 enabled by --allow-mock for compatibility fallback"
+                );
+            }
             // Mock fallback
             let load_result = bitnet_models::gguf_simple::load_gguf_full(
                 &model_path,
@@ -1087,6 +1717,8 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
+            loader_mode = load_result.loader_mode.as_str();
+            warn!("GGUF loader mode: {}", loader_mode);
             let mut raw_tensors = std::collections::HashMap::new();
             for (name, qk256) in load_result.i2s_qk256 {
                 let expected_bytes = qk256.rows * qk256.row_stride_bytes;
@@ -1122,140 +1754,77 @@ async fn run_simple_generation(
         }
     };
 
-    // Load tokenizer with auto-discovery
-    // Priority: explicit path ΓåÆ sibling tokenizer.json ΓåÆ parent tokenizer.json ΓåÆ GGUF embedded ΓåÆ mock
+    // Load tokenizer with deterministic CPU-BITNET authority.
+    // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
-    let mut external_tokenizer = false;
+    let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
-    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = {
-        // Try auto-discovery first (handles explicit, sibling, parent)
-        let discovered_path = if tokenizer_path.is_some() {
-            // Explicit path provided
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, tokenizer_path)
-        } else {
-            // Try sibling/parent discovery
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, None)
-        };
-
-        match discovered_path {
-            Ok(path) => {
-                // Found tokenizer via discovery
-                external_tokenizer = true;
-                println!("Loading tokenizer from: {}", path.display());
-
-                match bitnet_tokenizers::load_tokenizer(&path) {
-                    Ok(tok) => tok,
-                    Err(e) => {
-                        if strict_tokenizer {
-                            eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
-                            std::process::exit(EXIT_STRICT_TOKENIZER);
-                        }
-                        if !allow_mock {
-                            anyhow::bail!(
-                                "Failed to load tokenizer from {}: {e}. Use --allow-mock to use mock tokenizer.",
-                                path.display()
-                            );
-                        }
-                        println!("Warning: Using mock tokenizer due to: {e}");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+    let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
+        &model_path,
+        tokenizer_path.as_deref(),
+        effective_strict_tokenizer,
+    ) {
+        Ok(resolution) => {
+            match resolution.source {
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+                | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+                    if let Some(path) = &resolution.path {
+                        println!("Loading tokenizer from: {}", path.display());
                     }
                 }
+                bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => {
+                    println!("Successfully loaded tokenizer from GGUF metadata");
+                }
+                bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {}
             }
-            Err(_discovery_err) => {
-                if is_hf_directory {
-                    // For HF directories, check for tokenizer.json inside the model dir
-                    let hf_tok_path = model_path.join("tokenizer.json");
-                    if hf_tok_path.exists() {
-                        println!("Loading tokenizer from HuggingFace directory...");
-                        external_tokenizer = true;
-                        match bitnet_tokenizers::load_tokenizer(&hf_tok_path) {
-                            Ok(tok) => tok,
-                            Err(e) => {
-                                if strict_tokenizer {
-                                    eprintln!("Strict tokenizer failed: {e}");
-                                    std::process::exit(EXIT_STRICT_TOKENIZER);
-                                }
-                                if !allow_mock {
-                                    anyhow::bail!(
-                                        "Failed to load tokenizer from {}: {e}",
-                                        hf_tok_path.display()
-                                    );
-                                }
-                                println!("Warning: Using mock tokenizer due to: {e}");
-                                std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                            }
-                        }
-                    } else if strict_tokenizer {
-                        eprintln!(
-                            "Strict tokenizer failed: no tokenizer.json in {}",
-                            model_path.display()
-                        );
-                        std::process::exit(EXIT_STRICT_TOKENIZER);
-                    } else if !allow_mock {
-                        anyhow::bail!(
-                            "No tokenizer.json found in HuggingFace model directory: {}\n\
-                             Provide --tokenizer or use --allow-mock",
-                            model_path.display()
-                        );
-                    } else {
-                        println!("Warning: Using mock tokenizer (no tokenizer.json in HF dir)");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                    }
+            resolution
+        }
+        Err(e) => {
+            if effective_strict_tokenizer {
+                eprintln!("Strict tokenizer failed: {e}");
+                std::process::exit(EXIT_STRICT_TOKENIZER);
+            }
+            if !allow_mock {
+                let model_dir = if is_hf_directory {
+                    model_path.as_path()
                 } else {
-                    // Discovery failed, try GGUF embedded as fallback
-                    println!("No external tokenizer found, attempting to load from GGUF model...");
-
-                    // Read the GGUF file to get tokenizer metadata
-                    let gguf_data = std::fs::read(&model_path)
-                        .context("Failed to read GGUF file for tokenizer extraction")?;
-                    let reader = bitnet_models::GgufReader::new(&gguf_data)
-                        .context("Failed to parse GGUF for tokenizer extraction")?;
-
-                    // Capture metadata counts
-                    let n_tensors = reader.tensor_count() as usize;
-                    let n_kv = reader.metadata_keys().len();
-                    gguf_metadata = Some((n_kv, n_tensors));
-
-                    match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-                        Ok(tok) => {
-                            println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                            tok
-                        }
-                        Err(e) => {
-                            if strict_tokenizer {
-                                eprintln!(
-                                    "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
-                                );
-                                std::process::exit(EXIT_STRICT_TOKENIZER);
-                            }
-                            if !allow_mock {
-                                // Provide actionable error message
-                                let model_dir = model_path
-                                    .parent()
-                                    .unwrap_or_else(|| std::path::Path::new("."));
-                                anyhow::bail!(
-                                    "Failed to load tokenizer from GGUF: {e}\n\
-                                 \n\
-                                 No tokenizer found. Solutions:\n\
-                                 1. Download tokenizer:\n\
-                                    cargo run -p xtask -- tokenizer --into {}\n\
-                                 2. Provide explicit tokenizer path:\n\
-                                    --tokenizer /path/to/tokenizer.json\n\
-                                 3. Use mock tokenizer for testing:\n\
-                                    --allow-mock",
-                                    model_dir.display()
-                                );
-                            }
-                            println!("Warning: Using mock tokenizer due to: {e}");
-                            std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                        }
-                    }
-                } // end GGUF else branch
+                    model_path.parent().unwrap_or_else(|| std::path::Path::new("."))
+                };
+                anyhow::bail!(
+                    "{e}\n\
+                     \n\
+                     No tokenizer found. Solutions:\n\
+                     1. Download tokenizer:\n\
+                        cargo run -p xtask -- tokenizer --into {}\n\
+                     2. Provide explicit tokenizer path:\n\
+                        --tokenizer /path/to/tokenizer.json\n\
+                     3. Use mock tokenizer for testing only:\n\
+                        --allow-mock",
+                    model_dir.display()
+                );
+            }
+            println!("Warning: Using mock tokenizer due to: {e}");
+            bitnet_tokenizers::auto::TokenizerResolution {
+                tokenizer: std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new()),
+                source: bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback,
+                strict: false,
+                path: None,
             }
         }
     };
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+
+    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+        let gguf_data = std::fs::read(&model_path)
+            .context("Failed to read GGUF file for tokenizer metadata")?;
+        let reader = bitnet_models::GgufReader::new(&gguf_data)
+            .context("Failed to parse GGUF for tokenizer metadata")?;
+        gguf_metadata = Some((reader.metadata_keys().len(), reader.tensor_count() as usize));
+    }
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -1577,9 +2146,16 @@ async fn run_simple_generation(
         let generated_text = tokenizer.decode(&generated_tokens)?;
 
         // Get tokenizer info
+        let tokenizer_source_str = tokenizer_source.as_str();
         let tokenizer_info = serde_json::json!({
             "type": "sentencepiece",
-            "origin": if external_tokenizer { "external" } else { "embedded" },
+            "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+                "embedded"
+            } else {
+                "external"
+            },
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
@@ -1599,9 +2175,60 @@ async fn run_simple_generation(
             "greedy": greedy,
             "deterministic": deterministic,
         });
+        let loader_info = serde_json::json!({
+            "mode": loader_mode,
+            "minimal_fallback_allowed": std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1"),
+            "minimal_fallback_disabled": std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+                || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1"),
+            "minimal_loader_fallback_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+            "tokenizer_source": tokenizer_source_str,
+            "mock_tensors_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
+        });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
-        let output = serde_json::json!({
+        let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
+        let kernel_implementation =
+            cpu_kernel_implementation(config.quantization.quantization_type);
+        let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
+        let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
+        let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
+        let dequantizes_before_compute =
+            dequantizes_before_compute(config.quantization.quantization_type);
+        let model_sha256 = compute_model_sha256(&model_path)?;
+        let model_repo = infer_model_repo(&model_path);
+        let canonical_bitnet_model = model_repo == "microsoft/bitnet-b1.58-2B-4T-gguf";
+        let model_architecture = infer_model_architecture(&model_path);
+        let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
+        let model_file =
+            model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+        let thread_count = effective_thread_count(threads);
+        let cpu_features = detected_cpu_feature_labels();
+        let fallback_reason = backend_identity.fallback_reason.clone();
+        let requested_backend = backend_identity.requested_backend.as_str();
+        let selected_backend = backend_identity.selected_backend.as_str();
+        let runtime_api = backend_identity.runtime_api.as_str();
+        let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
+        let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let strict_cpu_reference_artifact = strict_backend
+            && canonical_bitnet_model
+            && runtime_api == "cpu"
+            && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str();
+        let artifact_kind = if strict_cpu_reference_artifact {
+            "strict_bitnet_cpu_reference"
+        } else {
+            "inference_result"
+        };
+        let mut output = serde_json::json!({
+            "schema_version": "1.0.0",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "artifact_kind": artifact_kind,
+            "artifact_path": json_path.display().to_string(),
+            "requested_backend": requested_backend,
+            "selected_backend": selected_backend,
+            "runtime_api": runtime_api,
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": fallback_reason,
             "prompt": prompt,
             "text": generated_text,
             "tokens": {
@@ -1619,8 +2246,78 @@ async fn run_simple_generation(
                 "tokens_per_second": tok_per_sec,
                 "decoded_tokens": generated_tokens.len(),
             },
+            "model": {
+                "repo": model_repo,
+                "file": model_file,
+                "path": model_path.display().to_string(),
+                "sha256": model_sha256,
+                "format": model_format_label,
+                "architecture": model_architecture,
+                "context_length": config.model.max_position_embeddings,
+                "tokenizer": tokenizer_label,
+                "vocab_size": tokenizer.vocab_size(),
+                "loader_mode": loader_mode,
+            },
+            "bitnet": {
+                "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
+                "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
+                "kernel_format": kernel_family,
+                "kernel_family": kernel_family,
+                "execution_phase": "decode",
+                "layout_source": layout_source,
+                "fallback_layout": serde_json::Value::Null,
+            },
+            "execution": {
+                "phase": "decode",
+                "prompt_tokens": prompt_tokens_len,
+                "generated_tokens": generated_tokens.len(),
+                "batch_size": 1,
+                "thread_count": thread_count,
+                "requested_backend": requested_backend,
+                "selected_backend": selected_backend,
+                "runtime_api": runtime_api,
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            },
+            "execution_coverage": {
+                "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
+                "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
+                "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                "unsupported_ops": bitnet_linear_coverage.unsupported_ops,
+                "execution_claim": bitnet_linear_coverage.execution_claim,
+            },
+            "kernel": {
+                "family": kernel_family,
+                "implementation": kernel_implementation,
+                "layout": kernel_layout,
+                "dequantizes_before_compute": dequantizes_before_compute,
+                "kernel_id": selected_kernel.as_str(),
+            },
+            "cpu": {
+                "arch": std::env::consts::ARCH,
+                "features": &cpu_features,
+                "threads": thread_count,
+            },
+            "strict_provenance": {
+                "requested_backend": requested_backend,
+                "selected_backend": selected_backend,
+                "requested_kernel": selected_kernel.as_str(),
+                "selected_kernel": selected_kernel.as_str(),
+                "loader_mode": loader_mode,
+                "tokenizer_source": tokenizer_source_str,
+                "model_family": "bitnet",
+                "quant_format": format!("{}", config.quantization.quantization_type),
+                "cpu_features": &cpu_features,
+                "thread_count": thread_count,
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+                "prompt_tokens": prompt_tokens_len,
+                "decode_tokens": generated_tokens.len(),
+                "decode_tps": tok_per_sec,
+            },
             "counts": counts,
             "tokenizer": tokenizer_info,
+            "loader": loader_info,
             "gen_policy": gen_policy,
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {
@@ -1634,8 +2331,14 @@ async fn run_simple_generation(
                 None
             },
         });
-        std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
-        println!("JSON output written to: {}", json_path.display());
+        if let Some(apple_machine) = apple_machine
+            && let Some(object) = output.as_object_mut()
+        {
+            object.insert("machine_id".to_string(), apple_machine["machine_id"].clone());
+            object.insert("resolved_device".to_string(), apple_machine["resolved_device"].clone());
+            object.insert("apple".to_string(), apple_machine);
+        }
+        write_json_output(Some(&json_path), &output)?;
     }
 
     // Dump IDs if requested
@@ -1758,6 +2461,277 @@ fn compute_rms(xs: &[f32]) -> f32 {
     }
     let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
     (sum_sq / (xs.len() as f32)).sqrt()
+}
+
+fn apple_machine_receipt_json(
+    requested_backend: &str,
+    selected_backend: &str,
+) -> Option<serde_json::Value> {
+    if !is_apple_m4_backend_label(requested_backend) && !is_apple_m4_backend_label(selected_backend)
+    {
+        return None;
+    }
+
+    let probe = probe_apple_cli_machine();
+    Some(apple_machine_receipt_json_from_probe(&probe))
+}
+
+fn is_apple_m4_backend_label(label: &str) -> bool {
+    label.trim().to_ascii_lowercase().starts_with("apple-m4-")
+}
+
+#[derive(Debug, Clone, Default)]
+struct AppleCliMachineProbe {
+    chip: Option<String>,
+    cpu_cores: Option<usize>,
+    gpu_cores: Option<usize>,
+    unified_memory: Option<bool>,
+    unified_memory_bytes: Option<u64>,
+    macos_version: Option<String>,
+    macos_build: Option<String>,
+    native_or_virtualized: Option<String>,
+    metal_visible: bool,
+}
+
+fn probe_apple_cli_machine() -> AppleCliMachineProbe {
+    if std::env::consts::OS != "macos" {
+        return AppleCliMachineProbe {
+            native_or_virtualized: Some("not-macos".to_string()),
+            ..AppleCliMachineProbe::default()
+        };
+    }
+
+    let sw_vers = command_stdout_text("sw_vers", &[]).0;
+    let hardware = command_stdout_text("system_profiler", &["SPHardwareDataType"]).0;
+    let displays = command_stdout_text("system_profiler", &["SPDisplaysDataType"]).0;
+    let (metal, metal_success) = command_stdout_text("system_profiler", &["SPMetalDataType"]);
+    let memsize = command_stdout_text("sysctl", &["hw.memsize"]).0;
+    let virtualization = command_stdout_text("sysctl", &["kern.hv_vmm_present"]).0;
+
+    let chip = parse_receipt_colon_value(&hardware, "Chip")
+        .or_else(|| parse_receipt_colon_value(&metal, "Chipset Model"))
+        .or_else(|| parse_receipt_colon_value(&displays, "Chipset Model"));
+    let unified_memory = if chip.as_deref().is_some_and(|value| value.starts_with("Apple M")) {
+        Some(true)
+    } else if chip.is_some() {
+        Some(false)
+    } else {
+        None
+    };
+
+    AppleCliMachineProbe {
+        chip,
+        cpu_cores: parse_receipt_colon_value(&hardware, "Total Number of Cores")
+            .and_then(|value| parse_receipt_first_usize(&value)),
+        gpu_cores: parse_receipt_colon_value(&metal, "Total Number of Cores")
+            .or_else(|| parse_receipt_colon_value(&displays, "Total Number of Cores"))
+            .and_then(|value| parse_receipt_first_usize(&value)),
+        unified_memory,
+        unified_memory_bytes: parse_receipt_colon_value(&memsize, "hw.memsize").and_then(|value| {
+            value.split_whitespace().next().and_then(|number| number.parse::<u64>().ok())
+        }),
+        macos_version: parse_receipt_colon_value(&sw_vers, "ProductVersion"),
+        macos_build: parse_receipt_colon_value(&sw_vers, "BuildVersion"),
+        native_or_virtualized: parse_receipt_virtualization_state(&virtualization),
+        metal_visible: (metal_success && receipt_metal_text_reports_visibility(&metal))
+            || receipt_metal_text_reports_visibility(&displays),
+    }
+}
+
+fn command_stdout_text(command: &str, args: &[&str]) -> (String, bool) {
+    std::process::Command::new(command)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map_or_else(
+            |_| (String::new(), false),
+            |output| {
+                (String::from_utf8_lossy(&output.stdout).into_owned(), output.status.success())
+            },
+        )
+}
+
+fn parse_receipt_colon_value(output: &str, key: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        let trimmed = line.trim();
+        let value = trimmed.strip_prefix(key)?.trim_start().strip_prefix(':')?.trim();
+        (!value.is_empty()).then(|| value.to_owned())
+    })
+}
+
+fn parse_receipt_first_usize(value: &str) -> Option<usize> {
+    let mut digits = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_digit() {
+            digits.push(ch);
+        } else if !digits.is_empty() {
+            break;
+        }
+    }
+    digits.parse().ok()
+}
+
+fn parse_receipt_virtualization_state(output: &str) -> Option<String> {
+    let value = parse_receipt_colon_value(output, "kern.hv_vmm_present")?;
+    match value.split_whitespace().next() {
+        Some("0") => Some("native-macos".to_string()),
+        Some("1") => Some("virtualized-macos".to_string()),
+        _ => Some("unknown".to_string()),
+    }
+}
+
+fn receipt_metal_text_reports_visibility(output: &str) -> bool {
+    let lower = output.to_ascii_lowercase();
+    lower.contains("metal")
+        && (lower.contains("chipset model")
+            || lower.contains("metal support")
+            || lower.contains("metal family")
+            || lower.contains("gpu"))
+}
+
+fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_json::Value {
+    let mut resolved_device = serde_json::Map::new();
+    resolved_device.insert(
+        "chip".to_string(),
+        serde_json::Value::String(probe.chip.clone().unwrap_or_else(|| "unknown".to_string())),
+    );
+    if let Some(cpu_cores) = probe.cpu_cores {
+        resolved_device.insert("cpu_cores".to_string(), serde_json::json!(cpu_cores));
+    }
+    if let Some(gpu_cores) = probe.gpu_cores {
+        resolved_device.insert("gpu_cores".to_string(), serde_json::json!(gpu_cores));
+    }
+    if let Some(unified_memory) = probe.unified_memory {
+        resolved_device.insert("unified_memory".to_string(), serde_json::json!(unified_memory));
+    }
+    if let Some(unified_memory_bytes) = probe.unified_memory_bytes {
+        resolved_device
+            .insert("unified_memory_bytes".to_string(), serde_json::json!(unified_memory_bytes));
+    }
+
+    serde_json::json!({
+        "machine_id": "apple-m4-mac-mini",
+        "resolved_device": resolved_device,
+        "macos": {
+            "version": probe.macos_version,
+            "build": probe.macos_build,
+            "native_or_virtualized": probe.native_or_virtualized,
+        },
+        "metal_visible": probe.metal_visible,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apple_cpu_neon_identity_is_preserved_or_visible_fallback() {
+        let identity = resolve_run_backend_identity("apple-m4-cpu-neon", false).unwrap();
+
+        assert_eq!(identity.requested_backend, "apple-m4-cpu-neon");
+        assert_eq!(identity.runtime_api, "cpu");
+        assert!(
+            identity.selected_backend == "apple-m4-cpu-neon" || identity.selected_backend == "cpu",
+            "unexpected selected backend: {}",
+            identity.selected_backend
+        );
+        if identity.selected_backend == "cpu" {
+            assert!(identity.fallback_used);
+            assert!(identity.fallback_reason.is_some());
+        }
+    }
+
+    #[test]
+    fn i2s_receipt_kernel_family_is_stable() {
+        assert_eq!(kernel_family_for_quantization(bitnet_common::QuantizationType::I2S), "i2_s");
+    }
+
+    #[test]
+    fn i2s_receipt_records_packed_reference_layout() {
+        assert_eq!(
+            layout_source_for_quantization(bitnet_common::QuantizationType::I2S),
+            "gguf_packed_i2_s_reference"
+        );
+        assert_eq!(
+            kernel_layout_for_quantization(bitnet_common::QuantizationType::I2S),
+            "gguf_packed_i2_s"
+        );
+        assert!(!dequantizes_before_compute(bitnet_common::QuantizationType::I2S));
+    }
+
+    #[test]
+    fn apple_i2s_receipt_does_not_overclaim_neon_kernel() {
+        #[cfg(target_arch = "aarch64")]
+        assert_eq!(cpu_kernel_implementation(bitnet_common::QuantizationType::I2S), "scalar");
+    }
+
+    #[test]
+    fn known_bitnet_model_path_records_canonical_repo() {
+        let repo = infer_model_repo(std::path::Path::new(
+            "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+        ));
+
+        assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
+
+    #[test]
+    fn apple_m4_receipt_includes_resolved_machine_fields() {
+        let probe = AppleCliMachineProbe {
+            chip: Some("Apple M4".to_string()),
+            cpu_cores: Some(10),
+            gpu_cores: Some(10),
+            unified_memory: Some(true),
+            unified_memory_bytes: Some(17_179_869_184),
+            macos_version: Some("15.4".to_string()),
+            macos_build: Some("24E248".to_string()),
+            native_or_virtualized: Some("native-macos".to_string()),
+            metal_visible: true,
+        };
+        let receipt = apple_machine_receipt_json_from_probe(&probe);
+
+        assert_eq!(receipt["machine_id"], "apple-m4-mac-mini");
+        assert_eq!(receipt["resolved_device"]["chip"], "Apple M4");
+        assert_eq!(receipt["resolved_device"]["cpu_cores"], 10);
+        assert_eq!(receipt["resolved_device"]["gpu_cores"], 10);
+        assert_eq!(receipt["resolved_device"]["unified_memory"], true);
+        assert_eq!(receipt["resolved_device"]["unified_memory_bytes"], 17_179_869_184_u64);
+        assert_eq!(receipt["macos"]["native_or_virtualized"], "native-macos");
+        assert_eq!(receipt["metal_visible"], true);
+    }
+
+    #[test]
+    fn non_apple_backend_does_not_probe_apple_machine_fields() {
+        assert!(apple_machine_receipt_json("cpu", "cpu").is_none());
+    }
+
+    #[test]
+    fn apple_receipt_metal_visibility_accepts_display_profiler_output() {
+        assert!(receipt_metal_text_reports_visibility(
+            "Graphics/Displays:\n\n    Apple M4:\n      Chipset Model: Apple M4\n      Metal Support: Metal 4\n",
+        ));
+    }
+
+    #[test]
+    fn lunar_lake_probe_receipt_is_visibility_only() {
+        let probe = bitnet_device_probe::probe_lnl258v_platform();
+        let receipt = build_lunar_lake_probe_receipt(
+            probe,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/platform-probe.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "lnl258v_platform_probe");
+        assert_eq!(receipt["hardware_lane"], "core-ultra-7-258v");
+        assert_eq!(receipt["proof_stage"], "runtime_detected");
+        assert_eq!(receipt["runtime_api"], "platform_probe");
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["fallback_used"], false);
+        assert!(receipt["platform"]["cpu"]["has_avx512"].is_boolean());
+    }
 }
 
 /// Show system information

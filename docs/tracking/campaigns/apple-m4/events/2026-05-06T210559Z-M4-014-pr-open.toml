@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T21:05:59Z"
+campaign = "apple-m4"
+item = "M4-014"
+event = "pr_open"
+actor = "codex"
+pr = 3789
+head_sha = "53f38bb959f7a065c1b58263483714f4304f8d42"
+branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
+
+notes = [
+  "Opened strict BitNet M4 proof PR.",
+  "Live proof emitted a strict real-GGUF apple-m4-cpu-neon receipt with fallback_used=false and Apple resolved-device fields.",
+  "No Metal BitNet inference, QK256 on Metal, Neural Engine execution, server inference, or general performance claim.",
+]

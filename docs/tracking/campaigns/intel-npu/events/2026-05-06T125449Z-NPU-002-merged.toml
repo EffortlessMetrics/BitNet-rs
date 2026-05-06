@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:54:49Z"
+campaign = "intel-npu"
+item = "NPU-002"
+event = "merged"
+pr = 3722
+merge_sha = "20688198547dbb29a14e31fbdcf46c8c703a2a86"
+actor = "maintainer"
+
+notes = [
+  "Intel NPU backend identity merged.",
+  "NPU runtime detection, OpenVINO graph smoke, and BitNet inference remain follow-up work.",
+]

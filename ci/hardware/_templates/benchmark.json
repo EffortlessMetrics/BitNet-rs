@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "artifact_kind": "benchmark",
+  "machine_id": "TBD",
+  "hardware_lane": "TBD",
+  "timestamp_utc": "TBD",
+  "requested_backend": "TBD",
+  "selected_backend": "TBD",
+  "runtime_api": "TBD",
+  "power": {
+    "mode": null,
+    "thermal_profile": null,
+    "sustained_run": false
+  },
+  "timing": {
+    "model_load_ms": null,
+    "tokenize_ms": null,
+    "prefill_ms": null,
+    "first_token_ms": null,
+    "decode_steady_state_tok_s": null,
+    "sampling_ms_per_token": null,
+    "total_ms": null
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "artifact_path": "ci/hardware/<machine-id>/<date>/benchmark.json"
+}
