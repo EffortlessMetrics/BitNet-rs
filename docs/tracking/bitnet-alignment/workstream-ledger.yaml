@@ -1844,7 +1844,7 @@ items:
 
   - id: M4-002
     title: Add M4 machine profile and probe bundle
-    state: pr_open
+    state: merged
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1871,6 +1871,7 @@ items:
       - git diff --check
     notes:
       - Docs/artifact-prep only; do not touch kernels, QK256, server inference, or dependency manifests.
+      - Merged in #3627 as 6362101c3249a0758100d22c31e084eba37c387b; no runtime execution, kernels, dependencies, or bulky artifacts were added.
     followups:
       - M4-003
       - M4-004
@@ -1882,7 +1883,7 @@ items:
 
   - id: M4-003
     title: Preserve Apple backend identity
-    state: proposed
+    state: ready
     priority: P1
     workstream: apple_silicon
     depends_on:
