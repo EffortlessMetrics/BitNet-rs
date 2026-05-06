@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T18:46:45Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005c"
+event = "merged"
+pr = 3753
+merge_sha = "653839943eb177e590a750bc3ce33934eb27039a"
+actor = "maintainer"
+
+notes = [
+  "AVX2 decode GEMV parity hardening merged against the scalar QK256 oracle.",
+  "CPU-BITNET-006 real transformer decode is next; no strict receipts, benchmarks, server, GPU, NPU, or crate collapse are claimed.",
+]
