@@ -494,6 +494,7 @@ dependencies = [
  "bitnet-cli-config-core",
  "bitnet-cli-sampling-core",
  "bitnet-common",
+ "bitnet-device-probe",
  "bitnet-eval-core",
  "bitnet-ggml-ffi",
  "bitnet-inference",
@@ -677,12 +678,15 @@ dependencies = [
  "ash",
  "bitnet-common",
  "bitnet-intel-gpu-id",
+ "cudarc 0.17.8",
  "insta",
  "libloading 0.8.9",
  "log",
  "opencl3",
  "pollster",
  "proptest",
+ "serde",
+ "serde_json",
  "serial_test",
  "temp-env",
  "wgpu",
@@ -1051,6 +1055,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-gguf",
+ "bitnet-qk256-layout-core",
  "bitnet-quantization",
  "bitnet-st2gguf",
  "bitnet-test-fixtures-core",
@@ -1196,6 +1201,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-qk256-layout-core",
  "bitnet-quantization-bits",
  "bytemuck",
  "candle-core",
@@ -1399,6 +1405,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "bitnet-api-key-auth-core",
  "bitnet-api-versioning-core",
  "bitnet-client-ip-core",
@@ -1448,6 +1455,8 @@ dependencies = [
  "tracing-appender",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "uselesskey",
+ "uselesskey-jsonwebtoken",
  "uuid",
  "vergen-gix",
  "walkdir",
@@ -8793,6 +8802,157 @@ dependencies = [
  "idna",
  "percent-encoding",
  "serde",
+]
+
+[[package]]
+name = "uselesskey"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96b699dcd2fe0ab8ee5b415da7b8eb9fb27f9f31d89c6349ea4ac26ce82b5e8f"
+dependencies = [
+ "uselesskey-core",
+ "uselesskey-hmac",
+]
+
+[[package]]
+name = "uselesskey-core"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c61a36f8ac29336006b4ca03f78f12e34e43964a0bd9d1ff334b42675cd74aed"
+dependencies = [
+ "rand_chacha 0.3.1",
+ "thiserror 2.0.18",
+ "uselesskey-core-cache",
+ "uselesskey-core-factory",
+ "uselesskey-core-id",
+ "uselesskey-core-negative",
+ "uselesskey-core-sink",
+]
+
+[[package]]
+name = "uselesskey-core-cache"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fe24e6fffaa91e0467d19e49749810942341a973870a16409128c28c8772540"
+dependencies = [
+ "dashmap",
+ "spin",
+ "uselesskey-core-id",
+]
+
+[[package]]
+name = "uselesskey-core-factory"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4773ce6e936d7a8030cc7a5dce244a6716feaac6c285abacf9624772e239eca9"
+dependencies = [
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
+ "uselesskey-core-cache",
+ "uselesskey-core-id",
+]
+
+[[package]]
+name = "uselesskey-core-hash"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a033348427ea4ef1bccdffd0e82d37d838a39d0bfc21d17796ed2f8bee55d9d"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
+name = "uselesskey-core-hmac-spec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd6ff4c0724e3c445014222e47078b033c72c1a37b1265f17f2c246b4f2f577f"
+
+[[package]]
+name = "uselesskey-core-id"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f87a3fdc12173dab526dff81813cfabe2b0c5b565660306dc4485592a55b4aae"
+dependencies = [
+ "uselesskey-core-hash",
+ "uselesskey-core-seed",
+]
+
+[[package]]
+name = "uselesskey-core-kid"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a024c1f2966436baa4e302fa5bc878312f4526d9a1a624575b421776245fb7c"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+]
+
+[[package]]
+name = "uselesskey-core-negative"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8db160b7424fa04d1bbe69d9b8cde990a0c6b1a744122c7d9046318ce9e0784"
+dependencies = [
+ "uselesskey-core-negative-der",
+ "uselesskey-core-negative-pem",
+]
+
+[[package]]
+name = "uselesskey-core-negative-der"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5be41e3fcadac186f9ad88852eb3b2a9b4905b3c6dfbeb2252b6cc44ba0c730"
+dependencies = [
+ "uselesskey-core-hash",
+]
+
+[[package]]
+name = "uselesskey-core-negative-pem"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "804b7f55793d170397c73a98a883a4fde193d2f86ab49a6769c9aa33c0465567"
+dependencies = [
+ "uselesskey-core-hash",
+]
+
+[[package]]
+name = "uselesskey-core-seed"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0664d542017cd3c2a0444547a46ed533c93de60e8baddc9e3c60b53cb4f726fc"
+dependencies = [
+ "blake3",
+]
+
+[[package]]
+name = "uselesskey-core-sink"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "650162c195beeb6e746822fb0760e62e9d71df66b129192d315d63f08f9d82c1"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
+name = "uselesskey-hmac"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "433957b0edee4a3c2e946af20bed2fc1cab0da6f9a2763d7e26cd8f8d974caa4"
+dependencies = [
+ "rand_core 0.6.4",
+ "uselesskey-core",
+ "uselesskey-core-hmac-spec",
+ "uselesskey-core-kid",
+]
+
+[[package]]
+name = "uselesskey-jsonwebtoken"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "421501f9364f675f0c98dcc28721ea02434e68d890daa01b0758a905fed2cd39"
+dependencies = [
+ "jsonwebtoken",
+ "uselesskey-hmac",
 ]
 
 [[package]]

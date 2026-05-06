@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T03:52:45Z"
+campaign = "tracker-infra"
+item = "TRACKER-002"
+event = "pr_open"
+pr = 3681
+head_sha = "5ae9c5627ff086c071e29333b7f373ddb689972e"
+actor = "codex"
+
+notes = [
+  "Opened the CI enforcement PR for campaign doctor and generated-dashboard freshness.",
+  "The PR is tracker infrastructure only; no runtime code, kernels, QK256, server inference, dependencies, or hardware probe work changed.",
+]

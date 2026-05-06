@@ -22,14 +22,14 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  # Always-on: build all fuzz targets (catches compilation regressions on every PR)
+  # Always-on: build a representative fuzz subset on PR/push, and the full set on schedule/manual.
   fuzz-build:
     name: Fuzz targets build
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install nightly Rust (required by cargo-fuzz)
         uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
@@ -37,7 +37,7 @@ jobs:
           toolchain: nightly
 
       - name: Cache cargo-fuzz binary
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
         with:
           path: ~/.cargo/bin/cargo-fuzz
           key: cargo-fuzz-${{ runner.os }}-${{ hashFiles('fuzz/Cargo.lock') }}
@@ -51,10 +51,62 @@ jobs:
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked --force
 
-      - name: Build all fuzz targets
+      - name: Build fuzz targets
         run: |
           cd fuzz
-          cargo fuzz build 2>&1
+
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            targets=(
+              quantization_i2s
+              quantization_input
+              quantization_tl1
+              quantization_tl2
+              gguf_header
+              gguf_header_parse
+              gguf_header_roundtrip
+              gguf_kv_read
+              gguf_metadata_values
+              gguf_parser
+              gguf_writer_roundtrip
+              safetensors_metadata
+              safetensors_parser
+              kernel_matmul
+              tl_lut_helper
+              tokenizer_discovery
+              tokenizer_encode
+              tokenizer_encode_decode
+              tokenizer_encode_no_panic
+              generation_stop_check
+              generation_stop_checker
+              logits_transforms
+              prompt_template_no_panic
+              rope_table_gen
+              sampling_no_panic
+              transformer_config
+              architecture_detection
+              engine_core_no_panic
+              feature_activation_no_panic
+              honest_compute_no_panic
+              receipt_json_roundtrip
+              runtime_context_parse_no_panic
+              validation_no_panic
+              vocab_size_extraction
+            )
+          else
+            # Keep PR/push coverage broad enough to catch compile regressions without timing out.
+            targets=(
+              quantization_i2s
+              gguf_parser
+              kernel_matmul
+              tokenizer_encode
+              generation_stop_check
+              validation_no_panic
+            )
+          fi
+
+          for target in "${targets[@]}"; do
+            cargo fuzz build "$target" 2>&1
+          done
         env:
           RUSTUP_TOOLCHAIN: nightly
           RUSTFLAGS: -C debuginfo=0
@@ -115,7 +167,7 @@ jobs:
           - vocab_size_extraction
     steps:
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
@@ -141,7 +193,7 @@ jobs:
 
       - name: Upload crash artifacts
         if: failure()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: fuzz-crashes-${{ matrix.target }}
           path: fuzz/artifacts/${{ matrix.target }}/

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "artifact_kind": "smoke",
+  "machine_id": "TBD",
+  "hardware_lane": "TBD",
+  "timestamp_utc": "TBD",
+  "requested_backend": "TBD",
+  "selected_backend": "TBD",
+  "runtime_api": "TBD",
+  "resolved_device": {
+    "name": "TBD",
+    "device_id": null
+  },
+  "test": {
+    "name": "TBD",
+    "kind": "tiny_kernel_or_graph",
+    "input_shape": [],
+    "output_shape": []
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "artifact_path": "ci/hardware/<machine-id>/<date>/smoke.json"
+}

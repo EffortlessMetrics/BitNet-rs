@@ -71,12 +71,15 @@ anyhow = "1.0.100"
 vergen-gix = { version = "9", features = ["build", "cargo", "rustc"] }
 
 [dev-dependencies]
+base64 = "0.22.1"
 futures = "0.3.31"
 http-body-util = "0.1.3"
 hyper = "1.7.0"
 proptest.workspace = true
 serial_test = "3.2.0"
 tempfile.workspace = true
+uselesskey = { version = "0.2.0", default-features = false, features = ["hmac"] }
+uselesskey-jsonwebtoken = { version = "0.2.0", default-features = false, features = ["hmac"] }
 walkdir = "2.5.0"
 insta.workspace = true
 

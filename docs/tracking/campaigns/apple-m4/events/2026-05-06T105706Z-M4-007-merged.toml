@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T10:57:06Z"
+campaign = "apple-m4"
+item = "M4-007"
+event = "merged"
+pr = 3719
+merge_sha = "0f22bf32a8ea6bc351ecd06956f0dda015e7ec2b"
+actor = "maintainer"
+
+notes = [
+  "MPSGraph tiny graph smoke merged.",
+  "M4-008 promoted to ready for Apple backend receipt fields.",
+  "M4-007 is MPSGraph reference-lane evidence only; it is not native Metal kernel, Neural Engine, or BitNet inference proof.",
+]

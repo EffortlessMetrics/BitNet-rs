@@ -33,10 +33,20 @@ env:
 
 jobs:
   # ── Docker-based compile checks for each GPU backend ───────────
+  # Docker image builds are expensive (45-min timeout, multi-GB layers).
+  # Run on main, manual dispatch, or when explicitly requested via labels.
+  # Native compile checks below still run on PRs and catch most feature
+  # regressions without building Docker images.
   docker-compile:
     name: "docker-compile (${{ matrix.label }})"
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gpu-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'docker') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:
@@ -111,11 +121,19 @@ jobs:
         run: cargo check --workspace --locked ${{ matrix.flags }}
 
   # ── CPU test run ───────────────────────────────────────────────
+  # CI (Core)'s build-test-linux job already runs the CPU test suite on every PR.
+  # This job duplicates that signal. Keep it on main and manual/labeled runs as a
+  # second-source check for the GPU matrix workflow.
   cpu-tests:
     name: CPU Tests
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     needs: [native-compile]
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gpu-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
 
     steps:
       - name: Checkout
@@ -141,6 +159,12 @@ jobs:
     name: Intel GPU Docker Build
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gpu-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'docker') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
 
     steps:
       - name: Checkout
@@ -164,6 +188,12 @@ jobs:
     name: NVIDIA GPU Docker Build
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gpu-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'docker') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
 
     steps:
       - name: Checkout

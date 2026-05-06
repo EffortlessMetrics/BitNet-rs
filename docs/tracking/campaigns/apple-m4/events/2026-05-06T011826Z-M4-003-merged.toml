@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T01:18:26Z"
+campaign = "apple-m4"
+item = "M4-003"
+event = "merged"
+pr = 3652
+head_sha = "ddf0602c84121795fcc5b85ed2d8393910f9b437"
+merge_sha = "849c3db73b786483bb7955371b95f733235119bb"
+actor = "maintainer"
+
+notes = [
+  "Apple backend identity PR merged.",
+  "Preserves Apple M4 Metal, MPSGraph, and CPU/NEON backend labels without adding Metal kernels, MPSGraph execution, QK256, server inference, dependencies, runtime probes, or hardware artifacts.",
+]

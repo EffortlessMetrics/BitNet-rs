@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T07:25:55Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-004"
+event = "pr_open"
+pr = 3696
+head_sha = "e926b22ffdb2c4ec805bfbcd8f99cf17d86e232a"
+actor = "codex"
+
+notes = [
+  "Started scalar packed QK256 truth kernels after CPU-BITNET-003 merged.",
+  "This item is scalar correctness only; AVX2 dispatch, transformer decode, receipts, and benchmarks remain follow-up work.",
+]
