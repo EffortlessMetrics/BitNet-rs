@@ -1,0 +1,96 @@
+# Effortless Metrics strict Clippy policy ledger for BitNet-rs.
+#
+# This file is the source of truth for the workspace lint policy. The active
+# baseline is materialized in the root Cargo.toml [workspace.lints] table; this
+# ledger records the intent, future-flip plan, and policy invariants that the
+# `cargo xtask check-lint-policy` command enforces.
+#
+# Schema: 1.0
+# Owner:  policy/lints
+schema_version = "1.0"
+msrv = "1.93"
+
+[policy]
+# Tests are workspace surface, not a carve-out. No allow-unwrap-in-tests etc.
+panic_free_tests = true
+allow_test_carveouts = false
+# Suppressions must use #[expect(..., reason = "...")] — never bare #[allow].
+suppression_style = "expect-with-reason"
+# No blanket category lints (clippy::all/pedantic/nursery) at deny level. Use
+# explicit named lints so the policy is stable across toolchain bumps.
+blanket_categories = false
+# Rust + xtask is the default implementation surface. Non-Rust files require
+# an entry in policy/non-rust-allowlist.toml.
+rust_default_implementation = true
+
+# -----------------------------------------------------------------------------
+# Planned Rust 1.94 flips
+#
+# These lints are tracked here so they are landed atomically with the
+# corresponding MSRV bump. `cargo xtask check-lint-policy` rejects activating
+# them before the MSRV is at or above `activate_when_msrv`.
+# -----------------------------------------------------------------------------
+
+[[planned]]
+name = "clippy::same_length_and_capacity"
+level = "deny"
+activate_when_msrv = "1.94"
+reason = "Catch raw-parts reconstruction mistakes."
+
+[[planned]]
+name = "clippy::manual_ilog2"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Prefer the standard integer log helper."
+
+[[planned]]
+name = "clippy::decimal_bitwise_operands"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Make bit masks visually inspectable."
+
+[[planned]]
+name = "clippy::needless_type_cast"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Avoid stale numeric type drift."
+
+# -----------------------------------------------------------------------------
+# Planned Rust 1.95 flips
+# -----------------------------------------------------------------------------
+
+[[planned]]
+name = "clippy::disallowed_fields"
+level = "deny"
+activate_when_msrv = "1.95"
+reason = "Allow architecture policy to ban direct field access across protected seams."
+
+[[planned]]
+name = "clippy::manual_checked_ops"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Prefer checked arithmetic over manual divide-by-zero guards."
+
+[[planned]]
+name = "clippy::manual_take"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use standard ownership helper instead of local reimplementation."
+
+[[planned]]
+name = "clippy::manual_pop_if"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use collection APIs that encode predicate-and-pop intent directly."
+
+[[planned]]
+name = "clippy::duration_suboptimal_units"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Make durations legible without mental unit conversion."
+
+[[planned]]
+name = "clippy::unnecessary_trailing_comma"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Keep generated and hand-written format macro calls clean."
