@@ -3,6 +3,15 @@
 //! Loads `OpenCL.dll` (Windows) or `libOpenCL.so` (Linux) at runtime so the
 //! code compiles and runs even when no OpenCL SDK is installed.  When the
 //! library is absent every query returns an empty result instead of panicking.
+#![allow(
+    clippy::borrow_as_ptr,
+    clippy::doc_markdown,
+    clippy::if_not_else,
+    clippy::missing_const_for_fn,
+    clippy::redundant_closure_for_method_calls,
+    clippy::ref_as_ptr,
+    clippy::too_many_lines
+)]
 
 use std::fmt;
 

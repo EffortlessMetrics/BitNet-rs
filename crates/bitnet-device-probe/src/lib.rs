@@ -5,6 +5,10 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+pub mod cpu;
+pub mod intel;
+pub mod runtimes;
+
 #[cfg(feature = "metal")]
 pub mod apple_metal;
 #[cfg(feature = "metal")]
@@ -34,6 +38,11 @@ pub use intel_arc::{
 
 pub mod nvidia_cuda;
 pub use nvidia_cuda::{NvidiaCudaProbe, probe_nvidia_cuda};
+
+pub use intel::lunar_lake::{
+    IntelArc140vProbe, IntelNpuProbe, Lnl258vCpuProbe, Lnl258vPlatformProbe, OpenVinoProbe,
+    PlatformMemoryProbe, PlatformPowerProbe, probe_lnl258v_platform,
+};
 
 #[cfg(feature = "opencl")]
 pub mod opencl;

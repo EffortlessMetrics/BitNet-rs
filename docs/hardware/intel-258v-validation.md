@@ -221,6 +221,12 @@ The first 258V platform receipt should establish visibility only:
 
 This is not an inference claim. Smoke, parity, and benchmark receipts come later.
 
+The code-facing visibility probe for this first receipt lives in
+`bitnet-device-probe` as `probe_lnl258v_platform()`. It emits a JSON-ready
+`Lnl258vPlatformProbe` with nested CPU, Arc 140V, NPU, OpenVINO, memory, and
+power sections. Unsupported runtime tools must be represented as `false`,
+empty lists, or `null` fields rather than panics or fallback claims.
+
 ## Ownership
 
 Proof lanes:
