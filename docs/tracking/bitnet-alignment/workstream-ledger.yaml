@@ -2121,7 +2121,7 @@ items:
 
   - id: RTX5070TI-003
     title: Preserve RTX 5070 Ti CUDA selected-device identity
-    state: ready
+    state: in_progress
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2130,6 +2130,7 @@ items:
       allowed_paths:
         - crates/bitnet-common/src/backend_selection.rs
         - crates/bitnet-common/src/kernel_registry.rs
+        - crates/bitnet-device-config-core/Cargo.toml
         - crates/bitnet-device-config-core/src/lib.rs
         - crates/bitnet-cli-config-core/src/lib.rs
         - crates/bitnet-cli/src/main.rs

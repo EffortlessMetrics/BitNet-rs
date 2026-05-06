@@ -116,7 +116,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device/backend to use (cpu, cuda, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
+    /// Device/backend to use (cpu, cuda, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
 
@@ -492,11 +492,10 @@ async fn main() -> Result<()> {
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let request = cli
-            .device
-            .as_deref()
-            .and_then(BackendRequest::from_label)
-            .unwrap_or(BackendRequest::Auto);
+        let requested_backend_label =
+            cli.device.as_deref().unwrap_or(config.default_device.as_str());
+        let request =
+            BackendRequest::from_label(requested_backend_label).unwrap_or(BackendRequest::Auto);
         let strict_mode = std::env::var("BITNET_STRICT_MODE")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false);

@@ -50,6 +50,10 @@ pub enum BackendRequest {
     Gpu,
     /// Require CUDA specifically.
     Cuda,
+    /// Require the RTX 5070 Ti CUDA proof lane.
+    NvidiaRtx5070TiCuda,
+    /// Require the RTX 5070 Ti WGPU reference lane.
+    NvidiaRtx5070TiWgpu,
     /// Require AMD HIP specifically.
     Hip,
     /// Require Intel oneAPI specifically.
@@ -74,6 +78,8 @@ impl BackendRequest {
             "cpu" => Some(BackendRequest::Cpu),
             "gpu" => Some(BackendRequest::Gpu),
             "cuda" => Some(BackendRequest::Cuda),
+            "nvidia-rtx-5070-ti-cuda" => Some(BackendRequest::NvidiaRtx5070TiCuda),
+            "nvidia-rtx-5070-ti-wgpu" => Some(BackendRequest::NvidiaRtx5070TiWgpu),
             "hip" | "rocm" => Some(BackendRequest::Hip),
             "oneapi" => Some(BackendRequest::OneApi),
             "metal" => Some(BackendRequest::Metal),
@@ -93,6 +99,8 @@ impl fmt::Display for BackendRequest {
             BackendRequest::Cpu => write!(f, "cpu"),
             BackendRequest::Gpu => write!(f, "gpu"),
             BackendRequest::Cuda => write!(f, "cuda"),
+            BackendRequest::NvidiaRtx5070TiCuda => write!(f, "nvidia-rtx-5070-ti-cuda"),
+            BackendRequest::NvidiaRtx5070TiWgpu => write!(f, "nvidia-rtx-5070-ti-wgpu"),
             BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
             BackendRequest::Metal => write!(f, "metal"),
@@ -142,6 +150,9 @@ impl BackendSelectionResult {
             (BackendRequest::AppleM4CpuNeon, KernelBackend::CpuRust) => {
                 "apple-m4-cpu-neon".to_string()
             }
+            (BackendRequest::NvidiaRtx5070TiCuda, KernelBackend::Cuda) => {
+                "nvidia-rtx-5070-ti-cuda".to_string()
+            }
             _ => self.selected.to_string(),
         }
     }
@@ -149,7 +160,7 @@ impl BackendSelectionResult {
     /// Runtime API implied by the selected backend label.
     pub fn runtime_api(&self) -> &'static str {
         match self.selected_backend().as_str() {
-            "cuda" => "cuda",
+            "cuda" | "nvidia-rtx-5070-ti-cuda" => "cuda",
             "hip" => "hip",
             "oneapi" => "oneapi",
             "opencl" => "opencl",
@@ -168,7 +179,9 @@ impl BackendSelectionResult {
             BackendRequest::Cuda => self.selected != KernelBackend::Cuda,
             BackendRequest::Hip => self.selected != KernelBackend::Hip,
             BackendRequest::OneApi => self.selected != KernelBackend::OneApi,
-            BackendRequest::Metal
+            BackendRequest::NvidiaRtx5070TiCuda
+            | BackendRequest::NvidiaRtx5070TiWgpu
+            | BackendRequest::Metal
             | BackendRequest::MpsGraph
             | BackendRequest::AppleM4Metal
             | BackendRequest::AppleM4MpsGraph
@@ -259,6 +272,27 @@ pub fn select_backend(
                     available: detected.clone(),
                 });
             }
+        }
+        BackendRequest::NvidiaRtx5070TiCuda => {
+            // The RTX 5070 Ti lane is strict and label-preserving. Device-name
+            // verification lands in the probe stage; CPU fallback is never OK here.
+            if caps.cuda_compiled && caps.cuda_runtime {
+                (
+                    KernelBackend::Cuda,
+                    "RTX 5070 Ti CUDA backend requested; CUDA runtime available".to_string(),
+                )
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::NvidiaRtx5070TiWgpu => {
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
         }
         BackendRequest::Hip => {
             if caps.hip_compiled && caps.hip_runtime {
@@ -466,6 +500,54 @@ mod tests {
             BackendRequest::from_label("apple-m4-cpu-neon"),
             Some(BackendRequest::AppleM4CpuNeon)
         );
+    }
+
+    #[test]
+    fn rtx_5070_ti_labels_parse_without_aliasing() {
+        assert_eq!(BackendRequest::from_label("cuda"), Some(BackendRequest::Cuda));
+        assert_eq!(BackendRequest::from_label("gpu"), Some(BackendRequest::Gpu));
+        assert_eq!(
+            BackendRequest::from_label("nvidia-rtx-5070-ti-cuda"),
+            Some(BackendRequest::NvidiaRtx5070TiCuda)
+        );
+        assert_eq!(
+            BackendRequest::from_label("nvidia-rtx-5070-ti-wgpu"),
+            Some(BackendRequest::NvidiaRtx5070TiWgpu)
+        );
+    }
+
+    #[test]
+    fn rtx_5070_ti_cuda_request_preserves_identity_when_cuda_available() {
+        let result = select_backend(BackendRequest::NvidiaRtx5070TiCuda, &cuda_caps()).unwrap();
+
+        assert_eq!(result.selected, KernelBackend::Cuda);
+        assert_eq!(result.requested_backend(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(result.selected_backend(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(result.runtime_api(), "cuda");
+        assert!(!result.fallback_used());
+
+        let summary = result.identity_summary();
+        assert!(summary.contains("requested_backend=nvidia-rtx-5070-ti-cuda"), "got: {summary}");
+        assert!(summary.contains("selected_backend=nvidia-rtx-5070-ti-cuda"), "got: {summary}");
+        assert!(summary.contains("runtime_api=cuda"), "got: {summary}");
+        assert!(summary.contains("fallback_used=false"), "got: {summary}");
+    }
+
+    #[test]
+    fn rtx_5070_ti_cuda_request_is_strict_without_runtime() {
+        let err = select_backend(BackendRequest::NvidiaRtx5070TiCuda, &cuda_no_runtime_caps())
+            .unwrap_err();
+
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("nvidia-rtx-5070-ti-cuda"));
+    }
+
+    #[test]
+    fn rtx_5070_ti_wgpu_request_is_distinct_and_unavailable_until_reference_lane_lands() {
+        let err = select_backend(BackendRequest::NvidiaRtx5070TiWgpu, &cuda_caps()).unwrap_err();
+
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("nvidia-rtx-5070-ti-wgpu"));
     }
 
     #[test]

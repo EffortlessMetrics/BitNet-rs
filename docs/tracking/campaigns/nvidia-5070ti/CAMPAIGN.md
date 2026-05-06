@@ -25,7 +25,7 @@ Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-devi
 
 | Work item | Status | Notes |
 |---|---|---|
-| RTX5070TI-003 | ready | Preserve selected-device CUDA identity. |
+| RTX5070TI-003 | in progress | Preserve selected-device CUDA identity. |
 | RTX5070TI-004 | proposed | Add CUDA and NVML runtime probe. |
 
 ## Review Policy
