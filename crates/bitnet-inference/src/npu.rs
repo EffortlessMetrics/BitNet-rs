@@ -2,7 +2,7 @@
 //!
 //! This module centralizes environment-driven controls for the NPU path so the
 //! engine and CLI can expose a stable "npu" target while backend wiring to
-//! Qualcomm QNN/SNPE matures.
+//! Intel OpenVINO NPU probing and graph execution mature.
 
 use bitnet_common::Device;
 
@@ -21,8 +21,27 @@ pub fn map_device_token(token: &str) -> Option<Device> {
     match token {
         "cpu" => Some(Device::Cpu),
         "cuda" | "gpu" => Some(Device::Cuda(0)),
-        "metal" | "npu" => Some(Device::Metal),
-        "oneapi" | "opencl" | "intel-gpu" => Some(Device::OpenCL(0)),
+        "metal" => Some(Device::Metal),
+        "npu" | "intel-npu" | "openvino-npu" => Some(Device::Npu),
+        "oneapi" | "opencl" | "intel-gpu" | "intel-arc-140v" => Some(Device::OpenCL(0)),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_device_token;
+    use bitnet_common::Device;
+
+    #[test]
+    fn npu_tokens_preserve_npu_identity() {
+        assert_eq!(map_device_token("npu"), Some(Device::Npu));
+        assert_eq!(map_device_token("intel-npu"), Some(Device::Npu));
+        assert_eq!(map_device_token("openvino-npu"), Some(Device::Npu));
+    }
+
+    #[test]
+    fn metal_token_stays_metal() {
+        assert_eq!(map_device_token("metal"), Some(Device::Metal));
     }
 }
