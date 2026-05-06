@@ -192,7 +192,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-006"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-006-metal-cpu-parity"
 stackable = false
 requires_human_merge = true
