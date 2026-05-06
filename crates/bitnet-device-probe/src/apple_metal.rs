@@ -8,9 +8,9 @@
 pub const APPLE_M4_METAL_BACKEND: &str = "apple-m4-metal";
 /// Runtime API recorded by Apple Metal probe receipts.
 pub const APPLE_M4_METAL_RUNTIME_API: &str = "metal";
-/// Proof stage for a visible Metal runtime probe.
+/// Proof stage for a visible Apple M4-family Metal runtime probe.
 pub const APPLE_M4_METAL_PROOF_STAGE_DETECTED: &str = "runtime_detected";
-/// Proof stage for a Metal runtime probe where Metal is not visible.
+/// Proof stage for a Metal runtime probe where Apple M4-family Metal is not visible.
 pub const APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE: &str = "runtime_unavailable";
 
 /// Raw command text used to build an [`AppleMetalProbe`].
@@ -45,7 +45,7 @@ pub struct AppleMetalProbeText {
 pub struct AppleMetalProbe {
     /// Requested backend identity.
     pub requested_backend: &'static str,
-    /// Selected backend identity when Metal is visible.
+    /// Selected backend identity when Apple M4-family Metal is visible.
     pub selected_backend: Option<&'static str>,
     /// Runtime API identity.
     pub runtime_api: &'static str,
@@ -132,19 +132,21 @@ pub fn apple_metal_probe_artifact_path(date: &str) -> String {
 impl AppleMetalProbe {
     fn from_text(text: &AppleMetalProbeText) -> Self {
         let is_macos = text.host_os == "macos";
-        let metal_visible =
-            is_macos && text.metal_command_succeeded && metal_text_reports_visibility(&text.metal);
         let chip = parse_colon_value(&text.hardware, "Chip")
             .or_else(|| parse_colon_value(&text.metal, "Chipset Model"))
             .or_else(|| parse_colon_value(&text.displays, "Chipset Model"));
+        let apple_m4_family_chip = chip.as_deref().is_some_and(is_apple_m4_family_chip);
+        let metal_visible =
+            is_macos && text.metal_command_succeeded && metal_text_reports_visibility(&text.metal);
+        let apple_m4_metal_visible = metal_visible && apple_m4_family_chip;
         let unified_memory_bytes =
             parse_colon_value(&text.memsize, "hw.memsize").and_then(|value| {
                 value.split_whitespace().next().and_then(|number| number.parse::<u64>().ok())
             });
-        let unified_memory = if unified_memory_bytes.is_some()
-            || chip.as_deref().is_some_and(|value| value.starts_with("Apple M"))
-        {
+        let unified_memory = if chip.as_deref().is_some_and(|value| value.starts_with("Apple M")) {
             Some(true)
+        } else if is_macos && chip.is_some() {
+            Some(false)
         } else {
             None
         };
@@ -155,7 +157,7 @@ impl AppleMetalProbe {
 
         Self {
             requested_backend: APPLE_M4_METAL_BACKEND,
-            selected_backend: metal_visible.then_some(APPLE_M4_METAL_BACKEND),
+            selected_backend: apple_m4_metal_visible.then_some(APPLE_M4_METAL_BACKEND),
             runtime_api: APPLE_M4_METAL_RUNTIME_API,
             host_os: text.host_os.clone(),
             macos_version: parse_colon_value(&text.sw_vers, "ProductVersion"),
@@ -176,7 +178,7 @@ impl AppleMetalProbe {
             native_or_virtualized,
             metal_visible,
             fallback_used: false,
-            proof_stage: if metal_visible {
+            proof_stage: if apple_m4_metal_visible {
                 APPLE_M4_METAL_PROOF_STAGE_DETECTED
             } else {
                 APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE
@@ -252,6 +254,10 @@ fn metal_text_reports_visibility(output: &str) -> bool {
             || lower.contains("gpu"))
 }
 
+fn is_apple_m4_family_chip(chip: &str) -> bool {
+    chip == "Apple M4" || chip.starts_with("Apple M4 ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -315,5 +321,27 @@ mod tests {
             apple_metal_probe_artifact_path("2026-05-05"),
             "ci/hardware/apple-m4-mac-mini/2026-05-05/metal-probe.json"
         );
+    }
+
+    #[test]
+    fn metal_visible_on_non_m4_mac_does_not_select_m4_backend() {
+        let text = AppleMetalProbeText {
+            host_os: "macos".to_owned(),
+            hardware: "Hardware:\n\n    Chip: Apple M3\n    Total Number of Cores: 8\n"
+                .to_owned(),
+            metal: "Metal:\n\n    Apple M3:\n      Chipset Model: Apple M3\n      Metal Support: Metal 3\n"
+                .to_owned(),
+            metal_command_succeeded: true,
+            memsize: "hw.memsize: 17179869184\n".to_owned(),
+            virtualization: "kern.hv_vmm_present: 0\n".to_owned(),
+            ..AppleMetalProbeText::default()
+        };
+
+        let probe = parse_apple_metal_probe(&text);
+
+        assert_eq!(probe.chip.as_deref(), Some("Apple M3"));
+        assert!(probe.metal_visible);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.proof_stage, APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE);
     }
 }

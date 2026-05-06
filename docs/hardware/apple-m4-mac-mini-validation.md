@@ -103,7 +103,7 @@ cargo test --locked -p bitnet-device-probe --no-default-features --features meta
 The probe records:
 
 - `requested_backend = "apple-m4-metal"`.
-- `selected_backend = "apple-m4-metal"` only when macOS reports Metal visibility.
+- `selected_backend = "apple-m4-metal"` only when macOS reports Metal visibility on an Apple M4-family chip.
 - `runtime_api = "metal"`.
 - macOS version/build and kernel string.
 - Apple chip name when reported by `system_profiler`.
