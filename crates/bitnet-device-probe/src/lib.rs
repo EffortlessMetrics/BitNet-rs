@@ -5,9 +5,12 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+pub mod apple_receipts;
 pub mod cpu;
 pub mod intel;
 pub mod runtimes;
+
+pub use apple_receipts::{AppleBackendReceipt, AppleReceiptError, AppleResolvedDevice};
 
 #[cfg(feature = "metal")]
 pub mod apple_metal;

@@ -1,5 +1,6 @@
 #![cfg(feature = "metal")]
 
+use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
 use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, MACHINE_ID, PARITY_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND,
     RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SmokeComparison,
@@ -129,24 +130,25 @@ mod live_metal {
         let receipt =
             TinyMetalAddSmokeReceipt::passed(artifact_path.clone(), expected.len(), comparison);
 
-        let receipt_json = json!({
-            "machine_id": receipt.machine_id,
-            "artifact_kind": receipt.artifact_kind,
-            "requested_backend": receipt.requested_backend,
-            "selected_backend": receipt.selected_backend,
-            "runtime_api": receipt.runtime_api,
-            "resolved_device": {
-                "chip": smoke_output.adapter_name,
-                "unified_memory": true
-            },
-            "kernel_id": receipt.kernel_id,
-            "fallback_used": receipt.fallback_used,
-            "result": receipt.result,
-            "artifact_path": receipt.artifact_path,
-            "element_count": receipt.element_count,
-            "max_abs_error": receipt.max_abs_error,
-            "mean_abs_error": receipt.mean_abs_error
-        });
+        let mut receipt_json = apple_backend_receipt_json(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            smoke_output.adapter_name,
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+            Some(receipt.kernel_id),
+            None,
+            receipt.result,
+        )?;
+        extend_smoke_metrics(
+            &mut receipt_json,
+            receipt.element_count,
+            receipt.max_abs_error,
+            receipt.mean_abs_error,
+        );
 
         if let Ok(path) = std::env::var(RECEIPT_ENV) {
             if let Some(parent) = Path::new(&path).parent() {
@@ -186,29 +188,28 @@ mod live_metal {
         let receipt =
             TinyMetalAddParityReceipt::passed(artifact_path.clone(), expected.len(), comparison);
 
-        let receipt_json = json!({
-            "machine_id": receipt.machine_id,
-            "artifact_kind": receipt.artifact_kind,
-            "requested_backend": receipt.requested_backend,
-            "selected_backend": receipt.selected_backend,
-            "runtime_api": receipt.runtime_api,
-            "resolved_device": {
-                "chip": metal_output.adapter_name,
-                "unified_memory": true
-            },
-            "parity": {
-                "reference_backend": receipt.reference_backend,
-                "target_backend": receipt.target_backend,
-                "kernel_id": receipt.kernel_id,
-                "max_abs_error": receipt.max_abs_error,
-                "mean_abs_error": receipt.mean_abs_error,
-                "token_agreement_for_greedy": null
-            },
-            "fallback_used": receipt.fallback_used,
-            "result": receipt.result,
-            "artifact_path": receipt.artifact_path,
-            "element_count": receipt.element_count
-        });
+        let mut receipt_json = apple_backend_receipt_json(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            metal_output.adapter_name,
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+            Some(receipt.kernel_id),
+            None,
+            receipt.result,
+        )?;
+        extend_parity_metrics(
+            &mut receipt_json,
+            receipt.element_count,
+            receipt.reference_backend,
+            receipt.target_backend,
+            receipt.kernel_id,
+            receipt.max_abs_error,
+            receipt.mean_abs_error,
+        );
 
         if let Ok(path) = std::env::var(PARITY_RECEIPT_ENV) {
             if let Some(parent) = Path::new(&path).parent() {
@@ -365,6 +366,79 @@ mod live_metal {
 
     fn io_error(message: impl Into<String>) -> Box<dyn Error> {
         Box::new(io::Error::other(message.into()))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn apple_backend_receipt_json(
+        machine_id: &str,
+        artifact_kind: &str,
+        requested_backend: &str,
+        selected_backend: Option<&str>,
+        runtime_api: &str,
+        chip: String,
+        fallback_used: bool,
+        artifact_path: String,
+        kernel_id: Option<&str>,
+        graph_id: Option<&str>,
+        result: &str,
+    ) -> Result<serde_json::Value, Box<dyn Error>> {
+        let mut receipt = AppleBackendReceipt::new(
+            machine_id,
+            artifact_kind,
+            requested_backend,
+            selected_backend,
+            runtime_api,
+            AppleResolvedDevice::new(chip).with_unified_memory(true),
+            fallback_used,
+            artifact_path,
+        )
+        .with_result(result);
+
+        if let Some(kernel_id) = kernel_id {
+            receipt = receipt.with_kernel_id(kernel_id);
+        }
+        if let Some(graph_id) = graph_id {
+            receipt = receipt.with_graph_id(graph_id);
+        }
+
+        receipt.validate()?;
+        Ok(serde_json::to_value(receipt)?)
+    }
+
+    fn extend_smoke_metrics(
+        receipt_json: &mut serde_json::Value,
+        element_count: usize,
+        max_abs_error: f32,
+        mean_abs_error: f32,
+    ) {
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert("element_count".to_string(), json!(element_count));
+        object.insert("max_abs_error".to_string(), json!(max_abs_error));
+        object.insert("mean_abs_error".to_string(), json!(mean_abs_error));
+    }
+
+    fn extend_parity_metrics(
+        receipt_json: &mut serde_json::Value,
+        element_count: usize,
+        reference_backend: &str,
+        target_backend: &str,
+        kernel_id: &str,
+        max_abs_error: f32,
+        mean_abs_error: f32,
+    ) {
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert("element_count".to_string(), json!(element_count));
+        object.insert(
+            "parity".to_string(),
+            json!({
+                "reference_backend": reference_backend,
+                "target_backend": target_backend,
+                "kernel_id": kernel_id,
+                "max_abs_error": max_abs_error,
+                "mean_abs_error": mean_abs_error,
+                "token_agreement_for_greedy": null
+            }),
+        );
     }
 
     const TINY_ADD_SHADER: &str = r#"
