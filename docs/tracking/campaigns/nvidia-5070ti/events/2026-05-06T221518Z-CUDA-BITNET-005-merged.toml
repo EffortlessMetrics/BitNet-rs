@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T22:15:18Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-005"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3792
+merge_sha = "a50ab31522cb74a2c73380d0cf05d217b09c93a6"
+actor = "codex"
+
+notes = [
+  "Merged actual BitNetLinear routing through the selected CUDA backend.",
+  "This enables the strict one-token proof rung but is not itself the one-token proof artifact.",
+]

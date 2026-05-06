@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T20:04:04Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-002"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3782
+merge_sha = "2eacf9a377cc4e13e27fbfb9c7cfdc869f0a6c7c"
+actor = "codex"
+
+notes = [
+  "Merged reusable CUDA I2S linear primitive.",
+  "This records primitive-level CUDA work and remains separate from full BitNet inference proof.",
+]

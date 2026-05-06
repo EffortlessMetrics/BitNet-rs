@@ -2335,7 +2335,7 @@ items:
 
   - id: CUDA-BITNET-001
     title: Add persistent CUDA BitNet context and weight handles
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2368,7 +2368,7 @@ items:
 
   - id: CUDA-BITNET-002
     title: Add reusable CUDA I2S linear primitive
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2400,7 +2400,7 @@ items:
 
   - id: CUDA-BITNET-003
     title: Implement CUDA QK256 fused dequant GEMV
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2433,7 +2433,7 @@ items:
 
   - id: CUDA-BITNET-004
     title: Prepack and upload BitNet weights once for CUDA
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2466,7 +2466,7 @@ items:
 
   - id: CUDA-BITNET-005
     title: Route BitNetLinear through CUDA backend
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2500,7 +2500,7 @@ items:
 
   - id: CUDA-BITNET-006
     title: Add strict one-token BitNet CUDA proof
-    state: merged
+    state: proposed
     priority: P1
     workstream: nvidia_cuda
     depends_on:

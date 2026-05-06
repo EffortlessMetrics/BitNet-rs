@@ -1,5 +1,5 @@
 schema: 1
-updated: 2026-05-06
+updated: 2026-05-05
 
 status_values:
   - not_present
@@ -279,22 +279,26 @@ backends:
       - Add receipt fields for driver, compiler, OpenVINO, shape contract, cache timings, and fallback status.
 
   nvidia_rtx_5070_ti_cuda:
-    status: receipt_backed
+    status: scaffold
     notes:
       - Target hardware is NVIDIA GeForce RTX 5070 Ti.
       - Native path is CUDA first.
       - CUDA compute capability is 12.0.
       - Expected memory is 16 GB GDDR7 on a 256-bit bus.
       - Primary proof bench is windows-9950x3d-rtx5070ti with AMD Ryzen 9 9950X3D as the CPU reference path.
-      - Strict selected-device backend identity landed in RTX5070TI-003 and the CUDA/NVML, smoke, parity, receipt, and benchmark proof rungs are receipt-backed.
-      - QK256 CUDA now has a compiled packed fused dequant GEMV path and the transformer BitNetLinear route records CUDA coverage counters.
-      - CUDA-BITNET-006 records a strict one-token proof at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json.
-      - The one-token proof records speedup_claim=false; performance claims remain blocked until the full benchmark rung.
+      - Existing CUDA code is kernel-provider-level infrastructure, not proof that the real transformer inference path routes through CUDA.
+      - QK256 CUDA remains scaffold-only until a real packed fused dequant GEMV kernel is implemented and wired.
+      - Strict selected-device backend identity landed in RTX5070TI-003.
       - CPU fallback cannot count as CUDA execution.
     blockers:
-      - Add short decode proof before claiming multi-token CUDA decode.
-      - Wire the strict proof route through persistent CUDA weight handles before claiming per-token weight upload is eliminated.
-      - Add full strict BitNet CUDA benchmark baseline before any speedup claim.
+      - Collect normalized Windows 9950X3D plus RTX 5070 Ti machine profile receipt.
+      - Add CUDA runtime and NVML probe.
+      - Add CUDA kernel smoke.
+      - Add CPU/CUDA parity.
+      - Add receipt fields for CUDA runtime, driver, compute capability, VRAM, power, fallback, and kernel invocation counts.
+      - Add benchmark baseline.
+      - Add persistent CUDA BitNet context and upload-once weight handles.
+      - Replace scaffold-only QK256 CUDA with a real packed-kernel path before full BitNet inference claims.
 
   nvidia_rtx_5070_ti_wgpu:
     status: scaffold

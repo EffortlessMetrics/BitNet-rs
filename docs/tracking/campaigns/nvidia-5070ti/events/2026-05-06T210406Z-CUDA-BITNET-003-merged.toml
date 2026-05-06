@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T21:04:06Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-003"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3786
+merge_sha = "4d5579c4fb8741c6d3ffe177618e668419176fad"
+actor = "codex"
+
+notes = [
+  "Merged the real QK256 fused dequant GEMV CUDA kernel.",
+  "This replaces the scaffold-only launch path for parity-backed QK256 CUDA fixtures.",
+]
