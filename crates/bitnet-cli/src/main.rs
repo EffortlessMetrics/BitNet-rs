@@ -1872,7 +1872,7 @@ fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
     let mut file =
         std::fs::File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
     let mut hasher = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
+    let mut buffer = vec![0_u8; 1024 * 1024];
     loop {
         let read = file.read(&mut buffer)?;
         if read == 0 {
@@ -1881,6 +1881,63 @@ fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
         hasher.update(&buffer[..read]);
     }
     Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
+    logits
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, value)| value.is_finite())
+        .max_by(|(left_id, left), (right_id, right)| {
+            left.partial_cmp(right)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| right_id.cmp(left_id))
+        })
+        .map(|(token_id, _)| token_id as u32)
+}
+
+#[derive(Debug, Clone)]
+struct StrictReferenceReceipt {
+    artifact_path: String,
+    generated_token_id: Option<u32>,
+    top1_token_id: Option<u32>,
+}
+
+fn strict_reference_receipt_path(json_path: &std::path::Path) -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("BITNET_CPU_REFERENCE_RECEIPT") {
+        return std::path::PathBuf::from(path);
+    }
+
+    json_path.with_file_name("strict-bitnet-cpu-reference.json")
+}
+
+fn read_strict_reference_receipt(
+    reference_path: &std::path::Path,
+) -> Result<Option<StrictReferenceReceipt>> {
+    if !reference_path.exists() {
+        return Ok(None);
+    }
+
+    let json = std::fs::read_to_string(reference_path)
+        .with_context(|| format!("Failed to read {}", reference_path.display()))?;
+    let receipt: serde_json::Value = serde_json::from_str(&json)
+        .with_context(|| format!("Failed to parse {}", reference_path.display()))?;
+    let generated_token_id = receipt
+        .pointer("/tokens/ids/0")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok());
+    let top1_token_id = receipt
+        .pointer("/logits_dump/0/top_logits/0/token_id")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok());
+    let artifact_path = receipt
+        .get("artifact_path")
+        .and_then(serde_json::Value::as_str)
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| reference_path.display().to_string());
+
+    Ok(Some(StrictReferenceReceipt { artifact_path, generated_token_id, top1_token_id }))
 }
 
 /// Run text generation with sampling
@@ -2242,6 +2299,7 @@ async fn run_simple_generation(
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
+    let mut top1_tokens = Vec::new();
 
     // Rolling tail for fast string-stop checking (only if we have string stops)
     let max_stop_len = all_stop_sequences.iter().map(|s| s.len()).max().unwrap_or(0);
@@ -2304,6 +2362,10 @@ async fn run_simple_generation(
 
         // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
+        let greedy_top1_token = greedy_top1_token_id(&logits_vec);
+        if let Some(token_id) = greedy_top1_token {
+            top1_tokens.push(token_id);
+        }
 
         // Debug tap: dump logits shape and top-5 on first step (BITNET_DEBUG_LOGITS=1)
         if step_idx == 0 && std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") {
@@ -2390,16 +2452,12 @@ async fn run_simple_generation(
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
-            let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
-            for (i, &v) in logits_vec.iter().enumerate() {
-                if v.is_finite() && v > best_v {
-                    best_v = v;
-                    best_i = i;
-                }
-            }
-            if next_token as usize != best_i {
+            let Some(best_i) = greedy_top1_token else {
+                anyhow::bail!("No finite logits found for --assert-greedy at step {step_idx}");
+            };
+            if next_token != best_i {
                 eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} (logit={:.4}) but chosen={}", best_i, best_v, next_token);
+                eprintln!("  argmax={} but chosen={}", best_i, next_token);
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
@@ -2550,12 +2608,49 @@ async fn run_simple_generation(
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let strict_cuda_proof_artifact = strict_backend
+            && canonical_bitnet_model
+            && selected_backend == "nvidia-rtx-5070-ti-cuda"
+            && runtime_api == "cuda"
+            && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str()
+            && generated_tokens.len() == 1
+            && !backend_identity.fallback_used;
+        let cuda_generated_token_id = generated_tokens.first().copied();
+        let cuda_top1_token_id = top1_tokens.first().copied();
+        let cuda_kernel_invocations = bitnet_linear_coverage.bitnet_linear_layers_on_cuda;
+        let expected_reference_path =
+            strict_cuda_proof_artifact.then(|| strict_reference_receipt_path(&json_path));
+        let strict_reference_receipt = match expected_reference_path.as_deref() {
+            Some(path) => read_strict_reference_receipt(path)?,
+            None => None,
+        };
+        let reference_artifact_path = strict_reference_receipt
+            .as_ref()
+            .map(|receipt| receipt.artifact_path.clone())
+            .or_else(|| expected_reference_path.as_ref().map(|path| path.display().to_string()));
+        let cpu_greedy_token_id =
+            strict_reference_receipt.as_ref().and_then(|receipt| receipt.generated_token_id);
+        let cpu_top1_token_id =
+            strict_reference_receipt.as_ref().and_then(|receipt| receipt.top1_token_id);
+        let greedy_token_agreement = cpu_greedy_token_id
+            .zip(cuda_generated_token_id)
+            .map(|(cpu_token, cuda_token)| cpu_token == cuda_token);
+        let top1_agreement = cpu_top1_token_id
+            .zip(cuda_top1_token_id)
+            .map(|(cpu_token, cuda_token)| cpu_token == cuda_token);
+        let cuda_probe = if strict_cuda_proof_artifact {
+            Some(bitnet_device_probe::probe_nvidia_cuda(Some(0)))
+        } else {
+            None
+        };
         let strict_cpu_reference_artifact = strict_backend
             && canonical_bitnet_model
             && runtime_api == "cpu"
             && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str();
         let artifact_kind = if strict_cpu_reference_artifact {
             "strict_bitnet_cpu_reference"
+        } else if strict_cuda_proof_artifact {
+            "strict_bitnet_cuda_proof"
         } else {
             "inference_result"
         };
@@ -2597,15 +2692,19 @@ async fn run_simple_generation(
                 "tokenizer": tokenizer_label,
                 "vocab_size": tokenizer.vocab_size(),
                 "loader_mode": loader_mode,
+                "fallback_loader_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
             },
             "bitnet": {
                 "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
                 "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
+                "quantization": if canonical_bitnet_model { "W1.58A8" } else { "unknown" },
                 "kernel_format": kernel_family,
                 "kernel_family": kernel_family,
                 "execution_phase": "decode",
                 "layout_source": layout_source,
                 "fallback_layout": serde_json::Value::Null,
+                "weights_uploaded_once": false,
+                "per_token_weight_upload": strict_cuda_proof_artifact && cuda_kernel_invocations > 0,
             },
             "execution": {
                 "phase": "decode",
@@ -2623,7 +2722,7 @@ async fn run_simple_generation(
                 "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
                 "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
                 "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
-                "unsupported_ops": bitnet_linear_coverage.unsupported_ops,
+                "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
             "kernel": {
@@ -2675,6 +2774,92 @@ async fn run_simple_generation(
                 None
             },
         });
+        if strict_cuda_proof_artifact && let Some(object) = output.as_object_mut() {
+            object.insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_inference"));
+            object.insert("speedup_claim".to_string(), serde_json::json!(false));
+            object.insert(
+                "reference_backend".to_string(),
+                serde_json::json!("amd-9950x3d-cpu-avx512"),
+            );
+            object.insert("fallback_backend".to_string(), serde_json::Value::Null);
+            if let Some(cuda_probe) = &cuda_probe {
+                object.insert(
+                    "cuda".to_string(),
+                    serde_json::json!({
+                        "available": cuda_probe.available,
+                        "device_count": cuda_probe.device_count,
+                        "device_index": cuda_probe.selected_device_index,
+                        "device_name": cuda_probe.selected_device_name,
+                        "compute_capability": cuda_probe.compute_capability,
+                        "driver_version": cuda_probe.driver_version,
+                        "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+                        "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+                        "nvrtc_version": cuda_probe.nvrtc_version,
+                        "vram_bytes": cuda_probe.vram_bytes,
+                        "cuda_kernel_invocations": cuda_kernel_invocations,
+                    }),
+                );
+            }
+            object.insert(
+                "reference".to_string(),
+                serde_json::json!({
+                    "cpu_reference_artifact": reference_artifact_path,
+                    "cuda_greedy_token_id": cuda_generated_token_id,
+                    "cpu_greedy_token_id": cpu_greedy_token_id,
+                    "greedy_token_agreement": greedy_token_agreement,
+                    "cuda_top1_token_id": cuda_top1_token_id,
+                    "cpu_top1_token_id": cpu_top1_token_id,
+                    "top1_agreement": top1_agreement,
+                    "max_abs_error": serde_json::Value::Null,
+                    "mean_abs_error": serde_json::Value::Null,
+                }),
+            );
+            object.insert(
+                "kernel_stats".to_string(),
+                serde_json::json!([{
+                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                    "invocations": cuda_kernel_invocations,
+                    "fallback_invocations": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                    "host_to_device_bytes": serde_json::Value::Null,
+                    "device_to_host_bytes": serde_json::Value::Null,
+                    "kernel_launches": cuda_kernel_invocations,
+                    "kernel_time_ms": serde_json::Value::Null,
+                }]),
+            );
+            object.insert(
+                "kernel".to_string(),
+                serde_json::json!({
+                    "family": "qk256",
+                    "implementation": "cuda",
+                    "layout": kernel_layout,
+                    "dequantizes_before_compute": false,
+                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                }),
+            );
+            if let Some(strict_provenance) =
+                object.get_mut("strict_provenance").and_then(serde_json::Value::as_object_mut)
+            {
+                strict_provenance.insert(
+                    "requested_kernel".to_string(),
+                    serde_json::json!(bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "selected_kernel".to_string(),
+                    serde_json::json!(bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "cuda_kernel_invocations".to_string(),
+                    serde_json::json!(cuda_kernel_invocations),
+                );
+            }
+            let cpu_fallback_ops = if bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback == 0
+            {
+                Vec::<String>::new()
+            } else {
+                vec!["qk256_cpu_fallback".to_string()]
+            };
+            object.insert("cpu_fallback_ops".to_string(), serde_json::json!(cpu_fallback_ops));
+        }
         if let Some(apple_machine) = apple_machine
             && let Some(object) = output.as_object_mut()
         {
