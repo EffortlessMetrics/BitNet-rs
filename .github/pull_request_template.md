@@ -30,10 +30,25 @@
 - [ ] Code formatted with `cargo fmt --all`
 - [ ] Linting passes with `cargo clippy --all-targets --all-features -- -D warnings`
 
+## CI cost and verification discipline
+
+<!--
+BitNet-rs intentionally targets ordinary PR CI cost far below common
+agentic-development defaults. The goal is not lighter testing; it is
+stronger, better-scoped verification per CI minute.
+
+Before requesting broad CI, prefer targeted Rust-native checks that match
+the changed risk surface. Use the labels below only when the PR genuinely
+needs the extra verification.
+
+See: docs/ci/cost-and-verification-policy.md
+-->
+
 ## CI Labels (opt-in heavy checks)
 
 <!-- Only select labels for checks relevant to this PR -->
 <!-- See docs/ci/labels.md for detailed label documentation -->
+<!-- See docs/ci/cost-and-verification-policy.md for what these labels authorize -->
 
 - [ ] `coverage` - Run code coverage analysis (heavy, only for core changes)
 - [ ] `receipts` - Run CPU receipt verification gates (for inference/quantization changes)
