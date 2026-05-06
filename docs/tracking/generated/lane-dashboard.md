@@ -12,6 +12,6 @@
 | intel-258v-platform | Intel 258V platform validation | ARC140V-002 | Arc 140V OpenCL proof is not NPU proof. |
 | intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-003 | Device-node detection is not inference. |
-| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | RTX5070TI-006 | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | RTX5070TI-007 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-001 | Do not reintroduce simulated inference. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

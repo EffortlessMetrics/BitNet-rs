@@ -126,7 +126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-006-cuda-cpu-parity"
 stackable = false
 requires_human_merge = true
@@ -152,6 +152,44 @@ forbidden_paths = [
 ]
 may_claim = [
   "RTX 5070 Ti CUDA matches the 9950X3D CPU reference for the named parity fixture after cuda-parity.json exists.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works.",
+  "QK256 CUDA works.",
+  "CUDA is faster than CPU.",
+]
+
+[[work_item]]
+id = "RTX5070TI-007"
+status = "ready"
+branch = "codex/nvidia-5070ti/RTX5070TI-007-cuda-receipts-counters"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-006"]
+acceptance = "Record CUDA runtime identity and kernel invocation counters in smoke and parity receipts, including fallback-free strict validation, without adding benchmarks or BitNet inference claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-receipts --no-default-features --features cpu",
+  "CUDA smoke and parity receipt validation commands.",
+]
+allowed_paths = [
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-kernels/**",
+  "ci/hardware/_templates/cuda-smoke-receipt.json",
+  "ci/hardware/_templates/cuda-parity-receipt.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+]
+may_claim = [
+  "RTX 5070 Ti CUDA smoke and parity evidence is backed by validated receipts and kernel counters after receipt validation exists.",
 ]
 must_not_claim = [
   "Full BitNet CUDA inference works.",
