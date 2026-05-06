@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T16:38:48Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-007"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3756
+merge_sha = "80d91c3363342ab7ed56318f004e79d3ef9a5e17"
+actor = "codex"
+
+notes = [
+  "Merged RTX 5070 Ti CUDA receipt validation and kernel counters.",
+  "Smoke and parity receipt validation now requires fallback-free CUDA runtime identity, nonzero invocations, nonzero transfer bytes, and zero fallback invocations.",
+  "RTX5070TI-008 is now the next ready NVIDIA CUDA item for benchmark baselines.",
+]
