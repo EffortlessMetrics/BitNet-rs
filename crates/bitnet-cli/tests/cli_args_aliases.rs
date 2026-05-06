@@ -241,3 +241,44 @@ mod backward_compatibility {
         Ok(())
     }
 }
+
+#[cfg(feature = "full-cli")]
+mod strict_cpu_receipt_aliases {
+    use bitnet_cli::commands::InferenceCommand;
+    use clap::Parser;
+    use std::path::PathBuf;
+
+    #[derive(Parser)]
+    struct TestCli {
+        #[command(flatten)]
+        cmd: InferenceCommand,
+    }
+
+    fn parse(args: &[&str]) -> InferenceCommand {
+        TestCli::try_parse_from(args).expect("strict CPU aliases must parse").cmd
+    }
+
+    #[test]
+    fn backend_alias_sets_device() {
+        let cmd = parse(&["test", "--backend", "cpu"]);
+        assert_eq!(cmd.device.as_deref(), Some("cpu"));
+    }
+
+    #[test]
+    fn strict_alias_sets_strict_loader() {
+        let cmd = parse(&["test", "--strict"]);
+        assert!(cmd.strict_loader);
+    }
+
+    #[test]
+    fn receipt_out_alias_sets_receipt_path() {
+        let cmd = parse(&["test", "--receipt-out", "ci/receipts/cpu.json"]);
+        assert_eq!(cmd.receipt_path, Some(PathBuf::from("ci/receipts/cpu.json")));
+    }
+
+    #[test]
+    fn kernel_argument_sets_requested_kernel() {
+        let cmd = parse(&["test", "--kernel", "qk256-avx2-gemv"]);
+        assert_eq!(cmd.kernel.as_deref(), Some("qk256-avx2-gemv"));
+    }
+}

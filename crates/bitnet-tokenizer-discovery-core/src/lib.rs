@@ -2,6 +2,28 @@ use anyhow::{Context, Result, anyhow};
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
+/// Deterministic tokenizer authority selected for an inference run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenizerSource {
+    /// User supplied an explicit tokenizer path.
+    ExplicitOverride,
+    /// Tokenizer discovered next to the model file.
+    SiblingFile,
+    /// Tokenizer discovered in the parent directory of the model directory.
+    ParentFile,
+}
+
+impl TokenizerSource {
+    #[must_use]
+    pub const fn as_receipt_str(self) -> &'static str {
+        match self {
+            Self::ExplicitOverride => "explicit_override",
+            Self::SiblingFile => "sibling_file",
+            Self::ParentFile => "parent_file",
+        }
+    }
+}
+
 /// Resolve tokenizer path with deterministic fallback ordering.
 ///
 /// Priority:
@@ -11,18 +33,45 @@ use tracing::debug;
 pub fn resolve_tokenizer_with<F>(
     model_path: &Path,
     explicit_path: Option<PathBuf>,
-    mut verifier: F,
+    verifier: F,
 ) -> Result<PathBuf>
+where
+    F: FnMut(&Path) -> Result<bool>,
+{
+    resolve_tokenizer_with_source(model_path, explicit_path, verifier).map(|resolved| resolved.path)
+}
+
+/// Resolve tokenizer path and return the receipt source selected by the deterministic policy.
+///
+/// Priority:
+/// 1. Explicit path (if provided).
+/// 2. Sibling `tokenizer.json` next to model.
+/// 3. Parent-directory `tokenizer.json`.
+pub fn resolve_tokenizer_with_source<F>(
+    model_path: &Path,
+    explicit_path: Option<PathBuf>,
+    mut verifier: F,
+) -> Result<ResolvedTokenizer>
 where
     F: FnMut(&Path) -> Result<bool>,
 {
     if let Some(path) = explicit_path {
         debug!("Using explicit tokenizer path: {}", path.display());
-        return validate_explicit_path(path);
+        return Ok(ResolvedTokenizer {
+            path: validate_explicit_path(path)?,
+            source: TokenizerSource::ExplicitOverride,
+        });
     }
 
     let discovery = TokenizerDiscovery::new(model_path.to_path_buf());
     discovery.discover_with(&mut verifier)
+}
+
+/// Tokenizer path plus the source label that must be written into strict receipts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedTokenizer {
+    pub path: PathBuf,
+    pub source: TokenizerSource,
 }
 
 #[derive(Debug, Clone)]
@@ -36,7 +85,7 @@ impl TokenizerDiscovery {
         Self { model_path }
     }
 
-    pub fn discover_with<F>(&self, verifier: &mut F) -> Result<PathBuf>
+    pub fn discover_with<F>(&self, verifier: &mut F) -> Result<ResolvedTokenizer>
     where
         F: FnMut(&Path) -> Result<bool>,
     {
@@ -44,12 +93,12 @@ impl TokenizerDiscovery {
 
         if let Some(path) = self.check_sibling_tokenizer(verifier)? {
             debug!("Discovered sibling tokenizer: {}", path.display());
-            return Ok(path);
+            return Ok(ResolvedTokenizer { path, source: TokenizerSource::SiblingFile });
         }
 
         if let Some(path) = self.check_parent_tokenizer(verifier)? {
             debug!("Discovered parent tokenizer: {}", path.display());
-            return Ok(path);
+            return Ok(ResolvedTokenizer { path, source: TokenizerSource::ParentFile });
         }
 
         Err(self.discovery_failed_error())
@@ -153,9 +202,13 @@ mod tests {
         fs::write(&model_path, b"GGUF")?;
         fs::write(&explicit_tokenizer, b"{}")?;
 
-        let resolved =
-            resolve_tokenizer_with(&model_path, Some(explicit_tokenizer.clone()), always_valid)?;
-        assert_eq!(resolved, explicit_tokenizer.canonicalize()?);
+        let resolved = resolve_tokenizer_with_source(
+            &model_path,
+            Some(explicit_tokenizer.clone()),
+            always_valid,
+        )?;
+        assert_eq!(resolved.path, explicit_tokenizer.canonicalize()?);
+        assert_eq!(resolved.source, TokenizerSource::ExplicitOverride);
         Ok(())
     }
 
@@ -172,8 +225,9 @@ mod tests {
         fs::write(&sibling, b"{}")?;
         fs::write(&parent, b"{}")?;
 
-        let resolved = resolve_tokenizer_with(&model_path, None, always_valid)?;
-        assert_eq!(resolved, sibling.canonicalize()?);
+        let resolved = resolve_tokenizer_with_source(&model_path, None, always_valid)?;
+        assert_eq!(resolved.path, sibling.canonicalize()?);
+        assert_eq!(resolved.source, TokenizerSource::SiblingFile);
         Ok(())
     }
 
@@ -188,8 +242,9 @@ mod tests {
         fs::write(&model_path, b"GGUF")?;
         fs::write(&parent, b"{}")?;
 
-        let resolved = resolve_tokenizer_with(&model_path, None, always_valid)?;
-        assert_eq!(resolved, parent.canonicalize()?);
+        let resolved = resolve_tokenizer_with_source(&model_path, None, always_valid)?;
+        assert_eq!(resolved.path, parent.canonicalize()?);
+        assert_eq!(resolved.source, TokenizerSource::ParentFile);
         Ok(())
     }
 

@@ -150,9 +150,13 @@ pub struct InferenceCommand {
     #[arg(short, long, value_name = "PATH")]
     pub output: Option<PathBuf>,
 
-    /// Device to use for inference (cpu, cuda, auto)
-    #[arg(short, long, value_name = "DEVICE")]
+    /// Device/backend to use for inference (cpu, cuda, auto)
+    #[arg(short, long, visible_alias = "backend", value_name = "DEVICE")]
     pub device: Option<String>,
+
+    /// Requested CPU kernel for strict receipt proof (for example: qk256-avx2-gemv)
+    #[arg(long, value_name = "KERNEL")]
+    pub kernel: Option<String>,
 
     /// Quantization type (i2s, tl1, tl2, auto)
     #[arg(short, long, value_name = "TYPE")]
@@ -290,7 +294,7 @@ pub struct InferenceCommand {
     pub emit_receipt_dir: Option<PathBuf>,
 
     /// Path for the primary inference receipt (default: ci/inference.json)
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, visible_alias = "receipt-out", value_name = "PATH")]
     pub receipt_path: Option<PathBuf>,
 
     /// Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50)
@@ -300,7 +304,7 @@ pub struct InferenceCommand {
 
     /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1)
     /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
-    #[arg(long)]
+    #[arg(long = "strict-loader", visible_alias = "strict")]
     pub strict_loader: bool,
 }
 
@@ -608,6 +612,13 @@ impl InferenceCommand {
             .or(config.default_model.as_ref())
             .context("No model specified. Use --model or set default_model in config")?;
 
+        if self.strict_loader && model_path.extension().and_then(|s| s.to_str()) != Some("gguf") {
+            anyhow::bail!(
+                "strict CPU inference requires a real GGUF model path; got {}",
+                model_path.display()
+            );
+        }
+
         info!("Loading model from: {}", model_path.display());
 
         // Show loading progress
@@ -782,23 +793,46 @@ impl InferenceCommand {
         model_path: &Path,
         reader: Option<&bitnet_models::GgufReader<'_>>,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>> {
-        // Try RustGgufTokenizer from GGUF metadata (pure Rust, preferred)
+        // Strict tokenizer authority order:
+        // 1. explicit tokenizer override;
+        // 2. tokenizer embedded in GGUF;
+        // 3. sibling/parent tokenizer.json discovery;
+        // 4. fail (no compatibility tokenizer fallback).
+        if let Some(explicit_tokenizer) = self.tokenizer.clone() {
+            let resolved = crate::tokenizer_discovery::resolve_tokenizer_with_receipt_source(
+                model_path,
+                Some(explicit_tokenizer),
+            )?;
+            debug!("Loading explicit tokenizer from: {}", resolved.path.display());
+            let tokenizer = bitnet_tokenizers::loader::load_tokenizer(&resolved.path)?;
+            unsafe {
+                std::env::set_var("BITNET_TOKENIZER_SOURCE", resolved.source.as_receipt_str());
+            }
+            return Ok(tokenizer);
+        }
+
         if let Some(reader) = reader {
             if let Ok(tokenizer) = bitnet_tokenizers::RustGgufTokenizer::from_gguf(reader) {
                 debug!("Successfully loaded pure-Rust tokenizer from GGUF metadata");
+                unsafe {
+                    std::env::set_var("BITNET_TOKENIZER_SOURCE", "gguf_embedded");
+                }
                 return Ok(Arc::new(tokenizer));
             }
-            warn!("Failed to load pure-Rust tokenizer from GGUF, falling back to auto-detection");
+            debug!(
+                "GGUF tokenizer metadata was unavailable or unsupported; checking sibling files"
+            );
         }
 
-        // Resolve tokenizer path using discovery logic
-        let tokenizer_path =
-            crate::tokenizer_discovery::resolve_tokenizer(model_path, self.tokenizer.clone())?;
+        let resolved =
+            crate::tokenizer_discovery::resolve_tokenizer_with_receipt_source(model_path, None)?;
 
-        debug!("Loading tokenizer from: {}", tokenizer_path.display());
+        debug!("Loading tokenizer from: {}", resolved.path.display());
 
-        // Load tokenizer from resolved path (returns Arc directly)
-        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(&tokenizer_path)?;
+        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(&resolved.path)?;
+        unsafe {
+            std::env::set_var("BITNET_TOKENIZER_SOURCE", resolved.source.as_receipt_str());
+        }
         Ok(tokenizer)
     }
 
@@ -976,6 +1010,7 @@ impl InferenceCommand {
 
         // Determine backend from device
         let backend = self.device.as_deref().unwrap_or("cpu");
+        let requested_kernel = self.kernel.as_deref().unwrap_or("auto");
 
         // Capture runtime environment (similar to xtask benchmark)
         let rust_version = std::process::Command::new("rustc")
@@ -990,8 +1025,10 @@ impl InferenceCommand {
         // Capture actual kernel IDs from engine telemetry
         let mut kernels = if let Some(recorder) = engine.kernel_recorder() {
             recorder.snapshot()
+        } else if self.strict_loader {
+            anyhow::bail!("strict receipt requires an attached kernel recorder");
         } else {
-            // Fallback to placeholder kernels if no recorder attached
+            // Non-strict compatibility receipt for older engine paths that predate kernel telemetry.
             vec![
                 "embedding_lookup".to_string(),
                 "prefill_forward".to_string(),
@@ -1013,11 +1050,56 @@ impl InferenceCommand {
             kernels.truncate(MAX_KERNEL_CLASSES);
         }
 
+        if self.strict_loader && kernels.is_empty() {
+            anyhow::bail!("strict receipt requires at least one recorded real kernel");
+        }
+
+        let selected_kernel = if requested_kernel == "auto" {
+            kernels.first().cloned().unwrap_or_else(|| "none".to_string())
+        } else if kernels.iter().any(|kernel| kernel == requested_kernel) {
+            requested_kernel.to_string()
+        } else if self.strict_loader {
+            anyhow::bail!(
+                "strict receipt requested kernel '{}' but recorded kernels were {:?}",
+                requested_kernel,
+                kernels
+            );
+        } else {
+            kernels.first().cloned().unwrap_or_else(|| "none".to_string())
+        };
+        let fallback_used = selected_kernel != requested_kernel && requested_kernel != "auto";
+        let fallback_reason = if fallback_used {
+            Some(format!(
+                "requested kernel '{}' was not recorded; selected '{}'",
+                requested_kernel, selected_kernel
+            ))
+        } else {
+            None
+        };
+        let tokenizer_source =
+            std::env::var("BITNET_TOKENIZER_SOURCE").unwrap_or_else(|_| "unresolved".to_string());
+        if self.strict_loader && tokenizer_source == "unresolved" {
+            anyhow::bail!("strict receipt requires a deterministic tokenizer source");
+        }
+        let loader_mode = if self.strict_loader { "real_gguf" } else { "auto" };
+
         let receipt = serde_json::json!({
             "schema_version": "1.0.0",
             "timestamp": Utc::now().to_rfc3339(),
             "compute_path": "real",
             "backend": backend,
+            "requested_backend": backend,
+            "selected_backend": backend,
+            "requested_kernel": requested_kernel,
+            "selected_kernel": selected_kernel,
+            "fallback_used": fallback_used,
+            "fallback_reason": fallback_reason,
+            "loader": {
+                "mode": loader_mode
+            },
+            "tokenizer": {
+                "source": tokenizer_source
+            },
             "deterministic": self.deterministic || self.greedy,
             "tokens_generated": tokens_generated,
             "kernels": kernels,
@@ -1849,6 +1931,7 @@ mod tests {
             input_file: None,
             output: None,
             device: None,
+            kernel: None,
             quantization: None,
             max_tokens: 16,
             temperature: 0.7,
