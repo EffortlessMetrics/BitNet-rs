@@ -19,27 +19,37 @@ hard_constraints = [
 
 [[work_item]]
 id = "RTX5070TI-003"
-status = "ready"
-branch = "codex/nvidia-5070ti/RTX5070TI-003-backend-identity"
+status = "pr_open"
+branch = "codex/rtx5070ti-003-backend-identity"
 stackable = false
 requires_human_merge = true
 blocked_by = []
 acceptance = "Preserve RTX 5070 Ti requested and selected CUDA backend identity without adding kernels or inference claims."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-common --no-default-features --features cpu",
   "cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu",
+  "git diff --check",
 ]
 allowed_paths = [
-  "crates/bitnet-common/src/types.rs",
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-common/src/kernel_registry.rs",
+  "crates/bitnet-device-config-core/Cargo.toml",
   "crates/bitnet-device-config-core/src/lib.rs",
-  "crates/bitnet-inference/src/backends.rs",
   "crates/bitnet-cli-config-core/src/lib.rs",
   "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
   "docs/tracking/campaigns/nvidia-5070ti/**",
+  "xtask/src/campaign.rs",
+  "xtask/src/main.rs",
 ]
 forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
   "crates/bitnet-quantization/src/qk256/**",
   "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
   "crates/bitnet-server/**",
 ]
 may_claim = [

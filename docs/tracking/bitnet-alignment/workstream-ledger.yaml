@@ -1038,6 +1038,8 @@ items:
         - crates/bitnet-cli/src/main.rs
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - xtask/src/campaign.rs
+        - xtask/src/main.rs
       forbidden_paths:
         - crates/bitnet-quantization/src/qk256/**
         - crates/bitnet-qk256-dispatch/**
@@ -2121,7 +2123,7 @@ items:
 
   - id: RTX5070TI-003
     title: Preserve RTX 5070 Ti CUDA selected-device identity
-    state: ready
+    state: pr_open
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2130,6 +2132,7 @@ items:
       allowed_paths:
         - crates/bitnet-common/src/backend_selection.rs
         - crates/bitnet-common/src/kernel_registry.rs
+        - crates/bitnet-device-config-core/Cargo.toml
         - crates/bitnet-device-config-core/src/lib.rs
         - crates/bitnet-cli-config-core/src/lib.rs
         - crates/bitnet-cli/src/main.rs

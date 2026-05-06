@@ -15,6 +15,10 @@ pub enum DeviceConfig {
     Cpu,
     /// Force GPU execution on specific device ID.
     Gpu(usize),
+    /// Preserve the RTX 5070 Ti CUDA proof-lane backend identity.
+    NvidiaRtx5070TiCuda,
+    /// Preserve the RTX 5070 Ti WGPU reference-lane backend identity.
+    NvidiaRtx5070TiWgpu,
     /// Preserve a native Metal backend identity.
     Metal,
     /// Preserve an MPSGraph graph/reference backend identity.
@@ -35,6 +39,8 @@ impl FromStr for DeviceConfig {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
             "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
+            "nvidia-rtx-5070-ti-cuda" => Ok(DeviceConfig::NvidiaRtx5070TiCuda),
+            "nvidia-rtx-5070-ti-wgpu" => Ok(DeviceConfig::NvidiaRtx5070TiWgpu),
             "metal" => Ok(DeviceConfig::Metal),
             "mpsgraph" => Ok(DeviceConfig::MpsGraph),
             "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
@@ -68,6 +74,9 @@ impl DeviceConfig {
             }
             DeviceConfig::Cpu => Device::Cpu,
             DeviceConfig::Gpu(id) => Device::Cuda(*id),
+            DeviceConfig::NvidiaRtx5070TiCuda => Device::Cuda(0),
+            // WGPU is a reference-lane identity; execution lands in a later item.
+            DeviceConfig::NvidiaRtx5070TiWgpu => Device::Cpu,
             DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
             // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
             DeviceConfig::MpsGraph | DeviceConfig::AppleM4MpsGraph => Device::Cpu,
@@ -82,6 +91,8 @@ impl DeviceConfig {
             DeviceConfig::Auto => BackendRequest::Auto,
             DeviceConfig::Cpu => BackendRequest::Cpu,
             DeviceConfig::Gpu(_) => BackendRequest::Gpu,
+            DeviceConfig::NvidiaRtx5070TiCuda => BackendRequest::NvidiaRtx5070TiCuda,
+            DeviceConfig::NvidiaRtx5070TiWgpu => BackendRequest::NvidiaRtx5070TiWgpu,
             DeviceConfig::Metal => BackendRequest::Metal,
             DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
             DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
@@ -108,6 +119,14 @@ mod tests {
         assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
         assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
         assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));
+        assert_eq!(
+            "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::NvidiaRtx5070TiCuda
+        );
+        assert_eq!(
+            "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::NvidiaRtx5070TiWgpu
+        );
         assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);
         assert_eq!("mpsgraph".parse::<DeviceConfig>().unwrap(), DeviceConfig::MpsGraph);
         assert_eq!("apple-m4-metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::AppleM4Metal);
@@ -141,5 +160,20 @@ mod tests {
         assert_eq!(mpsgraph.backend_label(), "mpsgraph");
         assert_eq!(apple_mpsgraph.backend_label(), "apple-m4-mpsgraph");
         assert_eq!(apple_cpu.backend_label(), "apple-m4-cpu-neon");
+    }
+
+    #[test]
+    fn rtx_5070_ti_backend_labels_do_not_alias_legacy_gpu_labels() {
+        let generic_gpu = "gpu".parse::<DeviceConfig>().unwrap();
+        let generic_cuda = "cuda".parse::<DeviceConfig>().unwrap();
+        let rtx_cuda = "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap();
+        let rtx_wgpu = "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap();
+
+        assert_eq!(rtx_cuda.backend_label(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(rtx_wgpu.backend_label(), "nvidia-rtx-5070-ti-wgpu");
+        assert_ne!(rtx_cuda.backend_label(), generic_gpu.backend_label());
+        assert_ne!(rtx_cuda.backend_label(), generic_cuda.backend_label());
+        assert_ne!(rtx_wgpu.backend_label(), generic_gpu.backend_label());
+        assert_ne!(rtx_wgpu.backend_label(), generic_cuda.backend_label());
     }
 }

@@ -118,6 +118,8 @@ impl CliConfig {
     pub fn merge_with_env(&mut self) {
         if let Ok(device) = std::env::var("BITNET_DEVICE") {
             self.default_device = device;
+        } else if let Ok(backend) = std::env::var("BITNET_BACKEND") {
+            self.default_device = backend;
         }
 
         if let Ok(level) = std::env::var("BITNET_LOG_LEVEL") {
@@ -135,7 +137,7 @@ impl CliConfig {
     pub fn validate(&self) -> Result<()> {
         if !is_supported_device_label(&self.default_device) {
             anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
                 self.default_device
             );
         }
@@ -174,6 +176,8 @@ fn is_supported_device_label(label: &str) -> bool {
             | "opencl"
             | "ocl"
             | "npu"
+            | "nvidia-rtx-5070-ti-cuda"
+            | "nvidia-rtx-5070-ti-wgpu"
             | "metal"
             | "mpsgraph"
             | "apple-m4-metal"
