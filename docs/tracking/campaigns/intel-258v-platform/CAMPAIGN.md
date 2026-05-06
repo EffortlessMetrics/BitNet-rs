@@ -28,6 +28,7 @@ Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 
 | ARC140V-002 | merged | Add exact Arc 140V runtime identity probe logic. |
 | LNL258V-002 | merged | Add 258V probe bundle and same-machine comparison hooks. |
 | LNL258V-003 | merged | Add CLI platform probe emission for the current 258V machine. |
+| CPU258V-001 | ready | Add a validation-only CPU BitNet preflight harness for the 258V lane. |
 
 ## Review Policy
 

@@ -181,6 +181,51 @@ may_claim = [
 must_not_claim = [
   "BitNet inference works on 258V.",
   "Arc 140V execution works.",
-  "Intel NPU execution works.",
-  "OpenVINO graph execution works.",
+    "Intel NPU execution works.",
+    "OpenVINO graph execution works.",
+]
+
+[[work_item]]
+id = "CPU258V-001"
+status = "pr_open"
+branch = "codex/intel-258v-platform/CPU258V-001-validation-harness"
+stackable = false
+requires_human_merge = true
+blocked_by = ["LNL258V-003"]
+acceptance = "Add a validation-only Core Ultra 7 258V CPU BitNet preflight command that emits structured blocked_preflight or preflight_ready artifacts without changing GGUF loader, tokenizer, QK256 layout, QK256 dispatch, CPU kernels, or transformer decode internals."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::cpu258v_validation_blocks_missing_model_before_inference -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::cpu258v_validation_rejects_accelerator_backend -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- validate cpu-bitnet --machine intel-258v --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/BitNet-b1.58-2B-4T/tokenizer.json --backend cpu --strict --max-tokens 1 --platform-artifact ci/hardware/intel-258v/2026-05-06/platform-probe.json --json-out target/cpu258v-bitnet-validation.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V CPU validation harness can emit blocked_preflight or preflight_ready artifacts.",
+]
+must_not_claim = [
+  "Strict BitNet GGUF loaded on 258V.",
+  "QK256 or TL2 execution ran on 258V.",
+  "BitNet inference works on 258V.",
+  "258V CPU benchmark performance.",
 ]
