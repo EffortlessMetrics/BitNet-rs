@@ -45,11 +45,11 @@
   "kernel_stats": [
     {
       "kernel_id": "TBD",
-      "invocations": null,
+      "invocations": 1,
       "fallback_invocations": 0,
-      "host_to_device_bytes": null,
-      "device_to_host_bytes": null,
-      "kernel_launches": null,
+      "host_to_device_bytes": 8192,
+      "device_to_host_bytes": 4096,
+      "kernel_launches": 1,
       "kernel_time_ms": null
     }
   ],

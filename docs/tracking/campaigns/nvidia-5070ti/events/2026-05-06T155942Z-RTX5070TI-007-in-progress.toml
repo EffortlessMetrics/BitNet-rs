@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T15:59:42Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-007"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started RTX 5070 Ti CUDA receipt validation and kernel counter work after RTX5070TI-006 merged.",
+  "Scope is limited to smoke/parity receipt validation and invocation counters; no benchmarks, QK256, transformer routing, or BitNet inference claims.",
+]

@@ -83,7 +83,11 @@ fn parity_receipt_contract_records_9950x3d_reference_and_cuda_target() {
     assert_eq!(receipt["parity"]["kernel_id"], CUDA_TINY_VECTOR_ADD_KERNEL_ID);
     assert_eq!(receipt["parity"]["fixture_id"], CUDA_TINY_VECTOR_ADD_FIXTURE_ID);
     assert_eq!(receipt["parity"]["passed"], true);
+    assert_eq!(receipt["kernel_stats"][0]["invocations"], 1);
     assert_eq!(receipt["kernel_stats"][0]["fallback_invocations"], 0);
+    assert_eq!(receipt["kernel_stats"][0]["host_to_device_bytes"], 8192);
+    assert_eq!(receipt["kernel_stats"][0]["device_to_host_bytes"], 4096);
+    assert_eq!(receipt["kernel_stats"][0]["kernel_launches"], 1);
     assert_eq!(receipt["claim"], CLAIM);
 }
 
@@ -252,9 +256,9 @@ fn cuda_parity_receipt_json(
         "kernel_stats": [
             {
                 "device_to_host_bytes": parity.device_to_host_bytes,
-                "fallback_invocations": 0,
+                "fallback_invocations": parity.kernel_stats.fallback_invocations,
                 "host_to_device_bytes": parity.host_to_device_bytes,
-                "invocations": 1,
+                "invocations": parity.kernel_stats.invocations,
                 "kernel_id": parity.kernel_id,
                 "kernel_launches": parity.kernel_launches,
                 "kernel_time_ms": null
@@ -341,6 +345,18 @@ fn synthetic_passed_parity() -> CudaTinyVectorAddParity {
         host_to_device_bytes: 8192,
         device_to_host_bytes: 4096,
         kernel_launches: 1,
+        kernel_stats: bitnet_kernels::gpu::CudaKernelInvocationStats {
+            kernel_id: CUDA_TINY_VECTOR_ADD_KERNEL_ID.to_string(),
+            invocations: 1,
+            fallback_invocations: 0,
+            host_to_device_bytes: 8192,
+            device_to_host_bytes: 4096,
+            kernel_launches: 1,
+            kernel_time_ms: None,
+            selected_device_index: 0,
+            selected_device_name: "NVIDIA GeForce RTX 5070 Ti".to_string(),
+            compute_capability: "12.0".to_string(),
+        },
     }
 }
 

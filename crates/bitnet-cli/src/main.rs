@@ -944,6 +944,7 @@ struct CudaSmokeReceiptFields {
     host_to_device_bytes: serde_json::Value,
     device_to_host_bytes: serde_json::Value,
     invocations: u64,
+    fallback_invocations: u64,
     kernel_launches: u64,
 }
 
@@ -957,6 +958,7 @@ impl Default for CudaSmokeReceiptFields {
             host_to_device_bytes: serde_json::Value::Null,
             device_to_host_bytes: serde_json::Value::Null,
             invocations: 0,
+            fallback_invocations: 0,
             kernel_launches: 0,
         }
     }
@@ -991,10 +993,15 @@ fn run_cuda_smoke_kernel_receipt_fields(
                     input_len: serde_json::json!(smoke.input_len),
                     max_abs_error: serde_json::json!(smoke.max_abs_error),
                     mean_abs_error: serde_json::json!(smoke.mean_abs_error),
-                    host_to_device_bytes: serde_json::json!(smoke.host_to_device_bytes),
-                    device_to_host_bytes: serde_json::json!(smoke.device_to_host_bytes),
-                    invocations: 1,
-                    kernel_launches: smoke.kernel_launches,
+                    host_to_device_bytes: serde_json::json!(
+                        smoke.kernel_stats.host_to_device_bytes
+                    ),
+                    device_to_host_bytes: serde_json::json!(
+                        smoke.kernel_stats.device_to_host_bytes
+                    ),
+                    invocations: smoke.kernel_stats.invocations,
+                    fallback_invocations: smoke.kernel_stats.fallback_invocations,
+                    kernel_launches: smoke.kernel_stats.kernel_launches,
                 }
             }
             Err(err) => {
@@ -1113,7 +1120,7 @@ async fn handle_cuda_smoke_command(
             {
                 "kernel_id": KERNEL_ID,
                 "invocations": outcome.invocations,
-                "fallback_invocations": 0,
+                "fallback_invocations": outcome.fallback_invocations,
                 "host_to_device_bytes": outcome.host_to_device_bytes,
                 "device_to_host_bytes": outcome.device_to_host_bytes,
                 "kernel_launches": outcome.kernel_launches,
