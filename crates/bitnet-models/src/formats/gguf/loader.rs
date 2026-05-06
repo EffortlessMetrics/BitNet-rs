@@ -882,6 +882,7 @@ impl GgufLoader {
             "tok_embeddings.weight".to_string(),
             "embed_tokens.weight".to_string(),
             "model.embed_tokens.weight".to_string(),
+            "transformer.wte.weight".to_string(),
         ]) {
             missing.push("token embedding weight".to_string());
         }
@@ -894,7 +895,7 @@ impl GgufLoader {
             missing.push("output/lm head weight".to_string());
         }
 
-        let layer_prefixes = ["blk", "layers", "model.layers"];
+        let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
         let required_suffix_groups: &[&[&str]] = &[
             &["attn_q.weight", "attention.q_proj.weight", "self_attn.q_proj.weight"],
             &["attn_k.weight", "attention.k_proj.weight", "self_attn.k_proj.weight"],
@@ -904,7 +905,7 @@ impl GgufLoader {
             &["ffn_up.weight", "feed_forward.up_proj.weight", "mlp.up_proj.weight"],
             &["ffn_down.weight", "feed_forward.down_proj.weight", "mlp.down_proj.weight"],
             &["attn_norm.weight", "attention_norm.weight", "input_layernorm.weight"],
-            &["ffn_norm.weight", "ffn_norm.weight", "post_attention_layernorm.weight"],
+            &["ffn_norm.weight", "post_attention_layernorm.weight"],
         ];
 
         for layer_idx in 0..config.model.num_layers {
