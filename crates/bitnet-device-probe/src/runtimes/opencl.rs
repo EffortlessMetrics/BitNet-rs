@@ -1,4 +1,5 @@
 //! OpenCL runtime visibility wrapper for platform receipts.
+#![allow(clippy::doc_markdown)]
 
 use serde::{Deserialize, Serialize};
 

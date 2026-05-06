@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Runtime-visible x86 CPU feature facts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct X86CpuFeatureProbe {
     /// Whether AVX2 is available to the current process.
     pub has_avx2: bool,

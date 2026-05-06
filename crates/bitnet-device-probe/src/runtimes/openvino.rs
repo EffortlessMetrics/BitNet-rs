@@ -1,4 +1,5 @@
 //! OpenVINO runtime visibility probing without linking OpenVINO.
+#![allow(clippy::doc_markdown)]
 
 use serde::{Deserialize, Serialize};
 
@@ -82,9 +83,8 @@ for dev in core.available_devices:
 "#;
 
     for python in ["python3", "python"] {
-        match command_output(python, ["-c", script]) {
-            Ok(stdout) => return parse_openvino_line_output(&stdout),
-            Err(_) => continue,
+        if let Ok(stdout) = command_output(python, ["-c", script]) {
+            return parse_openvino_line_output(&stdout);
         }
     }
 
@@ -136,17 +136,17 @@ fn apply_property_line(probe: &mut OpenVinoProbe, rest: &str) {
         probe.available_devices.push(device_token.to_owned());
     }
 
-    let idx = match probe.devices.iter().position(|device| device.device == device_token) {
-        Some(idx) => idx,
-        None => {
+    let idx =
+        if let Some(idx) = probe.devices.iter().position(|device| device.device == device_token) {
+            idx
+        } else {
             probe.devices.push(OpenVinoDeviceProbe {
                 device: device_token.to_owned(),
                 full_name: None,
                 supported_properties: Vec::new(),
             });
             probe.devices.len() - 1
-        }
-    };
+        };
 
     match property {
         "FULL_DEVICE_NAME" if !value.trim().is_empty() => {

@@ -1,4 +1,5 @@
 //! Intel Arc 140V visibility probe.
+#![allow(clippy::doc_markdown)]
 
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +11,7 @@ const ARC_140V_PCI_DEVICE_ID: &str = "0x64A0";
 
 /// Visibility facts for the Lunar Lake integrated Arc 140V GPU.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct IntelArc140vProbe {
     /// Whether the probe found evidence that the Arc 140V is visible.
     pub available: bool,
@@ -60,7 +62,7 @@ pub fn probe_intel_arc_140v(
         openvino_gpu_device.as_deref().and_then(|token| openvino.full_name_for(token));
     let openvino_gpu_visible = openvino_gpu_device.is_some();
     let openvino_name_matches =
-        openvino_gpu_full_name.as_deref().map(name_matches_arc_140v).unwrap_or(false);
+        openvino_gpu_full_name.as_deref().is_some_and(name_matches_arc_140v);
 
     let available =
         opencl_device.is_some() || !level_zero_devices.is_empty() || openvino_name_matches;

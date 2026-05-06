@@ -1,4 +1,5 @@
 //! Lunar Lake CPU visibility facts.
+#![allow(clippy::doc_markdown)]
 
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +7,7 @@ use crate::cpu::{probe_cpu_topology, probe_x86_cpu_features};
 
 /// CPU facts for the Core Ultra 7 258V validation lane.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Lnl258vCpuProbe {
     /// CPU brand string when the OS exposes one.
     pub brand: Option<String>,
@@ -36,8 +38,7 @@ pub fn probe_lnl258v_cpu() -> Lnl258vCpuProbe {
     let is_258v = topology
         .brand
         .as_deref()
-        .map(|brand| brand.contains("258V") || brand.contains("Core Ultra 7"))
-        .unwrap_or(false);
+        .is_some_and(|brand| brand.contains("258V") || brand.contains("Core Ultra 7"));
 
     Lnl258vCpuProbe {
         brand: topology.brand,

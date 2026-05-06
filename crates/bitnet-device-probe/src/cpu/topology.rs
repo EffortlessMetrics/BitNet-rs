@@ -29,7 +29,7 @@ fn cpu_brand() -> Option<String> {
                 line.strip_prefix("model name")
                     .and_then(|rest| rest.split_once(':').map(|(_, value)| value.trim().to_owned()))
             }) {
-                return non_empty(value);
+                return non_empty(&value);
             }
         }
     }
@@ -44,14 +44,14 @@ fn cpu_brand() -> Option<String> {
                 "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name",
             ],
         ) {
-            return non_empty(value);
+            return non_empty(&value);
         }
     }
 
     #[cfg(target_os = "macos")]
     {
         if let Some(value) = command_stdout("sysctl", &["-n", "machdep.cpu.brand_string"]) {
-            return non_empty(value);
+            return non_empty(&value);
         }
     }
 
@@ -67,7 +67,7 @@ fn command_stdout(command: &str, args: &[&str]) -> Option<String> {
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
-fn non_empty(value: String) -> Option<String> {
+fn non_empty(value: &str) -> Option<String> {
     let trimmed = value.trim();
     if trimmed.is_empty() { None } else { Some(trimmed.to_owned()) }
 }

@@ -1,4 +1,5 @@
 //! JSON-ready Core Ultra 7 258V Lunar Lake platform probe.
+#![allow(clippy::doc_markdown)]
 
 use std::process::Command;
 
@@ -38,6 +39,7 @@ pub struct PlatformPowerProbe {
 
 /// Visibility-only Lunar Lake platform probe.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Lnl258vPlatformProbe {
     /// Stable machine identifier used by receipts.
     pub machine_id: String,
@@ -152,6 +154,7 @@ fn power_mode() -> Option<String> {
     platform_power_mode()
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn thermal_profile() -> Option<String> {
     #[cfg(target_os = "linux")]
     {
@@ -162,6 +165,7 @@ fn thermal_profile() -> Option<String> {
     None
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn ac_power_connected() -> Option<bool> {
     #[cfg(target_os = "linux")]
     {

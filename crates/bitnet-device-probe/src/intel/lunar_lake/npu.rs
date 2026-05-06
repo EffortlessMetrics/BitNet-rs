@@ -1,4 +1,5 @@
 //! Intel AI Boost NPU visibility probe for Lunar Lake.
+#![allow(clippy::doc_markdown)]
 
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +7,7 @@ use crate::runtimes::OpenVinoProbe;
 
 /// Visibility facts for the Intel AI Boost NPU lane.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct IntelNpuProbe {
     /// Whether any OS or OpenVINO NPU evidence was visible.
     pub available: bool,
@@ -85,6 +87,7 @@ pub fn probe_intel_npu(openvino: &OpenVinoProbe) -> IntelNpuProbe {
     }
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn accel_devices() -> Vec<String> {
     #[cfg(target_os = "linux")]
     {
@@ -115,7 +118,7 @@ fn intel_vpu_driver_seen() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        return std::process::Command::new("powershell")
+        std::process::Command::new("powershell")
             .args([
                 "-NoProfile",
                 "-Command",
@@ -123,7 +126,7 @@ fn intel_vpu_driver_seen() -> bool {
             ])
             .output()
             .map(|output| output.status.success() && !output.stdout.is_empty())
-            .unwrap_or(false);
+            .unwrap_or(false)
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
