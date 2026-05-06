@@ -20,7 +20,6 @@ Real BitNet CPU path sequencing after the #3625 hardware and BitNet contract mer
 | RTX5070TI-001 | #3625 | merged | RTX 5070 Ti CUDA lane scaffold; no runtime execution |
 | AMD9950X3D-001 | #3625 | merged | AMD 9950X3D CPU lane scaffold; no runtime execution |
 | AMD5700X-001 | #3625 | merged | AMD 5700X CPU lane scaffold; no runtime execution |
-| CPU-BITNET-000 | #3642 | pr_open | Add real BitNet CPU path implementation plan |
 | NPU-002 | TBD | ready | Preserve Intel NPU backend identity before runtime probing |
 | A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
 | KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
@@ -137,6 +136,7 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 | TRUTH-002 | #3630 | 18e4f8142aaafec3528a0d54b5332a2b9f7583fd | GGUF minimal fallback made explicit. |
 | INV-001 | #3632 | 457b36630906f2044e406e0dcf27ecb539e8a7a5 | Crate consolidation inventory completed for all workspace members. |
 | CPU-001 | #3635 | d90f70f4410155077ffc9741e018e5d747d40a9f | Strict CPU proof command documented. |
+| CPU-BITNET-000 | #3642 | c5f3480ac90cccfd1aec9766ae4628fd7e9fd3c3 | Real BitNet CPU path implementation plan merged. |
 | HW-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Shared hardware validation matrix and proof-stage contract merged. |
 | HW-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Hardware artifact naming policy merged. |
 | BITNET-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | BitNet model/kernel/receipt proof contract merged. |
