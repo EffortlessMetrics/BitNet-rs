@@ -89,7 +89,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-proof/CPU-BITNET-002-tokenizer-authority"
 stackable = false
 requires_human_merge = true
@@ -117,4 +117,40 @@ must_not_claim = [
   "Packed kernels are complete.",
   "Transformer decode is complete.",
   "CPU performance is proven.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-003"
+status = "ready"
+branch = "codex/cpu-proof/CPU-BITNET-003-canonical-packed-layout"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-002"]
+acceptance = "Canonical block geometry, alignment, stride, and row/block iteration API are defined."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-qk256-layout-core --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "crates/bitnet-quantization/src/qk256_dispatch.rs",
+  "crates/bitnet-models/src/quant/**",
+  "crates/bitnet-models/src/qk256_utils.rs",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Canonical packed layout exists after merge.",
+]
+must_not_claim = [
+  "Optimized kernel performance is proven.",
+  "Scalar truth kernels are complete.",
+  "AVX2 dispatch is complete.",
 ]

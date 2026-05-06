@@ -11,7 +11,8 @@
 |---|---|---:|---|---|
 | CPU-BITNET-000 | merged | #3642 | `codex/cpu-proof/CPU-BITNET-000-path-plan` | Document the real BitNet CPU path implementation plan and sequence strict loader, tokenizer, layout, scalar, AVX2, receipts, and benchmarks. |
 | CPU-BITNET-001 | merged | #3651 | `codex/cpu-proof/CPU-BITNET-001-loader-authority` | Strict CPU inference has one authoritative real GGUF loader path for BitNet models, and minimal fallback is impossible in strict proof mode. |
-| CPU-BITNET-002 | pr_open | #3680 | `codex/cpu-proof/CPU-BITNET-002-tokenizer-authority` | Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure. |
+| CPU-BITNET-002 | merged | #3680 | `codex/cpu-proof/CPU-BITNET-002-tokenizer-authority` | Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure. |
+| CPU-BITNET-003 | ready | TBD | `codex/cpu-proof/CPU-BITNET-003-canonical-packed-layout` | Canonical block geometry, alignment, stride, and row/block iteration API are defined. |
 
 ## Hard Constraints
 

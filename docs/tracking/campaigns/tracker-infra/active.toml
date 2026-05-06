@@ -55,7 +55,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "TRACKER-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/tracker-infra/TRACKER-002-ci-enforcement"
 stackable = false
 requires_human_merge = true
