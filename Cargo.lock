@@ -1199,6 +1199,7 @@ version = "0.2.1-dev"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-cpu-detect",
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-qk256-layout-core",

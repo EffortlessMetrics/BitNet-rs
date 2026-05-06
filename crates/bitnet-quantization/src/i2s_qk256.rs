@@ -394,7 +394,7 @@ pub fn qk256_gemm_scalar(
 /// Multi-row GEMV with runtime dispatch: y = Ax where A is quantized QK256, x is dense
 ///
 /// This function automatically selects the best available implementation:
-/// - **AVX2**: x86_64 with AVX2 support (3-5× speedup over scalar)
+/// - **AVX2**: x86_64 with AVX2 and FMA support
 /// - **Scalar**: Fallback for all other cases
 ///
 /// # Arguments
@@ -432,11 +432,11 @@ pub fn gemv_qk256(
         );
     }
 
-    // Runtime dispatch: probe for AVX2 support on x86_64
-    #[cfg(target_arch = "x86_64")]
+    // Runtime dispatch: QK256 AVX2 currently uses FMA intrinsics, so both AVX2 and FMA
+    // must be available before entering the target-feature-gated implementation.
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        if is_x86_feature_detected!("avx2") {
-            // Use AVX2 path (3-5× speedup over scalar)
+        if bitnet_cpu_detect::avx2_fma_available() {
             return super::i2s_qk256_avx2::gemv_qk256_avx2(
                 qs_data,
                 x,
