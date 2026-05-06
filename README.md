@@ -112,7 +112,7 @@ Organised by [Diataxis](https://diataxis.fr/):
 |---------|----------|
 | [Tutorials](docs/tutorials/) | Getting started, first inference, tokenizer discovery |
 | [How-to](docs/howto/) | Install, run inference, export GGUF, cross-validate, validate models |
-| [Explanation](docs/explanation/) | Architecture, quantization formats, feature flags |
+| [Explanation](docs/explanation/) | Architecture, quantization formats, feature flags, [CPU path plan](docs/explanation/cpu-path-plan.md) |
 | [Reference](docs/reference/) | [Inference CLI](docs/reference/inference-cli-reference.md), [Cross-validation CLI](docs/reference/crossval-cli-reference.md), [environment variables](docs/environment-variables.md), [quantization](docs/reference/quantization-support.md) |
 
 ## Contributing
