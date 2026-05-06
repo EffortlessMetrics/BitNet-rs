@@ -211,6 +211,36 @@ When a later artifact claims BitNet progress, it must also include the BitNet co
 
 M4-002 probe artifacts do not claim BitNet inference, Metal kernel execution, MPSGraph graph execution, or Neural Engine execution.
 
+## M4-010 CPU/NEON BitNet Reference
+
+The Apple CPU/NEON BitNet reference proof uses the CLI `--json-out` artifact as
+the receipt path:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- run \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy \
+  --device apple-m4-cpu-neon \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-proof.json
+```
+
+The receipt must record `requested_backend`, `selected_backend`,
+`runtime_api`, `fallback_used`, model repo/file/SHA-256, tokenizer source,
+loader mode, kernel family, execution phase, CPU features, and generated token
+count. The M4-010 reference path records the canonical GGUF packed I2_S layout
+and selected scalar reference kernel explicitly; NEON may be present as a CPU
+feature, but this proof must not claim a NEON-optimized packed kernel unless one
+is actually selected. It also does not claim Metal BitNet execution, QK256
+optimization on Apple Silicon, or Apple CPU performance.
+
 ## Benchmark Notes
 
 Benchmarks must record:

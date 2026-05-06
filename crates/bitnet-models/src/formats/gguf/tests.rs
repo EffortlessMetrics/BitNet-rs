@@ -1092,6 +1092,20 @@ fn test_ln_gamma_validator_envelope() {
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &edge_high_tensor);
         assert!(result.is_ok(), "RMS at upper boundary should pass");
     }
+
+    // Test 6: BitNet RMSNorm weights may be pre-scaled near 1/sqrt(hidden)
+    {
+        let _guard = EnvGuard::new("BITNET_STRICT_MODE");
+        _guard.set("1");
+        let hidden_size = 2560usize;
+        let target = 1.0 / (hidden_size as f32).sqrt();
+        let data = vec![target * 0.91; hidden_size];
+        let bitnet_scaled_tensor =
+            Tensor::from_vec(data, &[hidden_size], &candle_core::Device::Cpu).unwrap();
+        let result =
+            GgufLoader::check_ln_gamma_stats("blk.0.attn_norm.weight", &bitnet_scaled_tensor);
+        assert!(result.is_ok(), "BitNet pre-scaled RMSNorm gamma should pass strict mode");
+    }
 }
 
 // ---------- Extended validation tests ----------
