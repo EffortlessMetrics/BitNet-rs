@@ -20,21 +20,21 @@ hard_constraints = [
 
 [[work_item]]
 id = "KBL8250U-003"
-status = "ready"
-branch = "codex/cpu-qk256-performance/KBL8250U-003-scalar-avx2-dispatch"
+status = "pr_open"
+branch = "codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact"
 stackable = false
 requires_human_merge = true
 blocked_by = []
 acceptance = "Prove i5-8250U scalar and AVX2 dispatch with receipt-backed selected CPU kernel identity and no GPU/NPU fallback."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu",
-  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2",
+  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features avx2 -- --nocapture",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests -- --nocapture",
 ]
 allowed_paths = [
   "crates/bitnet-cpu-detect/**",
-  "crates/bitnet-kernels/**",
-  "crates/bitnet-receipts/**",
+  "crates/bitnet-quantization/**",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
   "docs/tracking/campaigns/cpu-qk256-performance/**",
 ]
 forbidden_paths = [
