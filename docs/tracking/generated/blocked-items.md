@@ -33,11 +33,21 @@
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
+| intel-258v-platform | CPU258V-001 | LNL258V-003 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
 | nvidia-5070ti | RTX5070TI-007 | RTX5070TI-006 | merged |
 | nvidia-5070ti | RTX5070TI-008 | RTX5070TI-006, RTX5070TI-007 | merged |
+| nvidia-5070ti | CUDA-BITNET-001 | RTX5070TI-007 | merged |
+| nvidia-5070ti | CUDA-BITNET-002 | CUDA-BITNET-001 | merged |
+| nvidia-5070ti | CUDA-BITNET-003 | CUDA-BITNET-001 | merged |
+| nvidia-5070ti | CUDA-BITNET-004 | CUDA-BITNET-002, CUDA-BITNET-003 | merged |
+| nvidia-5070ti | CUDA-BITNET-005 | CUDA-BITNET-004 | merged |
+| nvidia-5070ti | CUDA-BITNET-006 | CUDA-BITNET-005 | pr_open |
+| nvidia-5070ti | CUDA-BITNET-007 | CUDA-BITNET-006 | proposed |
+| nvidia-5070ti | CUDA-BITNET-008 | CUDA-BITNET-007 | proposed |
+| nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | proposed |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |

@@ -180,7 +180,7 @@ impl Drop for PooledBuffer {
             let mut inner = self.pool.lock().expect("pool lock poisoned");
             inner.stats.active_bytes = inner.stats.active_bytes.saturating_sub(bucket_size);
 
-            if inner.stats.pooled_bytes + bucket_size <= inner.max_size_bytes {
+            if can_return_to_pool(inner.stats.pooled_bytes, bucket_size, inner.max_size_bytes) {
                 inner.stats.pooled_bytes += bucket_size;
                 inner
                     .buckets
@@ -192,6 +192,14 @@ impl Drop for PooledBuffer {
             // else: drop `buf`, freeing the memory
         }
     }
+}
+
+/// Returns whether a freed buffer can be re-cached without exceeding capacity.
+///
+/// Uses checked arithmetic to prevent `usize` overflow from incorrectly
+/// admitting extra buffers when pooled byte counters approach `usize::MAX`.
+fn can_return_to_pool(pooled_bytes: usize, bucket_size: usize, max_size_bytes: usize) -> bool {
+    pooled_bytes.checked_add(bucket_size).is_some_and(|next| next <= max_size_bytes)
 }
 
 // ── BufferPool (f32 tiered pool) ────────────────────────────────────
@@ -647,5 +655,11 @@ mod tests {
         pool.release(buf);
         let buf2 = pool.acquire(256);
         assert_eq!(buf2[0], 0.0);
+    }
+
+    #[test]
+    fn return_to_pool_overflow_is_rejected() {
+        assert!(!can_return_to_pool(usize::MAX, 64, usize::MAX));
+        assert!(!can_return_to_pool(usize::MAX - 8, 16, usize::MAX));
     }
 }

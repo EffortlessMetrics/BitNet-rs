@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T23:14:30Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-001"
+event = "pr_open"
+pr = 3802
+branch = "codex/intel-258v-platform/CPU258V-001-validation-harness"
+head_sha = "7c242d1ee2e3993d390e2c34a843423f6f9380f9"
+actor = "codex"
+
+notes = [
+  "Opened CPU258V-001 as a validation-only CPU BitNet preflight harness.",
+  "The PR emits structured blocked_preflight artifacts without touching loader, tokenizer, QK256, CPU kernel, or transformer decode internals.",
+]

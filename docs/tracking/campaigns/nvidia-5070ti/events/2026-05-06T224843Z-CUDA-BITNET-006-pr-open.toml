@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T22:48:43Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-006"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3801
+head_sha = "54a762a13774bc0b3a8d3842d81a44cc10b0efff"
+actor = "codex"
+
+notes = [
+  "Opened strict one-token BitNet CUDA proof PR.",
+  "The proof receipt records selected RTX 5070 Ti CUDA backend identity, QK256 CUDA invocations, zero BitNet linear CPU fallback, CPU/CUDA greedy agreement, and speedup_claim=false.",
+]
