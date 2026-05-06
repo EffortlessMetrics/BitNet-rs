@@ -55,7 +55,6 @@ fn re_llama_wo() -> &'static Regex {
     })
 }
 
-
 static RE_LLAMA_Q_PROJ: OnceLock<Regex> = OnceLock::new();
 fn re_llama_q_proj() -> &'static Regex {
     RE_LLAMA_Q_PROJ.get_or_init(|| {
