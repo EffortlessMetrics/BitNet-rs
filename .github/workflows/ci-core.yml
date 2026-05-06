@@ -261,13 +261,21 @@ jobs:
             -p bitnet-sampling
 
   # Job 5: Clippy linting (macOS ARM64 / Apple Silicon)
-  # Non-blocking: reports status but does not gate merges until runners
-  # are confirmed available in the GitHub Actions pool.
+  # macOS minutes are 10x Linux. Even with continue-on-error and
+  # exclusion from the required summary, this job pays setup + cargo
+  # clippy on every default PR for a non-blocking signal. Move it to
+  # main / dispatch / explicit `macos` or `full-ci` label, where the
+  # platform delta is actually worth measuring.
   clippy-macos-arm64:
     name: Clippy (macOS ARM64)
     runs-on: macos-14
     continue-on-error: true
     timeout-minutes: 15
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'macos') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
       # Allow NEON-idiomatic patterns common in SIMD intrinsic code (~120 files).
       # Linux x86 Clippy remains strict (-D warnings with no allows).
