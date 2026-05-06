@@ -1147,140 +1147,77 @@ async fn run_simple_generation(
         }
     };
 
-    // Load tokenizer with auto-discovery
-    // Priority: explicit path ΓåÆ sibling tokenizer.json ΓåÆ parent tokenizer.json ΓåÆ GGUF embedded ΓåÆ mock
+    // Load tokenizer with deterministic CPU-BITNET authority.
+    // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
-    let mut external_tokenizer = false;
+    let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
-    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = {
-        // Try auto-discovery first (handles explicit, sibling, parent)
-        let discovered_path = if tokenizer_path.is_some() {
-            // Explicit path provided
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, tokenizer_path)
-        } else {
-            // Try sibling/parent discovery
-            crate::tokenizer_discovery::resolve_tokenizer(&model_path, None)
-        };
-
-        match discovered_path {
-            Ok(path) => {
-                // Found tokenizer via discovery
-                external_tokenizer = true;
-                println!("Loading tokenizer from: {}", path.display());
-
-                match bitnet_tokenizers::load_tokenizer(&path) {
-                    Ok(tok) => tok,
-                    Err(e) => {
-                        if strict_tokenizer {
-                            eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
-                            std::process::exit(EXIT_STRICT_TOKENIZER);
-                        }
-                        if !allow_mock {
-                            anyhow::bail!(
-                                "Failed to load tokenizer from {}: {e}. Use --allow-mock to use mock tokenizer.",
-                                path.display()
-                            );
-                        }
-                        println!("Warning: Using mock tokenizer due to: {e}");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+    let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
+        &model_path,
+        tokenizer_path.as_deref(),
+        effective_strict_tokenizer,
+    ) {
+        Ok(resolution) => {
+            match resolution.source {
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+                | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+                    if let Some(path) = &resolution.path {
+                        println!("Loading tokenizer from: {}", path.display());
                     }
                 }
+                bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => {
+                    println!("Successfully loaded tokenizer from GGUF metadata");
+                }
+                bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {}
             }
-            Err(_discovery_err) => {
-                if is_hf_directory {
-                    // For HF directories, check for tokenizer.json inside the model dir
-                    let hf_tok_path = model_path.join("tokenizer.json");
-                    if hf_tok_path.exists() {
-                        println!("Loading tokenizer from HuggingFace directory...");
-                        external_tokenizer = true;
-                        match bitnet_tokenizers::load_tokenizer(&hf_tok_path) {
-                            Ok(tok) => tok,
-                            Err(e) => {
-                                if strict_tokenizer {
-                                    eprintln!("Strict tokenizer failed: {e}");
-                                    std::process::exit(EXIT_STRICT_TOKENIZER);
-                                }
-                                if !allow_mock {
-                                    anyhow::bail!(
-                                        "Failed to load tokenizer from {}: {e}",
-                                        hf_tok_path.display()
-                                    );
-                                }
-                                println!("Warning: Using mock tokenizer due to: {e}");
-                                std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                            }
-                        }
-                    } else if strict_tokenizer {
-                        eprintln!(
-                            "Strict tokenizer failed: no tokenizer.json in {}",
-                            model_path.display()
-                        );
-                        std::process::exit(EXIT_STRICT_TOKENIZER);
-                    } else if !allow_mock {
-                        anyhow::bail!(
-                            "No tokenizer.json found in HuggingFace model directory: {}\n\
-                             Provide --tokenizer or use --allow-mock",
-                            model_path.display()
-                        );
-                    } else {
-                        println!("Warning: Using mock tokenizer (no tokenizer.json in HF dir)");
-                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                    }
+            resolution
+        }
+        Err(e) => {
+            if effective_strict_tokenizer {
+                eprintln!("Strict tokenizer failed: {e}");
+                std::process::exit(EXIT_STRICT_TOKENIZER);
+            }
+            if !allow_mock {
+                let model_dir = if is_hf_directory {
+                    model_path.as_path()
                 } else {
-                    // Discovery failed, try GGUF embedded as fallback
-                    println!("No external tokenizer found, attempting to load from GGUF model...");
-
-                    // Read the GGUF file to get tokenizer metadata
-                    let gguf_data = std::fs::read(&model_path)
-                        .context("Failed to read GGUF file for tokenizer extraction")?;
-                    let reader = bitnet_models::GgufReader::new(&gguf_data)
-                        .context("Failed to parse GGUF for tokenizer extraction")?;
-
-                    // Capture metadata counts
-                    let n_tensors = reader.tensor_count() as usize;
-                    let n_kv = reader.metadata_keys().len();
-                    gguf_metadata = Some((n_kv, n_tensors));
-
-                    match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-                        Ok(tok) => {
-                            println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                            tok
-                        }
-                        Err(e) => {
-                            if strict_tokenizer {
-                                eprintln!(
-                                    "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
-                                );
-                                std::process::exit(EXIT_STRICT_TOKENIZER);
-                            }
-                            if !allow_mock {
-                                // Provide actionable error message
-                                let model_dir = model_path
-                                    .parent()
-                                    .unwrap_or_else(|| std::path::Path::new("."));
-                                anyhow::bail!(
-                                    "Failed to load tokenizer from GGUF: {e}\n\
-                                 \n\
-                                 No tokenizer found. Solutions:\n\
-                                 1. Download tokenizer:\n\
-                                    cargo run -p xtask -- tokenizer --into {}\n\
-                                 2. Provide explicit tokenizer path:\n\
-                                    --tokenizer /path/to/tokenizer.json\n\
-                                 3. Use mock tokenizer for testing:\n\
-                                    --allow-mock",
-                                    model_dir.display()
-                                );
-                            }
-                            println!("Warning: Using mock tokenizer due to: {e}");
-                            std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
-                        }
-                    }
-                } // end GGUF else branch
+                    model_path.parent().unwrap_or_else(|| std::path::Path::new("."))
+                };
+                anyhow::bail!(
+                    "{e}\n\
+                     \n\
+                     No tokenizer found. Solutions:\n\
+                     1. Download tokenizer:\n\
+                        cargo run -p xtask -- tokenizer --into {}\n\
+                     2. Provide explicit tokenizer path:\n\
+                        --tokenizer /path/to/tokenizer.json\n\
+                     3. Use mock tokenizer for testing only:\n\
+                        --allow-mock",
+                    model_dir.display()
+                );
+            }
+            println!("Warning: Using mock tokenizer due to: {e}");
+            bitnet_tokenizers::auto::TokenizerResolution {
+                tokenizer: std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new()),
+                source: bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback,
+                strict: false,
+                path: None,
             }
         }
     };
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+
+    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+        let gguf_data = std::fs::read(&model_path)
+            .context("Failed to read GGUF file for tokenizer metadata")?;
+        let reader = bitnet_models::GgufReader::new(&gguf_data)
+            .context("Failed to parse GGUF for tokenizer metadata")?;
+        gguf_metadata = Some((reader.metadata_keys().len(), reader.tensor_count() as usize));
+    }
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -1602,9 +1539,16 @@ async fn run_simple_generation(
         let generated_text = tokenizer.decode(&generated_tokens)?;
 
         // Get tokenizer info
+        let tokenizer_source_str = tokenizer_source.as_str();
         let tokenizer_info = serde_json::json!({
             "type": "sentencepiece",
-            "origin": if external_tokenizer { "external" } else { "embedded" },
+            "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+                "embedded"
+            } else {
+                "external"
+            },
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
