@@ -20,6 +20,20 @@ The CPU path is considered production-ready only when a strict run can prove all
 - transformer decode-critical ops are present for CPU execution;
 - receipts record requested versus selected backend, kernel, tokenizer source, and fallback status.
 
+## External Reference Architecture
+
+The CPU lane should follow the same architectural lesson as `bitnet.cpp`: CPU inference for ternary BitNet models is not generic dense inference with a different file extension. Mixed-precision matrix multiplication dominates runtime, so the useful path is specialized I2_S/TL-style packed compute, not repeated whole-matrix dequantization into generic BLAS-shaped tensors.
+
+GGUF is the storage contract that makes this possible in Rust. Treat it as a single-file, metadata-rich, mmap-friendly container whose tensor alignment and metadata are validated once at load time, then turned into immutable packed views. The steady-state inference contract is:
+
+- parse metadata once;
+- validate model family, tensor names, RoPE/GQA/head metadata, and quant layout once;
+- expose read-only packed tensor views;
+- dispatch directly to packed scalar/SIMD kernels;
+- never repack or fully dequantize weights on the hot path unless the run is explicitly diagnostic.
+
+The tokenizer side needs the same authority. Hugging Face-style model trees commonly carry `tokenizer.json` and `tokenizer_config.json` next to weights, but runtime discovery must not guess indefinitely. Strict inference requires deterministic precedence and an explicit receipt source.
+
 ## Current Diagnosis
 
 The repo already contains the major surfaces required for a serious CPU lane, but they are not yet unified into a single end-to-end execution story.
@@ -132,6 +146,18 @@ Acceptance criteria:
 
 Prioritize decode-first CPU execution. Prefill is important, but single-token decode is more sensitive to memory traffic, KV-cache behavior, scalar fallback, and layout conversion.
 
+### Hardware planning targets
+
+Plan by ISA lane before planning by specific machine. AVX2 is the first x86 fast-path target because it covers the widest practical CPU set; AVX-512 and NEON should widen only after scalar and AVX2 decode paths are receipt-proven.
+
+| Machine lane | Planning target | Assumption for implementation work |
+|---|---|---|
+| 8250U CPU lane | AVX2 baseline | Low-core-count, memory-sensitive, decode-first, no wider-ISA assumptions. |
+| 258V CPU lane | AVX2 baseline | Current x86 reference lane; newer ISA features remain optional until probed and benchmarked. |
+| 5700X | AVX2 baseline | Strong multi-core prefill machine, but decode still drives optimization value. |
+| 9950X3D | AVX2 baseline plus optional advanced x86 | Prove AVX2 first; enable wider lanes only with CPUID and receipt-backed speedups. |
+| M4 Mac Mini | NEON baseline | Prioritize NEON; keep AMX/Accelerate out of the first CPU milestone. |
+
 | Kernel target | Primary workload | First lane | Acceptance |
 |---|---|---|---|
 | Scalar packed GEMV | decode correctness | all CPUs | Deterministic oracle for SIMD parity. |
@@ -192,6 +218,17 @@ pub fn rmsnorm_f32_inplace(x: &mut [f32], weight: &[f32], eps: f32);
 pub fn apply_rope_inplace(q: &mut [f32], k: &mut [f32], pos: usize, cfg: &RopeCfg);
 pub fn kv_append(cache: &mut KvCache, layer: usize, token: usize, k: &[f32], v: &[f32]) -> Result<()>;
 ```
+
+## Optimization Rules
+
+Use these rules to keep performance work aligned with correctness and receipts.
+
+1. **Keep packed weights packed.** Fuse block decode/unpack, scale, and dot-product work inside the kernel; accumulate in the most stable integer or mixed-precision domain available; scale late.
+2. **Separate prefill and decode.** Prefill wants tiled GEMM-like blocking; decode wants tight GEMV-like cache behavior. Shared helpers are fine, but a single abstraction must not hide workload differences.
+3. **Own the memory layout.** `bitnet-qk256-layout-core` should define block geometry, alignment, row/block iteration, and the executable view emitted by GGUF loading.
+4. **Use direct intrinsics where they matter.** Scalar code is the truth path; `std::arch` AVX2/AVX-512/NEON code is the fast path; portable-SIMD can be considered later as a fallback, not as the first performance authority.
+5. **Thread the outer dimension conservatively.** Prefill can parallelize rows/output tiles/layers when working sets remain sane; decode may slow down if extra threads increase cache and KV traffic.
+6. **Profile real shapes in the right order.** Optimize packed GEMV decode first, then KV-cache access, RMSNorm/RoPE, output head, and finally prefill GEMM.
 
 ## Parity Tolerances
 
@@ -331,6 +368,21 @@ A CPU receipt must make fallback impossible to hide:
 8. BitNet phase benchmarks.
 9. Wider ISA lanes.
 
+### Suggested milestone timeline
+
+| Milestone | Focus | Exit proof |
+|---|---|---|
+| Week 1 | GGUF and tokenizer authority | Strict load/tokenizer failures are deterministic and receipt-visible. |
+| Week 2 | Strict-mode fallback policy | Hidden fallback becomes a hard failure in strict proof runs. |
+| Week 3 | Scalar packed reference kernels | Exact layout fixtures and scalar GEMV/GEMM parity pass. |
+| Week 4 | Layer/block parity fixtures | Transformer block fixtures prove decode-critical CPU math. |
+| Week 5 | AVX2 decode GEMV | CPUID-gated AVX2 beats scalar and records selected kernel. |
+| Week 6 | KV-cache, RMSNorm, and RoPE tuning | Decode traces identify the next real bottleneck. |
+| Week 7 | NEON decode path | arm64 scalar parity and receipt-backed speedup exist. |
+| Week 8 | AVX2 prefill GEMM | Prefill benchmarks are separate from decode benchmarks. |
+| Week 9 | Receipts and CI benchmarks | Machine-readable CPU artifacts are published by stable commands. |
+| Later | Optional AVX-512 lane | Wider x86 lane is probed, optional, and benchmark-proven. |
+
 ## Review Checklist
 
 - [ ] Does the change preserve a single GGUF authority for strict real-model inference?
@@ -341,6 +393,32 @@ A CPU receipt must make fallback impossible to hide:
 - [ ] Does strict mode fail rather than silently substituting fallback execution?
 - [ ] Does the receipt include requested and selected backend/kernel plus fallback reason?
 - [ ] Does the benchmark name its phase: micro, layer, prefill, or decode?
+
+## Actionable PR Checklist
+
+Use this checklist when slicing implementation work:
+
+- [ ] Remove split-brain GGUF loading paths from strict real-model execution.
+- [ ] Make tokenizer resolution explicit, deterministic, and receipt-visible.
+- [ ] Make `bitnet-qk256-layout-core` the one QK256/I2_S layout authority.
+- [ ] Land scalar packed GEMV/GEMM reference kernels before claiming SIMD speedups.
+- [ ] Land AVX2 decode GEMV before wider x86 or ARM lanes.
+- [ ] Add RMSNorm, RoPE, KV-cache, attention score/value, embedding gather, and output-head helpers for CPU decode.
+- [ ] Record requested versus selected backend and kernel in receipts.
+- [ ] Fail strict mode on hidden fallback, minimal-loader fallback, tokenizer fallback, or dequantized steady-state substitution.
+- [ ] Add micro, layer, prefill, and decode benchmarks with stable output fields.
+- [ ] Publish reproducible receipt JSON for CI/manual CPU proof runs.
+
+## Open Questions and Review Limits
+
+This document is intentionally a planning contract, not a claim that every referenced API already exists with these exact signatures. Before implementation, inspect current file bodies for:
+
+- exact existing loader and tokenizer function names;
+- whether transformer CPU ops already exist under different module names;
+- current CLI spellings for strict mode, kernel selection, and receipt output;
+- receipt schema version and whether CPU kernel fields already have equivalent names.
+
+Those details can change the patch shape, but not the required direction: authoritative GGUF/tokenizer loading, canonical packed layout, scalar truth kernels, decode-first AVX2, then wider ISA lanes.
 
 ## Related Documents
 
