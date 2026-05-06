@@ -408,6 +408,73 @@ the recorded model, tokenizer, quantization, kernel family, and decode proof.
 It must not claim Metal BitNet inference, Neural Engine execution, QK256 on
 Metal, or general M4 performance.
 
+## M4-015 Steady Decode Profile
+
+The steady decode profile extends the strict BitNet M4 proof with timing
+evidence for a named profile. It records model load, tokenizer load, prompt
+tokenization, prompt-prefix prefill when requested, first-token decode, steady
+decode, sampling, backend identity, fallback status, and Apple machine context.
+
+Run the live profile with:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- \
+  --device apple-m4-cpu-neon \
+  run \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 4 \
+  --temperature 0.0 \
+  --greedy \
+  --deterministic \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt-template raw \
+  --profile-id smoke_4 \
+  --no-warnings \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-profile.json
+```
+
+The receipt must keep the profile claim narrow:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_profile",
+  "profile": {
+    "id": "smoke_4",
+    "kind": "steady_decode_prefill",
+    "phase": "decode",
+    "prompt_prefill": {
+      "tokens": 7,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode"
+    },
+    "decode": {
+      "generated_tokens": 4,
+      "steady_state_tokens": 3,
+      "steady_state_tok_s": 0.0
+    }
+  },
+  "timing": {
+    "model_load_ms": 0.0,
+    "tokenize_ms": 0.0,
+    "prefill_ms": 0.0,
+    "first_token_decode_ms": 0.0,
+    "decode_steady_state_tok_s": 0.0,
+    "sampling_ms_per_token": 0.0
+  },
+  "fallback_used": false
+}
+```
+
+This may claim only that M4 timing is recorded for the named BitNet phase and
+profile under captured machine context. It is not a general M4 performance
+claim, Neural Engine claim, QK256 acceleration claim, or Metal BitNet proof.
+
 ## Benchmark Notes
 
 Benchmarks must record:

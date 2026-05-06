@@ -466,6 +466,57 @@ This proves BitNet inference only for the selected Apple backend and recorded
 configuration. It is not Metal BitNet proof, QK256-on-Metal proof, Neural Engine
 proof, or a performance claim.
 
+### M4-015 - Steady Decode and Prefill Profile
+
+Add timing evidence to the strict BitNet M4 proof without broadening the claim.
+The profile receipt records a named profile, selected Apple backend, fallback
+status, model/tokenizer identity, Apple machine context, prompt tokenization
+time, prompt-prefix prefill timing, first-token decode timing, steady decode
+timing, and sampling time.
+
+The first profile target is a short CPU/NEON strict run:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_profile",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "profile": {
+    "id": "smoke_4",
+    "kind": "steady_decode_prefill",
+    "phase": "decode",
+    "machine_context_recorded": true,
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode"
+    },
+    "decode": {
+      "generated_tokens": 4,
+      "warmup_tokens": 1,
+      "steady_state_tokens": 3,
+      "steady_state_tok_s": 0.0
+    }
+  },
+  "timing": {
+    "model_load_ms": 0.0,
+    "tokenizer_load_ms": 0.0,
+    "tokenize_ms": 0.0,
+    "prefill_ms": 0.0,
+    "first_token_decode_ms": 0.0,
+    "decode_total_ms": 0.0,
+    "decode_steady_state_tok_s": 0.0,
+    "sampling_ms_per_token": 0.0
+  }
+}
+```
+
+M4-015 may claim only that timing is recorded for the named BitNet phase and
+profile under captured machine context. It must not claim general M4
+performance, Neural Engine execution, QK256 acceleration on Apple Silicon, or
+Metal BitNet inference.
+
 ## Do Not
 
 - Do not start with Apple Neural Engine inference claims.
