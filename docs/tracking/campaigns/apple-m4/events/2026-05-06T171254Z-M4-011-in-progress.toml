@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T17:12:54Z"
+campaign = "apple-m4"
+item = "M4-011"
+event = "in_progress"
+branch = "codex/apple-m4/M4-011-metal-i2s-smoke-parity"
+actor = "codex"
+
+notes = [
+  "Started native Metal I2_S smoke/parity after M4-010 closeout merged.",
+  "Scope remains limited to a tiny I2_S-adjacent Metal parity fixture, Apple campaign tracking, and receipt metadata.",
+  "No QK256, server inference, benchmarks, MPSGraph execution, or full BitNet Metal inference claims.",
+]
