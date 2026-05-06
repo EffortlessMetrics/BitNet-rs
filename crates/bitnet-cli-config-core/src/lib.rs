@@ -10,7 +10,7 @@ use tracing::debug;
 pub struct CliConfig {
     /// Default model path
     pub default_model: Option<PathBuf>,
-    /// Default device (cpu, cuda, auto)
+    /// Default device/backend identity (cpu, cuda, auto, apple-m4-metal, etc.)
     pub default_device: String,
     /// Default quantization type
     pub default_quantization: Option<String>,
@@ -133,12 +133,11 @@ impl CliConfig {
 
     /// Validate configuration
     pub fn validate(&self) -> Result<()> {
-        match self.default_device.as_str() {
-            "cpu" | "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" | "npu" | "auto" => {}
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, auto",
+        if !is_supported_device_label(&self.default_device) {
+            anyhow::bail!(
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
                 self.default_device
-            ),
+            );
         }
 
         match self.logging.level.as_str() {
@@ -163,6 +162,25 @@ impl CliConfig {
 
         Ok(())
     }
+}
+
+fn is_supported_device_label(label: &str) -> bool {
+    matches!(
+        label,
+        "cpu"
+            | "cuda"
+            | "gpu"
+            | "vulkan"
+            | "opencl"
+            | "ocl"
+            | "npu"
+            | "metal"
+            | "mpsgraph"
+            | "apple-m4-metal"
+            | "apple-m4-mpsgraph"
+            | "apple-m4-cpu-neon"
+            | "auto"
+    )
 }
 
 /// Configuration builder for command-line usage

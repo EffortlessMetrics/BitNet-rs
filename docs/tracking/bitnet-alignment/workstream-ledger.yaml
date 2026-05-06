@@ -1883,18 +1883,21 @@ items:
 
   - id: M4-003
     title: Preserve Apple backend identity
-    state: ready
+    state: pr_open
     priority: P1
     workstream: apple_silicon
     depends_on:
       - M4-002
     scope:
       allowed_paths:
-        - crates/bitnet-common/src/types.rs
+        - crates/bitnet-common/src/backend_selection.rs
         - crates/bitnet-device-config-core/src/lib.rs
-        - crates/bitnet-inference/src/backends.rs
         - crates/bitnet-cli-config-core/src/lib.rs
         - crates/bitnet-cli/src/main.rs
+        - crates/bitnet-cli/tests/cli_config_edge_cases.rs
+        - crates/bitnet-cli/tests/cli_extended_tests.rs
+        - crates/bitnet-cli/tests/snapshots/snapshot_wave10__cli_config_validate_invalid_device_error.snap
+        - docs/tracking/campaigns/apple-m4/**
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
@@ -1907,7 +1910,9 @@ items:
       - Strict mode fails if Apple M4 Metal is requested but unavailable.
     verification:
       - cargo fmt --all -- --check
-      - cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu
+      - cargo test --locked -p bitnet-common --no-default-features --features cpu backend_selection
+      - cargo test --locked -p bitnet-device-config-core --no-default-features
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli cli_config
 
   - id: M4-004
     title: Add Apple M4 Metal device probe
