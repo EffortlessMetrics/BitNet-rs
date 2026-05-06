@@ -1,0 +1,12 @@
+timestamp = "2026-05-05T22:00:00Z"
+campaign = "crate-collapse"
+item = "INV-001"
+event = "merged"
+pr = 3632
+merge_sha = "457b36630906f2044e406e0dcf27ecb539e8a7a5"
+actor = "maintainer"
+
+notes = [
+  "Crate consolidation inventory merged.",
+  "Inventory only; no crate movement or runtime behavior changes.",
+]

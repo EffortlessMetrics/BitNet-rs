@@ -286,3 +286,32 @@ fn tolerance_boundary_negative() {
 
     assert!(result.is_err(), "should fail beyond tolerance");
 }
+
+#[test]
+#[serial_test::serial]
+fn strict_mode_accepts_small_trailing_alignment_padding() {
+    temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+        let nelems = 256 * 17;
+        let qk256_need = 17 * 64;
+        let info = mk_info("blk.0.ffn_down.weight", &[256, 17], (qk256_need + 32) as u64);
+
+        let flavor = detect_i2s_flavor(&info, false, nelems)
+            .expect("strict mode should accept bounded trailing alignment padding");
+
+        assert_eq!(flavor, I2SFlavor::GgmlQk256NoScale);
+    });
+}
+
+#[test]
+#[serial_test::serial]
+fn strict_mode_rejects_missing_bytes_within_alignment_tolerance() {
+    temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+        let nelems = 256 * 17;
+        let qk256_need = 17 * 64;
+        let info = mk_info("blk.0.ffn_down.weight", &[256, 17], (qk256_need - 32) as u64);
+
+        let result = detect_i2s_flavor(&info, false, nelems);
+
+        assert!(result.is_err(), "strict mode must not accept missing packed bytes");
+    });
+}

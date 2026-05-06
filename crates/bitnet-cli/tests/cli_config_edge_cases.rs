@@ -46,7 +46,21 @@ fn validate_default_config() {
 
 #[test]
 fn validate_all_valid_devices() {
-    for device in &["cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "npu", "auto"] {
+    for device in &[
+        "cpu",
+        "cuda",
+        "gpu",
+        "vulkan",
+        "opencl",
+        "ocl",
+        "npu",
+        "metal",
+        "mpsgraph",
+        "apple-m4-metal",
+        "apple-m4-mpsgraph",
+        "apple-m4-cpu-neon",
+        "auto",
+    ] {
         let mut cfg = CliConfig::default();
         cfg.default_device = device.to_string();
         assert!(cfg.validate().is_ok(), "device '{}' should be valid", device);

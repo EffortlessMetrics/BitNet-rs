@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T13:33:29Z"
+campaign = "intel-npu"
+item = "NPU-003"
+event = "merged"
+pr = 3739
+merge_sha = "62fbc27bad331fb800c1ad1f080eb4bb80b143a3"
+actor = "maintainer"
+
+notes = [
+  "Intel NPU OpenVINO runtime visibility fields merged.",
+  "This records runtime visibility only; graph execution, BitNet inference, and NPU acceleration remain follow-up work.",
+]

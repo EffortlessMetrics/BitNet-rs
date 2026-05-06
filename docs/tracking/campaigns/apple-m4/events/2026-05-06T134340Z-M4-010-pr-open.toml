@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T13:43:40Z"
+campaign = "apple-m4"
+item = "M4-010"
+event = "pr_open"
+pr = 3746
+head_sha = "735a3d68f7292a78cef2828c5a3b0b12c07c2360"
+actor = "codex"
+
+notes = [
+  "Opened Apple CPU/NEON BitNet reference proof PR.",
+  "Receipt fields record real GGUF, real tokenizer, selected Apple CPU backend, fallback_used=false, packed I2_S scalar reference kernel, and decode phase.",
+  "No Metal BitNet execution, QK256 optimization on Apple Silicon, MPSGraph, Neural Engine, or performance claim is made.",
+]

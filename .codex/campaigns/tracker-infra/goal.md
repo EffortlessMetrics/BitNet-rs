@@ -1,0 +1,1 @@
+Use the tracker infrastructure campaign to finish the move from global hand-edited alignment trackers to campaign-local TOML manifests, append-only events, generated dashboards, and advisory xtask gates. Preserve hardware lane visibility, treat legacy global status files as transition surfaces, and do not touch runtime code or kernels.

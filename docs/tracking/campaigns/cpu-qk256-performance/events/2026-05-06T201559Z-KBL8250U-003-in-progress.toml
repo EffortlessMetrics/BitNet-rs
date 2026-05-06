@@ -1,0 +1,11 @@
+timestamp = "2026-05-06T20:15:59Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-003"
+event = "in_progress"
+branch = "codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact"
+actor = "codex"
+
+notes = [
+  "Started the i5-8250U CPU-only AVX2 parity artifact lane after CPU-BITNET-005c merged.",
+  "Artifacts record AVX2=true, FMA=true, AVX-512=false, selected qk256-avx2-gemv, scalar oracle qk256-scalar-gemv, and fallback_used=false; no throughput, sustained-performance, GPU, OpenVINO, UHD 620, or NPU claim is made.",
+]

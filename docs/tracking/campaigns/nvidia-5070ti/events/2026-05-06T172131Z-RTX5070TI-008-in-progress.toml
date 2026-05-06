@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T17:21:31Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-008"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the RTX 5070 Ti CUDA benchmark baseline rung after RTX5070TI-007 merged.",
+  "Scope is limited to parity-tested tiny CUDA vector-add benchmarking, CUDA benchmark receipt validation, and hardware receipt evidence.",
+  "FP32/I2S benchmark profiles are recorded as not-run until parity-backed CUDA benchmark primitives exist.",
+]

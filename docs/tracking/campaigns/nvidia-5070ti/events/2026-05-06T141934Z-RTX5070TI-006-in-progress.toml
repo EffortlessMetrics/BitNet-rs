@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T14:19:34Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-006"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the RTX 5070 Ti CPU/CUDA parity rung after RTX5070TI-005 merged.",
+  "Scope remains one deterministic tiny CUDA vector-add fixture with CPU reference metrics, selected-device identity, and no BitNet inference or speedup claim.",
+]

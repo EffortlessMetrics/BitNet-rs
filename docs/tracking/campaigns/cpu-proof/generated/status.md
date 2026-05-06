@@ -1,0 +1,27 @@
+<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->
+# BitNet CPU proof Campaign Status
+
+- Campaign: `cpu-proof`
+- State: `active`
+- Objective: Make real BitNet CPU inference strict, receipt-backed, and measurable without routing around model, tokenizer, layout, or fallback truth.
+
+## Work Items
+
+| Item | State | PR | Branch | Acceptance |
+|---|---|---:|---|---|
+| CPU-BITNET-000 | merged | #3642 | `codex/cpu-proof/CPU-BITNET-000-path-plan` | Document the real BitNet CPU path implementation plan and sequence strict loader, tokenizer, layout, scalar, AVX2, receipts, and benchmarks. |
+| CPU-BITNET-001 | merged | #3651 | `codex/cpu-proof/CPU-BITNET-001-loader-authority` | Strict CPU inference has one authoritative real GGUF loader path for BitNet models, and minimal fallback is impossible in strict proof mode. |
+| CPU-BITNET-002 | merged | #3680 | `codex/cpu-proof/CPU-BITNET-002-tokenizer-authority` | Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure. |
+| CPU-BITNET-003 | merged | #3690 | `codex/cpu-bitnet-003-canonical-packed-layout` | Canonical block geometry, alignment, stride, and row/block iteration API are defined. |
+| CPU-BITNET-004 | merged | #3696 | `codex/cpu-bitnet-004-scalar-packed-truth` | Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill. |
+| CPU-BITNET-005a | merged | #3735 | `codex/cpu-bitnet-005a-avx2-fma-gating` | AVX2/FMA feature plumbing is explicit, FMA-using QK256 helpers are target-feature gated, and scalar fallback remains unchanged. |
+| CPU-BITNET-005b | merged | #3748 | `codex/cpu-bitnet-005b-kernel-selection` | QK256 decode GEMV selection reports requested kernel, selected kernel, fallback status, fallback reason, and CPU features with strict AVX2 fallback failure. |
+| CPU-BITNET-005c | merged | #3753 | `codex/cpu-bitnet-005c-avx2-parity-hardening` | AVX2 decode GEMV parity is hardened against scalar across rows, tail-column shapes, deterministic patterns, and repeated-run equality. |
+| CPU-BITNET-006 | ready | TBD | `codex/cpu-bitnet-006-transformer-decode-ops` | Embedding gather, RMSNorm/subln, RoPE, attention scores, softmax, A/V, FFN, KV-cache, output head, logits handoff, and sampling handoff are authoritative for CPU decode; prefill and decode scheduling are separated; one real-model decode step can run with real tensors; missing ops fail explicitly; KV-cache append/read is deterministic. |
+
+## Hard Constraints
+
+- No GPU or NPU claims.
+- No silent GGUF fallback.
+- No performance claim without receipt artifacts.
+- No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.

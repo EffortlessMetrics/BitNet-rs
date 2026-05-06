@@ -1,0 +1,1 @@
+Use the NVIDIA 5070 Ti campaign to make RTX 5070 Ti a CUDA-first, receipt-backed BitNet target. Keep CUDA, WGPU, CPU fallback, and generic GPU labels separate, and do not claim kernel execution, inference, or performance from visibility alone.

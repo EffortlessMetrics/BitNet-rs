@@ -2,6 +2,13 @@
 
 This document describes the comprehensive CI integration setup for the BitNet-rs testing framework.
 
+> Before adding a new CI workflow or expanding an existing one, read
+> [CI Cost and Verification Policy](../ci/cost-and-verification-policy.md).
+> The policy explains why ordinary PR CI targets well below `$1` per PR and
+> what belongs on which lane (PR / main / nightly / labeled / hardware /
+> release). New checks should make verification stronger per CI minute, not
+> simply add another lane that runs on every default PR.
+
 ## Overview
 
 The BitNet-rs testing framework provides reliable automated testing through a coordinated set of GitHub Actions workflows that ensure code quality, performance, and compatibility across platforms.

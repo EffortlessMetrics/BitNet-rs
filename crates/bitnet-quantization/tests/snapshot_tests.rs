@@ -82,14 +82,33 @@ use bitnet_quantization::simd_ops::{QuantizationStrategy, SimdCapabilities};
 #[test]
 fn simd_capabilities_detect_debug() {
     let caps = SimdCapabilities::detect();
-    insta::assert_debug_snapshot!("simd_capabilities_detect", caps);
+    let strategy = caps.best_quantization_strategy();
+    assert!(matches!(
+        strategy,
+        QuantizationStrategy::Scalar
+            | QuantizationStrategy::SSE4_1
+            | QuantizationStrategy::AVX2
+            | QuantizationStrategy::AVX512
+            | QuantizationStrategy::NEON
+    ));
 }
 
 #[test]
 fn simd_capabilities_best_strategy() {
     let caps = SimdCapabilities::detect();
     let strategy = caps.best_quantization_strategy();
-    insta::assert_snapshot!("simd_best_strategy", format!("{strategy:?}"));
+    let expected = if caps.has_avx512 {
+        QuantizationStrategy::AVX512
+    } else if caps.has_avx2 {
+        QuantizationStrategy::AVX2
+    } else if caps.has_neon {
+        QuantizationStrategy::NEON
+    } else if caps.has_sse4_1 {
+        QuantizationStrategy::SSE4_1
+    } else {
+        QuantizationStrategy::Scalar
+    };
+    assert_eq!(strategy, expected);
 }
 
 #[test]
@@ -109,7 +128,7 @@ fn quantization_strategy_variants_debug() {
 #[test]
 fn simd_capabilities_x86_has_sse4_1() {
     let caps = SimdCapabilities::detect();
-    insta::assert_snapshot!("simd_x86_sse4_1", format!("has_sse4_1={}", caps.has_sse4_1));
+    assert_eq!(caps.has_sse4_1, is_x86_feature_detected!("sse4.1"));
 }
 
 #[test]
@@ -117,7 +136,13 @@ fn simd_optimal_block_size() {
     let caps = SimdCapabilities::detect();
     let block_size = caps.optimal_block_size();
     assert!((32..=256).contains(&block_size), "block_size should be 32..256");
-    insta::assert_snapshot!("simd_optimal_block_size", format!("block_size={block_size}"));
+    let expected = match caps.best_quantization_strategy() {
+        QuantizationStrategy::AVX512 => 256,
+        QuantizationStrategy::AVX2 => 128,
+        QuantizationStrategy::NEON | QuantizationStrategy::SSE4_1 => 64,
+        QuantizationStrategy::Scalar => 32,
+    };
+    assert_eq!(block_size, expected);
 }
 
 #[test]

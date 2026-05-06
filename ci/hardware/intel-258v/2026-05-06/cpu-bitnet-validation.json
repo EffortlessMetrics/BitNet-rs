@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "artifact_kind": "cpu-bitnet-validation",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "proof_stage": "blocked_preflight",
+  "status": "blocked_missing_canonical_model",
+  "fallback_used": false,
+  "validation_attempted": false,
+  "blocked_before_inference": true,
+  "blocker": {
+    "stage": "load_model",
+    "reason": "canonical BitNet GGUF fixture was not present at checked local paths",
+    "checked_paths": [
+      "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+      "models/BitNet-b1.58-2B-4T/tokenizer.json",
+      "C:\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+      "C:\\models\\BitNet-b1.58-2B-4T\\tokenizer.json"
+    ]
+  },
+  "hardware": {
+    "requested_backend": "cpu",
+    "selected_backend": "intel-258v-cpu-avx2",
+    "runtime_api": "cpu",
+    "cpu": {
+      "model": "Intel(R) Core(TM) Ultra 7 258V",
+      "cores": 8,
+      "threads": 8,
+      "avx2_detected": true,
+      "avx512_detected": false,
+      "fma_detected": true,
+      "sse42_detected": true
+    },
+    "platform_artifact": "ci/hardware/intel-258v/2026-05-06/platform-probe.json"
+  },
+  "model": {
+    "expected_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "expected_file": "ggml-model-i2_s.gguf",
+    "sha256": null,
+    "format": "gguf",
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "tokenizer": "llama3",
+    "vocab_size": 128256,
+    "loader_mode": null
+  },
+  "bitnet": {
+    "weight_quantization": "W1.58",
+    "activation_quantization": "A8",
+    "weight_domain": "ternary",
+    "kernel_family": "i2_s|tl2|qk256",
+    "layout": null,
+    "layout_source": null,
+    "fallback_layout": null
+  },
+  "execution": {
+    "phase": "load_model",
+    "prompt_tokens": 0,
+    "generated_tokens": 0,
+    "batch_size": 1,
+    "thread_count": 8,
+    "requested_backend": "intel-258v-cpu-avx2",
+    "selected_backend": "intel-258v-cpu-avx2",
+    "requested_kernel": null,
+    "selected_kernel": null,
+    "fallback_used": false,
+    "fallback_reason": null
+  },
+  "claim_allowed": "The 258V CPU lane is ready for strict validation once the canonical GGUF/tokenizer fixture is available locally.",
+  "claims_not_allowed": [
+    "Strict BitNet GGUF loaded on 258V",
+    "Tokenizer authority resolved on 258V",
+    "QK256 or TL2 execution ran on 258V",
+    "BitNet inference works on 258V",
+    "258V CPU benchmark performance"
+  ]
+}

@@ -8,6 +8,7 @@
 
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Role in a chat conversation
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -356,6 +357,50 @@ impl std::fmt::Display for TemplateType {
 }
 
 impl TemplateType {
+    /// Detect template type from model/tokenizer path hints.
+    ///
+    /// This is intentionally lightweight and filesystem-free so callers can
+    /// apply consistent CLI auto-detection heuristics across binaries.
+    #[must_use]
+    pub fn detect_from_paths(model_path: Option<&Path>, tokenizer_path: Option<&Path>) -> Self {
+        if let Some(model_path) = model_path {
+            let path_str = model_path.to_string_lossy().to_lowercase();
+
+            if path_str.contains("llama") && path_str.contains("3") {
+                return Self::Llama3Chat;
+            }
+
+            if path_str.contains("microsoft-bitnet")
+                || path_str.contains("bitnet-b1.58")
+                || path_str.contains("bitnet-1.58b")
+                || path_str.contains("bitnet-1_58b")
+                || path_str.contains("1.58b")
+                || path_str.contains("1_58b")
+                || (path_str.contains("bitnet") && !path_str.contains("instruct"))
+            {
+                return Self::Instruct;
+            }
+
+            if path_str.contains("instruct") || path_str.contains("chat") {
+                return Self::Instruct;
+            }
+        }
+
+        if let Some(tok_path) = tokenizer_path {
+            let path_str = tok_path.to_string_lossy().to_lowercase();
+
+            if path_str.contains("llama") && path_str.contains("3") {
+                return Self::Llama3Chat;
+            }
+
+            if path_str.contains("instruct") {
+                return Self::Instruct;
+            }
+        }
+
+        Self::Instruct
+    }
+
     /// Detect template type from GGUF metadata and tokenizer hints.
     ///
     /// Priority order:
@@ -3388,6 +3433,30 @@ impl PromptTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn detects_llama3_from_model_path() {
+        let detected = TemplateType::detect_from_paths(
+            Some(Path::new("models/Llama-3.1-8B-Instruct-Q4_K_M.gguf")),
+            None,
+        );
+        assert_eq!(detected, TemplateType::Llama3Chat);
+    }
+
+    #[test]
+    fn detects_bitnet_from_model_path() {
+        let detected = TemplateType::detect_from_paths(
+            Some(Path::new("models/microsoft-bitnet-b1.58-2B-4T.gguf")),
+            None,
+        );
+        assert_eq!(detected, TemplateType::Instruct);
+    }
+
+    #[test]
+    fn defaults_to_instruct_when_no_hint_present() {
+        let detected = TemplateType::detect_from_paths(Some(Path::new("models/base.gguf")), None);
+        assert_eq!(detected, TemplateType::Instruct);
+    }
 
     #[test]
     fn test_phi4_chat_template() {

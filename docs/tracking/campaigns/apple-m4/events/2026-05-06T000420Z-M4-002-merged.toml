@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T00:04:20Z"
+campaign = "apple-m4"
+item = "M4-002"
+event = "merged"
+pr = 3627
+merge_sha = "6362101c3249a0758100d22c31e084eba37c387b"
+actor = "maintainer"
+
+notes = [
+  "Apple M4 Mac mini machine profile and probe bundle merged.",
+  "Docs and artifact-prep only; no runtime code, kernels, QK256, server inference, dependencies, or bulky artifacts were added.",
+]

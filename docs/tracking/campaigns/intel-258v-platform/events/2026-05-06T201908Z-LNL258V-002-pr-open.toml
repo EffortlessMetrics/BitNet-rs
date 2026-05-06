@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T20:19:08Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-002"
+event = "pr_open"
+pr = 3784
+branch = "codex/intel-258v-platform/LNL258V-002-probe-bundle"
+head_sha = "c056fd735763150e1cd53c43951e537b2b71715b"
+actor = "codex"
+
+notes = [
+  "Opened the docs-only platform probe bundle PR.",
+  "The PR documents artifact paths and comparison-index shape only; it does not add machine artifacts, runtime execution, graph smoke, BitNet inference, parity, or benchmark claims.",
+]
