@@ -1064,7 +1064,7 @@ async fn run_simple_generation(
     let loader = ModelLoader::new(Device::Cpu);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
-    let mut loader_mode = "enhanced";
+    let mut loader_mode = bitnet_models::GgufLoaderMode::RealGguf.as_str();
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -1097,7 +1097,7 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
-            loader_mode = "compatibility_fallback";
+            loader_mode = load_result.loader_mode.as_str();
             warn!("GGUF loader mode: {}", loader_mode);
             let mut raw_tensors = std::collections::HashMap::new();
             for (name, qk256) in load_result.i2s_qk256 {

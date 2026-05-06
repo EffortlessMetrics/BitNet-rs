@@ -49,9 +49,28 @@ impl Default for GGUFLoaderConfig {
 
 /// Result of GGUF loading with both regular tensors and QK256 quantized weights
 pub struct GgufLoadResult {
+    pub loader_mode: GgufLoaderMode,
     pub config: bitnet_common::BitNetConfig,
     pub tensors: HashMap<String, CandleTensor>,
     pub i2s_qk256: HashMap<String, I2SQk256NoScale>,
+}
+
+/// Machine-readable GGUF loader mode for receipts and proof paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GgufLoaderMode {
+    /// Authoritative GGUF parser loaded the model from real GGUF metadata and tensors.
+    RealGguf,
+    /// Explicit opt-in compatibility path that may synthesize missing tensors.
+    MinimalCompatibility,
+}
+
+impl GgufLoaderMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::RealGguf => "real_gguf",
+            Self::MinimalCompatibility => "minimal_compatibility",
+        }
+    }
 }
 
 fn minimal_loader_disabled() -> bool {
@@ -252,10 +271,10 @@ fn load_gguf_enhanced(
         tensor_infos.insert(info.name.clone(), info.clone());
     }
 
-    // AC3: Validate tensor metadata completeness
-    // NOTE: Validation moved to later stage (build_transformer) for better error messages
-    // and to avoid false positives with different tensor naming conventions
-    // validate_tensor_completeness(&tensor_infos, &config)?;
+    // Strict proof paths must fail before compatibility defaults can synthesize tensors.
+    if loader_config.strict_mode || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1") {
+        validate_tensor_completeness(&tensor_infos, &config)?;
+    }
 
     let mut tensor_map = HashMap::with_capacity(tensor_count);
     let mut i2s_qk256_map = HashMap::new();
@@ -461,8 +480,12 @@ fn load_gguf_enhanced(
     // This must happen HERE in the enhanced loader to prevent double transposition downstream
     normalize_embed_and_lm_head(&mut tensor_map, &config, &cdevice)?;
 
-    // AC9: Maintain backward compatibility - ensure all expected tensors exist
-    ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    // AC9: Maintain backward compatibility only outside strict proof paths.
+    if loader_config.strict_mode || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1") {
+        tracing::debug!("Strict GGUF load: compatibility tensor synthesis disabled");
+    } else {
+        ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    }
 
     tracing::debug!(
         "Enhanced loader complete: hidden={}, n_heads={}, n_kv_heads={}, vocab={}, layers={}",
@@ -473,7 +496,12 @@ fn load_gguf_enhanced(
         config.model.num_layers
     );
 
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: i2s_qk256_map })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::RealGguf,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: i2s_qk256_map,
+    })
 }
 
 /// Minimal GGUF loading for backward compatibility with existing mock infrastructure
@@ -653,7 +681,12 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
     );
 
     tracing::info!("Loaded model using minimal GGUF parser with {} tensors", tensor_map.len());
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
 }
 
 /// Extract BitNet configuration from GGUF metadata
@@ -1810,7 +1843,12 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         "Created mock tensor layout with {} tensors for test compatibility",
         tensor_map.len()
     );
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
 }
 
 #[cfg(test)]
@@ -1866,5 +1904,12 @@ mod tests {
                 assert!(result.is_err(), "strict mode must fail before compatibility fallback");
             });
         });
+    }
+
+    #[test]
+    #[serial]
+    fn loader_mode_names_are_receipt_stable() {
+        assert_eq!(super::GgufLoaderMode::RealGguf.as_str(), "real_gguf");
+        assert_eq!(super::GgufLoaderMode::MinimalCompatibility.as_str(), "minimal_compatibility");
     }
 }
