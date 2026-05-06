@@ -26,7 +26,8 @@ Finish the move from global hand-edited alignment trackers to campaign-local TOM
 
 | Work item | Status | Notes |
 |---|---|---|
-| TRACKER-001 | in_progress | Add advisory campaign check/generate/doctor commands and generated dashboards. |
+| TRACKER-001 | merged | Advisory campaign check/generate/doctor commands and generated dashboards merged in #3660. |
+| TRACKER-002 | proposed | Add CI enforcement for campaign doctor and generated-dashboard freshness. |
 
 ## Review Policy
 
