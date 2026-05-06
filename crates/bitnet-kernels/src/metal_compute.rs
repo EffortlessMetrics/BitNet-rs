@@ -156,7 +156,7 @@ pub fn align_buffer_size(size: usize) -> usize {
 /// Validate that `offset` satisfies Metal's 256-byte alignment rule.
 #[inline]
 pub fn is_aligned(offset: usize) -> bool {
-    offset % METAL_BUFFER_ALIGNMENT == 0
+    offset.is_multiple_of(METAL_BUFFER_ALIGNMENT)
 }
 
 // ── Pipeline configuration ──────────────────────────────────────────

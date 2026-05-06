@@ -3,14 +3,18 @@
 use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
 use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE,
-    I2S_METAL_PARITY_KERNEL_ID, I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N,
-    I2S_TRANSPORT_LAYOUT, I2sMetalParityFixture, I2sMetalParityReceipt, MACHINE_ID,
-    PARITY_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND, RUNTIME_API, SELECTED_BACKEND,
-    SMOKE_WORKGROUP_SIZE, SmokeComparison, TINY_METAL_ADD_PARITY_KERNEL_ID,
+    I2S_METAL_PARITY_KERNEL_ID, I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID, I2S_PARITY_BLOCK_SIZE,
+    I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE,
+    I2S_PREFILL_KV_CACHE_BEHAVIOR, I2S_PREFILL_PHASE_SCOPE, I2S_PREFILL_TOKENS,
+    I2S_TRANSPORT_LAYOUT, I2sMetalParityFixture, I2sMetalParityReceipt,
+    I2sMetalPrefillContributionReceipt, MACHINE_ID, PARITY_ARTIFACT_KIND,
+    PHASE_CONTRIBUTION_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND, RUNTIME_API,
+    SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SmokeComparison, TINY_METAL_ADD_PARITY_KERNEL_ID,
     TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt, TinyMetalAddSmokeReceipt,
-    compare_tiny_add_outputs, expected_tiny_add, i2s_metal_parity_fixture, i2s_parity_shape_words,
-    is_apple_m4_adapter_name, metal_i2s_parity_artifact_path, metal_parity_artifact_path,
-    metal_smoke_artifact_path, tiny_add_inputs,
+    compare_tiny_add_outputs, expected_tiny_add, i2s_metal_parity_fixture,
+    i2s_metal_prefill_fixture, i2s_parity_shape_words, is_apple_m4_adapter_name,
+    metal_i2s_parity_artifact_path, metal_i2s_prefill_contribution_artifact_path,
+    metal_parity_artifact_path, metal_smoke_artifact_path, tiny_add_inputs,
 };
 
 #[test]
@@ -109,6 +113,48 @@ fn i2s_receipt_contract_records_kernel_family_without_inference_claim() {
 }
 
 #[test]
+fn i2s_prefill_fixture_records_named_phase_without_kv_cache_claim() {
+    let fixture = i2s_metal_prefill_fixture();
+
+    assert_eq!(fixture.m, I2S_PREFILL_TOKENS);
+    assert_eq!(fixture.n, I2S_PARITY_N);
+    assert_eq!(fixture.k, I2S_PARITY_K);
+    assert_eq!(fixture.block_size, I2S_PARITY_BLOCK_SIZE);
+    assert_eq!(fixture.activations.len(), I2S_PREFILL_TOKENS * I2S_PARITY_K);
+    assert_eq!(fixture.expected.len(), I2S_PREFILL_TOKENS * I2S_PARITY_N);
+    assert!(fixture.expected.iter().any(|value| *value != 0.0));
+}
+
+#[test]
+fn i2s_prefill_contribution_receipt_records_phase_and_fallback_status() {
+    let receipt = I2sMetalPrefillContributionReceipt::passed(
+        metal_i2s_prefill_contribution_artifact_path("2026-05-06"),
+        SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 },
+    );
+
+    assert_eq!(receipt.machine_id, MACHINE_ID);
+    assert_eq!(receipt.artifact_kind, PHASE_CONTRIBUTION_ARTIFACT_KIND);
+    assert_eq!(receipt.requested_backend, REQUESTED_BACKEND);
+    assert_eq!(receipt.selected_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.runtime_api, RUNTIME_API);
+    assert_eq!(receipt.reference_backend, REFERENCE_BACKEND);
+    assert_eq!(receipt.target_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.kernel_id, I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID);
+    assert_eq!(receipt.kernel_family, I2S_KERNEL_FAMILY);
+    assert_eq!(receipt.execution_phase, I2S_PREFILL_EXECUTION_PHASE);
+    assert_eq!(receipt.phase_scope, I2S_PREFILL_PHASE_SCOPE);
+    assert_eq!(receipt.layout_source, I2S_LAYOUT_SOURCE);
+    assert_eq!(receipt.transport_layout, I2S_TRANSPORT_LAYOUT);
+    assert_eq!(receipt.kv_cache_behavior, I2S_PREFILL_KV_CACHE_BEHAVIOR);
+    assert_eq!(receipt.prefill_tokens, I2S_PREFILL_TOKENS);
+    assert!(!receipt.fallback_used);
+    assert_eq!(
+        receipt.artifact_path,
+        "ci/hardware/apple-m4-mac-mini/2026-05-06/metal-i2s-prefill-contribution.json"
+    );
+}
+
+#[test]
 fn comparison_fails_instead_of_falling_back_to_cpu() {
     let expected = [1.0_f32, 2.0, 3.0];
     let actual = [1.0_f32, 20.0, 3.0];
@@ -150,6 +196,9 @@ mod live_metal {
     const RUN_I2S_PARITY_ENV: &str = "BITNET_RUN_M4_METAL_I2S_PARITY";
     const I2S_PARITY_RECEIPT_ENV: &str = "BITNET_M4_METAL_I2S_PARITY_RECEIPT";
     const I2S_PARITY_ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_I2S_PARITY_ARTIFACT_PATH";
+    const RUN_I2S_PREFILL_ENV: &str = "BITNET_RUN_M4_METAL_I2S_PREFILL";
+    const I2S_PREFILL_RECEIPT_ENV: &str = "BITNET_M4_METAL_I2S_PREFILL_RECEIPT";
+    const I2S_PREFILL_ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_I2S_PREFILL_ARTIFACT_PATH";
     const TINY_KERNEL_SMOKE_PROFILE: &str = "tiny_kernel_smoke";
 
     struct MetalSmokeOutput {
@@ -368,7 +417,8 @@ mod live_metal {
         }
 
         let fixture = i2s_metal_parity_fixture();
-        let metal_output = run_i2s_metal_parity(&fixture)?;
+        let metal_output =
+            run_i2s_metal_fixture(&fixture, I2S_METAL_PARITY_KERNEL_ID, "M4-011 I2_S parity")?;
 
         if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
             return Err(io_error(format!(
@@ -401,6 +451,66 @@ mod live_metal {
         extend_i2s_parity_metrics(&mut receipt_json, &receipt, &fixture);
 
         if let Ok(path) = std::env::var(I2S_PARITY_RECEIPT_ENV) {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
+        }
+
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+        Ok(())
+    }
+
+    #[test]
+    fn tiny_m4_metal_i2s_prefill_contribution_matches_cpu_reference_when_enabled()
+    -> Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_I2S_PREFILL_ENV).as_deref() != Ok("1") {
+            eprintln!(
+                "skipping live M4 Metal I2_S prefill contribution; set {RUN_I2S_PREFILL_ENV}=1 to run it"
+            );
+            return Ok(());
+        }
+
+        let fixture = i2s_metal_prefill_fixture();
+        let metal_output = run_i2s_metal_fixture(
+            &fixture,
+            I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID,
+            "M4-013 I2_S prefill contribution",
+        )?;
+
+        if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
+            return Err(io_error(format!(
+                "M4-013 I2_S prefill contribution requires an Apple M4-family Metal adapter; found '{}'",
+                metal_output.adapter_name
+            )));
+        }
+
+        let comparison = compare_tiny_add_outputs(&fixture.expected, &metal_output.output, 1e-5)?;
+        let artifact_path = std::env::var(I2S_PREFILL_ARTIFACT_PATH_ENV)
+            .or_else(|_| std::env::var(I2S_PREFILL_RECEIPT_ENV))
+            .unwrap_or_else(|_| {
+                "ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-prefill-contribution.json"
+                    .to_string()
+            });
+        let receipt = I2sMetalPrefillContributionReceipt::passed(artifact_path.clone(), comparison);
+
+        let mut receipt_json = apple_backend_receipt_json(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            metal_output.adapter_name,
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+            Some(receipt.kernel_id),
+            None,
+            receipt.result,
+        )?;
+        extend_i2s_prefill_contribution_metrics(&mut receipt_json, &receipt, &fixture);
+
+        if let Ok(path) = std::env::var(I2S_PREFILL_RECEIPT_ENV) {
             let output_path = receipt_output_path(&path);
             if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -541,8 +651,10 @@ mod live_metal {
         })
     }
 
-    fn run_i2s_metal_parity(
+    fn run_i2s_metal_fixture(
         fixture: &I2sMetalParityFixture,
+        kernel_id: &'static str,
+        proof_label: &str,
     ) -> Result<MetalI2sParityOutput, Box<dyn Error>> {
         pollster::block_on(async move {
             let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -556,12 +668,12 @@ mod live_metal {
                     force_fallback_adapter: false,
                 })
                 .await
-                .ok_or_else(|| io_error("no Metal adapter found for M4-011 I2_S parity"))?;
+                .ok_or_else(|| io_error(format!("no Metal adapter found for {proof_label}")))?;
 
             let adapter_info = adapter.get_info();
             if adapter_info.backend != wgpu::Backend::Metal {
                 return Err(io_error(format!(
-                    "M4-011 I2_S parity requires Metal backend, found {:?}",
+                    "{proof_label} requires Metal backend, found {:?}",
                     adapter_info.backend
                 )));
             }
@@ -572,7 +684,7 @@ mod live_metal {
                 .map_err(|error| io_error(format!("failed to create Metal device: {error}")))?;
 
             let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some(I2S_METAL_PARITY_KERNEL_ID),
+                label: Some(kernel_id),
                 source: wgpu::ShaderSource::Wgsl(I2S_PARITY_SHADER.into()),
             });
 
@@ -1046,6 +1158,62 @@ mod live_metal {
             }),
         );
         object.insert("model".to_string(), serde_json::Value::Null);
+        object.insert(
+            "layout".to_string(),
+            json!({
+                "source": receipt.layout_source,
+                "transport_layout": receipt.transport_layout,
+                "canonical_packed_bytes": fixture.weights_packed.len(),
+                "transport_words_u32": fixture.weights_packed_words.len(),
+                "consumes_packed_i2_s_directly": true,
+                "dequantizes_before_compute": false,
+                "m": fixture.m,
+                "n": fixture.n,
+                "k": fixture.k,
+                "block_size": fixture.block_size
+            }),
+        );
+        object.insert(
+            "parity".to_string(),
+            json!({
+                "reference_backend": receipt.reference_backend,
+                "target_backend": receipt.target_backend,
+                "kernel_id": receipt.kernel_id,
+                "kernel_family": receipt.kernel_family,
+                "max_abs_error": receipt.max_abs_error,
+                "mean_abs_error": receipt.mean_abs_error,
+                "token_agreement_for_greedy": null
+            }),
+        );
+    }
+
+    fn extend_i2s_prefill_contribution_metrics(
+        receipt_json: &mut serde_json::Value,
+        receipt: &I2sMetalPrefillContributionReceipt,
+        fixture: &I2sMetalParityFixture,
+    ) {
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert(
+            "bitnet".to_string(),
+            json!({
+                "kernel_family": receipt.kernel_family,
+                "execution_phase": receipt.execution_phase,
+                "phase_scope": receipt.phase_scope,
+                "layout_source": receipt.layout_source,
+                "fallback_layout": null
+            }),
+        );
+        object.insert("model".to_string(), serde_json::Value::Null);
+        object.insert(
+            "phase".to_string(),
+            json!({
+                "name": receipt.execution_phase,
+                "scope": receipt.phase_scope,
+                "prefill_tokens": receipt.prefill_tokens,
+                "kv_cache_behavior": receipt.kv_cache_behavior,
+                "full_autoregressive_decode": false
+            }),
+        );
         object.insert(
             "layout".to_string(),
             json!({
