@@ -161,7 +161,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-007"
-status = "pr_open"
+status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-007-cuda-receipts-counters"
 stackable = false
 requires_human_merge = true
@@ -195,4 +195,39 @@ must_not_claim = [
   "Full BitNet CUDA inference works.",
   "QK256 CUDA works.",
   "CUDA is faster than CPU.",
+]
+
+[[work_item]]
+id = "RTX5070TI-008"
+status = "ready"
+branch = "codex/nvidia-5070ti/RTX5070TI-008-benchmark-baseline"
+stackable = false
+requires_human_merge = true
+blocked_by = ["RTX5070TI-006", "RTX5070TI-007"]
+acceptance = "Benchmark parity-tested RTX 5070 Ti CUDA kernels/subgraphs against the 9950X3D CPU reference with driver/runtime/VRAM/power/thermal context and no full inference or unproven speedup claim."
+commands = [
+  "cargo fmt --all -- --check",
+  "Manual RTX 5070 Ti benchmark command with receipt artifact.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/benches/**",
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/_templates/benchmark.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+]
+may_claim = [
+  "RTX 5070 Ti CUDA benchmark data exists for the named parity-tested kernel or subgraph after cuda-benchmark.json exists.",
+]
+must_not_claim = [
+  "Full BitNet CUDA inference works.",
+  "QK256 CUDA works.",
+  "CUDA speedup exists without a same-model benchmark artifact.",
 ]
