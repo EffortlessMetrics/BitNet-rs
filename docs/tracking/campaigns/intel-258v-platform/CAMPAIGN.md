@@ -24,7 +24,7 @@ Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 
 
 | Work item | Status | Notes |
 |---|---|---|
-| LNL258V-002 | ready | Add 258V probe bundle and same-machine comparison hooks. |
+| LNL258V-002 | pr_open | Add 258V probe bundle and same-machine comparison hooks. |
 
 ## Review Policy
 

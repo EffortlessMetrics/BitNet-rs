@@ -144,6 +144,37 @@ Use that document for PR boundaries, probe structures, receipt fields, acceptanc
 
 Docs/tracking only. Add the 258V platform profile, claim boundaries, data bundles, and cross-links to CPU, Arc 140V, and NPU lanes.
 
+### LNL258V-002 - Platform Probe Bundle
+
+Docs/tracking only. Define the same-machine platform probe bundle that ties
+Lunar Lake CPU, Arc 140V, and Intel NPU visibility artifacts together without
+turning visibility into execution proof.
+
+The bundle documents these future artifact paths:
+
+```text
+ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-runtime-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/npu-openvino-runtime-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/platform-comparison-index.json
+```
+
+Required bundle fields:
+
+- `machine_id`, OS/build, native/WSL context, memory, power, and thermal context.
+- CPU model, topology, AVX2 visibility, and AVX-512 non-claim.
+- Arc 140V OpenCL, Level Zero, OpenVINO `GPU.0`, and exact identity evidence.
+- Intel NPU OS device evidence, OpenVINO `NPU`, driver/compiler/memory properties.
+- Requested backend, selected backend, runtime API, proof stage, fallback status, and artifact path for each lane.
+
+Claim boundaries:
+
+- The bundle records detection/runtime visibility only.
+- `platform-comparison-index.json` is an index, not an execution receipt.
+- Arc 140V visibility is not OpenCL kernel execution.
+- OpenVINO `NPU` visibility is not graph execution.
+- No BitNet inference, parity, benchmark, or accelerator contribution claim is allowed.
+
 ### CPU258V-001 - Add CPU AVX2 Validation Lane
 
 Document 258V CPU as a parallel Lunar Lake validation lane for the same CPU path. The 8250U remains the active AVX2 implementation/proof lane; 258V CPU validates behavior on the Lunar Lake platform and supports same-machine comparison against Arc 140V and NPU artifacts.

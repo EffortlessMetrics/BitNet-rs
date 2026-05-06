@@ -110,7 +110,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-002"
-status = "ready"
+status = "pr_open"
 branch = "codex/intel-258v-platform/LNL258V-002-probe-bundle"
 stackable = false
 requires_human_merge = true
@@ -118,7 +118,8 @@ blocked_by = []
 acceptance = "Add a 258V platform probe bundle that records CPU, Arc 140V GPU, Intel NPU, memory, OS, driver, OpenVINO, OpenCL, Level Zero, WSL, and power context without runtime claims."
 commands = [
   "cargo fmt --all -- --check",
-  "Parse TOML tracker files",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
