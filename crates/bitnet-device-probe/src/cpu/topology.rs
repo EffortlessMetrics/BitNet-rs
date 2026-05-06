@@ -1,5 +1,6 @@
 //! Portable CPU topology and brand probing.
 
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
@@ -24,13 +25,13 @@ pub fn probe_cpu_topology() -> CpuTopologyProbe {
 fn cpu_brand() -> Option<String> {
     #[cfg(target_os = "linux")]
     {
-        if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
-            if let Some(value) = cpuinfo.lines().find_map(|line| {
+        if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo")
+            && let Some(value) = cpuinfo.lines().find_map(|line| {
                 line.strip_prefix("model name")
                     .and_then(|rest| rest.split_once(':').map(|(_, value)| value.trim().to_owned()))
-            }) {
-                return non_empty(&value);
-            }
+            })
+        {
+            return non_empty(&value);
         }
     }
 
@@ -58,6 +59,7 @@ fn cpu_brand() -> Option<String> {
     None
 }
 
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 fn command_stdout(command: &str, args: &[&str]) -> Option<String> {
     Command::new(command)
         .args(args)

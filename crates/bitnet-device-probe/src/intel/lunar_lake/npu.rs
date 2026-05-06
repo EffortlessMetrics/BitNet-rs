@@ -91,7 +91,7 @@ pub fn probe_intel_npu(openvino: &OpenVinoProbe) -> IntelNpuProbe {
 fn accel_devices() -> Vec<String> {
     #[cfg(target_os = "linux")]
     {
-        return std::fs::read_dir("/dev/accel")
+        std::fs::read_dir("/dev/accel")
             .map(|entries| {
                 entries
                     .flatten()
@@ -99,7 +99,7 @@ fn accel_devices() -> Vec<String> {
                     .filter(|path| path.contains("accel"))
                     .collect()
             })
-            .unwrap_or_default();
+            .unwrap_or_default()
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -111,9 +111,9 @@ fn accel_devices() -> Vec<String> {
 fn intel_vpu_driver_seen() -> bool {
     #[cfg(target_os = "linux")]
     {
-        return std::fs::read_to_string("/sys/bus/pci/drivers/intel_vpu/module/drivers")
+        std::fs::read_to_string("/sys/bus/pci/drivers/intel_vpu/module/drivers")
             .map(|content| content.to_ascii_lowercase().contains("vpu"))
-            .unwrap_or(false);
+            .unwrap_or(false)
     }
 
     #[cfg(target_os = "windows")]

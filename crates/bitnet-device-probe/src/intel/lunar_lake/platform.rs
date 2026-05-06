@@ -118,18 +118,18 @@ pub fn probe_platform_power() -> PlatformPowerProbe {
 fn total_memory_bytes() -> Option<u64> {
     #[cfg(target_os = "linux")]
     {
-        if let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") {
-            return meminfo.lines().find_map(|line| {
+        std::fs::read_to_string("/proc/meminfo").ok().and_then(|meminfo| {
+            meminfo.lines().find_map(|line| {
                 let rest = line.strip_prefix("MemTotal:")?;
                 let kb = rest.split_whitespace().next()?.parse::<u64>().ok()?;
                 Some(kb * 1024)
-            });
-        }
+            })
+        })
     }
 
     #[cfg(target_os = "windows")]
     {
-        return command_stdout(
+        command_stdout(
             "powershell",
             &[
                 "-NoProfile",
@@ -137,17 +137,19 @@ fn total_memory_bytes() -> Option<u64> {
                 "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory",
             ],
         )
-        .and_then(|value| value.trim().parse::<u64>().ok());
+        .and_then(|value| value.trim().parse::<u64>().ok())
     }
 
     #[cfg(target_os = "macos")]
     {
-        return command_stdout("sysctl", &["-n", "hw.memsize"])
-            .and_then(|value| value.trim().parse::<u64>().ok());
+        command_stdout("sysctl", &["-n", "hw.memsize"])
+            .and_then(|value| value.trim().parse::<u64>().ok())
     }
 
-    #[allow(unreachable_code)]
-    None
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+    {
+        None
+    }
 }
 
 fn power_mode() -> Option<String> {
@@ -159,10 +161,13 @@ fn thermal_profile() -> Option<String> {
     #[cfg(target_os = "linux")]
     {
         let zones = std::fs::read_dir("/sys/class/thermal").ok()?.flatten().count();
-        return (zones > 0).then(|| format!("{zones} thermal zones visible"));
+        (zones > 0).then(|| format!("{zones} thermal zones visible"))
     }
 
-    None
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
 }
 
 #[allow(clippy::missing_const_for_fn)]
