@@ -21,6 +21,9 @@ pub use intel_arc::{
     is_arc_alchemist,
 };
 
+pub mod nvidia_cuda;
+pub use nvidia_cuda::{NvidiaCudaProbe, probe_nvidia_cuda};
+
 #[cfg(feature = "opencl")]
 pub mod opencl;
 #[cfg(feature = "opencl")]
