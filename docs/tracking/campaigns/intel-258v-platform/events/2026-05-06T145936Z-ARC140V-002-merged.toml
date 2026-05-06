@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T14:59:36Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-002"
+event = "merged"
+pr = 3727
+merge_sha = "2d17cb5811b254bbfbe9e41569e770db905b9b54"
+actor = "maintainer"
+
+notes = [
+  "Arc 140V runtime identity probe merged.",
+  "This records runtime visibility only; Arc 140V execution, OpenCL kernels, and BitNet inference remain follow-up work.",
+]

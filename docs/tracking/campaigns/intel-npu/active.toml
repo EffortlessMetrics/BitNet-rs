@@ -61,7 +61,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-npu/NPU-003-openvino-runtime-probe"
 stackable = false
 requires_human_merge = true
