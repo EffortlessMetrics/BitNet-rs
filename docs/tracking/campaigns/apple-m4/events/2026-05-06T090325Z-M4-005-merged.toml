@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T09:03:25Z"
+campaign = "apple-m4"
+item = "M4-005"
+event = "merged"
+pr = 3699
+merge_sha = "4f890511a557088388db108e0e7aad427c114856"
+actor = "maintainer"
+
+notes = [
+  "Tiny native Metal compute smoke merged.",
+  "No BitNet inference, QK256, MPSGraph, Neural Engine, or benchmark claim is made.",
+  "M4-006 promoted to ready for CPU/Metal parity.",
+]

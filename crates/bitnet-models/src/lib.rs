@@ -66,10 +66,10 @@ pub mod weight_stats;
 mod transformer_tests;
 
 pub use bitnet::*;
-pub use gguf_simple::GGUFLoaderConfig; // AC1: Export loader config for strict mode
 #[allow(deprecated)]
 pub use gguf_simple::load_gguf;
 pub use gguf_simple::load_gguf_full;
+pub use gguf_simple::{GGUFLoaderConfig, GgufLoaderMode}; // AC1: Export loader config/mode
 pub use loader::*;
 pub use production_loader::*;
 

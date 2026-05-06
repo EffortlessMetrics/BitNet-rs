@@ -1,7 +1,7 @@
 //! Core device configuration parsing and runtime resolution.
 
 use anyhow::Result;
-use bitnet_common::Device;
+use bitnet_common::{BackendRequest, Device};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -15,6 +15,24 @@ pub enum DeviceConfig {
     Cpu,
     /// Force GPU execution on specific device ID.
     Gpu(usize),
+    /// Preserve Intel NPU backend identity without mapping through GPU/Metal/CPU.
+    IntelNpu(usize),
+    /// Preserve Intel NPU through OpenVINO backend identity.
+    OpenVinoNpu,
+    /// Preserve the RTX 5070 Ti CUDA proof-lane backend identity.
+    NvidiaRtx5070TiCuda,
+    /// Preserve the RTX 5070 Ti WGPU reference-lane backend identity.
+    NvidiaRtx5070TiWgpu,
+    /// Preserve a native Metal backend identity.
+    Metal,
+    /// Preserve an MPSGraph graph/reference backend identity.
+    MpsGraph,
+    /// Preserve the Apple M4 native Metal backend identity.
+    AppleM4Metal,
+    /// Preserve the Apple M4 MPSGraph graph/reference backend identity.
+    AppleM4MpsGraph,
+    /// Preserve the Apple M4 CPU/NEON fallback/parity backend identity.
+    AppleM4CpuNeon,
 }
 
 impl FromStr for DeviceConfig {
@@ -24,12 +42,25 @@ impl FromStr for DeviceConfig {
         match s.to_lowercase().as_str() {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
+            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
+            "npu" | "intel-npu" => Ok(DeviceConfig::IntelNpu(0)),
+            "openvino-npu" | "intel-npu-openvino" => Ok(DeviceConfig::OpenVinoNpu),
+            "nvidia-rtx-5070-ti-cuda" => Ok(DeviceConfig::NvidiaRtx5070TiCuda),
+            "nvidia-rtx-5070-ti-wgpu" => Ok(DeviceConfig::NvidiaRtx5070TiWgpu),
+            "metal" => Ok(DeviceConfig::Metal),
+            "mpsgraph" => Ok(DeviceConfig::MpsGraph),
+            "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
+            "apple-m4-mpsgraph" => Ok(DeviceConfig::AppleM4MpsGraph),
+            "apple-m4-cpu-neon" => Ok(DeviceConfig::AppleM4CpuNeon),
             s if s.starts_with("gpu:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
             s if s.starts_with("cuda:") => Ok(DeviceConfig::Gpu(s[5..].parse::<usize>()?)),
             s if s.starts_with("vulkan:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
             s if s.starts_with("opencl:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
             s if s.starts_with("ocl:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
+            s if s.starts_with("npu:") => Ok(DeviceConfig::IntelNpu(s[4..].parse::<usize>()?)),
+            s if s.starts_with("intel-npu:") => {
+                Ok(DeviceConfig::IntelNpu(s[10..].parse::<usize>()?))
+            }
             _ => anyhow::bail!("Unknown device config: {}", s),
         }
     }
@@ -53,6 +84,43 @@ impl DeviceConfig {
             }
             DeviceConfig::Cpu => Device::Cpu,
             DeviceConfig::Gpu(id) => Device::Cuda(*id),
+            DeviceConfig::IntelNpu(_) | DeviceConfig::OpenVinoNpu => Device::Npu,
+            DeviceConfig::NvidiaRtx5070TiCuda => Device::Cuda(0),
+            // WGPU is a reference-lane identity; execution lands in a later item.
+            DeviceConfig::NvidiaRtx5070TiWgpu => Device::Cpu,
+            DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
+            // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
+            DeviceConfig::MpsGraph | DeviceConfig::AppleM4MpsGraph => Device::Cpu,
+            DeviceConfig::AppleM4CpuNeon => Device::Cpu,
+        }
+    }
+
+    /// Return the backend request identity represented by this config.
+    #[must_use]
+    pub fn backend_request(&self) -> BackendRequest {
+        match self {
+            DeviceConfig::Auto => BackendRequest::Auto,
+            DeviceConfig::Cpu => BackendRequest::Cpu,
+            DeviceConfig::Gpu(_) => BackendRequest::Gpu,
+            DeviceConfig::IntelNpu(_) => BackendRequest::IntelNpu,
+            DeviceConfig::OpenVinoNpu => BackendRequest::OpenVinoNpu,
+            DeviceConfig::NvidiaRtx5070TiCuda => BackendRequest::NvidiaRtx5070TiCuda,
+            DeviceConfig::NvidiaRtx5070TiWgpu => BackendRequest::NvidiaRtx5070TiWgpu,
+            DeviceConfig::Metal => BackendRequest::Metal,
+            DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
+            DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
+            DeviceConfig::AppleM4MpsGraph => BackendRequest::AppleM4MpsGraph,
+            DeviceConfig::AppleM4CpuNeon => BackendRequest::AppleM4CpuNeon,
+        }
+    }
+
+    /// Stable label for logs and planned receipt fields.
+    #[must_use]
+    pub fn backend_label(&self) -> String {
+        match self {
+            DeviceConfig::IntelNpu(0) => "intel-npu".to_string(),
+            DeviceConfig::IntelNpu(index) => format!("intel-npu:{index}"),
+            _ => self.backend_request().to_string(),
         }
     }
 }
@@ -68,6 +136,28 @@ mod tests {
         assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
         assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
         assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));
+        assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(0));
+        assert_eq!("intel-npu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(1));
+        assert_eq!("openvino-npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::OpenVinoNpu);
+        assert_eq!(
+            "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::NvidiaRtx5070TiCuda
+        );
+        assert_eq!(
+            "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::NvidiaRtx5070TiWgpu
+        );
+        assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);
+        assert_eq!("mpsgraph".parse::<DeviceConfig>().unwrap(), DeviceConfig::MpsGraph);
+        assert_eq!("apple-m4-metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::AppleM4Metal);
+        assert_eq!(
+            "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::AppleM4MpsGraph
+        );
+        assert_eq!(
+            "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::AppleM4CpuNeon
+        );
     }
 
     #[test]
@@ -75,5 +165,57 @@ mod tests {
         assert!("unknown".parse::<DeviceConfig>().is_err());
         assert!("gpu:".parse::<DeviceConfig>().is_err());
         assert!("gpu:abc".parse::<DeviceConfig>().is_err());
+        assert!("npu:".parse::<DeviceConfig>().is_err());
+        assert!("intel-npu:abc".parse::<DeviceConfig>().is_err());
+    }
+
+    #[test]
+    fn apple_backend_labels_do_not_alias() {
+        let metal = "metal".parse::<DeviceConfig>().unwrap();
+        let apple_metal = "apple-m4-metal".parse::<DeviceConfig>().unwrap();
+        let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();
+        let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();
+        let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();
+
+        assert_eq!(metal.backend_label(), "metal");
+        assert_eq!(apple_metal.backend_label(), "apple-m4-metal");
+        assert_eq!(mpsgraph.backend_label(), "mpsgraph");
+        assert_eq!(apple_mpsgraph.backend_label(), "apple-m4-mpsgraph");
+        assert_eq!(apple_cpu.backend_label(), "apple-m4-cpu-neon");
+    }
+
+    #[test]
+    fn rtx_5070_ti_backend_labels_do_not_alias_legacy_gpu_labels() {
+        let generic_gpu = "gpu".parse::<DeviceConfig>().unwrap();
+        let generic_cuda = "cuda".parse::<DeviceConfig>().unwrap();
+        let rtx_cuda = "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap();
+        let rtx_wgpu = "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap();
+
+        assert_eq!(rtx_cuda.backend_label(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(rtx_wgpu.backend_label(), "nvidia-rtx-5070-ti-wgpu");
+        assert_ne!(rtx_cuda.backend_label(), generic_gpu.backend_label());
+        assert_ne!(rtx_cuda.backend_label(), generic_cuda.backend_label());
+        assert_ne!(rtx_wgpu.backend_label(), generic_gpu.backend_label());
+        assert_ne!(rtx_wgpu.backend_label(), generic_cuda.backend_label());
+    }
+
+    #[test]
+    fn intel_npu_backend_labels_do_not_alias_gpu_or_cpu_labels() {
+        let generic_gpu = "gpu".parse::<DeviceConfig>().unwrap();
+        let generic_cuda = "cuda".parse::<DeviceConfig>().unwrap();
+        let cpu = "cpu".parse::<DeviceConfig>().unwrap();
+        let npu = "npu".parse::<DeviceConfig>().unwrap();
+        let indexed_npu = "intel-npu:1".parse::<DeviceConfig>().unwrap();
+        let openvino_npu = "openvino-npu".parse::<DeviceConfig>().unwrap();
+
+        assert_eq!(npu.backend_label(), "intel-npu");
+        assert_eq!(indexed_npu.backend_label(), "intel-npu:1");
+        assert_eq!(openvino_npu.backend_label(), "openvino-npu");
+        assert_eq!(npu.resolve(), bitnet_common::Device::Npu);
+        assert_eq!(indexed_npu.resolve(), bitnet_common::Device::Npu);
+        assert_eq!(openvino_npu.resolve(), bitnet_common::Device::Npu);
+        assert_ne!(npu.backend_label(), generic_gpu.backend_label());
+        assert_ne!(npu.backend_label(), generic_cuda.backend_label());
+        assert_ne!(npu.backend_label(), cpu.backend_label());
     }
 }

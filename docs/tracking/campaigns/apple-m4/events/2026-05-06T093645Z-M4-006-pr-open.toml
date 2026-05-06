@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T09:36:45Z"
+campaign = "apple-m4"
+item = "M4-006"
+event = "pr_open"
+pr = 3709
+head_sha = "9ea8a6b1ab97a97ab701db58bec18330644226fa"
+actor = "codex"
+
+notes = [
+  "Opened CPU/Metal parity PR for the tiny M4 Metal add kernel.",
+  "Receipt records apple-m4-cpu-neon as reference and apple-m4-metal as target with fallback_used=false.",
+  "No BitNet inference, QK256, MPSGraph, server, dependency, benchmark, or performance claim is in scope.",
+]

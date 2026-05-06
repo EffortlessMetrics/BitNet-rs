@@ -132,7 +132,6 @@ members = [
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-  "crates/bitnet-opencl",       # OpenCL GPU backend with KV cache & paged attention
   "crates/bitnet-wgpu-shaders-i2s", # WGSL compute shaders for I2_S 2-bit inference
   "crates/bitnet-qk256-dispatch",
 ]

@@ -11,7 +11,7 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
     branches: [ main ]
     paths:
       - 'crates/**'
@@ -20,40 +20,85 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.92
+
 jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: read
 
     # PRs: only run when explicitly labeled "coverage"
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'coverage')
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'coverage')
 
     steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift /usr/share/miniconda \
+            /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/chromium \
+            /usr/local/share/powershell /usr/share/az_* /opt/microsoft
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3
         with:
-          toolchain: "1.92.0"
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked
+      - name: Pull rust-ci image
+        run: docker pull "${{ env.RUST_CI_IMAGE }}"
 
-      - name: Generate coverage (HTML + JSON + text)
+      - name: Disk usage before coverage
+        run: df -h /
+
+      - name: Generate coverage in rust-ci image
         env:
           RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
-          set -e
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --html --output-dir target/llvm-cov/html
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu \
-            --json --output-path coverage.json
-          cargo llvm-cov report --text | tee coverage.txt
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e RUST_BACKTRACE \
+            -e CARGO_INCREMENTAL \
+            -e CARGO_PROFILE_TEST_DEBUG \
+            "${{ env.RUST_CI_IMAGE }}" \
+            bash -c '
+              set -euo pipefail
+              export PATH="/usr/local/cargo/bin:${PATH}"
+              cargo llvm-cov clean --workspace
+              cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
+                --ignore-run-fail
+              cargo llvm-cov report --json --output-path coverage.json
+              cargo llvm-cov report --lcov --output-path lcov.info
+              cargo llvm-cov report --text | tee coverage.txt
+            '
+
+      - name: Disk usage after coverage
+        if: always()
+        run: |
+          df -h /
+          du -sh target/ || true
 
       - name: Install jq
         if: github.event_name == 'push'
@@ -62,6 +107,12 @@ jobs:
       - name: Enforce threshold on main (70%)
         if: github.event_name == 'push'
         run: |
+          files=$(jq '.data[0].files | length // 0' coverage.json)
+          lines=$(jq '.data[0].totals.lines.count // 0' coverage.json)
+          if [ "$files" -eq 0 ] || [ "$lines" -eq 0 ]; then
+            echo "::error::coverage.json is empty (0 files / 0 lines); coverage collection is misconfigured"
+            exit 1
+          fi
           perc=$(jq -r '.data[0].totals.lines.percent' coverage.json | awk '{print int($1+0.5)}')
           echo "Coverage: ${perc}%"
           if [ -z "$perc" ]; then echo "No coverage data"; exit 1; fi
@@ -70,13 +121,23 @@ jobs:
           fi
           echo "Coverage OK"
 
+      - name: Upload coverage reports to Codecov
+        if: ${{ always() && hashFiles('lcov.info') != '' && secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: rust-cpu
+          name: bitnet-rs-rust-cpu
+          fail_ci_if_error: true
+
       - name: Upload coverage artifacts (always)
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: coverage-report
           path: |
             coverage.json
             coverage.txt
-            target/llvm-cov/html/**
+            lcov.info
           retention-days: 7

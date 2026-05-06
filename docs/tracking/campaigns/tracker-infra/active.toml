@@ -1,0 +1,121 @@
+id = "tracker-infra"
+title = "Tracker infrastructure"
+status = "active"
+
+objective = "Finish the move from global hand-edited alignment trackers to campaign-local TOML manifests, append-only events, generated dashboards, and enforced xtask gates."
+
+end_state = [
+  "Campaign manifests and events are the source of truth for active work.",
+  "Generated dashboards preserve global coordination visibility.",
+  "Legacy global status and ledger files are transition surfaces, not normal item PR targets.",
+  "xtask can check, generate, and doctor campaign state in mandatory CI gates.",
+]
+
+hard_constraints = [
+  "Do not touch runtime code, kernels, or dependencies for tracker infrastructure.",
+  "Do not remove hardware lane visibility.",
+  "Do not mark work merged without a merge SHA.",
+  "Do not name the pattern after the other repository it was borrowed from.",
+]
+
+[[work_item]]
+id = "TRACKER-001"
+status = "merged"
+branch = "codex/tracker-infra/TRACKER-001-campaign-local-gates"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run -p xtask --no-default-features -- campaign check apple-m4",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/**",
+  "docs/tracking/TRACKER_MODEL.md",
+  "docs/tracking/campaigns/**",
+  "docs/tracking/generated/**",
+  "xtask/src/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Campaign-local tracker checks and generated dashboards are available after merge.",
+]
+must_not_claim = [
+  "Legacy global tracking has been fully removed.",
+  "CI enforcement is active.",
+  "Runtime behavior changed.",
+]
+
+[[work_item]]
+id = "TRACKER-002"
+status = "merged"
+branch = "codex/tracker-infra/TRACKER-002-ci-enforcement"
+stackable = false
+requires_human_merge = true
+blocked_by = ["TRACKER-001"]
+acceptance = "Add CI enforcement for campaign doctor and generated-dashboard freshness after the advisory tracker gate has landed, with stale generated dashboards and normal legacy tracker edits treated as hard failures."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo check --locked -p xtask --no-default-features",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  "docs/tracking/TRACKER_MODEL.md",
+  "docs/tracking/campaigns/**",
+  "docs/tracking/generated/**",
+  "xtask/src/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Campaign tracker checks are enforced in CI after merge.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "Legacy global tracking has been removed.",
+]
+
+[[work_item]]
+id = "TRACKER-003"
+status = "pr_open"
+branch = "codex/tracker-infra/TRACKER-003-current-pr-reconciliation"
+stackable = false
+requires_human_merge = true
+blocked_by = ["TRACKER-002"]
+acceptance = "Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p xtask --no-default-features campaign::tests",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/TRACKER_MODEL.md",
+  "docs/tracking/campaigns/tracker-infra/**",
+  "docs/tracking/generated/**",
+  "xtask/src/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "GitHub PR reconciliation remains strict for the current PR while avoiding cross-branch live-lock deadlocks.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "Legacy global tracking has been removed.",
+]

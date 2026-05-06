@@ -1,241 +1,90 @@
 # Coverage Collection and Reporting
 
-This document describes the coverage collection system for BitNet-rs, including local development workflows and CI integration.
+This document describes the coverage system for BitNet-rs, using
+[cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov) for
+source-based code coverage via LLVM instrumentation.
 
 ## Quick Start
 
-### Local Coverage Collection
+### Install
 
 ```bash
-# Install tarpaulin (Linux recommended)
-cargo install cargo-tarpaulin --locked
+cargo install cargo-llvm-cov --locked
+```
 
-# Run coverage with HTML output
+### Collect Coverage
+
+```bash
+# JSON report (machine-readable)
+cargo cov
+
+# HTML report (interactive, line-by-line)
 cargo cov-html
 
-# Run coverage with all formats (XML, LCOV, HTML)
-cargo cov-all
-
-# View results
-open target/coverage/tarpaulin-report.html
+# Open the HTML report
+open target/llvm-cov/html/index.html
 ```
 
-### Using Aliases
+### Cargo Aliases
 
-The project includes convenient cargo aliases:
+Defined in `.cargo/config.toml`:
 
-```bash
-# Coverage collection
-cargo cov          # XML + LCOV output
-cargo cov-html      # HTML output only
-cargo cov-all       # All formats
+| Alias | Command | Output |
+|-------|---------|--------|
+| `cargo cov` | `cargo llvm-cov ... --json --output-path coverage.json` | `coverage.json` |
+| `cargo cov-html` | `cargo llvm-cov ... --html --output-dir target/llvm-cov/html` | HTML report |
 
-# Testing
-cargo test-unit     # Unit tests only
-cargo test-integration  # Integration tests only
-cargo test-all      # All tests
+All aliases use `--workspace --no-default-features --features cpu`.
 
-# Reporting
-cargo report-example    # Generate sample reports
-cargo report-demo       # Comprehensive demo
-```
+## CI Workflow
 
-## Coverage Workflow
+The coverage workflow (`.github/workflows/coverage.yml`) runs a single
+instrumented build against workspace `default-members` (core inference
+crates) using `cargo llvm-cov nextest` with the `ci` nextest profile,
+ensuring the same tests run under coverage as in CI.
 
-### 1. Local Development
+### Triggers
 
-```bash
-# Run tests with coverage
-cargo cov-html
+| Trigger | Behavior |
+|---------|----------|
+| Push to `main` | Full run with 70% threshold enforcement |
+| PR with `coverage` label | Coverage collected, no threshold gate |
+| Manual dispatch | Coverage collected, no threshold gate |
 
-# Check coverage thresholds
-cargo cov | grep "Coverage"
+### Threshold
 
-# Generate reports
-cargo report-example
-```
+The CI enforces a **70%** line-coverage minimum on pushes to `main` only.
+PRs with the `coverage` label and manual dispatch runs collect coverage
+without enforcing the threshold.
 
-### 2. CI Integration
+### Artifacts
 
-The CI system automatically:
+A single `coverage-report` artifact is uploaded on every run containing:
 
-- Collects coverage on every push/PR
-- Generates HTML, LCOV, and XML reports
-- Uploads artifacts for 30 days
-- Enforces minimum coverage thresholds
-- Creates weekly coverage tracking issues
+- `coverage.json` — machine-readable JSON report
+- `coverage.txt` — text summary
 
-### 3. Coverage Types
+Retention: **7 days**.
 
-- **Unit Tests**: Individual crate testing
-- **Integration Tests**: Cross-crate workflows
-- **Combined Coverage**: Comprehensive analysis
+## Output Paths
 
-## Configuration
+| File | Description |
+|------|-------------|
+| `coverage.json` | JSON report (workspace root) |
+| `coverage.txt` | Text summary (workspace root) |
+| `target/llvm-cov/html/index.html` | Interactive HTML report (local only, via `cargo cov-html`) |
 
-### Coverage Thresholds
+## Platform Support
 
-Default minimum coverage: **90%**
+`cargo-llvm-cov` uses LLVM instrumentation (not ptrace), so it works on
+all platforms:
 
-Override in CI:
-```yaml
-workflow_dispatch:
-  inputs:
-    coverage_threshold:
-      default: "85"  # Lower threshold
-```
-
-### Excluded Crates
-
-The following crates are excluded from coverage:
-- `bitnet-sys` - FFI bindings
-- `crossval` - Cross-validation utilities
-- `xtask` - Build utilities
-- `bitnet-cli` - CLI application
-
-### Features
-
-Coverage collection uses CPU-only features:
-- `cpu` - CPU backend
-- `avx2` - SIMD optimizations (when available)
-
-## Output Formats
-
-### HTML Reports
-- **Location**: `target/coverage/tarpaulin-report.html`
-- **Features**: Interactive line-by-line coverage
-- **Best for**: Development and debugging
-
-### LCOV Format
-- **Location**: `target/coverage/lcov.info`
-- **Features**: Machine-readable format
-- **Best for**: CI integration and tooling
-
-### XML Format (Cobertura)
-- **Location**: `target/coverage/cobertura.xml`
-- **Features**: CI-compatible format
-- **Best for**: Coverage badges and dashboards
-
-## CI Artifacts
-
-Coverage artifacts are uploaded on every CI run:
-
-### Available Downloads
-- `coverage-unit-tests` - Unit test coverage
-- `coverage-integration-tests` - Integration test coverage
-- `coverage-combined-coverage` - Complete analysis
-- `coverage-summary` - Comprehensive summary
-
-### Retention
-- **Coverage Reports**: 30 days
-- **Summary Reports**: 90 days
-
-## Quality Gates
-
-### Automatic Checks
-- ✅ Minimum coverage threshold enforcement
-- ✅ Per-crate coverage analysis
-- ✅ Trend tracking over time
-- ✅ Regression detection
-
-### Manual Review
-- 📊 Weekly coverage reports
-- 🎯 Coverage goal tracking
-- 📈 Improvement recommendations
-
-## Troubleshooting
-
-### Common Issues
-
-**Tarpaulin not found**:
-```bash
-cargo install cargo-tarpaulin --locked
-```
-
-**Permission denied (Linux)**:
-```bash
-# Tarpaulin requires ptrace permissions
-sudo sysctl kernel.yama.ptrace_scope=0
-```
-
-**Low coverage warnings**:
-```bash
-# Check which lines are uncovered
-cargo cov-html
-open target/coverage/tarpaulin-report.html
-```
-
-### Platform Support
-
-- ✅ **Linux**: Full support with ptrace
-- ⚠️ **macOS**: Limited support, use CI for official coverage
-- ❌ **Windows**: Not supported, use CI for coverage collection
-
-## Integration with Reporting System
-
-Coverage data integrates with the test reporting system:
-
-```bash
-# Generate test reports with coverage context
-cargo report-example
-
-# View comprehensive analysis
-open tests/example_reports/example_report.html
-```
-
-The HTML test reports include coverage summaries and links to detailed coverage analysis.
-
-## Best Practices
-
-### Development Workflow
-1. Write tests with coverage in mind
-2. Run `cargo cov-html` before committing
-3. Review uncovered lines in HTML report
-4. Add tests for critical uncovered paths
-
-### CI Integration
-1. Coverage collected automatically
-2. Artifacts available for download
-3. Thresholds enforced on PRs
-4. Weekly reports track trends
-
-### Quality Assurance
-1. Maintain >90% line coverage
-2. Focus on branch coverage for complex logic
-3. Ensure integration test coverage
-4. Monitor coverage trends over time
-
-## Advanced Usage
-
-### Custom Coverage Collection
-
-```bash
-# Specific crate coverage
-cargo tarpaulin --package bitnet-common --out Html
-
-# With specific features
-cargo tarpaulin --features "cpu,avx2" --out Html
-
-# Exclude specific tests
-cargo tarpaulin --exclude-files "tests/integration/*" --out Html
-```
-
-### Coverage Analysis
-
-```bash
-# Generate detailed analysis
-cargo cov-all
-
-# Extract metrics
-grep "Coverage" target/coverage/tarpaulin-report.txt
-
-# Compare with previous runs
-diff previous-coverage.lcov target/coverage/lcov.info
-```
+- **Linux** — full support
+- **macOS** — full support
+- **Windows** — full support
 
 ## Resources
 
-- [Tarpaulin Documentation](https://github.com/xd009642/tarpaulin)
-- [LCOV Format Specification](http://ltp.sourceforge.net/coverage/lcov/genhtml.1.php)
-- [Codecov Integration](https://docs.codecov.io/docs)
-- [Coverage Best Practices](https://testing.googleblog.com/2020/08/code-coverage-best-practices.html)
+- [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov) — the
+  coverage tool used by this project
+- [LLVM Source-Based Code Coverage](https://llvm.org/docs/CoverageMapping.html)

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "artifact_kind": "parity",
+  "machine_id": "TBD",
+  "hardware_lane": "TBD",
+  "timestamp_utc": "TBD",
+  "requested_backend": "TBD",
+  "selected_backend": "TBD",
+  "runtime_api": "TBD",
+  "reference": {
+    "name": "cpu-reference",
+    "artifact_path": "TBD"
+  },
+  "parity": {
+    "class": "TBD",
+    "max_abs_error": null,
+    "mean_abs_error": null,
+    "token_agreement_for_greedy": null,
+    "tolerance_source": "docs/bitnet/BITNET_PARITY_TOLERANCES.md"
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "artifact_path": "ci/hardware/<machine-id>/<date>/parity.json"
+}
