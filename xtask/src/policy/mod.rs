@@ -9,6 +9,7 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod no_panic;
 pub mod non_rust;
 pub mod report;
 

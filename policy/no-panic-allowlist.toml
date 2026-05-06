@@ -1,0 +1,29 @@
+# Semantic no-panic allowlist for BitNet-rs.
+#
+# Schema: 0.3
+# Owner:  policy/no-panic
+#
+# Each entry is a structured receipt for a single panic-family call site:
+# `unwrap()`, `expect()`, `panic!`, `todo!`, `unimplemented!`,
+# `unreachable!`. Identity is `path + family + selector`; selector captures
+# the call's *meaning* (kind + container + callee, with an optional
+# receiver fingerprint). Line/column live under `last_seen` and are
+# *advisory* — they help reviewers locate the call site after benign
+# refactors but are *not* part of the matching key.
+#
+# This file is intentionally empty in the current rollout stage. Existing
+# panic-family debt is being migrated under PR 7 (default-members) and
+# PR 8 (FFI/GPU/python/wasm/fuzz/xtask/crossval). New entries land
+# alongside their justifying refactor — never as a one-time bulk
+# import — and every entry must include owner, classification,
+# explanation, and an expiry date.
+#
+# Run `cargo xtask check-no-panic-family` to enforce this allowlist.
+# Run `cargo xtask no-panic propose` to generate a review-only proposed
+# allowlist under `target/bitnet/reports/no-panic-proposed-allowlist.toml`.
+
+schema_version = "0.3"
+
+# No active entries yet. See docs/development/BITNET_POLICY_ROLLOUT.md for
+# the migration plan.
+allow = []

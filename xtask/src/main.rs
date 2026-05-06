@@ -1022,11 +1022,50 @@ enum Cmd {
 
     /// Print a unified summary of the active policy checks.
     ///
-    /// Aggregates the latest results of `check-file-policy` (and, in later
-    /// rollout PRs, `check-no-panic-family` and `check-lint-policy`) into a
+    /// Aggregates the latest results of `check-file-policy`,
+    /// `check-no-panic-family`, and (in PR 5) `check-lint-policy` into a
     /// single report under `target/bitnet/reports/policy-report.{md,json}`.
     #[command(name = "policy-report")]
     PolicyReport,
+
+    /// Validate the panic-family allowlist (`policy/no-panic-allowlist.toml`).
+    ///
+    /// Parses every tracked Rust file with `syn`, walks the AST, and
+    /// emits findings for `unwrap`, `expect`, `panic!`, `todo!`,
+    /// `unimplemented!`, and `unreachable!`. Each finding is matched
+    /// against the allowlist by `path + family + selector` (kind,
+    /// container, callee, optional receiver fingerprint). Line/column
+    /// are advisory only.
+    ///
+    /// Reports are written to
+    /// `target/bitnet/reports/no-panic.{md,json}`. Schema errors and
+    /// expired entries fail the check unconditionally; unallowlisted
+    /// findings and unused entries fail only with `--strict`.
+    #[command(name = "check-no-panic-family")]
+    CheckNoPanicFamily {
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Generate a review-only proposed no-panic allowlist.
+    ///
+    /// Writes `target/bitnet/reports/no-panic-proposed-allowlist.toml`
+    /// containing one entry per current finding with `owner = "TODO"`
+    /// and a placeholder explanation. The proposal is never applied
+    /// automatically; it exists so reviewers can adapt entries before
+    /// landing them in `policy/no-panic-allowlist.toml`.
+    #[command(name = "no-panic")]
+    NoPanic {
+        #[command(subcommand)]
+        command: NoPanicCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum NoPanicCmd {
+    /// Write a review-only proposed allowlist under
+    /// `target/bitnet/reports/no-panic-proposed-allowlist.toml`.
+    Propose,
 }
 
 #[derive(Subcommand)]
@@ -1355,7 +1394,37 @@ fn real_main() -> Result<()> {
         Cmd::Campaign { command } => campaign::run(command),
         Cmd::CheckFilePolicy { strict } => check_file_policy_cmd(strict),
         Cmd::PolicyReport => policy_report_cmd(),
+        Cmd::CheckNoPanicFamily { strict } => check_no_panic_family_cmd(strict),
+        Cmd::NoPanic { command } => match command {
+            NoPanicCmd::Propose => {
+                let root = policy::repo_root()?;
+                policy::no_panic::run_propose(&root)?;
+                Ok(())
+            }
+        },
     }
+}
+
+fn check_no_panic_family_cmd(strict: bool) -> Result<()> {
+    let root = policy::repo_root()?;
+    let outcome = policy::no_panic::run_check(&root, strict)?;
+    if outcome.has_failures(strict) {
+        anyhow::bail!(
+            "no-panic-family: {} schema errors, {} expired entries{}",
+            outcome.schema_errors.len(),
+            outcome.expired_entries.len(),
+            if strict {
+                format!(
+                    ", {} unallowlisted, {} unused",
+                    outcome.unallowlisted.len(),
+                    outcome.unused_entries.len()
+                )
+            } else {
+                String::new()
+            }
+        );
+    }
+    Ok(())
 }
 
 fn check_file_policy_cmd(strict: bool) -> Result<()> {
@@ -1402,6 +1471,24 @@ fn policy_report_cmd() -> Result<()> {
         }
         Err(e) => sections.push((
             "non-rust-file-policy".to_string(),
+            vec![format!("ERROR: {e:#}")],
+        )),
+    }
+
+    match policy::no_panic::run_check(&root, false) {
+        Ok(outcome) => {
+            let mut lines = Vec::new();
+            lines.push(format!("files_scanned: {}", outcome.files_scanned));
+            lines.push(format!("findings: {}", outcome.findings.len()));
+            lines.push(format!("matched: {}", outcome.matched));
+            lines.push(format!("unallowlisted: {}", outcome.unallowlisted.len()));
+            lines.push(format!("unused: {}", outcome.unused_entries.len()));
+            lines.push(format!("expired: {}", outcome.expired_entries.len()));
+            lines.push(format!("schema_errors: {}", outcome.schema_errors.len()));
+            sections.push(("no-panic-family".to_string(), lines));
+        }
+        Err(e) => sections.push((
+            "no-panic-family".to_string(),
             vec![format!("ERROR: {e:#}")],
         )),
     }
