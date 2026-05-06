@@ -137,7 +137,7 @@ impl CliConfig {
     pub fn validate(&self) -> Result<()> {
         if !is_supported_device_label(&self.default_device) {
             anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, intel-npu, openvino-npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
                 self.default_device
             );
         }
@@ -167,8 +167,9 @@ impl CliConfig {
 }
 
 fn is_supported_device_label(label: &str) -> bool {
+    let label = label.trim().to_ascii_lowercase();
     matches!(
-        label,
+        label.as_str(),
         "cpu"
             | "cuda"
             | "gpu"
@@ -176,6 +177,9 @@ fn is_supported_device_label(label: &str) -> bool {
             | "opencl"
             | "ocl"
             | "npu"
+            | "intel-npu"
+            | "openvino-npu"
+            | "intel-npu-openvino"
             | "nvidia-rtx-5070-ti-cuda"
             | "nvidia-rtx-5070-ti-wgpu"
             | "metal"
@@ -184,7 +188,8 @@ fn is_supported_device_label(label: &str) -> bool {
             | "apple-m4-mpsgraph"
             | "apple-m4-cpu-neon"
             | "auto"
-    )
+    ) || label.strip_prefix("npu:").is_some_and(|index| index.parse::<usize>().is_ok())
+        || label.strip_prefix("intel-npu:").is_some_and(|index| index.parse::<usize>().is_ok())
 }
 
 /// Configuration builder for command-line usage
@@ -234,5 +239,32 @@ impl ConfigBuilder {
         self.config.merge_with_env();
         self.config.validate()?;
         Ok(self.config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CliConfig, ConfigBuilder};
+
+    #[test]
+    fn validates_intel_npu_labels_without_aliasing() {
+        for device in ["npu", "intel-npu", "intel-npu:1", "openvino-npu", "intel-npu-openvino"] {
+            let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
+            config.validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_intel_npu_index() {
+        for device in ["npu:", "npu:abc", "intel-npu:", "intel-npu:abc"] {
+            let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
+            assert!(config.validate().is_err(), "{device} should be rejected");
+        }
+    }
+
+    #[test]
+    fn builder_preserves_intel_npu_device_label() {
+        let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();
+        assert_eq!(config.default_device, "intel-npu:2");
     }
 }

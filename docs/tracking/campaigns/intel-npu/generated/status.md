@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| NPU-002 | ready | TBD | `codex/intel-npu/NPU-002-backend-identity` | Preserve Intel NPU requested and selected backend identity without mapping it to Metal, CUDA, generic GPU, or CPU fallback. |
+| NPU-002 | pr_open | #3722 | `codex/intel-npu/NPU-002-lite-backend-identity` | Preserve Intel NPU requested and selected backend identity without mapping it to Metal, CUDA, generic GPU, or CPU fallback. |
 
 ## Hard Constraints
 

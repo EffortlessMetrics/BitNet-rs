@@ -58,6 +58,10 @@ pub enum BackendRequest {
     Hip,
     /// Require Intel oneAPI specifically.
     OneApi,
+    /// Require Intel NPU identity without treating it as GPU, Metal, or CPU fallback.
+    IntelNpu,
+    /// Require Intel NPU through the OpenVINO runtime.
+    OpenVinoNpu,
     /// Require native Metal compute without assuming a specific Apple machine.
     Metal,
     /// Require MPSGraph graph execution without treating it as native Metal kernels.
@@ -82,6 +86,8 @@ impl BackendRequest {
             "nvidia-rtx-5070-ti-wgpu" => Some(BackendRequest::NvidiaRtx5070TiWgpu),
             "hip" | "rocm" => Some(BackendRequest::Hip),
             "oneapi" => Some(BackendRequest::OneApi),
+            "npu" | "intel-npu" => Some(BackendRequest::IntelNpu),
+            "openvino-npu" | "intel-npu-openvino" => Some(BackendRequest::OpenVinoNpu),
             "metal" => Some(BackendRequest::Metal),
             "mpsgraph" => Some(BackendRequest::MpsGraph),
             "apple-m4-metal" => Some(BackendRequest::AppleM4Metal),
@@ -103,6 +109,8 @@ impl fmt::Display for BackendRequest {
             BackendRequest::NvidiaRtx5070TiWgpu => write!(f, "nvidia-rtx-5070-ti-wgpu"),
             BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
+            BackendRequest::IntelNpu => write!(f, "intel-npu"),
+            BackendRequest::OpenVinoNpu => write!(f, "openvino-npu"),
             BackendRequest::Metal => write!(f, "metal"),
             BackendRequest::MpsGraph => write!(f, "mpsgraph"),
             BackendRequest::AppleM4Metal => write!(f, "apple-m4-metal"),
@@ -181,6 +189,8 @@ impl BackendSelectionResult {
             BackendRequest::OneApi => self.selected != KernelBackend::OneApi,
             BackendRequest::NvidiaRtx5070TiCuda
             | BackendRequest::NvidiaRtx5070TiWgpu
+            | BackendRequest::IntelNpu
+            | BackendRequest::OpenVinoNpu
             | BackendRequest::Metal
             | BackendRequest::MpsGraph
             | BackendRequest::AppleM4Metal
@@ -313,6 +323,15 @@ pub fn select_backend(
                     available: detected.clone(),
                 });
             }
+        }
+        BackendRequest::IntelNpu | BackendRequest::OpenVinoNpu => {
+            // NPU-002 preserves the requested identity only. Runtime probing and
+            // OpenVINO graph execution land later, so CPU/GPU fallback is never
+            // selected here.
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
         }
         BackendRequest::Metal | BackendRequest::AppleM4Metal => {
             return Err(BackendSelectionError::RequestedUnavailable {
@@ -517,6 +536,21 @@ mod tests {
     }
 
     #[test]
+    fn intel_npu_labels_parse_without_aliasing() {
+        assert_eq!(BackendRequest::from_label("npu"), Some(BackendRequest::IntelNpu));
+        assert_eq!(BackendRequest::from_label("intel-npu"), Some(BackendRequest::IntelNpu));
+        assert_eq!(BackendRequest::from_label("openvino-npu"), Some(BackendRequest::OpenVinoNpu));
+        assert_eq!(
+            BackendRequest::from_label("intel-npu-openvino"),
+            Some(BackendRequest::OpenVinoNpu)
+        );
+        assert_ne!(BackendRequest::from_label("npu"), Some(BackendRequest::Gpu));
+        assert_ne!(BackendRequest::from_label("npu"), Some(BackendRequest::Metal));
+        assert_eq!(BackendRequest::IntelNpu.to_string(), "intel-npu");
+        assert_eq!(BackendRequest::OpenVinoNpu.to_string(), "openvino-npu");
+    }
+
+    #[test]
     fn rtx_5070_ti_cuda_request_preserves_identity_when_cuda_available() {
         let result = select_backend(BackendRequest::NvidiaRtx5070TiCuda, &cuda_caps()).unwrap();
 
@@ -555,6 +589,15 @@ mod tests {
         let err = select_backend(BackendRequest::AppleM4Metal, &cpu_only_caps()).unwrap_err();
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         assert!(err.to_string().contains("apple-m4-metal"));
+    }
+
+    #[test]
+    fn intel_npu_requests_are_strict_until_openvino_runtime_lands() {
+        for request in [BackendRequest::IntelNpu, BackendRequest::OpenVinoNpu] {
+            let err = select_backend(request, &cpu_only_caps()).unwrap_err();
+            assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+            assert!(err.to_string().contains(&request.to_string()));
+        }
     }
 
     #[test]
