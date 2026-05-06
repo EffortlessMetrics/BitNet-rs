@@ -31,6 +31,6 @@
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
 | nvidia-5070ti | RTX5070TI-007 | RTX5070TI-006 | merged |
-| nvidia-5070ti | RTX5070TI-008 | RTX5070TI-006, RTX5070TI-007 | ready |
+| nvidia-5070ti | RTX5070TI-008 | RTX5070TI-006, RTX5070TI-007 | pr_open |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
