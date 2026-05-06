@@ -24,6 +24,12 @@ The CPU path is considered production-ready only when a strict run can prove all
 
 The repo already contains the major surfaces required for a serious CPU lane, but they are not yet unified into a single end-to-end execution story.
 
+This plan intentionally treats the CPU path as three systems that must become one coherent inference lane:
+
+1. **Model and tokenizer authority**: GGUF loading, tensor metadata, tokenizer discovery, and strict-mode policy must converge before real-model CPU receipts are trustworthy.
+2. **Packed quantized kernel authority**: QK256/I2_S block layout, scalar truth kernels, SIMD dispatch, and FFI boundaries must consume the same packed representation.
+3. **Real transformer execution**: decode-critical transformer operations must exist on CPU so fast packed matmul is not isolated from RMSNorm, RoPE, attention, KV-cache, embedding, logits, batching, and prefill/decode scheduling.
+
 | Area | Current surface | Build-upon direction |
 |---|---|---|
 | GGUF loading | `crates/bitnet-models/src/formats/gguf/loader.rs`, `crates/bitnet-models/src/gguf_simple.rs` | Fold real-model inference onto one canonical loader and make any minimal/simple path diagnostic-only. |
@@ -55,6 +61,30 @@ CLI/server request
 ```
 
 Strict mode must fail if any requested part of this path is replaced by an unrequested fallback. Auto mode may use scalar or diagnostic fallback paths, but receipts must still record that fallback explicitly.
+
+## External Architecture Reference Points
+
+The Rust CPU lane should follow the same high-level lesson as `bitnet.cpp`: CPU execution is not generic dense inference with a late quantization wrapper. The performance-critical path is mixed-precision ternary/I2_S matrix multiplication over packed weights, so steady-state inference must dispatch into specialized packed kernels instead of repeatedly dequantizing whole matrices and hoping BLAS recovers the cost.
+
+GGUF should be treated as the storage contract for this lane because it supports single-file deployment, extensible metadata, and mmap/alignment-friendly tensor data. That implies this implementation posture:
+
+- parse and normalize GGUF metadata once;
+- decide model family, tensor-name mapping, quantization layout, RoPE/GQA/head metadata, and tokenizer source before inference;
+- expose immutable packed tensor views from the loader;
+- keep packed weights packed through prefill and decode;
+- make layout conversion, dequantized reference paths, and compatibility tokenizers diagnostic tools rather than strict inference behavior.
+
+## Hardware Planning Lanes
+
+Use ISA availability and workload phase as the planning axis, not named machines or peak theoretical throughput.
+
+| Machine or class | Planning target | Assumption for implementation work |
+|---|---|---|
+| Low-core x86 laptop CPUs | AVX2 baseline | Memory-sensitive decode-first work; avoid assumptions beyond AVX2/FMA unless CPUID proves them. |
+| Current mainstream x86 desktops | AVX2 baseline | Use as the reference fast lane for decode GEMV and later prefill GEMM. |
+| High-core x86 desktops | AVX2 baseline plus optional advanced x86 | Parallel prefill may scale, but decode must be benchmarked conservatively because more threads can hurt memory-bound token generation. |
+| AVX-512-capable x86 hosts | Optional widening lane | Enable only through feature detection and receipt-backed parity/speed data. |
+| Apple/Arm64 systems | NEON baseline | Prioritize NEON GEMV after AVX2/scalar contracts are stable; defer AMX/Accelerate-specific assumptions. |
 
 ## Strict-Mode Semantics
 
@@ -318,6 +348,19 @@ A CPU receipt must make fallback impossible to hide:
 | CPU-BITNET-007 | Strict receipts and fallback enforcement | `crates/bitnet-common/src/backend_selection.rs`, `crates/bitnet-inference/src/backends.rs`, `crates/bitnet-receipts/**`, `crates/bitnet-receipts-core/**`, `crates/bitnet-bench-receipts/**`, `crates/bitnet-cli/**` | Strict proof fails on hidden fallback and emits machine-readable loader/tokenizer/kernel/backend receipt fields. |
 | CPU-BITNET-008 | BitNet phase benchmarks | `crates/bitnet-kernels/benches/**`, `crates/bitnet-quantization/benches/**`, `crates/bitnet-bench-receipts/**`, `docs/bitnet/**` | Micro, layer, prefill, first-token, decode, and context profiles use real BitNet fields and fallback status. |
 | CPU-BITNET-009 | Wider ISA lanes | NEON and AVX-512 kernel files, dispatch tables, receipts, tests | NEON and AVX-512 widen proven scalar/AVX2 architecture only; each selected kernel has parity and receipts. |
+
+## Milestone Timeline
+
+The dates below are planning anchors, not release promises. Keep each milestone PR-sized and receipt-backed.
+
+| Target window | Primary milestone | Proof expected |
+|---|---|---|
+| Week 1 | GGUF and tokenizer authority | Strict-mode loader/tokenizer fallback policy is documented and testable. |
+| Week 2 | Canonical packed layout and scalar kernels | Byte-exact layout fixtures and scalar GEMV/GEMM parity tests exist. |
+| Week 3 | AVX2 decode GEMV | CPUID-gated AVX2 decode path beats scalar on an AVX2 host and records selected kernel. |
+| Week 4 | CPU transformer decode helpers | RMSNorm, RoPE, attention score/value, and KV-cache helpers have deterministic parity coverage. |
+| Week 5 | Receipts and CI benchmarks | Micro, layer, prefill, and decode artifacts include fallback status and selected kernel. |
+| Week 6+ | Widening lanes | NEON and optional AVX-512 follow only after scalar/AVX2 contracts are stable. |
 
 ## Roadmap Order
 
