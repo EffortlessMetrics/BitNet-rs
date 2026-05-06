@@ -7,6 +7,7 @@
   "proof_stage": "detected",
   "artifacts": {
     "platform": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "platform_cli": "ci/hardware/intel-258v/2026-05-06/platform-probe-cli.json",
     "cpu_bitnet_validation": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json",
     "arc140v": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
     "npu": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json"
