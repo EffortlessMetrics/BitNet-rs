@@ -1038,6 +1038,8 @@ items:
         - crates/bitnet-cli/src/main.rs
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - xtask/src/campaign.rs
+        - xtask/src/main.rs
       forbidden_paths:
         - crates/bitnet-quantization/src/qk256/**
         - crates/bitnet-qk256-dispatch/**

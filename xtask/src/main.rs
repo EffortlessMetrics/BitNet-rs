@@ -4857,7 +4857,7 @@ fn is_executable(path: &Path) -> bool {
     #[cfg(not(unix))]
     {
         // On Windows, check if it's an .exe file
-        path.extension().map_or(false, |ext| ext == "exe")
+        path.extension().is_some_and(|ext| ext == "exe")
     }
 }
 

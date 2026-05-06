@@ -618,7 +618,7 @@ fn current_item(manifest: &CampaignManifest) -> Option<&WorkItem> {
 }
 
 fn latest_pr(events: &[Event], item_id: &str) -> Option<u64> {
-    events.iter().filter(|event| event.item == item_id).filter_map(|event| event.pr).last()
+    events.iter().filter(|event| event.item == item_id).filter_map(|event| event.pr).next_back()
 }
 
 fn render_campaign_status(campaign: &LoadedCampaign) -> String {

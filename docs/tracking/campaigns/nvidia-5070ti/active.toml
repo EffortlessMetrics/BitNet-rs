@@ -41,6 +41,8 @@ allowed_paths = [
   "docs/tracking/bitnet-alignment/status.md",
   "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
   "docs/tracking/campaigns/nvidia-5070ti/**",
+  "xtask/src/campaign.rs",
+  "xtask/src/main.rs",
 ]
 forbidden_paths = [
   "crates/bitnet-kernels/src/gpu/**",
