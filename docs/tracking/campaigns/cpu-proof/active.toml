@@ -154,3 +154,34 @@ must_not_claim = [
   "Scalar truth kernels are complete.",
   "AVX2 dispatch is complete.",
 ]
+
+[[work_item]]
+id = "CPU-BITNET-004"
+status = "pr_open"
+branch = "codex/cpu-bitnet-004-scalar-packed-truth"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-003"]
+acceptance = "Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu i2s_qk256 --lib",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Scalar packed QK256 GEMV/GEMM correctness oracles exist after merge.",
+]
+must_not_claim = [
+  "Optimized kernel performance is proven.",
+  "AVX2 dispatch is complete.",
+  "Transformer decode is complete.",
+]

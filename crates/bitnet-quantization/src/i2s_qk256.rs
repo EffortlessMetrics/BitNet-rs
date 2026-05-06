@@ -44,6 +44,12 @@ pub const QK256_BLOCK: usize = QK256_BLOCK_COLS;
 /// Packed bytes per block (2 bits/elem * 256 elem / 8 bits/byte)
 pub const QK256_PACKED_BYTES: usize = QK256_PACKED_BYTES_PER_BLOCK;
 
+/// Stable receipt/proof kernel ID for the canonical scalar QK256 decode GEMV.
+pub const QK256_SCALAR_GEMV_KERNEL_ID: &str = "qk256-scalar-gemv";
+
+/// Stable receipt/proof kernel ID for the canonical scalar QK256 prefill GEMM.
+pub const QK256_SCALAR_GEMM_KERNEL_ID: &str = "qk256-scalar-gemm";
+
 /// Storage for GGML I2_S (QK=256) quantized weights without per-block scales
 ///
 /// This structure holds raw packed 2-bit codes for a weight tensor in the
@@ -293,7 +299,7 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
 /// # Errors
 ///
 /// Returns error if dimensions don't match or data is insufficient.
-fn gemv_qk256_scalar(
+fn gemv_qk256_scalar_checked(
     qs_data: &[u8],
     x: &[f32],
     y_out: &mut [f32],
@@ -318,6 +324,68 @@ fn gemv_qk256_scalar(
         let end = start + row_stride_bytes;
         let row_bytes = &qs_data[start..end];
         *output = gemv_qk256_row(row_bytes, x, cols);
+    }
+
+    Ok(())
+}
+
+/// Canonical scalar QK256 GEMV oracle for decode: `y = A x`.
+///
+/// This path uses the GGML I2_S no-scale mapping from [`code_to_f32`] and the
+/// canonical QK256 packed layout. It never dispatches to SIMD.
+pub fn qk256_gemv_scalar(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+) -> Result<()> {
+    let layout = Qk256Layout::from_rows_cols(rows, cols)?;
+    layout.validate_packed_len(qs_data.len())?;
+    gemv_qk256_scalar_checked(qs_data, x, y_out, rows, cols, layout.row_stride_bytes)
+}
+
+/// Canonical scalar QK256 GEMM oracle for prefill: `Y = X A^T`.
+///
+/// `x` is row-major with shape `tokens × cols`; `y_out` is row-major with shape
+/// `tokens × rows`. The packed matrix `A` is row-major QK256 with shape
+/// `rows × cols`.
+pub fn qk256_gemm_scalar(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    tokens: usize,
+    rows: usize,
+    cols: usize,
+) -> Result<()> {
+    let layout = Qk256Layout::from_rows_cols(rows, cols)?;
+    layout.validate_packed_len(qs_data.len())?;
+
+    let expected_x_len = tokens.checked_mul(cols).ok_or_else(|| {
+        anyhow::anyhow!("I2S_QK256: x length overflow for tokens={tokens}, cols={cols}")
+    })?;
+    if x.len() != expected_x_len {
+        bail!("I2S_QK256: x length {} != tokens*cols {}", x.len(), expected_x_len);
+    }
+
+    let expected_y_len = tokens.checked_mul(rows).ok_or_else(|| {
+        anyhow::anyhow!("I2S_QK256: y_out length overflow for tokens={tokens}, rows={rows}")
+    })?;
+    if y_out.len() != expected_y_len {
+        bail!("I2S_QK256: y_out length {} != tokens*rows {}", y_out.len(), expected_y_len);
+    }
+
+    for token in 0..tokens {
+        let x_start = token * cols;
+        let y_start = token * rows;
+        gemv_qk256_scalar_checked(
+            qs_data,
+            &x[x_start..x_start + cols],
+            &mut y_out[y_start..y_start + rows],
+            rows,
+            cols,
+            layout.row_stride_bytes,
+        )?;
     }
 
     Ok(())
@@ -381,12 +449,32 @@ pub fn gemv_qk256(
     }
 
     // Fallback to scalar implementation
-    gemv_qk256_scalar(qs_data, x, y_out, rows, cols, row_stride_bytes)
+    gemv_qk256_scalar_checked(qs_data, x, y_out, rows, cols, row_stride_bytes)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn pack_codes_for_cols(codes: &[u8], cols: usize) -> Vec<u8> {
+        let layout = Qk256Layout::from_rows_cols(1, cols).expect("layout");
+        let mut packed = vec![0u8; layout.row_stride_bytes];
+        for (i, &code) in codes.iter().enumerate().take(cols) {
+            assert!(code < 4, "test code must be 0..=3");
+            packed[i / 4] |= code << ((i % 4) * 2);
+        }
+        packed
+    }
+
+    fn reference_dot(codes: &[u8], x: &[f32], cols: usize) -> f32 {
+        codes
+            .iter()
+            .copied()
+            .zip(x.iter().copied())
+            .take(cols)
+            .map(|(code, x)| code_to_f32(code) * x)
+            .sum()
+    }
 
     #[test]
     fn unpack_block_smoke() {
@@ -484,6 +572,70 @@ mod tests {
         assert_eq!(code_to_f32(1), -1.0);
         assert_eq!(code_to_f32(2), 1.0);
         assert_eq!(code_to_f32(3), 2.0);
+    }
+
+    #[test]
+    fn qk256_scalar_kernel_ids_are_stable() {
+        assert_eq!(QK256_SCALAR_GEMV_KERNEL_ID, "qk256-scalar-gemv");
+        assert_eq!(QK256_SCALAR_GEMM_KERNEL_ID, "qk256-scalar-gemm");
+    }
+
+    #[test]
+    fn qk256_gemv_scalar_matches_reference_fixture() -> Result<()> {
+        let rows = 2usize;
+        let cols = 300usize;
+        let x: Vec<f32> = (0..cols).map(|i| ((i % 11) as f32 - 5.0) * 0.25).collect();
+        let row0_codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
+        let row1_codes: Vec<u8> = (0..cols).map(|i| ((i + 1) % 4) as u8).collect();
+
+        let mut qs_data = Vec::new();
+        qs_data.extend_from_slice(&pack_codes_for_cols(&row0_codes, cols));
+        qs_data.extend_from_slice(&pack_codes_for_cols(&row1_codes, cols));
+
+        let mut y_out = vec![0.0f32; rows];
+        qk256_gemv_scalar(&qs_data, &x, &mut y_out, rows, cols)?;
+
+        let expected = [reference_dot(&row0_codes, &x, cols), reference_dot(&row1_codes, &x, cols)];
+        for (got, expected) in y_out.iter().zip(expected) {
+            assert!((got - expected).abs() < 1e-5, "got {got}, expected {expected}");
+        }
+
+        let mut y_out_repeat = vec![0.0f32; rows];
+        qk256_gemv_scalar(&qs_data, &x, &mut y_out_repeat, rows, cols)?;
+        assert_eq!(y_out, y_out_repeat, "scalar GEMV must be deterministic");
+
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_gemm_scalar_matches_batched_gemv_fixture() -> Result<()> {
+        let tokens = 3usize;
+        let rows = 2usize;
+        let cols = 256usize;
+        let row0_codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
+        let row1_codes: Vec<u8> = (0..cols).map(|i| ((i + 2) % 4) as u8).collect();
+
+        let mut qs_data = Vec::new();
+        qs_data.extend_from_slice(&pack_codes_for_cols(&row0_codes, cols));
+        qs_data.extend_from_slice(&pack_codes_for_cols(&row1_codes, cols));
+
+        let x: Vec<f32> = (0..tokens * cols).map(|i| ((i % 17) as f32 - 8.0) / 8.0).collect();
+        let mut y_out = vec![0.0f32; tokens * rows];
+        qk256_gemm_scalar(&qs_data, &x, &mut y_out, tokens, rows, cols)?;
+
+        for token in 0..tokens {
+            let x_token = &x[token * cols..(token + 1) * cols];
+            let expected0 = reference_dot(&row0_codes, x_token, cols);
+            let expected1 = reference_dot(&row1_codes, x_token, cols);
+            assert!((y_out[token * rows] - expected0).abs() < 1e-5);
+            assert!((y_out[token * rows + 1] - expected1).abs() < 1e-5);
+        }
+
+        let mut y_out_repeat = vec![0.0f32; tokens * rows];
+        qk256_gemm_scalar(&qs_data, &x, &mut y_out_repeat, tokens, rows, cols)?;
+        assert_eq!(y_out, y_out_repeat, "scalar GEMM must be deterministic");
+
+        Ok(())
     }
 
     #[test]
