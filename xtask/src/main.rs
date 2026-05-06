@@ -44,6 +44,7 @@ mod gates;
 mod grid_check;
 #[allow(dead_code)]
 mod health_check;
+mod lint_policy;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
@@ -998,6 +999,10 @@ enum Cmd {
         dry_run: bool,
     },
 
+    /// Check Cargo, Clippy, and policy ledger lint governance.
+    #[command(name = "check-lint-policy")]
+    CheckLintPolicy,
+
     /// Manage campaign-local alignment trackers.
     Campaign {
         #[command(subcommand)]
@@ -1328,6 +1333,7 @@ fn real_main() -> Result<()> {
         Cmd::GridCheck { cpu_only, verbose, dry_run } => {
             grid_check::run(cpu_only, verbose, dry_run)
         }
+        Cmd::CheckLintPolicy => lint_policy::check(),
         Cmd::Campaign { command } => campaign::run(command),
     }
 }

@@ -1,0 +1,22 @@
+schema = 1
+
+[[debt]]
+lint = "clippy::arithmetic_side_effects"
+path = "crates/bitnet-kernels/**"
+owner = "numeric-kernel"
+reason = "GPU and CPU kernel arithmetic requires a reviewed checked/wrapping/saturating policy before promotion from warn to deny."
+expires = "2026-07-01"
+
+[[debt]]
+lint = "clippy::cast_possible_truncation"
+path = "crates/bitnet-quantization*/**"
+owner = "quantization"
+reason = "Quantization conversions need typed range guards before truncating cast warnings can be promoted."
+expires = "2026-07-01"
+
+[[debt]]
+lint = "rust::unsafe_code"
+path = "crates/bitnet-simd/**"
+owner = "simd"
+reason = "Existing SIMD intrinsics require a reviewed safe-abstraction boundary before workspace unsafe_code can move from warn to forbid."
+expires = "2026-07-01"

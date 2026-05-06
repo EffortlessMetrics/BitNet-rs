@@ -2,7 +2,7 @@
 # Ensures high code quality standards for crates.io publication
 
 # MSRV compatibility
-msrv = "1.92.0"
+msrv = "1.93"
 
 # Complexity thresholds
 cognitive-complexity-threshold = 30
@@ -10,7 +10,5 @@ too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 trivial-copy-size-limit = 64
 
-# Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
+# Repository-specific Clippy configuration only; test carveouts are intentionally forbidden.
 allow-mixed-uninlined-format-args = true  # Performance in hot paths

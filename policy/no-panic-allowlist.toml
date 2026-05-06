@@ -1,0 +1,22 @@
+schema_version = "0.3"
+
+# Empty by default. Add narrow semantic receipts only when a reviewed migration
+# cannot remove a panic-family call immediately.
+#
+# [[allow]]
+# path = "crates/example/src/parser.rs"
+# family = "unwrap"
+# classification = "test_only"
+# owner = "parser"
+# explanation = "Fixture setup path; covered by follow-up panic-free test helper migration."
+# expires = "2026-07-01"
+#
+# [allow.selector]
+# kind = "method_call"
+# container = "parses_fixture_with_boundary_case"
+# callee = "unwrap"
+# receiver_fingerprint = "std::fs::read_to_string(path)"
+#
+# [allow.last_seen]
+# line = 42
+# column = 17
