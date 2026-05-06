@@ -258,6 +258,7 @@ mod tests {
                 device: "GPU.0".to_owned(),
                 full_name: Some("Intel(R) Arc(TM) 140V Graphics".to_owned()),
                 supported_properties: Vec::new(),
+                properties: Vec::new(),
             }],
             error: None,
         };
@@ -298,6 +299,7 @@ mod tests {
                 device: "GPU.0".to_owned(),
                 full_name: Some("Intel(R) UHD Graphics 620".to_owned()),
                 supported_properties: Vec::new(),
+                properties: Vec::new(),
             }],
             error: None,
         };
