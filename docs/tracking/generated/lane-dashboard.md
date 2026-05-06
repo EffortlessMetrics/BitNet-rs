@@ -6,7 +6,7 @@
 | amd-cpu-baselines | AMD CPU baselines | AMD5700X-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | Apple M4 Mac mini validation | M4-012 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | BitNet CPU proof | CPU-BITNET-005c | No GPU or NPU claims. |
+| cpu-proof | BitNet CPU proof | CPU-BITNET-006 | No GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-003 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | Intel 258V platform validation | ARC140V-002 | Arc 140V OpenCL proof is not NPU proof. |
