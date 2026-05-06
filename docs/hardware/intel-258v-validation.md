@@ -77,6 +77,7 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 - OpenVINO `NPU` smoke does not prove full BitNet inference.
 - CPU or GPU fallback cannot count as NPU execution.
 - 258V CPU validation must record artifacts without reshaping shared CPU implementation unless explicitly scoped by a ledger item.
+- Arc 140V visibility must preserve `requested_backend`, `selected_backend`, runtime API, exact device identity evidence, and `fallback_used=false`; generic Intel GPU visibility is not enough.
 
 ## Windows PowerShell Bundle
 

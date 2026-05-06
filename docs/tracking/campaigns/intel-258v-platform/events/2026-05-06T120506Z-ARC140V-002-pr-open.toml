@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:05:06Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-002"
+event = "pr_open"
+pr = 3727
+head_sha = "af4453347a798e0520be6d47516096a10a490d21"
+actor = "codex"
+
+notes = [
+  "Opened the exact Arc 140V runtime identity probe PR.",
+  "The PR records runtime_detected visibility only and does not claim OpenCL execution, OpenVINO graph smoke, or BitNet inference.",
+]
