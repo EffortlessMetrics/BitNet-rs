@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T17:23:55Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-008"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3770
+head_sha = "437ffa72d3021fafa6d275afaf9440ec8097248d"
+actor = "codex"
+
+notes = [
+  "Opened the RTX 5070 Ti CUDA benchmark baseline PR.",
+  "The PR adds a benchmark receipt for the parity-tested tiny CUDA vector-add fixture and keeps speedup_claim=false.",
+  "FP32/I2S benchmark profiles are present as not-run until parity-backed CUDA benchmark primitives exist.",
+]
