@@ -126,7 +126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-006"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/nvidia-5070ti/RTX5070TI-006-cuda-cpu-parity"
 stackable = false
 requires_human_merge = true
