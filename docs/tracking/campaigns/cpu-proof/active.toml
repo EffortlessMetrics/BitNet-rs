@@ -121,7 +121,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-bitnet-003-canonical-packed-layout"
 stackable = false
 requires_human_merge = true
