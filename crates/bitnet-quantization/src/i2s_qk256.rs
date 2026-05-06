@@ -34,12 +34,15 @@
 //! This implementation supports the "no-scale" variant used by MS BitNet GGUF models.
 
 use anyhow::{Result, bail};
+use bitnet_qk256_layout_core::{
+    QK256_BLOCK_COLS, QK256_PACKED_BYTES_PER_BLOCK, Qk256Layout, qk256_row_stride_bytes,
+};
 
 /// Block size for GGML I2_S format
-pub const QK256_BLOCK: usize = 256;
+pub const QK256_BLOCK: usize = QK256_BLOCK_COLS;
 
 /// Packed bytes per block (2 bits/elem * 256 elem / 8 bits/byte)
-pub const QK256_PACKED_BYTES: usize = 64;
+pub const QK256_PACKED_BYTES: usize = QK256_PACKED_BYTES_PER_BLOCK;
 
 /// Storage for GGML I2_S (QK=256) quantized weights without per-block scales
 ///
@@ -83,9 +86,9 @@ impl I2SQk256NoScale {
     ///
     /// `Result<Self>` - The quantized tensor or error if dimensions don't match
     pub fn new(rows: usize, cols: usize, qs: Vec<u8>) -> Result<Self> {
-        let blocks_per_row = cols.div_ceil(QK256_BLOCK);
-        let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
-        let expected_bytes = rows * row_stride_bytes;
+        let layout = Qk256Layout::from_rows_cols(rows, cols)?;
+        let row_stride_bytes = layout.row_stride_bytes;
+        let expected_bytes = layout.packed_len_bytes;
 
         // Allow for alignment padding (e.g., 32 bytes for cache line alignment)
         const TOLERANCE: usize = 128;
@@ -194,8 +197,8 @@ fn compute_rms(xs: &[f32]) -> f32 {
 /// Panics if `qs_row` length doesn't match expected packing or if `x` is shorter than `cols`.
 #[inline]
 pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
-    let blocks_needed = cols.div_ceil(QK256_BLOCK);
-    let expected_bytes = blocks_needed * QK256_PACKED_BYTES;
+    let expected_bytes = qk256_row_stride_bytes(cols)
+        .expect("QK256: row stride overflow should be impossible for in-memory row");
 
     debug_assert_eq!(
         qs_row.len(),
@@ -351,7 +354,7 @@ pub fn gemv_qk256(
     cols: usize,
     row_stride_bytes: usize,
 ) -> Result<()> {
-    let expected_stride = cols.div_ceil(QK256_BLOCK) * QK256_PACKED_BYTES;
+    let expected_stride = qk256_row_stride_bytes(cols)?;
     if row_stride_bytes != expected_stride {
         bail!(
             "I2S_QK256: row_stride_bytes {} != expected {} for cols={}",
