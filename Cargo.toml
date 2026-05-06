@@ -539,7 +539,11 @@ debug = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Workspace-level lints for code quality
+# Workspace-level lints for code quality.
+#
+# The active set must stay in sync with `policy/clippy-lints.toml`; the check
+# is enforced by `cargo xtask check-lint-policy --strict` (see
+# docs/CLIPPY_POLICY.md and the rollout plan there).
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 missing_errors_doc = "allow"
@@ -549,6 +553,13 @@ must_use_candidate = "allow"
 nursery = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 ptr_arg = "deny"
+
+# PR 2 strict baseline (panic-free / suppression-governed estate floor).
+# The block grows incrementally; entries here must appear as `[[active]]` in
+# `policy/clippy-lints.toml`. Zero-hit lints land at `deny` directly; lints
+# with existing violations are seeded into `policy/clippy-debt.toml` before
+# promotion.
+dbg_macro = "deny"
 
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]

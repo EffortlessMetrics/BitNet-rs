@@ -8,6 +8,8 @@ on:
       - 'scripts/**'
       - 'tools/bitnet-task/**'
       - 'crates/**'
+      - 'xtask/**'
+      - 'policy/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -47,6 +49,9 @@ jobs:
       # Ensure scripts are executable in fresh clones
       - run: chmod +x scripts/*.sh || true
       - run: chmod +x scripts/tests/*.sh || true
+
+      - name: Lint policy (strict)
+        run: cargo run --locked -p xtask --no-default-features -- check-lint-policy --strict
 
       - name: bitnet-task integration tests
         run: cargo test --locked -p bitnet-task

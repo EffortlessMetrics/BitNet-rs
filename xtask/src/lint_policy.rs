@@ -19,13 +19,16 @@
 //! 6. `policy/no-panic-allowlist.toml` and `policy/non-rust-allowlist.toml`
 //!    parse and have the expected schema versions.
 //!
+//! 7. (PR 2) Every `[[active]]` entry in `policy/clippy-lints.toml` is
+//!    reflected in `Cargo.toml` `[workspace.lints.<root>]` at the same
+//!    level, and every Cargo-active lint is either in the ledger or is a
+//!    blanket category (`all`, `pedantic`, `nursery`, ...).
+//!
 //! It does *not* yet:
 //!   - Walk the AST to enforce the no-panic allowlist (planned: `xtask
 //!     check-no-panic-family`).
 //!   - Walk the file tree to enforce the non-Rust allowlist (planned: `xtask
 //!     check-file-policy`).
-//!   - Diff `policy/clippy-lints.toml` against `[workspace.lints]` in
-//!     `Cargo.toml` (added in PR 2 when the strict block lands).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -163,6 +166,7 @@ pub fn run(mode: Mode) -> Result<()> {
 
     if let Some(lints) = lints.as_ref() {
         check_msrv_consistency(&repo_root, lints, &mut findings);
+        check_active_lints_match_cargo(&repo_root, lints, &mut findings);
     }
 
     findings.report(mode)
@@ -550,6 +554,112 @@ fn extract_toolchain_channel(text: &str) -> Option<String> {
     let toolchain = value.get("toolchain")?.as_table()?;
     let channel = toolchain.get("channel")?.as_str()?;
     Some(channel.to_string())
+}
+
+/// Verify that every `[[active]]` lint in `policy/clippy-lints.toml` is also
+/// present in `Cargo.toml` `[workspace.lints.<root>]` at the declared level.
+/// The reverse direction (lints active in Cargo.toml without a ledger entry)
+/// is also reported. We accept either bare-string levels (`level = "warn"`)
+/// or table form with `priority`.
+fn check_active_lints_match_cargo(repo_root: &Path, lints: &LintsLedger, findings: &mut Findings) {
+    let cargo_path = repo_root.join("Cargo.toml");
+    let cargo_text = match fs::read_to_string(&cargo_path) {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+    let cargo: toml::Value = match toml::from_str(&cargo_text) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    let workspace_lints =
+        cargo.get("workspace").and_then(|w| w.get("lints")).and_then(|l| l.as_table());
+    let Some(workspace_lints) = workspace_lints else {
+        findings.warn(format!(
+            "{}: workspace.lints table is missing — strict baseline cannot be verified",
+            cargo_path.display()
+        ));
+        return;
+    };
+
+    // Build map: ("clippy" | "rust" | ...) -> { lint_name -> level_string }
+    let mut cargo_lints: std::collections::BTreeMap<
+        String,
+        std::collections::BTreeMap<String, String>,
+    > = std::collections::BTreeMap::new();
+    for (root, body) in workspace_lints {
+        let Some(body) = body.as_table() else { continue };
+        let bucket = cargo_lints.entry(root.clone()).or_default();
+        for (name, value) in body {
+            let level = match value {
+                toml::Value::String(s) => Some(s.clone()),
+                toml::Value::Table(t) => t.get("level").and_then(|v| v.as_str()).map(str::to_owned),
+                _ => None,
+            };
+            if let Some(level) = level {
+                bucket.insert(name.clone(), level);
+            }
+        }
+    }
+
+    // Forward direction: every [[active]] entry must be reflected in cargo.
+    for active in &lints.active {
+        let Some((root, name)) = split_lint_name(&active.name) else { continue };
+        let cargo_level = cargo_lints.get(root).and_then(|b| b.get(name));
+        match cargo_level {
+            None => findings.error(format!(
+                "policy/clippy-lints.toml declares [[active]] {} but Cargo.toml has no entry",
+                active.name
+            )),
+            Some(level) if level != &active.level => findings.error(format!(
+                "lint {} level mismatch: Cargo.toml = {level:?}, policy/clippy-lints.toml = {:?}",
+                active.name, active.level
+            )),
+            Some(_) => {}
+        }
+    }
+
+    // Reverse direction: report any cargo-active lint not in the ledger as a
+    // warning. Category lints (`all`, `pedantic`, `nursery`, `cargo`,
+    // `complexity`, `correctness`, `perf`, `style`, `restriction`,
+    // `suspicious`) are accepted without ledger entries until the explicit
+    // baseline replaces them in a later PR.
+    let known: std::collections::BTreeSet<&str> =
+        lints.active.iter().map(|a| a.name.as_str()).collect();
+    for (root, bucket) in &cargo_lints {
+        for name in bucket.keys() {
+            let qualified = format!("{root}::{name}");
+            if known.contains(qualified.as_str()) {
+                continue;
+            }
+            if root == "clippy" && is_clippy_category(name) {
+                continue;
+            }
+            findings.warn(format!(
+                "Cargo.toml declares {qualified} but policy/clippy-lints.toml has no [[active]] entry"
+            ));
+        }
+    }
+}
+
+fn split_lint_name(qualified: &str) -> Option<(&str, &str)> {
+    qualified.split_once("::")
+}
+
+fn is_clippy_category(name: &str) -> bool {
+    matches!(
+        name,
+        "all"
+            | "cargo"
+            | "complexity"
+            | "correctness"
+            | "nursery"
+            | "pedantic"
+            | "perf"
+            | "restriction"
+            | "style"
+            | "suspicious"
+    )
 }
 
 #[cfg(test)]

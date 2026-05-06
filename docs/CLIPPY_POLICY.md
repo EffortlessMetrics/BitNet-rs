@@ -86,25 +86,44 @@ This is a stacked rollout. Each PR is independently reviewable.
 - Add this document.
 - Add `cargo xtask check-lint-policy` (advisory). No lint behavior changes.
 
-### PR 2 — Strict baseline
+### PR 2 — Strict baseline kickoff
 
-- Replace the `all`/`pedantic`/`nursery` warn block in root `Cargo.toml` with
-  the explicit lint set declared as `activate_when_msrv = "1.92"` in
-  `policy/clippy-lints.toml`.
+- Promote `cargo xtask check-lint-policy --strict` to a CI gate (Guards
+  workflow).
+- Add `Cargo.toml` ↔ `policy/clippy-lints.toml` consistency check: every
+  `[workspace.lints.<root>]` entry must appear as `[[active]]` in the ledger
+  with the same level, and vice versa (category lints excepted until they are
+  expanded into their explicit lint set).
+- Promote `clippy::dbg_macro` to `deny` (zero-hit lint, safe to land).
+- Pedantic overrides in `Cargo.toml` (`missing_errors_doc`, `missing_panics_doc`,
+  `module_name_repetitions`, `must_use_candidate`) are recorded as
+  `[[active]] level = "allow"` in the ledger.
+
+### PR 3 — Suppression migration
+
+- Convert existing `#[allow(clippy::*)]` attributes (~447 instances) to
+  `#[expect(clippy::*, reason = "...")]` with reasons sourced from the
+  surrounding context.
+- Add `clippy::allow_attributes_without_reason = "deny"` and
+  `clippy::blanket_clippy_restriction_lints = "deny"`.
+
+### PR 4 — Panic family ratchet
+
+- Per-crate ratchet of `clippy::unwrap_used`, `clippy::expect_used`,
+  `clippy::panic`, `clippy::unimplemented`, `clippy::unreachable` from
+  `allow` → `warn` → `deny`. Each crate gets a debt entry + `#![allow]` at
+  the crate root until cleaned.
 - Remove `allow-unwrap-in-tests` and `allow-expect-in-tests` from
-  `clippy.toml`.
-- Seed `policy/clippy-debt.toml` with the resulting violations, each with a
-  named owner and an expiry no further than +90 days.
-- Promote `cargo xtask check-lint-policy` to a CI gate.
+  `clippy.toml` once test code is migrated to `Result`-returning helpers.
 
-### PR 3 — MSRV ratchet 1.92 → 1.93
+### PR 5 — MSRV ratchet 1.92 → 1.93
 
 - Bump `rust-toolchain.toml` and `workspace.package.rust-version`.
 - Bump `policy/clippy-lints.toml` `msrv = "1.93"`.
 - Promote `warn`-level numeric lints to `deny` per crate as kernel debt is
   cleared.
 
-### PR 4+ — Rust 1.94 / 1.95 flip cohorts
+### PR 6+ — Rust 1.94 / 1.95 flip cohorts
 
 - When MSRV reaches 1.94, activate the lints declared with
   `activate_when_msrv = "1.94"` (same for 1.95).

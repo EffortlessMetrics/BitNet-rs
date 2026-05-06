@@ -57,6 +57,40 @@ level = "warn"
 class = "category"
 reason = "Workspace baseline; will be replaced with explicit selections in PR 2."
 
+# Pedantic overrides — these lints come from clippy::pedantic but produce
+# noise that has not been tackled yet; explicitly silencing them is policy.
+[[active]]
+name = "clippy::missing_errors_doc"
+level = "allow"
+class = "documentation"
+reason = "API doc backfill is a separate workstream; tracked outside this ledger."
+
+[[active]]
+name = "clippy::missing_panics_doc"
+level = "allow"
+class = "documentation"
+reason = "Panic-doc tracking moves with the panic-family promotion; revisit after #[expect] migration."
+
+[[active]]
+name = "clippy::module_name_repetitions"
+level = "allow"
+class = "naming"
+reason = "Workspace prefers re-exports that intentionally repeat module names (e.g. `Foo::Foo`)."
+
+[[active]]
+name = "clippy::must_use_candidate"
+level = "allow"
+class = "api"
+reason = "#[must_use] policy is being defined separately; off until that lands."
+
+# Promoted from [[planned]] to [[active]] in PR 2 (strict baseline kickoff).
+# Empirical scan showed 0 hits in `crates/` and `xtask/`, so deny is safe.
+[[active]]
+name = "clippy::dbg_macro"
+level = "deny"
+class = "diagnostic-debt"
+reason = "dbg!() must not ship; pre-commit hook also greps for it."
+
 # ---------------------------------------------------------------------------
 # Planned lints (PR 2 — strict baseline). These are the lints we intend to add
 # to [workspace.lints] in the next stacked PR. They are listed here so the
@@ -84,13 +118,6 @@ level = "deny"
 activate_when_msrv = "1.92"
 class = "silent-failure"
 reason = "Catch ignored Result/Future returns at compile time."
-
-[[planned]]
-name = "clippy::dbg_macro"
-level = "deny"
-activate_when_msrv = "1.92"
-class = "diagnostic-debt"
-reason = "dbg!() must not ship; pre-commit already greps for it."
 
 [[planned]]
 name = "clippy::todo"
