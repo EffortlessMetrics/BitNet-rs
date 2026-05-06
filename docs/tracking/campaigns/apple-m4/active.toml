@@ -388,7 +388,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-012"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4/M4-012-tl1-arm-investigation"
 stackable = false
 requires_human_merge = true
@@ -396,7 +396,8 @@ blocked_by = ["M4-011"]
 acceptance = "Investigate TL1 as an Apple CPU/NEON-oriented BitNet path and document any Metal conversion boundaries honestly."
 commands = [
   "cargo fmt --all -- --check",
-  "Focused TL1/Apple investigation checks",
+  "cargo test --locked -p bitnet-quantization --no-default-features test_apple_m4_tl1_layout_contract_is_cpu_neon_only -- --nocapture",
+  "cargo test --locked -p bitnet-quantization --no-default-features test_tl1_default_quantization_records_packed_u2_codes_and_scales -- --nocapture",
 ]
 allowed_paths = [
   "crates/**/src/**",

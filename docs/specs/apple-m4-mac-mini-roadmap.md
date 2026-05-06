@@ -341,6 +341,38 @@ execution, Neural Engine execution, or performance.
 Investigate whether TL1 is the right Apple CPU/NEON-oriented path and document
 any layout conversion boundary before claiming Metal consumption.
 
+Current TL1 evidence is CPU-oriented. The default TL1 layout uses unsigned
+2-bit LUT codes packed four per byte, per-block scales, and optional zero
+points for asymmetric quantization. Apple receipts should identify this as
+`kernel_family = "tl1"`, `layout_source = "tl1_reference"`, and
+`transport_layout = "tl1_packed_u2_codes_with_scales"`.
+
+M4-012 may record:
+
+```json
+{
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "bitnet": {
+    "kernel_family": "tl1",
+    "execution_phase": "investigation",
+    "layout_source": "tl1_reference"
+  },
+  "layout": {
+    "transport_layout": "tl1_packed_u2_codes_with_scales",
+    "conversion_boundary": "tl1_to_metal_transport_not_proven",
+    "consumes_packed_tl1_directly_on_metal": false,
+    "dequantizes_before_compute": true
+  },
+  "fallback_used": false
+}
+```
+
+M4-012 must not claim native Metal TL1 execution. A later Metal item must either
+prove direct packed TL1 consumption or record the exact conversion/dequantization
+path before compute.
+
 ### M4-013 - Metal Prefill/Decode Contribution
 
 Move from isolated kernels to a named BitNet phase such as prefill or decode

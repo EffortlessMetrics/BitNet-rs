@@ -274,6 +274,41 @@ fallback, and matches the Apple CPU/NEON reference lane for that fixture. It mus
 not claim full BitNet Metal inference, QK256 on Metal, benchmark performance,
 server inference, MPSGraph execution, or Neural Engine execution.
 
+## M4-012 TL1 Apple CPU/NEON Investigation
+
+TL1 is currently an Apple CPU/NEON-oriented BitNet layout investigation item,
+not a native Metal proof. The TL1 quantizer records unsigned 2-bit LUT codes
+packed four values per byte, per-block scales, and optional zero points for
+asymmetric quantization. The default Apple contract uses:
+
+```json
+{
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "bitnet": {
+    "kernel_family": "tl1",
+    "execution_phase": "investigation",
+    "layout_source": "tl1_reference",
+    "fallback_layout": null
+  },
+  "layout": {
+    "source": "tl1_reference",
+    "transport_layout": "tl1_packed_u2_codes_with_scales",
+    "conversion_boundary": "tl1_to_metal_transport_not_proven",
+    "consumes_packed_tl1_directly_on_metal": false,
+    "dequantizes_before_compute": true
+  },
+  "fallback_used": false
+}
+```
+
+The contract may claim only that TL1 CPU/NEON behavior and the current Metal
+conversion boundary are documented or receipt-backed. It must not claim TL1
+runs natively on Metal until a later receipt proves that Metal consumes the TL1
+layout directly or names the exact conversion/dequantization path before
+compute.
+
 ## Benchmark Notes
 
 Benchmarks must record:
