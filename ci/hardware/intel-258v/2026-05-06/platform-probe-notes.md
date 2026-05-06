@@ -4,6 +4,11 @@ This bundle records OS-visible hardware identity on the local Lunar Lake laptop.
 It does not claim OpenCL, Level Zero, OpenVINO, Arc 140V execution, NPU
 execution, BitNet inference, parity, or benchmark performance.
 
+`platform-probe-cli.json` was emitted by the `bitnet lunar-lake-probe` command
+after the CLI receipt path landed. It is a runtime-visibility receipt only and
+keeps `kernel_execution=false`, `graph_execution=false`, and
+`bitnet_inference=false`.
+
 ## Captured Facts
 
 - Machine: Lenovo `83MC`
@@ -21,6 +26,9 @@ execution, BitNet inference, parity, or benchmark performance.
 - `sycl-ls` and `ze_info` are not installed in PATH, so this bundle does not prove Level Zero runtime visibility.
 - Python cannot import `openvino`, so this bundle does not prove OpenVINO GPU or NPU visibility.
 - The canonical BitNet GGUF fixture was not present at the checked local paths, so CPU BitNet validation is recorded as `blocked_preflight`.
+- The CLI probe reports Arc 140V runtime identity as unavailable because the
+  OpenCL, Level Zero, and OpenVINO runtime tools were not available to the
+  command, even though the OS/PnP artifact records the Arc 140V device identity.
 
 ## Claim Boundary
 
