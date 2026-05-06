@@ -230,7 +230,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005b"
-status = "ready"
+status = "pr_open"
 branch = "codex/cpu-bitnet-005b-kernel-selection"
 stackable = false
 requires_human_merge = true
