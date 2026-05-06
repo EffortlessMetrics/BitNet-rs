@@ -40,6 +40,16 @@ Expected Core Ultra 7 258V profile:
 
 The CPU supports AVX2, but this profile should not assume AVX-512.
 
+## Buildout Contract
+
+The detailed buildout plan for backend identity, Arc 140V probing, platform receipts, and 258V CPU validation is maintained in:
+
+```text
+docs/specs/intel-lunar-lake-258v-buildout-plan.md
+```
+
+Use this validation profile for manual machine-fact collection. Use the buildout plan for implementation scope and acceptance criteria.
+
 ## Required Machine Facts
 
 Record these before moving any 258V hardware lane beyond `scaffold`:
