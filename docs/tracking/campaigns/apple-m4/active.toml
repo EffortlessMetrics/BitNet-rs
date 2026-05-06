@@ -455,11 +455,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-014"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-014-strict-bitnet-proof"
 stackable = false
 requires_human_merge = true
 blocked_by = ["M4-013"]
+pr = 3789
 acceptance = "Run strict real GGUF, real tokenizer, selected Apple backend, fallback_used=false, deterministic prompt, and receipt emission."
 commands = [
   "cargo fmt --all -- --check",

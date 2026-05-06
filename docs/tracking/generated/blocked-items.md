@@ -15,7 +15,7 @@
 | apple-m4 | M4-011 | M4-010 | merged |
 | apple-m4 | M4-012 | M4-011 | merged |
 | apple-m4 | M4-013 | M4-012 | merged |
-| apple-m4 | M4-014 | M4-013 | in_progress |
+| apple-m4 | M4-014 | M4-013 | pr_open |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
