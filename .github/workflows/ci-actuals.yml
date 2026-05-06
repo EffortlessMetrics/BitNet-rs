@@ -1,0 +1,180 @@
+name: CI Actuals
+
+# Records the actual job-level wall-clock minutes for completed CI runs and
+# emits ci-actuals.json so we can compare estimated LEM (from PR Plan) to
+# observed LEM. This is the calibration layer for future budget enforcement
+# (PR O) and learned-budget guardrails.
+#
+# Triggered via workflow_run when other workflows complete. Listens for the
+# canonical PR-time workflows so we capture both the merge-gate lanes and
+# the advisory lanes (telemetry, ripr) in one rollup.
+#
+# Stage: visibility only. We are NOT enforcing budget yet — the existing
+# CI baseline does not have enough actuals to enforce learned thresholds
+# safely. See docs/ci/cost-and-verification-policy.md (Telemetry section).
+
+on:
+  workflow_run:
+    workflows:
+      - "CI (Core)"
+      - "Feature Matrix"
+      - "GPU CI Matrix"
+      - "Compatibility Tests"
+      - "Property-Based Tests"
+      - "Test Telemetry"
+      - "ripr (static exposure)"
+      - "PR Plan"
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  record:
+    name: Record actuals
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    # Only record runs that completed (success or failure). Skipped /
+    # cancelled runs do not produce useful timing data.
+    if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Compute job actuals
+        id: compute
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WF_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WF_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WF_EVENT: ${{ github.event.workflow_run.event }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci-actuals
+
+          # Pull job list + per-job timing from the Actions API.
+          gh api -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs?per_page=100" \
+            > target/ci-actuals/jobs-raw.json
+
+          python3 - <<'PY' > "target/ci-actuals/ci-actuals.json"
+          import json, os, sys
+          from datetime import datetime
+
+          # GitHub timestamps are UTC ISO-8601.
+          def parse(s):
+              if not s:
+                  return None
+              return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+          # Linux-equivalent runner multipliers. Mirrors the values shipped in
+          # policy/ci-budget.toml.
+          MULT = {
+              "ubuntu":   1.0,
+              "linux":    1.0,
+              "macos":    10.0,
+              "windows":  2.0,
+              "darwin":   10.0,
+          }
+          def runner_mult(label: str) -> float:
+              if not label:
+                  return 1.0
+              s = label.lower()
+              for k, m in MULT.items():
+                  if k in s:
+                      return m
+              return 1.0
+
+          with open("target/ci-actuals/jobs-raw.json") as f:
+              raw = json.load(f)
+
+          out_jobs = []
+          total_lem = 0.0
+          total_wall_min = 0.0
+
+          for j in raw.get("jobs", []):
+              started = parse(j.get("started_at"))
+              completed = parse(j.get("completed_at"))
+              if not started or not completed:
+                  continue
+              wall_min = max((completed - started).total_seconds() / 60.0, 0.0)
+              # runner labels are a list; first label usually identifies the OS.
+              labels = j.get("labels") or []
+              label = labels[0] if labels else (j.get("runner_name") or "")
+              mult = runner_mult(label)
+              lem = wall_min * mult
+              out_jobs.append({
+                  "name":         j.get("name"),
+                  "status":       j.get("status"),
+                  "conclusion":   j.get("conclusion"),
+                  "started_at":   j.get("started_at"),
+                  "completed_at": j.get("completed_at"),
+                  "wall_min":     round(wall_min, 3),
+                  "runner_label": label,
+                  "runner_mult":  mult,
+                  "lem":          round(lem, 3),
+              })
+              if j.get("conclusion") not in ("skipped", "cancelled"):
+                  total_lem += lem
+                  total_wall_min += wall_min
+
+          payload = {
+              "schema_version": 1,
+              "workflow":      os.environ.get("WF_NAME"),
+              "workflow_run_id": int(os.environ.get("RUN_ID")),
+              "conclusion":    os.environ.get("WF_CONCLUSION"),
+              "event":         os.environ.get("WF_EVENT"),
+              "head_branch":   os.environ.get("WF_HEAD_BRANCH"),
+              "head_sha":      os.environ.get("WF_HEAD_SHA"),
+              "totals": {
+                  "wall_min": round(total_wall_min, 3),
+                  "lem":      round(total_lem, 3),
+                  "jobs":     len(out_jobs),
+              },
+              "jobs": out_jobs,
+          }
+          json.dump(payload, sys.stdout, indent=2)
+          PY
+
+      - name: Step summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -s target/ci-actuals/ci-actuals.json ]; then
+            echo "## CI Actuals" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No actuals captured for this run._" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open("target/ci-actuals/ci-actuals.json"))
+          t = d.get("totals", {})
+          print(f"## CI Actuals — `{d.get('workflow')}`")
+          print()
+          print(f"- **Conclusion:** {d.get('conclusion')}")
+          print(f"- **Jobs:** {t.get('jobs', 0)}")
+          print(f"- **Wall time (sum):** {t.get('wall_min', 0.0):.1f} min")
+          print(f"- **LEM (actual):** {t.get('lem', 0.0):.1f}")
+          print()
+          jobs = sorted(d.get("jobs", []), key=lambda j: j.get("lem", 0), reverse=True)[:15]
+          if jobs:
+              print("### Top jobs by LEM")
+              print()
+              print("| Job | Wall (min) | Mult | LEM | Conclusion |")
+              print("|---|---:|---:|---:|---|")
+              for j in jobs:
+                  print(f"| `{j['name']}` | {j['wall_min']:.2f} | {j['runner_mult']:.1f} | {j['lem']:.2f} | {j['conclusion']} |")
+          PY
+
+      - name: Upload ci-actuals.json
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: ci-actuals-${{ github.event.workflow_run.id }}
+          path: target/ci-actuals/ci-actuals.json
+          retention-days: 90
+          if-no-files-found: ignore
