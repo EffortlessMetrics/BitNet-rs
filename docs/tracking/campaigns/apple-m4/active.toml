@@ -160,7 +160,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-005"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4/M4-005-metal-smoke"
 stackable = false
 requires_human_merge = true
