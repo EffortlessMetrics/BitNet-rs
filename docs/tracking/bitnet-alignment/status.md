@@ -4,7 +4,7 @@ Updated: 2026-05-06
 
 ## Current Focus
 
-Real BitNet CPU path sequencing remains active, Apple Silicon M4-003 backend identity is merged, and the NVIDIA CUDA proof bench is documented as a separate staged lane. The next Apple Silicon item is M4-004 Metal probe, before Metal execution smoke, kernels, MPSGraph execution, parity, receipts, or benchmarks. The active NVIDIA item is `RTX5070TI-003` backend identity, before CUDA/NVML probing, kernel smoke, parity, receipts, benchmarks, or BitNet CUDA inference work.
+Real BitNet CPU path sequencing remains active, Apple Silicon M4-003 backend identity is merged, and the NVIDIA CUDA proof bench has completed the RTX 5070 Ti hardware proof ladder through `RTX5070TI-008`. The next Apple Silicon item is M4-004 Metal probe, before Metal execution smoke, kernels, MPSGraph execution, parity, receipts, or benchmarks. The active NVIDIA item is `CUDA-BITNET-001`, which adds persistent CUDA BitNet context and upload-once weight handles before reusable I2S, QK256, transformer routing, or strict inference proof work.
 
 Transition note: campaign-local `active.toml` files and append-only `events/*.toml` files are now the active tracker model. This legacy global status file remains a transition view; normal item PRs should use campaign-local tracking plus generated dashboards instead of hand-editing this table.
 
@@ -26,7 +26,7 @@ Transition note: campaign-local `active.toml` files and append-only `events/*.to
 | A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
 | KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
 | M4-004 | TBD | ready | Add Apple M4 Metal device probe before execution smoke or inference claims |
-| RTX5070TI-003 | #3679 | pr_open | Preserve RTX 5070 Ti CUDA selected-device identity |
+| CUDA-BITNET-001 | TBD | in_progress | Add persistent CUDA BitNet context and upload-once weight handles; no inference routing or kernel claim |
 | AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
 | AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
 
@@ -117,7 +117,7 @@ The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform r
 
 The Windows CUDA proof bench is `windows-9950x3d-rtx5070ti`: AMD Ryzen 9 9950X3D is the CPU reference path and NVIDIA GeForce RTX 5070 Ti is the CUDA target. Receipts should use narrow backend labels such as `amd-9950x3d-cpu-avx512`, `nvidia-rtx-5070-ti-cuda`, and `nvidia-rtx-5070-ti-wgpu`; generic `gpu`, `cuda`, `nvidia`, `accelerated`, or `blackwell` labels are not enough for strict proof.
 
-The current CUDA code is scaffolded kernel-provider infrastructure, not end-to-end CUDA inference. QK256 CUDA is scaffold-only until the packed fused dequant GEMV path is implemented and wired. The staged order is `RTX5070TI-003` backend identity, `RTX5070TI-004` CUDA/NVML probe, `RTX5070TI-005` tiny CUDA kernel smoke, `RTX5070TI-006` CPU/CUDA parity, `RTX5070TI-007` receipt/kernel counters, and `RTX5070TI-008` benchmark baseline. Only after those land should the `CUDA-BITNET-001` through `CUDA-BITNET-008` wave start persistent CUDA BitNet context, upload-once weights, reusable I2S linear, real QK256 CUDA, BitNetLinear routing, one-token strict proof, short decode proof, and full benchmark baselines.
+The current CUDA code is now receipt-backed through the RTX 5070 Ti hardware proof ladder: backend identity, CUDA/NVML probe, tiny kernel smoke, CPU/CUDA parity, receipt/kernel counters, and benchmark baseline are merged. This still is not end-to-end CUDA inference. QK256 CUDA is scaffold-only until the packed fused dequant GEMV path is implemented and wired. The active `CUDA-BITNET-001` work adds persistent CUDA BitNet context, upload-once weight handles, reusable activation workspace metadata, and receipt fields only; `CUDA-BITNET-002` through `CUDA-BITNET-008` remain follow-ups for reusable I2S, real QK256 CUDA, upload-once model weights, BitNetLinear routing, one-token strict proof, short decode proof, and full benchmark baselines.
 
 Dense regular-LLM CUDA work is useful as a future `CUDA-DENSE-001` reference lane, but it must be labeled as dense regular LLM execution and cannot claim BitNet packed I2S/QK256 inference.
 
@@ -164,6 +164,12 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 | M4-003 | #3652 | 849c3db73b786483bb7955371b95f733235119bb | Apple M4 backend identity merged; no Metal kernels, MPSGraph execution, QK256, server inference, dependencies, runtime probes, or hardware artifacts. |
 | RTX5070TI-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti CUDA backend lane merged. |
 | RTX5070TI-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti machine profile and probe bundle merged. |
+| RTX5070TI-003 | #3679 | 3be5b896a68f6dd0f54796107bfad09e3ce68c2e | RTX 5070 Ti CUDA backend identity merged; no runtime probe or kernel execution claim. |
+| RTX5070TI-004 | #3691 | 43023bd2aecb1a77f4e6027b10501b0c1948f8b1 | RTX 5070 Ti CUDA/NVML probe merged; no kernel execution claim. |
+| RTX5070TI-005 | #3723 | 8b588762976d17bc2774f0a4a554ecec1d39342f | Tiny CUDA vector-add smoke receipt merged; no BitNet inference or speedup claim. |
+| RTX5070TI-006 | #3749 | 63b12420631df5b70ad81821cc13a6dfe3f474db | CPU/CUDA tiny fixture parity merged with fallback-free receipt. |
+| RTX5070TI-007 | #3756 | 80d91c3363342ab7ed56318f004e79d3ef9a5e17 | CUDA receipt validation and kernel counters merged. |
+| RTX5070TI-008 | #3770 | 703b6be6c2a43cd1506dbb781d943aa5913adc1d | RTX 5070 Ti CUDA benchmark baseline merged; no full inference speedup claim. |
 | AMD9950X3D-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D CPU validation lane merged. |
 | AMD9950X3D-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D machine profile and probe bundle merged. |
 | AMD5700X-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X CPU validation lane merged. |

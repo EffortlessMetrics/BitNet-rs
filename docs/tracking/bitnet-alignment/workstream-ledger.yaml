@@ -2123,7 +2123,7 @@ items:
 
   - id: RTX5070TI-003
     title: Preserve RTX 5070 Ti CUDA selected-device identity
-    state: pr_open
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2160,7 +2160,7 @@ items:
 
   - id: RTX5070TI-004
     title: Add RTX 5070 Ti CUDA and NVML runtime probe
-    state: proposed
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2191,7 +2191,7 @@ items:
 
   - id: RTX5070TI-005
     title: Run RTX 5070 Ti CUDA kernel smoke
-    state: proposed
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2221,7 +2221,7 @@ items:
 
   - id: RTX5070TI-006
     title: Add RTX 5070 Ti CPU/CUDA parity
-    state: proposed
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2250,7 +2250,7 @@ items:
 
   - id: RTX5070TI-007
     title: Record RTX 5070 Ti CUDA backend identity in receipts
-    state: proposed
+    state: merged
     priority: P1
     workstream: nvidia_cuda
     depends_on:
@@ -2281,7 +2281,7 @@ items:
 
   - id: RTX5070TI-008
     title: Add RTX 5070 Ti benchmark baseline
-    state: proposed
+    state: merged
     priority: P2
     workstream: nvidia_cuda
     depends_on:
@@ -2335,7 +2335,7 @@ items:
 
   - id: CUDA-BITNET-001
     title: Add persistent CUDA BitNet context and weight handles
-    state: proposed
+    state: in_progress
     priority: P1
     workstream: nvidia_cuda
     depends_on:
