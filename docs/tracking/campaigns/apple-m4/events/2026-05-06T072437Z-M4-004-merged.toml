@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T07:24:37Z"
+campaign = "apple-m4"
+item = "M4-004"
+event = "merged"
+pr = 3692
+merge_sha = "740eacd6daa972f27bc80eaf1b18edadd3f62e24"
+actor = "maintainer"
+
+notes = [
+  "Merged Apple M4 Metal device/runtime visibility probe.",
+  "No Metal execution, MPSGraph execution, Neural Engine execution, QK256, server inference, or BitNet inference was claimed.",
+  "M4-005 is ready for tiny native Metal compute smoke.",
+]
