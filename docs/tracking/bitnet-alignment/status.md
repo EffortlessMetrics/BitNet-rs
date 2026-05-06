@@ -4,7 +4,7 @@ Updated: 2026-05-05
 
 ## Current Focus
 
-Real BitNet CPU path sequencing after the #3625 hardware and BitNet contract merge. Earlier truth, crate inventory, and strict CPU proof documentation items are merged; receipt validation now waits for the CPU-BITNET authority chain.
+Real BitNet CPU path sequencing after the #3625 hardware and BitNet contract merge. Apple Silicon M4-002 is merged; the next Apple Silicon item is M4-003 backend identity, before Metal probes, kernels, MPSGraph execution, parity, receipts, or benchmarks.
 
 ## Active / Coordination Queue
 
@@ -21,11 +21,10 @@ Real BitNet CPU path sequencing after the #3625 hardware and BitNet contract mer
 | AMD9950X3D-001 | #3625 | merged | AMD 9950X3D CPU lane scaffold; no runtime execution |
 | AMD5700X-001 | #3625 | merged | AMD 5700X CPU lane scaffold; no runtime execution |
 | CPU-BITNET-000 | #3642 | pr_open | Add real BitNet CPU path implementation plan |
-| M4-002 | #3627 | pr_open | Add Apple M4 Mac mini machine profile and probe bundle without runtime work |
 | NPU-002 | TBD | ready | Preserve Intel NPU backend identity before runtime probing |
 | A770-003 | TBD | ready | Preserve Intel Arc A770 selected-device identity |
 | KBL8250U-003 | TBD | ready | Prove i5-8250U scalar and AVX2 dispatch |
-| M4-003 | TBD | ready | Preserve Apple Metal backend identity |
+| M4-003 | TBD | ready | Preserve Apple M4 Metal, MPSGraph, and CPU/NEON backend identity before runtime work |
 | RTX5070TI-003 | TBD | ready | Preserve RTX 5070 Ti CUDA selected-device identity |
 | AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
 | AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
@@ -109,7 +108,7 @@ The 5700X and 9950X3D lanes are CPU proof lanes, not accelerator lanes. The 5700
 
 The M4 Mac mini lane is Metal-first, with MPSGraph as a graph/reference lane and CPU/NEON as fallback/parity. CPU fallback cannot count as Metal execution, MPSGraph smoke cannot count as native Metal kernel proof, and Neural Engine execution must not be claimed unless the resolved target is receipt-backed.
 
-The Apple Silicon implementation order is M4-002 machine profile, M4-003 backend identity, M4-004 Metal probe, M4-005 Metal compute smoke, M4-006 CPU/Metal parity, M4-007 MPSGraph smoke, M4-008 receipt identity fields, and M4-009 benchmark baseline. The current M4-002 work is docs/artifact prep only and must not touch runtime code, kernels, QK256, server inference, or dependencies.
+The Apple Silicon implementation order is M4-002 machine profile, M4-003 backend identity, M4-004 Metal probe, M4-005 Metal compute smoke, M4-006 CPU/Metal parity, M4-007 MPSGraph smoke, M4-008 receipt identity fields, and M4-009 benchmark baseline. M4-002 was docs/artifact prep only; M4-003 is the next Apple Silicon item and must not touch Metal kernels, MPSGraph execution, QK256, server inference, or dependencies.
 
 ## NVIDIA CUDA Boundary
 
@@ -152,7 +151,7 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 | KBL8250U-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core i5-8250U CPU validation lane merged. |
 | KBL8250U-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Core i5-8250U machine profile and probe bundle merged. |
 | M4-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Apple M4 Mac mini backend lane merged. |
-| M4-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | Apple M4 machine profile and probe bundle merged. |
+| M4-002 | #3627 | 6362101c3249a0758100d22c31e084eba37c387b | Apple M4 Mac mini machine profile and probe bundle merged; docs/artifact prep only, no runtime execution. |
 | RTX5070TI-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti CUDA backend lane merged. |
 | RTX5070TI-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | NVIDIA RTX 5070 Ti machine profile and probe bundle merged. |
 | AMD9950X3D-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 9 9950X3D CPU validation lane merged. |
