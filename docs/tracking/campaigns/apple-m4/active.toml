@@ -256,7 +256,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-008"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-008-backend-receipts"
 stackable = false
 requires_human_merge = true
@@ -289,7 +289,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-009"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-009-benchmark-baseline"
 stackable = false
 requires_human_merge = true
