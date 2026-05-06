@@ -230,7 +230,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005b"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-bitnet-005b-kernel-selection"
 stackable = false
 requires_human_merge = true
@@ -267,7 +267,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005c"
-status = "proposed"
+status = "ready"
 branch = "codex/cpu-bitnet-005c-avx2-parity-hardening"
 stackable = false
 requires_human_merge = true
