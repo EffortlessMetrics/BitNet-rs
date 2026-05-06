@@ -79,6 +79,55 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 - 258V CPU validation must record artifacts without reshaping shared CPU implementation unless explicitly scoped by a ledger item.
 - Arc 140V visibility must preserve `requested_backend`, `selected_backend`, runtime API, exact device identity evidence, and `fallback_used=false`; generic Intel GPU visibility is not enough.
 
+## Platform Probe Bundle Artifacts
+
+`LNL258V-002` documents the same-machine probe bundle that later runs should
+write under `ci/hardware/intel-258v/<date>/`. These paths are examples and
+placeholders for future evidence; adding them to the docs does not commit a
+real machine artifact and does not prove runtime execution.
+
+```text
+ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-runtime-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/npu-openvino-runtime-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/platform-comparison-index.json
+```
+
+The bundle must keep each lane independently addressable:
+
+| Artifact | Proof stage | Scope | Claim boundary |
+|---|---|---|---|
+| `platform-probe.json` | `runtime_detected` | OS, CPU, memory, power, OpenVINO device list, shared platform context | Machine visibility only |
+| `arc-140v-runtime-probe.json` | `runtime_detected` | Arc 140V OpenCL, Level Zero, OpenVINO `GPU.0`, exact device identity | No OpenCL kernel execution claim |
+| `npu-openvino-runtime-probe.json` | `runtime_detected` | OS NPU evidence, OpenVINO `NPU`, driver/compiler/memory properties | No graph execution claim |
+| `platform-comparison-index.json` | index only | Links CPU, Arc 140V, and NPU artifacts from the same machine/date | No independent proof claim |
+
+The comparison index should preserve artifact paths and lane identities so later
+CPU, GPU, and NPU receipts can be compared without inferring cross-lane proof:
+
+```json
+{
+  "machine_id": "intel-258v",
+  "date": "YYYY-MM-DD",
+  "proof_stage": "runtime_detected",
+  "artifacts": {
+    "platform": "ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json",
+    "arc140v": "ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-runtime-probe.json",
+    "npu": "ci/hardware/intel-258v/YYYY-MM-DD/npu-openvino-runtime-probe.json"
+  },
+  "lanes": {
+    "cpu": "intel-258v-cpu-avx2",
+    "gpu": "intel-arc-140v-opencl",
+    "openvino_gpu": "intel-arc-140v-openvino-gpu",
+    "npu": "intel-npu-openvino"
+  },
+  "fallback_used": false
+}
+```
+
+The bundle does not prove BitNet inference, Arc 140V execution, OpenVINO NPU
+graph execution, parity, or benchmark performance.
+
 ## Windows PowerShell Bundle
 
 ```powershell
