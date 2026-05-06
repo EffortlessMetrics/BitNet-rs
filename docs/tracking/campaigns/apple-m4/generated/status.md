@@ -20,7 +20,7 @@
 | M4-009 | merged | #3732 | `codex/apple-m4/M4-009-benchmark-baseline` | Compare Apple CPU/NEON and M4 Metal for a validated kernel or subgraph after parity exists. |
 | M4-010 | merged | #3746 | `codex/apple-m4/M4-010-cpu-neon-bitnet-reference` | Prove the Apple CPU/NEON BitNet reference path before native Metal BitNet kernels. |
 | M4-011 | merged | #3769 | `codex/apple-m4/M4-011-metal-i2s-smoke-parity` | Run an I2_S-adjacent native Metal smoke or parity target against Apple CPU/NEON without claiming full inference. |
-| M4-012 | in_progress | TBD | `codex/apple-m4/M4-012-tl1-arm-investigation` | Investigate TL1 as an Apple CPU/NEON-oriented BitNet path and document any Metal conversion boundaries honestly. |
+| M4-012 | pr_open | #3775 | `codex/apple-m4/M4-012-tl1-arm-investigation` | Investigate TL1 as an Apple CPU/NEON-oriented BitNet path and document any Metal conversion boundaries honestly. |
 | M4-013 | proposed | TBD | `codex/apple-m4/M4-013-metal-prefill-decode` | Move from isolated Apple Metal kernels toward a named BitNet inference phase with CPU reference and explicit fallback status. |
 | M4-014 | proposed | TBD | `codex/apple-m4/M4-014-strict-bitnet-proof` | Run strict real GGUF, real tokenizer, selected Apple backend, fallback_used=false, deterministic prompt, and receipt emission. |
 

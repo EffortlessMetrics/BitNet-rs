@@ -388,7 +388,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-012"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-012-tl1-arm-investigation"
 stackable = false
 requires_human_merge = true
