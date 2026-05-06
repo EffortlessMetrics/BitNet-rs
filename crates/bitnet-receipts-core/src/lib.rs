@@ -1161,11 +1161,11 @@ mod tests {
         let provenance = receipt.strict_provenance.as_mut().unwrap();
         provenance.requested_backend = "apple-m4-cpu-neon".to_string();
         provenance.selected_backend = "apple-m4-cpu-neon".to_string();
-        provenance.selected_kernel = Some("i2_s-neon-reference".to_string());
-        provenance.requested_kernel = Some("i2_s-neon-reference".to_string());
+        provenance.selected_kernel = Some("i2_s-scalar-reference".to_string());
+        provenance.requested_kernel = Some("i2_s-scalar-reference".to_string());
         provenance.quant_format = Some("I2_S".to_string());
         provenance.cpu_features = vec!["neon".to_string()];
-        receipt.kernels = vec!["i2_s-neon-reference".to_string()];
+        receipt.kernels = vec!["i2_s-scalar-reference".to_string()];
 
         assert!(receipt.validate_strict_cpu_proof().is_ok());
     }
