@@ -18,7 +18,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "LNL258V-RUN-001"
-status = "ready"
+status = "pr_open"
 branch = "codex/intel-258v/LNL258V-RUN-001-platform-probe"
 stackable = false
 requires_human_merge = true
