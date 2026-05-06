@@ -64,8 +64,55 @@ fn deterministic_activation(cols: usize, salt: usize) -> Vec<f32> {
     (0..cols)
         .map(|i| {
             let centered = ((i * 31 + salt * 19) % 257) as f32 - 128.0;
-            let sign = if (i + salt) % 11 == 0 { -1.0 } else { 1.0 };
+            let sign = if (i + salt).is_multiple_of(11) { -1.0 } else { 1.0 };
             sign * centered / 37.0
+        })
+        .collect()
+}
+
+#[derive(Clone, Copy, Debug)]
+enum CodePattern {
+    AllZeroCodes,
+    Repeating0123,
+    AlternatingRows,
+    PseudoRandom,
+}
+
+impl CodePattern {
+    fn name(self) -> &'static str {
+        match self {
+            Self::AllZeroCodes => "all_zero_codes",
+            Self::Repeating0123 => "repeating_0123",
+            Self::AlternatingRows => "alternating_rows",
+            Self::PseudoRandom => "pseudo_random",
+        }
+    }
+}
+
+fn row_codes_for_pattern(pattern: CodePattern, row: usize, cols: usize) -> Vec<u8> {
+    (0..cols)
+        .map(|col| match pattern {
+            CodePattern::AllZeroCodes => 0,
+            CodePattern::Repeating0123 => (col % 4) as u8,
+            CodePattern::AlternatingRows => ((row + col) % 4) as u8,
+            CodePattern::PseudoRandom => {
+                let mixed = (row as u64)
+                    .wrapping_mul(0x9E37_79B9)
+                    .wrapping_add((col as u64).wrapping_mul(0x85EB_CA6B))
+                    .wrapping_add(0xC2B2_AE35);
+                ((mixed ^ (mixed >> 13) ^ (mixed >> 29)) & 0x03) as u8
+            }
+        })
+        .collect()
+}
+
+fn deterministic_prng_activation(cols: usize) -> Vec<f32> {
+    (0..cols)
+        .map(|i| {
+            let mixed =
+                (i as u64).wrapping_mul(0xD1B5_4A32).wrapping_add(0x94D0_49BB).rotate_left(17);
+            let bucket = (mixed % 2049) as f32 - 1024.0;
+            bucket / 512.0
         })
         .collect()
 }
@@ -295,6 +342,117 @@ fn test_hardened_avx2_parity_rows_tails_patterns_and_repeats() {
     for (rows, cols, salt) in [(1, 256, 3), (2, 257, 5), (5, 511, 7), (9, 768, 11), (13, 1025, 17)]
     {
         assert_hardened_parity_case(rows, cols, salt, 1e-3);
+    }
+}
+
+#[test]
+fn test_avx2_parity_requested_shape_pattern_matrix_1e4() {
+    let patterns = [
+        CodePattern::AllZeroCodes,
+        CodePattern::Repeating0123,
+        CodePattern::AlternatingRows,
+        CodePattern::PseudoRandom,
+    ];
+
+    for rows in [1usize, 2, 7, 32] {
+        for cols in [256usize, 300, 512, 513, 1024] {
+            let x = deterministic_prng_activation(cols);
+            for pattern in patterns {
+                let row_codes: Vec<Vec<u8>> =
+                    (0..rows).map(|row| row_codes_for_pattern(pattern, row, cols)).collect();
+                let (qs, stride) = build_qs_data(&row_codes, cols);
+
+                let mut y_scalar = vec![0.0f32; rows];
+                gemv_qk256_with_kernel_selection(
+                    &qs,
+                    &x,
+                    &mut y_scalar,
+                    rows,
+                    cols,
+                    stride,
+                    Some(QK256_SCALAR_GEMV_KERNEL_ID),
+                    true,
+                )
+                .expect("forced scalar GEMV");
+
+                let mut y_scalar_repeat = vec![0.0f32; rows];
+                gemv_qk256_with_kernel_selection(
+                    &qs,
+                    &x,
+                    &mut y_scalar_repeat,
+                    rows,
+                    cols,
+                    stride,
+                    Some(QK256_SCALAR_GEMV_KERNEL_ID),
+                    true,
+                )
+                .expect("repeat forced scalar GEMV");
+                assert_eq!(
+                    y_scalar,
+                    y_scalar_repeat,
+                    "scalar repeat mismatch rows={rows} cols={cols} pattern={}",
+                    pattern.name()
+                );
+
+                #[cfg(target_arch = "x86_64")]
+                if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+                    let mut y_avx2 = vec![0.0f32; rows];
+                    let selection = gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_avx2,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect("forced AVX2 GEMV");
+                    assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+                    assert!(!selection.fallback_used);
+
+                    let mut y_avx2_repeat = vec![0.0f32; rows];
+                    gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_avx2_repeat,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect("repeat forced AVX2 GEMV");
+                    assert_eq!(
+                        y_avx2,
+                        y_avx2_repeat,
+                        "AVX2 repeat mismatch rows={rows} cols={cols} pattern={}",
+                        pattern.name()
+                    );
+
+                    assert_close_vectors(
+                        "requested-shape-pattern-avx2-vs-scalar",
+                        &y_scalar,
+                        &y_avx2,
+                        1e-4,
+                    );
+                } else {
+                    let mut y_strict_avx2 = vec![0.0f32; rows];
+                    let err = gemv_qk256_with_kernel_selection(
+                        &qs,
+                        &x,
+                        &mut y_strict_avx2,
+                        rows,
+                        cols,
+                        stride,
+                        Some(QK256_AVX2_GEMV_KERNEL_ID),
+                        true,
+                    )
+                    .expect_err("strict AVX2 must fail when AVX2/FMA is unavailable");
+                    assert!(err.to_string().contains("cannot fall back"));
+                }
+            }
+        }
     }
 }
 
