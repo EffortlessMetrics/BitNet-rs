@@ -24,7 +24,10 @@ Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 
 
 | Work item | Status | Notes |
 |---|---|---|
-| LNL258V-002 | pr_open | Add 258V probe bundle and same-machine comparison hooks. |
+| LNL258V-RUN-001 | merged | Add JSON-ready Lunar Lake platform probe structs. |
+| ARC140V-002 | merged | Add exact Arc 140V runtime identity probe logic. |
+| LNL258V-002 | merged | Add 258V probe bundle and same-machine comparison hooks. |
+| LNL258V-003 | pr_open | Add CLI platform probe emission for the current 258V machine. |
 
 ## Review Policy
 

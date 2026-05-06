@@ -393,6 +393,13 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Probe Lunar Lake 258V platform visibility without launching kernels
+    LunarLakeProbe {
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Compile and launch a tiny CUDA vector-add kernel
     CudaSmoke {
         /// CUDA device index to probe and launch on
@@ -609,6 +616,9 @@ async fn main() -> Result<()> {
         Some(Commands::Info) => show_system_info().await,
         Some(Commands::DeviceSmoke { json_out }) => {
             handle_device_smoke_command(&requested_backend_label, json_out).await
+        }
+        Some(Commands::LunarLakeProbe { json_out }) => {
+            handle_lunar_lake_probe_command(json_out).await
         }
         Some(Commands::CudaSmoke { device_index, json_out }) => {
             handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
@@ -932,6 +942,50 @@ async fn handle_device_smoke_command(
     if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
         anyhow::bail!("{error}");
     }
+
+    Ok(())
+}
+
+fn build_lunar_lake_probe_receipt(
+    probe: bitnet_device_probe::Lnl258vPlatformProbe,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "lnl258v_platform_probe",
+        "machine_id": probe.machine_id.clone(),
+        "hardware_lane": "core-ultra-7-258v",
+        "proof_stage": probe.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": "core-ultra-7-258v",
+        "selected_backend": "core-ultra-7-258v",
+        "runtime_api": "platform_probe",
+        "fallback_used": probe.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "platform": probe,
+        "kernel_execution": false,
+        "graph_execution": false,
+        "bitnet_inference": false,
+        "claim": "lunar_lake_runtime_visibility_recorded",
+        "must_not_claim": [
+            "BitNet inference works on 258V",
+            "Arc 140V execution works",
+            "Intel NPU execution works",
+            "NPU accelerates BitNet"
+        ],
+        "artifact_path": artifact_path,
+    })
+}
+
+async fn handle_lunar_lake_probe_command(json_out: Option<std::path::PathBuf>) -> Result<()> {
+    let probe = bitnet_device_probe::probe_lnl258v_platform();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = build_lunar_lake_probe_receipt(probe, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
 
     Ok(())
 }
@@ -2637,6 +2691,26 @@ mod tests {
         assert!(receipt_metal_text_reports_visibility(
             "Graphics/Displays:\n\n    Apple M4:\n      Chipset Model: Apple M4\n      Metal Support: Metal 4\n",
         ));
+    }
+
+    #[test]
+    fn lunar_lake_probe_receipt_is_visibility_only() {
+        let probe = bitnet_device_probe::probe_lnl258v_platform();
+        let receipt = build_lunar_lake_probe_receipt(
+            probe,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/platform-probe.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "lnl258v_platform_probe");
+        assert_eq!(receipt["hardware_lane"], "core-ultra-7-258v");
+        assert_eq!(receipt["proof_stage"], "runtime_detected");
+        assert_eq!(receipt["runtime_api"], "platform_probe");
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["fallback_used"], false);
+        assert!(receipt["platform"]["cpu"]["has_avx512"].is_boolean());
     }
 }
 

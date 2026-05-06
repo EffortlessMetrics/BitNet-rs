@@ -141,3 +141,46 @@ must_not_claim = [
   "Intel NPU execution works.",
   "BitNet inference works on 258V.",
 ]
+
+[[work_item]]
+id = "LNL258V-003"
+status = "pr_open"
+branch = "codex/intel-258v-platform/LNL258V-003-cli-platform-probe"
+stackable = false
+requires_human_merge = true
+blocked_by = ["LNL258V-002"]
+acceptance = "Add a CLI command that emits the Lunar Lake 258V visibility-only platform probe receipt from the current machine without launching kernels, compiling OpenVINO graphs, loading BitNet models, or making execution claims."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::lunar_lake_probe_receipt_is_visibility_only -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- lunar-lake-probe --json-out target/lnl258v-platform-probe.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "tests/**",
+]
+may_claim = [
+  "The CLI can emit a Lunar Lake runtime visibility receipt.",
+]
+must_not_claim = [
+  "BitNet inference works on 258V.",
+  "Arc 140V execution works.",
+  "Intel NPU execution works.",
+  "OpenVINO graph execution works.",
+]

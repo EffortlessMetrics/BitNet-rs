@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T22:00:37Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-003"
+event = "pr_open"
+pr = 3795
+branch = "codex/intel-258v-platform/LNL258V-003-cli-platform-probe"
+head_sha = "7877b48bb80b55c0bbfc159cf598b82a0b019d37"
+actor = "codex"
+
+notes = [
+  "Opened the CLI Lunar Lake platform probe emission PR.",
+  "The command emits a visibility-only receipt and does not launch kernels, compile OpenVINO graphs, or load BitNet models.",
+]
