@@ -1,10 +1,12 @@
 #![cfg(feature = "metal")]
 
 use bitnet_kernels::metal::smoke::{
-    ARTIFACT_KIND, MACHINE_ID, REQUESTED_BACKEND, RUNTIME_API, SELECTED_BACKEND,
-    SMOKE_WORKGROUP_SIZE, SmokeComparison, TINY_METAL_ADD_SMOKE_KERNEL_ID,
+    ARTIFACT_KIND, MACHINE_ID, PARITY_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND,
+    RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SmokeComparison,
+    TINY_METAL_ADD_PARITY_KERNEL_ID, TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt,
     TinyMetalAddSmokeReceipt, compare_tiny_add_outputs, expected_tiny_add,
-    is_apple_m4_adapter_name, metal_smoke_artifact_path, tiny_add_inputs,
+    is_apple_m4_adapter_name, metal_parity_artifact_path, metal_smoke_artifact_path,
+    tiny_add_inputs,
 };
 
 #[test]
@@ -38,6 +40,29 @@ fn receipt_contract_records_only_tiny_m4_metal_smoke() {
 }
 
 #[test]
+fn parity_receipt_contract_records_cpu_neon_reference_and_metal_target() {
+    let receipt = TinyMetalAddParityReceipt::passed(
+        metal_parity_artifact_path("2026-05-06"),
+        64,
+        SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 },
+    );
+
+    assert_eq!(receipt.machine_id, MACHINE_ID);
+    assert_eq!(receipt.artifact_kind, PARITY_ARTIFACT_KIND);
+    assert_eq!(receipt.requested_backend, REQUESTED_BACKEND);
+    assert_eq!(receipt.selected_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.runtime_api, RUNTIME_API);
+    assert_eq!(receipt.reference_backend, REFERENCE_BACKEND);
+    assert_eq!(receipt.target_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.kernel_id, TINY_METAL_ADD_PARITY_KERNEL_ID);
+    assert!(!receipt.fallback_used);
+    assert_eq!(receipt.result, "pass");
+    assert_eq!(receipt.artifact_path, "ci/hardware/apple-m4-mac-mini/2026-05-06/metal-parity.json");
+    assert_eq!(receipt.max_abs_error, 0.0);
+    assert_eq!(receipt.mean_abs_error, 0.0);
+}
+
+#[test]
 fn comparison_fails_instead_of_falling_back_to_cpu() {
     let expected = [1.0_f32, 2.0, 3.0];
     let actual = [1.0_f32, 20.0, 3.0];
@@ -68,6 +93,9 @@ mod live_metal {
     const RUN_ENV: &str = "BITNET_RUN_M4_METAL_SMOKE";
     const RECEIPT_ENV: &str = "BITNET_M4_METAL_SMOKE_RECEIPT";
     const ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_SMOKE_ARTIFACT_PATH";
+    const RUN_PARITY_ENV: &str = "BITNET_RUN_M4_METAL_PARITY";
+    const PARITY_RECEIPT_ENV: &str = "BITNET_M4_METAL_PARITY_RECEIPT";
+    const PARITY_ARTIFACT_PATH_ENV: &str = "BITNET_M4_METAL_PARITY_ARTIFACT_PATH";
 
     struct MetalSmokeOutput {
         adapter_name: String,
@@ -121,6 +149,68 @@ mod live_metal {
         });
 
         if let Ok(path) = std::env::var(RECEIPT_ENV) {
+            if let Some(parent) = Path::new(&path).parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&path, serde_json::to_string_pretty(&receipt_json)?)?;
+        }
+
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+        Ok(())
+    }
+
+    #[test]
+    fn tiny_m4_metal_add_matches_cpu_neon_reference_when_enabled() -> Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_PARITY_ENV).as_deref() != Ok("1") {
+            eprintln!("skipping live M4 CPU/Metal parity; set {RUN_PARITY_ENV}=1 to run it");
+            return Ok(());
+        }
+
+        let (lhs, rhs) = tiny_add_inputs();
+        let expected = expected_tiny_add(&lhs, &rhs)?;
+        let metal_output = run_tiny_add_smoke(&lhs, &rhs)?;
+
+        if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
+            return Err(io_error(format!(
+                "M4-006 parity requires an Apple M4-family Metal adapter; found '{}'",
+                metal_output.adapter_name
+            )));
+        }
+
+        let comparison = compare_tiny_add_outputs(&expected, &metal_output.output, 1e-6)?;
+        let artifact_path = std::env::var(PARITY_ARTIFACT_PATH_ENV)
+            .or_else(|_| std::env::var(PARITY_RECEIPT_ENV))
+            .unwrap_or_else(|_| {
+                "ci/hardware/apple-m4-mac-mini/<date>/metal-parity.json".to_string()
+            });
+        let receipt =
+            TinyMetalAddParityReceipt::passed(artifact_path.clone(), expected.len(), comparison);
+
+        let receipt_json = json!({
+            "machine_id": receipt.machine_id,
+            "artifact_kind": receipt.artifact_kind,
+            "requested_backend": receipt.requested_backend,
+            "selected_backend": receipt.selected_backend,
+            "runtime_api": receipt.runtime_api,
+            "resolved_device": {
+                "chip": metal_output.adapter_name,
+                "unified_memory": true
+            },
+            "parity": {
+                "reference_backend": receipt.reference_backend,
+                "target_backend": receipt.target_backend,
+                "kernel_id": receipt.kernel_id,
+                "max_abs_error": receipt.max_abs_error,
+                "mean_abs_error": receipt.mean_abs_error,
+                "token_agreement_for_greedy": null
+            },
+            "fallback_used": receipt.fallback_used,
+            "result": receipt.result,
+            "artifact_path": receipt.artifact_path,
+            "element_count": receipt.element_count
+        });
+
+        if let Ok(path) = std::env::var(PARITY_RECEIPT_ENV) {
             if let Some(parent) = Path::new(&path).parent() {
                 std::fs::create_dir_all(parent)?;
             }
