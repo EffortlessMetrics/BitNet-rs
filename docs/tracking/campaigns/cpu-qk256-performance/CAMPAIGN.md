@@ -26,8 +26,8 @@ Move CPU BitNet work from strict proof surfaces into scalar, packed-layout, AVX2
 
 | Work item | Status | Notes |
 |---|---|---|
-| KBL8250U-003 | pr_open | Prove i5-8250U scalar and AVX2 dispatch. |
-| KBL8250U-004 | proposed | Add strict CPU proof run on the i5-8250U lane. |
+| KBL8250U-003 | merged | Prove i5-8250U scalar and AVX2 dispatch. |
+| KBL8250U-004 | ready | Add strict CPU proof run on the i5-8250U lane. |
 
 ## Review Policy
 

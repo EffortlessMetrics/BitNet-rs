@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T20:53:33Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-003"
+event = "merged"
+pr = 3785
+merge_sha = "6f2bbb5dba7a99e3329e7786adc4aa1b19804797"
+actor = "maintainer"
+
+notes = [
+  "i5-8250U CPU-only AVX2/FMA profile, flags, and parity receipt artifacts merged.",
+  "KBL8250U-004 strict CPU proof run is next; no throughput, sustained-performance, transformer decode, GPU, OpenVINO, UHD 620, or NPU claim is made.",
+]
