@@ -18,6 +18,7 @@ pub mod compute_graph;
 pub mod config;
 pub mod config_builder;
 pub mod context_window;
+pub mod cpu_decode;
 pub mod cpu_opt;
 pub mod decode_strategy;
 pub mod dense_forward;
@@ -95,6 +96,10 @@ pub use batch::{BatchConfig, BatchRequest, BatchResult, BatchScheduler, SingleRe
 pub use bitnet_inference_metrics_core::{ThroughputMetrics, TimingMetrics};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
+pub use cpu_decode::{
+    CPU_DECODE_SCALAR_KERNEL_FAMILY, CpuDecodeOps, CpuDecodeStepOutput, CpuDecodeStepReport,
+    decode_one_cpu_token,
+};
 pub use dense_forward::{
     DenseAttention, DenseAttentionConfig, DenseFFN, DenseLinear, DenseModel, DenseTransformerBlock,
     dense_block_forward_tensor, rms_norm, silu,

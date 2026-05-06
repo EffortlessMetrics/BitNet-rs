@@ -45,6 +45,18 @@ pub fn avx2_available() -> bool {
     false
 }
 
+/// Returns true when AVX2 and FMA are both compiled and available at runtime.
+#[must_use]
+pub fn avx2_fma_available() -> bool {
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+    {
+        return is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma");
+    }
+
+    #[allow(unreachable_code)]
+    false
+}
+
 /// Returns true when NEON is both compiled and available at runtime.
 #[must_use]
 pub fn neon_available() -> bool {
@@ -89,7 +101,7 @@ pub fn best_tier() -> CpuExecutionTier {
 
 #[cfg(test)]
 mod tests {
-    use super::{CpuExecutionTier, available_tiers, best_tier};
+    use super::{CpuExecutionTier, available_tiers, avx2_available, avx2_fma_available, best_tier};
 
     #[test]
     fn scalar_tier_is_always_present() {
@@ -110,5 +122,12 @@ mod tests {
         let tiers = available_tiers();
         let first = tiers.first().copied().unwrap_or(CpuExecutionTier::Scalar);
         assert_eq!(best_tier(), first);
+    }
+
+    #[test]
+    fn avx2_fma_implies_avx2() {
+        if avx2_fma_available() {
+            assert!(avx2_available());
+        }
     }
 }

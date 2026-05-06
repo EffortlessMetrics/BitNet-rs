@@ -1,0 +1,97 @@
+schema: 1
+
+canonical_model:
+  id: bitnet-b1.58-2b-4t-i2_s
+  hf_repo: microsoft/bitnet-b1.58-2B-4T
+  gguf_repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  gguf_file: ggml-model-i2_s.gguf
+  local_path: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+  sha256: TBD
+  format: gguf
+  architecture: bitnet_b1_58
+  parameters: approx_2b
+  training_tokens: 4t
+  context_length: 4096
+  tokenizer: llama3
+  vocab_size: 128256
+  quantization: W1.58A8
+  weight_domain: ternary
+  activation_quantization: int8_per_token_absmax
+  expected_loader_mode: strict
+  minimal_loader_fallback_allowed: false
+
+prompt_fixtures:
+  smoke_single_digit:
+    prompt: "Answer with a single digit: 2+2="
+    max_tokens: 1
+    temperature: 0.0
+    context: 512
+    batch_size: 1
+    purpose: strict path proof
+
+  decode_128:
+    prompt_tokens: 256
+    generated_tokens: 128
+    temperature: 0.0
+    purpose: steady decode benchmark
+
+  prefill_512:
+    prompt_tokens: 512
+    generated_tokens: 1
+    temperature: 0.0
+    purpose: prefill benchmark
+
+  context_4096:
+    prompt_tokens: 4096
+    generated_tokens: 16
+    temperature: 0.0
+    purpose: context limit behavior
+
+reference_commands:
+  bitnet_cpp_smoke:
+    cwd: external/BitNet
+    command:
+      - python
+      - run_inference.py
+      - -m
+      - models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+      - -p
+      - "Answer with a single digit: 2+2="
+      - -n
+      - "1"
+      - -t
+      - "4"
+      - -c
+      - "512"
+      - -temp
+      - "0"
+
+  bitnet_rs_strict_smoke:
+    env:
+      BITNET_DISABLE_MINIMAL_LOADER: "1"
+      BITNET_STRICT_MODE: "1"
+    command:
+      - cargo
+      - run
+      - --locked
+      - -p
+      - bitnet-cli
+      - --
+      - run
+      - --model
+      - models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+      - --prompt
+      - "Answer with a single digit: 2+2="
+      - --max-tokens
+      - "1"
+      - --temperature
+      - "0.0"
+      - --json-out
+      - ci/hardware/<machine-id>/<date>/strict-bitnet-proof.json
+
+artifact_rules:
+  no_large_model_files_in_repo: true
+  record_model_hash_before_claim: true
+  record_tokenizer_source_before_claim: true
+  record_kernel_family_before_claim: true
+  fallback_used_must_be_false_for_strict_proof: true

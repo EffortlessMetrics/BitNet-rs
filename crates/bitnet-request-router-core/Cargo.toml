@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-request-router-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Reusable HTTP request routing primitives for BitNet server components"
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

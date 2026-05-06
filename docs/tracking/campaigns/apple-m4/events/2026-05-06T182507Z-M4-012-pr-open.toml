@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T18:25:07Z"
+campaign = "apple-m4"
+item = "M4-012"
+event = "pr_open"
+pr = 3775
+head_sha = "933203e8b563aa3115ba79b8fdcf64a89af9b9c2"
+actor = "codex"
+
+notes = [
+  "Opened TL1 Apple layout-boundary PR.",
+  "The PR records TL1 as CPU/NEON-oriented evidence, documents packed unsigned 2-bit LUT codes with scales, and keeps direct Metal TL1 consumption unclaimed.",
+  "No QK256, server inference, benchmarks, MPSGraph execution, Neural Engine proof, or full BitNet inference claim is included.",
+]

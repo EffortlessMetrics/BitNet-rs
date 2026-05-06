@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T10:42:22Z"
+campaign = "apple-m4"
+item = "M4-007"
+event = "pr_open"
+pr = 3719
+head_sha = "bf921f968827323c2d8afd8b6cfe1aecfa2dc6b2"
+actor = "codex"
+
+notes = [
+  "Opened MPSGraph tiny graph smoke PR.",
+  "Receipt records apple-m4-mpsgraph with runtime_api=mpsgraph, resolved_target=unknown, and fallback_used=false.",
+  "No native Metal kernel proof, Neural Engine claim, BitNet inference, QK256, server, dependency, benchmark, or performance claim is in scope.",
+]

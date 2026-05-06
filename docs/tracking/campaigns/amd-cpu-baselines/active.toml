@@ -1,0 +1,82 @@
+id = "amd-cpu-baselines"
+title = "AMD CPU baselines"
+status = "active"
+
+objective = "Validate AMD 5700X and 9950X3D as CPU proof and benchmark lanes while preserving scalar, AVX2, AVX-512, cache, memory, and sustained-power context."
+
+end_state = [
+  "5700X proves mainstream Zen 3 AVX2 behavior and never claims AVX-512.",
+  "9950X3D proves Zen 5 AVX2 and AVX-512 behavior with cache-domain context.",
+  "Benchmark artifacts separate correctness proof from performance claims.",
+]
+
+hard_constraints = [
+  "These lanes are CPU proof lanes, not accelerator lanes.",
+  "The 5700X lane must not claim AVX-512.",
+  "9950X3D receipts must record scheduler/core placement and cache-domain context before performance claims.",
+]
+
+[[work_item]]
+id = "AMD5700X-003"
+status = "ready"
+branch = "codex/amd-cpu-baselines/AMD5700X-003-scalar-avx2-dispatch"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Prove 5700X scalar and AVX2 dispatch with selected CPU kernel receipts and no GPU/NPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2",
+]
+allowed_paths = [
+  "crates/bitnet-cpu-detect/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-receipts/**",
+  "docs/tracking/campaigns/amd-cpu-baselines/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "5700X scalar and AVX2 dispatch can be selected after receipt-backed validation.",
+]
+must_not_claim = [
+  "5700X AVX-512 works.",
+  "CPU performance is proven.",
+  "GPU or NPU acceleration is involved.",
+]
+
+[[work_item]]
+id = "AMD9950X3D-003"
+status = "ready"
+branch = "codex/amd-cpu-baselines/AMD9950X3D-003-scalar-avx2-avx512-dispatch"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Prove 9950X3D scalar, AVX2, and AVX-512 dispatch with selected CPU kernel receipts and no GPU/NPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2",
+]
+allowed_paths = [
+  "crates/bitnet-cpu-detect/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-receipts/**",
+  "docs/tracking/campaigns/amd-cpu-baselines/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "9950X3D scalar, AVX2, and AVX-512 dispatch can be selected after receipt-backed validation.",
+]
+must_not_claim = [
+  "CPU performance is proven.",
+  "GPU or NPU acceleration is involved.",
+]

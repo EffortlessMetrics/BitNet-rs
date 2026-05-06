@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "artifact_kind": "platform-probe",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "proof_stage": "detected",
+  "status": "partial_platform_detected",
+  "fallback_used": false,
+  "claim_allowed": "Core Ultra 7 258V platform hardware is OS-visible on this Windows host.",
+  "claims_not_allowed": [
+    "BitNet inference works on 258V",
+    "Arc 140V OpenCL execution works",
+    "Level Zero execution works",
+    "OpenVINO GPU execution works",
+    "OpenVINO NPU execution works",
+    "Intel NPU accelerates BitNet"
+  ],
+  "os": {
+    "name": "Microsoft Windows 11 Home",
+    "version": "10.0.26200",
+    "windows_version": "2009",
+    "native_or_virtualized": "native",
+    "arch": "x86_64"
+  },
+  "system": {
+    "manufacturer": "LENOVO",
+    "model": "83MC",
+    "system_type": "x64-based PC"
+  },
+  "cpu": {
+    "requested_backend": "cpu",
+    "selected_backend": "intel-258v-cpu-avx2",
+    "runtime_api": "cpu",
+    "model": "Intel(R) Core(TM) Ultra 7 258V",
+    "cores": 8,
+    "threads": 8,
+    "p_core_count": 4,
+    "lp_e_core_count": 4,
+    "max_clock_mhz": 2200,
+    "l2_cache_kib": 14336,
+    "l3_cache_kib": 12288,
+    "flags": [
+      "avx2",
+      "fma",
+      "sse4.2"
+    ],
+    "avx2_detected": true,
+    "avx512_detected": false,
+    "fma_detected": true,
+    "sse42_detected": true,
+    "scheduler_hint": "Lunar Lake validation should record P-core / low-power E-core and power context before benchmark claims."
+  },
+  "memory": {
+    "kind": "shared LPDDR-class system memory",
+    "total_bytes": 33873780736,
+    "reported_modules": 8,
+    "reported_module_bytes": 4294967296,
+    "reported_speed_mt_s": 8533,
+    "reported_manufacturer": "Micron Technology",
+    "shared_memory": true
+  },
+  "power": {
+    "mode": "Balanced",
+    "power_scheme_guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+    "thermal_profile": null,
+    "sustained_run": false
+  },
+  "arc140v": {
+    "requested_backend": "intel-arc-140v",
+    "selected_backend": null,
+    "runtime_api": null,
+    "proof_stage": "detected",
+    "os_device_visible": true,
+    "device_name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "pci_vendor_id": "0x8086",
+    "pci_device_id": "0x64A0",
+    "pnp_status": "OK",
+    "opencl_tool_present": false,
+    "opencl_visible": null,
+    "level_zero_tool_present": false,
+    "level_zero_visible": null,
+    "openvino_gpu_visible": false,
+    "fallback_used": false
+  },
+  "npu": {
+    "requested_backend": "intel-npu",
+    "selected_backend": null,
+    "runtime_api": null,
+    "proof_stage": "detected",
+    "os_device_visible": true,
+    "device_name": "Intel(R) AI Boost",
+    "pci_vendor_id": "0x8086",
+    "pci_device_id": "0x643E",
+    "pnp_status": "OK",
+    "openvino_runtime_available": false,
+    "openvino_npu_visible": false,
+    "fallback_used": false
+  },
+  "openvino": {
+    "python_module_available": false,
+    "python_error": "ModuleNotFoundError(\"No module named 'openvino'\")",
+    "available_devices": []
+  },
+  "tools": {
+    "clinfo": {
+      "present_in_path": false
+    },
+    "sycl-ls": {
+      "present_in_path": false
+    },
+    "ze_info": {
+      "present_in_path": false
+    },
+    "python": {
+      "present_in_path": true,
+      "path": "C:\\Python314\\python.exe"
+    }
+  },
+  "evidence_commands": [
+    "Get-ComputerInfo | Select-Object OsName,OsVersion,WindowsVersion,CsSystemType,CsManufacturer,CsModel",
+    "Get-CimInstance Win32_Processor",
+    "Get-CimInstance Win32_PhysicalMemory",
+    "powercfg /GETACTIVESCHEME",
+    "Get-PnpDevice",
+    "Get-Command clinfo,sycl-ls,ze_info,python,python3",
+    "python -c \"import openvino as ov\"",
+    "rustc std::is_x86_feature_detected probe"
+  ]
+}

@@ -68,6 +68,33 @@ The validation system uses a **3-stage pipeline**:
   models/tokenizer.json
 ```
 
+### Strict CPU Proof Smoke
+
+After the model and tokenizer are present locally, use the strict CPU proof
+command to check the user-facing CLI path without mock or minimal-loader
+ambiguity:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+RUST_LOG=warn \
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy \
+  --json-out target/cpu-proof.json
+```
+
+This is a strict smoke/proof command, not a model-quality or performance claim.
+The JSON artifact must distinguish the enhanced loader from compatibility
+fallback. Receipt validation, kernel IDs, and throughput claims are handled by
+follow-up CPU proof items.
+
 ---
 
 ## The 3-Stage Validation Pipeline

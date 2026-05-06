@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T12:12:38Z"
+campaign = "apple-m4"
+item = "M4-009"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the Apple M4 benchmark baseline for the validated tiny Metal add kernel.",
+  "Scope remains benchmark/test and Apple campaign tracking only; no BitNet inference, QK256, server inference, MPSGraph, Neural Engine, or broad performance claim.",
+]

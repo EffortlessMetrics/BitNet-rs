@@ -367,3 +367,24 @@ async fn batch_engine_stats() {
     assert_eq!(stats.total_batches_processed, 0);
     assert_eq!(stats.queue_depth, 0);
 }
+
+#[tokio::test]
+async fn batch_engine_rejects_unimplemented_inference_without_fake_text() {
+    let engine = BatchEngine::new(BatchEngineConfig {
+        max_batch_size: 1,
+        max_concurrent_batches: 1,
+        quantization_aware: false,
+        ..BatchEngineConfig::default()
+    });
+    let request = BatchRequest::new("hello".to_string(), GenerationConfig::default());
+
+    let result = tokio::time::timeout(Duration::from_secs(2), engine.submit_request(request))
+        .await
+        .expect("batch request should complete instead of hanging");
+
+    let error =
+        result.expect_err("production batch inference must fail until real inference exists");
+    let message = error.to_string();
+    assert!(message.contains("not implemented"));
+    assert!(!message.contains("Simulated response"));
+}

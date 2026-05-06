@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T20:22:27Z"
+campaign = "apple-m4"
+item = "M4-013"
+event = "merged"
+pr = 3783
+merge_sha = "6dfb4041ebb875a26a6c7b9381ba67480303ab21"
+actor = "codex"
+
+notes = [
+  "M4-013 merged with the receipt-backed I2_S Metal prefill contribution fixture.",
+  "The proof records execution_phase=prefill, phase_scope=prefill_projection_fixture, fallback_used=false, and kv_cache_behavior=not_exercised.",
+  "M4-014 is now ready for strict real-model BitNet M4 proof work.",
+]

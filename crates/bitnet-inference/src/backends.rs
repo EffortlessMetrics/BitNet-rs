@@ -98,16 +98,8 @@ impl Backend for CpuBackend {
         // Ignore errors if the global thread pool has already been initialized
         let _ = rayon::ThreadPoolBuilder::new().num_threads(self.num_threads).build_global();
 
-        let model = self.model.clone();
-        let input_tensor = input.clone();
-
-        // Use block_in_place to allow blocking the current thread with computation
-        // while properly passing the mutable cache reference.
-        // This avoids the 'static lifetime requirement of spawn_blocking.
-        let output = tokio::task::block_in_place(move || {
-            let cache_any: &mut dyn std::any::Any = cache;
-            model.forward(&input_tensor, cache_any)
-        })?;
+        let cache_any: &mut dyn std::any::Any = cache;
+        let output = self.model.forward(input, cache_any)?;
 
         debug!("CPU forward pass completed");
         Ok(output)

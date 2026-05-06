@@ -8,6 +8,7 @@ use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
 };
+use bitnet_layer_index_core::extract_structured_layer_index_segment;
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
@@ -170,29 +171,7 @@ impl GgufLoader {
 
     /// Extract layer number from tensor name patterns like "blk.N." or "layers.N."
     fn extract_layer_number(name: &str) -> Option<usize> {
-        // Check for "blk.N." pattern
-        if let Some(start) = name.find("blk.") {
-            let after_blk = &name[start + 4..];
-            if let Some(dot_pos) = after_blk.find('.') {
-                let number_str = &after_blk[..dot_pos];
-                if let Ok(layer_num) = number_str.parse::<usize>() {
-                    return Some(layer_num);
-                }
-            }
-        }
-
-        // Check for "layers.N." pattern
-        if let Some(start) = name.find("layers.") {
-            let after_layers = &name[start + 7..];
-            if let Some(dot_pos) = after_layers.find('.') {
-                let number_str = &after_layers[..dot_pos];
-                if let Ok(layer_num) = number_str.parse::<usize>() {
-                    return Some(layer_num);
-                }
-            }
-        }
-
-        None
+        extract_structured_layer_index_segment(name)
     }
 
     /// Infer number of KV heads from tensor shapes (for models without explicit metadata)
@@ -294,6 +273,8 @@ impl GgufLoader {
     /// Validate LayerNorm gamma statistics to catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
+    /// BitNet GGUFs can also store pre-scaled RMSNorm weights near
+    /// 1/sqrt(hidden_size); accept that narrow envelope for real hidden vectors.
     /// If stats are suspicious, fail in strict mode or warn otherwise.
     ///
     /// Set BITNET_STRICT_MODE=1 to fail on invalid LN gamma.
@@ -304,12 +285,25 @@ impl GgufLoader {
         let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
         let rms = Self::rms_f32(&w32)?;
 
-        // Acceptable envelope for γ RMS
-        let ok = (0.5..=2.0).contains(&rms) && rms.is_finite();
+        // Acceptable envelopes for γ RMS.
+        let unit_scaled_ok = (0.5..=2.0).contains(&rms);
+        let hidden_scaled_ok = w32
+            .dims()
+            .last()
+            .copied()
+            .filter(|hidden| *hidden >= 512)
+            .map(|hidden| {
+                let target = 1.0 / (hidden as f32).sqrt();
+                ((target * 0.5)..=(target * 1.5)).contains(&rms)
+            })
+            .unwrap_or(false);
+        let ok = rms.is_finite() && (unit_scaled_ok || hidden_scaled_ok);
 
         if !ok {
-            let msg =
-                format!("LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0)", name, rms);
+            let msg = format!(
+                "LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0 or pre-scaled ≈1/sqrt(hidden_size))",
+                name, rms
+            );
 
             // In strict mode, fail immediately
             if Self::env_truthy("BITNET_STRICT_MODE") {
@@ -842,6 +836,9 @@ impl FormatLoader for GgufLoader {
 
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
+        if Self::env_truthy("BITNET_STRICT_MODE") {
+            self.validate_strict_tensor_authority(&reader, &model_config)?;
+        }
 
         if let Some(callback) = &config.progress_callback {
             callback(0.5, "Loading tensors...");
@@ -862,6 +859,82 @@ impl FormatLoader for GgufLoader {
 }
 
 impl GgufLoader {
+    fn validate_strict_tensor_authority(
+        &self,
+        reader: &GgufReader,
+        config: &BitNetConfig,
+    ) -> Result<()> {
+        let tensor_names = reader.tensor_names();
+        let has_any = |candidates: &[String]| -> bool {
+            candidates.iter().any(|candidate| tensor_names.iter().any(|name| name == candidate))
+        };
+
+        let mut missing = Vec::new();
+
+        let has_token_embedding = has_any(&[
+            "token_embd.weight".to_string(),
+            "tok_embeddings.weight".to_string(),
+            "embed_tokens.weight".to_string(),
+            "model.embed_tokens.weight".to_string(),
+            "transformer.wte.weight".to_string(),
+        ]);
+        if !has_token_embedding {
+            missing.push("token embedding weight".to_string());
+        }
+
+        let has_output_head = has_any(&[
+            "output.weight".to_string(),
+            "lm_head.weight".to_string(),
+            "model.lm_head.weight".to_string(),
+            "head.weight".to_string(),
+        ]);
+        if !has_output_head && !has_token_embedding {
+            missing.push("output/lm head weight".to_string());
+        } else if !has_output_head {
+            tracing::info!(
+                "Strict real_gguf load: no output/lm head tensor; using tied token embeddings"
+            );
+        }
+
+        let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
+        let required_suffix_groups: &[&[&str]] = &[
+            &["attn_q.weight", "attention.q_proj.weight", "self_attn.q_proj.weight"],
+            &["attn_k.weight", "attention.k_proj.weight", "self_attn.k_proj.weight"],
+            &["attn_v.weight", "attention.v_proj.weight", "self_attn.v_proj.weight"],
+            &["attn_output.weight", "attention.o_proj.weight", "self_attn.o_proj.weight"],
+            &["ffn_gate.weight", "feed_forward.gate_proj.weight", "mlp.gate_proj.weight"],
+            &["ffn_up.weight", "feed_forward.up_proj.weight", "mlp.up_proj.weight"],
+            &["ffn_down.weight", "feed_forward.down_proj.weight", "mlp.down_proj.weight"],
+            &["attn_norm.weight", "attention_norm.weight", "input_layernorm.weight"],
+            &["ffn_norm.weight", "post_attention_layernorm.weight"],
+        ];
+
+        for layer_idx in 0..config.model.num_layers {
+            for suffix_group in required_suffix_groups {
+                let candidates: Vec<String> = layer_prefixes
+                    .iter()
+                    .flat_map(|prefix| {
+                        suffix_group
+                            .iter()
+                            .map(move |suffix| format!("{}.{}.{}", prefix, layer_idx, suffix))
+                    })
+                    .collect();
+                if !has_any(&candidates) {
+                    missing.push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
+                }
+            }
+        }
+
+        if missing.is_empty() {
+            return Ok(());
+        }
+
+        Err(BitNetError::Validation(format!(
+            "Strict real_gguf load rejected unsupported/incomplete tensor layout: missing {}",
+            missing.join(", ")
+        )))
+    }
+
     /// Check if a tensor name indicates it's an embedding tensor
     fn is_embedding_tensor(name: &str) -> bool {
         matches!(
@@ -1493,10 +1566,35 @@ impl GgufLoader {
 
                     let blocks_per_row = cols.div_ceil(256); // 256 elements per block
                     let row_stride_bytes = blocks_per_row * 64; // 64 bytes per 256-element block
+                    let expected_raw_bytes =
+                        rows.checked_mul(row_stride_bytes).ok_or_else(|| {
+                            BitNetError::Validation(format!(
+                                "QK256 '{}': raw byte shape overflow for rows={} stride={}",
+                                info.name, rows, row_stride_bytes
+                            ))
+                        })?;
+                    if data.len() < expected_raw_bytes {
+                        return Err(BitNetError::Validation(format!(
+                            "QK256 '{}': missing raw bytes: available={}, expected={}",
+                            info.name,
+                            data.len(),
+                            expected_raw_bytes
+                        )));
+                    }
+                    let raw_data = if data.len() > expected_raw_bytes {
+                        tracing::debug!(
+                            "QK256 '{}': ignoring {} trailing alignment padding bytes",
+                            info.name,
+                            data.len() - expected_raw_bytes
+                        );
+                        &data[..expected_raw_bytes]
+                    } else {
+                        data
+                    };
 
                     // Store raw bytes as U8 tensor [rows, row_stride_bytes]
                     let raw_tensor = Tensor::from_raw_buffer(
-                        data,
+                        raw_data,
                         DType::U8,
                         &[rows, row_stride_bytes],
                         &candle_device,

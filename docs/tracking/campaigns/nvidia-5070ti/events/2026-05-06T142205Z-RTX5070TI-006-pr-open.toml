@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T14:22:05Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-006"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3749
+head_sha = "ca9d1916e19fb3c02e2caec4c2d9d98cd16689af"
+actor = "codex"
+
+notes = [
+  "Opened the RTX 5070 Ti CPU/CUDA parity PR with a live cuda-parity.json receipt.",
+  "The PR claims only tiny fixture parity and does not claim BitNet inference, QK256 CUDA, or speedup.",
+]

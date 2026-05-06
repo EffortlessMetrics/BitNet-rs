@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T13:14:14Z"
+campaign = "apple-m4"
+item = "M4-010"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the Apple CPU/NEON BitNet reference proof item after M4-009 closeout.",
+  "Scope is strict real-GGUF CPU reference receipt fields and Apple campaign tracking only; no Metal BitNet execution, QK256, server inference, MPSGraph, Neural Engine, or performance claim.",
+]

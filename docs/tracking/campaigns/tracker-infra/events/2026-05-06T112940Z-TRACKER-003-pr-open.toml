@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T11:29:40Z"
+campaign = "tracker-infra"
+item = "TRACKER-003"
+event = "pr_open"
+pr = 3724
+head_sha = "9a81e44e4c7608c1e747913dc6af3ccbd12354b7"
+actor = "codex"
+
+notes = [
+  "Opened the current-PR-scoped GitHub reconciliation fix.",
+  "No runtime code, kernels, device lanes, or dependency surfaces changed.",
+]

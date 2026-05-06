@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T20:00:01Z"
+campaign = "apple-m4"
+item = "M4-013"
+event = "in_progress"
+branch = "codex/apple-m4/M4-013-metal-prefill-decode"
+actor = "codex"
+
+notes = [
+  "Started the named Apple Metal prefill/decode contribution item.",
+  "Scope is a receipt-backed I2_S prefill contribution fixture with CPU/NEON reference and explicit fallback status.",
+  "No QK256, server inference, MPSGraph execution, Neural Engine proof, benchmarks, full autoregressive decode, or full BitNet inference claim is included.",
+]

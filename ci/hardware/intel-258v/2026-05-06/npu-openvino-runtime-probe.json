@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "artifact_kind": "npu-openvino-runtime-probe",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "requested_backend": "intel-npu",
+  "selected_backend": null,
+  "runtime_api": null,
+  "proof_stage": "detected",
+  "fallback_used": false,
+  "device": {
+    "os_device_visible": true,
+    "class": "ComputeAccelerator",
+    "status": "OK",
+    "name": "Intel(R) AI Boost",
+    "instance_id": "PCI\\VEN_8086&DEV_643E&SUBSYS_380617AA&REV_04\\3&11583659&0&58",
+    "pci_vendor_id": "0x8086",
+    "pci_device_id": "0x643E"
+  },
+  "runtime_visibility": {
+    "openvino_python_module_available": false,
+    "openvino_import_error": "ModuleNotFoundError(\"No module named 'openvino'\")",
+    "openvino_available_devices": [],
+    "openvino_npu_visible": false,
+    "openvino_npu_full_name": null,
+    "driver_version": null,
+    "compiler_version": null,
+    "total_mem_size": null
+  },
+  "claim_allowed": "Intel AI Boost NPU device identity is OS-visible by PCI PnP evidence.",
+  "claims_not_allowed": [
+    "OpenVINO sees NPU",
+    "OpenVINO NPU graph execution works",
+    "Intel NPU accelerates BitNet",
+    "BitNet inference works on Intel NPU"
+  ]
+}

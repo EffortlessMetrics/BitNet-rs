@@ -1,0 +1,95 @@
+{
+  "artifact_kind": "cpu-bitnet-validation",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "fallback_layout": null,
+    "kernel_family": "i2_s|tl2|qk256",
+    "layout": null,
+    "layout_source": null,
+    "weight_domain": "ternary",
+    "weight_quantization": "W1.58"
+  },
+  "bitnet_inference": false,
+  "blocked_before_inference": true,
+  "blocker": {
+    "reason": "model path does not exist: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "stage": "load_model"
+  },
+  "claim_allowed": "The 258V CPU lane emitted a structured validation blocker before inference.",
+  "claims_not_allowed": [
+    "Strict BitNet GGUF loaded on 258V",
+    "Tokenizer authority resolved through the inference path on 258V",
+    "QK256 or TL2 execution ran on 258V",
+    "BitNet inference works on 258V",
+    "258V CPU benchmark performance"
+  ],
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 0,
+    "max_tokens_requested": 1,
+    "phase": "load_model",
+    "prompt_tokens": 0,
+    "requested_backend": "intel-258v-cpu-avx2",
+    "requested_kernel": null,
+    "selected_backend": "intel-258v-cpu-avx2",
+    "selected_kernel": null,
+    "thread_count": 8
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware": {
+    "cpu": {
+      "avx2_detected": true,
+      "avx512_detected": false,
+      "cores": 8,
+      "features": [
+        "avx2",
+        "avx",
+        "fma",
+        "sse4.2",
+        "sse2"
+      ],
+      "fma_detected": true,
+      "lp_e_core_count": 4,
+      "model": "Intel(R) Core(TM) Ultra 7 258V",
+      "p_core_count": 4,
+      "sse42_detected": true,
+      "threads": 8
+    },
+    "platform_artifact": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "intel-258v-cpu-avx2"
+  },
+  "hardware_lane": "intel-258v-cpu-avx2",
+  "kernel_execution": false,
+  "machine_id": "intel-258v",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "exists": false,
+    "expected_file": "ggml-model-i2_s.gguf",
+    "expected_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "format": "gguf",
+    "loader_mode": null,
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "sha256": null,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "proof_stage": "blocked_preflight",
+  "schema": 1,
+  "status": "blocked_missing_canonical_model",
+  "strict": true,
+  "timestamp_utc": "2026-05-06T23:08:57Z",
+  "tokenizer": {
+    "path": null,
+    "source": null,
+    "strict": true
+  },
+  "validation_attempted": false
+}

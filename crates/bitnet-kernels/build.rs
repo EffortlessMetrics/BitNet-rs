@@ -28,6 +28,7 @@ fn main() {
 
     // Always allow re-run if this file changes
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=BITNET_CUDA_LINK_LIBS");
 
     // Unified GPU detection: honor both "gpu" and legacy "cuda" features for back-compat.
     // This ensures the build script recognizes GPU builds regardless of which feature is enabled.
@@ -60,12 +61,26 @@ fn main() {
             println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib");
             println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib/stubs");
 
-            // Link CUDA libraries
-            println!("cargo:rustc-link-lib=cuda");
-            println!("cargo:rustc-link-lib=nvrtc");
-            println!("cargo:rustc-link-lib=curand");
-            println!("cargo:rustc-link-lib=cublas");
-            println!("cargo:rustc-link-lib=cublasLt");
+            // CUDA uses cudarc dynamic loading by default, so driver-visible
+            // systems do not need CUDA import libraries at build time. Set
+            // BITNET_CUDA_LINK_LIBS=1 or a comma-separated library list to
+            // force explicit linker inputs for a toolkit-installed build.
+            if let Some(link_libs) = env_var("BITNET_CUDA_LINK_LIBS") {
+                let libs: Vec<String> =
+                    if link_libs.trim().is_empty() || link_libs == "1" || link_libs == "true" {
+                        vec!["cuda".to_string(), "nvrtc".to_string()]
+                    } else {
+                        link_libs
+                            .split(',')
+                            .map(str::trim)
+                            .filter(|lib| !lib.is_empty())
+                            .map(str::to_string)
+                            .collect()
+                    };
+                for lib in libs {
+                    println!("cargo:rustc-link-lib={lib}");
+                }
+            }
         }
 
         if env::var_os("CARGO_FEATURE_HIP").is_some() {

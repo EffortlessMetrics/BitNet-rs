@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "artifact_kind": "strict_bitnet_cuda_proof",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "TBD",
+  "claim": "strict_bitnet_cuda_inference",
+  "speedup_claim": false,
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "fallback_used": false,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "cuda": {
+    "device_index": null,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "driver_version": "TBD",
+    "cuda_runtime_version": "TBD",
+    "cuda_toolkit_version": "TBD",
+    "nvrtc_version": "TBD",
+    "vram_bytes": null,
+    "cuda_kernel_invocations": null
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "TBD",
+    "format": "gguf",
+    "loader_mode": "strict",
+    "fallback_loader_used": false,
+    "tokenizer_source": "gguf|sibling-tokenizer-json|explicit"
+  },
+  "bitnet": {
+    "quantization": "W1.58A8",
+    "kernel_family": "i2_s|qk256",
+    "layout": "packed",
+    "weights_uploaded_once": true,
+    "per_token_weight_upload": false
+  },
+  "execution_coverage": {
+    "linear_layers_total": null,
+    "linear_layers_on_cuda": null,
+    "linear_layers_cpu_fallback": 0,
+    "unsupported_ops": []
+  },
+  "reference": {
+    "greedy_token_agreement": null,
+    "top1_agreement": null,
+    "max_abs_error": null,
+    "mean_abs_error": null
+  },
+  "kernel_stats": [
+    {
+      "kernel_id": "TBD",
+      "invocations": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "device_to_host_bytes": null,
+      "kernel_launches": null,
+      "kernel_time_ms": null
+    }
+  ],
+  "cpu_fallback_ops": [],
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/strict-bitnet-cuda-proof.json"
+}
