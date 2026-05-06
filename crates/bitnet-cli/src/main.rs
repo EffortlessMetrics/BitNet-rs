@@ -291,6 +291,10 @@ enum Commands {
         /// Suppress performance warnings
         #[arg(long, default_value_t = false)]
         no_warnings: bool,
+
+        /// Profile label to record in JSON receipts (for example: smoke_1, prefill_512, decode_128)
+        #[arg(long, value_name = "PROFILE")]
+        profile_id: Option<String>,
     },
 
     /// Tokenize text and output token IDs as JSON
@@ -607,6 +611,7 @@ async fn main() -> Result<()> {
             logits_topk,
             assert_greedy,
             no_warnings,
+            profile_id,
         }) => {
             run_simple_generation(
                 &requested_backend_label,
@@ -639,6 +644,7 @@ async fn main() -> Result<()> {
                 logits_topk,
                 assert_greedy,
                 no_warnings,
+                profile_id,
             )
             .await
         }
@@ -1973,6 +1979,7 @@ async fn run_simple_generation(
     logits_topk: usize,
     assert_greedy: bool,
     no_warnings: bool,
+    profile_id: Option<String>,
 ) -> Result<()> {
     use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
@@ -2079,6 +2086,7 @@ async fn run_simple_generation(
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let loader_mode;
+    let model_load_start = std::time::Instant::now();
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -2148,6 +2156,7 @@ async fn run_simple_generation(
             (Arc::new(m) as Arc<dyn Model>, load_result.config)
         }
     };
+    let model_load_ms = elapsed_ms(model_load_start);
 
     // Load tokenizer with deterministic CPU-BITNET authority.
     // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
@@ -2156,6 +2165,7 @@ async fn run_simple_generation(
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
+    let tokenizer_load_start = std::time::Instant::now();
     let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
         &model_path,
         tokenizer_path.as_deref(),
@@ -2209,6 +2219,7 @@ async fn run_simple_generation(
             }
         }
     };
+    let tokenizer_load_ms = elapsed_ms(tokenizer_load_start);
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
@@ -2270,8 +2281,10 @@ async fn run_simple_generation(
 
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
+    let prompt_tokenize_start = std::time::Instant::now();
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
     ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
+    let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -2293,9 +2306,27 @@ async fn run_simple_generation(
     // Track timing
     let start_time = std::time::Instant::now();
     let mut first_token_ms: Option<u64> = None;
+    let mut first_token_decode_ms: Option<f64> = None;
 
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
+
+    // M4-015 profiles measure prompt prefix prefill only when explicitly requested.
+    // Default generation behavior remains unchanged for non-profile runs.
+    let profile_requested = profile_id.is_some();
+    let mut prefill_token_count = 0usize;
+    let mut prefill_step_ms = Vec::new();
+    let prefill_start = std::time::Instant::now();
+    if profile_requested && tokens.len() > 1 {
+        for token in &tokens[..tokens.len() - 1] {
+            let step_start = std::time::Instant::now();
+            let x = model.embed(&[*token])?;
+            let _ = model.forward(&x, any_cache.as_mut())?;
+            prefill_step_ms.push(elapsed_ms(step_start));
+            prefill_token_count += 1;
+        }
+    }
+    let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
@@ -2325,22 +2356,33 @@ async fn run_simple_generation(
     //
     // Performance impact: This changes embedding from O(N┬▓) to O(N), providing
     // ~50├ù speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
     for step_idx in 0..max_new_tokens {
+        let decode_step_start = std::time::Instant::now();
         // Embed only the LAST token (incremental)
         // KV cache already maintains historical context
         let last_token = tokens.last().copied().expect("tokens must be non-empty");
 
-        let t0 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let t0 = std::time::Instant::now();
         let x = model.embed(&[last_token])?;
-        if let Some(t) = t0 {
-            eprintln!("timing: embed_us={}", t.elapsed().as_micros());
+        let embed_ms = elapsed_ms(t0);
+        embed_step_ms.push(embed_ms);
+        if timing_enabled {
+            eprintln!("timing: embed_us={}", ms_to_us(embed_ms));
         }
 
         // Forward pass (with KV cache handling history)
-        let t1 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let t1 = std::time::Instant::now();
         let h = model.forward(&x, any_cache.as_mut())?;
-        if let Some(t) = t1 {
-            eprintln!("timing: forward_us={}", t.elapsed().as_micros());
+        let forward_ms = elapsed_ms(t1);
+        forward_step_ms.push(forward_ms);
+        if timing_enabled {
+            eprintln!("timing: forward_us={}", ms_to_us(forward_ms));
         }
 
         // Extract last token hidden state first to avoid 3D├ù2D matmul issues
@@ -2354,10 +2396,12 @@ async fn run_simple_generation(
         }
 
         // Get logits from last token hidden state
-        let t2 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let t2 = std::time::Instant::now();
         let logits = model.logits(&last_hidden)?;
-        if let Some(t) = t2 {
-            eprintln!("timing: logits_us={}", t.elapsed().as_micros());
+        let logits_ms = elapsed_ms(t2);
+        logits_step_ms.push(logits_ms);
+        if timing_enabled {
+            eprintln!("timing: logits_us={}", ms_to_us(logits_ms));
         }
 
         // Extract logits vector with robust shape handling
@@ -2423,10 +2467,12 @@ async fn run_simple_generation(
         }
 
         // Sample next token
-        let t3 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let t3 = std::time::Instant::now();
         let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
-        if let Some(t) = t3 {
-            eprintln!("timing: sample_us={}", t.elapsed().as_micros());
+        let sample_ms = elapsed_ms(t3);
+        sample_step_ms.push(sample_ms);
+        if timing_enabled {
+            eprintln!("timing: sample_us={}", ms_to_us(sample_ms));
         }
 
         // BITNET_PARITY=1: Log chosen token + top-10 logits for greedy decode verification
@@ -2477,7 +2523,9 @@ async fn run_simple_generation(
         }
 
         // Decode and print the new token
+        let token_decode_start = std::time::Instant::now();
         let token_text = tokenizer.decode(&[next_token])?;
+        token_decode_step_ms.push(elapsed_ms(token_decode_start));
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 
@@ -2495,6 +2543,12 @@ async fn run_simple_generation(
                 t.drain(..safe_cut);
             }
         }
+
+        let step_ms = elapsed_ms(decode_step_start);
+        if first_token_decode_ms.is_none() {
+            first_token_decode_ms = Some(step_ms);
+        }
+        decode_step_ms.push(step_ms);
 
         // 1) Token-ID stops (includes template-resolved IDs like <|eot_id|>)
         if all_stop_ids.contains(&next_token) {
@@ -2647,13 +2701,69 @@ async fn run_simple_generation(
             && canonical_bitnet_model
             && runtime_api == "cpu"
             && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str();
-        let artifact_kind = if strict_cpu_reference_artifact {
+        let artifact_kind = if strict_cpu_reference_artifact && profile_requested {
+            "strict_bitnet_cpu_profile"
+        } else if strict_cpu_reference_artifact {
             "strict_bitnet_cpu_reference"
         } else if strict_cuda_proof_artifact {
             "strict_bitnet_cuda_proof"
         } else {
             "inference_result"
         };
+        let steady_decode_step_ms = decode_step_ms.get(1..).unwrap_or(&[]);
+        let decode_total_ms = decode_step_ms.iter().sum::<f64>();
+        let sampling_ms_per_token = if sample_step_ms.is_empty() {
+            None
+        } else {
+            Some(sample_step_ms.iter().sum::<f64>() / sample_step_ms.len() as f64)
+        };
+        let steady_decode_tps = steady_decode_tps_ms(&decode_step_ms);
+        let profile_label = profile_id.as_deref().unwrap_or("default");
+        let profile_receipt = serde_json::json!({
+            "id": profile_label,
+            "requested": profile_requested,
+            "kind": "steady_decode_prefill",
+            "claim_scope": "selected Apple backend phase timing only",
+            "phase": "decode",
+            "machine_context_recorded": apple_machine.is_some(),
+            "backend": {
+                "requested_backend": requested_backend,
+                "selected_backend": selected_backend,
+                "runtime_api": runtime_api,
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            },
+            "prompt_prefill": {
+                "exercised": prefill_token_count > 0,
+                "tokens": prefill_token_count,
+                "ms": rounded_ms(prefill_ms),
+                "per_token_ms": timing_samples_json(&prefill_step_ms),
+                "kv_cache_behavior": if prefill_token_count > 0 {
+                    "prompt_prefix_prefilled_before_decode"
+                } else if profile_requested {
+                    "single_token_prompt_no_prefix_prefill"
+                } else {
+                    "not_requested"
+                },
+            },
+            "decode": {
+                "generated_tokens": generated_tokens.len(),
+                "warmup_tokens": usize::from(!decode_step_ms.is_empty()),
+                "steady_state_tokens": decode_step_ms.len().saturating_sub(1),
+                "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
+                "steady_state_tok_s": steady_decode_tps.map(|value| (value * 1000.0).round() / 1000.0),
+                "per_token_ms": timing_samples_json(&decode_step_ms),
+                "steady_per_token_ms": timing_samples_json(steady_decode_step_ms),
+                "embed_ms": timing_samples_json(&embed_step_ms),
+                "forward_ms": timing_samples_json(&forward_step_ms),
+                "logits_ms": timing_samples_json(&logits_step_ms),
+                "sample_ms": timing_samples_json(&sample_step_ms),
+                "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+            },
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "prompt_tokenize_ms": rounded_ms(prompt_tokenize_ms),
+        });
         let mut output = serde_json::json!({
             "schema_version": "1.0.0",
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -2677,10 +2787,22 @@ async fn run_simple_generation(
                 "decode_first_ms": first_token_ms,  // Same as cmd_to_first for now
                 "total_ms": total_ms,
             },
+            "timing": {
+                "model_load_ms": rounded_ms(model_load_ms),
+                "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                "tokenize_ms": rounded_ms(prompt_tokenize_ms),
+                "prefill_ms": rounded_ms(prefill_ms),
+                "first_token_ms": first_token_ms,
+                "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
+                "decode_total_ms": rounded_ms(decode_total_ms),
+                "decode_steady_state_tok_s": steady_decode_tps.map(|value| (value * 1000.0).round() / 1000.0),
+                "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+            },
             "throughput": {
                 "tokens_per_second": tok_per_sec,
                 "decoded_tokens": generated_tokens.len(),
             },
+            "profile": profile_receipt,
             "model": {
                 "repo": model_repo,
                 "file": model_file,
@@ -3086,6 +3208,66 @@ fn compute_rms(xs: &[f32]) -> f32 {
     (sum_sq / (xs.len() as f32)).sqrt()
 }
 
+fn elapsed_ms(start: std::time::Instant) -> f64 {
+    start.elapsed().as_secs_f64() * 1000.0
+}
+
+fn ms_to_us(ms: f64) -> u128 {
+    (ms * 1000.0).round() as u128
+}
+
+fn rounded_ms(ms: f64) -> f64 {
+    (ms * 1000.0).round() / 1000.0
+}
+
+fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
+    if samples.is_empty() {
+        return serde_json::json!({
+            "count": 0,
+            "total_ms": 0.0,
+            "min_ms": serde_json::Value::Null,
+            "mean_ms": serde_json::Value::Null,
+            "p50_ms": serde_json::Value::Null,
+            "p95_ms": serde_json::Value::Null,
+            "max_ms": serde_json::Value::Null,
+        });
+    }
+
+    let mut sorted = samples.to_vec();
+    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    let total_ms = samples.iter().sum::<f64>();
+    let mean_ms = total_ms / samples.len() as f64;
+
+    serde_json::json!({
+        "count": samples.len(),
+        "total_ms": rounded_ms(total_ms),
+        "min_ms": rounded_ms(sorted[0]),
+        "mean_ms": rounded_ms(mean_ms),
+        "p50_ms": rounded_ms(percentile_nearest(&sorted, 50)),
+        "p95_ms": rounded_ms(percentile_nearest(&sorted, 95)),
+        "max_ms": rounded_ms(sorted[sorted.len() - 1]),
+    })
+}
+
+fn percentile_nearest(sorted_samples: &[f64], percentile: usize) -> f64 {
+    debug_assert!(!sorted_samples.is_empty());
+    let rank = (percentile as f64 / 100.0 * sorted_samples.len() as f64).ceil() as usize;
+    let index = rank.saturating_sub(1).min(sorted_samples.len() - 1);
+    sorted_samples[index]
+}
+
+fn steady_decode_tps_ms(decode_step_ms: &[f64]) -> Option<f64> {
+    let steady = decode_step_ms.get(1..)?;
+    if steady.is_empty() {
+        return None;
+    }
+    let steady_ms = steady.iter().sum::<f64>();
+    if steady_ms <= 0.0 {
+        return None;
+    }
+    Some(steady.len() as f64 / (steady_ms / 1000.0))
+}
+
 fn apple_machine_receipt_json(
     requested_backend: &str,
     selected_backend: &str,
@@ -3334,6 +3516,27 @@ mod tests {
         assert!(receipt_metal_text_reports_visibility(
             "Graphics/Displays:\n\n    Apple M4:\n      Chipset Model: Apple M4\n      Metal Support: Metal 4\n",
         ));
+    }
+
+    #[test]
+    fn timing_samples_json_records_percentiles_and_total() {
+        let summary = timing_samples_json(&[3.0, 1.0, 2.0, 10.0]);
+
+        assert_eq!(summary["count"], 4);
+        assert_eq!(summary["total_ms"], 16.0);
+        assert_eq!(summary["min_ms"], 1.0);
+        assert_eq!(summary["mean_ms"], 4.0);
+        assert_eq!(summary["p50_ms"], 2.0);
+        assert_eq!(summary["p95_ms"], 10.0);
+        assert_eq!(summary["max_ms"], 10.0);
+    }
+
+    #[test]
+    fn steady_decode_tps_excludes_first_decode_token() {
+        let tps = steady_decode_tps_ms(&[100.0, 50.0, 50.0]).unwrap();
+
+        assert_eq!((tps * 1000.0).round() / 1000.0, 20.0);
+        assert!(steady_decode_tps_ms(&[100.0]).is_none());
     }
 
     #[test]
