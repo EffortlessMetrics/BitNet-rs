@@ -1,0 +1,160 @@
+name: Test Telemetry
+
+# Non-blocking observability lane. Runs cargo-nextest on the PR's diff,
+# uploads JUnit XML, and posts a slow-test summary to the run step summary.
+# Does NOT gate merges: CI Core (build-test-linux) is still the merge gate
+# and remains source of truth for "tests pass".
+#
+# Why a separate lane:
+# - We want JUnit-shaped per-test data + slow-test visibility on every PR
+#   without risking semantics changes in the existing required Build & Test
+#   step (which runs `cargo test`, not `cargo nextest run`).
+# - This produces durable per-test signal that PR N (LEM actuals) and any
+#   future flake/health dashboard can consume.
+#
+# See docs/ci/cost-and-verification-policy.md (Telemetry section).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'tests/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.config/nextest.toml'
+      - '.github/workflows/test-telemetry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'tests/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.config/nextest.toml'
+      - '.github/workflows/test-telemetry.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: 1
+  BITNET_SKIP_SLOW_TESTS: "1"
+
+jobs:
+  nextest-junit:
+    name: Test Telemetry (JUnit + slow tests)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    # Advisory lane — does not gate merges. CI Core remains the merge gate.
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: test-telemetry-ubuntu
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@10ce611e0eba0b53a26be05dab27b76d3eed20bf  # v2
+        with:
+          tool: nextest
+
+      - name: Run nextest (ci profile, JUnit output)
+        run: |
+          # Use the existing `ci` profile in .config/nextest.toml. JUnit goes
+          # to target/nextest/ci/junit.xml. Run the same crate set as CI Core's
+          # build-test-linux job so the telemetry covers the merge-gate surface.
+          cargo nextest run --locked --profile ci \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            -p bitnet-prompt-templates \
+            -p bitnet-receipts \
+            -p bitnet-sampling \
+            -p bitnet-logits \
+            -p bitnet-gguf \
+            -p bitnet-generation \
+            -p bitnet-device-probe \
+            -p bitnet-engine-core \
+            --no-default-features --features cpu \
+            -- --test-threads 4 || true
+
+      - name: Slow-test summary
+        if: always()
+        run: |
+          set -euo pipefail
+          junit=target/nextest/ci/junit.xml
+          if [ ! -f "$junit" ]; then
+            echo "## Test Telemetry" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No JUnit output produced._" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          import os
+          path = "target/nextest/ci/junit.xml"
+          tree = ET.parse(path)
+          root = tree.getroot()
+          # nextest emits <testsuites><testsuite><testcase ...> with `time` attr.
+          cases = []
+          totals = {"tests": 0, "failures": 0, "skipped": 0, "time": 0.0}
+          for suite in root.iter("testsuite"):
+              totals["tests"]    += int(suite.attrib.get("tests", 0))
+              totals["failures"] += int(suite.attrib.get("failures", 0))
+              totals["skipped"]  += int(suite.attrib.get("skipped", 0))
+              totals["time"]     += float(suite.attrib.get("time", 0) or 0)
+              for c in suite.iter("testcase"):
+                  t = float(c.attrib.get("time", 0) or 0)
+                  name = f"{c.attrib.get('classname','?')}::{c.attrib.get('name','?')}"
+                  cases.append((t, name))
+          cases.sort(reverse=True)
+          slow = [c for c in cases if c[0] >= 0.5][:20]
+          print("## Test Telemetry")
+          print()
+          print(f"- **Tests:** {totals['tests']}")
+          print(f"- **Failures:** {totals['failures']}")
+          print(f"- **Skipped:** {totals['skipped']}")
+          print(f"- **Wall time (sum):** {totals['time']:.1f}s")
+          print()
+          if slow:
+              print("### Slowest tests (≥ 0.5s, top 20)")
+              print()
+              print("| Test | Time (s) |")
+              print("|---|---:|")
+              for t, name in slow:
+                  print(f"| `{name}` | {t:.2f} |")
+          else:
+              print("_No tests took ≥ 0.5s._")
+          PY
+
+      - name: Upload JUnit artifact
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: nextest-junit
+          path: target/nextest/ci/junit.xml
+          retention-days: 30
+          if-no-files-found: ignore
