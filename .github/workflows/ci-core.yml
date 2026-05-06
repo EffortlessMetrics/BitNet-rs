@@ -2,8 +2,10 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh.
-# Triggers are scoped to inputs that affect Rust compilation/tests. Docs and meta-only
-# changes are handled by markdownlint, link-check, docs-automation, and similar workflows.
+# Triggers are scoped to inputs that affect Rust compilation/tests plus campaign
+# tracking docs, because repository rules require this workflow's contexts before
+# every PR merge. Other docs and meta-only changes are handled by markdownlint,
+# link-check, docs-automation, and similar workflows.
 
 on:
   pull_request:
@@ -17,6 +19,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'docs/tracking/**'
       - '.github/workflows/ci-core.yml'
   push:
     branches: [ main ]
@@ -29,6 +32,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'docs/tracking/**'
       - '.github/workflows/ci-core.yml'
   workflow_dispatch:
 
