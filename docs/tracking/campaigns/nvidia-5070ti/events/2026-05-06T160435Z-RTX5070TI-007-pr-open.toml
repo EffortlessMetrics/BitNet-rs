@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T16:04:35Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-007"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3756
+head_sha = "1a5b8272bd0f773601a0ec64ef4c4c432c432898"
+actor = "codex"
+
+notes = [
+  "Opened the RTX 5070 Ti CUDA receipt validation and kernel counter PR.",
+  "The PR validates smoke/parity receipts for fallback-free CUDA proof and does not add benchmarks, QK256, transformer routing, server inference, dense CUDA, or BitNet inference claims.",
+]
