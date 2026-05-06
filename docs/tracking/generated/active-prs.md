@@ -3,7 +3,7 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| cpu-proof | CPU-BITNET-004 | #3696 | `codex/cpu-bitnet-004-scalar-packed-truth` | Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill. |
 | intel-258v-platform | LNL258V-RUN-001 | #3714 | `codex/intel-258v/LNL258V-RUN-001-platform-probe` | Add a JSON-ready Lunar Lake 258V platform probe that records CPU AVX2 facts, Arc 140V OpenCL/Level Zero/OpenVINO GPU visibility, Intel NPU OS/OpenVINO visibility, memory, power, OS, proof_stage=runtime_detected, and fallback_used=false without inference claims. |
 | intel-npu | NPU-002 | #3722 | `codex/intel-npu/NPU-002-lite-backend-identity` | Preserve Intel NPU requested and selected backend identity without mapping it to Metal, CUDA, generic GPU, or CPU fallback. |
+| nvidia-5070ti | RTX5070TI-005 | #3723 | `codex/nvidia-5070ti/RTX5070TI-005-smoke-receipt` | Compile and run a tiny CUDA kernel on the selected RTX 5070 Ti with a fallback-free smoke receipt and no BitNet inference or speedup claim. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |
