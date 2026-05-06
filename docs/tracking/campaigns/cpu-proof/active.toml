@@ -89,7 +89,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-002"
-status = "ready"
+status = "pr_open"
 branch = "codex/cpu-proof/CPU-BITNET-002-tokenizer-authority"
 stackable = false
 requires_human_merge = true

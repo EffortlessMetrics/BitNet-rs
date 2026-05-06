@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
-| CI-COVERAGE-001 | pr_open | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
+| CI-COVERAGE-001 | merged | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
 
 ## Hard Constraints
 

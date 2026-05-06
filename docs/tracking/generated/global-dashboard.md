@@ -5,8 +5,8 @@
 |---|---|---:|---|---|---|
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | M4-004 | TBD | ready | M4-005 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
-| ci-coverage | CI-COVERAGE-001 | #3620 | pr_open | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | CPU-BITNET-002 | TBD | ready | none | No GPU or NPU claims. |
+| ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
+| cpu-proof | CPU-BITNET-002 | #3680 | pr_open | none | No GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-003 | TBD | ready | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | LNL258V-002 | TBD | ready | none | Arc 140V OpenCL proof is not NPU proof. |
@@ -14,4 +14,4 @@
 | intel-npu | NPU-002 | TBD | ready | none | Device-node detection is not inference. |
 | nvidia-5070ti | RTX5070TI-003 | TBD | ready | RTX5070TI-004 | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
-| tracker-infra | TRACKER-002 | TBD | proposed | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
+| tracker-infra | TRACKER-002 | TBD | in_progress | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

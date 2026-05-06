@@ -18,7 +18,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "CI-COVERAGE-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/implement-minimal-codecov-integration-vm5aks"
 stackable = false
 requires_human_merge = true

@@ -26,6 +26,24 @@ cargo run -p xtask --no-default-features -- campaign generate
 cargo run -p xtask --no-default-features -- campaign doctor
 ```
 
+CI runs the strict forms with `--locked`:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- campaign doctor
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+```
+
+`campaign doctor` treats stale generated dashboards and normal item PR edits to
+legacy global tracker files as failures. Branches whose names contain
+`tracker-infra`, `legacy-migration`, or `generated-dashboard` are the intended
+maintenance exceptions for legacy tracker edits.
+
+When `GITHUB_REPOSITORY` and `GITHUB_TOKEN` are available outside push-to-main
+checks, `campaign doctor` also reconciles campaign state against live open
+GitHub PRs. An open PR that claims an item must have that item marked `pr_open`
+with a matching `pr_open` event, and an item marked `pr_open` must still have a
+live open PR that claims the item.
+
 ## Work Item Contract
 
 Each `[[work_item]]` in `active.toml` should include:
@@ -73,7 +91,9 @@ Lifecycle events are TOML files under `events/` with these event types:
 - `merged`
 - `closeout`
 
-Merged events must include `merge_sha`. `pr_open` events should include the PR number and head SHA when available.
+Merged events must include `merge_sha`. `pr_open` events must include the PR
+number; head SHA remains recommended so humans can audit which branch state
+opened the PR.
 
 ## Stackability
 

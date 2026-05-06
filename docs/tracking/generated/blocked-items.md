@@ -8,8 +8,8 @@
 | apple-m4 | M4-004 | M4-003 | ready |
 | apple-m4 | M4-005 | M4-004 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
-| cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | ready |
+| cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | pr_open |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | proposed |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | proposed |
-| tracker-infra | TRACKER-002 | TRACKER-001 | proposed |
+| tracker-infra | TRACKER-002 | TRACKER-001 | in_progress |

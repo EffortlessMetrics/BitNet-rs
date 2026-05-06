@@ -3,14 +3,14 @@
 
 - Campaign: `tracker-infra`
 - State: `active`
-- Objective: Finish the move from global hand-edited alignment trackers to campaign-local TOML manifests, append-only events, generated dashboards, and advisory xtask gates.
+- Objective: Finish the move from global hand-edited alignment trackers to campaign-local TOML manifests, append-only events, generated dashboards, and enforced xtask gates.
 
 ## Work Items
 
 | Item | State | PR | Branch | Acceptance |
 |---|---|---:|---|---|
 | TRACKER-001 | merged | #3660 | `codex/tracker-infra/TRACKER-001-campaign-local-gates` | Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards. |
-| TRACKER-002 | proposed | TBD | `codex/tracker-infra/TRACKER-002-ci-enforcement` | Add CI enforcement for campaign doctor and generated-dashboard freshness after the advisory tracker gate has landed. |
+| TRACKER-002 | in_progress | TBD | `codex/tracker-infra/TRACKER-002-ci-enforcement` | Add CI enforcement for campaign doctor and generated-dashboard freshness after the advisory tracker gate has landed, with stale generated dashboards and normal legacy tracker edits treated as hard failures. |
 
 ## Hard Constraints
 

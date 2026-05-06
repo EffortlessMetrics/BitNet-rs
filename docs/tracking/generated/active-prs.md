@@ -3,4 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| ci-coverage | CI-COVERAGE-001 | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
+| cpu-proof | CPU-BITNET-002 | #3680 | `codex/cpu-proof/CPU-BITNET-002-tokenizer-authority` | Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure. |
