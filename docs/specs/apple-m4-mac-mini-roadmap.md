@@ -249,6 +249,10 @@ Record chip, GPU core count, unified memory, selected backend, fallback status, 
 ### M4-009 - Benchmark Baseline
 
 Compare Apple CPU/NEON against M4 Metal for the validated kernel/subgraph.
+The first baseline is limited to the validated `tiny_metal_add_smoke` kernel and
+records `compile_ms`, `first_dispatch_ms`, `steady_state_ms`, and
+`cpu_reference_ms` in `ci/hardware/apple-m4-mac-mini/<date>/metal-benchmark.json`.
+It is not a general Metal performance claim and is not a BitNet inference claim.
 
 ### M4-010 - Apple CPU/NEON BitNet Reference
 
