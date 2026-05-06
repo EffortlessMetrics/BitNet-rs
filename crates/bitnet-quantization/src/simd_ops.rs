@@ -313,13 +313,17 @@ impl QuantizationKernels {
                 let rounded = _mm256_round_ps::<_MM_FROUND_TO_NEAREST_INT>(scaled);
                 let clamped = _mm256_max_ps(_mm256_min_ps(rounded, max_val_vec), min_val_vec);
 
-                // Convert to i32 and then to i8
+                // Convert to i32 and then to i8. AVX2 pack intrinsics operate
+                // within 128-bit lanes, so pack the low/high halves explicitly
+                // to preserve the order of all eight quantized values.
                 let i32_vec = _mm256_cvtps_epi32(clamped);
-                let i16_vec = _mm256_packs_epi32(i32_vec, i32_vec);
-                let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
+                let i32_lo = _mm256_castsi256_si128(i32_vec);
+                let i32_hi = _mm256_extracti128_si256::<1>(i32_vec);
+                let i16_vec = _mm_packs_epi32(i32_lo, i32_hi);
+                let i8_vec = _mm_packs_epi16(i16_vec, _mm_setzero_si128());
 
                 // Store 8 bytes efficiently
-                let result = _mm256_extract_epi64::<0>(i8_vec);
+                let result = _mm_cvtsi128_si64(i8_vec);
                 std::ptr::write_unaligned(output.as_mut_ptr().add(i * 8) as *mut i64, result);
             }
         }
@@ -538,6 +542,26 @@ mod tests {
 
         let dequantized = kernels.dequantize_simd(&quantized, &scales, block_size).unwrap();
         assert_eq!(dequantized.len(), data.len());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_quantize_preserves_upper_lane_values() {
+        if !is_x86_feature_detected!("avx2") {
+            return;
+        }
+
+        let kernels = QuantizationKernels::with_capabilities(SimdCapabilities {
+            has_avx512: false,
+            has_avx2: true,
+            has_neon: false,
+            has_sse4_1: true,
+        });
+        let data = vec![-2.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, -2.0];
+        let scales = vec![1.0];
+        let quantized = kernels.quantize_simd(&data, &scales, 8, 2).unwrap();
+
+        assert_eq!(quantized, vec![-2, -1, 0, 1, 1, 0, -1, -2]);
     }
 
     #[test]

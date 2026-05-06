@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T14:37:12Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-006"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3749
+merge_sha = "63b12420631df5b70ad81821cc13a6dfe3f474db"
+actor = "codex"
+
+notes = [
+  "Merged RTX 5070 Ti CPU/CUDA parity for the deterministic tiny vector-add fixture.",
+  "The receipt claims cuda_cpu_parity_tested only and records fallback_used=false, kernel_id=cuda_tiny_vector_add, max_abs_error=0.0, and mean_abs_error=0.0.",
+  "RTX5070TI-007 is now the next ready NVIDIA CUDA item for receipt validation and kernel counters.",
+]

@@ -15,6 +15,64 @@ use candle_core::Device;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
+/// Receipt/kernel-family label for TL1 work.
+pub const TL1_KERNEL_FAMILY: &str = "tl1";
+
+/// Execution phase for the Apple TL1 investigation item.
+pub const TL1_EXECUTION_PHASE: &str = "investigation";
+
+/// Current receipt layout source for TL1.
+pub const TL1_LAYOUT_SOURCE: &str = "tl1_reference";
+
+/// Current packed TL1 transport shape: unsigned 2-bit LUT codes plus per-block
+/// scales, with optional zero points for asymmetric quantization.
+pub const TL1_TRANSPORT_LAYOUT: &str = "tl1_packed_u2_codes_with_scales";
+
+/// Boundary name used until a Metal path proves direct TL1 layout consumption.
+pub const TL1_METAL_CONVERSION_BOUNDARY: &str = "tl1_to_metal_transport_not_proven";
+
+/// Apple TL1 layout contract for receipts and docs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TL1AppleLayoutContract {
+    pub requested_backend: &'static str,
+    pub selected_backend: &'static str,
+    pub runtime_api: &'static str,
+    pub kernel_family: &'static str,
+    pub execution_phase: &'static str,
+    pub layout_source: &'static str,
+    pub fallback_layout: Option<&'static str>,
+    pub transport_layout: &'static str,
+    pub conversion_boundary: &'static str,
+    pub block_size: usize,
+    pub precision_bits: u8,
+    pub consumes_packed_tl1_directly_on_metal: bool,
+    pub dequantizes_before_compute: bool,
+    pub metal_supported: bool,
+}
+
+/// Return the current Apple TL1 contract.
+///
+/// This records TL1 as CPU/NEON-oriented evidence. It does not claim native
+/// Metal TL1 execution or direct Metal consumption of the packed TL1 layout.
+pub const fn apple_m4_tl1_layout_contract() -> TL1AppleLayoutContract {
+    TL1AppleLayoutContract {
+        requested_backend: "apple-m4-cpu-neon",
+        selected_backend: "apple-m4-cpu-neon",
+        runtime_api: "cpu",
+        kernel_family: TL1_KERNEL_FAMILY,
+        execution_phase: TL1_EXECUTION_PHASE,
+        layout_source: TL1_LAYOUT_SOURCE,
+        fallback_layout: None,
+        transport_layout: TL1_TRANSPORT_LAYOUT,
+        conversion_boundary: TL1_METAL_CONVERSION_BOUNDARY,
+        block_size: TL1Config::DEFAULT_BLOCK_SIZE,
+        precision_bits: TL1Config::DEFAULT_PRECISION_BITS,
+        consumes_packed_tl1_directly_on_metal: false,
+        dequantizes_before_compute: true,
+        metal_supported: false,
+    }
+}
+
 /// Configuration for TL1 quantization loaded from .ini files
 #[derive(Debug, Clone)]
 pub struct TL1Config {
@@ -26,8 +84,19 @@ pub struct TL1Config {
 
 impl Default for TL1Config {
     fn default() -> Self {
-        Self { block_size: 64, lookup_table_size: 256, use_asymmetric: false, precision_bits: 2 }
+        Self {
+            block_size: Self::DEFAULT_BLOCK_SIZE,
+            lookup_table_size: Self::DEFAULT_LOOKUP_TABLE_SIZE,
+            use_asymmetric: false,
+            precision_bits: Self::DEFAULT_PRECISION_BITS,
+        }
     }
+}
+
+impl TL1Config {
+    pub const DEFAULT_BLOCK_SIZE: usize = 64;
+    pub const DEFAULT_LOOKUP_TABLE_SIZE: usize = 256;
+    pub const DEFAULT_PRECISION_BITS: u8 = 2;
 }
 
 /// Lookup table for TL1 quantization
@@ -605,8 +674,8 @@ mod tests {
     fn test_tl1_config_loading() {
         // Test default config
         let quantizer = TL1Quantizer::new();
-        assert_eq!(quantizer.config.block_size, 64);
-        assert_eq!(quantizer.config.precision_bits, 2);
+        assert_eq!(quantizer.config.block_size, TL1Config::DEFAULT_BLOCK_SIZE);
+        assert_eq!(quantizer.config.precision_bits, TL1Config::DEFAULT_PRECISION_BITS);
 
         // Test custom config
         let config = TL1Config {
@@ -618,6 +687,45 @@ mod tests {
         let quantizer = TL1Quantizer::with_config(config.clone());
         assert_eq!(quantizer.config.block_size, 128);
         assert!(quantizer.config.use_asymmetric);
+    }
+
+    #[test]
+    fn test_apple_m4_tl1_layout_contract_is_cpu_neon_only() {
+        let contract = apple_m4_tl1_layout_contract();
+
+        assert_eq!(contract.requested_backend, "apple-m4-cpu-neon");
+        assert_eq!(contract.selected_backend, "apple-m4-cpu-neon");
+        assert_eq!(contract.runtime_api, "cpu");
+        assert_eq!(contract.kernel_family, "tl1");
+        assert_eq!(contract.execution_phase, "investigation");
+        assert_eq!(contract.layout_source, "tl1_reference");
+        assert_eq!(contract.fallback_layout, None);
+        assert_eq!(contract.transport_layout, "tl1_packed_u2_codes_with_scales");
+        assert_eq!(contract.block_size, 64);
+        assert_eq!(contract.precision_bits, 2);
+        assert!(!contract.consumes_packed_tl1_directly_on_metal);
+        assert!(contract.dequantizes_before_compute);
+        assert!(!contract.metal_supported);
+    }
+
+    #[test]
+    fn test_tl1_default_quantization_records_packed_u2_codes_and_scales() {
+        let device = Device::Cpu;
+        let data = (0..128).map(|i| (i as f32 - 64.0) / 16.0).collect::<Vec<_>>();
+        let tensor = create_tensor_from_f32(data, &[128], &device).unwrap();
+        let quantizer = TL1Quantizer::new();
+
+        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+
+        assert_eq!(quantized.qtype, QuantizationType::TL1);
+        assert_eq!(quantized.block_size, TL1Config::DEFAULT_BLOCK_SIZE);
+        assert_eq!(quantized.data.len(), 32);
+        assert_eq!(quantized.scales.len(), 2);
+        assert!(quantized.zero_points.is_none());
+
+        let unpacked = quantizer.unpack_tl1_values(&quantized.data, 128);
+        assert_eq!(unpacked.len(), 128);
+        assert!(unpacked.iter().all(|code| (0..4).contains(code)));
     }
 
     #[test]

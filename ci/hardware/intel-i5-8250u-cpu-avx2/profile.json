@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "artifact_kind": "machine_profile",
+  "machine_id": "intel-i5-8250u-cpu-avx2",
+  "hardware_lane": "i5_8250u",
+  "timestamp_utc": "2026-05-06T20:15:59Z",
+  "os": {
+    "name": "Microsoft Windows 11 Home",
+    "version": "10.0.26200",
+    "kernel_or_build": "26200",
+    "native_or_virtualized": "native"
+  },
+  "cpu": {
+    "model": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "cores": 4,
+    "threads": 8,
+    "flags": [
+      "avx2",
+      "fma"
+    ],
+    "selected_backend": "intel-i5-8250u-cpu-avx2"
+  },
+  "accelerator": {
+    "requested_backend": "cpu",
+    "selected_backend": "intel-i5-8250u-cpu-avx2",
+    "runtime_api": "cpu",
+    "device_name": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "device_id": null,
+    "driver_version": null,
+    "fallback_used": false,
+    "fallback_reason": null
+  },
+  "memory": {
+    "kind": "DDR4-2400 SODIMM",
+    "total_bytes": 34359738368,
+    "vram_bytes": null,
+    "shared_memory": false
+  },
+  "power": {
+    "mode": "Balanced",
+    "thermal_profile": null,
+    "sustained_run": false
+  },
+  "lane_extension": {
+    "i5_8250u": {
+      "avx2_detected": true,
+      "fma_detected": true,
+      "avx512_detected": false,
+      "tdp_context": "15 W nominal mobile CPU; cTDP-up/down not measured in this artifact",
+      "sustained_frequency": null
+    }
+  },
+  "gpu_or_npu_used": false,
+  "claim_boundary": "CPU feature and parity artifact only; no throughput, sustained performance, GPU, OpenVINO, UHD 620, or NPU claim.",
+  "artifact_path": "ci/hardware/intel-i5-8250u-cpu-avx2/profile.json"
+}

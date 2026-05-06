@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T13:24:35Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005a"
+event = "merged"
+pr = 3735
+merge_sha = "d6b7b0f2f560d50d79415e0edde034a36b7c9926"
+actor = "maintainer"
+
+notes = [
+  "AVX2/FMA feature plumbing merged for QK256 GEMV gating.",
+  "CPU-BITNET-005b requested versus selected kernel dispatch remains next; no receipts, benchmarks, transformer decode, server, GPU, NPU, or crate collapse are claimed.",
+]

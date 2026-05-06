@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T11:26:32Z"
+campaign = "apple-m4"
+item = "M4-008"
+event = "pr_open"
+pr = 3721
+head_sha = "7a772c12ac9bc5463aff758ad56ce39f0ca9f606"
+actor = "codex"
+
+notes = [
+  "Recorded live GitHub state for the Apple M4 backend receipt PR so campaign doctor can reconcile open PR claims.",
+  "Tracker-only CI reconciliation; no runtime or receipt behavior changed here.",
+]

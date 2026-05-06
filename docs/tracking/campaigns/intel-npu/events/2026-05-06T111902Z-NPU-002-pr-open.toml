@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T11:19:02Z"
+campaign = "intel-npu"
+item = "NPU-002"
+event = "pr_open"
+pr = 3722
+branch = "codex/intel-npu/NPU-002-lite-backend-identity"
+head_sha = "a73607286e9d65381bafc6d86e4000141ee9f72c"
+actor = "codex"
+
+notes = [
+  "Opened identity-only Intel NPU config/common PR.",
+  "Keeps npu, intel-npu, and openvino-npu distinct from GPU, Metal, CUDA, CPU fallback, and runtime execution.",
+]

@@ -2,6 +2,13 @@
 
 BitNet-rs uses GitHub labels to selectively trigger heavy CI workflows. This keeps fast feedback for most PRs while ensuring comprehensive validation when needed.
 
+> **Cost discipline:** these labels are not convenience toggles. They are
+> explicit spend and verification decisions. The default PR lane is designed
+> to stay well below `$1` per PR — preferably far below — while still running
+> strong Rust-native tests scoped to the changed crates and risk packs. See
+> [CI Cost and Verification Policy](./cost-and-verification-policy.md) for
+> the rationale.
+
 ## Label-Gated Workflows
 
 These workflows only run when their corresponding label is applied to a PR:

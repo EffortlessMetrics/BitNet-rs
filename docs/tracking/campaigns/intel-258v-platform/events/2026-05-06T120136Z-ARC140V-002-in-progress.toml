@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T12:01:36Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started exact Arc 140V runtime visibility probe work on the Lunar Lake validation lane.",
+  "Scope is device-probe and tracker only; no inference, OpenCL kernel execution, or OpenVINO graph smoke claims.",
+]

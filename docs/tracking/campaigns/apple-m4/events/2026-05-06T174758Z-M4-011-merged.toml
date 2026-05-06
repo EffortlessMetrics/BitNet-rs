@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T17:47:58Z"
+campaign = "apple-m4"
+item = "M4-011"
+event = "merged"
+pr = 3769
+head_sha = "8ea48147a0fcbbc06ce50b2ea51dd8f2d41b5ceb"
+merge_sha = "1fa0c1e5bf86557bc4f6b1e77eea5aa28f823a00"
+actor = "codex"
+
+notes = [
+  "Merged native Metal I2_S smoke/parity proof.",
+  "The receipt-backed live path preserved requested_backend=apple-m4-metal, selected_backend=apple-m4-metal, runtime_api=metal, fallback_used=false, kernel_family=i2_s, execution_phase=parity, and CPU/NEON reference parity metrics.",
+  "No full BitNet Metal inference, QK256 on Metal, Metal performance, MPSGraph, server inference, or Neural Engine proof was claimed.",
+  "M4-012 is ready for TL1 Apple CPU/NEON investigation and Metal conversion-boundary documentation.",
+]

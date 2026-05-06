@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T15:27:42Z"
+campaign = "apple-m4"
+item = "M4-010"
+event = "merged"
+pr = 3746
+head_sha = "04c18711b5ebb1041da673439a8e5184b897262c"
+merge_sha = "876cc267852e6083c5d7fca3413ecdfa83f08d45"
+actor = "codex"
+
+notes = [
+  "Merged Apple CPU/NEON BitNet reference proof.",
+  "Strict real-GGUF proof preserved requested_backend=apple-m4-cpu-neon, selected_backend=apple-m4-cpu-neon, runtime_api=cpu, fallback_used=false, model/tokenizer identity, i2_s kernel family, decode phase, and scalar packed-reference kernel identity.",
+  "No Metal BitNet execution, QK256 on Apple Silicon, Apple CPU performance, server inference, or Neural Engine proof was claimed.",
+  "M4-011 is ready for native Metal I2_S smoke/parity.",
+]

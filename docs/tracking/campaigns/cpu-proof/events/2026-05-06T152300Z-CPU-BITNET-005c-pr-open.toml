@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T15:23:00Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005c"
+event = "pr_open"
+pr = 3753
+head_sha = "985f4d3c94bcf5de8118acdbfa98a8b8a3487f02"
+actor = "codex"
+
+notes = [
+  "Opened CPU-BITNET-005c to harden QK256 AVX2 decode GEMV parity across rows, tails, deterministic patterns, strict selection, direct AVX2 execution, and repeated-run equality.",
+  "Broad bitnet-quantization acceptance passes after the generic I2S AVX2 upper-lane fix in PR #3752 and SIMD snapshot baseline fix in PR #3755; no transformer decode, strict receipts, benchmarks, server, GPU, or NPU work is claimed.",
+]

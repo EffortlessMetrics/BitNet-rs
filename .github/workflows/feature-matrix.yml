@@ -24,12 +24,59 @@ permissions:
   contents: read
 
 jobs:
-  # Compile-only checks for each significant feature combination.
-  # These are fast (no linking of tests) and catch feature-wiring regressions early.
+  # Reduced PR-time matrix: just the canonical CPU paths. Catches the most common
+  # feature-wiring regressions cheaply. The full matrix below runs on main and
+  # opt-in PRs (via `feature-matrix` or `full-ci` label) and on workflow_dispatch.
+  pr-compile-check:
+    name: "pr-check (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.ref != 'refs/heads/main' &&
+      !contains(github.event.pull_request.labels.*.name, 'feature-matrix') &&
+      !contains(github.event.pull_request.labels.*.name, 'full-ci')
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - label: "no-features"
+            flags: "--no-default-features"
+          - label: "cpu"
+            flags: "--no-default-features --features cpu"
+          - label: "cpu+full-cli"
+            flags: "--no-default-features --features cpu,full-cli"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: feature-matrix-pr
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: cargo check ${{ matrix.label }}
+        run: cargo check --workspace --locked ${{ matrix.flags }}
+
+  # Full feature matrix. Runs on main pushes, manual dispatch, and PRs that opt in
+  # via the `feature-matrix` or `full-ci` label. The PR-time matrix above already
+  # covers the canonical CPU paths.
   compile-check:
     name: "check (${{ matrix.label }})"
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'feature-matrix') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +133,8 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
-          key: feature-matrix-${{ matrix.label }}
+          shared-key: feature-matrix-${{ matrix.label }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check ${{ matrix.label }}
         # continue-on-error at step level: step conclusion = success even on failure,
@@ -97,11 +145,18 @@ jobs:
           RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
         run: cargo check --workspace --locked ${{ matrix.flags }}
 
-  # Targeted compile checks for key crates that are most likely to diverge
+  # Targeted compile checks for key crates that are most likely to diverge.
+  # Gated to main/dispatch/full-ci same as the full matrix above; the PR-time
+  # canonical CPU checks already exercise these crates as part of the workspace.
   crate-feature-check:
     name: "crate-check (${{ matrix.crate }}/${{ matrix.label }})"
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'feature-matrix') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:
@@ -148,7 +203,8 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
-          key: crate-check-${{ matrix.crate }}-${{ matrix.label }}
+          shared-key: crate-check-${{ matrix.crate }}-${{ matrix.label }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check -p ${{ matrix.crate }} (${{ matrix.label }})
         # continue-on-error for GPU/oneapi checks that require CUDA/OpenCL runtime

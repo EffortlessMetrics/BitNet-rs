@@ -16,10 +16,12 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-qk256-layout-core = { path = "../bitnet-qk256-layout-core", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-transformer = { path = "../bitnet-transformer", version = "0.2.1-dev" }
 bitnet-gguf = { path = "../bitnet-gguf", version = "0.2.1-dev" }
 bitnet-weight-name-core = { path = "../bitnet-weight-name-core", version = "0.2.1-dev" }
+bitnet-layer-index-core = { path = "../bitnet-layer-index-core", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 bitnet-trace = { path = "../bitnet-trace", version = "0.2.1-dev", optional = true }
 anyhow.workspace = true
@@ -50,7 +52,7 @@ dirs = "6.0.0"
 serial_test.workspace = true
 temp-env = "0.3.6"
 sha2 = "0.10.9"
-sysinfo = "0.37.2"
+sysinfo = "0.38.0"
 bitnet-st2gguf = { path = "../bitnet-st2gguf", version = "0.2.1-dev" }
 bitnet-test-support.workspace = true
 bitnet-test-fixtures-core = { path = "../bitnet-test-fixtures-core", version = "0.2.1-dev" }

@@ -4,6 +4,7 @@
 //! loader implementations (GGUF and simple loaders).
 
 use bitnet_common::BitNetConfig;
+use bitnet_qk256_layout_core::qk256_packed_len_bytes;
 
 /// Expected [rows, cols] = [output_dim, input_dim] for kernel layout
 ///
@@ -72,18 +73,36 @@ pub fn detect_qk256_orientation_by_bytes(
     shape_transposed: (usize, usize),
     available_bytes: usize,
 ) -> (usize, usize) {
-    // QK256 format: each row has (cols+255)/256 blocks, each block is 64 bytes
-    let blocks_as_is = shape_as_is.1.div_ceil(256);
-    let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
-
-    let blocks_transposed = shape_transposed.1.div_ceil(256);
-    let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
+    let expected_as_is = qk256_packed_len_bytes(shape_as_is.0, shape_as_is.1).unwrap_or(usize::MAX);
+    let expected_transposed =
+        qk256_packed_len_bytes(shape_transposed.0, shape_transposed.1).unwrap_or(usize::MAX);
 
     // Choose the orientation that better matches the available bytes
     if available_bytes.abs_diff(expected_transposed) < available_bytes.abs_diff(expected_as_is) {
         shape_transposed
     } else {
         shape_as_is
+    }
+}
+
+/// Strict orientation detection for proof-mode layout validation.
+///
+/// This returns a shape only when the available byte length exactly matches the
+/// canonical packed length for one orientation. If both orientations match, the
+/// as-is shape wins to preserve the existing tie-breaker.
+pub fn detect_qk256_orientation_by_exact_bytes(
+    shape_as_is: (usize, usize),
+    shape_transposed: (usize, usize),
+    available_bytes: usize,
+) -> Option<(usize, usize)> {
+    let expected_as_is = qk256_packed_len_bytes(shape_as_is.0, shape_as_is.1).ok()?;
+    let expected_transposed =
+        qk256_packed_len_bytes(shape_transposed.0, shape_transposed.1).ok()?;
+
+    match (available_bytes == expected_as_is, available_bytes == expected_transposed) {
+        (true, _) => Some(shape_as_is),
+        (false, true) => Some(shape_transposed),
+        (false, false) => None,
     }
 }
 
@@ -176,5 +195,24 @@ mod tests {
         let available = 491_520;
         let result = detect_qk256_orientation_by_bytes(shape_as_is, shape_transposed, available);
         assert_eq!(result, shape_transposed);
+    }
+
+    #[test]
+    fn test_detect_qk256_orientation_by_exact_bytes() {
+        let shape_as_is = (640, 2560);
+        let shape_transposed = (2560, 640);
+
+        assert_eq!(
+            detect_qk256_orientation_by_exact_bytes(shape_as_is, shape_transposed, 409_600),
+            Some(shape_as_is)
+        );
+        assert_eq!(
+            detect_qk256_orientation_by_exact_bytes(shape_as_is, shape_transposed, 491_520),
+            Some(shape_transposed)
+        );
+        assert_eq!(
+            detect_qk256_orientation_by_exact_bytes(shape_as_is, shape_transposed, 409_599),
+            None
+        );
     }
 }

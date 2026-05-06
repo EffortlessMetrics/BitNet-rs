@@ -1,0 +1,1 @@
+Use the Intel 258V platform campaign to coordinate same-machine CPU, Arc 140V GPU, and Intel NPU validation without merging their proof labels. Record OS, driver, memory, power, thermal, OpenVINO, OpenCL, Level Zero, native, and WSL visibility context before any implementation claim.

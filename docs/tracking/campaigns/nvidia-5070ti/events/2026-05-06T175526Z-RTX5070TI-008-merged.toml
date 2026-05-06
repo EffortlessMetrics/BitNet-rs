@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T17:55:26Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-008"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3770
+merge_sha = "703b6be6c2a43cd1506dbb781d943aa5913adc1d"
+actor = "codex"
+
+notes = [
+  "Merged the RTX 5070 Ti CUDA benchmark baseline receipt.",
+  "The benchmark artifact measures the parity-tested tiny CUDA vector-add fixture and records transfer timing, kernel timing, runtime identity, power, thermal, and fallback-free counters.",
+  "The receipt keeps speedup_claim=false and records FP32/I2S benchmark profiles as not-run until parity-backed CUDA benchmark primitives exist.",
+]

@@ -23,6 +23,7 @@
 - [Troubleshooting](troubleshooting/troubleshooting.md)
 - [Health Endpoints](health-endpoints.md)
 - [Streaming API](streaming-api.md)
+- [API Snapshots](api/README.md)
 
 ## CPU / GPU Architectures
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)

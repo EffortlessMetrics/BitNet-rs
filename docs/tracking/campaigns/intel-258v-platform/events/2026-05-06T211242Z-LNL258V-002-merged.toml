@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T21:12:42Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-002"
+event = "merged"
+pr = 3784
+merge_sha = "69da7744f832ab71abbec60f27e7c1422630a5c0"
+actor = "codex"
+
+notes = [
+  "Recorded merge of the docs-only 258V platform probe bundle.",
+  "The merge defined artifact paths and same-machine comparison shape without runtime execution claims.",
+]

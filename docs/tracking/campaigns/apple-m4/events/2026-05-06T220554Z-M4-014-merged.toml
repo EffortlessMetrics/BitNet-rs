@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T22:05:54Z"
+campaign = "apple-m4"
+item = "M4-014"
+event = "merged"
+pr = 3789
+merge_sha = "bc4e53f76fc984add799dd4da2e1c40d1b05acf1"
+actor = "codex"
+
+notes = [
+  "Closed out strict BitNet M4 proof after PR #3789 merged.",
+  "Recorded receipt-backed real GGUF, real tokenizer, selected Apple CPU/NEON backend, and fallback_used=false proof without claiming Metal, Neural Engine, QK256, or general performance.",
+]

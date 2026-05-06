@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "artifact_kind": "platform-comparison-index",
+  "machine_id": "intel-258v",
+  "date": "2026-05-06",
+  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "proof_stage": "detected",
+  "artifacts": {
+    "platform": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "platform_cli": "ci/hardware/intel-258v/2026-05-06/platform-probe-cli.json",
+    "cpu_bitnet_validation": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json",
+    "arc140v": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+    "npu": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json"
+  },
+  "lanes": {
+    "cpu": {
+      "proof_label": "intel-258v-cpu-avx2",
+      "proof_stage": "blocked_preflight",
+      "artifact": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json"
+    },
+    "arc140v": {
+      "proof_label": "intel-arc-140v-opencl",
+      "proof_stage": "detected",
+      "artifact": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json"
+    },
+    "npu": {
+      "proof_label": "intel-npu-openvino",
+      "proof_stage": "detected",
+      "artifact": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json"
+    }
+  },
+  "fallback_used": false,
+  "claim_allowed": "Same-machine 258V OS visibility artifacts are linked for later runtime and BitNet validation.",
+  "claims_not_allowed": [
+    "Arc 140V runtime execution works",
+    "Intel NPU OpenVINO execution works",
+    "BitNet inference works on 258V"
+  ]
+}
