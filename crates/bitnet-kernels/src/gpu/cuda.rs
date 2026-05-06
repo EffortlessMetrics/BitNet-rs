@@ -7,11 +7,30 @@ use cudarc::driver::{
     CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
     result::device as cu_device, sys::CUdevice_attribute,
 };
-use cudarc::nvrtc::compile_ptx;
-use std::sync::Arc;
+use cudarc::nvrtc::{Ptx, compile_ptx};
+use std::{
+    any::Any,
+    mem::size_of,
+    sync::{Arc, Mutex},
+};
 
 /// Type alias for batch matrix multiplication operation
 type BatchOperation<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usize);
+
+/// Kernel ID used by RTX5070TI-005 tiny CUDA smoke receipts.
+pub const CUDA_TINY_VECTOR_ADD_KERNEL_ID: &str = "cuda_tiny_vector_add";
+
+const CUDA_TINY_VECTOR_ADD_SRC: &str = r#"
+extern "C" __global__
+void cuda_tiny_vector_add(const float* a, const float* b, float* c, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) {
+        c[idx] = a[idx] + b[idx];
+    }
+}
+"#;
+
+static NVRTC_COMPILE_HOOK_LOCK: Mutex<()> = Mutex::new(());
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
@@ -52,6 +71,139 @@ pub struct PerformanceStats {
     pub cache_misses: u64,
 }
 
+/// Result of the RTX5070TI-005 tiny CUDA vector-add smoke.
+#[derive(Debug, Clone)]
+pub struct CudaTinyVectorAddSmoke {
+    pub kernel_id: &'static str,
+    pub device_info: CudaDeviceInfo,
+    pub input_len: usize,
+    pub passed: bool,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+    pub host_to_device_bytes: u64,
+    pub device_to_host_bytes: u64,
+    pub kernel_launches: u64,
+}
+
+fn compile_cuda_ptx(source: &str, label: &str) -> Result<Ptx> {
+    // cudarc 0.17 can panic while dynamically loading NVRTC when nvrtc.dll is
+    // absent. Convert that into a normal error so smoke commands can still
+    // write negative receipts instead of aborting before receipt emission.
+    let _hook_guard = NVRTC_COMPILE_HOOK_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result = std::panic::catch_unwind(|| compile_ptx(source));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => {
+            Err(KernelError::GpuError { reason: format!("Failed to compile {label} PTX: {err:?}") }
+                .into())
+        }
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "Failed to compile {label} PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+/// Compile and launch a tiny CUDA vector-add kernel on the selected device.
+///
+/// This is intentionally not a BitNet kernel or inference proof. It only proves
+/// NVRTC compilation, CUDA launch, synchronization, and device-to-host copy for
+/// a deterministic vector-add fixture.
+pub fn run_cuda_tiny_vector_add_smoke(device_id: usize) -> Result<CudaTinyVectorAddSmoke> {
+    const LEN: usize = 1024;
+    const THREADS_PER_BLOCK: u32 = 256;
+
+    let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to create CUDA context for device {device_id}: {e:?}"),
+    })?;
+    let stream = ctx.default_stream();
+
+    let ptx = compile_cuda_ptx(CUDA_TINY_VECTOR_ADD_SRC, "tiny CUDA smoke")?;
+    let module = ctx.load_module(ptx).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to load tiny CUDA smoke module: {e:?}"),
+    })?;
+    let function = module.load_function(CUDA_TINY_VECTOR_ADD_KERNEL_ID).map_err(|e| {
+        KernelError::GpuError { reason: format!("Failed to load tiny CUDA smoke kernel: {e:?}") }
+    })?;
+
+    let a: Vec<f32> = (0..LEN).map(|i| (i as f32 * 0.25) - 17.0).collect();
+    let b: Vec<f32> = (0..LEN).map(|i| ((i % 31) as f32) - 15.0).collect();
+    let expected: Vec<f32> = a.iter().zip(&b).map(|(a, b)| a + b).collect();
+
+    let a_dev = stream.memcpy_stod(&a).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to transfer tiny smoke input A to device: {e:?}"),
+    })?;
+    let b_dev = stream.memcpy_stod(&b).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to transfer tiny smoke input B to device: {e:?}"),
+    })?;
+    let mut c_dev: CudaSlice<f32> = stream.alloc_zeros(LEN).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to allocate tiny smoke output: {e:?}"),
+    })?;
+
+    let grid = (LEN as u32).div_ceil(THREADS_PER_BLOCK);
+    let cfg = LaunchConfig {
+        grid_dim: (grid, 1, 1),
+        block_dim: (THREADS_PER_BLOCK, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&a_dev);
+    builder.arg(&b_dev);
+    builder.arg(&mut c_dev);
+    let n_arg = LEN as i32;
+    builder.arg(&n_arg);
+
+    unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to launch tiny CUDA smoke kernel: {e:?}"),
+    })?;
+    stream.synchronize().map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to synchronize tiny CUDA smoke kernel: {e:?}"),
+    })?;
+
+    let actual: Vec<f32> = stream.memcpy_dtov(&c_dev).map_err(|e| KernelError::GpuError {
+        reason: format!("Failed to transfer tiny smoke output back to host: {e:?}"),
+    })?;
+
+    let mut max_abs_error = 0.0f32;
+    let mut total_abs_error = 0.0f32;
+    for (actual, expected) in actual.iter().zip(&expected) {
+        let abs_error = (actual - expected).abs();
+        max_abs_error = max_abs_error.max(abs_error);
+        total_abs_error += abs_error;
+    }
+    let mean_abs_error = total_abs_error / LEN as f32;
+
+    Ok(CudaTinyVectorAddSmoke {
+        kernel_id: CUDA_TINY_VECTOR_ADD_KERNEL_ID,
+        device_info: CudaKernel::get_device_info(device_id)?,
+        input_len: LEN,
+        passed: max_abs_error <= f32::EPSILON,
+        max_abs_error,
+        mean_abs_error,
+        host_to_device_bytes: (2 * LEN * size_of::<f32>()) as u64,
+        device_to_host_bytes: (LEN * size_of::<f32>()) as u64,
+        kernel_launches: 1,
+    })
+}
+
 impl CudaKernel {
     /// Create a new CUDA kernel provider
     pub fn new() -> Result<Self> {
@@ -71,9 +223,7 @@ impl CudaKernel {
         let stream = ctx.default_stream();
 
         // Compile PTX kernel
-        let ptx = compile_ptx(include_str!("kernels/bitnet_kernels.cu")).map_err(|e| {
-            KernelError::GpuError { reason: format!("Failed to compile PTX: {:?}", e) }
-        })?;
+        let ptx = compile_cuda_ptx(include_str!("kernels/bitnet_kernels.cu"), "BitNet CUDA")?;
 
         // Load module
         let module = ctx.load_module(ptx).map_err(|e| KernelError::GpuError {

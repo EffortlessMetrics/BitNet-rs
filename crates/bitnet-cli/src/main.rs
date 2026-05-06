@@ -393,6 +393,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Compile and launch a tiny CUDA vector-add kernel
+    CudaSmoke {
+        /// CUDA device index to probe and launch on
+        #[arg(long, default_value_t = 0)]
+        device_index: usize,
+
+        /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     #[cfg(feature = "full-cli")]
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
@@ -597,6 +608,9 @@ async fn main() -> Result<()> {
         Some(Commands::Info) => show_system_info().await,
         Some(Commands::DeviceSmoke { json_out }) => {
             handle_device_smoke_command(&requested_backend_label, json_out).await
+        }
+        Some(Commands::CudaSmoke { device_index, json_out }) => {
+            handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
         }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
@@ -908,6 +922,208 @@ async fn handle_device_smoke_command(
         "cuda": cuda_probe,
         "claim": "cuda_runtime_probe_recorded",
         "kernel_execution": false,
+        "artifact_path": artifact_path,
+        "error": error,
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+struct CudaSmokeReceiptFields {
+    result: &'static str,
+    input_len: serde_json::Value,
+    max_abs_error: serde_json::Value,
+    mean_abs_error: serde_json::Value,
+    host_to_device_bytes: serde_json::Value,
+    device_to_host_bytes: serde_json::Value,
+    invocations: u64,
+    kernel_launches: u64,
+}
+
+impl Default for CudaSmokeReceiptFields {
+    fn default() -> Self {
+        Self {
+            result: "fail",
+            input_len: serde_json::Value::Null,
+            max_abs_error: serde_json::Value::Null,
+            mean_abs_error: serde_json::Value::Null,
+            host_to_device_bytes: serde_json::Value::Null,
+            device_to_host_bytes: serde_json::Value::Null,
+            invocations: 0,
+            kernel_launches: 0,
+        }
+    }
+}
+
+fn run_cuda_smoke_kernel_receipt_fields(
+    cuda_probe: &mut bitnet_device_probe::NvidiaCudaProbe,
+    device_index: usize,
+    error: &mut Option<String>,
+) -> CudaSmokeReceiptFields {
+    #[cfg(feature = "cuda")]
+    {
+        match bitnet_kernels::gpu::run_cuda_tiny_vector_add_smoke(device_index) {
+            Ok(smoke) => {
+                cuda_probe.selected_device_index = Some(smoke.device_info.device_id);
+                cuda_probe.selected_device_name = Some(smoke.device_info.name);
+                cuda_probe.compute_capability = Some(format!(
+                    "{}.{}",
+                    smoke.device_info.compute_capability.0, smoke.device_info.compute_capability.1
+                ));
+                cuda_probe.vram_bytes = Some(smoke.device_info.total_memory as u64);
+
+                if !smoke.passed {
+                    *error = Some(format!(
+                        "tiny CUDA vector add mismatch: max_abs_error={}, mean_abs_error={}",
+                        smoke.max_abs_error, smoke.mean_abs_error
+                    ));
+                }
+
+                CudaSmokeReceiptFields {
+                    result: if smoke.passed { "pass" } else { "fail" },
+                    input_len: serde_json::json!(smoke.input_len),
+                    max_abs_error: serde_json::json!(smoke.max_abs_error),
+                    mean_abs_error: serde_json::json!(smoke.mean_abs_error),
+                    host_to_device_bytes: serde_json::json!(smoke.host_to_device_bytes),
+                    device_to_host_bytes: serde_json::json!(smoke.device_to_host_bytes),
+                    invocations: 1,
+                    kernel_launches: smoke.kernel_launches,
+                }
+            }
+            Err(err) => {
+                *error = Some(format!("tiny CUDA vector add smoke failed: {err}"));
+                CudaSmokeReceiptFields::default()
+            }
+        }
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = cuda_probe;
+        let _ = device_index;
+        *error = Some("compiled without the cuda feature".to_string());
+        CudaSmokeReceiptFields::default()
+    }
+}
+
+async fn handle_cuda_smoke_command(
+    requested_backend_label: &str,
+    device_index: usize,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_common::BackendRequest;
+
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    const REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+    const KERNEL_ID: &str = "cuda_tiny_vector_add";
+
+    let request = BackendRequest::from_label(requested_backend_label)
+        .with_context(|| format!("unsupported cuda-smoke backend: {requested_backend_label}"))?;
+    let requested_backend = request.to_string();
+
+    if !matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+        anyhow::bail!(
+            "cuda-smoke currently supports nvidia-rtx-5070-ti-cuda only, got {requested_backend}"
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(device_index));
+    let identity_error =
+        if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) && cuda_probe.available {
+            validate_rtx_5070_ti_identity(&cuda_probe)
+        } else {
+            None
+        };
+
+    if let Some(error) = &identity_error {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error.clone());
+    }
+
+    let mut error = if !cuda_probe.available {
+        cuda_probe
+            .failure_reason
+            .clone()
+            .or_else(|| Some("requested CUDA smoke device is unavailable".to_string()))
+    } else {
+        None
+    };
+
+    let selected_backend = if cuda_probe.available {
+        Some(if matches!(request, BackendRequest::NvidiaRtx5070TiCuda) {
+            RTX_5070_TI_CUDA
+        } else {
+            "cuda"
+        })
+    } else {
+        None
+    };
+
+    let outcome = if error.is_none() {
+        run_cuda_smoke_kernel_receipt_fields(&mut cuda_probe, device_index, &mut error)
+    } else {
+        CudaSmokeReceiptFields::default()
+    };
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let claim = if error.is_none() && outcome.result == "pass" {
+        "kernel_smoke_tested"
+    } else {
+        "cuda_kernel_smoke_attempted"
+    };
+    let receipt = serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "cuda_smoke",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": "cuda",
+        "reference_backend": REFERENCE_BACKEND,
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cuda": {
+            "available": cuda_probe.available,
+            "device_count": cuda_probe.device_count,
+            "device_index": cuda_probe.selected_device_index,
+            "device_name": cuda_probe.selected_device_name,
+            "compute_capability": cuda_probe.compute_capability,
+            "driver_version": cuda_probe.driver_version,
+            "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+            "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+            "nvrtc_version": cuda_probe.nvrtc_version,
+            "nvml_available": cuda_probe.nvml_available,
+            "vram_bytes": cuda_probe.vram_bytes,
+            "power_limit_watts": cuda_probe.power_limit_watts,
+            "power_draw_watts": cuda_probe.power_draw_watts,
+            "temperature_c": cuda_probe.temperature_c,
+        },
+        "kernel_stats": [
+            {
+                "kernel_id": KERNEL_ID,
+                "invocations": outcome.invocations,
+                "fallback_invocations": 0,
+                "host_to_device_bytes": outcome.host_to_device_bytes,
+                "device_to_host_bytes": outcome.device_to_host_bytes,
+                "kernel_launches": outcome.kernel_launches,
+                "kernel_time_ms": null
+            }
+        ],
+        "input_len": outcome.input_len,
+        "max_abs_error": outcome.max_abs_error,
+        "mean_abs_error": outcome.mean_abs_error,
+        "result": outcome.result,
+        "claim": claim,
         "artifact_path": artifact_path,
         "error": error,
     });

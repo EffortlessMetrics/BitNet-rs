@@ -31,6 +31,9 @@
       "kernel_time_ms": null
     }
   ],
+  "input_len": 1024,
+  "max_abs_error": 0.0,
+  "mean_abs_error": 0.0,
   "result": "TBD",
   "claim": "kernel_smoke_tested",
   "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/cuda-smoke.json"
