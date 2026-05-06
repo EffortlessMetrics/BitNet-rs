@@ -267,7 +267,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005c"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-bitnet-005c-avx2-parity-hardening"
 stackable = false
 requires_human_merge = true
@@ -297,5 +297,42 @@ must_not_claim = [
   "Transformer decode is complete.",
   "Strict receipts are complete.",
   "Benchmark or throughput performance is proven.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-006"
+status = "ready"
+branch = "codex/cpu-bitnet-006-transformer-decode"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-005c"]
+acceptance = "One real-model CPU decode step runs with real tensors, deterministic KV-cache behavior, visible selected kernel family, and explicit failure for missing runtime pieces."
+commands = [
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cpu/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/src/backends.rs",
+  "crates/bitnet-inference/**",
+  "tests/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+]
+may_claim = [
+  "A real CPU transformer decode step exists after merge.",
+  "Selected CPU kernel family is visible in the decode path after merge.",
+]
+must_not_claim = [
+  "Strict receipts are complete.",
+  "Benchmark or throughput performance is proven.",
+  "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
