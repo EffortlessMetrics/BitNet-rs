@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T05:16:47Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-003"
+event = "pr_open"
+pr = 3690
+head_sha = "1a6ba78c6fd536821b00b773b5e234ffee4c0494"
+actor = "codex"
+
+notes = [
+  "Opened canonical packed layout PR for QK256/I2_S geometry, stride, row/block ranges, and byte-exact layout fixtures.",
+  "No scalar truth kernel, AVX2 parity, transformer decode, receipt, benchmark, server, GPU, or crate-collapse claims are made.",
+]
