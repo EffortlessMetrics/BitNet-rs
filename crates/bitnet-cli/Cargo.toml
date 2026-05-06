@@ -14,6 +14,9 @@ include = [
   "Cargo.toml",
 ]
 
+
+[lints]
+workspace = true
 [lib]
 name = "bitnet_cli"
 path = "src/lib.rs"

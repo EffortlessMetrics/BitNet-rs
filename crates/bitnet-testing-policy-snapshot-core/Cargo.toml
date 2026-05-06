@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Policy snapshot resolution helpers for BitNet testing configuration contexts"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.1-dev" }
 bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.2.1-dev" }

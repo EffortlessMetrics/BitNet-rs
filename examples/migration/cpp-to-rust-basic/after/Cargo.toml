@@ -5,6 +5,9 @@ edition.workspace = true
 description = "Basic BitNet Rust example - migrated from C++"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [[bin]]
 name = "main"
 path = "src/main.rs"

@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 description = "Benchmarking and profiling harness for wgpu compute kernels"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-bench-receipts = { path = "../bitnet-bench-receipts" }
 bitnet-bench-regression-core = { path = "../bitnet-bench-regression-core" }

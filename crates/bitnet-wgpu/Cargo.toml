@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 description = "wgpu-based GPU compute backend for BitNet inference (Vulkan/Metal/DX12)"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-dispatch-core = { path = "../bitnet-dispatch-core" }
 bitnet-nvidia = { path = "../bitnet-nvidia" }

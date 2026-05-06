@@ -1,0 +1,22 @@
+schema_version = "0.3"
+
+# Semantic no-panic allowlist entries use identity = path + family + selector.
+# last_seen line/column values are advisory repair hints only.
+#
+# [[allow]]
+# path = "crates/example/src/parser.rs"
+# family = "unwrap"
+# classification = "test_only"
+# owner = "parser"
+# explanation = "Fixture setup path; migrate to panic-free helper."
+# expires = "2026-07-01"
+#
+# [allow.selector]
+# kind = "method_call"
+# container = "parses_fixture"
+# callee = "unwrap"
+# receiver_fingerprint = "std::fs::read_to_string(path)"
+#
+# [allow.last_seen]
+# line = 42
+# column = 17

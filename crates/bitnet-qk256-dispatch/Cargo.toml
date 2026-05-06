@@ -11,6 +11,9 @@ readme = "README.md"
 repository.workspace = true
 rust-version.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-qk256-layout-core = { path = "../bitnet-qk256-layout-core", version = "0.2.1-dev" }

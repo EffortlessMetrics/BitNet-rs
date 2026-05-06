@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 publish = false  # One-time migration tool, not for distribution
 
+
+[lints]
+workspace = true
 [dependencies]
 walkdir = "2.5.0"
 syn = { version = "2.0.110", features = ["full", "visit-mut"] }

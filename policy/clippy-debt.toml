@@ -1,0 +1,6 @@
+schema = 1
+
+# Temporary, reviewed lint-policy exceptions belong here. Each debt entry must
+# include lint, path, owner, reason, and expires. Keep entries narrow and remove
+# them when the corresponding #[expect(..., reason = "...")] suppression is
+# retired.

@@ -10,6 +10,9 @@ description = "SRP core device configuration parsing and resolution"
 keywords.workspace = true
 categories.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }

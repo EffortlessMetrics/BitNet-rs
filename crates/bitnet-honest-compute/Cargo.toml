@@ -17,6 +17,9 @@ include = [
   "README.md",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [features]

@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Startup contract primitives powered by BDD grid and runtime feature profile"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-startup-contract-core = { path = "../bitnet-startup-contract-core", version = "0.2.1-dev" }
 

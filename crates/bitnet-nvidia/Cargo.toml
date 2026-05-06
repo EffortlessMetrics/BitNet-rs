@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 description = "NVIDIA-specific GPU tuning heuristics shared across BitNet backends"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [dev-dependencies]

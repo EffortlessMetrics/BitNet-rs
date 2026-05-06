@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "SRP microcrate for chat REPL state management"
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 

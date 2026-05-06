@@ -1,0 +1,762 @@
+schema = 1
+msrv = "1.93"
+
+[policy]
+panic_free_tests = true
+allow_test_carveouts = false
+suppression_style = "expect-with-reason"
+blanket_categories = false
+
+
+[[lint]]
+name = "rust::unsafe_code"
+level = "warn"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "rust::unsafe_op_in_unsafe_fn"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "rust::unused_must_use"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "rust::unexpected_cfgs"
+level = "warn"
+status = "active"
+class = "cfg"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::dbg_macro"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::todo"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unimplemented"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::panic"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unreachable"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unwrap_used"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::expect_used"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::get_unwrap"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unwrap_in_result"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::panic_in_result_fn"
+level = "deny"
+status = "active"
+class = "panic"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::string_slice"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::indexing_slicing"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::out_of_bounds_indexing"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unchecked_time_subtraction"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::char_indices_as_byte_indices"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::sliced_string_as_bytes"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::index_refutable_slice"
+level = "deny"
+status = "active"
+class = "ast-safety"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::let_underscore_future"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::let_underscore_must_use"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::let_underscore_lock"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unused_result_ok"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::map_err_ignore"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::assertions_on_result_states"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::lines_filter_map_ok"
+level = "deny"
+status = "active"
+class = "silent-failure"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::await_holding_lock"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::await_holding_refcell_ref"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::await_holding_invalid_type"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::future_not_send"
+level = "warn"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::large_futures"
+level = "warn"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::arc_with_non_send_sync"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::rc_mutex"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::mut_mutex_lock"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::readonly_write_lock"
+level = "deny"
+status = "active"
+class = "async-concurrency"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::mem_forget"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::forget_non_drop"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::drop_non_drop"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::undocumented_unsafe_blocks"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::multiple_unsafe_ops_per_block"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::repr_packed_without_abi"
+level = "deny"
+status = "active"
+class = "unsafe-memory"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::float_cmp"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::float_cmp_const"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::float_equality_without_abs"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::lossy_float_literal"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_sign_loss"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_possible_wrap"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_possible_truncation"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_precision_loss"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::invalid_upcast_comparisons"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_abs_to_unsigned"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_enum_truncation"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cast_nan_to_int"
+level = "deny"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_midpoint"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_is_multiple_of"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_div_ceil"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::arithmetic_side_effects"
+level = "warn"
+status = "active"
+class = "numeric"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::suspicious_open_options"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::nonsensical_open_options"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::ineffective_open_options"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::path_buf_push_overwrite"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::join_absolute_paths"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::read_line_without_trim"
+level = "warn"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::exit"
+level = "deny"
+status = "active"
+class = "file-process-path"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::iter_not_returning_iterator"
+level = "deny"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::expl_impl_clone_on_copy"
+level = "deny"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::infallible_try_from"
+level = "deny"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::fallible_impl_from"
+level = "deny"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::error_impl_error"
+level = "deny"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::result_unit_err"
+level = "warn"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::result_large_err"
+level = "warn"
+status = "active"
+class = "api-correctness"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::format_in_format_args"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::to_string_in_format_args"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unused_format_specs"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::unnecessary_debug_formatting"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::uninlined_format_args"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_let_else"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_ok_or"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_strip"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_split_once"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::manual_is_variant_and"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::filter_map_next"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::flat_map_option"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::match_result_ok"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::cloned_instead_of_copied"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::iter_cloned_collect"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::iter_overeager_cloned"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::needless_collect"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::redundant_closure"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::redundant_closure_for_method_calls"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::missing_panics_doc"
+level = "deny"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::missing_errors_doc"
+level = "warn"
+status = "active"
+class = "reviewability"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::allow_attributes"
+level = "deny"
+status = "active"
+class = "suppression-governance"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::allow_attributes_without_reason"
+level = "deny"
+status = "active"
+class = "suppression-governance"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::blanket_clippy_restriction_lints"
+level = "deny"
+status = "active"
+class = "suppression-governance"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::ignore_without_reason"
+level = "deny"
+status = "active"
+class = "suppression-governance"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[lint]]
+name = "clippy::should_panic_without_expect"
+level = "deny"
+status = "active"
+class = "suppression-governance"
+reason = "Part of the shared Effortless Metrics workspace lint baseline."
+
+[[planned]]
+name = "clippy::same_length_and_capacity"
+level = "deny"
+activate_when_msrv = "1.94"
+reason = "Catch raw-parts reconstruction mistakes."
+
+[[planned]]
+name = "clippy::manual_ilog2"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Prefer the standard integer log helper."
+
+[[planned]]
+name = "clippy::decimal_bitwise_operands"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Make bit masks visually inspectable."
+
+[[planned]]
+name = "clippy::needless_type_cast"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Avoid stale numeric type drift."
+
+[[planned]]
+name = "clippy::disallowed_fields"
+level = "deny"
+activate_when_msrv = "1.95"
+reason = "Allow architecture policy to ban direct field access across protected seams."
+
+[[planned]]
+name = "clippy::manual_checked_ops"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Prefer checked arithmetic over manual divide-by-zero guards."
+
+[[planned]]
+name = "clippy::manual_take"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use standard ownership helper instead of local reimplementation."
+
+[[planned]]
+name = "clippy::manual_pop_if"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use collection APIs that encode predicate-and-pop intent directly."
+
+[[planned]]
+name = "clippy::duration_suboptimal_units"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Make durations legible without mental unit conversion."
+
+[[planned]]
+name = "clippy::unnecessary_trailing_comma"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Keep generated and hand-written format macro calls clean."

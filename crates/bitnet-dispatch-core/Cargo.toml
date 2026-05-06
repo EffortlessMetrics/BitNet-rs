@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 description = "Backend-agnostic compute dispatch sizing and recording primitives"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [features]

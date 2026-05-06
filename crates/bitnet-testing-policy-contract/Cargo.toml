@@ -15,6 +15,9 @@ include = [
   "Cargo.toml",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.1-dev" }
 bitnet-feature-contract = { path = "../bitnet-feature-contract", version = "0.2.1-dev" }

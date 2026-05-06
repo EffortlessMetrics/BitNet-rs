@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "SRP core token span merge/split utilities"
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [dev-dependencies]

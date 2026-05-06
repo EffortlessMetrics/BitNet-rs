@@ -14,6 +14,9 @@ readme = "README.md"
 rust-version.workspace = true
 publish = false                                                                          # Internal crate, not published
 
+
+[lints]
+workspace = true
 [features]
 default = []
 ffi = ["dep:bindgen", "dep:cc"]  # Enable native/C++ build only when requested

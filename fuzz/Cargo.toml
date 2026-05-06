@@ -8,6 +8,9 @@ license = "MIT OR Apache-2.0"
 [package.metadata]
 cargo-fuzz = true
 
+
+[lints]
+workspace = true
 [dependencies]
 libfuzzer-sys = "0.4.10"
 serde_json = "1.0.145"

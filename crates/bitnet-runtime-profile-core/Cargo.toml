@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Core runtime profile, BDD, and feature-flag contracts"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-runtime-profile-contract = { path = "../bitnet-runtime-profile-contract", version = "0.2.1-dev" }
 

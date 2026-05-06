@@ -6,5 +6,8 @@ rust-version = "1.92.0"
 description = "WGSL compute shaders for I2_S 2-bit quantized inference (BitNet)"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dev-dependencies]
 naga = { version = "28", features = ["wgsl-in"] }

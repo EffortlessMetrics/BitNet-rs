@@ -10,5 +10,8 @@ keywords.workspace = true
 categories.workspace = true
 description = "CPU activation kernels extracted as an SRP microcrate"
 
+
+[lints]
+workspace = true
 [dependencies]
 libm = "0.2.16"

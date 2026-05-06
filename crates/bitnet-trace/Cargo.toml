@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 license = "MIT OR Apache-2.0"
 description = "Tensor activation tracing for bitnet-rs cross-validation debugging"
 
+
+[lints]
+workspace = true
 [dependencies]
 blake3 = "1.8.2"
 serde = { version = "1.0.228", features = ["derive"] }

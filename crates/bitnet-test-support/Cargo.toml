@@ -9,6 +9,9 @@ authors.workspace = true
 description = "Shared test infrastructure for BitNet-rs: EnvGuard/EnvScope, model-path gating, RNG seeds"
 publish = true
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-test-env.workspace = true
 

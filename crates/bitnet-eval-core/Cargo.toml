@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "SRP helpers for evaluation and scoring math"
 
+
+[lints]
+workspace = true
 [lib]
 name = "bitnet_eval_core"
 path = "src/lib.rs"

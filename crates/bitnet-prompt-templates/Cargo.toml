@@ -11,6 +11,9 @@ readme = "README.md"
 repository.workspace = true
 rust-version.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-prompt-templates-core = { path = "../bitnet-prompt-templates-core", version = "0.2.1-dev" }
 

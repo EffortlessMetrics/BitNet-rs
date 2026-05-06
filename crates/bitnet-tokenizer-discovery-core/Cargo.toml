@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "SRP core crate for tokenizer path auto-discovery and resolution"
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 tracing.workspace = true

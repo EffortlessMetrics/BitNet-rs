@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "C API bindings for BitNet"
 
+
+[lints]
+workspace = true
 [lib]
 name = "bitnet_ffi"
 # add rlib so integration tests can import the crate by name

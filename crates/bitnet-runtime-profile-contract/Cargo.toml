@@ -15,6 +15,9 @@ include = [
   "Cargo.toml",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-runtime-profile-contract-core = { path = "../bitnet-runtime-profile-contract-core", version = "0.2.1-dev" }
 

@@ -10,6 +10,9 @@ authors.workspace = true
 description = "Architecture-aware LayerNorm and projection weight validation rules for BitNet models"
 readme = "README.md"
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 regex = "1.12.2"

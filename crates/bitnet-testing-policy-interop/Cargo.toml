@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Interoperability façade for BitNet testing policy, BDD grid, and runtime feature flags"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-testing-policy-contract = { path = "../bitnet-testing-policy-contract", version = "0.2.1-dev" }
 bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.1-dev" }

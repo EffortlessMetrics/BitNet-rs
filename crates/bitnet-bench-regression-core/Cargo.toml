@@ -6,5 +6,8 @@ rust-version = "1.92.0"
 description = "Core benchmark regression detection primitives"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-bench-receipts = { path = "../bitnet-bench-receipts" }

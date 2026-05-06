@@ -10,5 +10,8 @@ name = "bitnet-api-key-auth-core"
 repository.workspace = true
 version.workspace = true
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }

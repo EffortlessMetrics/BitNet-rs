@@ -7,6 +7,9 @@ description = "Cross-validation framework for BitNet Rust vs C++ implementations
 license = "MIT OR Apache-2.0"
 publish = false
 
+
+[lints]
+workspace = true
 [features]
 default = []
 # llama-ffi: llama.cpp cross-validation (no bitnet-sys dependency)

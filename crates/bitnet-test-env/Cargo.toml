@@ -9,6 +9,9 @@ authors.workspace = true
 description = "Thread-safe test environment variable isolation primitives for BitNet-rs"
 publish = true
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [dev-dependencies]

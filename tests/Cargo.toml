@@ -9,6 +9,9 @@ publish = false
 autotests = false
 autobenches = false
 
+
+[lints]
+workspace = true
 [lib]
 name = "bitnet_tests"
 path = "lib.rs"

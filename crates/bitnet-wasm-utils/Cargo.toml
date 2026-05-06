@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "Shared WebAssembly runtime utilities for BitNet crates"
 
+
+[lints]
+workspace = true
 [dependencies]
 thiserror = { workspace = true }
 wasm-bindgen = { workspace = true }

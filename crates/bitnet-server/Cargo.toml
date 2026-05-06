@@ -16,6 +16,9 @@ include = [
   "HEALTH_ENDPOINTS.md",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-api-key-auth-core = { path = "../bitnet-api-key-auth-core", version = "0.2.1-dev" }
 anyhow.workspace = true

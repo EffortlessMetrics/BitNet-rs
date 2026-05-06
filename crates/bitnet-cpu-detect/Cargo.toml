@@ -15,6 +15,9 @@ include = [
   "Cargo.toml",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 
 [features]

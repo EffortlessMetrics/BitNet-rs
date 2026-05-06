@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Core policy and BDD compatibility orchestration for BitNet runtime and scenario configuration"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.1-dev" }
 bitnet-testing-policy-snapshot-core = { path = "../bitnet-testing-policy-snapshot-core", version = "0.2.1-dev" }

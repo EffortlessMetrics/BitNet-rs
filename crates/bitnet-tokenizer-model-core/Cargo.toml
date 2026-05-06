@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "Core model/vocabulary detection helpers for tokenizers"
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 

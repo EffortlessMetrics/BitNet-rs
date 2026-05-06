@@ -7,6 +7,9 @@ authors = ["BitNet Contributors"]
 description = "SRP core GGUF compatibility diagnostics"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }

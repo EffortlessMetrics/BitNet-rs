@@ -20,6 +20,9 @@ include = [
   "csrc/**",
 ]
 
+
+[lints]
+workspace = true
 [features]
 integration-tests = []
 # When enabled, we compile the GGML shim and expose IQ2_S dequantization.

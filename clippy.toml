@@ -1,16 +1,18 @@
-# Clippy configuration for bitnet-rs
-# Ensures high code quality standards for crates.io publication
+# Repo-local Clippy configuration for BitNet-rs.
+#
+# Do not add test carveouts here. The workspace policy is panic-free across
+# production code and tests. Temporary exceptions must be represented as
+# narrow #[expect(..., reason = "...")] suppressions and tracked in
+# policy/clippy-debt.toml when they represent migration debt.
+#
+# This file is reserved for repo-specific disallowed methods, types, macros,
+# and similar domain-policy additions.
 
 # MSRV compatibility
-msrv = "1.92.0"
+msrv = "1.93"
 
-# Complexity thresholds
+# Complexity thresholds retained from the previous BitNet-rs Clippy profile.
 cognitive-complexity-threshold = 30
 too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 trivial-copy-size-limit = 64
-
-# Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
-allow-mixed-uninlined-format-args = true  # Performance in hot paths

@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Runtime profile, BDD, and feature-flagging utilities for BitNet"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.2.1-dev" }
 

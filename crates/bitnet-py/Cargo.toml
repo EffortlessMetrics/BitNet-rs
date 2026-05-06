@@ -13,6 +13,9 @@ categories.workspace = true
 description = "Python bindings for BitNet.cpp Rust implementation"
 readme = "README.md"
 
+
+[lints]
+workspace = true
 [lib]
 name = "bitnet_py"
 crate-type = ["cdylib"]

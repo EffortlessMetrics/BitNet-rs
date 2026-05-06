@@ -15,6 +15,9 @@ include = [
   "Cargo.toml",
 ]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.2.1-dev" }
 bitnet-runtime-context = { path = "../bitnet-runtime-context", version = "0.2.1-dev" }

@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Core startup contract diagnostics and profile reporting model"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 anyhow.workspace = true
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }

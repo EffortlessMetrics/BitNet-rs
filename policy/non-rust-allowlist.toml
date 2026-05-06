@@ -1,0 +1,15 @@
+schema_version = "1.0"
+
+# Non-Rust programming/configuration surfaces must be explicitly owned and
+# covered by checks. Add entries with either path or glob, plus kind, owner,
+# reason, surface, classification, and covered_by when the surface is
+# production/test/tooling.
+#
+# [[allow]]
+# glob = ".github/workflows/*.yml"
+# kind = "ci_declarative"
+# owner = "release/ci"
+# reason = "GitHub Actions workflow definitions are platform-required YAML."
+# surface = "ci"
+# classification = "config"
+# covered_by = ["cargo xtask check-lint-policy"]

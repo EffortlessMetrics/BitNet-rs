@@ -12,6 +12,9 @@ categories.workspace = true
 description = "Compact feature and BDD profile contracts for BitNet tooling"
 include = ["src/**", "Cargo.toml"]
 
+
+[lints]
+workspace = true
 [dependencies]
 bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.2.1-dev" }
 bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.2.1-dev" }

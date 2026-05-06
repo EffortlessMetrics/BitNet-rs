@@ -6,6 +6,9 @@ rust-version = "1.92.0"
 description = "Kernel execution runner for wgpu compute pipelines"
 license = "MIT OR Apache-2.0"
 
+
+[lints]
+workspace = true
 [dependencies]
 wgpu = { version = "24", features = ["vulkan-portability"] }
 bytemuck = { version = "1", features = ["derive"] }

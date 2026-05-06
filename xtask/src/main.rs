@@ -678,6 +678,9 @@ enum Cmd {
     /// Check feature flag consistency
     CheckFeatures,
 
+    /// Validate workspace Clippy policy, debt ledger, and lint inheritance
+    CheckLintPolicy,
+
     /// CI gates that emit JSON for robust detection
     Gate {
         #[command(subcommand)]
@@ -1231,6 +1234,7 @@ fn real_main() -> Result<()> {
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
         Cmd::CheckFeatures => check_features(),
+        Cmd::CheckLintPolicy => check_lint_policy(),
         Cmd::Gate { which } => match which {
             GateWhich::Mapper { model } => std::process::exit(gates::mapper_gate(model)?),
         },
@@ -4320,6 +4324,493 @@ fn dir_size(path: &Path) -> Result<u64> {
         }
     }
     Ok(size)
+}
+
+fn check_lint_policy() -> Result<()> {
+    let root = Path::new(".");
+    let cargo_path = root.join("Cargo.toml");
+    let cargo_text = fs::read_to_string(&cargo_path).context("read Cargo.toml")?;
+    let cargo: toml::Value = toml::from_str(&cargo_text).context("parse Cargo.toml")?;
+
+    let policy_path = root.join("policy/clippy-lints.toml");
+    let policy_text = fs::read_to_string(&policy_path).context("read policy/clippy-lints.toml")?;
+    let policy: toml::Value =
+        toml::from_str(&policy_text).context("parse policy/clippy-lints.toml")?;
+
+    let mut errors = Vec::new();
+    let workspace = cargo.get("workspace").and_then(toml::Value::as_table);
+    let workspace_package =
+        workspace.and_then(|table| table.get("package")).and_then(toml::Value::as_table);
+    let cargo_msrv =
+        workspace_package.and_then(|table| table.get("rust-version")).and_then(toml::Value::as_str);
+    let policy_msrv = policy.get("msrv").and_then(toml::Value::as_str);
+    if cargo_msrv != Some("1.93") {
+        errors.push(format!("workspace.package.rust-version must be 1.93, found {:?}", cargo_msrv));
+    }
+    if cargo_msrv != policy_msrv {
+        errors.push(format!(
+            "workspace.package.rust-version {:?} must match policy msrv {:?}",
+            cargo_msrv, policy_msrv
+        ));
+    }
+
+    let policy_table = policy.get("policy").and_then(toml::Value::as_table);
+    check_policy_bool(&mut errors, policy_table, "panic_free_tests", true);
+    check_policy_bool(&mut errors, policy_table, "allow_test_carveouts", false);
+    check_policy_bool(&mut errors, policy_table, "blanket_categories", false);
+    let suppression_style =
+        policy_table.and_then(|table| table.get("suppression_style")).and_then(toml::Value::as_str);
+    if suppression_style != Some("expect-with-reason") {
+        errors.push(format!(
+            "policy.suppression_style must be expect-with-reason, found {:?}",
+            suppression_style
+        ));
+    }
+
+    let workspace_lints =
+        workspace.and_then(|table| table.get("lints")).and_then(toml::Value::as_table);
+    let rust_lints =
+        workspace_lints.and_then(|table| table.get("rust")).and_then(toml::Value::as_table);
+    let clippy_lints =
+        workspace_lints.and_then(|table| table.get("clippy")).and_then(toml::Value::as_table);
+
+    for (name, level) in REQUIRED_RUST_LINTS {
+        check_lint_level(&mut errors, rust_lints, "rust", name, level);
+    }
+    for (name, level) in REQUIRED_CLIPPY_LINTS {
+        check_lint_level(&mut errors, clippy_lints, "clippy", name, level);
+    }
+    check_active_lint_ledger(&mut errors, &policy, rust_lints, clippy_lints);
+
+    for blanket in ["all", "pedantic", "nursery", "restriction"] {
+        if clippy_lints.is_some_and(|table| table.contains_key(blanket)) {
+            errors.push(format!(
+                "workspace.lints.clippy.{blanket} is a blanket category; use explicit governed lints"
+            ));
+        }
+    }
+
+    check_planned_lints(&mut errors, &policy, clippy_lints, cargo_msrv);
+    check_clippy_toml(&mut errors, root);
+    check_workspace_lint_inheritance(&mut errors, root, &cargo);
+    check_clippy_debt(&mut errors, root);
+    check_allowlist_metadata(&mut errors, root.join("policy/no-panic-allowlist.toml"), true);
+    check_allowlist_metadata(&mut errors, root.join("policy/non-rust-allowlist.toml"), false);
+
+    if errors.is_empty() {
+        println!("✅ lint policy check passed");
+        return Ok(());
+    }
+
+    for error in &errors {
+        eprintln!("❌ {error}");
+    }
+    bail!("lint policy check failed with {} error(s)", errors.len())
+}
+
+const REQUIRED_RUST_LINTS: &[(&str, &str)] = &[
+    ("unsafe_code", "warn"),
+    ("unsafe_op_in_unsafe_fn", "deny"),
+    ("unused_must_use", "deny"),
+    ("unexpected_cfgs", "warn"),
+];
+
+const REQUIRED_CLIPPY_LINTS: &[(&str, &str)] = &[
+    ("dbg_macro", "deny"),
+    ("todo", "deny"),
+    ("unimplemented", "deny"),
+    ("panic", "deny"),
+    ("unreachable", "deny"),
+    ("unwrap_used", "deny"),
+    ("expect_used", "deny"),
+    ("get_unwrap", "deny"),
+    ("unwrap_in_result", "deny"),
+    ("panic_in_result_fn", "deny"),
+    ("string_slice", "deny"),
+    ("indexing_slicing", "deny"),
+    ("out_of_bounds_indexing", "deny"),
+    ("unchecked_time_subtraction", "deny"),
+    ("char_indices_as_byte_indices", "deny"),
+    ("sliced_string_as_bytes", "deny"),
+    ("index_refutable_slice", "deny"),
+    ("let_underscore_future", "deny"),
+    ("let_underscore_must_use", "deny"),
+    ("let_underscore_lock", "deny"),
+    ("unused_result_ok", "deny"),
+    ("map_err_ignore", "deny"),
+    ("assertions_on_result_states", "deny"),
+    ("lines_filter_map_ok", "deny"),
+    ("await_holding_lock", "deny"),
+    ("await_holding_refcell_ref", "deny"),
+    ("await_holding_invalid_type", "deny"),
+    ("future_not_send", "warn"),
+    ("large_futures", "warn"),
+    ("arc_with_non_send_sync", "deny"),
+    ("rc_mutex", "deny"),
+    ("mut_mutex_lock", "deny"),
+    ("readonly_write_lock", "deny"),
+    ("mem_forget", "deny"),
+    ("forget_non_drop", "deny"),
+    ("drop_non_drop", "deny"),
+    ("undocumented_unsafe_blocks", "deny"),
+    ("multiple_unsafe_ops_per_block", "deny"),
+    ("repr_packed_without_abi", "deny"),
+    ("float_cmp", "deny"),
+    ("float_cmp_const", "deny"),
+    ("float_equality_without_abs", "deny"),
+    ("lossy_float_literal", "deny"),
+    ("cast_sign_loss", "deny"),
+    ("cast_possible_wrap", "warn"),
+    ("cast_possible_truncation", "warn"),
+    ("cast_precision_loss", "warn"),
+    ("invalid_upcast_comparisons", "deny"),
+    ("cast_abs_to_unsigned", "deny"),
+    ("cast_enum_truncation", "deny"),
+    ("cast_nan_to_int", "deny"),
+    ("manual_midpoint", "warn"),
+    ("manual_is_multiple_of", "warn"),
+    ("manual_div_ceil", "warn"),
+    ("arithmetic_side_effects", "warn"),
+    ("suspicious_open_options", "deny"),
+    ("nonsensical_open_options", "deny"),
+    ("ineffective_open_options", "deny"),
+    ("path_buf_push_overwrite", "deny"),
+    ("join_absolute_paths", "deny"),
+    ("read_line_without_trim", "warn"),
+    ("exit", "deny"),
+    ("iter_not_returning_iterator", "deny"),
+    ("expl_impl_clone_on_copy", "deny"),
+    ("infallible_try_from", "deny"),
+    ("fallible_impl_from", "deny"),
+    ("error_impl_error", "deny"),
+    ("result_unit_err", "warn"),
+    ("result_large_err", "warn"),
+    ("format_in_format_args", "deny"),
+    ("to_string_in_format_args", "deny"),
+    ("unused_format_specs", "deny"),
+    ("unnecessary_debug_formatting", "warn"),
+    ("uninlined_format_args", "warn"),
+    ("manual_let_else", "warn"),
+    ("manual_ok_or", "warn"),
+    ("manual_strip", "warn"),
+    ("manual_split_once", "warn"),
+    ("manual_is_variant_and", "warn"),
+    ("filter_map_next", "warn"),
+    ("flat_map_option", "warn"),
+    ("match_result_ok", "deny"),
+    ("cloned_instead_of_copied", "warn"),
+    ("iter_cloned_collect", "warn"),
+    ("iter_overeager_cloned", "warn"),
+    ("needless_collect", "warn"),
+    ("redundant_closure", "warn"),
+    ("redundant_closure_for_method_calls", "warn"),
+    ("missing_panics_doc", "deny"),
+    ("missing_errors_doc", "warn"),
+    ("allow_attributes", "deny"),
+    ("allow_attributes_without_reason", "deny"),
+    ("blanket_clippy_restriction_lints", "deny"),
+    ("ignore_without_reason", "deny"),
+    ("should_panic_without_expect", "deny"),
+];
+
+fn check_active_lint_ledger(
+    errors: &mut Vec<String>,
+    policy: &toml::Value,
+    rust_lints: Option<&toml::map::Map<String, toml::Value>>,
+    clippy_lints: Option<&toml::map::Map<String, toml::Value>>,
+) {
+    let Some(entries) = policy.get("lint").and_then(toml::Value::as_array) else {
+        errors.push("policy/clippy-lints.toml must include active [[lint]] entries".to_string());
+        return;
+    };
+    for (name, level) in REQUIRED_RUST_LINTS {
+        let full = format!("rust::{name}");
+        if !active_lint_entry_exists(entries, &full, level) {
+            errors.push(format!(
+                "policy/clippy-lints.toml missing active entry for {full} = {level}"
+            ));
+        }
+    }
+    for (name, level) in REQUIRED_CLIPPY_LINTS {
+        let full = format!("clippy::{name}");
+        if !active_lint_entry_exists(entries, &full, level) {
+            errors.push(format!(
+                "policy/clippy-lints.toml missing active entry for {full} = {level}"
+            ));
+        }
+    }
+    for entry in entries {
+        let table = entry.as_table();
+        let name = table.and_then(|table| table.get("name")).and_then(toml::Value::as_str);
+        let level = table.and_then(|table| table.get("level")).and_then(toml::Value::as_str);
+        let status = table.and_then(|table| table.get("status")).and_then(toml::Value::as_str);
+        let class = table.and_then(|table| table.get("class")).and_then(toml::Value::as_str);
+        let reason = table.and_then(|table| table.get("reason")).and_then(toml::Value::as_str);
+        if name.is_none()
+            || level.is_none()
+            || status != Some("active")
+            || class.is_none_or(str::is_empty)
+            || reason.is_none_or(str::is_empty)
+        {
+            errors.push(format!(
+                "active lint entry must include name, level, status=active, class, and reason: {entry}"
+            ));
+            continue;
+        }
+        let Some(name) = name else {
+            continue;
+        };
+        let Some(level) = level else {
+            continue;
+        };
+        if let Some(bare) = name.strip_prefix("rust::") {
+            check_lint_level(errors, rust_lints, "rust", bare, level);
+        } else if let Some(bare) = name.strip_prefix("clippy::") {
+            check_lint_level(errors, clippy_lints, "clippy", bare, level);
+        } else {
+            errors.push(format!("active lint {name} must start with rust:: or clippy::"));
+        }
+    }
+}
+
+fn active_lint_entry_exists(entries: &[toml::Value], name: &str, level: &str) -> bool {
+    entries.iter().any(|entry| {
+        let table = entry.as_table();
+        table.and_then(|table| table.get("name")).and_then(toml::Value::as_str) == Some(name)
+            && table.and_then(|table| table.get("level")).and_then(toml::Value::as_str)
+                == Some(level)
+            && table.and_then(|table| table.get("status")).and_then(toml::Value::as_str)
+                == Some("active")
+    })
+}
+
+fn check_policy_bool(
+    errors: &mut Vec<String>,
+    policy_table: Option<&toml::map::Map<String, toml::Value>>,
+    key: &str,
+    expected: bool,
+) {
+    let actual = policy_table.and_then(|table| table.get(key)).and_then(toml::Value::as_bool);
+    if actual != Some(expected) {
+        errors.push(format!("policy.{key} must be {expected}, found {actual:?}"));
+    }
+}
+
+fn check_lint_level(
+    errors: &mut Vec<String>,
+    table: Option<&toml::map::Map<String, toml::Value>>,
+    family: &str,
+    name: &str,
+    expected: &str,
+) {
+    let actual = table.and_then(|table| table.get(name)).and_then(toml::Value::as_str);
+    if actual != Some(expected) {
+        errors
+            .push(format!("workspace.lints.{family}.{name} must be {expected}, found {actual:?}"));
+    }
+}
+
+fn check_planned_lints(
+    errors: &mut Vec<String>,
+    policy: &toml::Value,
+    clippy_lints: Option<&toml::map::Map<String, toml::Value>>,
+    cargo_msrv: Option<&str>,
+) {
+    let Some(planned) = policy.get("planned").and_then(toml::Value::as_array) else {
+        errors
+            .push("policy/clippy-lints.toml must include planned Rust 1.94/1.95 flips".to_string());
+        return;
+    };
+    let mut saw_194 = false;
+    let mut saw_195 = false;
+    for item in planned {
+        let table = item.as_table();
+        let name = table.and_then(|table| table.get("name")).and_then(toml::Value::as_str);
+        let level = table.and_then(|table| table.get("level")).and_then(toml::Value::as_str);
+        let activate =
+            table.and_then(|table| table.get("activate_when_msrv")).and_then(toml::Value::as_str);
+        let reason = table.and_then(|table| table.get("reason")).and_then(toml::Value::as_str);
+        if name.is_none()
+            || level.is_none()
+            || activate.is_none()
+            || reason.is_none_or(str::is_empty)
+        {
+            errors.push(format!(
+                "planned lint entry is missing name, level, activate_when_msrv, or reason: {item}"
+            ));
+            continue;
+        }
+        if activate == Some("1.94") {
+            saw_194 = true;
+        }
+        if activate == Some("1.95") {
+            saw_195 = true;
+        }
+        if cargo_msrv.is_some_and(|msrv| msrv < activate.unwrap_or(msrv)) {
+            let bare_name = name.unwrap().strip_prefix("clippy::").unwrap_or(name.unwrap());
+            if clippy_lints.is_some_and(|table| table.contains_key(bare_name)) {
+                errors.push(format!(
+                    "planned lint {} must not be active before MSRV {}",
+                    name.unwrap(),
+                    activate.unwrap()
+                ));
+            }
+        }
+    }
+    if !saw_194 || !saw_195 {
+        errors.push("planned lint ledger must include both Rust 1.94 and 1.95 flips".to_string());
+    }
+}
+
+fn check_clippy_toml(errors: &mut Vec<String>, root: &Path) {
+    let path = root.join("clippy.toml");
+    let Ok(text) = fs::read_to_string(&path) else {
+        errors.push("clippy.toml must exist".to_string());
+        return;
+    };
+    for carveout in [
+        "allow-unwrap-in-tests",
+        "allow-expect-in-tests",
+        "allow-panic-in-tests",
+        "allow-indexing-slicing-in-tests",
+        "allow-dbg-in-tests",
+    ] {
+        if text.contains(carveout)
+            && !text.contains(&format!("Do not add test carveouts such as `{carveout}`"))
+        {
+            errors.push(format!("clippy.toml must not set {carveout}"));
+        }
+    }
+}
+
+fn check_workspace_lint_inheritance(errors: &mut Vec<String>, root: &Path, cargo: &toml::Value) {
+    let Some(members) = cargo
+        .get("workspace")
+        .and_then(|workspace| workspace.get("members"))
+        .and_then(toml::Value::as_array)
+    else {
+        errors.push("workspace.members must be present".to_string());
+        return;
+    };
+    let mut package_paths = vec![PathBuf::from("Cargo.toml")];
+    for member in members.iter().filter_map(toml::Value::as_str) {
+        package_paths.push(PathBuf::from(member).join("Cargo.toml"));
+    }
+    package_paths.sort();
+    package_paths.dedup();
+    for package_path in package_paths {
+        let full_path = root.join(&package_path);
+        if !full_path.exists() {
+            errors.push(format!(
+                "workspace member manifest {} does not exist",
+                package_path.display()
+            ));
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(&full_path) else {
+            errors.push(format!("could not read {}", package_path.display()));
+            continue;
+        };
+        let Ok(manifest) = toml::from_str::<toml::Value>(&text) else {
+            errors.push(format!("could not parse {}", package_path.display()));
+            continue;
+        };
+        if manifest.get("package").is_none() {
+            continue;
+        }
+        let inherits = manifest
+            .get("lints")
+            .and_then(|lints| lints.get("workspace"))
+            .and_then(toml::Value::as_bool);
+        if inherits != Some(true) {
+            errors
+                .push(format!("{} must include [lints] workspace = true", package_path.display()));
+        }
+    }
+}
+
+fn check_clippy_debt(errors: &mut Vec<String>, root: &Path) {
+    let path = root.join("policy/clippy-debt.toml");
+    let Ok(text) = fs::read_to_string(&path) else {
+        errors.push("policy/clippy-debt.toml must exist".to_string());
+        return;
+    };
+    let Ok(doc) = toml::from_str::<toml::Value>(&text) else {
+        errors.push("policy/clippy-debt.toml must parse as TOML".to_string());
+        return;
+    };
+    let Some(entries) = doc.get("debt").and_then(toml::Value::as_array) else {
+        return;
+    };
+    for (index, entry) in entries.iter().enumerate() {
+        let table = entry.as_table();
+        for field in ["lint", "path", "owner", "reason", "expires"] {
+            let value = table.and_then(|table| table.get(field)).and_then(toml::Value::as_str);
+            if value.is_none_or(str::is_empty) {
+                errors.push(format!("clippy debt entry #{index} missing {field}"));
+            }
+        }
+        check_expiry(
+            errors,
+            table.and_then(|table| table.get("expires")).and_then(toml::Value::as_str),
+            &format!("clippy debt entry #{index}"),
+        );
+    }
+}
+
+fn check_allowlist_metadata(errors: &mut Vec<String>, path: PathBuf, panic_allowlist: bool) {
+    let Ok(text) = fs::read_to_string(&path) else {
+        errors.push(format!("{} must exist", path.display()));
+        return;
+    };
+    let Ok(doc) = toml::from_str::<toml::Value>(&text) else {
+        errors.push(format!("{} must parse as TOML", path.display()));
+        return;
+    };
+    let Some(entries) = doc.get("allow").and_then(toml::Value::as_array) else {
+        return;
+    };
+    for (index, entry) in entries.iter().enumerate() {
+        let table = entry.as_table();
+        let label = format!("{} allow entry #{index}", path.display());
+        let fields: &[&str] = if panic_allowlist {
+            &["path", "family", "classification", "owner", "explanation"]
+        } else {
+            &["kind", "owner", "reason", "surface", "classification"]
+        };
+        for field in fields {
+            let value = table.and_then(|table| table.get(*field)).and_then(toml::Value::as_str);
+            if value.is_none_or(str::is_empty) {
+                errors.push(format!("{label} missing {field}"));
+            }
+        }
+        if !panic_allowlist {
+            let has_path = table.and_then(|table| table.get("path")).is_some();
+            let has_glob = table.and_then(|table| table.get("glob")).is_some();
+            if has_path == has_glob {
+                errors.push(format!("{label} must include exactly one of path or glob"));
+            }
+        }
+        check_expiry(
+            errors,
+            table.and_then(|table| table.get("expires")).and_then(toml::Value::as_str),
+            &label,
+        );
+    }
+}
+
+fn check_expiry(errors: &mut Vec<String>, expires: Option<&str>, label: &str) {
+    let Some(expires) = expires else {
+        return;
+    };
+    let Ok(expiry) = chrono::NaiveDate::parse_from_str(expires, "%Y-%m-%d") else {
+        errors.push(format!("{label} has invalid expiry date {expires:?}; use YYYY-MM-DD"));
+        return;
+    };
+    let today = chrono::Utc::now().date_naive();
+    if expiry < today {
+        errors.push(format!("{label} expired on {expires}"));
+    }
 }
 
 fn check_features() -> Result<()> {
