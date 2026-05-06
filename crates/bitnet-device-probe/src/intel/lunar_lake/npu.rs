@@ -108,6 +108,7 @@ fn accel_devices() -> Vec<String> {
     }
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn intel_vpu_driver_seen() -> bool {
     #[cfg(target_os = "linux")]
     {

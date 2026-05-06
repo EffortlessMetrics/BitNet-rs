@@ -17,6 +17,7 @@ pub struct X86CpuFeatureProbe {
 }
 
 /// Probe x86 SIMD features without panicking on non-x86 targets.
+#[allow(clippy::missing_const_for_fn)]
 pub fn probe_x86_cpu_features() -> X86CpuFeatureProbe {
     #[cfg(target_arch = "x86_64")]
     {

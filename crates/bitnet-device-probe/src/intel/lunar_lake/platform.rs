@@ -152,6 +152,7 @@ fn total_memory_bytes() -> Option<u64> {
     }
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn power_mode() -> Option<String> {
     platform_power_mode()
 }
