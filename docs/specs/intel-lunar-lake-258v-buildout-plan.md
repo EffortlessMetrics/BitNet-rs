@@ -82,6 +82,26 @@ pub struct Lnl258vPlatformProbe {
 pub fn probe_lnl258v_platform() -> Lnl258vPlatformProbe;
 ```
 
+The implementation keeps runtime probes separate:
+
+```text
+crates/bitnet-device-probe/src/
+  cpu/
+  runtimes/
+    opencl.rs
+    level_zero.rs
+    openvino.rs
+  intel/lunar_lake/
+    cpu.rs
+    arc140v.rs
+    npu.rs
+    platform.rs
+```
+
+These modules collect visibility facts only. They must not compile OpenVINO
+graphs, dispatch OpenCL kernels, run BitNet inference, or route through CPU
+fallbacks as accelerator proof.
+
 Initial files:
 
 - `crates/bitnet-device-probe/src/intel_lnl258v.rs`
