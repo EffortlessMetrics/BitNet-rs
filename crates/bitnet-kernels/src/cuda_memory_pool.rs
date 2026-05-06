@@ -416,23 +416,24 @@ impl CudaMemoryPool {
         // Merge with the *next* free block.
         let block = self.blocks[&offset].clone();
         let next_offset = block.offset + block.size;
-        if let Some(next) = self.blocks.get(&next_offset) {
-            if !next.in_use {
-                let merged_size = block.size + next.size;
-                self.blocks.remove(&next_offset);
-                self.blocks.get_mut(&offset).unwrap().size = merged_size;
-            }
+        if let Some(next) = self.blocks.get(&next_offset)
+            && !next.in_use
+        {
+            let merged_size = block.size + next.size;
+            self.blocks.remove(&next_offset);
+            self.blocks.get_mut(&offset).unwrap().size = merged_size;
         }
 
         // Merge with the *previous* free block.
         let prev = self.blocks.range(..offset).next_back().map(|(&o, b)| (o, b.clone()));
-        if let Some((prev_off, prev_block)) = prev {
-            if !prev_block.in_use && prev_off + prev_block.size == offset {
-                let cur = &self.blocks[&offset];
-                let merged_size = prev_block.size + cur.size;
-                self.blocks.remove(&offset);
-                self.blocks.get_mut(&prev_off).unwrap().size = merged_size;
-            }
+        if let Some((prev_off, prev_block)) = prev
+            && !prev_block.in_use
+            && prev_off + prev_block.size == offset
+        {
+            let cur = &self.blocks[&offset];
+            let merged_size = prev_block.size + cur.size;
+            self.blocks.remove(&offset);
+            self.blocks.get_mut(&prev_off).unwrap().size = merged_size;
         }
     }
 

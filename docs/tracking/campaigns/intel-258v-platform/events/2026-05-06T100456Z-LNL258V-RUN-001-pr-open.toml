@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T10:04:56Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-RUN-001"
+event = "pr_open"
+pr = 3714
+head_sha = "daabc852a1cd5c84a5a1184dc2c967a2ebb5d122"
+actor = "codex"
+
+notes = [
+  "Opened the visibility-only Lunar Lake 258V platform probe PR.",
+  "The PR records CPU, Arc 140V, OpenVINO GPU, Intel NPU, memory, power, and OS visibility without inference, kernel, graph, or accelerator claims.",
+]

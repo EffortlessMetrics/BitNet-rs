@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T14:13:20Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005b"
+event = "pr_open"
+pr = 3748
+head_sha = "82c0e3f206ec95b097a0edd474e87dd44ead5005"
+actor = "codex"
+
+notes = [
+  "Started CPU-BITNET-005b for proof-level QK256 requested and selected kernel dispatch.",
+  "This PR does not add receipts, benchmarks, transformer decode, server, GPU, NPU, or crate collapse.",
+]

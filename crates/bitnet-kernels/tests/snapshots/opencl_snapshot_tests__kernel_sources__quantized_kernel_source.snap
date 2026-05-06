@@ -1,0 +1,41 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: src.source
+---
+__kernel void dequantize_i2s(
+    __global const uchar* packed,
+    __global const float* scales,
+    __global float* output,
+    const int num_elements, const int block_size)
+{
+    int i = get_global_id(0);
+    if (i >= num_elements) return;
+    int byte_idx = i / 4;
+    int bit_pos = (i % 4) * 2;
+    int val = (packed[byte_idx] >> bit_pos) & 0x03;
+    float fval = (float)(val - 1);
+    int block_idx = i / block_size;
+    output[i] = fval * scales[block_idx];
+}
+
+__kernel void quantized_matvec(
+    __global const uchar* packed_w,
+    __global const float* scales,
+    __global const float* x,
+    __global float* y,
+    const int rows, const int cols, const int block_size)
+{
+    int row = get_global_id(0);
+    if (row >= rows) return;
+    float sum = 0.0f;
+    for (int col = 0; col < cols; col++) {
+        int idx = row * cols + col;
+        int byte_idx = idx / 4;
+        int bit_pos = (idx % 4) * 2;
+        int val = (packed_w[byte_idx] >> bit_pos) & 0x03;
+        float w = (float)(val - 1)
+            * scales[idx / block_size];
+        sum += w * x[col];
+    }
+    y[row] = sum;
+}

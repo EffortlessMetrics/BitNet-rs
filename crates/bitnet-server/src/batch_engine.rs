@@ -557,43 +557,19 @@ impl BatchEngine {
             processing.insert(batch_id.clone(), batch.clone());
         }
 
-        // TODO: Execute batch with actual inference engine
-        // For now, simulate execution
-        let execution_duration = self.simulate_batch_execution(&batch).await?;
-
-        // Update statistics
-        self.batch_counter.fetch_add(1, Ordering::Relaxed);
-        self.total_processing_time
-            .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
-
-        // Deliver responses to all requests in this batch.
+        // Real batch inference is not wired yet. Fail every queued request
+        // explicitly so production-shaped endpoints cannot return fake output.
         let pending_requests = {
             let mut responses = self.batch_responses.lock().await;
             responses.remove(&batch_id).unwrap_or_default()
         };
 
         for pending in pending_requests {
-            let simulated_tokens = pending.request.max_tokens.clamp(1, 64) as u64;
-            let simulated_text = format!(
-                "Simulated response for prompt: {}",
-                pending.request.prompt.chars().take(200).collect::<String>()
+            let error = anyhow::anyhow!(
+                "Batch inference is not implemented; real server inference must be wired before this endpoint can return generated text"
             );
 
-            let result = BatchResult {
-                request_id: pending.request.id,
-                generated_text: simulated_text,
-                tokens_generated: simulated_tokens,
-                execution_time: execution_duration,
-                device_used: batch.device,
-                quantization_type: pending
-                    .request
-                    .quantization_hint
-                    .unwrap_or_else(|| "I2S".to_string()),
-                batch_id: batch_id.clone(),
-                batch_size: batch.size(),
-            };
-
-            if pending.response_tx.send(Ok(result)).is_err() {
+            if pending.response_tx.send(Err(error)).is_err() {
                 debug!(batch_id = %batch_id, "Dropped response for cancelled request");
             }
         }
@@ -608,34 +584,10 @@ impl BatchEngine {
         info!(
             batch_id = %batch_id,
             processing_time_ms = processing_time.as_millis(),
-            "Batch execution completed"
+            "Batch execution rejected because inference is not implemented"
         );
 
         Ok(())
-    }
-
-    /// Simulate batch execution (placeholder)
-    async fn simulate_batch_execution(&self, batch: &ProcessingBatch) -> Result<Duration> {
-        let start = Instant::now();
-
-        // Simulate processing time based on batch size and device
-        let base_time_ms = match batch.device {
-            Device::Cpu => 100,
-            Device::Cuda(_) => 50,
-            Device::Metal => 60, // TODO: Adjust for Metal performance
-            Device::Hip(_) | Device::Npu => 55, // HIP/NPU: similar to GPU performance
-            Device::OpenCL(_) => 55, // TODO: Adjust for OpenCL performance
-        };
-
-        let processing_time = Duration::from_millis(base_time_ms * batch.size() as u64);
-        tokio::time::sleep(processing_time).await;
-
-        // Simulate token generation
-        let tokens_per_request = 50;
-        let total_tokens = batch.size() as u64 * tokens_per_request;
-        self.total_tokens_generated.fetch_add(total_tokens, Ordering::Relaxed);
-
-        Ok(start.elapsed())
     }
 
     /// Get current statistics

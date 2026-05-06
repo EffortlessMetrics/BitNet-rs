@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: prios
+---
+- OpenCL-tiled=50
+- OpenCL-vec=40
+- OpenCL-scalar=30
+- CPU-SIMD=20
+- CPU-scalar=10

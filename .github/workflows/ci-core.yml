@@ -1,9 +1,9 @@
 name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
-# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, fuzz/**, Cargo.{toml,lock}, .github/workflows/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
-# Workflow hardening: concurrency + timeouts applied across all workflows in #485
+# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh.
+# Triggers are scoped to inputs that affect Rust compilation/tests. Docs and meta-only
+# changes are handled by markdownlint, link-check, docs-automation, and similar workflows.
 
 on:
   pull_request:
@@ -13,23 +13,11 @@ on:
       - 'crossval/**'
       - 'tests/**'
       - 'xtask/**'
+      - 'fuzz/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - '.github/workflows/**'
-      - '.github/pull_request_template.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/copilot-instructions.md'
-      - '.gitignore'
-      - 'README.md'
-      - 'docs/**'
-      - 'CLAUDE.md'
-      - 'CHANGELOG.md'
-      - 'CONTRIBUTING.md'
-      - 'SECURITY.md'
-      - 'COMPATIBILITY.md'
-      - 'THIRD_PARTY.md'
-      - '.github/settings.yml'
-      - 'fuzz/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-core.yml'
   push:
     branches: [ main ]
     paths:
@@ -37,23 +25,11 @@ on:
       - 'crossval/**'
       - 'tests/**'
       - 'xtask/**'
+      - 'fuzz/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - '.github/workflows/**'
-      - '.github/pull_request_template.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/copilot-instructions.md'
-      - '.gitignore'
-      - 'README.md'
-      - 'docs/**'
-      - 'CLAUDE.md'
-      - 'CHANGELOG.md'
-      - 'CONTRIBUTING.md'
-      - 'SECURITY.md'
-      - 'COMPATIBILITY.md'
-      - 'THIRD_PARTY.md'
-      - '.github/settings.yml'
-      - 'fuzz/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-core.yml'
   workflow_dispatch:
 
 concurrency:
@@ -84,7 +60,7 @@ jobs:
       INSTA_UPDATE: unseen
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -96,11 +72,12 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-ubuntu
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Build core crates (libs, CPU features)
+      - name: Build core libs (CPU features)
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -109,15 +86,16 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --no-default-features --features cpu
-          # SRP microcrates (no feature flags required)
+
+      - name: Build SRP microcrates
+        run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
 
-      - name: Run unit tests (libs only, CPU features)
+      - name: "Run unit tests: core libs"
         run: |
-          # Target only the library crates to keep feedback fast.
           cargo test --locked \
             -p bitnet-common \
             -p bitnet-models \
@@ -127,16 +105,13 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
-          # SRP microcrates (unit tests + integration tests)
+
+      - name: "Run unit tests: SRP microcrates"
+        run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
-          # Phase 5: CPU golden path E2E (always-on, no model download)
-          cargo test --locked \
-            -p bitnet-inference --test cpu_golden_path \
-            --no-default-features --features cpu
-          # Phase 6 SRP microcrates (no feature flags required)
           cargo test --locked \
             -p bitnet-logits \
             -p bitnet-gguf \
@@ -144,7 +119,15 @@ jobs:
             -p bitnet-device-probe \
             -p bitnet-engine-core \
             --no-default-features
-          # BDD/policy/testing-infrastructure crates (cpu feature required for profile tests)
+
+      - name: "Run tests: inference golden path"
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
+      - name: "Run unit tests: policy / BDD crates"
+        run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
             -p bitnet-bdd-grid \
@@ -167,7 +150,7 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
-      - name: Run AVX2-targeted unit tests (x86_64 static +avx2)
+      - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
         if: runner.os == 'Linux' && runner.arch == 'X64'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
@@ -184,17 +167,28 @@ jobs:
             -- --nocapture
 
   # Job 2: BDD Grid Check (separate job for parallel execution and clear gate signal)
+  # The xtask grid-check validates BDD/policy/runtime-flag coverage. Most PRs
+  # do not touch those crates, so the work is wasted on the default path.
+  # Gate to main / dispatch / `bdd` / `grid` / `full-ci` label. The
+  # build-test-linux job still runs the policy / BDD crate unit tests on every
+  # PR, so functional regressions to those crates are caught regardless.
   grid-check:
     name: BDD Grid Check
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'bdd') ||
+      contains(github.event.pull_request.labels.*.name, 'grid') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -205,6 +199,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-grid-check
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run BDD Grid Check (CPU cells)
         run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only --verbose
@@ -220,7 +215,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -232,6 +227,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
         run: |
@@ -250,13 +246,21 @@ jobs:
             -p bitnet-sampling
 
   # Job 5: Clippy linting (macOS ARM64 / Apple Silicon)
-  # Non-blocking: reports status but does not gate merges until runners
-  # are confirmed available in the GitHub Actions pool.
+  # macOS minutes are 10x Linux. Even with continue-on-error and
+  # exclusion from the required summary, this job pays setup + cargo
+  # clippy on every default PR for a non-blocking signal. Move it to
+  # main / dispatch / explicit `macos` or `full-ci` label, where the
+  # platform delta is actually worth measuring.
   clippy-macos-arm64:
     name: Clippy (macOS ARM64)
     runs-on: macos-14
     continue-on-error: true
     timeout-minutes: 15
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'macos') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
       # Allow NEON-idiomatic patterns common in SIMD intrinsic code (~120 files).
       # Linux x86 Clippy remains strict (-D warnings with no allows).
@@ -278,7 +282,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -290,6 +294,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy-macos-arm64
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
         run: |
@@ -309,7 +314,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -320,6 +325,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-docs
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build documentation
         env:
@@ -349,11 +355,17 @@ jobs:
           bad=0
           # Required jobs (must succeed)
           for r in "${{ needs.build-test-linux.result }}" \
-                   "${{ needs.grid-check.result }}" \
                    "${{ needs.clippy.result }}" \
                    "${{ needs.docs.result }}"; do
             [ "$r" = "success" ] || bad=1
           done
+          # grid-check is conditionally skipped on PRs that do not touch
+          # BDD / policy crates (gated by label / main / dispatch). Treat
+          # skipped as acceptable, but do not allow failures or cancellations.
+          case "${{ needs.grid-check.result }}" in
+            success|skipped) ;;
+            *) bad=1 ;;
+          esac
           if [ $bad -ne 0 ]; then
             echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi

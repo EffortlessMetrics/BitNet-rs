@@ -5,12 +5,13 @@ use bitnet_common::{BitNetTensor, QuantizationType, Tensor};
 use bitnet_quantization::utils::{
     calculate_grouped_scales, calculate_scale, dequantize_value, quantize_value,
 };
-use bitnet_quantization::{I2SQuantizer, QuantizedTensor, QuantizerTrait, TL1Quantizer};
+use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer};
 use candle_core::{Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 fn normal_f32_vec(len: usize) -> impl Strategy<Value = Vec<f32>> {
     prop::collection::vec(-10.0f32..10.0, len)
 }
@@ -89,7 +90,7 @@ proptest! {
         let d = dequantize_value(q, scale);
         prop_assert!(d.is_finite(), "roundtrip should be finite for value={value}, scale={scale}");
         // Quantized value must be in 2-bit signed range [-2, 1]
-        prop_assert!(q >= -2 && q <= 1, "2-bit quantized value {q} out of range");
+        prop_assert!((-2..=1).contains(&q), "2-bit quantized value {q} out of range");
     }
 
     /// Scalar roundtrip error is bounded by the scale for small values.

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T03:34:53Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-003"
+event = "pr_open"
+pr = 3679
+head_sha = "8678e25f"
+actor = "codex"
+
+notes = [
+  "Opened RTX 5070 Ti CUDA backend identity PR.",
+  "No CUDA kernels, QK256 code, transformer routing, server inference, runtime probes, or hardware artifacts touched.",
+]

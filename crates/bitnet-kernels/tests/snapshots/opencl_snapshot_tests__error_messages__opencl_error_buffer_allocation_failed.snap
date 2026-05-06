@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: err.to_string()
+---
+Buffer allocation (1073741824 bytes) failed: out of device memory

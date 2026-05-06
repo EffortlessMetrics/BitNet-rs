@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: pts
+---
+- add
+- dequantize_i2s
+- gelu
+- layer_norm
+- matmul_batched
+- matmul_naive
+- matmul_tiled
+- mul
+- quantized_matvec
+- rms_norm
+- rope_forward
+- silu
+- softmax_row
+- softmax_temperature

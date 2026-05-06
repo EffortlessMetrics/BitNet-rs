@@ -39,6 +39,7 @@ bitnet-sampling = { path = "../bitnet-sampling", version = "0.2.1-dev" }
 bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
 bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.2.1-dev" }
 bitnet-cli-config-core = { path = "../bitnet-cli-config-core", version = "0.2.1-dev" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev", default-features = false }
 bitnet-scoring-core = { path = "../bitnet-scoring-core", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 candle-core.workspace = true
@@ -85,12 +86,14 @@ runtime-profile-core = [
 cpu = [
   "bitnet-inference/cpu",
   "bitnet-kernels/cpu",
+  "bitnet-device-probe/cpu",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]
 cuda = [
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
+  "bitnet-device-probe/cuda",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]

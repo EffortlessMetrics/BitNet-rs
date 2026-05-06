@@ -292,6 +292,16 @@ async fn test_security_header_strict_transport_security() {
     );
 }
 
+#[tokio::test]
+async fn test_security_header_cache_control() {
+    let headers = get_security_headers().await;
+    assert_eq!(
+        headers.get("cache-control").unwrap(),
+        "no-store",
+        "Cache-Control must be 'no-store'"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Request validation tests
 // ─────────────────────────────────────────────────────────────────────────────
@@ -465,6 +475,24 @@ fn test_model_path_empty_rejected_as_missing_field() {
         matches!(v.validate_model_request(""), Err(ValidationError::MissingField(_))),
         "empty model path must return MissingField"
     );
+}
+
+#[test]
+fn test_model_path_null_bytes_rejected_before_extension_or_directory_checks() {
+    let v = validator(false, false);
+    let paths =
+        ["/etc/passwd\0.gguf", "models/good.gguf\0", "models/\0bad.gguf", "secret.txt\0.gguf"];
+
+    for path in paths {
+        assert!(
+            matches!(
+                v.validate_model_request(path),
+                Err(ValidationError::InvalidFieldValue(msg))
+                    if msg == "Model path contains null byte"
+            ),
+            "model path containing a null byte must be rejected: {path:?}"
+        );
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

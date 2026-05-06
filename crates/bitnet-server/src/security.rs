@@ -15,9 +15,14 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::{debug, warn};
 
+const JWT_SECRET_BASE64_PREFIX: &str = "base64:";
+
 /// Security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityConfig {
+    /// Shared secret used for HS256 JWT validation.
+    /// Plain text secrets are accepted directly; prefix with `base64:` to decode
+    /// binary HMAC key material from configuration or tests.
     pub jwt_secret: Option<String>,
     pub require_authentication: bool,
     pub max_prompt_length: usize,
@@ -28,6 +33,8 @@ pub struct SecurityConfig {
     pub rate_limit_by_ip: bool,
     pub input_sanitization: bool,
     pub content_filtering: bool,
+    #[serde(default)]
+    pub trust_forwarded_headers: bool,
 }
 
 impl Default for SecurityConfig {
@@ -43,6 +50,7 @@ impl Default for SecurityConfig {
             rate_limit_by_ip: true,
             input_sanitization: true,
             content_filtering: true,
+            trust_forwarded_headers: false,
         }
     }
 }
@@ -219,6 +227,12 @@ impl SecurityValidator {
             return Err(ValidationError::MissingField("model_path".to_string()));
         }
 
+        if model_path.contains('\0') {
+            return Err(ValidationError::InvalidFieldValue(
+                "Model path contains null byte".to_string(),
+            ));
+        }
+
         // Prevent path traversal attacks
         if model_path.contains("..") || model_path.contains("~") {
             return Err(ValidationError::InvalidFieldValue(
@@ -310,11 +324,19 @@ pub async fn auth_middleware(
     Ok(next.run(request).await)
 }
 
+fn decoding_key_for_secret(secret: &str) -> Result<jsonwebtoken::DecodingKey> {
+    if let Some(encoded) = secret.strip_prefix(JWT_SECRET_BASE64_PREFIX) {
+        return Ok(jsonwebtoken::DecodingKey::from_base64_secret(encoded)?);
+    }
+
+    Ok(jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()))
+}
+
 /// Validate JWT token
 fn validate_jwt_token(token: &str, secret: &str) -> Result<Claims> {
-    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+    use jsonwebtoken::{Algorithm, Validation, decode};
 
-    let decoding_key = DecodingKey::from_secret(secret.as_bytes());
+    let decoding_key = decoding_key_for_secret(secret)?;
     let validation = Validation::new(Algorithm::HS256);
 
     let token_data = decode::<Claims>(token, &decoding_key, &validation)?;
@@ -329,7 +351,7 @@ pub async fn ip_blocking_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     // Extract client IP
-    let client_ip = extract_client_ip(&request);
+    let client_ip = extract_client_ip(&request, &config);
 
     // Check if IP is blocked
     if let Some(ip) = client_ip
@@ -343,8 +365,21 @@ pub async fn ip_blocking_middleware(
 }
 
 /// Extract client IP from request
-fn extract_client_ip(request: &Request) -> Option<IpAddr> {
-    extract_client_ip_from_headers(request.headers())
+fn extract_client_ip(request: &Request, config: &SecurityConfig) -> Option<IpAddr> {
+    let mut ip = None;
+
+    if config.trust_forwarded_headers {
+        ip = extract_client_ip_from_headers(request.headers());
+    }
+
+    if ip.is_none()
+        && let Some(connect_info) =
+            request.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+    {
+        ip = Some(connect_info.0.ip());
+    }
+
+    ip
 }
 
 /// Extract client IP from headers (shared utility)
@@ -412,19 +447,29 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
 
     let headers = response.headers_mut();
 
-    // Add security headers
-    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
-    headers.insert("X-Frame-Options", "DENY".parse().unwrap());
-    headers.insert("X-XSS-Protection", "1; mode=block".parse().unwrap());
-    headers.insert("Referrer-Policy", "strict-origin-when-cross-origin".parse().unwrap());
+    use axum::http::header::{
+        CONTENT_SECURITY_POLICY, HeaderValue, REFERRER_POLICY, STRICT_TRANSPORT_SECURITY,
+        X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_XSS_PROTECTION,
+    };
+
+    // Add security headers using typed constants and HeaderValue::from_static to prevent panics
+    headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
+    headers.insert(X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+    headers.insert(X_XSS_PROTECTION, HeaderValue::from_static("1; mode=block"));
+    headers.insert(REFERRER_POLICY, HeaderValue::from_static("strict-origin-when-cross-origin"));
     headers.insert(
-        "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'".parse().unwrap(),
+        CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+        ),
     );
     headers.insert(
-        "Strict-Transport-Security",
-        "max-age=31536000; includeSubDomains".parse().unwrap(),
+        STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
     );
+    if !headers.contains_key(axum::http::header::CACHE_CONTROL) {
+        headers.insert(axum::http::header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
 
     response
 }
@@ -533,6 +578,34 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_extract_client_ip_uses_connect_info_when_forwarded_headers_untrusted() {
+        let mut request = Request::builder()
+            .header("x-forwarded-for", "203.0.113.1")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        let config = SecurityConfig::default();
+        assert_eq!(extract_client_ip(&request, &config), Some(IpAddr::from([127, 0, 0, 1])));
+    }
+
+    #[test]
+    fn test_extract_client_ip_can_trust_forwarded_headers() {
+        let mut request = Request::builder()
+            .header("x-forwarded-for", "203.0.113.1")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 8080))));
+
+        let config = SecurityConfig { trust_forwarded_headers: true, ..Default::default() };
+        assert_eq!(extract_client_ip(&request, &config), Some(IpAddr::from([203, 0, 113, 1])));
     }
 
     #[test]

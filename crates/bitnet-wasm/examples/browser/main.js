@@ -70,6 +70,10 @@ function updateStatus(message, type = 'loading') {
 function updateProgress(percent) {
     const progressEl = document.getElementById('progress');
     progressEl.style.width = `${percent}%`;
+    const progressBarContainer = progressEl.parentElement;
+    if (progressBarContainer) {
+        progressBarContainer.setAttribute('aria-valuenow', percent);
+    }
 }
 
 // Detect platform features
@@ -486,12 +490,14 @@ function showBenchmarkProgress(show) {
         const interval = setInterval(() => {
             progress += 2;
             document.getElementById('benchmark-progress-fill').style.width = `${progress}%`;
+            progressEl.setAttribute('aria-valuenow', progress);
             if (progress >= 100) {
                 clearInterval(interval);
             }
         }, 100);
     } else {
         progressEl.style.display = 'none';
+        progressEl.setAttribute('aria-valuenow', 0);
     }
 }
 

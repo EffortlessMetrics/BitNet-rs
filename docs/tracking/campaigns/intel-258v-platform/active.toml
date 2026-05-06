@@ -1,0 +1,142 @@
+id = "intel-258v-platform"
+title = "Intel 258V platform validation"
+status = "active"
+
+objective = "Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate."
+
+end_state = [
+  "Same-machine CPU, GPU, and NPU facts are captured.",
+  "Arc 140V OpenCL, OpenVINO GPU, and OpenVINO NPU evidence are not conflated.",
+  "Receipts record OS, drivers, memory, power, thermal, and WSL/native visibility context.",
+]
+
+hard_constraints = [
+  "Arc 140V OpenCL proof is not NPU proof.",
+  "OpenVINO GPU smoke is not packed BitNet kernel proof.",
+  "WSL only counts for NPU validation if OpenVINO reports NPU inside WSL.",
+]
+
+[[work_item]]
+id = "LNL258V-RUN-001"
+status = "merged"
+branch = "codex/intel-258v/LNL258V-RUN-001-platform-probe"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Add a JSON-ready Lunar Lake 258V platform probe that records CPU AVX2 facts, Arc 140V OpenCL/Level Zero/OpenVINO GPU visibility, Intel NPU OS/OpenVINO visibility, memory, power, OS, proof_stage=runtime_detected, and fallback_used=false without inference claims."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/src/intel/lunar_lake/**",
+  "crates/bitnet-device-probe/src/intel/mod.rs",
+  "crates/bitnet-device-probe/src/cpu/**",
+  "crates/bitnet-device-probe/src/runtimes/**",
+  "crates/bitnet-device-probe/src/lib.rs",
+  "crates/bitnet-device-probe/tests/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Lunar Lake runtime visibility can be recorded after merge.",
+]
+must_not_claim = [
+  "BitNet inference works on 258V.",
+  "Arc 140V execution works.",
+  "Intel NPU execution works.",
+  "NPU accelerates BitNet.",
+]
+
+[[work_item]]
+id = "ARC140V-002"
+status = "pr_open"
+branch = "codex/intel-arc/ARC140V-002-runtime-probe"
+stackable = false
+requires_human_merge = true
+blocked_by = ["LNL258V-RUN-001"]
+acceptance = "Probe exact Arc 140V runtime visibility by name or PCI ID 0x64A0 across OpenCL, Level Zero, and OpenVINO GPU.0 while recording proof_stage=runtime_detected, requested/selected backend identity, runtime API, and fallback_used=false."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features lunar_lake -- --nocapture",
+  "cargo test --locked -p bitnet-device-probe --no-default-features level_zero -- --nocapture",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/src/intel/lunar_lake/arc140v.rs",
+  "crates/bitnet-device-probe/src/runtimes/opencl.rs",
+  "crates/bitnet-device-probe/src/runtimes/level_zero.rs",
+  "crates/bitnet-device-probe/src/runtimes/openvino.rs",
+  "crates/bitnet-device-probe/tests/**",
+  "docs/specs/intel-lunar-lake-gpu-roadmap.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Arc 140V runtime visibility is recorded when OpenCL, Level Zero, or OpenVINO GPU.0 exact identity evidence is present.",
+]
+must_not_claim = [
+  "Arc 140V OpenCL execution works.",
+  "OpenVINO GPU.0 smoke proves native OpenCL kernels.",
+  "BitNet inference works on Arc 140V.",
+]
+
+[[work_item]]
+id = "LNL258V-002"
+status = "ready"
+branch = "codex/intel-258v-platform/LNL258V-002-probe-bundle"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Add a 258V platform probe bundle that records CPU, Arc 140V GPU, Intel NPU, memory, OS, driver, OpenVINO, OpenCL, Level Zero, WSL, and power context without runtime claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "Parse TOML tracker files",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-platform-roadmap.md",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/specs/intel-lunar-lake-gpu-roadmap.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "258V platform probe fields and artifact paths are documented after merge.",
+]
+must_not_claim = [
+  "Arc 140V execution works.",
+  "Intel NPU execution works.",
+  "BitNet inference works on 258V.",
+]

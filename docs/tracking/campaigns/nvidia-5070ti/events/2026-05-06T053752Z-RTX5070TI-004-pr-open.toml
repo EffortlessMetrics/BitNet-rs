@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T05:37:52Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-004"
+event = "pr_open"
+pr = 3691
+head_sha = "7fa008659a00b16df68e59798d469b2a6cfac864"
+actor = "codex"
+
+notes = [
+  "Recorded live GitHub state for the RTX 5070 Ti CUDA/NVML probe PR.",
+  "This tracker update is a reconciliation-only fix for the campaign doctor gate.",
+]

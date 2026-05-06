@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: opt
+---
+OptimalBlockConfig {
+    block_size: 256,
+    layout: Qk256,
+    waste_ratio: 0.0,
+}

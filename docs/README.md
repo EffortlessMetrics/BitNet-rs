@@ -68,6 +68,9 @@ Information-oriented. Look up exact behaviors, formats, and APIs.
 | [environment-variables.md](environment-variables.md) | All runtime configuration env vars |
 | [reference/api-reference.md](reference/api-reference.md) | Public API contracts |
 | [reference/strict-mode-api.md](reference/strict-mode-api.md) | Strict mode behavior |
+| [api/README.md](api/README.md) | Generated API snapshots and contract baselines |
+| [bitnet/BITNET_CPU_PATH_PLAN.md](bitnet/BITNET_CPU_PATH_PLAN.md) | CPU GGUF/tokenizer/layout/kernel roadmap and strict receipt contract |
+| [specs/intel-lunar-lake-258v-buildout-plan.md](specs/intel-lunar-lake-258v-buildout-plan.md) | Lunar Lake 258V CPU validation, Arc 140V, NPU identity, platform probe, and receipt buildout plan |
 
 ---
 

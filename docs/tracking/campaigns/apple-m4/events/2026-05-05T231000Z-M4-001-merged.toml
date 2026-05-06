@@ -1,0 +1,12 @@
+timestamp = "2026-05-05T23:10:00Z"
+campaign = "apple-m4"
+item = "M4-001"
+event = "merged"
+pr = 3625
+merge_sha = "bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3"
+actor = "maintainer"
+
+notes = [
+  "Apple M4 Mac mini lane scaffold merged as docs/contracts only.",
+  "No runtime execution, kernels, MPSGraph execution, Neural Engine execution, or BitNet inference proof was claimed.",
+]

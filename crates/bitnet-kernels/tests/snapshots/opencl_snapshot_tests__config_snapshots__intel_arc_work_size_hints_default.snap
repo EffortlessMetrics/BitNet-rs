@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: hints
+---
+IntelArcWorkSizeHints {
+    simd_width: 16,
+    xe_cores: 32,
+    max_work_group_size: 1024,
+    preferred_work_group_size: 256,
+}

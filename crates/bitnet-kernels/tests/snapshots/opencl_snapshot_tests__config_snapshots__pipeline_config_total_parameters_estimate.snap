@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"total_params={}\", cfg.total_parameters_estimate())"
+---
+total_params=1364297728

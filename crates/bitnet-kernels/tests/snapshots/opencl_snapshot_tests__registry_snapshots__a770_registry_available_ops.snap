@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: ops
+---
+- MatMul
+- MatVec
+- Softmax
+- RmsNorm
+- LayerNorm
+- RoPE
+- Attention
+- SiLU
+- GELU
+- ReLU
+- ElementwiseAdd
+- ElementwiseMul
+- Scale
+- Embedding
+- Dequantize
+- KvCacheAppend

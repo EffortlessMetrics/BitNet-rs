@@ -364,7 +364,8 @@ impl BitNetServer {
         );
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(listener, app.into_make_service_with_connect_info::<std::net::SocketAddr>())
+            .await?;
 
         Ok(())
     }
@@ -405,6 +406,7 @@ async fn root_handler() -> &'static str {
 /// Enhanced inference handler with production features
 async fn enhanced_inference_handler(
     State(state): State<ProductionAppState>,
+    connect_info: axum::extract::ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
     Json(request): Json<EnhancedInferenceRequest>,
 ) -> Result<Json<EnhancedInferenceResponse>, StatusCode> {
@@ -412,8 +414,11 @@ async fn enhanced_inference_handler(
     let request_id = Uuid::new_v4().to_string();
 
     // Extract client IP with localhost fallback
-    let client_ip =
-        extract_client_ip_from_headers(&headers).unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]));
+    let client_ip = if state.config.security.trust_forwarded_headers {
+        extract_client_ip_from_headers(&headers).unwrap_or_else(|| connect_info.ip())
+    } else {
+        connect_info.ip()
+    };
 
     // Create request metadata
     let metadata = RequestMetadata {
@@ -470,7 +475,7 @@ async fn enhanced_inference_handler(
     // Submit to batch engine and build response
     let result = state.batch_engine.submit_request(batch_request).await.map_err(|e| {
         error!(error = %e, "Batch processing failed");
-        StatusCode::INTERNAL_SERVER_ERROR
+        StatusCode::SERVICE_UNAVAILABLE
     })?;
 
     // Calculate tokens per second efficiently
@@ -497,6 +502,7 @@ async fn enhanced_inference_handler(
 /// Legacy inference handler for backwards compatibility
 async fn legacy_inference_handler(
     State(state): State<ProductionAppState>,
+    connect_info: axum::extract::ConnectInfo<std::net::SocketAddr>,
     headers: HeaderMap,
     Json(request): Json<InferenceRequest>,
 ) -> Result<Json<InferenceResponse>, StatusCode> {
@@ -508,7 +514,9 @@ async fn legacy_inference_handler(
         timeout_ms: None,
     };
 
-    match enhanced_inference_handler(State(state), headers, Json(enhanced_request)).await {
+    match enhanced_inference_handler(State(state), connect_info, headers, Json(enhanced_request))
+        .await
+    {
         Ok(Json(enhanced_response)) => Ok(Json(enhanced_response.base)),
         Err(status) => Err(status),
     }

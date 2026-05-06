@@ -15,6 +15,34 @@ RUST_LOG=warn cargo run --locked -p bitnet-cli --no-default-features --features 
   --prompt "What is 2+2?" --max-tokens 8
 ```
 
+### strict CPU proof command
+
+Use this command when checking the CPU proof path. It requires a real model path,
+an explicit tokenizer path, strict loader behavior, minimal fallback disabled,
+greedy decoding, and JSON proof output.
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+RUST_LOG=warn \
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy \
+  --json-out target/cpu-proof.json
+```
+
+Passing this command is a strict smoke/proof signal for the local CPU CLI path.
+It is not a model-quality claim, a sustained performance claim, or receipt
+validation by itself. Treat `target/cpu-proof.json` as a receipt-adjacent proof
+artifact: it must show the enhanced loader path and must not show compatibility
+fallback before follow-up CPU receipt work can promote the claim.
+
 ### chat
 
 Interactive chat with REPL and auto-template detection.

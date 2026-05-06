@@ -38,6 +38,13 @@ pub struct GGUFLoaderConfig {
     pub tolerance_bytes: usize,
 }
 
+impl GGUFLoaderConfig {
+    /// Strict proof mode: exact packed-layout validation and no compatibility fallback.
+    pub fn strict_proof() -> Self {
+        Self { strict_mode: true, tolerance_bytes: 0 }
+    }
+}
+
 impl Default for GGUFLoaderConfig {
     fn default() -> Self {
         Self {
@@ -49,9 +56,50 @@ impl Default for GGUFLoaderConfig {
 
 /// Result of GGUF loading with both regular tensors and QK256 quantized weights
 pub struct GgufLoadResult {
+    pub loader_mode: GgufLoaderMode,
     pub config: bitnet_common::BitNetConfig,
     pub tensors: HashMap<String, CandleTensor>,
     pub i2s_qk256: HashMap<String, I2SQk256NoScale>,
+}
+
+/// Machine-readable GGUF loader mode for receipts and proof paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum GgufLoaderMode {
+    /// Authoritative GGUF parser loaded the model from real GGUF metadata and tensors.
+    RealGguf,
+    /// Explicit opt-in compatibility path that may synthesize missing tensors.
+    MinimalCompatibility,
+    /// Explicit opt-in mock tensor compatibility path was used.
+    MockCompatibility,
+}
+
+impl GgufLoaderMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::RealGguf => "real_gguf",
+            Self::MinimalCompatibility => "minimal_compatibility",
+            Self::MockCompatibility => "mock_compatibility",
+        }
+    }
+
+    pub fn fallback_used(self) -> bool {
+        !matches!(self, Self::RealGguf)
+    }
+}
+
+fn minimal_loader_disabled(config: &GGUFLoaderConfig) -> bool {
+    config.strict_mode
+        || std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1")
+        || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1")
+}
+
+fn minimal_loader_allowed() -> bool {
+    std::env::var("BITNET_ALLOW_MINIMAL_LOADER").as_deref() == Ok("1")
+}
+
+fn minimal_loader_hint() -> &'static str {
+    "Set BITNET_ALLOW_MINIMAL_LOADER=1 to opt into the reduced-feature minimal loader. \
+     Set BITNET_DISABLE_MINIMAL_LOADER=1 or BITNET_STRICT_MODE=1 to fail fast for proof/CI paths."
 }
 
 /// Load a GGUF model file - backward compatibility shim (returns tuple)
@@ -124,31 +172,23 @@ pub fn load_gguf_full(
                 }
             }
 
-            // For other errors, fall back to minimal parser
+            // For other errors, fall back to minimal parser only when explicitly requested.
             match result {
                 Ok(x) => Ok(x),
                 Err(e) => {
-                    let hint = "Set BITNET_DISABLE_MINIMAL_LOADER=1 to fail-fast with the enhanced loader \
-                                (preferred for CI/parity). Unset to allow minimal loader fallback (reduced features).";
+                    let hint = minimal_loader_hint();
 
-                    let fail_fast =
-                        std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1");
-
-                    if fail_fast {
+                    if minimal_loader_disabled(&config) || !minimal_loader_allowed() {
                         tracing::error!("Enhanced loader failed: {}. {}", e, hint);
-                        tracing::error!(
-                            "BITNET_DISABLE_MINIMAL_LOADER=1: stopping here (no minimal fallback)."
-                        );
-                        return Err(BitNetError::Validation(format!(
-                            "{}\nHint: unset BITNET_DISABLE_MINIMAL_LOADER to try the minimal loader (reduced features).",
-                            e
-                        )));
-                    } else {
-                        tracing::warn!("Enhanced loader failed: {}. {}", e, hint);
-                        tracing::warn!(
-                            "Falling back to minimal parser (may use 32/0 default dims)"
-                        );
+                        tracing::error!("Stopping here without minimal compatibility fallback.");
+                        return Err(BitNetError::Validation(format!("{}\nHint: {}", e, hint)));
                     }
+
+                    tracing::warn!("Enhanced loader failed: {}. {}", e, hint);
+                    tracing::warn!(
+                        "BITNET_ALLOW_MINIMAL_LOADER=1: using minimal parser \
+                        (reduced features; may use default/mock transformer tensors)"
+                    );
 
                     // AC9: Fallback to minimal GGUF parser for backward compatibility
                     // This happens when:
@@ -164,9 +204,17 @@ pub fn load_gguf_full(
             }
         }
         Err(e) => {
-            // GgufReader construction failed - fall back to minimal
-            tracing::info!(
-                "GGUF reader construction failed ({}), falling back to minimal parser",
+            // GgufReader construction failed - fall back to minimal only when explicitly requested.
+            if minimal_loader_disabled(&config) || !minimal_loader_allowed() {
+                return Err(BitNetError::Validation(format!(
+                    "GGUF reader construction failed: {}\nHint: {}",
+                    e,
+                    minimal_loader_hint()
+                )));
+            }
+            tracing::warn!(
+                "GGUF reader construction failed ({}); BITNET_ALLOW_MINIMAL_LOADER=1: \
+                using minimal compatibility parser",
                 e
             );
             load_gguf_minimal(path, device)
@@ -202,6 +250,9 @@ fn load_gguf_enhanced(
     device: Device,
     loader_config: &GGUFLoaderConfig,
 ) -> Result<GgufLoadResult> {
+    let strict_mode =
+        loader_config.strict_mode || std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
+
     let cdevice = match device {
         Device::Cpu => CDevice::Cpu,
         Device::Cuda(id) => match CDevice::new_cuda(id) {
@@ -238,10 +289,10 @@ fn load_gguf_enhanced(
         tensor_infos.insert(info.name.clone(), info.clone());
     }
 
-    // AC3: Validate tensor metadata completeness
-    // NOTE: Validation moved to later stage (build_transformer) for better error messages
-    // and to avoid false positives with different tensor naming conventions
-    // validate_tensor_completeness(&tensor_infos, &config)?;
+    // Strict proof paths must fail before compatibility defaults can synthesize tensors.
+    if strict_mode {
+        validate_tensor_completeness(&tensor_infos, &config)?;
+    }
 
     let mut tensor_map = HashMap::with_capacity(tensor_count);
     let mut i2s_qk256_map = HashMap::new();
@@ -447,8 +498,12 @@ fn load_gguf_enhanced(
     // This must happen HERE in the enhanced loader to prevent double transposition downstream
     normalize_embed_and_lm_head(&mut tensor_map, &config, &cdevice)?;
 
-    // AC9: Maintain backward compatibility - ensure all expected tensors exist
-    ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    if strict_mode {
+        validate_no_missing_runtime_tensors(&tensor_map, &i2s_qk256_map, &config)?;
+    } else {
+        // AC9: Maintain backward compatibility only outside strict proof paths.
+        ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+    }
 
     tracing::debug!(
         "Enhanced loader complete: hidden={}, n_heads={}, n_kv_heads={}, vocab={}, layers={}",
@@ -459,7 +514,12 @@ fn load_gguf_enhanced(
         config.model.num_layers
     );
 
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: i2s_qk256_map })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::RealGguf,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: i2s_qk256_map,
+    })
 }
 
 /// Minimal GGUF loading for backward compatibility with existing mock infrastructure
@@ -639,7 +699,12 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
     );
 
     tracing::info!("Loaded model using minimal GGUF parser with {} tensors", tensor_map.len());
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MinimalCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
 }
 
 /// Extract BitNet configuration from GGUF metadata
@@ -829,7 +894,6 @@ fn parse_usize_prefix(bytes: &[u8]) -> Option<usize> {
 }
 
 /// AC3: Validate that all required transformer tensors are present
-#[allow(dead_code)]
 fn validate_tensor_completeness(
     tensor_infos: &HashMap<String, crate::formats::gguf::TensorInfo>,
     config: &bitnet_common::BitNetConfig,
@@ -837,42 +901,47 @@ fn validate_tensor_completeness(
     let mut missing_tensors = Vec::new();
 
     // Check for essential embedding tensors
-    if !tensor_infos.contains_key("token_embd.weight")
-        && !tensor_infos.contains_key("model.embed_tokens.weight")
-    {
+    if !has_any_tensor(
+        tensor_infos,
+        &[
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "embed_tokens.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
+        ],
+    ) {
         missing_tensors.push("token_embd.weight".to_string());
     }
 
-    if !tensor_infos.contains_key("output.weight") && !tensor_infos.contains_key("lm_head.weight") {
+    if !has_any_tensor(tensor_infos, &["output.weight", "lm_head.weight", "model.lm_head.weight"]) {
         missing_tensors.push("output.weight".to_string());
     }
 
+    let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
+    let required_suffix_groups: &[&[&str]] = &[
+        &["attn_q.weight", "attention.q_proj.weight", "self_attn.q_proj.weight"],
+        &["attn_k.weight", "attention.k_proj.weight", "self_attn.k_proj.weight"],
+        &["attn_v.weight", "attention.v_proj.weight", "self_attn.v_proj.weight"],
+        &["attn_output.weight", "attention.o_proj.weight", "self_attn.o_proj.weight"],
+        &["ffn_gate.weight", "feed_forward.gate_proj.weight", "mlp.gate_proj.weight"],
+        &["ffn_up.weight", "feed_forward.up_proj.weight", "mlp.up_proj.weight"],
+        &["ffn_down.weight", "feed_forward.down_proj.weight", "mlp.down_proj.weight"],
+        &["attn_norm.weight", "attention_norm.weight", "input_layernorm.weight"],
+        &["ffn_norm.weight", "post_attention_layernorm.weight"],
+    ];
+
     // Check transformer layers
     for layer_idx in 0..config.model.num_layers {
-        let layer_prefix = format!("blk.{}", layer_idx);
-
-        // Attention tensors
-        for suffix in &[".attn_q.weight", ".attn_k.weight", ".attn_v.weight", ".attn_output.weight"]
-        {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
-            }
-        }
-
-        // Feed-forward tensors
-        for suffix in &[".ffn_gate.weight", ".ffn_up.weight", ".ffn_down.weight"] {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
-            }
-        }
-
-        // Normalization tensors
-        for suffix in &[".attn_norm.weight", ".ffn_norm.weight"] {
-            let tensor_name = format!("{}{}", layer_prefix, suffix);
-            if !tensor_infos.contains_key(&tensor_name) {
-                missing_tensors.push(tensor_name);
+        for suffix_group in required_suffix_groups {
+            let found = layer_prefixes.iter().any(|prefix| {
+                suffix_group.iter().any(|suffix| {
+                    tensor_infos.contains_key(&format!("{}.{}.{}", prefix, layer_idx, suffix))
+                })
+            });
+            if !found {
+                missing_tensors
+                    .push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
             }
         }
     }
@@ -885,6 +954,13 @@ fn validate_tensor_completeness(
     }
 
     Ok(())
+}
+
+fn has_any_tensor(
+    tensor_infos: &HashMap<String, crate::formats::gguf::TensorInfo>,
+    names: &[&str],
+) -> bool {
+    names.iter().any(|name| tensor_infos.contains_key(*name))
 }
 
 /// Find a sibling scale tensor for I2_S quantized data
@@ -1655,6 +1731,58 @@ fn ensure_backward_compatibility(
     Ok(())
 }
 
+fn has_loaded_tensor(
+    tensor_map: &HashMap<String, CandleTensor>,
+    qk256_map: &HashMap<String, I2SQk256NoScale>,
+    name: &str,
+) -> bool {
+    tensor_map.contains_key(name) || qk256_map.contains_key(name)
+}
+
+/// Strict proof mode cannot create default tensors. All runtime-critical tensors
+/// must come from the GGUF file as real loaded tensors or packed QK256 views.
+fn validate_no_missing_runtime_tensors(
+    tensor_map: &HashMap<String, CandleTensor>,
+    qk256_map: &HashMap<String, I2SQk256NoScale>,
+    config: &bitnet_common::BitNetConfig,
+) -> Result<()> {
+    let mut missing = Vec::new();
+    for name in ["token_embd.weight", "output.weight", "output_norm.weight"] {
+        if !has_loaded_tensor(tensor_map, qk256_map, name) {
+            missing.push(name.to_string());
+        }
+    }
+
+    for layer_idx in 0..config.model.num_layers {
+        let layer_prefix = format!("blk.{}", layer_idx);
+        for suffix in [
+            "attn_q.weight",
+            "attn_k.weight",
+            "attn_v.weight",
+            "attn_output.weight",
+            "ffn_gate.weight",
+            "ffn_up.weight",
+            "ffn_down.weight",
+            "attn_norm.weight",
+            "ffn_norm.weight",
+        ] {
+            let name = format!("{}.{}", layer_prefix, suffix);
+            if !has_loaded_tensor(tensor_map, qk256_map, &name) {
+                missing.push(name);
+            }
+        }
+    }
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    Err(BitNetError::Validation(format!(
+        "Strict GGUF loading rejected missing runtime tensors; compatibility/default tensors are disabled in strict proof mode. Missing: {}",
+        missing.join(", ")
+    )))
+}
+
 /// Create a default mock tensor layout for test compatibility
 /// This handles completely invalid mock files used in test infrastructure
 fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
@@ -1796,5 +1924,74 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         "Created mock tensor layout with {} tensors for test compatibility",
         tensor_map.len()
     );
-    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
+    Ok(GgufLoadResult {
+        loader_mode: GgufLoaderMode::MockCompatibility,
+        config,
+        tensors: tensor_map,
+        i2s_qk256: HashMap::new(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GGUFLoaderConfig, load_gguf_full};
+    use bitnet_common::Device;
+    use serial_test::serial;
+    use tempfile::TempDir;
+
+    #[test]
+    #[serial]
+    fn mock_compatibility_loader_requires_explicit_opt_in() {
+        let dir = TempDir::new().expect("tempdir");
+        let path = dir.path().join("mock.gguf");
+        std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");
+
+        temp_env::with_var_unset("BITNET_ALLOW_MINIMAL_LOADER", || {
+            temp_env::with_var_unset("BITNET_DISABLE_MINIMAL_LOADER", || {
+                temp_env::with_var_unset("BITNET_STRICT_MODE", || {
+                    let result = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::default());
+                    assert!(result.is_err(), "minimal/mock fallback must be opt-in");
+                    let err = result.err().expect("error").to_string();
+                    assert!(
+                        err.contains("BITNET_ALLOW_MINIMAL_LOADER=1"),
+                        "error should explain explicit opt-in: {err}"
+                    );
+                });
+            });
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn minimal_loader_opt_in_env_is_explicit() {
+        temp_env::with_var_unset("BITNET_ALLOW_MINIMAL_LOADER", || {
+            assert!(!super::minimal_loader_allowed());
+        });
+        temp_env::with_var("BITNET_ALLOW_MINIMAL_LOADER", Some("1"), || {
+            assert!(super::minimal_loader_allowed());
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn strict_mode_blocks_minimal_loader_even_when_allowed() {
+        let dir = TempDir::new().expect("tempdir");
+        let path = dir.path().join("mock.gguf");
+        std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");
+
+        temp_env::with_var("BITNET_ALLOW_MINIMAL_LOADER", Some("1"), || {
+            temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+                let result = load_gguf_full(&path, Device::Cpu, GGUFLoaderConfig::default());
+                assert!(result.is_err(), "strict mode must fail before compatibility fallback");
+            });
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn loader_mode_names_are_receipt_stable() {
+        assert_eq!(super::GgufLoaderMode::RealGguf.as_str(), "real_gguf");
+        assert_eq!(super::GgufLoaderMode::MinimalCompatibility.as_str(), "minimal_compatibility");
+        assert_eq!(super::GgufLoaderMode::MockCompatibility.as_str(), "mock_compatibility");
+    }
 }

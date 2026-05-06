@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T01:10:32Z"
+campaign = "apple-m4"
+item = "M4-003"
+event = "pr_open"
+pr = 3652
+head_sha = "c4ad9edf"
+actor = "codex"
+
+notes = [
+  "Opened Apple backend identity PR.",
+  "No Metal kernels, MPSGraph execution, QK256, server inference, dependencies, runtime probes, or hardware artifacts touched.",
+]
