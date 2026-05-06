@@ -19,6 +19,35 @@ hard_constraints = [
 ]
 
 [[work_item]]
+id = "INV-001"
+status = "merged"
+branch = "codex/inventory/INV-001-crate-consolidation-map"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Add crate consolidation inventory mapping every workspace member to a final public crate or internal module without moving code."
+commands = [
+  "cargo fmt --all -- --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/bitnet-alignment/crate-consolidation-map.yaml",
+  "docs/tracking/campaigns/crate-collapse/**",
+]
+forbidden_paths = [
+  "Cargo.toml",
+  "crates/**",
+  ".github/**",
+]
+may_claim = [
+  "Crate consolidation inventory exists.",
+]
+must_not_claim = [
+  "Any crate has moved.",
+  "Runtime behavior changed.",
+]
+
+[[work_item]]
 id = "LEAF-001"
 status = "proposed"
 branch = "codex/crate-collapse/LEAF-001-warn-once"

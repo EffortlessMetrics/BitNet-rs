@@ -1,0 +1,12 @@
+timestamp = "2026-05-04T03:00:00Z"
+campaign = "ci-coverage"
+item = "CI-COVERAGE-001"
+event = "pr_open"
+pr = 3620
+head_sha = "2bce180b35265f17278db10e9c235220659b07d1"
+actor = "codex"
+
+notes = [
+  "Canonical Codecov upload guard PR is open.",
+  "Coverage work remains CI-only and does not touch runtime or kernel code.",
+]

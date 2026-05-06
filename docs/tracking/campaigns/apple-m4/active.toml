@@ -22,12 +22,76 @@ hard_constraints = [
 ]
 
 [[work_item]]
-id = "M4-003"
-status = "pr_open"
-branch = "codex/apple-m4/M4-003-backend-identity"
+id = "M4-001"
+status = "merged"
+branch = "codex/hardware-scaffold/M4-001-apple-lane"
 stackable = false
 requires_human_merge = true
 blocked_by = []
+acceptance = "Add the Apple M4 Mac mini lane scaffold without runtime execution claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "Parse YAML tracker files",
+]
+allowed_paths = [
+  "docs/hardware/**",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "docs/tracking/campaigns/apple-m4/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Apple M4 lane scaffold exists.",
+]
+must_not_claim = [
+  "Metal execution works.",
+  "MPSGraph execution works.",
+  "BitNet inference works on M4.",
+]
+
+[[work_item]]
+id = "M4-002"
+status = "merged"
+branch = "codex/apple-m4/M4-002-profile-probe-bundle"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-001"]
+acceptance = "Add the Apple M4 Mac mini machine profile and probe bundle without runtime code, kernels, QK256, server inference, dependencies, or bulky artifacts."
+commands = [
+  "cargo fmt --all -- --check",
+  "Parse TOML tracker files",
+  "Parse YAML tracker files",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "ci/hardware/README.md",
+  "docs/tracking/campaigns/apple-m4/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Apple M4 machine profile and probe bundle docs exist.",
+]
+must_not_claim = [
+  "Metal execution works.",
+  "MPSGraph execution works.",
+  "Neural Engine execution works.",
+  "BitNet inference works on M4.",
+]
+
+[[work_item]]
+id = "M4-003"
+status = "merged"
+branch = "codex/apple-m4/M4-003-backend-identity"
+stackable = false
+requires_human_merge = true
+blocked_by = ["M4-002"]
 acceptance = "Preserve Apple M4 Metal, MPSGraph, and CPU/NEON backend identity without adding runtime execution or kernels."
 commands = [
   "cargo fmt --all -- --check",
@@ -44,8 +108,6 @@ allowed_paths = [
   "crates/bitnet-cli/tests/cli_extended_tests.rs",
   "crates/bitnet-cli/tests/snapshots/snapshot_wave10__cli_config_validate_invalid_device_error.snap",
   "docs/tracking/campaigns/apple-m4/**",
-  "docs/tracking/bitnet-alignment/status.md",
-  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/src/qk256/**",
@@ -64,7 +126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-004"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-004-metal-probe"
 stackable = false
 requires_human_merge = true
@@ -73,6 +135,27 @@ acceptance = "Add Apple M4 Metal device probe without claiming Metal execution o
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-device-probe --no-default-features --features metal",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "docs/tracking/campaigns/apple-m4/**",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "Apple M4 Metal runtime visibility is recorded after merge.",
+]
+must_not_claim = [
+  "Metal execution works.",
+  "MPSGraph execution works.",
+  "Neural Engine execution works.",
+  "BitNet inference works on M4.",
 ]
 
 [[work_item]]
@@ -86,4 +169,23 @@ acceptance = "Run a tiny native Metal compute smoke on M4 with fallback_used=fal
 commands = [
   "cargo fmt --all -- --check",
   "Manual M4 Metal smoke command with receipt artifact",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-kernels/tests/**",
+  "docs/tracking/campaigns/apple-m4/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Tiny Metal compute dispatch works on the tested M4 machine after receipt-backed smoke passes.",
+]
+must_not_claim = [
+  "BitNet Metal inference works.",
+  "QK256 works on Metal.",
+  "MPSGraph works.",
+  "Neural Engine execution works.",
 ]

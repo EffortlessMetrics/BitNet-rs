@@ -26,6 +26,7 @@ Collapse low-risk public microcrates into SRP modules while preserving behavior,
 
 | Work item | Status | Notes |
 |---|---|---|
+| INV-001 | merged | Crate consolidation inventory merged in #3632. |
 | LEAF-001 | proposed | Collapse warn-once into common. |
 
 ## Review Policy

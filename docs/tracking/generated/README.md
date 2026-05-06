@@ -2,10 +2,23 @@
 
 This directory is reserved for generated alignment dashboards.
 
-Planned generated outputs:
+Generated outputs:
 
 - `global-dashboard.md`
 - `active-prs.md`
-- `lane-map.md`
+- `lane-dashboard.md`
+- `blocked-items.md`
 
-Do not hand-edit generated dashboard files once the generator lands. Source data should come from campaign-local `active.toml` files and append-only event files.
+Do not hand-edit generated dashboard files. Source data comes from campaign-local `active.toml` files and append-only event files.
+
+Refresh dashboards with:
+
+```bash
+cargo run -p xtask --no-default-features -- campaign generate
+```
+
+Check for stale dashboards with:
+
+```bash
+cargo run -p xtask --no-default-features -- campaign generate --check
+```

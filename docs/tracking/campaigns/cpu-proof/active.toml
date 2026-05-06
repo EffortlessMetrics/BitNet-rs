@@ -21,8 +21,38 @@ hard_constraints = [
 ]
 
 [[work_item]]
+id = "CPU-BITNET-000"
+status = "merged"
+branch = "codex/cpu-proof/CPU-BITNET-000-path-plan"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Document the real BitNet CPU path implementation plan and sequence strict loader, tokenizer, layout, scalar, AVX2, receipts, and benchmarks."
+commands = [
+  "cargo fmt --all -- --check",
+  "Parse TOML tracker files",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The real BitNet CPU path plan is documented.",
+]
+must_not_claim = [
+  "Strict loader authority is implemented.",
+  "Tokenizer authority is complete.",
+  "CPU performance is proven.",
+]
+
+[[work_item]]
 id = "CPU-BITNET-001"
-status = "proposed"
+status = "pr_open"
 branch = "codex/cpu-proof/CPU-BITNET-001-loader-authority"
 stackable = false
 requires_human_merge = true
@@ -68,4 +98,23 @@ acceptance = "Strict tokenizer resolution uses explicit override, GGUF metadata,
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-tokenizers --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-cli/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Strict tokenizer authority exists after merge.",
+]
+must_not_claim = [
+  "Packed kernels are complete.",
+  "Transformer decode is complete.",
+  "CPU performance is proven.",
 ]

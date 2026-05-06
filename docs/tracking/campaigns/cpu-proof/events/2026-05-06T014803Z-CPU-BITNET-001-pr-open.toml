@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T01:48:03Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-001"
+event = "pr_open"
+pr = 3651
+head_sha = "4f076aa1660e388280af13dbf19bcae4a94162db"
+actor = "codex"
+
+notes = [
+  "Strict GGUF loader authority PR is open.",
+  "No AVX2 kernels or performance claims are included in the campaign tracker state.",
+]
