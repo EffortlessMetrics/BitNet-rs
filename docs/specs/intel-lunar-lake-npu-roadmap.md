@@ -226,6 +226,12 @@ Suggested probe result:
 
 ```rust
 pub struct IntelNpuProbe {
+    pub proof_stage: String,
+    pub requested_backend: String,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+
     pub available: bool,
 
     pub os: String,
@@ -237,8 +243,8 @@ pub struct IntelNpuProbe {
     pub intel_vpu_driver_seen: bool,
     pub driver_version: Option<String>,
 
-    pub openvino_runtime_present: bool,
-    pub runtime_version: Option<String>,
+    pub openvino_runtime_available: bool,
+    pub openvino_version: Option<String>,
 
     pub openvino_npu_visible: bool,
     pub openvino_available_devices: Vec<String>,
@@ -249,6 +255,7 @@ pub struct IntelNpuProbe {
     pub device_alloc_mem_size: Option<u64>,
     pub max_tiles: Option<u32>,
 
+    pub fallback_used: bool,
     pub failure_reason: Option<String>,
 }
 ```
@@ -468,6 +475,12 @@ Expected capability shape:
 
 ```rust
 pub struct IntelNpuProbe {
+    pub proof_stage: String,
+    pub requested_backend: String,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+
     pub available: bool,
 
     pub os: String,
@@ -479,8 +492,8 @@ pub struct IntelNpuProbe {
     pub intel_vpu_driver_seen: bool,
     pub driver_version: Option<String>,
 
-    pub openvino_runtime_present: bool,
-    pub runtime_version: Option<String>,
+    pub openvino_runtime_available: bool,
+    pub openvino_version: Option<String>,
 
     pub openvino_npu_visible: bool,
     pub openvino_available_devices: Vec<String>,
@@ -491,6 +504,7 @@ pub struct IntelNpuProbe {
     pub device_alloc_mem_size: Option<u64>,
     pub max_tiles: Option<u32>,
 
+    pub fallback_used: bool,
     pub failure_reason: Option<String>,
 }
 ```
@@ -508,15 +522,23 @@ Example artifact shape:
 ```json
 {
   "requested_backend": "intel-npu",
-  "selected_backend": null,
-  "status": "runtime_detected",
+  "selected_backend": "intel-npu-openvino",
+  "runtime_api": "openvino",
+  "runtime_device": "NPU",
+  "proof_stage": "runtime_detected",
   "accel_device_present": true,
   "intel_vpu_driver_seen": true,
-  "openvino_runtime_present": true,
+  "openvino_runtime_available": true,
   "openvino_version": "2026.1",
   "openvino_available_devices": ["CPU", "GPU", "NPU"],
   "openvino_npu_visible": true,
+  "openvino_npu_full_name": "Intel(R) AI Boost",
   "driver_hint": "intel_vpu",
+  "driver_version": "...",
+  "compiler_version": "...",
+  "device_total_mem_size": 0,
+  "device_alloc_mem_size": 0,
+  "max_tiles": 1,
   "strict_mode": true,
   "fallback_used": false
 }
