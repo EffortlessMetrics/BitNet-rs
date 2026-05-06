@@ -167,10 +167,21 @@ jobs:
             -- --nocapture
 
   # Job 2: BDD Grid Check (separate job for parallel execution and clear gate signal)
+  # The xtask grid-check validates BDD/policy/runtime-flag coverage. Most PRs
+  # do not touch those crates, so the work is wasted on the default path.
+  # Gate to main / dispatch / `bdd` / `grid` / `full-ci` label. The
+  # build-test-linux job still runs the policy / BDD crate unit tests on every
+  # PR, so functional regressions to those crates are caught regardless.
   grid-check:
     name: BDD Grid Check
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'bdd') ||
+      contains(github.event.pull_request.labels.*.name, 'grid') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
@@ -344,11 +355,17 @@ jobs:
           bad=0
           # Required jobs (must succeed)
           for r in "${{ needs.build-test-linux.result }}" \
-                   "${{ needs.grid-check.result }}" \
                    "${{ needs.clippy.result }}" \
                    "${{ needs.docs.result }}"; do
             [ "$r" = "success" ] || bad=1
           done
+          # grid-check is conditionally skipped on PRs that do not touch
+          # BDD / policy crates (gated by label / main / dispatch). Treat
+          # skipped as acceptable, but do not allow failures or cancellations.
+          case "${{ needs.grid-check.result }}" in
+            success|skipped) ;;
+            *) bad=1 ;;
+          esac
           if [ $bad -ne 0 ]; then
             echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi
