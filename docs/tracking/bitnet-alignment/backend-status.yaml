@@ -285,15 +285,20 @@ backends:
       - Native path is CUDA first.
       - CUDA compute capability is 12.0.
       - Expected memory is 16 GB GDDR7 on a 256-bit bus.
+      - Primary proof bench is windows-9950x3d-rtx5070ti with AMD Ryzen 9 9950X3D as the CPU reference path.
+      - Existing CUDA code is kernel-provider-level infrastructure, not proof that the real transformer inference path routes through CUDA.
+      - QK256 CUDA remains scaffold-only until a real packed fused dequant GEMV kernel is implemented and wired.
       - CPU fallback cannot count as CUDA execution.
     blockers:
-      - Add 5070 Ti machine profile.
+      - Collect normalized Windows 9950X3D plus RTX 5070 Ti machine profile receipt.
       - Add CUDA runtime and NVML probe.
       - Add strict selected-device identity.
       - Add CUDA kernel smoke.
       - Add CPU/CUDA parity.
-      - Add receipt fields for CUDA runtime, driver, compute capability, VRAM, power, and fallback.
+      - Add receipt fields for CUDA runtime, driver, compute capability, VRAM, power, fallback, and kernel invocation counts.
       - Add benchmark baseline.
+      - Add persistent CUDA BitNet context and upload-once weight handles.
+      - Replace scaffold-only QK256 CUDA with a real packed-kernel path before full BitNet inference claims.
 
   nvidia_rtx_5070_ti_wgpu:
     status: scaffold
@@ -301,11 +306,23 @@ backends:
       - Cross-platform reference path through wgpu/Vulkan/D3D12.
       - WGPU smoke is not CUDA kernel proof.
       - Useful for shader portability and non-CUDA comparison.
+      - This lane must preserve selected backend identity as nvidia-rtx-5070-ti-wgpu and must not satisfy CUDA proof items.
     blockers:
       - Add wgpu adapter probe.
       - Add tiny shader smoke.
       - Add CPU/wgpu parity.
       - Record backend API, adapter name, driver, and fallback status.
+
+  cuda_dense_regular_llm:
+    status: not_present
+    notes:
+      - Future CUDA reference lane for regular FP16/BF16/INT8 dense LLM kernels.
+      - Can share CUDA probe, context, allocator, workspace, stats, parity, receipts, and benchmark protocol.
+      - Dense regular-LLM kernels cannot count as BitNet packed I2S or QK256 proof.
+    blockers:
+      - Complete RTX 5070 Ti CUDA receipt and kernel counter work first.
+      - Add dense FP16/BF16 or cuBLAS-backed matmul parity.
+      - Label receipts as dense_regular_llm rather than BitNet packed-kernel proof.
 
   rocm:
     status: scaffold

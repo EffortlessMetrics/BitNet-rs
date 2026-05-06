@@ -10,6 +10,12 @@ Roadmap:
 docs/specs/nvidia-rtx-5070-ti-roadmap.md
 ```
 
+Windows proof bench:
+
+```text
+docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+```
+
 ## Hardware Baseline
 
 - GPU: NVIDIA GeForce RTX 5070 Ti.
@@ -69,6 +75,17 @@ cargo --version
 ```powershell
 $ErrorActionPreference = "Continue"
 
+Write-Host "=== Windows ==="
+Get-ComputerInfo | Select-Object OsName, OsVersion, WindowsVersion, OsBuildNumber, CsSystemType
+
+Write-Host "=== CPU ==="
+Get-CimInstance Win32_Processor |
+  Format-List Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed
+
+Write-Host "=== Memory ==="
+Get-CimInstance Win32_PhysicalMemory |
+  Format-Table Manufacturer,Capacity,Speed,ConfiguredClockSpeed,PartNumber
+
 Write-Host "=== GPU devices ==="
 Get-PnpDevice | Where-Object {
   $_.FriendlyName -match "NVIDIA|5070|GeForce"
@@ -78,9 +95,17 @@ Write-Host "=== NVIDIA SMI ==="
 nvidia-smi
 nvidia-smi --query-gpu=name,driver_version,cuda_version,memory.total,power.limit,power.draw,temperature.gpu,compute_cap --format=csv
 
-Write-Host "=== CUDA ==="
+Write-Host "=== CUDA toolkit ==="
 where nvcc
 nvcc --version
+
+Write-Host "=== Rust ==="
+rustc --version
+cargo --version
+
+Write-Host "=== Optional WGPU / Vulkan / D3D12 ==="
+where vulkaninfo
+vulkaninfo --summary
 ```
 
 ## First CUDA Receipt
@@ -90,13 +115,16 @@ The first useful receipt is a CUDA smoke proof:
 ```json
 {
   "hardware": "nvidia-rtx-5070-ti",
-  "requested_backend": "nvidia-rtx-5070-ti",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "runtime_api": "cuda",
+  "reference_backend": "amd-9950x3d-cpu-avx512",
   "compute_capability": "12.0",
   "vram_bytes": 17179869184,
   "driver_version": "...",
-  "cuda_version": "...",
+  "cuda_runtime_version": "...",
+  "cuda_toolkit_version": "...",
   "fallback_used": false,
   "status": "kernel_smoke_tested"
 }

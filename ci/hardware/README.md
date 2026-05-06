@@ -49,6 +49,14 @@ ci/hardware/apple-m4-mac-mini/2026-05-05/mpsgraph-smoke.json
 ci/hardware/nvidia-rtx-5070-ti/2026-05-05/cuda-probe.json
 ci/hardware/nvidia-rtx-5070-ti/2026-05-05/cuda-smoke.json
 ci/hardware/nvidia-rtx-5070-ti/2026-05-05/cuda-parity.json
+
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/machine-profile.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-probe.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/nvml-probe.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-smoke.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-parity.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json
 ```
 
 ## Artifact Kinds
@@ -77,6 +85,10 @@ smoke.json
 parity.json
 benchmark.json
 strict-bitnet-proof.json
+cuda-probe-receipt.json
+cuda-smoke-receipt.json
+cuda-parity-receipt.json
+strict-bitnet-cuda-proof.json
 ```
 
 Templates are schema starters, not evidence. Replace every `TBD` field and write the completed receipt under `ci/hardware/<machine-id>/<date>/`.
@@ -96,14 +108,17 @@ mpsgraph-smoke.json
 cuda-probe.json
 cuda-smoke.json
 cuda-parity.json
+cuda-benchmark.json
 matmul-i2s-parity.json
 strict-cpu-proof.json
+strict-bitnet-cuda-proof.json
 sustained-cpu-benchmark.json
 ```
 
 ## Rules
 
 - Do not add binary or large artifacts to normal docs PRs.
+- Do not add raw command transcripts when a normalized JSON receipt is enough.
 - Probe artifacts cannot support execution claims.
 - Smoke artifacts cannot support parity claims.
 - Parity artifacts cannot support full inference claims.

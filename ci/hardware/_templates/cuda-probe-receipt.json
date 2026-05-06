@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "artifact_kind": "cuda_probe",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "TBD",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_backend": "TBD",
+  "runtime_api": "cuda",
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "fallback_used": false,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "cuda": {
+    "available": null,
+    "device_count": null,
+    "selected_device_index": null,
+    "selected_device_name": null,
+    "compute_capability": null,
+    "driver_version": null,
+    "cuda_runtime_version": null,
+    "cuda_toolkit_version": null,
+    "nvrtc_version": null,
+    "nvml_available": null,
+    "vram_bytes": null,
+    "power_limit_watts": null,
+    "power_draw_watts": null,
+    "temperature_c": null,
+    "failure_reason": null
+  },
+  "claim": "cuda_runtime_probe_recorded",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/cuda-probe.json"
+}

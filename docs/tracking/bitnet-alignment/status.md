@@ -1,10 +1,10 @@
 # bitnet-rs Alignment Status
 
-Updated: 2026-05-05
+Updated: 2026-05-06
 
 ## Current Focus
 
-Real BitNet CPU path sequencing after the #3625 hardware and BitNet contract merge. Apple Silicon M4-002 is merged; the next Apple Silicon item is M4-003 backend identity, before Metal probes, kernels, MPSGraph execution, parity, receipts, or benchmarks.
+Real BitNet CPU path sequencing remains active, and the NVIDIA CUDA proof bench is now documented as a separate staged lane. The next NVIDIA item is `RTX5070TI-003` backend identity, before CUDA/NVML probing, kernel smoke, parity, receipts, benchmarks, or BitNet CUDA inference work.
 
 ## Active / Coordination Queue
 
@@ -112,6 +112,12 @@ The Apple Silicon implementation order is M4-002 machine profile, M4-003 backend
 ## NVIDIA CUDA Boundary
 
 The RTX 5070 Ti lane is CUDA-first, with wgpu/Vulkan/D3D12 as a cross-platform reference lane. CUDA visibility is not kernel execution, WGPU smoke is not CUDA proof, CPU fallback cannot count as CUDA execution, and performance claims require driver, CUDA version, compute capability, VRAM, power, and thermal context.
+
+The Windows CUDA proof bench is `windows-9950x3d-rtx5070ti`: AMD Ryzen 9 9950X3D is the CPU reference path and NVIDIA GeForce RTX 5070 Ti is the CUDA target. Receipts should use narrow backend labels such as `amd-9950x3d-cpu-avx512`, `nvidia-rtx-5070-ti-cuda`, and `nvidia-rtx-5070-ti-wgpu`; generic `gpu`, `cuda`, `nvidia`, `accelerated`, or `blackwell` labels are not enough for strict proof.
+
+The current CUDA code is scaffolded kernel-provider infrastructure, not end-to-end CUDA inference. QK256 CUDA is scaffold-only until the packed fused dequant GEMV path is implemented and wired. The staged order is `RTX5070TI-003` backend identity, `RTX5070TI-004` CUDA/NVML probe, `RTX5070TI-005` tiny CUDA kernel smoke, `RTX5070TI-006` CPU/CUDA parity, `RTX5070TI-007` receipt/kernel counters, and `RTX5070TI-008` benchmark baseline. Only after those land should the `CUDA-BITNET-001` through `CUDA-BITNET-008` wave start persistent CUDA BitNet context, upload-once weights, reusable I2S linear, real QK256 CUDA, BitNetLinear routing, one-token strict proof, short decode proof, and full benchmark baselines.
+
+Dense regular-LLM CUDA work is useful as a future `CUDA-DENSE-001` reference lane, but it must be labeled as dense regular LLM execution and cannot claim BitNet packed I2S/QK256 inference.
 
 ## Tracker Notes
 

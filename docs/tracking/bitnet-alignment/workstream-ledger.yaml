@@ -1,6 +1,6 @@
 schema: 1
 project: bitnet-rs-alignment
-updated: 2026-05-05
+updated: 2026-05-06
 
 states:
   - proposed
@@ -2124,23 +2124,31 @@ items:
       - RTX5070TI-001
     scope:
       allowed_paths:
-        - crates/bitnet-common/src/types.rs
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-common/src/kernel_registry.rs
         - crates/bitnet-device-config-core/src/lib.rs
-        - crates/bitnet-inference/src/backends.rs
         - crates/bitnet-cli-config-core/src/lib.rs
         - crates/bitnet-cli/src/main.rs
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/kernels/**
+        - crates/bitnet-kernels/src/cuda/qk256_gemv.rs
+        - crates/bitnet-quantization/**
         - crates/bitnet-quantization/src/qk256/**
         - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-transformer/**
         - crates/bitnet-server/**
     acceptance:
-      - Requested backend can distinguish generic CUDA from RTX 5070 Ti when selected by explicit flag or device probe.
-      - Logs and receipts preserve requested backend and selected backend separately.
+      - nvidia-rtx-5070-ti-cuda parses as a distinct backend request.
+      - nvidia-rtx-5070-ti-wgpu parses as a distinct reference backend request.
+      - Generic cuda can still exist and remains distinguishable from nvidia-rtx-5070-ti-cuda.
+      - Logs and planned receipts preserve requested backend, selected backend, runtime API, fallback status, and fallback reason.
       - Strict mode fails if RTX 5070 Ti CUDA is requested but unavailable.
+      - No CUDA kernel execution is claimed.
     verification:
       - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-common --no-default-features --features cpu
       - cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu
 
   - id: RTX5070TI-004
@@ -2153,14 +2161,22 @@ items:
     scope:
       allowed_paths:
         - crates/bitnet-device-probe/**
+        - crates/bitnet-cli/src/main.rs
+        - xtask/**
+        - ci/hardware/_templates/cuda-probe-receipt.json
         - docs/tracking/bitnet-alignment/backend-status.yaml
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
         - crates/bitnet-server/**
     acceptance:
+      - Probe can create a CUDA context for the selected device.
       - Probe reports CUDA runtime visibility, NVIDIA driver, CUDA version, compute capability, device name, VRAM, power limit, and temperature when available.
       - Probe reports NVML visibility when available.
+      - Probe records CUDA toolkit and NVRTC version where available.
+      - Probe verifies selected CUDA device identity against NVIDIA GeForce RTX 5070 Ti when requested.
+      - CPU fallback is not counted as probe success.
+      - Probe does not claim kernel execution.
       - Fake detection is ignored in strict mode.
     verification:
       - cargo fmt --all -- --check
@@ -2177,6 +2193,7 @@ items:
       allowed_paths:
         - crates/bitnet-kernels/src/cuda/**
         - crates/bitnet-kernels/tests/**
+        - ci/hardware/_templates/cuda-smoke-receipt.json
         - docs/tracking/bitnet-alignment/backend-status.yaml
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
@@ -2185,9 +2202,12 @@ items:
         - crates/bitnet-qk256-dispatch/**
         - crates/bitnet-server/**
     acceptance:
-      - Tiny CUDA kernel compiles and executes on RTX 5070 Ti.
+      - Tiny CUDA kernel compiles with NVRTC and executes on RTX 5070 Ti.
+      - Output matches CPU expected result.
+      - Receipt records kernel_id and fallback_used=false.
       - Strict mode fails if CPU fallback is used.
       - Smoke output records selected device name, compute capability 12.0, CUDA version, driver version, VRAM, and fallback status.
+      - No BitNet inference claim or speedup claim is made.
     verification:
       - cargo fmt --all -- --check
       - Manual RTX 5070 Ti CUDA smoke command with receipt artifact.
@@ -2204,6 +2224,7 @@ items:
         - crates/bitnet-kernels/**
         - crates/bitnet-inference/**
         - tests/**
+        - ci/hardware/_templates/cuda-parity-receipt.json
         - docs/tracking/bitnet-alignment/backend-status.yaml
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
@@ -2211,8 +2232,10 @@ items:
         - crates/bitnet-server/**
     acceptance:
       - One isolated kernel or subgraph runs on RTX 5070 Ti through CUDA.
+      - Same input fixture goes through 9950X3D CPU reference and RTX 5070 Ti CUDA target.
       - CPU reference parity records max_abs_error and mean_abs_error.
-      - Receipt records selected CUDA backend and fallback status.
+      - Receipt records kernel ID, selected CUDA device, selected CUDA backend, and fallback status.
+      - Mismatch produces a debug artifact.
       - No full CUDA inference claim is made from isolated parity.
     verification:
       - cargo fmt --all -- --check
@@ -2231,12 +2254,18 @@ items:
         - crates/bitnet-receipts-core/**
         - crates/bitnet-bench-receipts/**
         - crates/bitnet-kernels/**
+        - ci/hardware/_templates/cuda-smoke-receipt.json
+        - ci/hardware/_templates/cuda-parity-receipt.json
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
         - crates/bitnet-server/**
     acceptance:
       - Receipts record requested backend, selected backend, CUDA runtime, driver, CUDA version, compute capability, VRAM, power, fallback status, and kernel IDs.
+      - CUDA smoke and parity receipts validate.
+      - Kernel invocation count is greater than zero for CUDA proof.
+      - fallback_invocations equals zero for strict CUDA proof.
+      - Host-to-device bytes, device-to-host bytes, kernel launches, and optional kernel time are recorded.
       - Strict RTX 5070 Ti CUDA validation fails if fallback was used.
       - CPU fallback remains visible when allowed in auto mode.
     verification:
@@ -2262,6 +2291,8 @@ items:
         - crates/bitnet-server/**
     acceptance:
       - Benchmark compares CPU against RTX 5070 Ti CUDA for the validated kernel or subgraph.
+      - Benchmark profiles include cuda_tiny_smoke, cuda_fp32_matmul_small, cuda_i2s_matmul_small, cuda_i2s_matmul_medium, and cuda_transfer_h2d_d2h.
+      - Benchmark separates CPU reference time, CUDA total time, CUDA kernel time, host-to-device time, and device-to-host time.
       - Receipt records driver, CUDA version, compute capability, VRAM, power, temperature, selected backend, and fallback status.
       - Performance claim only appears if benchmark artifact exists.
     verification:
@@ -2294,6 +2325,301 @@ items:
     verification:
       - cargo fmt --all -- --check
       - Manual RTX 5070 Ti wgpu smoke command with receipt artifact.
+
+  - id: CUDA-BITNET-001
+    title: Add persistent CUDA BitNet context and weight handles
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/src/lib.rs
+        - crates/bitnet-inference/**
+        - crates/bitnet-common/src/backend_selection.rs
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - CUDA context and stream persist across inference.
+      - Weights can be uploaded once and referenced by CUDA weight handles.
+      - Reusable activation workspace exists for decode-time buffers.
+      - Receipts can record weights_uploaded_once=true and per_token_weight_upload=false.
+      - CPU-only builds still compile.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+    notes:
+      - This creates CUDA lifetime infrastructure only; it must not claim full BitNet inference.
+    followups:
+      - CUDA-BITNET-002
+      - CUDA-BITNET-003
+
+  - id: CUDA-BITNET-002
+    title: Add reusable CUDA I2S linear primitive
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/tests/**
+        - crates/bitnet-quantization/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Real layer shapes are supported.
+      - Tails and padding are handled.
+      - CPU/CUDA parity passes for the I2S primitive.
+      - Kernel invocation stats are recorded.
+      - Weights are not allocated or uploaded per token.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - Manual RTX 5070 Ti I2S parity command with receipt artifact.
+    notes:
+      - I2S primitive parity is not QK256 proof and is not full inference proof.
+    followups:
+      - CUDA-BITNET-004
+
+  - id: CUDA-BITNET-003
+    title: Implement CUDA QK256 fused dequant GEMV
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/tests/**
+        - crates/bitnet-quantization/**
+        - crates/bitnet-qk256-dispatch/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Scaffold-only QK256 launch path is replaced with a real compiled CUDA kernel.
+      - Packed QK256 weights and scale blocks are consumed without materializing full FP32 weights.
+      - Official BitNet GGUF layer shapes are supported.
+      - CPU QK256 scalar parity passes.
+      - Receipt records qk256_cuda kernel ID and fallback_used=false.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - Manual RTX 5070 Ti QK256 parity command with receipt artifact.
+    notes:
+      - This is the packed-kernel blocker for strict BitNet CUDA inference claims.
+    followups:
+      - CUDA-BITNET-004
+
+  - id: CUDA-BITNET-004
+    title: Prepack and upload BitNet weights once for CUDA
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-002
+      - CUDA-BITNET-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/**
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Strict GGUF load validates BitNet layout before CUDA upload.
+      - Per-layer CUDA weight handles exist.
+      - Decode path does not repack or upload weights per token.
+      - Receipt records packed_at_load=true and uploaded_once=true.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda
+    notes:
+      - This does not claim full CUDA inference until BitNetLinear dispatch is routed through CUDA.
+    followups:
+      - CUDA-BITNET-005
+
+  - id: CUDA-BITNET-005
+    title: Route BitNetLinear through CUDA backend
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-transformer/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Actual transformer forward path invokes CUDA for BitNetLinear.
+      - Strict CUDA mode fails on unsupported CPU fallback.
+      - Coverage counters record total, CUDA-routed, and CPU-fallback BitNet linear layers.
+      - If only some layers route to CUDA, receipts label it as CUDA inference contribution, not full CUDA inference.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-transformer --no-default-features --features cpu,cuda
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda
+    notes:
+      - This is the real integration point for CUDA inference routing.
+    followups:
+      - CUDA-BITNET-006
+
+  - id: CUDA-BITNET-006
+    title: Add strict one-token BitNet CUDA proof
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Official GGUF loads in strict mode.
+      - One token is generated greedily.
+      - CUDA kernel invocation count is greater than zero.
+      - CPU fallback count is zero.
+      - CPU/CUDA greedy or top-1 parity is recorded.
+      - Receipt records fallback_used=false and speedup_claim=false.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti strict one-token BitNet CUDA proof with receipt artifact.
+    notes:
+      - The first proof must not claim speedup.
+    followups:
+      - CUDA-BITNET-007
+
+  - id: CUDA-BITNET-007
+    title: Add short decode BitNet CUDA proof
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Short greedy decode succeeds.
+      - Prefill, first-token, and decode timing are recorded.
+      - CUDA kernel invocations, CPU fallback operations, and CUDA memory high-water mark are recorded.
+      - fallback_used=false.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti short decode BitNet CUDA proof with receipt artifact.
+    notes:
+      - Short decode proof is correctness and instrumentation first, not a speedup claim.
+    followups:
+      - CUDA-BITNET-008
+
+  - id: CUDA-BITNET-008
+    title: Add RTX 5070 Ti BitNet CUDA benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmarks compare 9950X3D CPU scalar, AVX2, AVX-512, and RTX 5070 Ti CUDA.
+      - Same model, tokenizer, prompt profile, generated token count, and strict loader mode are used.
+      - Driver, CUDA, VRAM, power, and thermal context are recorded.
+      - Speedup claim appears only if the same-model fallback-free receipt proves it.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti BitNet CUDA benchmark with receipt artifact.
+    notes:
+      - This is the first work item allowed to make performance claims, and only with matching receipts.
+    followups: []
+
+  - id: CUDA-DENSE-001
+    title: Add regular LLM CUDA dense-kernel reference lane
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - FP16/BF16 dense matmul or cuBLAS-backed path has CPU parity.
+      - RMSNorm, RoPE, and KV-cache CUDA helpers are shared where useful.
+      - Receipts label the path as dense_regular_llm, not BitNet packed-kernel proof.
+      - Dense-lane receipts cannot satisfy CUDA-BITNET packed I2S/QK256 acceptance criteria.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+    notes:
+      - This lane is separate from strict BitNet CUDA inference.
+    followups: []
 
   - id: AMD9950X3D-001
     title: Add AMD Ryzen 9 9950X3D CPU validation lane
