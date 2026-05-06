@@ -27,6 +27,7 @@ bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
+bitnet-qk256-dispatch = { path = "../bitnet-qk256-dispatch", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-tokenizer-discovery-core = { path = "../bitnet-tokenizer-discovery-core", version = "0.2.1-dev" }
@@ -86,6 +87,7 @@ runtime-profile-core = [
 cpu = [
   "bitnet-inference/cpu",
   "bitnet-kernels/cpu",
+  "bitnet-qk256-dispatch/cpu",
   "bitnet-device-probe/cpu",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
@@ -93,6 +95,7 @@ cpu = [
 cuda = [
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
+  "bitnet-qk256-dispatch/cuda",
   "bitnet-device-probe/cuda",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
@@ -100,6 +103,7 @@ cuda = [
 metal = [
   "bitnet-common/metal",
   "bitnet-inference/metal",
+  "bitnet-qk256-dispatch/metal",
   "runtime-profile-core",
 ]
 gpu = ["cuda", "metal", "bitnet-runtime-bootstrap/runtime-profile-gpu"]

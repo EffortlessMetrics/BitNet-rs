@@ -501,6 +501,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-prompt-templates",
+ "bitnet-qk256-dispatch",
  "bitnet-quantization",
  "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
@@ -1193,10 +1194,12 @@ name = "bitnet-qk256-dispatch"
 version = "0.2.1-dev"
 dependencies = [
  "bitnet-common",
+ "bitnet-kernels",
  "bitnet-qk256-layout-core",
  "bitnet-quantization",
  "bitnet-test-support",
  "candle-core",
+ "tracing",
 ]
 
 [[package]]
