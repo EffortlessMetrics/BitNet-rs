@@ -40,9 +40,11 @@ maintenance exceptions for legacy tracker edits.
 
 When `GITHUB_REPOSITORY` and `GITHUB_TOKEN` are available outside push-to-main
 checks, `campaign doctor` also reconciles campaign state against live open
-GitHub PRs. An open PR that claims an item must have that item marked `pr_open`
-with a matching `pr_open` event, and an item marked `pr_open` must still have a
-live open PR that claims the item.
+GitHub PRs. In pull-request CI, strict reconciliation is scoped to the current
+PR so parallel branches do not need to carry one another's campaign TOML state.
+The current open PR must have its claimed item marked `pr_open` with a matching
+`pr_open` event, and an item marked `pr_open` must still have a live open PR
+that claims the item.
 
 ## Work Item Contract
 

@@ -14,4 +14,4 @@
 | intel-npu | Intel NPU validation | NPU-002 | Device-node detection is not inference. |
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | RTX5070TI-005 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-001 | Do not reintroduce simulated inference. |
-| tracker-infra | Tracker infrastructure | TRACKER-001 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
+| tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
