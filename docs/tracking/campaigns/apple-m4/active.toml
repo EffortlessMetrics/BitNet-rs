@@ -126,7 +126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-004"
-status = "ready"
+status = "pr_open"
 branch = "codex/apple-m4/M4-004-metal-probe"
 stackable = false
 requires_human_merge = true

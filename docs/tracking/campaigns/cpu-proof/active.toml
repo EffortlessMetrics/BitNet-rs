@@ -121,8 +121,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-003"
-status = "ready"
-branch = "codex/cpu-proof/CPU-BITNET-003-canonical-packed-layout"
+status = "pr_open"
+branch = "codex/cpu-bitnet-003-canonical-packed-layout"
 stackable = false
 requires_human_merge = true
 blocked_by = ["CPU-BITNET-002"]
