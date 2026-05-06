@@ -23,7 +23,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4/M4-003-backend-identity"
 stackable = false
 requires_human_merge = true
@@ -31,15 +31,21 @@ blocked_by = []
 acceptance = "Preserve Apple M4 Metal, MPSGraph, and CPU/NEON backend identity without adding runtime execution or kernels."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-common --no-default-features --features cpu backend_selection",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli cli_config",
 ]
 allowed_paths = [
-  "crates/bitnet-common/src/types.rs",
+  "crates/bitnet-common/src/backend_selection.rs",
   "crates/bitnet-device-config-core/src/lib.rs",
-  "crates/bitnet-inference/src/backends.rs",
   "crates/bitnet-cli-config-core/src/lib.rs",
   "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/tests/cli_config_edge_cases.rs",
+  "crates/bitnet-cli/tests/cli_extended_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/snapshot_wave10__cli_config_validate_invalid_device_error.snap",
   "docs/tracking/campaigns/apple-m4/**",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/src/qk256/**",

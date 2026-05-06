@@ -116,7 +116,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device to use (cpu, cuda, oneapi, gpu, npu, auto)
+    /// Device/backend to use (cpu, cuda, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
 
@@ -492,16 +492,17 @@ async fn main() -> Result<()> {
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let request = match cli.device.as_deref() {
-            Some("cuda") => BackendRequest::Cuda,
-            Some("gpu") => BackendRequest::Gpu,
-            Some("oneapi") => BackendRequest::OneApi,
-            Some("cpu") => BackendRequest::Cpu,
-            Some("npu") => BackendRequest::Auto,
-            _ => BackendRequest::Auto,
-        };
+        let request = cli
+            .device
+            .as_deref()
+            .and_then(BackendRequest::from_label)
+            .unwrap_or(BackendRequest::Auto);
+        let strict_mode = std::env::var("BITNET_STRICT_MODE")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
         match select_backend(request, &caps) {
-            Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
+            Ok(result) => info!(backend_selection = %result.identity_summary(), "backend selected"),
+            Err(e) if strict_mode => return Err(e.into()),
             Err(e) => warn!(error = %e, "backend selection warning"),
         }
     }

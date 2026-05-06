@@ -1,7 +1,7 @@
 //! Core device configuration parsing and runtime resolution.
 
 use anyhow::Result;
-use bitnet_common::Device;
+use bitnet_common::{BackendRequest, Device};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -15,6 +15,16 @@ pub enum DeviceConfig {
     Cpu,
     /// Force GPU execution on specific device ID.
     Gpu(usize),
+    /// Preserve a native Metal backend identity.
+    Metal,
+    /// Preserve an MPSGraph graph/reference backend identity.
+    MpsGraph,
+    /// Preserve the Apple M4 native Metal backend identity.
+    AppleM4Metal,
+    /// Preserve the Apple M4 MPSGraph graph/reference backend identity.
+    AppleM4MpsGraph,
+    /// Preserve the Apple M4 CPU/NEON fallback/parity backend identity.
+    AppleM4CpuNeon,
 }
 
 impl FromStr for DeviceConfig {
@@ -25,6 +35,11 @@ impl FromStr for DeviceConfig {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
             "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
+            "metal" => Ok(DeviceConfig::Metal),
+            "mpsgraph" => Ok(DeviceConfig::MpsGraph),
+            "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
+            "apple-m4-mpsgraph" => Ok(DeviceConfig::AppleM4MpsGraph),
+            "apple-m4-cpu-neon" => Ok(DeviceConfig::AppleM4CpuNeon),
             s if s.starts_with("gpu:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
             s if s.starts_with("cuda:") => Ok(DeviceConfig::Gpu(s[5..].parse::<usize>()?)),
             s if s.starts_with("vulkan:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
@@ -53,7 +68,32 @@ impl DeviceConfig {
             }
             DeviceConfig::Cpu => Device::Cpu,
             DeviceConfig::Gpu(id) => Device::Cuda(*id),
+            DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
+            // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
+            DeviceConfig::MpsGraph | DeviceConfig::AppleM4MpsGraph => Device::Cpu,
+            DeviceConfig::AppleM4CpuNeon => Device::Cpu,
         }
+    }
+
+    /// Return the backend request identity represented by this config.
+    #[must_use]
+    pub fn backend_request(&self) -> BackendRequest {
+        match self {
+            DeviceConfig::Auto => BackendRequest::Auto,
+            DeviceConfig::Cpu => BackendRequest::Cpu,
+            DeviceConfig::Gpu(_) => BackendRequest::Gpu,
+            DeviceConfig::Metal => BackendRequest::Metal,
+            DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
+            DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
+            DeviceConfig::AppleM4MpsGraph => BackendRequest::AppleM4MpsGraph,
+            DeviceConfig::AppleM4CpuNeon => BackendRequest::AppleM4CpuNeon,
+        }
+    }
+
+    /// Stable label for logs and planned receipt fields.
+    #[must_use]
+    pub fn backend_label(&self) -> String {
+        self.backend_request().to_string()
     }
 }
 
@@ -68,6 +108,17 @@ mod tests {
         assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
         assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
         assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));
+        assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);
+        assert_eq!("mpsgraph".parse::<DeviceConfig>().unwrap(), DeviceConfig::MpsGraph);
+        assert_eq!("apple-m4-metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::AppleM4Metal);
+        assert_eq!(
+            "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::AppleM4MpsGraph
+        );
+        assert_eq!(
+            "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::AppleM4CpuNeon
+        );
     }
 
     #[test]
@@ -75,5 +126,20 @@ mod tests {
         assert!("unknown".parse::<DeviceConfig>().is_err());
         assert!("gpu:".parse::<DeviceConfig>().is_err());
         assert!("gpu:abc".parse::<DeviceConfig>().is_err());
+    }
+
+    #[test]
+    fn apple_backend_labels_do_not_alias() {
+        let metal = "metal".parse::<DeviceConfig>().unwrap();
+        let apple_metal = "apple-m4-metal".parse::<DeviceConfig>().unwrap();
+        let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();
+        let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();
+        let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();
+
+        assert_eq!(metal.backend_label(), "metal");
+        assert_eq!(apple_metal.backend_label(), "apple-m4-metal");
+        assert_eq!(mpsgraph.backend_label(), "mpsgraph");
+        assert_eq!(apple_mpsgraph.backend_label(), "apple-m4-mpsgraph");
+        assert_eq!(apple_cpu.backend_label(), "apple-m4-cpu-neon");
     }
 }
