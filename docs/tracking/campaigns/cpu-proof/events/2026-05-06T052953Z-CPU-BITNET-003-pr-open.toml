@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T05:29:53Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-003"
+event = "pr_open"
+pr = 3690
+head_sha = "ab89f51cf7aae1ffb5e34e24758c11eff6aa637e"
+actor = "codex"
+
+notes = [
+  "Recorded live GitHub state for the canonical packed layout PR.",
+  "This tracker update is a reconciliation-only fix for the campaign doctor gate.",
+]

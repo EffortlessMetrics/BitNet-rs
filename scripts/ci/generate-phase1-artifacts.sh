@@ -39,7 +39,7 @@ fi
   echo
   echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo
-  rg --files benches benchmarks 2>/dev/null | LC_ALL=C sort | sed 's|^|- |'
+  git ls-files -- benches benchmarks 2>/dev/null | LC_ALL=C sort | sed 's|^|- |'
 } > "$out_dir/bench-inventory.md"
 
 # 27) Size inventory baseline (dependency graph size proxy)

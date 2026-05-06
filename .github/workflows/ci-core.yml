@@ -2,7 +2,7 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, fuzz/**, Cargo.{toml,lock}, .github/workflows/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
+# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, fuzz/**, Cargo.{toml,lock}, .github/workflows/**, .github/images/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
 # Workflow hardening: concurrency + timeouts applied across all workflows in #485
 
 on:
@@ -16,6 +16,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/**'
+      - '.github/images/**'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/copilot-instructions.md'
@@ -40,6 +41,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/**'
+      - '.github/images/**'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/copilot-instructions.md'
@@ -84,7 +86,7 @@ jobs:
       INSTA_UPDATE: unseen
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -96,11 +98,12 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-ubuntu
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Build core crates (libs, CPU features)
+      - name: Build core libs (CPU features)
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -109,15 +112,16 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --no-default-features --features cpu
-          # SRP microcrates (no feature flags required)
+
+      - name: Build SRP microcrates
+        run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
 
-      - name: Run unit tests (libs only, CPU features)
+      - name: "Run unit tests: core libs"
         run: |
-          # Target only the library crates to keep feedback fast.
           cargo test --locked \
             -p bitnet-common \
             -p bitnet-models \
@@ -127,16 +131,13 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
-          # SRP microcrates (unit tests + integration tests)
+
+      - name: "Run unit tests: SRP microcrates"
+        run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
-          # Phase 5: CPU golden path E2E (always-on, no model download)
-          cargo test --locked \
-            -p bitnet-inference --test cpu_golden_path \
-            --no-default-features --features cpu
-          # Phase 6 SRP microcrates (no feature flags required)
           cargo test --locked \
             -p bitnet-logits \
             -p bitnet-gguf \
@@ -144,7 +145,15 @@ jobs:
             -p bitnet-device-probe \
             -p bitnet-engine-core \
             --no-default-features
-          # BDD/policy/testing-infrastructure crates (cpu feature required for profile tests)
+
+      - name: "Run tests: inference golden path"
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
+      - name: "Run unit tests: policy / BDD crates"
+        run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
             -p bitnet-bdd-grid \
@@ -167,7 +176,7 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
-      - name: Run AVX2-targeted unit tests (x86_64 static +avx2)
+      - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
         if: runner.os == 'Linux' && runner.arch == 'X64'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
@@ -194,7 +203,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -205,6 +214,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-grid-check
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run BDD Grid Check (CPU cells)
         run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only --verbose
@@ -220,7 +230,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -232,6 +242,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
         run: |
@@ -278,7 +289,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -290,6 +301,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy-macos-arm64
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
         run: |
@@ -309,7 +321,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -320,6 +332,7 @@ jobs:
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-docs
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build documentation
         env:

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T02:04:30Z"
+campaign = "tracker-infra"
+item = "TRACKER-001"
+event = "pr_open"
+pr = 3660
+head_sha = "46a2dc58599a771e459762a56fa0523875b4ee55"
+actor = "codex"
+
+notes = [
+  "Opened tracker infrastructure PR.",
+  "Adds advisory campaign-local tracker checks and generated dashboards without runtime code, kernels, QK256, server inference, or dependency changes.",
+]

@@ -1,0 +1,2923 @@
+schema: 1
+project: bitnet-rs-alignment
+updated: 2026-05-06
+
+states:
+  - proposed
+  - ready
+  - in_progress
+  - pr_open
+  - blocked
+  - merged
+  - superseded
+
+item_schema:
+  required:
+    - id
+    - title
+    - state
+    - priority
+    - workstream
+    - depends_on
+    - scope.allowed_paths
+    - scope.forbidden_paths
+    - acceptance
+    - verification
+    - notes
+    - followups
+  crate_collapse_fields:
+    - source_crate
+    - destination_crate
+    - destination_module
+    - behavior_change
+    - public_api_change
+  runtime_fields:
+    - claim_boundary.may_claim
+    - claim_boundary.must_not_claim
+    - receipt_required
+
+state_transition_rules:
+  - proposed -> ready only when scope, acceptance, and verification are clear.
+  - ready -> in_progress when a branch starts work.
+  - in_progress -> pr_open when a PR is opened.
+  - pr_open -> merged only after merge.
+  - pr_open -> blocked when waiting on an external blocker.
+  - pr_open -> superseded when replaced by another PR.
+  - Work item state must match status.md.
+  - A PR must not mark itself merged.
+  - Only update merged state after the merge SHA exists.
+
+sequence_gates:
+  - No crate movement before TRUTH-001, TRUTH-002, TRUTH-003, and INV-001 are merged.
+  - No server real-inference work before fake/simulated paths are fenced and GGUF fallback is explicit.
+  - No GPU validation claims before backend identity and fallback semantics are clean and a CPU proof path exists.
+
+workstreams:
+  truth:
+    title: Truth boundary
+    objective: Prevent misleading runtime behavior and align docs with real status.
+
+  inventory:
+    title: Consolidation inventory
+    objective: Assign every microcrate to a final public crate or internal module.
+
+  collapse_leaf:
+    title: Leaf crate collapse
+    objective: Move low-risk utility microcrates into destination modules.
+
+  collapse_domain:
+    title: Domain crate collapse
+    objective: Collapse tokenizer, inference, receipt, model, and quantization helper crates.
+
+  runtime_cpu:
+    title: CPU runtime proof
+    objective: Make strict CPU QK256 CLI inference receipt-backed and measurable.
+
+  legacy_mobile_cpu:
+    title: Legacy mobile CPU validation
+    objective: Validate the CPU-first BitNet path on Intel Core i5-8250U-class AVX2 mobile hardware, with receipts that separate short turbo behavior from sustained low-power operation.
+
+  desktop_cpu:
+    title: Desktop CPU validation
+    objective: Validate BitNet CPU execution across modern and mainstream desktop CPUs, including AMD Zen 5 AVX-512 and Zen 3 AVX2 lanes, with receipts that separate scalar, AVX2, AVX-512, cache, memory, and sustained-power behavior.
+
+  server:
+    title: Server real inference
+    objective: Replace simulated inference with real engine execution or explicit 501.
+
+  gpu:
+    title: GPU validation
+    objective: Validate one backend end-to-end with receipts before broadening.
+
+  apple_silicon:
+    title: Apple Silicon validation
+    objective: Validate M4 Mac mini execution through Metal kernels, MPSGraph reference graphs, CPU/NEON fallback, parity tests, receipts, and benchmark artifacts.
+
+  intel_arc_gpu:
+    title: Intel Arc GPU validation
+    objective: Validate Intel Arc A770 discrete GPU and Arc 140V integrated GPU execution through OpenCL kernels, OpenVINO GPU smoke, parity tests, receipts, and benchmark artifacts without colliding with CPU or NPU work.
+
+  lunar_lake_platform:
+    title: Lunar Lake 258V platform validation
+    objective: Validate the Core Ultra 7 258V as a tri-device platform with CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU using separate proof labels and receipts.
+
+  npu:
+    title: Intel NPU validation
+    objective: Validate Intel Lunar Lake NPU through detection, runtime smoke, parity, and receipts without colliding with CPU kernel work.
+
+  nvidia_cuda:
+    title: NVIDIA CUDA validation
+    objective: Validate RTX 5070 Ti execution through CUDA kernels, CPU/CUDA parity, receipts, and benchmark artifacts, with wgpu/Vulkan as a separate cross-platform comparison lane.
+
+items:
+  - id: TRUTH-001
+    title: Fence server simulated inference
+    state: merged
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - crates/bitnet-server/src/batch_engine.rs
+        - crates/bitnet-server/src/lib.rs
+        - crates/bitnet-server/tests/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+    acceptance:
+      - Public server inference routes do not return simulated text.
+      - Non-test builds either call real inference or return 501/503.
+      - Tests assert simulated responses are unavailable outside test mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo clippy --locked -p bitnet-server --all-targets --no-default-features --features cpu -- -D warnings
+      - cargo test --locked -p bitnet-server --no-default-features --features cpu
+    notes:
+      - Do not attempt real batching in this PR.
+      - Single-request real inference is a later item.
+    claim_boundary:
+      may_claim:
+        - Public server inference paths fail honestly after merge.
+      must_not_claim:
+        - Server inference works or returns real model output.
+    receipt_required: false
+    followups: []
+
+  - id: TRUTH-002
+    title: Make GGUF minimal fallback explicit
+    state: merged
+    priority: P0
+    workstream: truth
+    depends_on:
+      - TRUTH-001
+      - TRUTH-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/gguf_simple.rs
+        - crates/bitnet-cli/src/main.rs
+        - docs/reference/quantization-support.md
+        - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+    acceptance:
+      - CLI/server/bench paths do not silently use minimal loader fallback.
+      - Explicit opt-in exists for compatibility/test fallback.
+      - Receipt or JSON output records loader mode.
+    verification:
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Add a proposed receipt-schema item if loader mode needs schema expansion.
+    claim_boundary:
+      may_claim:
+        - User-facing fallback behavior is explicit after merge.
+      must_not_claim:
+        - Minimal fallback proves model correctness or performance.
+    receipt_required: false
+    followups: []
+
+  - id: TRUTH-003
+    title: Fix null-byte model path validation
+    state: merged
+    priority: P0
+    workstream: truth
+    depends_on:
+      - TRUTH-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-server/src/security.rs
+        - crates/bitnet-server/tests/**
+      forbidden_paths:
+        - Cargo.toml
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-models/**
+        - .github/**
+    acceptance:
+      - Model paths containing null bytes are rejected.
+      - Tests cover prefix, suffix, middle, and extension-bypass null-byte cases.
+      - Duplicate open security PRs can be closed as superseded.
+    verification:
+      - cargo test --locked -p bitnet-server security --no-default-features --features cpu
+    notes:
+      - Canonical ledger-aligned fix landed in #3626.
+      - Duplicate Sentinel PRs were closed as superseded by #3626.
+    followups: []
+
+  - id: INV-001
+    title: Add crate consolidation map
+    state: merged
+    priority: P0
+    workstream: inventory
+    depends_on:
+      - TRUTH-001
+      - TRUTH-002
+      - TRUTH-003
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/crate-consolidation-map.yaml
+        - docs/tracking/bitnet-alignment/status.md
+      forbidden_paths:
+        - Cargo.toml
+        - crates/**
+        - .github/**
+    acceptance:
+      - Every current workspace member has a disposition.
+      - Each item has destination, reason, wave, and verification gate.
+      - No code is moved in this PR.
+    verification:
+      - cargo fmt --all -- --check
+    notes:
+      - Inventory only; do not move code or edit Cargo.toml.
+    followups: []
+
+  - id: QUEUE-001
+    title: Deduplicate generated PR clusters
+    state: merged
+    priority: P0
+    workstream: truth
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/superseded-work.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - Cargo.toml
+        - crates/**
+        - .github/**
+    acceptance:
+      - Duplicate null-byte PRs are tied to TRUTH-003.
+      - Duplicate Codecov PRs have one canonical PR or are deferred.
+      - Duplicate accessibility PRs have one canonical PR or are deferred.
+      - Duplicate performance PRs are deferred until truth boundary and inventory complete.
+    verification:
+      - cargo fmt --all -- --check
+    notes:
+      - This item may be completed by PR comments and tracker updates; do not touch runtime code.
+      - Codecov duplicate cluster uses #3620 as the deferred canonical candidate.
+      - Null-byte Sentinel duplicates are tied to TRUTH-003 and should close after canonical merge.
+      - Accessibility Palette duplicates are deferred until truth boundary and inventory.
+      - Sampling/performance Bolt duplicates are deferred until truth boundary and inventory.
+    followups: []
+
+  - id: HW-001
+    title: Add shared hardware validation matrix
+    state: merged
+    priority: P1
+    workstream: inventory
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/hardware/HARDWARE_MATRIX.md
+        - docs/hardware/PROOF_STAGES.md
+        - docs/hardware/BENCHMARK_PROTOCOL.md
+        - docs/hardware/machine-profile.schema.yaml
+        - .codex/bitnet-alignment.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - All hardware lanes have explicit proof labels.
+      - Proof stages are defined once.
+      - Machine profile schema defines required receipt fields.
+      - Benchmark protocol separates detection, smoke, parity, inference, and performance claims.
+      - Codex memory includes lane ownership rules.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: HW-002
+    title: Add hardware artifact naming policy
+    state: proposed
+    priority: P1
+    workstream: inventory
+    depends_on:
+      - HW-001
+    scope:
+      allowed_paths:
+        - ci/hardware/README.md
+        - docs/hardware/HARDWARE_MATRIX.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Hardware receipts use stable machine/date/artifact-kind paths.
+      - Probe, smoke, parity, benchmark, and proof artifact kinds are defined.
+      - No binary or large artifacts are added.
+    verification:
+      - cargo fmt --all -- --check
+    notes:
+      - "#3625 added ci/hardware/README.md with hardware artifact naming guidance, but this item remains proposed until maintainers confirm HW-002 should be marked merged."
+    followups: []
+
+  - id: BITNET-001
+    title: Add BitNet model and kernel proof contract
+    state: merged
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - HW-001
+    scope:
+      allowed_paths:
+        - docs/bitnet/**
+        - docs/hardware/HARDWARE_MATRIX.md
+        - docs/hardware/BENCHMARK_PROTOCOL.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - .codex/bitnet-alignment.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Canonical BitNet b1.58 2B4T model contract is documented.
+      - BitNet W1.58A8 quantization semantics are documented separately from generic INT8.
+      - I2_S/TL1/TL2/QK256/OpenVINO graph responsibilities are documented.
+      - Runtime phases distinguish load, tokenize, prefill, first token, decode, sampling, and total generation.
+      - Reference commands for bitnet.cpp and bitnet-rs are documented.
+      - BitNet receipt fields are defined.
+      - Benchmark phases distinguish load, prefill, first token, decode, and sampling.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: BITNET-002
+    title: Add canonical BitNet fixture manifest and receipt templates
+    state: merged
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - BITNET-001
+    scope:
+      allowed_paths:
+        - docs/bitnet/fixtures.yaml
+        - docs/bitnet/BITNET_REFERENCE_RUNS.md
+        - ci/hardware/README.md
+        - ci/hardware/_templates/**
+        - .codex/bitnet-alignment.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Lists canonical GGUF, tokenizer, prompt fixtures, expected loader mode, and reference command.
+      - Includes model hash placeholder fields.
+      - Adds probe, smoke, parity, benchmark, and strict BitNet proof receipt templates.
+      - Does not add large model files.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files
+      - Parse receipt template JSON files
+
+  - id: BITNET-003
+    title: Add BitNet parity tolerance policy
+    state: merged
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - BITNET-001
+    scope:
+      allowed_paths:
+        - docs/bitnet/BITNET_PARITY_TOLERANCES.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Scalar, AVX2, AVX-512, GPU, OpenVINO, and sampling tolerance classes are documented.
+      - Deterministic greedy token agreement rules are documented.
+      - Unknown tolerances are marked TBD, not invented.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: CPU-001
+    title: Add strict CPU inference proof command
+    state: merged
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - TRUTH-002
+      - TRUTH-003
+      - INV-001
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/verification-gates.md
+        - docs/reference/inference-cli-reference.md
+        - docs/howto/validate-models.md
+        - scripts/**
+      forbidden_paths:
+        - crates/**
+        - Cargo.toml
+        - .github/**
+    acceptance:
+      - Strict CPU proof command is documented.
+      - Command disables minimal fallback and enables strict mode.
+      - Command uses explicit model and tokenizer paths.
+      - Command enables JSON output or another receipt-adjacent proof artifact.
+      - Output expectations are documented as smoke/proof, not model-quality claims.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+    notes:
+      - Documentation and scripts only; do not change runtime behavior in this item.
+    claim_boundary:
+      may_claim:
+        - Strict CPU proof command is reproducible after merge.
+      must_not_claim:
+        - CPU inference correctness, performance, or receipt validation is complete.
+    receipt_required: false
+    followups: []
+
+  - id: CPU-BITNET-000
+    title: Add real BitNet CPU path implementation plan
+    state: merged
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-001
+      - BITNET-002
+    scope:
+      allowed_paths:
+        - docs/README.md
+        - docs/bitnet/BITNET_CPU_PATH_PLAN.md
+        - docs/bitnet/BITNET_KERNEL_MATRIX.md
+        - docs/bitnet/BITNET_RECEIPT_FIELDS.md
+        - .codex/bitnet-alignment.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Documents that BitNet CPU proof cannot route around real GGUF loading, tokenizer authority, packed layout, scalar truth kernels, SIMD dispatch, transformer decode coverage, strict fallback behavior, and receipts.
+      - Adds CPU-BITNET-001 through CPU-BITNET-009 as PR-sized follow-up items.
+      - Keeps unknown parity tolerances in the existing tolerance policy instead of inventing new numeric thresholds.
+      - Does not touch runtime code.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files
+      - git diff --check
+    notes:
+      - Docs and tracker only.
+    claim_boundary:
+      may_claim:
+        - The real BitNet CPU implementation sequence is documented after merge.
+      must_not_claim:
+        - Loader, tokenizer, packed kernels, transformer decode, receipts, or performance are implemented.
+    receipt_required: false
+    followups:
+      - CPU-BITNET-001
+      - CPU-BITNET-002
+      - CPU-BITNET-003
+      - CPU-BITNET-004
+      - CPU-BITNET-005
+      - CPU-BITNET-006
+      - CPU-BITNET-007
+      - CPU-BITNET-008
+      - CPU-BITNET-009
+
+  - id: CPU-BITNET-001
+    title: Establish strict BitNet GGUF loader authority
+    state: merged
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-000
+      - TRUTH-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/formats/gguf/loader.rs
+        - crates/bitnet-models/src/gguf_simple.rs
+        - crates/bitnet-models/src/lib.rs
+        - crates/bitnet-cli/**
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Strict CPU inference has one authoritative real GGUF loader path for BitNet models.
+      - Required BitNet metadata is validated before inference.
+      - Minimal GGUF fallback is impossible in strict proof mode.
+      - Unsupported layouts fail early with a clear error.
+      - Loader receipts or test-visible result structs record `loader.mode=real_gguf`.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Do not add dense fallback, mock tensors, model files, or GPU/NPU work.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet GGUF loader authority exists after merge.
+      must_not_claim:
+        - Tokenizer, packed layout, transformer decode, or performance is complete.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-002
+
+  - id: CPU-BITNET-002
+    title: Establish strict BitNet tokenizer authority
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-tokenizers/src/gguf_loader.rs
+        - crates/bitnet-tokenizers/src/gguf_tokenizer.rs
+        - crates/bitnet-tokenizers/src/auto.rs
+        - crates/bitnet-tokenizers/src/universal.rs
+        - crates/bitnet-cli/src/tokenizer_discovery.rs
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure.
+      - Hardcoded GPT-2 or generic tokenizer fallback cannot run in strict mode.
+      - Receipt fields record tokenizer source.
+      - Canonical smoke prompt tokenizes deterministically.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-tokenizers --no-default-features --features cpu
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+    notes:
+      - Tokenization success alone is not model inference success.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet tokenizer authority exists after merge.
+      must_not_claim:
+        - Packed layout, transformer decode, or performance is complete.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-003
+
+  - id: CPU-BITNET-003
+    title: Make QK256 and I2_S packed layout canonical
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-qk256-layout-core/src/lib.rs
+        - crates/bitnet-quantization/src/i2s_qk256.rs
+        - crates/bitnet-quantization/src/qk256_dispatch.rs
+        - crates/bitnet-models/src/quant/**
+        - crates/bitnet-models/src/qk256_utils.rs
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Canonical block geometry, alignment, stride, and row/block iteration API are defined.
+      - GGUF tensor metadata normalizes into the canonical packed layout.
+      - Loader, scalar kernels, and SIMD kernels consume the same packed layout.
+      - Layout fixtures are byte-exact.
+      - Steady-state inference does not require repacking or full-matrix dequantization.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-qk256-layout-core --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Do not duplicate layout interpretation across model and quantization crates.
+    claim_boundary:
+      may_claim:
+        - Canonical packed layout exists after merge.
+      must_not_claim:
+        - Optimized kernel performance is proven.
+    receipt_required: false
+    followups:
+      - CPU-BITNET-004
+
+  - id: CPU-BITNET-004
+    title: Add scalar packed BitNet truth kernels
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/i2s_qk256.rs
+        - crates/bitnet-kernels/src/matmul_dispatch.rs
+        - crates/bitnet-kernels/src/ffi.rs
+        - crates/bitnet-kernels/src/ffi/bridge.rs
+        - crates/bitnet-kernels/tests/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Scalar packed GEMV for decode is deterministic.
+      - Scalar packed GEMM for prefill is deterministic.
+      - Debug dequant/reference helpers are test-only and do not become strict production fallback.
+      - Pack/layout parity is exact.
+      - Receipt or test-visible metadata records selected scalar kernel IDs.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Correctness before optimization.
+    claim_boundary:
+      may_claim:
+        - Scalar packed truth kernels exist after merge.
+      must_not_claim:
+        - AVX2, AVX-512, NEON, GPU, or full model performance is proven.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-005
+
+  - id: CPU-BITNET-005
+    title: Add AVX2 packed decode GEMV
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/i2s_qk256_avx2.rs
+        - crates/bitnet-kernels/src/matmul_dispatch.rs
+        - crates/bitnet-kernels/src/dispatch_planner.rs
+        - crates/bitnet-kernels/src/dispatch_table.rs
+        - crates/bitnet-receipts/**
+        - benches/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - AVX2 dispatch is CPUID-gated.
+      - Scalar forced mode remains available.
+      - AVX2 decode GEMV compares against scalar packed reference.
+      - Strict `qk256-avx2-gemv` requests fail if AVX2 is unavailable or fallback occurs.
+      - Receipts record requested kernel and selected kernel.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2
+    notes:
+      - 8250U is the active AVX2 implementation lane; 258V and 5700X are validation lanes.
+    claim_boundary:
+      may_claim:
+        - AVX2 decode GEMV parity exists after merge.
+      must_not_claim:
+        - Full transformer decode or sustained benchmark performance is proven.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-006
+
+  - id: CPU-BITNET-006
+    title: Complete CPU transformer decode ops
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cpu/**
+        - crates/bitnet-transformer/**
+        - crates/bitnet-inference/src/backends.rs
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Embedding gather, RMSNorm/subln, RoPE, attention scores, softmax, A/V, FFN, KV-cache, output head, logits handoff, and sampling handoff are authoritative for CPU decode.
+      - Prefill and decode scheduling are separated.
+      - One real-model decode step can run with real tensors.
+      - Missing ops fail explicitly.
+      - KV-cache append/read is deterministic.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+    notes:
+      - Matmul alone is not model inference.
+    claim_boundary:
+      may_claim:
+        - CPU decode op coverage exists after merge.
+      must_not_claim:
+        - Full inference quality or performance is proven without receipts.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-007
+
+  - id: CPU-BITNET-007
+    title: Enforce strict BitNet CPU receipts and fallback behavior
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-inference/src/backends.rs
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-cli/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Strict proof fails on hidden fallback.
+      - Receipts record model repo/file/hash, tokenizer source, quantization, packed layout, requested/selected backend, requested/selected kernel, runtime phase, fallback status, fallback reason, reference path, and parity metrics when relevant.
+      - Auto mode may fall back, but receipts record it.
+      - Minimal loader fallback cannot support CPU proof.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+    notes:
+      - This item supersedes earlier receipt-first work that did not depend on loader/tokenizer/layout authority.
+    claim_boundary:
+      may_claim:
+        - Strict BitNet CPU proof receipts enforce fallback rules after merge.
+      must_not_claim:
+        - Benchmark performance is proven without benchmark artifacts.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-008
+
+  - id: CPU-BITNET-008
+    title: Add BitNet CPU phase benchmark profiles
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-quantization/benches/**
+        - crates/bitnet-bench-receipts/**
+        - docs/bitnet/**
+        - docs/hardware/BENCHMARK_PROTOCOL.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Micro, layer, prefill_512, first_token, decode_128, and context_4096 profiles are defined or emitted.
+      - Model-level profiles use real BitNet GGUF artifacts.
+      - Microbench profiles use synthetic packed fixtures only.
+      - Benchmark JSON records model, tokenizer, quantization, kernel, phase, selected backend, fallback status, CPU feature set, thread count, and power/thermal context when available.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo bench --locked -p bitnet-kernels --bench kernel_benchmarks --features cpu
+      - cargo bench --locked -p bitnet-quantization --bench qk256_gemv --features cpu
+    notes:
+      - Benchmarks must separate cold and warm runs, prefill, first token, and steady-state decode.
+    claim_boundary:
+      may_claim:
+        - BitNet CPU benchmark profiles exist after merge.
+      must_not_claim:
+        - Cross-machine performance generalizes without hardware context.
+    receipt_required: true
+    followups:
+      - CPU-BITNET-009
+
+  - id: CPU-BITNET-009
+    title: Add optional NEON and AVX-512 CPU lanes
+    state: proposed
+    priority: P2
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-008
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/src/*neon*
+        - crates/bitnet-quantization/src/*avx512*
+        - crates/bitnet-kernels/src/cpu/**
+        - crates/bitnet-kernels/src/dispatch_planner.rs
+        - crates/bitnet-kernels/src/dispatch_table.rs
+        - crates/bitnet-receipts/**
+        - docs/bitnet/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-server/**
+    acceptance:
+      - NEON and AVX-512 are optional widened paths that prove against scalar packed reference.
+      - AVX2 remains the common x86 baseline.
+      - NEON does not change x86 layout semantics.
+      - AVX-512 is runtime-gated and never required for correctness.
+      - Each widened path records selected kernel receipts.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Widen only after scalar and AVX2 decode are proven.
+    claim_boundary:
+      may_claim:
+        - Optional widened CPU lanes exist after merge.
+      must_not_claim:
+        - Wider lanes replace scalar truth or AVX2 baseline.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-002
+    title: Validate CPU inference receipt for CLI proof
+    state: proposed
+    priority: P0
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-BITNET-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-receipts/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-server/**
+    acceptance:
+      - CLI proof emits or references a receipt.
+      - Receipt validates compute_path=real and backend=cpu.
+      - Kernel IDs are non-empty and non-mock.
+      - Fallback/minimal loader cannot pass proof silently.
+    verification:
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+    notes:
+      - Deferred until loader, tokenizer, layout, kernel, decode, and strict receipt authority exist.
+    claim_boundary:
+      may_claim:
+        - CPU receipt validation exists for the CLI proof path after merge.
+      must_not_claim:
+        - QK256 scalar or AVX2 performance is proven.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-003
+    title: Add QK256 scalar correctness/parity gate
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - TRUTH-002
+      - BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/**
+        - crates/bitnet-models/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - .github/**
+    acceptance:
+      - QK256 scalar fixtures pass.
+      - BitNet32 vs QK256 detection is covered.
+      - Orientation/shape mismatch errors are tested.
+      - Scalar kernel IDs are receipt-compatible.
+    verification:
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu,fixtures
+    notes:
+      - Correctness only; do not make performance claims in this item.
+    claim_boundary:
+      may_claim:
+        - QK256 scalar correctness/parity gate exists after merge.
+      must_not_claim:
+        - QK256 is fast or production performance-ready.
+    receipt_required: false
+    followups: []
+
+  - id: CPU-004
+    title: Implement QK256 AVX2 dispatch parity
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-quantization/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-cli/**
+    acceptance:
+      - AVX2 path dispatches only when available.
+      - Scalar fallback is visible.
+      - AVX2 output matches scalar within tolerance.
+      - Benchmarks record scalar vs AVX2 delta.
+    verification:
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+      - cargo test --locked -p bitnet-quantization --no-default-features --features cpu
+    notes:
+      - Performance claims require benchmark receipts.
+    claim_boundary:
+      may_claim:
+        - QK256 AVX2 dispatch parity exists after merge.
+      must_not_claim:
+        - Sustained CPU performance is proven without benchmark receipts.
+    receipt_required: true
+    followups: []
+
+  - id: CPU-005
+    title: Audit CPU decode hot-path allocations
+    state: proposed
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - CPU-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-sampling/**
+        - crates/bitnet-logits/**
+        - crates/bitnet-logits-filters/**
+        - crates/bitnet-probability/**
+        - docs/tracking/bitnet-alignment/**
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/**
+        - Cargo.toml
+    acceptance:
+      - Sampling/logits hot path avoids per-token HashMap or vocab-sized avoidable allocations.
+      - Any optimization PR includes tests and benchmark notes.
+      - Existing Bolt PRs are reviewed only after truth boundary and inventory.
+    verification:
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu
+      - cargo test --locked -p bitnet-sampling --no-default-features --features cpu
+    notes:
+      - Audit first; add separate implementation items for optimizations found.
+    claim_boundary:
+      may_claim:
+        - CPU decode allocation risks are audited after merge.
+      must_not_claim:
+        - Decode performance is improved without benchmark receipts.
+    receipt_required: false
+    followups: []
+
+  - id: NPU-001
+    title: Add Intel NPU backend lane
+    state: merged
+    priority: P1
+    workstream: npu
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/intel-lunar-lake-npu-roadmap.md
+        - .codex/bitnet-alignment.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Intel NPU has a distinct scaffold backend status.
+      - Claim boundaries distinguish device-node detection, runtime smoke, BitNet subgraph parity, full inference, and performance.
+      - OpenVINO NPU is named as the first implementation target, not oneAPI/OpenCL or a handwritten KernelProvider.
+      - CPU fallback and QK256 CPU execution cannot count as Intel NPU execution.
+      - Follow-up items are split into backend identity, runtime detection, CLI smoke, OpenVINO tiny graph smoke, receipt fields, BitNet subgraph parity, and OpenVINO llama.cpp GGUF reference evaluation.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: NPU-002
+    title: Preserve Intel NPU backend identity
+    state: ready
+    priority: P1
+    workstream: npu
+    depends_on:
+      - NPU-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/types.rs
+        - crates/bitnet-inference/src/npu.rs
+        - crates/bitnet-device-config-core/src/lib.rs
+        - crates/bitnet-cli-config-core/src/lib.rs
+        - crates/bitnet-cli/src/main.rs
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - xtask/src/campaign.rs
+        - xtask/src/main.rs
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - npu no longer maps to Metal, CUDA, or generic GPU.
+      - npu, intel-npu, intel-npu index syntax, and openvino-npu aliases preserve requested Intel NPU identity.
+      - Proof labels distinguish intel-npu-openvino from intel-gpu-opencl and CPU variants.
+      - Future selected backend label is reserved as intel-npu-openvino with runtime device NPU.
+      - Strict mode fails before inference when Intel NPU is requested but unavailable.
+      - CLI and config help text describe Intel NPU honestly.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cli-config-core --no-default-features --features cpu
+
+  - id: NPU-003
+    title: Add Intel NPU runtime detection
+    state: proposed
+    priority: P1
+    workstream: npu
+    depends_on:
+      - NPU-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/src/**
+        - crates/bitnet-device-probe/Cargo.toml
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Probe reports accel device-node presence separately from kernel driver and runtime availability.
+      - Probe searches for NPU and VPU language, including intel_vpu where the OS exposes that driver hint.
+      - Probe supports Windows-native artifacts early and does not assume WSL can see the NPU.
+      - Probe reports OpenVINO runtime presence, runtime version when available, and NPU device visibility.
+      - Probe records OpenVINO available devices, NPU full device name, driver version, compiler version, memory properties, and max tiles when they can be discovered.
+      - npu feature builds without requiring OpenVINO to be installed.
+      - BITNET_NPU_FAKE=intel is allowed only outside strict mode.
+      - Strict mode ignores fake detection controls.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-probe --no-default-features --features npu
+
+  - id: NPU-004
+    title: Add Intel NPU smoke probe command
+    state: proposed
+    priority: P1
+    workstream: npu
+    depends_on:
+      - NPU-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-device-probe/**
+        - docs/api/cli/help.txt
+        - docs/cli-help-baseline.txt
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Smoke command emits machine-readable Intel NPU detection output without running model inference.
+      - Output records requested backend, selected backend, strict mode, fallback use, accel device-node presence, intel_vpu or driver hint, OpenVINO runtime presence, OpenVINO version, available devices, and OpenVINO NPU visibility.
+      - Non-NPU machines can report unavailable without claiming failure of CPU support.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,npu,full-cli
+
+  - id: NPU-005
+    title: Run tiny OpenVINO NPU graph smoke
+    state: proposed
+    priority: P1
+    workstream: npu
+    depends_on:
+      - NPU-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/npu/**
+        - crates/bitnet-kernels/Cargo.toml
+        - crates/bitnet-device-probe/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Static-shape F16 tiny matmul graph is compiled through OpenVINO to runtime device NPU.
+      - Tiny graph executes on Intel NPU through OpenVINO.
+      - Strict mode fails the smoke test if CPU fallback is used.
+      - Smoke output records requested_backend=intel-npu, selected_backend=intel-npu-openvino, graph name, precision, shape contract, fallback use, and result.
+      - Backend status moves beyond scaffold only after a real Lunar Lake artifact exists.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Lunar Lake Intel NPU smoke command with receipt artifact.
+
+  - id: NPU-006
+    title: Record backend identity and fallback in receipts
+    state: proposed
+    priority: P1
+    workstream: npu
+    depends_on:
+      - NPU-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-inference/src/receipts.rs
+        - crates/bitnet-inference/tests/fixtures/test_receipts/**
+        - crates/bitnet-cli/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Receipts record requested backend, selected backend, fallback backend, fallback reason, runtime name, runtime device, and runtime device name when available.
+      - Receipts record driver version, compiler version, OpenVINO version, shape contract, graph name, precision, cache directory, first-ever compile/inference timing, cached compile timing, first inference timing, and steady-state timing when available.
+      - Strict Intel NPU runs fail if fallback was used.
+      - CPU fallback remains visible in receipts.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked --workspace --no-default-features --features cpu
+
+  - id: NPU-007
+    title: Prototype Intel NPU BitNet subgraph parity
+    state: proposed
+    priority: P2
+    workstream: npu
+    depends_on:
+      - NPU-005
+      - NPU-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/npu/**
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - One static-shape BitNet subgraph runs on Intel NPU with CPU reference parity metrics.
+      - Output records max_abs_error, mean_abs_error, latency, shape contract, selected backend, and fallback use.
+      - No full Intel NPU inference claim is made from subgraph parity alone.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Lunar Lake Intel NPU subgraph parity command with receipt artifact.
+
+  - id: NPU-008
+    title: Evaluate OpenVINO llama.cpp GGUF backend as Intel NPU reference
+    state: proposed
+    priority: P2
+    workstream: npu
+    depends_on:
+      - NPU-005
+    scope:
+      allowed_paths:
+        - docs/specs/intel-lunar-lake-npu-roadmap.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - ci/intel-npu/**
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Run one OpenVINO-validated GGUF on Lunar Lake NPU through the OpenVINO llama.cpp backend.
+      - Record model, OpenVINO version, driver version, selected device, fallback status, shape or context settings, and timing.
+      - Decide whether the reference lane informs bitnet-rs native graph lowering or remains external validation only.
+      - Do not claim BitNet QK256 GGUF NPU support from this reference lane alone.
+    verification:
+      - Manual Lunar Lake OpenVINO llama.cpp GGUF run with receipt artifact.
+
+  - id: A770-001
+    title: Add Intel Arc A770 16GB backend lane
+    state: merged
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/intel-arc-a770-gpu-roadmap.md
+        - docs/hardware/intel-arc-a770-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - A770 has distinct OpenCL-first and OpenVINO GPU reference backend lanes.
+      - ReBAR, PCIe link, VRAM, OpenCL, Level Zero, OpenVINO GPU index, and fallback boundaries are documented.
+      - Claim boundaries distinguish detection, kernel smoke, parity, receipts, and performance.
+      - CPU fallback cannot count as A770 execution.
+      - Lunar Lake NPU remains a separate workstream.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: A770-002
+    title: Add Intel Arc A770 machine profile
+    state: merged
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-001
+    scope:
+      allowed_paths:
+        - docs/specs/intel-arc-a770-gpu-roadmap.md
+        - docs/hardware/intel-arc-a770-validation.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Validation doc records required machine facts including OS, kernel, driver, PCI ID, VRAM, PCIe link, ReBAR, OpenCL device name, OpenVINO GPU index, Level Zero visibility, and render-node permissions.
+      - Includes Windows and Linux probe commands.
+      - Does not require runtime code changes.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: A770-003
+    title: Preserve Intel Arc A770 backend identity
+    state: ready
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/types.rs
+        - crates/bitnet-device-config-core/src/lib.rs
+        - crates/bitnet-inference/src/backends.rs
+        - crates/bitnet-cli-config-core/src/lib.rs
+        - crates/bitnet-cli/src/main.rs
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Requested backend can distinguish generic OpenCL from Intel Arc A770 when selected by explicit flag or device probe.
+      - Logs and receipts preserve requested backend and selected backend separately.
+      - Strict mode fails if Intel Arc A770 is requested but unavailable.
+      - intel-arc-a770 is not a synonym for CUDA, generic GPU, or Lunar Lake NPU.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu
+
+  - id: A770-004
+    title: Add Intel Arc A770 runtime probe
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Probe reports OpenCL platform, vendor, device name, OpenCL version, and driver version.
+      - Probe detects Intel Arc A770 by device name and/or PCI ID 0x56A0.
+      - Probe reports Level Zero visibility when tools or runtime are available.
+      - Probe reports Linux render-node access when possible.
+      - Probe reports OpenVINO GPU visibility and resolved GPU.X device when available.
+      - Fake detection is ignored in strict mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-probe --no-default-features --features opencl
+
+  - id: A770-005
+    title: Run Intel Arc A770 OpenCL kernel smoke
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/gpu/opencl.rs
+        - crates/bitnet-kernels/src/opencl_*
+        - crates/bitnet-kernels/tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny OpenCL kernel compiles and executes on the A770.
+      - matmul_i2s or an equivalent minimal compute smoke compares against CPU output.
+      - Strict mode fails if CPU fallback is used.
+      - Smoke output records selected device name, PCI ID when available, runtime API, driver version, and fallback status.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual A770 OpenCL smoke command with receipt artifact.
+
+  - id: A770-006
+    title: Prototype Intel Arc A770 matmul_i2s parity
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - One isolated BitNet kernel or subgraph runs on A770 through OpenCL.
+      - CPU reference parity records max_abs_error and mean_abs_error.
+      - Receipt records selected A770 backend and fallback status.
+      - No full GPU inference claim is made from isolated parity.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual A770 parity command with receipt artifact.
+
+  - id: A770-007
+    title: Record Intel Arc A770 backend identity in receipts
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Receipts record requested backend, selected backend, OpenCL/OpenVINO runtime identity, device name, driver version, PCI device ID, VRAM, ReBAR status when available, fallback status, and kernel IDs.
+      - Strict A770 validation fails if fallback was used.
+      - CPU fallback remains visible when allowed in auto mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+
+  - id: A770-008
+    title: Add Intel Arc A770 benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-006
+      - A770-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-wgpu-bench/**
+        - crates/bitnet-bench-receipts/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmark compares CPU scalar/AVX2 against A770 OpenCL for the validated kernel or subgraph.
+      - Receipt records driver, runtime, version, device, PCI link, VRAM, and fallback status.
+      - Power/utilization collection is optional but documented.
+      - Performance claim only appears if benchmark artifact exists.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual A770 benchmark with receipt artifact.
+
+  - id: A770-009
+    title: Run Intel Arc A770 OpenVINO GPU graph smoke
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - crates/bitnet-kernels/src/openvino/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny graph compiles to the selected OpenVINO GPU.X device for the A770.
+      - Output compares against CPU expected output.
+      - Receipt records OpenVINO version, selected GPU.X device, full device name, and fallback status.
+      - Does not imply native BitNet kernel acceleration.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual A770 OpenVINO GPU smoke command with receipt artifact.
+
+  - id: A770-010
+    title: Evaluate OpenVINO llama.cpp GGUF on Arc A770
+    state: proposed
+    priority: P2
+    workstream: intel_arc_gpu
+    depends_on:
+      - A770-009
+    scope:
+      allowed_paths:
+        - docs/specs/intel-arc-a770-gpu-roadmap.md
+        - docs/reports/intel-arc-a770-openvino-llamacpp.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Runs one OpenVINO-validated GGUF through llama.cpp OpenVINO backend on A770 or documents blocker.
+      - Records model, quantization, OpenVINO version, selected GPU device, fallback status, and timing.
+      - Decides whether the reference path informs native bitnet-rs graph lowering.
+      - Does not claim native bitnet-rs GPU inference support.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: ARC140V-001
+    title: Add Intel Arc 140V integrated GPU lane
+    state: merged
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - NPU-001
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/intel-lunar-lake-gpu-roadmap.md
+        - docs/hardware/intel-258v-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Arc 140V is documented as a separate integrated GPU lane from Intel NPU.
+      - OpenCL, Level Zero, and OpenVINO GPU.0 probes are specified.
+      - Shared-memory and laptop power constraints are documented.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: ARC140V-002
+    title: Add Intel Arc 140V runtime probe
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - ARC140V-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Probe detects Arc 140V by device name and/or PCI ID 0x64A0.
+      - Probe reports OpenCL and Level Zero visibility.
+      - Probe reports OpenVINO GPU.0 visibility and full device name on the 258V laptop.
+      - Probe records shared-memory context and failure reason when unavailable.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-probe --no-default-features --features opencl
+
+  - id: ARC140V-003
+    title: Run Intel Arc 140V OpenVINO GPU graph smoke
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - ARC140V-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - crates/bitnet-kernels/src/openvino/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny graph compiles to OpenVINO GPU.0 on the 258V laptop.
+      - Output compares against CPU expected output.
+      - Receipt records OpenVINO version, full device name, shared-memory context, and fallback status.
+      - Does not imply native OpenCL BitNet kernel acceleration.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Arc 140V OpenVINO GPU smoke command with receipt artifact.
+
+  - id: ARC140V-004
+    title: Run Intel Arc 140V OpenCL kernel smoke
+    state: proposed
+    priority: P1
+    workstream: intel_arc_gpu
+    depends_on:
+      - ARC140V-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/gpu/opencl.rs
+        - crates/bitnet-kernels/src/opencl_*
+        - crates/bitnet-kernels/tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny OpenCL kernel compiles and executes on Arc 140V.
+      - Strict mode fails if CPU fallback is used.
+      - Smoke output records selected device, OpenCL driver version, shared-memory context, and fallback status.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Arc 140V OpenCL smoke command with receipt artifact.
+
+  - id: ARC140V-005
+    title: Prototype Intel Arc 140V CPU/iGPU parity
+    state: proposed
+    priority: P2
+    workstream: intel_arc_gpu
+    depends_on:
+      - ARC140V-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - One isolated kernel or subgraph runs on Arc 140V through OpenCL.
+      - CPU reference parity records max_abs_error and mean_abs_error.
+      - Receipt records selected Arc 140V backend, power mode when known, and fallback status.
+      - No full iGPU inference claim is made from isolated parity.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Arc 140V parity command with receipt artifact.
+
+  - id: ARC140V-006
+    title: Add Intel Arc 140V shared-memory benchmark receipt
+    state: proposed
+    priority: P2
+    workstream: intel_arc_gpu
+    depends_on:
+      - ARC140V-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-bench-receipts/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmark compares CPU AVX2, Arc 140V OpenCL, and available NPU smoke/subgraph data on the same 258V platform.
+      - Receipt records shared-memory pressure, power mode or thermal profile when available, runtime versions, and fallback status.
+      - Performance claims include laptop power and memory context.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual Arc 140V benchmark with receipt artifact.
+
+  - id: LNL258V-001
+    title: Add Core Ultra 7 258V platform profile
+    state: merged
+    priority: P1
+    workstream: lunar_lake_platform
+    depends_on:
+      - NPU-001
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/hardware/intel-258v-validation.md
+        - docs/specs/intel-lunar-lake-258v-platform-roadmap.md
+        - docs/specs/intel-lunar-lake-npu-roadmap.md
+        - docs/specs/intel-lunar-lake-gpu-roadmap.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - 258V is documented as a tri-device validation platform with CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU lanes.
+      - Data bundle captures CPU, GPU, NPU, memory, OS, driver, OpenVINO, OpenCL, and Level Zero facts.
+      - The doc states which proof lane owns each device.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: CPU258V-001
+    title: Add Core Ultra 7 258V CPU AVX2 validation lane
+    state: merged
+    priority: P1
+    workstream: runtime_cpu
+    depends_on:
+      - LNL258V-001
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/intel-lunar-lake-258v-platform-roadmap.md
+        - docs/hardware/intel-258v-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - 258V CPU is documented as a parallel Lunar Lake AVX2 validation lane.
+      - 8250U remains the active AVX2 CPU implementation lane.
+      - Arc 140V GPU and Intel NPU remain separate proof lanes on the same machine.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: KBL8250U-001
+    title: Add Intel Core i5-8250U CPU validation lane
+    state: merged
+    priority: P1
+    workstream: legacy_mobile_cpu
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/intel-kaby-lake-8250u-cpu-roadmap.md
+        - docs/hardware/intel-i5-8250u-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - i5-8250U is documented as a CPU AVX2 validation lane.
+      - UHD 620 is documented only as optional/deferred OpenVINO GPU smoke.
+      - The doc records AVX2/no-AVX512, 4C/8T, 15W TDP, memory bandwidth, and sustained-load caveats.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: KBL8250U-002
+    title: Add i5-8250U machine profile and probe bundle
+    state: merged
+    priority: P1
+    workstream: legacy_mobile_cpu
+    depends_on:
+      - KBL8250U-001
+    scope:
+      allowed_paths:
+        - docs/hardware/intel-i5-8250u-validation.md
+        - docs/specs/intel-kaby-lake-8250u-cpu-roadmap.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Probe bundle captures OS, CPU model, flags, core/thread count, memory type/capacity, governor/power mode, thermal state, OpenVINO CPU visibility, and optional UHD 620 visibility.
+      - Probe bundle records whether AVX2 is detected at runtime.
+      - Probe bundle records that AVX-512 is absent.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: KBL8250U-003
+    title: Prove i5-8250U scalar and AVX2 dispatch
+    state: ready
+    priority: P1
+    workstream: legacy_mobile_cpu
+    depends_on:
+      - KBL8250U-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-cpu-detect/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-receipts/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Runtime probe records AVX2 available and AVX-512 unavailable.
+      - Scalar and AVX2 paths can be forced independently.
+      - Receipt records selected CPU kernel path.
+      - No GPU/NPU fallback is involved.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+
+  - id: KBL8250U-004
+    title: Add i5-8250U strict CPU proof run
+    state: proposed
+    priority: P1
+    workstream: legacy_mobile_cpu
+    depends_on:
+      - KBL8250U-003
+    scope:
+      allowed_paths:
+        - docs/hardware/intel-i5-8250u-validation.md
+        - ci/intel-i5-8250u/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Strict CPU proof command records selected_backend=cpu-avx2 or cpu-scalar.
+      - Receipt confirms no minimal GGUF fallback, no GPU fallback, and no mock path.
+      - Output records prompt, model hash, tokens/sec, first-token latency, decode latency, and thermal/power context.
+    verification:
+      - Manual i5-8250U strict CPU proof command with receipt artifact.
+
+  - id: KBL8250U-005
+    title: Add i5-8250U sustained-load baseline
+    state: proposed
+    priority: P2
+    workstream: legacy_mobile_cpu
+    depends_on:
+      - KBL8250U-004
+    scope:
+      allowed_paths:
+        - docs/hardware/intel-i5-8250u-validation.md
+        - ci/intel-i5-8250u/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Baseline separates cold turbo, warm sustained, and throttled performance.
+      - Receipt records CPU frequency, temperature if available, power/governor mode, and duration.
+      - Docs explain that 8250U results are low-power mobile baselines, not desktop CPU claims.
+    verification:
+      - Manual sustained-load benchmark with receipt artifact.
+
+  - id: M4-001
+    title: Add Apple M4 Mac mini backend lane
+    state: merged
+    priority: P1
+    workstream: apple_silicon
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/apple-m4-mac-mini-roadmap.md
+        - docs/hardware/apple-m4-mac-mini-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - M4 Mac mini has distinct Metal, MPSGraph, and CPU/NEON lanes.
+      - Base M4 and M4 Pro differences are documented.
+      - Unified memory, GPU core count, Neural Engine, and memory bandwidth are documented.
+      - CPU fallback cannot count as Metal execution.
+      - MPSGraph smoke cannot count as native Metal kernel proof.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: M4-002
+    title: Add M4 machine profile and probe bundle
+    state: merged
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-001
+    scope:
+      allowed_paths:
+        - docs/hardware/apple-m4-mac-mini-validation.md
+        - docs/specs/apple-m4-mac-mini-roadmap.md
+        - ci/hardware/README.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Probe bundle captures macOS version, Apple chip, CPU/GPU core counts, unified memory, Metal visibility, and Rust toolchain.
+      - M4 and M4 Pro configurations are recorded rather than assumed.
+      - Metal, MPSGraph, and CPU/NEON probe artifact paths are documented as separate proof labels.
+      - Probe artifacts do not claim Metal execution, MPSGraph execution, Neural Engine execution, or BitNet inference.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+      - git diff --check
+    notes:
+      - Docs/artifact-prep only; do not touch kernels, QK256, server inference, or dependency manifests.
+      - Merged in #3627 as 6362101c3249a0758100d22c31e084eba37c387b; no runtime execution, kernels, dependencies, or bulky artifacts were added.
+    followups:
+      - M4-003
+      - M4-004
+      - M4-005
+      - M4-006
+      - M4-007
+      - M4-008
+      - M4-009
+
+  - id: M4-003
+    title: Preserve Apple backend identity
+    state: merged
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-device-config-core/src/lib.rs
+        - crates/bitnet-cli-config-core/src/lib.rs
+        - crates/bitnet-cli/src/main.rs
+        - crates/bitnet-cli/tests/cli_config_edge_cases.rs
+        - crates/bitnet-cli/tests/cli_extended_tests.rs
+        - crates/bitnet-cli/tests/snapshots/snapshot_wave10__cli_config_validate_invalid_device_error.snap
+        - docs/tracking/campaigns/apple-m4/**
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Requested backend can distinguish Apple M4 Metal, MPSGraph, and CPU/NEON.
+      - Logs and receipts preserve requested backend and selected backend separately.
+      - Strict mode fails if Apple M4 Metal is requested but unavailable.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-common --no-default-features --features cpu backend_selection
+      - cargo test --locked -p bitnet-device-config-core --no-default-features
+      - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli cli_config
+    notes:
+      - Merged in #3652 with SHA 849c3db73b786483bb7955371b95f733235119bb.
+      - Identity only; no Metal kernels, MPSGraph execution, QK256, server inference, dependencies, runtime probes, or hardware artifacts.
+
+  - id: M4-004
+    title: Add Apple M4 Metal device probe
+    state: ready
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - docs/hardware/apple-m4-mac-mini-validation.md
+        - docs/specs/apple-m4-mac-mini-roadmap.md
+        - docs/tracking/campaigns/apple-m4/**
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/src/metal/**
+    acceptance:
+      - Probe reports Metal device visibility, Apple chip name, GPU family when available, unified memory, and macOS version.
+      - Probe distinguishes Metal visibility from MPSGraph visibility.
+      - Fake detection is ignored in strict mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-probe --no-default-features --features metal
+
+  - id: M4-005
+    title: Run Apple M4 Metal compute smoke
+    state: proposed
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/metal/**
+        - crates/bitnet-kernels/tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny Metal compute pipeline compiles and dispatches on M4.
+      - Strict mode fails if CPU fallback is used.
+      - Smoke output records selected backend, Metal device identity, unified memory, and fallback status.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual M4 Metal smoke command with receipt artifact.
+
+  - id: M4-006
+    title: Add Apple M4 CPU/Metal parity
+    state: proposed
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-inference/**
+        - tests/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - One isolated kernel or subgraph runs on M4 Metal.
+      - CPU/NEON reference parity records max_abs_error and mean_abs_error.
+      - Receipt records selected Metal backend and fallback status.
+      - No full Metal inference claim is made from isolated parity.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual M4 CPU/Metal parity command with receipt artifact.
+
+  - id: M4-007
+    title: Run Apple M4 MPSGraph tiny graph smoke
+    state: proposed
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - crates/bitnet-kernels/src/mpsgraph/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny graph executes through MPSGraph.
+      - Output compares against CPU expected output.
+      - Receipt records MPSGraph runtime identity, resolved target when available, and fallback status.
+      - MPSGraph smoke does not imply native Metal kernel proof or Neural Engine execution.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual M4 MPSGraph smoke command with receipt artifact.
+
+  - id: M4-008
+    title: Record Apple M4 backend identity in receipts
+    state: proposed
+    priority: P1
+    workstream: apple_silicon
+    depends_on:
+      - M4-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-kernels/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Receipts record requested backend, selected backend, runtime API, chip, GPU core count, unified memory, memory bandwidth, fallback status, and kernel/graph IDs.
+      - Strict M4 Metal validation fails if fallback was used.
+      - CPU fallback remains visible when allowed in auto mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+
+  - id: M4-009
+    title: Add Apple M4 benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: apple_silicon
+    depends_on:
+      - M4-006
+      - M4-008
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-bench-receipts/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmark compares Apple CPU/NEON against M4 Metal for the validated kernel or subgraph.
+      - Receipt records macOS version, chip, memory configuration, selected backend, and fallback status.
+      - Performance claim only appears if benchmark artifact exists.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual M4 benchmark with receipt artifact.
+
+  - id: RTX5070TI-001
+    title: Add NVIDIA RTX 5070 Ti CUDA backend lane
+    state: merged
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/nvidia-rtx-5070-ti-roadmap.md
+        - docs/hardware/nvidia-rtx-5070-ti-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - RTX 5070 Ti has a distinct CUDA-first backend lane.
+      - WGPU/Vulkan/D3D12 reference path is documented separately.
+      - CUDA capability 12.0, 16GB GDDR7, 300W graphics power, and driver/runtime facts are documented.
+      - CPU fallback cannot count as CUDA execution.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: RTX5070TI-002
+    title: Add RTX 5070 Ti machine profile and probe bundle
+    state: merged
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-001
+    scope:
+      allowed_paths:
+        - docs/hardware/nvidia-rtx-5070-ti-validation.md
+        - docs/specs/nvidia-rtx-5070-ti-roadmap.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Probe bundle captures OS, PCI identity, NVIDIA driver, CUDA version, compute capability, VRAM, power limit, and optional Vulkan/wgpu visibility.
+      - Linux and Windows probe commands are documented.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: RTX5070TI-003
+    title: Preserve RTX 5070 Ti CUDA selected-device identity
+    state: pr_open
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-common/src/kernel_registry.rs
+        - crates/bitnet-device-config-core/Cargo.toml
+        - crates/bitnet-device-config-core/src/lib.rs
+        - crates/bitnet-cli-config-core/src/lib.rs
+        - crates/bitnet-cli/src/main.rs
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-kernels/src/gpu/kernels/**
+        - crates/bitnet-kernels/src/cuda/qk256_gemv.rs
+        - crates/bitnet-quantization/**
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-transformer/**
+        - crates/bitnet-server/**
+    acceptance:
+      - nvidia-rtx-5070-ti-cuda parses as a distinct backend request.
+      - nvidia-rtx-5070-ti-wgpu parses as a distinct reference backend request.
+      - Generic cuda can still exist and remains distinguishable from nvidia-rtx-5070-ti-cuda.
+      - Logs and planned receipts preserve requested backend, selected backend, runtime API, fallback status, and fallback reason.
+      - Strict mode fails if RTX 5070 Ti CUDA is requested but unavailable.
+      - No CUDA kernel execution is claimed.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-common --no-default-features --features cpu
+      - cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu
+
+  - id: RTX5070TI-004
+    title: Add RTX 5070 Ti CUDA and NVML runtime probe
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-device-probe/**
+        - crates/bitnet-cli/src/main.rs
+        - xtask/**
+        - ci/hardware/_templates/cuda-probe-receipt.json
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Probe can create a CUDA context for the selected device.
+      - Probe reports CUDA runtime visibility, NVIDIA driver, CUDA version, compute capability, device name, VRAM, power limit, and temperature when available.
+      - Probe reports NVML visibility when available.
+      - Probe records CUDA toolkit and NVRTC version where available.
+      - Probe verifies selected CUDA device identity against NVIDIA GeForce RTX 5070 Ti when requested.
+      - CPU fallback is not counted as probe success.
+      - Probe does not claim kernel execution.
+      - Fake detection is ignored in strict mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-device-probe --no-default-features --features cuda
+
+  - id: RTX5070TI-005
+    title: Run RTX 5070 Ti CUDA kernel smoke
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/tests/**
+        - ci/hardware/_templates/cuda-smoke-receipt.json
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny CUDA kernel compiles with NVRTC and executes on RTX 5070 Ti.
+      - Output matches CPU expected result.
+      - Receipt records kernel_id and fallback_used=false.
+      - Strict mode fails if CPU fallback is used.
+      - Smoke output records selected device name, compute capability 12.0, CUDA version, driver version, VRAM, and fallback status.
+      - No BitNet inference claim or speedup claim is made.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti CUDA smoke command with receipt artifact.
+
+  - id: RTX5070TI-006
+    title: Add RTX 5070 Ti CPU/CUDA parity
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/**
+        - crates/bitnet-inference/**
+        - tests/**
+        - ci/hardware/_templates/cuda-parity-receipt.json
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - One isolated kernel or subgraph runs on RTX 5070 Ti through CUDA.
+      - Same input fixture goes through 9950X3D CPU reference and RTX 5070 Ti CUDA target.
+      - CPU reference parity records max_abs_error and mean_abs_error.
+      - Receipt records kernel ID, selected CUDA device, selected CUDA backend, and fallback status.
+      - Mismatch produces a debug artifact.
+      - No full CUDA inference claim is made from isolated parity.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti CPU/CUDA parity command with receipt artifact.
+
+  - id: RTX5070TI-007
+    title: Record RTX 5070 Ti CUDA backend identity in receipts
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-kernels/**
+        - ci/hardware/_templates/cuda-smoke-receipt.json
+        - ci/hardware/_templates/cuda-parity-receipt.json
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Receipts record requested backend, selected backend, CUDA runtime, driver, CUDA version, compute capability, VRAM, power, fallback status, and kernel IDs.
+      - CUDA smoke and parity receipts validate.
+      - Kernel invocation count is greater than zero for CUDA proof.
+      - fallback_invocations equals zero for strict CUDA proof.
+      - Host-to-device bytes, device-to-host bytes, kernel launches, and optional kernel time are recorded.
+      - Strict RTX 5070 Ti CUDA validation fails if fallback was used.
+      - CPU fallback remains visible when allowed in auto mode.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-receipts --no-default-features --features cpu
+
+  - id: RTX5070TI-008
+    title: Add RTX 5070 Ti benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-006
+      - RTX5070TI-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-bench-receipts/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmark compares CPU against RTX 5070 Ti CUDA for the validated kernel or subgraph.
+      - Benchmark profiles include cuda_tiny_smoke, cuda_fp32_matmul_small, cuda_i2s_matmul_small, cuda_i2s_matmul_medium, and cuda_transfer_h2d_d2h.
+      - Benchmark separates CPU reference time, CUDA total time, CUDA kernel time, host-to-device time, and device-to-host time.
+      - Receipt records driver, CUDA version, compute capability, VRAM, power, temperature, selected backend, and fallback status.
+      - Performance claim only appears if benchmark artifact exists.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti benchmark with receipt artifact.
+
+  - id: RTX5070TI-009
+    title: Add RTX 5070 Ti wgpu/Vulkan shader smoke
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-wgpu-bench/**
+        - crates/bitnet-device-probe/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Tiny wgpu/Vulkan/D3D12 shader smoke runs on RTX 5070 Ti or documents the blocker.
+      - Output compares against CPU expected output.
+      - Receipt records backend API, adapter name, driver, and fallback status.
+      - WGPU smoke does not imply CUDA kernel proof.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti wgpu smoke command with receipt artifact.
+
+  - id: CUDA-BITNET-001
+    title: Add persistent CUDA BitNet context and weight handles
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/src/lib.rs
+        - crates/bitnet-inference/**
+        - crates/bitnet-common/src/backend_selection.rs
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - CUDA context and stream persist across inference.
+      - Weights can be uploaded once and referenced by CUDA weight handles.
+      - Reusable activation workspace exists for decode-time buffers.
+      - Receipts can record weights_uploaded_once=true and per_token_weight_upload=false.
+      - CPU-only builds still compile.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+    notes:
+      - This creates CUDA lifetime infrastructure only; it must not claim full BitNet inference.
+    followups:
+      - CUDA-BITNET-002
+      - CUDA-BITNET-003
+
+  - id: CUDA-BITNET-002
+    title: Add reusable CUDA I2S linear primitive
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/tests/**
+        - crates/bitnet-quantization/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Real layer shapes are supported.
+      - Tails and padding are handled.
+      - CPU/CUDA parity passes for the I2S primitive.
+      - Kernel invocation stats are recorded.
+      - Weights are not allocated or uploaded per token.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - Manual RTX 5070 Ti I2S parity command with receipt artifact.
+    notes:
+      - I2S primitive parity is not QK256 proof and is not full inference proof.
+    followups:
+      - CUDA-BITNET-004
+
+  - id: CUDA-BITNET-003
+    title: Implement CUDA QK256 fused dequant GEMV
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-kernels/tests/**
+        - crates/bitnet-quantization/**
+        - crates/bitnet-qk256-dispatch/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Scaffold-only QK256 launch path is replaced with a real compiled CUDA kernel.
+      - Packed QK256 weights and scale blocks are consumed without materializing full FP32 weights.
+      - Official BitNet GGUF layer shapes are supported.
+      - CPU QK256 scalar parity passes.
+      - Receipt records qk256_cuda kernel ID and fallback_used=false.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - Manual RTX 5070 Ti QK256 parity command with receipt artifact.
+    notes:
+      - This is the packed-kernel blocker for strict BitNet CUDA inference claims.
+    followups:
+      - CUDA-BITNET-004
+
+  - id: CUDA-BITNET-004
+    title: Prepack and upload BitNet weights once for CUDA
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-002
+      - CUDA-BITNET-003
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/**
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Strict GGUF load validates BitNet layout before CUDA upload.
+      - Per-layer CUDA weight handles exist.
+      - Decode path does not repack or upload weights per token.
+      - Receipt records packed_at_load=true and uploaded_once=true.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda
+    notes:
+      - This does not claim full CUDA inference until BitNetLinear dispatch is routed through CUDA.
+    followups:
+      - CUDA-BITNET-005
+
+  - id: CUDA-BITNET-005
+    title: Route BitNetLinear through CUDA backend
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-004
+    scope:
+      allowed_paths:
+        - crates/bitnet-transformer/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-common/src/backend_selection.rs
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Actual transformer forward path invokes CUDA for BitNetLinear.
+      - Strict CUDA mode fails on unsupported CPU fallback.
+      - Coverage counters record total, CUDA-routed, and CPU-fallback BitNet linear layers.
+      - If only some layers route to CUDA, receipts label it as CUDA inference contribution, not full CUDA inference.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-transformer --no-default-features --features cpu,cuda
+      - cargo test --locked -p bitnet-inference --no-default-features --features cpu,cuda
+    notes:
+      - This is the real integration point for CUDA inference routing.
+    followups:
+      - CUDA-BITNET-006
+
+  - id: CUDA-BITNET-006
+    title: Add strict one-token BitNet CUDA proof
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-005
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Official GGUF loads in strict mode.
+      - One token is generated greedily.
+      - CUDA kernel invocation count is greater than zero.
+      - CPU fallback count is zero.
+      - CPU/CUDA greedy or top-1 parity is recorded.
+      - Receipt records fallback_used=false and speedup_claim=false.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti strict one-token BitNet CUDA proof with receipt artifact.
+    notes:
+      - The first proof must not claim speedup.
+    followups:
+      - CUDA-BITNET-007
+
+  - id: CUDA-BITNET-007
+    title: Add short decode BitNet CUDA proof
+    state: proposed
+    priority: P1
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-006
+    scope:
+      allowed_paths:
+        - crates/bitnet-cli/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Short greedy decode succeeds.
+      - Prefill, first-token, and decode timing are recorded.
+      - CUDA kernel invocations, CPU fallback operations, and CUDA memory high-water mark are recorded.
+      - fallback_used=false.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti short decode BitNet CUDA proof with receipt artifact.
+    notes:
+      - Short decode proof is correctness and instrumentation first, not a speedup claim.
+    followups:
+      - CUDA-BITNET-008
+
+  - id: CUDA-BITNET-008
+    title: Add RTX 5070 Ti BitNet CUDA benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-BITNET-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/benches/**
+        - crates/bitnet-bench-receipts/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - ci/hardware/**
+        - docs/hardware/windows-9950x3d-rtx5070ti-validation.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - Benchmarks compare 9950X3D CPU scalar, AVX2, AVX-512, and RTX 5070 Ti CUDA.
+      - Same model, tokenizer, prompt profile, generated token count, and strict loader mode are used.
+      - Driver, CUDA, VRAM, power, and thermal context are recorded.
+      - Speedup claim appears only if the same-model fallback-free receipt proves it.
+    verification:
+      - cargo fmt --all -- --check
+      - Manual RTX 5070 Ti BitNet CUDA benchmark with receipt artifact.
+    notes:
+      - This is the first work item allowed to make performance claims, and only with matching receipts.
+    followups: []
+
+  - id: CUDA-DENSE-001
+    title: Add regular LLM CUDA dense-kernel reference lane
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - RTX5070TI-007
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-inference/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+    acceptance:
+      - FP16/BF16 dense matmul or cuBLAS-backed path has CPU parity.
+      - RMSNorm, RoPE, and KV-cache CUDA helpers are shared where useful.
+      - Receipts label the path as dense_regular_llm, not BitNet packed-kernel proof.
+      - Dense-lane receipts cannot satisfy CUDA-BITNET packed I2S/QK256 acceptance criteria.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+    notes:
+      - This lane is separate from strict BitNet CUDA inference.
+    followups: []
+
+  - id: AMD9950X3D-001
+    title: Add AMD Ryzen 9 9950X3D CPU validation lane
+    state: merged
+    priority: P1
+    workstream: desktop_cpu
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/amd-9950x3d-cpu-roadmap.md
+        - docs/hardware/amd-9950x3d-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - 9950X3D is documented as a modern desktop CPU validation lane.
+      - AVX-512, AVX2, 16C/32T, 170 W TDP, AM5, DDR5, and 128 MB L3 cache are documented.
+      - X3D/cache-domain and sustained-cooling caveats are documented.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: AMD9950X3D-002
+    title: Add 9950X3D machine profile and probe bundle
+    state: merged
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD9950X3D-001
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-9950x3d-validation.md
+        - docs/specs/amd-9950x3d-cpu-roadmap.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Probe bundle captures OS, CPU model, flags, topology, scheduler/core placement context, memory type/capacity, governor/power mode, thermal state, and optional OpenVINO CPU visibility.
+      - Probe bundle records AVX2 and AVX-512 detection.
+      - Probe bundle records cache and sustained-power context when available.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: AMD9950X3D-003
+    title: Prove 9950X3D scalar AVX2 and AVX-512 dispatch
+    state: ready
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD9950X3D-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-cpu-detect/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-receipts/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Runtime probe records AVX2 and AVX-512 available.
+      - Scalar, AVX2, and AVX-512 paths can be forced independently.
+      - Receipt records selected CPU kernel path.
+      - No GPU/NPU fallback is involved.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+
+  - id: AMD9950X3D-004
+    title: Add 9950X3D strict CPU proof run
+    state: proposed
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD9950X3D-003
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-9950x3d-validation.md
+        - ci/hardware/amd-9950x3d/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Strict CPU proof command records selected_backend=amd-9950x3d-cpu-avx512, amd-9950x3d-cpu-avx2, or amd-9950x3d-cpu-scalar.
+      - Receipt confirms no GPU/NPU fallback, no mock path, and no hidden loader fallback.
+      - Output records prompt, model hash, tokens/sec, first-token latency, decode latency, cache-domain context, and power/thermal context.
+    verification:
+      - Manual 9950X3D strict CPU proof command with receipt artifact.
+
+  - id: AMD9950X3D-005
+    title: Add 9950X3D cache-sensitive benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: desktop_cpu
+    depends_on:
+      - AMD9950X3D-004
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-9950x3d-validation.md
+        - ci/hardware/amd-9950x3d/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Benchmark separates scalar, AVX2, and AVX-512 paths.
+      - Receipt records cache-domain, scheduler/core placement, memory, and selected CPU path context.
+      - Docs explain that X3D/cache-sensitive wins must be receipt-backed.
+    verification:
+      - Manual 9950X3D cache-sensitive benchmark with receipt artifact.
+
+  - id: AMD9950X3D-006
+    title: Add 9950X3D sustained-power benchmark receipt
+    state: proposed
+    priority: P2
+    workstream: desktop_cpu
+    depends_on:
+      - AMD9950X3D-005
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-9950x3d-validation.md
+        - ci/hardware/amd-9950x3d/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Baseline records sustained frequency, temperature if available, power mode, cooling context, and duration.
+      - Receipt separates short boost from sustained desktop performance.
+      - Docs explain cooling requirements before performance claims.
+    verification:
+      - Manual 9950X3D sustained-power benchmark with receipt artifact.
+
+  - id: AMD5700X-001
+    title: Add AMD Ryzen 7 5700X CPU validation lane
+    state: merged
+    priority: P1
+    workstream: desktop_cpu
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/specs/amd-5700x-cpu-roadmap.md
+        - docs/hardware/amd-5700x-validation.md
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - 5700X is documented as a mainstream AM4 Zen 3 AVX2 validation lane.
+      - AVX2/no-AVX512, 8C/16T, 65 W TDP, DDR4, PCIe 4.0, and no iGPU are documented.
+      - The doc states this lane is CPU-only and cannot support GPU/NPU claims.
+      - No runtime code is touched.
+    verification:
+      - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+
+  - id: AMD5700X-002
+    title: Add 5700X machine profile and probe bundle
+    state: merged
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD5700X-001
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-5700x-validation.md
+        - docs/specs/amd-5700x-cpu-roadmap.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+        - tests/**
+    acceptance:
+      - Probe bundle captures OS, CPU model, flags, topology, memory type/capacity, governor/power mode, thermal state, and optional OpenVINO CPU visibility.
+      - Probe bundle records AVX2 detected and AVX-512 absent.
+      - Probe bundle records AM4/DDR4 context when available.
+    verification:
+      - cargo fmt --all -- --check
+
+  - id: AMD5700X-003
+    title: Prove 5700X scalar and AVX2 dispatch
+    state: ready
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD5700X-002
+    scope:
+      allowed_paths:
+        - crates/bitnet-cpu-detect/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-receipts/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-server/**
+        - crates/bitnet-kernels/src/gpu/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Runtime probe records AVX2 available and AVX-512 unavailable.
+      - Scalar and AVX2 paths can be forced independently.
+      - Receipt records selected CPU kernel path.
+      - No GPU/NPU fallback is involved.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-cpu-detect --no-default-features --features cpu
+      - cargo test --locked -p bitnet-kernels --no-default-features --features cpu,avx2
+
+  - id: AMD5700X-004
+    title: Add 5700X strict CPU proof run
+    state: proposed
+    priority: P1
+    workstream: desktop_cpu
+    depends_on:
+      - AMD5700X-003
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-5700x-validation.md
+        - ci/hardware/amd-5700x/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Strict CPU proof command records selected_backend=amd-5700x-cpu-avx2 or amd-5700x-cpu-scalar.
+      - Receipt confirms no GPU/NPU fallback, no mock path, and no hidden loader fallback.
+      - Output records prompt, model hash, tokens/sec, first-token latency, decode latency, and power/thermal context.
+    verification:
+      - Manual 5700X strict CPU proof command with receipt artifact.
+
+  - id: AMD5700X-005
+    title: Add 5700X DDR4 AM4 sustained benchmark baseline
+    state: proposed
+    priority: P2
+    workstream: desktop_cpu
+    depends_on:
+      - AMD5700X-004
+    scope:
+      allowed_paths:
+        - docs/hardware/amd-5700x-validation.md
+        - ci/hardware/amd-5700x/**
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Baseline separates scalar and AVX2 paths.
+      - Receipt records DDR4/AM4 memory context, sustained frequency, temperature if available, power mode, and duration.
+      - Docs explain that 5700X results are mainstream desktop AVX2 baselines, not AVX-512 claims.
+    verification:
+      - Manual 5700X sustained benchmark with receipt artifact.
+
+  - id: LEAF-001
+    title: Collapse warn-once into common
+    state: proposed
+    priority: P1
+    workstream: collapse_leaf
+    depends_on:
+      - INV-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-common/**
+        - crates/bitnet-warn-once/**
+        - Cargo.toml
+        - crates/*/Cargo.toml
+      forbidden_paths:
+        - crates/bitnet-inference/src/engine.rs
+    acceptance:
+      - warn-once code lives under bitnet-common module.
+      - Workspace member is removed.
+      - Imports updated.
+      - No behavior change.
+    verification:
+      - cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
+      - cargo nextest run --locked --workspace --no-default-features --features cpu
+    notes:
+      - Do not start until INV-001 is merged.
+    source_crate: bitnet-warn-once
+    destination_crate: bitnet-common
+    destination_module: warn_once
+    behavior_change: false
+    public_api_change: true
+    followups: []

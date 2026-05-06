@@ -1,0 +1,46 @@
+id = "ci-coverage"
+title = "CI coverage"
+status = "active"
+
+objective = "Make coverage upload and reporting reliable without turning forked PRs or missing secrets into failing unrelated work."
+
+end_state = [
+  "Coverage upload handles trusted and forked PR contexts explicitly.",
+  "Duplicate Codecov PRs are normalized behind one canonical path.",
+  "CI reports make skipped coverage reasons visible.",
+]
+
+hard_constraints = [
+  "Do not block unrelated runtime or tracker work on optional coverage uploads.",
+  "Do not leak or assume Codecov secrets in forked PRs.",
+  "Do not conflate coverage wiring with test quality claims.",
+]
+
+[[work_item]]
+id = "CI-COVERAGE-001"
+status = "merged"
+branch = "codex/implement-minimal-codecov-integration-vm5aks"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI."
+commands = [
+  "cargo fmt --all -- --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  "codecov.yml",
+  "docs/tracking/campaigns/ci-coverage/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Coverage upload handling is safer after merge.",
+]
+must_not_claim = [
+  "Coverage thresholds are complete.",
+  "Runtime behavior changed.",
+]
