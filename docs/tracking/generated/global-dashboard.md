@@ -14,4 +14,4 @@
 | intel-npu | NPU-002 | #3722 | pr_open | none | Device-node detection is not inference. |
 | nvidia-5070ti | RTX5070TI-005 | TBD | ready | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
-| tracker-infra | TRACKER-003 | TBD | in_progress | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
+| tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
