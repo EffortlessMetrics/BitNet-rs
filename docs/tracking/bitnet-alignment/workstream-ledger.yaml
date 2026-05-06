@@ -2335,7 +2335,7 @@ items:
 
   - id: CUDA-BITNET-001
     title: Add persistent CUDA BitNet context and weight handles
-    state: in_progress
+    state: pr_open
     priority: P1
     workstream: nvidia_cuda
     depends_on:
