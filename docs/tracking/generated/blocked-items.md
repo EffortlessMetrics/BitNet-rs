@@ -22,5 +22,6 @@
 | cpu-proof | CPU-BITNET-004 | CPU-BITNET-003 | pr_open |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | proposed |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
-| nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | pr_open |
+| nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
+| nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
