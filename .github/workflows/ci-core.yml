@@ -6,6 +6,9 @@ name: CI (Core)
 # tracking docs, because repository rules require this workflow's contexts before
 # every PR merge. Other docs and meta-only changes are handled by markdownlint,
 # link-check, docs-automation, and similar workflows.
+#
+# CI cost / verification policy: see docs/ci/cost-and-verification-policy.md
+# (rationale for the well-below-$1-per-PR target and the verification ladder).
 
 on:
   pull_request:
