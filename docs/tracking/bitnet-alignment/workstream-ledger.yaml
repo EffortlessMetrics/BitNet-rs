@@ -440,7 +440,7 @@ items:
 
   - id: CPU-BITNET-000
     title: Add real BitNet CPU path implementation plan
-    state: pr_open
+    state: merged
     priority: P0
     workstream: runtime_cpu
     depends_on:
