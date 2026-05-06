@@ -128,6 +128,23 @@ CPU, GPU, and NPU receipts can be compared without inferring cross-lane proof:
 The bundle does not prove BitNet inference, Arc 140V execution, OpenVINO NPU
 graph execution, parity, or benchmark performance.
 
+### CLI Platform Probe
+
+Use the CLI probe command to emit the visibility-only platform receipt from the
+current machine without launching kernels or compiling OpenVINO graphs:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- lunar-lake-probe \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json
+```
+
+The command records `proof_stage=runtime_detected`, `runtime_api=platform_probe`,
+`fallback_used=false`, and a `must_not_claim` list. It does not replace the
+lane-specific Arc 140V, NPU, CPU BitNet, parity, or benchmark artifacts.
+
 ## Windows PowerShell Bundle
 
 ```powershell
