@@ -390,3 +390,7 @@ Technical specification for implementing manual KV cache position tracking in th
 - `bitnet-cpp-ffi-sockets.md` - Socket 1/Socket 3 architecture
 - `dual-backend-crossval.md` - Cross-validation patterns
 - `cpp-setup.md` - C++ reference setup guide
+
+## Hardware and Runtime Enablement Specs
+
+- `intel-258v-cpu-validation-runtime-enablement.md` - Lunar Lake 258V CPU validation and runtime-probe buildout requirements.

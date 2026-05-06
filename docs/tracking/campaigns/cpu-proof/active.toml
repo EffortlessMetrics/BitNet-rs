@@ -118,3 +118,38 @@ must_not_claim = [
   "Transformer decode is complete.",
   "CPU performance is proven.",
 ]
+
+
+[[work_item]]
+id = "CPU258V-001"
+status = "planned"
+branch = "codex/cpu-proof/CPU258V-001-lunar-lake-validation"
+stackable = true
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-002"]
+acceptance = "Add a Core Ultra 7 258V CPU-only validation harness that records strict loader, tokenizer, requested kernel, selected kernel, fallback, phase, and benchmark metrics for the merged CPU path without taking ownership of shared CPU implementation work."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-receipts-core",
+  "cargo test --locked -p bitnet-cli",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/bitnet/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-258v-cpu-validation-runtime-enablement.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/i2s_qk256*.rs",
+  "crates/bitnet-inference/src/layers/**",
+]
+may_claim = [
+  "258V CPU validation receipts are generated after merge.",
+]
+must_not_claim = [
+  "258V owns the shared CPU implementation lane.",
+  "CPU performance is proven without receipt artifacts.",
+]

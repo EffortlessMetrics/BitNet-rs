@@ -169,3 +169,21 @@ NPU subgraph parity, if proven
 - `docs/hardware/intel-258v-validation.md`
 
 Keep implementation work item ownership separate even when the same laptop produces the receipts.
+
+## CPU Validation and Runtime Enablement Buildout
+
+The detailed CPU validation/runtime buildout is defined in:
+
+```text
+docs/specs/intel-258v-cpu-validation-runtime-enablement.md
+```
+
+That buildout is normative for sequencing 258V work:
+
+1. preserve backend identity first (`NPU-002`/`NPU-002-lite`);
+2. prove Arc 140V identity separately (`ARC140V-002`);
+3. add a visibility-only 258V platform probe (`LNL258V-RUN-001`);
+4. let the CPU proof lane own strict loader and tokenizer authority;
+5. add a 258V CPU validation harness only after strict CPU receipts can record loader, tokenizer, requested kernel, selected kernel, and fallback status.
+
+The 258V platform lane must not rewrite shared QK256 dispatch, CPU kernels, or transformer hot paths unless a tracker item explicitly scopes that overlap with the CPU proof campaign.

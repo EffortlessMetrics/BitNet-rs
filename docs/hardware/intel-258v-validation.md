@@ -220,3 +220,21 @@ Proof lanes:
 - Intel AI Boost NPU and OpenVINO NPU are owned by the Intel NPU workstream.
 
 The platform profile ties the lanes together for comparison, but it does not merge their claims.
+
+## Buildout Linkage
+
+The implementation-facing requirements for turning this validation profile into runtime probes, strict receipts, and CPU validation harnesses are captured in:
+
+```text
+docs/specs/intel-258v-cpu-validation-runtime-enablement.md
+```
+
+Use that spec when adding:
+
+- `Lnl258vPlatformProbe` visibility-only JSON output;
+- exact Arc 140V probe fields;
+- Intel NPU identity-preserving backend/device mappings;
+- strict CPU validation receipts for loader, tokenizer, requested kernel, selected kernel, and fallback status;
+- benchmark gates for 258V scalar-vs-AVX2 validation.
+
+This validation profile remains the manual machine-fact bundle. The buildout spec defines the code-facing APIs and acceptance criteria.

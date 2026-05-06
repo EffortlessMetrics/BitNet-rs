@@ -148,3 +148,40 @@ Parity receipts must record:
 - `docs/bitnet/BITNET_QUANTIZATION_CONTRACT.md`
 - `docs/bitnet/BITNET_RUNTIME_PHASES.md`
 - `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
+
+## 258V CPU Validation Extensions
+
+The Core Ultra 7 258V validation lane requires strict CPU receipts to include loader, tokenizer, kernel, and platform linkage fields before making real-model or performance claims. The implementation plan is tracked in `docs/specs/intel-258v-cpu-validation-runtime-enablement.md`.
+
+Required 258V CPU receipt surfaces:
+
+```json
+{
+  "loader": {
+    "mode": "real_gguf",
+    "minimal_loader_fallback_used": false,
+    "tokenizer_source": "gguf|override|tokenizer.json|tokenizer.model",
+    "mock_tensors_used": false
+  },
+  "bitnet": {
+    "kernel_family": "qk256|i2_s|tl2",
+    "kernel_format": "i2_s|tl2|qk256",
+    "layout": "qk256-row-major-out-in",
+    "layout_source": "gguf|converted|repo_internal",
+    "requested_kernel": "qk256-avx2-gemv",
+    "selected_kernel": "qk256-avx2-gemv",
+    "dequantizes_before_compute": false
+  },
+  "platform_runtime": {
+    "machine": "core-ultra-7-258v",
+    "cpu_features": ["avx2", "fma", "sse4_2"],
+    "opencl_device_name": "Intel(R) Arc(TM) 140V Graphics",
+    "openvino_available_devices": ["CPU", "GPU.0", "NPU"],
+    "runtime_device": "CPU",
+    "power_mode": "balanced",
+    "thermal_profile": "default"
+  }
+}
+```
+
+A strict 258V CPU receipt is invalid if it uses minimal GGUF fallback, mock tensors, hidden tokenizer fallback, dequantizing fallback for a claimed packed kernel, or a selected kernel different from the requested kernel without reporting a strict failure.

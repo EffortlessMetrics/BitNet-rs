@@ -48,3 +48,39 @@ must_not_claim = [
   "Intel NPU execution works.",
   "BitNet inference works on 258V.",
 ]
+
+
+[[work_item]]
+id = "LNL258V-RUN-001"
+status = "planned"
+branch = "codex/intel-258v-platform/LNL258V-RUN-001-platform-probe"
+stackable = false
+requires_human_merge = true
+blocked_by = ["NPU-002", "ARC140V-002"]
+acceptance = "Add a visibility-only Core Ultra 7 258V platform probe and receipt that records CPU AVX2 facts, Arc 140V visibility, Level Zero, OpenVINO GPU.0, OpenVINO NPU, /dev/accel, driver, memory, power, and thermal context without inference claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-probe",
+  "cargo test --locked -p bitnet-receipts-core",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-platform-roadmap.md",
+  "docs/specs/intel-258v-cpu-validation-runtime-enablement.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-inference/src/layers/**",
+]
+may_claim = [
+  "258V platform visibility is recorded after merge.",
+]
+must_not_claim = [
+  "BitNet inference works on 258V.",
+  "Arc 140V executes BitNet kernels.",
+  "Intel NPU executes BitNet graphs.",
+]
