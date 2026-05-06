@@ -286,3 +286,6 @@ filetime = "0.2.26"
 html-escape = "0.2.13"
 serde = { version = "1.0.228", features = ["derive"] }
 libc = "0.2.177"
+
+[lints]
+workspace = true

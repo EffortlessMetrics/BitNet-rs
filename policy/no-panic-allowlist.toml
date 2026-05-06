@@ -1,0 +1,5 @@
+schema_version = "0.3"
+
+# Panic-family exceptions use semantic identity:
+# path + family + selector. last_seen line/column data is advisory only.
+# New exceptions require owner, classification, explanation, and optional expiry.

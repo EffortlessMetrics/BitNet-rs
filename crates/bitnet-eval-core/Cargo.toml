@@ -13,3 +13,6 @@ description = "SRP helpers for evaluation and scoring math"
 [lib]
 name = "bitnet_eval_core"
 path = "src/lib.rs"
+
+[lints]
+workspace = true

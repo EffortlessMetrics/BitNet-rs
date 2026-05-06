@@ -223,6 +223,9 @@ autoexamples = false
 autotests = false
 autobenches = false
 
+[lints]
+workspace = true
+
 [lib]
 # Library source
 
@@ -238,7 +241,7 @@ keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/EffortlessMetrics/BitNet"
-rust-version = "1.92.0"
+rust-version = "1.93"
 version = "0.2.1-dev"
 
 [dependencies]
@@ -539,16 +542,134 @@ debug = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Workspace-level lints for code quality
+# Workspace-level lint policy for panic-free, suppression-governed Rust.
+[workspace.lints.rust]
+unsafe_code = "warn"
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+unexpected_cfgs = "warn"
+const_item_interior_mutations = "deny"
+function_casts_as_integer = "deny"
+
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-module_name_repetitions = "allow"
-must_use_candidate = "allow"
 nursery = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
-ptr_arg = "deny"
+
+# Panic-free production and tests
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+panic = "deny"
+unreachable = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+get_unwrap = "deny"
+unwrap_in_result = "deny"
+panic_in_result_fn = "deny"
+string_slice = "deny"
+indexing_slicing = "deny"
+out_of_bounds_indexing = "deny"
+unchecked_time_subtraction = "deny"
+
+# AST / parser / UTF-8 / slice safety
+char_indices_as_byte_indices = "deny"
+sliced_string_as_bytes = "deny"
+index_refutable_slice = "deny"
+
+# Silent failure
+let_underscore_future = "deny"
+let_underscore_must_use = "deny"
+let_underscore_lock = "deny"
+unused_result_ok = "deny"
+map_err_ignore = "deny"
+assertions_on_result_states = "deny"
+lines_filter_map_ok = "deny"
+
+# Async / concurrency
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+await_holding_invalid_type = "deny"
+future_not_send = "warn"
+large_futures = "warn"
+arc_with_non_send_sync = "deny"
+rc_mutex = "deny"
+mut_mutex_lock = "deny"
+readonly_write_lock = "deny"
+
+# Unsafe / memory
+mem_forget = "deny"
+forget_non_drop = "deny"
+drop_non_drop = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"
+repr_packed_without_abi = "deny"
+
+# Numeric correctness
+float_cmp = "deny"
+float_cmp_const = "deny"
+float_equality_without_abs = "deny"
+lossy_float_literal = "deny"
+cast_sign_loss = "deny"
+cast_possible_wrap = "warn"
+cast_possible_truncation = "warn"
+cast_precision_loss = "warn"
+invalid_upcast_comparisons = "deny"
+cast_abs_to_unsigned = "deny"
+cast_enum_truncation = "deny"
+cast_nan_to_int = "deny"
+manual_midpoint = "warn"
+manual_is_multiple_of = "warn"
+manual_div_ceil = "warn"
+arithmetic_side_effects = "warn"
+
+# File/process/path footguns
+suspicious_open_options = "deny"
+nonsensical_open_options = "deny"
+ineffective_open_options = "deny"
+path_buf_push_overwrite = "deny"
+join_absolute_paths = "deny"
+read_line_without_trim = "warn"
+exit = "deny"
+
+# API / trait correctness
+iter_not_returning_iterator = "deny"
+expl_impl_clone_on_copy = "deny"
+infallible_try_from = "deny"
+fallible_impl_from = "deny"
+error_impl_error = "deny"
+result_unit_err = "warn"
+result_large_err = "warn"
+
+# Good taste that pays rent
+format_in_format_args = "deny"
+to_string_in_format_args = "deny"
+unused_format_specs = "deny"
+unnecessary_debug_formatting = "warn"
+uninlined_format_args = "warn"
+manual_let_else = "warn"
+manual_ok_or = "warn"
+manual_strip = "warn"
+manual_split_once = "warn"
+manual_is_variant_and = "warn"
+filter_map_next = "warn"
+flat_map_option = "warn"
+match_result_ok = "deny"
+cloned_instead_of_copied = "warn"
+iter_cloned_collect = "warn"
+iter_overeager_cloned = "warn"
+needless_collect = "warn"
+redundant_closure = "warn"
+redundant_closure_for_method_calls = "warn"
+missing_panics_doc = "deny"
+missing_errors_doc = "warn"
+
+# Suppression governance
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+blanket_clippy_restriction_lints = "deny"
+ignore_without_reason = "deny"
+should_panic_without_expect = "deny"
 
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]
@@ -586,4 +707,4 @@ keywords = [
   "inference",        # Model inference
   "bitnet",           # BitNet specific
 ]
-msrv = "1.92.0"
+msrv = "1.93"

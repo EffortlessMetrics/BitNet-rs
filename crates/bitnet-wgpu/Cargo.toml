@@ -2,7 +2,7 @@
 name = "bitnet-wgpu"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.92.0"
+rust-version.workspace = true
 description = "wgpu-based GPU compute backend for BitNet inference (Vulkan/Metal/DX12)"
 license = "MIT OR Apache-2.0"
 
@@ -21,3 +21,6 @@ proptest = "1"
 
 [features]
 default = []
+
+[lints]
+workspace = true

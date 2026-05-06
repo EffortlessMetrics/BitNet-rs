@@ -1,16 +1,13 @@
-# Clippy configuration for bitnet-rs
-# Ensures high code quality standards for crates.io publication
+# Clippy configuration for bitnet-rs.
+# Repo-local Clippy config is intentionally narrow: lint levels live in
+# Cargo.toml and policy/clippy-lints.toml; suppressions must be local
+# #[expect(..., reason = "...")] receipts rather than test carveouts.
 
 # MSRV compatibility
-msrv = "1.92.0"
+msrv = "1.93"
 
-# Complexity thresholds
+# Complexity thresholds tuned for ML/systems code review.
 cognitive-complexity-threshold = 30
 too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 trivial-copy-size-limit = 64
-
-# Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
-allow-mixed-uninlined-format-args = true  # Performance in hot paths

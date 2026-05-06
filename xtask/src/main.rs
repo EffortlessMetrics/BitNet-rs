@@ -47,6 +47,7 @@ mod health_check;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
+mod policy_checks;
 mod tokenizers;
 mod trace_diff;
 
@@ -183,6 +184,11 @@ impl PromptTemplateArg {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Verify the workspace Clippy lint policy ledgers and manifest wiring.
+    CheckLintPolicy,
+
+    /// Print a concise policy inventory for review and CI logs.
+    PolicyReport,
     /// Download a GGUF model from Hugging Face
     ///
     /// Features:
@@ -1068,6 +1074,8 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 fn real_main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
+        Cmd::CheckLintPolicy => policy_checks::check_lint_policy(Path::new(".")),
+        Cmd::PolicyReport => policy_checks::policy_report(Path::new(".")),
         Cmd::DownloadModel {
             id,
             file,

@@ -1,0 +1,6 @@
+schema = 1
+
+# Temporary lint exceptions belong here as reviewed, expiring debt. This first
+# policy PR establishes the ledger; follow-up cleanup PRs should add concrete
+# entries only when they introduce narrow #[expect(..., reason = "...")]
+# suppressions or documented rollout debt.

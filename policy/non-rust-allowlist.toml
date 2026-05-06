@@ -1,0 +1,28 @@
+schema_version = "1.0"
+
+[[allow]]
+glob = ".github/workflows/*.yml"
+kind = "ci_declarative"
+owner = "release/ci"
+reason = "GitHub Actions workflow definitions are platform-required YAML."
+surface = "ci"
+classification = "config"
+covered_by = ["cargo xtask check-lint-policy"]
+
+[[allow]]
+glob = "docs/**"
+kind = "documentation"
+owner = "docs"
+reason = "Repository documentation is authored in Markdown and related documentation formats."
+surface = "docs"
+classification = "config"
+covered_by = ["cargo xtask check-lint-policy"]
+
+[[allow]]
+glob = "tests/fixtures/**"
+kind = "fixture_input"
+owner = "testing"
+reason = "Test fixtures intentionally contain non-Rust sample inputs and golden data."
+surface = "fixtures"
+classification = "test"
+covered_by = ["cargo test --workspace"]

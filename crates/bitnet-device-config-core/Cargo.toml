@@ -21,3 +21,6 @@ default = []
 cpu = ["bitnet-common/cpu"]
 cuda = ["dep:bitnet-kernels", "bitnet-kernels/cuda"]
 gpu = ["cuda", "bitnet-kernels/gpu"]
+
+[lints]
+workspace = true

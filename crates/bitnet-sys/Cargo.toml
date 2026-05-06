@@ -44,3 +44,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 [lib]
 name = "bitnet_sys"
 path = "src/lib.rs"
+
+[lints]
+workspace = true

@@ -120,3 +120,6 @@ trace = ["bitnet-inference/trace", "bitnet-runtime-bootstrap/runtime-profile-tra
 # This prevents production CLI builds with test mocks
 # DO NOT enable this feature - it will fail to compile by design
 mock = []
+
+[lints]
+workspace = true
