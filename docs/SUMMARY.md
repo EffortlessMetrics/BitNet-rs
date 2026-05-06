@@ -25,6 +25,7 @@
 - [Streaming API](streaming-api.md)
 
 ## CPU / GPU Architectures
+- [BitNet CPU Path Plan](bitnet/BITNET_CPU_PATH_PLAN.md)
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)

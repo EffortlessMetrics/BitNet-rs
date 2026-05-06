@@ -20,6 +20,27 @@ The CPU path is considered production-ready only when a strict run can prove all
 - transformer decode-critical ops are present for CPU execution;
 - receipts record requested versus selected backend, kernel, tokenizer source, and fallback status.
 
+## Executive Summary
+
+The CPU path is not one missing function. It is three partially connected systems that must become one coherent inference lane:
+
+1. **Model and tokenizer authority**: GGUF loading, layout selection, and tokenizer discovery already exist in pieces, but strict real-model execution must not depend on minimal-loader behavior, hardcoded tokenizer fallback, or ambiguous discovery policy.
+2. **Packed quantized kernel authority**: QK256/I2_S code and dispatch scaffolding are present, but model-side layout helpers, quantization kernels, and dispatch crates must agree on one packed representation before performance claims are meaningful.
+3. **Real transformer execution**: Packed matmul is necessary but not sufficient; RMSNorm, RoPE, attention score/value paths, KV-cache append/read helpers, embedding lookup, output head, batching, and prefill/decode scheduling must be covered by the CPU lane.
+
+The implementation priority is:
+
+1. make loader, tokenizer, and layout authority strict and deterministic;
+2. make scalar packed reference kernels correct and receipt-backed;
+3. make AVX2 decode-first kernels fast enough for real models;
+4. widen to AVX-512 and NEON only after the scalar and AVX2 proof path is stable.
+
+## External Reference Model
+
+The CPU lane should follow the same high-level lesson as `bitnet.cpp`: BitNet CPU inference is not generic dense inference with a quantized file format attached. The dominant cost is mixed-precision matrix multiplication over ternary/I2_S-style weights, so the useful path is specialized packed kernels that fuse decode/unpack, scaling, and dot products.
+
+GGUF should be treated as the storage contract for single-file deployment, extensible metadata, mmap-friendly access, and aligned tensor payloads. The Rust runtime should therefore parse metadata once, validate the packed layout once, expose immutable packed tensor views, and dispatch directly into fused packed kernels instead of repeatedly unpacking or dequantizing whole matrices on the hot path.
+
 ## Current Diagnosis
 
 The repo already contains the major surfaces required for a serious CPU lane, but they are not yet unified into a single end-to-end execution story.
@@ -127,6 +148,18 @@ Acceptance criteria:
 - scalar and SIMD kernels consume the same representation;
 - no duplicate repacking is required in steady-state inference;
 - layout/pack/unpack tests use exact byte equality.
+
+## Hardware Planning Lanes
+
+Plan by ISA lane first, not by individual SKU. The first successful fast path should work across mainstream CPUs before optional wider lanes are promoted.
+
+| Machine lane | Planning target | What builders should assume |
+|---|---|---|
+| 8250U CPU lane | AVX2 baseline | Low core count, memory-sensitive decode, no advanced ISA assumptions. |
+| 258V CPU lane | AVX2 baseline | Current x86 reference lane; newer ISA exposure is optional and must be probed. |
+| 5700X | AVX2 baseline | Strong multi-core prefill lane, but decode-first work still has the highest optimization value. |
+| 9950X3D | AVX2 baseline plus optional advanced x86 | Use AVX2 first; enable AVX-512 or other advanced paths only if runtime probing and benchmarks prove them. |
+| M4 Mac Mini | NEON baseline | Prioritize NEON after AVX2/scalar proof; keep AMX/Accelerate out of the first CPU milestone. |
 
 ## Kernel Matrix
 
@@ -305,6 +338,25 @@ A CPU receipt must make fallback impossible to hide:
 }
 ```
 
+## Concrete Code Edit Map
+
+Use this table to keep implementation PRs small and reviewable. Each row should land with tests or receipt fields that prove the behavior it changes.
+
+| File or area | Edit | Suggested API or output | Feature flags | Optional dependencies |
+|---|---|---|---|---|
+| `crates/bitnet-models/src/formats/gguf/loader.rs` | Canonical real GGUF load path | `load_gguf_model(...)` | `gguf` | `memmap2` if useful |
+| `crates/bitnet-models/src/gguf_simple.rs` | Fold into canonical path or restrict to diagnostics | none for strict inference | `gguf` | none |
+| `crates/bitnet-tokenizers/src/auto.rs` | Deterministic tokenizer resolution | `resolve_tokenizer(...)` | tokenizer-related features | existing tokenizer stack |
+| `crates/bitnet-qk256-layout-core/src/lib.rs` | Canonical block view and matrix iteration types | `Qk256BlockView`, `PackedWeightMatrix` | `qk256` | `bytemuck` if useful |
+| `crates/bitnet-quantization/src/i2s_qk256.rs` | Scalar GEMV/GEMM truth kernels | `qk256_gemv_scalar`, `qk256_gemm_scalar` | `cpu` | none |
+| `crates/bitnet-quantization/src/i2s_qk256_avx2.rs` | Decode-first AVX2 fast path | `qk256_gemv_avx2` | `cpu`, `avx2` | none |
+| `crates/bitnet-kernels/src/matmul_dispatch.rs` | Dispatch by workload phase and ISA | selected kernel ID plus fallback status | `cpu` | none |
+| `crates/bitnet-kernels/src/cpu/` | RMSNorm, RoPE, attention, KV-cache helpers | op-specific CPU APIs | `cpu` | none |
+| `crates/bitnet-inference/src/backends.rs` | Strict CPU selection and receipt hooks | requested/selected backend and kernel fields | `cpu` | none |
+| `crates/bitnet-receipts/**` | Requested/selected kernel schema | `CpuReceipt` fields | receipts features | `serde_json` |
+| `crates/bitnet-quantization/benches/qk256_gemv.rs` | Stable decode microbench | Criterion benchmark group | bench features | `criterion` |
+| `scripts/phase2_flamegraph.sh` | Standardized packed-kernel perf run | repeatable flamegraph entry point | n/a | system perf tools |
+
 ## PR-Sized Work Items
 
 | ID | Work item | Primary files | Acceptance |
@@ -341,6 +393,19 @@ A CPU receipt must make fallback impossible to hide:
 - [ ] Does strict mode fail rather than silently substituting fallback execution?
 - [ ] Does the receipt include requested and selected backend/kernel plus fallback reason?
 - [ ] Does the benchmark name its phase: micro, layer, prefill, or decode?
+
+## Source Priority for Future Builders
+
+When implementing or reviewing CPU-path work, use sources in this order:
+
+1. Current repo files and tests, especially the quantization, layout, GGUF, tokenizer, dispatch, inference, and receipt crates named in this document.
+2. Official `bitnet.cpp` documentation and BitNet papers for CPU-first packed-kernel expectations.
+3. GGUF specification and `llama.cpp` conventions for metadata, alignment, mmap, tensor naming, and benchmark conventions.
+4. Official ISA optimization references: Intel/AMD x86 optimization material for AVX2/AVX-512, and Arm Neon guidance for arm64 lanes.
+
+## Open Questions and Limits
+
+This document intentionally sets the strategy and acceptance contract before every implementation detail is final. PR authors must still verify exact function signatures, current feature flags, and existing transformer-op coverage before editing code. If an operation already exists under a different name, consolidate it into the CPU lane rather than creating a parallel authority. If a runtime path cannot prove that it used the requested loader, tokenizer, layout, and kernel, strict mode must treat that as unsupported until receipts can prove otherwise.
 
 ## Related Documents
 
