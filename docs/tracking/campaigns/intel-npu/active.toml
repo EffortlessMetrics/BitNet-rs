@@ -1,0 +1,52 @@
+id = "intel-npu"
+title = "Intel NPU validation"
+status = "active"
+
+objective = "Validate Intel Lunar Lake NPU through OpenVINO static-shape detection, smoke, parity, and receipts without conflating NPU, GPU, or CPU work."
+
+end_state = [
+  "Intel NPU backend identity is distinct from Intel GPU, OpenCL, CPU, and generic accelerator labels.",
+  "Probe records device-node, driver, OpenVINO runtime, available devices, NPU visibility, and environment facts.",
+  "Tiny OpenVINO NPU graph smoke executes with fallback_used=false.",
+  "Static-shape BitNet subgraph parity is receipt-backed before inference claims.",
+]
+
+hard_constraints = [
+  "Device-node detection is not inference.",
+  "OpenVINO NPU smoke is not full BitNet inference.",
+  "CPU fallback cannot count as NPU execution.",
+  "Do not assume WSL can see the NPU unless OpenVINO reports NPU inside WSL.",
+]
+
+[[work_item]]
+id = "NPU-002"
+status = "ready"
+branch = "codex/intel-npu/NPU-002-backend-identity"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Preserve Intel NPU requested and selected backend identity without mapping it to Metal, CUDA, generic GPU, or CPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli-config-core --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-common/src/types.rs",
+  "crates/bitnet-inference/src/npu.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/campaigns/intel-npu/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Intel NPU backend identity is preserved through config and help surfaces.",
+]
+must_not_claim = [
+  "Intel NPU runtime detection works.",
+  "OpenVINO NPU graph execution works.",
+  "BitNet inference works on Intel NPU.",
+]

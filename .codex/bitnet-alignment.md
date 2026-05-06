@@ -1,60 +1,33 @@
-# Codex: bitnet-rs Alignment Work
+# Codex Campaign Index
 
-You are working on the bitnet-rs pre-publish alignment burndown.
+Use campaign-local goals and trackers for BitNet alignment work.
 
-Use `docs/tracking/bitnet-alignment/workstream-ledger.yaml` as the control plane:
-pick the next ready item with no unmet dependencies, stay inside its allowed paths,
-avoid forbidden paths, update the tracker, and report only verification commands
-actually run. The goal is to make bitnet-rs smaller, stricter, greener, and more
-honest by collapsing excess public crate seams into SRP modules, preserving
-explicit feature gates, removing fake or ambiguous runtime paths, and requiring
-receipt-backed proof for working claims. Keep the sequence disciplined: truth
-boundary first, then crate inventory, then consolidation, then CPU runtime proof,
-then server inference and GPU validation; when work grows beyond the item, add a
-follow-up ledger entry instead of broadening the PR.
+Campaign goals:
 
-Primary tracker:
+- `apple-m4`: `.codex/campaigns/apple-m4/goal.md`
+- `cpu-proof`: `.codex/campaigns/cpu-proof/goal.md`
+- `intel-a770`: `.codex/campaigns/intel-a770/goal.md`
+- `intel-npu`: `.codex/campaigns/intel-npu/goal.md`
+- `crate-collapse`: `.codex/campaigns/crate-collapse/goal.md`
 
-- `docs/tracking/bitnet-alignment/workstream-ledger.yaml`
+Campaign manifests:
 
-Before starting:
+- `apple-m4`: `docs/tracking/campaigns/apple-m4/active.toml`
+- `cpu-proof`: `docs/tracking/campaigns/cpu-proof/active.toml`
+- `intel-a770`: `docs/tracking/campaigns/intel-a770/active.toml`
+- `intel-npu`: `docs/tracking/campaigns/intel-npu/active.toml`
+- `crate-collapse`: `docs/tracking/campaigns/crate-collapse/active.toml`
 
-1. Pick the first `ready` item with no unmet dependencies.
-2. Keep the PR within `scope.allowed_paths`.
-3. Do not touch `scope.forbidden_paths`.
-4. If the task is too large, split it by adding follow-up ledger items.
-5. Update `status.md`.
-6. Run the verification gate listed on the item.
-7. Report commands actually run.
+Rules:
 
-Every work item may also update:
+- Pick only from the selected campaign.
+- Check GitHub for an existing PR with the item ID before starting.
+- One work item, one PR.
+- Respect `stackable`, `requires_human_merge`, and `blocked_by`.
+- Do not edit global dashboards by hand.
+- Do not delete hardware lane visibility.
+- Add follow-up items instead of broadening a PR.
 
-- `docs/tracking/bitnet-alignment/status.md`
-- `docs/tracking/bitnet-alignment/workstream-ledger.yaml`
+Transition note:
 
-Use that implicit tracker exception only for item state, PR number, verification notes,
-and follow-up items. Do not reshape unrelated tracker sections inside implementation PRs.
-
-Default command baseline:
-
-```bash
-cargo fmt --all -- --check
-cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
-cargo nextest run --locked --workspace --no-default-features --features cpu
-```
-
-Do not claim GPU, server inference, QK256 performance, or production readiness unless receipt-backed.
-
-Hardware validation is lane-based. The i5-8250U owns low-power CPU AVX2 proof, the A770 owns discrete Intel OpenCL kernel proof, the Arc 140V owns Lunar Lake shared-memory iGPU comparison, and the 258V NPU owns OpenVINO static-shape NPU smoke/subgraph work. Always preserve requested backend, selected backend, runtime API, resolved device identity, fallback status, and artifact path. Detection is not execution, execution is not parity, parity is not inference, and performance claims require benchmark receipts with machine, driver, power, and thermal context.
-
-Modern hardware lanes are still lane-based. M4 Mac mini owns Apple Silicon Metal/MPSGraph work; RTX 5070 Ti owns NVIDIA CUDA work; A770 owns Intel Arc OpenCL work; Arc 140V owns Lunar Lake iGPU comparison; 258V NPU owns OpenVINO NPU static-shape work; i5-8250U owns low-power CPU AVX2 proof. Always preserve requested backend, selected backend, runtime API, resolved device identity, fallback status, and artifact path. Do not treat Metal, MPSGraph, CUDA, OpenCL, WGPU, OpenVINO GPU, or OpenVINO NPU as interchangeable proof.
-
-AMD desktop CPU lanes are CPU proof lanes, not accelerator lanes. The Ryzen 9 9950X3D owns modern Zen 5 AVX-512, large-cache, AM5/DDR5 CPU proof; the Ryzen 7 5700X owns mainstream Zen 3 AVX2, AM4/DDR4 CPU proof. Keep scalar, AVX2, and AVX-512 receipts distinct, record memory and sustained-power context, and never treat CPU proof as GPU/NPU proof.
-
-The 8250U and 258V CPU lanes may both perform CPU work, but they must not edit the same runtime surface in overlapping PRs. The 8250U lane owns active AVX2 CPU implementation, scalar/AVX2 parity, strict CPU proof, and sustained low-power behavior. The 258V CPU lane owns Lunar Lake CPU validation and same-machine comparisons against Arc 140V and NPU artifacts. If a CPU change touches shared dispatch, QK256 CPU kernels, or inference hot paths, the ledger item must name the owning CPU lane and list the other CPU lane as a validation target, not a co-owner.
-
-BitNet is not generic INT8 inference. BitNet proof is model/kernel-specific, not just hardware-specific. Every hardware artifact that claims BitNet progress must record the model artifact, tokenizer, quantization family, kernel family, execution phase, selected backend, reference path, and fallback status. I2_S is the portable baseline, TL1 is ARM-oriented, TL2 is x86-oriented, and QK256 is a repo-local packed/dispatch path that needs scalar parity and receipt-backed benchmarks before performance claims. Do not treat BF16, OpenVINO graph smoke, or dense fallback as packed BitNet kernel proof.
-
-Use `docs/bitnet/fixtures.yaml` for the canonical BitNet model and prompt fixtures, and use `ci/hardware/_templates/` as receipt starters. Templates are not evidence; every `TBD` field must be replaced and the completed artifact must live under `ci/hardware/<machine-id>/<date>/` before it can support a claim.
-
-Do not make BitNet run by routing around BitNet. Real CPU support means real GGUF loading, real tokenizer resolution, canonical packed layout, scalar packed reference correctness, explicit SIMD dispatch, full transformer decode coverage, strict fallback behavior, and receipt-backed benchmarks. Follow `docs/bitnet/BITNET_CPU_PATH_PLAN.md`: loader authority, tokenizer authority, canonical packed layout, scalar truth kernels, AVX2 decode GEMV, CPU transformer decode ops, strict receipts, benchmarks, then wider ISA lanes.
+`docs/tracking/bitnet-alignment/workstream-ledger.yaml` and `docs/tracking/bitnet-alignment/status.md` remain transition trackers until generator/checker tooling makes campaign manifests authoritative. New planning work should prefer `docs/tracking/campaigns/**` and generated dashboards.

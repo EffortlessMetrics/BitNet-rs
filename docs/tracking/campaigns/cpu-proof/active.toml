@@ -1,0 +1,71 @@
+id = "cpu-proof"
+title = "BitNet CPU proof"
+status = "active"
+
+objective = "Make real BitNet CPU inference strict, receipt-backed, and measurable without routing around model, tokenizer, layout, or fallback truth."
+
+end_state = [
+  "Real GGUF loading is authoritative in strict proof mode.",
+  "Tokenizer resolution is strict and receipt-backed.",
+  "Packed BitNet layout is canonical.",
+  "Scalar truth kernels exist before SIMD performance work.",
+  "AVX2 dispatch and decode work are parity checked.",
+  "Strict receipts record model, tokenizer, quantization, kernel family, selected backend, phase, and fallback status.",
+]
+
+hard_constraints = [
+  "No GPU or NPU claims.",
+  "No silent GGUF fallback.",
+  "No performance claim without receipt artifacts.",
+  "No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-001"
+status = "proposed"
+branch = "codex/cpu-proof/CPU-BITNET-001-loader-authority"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-000"]
+acceptance = "Strict CPU inference has one authoritative real GGUF loader path for BitNet models, and minimal fallback is impossible in strict proof mode."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+]
+allowed_paths = [
+  "crates/bitnet-models/src/formats/gguf/loader.rs",
+  "crates/bitnet-models/src/gguf_simple.rs",
+  "crates/bitnet-models/src/lib.rs",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Strict BitNet GGUF loader authority exists after merge.",
+]
+must_not_claim = [
+  "Tokenizer authority is complete.",
+  "Packed kernels are complete.",
+  "Transformer decode is complete.",
+  "CPU performance is proven.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-002"
+status = "proposed"
+branch = "codex/cpu-proof/CPU-BITNET-002-tokenizer-authority"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-001"]
+acceptance = "Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-tokenizers --no-default-features --features cpu",
+]

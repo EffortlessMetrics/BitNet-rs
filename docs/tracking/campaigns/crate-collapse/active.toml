@@ -1,0 +1,50 @@
+id = "crate-collapse"
+title = "Crate collapse"
+status = "active"
+
+objective = "Collapse low-risk public microcrates into SRP modules while preserving behavior, feature gates, and public API intent."
+
+end_state = [
+  "Low-risk leaf crates are moved into destination modules.",
+  "Imports and workspace membership are updated in small PRs.",
+  "Behavior is unchanged unless an item explicitly permits a public API change.",
+  "Verification gates remain green after each collapse.",
+]
+
+hard_constraints = [
+  "Do not combine crate movement with runtime proof.",
+  "Do not change hardware lane semantics.",
+  "Do not move domain crates before leaf dependencies are settled.",
+  "Do not mass-format unrelated files.",
+]
+
+[[work_item]]
+id = "LEAF-001"
+status = "proposed"
+branch = "codex/crate-collapse/LEAF-001-warn-once"
+stackable = false
+requires_human_merge = true
+blocked_by = ["INV-001"]
+acceptance = "Move warn-once code under bitnet-common, update imports and workspace membership, and preserve behavior."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings",
+  "cargo nextest run --locked --workspace --no-default-features --features cpu",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-warn-once/**",
+  "Cargo.toml",
+  "crates/*/Cargo.toml",
+  "docs/tracking/campaigns/crate-collapse/**",
+]
+forbidden_paths = [
+  "crates/bitnet-inference/src/engine.rs",
+]
+may_claim = [
+  "warn-once code was collapsed into bitnet-common after merge.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "Hardware validation progressed.",
+]
