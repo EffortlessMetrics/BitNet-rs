@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T09:34:28Z"
+campaign = "apple-m4"
+item = "M4-006"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started CPU/Metal parity work for the tiny M4 Metal add kernel.",
+  "No BitNet inference, QK256, MPSGraph, server, benchmark, or performance claim is in scope.",
+]

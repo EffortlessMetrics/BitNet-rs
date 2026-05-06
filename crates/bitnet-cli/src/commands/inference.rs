@@ -298,8 +298,8 @@ pub struct InferenceCommand {
     #[arg(long)]
     pub qa: bool,
 
-    /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1)
-    /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
+    /// Strict loader mode: fail-fast with authoritative real_gguf loading.
+    /// Preferred for CI/parity testing; compatibility loaders are rejected.
     #[arg(long)]
     pub strict_loader: bool,
 }
@@ -514,7 +514,7 @@ impl InferenceCommand {
 
     /// Setup environment for deterministic execution
     pub(super) fn setup_environment(&self) -> Result<()> {
-        // Enable strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
+        // Enable strict loader mode if requested (AC1: fail-fast with real_gguf loader authority)
         if self.strict_loader {
             unsafe {
                 std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");

@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T11:27:22Z"
+campaign = "tracker-infra"
+item = "TRACKER-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started a tracker-infra fix for current-PR-scoped GitHub reconciliation.",
+  "This avoids cross-branch live-lock failures between parallel campaign PRs while preserving strict checks for the current PR.",
+]

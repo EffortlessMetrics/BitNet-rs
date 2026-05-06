@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "artifact_kind": "cuda_parity",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "TBD",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "fallback_used": false,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "cuda": {
+    "available": true,
+    "device_count": null,
+    "device_index": null,
+    "selected_device_index": null,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "driver_version": "TBD",
+    "cuda_runtime_version": "TBD",
+    "cuda_toolkit_version": "TBD",
+    "nvrtc_version": "TBD",
+    "nvml_available": null,
+    "vram_bytes": null,
+    "power_limit_watts": null,
+    "power_draw_watts": null,
+    "temperature_c": null
+  },
+  "input_len": null,
+  "max_abs_error": null,
+  "mean_abs_error": null,
+  "parity": {
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "target_backend": "nvidia-rtx-5070-ti-cuda",
+    "kernel_id": "TBD",
+    "fixture_id": "TBD",
+    "max_abs_error": null,
+    "mean_abs_error": null,
+    "passed": null,
+    "tolerance": null,
+    "tolerance_source": "docs/bitnet/BITNET_PARITY_TOLERANCES.md",
+    "debug_artifact_path": null
+  },
+  "kernel_stats": [
+    {
+      "kernel_id": "TBD",
+      "invocations": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "device_to_host_bytes": null,
+      "kernel_launches": null,
+      "kernel_time_ms": null
+    }
+  ],
+  "result": "TBD",
+  "claim": "cuda_cpu_parity_tested",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/<date>/cuda-parity.json"
+}

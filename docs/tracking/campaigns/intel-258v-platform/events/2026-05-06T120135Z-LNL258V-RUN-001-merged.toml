@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:01:35Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-RUN-001"
+event = "merged"
+pr = 3714
+merge_sha = "4dfd156a7e731ccf57f70213566ad63f668a98af"
+actor = "codex"
+
+notes = [
+  "Recorded merge of the Lunar Lake platform visibility probe.",
+  "Next non-overlapping platform work is exact Arc 140V runtime visibility.",
+]

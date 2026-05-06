@@ -842,6 +842,9 @@ impl FormatLoader for GgufLoader {
 
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
+        if Self::env_truthy("BITNET_STRICT_MODE") {
+            self.validate_strict_tensor_authority(&reader, &model_config)?;
+        }
 
         if let Some(callback) = &config.progress_callback {
             callback(0.5, "Loading tensors...");
@@ -862,6 +865,75 @@ impl FormatLoader for GgufLoader {
 }
 
 impl GgufLoader {
+    fn validate_strict_tensor_authority(
+        &self,
+        reader: &GgufReader,
+        config: &BitNetConfig,
+    ) -> Result<()> {
+        let tensor_names = reader.tensor_names();
+        let has_any = |candidates: &[String]| -> bool {
+            candidates.iter().any(|candidate| tensor_names.iter().any(|name| name == candidate))
+        };
+
+        let mut missing = Vec::new();
+
+        if !has_any(&[
+            "token_embd.weight".to_string(),
+            "tok_embeddings.weight".to_string(),
+            "embed_tokens.weight".to_string(),
+            "model.embed_tokens.weight".to_string(),
+            "transformer.wte.weight".to_string(),
+        ]) {
+            missing.push("token embedding weight".to_string());
+        }
+
+        if !has_any(&[
+            "output.weight".to_string(),
+            "lm_head.weight".to_string(),
+            "model.lm_head.weight".to_string(),
+        ]) {
+            missing.push("output/lm head weight".to_string());
+        }
+
+        let layer_prefixes = ["blk", "layers", "model.layers", "transformer.h"];
+        let required_suffix_groups: &[&[&str]] = &[
+            &["attn_q.weight", "attention.q_proj.weight", "self_attn.q_proj.weight"],
+            &["attn_k.weight", "attention.k_proj.weight", "self_attn.k_proj.weight"],
+            &["attn_v.weight", "attention.v_proj.weight", "self_attn.v_proj.weight"],
+            &["attn_output.weight", "attention.o_proj.weight", "self_attn.o_proj.weight"],
+            &["ffn_gate.weight", "feed_forward.gate_proj.weight", "mlp.gate_proj.weight"],
+            &["ffn_up.weight", "feed_forward.up_proj.weight", "mlp.up_proj.weight"],
+            &["ffn_down.weight", "feed_forward.down_proj.weight", "mlp.down_proj.weight"],
+            &["attn_norm.weight", "attention_norm.weight", "input_layernorm.weight"],
+            &["ffn_norm.weight", "post_attention_layernorm.weight"],
+        ];
+
+        for layer_idx in 0..config.model.num_layers {
+            for suffix_group in required_suffix_groups {
+                let candidates: Vec<String> = layer_prefixes
+                    .iter()
+                    .flat_map(|prefix| {
+                        suffix_group
+                            .iter()
+                            .map(move |suffix| format!("{}.{}.{}", prefix, layer_idx, suffix))
+                    })
+                    .collect();
+                if !has_any(&candidates) {
+                    missing.push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
+                }
+            }
+        }
+
+        if missing.is_empty() {
+            return Ok(());
+        }
+
+        Err(BitNetError::Validation(format!(
+            "Strict real_gguf load rejected unsupported/incomplete tensor layout: missing {}",
+            missing.join(", ")
+        )))
+    }
+
     /// Check if a tensor name indicates it's an embedding tensor
     fn is_embedding_tensor(name: &str) -> bool {
         matches!(

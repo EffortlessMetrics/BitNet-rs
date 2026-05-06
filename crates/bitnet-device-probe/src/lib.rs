@@ -5,10 +5,46 @@
 
 pub use bitnet_common::kernel_registry::SimdLevel;
 
+pub mod apple_receipts;
+pub mod cpu;
+pub mod intel;
+pub mod runtimes;
+
+pub use apple_receipts::{AppleBackendReceipt, AppleReceiptError, AppleResolvedDevice};
+
+#[cfg(feature = "metal")]
+pub mod apple_metal;
+#[cfg(feature = "metal")]
+pub use apple_metal::{
+    APPLE_M4_METAL_BACKEND, APPLE_M4_METAL_PROOF_STAGE_DETECTED,
+    APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE, APPLE_M4_METAL_RUNTIME_API, AppleMetalProbe,
+    AppleMetalProbeText, apple_metal_available_runtime, apple_metal_probe_artifact_path,
+    parse_apple_metal_probe, probe_apple_metal,
+};
+
+#[cfg(feature = "metal")]
+pub mod apple_mpsgraph;
+#[cfg(feature = "metal")]
+pub use apple_mpsgraph::{
+    APPLE_M4_MPSGRAPH_BACKEND, APPLE_M4_MPSGRAPH_RESOLVED_TARGET_UNKNOWN,
+    APPLE_M4_MPSGRAPH_RUNTIME_API, TINY_MPSGRAPH_MATMUL_GRAPH_ID, TinyMpsGraphSmokeComparison,
+    TinyMpsGraphSmokeError, TinyMpsGraphSmokeReceipt, apple_mpsgraph_smoke_artifact_path,
+    compare_tiny_mpsgraph_matmul_outputs, expected_tiny_mpsgraph_matmul,
+    tiny_mpsgraph_matmul_inputs, tiny_mpsgraph_smoke_swift_source,
+};
+
 pub mod intel_arc;
 pub use intel_arc::{
     IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
     is_arc_alchemist,
+};
+
+pub mod nvidia_cuda;
+pub use nvidia_cuda::{NvidiaCudaProbe, probe_nvidia_cuda};
+
+pub use intel::lunar_lake::{
+    IntelArc140vProbe, IntelNpuProbe, Lnl258vCpuProbe, Lnl258vPlatformProbe, OpenVinoProbe,
+    PlatformMemoryProbe, PlatformPowerProbe, probe_lnl258v_platform,
 };
 
 #[cfg(feature = "opencl")]
@@ -159,6 +195,15 @@ pub const fn probe_gpu() -> GpuCapabilities {
 #[inline]
 pub const fn gpu_compiled() -> bool {
     cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))
+}
+
+/// Check if Apple Metal probe support was compiled into this binary.
+///
+/// This is intentionally separate from [`gpu_compiled`] so Apple Metal,
+/// `MPSGraph`, and CPU/NEON lanes do not collapse into a generic GPU claim.
+#[inline]
+pub const fn apple_metal_compiled() -> bool {
+    cfg!(feature = "metal")
 }
 
 /// Check if a GPU is available at runtime.

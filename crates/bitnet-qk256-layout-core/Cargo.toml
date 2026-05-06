@@ -12,3 +12,7 @@ rust-version.workspace = true
 
 [dependencies]
 thiserror = { workspace = true }
+
+[features]
+default = []
+cpu = []

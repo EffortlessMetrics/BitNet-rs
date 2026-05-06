@@ -1,0 +1,1 @@
+Use the AMD CPU baselines campaign to validate 5700X and 9950X3D CPU behavior with scalar, AVX2, AVX-512, cache, memory, and sustained-power context. Keep 5700X and 9950X3D claims separate, never claim AVX-512 on 5700X, and do not make performance claims before receipt-backed proof artifacts exist.

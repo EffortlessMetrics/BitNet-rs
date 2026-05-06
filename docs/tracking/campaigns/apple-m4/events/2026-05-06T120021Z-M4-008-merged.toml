@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:00:21Z"
+campaign = "apple-m4"
+item = "M4-008"
+event = "merged"
+pr = 3721
+merge_sha = "efd63f60bf6f41669f8ac49e635f331ff39aefdd"
+actor = "maintainer"
+
+notes = [
+  "Apple backend receipt fields merged.",
+  "M4-009 benchmark baseline is ready; no BitNet inference or performance claim is made by this closeout.",
+]

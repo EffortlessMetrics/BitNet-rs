@@ -1,0 +1,11 @@
+timestamp = "2026-05-06T08:00:41Z"
+campaign = "apple-m4"
+item = "M4-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started tiny native Metal compute smoke after M4-004 merged.",
+  "Scope remains limited to bitnet-kernels Metal smoke helpers/tests and Apple campaign tracking.",
+  "No QK256, server inference, BitNet model loading, MPSGraph execution, benchmarks, or performance claims.",
+]
