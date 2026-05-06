@@ -42,7 +42,7 @@ Make Apple Silicon a receipt-backed BitNet target by moving in order from machin
 | M4-010 | merged | Apple CPU/NEON BitNet reference merged in #3746. |
 | M4-011 | merged | Native Metal I2_S smoke/parity merged in #3769. |
 | M4-012 | merged | TL1 Apple layout-boundary investigation merged in #3775. |
-| M4-013 | in_progress | Add receipt-backed Metal prefill/decode contribution. |
+| M4-013 | pr_open | Add receipt-backed Metal prefill/decode contribution in #3783. |
 | M4-014 | proposed | Run strict real-model BitNet M4 proof with fallback disabled. |
 
 ## Review Policy

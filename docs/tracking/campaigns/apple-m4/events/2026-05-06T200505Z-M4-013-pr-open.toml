@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T20:05:05Z"
+campaign = "apple-m4"
+item = "M4-013"
+event = "pr_open"
+pr = 3783
+head_sha = "172cbaebee87f01eccdf463ef79f02580b146035"
+actor = "codex"
+
+notes = [
+  "Opened Metal prefill contribution PR.",
+  "The PR records a tiny I2_S prefill projection fixture with CPU/NEON reference, requested/selected Apple Metal backend identity, explicit fallback_used=false, and KV-cache behavior marked not_exercised.",
+  "No QK256, server inference, MPSGraph execution, Neural Engine proof, benchmark, full autoregressive decode, or full BitNet inference claim is included.",
+]
