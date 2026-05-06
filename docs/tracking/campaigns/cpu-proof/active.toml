@@ -52,7 +52,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-proof/CPU-BITNET-001-loader-authority"
 stackable = false
 requires_human_merge = true
@@ -89,7 +89,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-002"
-status = "proposed"
+status = "ready"
 branch = "codex/cpu-proof/CPU-BITNET-002-tokenizer-authority"
 stackable = false
 requires_human_merge = true
