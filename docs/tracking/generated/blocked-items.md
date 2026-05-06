@@ -7,6 +7,15 @@
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | pr_open |
 | apple-m4 | M4-005 | M4-004 | proposed |
+| apple-m4 | M4-006 | M4-005 | proposed |
+| apple-m4 | M4-007 | M4-006 | proposed |
+| apple-m4 | M4-008 | M4-007 | proposed |
+| apple-m4 | M4-009 | M4-008 | proposed |
+| apple-m4 | M4-010 | M4-009 | proposed |
+| apple-m4 | M4-011 | M4-010 | proposed |
+| apple-m4 | M4-012 | M4-011 | proposed |
+| apple-m4 | M4-013 | M4-012 | proposed |
+| apple-m4 | M4-014 | M4-013 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | pr_open |

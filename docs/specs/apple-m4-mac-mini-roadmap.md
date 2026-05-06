@@ -226,6 +226,10 @@ Preserve Apple M4 Metal, MPSGraph, and CPU/NEON requested and selected backend i
 
 Report Metal device visibility, Apple chip, GPU family where available, unified memory, and macOS version.
 
+This probe records runtime visibility only. It preserves `requested_backend`,
+`selected_backend`, `runtime_api`, `fallback_used`, and `proof_stage` fields,
+but it does not compile or dispatch a Metal compute pipeline.
+
 ### M4-005 - Metal Compute Smoke
 
 Compile and dispatch a tiny Metal compute pipeline.
@@ -245,6 +249,32 @@ Record chip, GPU core count, unified memory, selected backend, fallback status, 
 ### M4-009 - Benchmark Baseline
 
 Compare Apple CPU/NEON against M4 Metal for the validated kernel/subgraph.
+
+### M4-010 - Apple CPU/NEON BitNet Reference
+
+Run a BitNet reference path on Apple CPU/NEON or scalar fallback with model,
+tokenizer, kernel family, and fallback status recorded.
+
+### M4-011 - Native Metal I2_S Smoke/Parity
+
+Start BitNet-specific native Metal work with an I2_S-adjacent kernel or
+subgraph, not QK256, and compare against Apple CPU/NEON.
+
+### M4-012 - TL1 / ARM-Oriented Investigation
+
+Investigate whether TL1 is the right Apple CPU/NEON-oriented path and document
+any layout conversion boundary before claiming Metal consumption.
+
+### M4-013 - Metal Prefill/Decode Contribution
+
+Move from isolated kernels to a named BitNet phase such as prefill or decode
+contribution, with CPU reference and explicit fallback status.
+
+### M4-014 - Strict BitNet M4 Proof Run
+
+Run strict real GGUF, real tokenizer, selected Apple backend,
+`fallback_used=false`, deterministic prompt, and receipt emission before
+claiming BitNet inference on M4.
 
 ## Do Not
 
