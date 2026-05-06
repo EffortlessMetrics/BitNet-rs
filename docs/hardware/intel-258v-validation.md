@@ -58,6 +58,79 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 | Shared memory pressure | 32GB LPDDR5X is shared by CPU/GPU/NPU. |
 | Power mode / thermal profile | Laptop results depend heavily on power policy. |
 
+
+## Machine-Readable Probe Schema
+
+The machine-readable platform probe should emit the following top-level fields before any lane claims inference:
+
+```json
+{
+  "platform": "core-ultra-7-258v",
+  "os": "linux|windows|wsl",
+  "arch": "x86_64",
+  "cpu_model": "Intel Core Ultra 7 258V",
+  "cpu_cores": 8,
+  "cpu_threads": 8,
+  "cpu_flags": ["avx2", "fma", "sse4_2"],
+  "cpu_has_avx2": true,
+  "cpu_has_avx512": false,
+
+  "opencl_arc_140v_visible": true,
+  "opencl_platform_name": "Intel(R) OpenCL Graphics",
+  "opencl_device_name": "Intel(R) Arc(TM) 140V Graphics",
+  "opencl_driver_version": "...",
+  "pci_device_id": "0x64A0",
+
+  "level_zero_visible": true,
+  "level_zero_devices": ["Intel(R) Arc(TM) 140V Graphics"],
+
+  "openvino_version": "...",
+  "openvino_available_devices": ["CPU", "GPU.0", "NPU"],
+  "openvino_gpu_device": "GPU.0",
+  "openvino_gpu_full_name": "Intel(R) Arc(TM) 140V Graphics",
+  "openvino_npu_visible": true,
+  "openvino_npu_full_name": "...",
+
+  "accel_device_present": true,
+  "accel_devices": ["/dev/accel/accel0"],
+  "intel_vpu_driver_seen": true,
+  "npu_driver_version": "...",
+
+  "power_mode": "balanced|performance|powersaver|unknown",
+  "thermal_profile": "default|cool|performance|unknown",
+  "shared_memory_bytes": 34359738368,
+
+  "status": "runtime_detected|partial|unavailable",
+  "failure_reason": null
+}
+```
+
+The schema is visibility-only. It may prove that runtimes can see devices, but it must not be used as a BitNet inference, parity, or throughput receipt.
+
+## Build-Out Artifacts
+
+When the probe and validation commands are implemented, archive artifacts under a dated machine directory such as:
+
+```text
+ci/hardware/core-ultra-7-258v/YYYY-MM-DD/platform-probe.json
+ci/hardware/core-ultra-7-258v/YYYY-MM-DD/openvino-devices.json
+ci/hardware/core-ultra-7-258v/YYYY-MM-DD/arc-140v-probe.json
+ci/hardware/core-ultra-7-258v/YYYY-MM-DD/npu-probe.json
+ci/hardware/core-ultra-7-258v/YYYY-MM-DD/cpu-bitnet-validation.json
+```
+
+Required command-to-artifact mapping:
+
+| Artifact | Producing command | Claim supported |
+|---|---|---|
+| `platform-probe.json` | future platform probe CLI or xtask | Same-machine visibility only. |
+| `openvino-devices.json` | OpenVINO Python query below | OpenVINO runtime device visibility. |
+| `arc-140v-probe.json` | future Arc 140V probe | Exact iGPU identity when PCI/name checks pass. |
+| `npu-probe.json` | future NPU probe | Intel NPU identity and OpenVINO `NPU` visibility. |
+| `cpu-bitnet-validation.json` | future strict CPU validation command | CPU BitNet proof only if loader/tokenizer/kernel strictness is satisfied. |
+
+Do not move a lane out of scaffold based on a different lane's artifact.
+
 ## Claim Boundary
 
 - CPU AVX2 correctness does not count as Arc 140V or NPU execution.
@@ -114,6 +187,8 @@ for dev in core.available_devices:
         "FULL_DEVICE_NAME",
         "SUPPORTED_PROPERTIES",
         "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "DEVICE_ARCHITECTURE",
+        "DEVICE_UUID",
     ]:
         try:
             props[prop] = str(core.get_property(dev, prop))
@@ -180,6 +255,8 @@ for dev in core.available_devices:
         "FULL_DEVICE_NAME",
         "SUPPORTED_PROPERTIES",
         "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "DEVICE_ARCHITECTURE",
+        "DEVICE_UUID",
     ]:
         try:
             props[prop] = str(core.get_property(dev, prop))
@@ -189,6 +266,39 @@ for dev in core.available_devices:
 print(json.dumps(out, indent=2))
 PY
 ```
+
+
+## OpenVINO NPU Extended Property Query
+
+Run this when OpenVINO reports `NPU` or an `NPU.*` device. Missing properties should be recorded as errors rather than treated as absence of the device.
+
+```python
+import json
+import openvino as ov
+
+core = ov.Core()
+out = {"available_devices": list(core.available_devices), "npu": {}}
+
+if any(d.startswith("NPU") or d == "NPU" for d in core.available_devices):
+    for prop in [
+        "FULL_DEVICE_NAME",
+        "SUPPORTED_PROPERTIES",
+        "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "NPU_DRIVER_VERSION",
+        "NPU_COMPILER_VERSION",
+        "NPU_DEVICE_TOTAL_MEM_SIZE",
+        "NPU_DEVICE_ALLOC_MEM_SIZE",
+        "NPU_MAX_TILES",
+    ]:
+        try:
+            out["npu"][prop] = str(core.get_property("NPU", prop))
+        except Exception as e:
+            out["npu"][prop] = "ERR: " + repr(e)
+
+print(json.dumps(out, indent=2))
+```
+
+NPU properties support NPU identity and runtime visibility claims only. A tiny static-shape `compile_model(..., "NPU")` smoke is still required before any NPU execution claim.
 
 ## First Platform Receipt
 
