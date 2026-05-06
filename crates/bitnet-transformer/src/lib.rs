@@ -1,5 +1,8 @@
 use bitnet_common::{BitNetConfig, BitNetError, Result};
-use bitnet_qk256_dispatch::forward_qk256;
+use bitnet_qk256_dispatch::{
+    forward_qk256, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
+    strict_cuda_bitnet_backend_requested,
+};
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
@@ -562,6 +565,14 @@ impl MultiHeadAttention {
             return forward_qk256(input, qk256_tensor, &qk256_key);
         }
 
+        if strict_cuda_bitnet_backend_requested() {
+            record_bitnet_linear_unsupported();
+            return Err(BitNetError::Validation(format!(
+                "strict CUDA BitNet linear dispatch requires QK256 raw tensor {}; refusing CPU fallback",
+                qk256_key
+            )));
+        }
+
         // Probe: Why is QK256 not found? (layer 0 only, once)
         if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
             static FALLBACK_LOGGED: std::sync::Once = std::sync::Once::new();
@@ -583,6 +594,7 @@ impl MultiHeadAttention {
             self.layer_idx,
             proj_name
         );
+        record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
 
@@ -701,12 +713,21 @@ impl FeedForward {
             return forward_qk256(input, qk256_tensor, &qk256_key);
         }
 
+        if strict_cuda_bitnet_backend_requested() {
+            record_bitnet_linear_unsupported();
+            return Err(BitNetError::Validation(format!(
+                "strict CUDA BitNet linear dispatch requires QK256 raw tensor {}; refusing CPU fallback",
+                qk256_key
+            )));
+        }
+
         // Fall back to standard linear
         tracing::trace!(
             "Using standard linear for layers.{}.feed_forward.{}",
             self.layer_idx,
             proj_name
         );
+        record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
 }

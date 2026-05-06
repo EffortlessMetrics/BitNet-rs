@@ -14,6 +14,7 @@ rust-version.workspace = true
 [dependencies]
 bitnet-tokenizer-text-core = { path = "../bitnet-tokenizer-text-core", version = "0.2.1-dev" }
 bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-dev" }
+bitnet-layer-index-core = { path = "../bitnet-layer-index-core", version = "0.2.1-dev" }
 tokio = { workspace = true }
 log.workspace = true
 serde = { workspace = true }

@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T20:22:00Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-003"
+event = "pr_open"
+pr = 3785
+head_sha = "d4e6ecd64937c9c25b9902f72fe2b8d21b98726d"
+actor = "codex"
+
+notes = [
+  "Opened KBL8250U-003 with CPU-only i5-8250U AVX2/FMA profile, flags, and parity receipt artifacts.",
+  "The PR proves selected qk256-avx2-gemv against qk256-scalar-gemv with fallback_used=false; no throughput, sustained-performance, GPU, OpenVINO, UHD 620, NPU, transformer decode, or strict receipt claim is made.",
+]

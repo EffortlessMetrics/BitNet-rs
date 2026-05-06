@@ -4,9 +4,9 @@
 //! to catch accidental regressions. Machine-specific values (core count,
 //! SIMD level) are redacted or tested as invariants rather than exact values.
 
-use bitnet_device_probe::{
-    DeviceCapabilities, SimdLevel, probe_cpu, probe_device, probe_gpu, probe_npu,
-};
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
+use bitnet_device_probe::{DeviceCapabilities, probe_gpu};
+use bitnet_device_probe::{SimdLevel, probe_cpu, probe_device, probe_npu};
 
 // ── CpuCapabilities ────────────────────────────────────────────────
 
@@ -43,6 +43,7 @@ fn cpu_capabilities_debug_shape() {
 // ── GpuCapabilities ────────────────────────────────────────────────
 
 #[test]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 fn gpu_capabilities_cpu_only_build() {
     let caps = probe_gpu();
     insta::assert_snapshot!(format!(
@@ -52,6 +53,7 @@ fn gpu_capabilities_cpu_only_build() {
 }
 
 #[test]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 fn gpu_capabilities_debug() {
     let caps = probe_gpu();
     insta::assert_debug_snapshot!(caps);
@@ -97,6 +99,7 @@ fn device_probe_cpu_cores_positive() {
 }
 
 #[test]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 fn device_probe_debug_shape() {
     let probe = probe_device();
     let debug = format!("{probe:?}");
@@ -114,6 +117,7 @@ fn device_probe_debug_shape() {
 // ── DeviceCapabilities ─────────────────────────────────────────────
 
 #[test]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 fn device_capabilities_detect_invariants() {
     let caps = DeviceCapabilities::detect();
     insta::with_settings!({

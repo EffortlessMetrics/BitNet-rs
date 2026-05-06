@@ -1,0 +1,11 @@
+timestamp = "2026-05-06T12:54:50Z"
+campaign = "intel-npu"
+item = "NPU-003"
+event = "in_progress"
+branch = "codex/intel-npu/NPU-003-openvino-runtime-probe"
+actor = "codex"
+
+notes = [
+  "Started Intel NPU OpenVINO runtime detection work.",
+  "Scope is visibility-only: no OpenVINO graph execution, NPU inference, or BitNet acceleration claim.",
+]

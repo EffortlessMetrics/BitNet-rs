@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T04:11:01Z"
+campaign = "tracker-infra"
+item = "TRACKER-002"
+event = "merged"
+pr = 3681
+head_sha = "3e2cccba0b2c078661f74a195986a03c8e7c6d42"
+merge_sha = "216b95393cde5c126a894ff907e5cfb1f522df63"
+actor = "maintainer"
+
+notes = [
+  "Campaign tracker CI enforcement merged.",
+  "Normal item PRs now use campaign-local tracker files and generated dashboards rather than legacy global tracker edits.",
+  "No runtime code, kernels, QK256, server inference, dependencies, or hardware probe work changed.",
+]

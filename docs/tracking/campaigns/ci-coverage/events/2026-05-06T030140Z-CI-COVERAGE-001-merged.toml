@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T03:01:40Z"
+campaign = "ci-coverage"
+item = "CI-COVERAGE-001"
+event = "merged"
+pr = 3620
+head_sha = "f25be6d0ce883d32b67eb66691b194ca19c9a543"
+merge_sha = "650e1df17c43fef535d3ed50da75993de6eb65bc"
+actor = "maintainer"
+
+notes = [
+  "Recorded live GitHub state for #3620 before making campaign doctor enforce PR reconciliation.",
+  "No coverage workflow behavior changed in this tracker-infra PR.",
+]

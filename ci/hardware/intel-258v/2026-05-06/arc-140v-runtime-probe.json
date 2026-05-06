@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "artifact_kind": "arc-140v-runtime-probe",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "requested_backend": "intel-arc-140v",
+  "selected_backend": null,
+  "runtime_api": null,
+  "proof_stage": "detected",
+  "fallback_used": false,
+  "device": {
+    "os_device_visible": true,
+    "class": "Display",
+    "status": "OK",
+    "name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "instance_id": "PCI\\VEN_8086&DEV_64A0&SUBSYS_383E17AA&REV_04\\3&11583659&0&10",
+    "pci_vendor_id": "0x8086",
+    "pci_device_id": "0x64A0"
+  },
+  "runtime_visibility": {
+    "opencl_tool_present": false,
+    "opencl_visible": null,
+    "level_zero_tool_present": false,
+    "level_zero_visible": null,
+    "openvino_python_module_available": false,
+    "openvino_gpu_visible": false,
+    "openvino_gpu_device": null,
+    "openvino_gpu_full_name": null
+  },
+  "claim_allowed": "Arc 140V device identity is OS-visible by PCI PnP evidence.",
+  "claims_not_allowed": [
+    "OpenCL runtime sees Arc 140V",
+    "Level Zero runtime sees Arc 140V",
+    "OpenVINO GPU.0 sees Arc 140V",
+    "Arc 140V kernel execution works",
+    "BitNet inference works on Arc 140V"
+  ]
+}

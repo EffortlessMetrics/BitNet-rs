@@ -1,0 +1,15 @@
+timestamp = "2026-05-06T19:20:19Z"
+campaign = "apple-m4"
+item = "M4-012"
+event = "merged"
+pr = 3775
+head_sha = "ed19f578464d89345688a23fb94756d17f4e5396"
+merge_sha = "b995985d3c58c435ef357d3a04be3de983ec4c0e"
+actor = "codex"
+
+notes = [
+  "Merged TL1 Apple layout-boundary investigation.",
+  "The contract records TL1 as Apple CPU/NEON-oriented evidence with unsigned 2-bit LUT codes, per-block scales, optional zero points, kernel_family=tl1, execution_phase=investigation, and direct Metal TL1 consumption unclaimed.",
+  "No QK256, server inference, benchmarks, MPSGraph execution, Neural Engine proof, or full BitNet inference claim was made.",
+  "M4-013 is ready for named Apple Metal prefill/decode contribution work with CPU reference and explicit fallback status.",
+]

@@ -1,0 +1,13 @@
+timestamp = "2026-05-06T11:20:14Z"
+campaign = "apple-m4"
+item = "M4-008"
+event = "pr_open"
+pr = 3721
+head_sha = "090a5c4edfe11910c0e6c3dd7073fd251227b685"
+actor = "codex"
+
+notes = [
+  "Opened Apple backend receipt fields PR.",
+  "Receipt schema records requested backend, selected backend, runtime API, resolved device, fallback status, artifact path, and kernel or graph identity.",
+  "No BitNet inference, QK256, server, benchmark, performance, or Neural Engine claim is in scope.",
+]

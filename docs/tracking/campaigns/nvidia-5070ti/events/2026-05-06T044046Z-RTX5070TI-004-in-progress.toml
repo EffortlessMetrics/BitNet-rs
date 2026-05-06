@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T04:40:46Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started CUDA/NVML runtime probe work after #3679 merged.",
+  "Scope is device/runtime probing only; no CUDA kernels, QK256, transformer routing, server inference, WGPU proof, or dense regular-LLM CUDA work.",
+]

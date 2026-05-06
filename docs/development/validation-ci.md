@@ -2,6 +2,13 @@
 
 Comprehensive documentation for the BitNet-rs validation CI workflow (`.github/workflows/validation.yml`).
 
+> **CI is part of the architecture.** We treat cost, latency, determinism,
+> and proof strength as design constraints, not after-the-fact billing
+> concerns. See
+> [CI Cost and Verification Policy](../ci/cost-and-verification-policy.md)
+> for the operating target (well below `$1` per ordinary PR) and the lane
+> routing rules that follow from it.
+
 ## Overview
 
 The validation workflow enforces quality standards for all model operations and validation tooling in BitNet-rs. It ensures that:

@@ -862,7 +862,7 @@ impl I2SFlavor {
 ///    - split_need = blocks32 * 8
 ///    - inline_need = blocks32 * 10
 ///    - qk256_need = blocks256 * 64
-/// 2. Match available bytes against expected (with ±64 byte tolerance for alignment)
+/// 2. Match available bytes against expected (with bounded tolerance for alignment)
 /// 3. Priority: Split32WithSibling (if sibling) > BitNet32F16 > GgmlQk256NoScale
 /// 4. Fail-closed with detailed error if no match
 pub fn detect_i2s_flavor(
@@ -878,11 +878,11 @@ pub fn detect_i2s_flavor(
     let available = info.size as usize;
 
     // AC2: Centralized tolerance
-    // - Strict mode: tight 8 bytes (fail-fast)
+    // - Strict mode: bounded 64-byte trailing alignment padding only
     // - Default: size-proportional (~0.1%) using quantization helper
     let strict = std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
     let tolerance = if strict {
-        8usize
+        64usize
     } else {
         // pick a representative expected size (qk256/split) to compute tolerance bytes
         let expected_any = core::cmp::min(split_need, qk256_need);
@@ -904,10 +904,14 @@ pub fn detect_i2s_flavor(
         strict
     );
 
-    // Calculate diff for each flavor
+    // Calculate diff for each flavor. Strict mode permits small trailing
+    // alignment padding from real GGUF files, but still rejects missing bytes.
     let diff_split32 = available.abs_diff(split_need);
     let diff_inline = available.abs_diff(inline_need);
     let diff_qk256 = available.abs_diff(qk256_need);
+    let within_tolerance = |expected: usize, diff: usize| {
+        if strict { available >= expected && diff <= tolerance } else { diff <= tolerance }
+    };
 
     //  Priority logic with adaptive tolerance:
     // 1. Exact matches (diff == 0) - prefer larger block sizes (qk256 > inline > split32)
@@ -971,7 +975,7 @@ pub fn detect_i2s_flavor(
     }
 
     // Priority 2: Close matches (within tolerance) - prefer QK256 for specificity
-    if diff_qk256 <= tolerance {
+    if within_tolerance(qk256_need, diff_qk256) {
         tracing::debug!(
             "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
             info.name,
@@ -990,7 +994,7 @@ pub fn detect_i2s_flavor(
 
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
-    if has_scale_sibling && diff_split32 <= tolerance {
+    if has_scale_sibling && within_tolerance(split_need, diff_split32) {
         tracing::debug!(
             "I2_S '{}': detected Split32WithSibling (close match: available={}, split_need={}, diff={}, has_sibling=true)",
             info.name,
@@ -1009,7 +1013,7 @@ pub fn detect_i2s_flavor(
 
         return Ok(I2SFlavor::Split32WithSibling);
     }
-    if diff_inline <= tolerance {
+    if within_tolerance(inline_need, diff_inline) {
         tracing::debug!(
             "I2_S '{}': detected BitNet32F16 (close match: available={}, inline_need={}, diff={})",
             info.name,
@@ -1030,7 +1034,7 @@ pub fn detect_i2s_flavor(
     }
 
     // Priority 3: Split32 without sibling (data-only, warn about missing scales)
-    if diff_split32 <= tolerance {
+    if within_tolerance(split_need, diff_split32) {
         tracing::warn!(
             "I2_S '{}': bytes match split layout (close match: available={}, split_need={}, diff={}) but no scale sibling found - may be incomplete",
             info.name,
@@ -1049,7 +1053,7 @@ pub fn detect_i2s_flavor(
          - inline_need (32-elem blocks, 10B/block): {} (diff: {})\n\
          - qk256_need (256-elem blocks, 64B/block): {} (diff: {})\n\
          - has_scale_sibling: {}\n\
-         - tolerance: ±{} bytes ({})\n\
+         - tolerance: {} bytes ({})\n\
          All diffs exceed tolerance. This indicates an unsupported I2_S variant or corrupted data.",
         info.name,
         available,
@@ -1061,7 +1065,7 @@ pub fn detect_i2s_flavor(
         available.abs_diff(qk256_need),
         has_scale_sibling,
         tolerance,
-        if strict { "strict mode" } else { "~0.1% size-proportional" }
+        if strict { "strict mode trailing padding only" } else { "±~0.1% size-proportional" }
     )))
 }
 

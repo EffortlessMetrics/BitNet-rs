@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::validator::ModelInfo;
+use bitnet_layer_index_core::parse_block_index;
 
 // ---------------------------------------------------------------------------
 // ValidationIssue
@@ -333,12 +334,6 @@ pub fn full_validation(model: &ModelInfo) -> ValidationReport {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/// Extract the block index from a tensor name like `blk.3.attn_q.weight`.
-fn parse_block_index(name: &str) -> Option<usize> {
-    let parts: Vec<&str> = name.split('.').collect();
-    if parts.len() >= 2 && parts[0] == "blk" { parts[1].parse().ok() } else { None }
-}
 
 /// Return `true` if the tensor name indicates a normalisation weight.
 fn is_norm_tensor(name: &str) -> bool {

@@ -50,10 +50,52 @@ pub enum BackendRequest {
     Gpu,
     /// Require CUDA specifically.
     Cuda,
+    /// Require the RTX 5070 Ti CUDA proof lane.
+    NvidiaRtx5070TiCuda,
+    /// Require the RTX 5070 Ti WGPU reference lane.
+    NvidiaRtx5070TiWgpu,
     /// Require AMD HIP specifically.
     Hip,
     /// Require Intel oneAPI specifically.
     OneApi,
+    /// Require Intel NPU identity without treating it as GPU, Metal, or CPU fallback.
+    IntelNpu,
+    /// Require Intel NPU through the OpenVINO runtime.
+    OpenVinoNpu,
+    /// Require native Metal compute without assuming a specific Apple machine.
+    Metal,
+    /// Require MPSGraph graph execution without treating it as native Metal kernels.
+    MpsGraph,
+    /// Require the Apple M4 native Metal lane.
+    AppleM4Metal,
+    /// Require the Apple M4 MPSGraph graph/reference lane.
+    AppleM4MpsGraph,
+    /// Require the Apple M4 CPU/NEON fallback/parity lane.
+    AppleM4CpuNeon,
+}
+
+impl BackendRequest {
+    /// Parse a CLI/config backend label without collapsing Apple proof lanes.
+    pub fn from_label(label: &str) -> Option<Self> {
+        match label.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(BackendRequest::Auto),
+            "cpu" => Some(BackendRequest::Cpu),
+            "gpu" => Some(BackendRequest::Gpu),
+            "cuda" => Some(BackendRequest::Cuda),
+            "nvidia-rtx-5070-ti-cuda" => Some(BackendRequest::NvidiaRtx5070TiCuda),
+            "nvidia-rtx-5070-ti-wgpu" => Some(BackendRequest::NvidiaRtx5070TiWgpu),
+            "hip" | "rocm" => Some(BackendRequest::Hip),
+            "oneapi" => Some(BackendRequest::OneApi),
+            "npu" | "intel-npu" => Some(BackendRequest::IntelNpu),
+            "openvino-npu" | "intel-npu-openvino" => Some(BackendRequest::OpenVinoNpu),
+            "metal" => Some(BackendRequest::Metal),
+            "mpsgraph" => Some(BackendRequest::MpsGraph),
+            "apple-m4-metal" => Some(BackendRequest::AppleM4Metal),
+            "apple-m4-mpsgraph" => Some(BackendRequest::AppleM4MpsGraph),
+            "apple-m4-cpu-neon" => Some(BackendRequest::AppleM4CpuNeon),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for BackendRequest {
@@ -63,8 +105,17 @@ impl fmt::Display for BackendRequest {
             BackendRequest::Cpu => write!(f, "cpu"),
             BackendRequest::Gpu => write!(f, "gpu"),
             BackendRequest::Cuda => write!(f, "cuda"),
+            BackendRequest::NvidiaRtx5070TiCuda => write!(f, "nvidia-rtx-5070-ti-cuda"),
+            BackendRequest::NvidiaRtx5070TiWgpu => write!(f, "nvidia-rtx-5070-ti-wgpu"),
             BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
+            BackendRequest::IntelNpu => write!(f, "intel-npu"),
+            BackendRequest::OpenVinoNpu => write!(f, "openvino-npu"),
+            BackendRequest::Metal => write!(f, "metal"),
+            BackendRequest::MpsGraph => write!(f, "mpsgraph"),
+            BackendRequest::AppleM4Metal => write!(f, "apple-m4-metal"),
+            BackendRequest::AppleM4MpsGraph => write!(f, "apple-m4-mpsgraph"),
+            BackendRequest::AppleM4CpuNeon => write!(f, "apple-m4-cpu-neon"),
         }
     }
 }
@@ -93,6 +144,79 @@ impl BackendSelectionResult {
             self.requested,
             detected.join(","),
             self.selected,
+        )
+    }
+
+    /// Requested backend label for receipt/log fields.
+    pub fn requested_backend(&self) -> String {
+        self.requested.to_string()
+    }
+
+    /// Selected backend label for receipt/log fields.
+    pub fn selected_backend(&self) -> String {
+        match (self.requested, self.selected) {
+            (BackendRequest::AppleM4CpuNeon, KernelBackend::CpuRust) => {
+                "apple-m4-cpu-neon".to_string()
+            }
+            (BackendRequest::NvidiaRtx5070TiCuda, KernelBackend::Cuda) => {
+                "nvidia-rtx-5070-ti-cuda".to_string()
+            }
+            _ => self.selected.to_string(),
+        }
+    }
+
+    /// Runtime API implied by the selected backend label.
+    pub fn runtime_api(&self) -> &'static str {
+        match self.selected_backend().as_str() {
+            "cuda" | "nvidia-rtx-5070-ti-cuda" => "cuda",
+            "hip" => "hip",
+            "oneapi" => "oneapi",
+            "opencl" => "opencl",
+            "apple-m4-metal" | "metal" => "metal",
+            "apple-m4-mpsgraph" | "mpsgraph" => "mpsgraph",
+            _ => "cpu",
+        }
+    }
+
+    /// Whether backend selection changed the requested backend identity.
+    pub fn fallback_used(&self) -> bool {
+        match self.requested {
+            BackendRequest::Auto => false,
+            BackendRequest::Cpu => self.selected != KernelBackend::CpuRust,
+            BackendRequest::Gpu => !self.selected.requires_gpu(),
+            BackendRequest::Cuda => self.selected != KernelBackend::Cuda,
+            BackendRequest::Hip => self.selected != KernelBackend::Hip,
+            BackendRequest::OneApi => self.selected != KernelBackend::OneApi,
+            BackendRequest::NvidiaRtx5070TiCuda
+            | BackendRequest::NvidiaRtx5070TiWgpu
+            | BackendRequest::IntelNpu
+            | BackendRequest::OpenVinoNpu
+            | BackendRequest::Metal
+            | BackendRequest::MpsGraph
+            | BackendRequest::AppleM4Metal
+            | BackendRequest::AppleM4MpsGraph
+            | BackendRequest::AppleM4CpuNeon => self.requested_backend() != self.selected_backend(),
+        }
+    }
+
+    /// Human-readable fallback reason, when fallback happened.
+    pub fn fallback_reason(&self) -> Option<&str> {
+        self.fallback_used().then_some(self.rationale.as_str())
+    }
+
+    /// Receipt-oriented one-line identity summary for logs.
+    pub fn identity_summary(&self) -> String {
+        let fallback_reason = self
+            .fallback_reason()
+            .map(|reason| format!(" fallback_reason={reason}"))
+            .unwrap_or_default();
+        format!(
+            "requested_backend={} selected_backend={} runtime_api={} fallback_used={}{}",
+            self.requested_backend(),
+            self.selected_backend(),
+            self.runtime_api(),
+            self.fallback_used(),
+            fallback_reason,
         )
     }
 }
@@ -159,6 +283,27 @@ pub fn select_backend(
                 });
             }
         }
+        BackendRequest::NvidiaRtx5070TiCuda => {
+            // The RTX 5070 Ti lane is strict and label-preserving. Device-name
+            // verification lands in the probe stage; CPU fallback is never OK here.
+            if caps.cuda_compiled && caps.cuda_runtime {
+                (
+                    KernelBackend::Cuda,
+                    "RTX 5070 Ti CUDA backend requested; CUDA runtime available".to_string(),
+                )
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::NvidiaRtx5070TiWgpu => {
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
+        }
         BackendRequest::Hip => {
             if caps.hip_compiled && caps.hip_runtime {
                 (KernelBackend::Hip, "AMD HIP GPU available and requested".to_string())
@@ -172,6 +317,40 @@ pub fn select_backend(
         BackendRequest::OneApi => {
             if caps.oneapi_compiled && caps.oneapi_runtime {
                 (KernelBackend::OneApi, "Intel oneAPI GPU available and requested".to_string())
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::IntelNpu | BackendRequest::OpenVinoNpu => {
+            // NPU-002 preserves the requested identity only. Runtime probing and
+            // OpenVINO graph execution land later, so CPU/GPU fallback is never
+            // selected here.
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
+        }
+        BackendRequest::Metal | BackendRequest::AppleM4Metal => {
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
+        }
+        BackendRequest::MpsGraph | BackendRequest::AppleM4MpsGraph => {
+            return Err(BackendSelectionError::RequestedUnavailable {
+                requested: request,
+                available: detected.clone(),
+            });
+        }
+        BackendRequest::AppleM4CpuNeon => {
+            if caps.cpu_rust
+                && matches!(caps.simd_level, crate::kernel_registry::SimdLevel::Neon)
+                && cfg!(all(target_os = "macos", target_arch = "aarch64"))
+            {
+                (KernelBackend::CpuRust, "Apple M4 CPU/NEON lane requested".to_string())
             } else {
                 return Err(BackendSelectionError::RequestedUnavailable {
                     requested: request,
@@ -322,6 +501,113 @@ mod tests {
         let summary = result.summary();
         assert!(summary.contains("requested=auto"), "got: {summary}");
         assert!(summary.contains("selected=cpu-rust"), "got: {summary}");
+    }
+
+    #[test]
+    fn apple_backend_labels_parse_without_aliasing() {
+        assert_eq!(BackendRequest::from_label("metal"), Some(BackendRequest::Metal));
+        assert_eq!(
+            BackendRequest::from_label("apple-m4-metal"),
+            Some(BackendRequest::AppleM4Metal)
+        );
+        assert_eq!(BackendRequest::from_label("mpsgraph"), Some(BackendRequest::MpsGraph));
+        assert_eq!(
+            BackendRequest::from_label("apple-m4-mpsgraph"),
+            Some(BackendRequest::AppleM4MpsGraph)
+        );
+        assert_eq!(
+            BackendRequest::from_label("apple-m4-cpu-neon"),
+            Some(BackendRequest::AppleM4CpuNeon)
+        );
+    }
+
+    #[test]
+    fn rtx_5070_ti_labels_parse_without_aliasing() {
+        assert_eq!(BackendRequest::from_label("cuda"), Some(BackendRequest::Cuda));
+        assert_eq!(BackendRequest::from_label("gpu"), Some(BackendRequest::Gpu));
+        assert_eq!(
+            BackendRequest::from_label("nvidia-rtx-5070-ti-cuda"),
+            Some(BackendRequest::NvidiaRtx5070TiCuda)
+        );
+        assert_eq!(
+            BackendRequest::from_label("nvidia-rtx-5070-ti-wgpu"),
+            Some(BackendRequest::NvidiaRtx5070TiWgpu)
+        );
+    }
+
+    #[test]
+    fn intel_npu_labels_parse_without_aliasing() {
+        assert_eq!(BackendRequest::from_label("npu"), Some(BackendRequest::IntelNpu));
+        assert_eq!(BackendRequest::from_label("intel-npu"), Some(BackendRequest::IntelNpu));
+        assert_eq!(BackendRequest::from_label("openvino-npu"), Some(BackendRequest::OpenVinoNpu));
+        assert_eq!(
+            BackendRequest::from_label("intel-npu-openvino"),
+            Some(BackendRequest::OpenVinoNpu)
+        );
+        assert_ne!(BackendRequest::from_label("npu"), Some(BackendRequest::Gpu));
+        assert_ne!(BackendRequest::from_label("npu"), Some(BackendRequest::Metal));
+        assert_eq!(BackendRequest::IntelNpu.to_string(), "intel-npu");
+        assert_eq!(BackendRequest::OpenVinoNpu.to_string(), "openvino-npu");
+    }
+
+    #[test]
+    fn rtx_5070_ti_cuda_request_preserves_identity_when_cuda_available() {
+        let result = select_backend(BackendRequest::NvidiaRtx5070TiCuda, &cuda_caps()).unwrap();
+
+        assert_eq!(result.selected, KernelBackend::Cuda);
+        assert_eq!(result.requested_backend(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(result.selected_backend(), "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(result.runtime_api(), "cuda");
+        assert!(!result.fallback_used());
+
+        let summary = result.identity_summary();
+        assert!(summary.contains("requested_backend=nvidia-rtx-5070-ti-cuda"), "got: {summary}");
+        assert!(summary.contains("selected_backend=nvidia-rtx-5070-ti-cuda"), "got: {summary}");
+        assert!(summary.contains("runtime_api=cuda"), "got: {summary}");
+        assert!(summary.contains("fallback_used=false"), "got: {summary}");
+    }
+
+    #[test]
+    fn rtx_5070_ti_cuda_request_is_strict_without_runtime() {
+        let err = select_backend(BackendRequest::NvidiaRtx5070TiCuda, &cuda_no_runtime_caps())
+            .unwrap_err();
+
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("nvidia-rtx-5070-ti-cuda"));
+    }
+
+    #[test]
+    fn rtx_5070_ti_wgpu_request_is_distinct_and_unavailable_until_reference_lane_lands() {
+        let err = select_backend(BackendRequest::NvidiaRtx5070TiWgpu, &cuda_caps()).unwrap_err();
+
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("nvidia-rtx-5070-ti-wgpu"));
+    }
+
+    #[test]
+    fn apple_m4_metal_request_is_strict_until_probe_work_lands() {
+        let err = select_backend(BackendRequest::AppleM4Metal, &cpu_only_caps()).unwrap_err();
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("apple-m4-metal"));
+    }
+
+    #[test]
+    fn intel_npu_requests_are_strict_until_openvino_runtime_lands() {
+        for request in [BackendRequest::IntelNpu, BackendRequest::OpenVinoNpu] {
+            let err = select_backend(request, &cpu_only_caps()).unwrap_err();
+            assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+            assert!(err.to_string().contains(&request.to_string()));
+        }
+    }
+
+    #[test]
+    fn identity_summary_records_fallback_status() {
+        let result = select_backend(BackendRequest::Gpu, &cuda_no_runtime_caps()).unwrap();
+        let summary = result.identity_summary();
+        assert!(summary.contains("requested_backend=gpu"), "got: {summary}");
+        assert!(summary.contains("selected_backend=cpu-rust"), "got: {summary}");
+        assert!(summary.contains("runtime_api=cpu"), "got: {summary}");
+        assert!(summary.contains("fallback_used=true"), "got: {summary}");
     }
 
     #[test]

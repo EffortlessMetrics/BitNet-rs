@@ -14,11 +14,47 @@ use bitnet_quantization::simd_ops::{QuantizationStrategy, SimdCapabilities};
 // Section 1 — SIMD capabilities & strategy
 // ============================================================================
 
+fn expected_best_strategy(caps: SimdCapabilities) -> QuantizationStrategy {
+    if caps.has_avx512 {
+        QuantizationStrategy::AVX512
+    } else if caps.has_avx2 {
+        QuantizationStrategy::AVX2
+    } else if caps.has_neon {
+        QuantizationStrategy::NEON
+    } else if caps.has_sse4_1 {
+        QuantizationStrategy::SSE4_1
+    } else {
+        QuantizationStrategy::Scalar
+    }
+}
+
 #[test]
 fn w24_simd_capabilities_detect() {
     let caps = SimdCapabilities::detect();
-    // Snapshot whatever the build host reports — pins CI's view.
-    insta::assert_debug_snapshot!(caps);
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        assert_eq!(caps.has_avx512, is_x86_feature_detected!("avx512f"));
+        assert_eq!(caps.has_avx2, is_x86_feature_detected!("avx2"));
+        assert!(!caps.has_neon);
+        assert_eq!(caps.has_sse4_1, is_x86_feature_detected!("sse4.1"));
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        assert!(!caps.has_avx512);
+        assert!(!caps.has_avx2);
+        assert_eq!(caps.has_neon, std::arch::is_aarch64_feature_detected!("neon"));
+        assert!(!caps.has_sse4_1);
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    {
+        assert!(!caps.has_avx512);
+        assert!(!caps.has_avx2);
+        assert!(!caps.has_neon);
+        assert!(!caps.has_sse4_1);
+    }
 }
 
 #[test]
@@ -37,7 +73,7 @@ fn w24_quantization_strategy_all_variants() {
 fn w24_simd_best_strategy() {
     let caps = SimdCapabilities::detect();
     let strategy = caps.best_quantization_strategy();
-    insta::assert_debug_snapshot!(strategy);
+    assert_eq!(strategy, expected_best_strategy(caps));
 }
 
 // ============================================================================
@@ -103,7 +139,22 @@ use bitnet_quantization::tl2::{TL2Config, VectorizedLookupTable};
 #[test]
 fn w24_tl2_config_default() {
     let cfg = TL2Config::default();
-    insta::assert_debug_snapshot!(cfg);
+    assert_eq!(cfg.block_size, 128);
+    assert_eq!(cfg.lookup_table_size, 256);
+    assert_eq!(cfg.precision_bits, 2);
+    assert!(cfg.vectorized_tables);
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        assert_eq!(cfg.use_avx512, is_x86_feature_detected!("avx512f"));
+        assert_eq!(cfg.use_avx2, is_x86_feature_detected!("avx2"));
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    {
+        assert!(!cfg.use_avx512);
+        assert!(!cfg.use_avx2);
+    }
 }
 
 #[test]
