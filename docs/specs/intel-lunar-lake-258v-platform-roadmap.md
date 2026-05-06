@@ -128,6 +128,16 @@ The first platform receipt is detection-only:
 
 This receipt does not prove BitNet inference, GPU kernel parity, or NPU subgraph parity.
 
+## Buildout Contract
+
+The implementation contract for the immediate Lunar Lake 258V buildout lives in:
+
+```text
+docs/specs/intel-lunar-lake-258v-buildout-plan.md
+```
+
+Use that document for PR boundaries, probe structures, receipt fields, acceptance gates, and CI commands. This roadmap remains the platform-level claim boundary and lane overview.
+
 ## Work Plan
 
 ### LNL258V-001 - Add Platform Profile
