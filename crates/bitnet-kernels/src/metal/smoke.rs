@@ -2,10 +2,13 @@ use std::fmt;
 
 pub const MACHINE_ID: &str = "apple-m4-mac-mini";
 pub const ARTIFACT_KIND: &str = "smoke";
+pub const PARITY_ARTIFACT_KIND: &str = "parity";
 pub const REQUESTED_BACKEND: &str = "apple-m4-metal";
 pub const SELECTED_BACKEND: &str = "apple-m4-metal";
+pub const REFERENCE_BACKEND: &str = "apple-m4-cpu-neon";
 pub const RUNTIME_API: &str = "metal";
 pub const TINY_METAL_ADD_SMOKE_KERNEL_ID: &str = "tiny_metal_add_smoke";
+pub const TINY_METAL_ADD_PARITY_KERNEL_ID: &str = "tiny_metal_add_parity";
 pub const SMOKE_ELEMENT_COUNT: usize = 64;
 pub const SMOKE_WORKGROUP_SIZE: u32 = 64;
 
@@ -38,6 +41,49 @@ impl TinyMetalAddSmokeReceipt {
             selected_backend: SELECTED_BACKEND,
             runtime_api: RUNTIME_API,
             kernel_id: TINY_METAL_ADD_SMOKE_KERNEL_ID,
+            fallback_used: false,
+            result: "pass",
+            artifact_path: artifact_path.into(),
+            element_count,
+            max_abs_error: comparison.max_abs_error,
+            mean_abs_error: comparison.mean_abs_error,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TinyMetalAddParityReceipt {
+    pub machine_id: &'static str,
+    pub artifact_kind: &'static str,
+    pub requested_backend: &'static str,
+    pub selected_backend: &'static str,
+    pub runtime_api: &'static str,
+    pub reference_backend: &'static str,
+    pub target_backend: &'static str,
+    pub kernel_id: &'static str,
+    pub fallback_used: bool,
+    pub result: &'static str,
+    pub artifact_path: String,
+    pub element_count: usize,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+}
+
+impl TinyMetalAddParityReceipt {
+    pub fn passed(
+        artifact_path: impl Into<String>,
+        element_count: usize,
+        comparison: SmokeComparison,
+    ) -> Self {
+        Self {
+            machine_id: MACHINE_ID,
+            artifact_kind: PARITY_ARTIFACT_KIND,
+            requested_backend: REQUESTED_BACKEND,
+            selected_backend: SELECTED_BACKEND,
+            runtime_api: RUNTIME_API,
+            reference_backend: REFERENCE_BACKEND,
+            target_backend: SELECTED_BACKEND,
+            kernel_id: TINY_METAL_ADD_PARITY_KERNEL_ID,
             fallback_used: false,
             result: "pass",
             artifact_path: artifact_path.into(),
@@ -84,6 +130,10 @@ impl std::error::Error for TinyMetalSmokeError {}
 
 pub fn metal_smoke_artifact_path(date: &str) -> String {
     format!("ci/hardware/{MACHINE_ID}/{date}/metal-smoke.json")
+}
+
+pub fn metal_parity_artifact_path(date: &str) -> String {
+    format!("ci/hardware/{MACHINE_ID}/{date}/metal-parity.json")
 }
 
 pub fn tiny_add_inputs() -> (Vec<f32>, Vec<f32>) {
