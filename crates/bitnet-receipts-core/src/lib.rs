@@ -178,9 +178,9 @@ pub struct ParityMetadata {
 /// tokenizer authorities were used, and whether any fallback was taken.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StrictInferenceProvenance {
-    /// Backend requested by the caller (for strict CPU proofs this must be `cpu`).
+    /// Backend requested by the caller (for strict CPU proofs this must be a CPU proof label).
     pub requested_backend: String,
-    /// Backend selected by runtime dispatch (for strict CPU proofs this must be `cpu`).
+    /// Backend selected by runtime dispatch (for strict CPU proofs this must be a CPU proof label).
     pub selected_backend: String,
     /// Kernel requested by the caller, for example `qk256-avx2-gemv`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -545,13 +545,13 @@ impl InferenceReceipt {
             .as_ref()
             .ok_or_else(|| anyhow!("strict CPU proof missing strict_provenance"))?;
 
-        if provenance.requested_backend != "cpu" {
+        if !is_strict_cpu_backend_label(&provenance.requested_backend) {
             return Err(anyhow!(
-                "strict CPU proof requested backend must be cpu, got {:?}",
+                "strict CPU proof requested backend must be a CPU proof label, got {:?}",
                 provenance.requested_backend
             ));
         }
-        if provenance.selected_backend != "cpu" || self.backend != "cpu" {
+        if !is_strict_cpu_backend_label(&provenance.selected_backend) || self.backend != "cpu" {
             return Err(anyhow!(
                 "strict CPU proof selected backend mismatch: receipt backend={:?}, selected={:?}",
                 self.backend,
@@ -745,6 +745,10 @@ impl InferenceReceipt {
     pub fn add_correction(&mut self, correction: CorrectionRecord) {
         self.corrections.push(correction);
     }
+}
+
+fn is_strict_cpu_backend_label(label: &str) -> bool {
+    matches!(label, "cpu" | "apple-m4-cpu-neon")
 }
 
 /// Detect CPU brand string (best-effort).
@@ -1147,6 +1151,21 @@ mod tests {
     #[test]
     fn test_validate_strict_cpu_proof_accepts_authoritative_lane() {
         let receipt = strict_cpu_proof_receipt();
+
+        assert!(receipt.validate_strict_cpu_proof().is_ok());
+    }
+
+    #[test]
+    fn test_validate_strict_cpu_proof_accepts_apple_cpu_neon_label() {
+        let mut receipt = strict_cpu_proof_receipt();
+        let provenance = receipt.strict_provenance.as_mut().unwrap();
+        provenance.requested_backend = "apple-m4-cpu-neon".to_string();
+        provenance.selected_backend = "apple-m4-cpu-neon".to_string();
+        provenance.selected_kernel = Some("i2_s-scalar-reference".to_string());
+        provenance.requested_kernel = Some("i2_s-scalar-reference".to_string());
+        provenance.quant_format = Some("I2_S".to_string());
+        provenance.cpu_features = vec!["neon".to_string()];
+        receipt.kernels = vec!["i2_s-scalar-reference".to_string()];
 
         assert!(receipt.validate_strict_cpu_proof().is_ok());
     }
