@@ -61,3 +61,6 @@ test-util = []  # Exposes test-only APIs for integration tests
 # ONLY on macOS, so Linux builds won't try to compile objc/Metal frameworks.
 workspace = true
 features = ["metal"]
+
+[lints]
+workspace = true

@@ -1,0 +1,5 @@
+schema_version = "0.3"
+
+# No panic-family exceptions are approved by default. Add [[allow]] entries only
+# with semantic path + family + selector identity, owner, explanation,
+# classification, advisory last_seen, and optional expires.

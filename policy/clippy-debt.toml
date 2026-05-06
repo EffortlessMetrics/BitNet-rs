@@ -1,0 +1,4 @@
+schema = 1
+
+# Repo-specific lint exceptions are added here as expiring, reviewed debt.
+# Each [[debt]] entry must include lint, path, owner, reason, and expires.

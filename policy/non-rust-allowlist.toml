@@ -1,0 +1,6 @@
+schema_version = "1.0"
+
+# Non-Rust source exceptions should be represented as structured policy data.
+# Add [[allow]] entries with path or glob, kind, owner, reason, surface,
+# classification, covered_by, and optional expires when file-policy checking is
+# enabled for this workspace.

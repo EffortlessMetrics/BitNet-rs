@@ -30,3 +30,6 @@ cc = "1.2.38"
 
 [dependencies]
 libc = { version = "0.2.175", optional = true }
+
+[lints]
+workspace = true

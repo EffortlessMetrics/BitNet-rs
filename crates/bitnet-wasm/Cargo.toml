@@ -81,3 +81,6 @@ wasm-kernels = ["dep:bitnet-kernels"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.53"
+
+[lints]
+workspace = true

@@ -26,3 +26,6 @@ cpu = ["bitnet-quantization/cpu"]
 cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-quantization/cuda"]
 metal = ["bitnet-common/metal"]
 gpu = ["cuda", "metal"]
+
+[lints]
+workspace = true

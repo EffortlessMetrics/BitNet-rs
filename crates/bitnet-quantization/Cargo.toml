@@ -54,3 +54,6 @@ inference = []
 [[bench]]
 name = "quantization"
 harness = false
+
+[lints]
+workspace = true

@@ -1,16 +1,15 @@
-# Clippy configuration for bitnet-rs
-# Ensures high code quality standards for crates.io publication
+# Clippy configuration for bitnet-rs.
+# Policy lives in Cargo.toml and policy/clippy-lints.toml; this file is only
+# for repo-local configuration knobs and disallowed-method/type policy.
 
-# MSRV compatibility
-msrv = "1.92.0"
+msrv = "1.93"
 
-# Complexity thresholds
+# Complexity thresholds.
 cognitive-complexity-threshold = 30
 too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 trivial-copy-size-limit = 64
 
-# Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
-allow-mixed-uninlined-format-args = true  # Performance in hot paths
+# Keep mixed format args available in hot numeric paths while the lint stays
+# visible through the workspace policy.
+allow-mixed-uninlined-format-args = true
