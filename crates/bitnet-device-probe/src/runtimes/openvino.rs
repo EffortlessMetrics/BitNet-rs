@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 
 use super::command_output;
 
+/// OpenVINO property value captured without compiling a model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OpenVinoPropertyProbe {
+    /// OpenVINO property name.
+    pub name: String,
+    /// Stringified property value reported by OpenVINO.
+    pub value: String,
+}
+
 /// OpenVINO device facts used in platform receipts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OpenVinoDeviceProbe {
@@ -14,6 +23,8 @@ pub struct OpenVinoDeviceProbe {
     pub full_name: Option<String>,
     /// Supported property names when collected.
     pub supported_properties: Vec<String>,
+    /// Selected property values collected for runtime identity receipts.
+    pub properties: Vec<OpenVinoPropertyProbe>,
 }
 
 /// OpenVINO runtime visibility result.
@@ -54,15 +65,37 @@ impl OpenVinoProbe {
 
     /// Return the full name for an OpenVINO device token.
     pub fn full_name_for(&self, token: &str) -> Option<String> {
-        self.devices
-            .iter()
-            .find(|device| device.device == token)
-            .and_then(|device| device.full_name.clone())
+        self.device_for(token).and_then(|device| device.full_name.clone())
+    }
+
+    /// Return per-device facts for an OpenVINO device token.
+    pub fn device_for(&self, token: &str) -> Option<&OpenVinoDeviceProbe> {
+        self.devices.iter().find(|device| device.device == token)
     }
 
     /// Return whether OpenVINO exposes an `NPU` device.
     pub fn npu_visible(&self) -> bool {
         self.available_devices.iter().any(|device| device == "NPU" || device.starts_with("NPU."))
+    }
+
+    /// Return the first OpenVINO NPU token, preferring the unindexed `NPU` alias.
+    pub fn npu_device_token(&self) -> Option<String> {
+        self.available_devices
+            .iter()
+            .find(|device| device.as_str() == "NPU")
+            .or_else(|| self.available_devices.iter().find(|device| device.starts_with("NPU.")))
+            .cloned()
+    }
+
+    /// Return a stringified OpenVINO property value for a device.
+    pub fn property_value_for(&self, token: &str, property: &str) -> Option<String> {
+        self.device_for(token).and_then(|device| {
+            device
+                .properties
+                .iter()
+                .find(|entry| entry.name == property)
+                .map(|entry| entry.value.clone())
+        })
     }
 }
 
@@ -73,9 +106,23 @@ import openvino as ov
 
 core = ov.Core()
 print("OPENVINO_VERSION=" + str(ov.__version__))
+common_props = [
+    "FULL_DEVICE_NAME",
+    "SUPPORTED_PROPERTIES",
+]
+npu_props = [
+    "NPU_DRIVER_VERSION",
+    "NPU_COMPILER_VERSION",
+    "NPU_DEVICE_TOTAL_MEM_SIZE",
+    "NPU_DEVICE_ALLOC_MEM_SIZE",
+    "NPU_MAX_TILES",
+]
 for dev in core.available_devices:
     print("DEVICE=" + str(dev))
-    for prop in ["FULL_DEVICE_NAME", "SUPPORTED_PROPERTIES"]:
+    props = list(common_props)
+    if str(dev) == "NPU" or str(dev).startswith("NPU."):
+        props.extend(npu_props)
+    for prop in props:
         try:
             print("PROP=" + str(dev) + "=" + prop + "=" + str(core.get_property(dev, prop)))
         except Exception as exc:
@@ -110,6 +157,7 @@ pub(crate) fn parse_openvino_line_output(output: &str) -> OpenVinoProbe {
                     device: value.to_owned(),
                     full_name: None,
                     supported_properties: Vec::new(),
+                    properties: Vec::new(),
                 });
             }
         } else if let Some(rest) = line.strip_prefix("PROP=") {
@@ -144,6 +192,7 @@ fn apply_property_line(probe: &mut OpenVinoProbe, rest: &str) {
                 device: device_token.to_owned(),
                 full_name: None,
                 supported_properties: Vec::new(),
+                properties: Vec::new(),
             });
             probe.devices.len() - 1
         };
@@ -160,6 +209,55 @@ fn apply_property_line(probe: &mut OpenVinoProbe, rest: &str) {
                 .filter(|entry| !entry.is_empty())
                 .collect();
         }
-        _ => {}
+        _ => upsert_property_value(&mut probe.devices[idx], property, value),
+    }
+}
+
+fn upsert_property_value(device: &mut OpenVinoDeviceProbe, property: &str, value: &str) {
+    let value = value.trim();
+    if value.is_empty() {
+        return;
+    }
+
+    if let Some(entry) = device.properties.iter_mut().find(|entry| entry.name == property) {
+        value.clone_into(&mut entry.value);
+    } else {
+        device
+            .properties
+            .push(OpenVinoPropertyProbe { name: property.to_owned(), value: value.to_owned() });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_openvino_line_output;
+
+    #[test]
+    fn parses_openvino_npu_runtime_properties() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+DEVICE=CPU
+PROP=CPU=FULL_DEVICE_NAME=Intel CPU
+DEVICE=NPU
+PROP=NPU=FULL_DEVICE_NAME=Intel(R) AI Boost
+PROP=NPU=SUPPORTED_PROPERTIES=['FULL_DEVICE_NAME', 'NPU_DRIVER_VERSION']
+PROP=NPU=NPU_DRIVER_VERSION=1.2.3
+PROP=NPU=NPU_COMPILER_VERSION=4.5.6
+PROP=NPU=NPU_DEVICE_TOTAL_MEM_SIZE=123456
+PROP=NPU=NPU_DEVICE_ALLOC_MEM_SIZE=65432
+PROP=NPU=NPU_MAX_TILES=2
+";
+
+        let probe = parse_openvino_line_output(output);
+
+        assert!(probe.runtime_available);
+        assert_eq!(probe.version.as_deref(), Some("2026.1"));
+        assert_eq!(probe.npu_device_token().as_deref(), Some("NPU"));
+        assert_eq!(probe.full_name_for("NPU").as_deref(), Some("Intel(R) AI Boost"));
+        assert_eq!(probe.property_value_for("NPU", "NPU_DRIVER_VERSION").as_deref(), Some("1.2.3"));
+        assert_eq!(
+            probe.property_value_for("NPU", "NPU_DEVICE_TOTAL_MEM_SIZE").as_deref(),
+            Some("123456")
+        );
     }
 }

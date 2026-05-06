@@ -124,6 +124,11 @@ for dev in core.available_devices:
         "FULL_DEVICE_NAME",
         "SUPPORTED_PROPERTIES",
         "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "NPU_DRIVER_VERSION",
+        "NPU_COMPILER_VERSION",
+        "NPU_DEVICE_TOTAL_MEM_SIZE",
+        "NPU_DEVICE_ALLOC_MEM_SIZE",
+        "NPU_MAX_TILES",
     ]:
         try:
             props[prop] = str(core.get_property(dev, prop))
@@ -190,6 +195,11 @@ for dev in core.available_devices:
         "FULL_DEVICE_NAME",
         "SUPPORTED_PROPERTIES",
         "OPTIMAL_NUMBER_OF_INFER_REQUESTS",
+        "NPU_DRIVER_VERSION",
+        "NPU_COMPILER_VERSION",
+        "NPU_DEVICE_TOTAL_MEM_SIZE",
+        "NPU_DEVICE_ALLOC_MEM_SIZE",
+        "NPU_MAX_TILES",
     ]:
         try:
             props[prop] = str(core.get_property(dev, prop))
@@ -211,6 +221,12 @@ The first 258V platform receipt should establish visibility only:
   "gpu_backend": "intel-arc-140v-opencl",
   "npu_backend": "intel-npu-openvino",
   "openvino_available_devices": ["CPU", "GPU", "NPU"],
+  "openvino_npu_full_name": "...",
+  "npu_driver_version": "...",
+  "npu_compiler_version": "...",
+  "npu_total_mem_size": 0,
+  "npu_alloc_mem_size": 0,
+  "npu_max_tiles": 1,
   "opencl_arc_140v_visible": true,
   "level_zero_visible": true,
   "npu_visible": true,

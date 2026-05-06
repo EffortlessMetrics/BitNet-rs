@@ -5,6 +5,7 @@ use bitnet_device_probe::intel::lunar_lake::{
 use bitnet_device_probe::runtimes::{OpenVinoDeviceProbe, OpenVinoProbe};
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
     let probe = Lnl258vPlatformProbe {
         machine_id: "intel-258v".to_owned(),
@@ -41,6 +42,13 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
             failure_reason: None,
         },
         npu: IntelNpuProbe {
+            proof_stage: "runtime_detected".to_owned(),
+            requested_backend: "intel-npu".to_owned(),
+            selected_backend: Some("intel-npu-openvino".to_owned()),
+            runtime_api: Some("openvino".to_owned()),
+            runtime_device: Some("NPU".to_owned()),
+            os: "linux".to_owned(),
+            arch: "x86_64".to_owned(),
             available: true,
             accel_device_present: true,
             accel_devices: vec!["/dev/accel/accel0".to_owned()],
@@ -48,12 +56,20 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
             driver_hint: Some("intel_vpu/ivpu evidence".to_owned()),
             openvino_runtime_available: true,
             openvino_version: Some("2026.1".to_owned()),
+            openvino_available_devices: vec![
+                "CPU".to_owned(),
+                "GPU.0".to_owned(),
+                "NPU".to_owned(),
+            ],
             openvino_npu_visible: true,
             openvino_npu_full_name: Some("Intel(R) AI Boost".to_owned()),
             supported_properties: vec!["FULL_DEVICE_NAME".to_owned()],
-            driver_version: None,
-            compiler_version: None,
-            total_mem_size: None,
+            driver_version: Some("1.2.3".to_owned()),
+            compiler_version: Some("4.5.6".to_owned()),
+            total_mem_size: Some(1_048_576),
+            alloc_mem_size: Some(524_288),
+            max_tiles: Some(2),
+            fallback_used: false,
             failure_reason: None,
         },
         openvino: OpenVinoProbe {
@@ -65,11 +81,13 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
                     device: "GPU.0".to_owned(),
                     full_name: Some("Intel(R) Arc(TM) 140V Graphics".to_owned()),
                     supported_properties: Vec::new(),
+                    properties: Vec::new(),
                 },
                 OpenVinoDeviceProbe {
                     device: "NPU".to_owned(),
                     full_name: Some("Intel(R) AI Boost".to_owned()),
                     supported_properties: vec!["FULL_DEVICE_NAME".to_owned()],
+                    properties: Vec::new(),
                 },
             ],
             error: None,
@@ -96,7 +114,12 @@ fn lunar_lake_platform_probe_serializes_visibility_receipt_shape() {
     assert_eq!(value["cpu"]["has_avx2"], true);
     assert_eq!(value["cpu"]["has_avx512"], false);
     assert_eq!(value["arc140v"]["openvino_gpu_device"], "GPU.0");
+    assert_eq!(value["npu"]["requested_backend"], "intel-npu");
+    assert_eq!(value["npu"]["selected_backend"], "intel-npu-openvino");
+    assert_eq!(value["npu"]["runtime_api"], "openvino");
+    assert_eq!(value["npu"]["runtime_device"], "NPU");
     assert_eq!(value["npu"]["openvino_npu_visible"], true);
+    assert_eq!(value["npu"]["fallback_used"], false);
 }
 
 #[test]
